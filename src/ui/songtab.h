@@ -12,7 +12,6 @@
 #include "core/songhistory.h"
 #include "project/projectidentity.h"
 #include "project/voicegroupsource.h"
-#include "ui/viewsidecar.h"
 
 class SongView;
 
@@ -26,18 +25,18 @@ class SongView;
 // subobject, re-exported unchanged; shared-bank requests route through
 // WorkspaceUi's VoicegroupViewCache, never through a second stack.
 //
-// Load lifecycle: WorkspaceUi delivers MidiStage, SidecarStage, then terminal
-// VoicegroupBound, whose lease was adopted from the preceding LoadedBankView;
-// later LoadedBankView events replace that lease atomically. MidiStage only
-// buffers the song content; SidecarStage adopts it and rebinds the paired
-// view in one swap, so the first visible frame carries the sidecar camera
-// while the previous song's projection and voicegroup lease stay live until
-// that swap. The view is
-// interactive only once every stage has landed (isReady()). SongSaved adopts
-// the save guards on the document; SongFailed records the presentation error
-// without unbinding a loaded tab. Document edits rebuild the timeline at the
-// copied sample rate and update the paired view, then emit edited() so the
-// owner refreshes its titles and dirty chrome.
+// Load lifecycle: WorkspaceUi delivers MidiStage — which adopts the SMF and
+// rebinds the paired view in one swap — then terminal VoicegroupBound, whose
+// lease was adopted from the preceding LoadedBankView; later LoadedBankView
+// events replace that lease atomically. A ready tab's complete view state is
+// captured before that swap and reapplied after it; a fresh open starts at
+// the canonical defaults. The previous song's projection and voicegroup
+// lease stay live until the swap. The view is interactive only once both
+// stages have landed (isReady()). SongSaved adopts the save guards on the
+// document; SongFailed records the presentation error without unbinding a
+// loaded tab. Document edits rebuild the timeline at the copied sample rate
+// and update the paired view, then emit edited() so the owner refreshes its
+// titles and dirty chrome.
 class SongTab final : public QWidget
 {
     Q_OBJECT
@@ -63,7 +62,7 @@ class SongTab final : public QWidget
     // document-driven rebuild (callback handoff stays internal to audio).
     std::shared_ptr<const MidiTimeline> timeline() const { return m_timeline; }
 
-    // True only after MidiStage, SidecarStage, and VoicegroupBound all landed.
+    // True only after MidiStage and terminal VoicegroupBound both landed.
     bool isReady() const { return m_ready; }
     // The last SongFailed message on this tab; empty otherwise.
     const QString &presentationError() const { return m_presentationError; }
@@ -80,18 +79,17 @@ class SongTab final : public QWidget
 
     // ---- Applied stage values (copied; WorkspaceUi unpacks SongUpdate) ----
 
-    // MidiStage: buffers the detached SMF content for the next SidecarStage.
+    // MidiStage: adopts the detached SMF and rebinds the paired view in one
+    // swap; a ready reload reapplies the captured complete view state and a
+    // fresh open starts at the canonical defaults.
     void applyMidiStage(SongInfo info, SmfFile smf, int trackBudget);
-    // SidecarStage: adopts the buffered SMF and rebinds the paired view in
-    // one swap; a missing or corrupt sidecar arrives as loaded == false.
-    void applySidecarStage(bool loaded, ViewSidecar::Snapshot snapshot);
     // VoicegroupBound: identity only; the lease came with the preceding
     // LoadedBankView.
     void applyVoicegroupBound(VoicegroupId id);
     // LoadedBankView: atomic shared-bank replacement for this tab's
     // voicegroup (initial bind and every later refresh).
     void applyBankView(LoadedBankView view);
-    // SongSaved: adopts the save guards; sidecar status stays with the owner.
+    // SongSaved: adopts the save guards.
     void applySongSaved(SongSaveSnapshot snapshot, bool flagsWritten);
     // SongFailed: records the presentation error; a ready tab stays loaded.
     void applySongFailed(const QString &message);
@@ -99,7 +97,6 @@ class SongTab final : public QWidget
     // ---- Captures for the semantic save seam ------------------------------
 
     SongSaveSnapshot captureSaveSnapshot() const { return m_document.captureSaveSnapshot(); }
-    ViewSidecar::Snapshot captureViewSnapshot() const;
 
   signals:
     // The timeline projection changed and is ready for the audio handoff.
@@ -112,31 +109,17 @@ class SongTab final : public QWidget
     void rebuildTimeline();
     void updateReadiness();
 
-    struct ScrollPosition {
-        double horizontal;
-        double vertical;
-    };
-
-    struct PendingLoad {
-        SongInfo info;
-        SmfFile smf;
-        int trackBudget;
-        std::optional<ScrollPosition> scroll;
-    };
-
     // Member order is destruction order's reverse: the paired view's raw
     // borrows (timeline, document) must not outlive what they point at.
     SongName m_name;
     SongDocument m_document;
     std::shared_ptr<const MidiTimeline> m_timeline;
-    SongView *const m_view;
+    SongView *m_view = nullptr;
     std::optional<VoicegroupId> m_voicegroupId;
     VoicegroupLease m_voicegroup;
-    std::optional<PendingLoad> m_pendingLoad;
     double m_sampleRate = 0.0;
     QString m_presentationError;
     bool m_midiBound = false;
-    bool m_sidecarBound = false;
     bool m_voicegroupBound = false;
     bool m_ready = false;
 };

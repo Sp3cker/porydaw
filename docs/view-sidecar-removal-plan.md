@@ -18,7 +18,7 @@ codec in `mainwindow.cpp`. The promoted preference is exactly the existing, comp
 ## 1. Fixed decisions
 
 1. The complete `EditorViewState` is one application-global persisted preference: flat drawer
-   fields (`velocity`, `automation`, `activePage`), `laneHeight`, `laneHeights`, `laneRanges`,
+   fields (`velocity`, `automation`, `voiceChanges`, `activePage`), `laneHeight`, `laneHeights`, `laneRanges`,
    `emptyLanes`, and ordered `hiddenLanes()`.
 2. Every `SongView::ViewState` field remains transient and per tab: `pxPerBeat`, `keyHeight`,
    `scrollPx`, `scrollY`, `selectedTrack`, `editCursorTick`, `gridMinDenom`, `gridTriplet`, and
@@ -32,7 +32,7 @@ codec in `mainwindow.cpp`. The promoted preference is exactly the existing, comp
    provenance sidecars, previews, trash, and whole-file deletion on song deletion.
 6. `WorkspaceUi::m_editorViewState` is the sole mutable in-memory global. `MainWindow` loads from
    and writes through exactly `*m_themeSettings`, with no mirror. Each `SongView` is a projection.
-7. The five existing `editorDrawer/*` entries keep their spelling and semantics. Former sidecar
+7. The seven existing `editorDrawer/*` entries keep their spelling and semantics. Former sidecar
    lane fields occupy one additional `QByteArray` entry, `editorDrawer/automationLanes`.
 
 ## 2. Ownership and invariants
@@ -76,12 +76,12 @@ void saveEditorViewState(QSettings &settings, const EditorViewState &state);
 helper. `MainWindow` passes `*m_themeSettings`; no new QSettings instance, subgroup, prefix,
 preferences object, or shadow value is allowed.
 
-The codec moves the five key constants and drawer helpers from `mainwindow.cpp:62-66,81-119`.
+The codec owns the eight key constants and drawer helpers moved from `mainwindow.cpp:62-66,81-119`.
 It reuses the row grammar and validation from `viewsidecar.cpp:42-173,232-269`, replacing
 `Geometry::resolve` bounds with `layout::fontPx(7.0 / 3.0)` and
 `layout::fontPx(32.0 / 3.0)`. View/camera JSON helpers die with `ViewSidecar`.
 
-### 3.2 Exact six-entry schema
+### 3.2 Exact eight-entry schema
 
 | Entry | Load | One save call |
 |---|---|---|
@@ -89,12 +89,14 @@ It reuses the row grammar and validation from `viewsidecar.cpp:42-173,232-269`, 
 | `editorDrawer/velocityHeight` | present, integer-convertible, and `> 0` → value; otherwise `nullopt` | exactly one `setValue` when present, otherwise one `remove` |
 | `editorDrawer/automationVisible` | `value(key, true).toBool()` | one `setValue` |
 | `editorDrawer/automationHeight` | same optional rule | exactly one `setValue` when present, otherwise one `remove` |
-| `editorDrawer/activePage` | exact `"velocity"` → `Velocity`; all other/missing values → `Automations` | one `setValue` of `"velocity"` or `"automations"` |
+| `editorDrawer/voiceChangesVisible` | `value(key, false).toBool()` | one `setValue` |
+| `editorDrawer/voiceChangesHeight` | same optional rule | exactly one `setValue` when present, otherwise one `remove` |
+| `editorDrawer/activePage` | exact `"velocity"` → `Velocity`; exact `"voiceChanges"` → `VoiceChanges`; all other/missing values → `Automations` | one `setValue` of `"velocity"`, `"voiceChanges"`, or `"automations"` |
 | `editorDrawer/automationLanes` | must be a `QByteArray` containing a JSON object; otherwise all lane fields default | one `setValue` of compact canonical JSON |
 
-Thus each semantic change invokes `saveEditorViewState` once. That call touches only these six
-entries: four mandatory `setValue` operations and one `setValue`-or-`remove` operation for each
-optional height. Optional height entries exist iff their state values exist. “All six keys are
+Thus each semantic change invokes `saveEditorViewState` once. That call touches only these eight
+entries: five mandatory `setValue` operations and one `setValue`-or-`remove` operation for each of
+the three optional heights. Optional height entries exist iff their state values exist. “All eight keys are
 present” is not an acceptance condition.
 
 ### 3.3 Exact compact lane blob
@@ -317,8 +319,9 @@ These boundaries perform zero view/editor project I/O.
 | `src/ui/songview.cpp` | preserve complete EditorViewState in `setSong`; exact fresh/reload ViewState application behavior |
 | `src/ui/songview/viewstate.cpp` | origin/silent projection split and candidate lane mutations |
 | `src/ui/songview/trackvoiceops.cpp` | candidate remap publication |
+| `src/ui/songview/drawercoordination.cpp` | candidate drawer/page origin mutations through the sole hub |
 | `src/ui/workspaceui.{h,cpp}` | constructor injection, sole hub, all-tab wire at `workspaceui.cpp:231-232`; delete persistence APIs |
-| `src/ui/workspaceui_tabs.cpp` | creation projection, no SidecarStage, bare save at §5.7 anchors |
+| `src/ui/workspaceui_tabs.cpp` | creation projection, no SidecarStage, bare save at §5.7 anchors; `destroyAllTabs` keeps QTabWidget selection signals blocked across page detachment/destruction so synchronous hub/selection teardown cannot republish a dying tab after the null selection/engine-unload boundary — a necessary lifecycle side effect discovered by the project-switch boundary check, not a new feature |
 | `src/ui/workspaceui_project.cpp` | no switch persistence |
 | `src/mainwindow.{h,cpp}` | codec removal, constructor load/injection, exact store sink, no mirror, no close flush |
 | `src/checks/sidecarcheck.cpp` | delete |
@@ -340,11 +343,11 @@ Slice agents do not build, format, lint, run checks, or edit `CMakeLists.txt`.
 | P1b adoption | `task` implementation agent | `src/ui/songtab.h`, `src/ui/songtab.cpp` (2) | §5.5/5.6 |
 | P2a codec/store | `task` implementation agent | `src/ui/editorviewstate.h`, `src/ui/editorviewstate.cpp`, `src/mainwindow.h`, `src/mainwindow.cpp` (4) | §3, §5.1, MainWindow sink |
 | P2b hub | `task` implementation agent | `src/ui/workspaceui.h`, `src/ui/workspaceui.cpp`, `src/ui/workspaceui_tabs.cpp`, `src/ui/workspaceui_project.cpp` (4) | §5.1-5.3, §5.7 |
-| P2c view | `task` implementation agent | `src/ui/songview.h`, `src/ui/songview.cpp`, `src/ui/songview/viewstate.cpp`, `src/ui/songview/trackvoiceops.cpp` (4) | §5.3-5.6 |
+| P2c view | `task` implementation agent | `src/ui/songview.h`, `src/ui/songview.cpp`, `src/ui/songview/viewstate.cpp`, `src/ui/songview/trackvoiceops.cpp`, `src/ui/songview/drawercoordination.cpp` (5) | §5.3-5.6 |
 | P2d obsolete UI | `task` implementation agent | `src/ui/viewsidecar.h`, `src/ui/viewsidecar.cpp` (2) | delete files |
 | P3a transport checks | `task` implementation agent | `src/checks/projectiocheck.cpp`, `src/checks/projectworkspacecheck.cpp`, `src/checks/tabcheck.cpp`, `src/checks/hostcheck.cpp` (4) | transport/order checks and compile repairs |
 | P3b UI checks | `task` implementation agent | `src/checks/mainwindowroutingcheck.cpp`, `src/checks/sessioncheck.cpp` (2) | §8 rows A/C/D-F |
-| P3c codec checks | `task` implementation agent | `src/checks/selftest.cpp` (1) | codec round trip/malformed/default coverage |
+| P3c codec checks | `task` implementation agent | `src/checks/selftest.cpp`, `src/checks/selftest/workspace.cpp` (2) | codec round trip/malformed/default coverage and workspace harness compile repair |
 | P3d obsolete check | `task` implementation agent | `src/checks/sidecarcheck.cpp`, `src/checks/checkcatalog.cpp`, `src/checks/fwd.hpp` (3) | delete harness and registration |
 | P3e docs | `task` implementation agent | `docs/old/projectio-dress-down-contract.md`, `docs/old/projectio-dress-down-plan.md`, `docs/old/projectio-implementation-steps.md` (3) | mechanical supersession only; no time-ruler edit |
 | INT integration | `task` integration owner | `CMakeLists.txt` only (1) | merge every slice, own all gates, remove source entries after P2d and the check entry after P3d |
@@ -399,7 +402,7 @@ commands in order:
 
 ```sh
 deno task build:checks
-deno task format --check src/project/projectworkspace.h src/project/projectworkspace.cpp src/project/projectio.h src/project/projectio.cpp src/ui/songtab.h src/ui/songtab.cpp src/ui/editorviewstate.h src/ui/editorviewstate.cpp src/mainwindow.h src/mainwindow.cpp src/ui/workspaceui.h src/ui/workspaceui.cpp src/ui/workspaceui_tabs.cpp src/ui/workspaceui_project.cpp src/ui/songview.h src/ui/songview.cpp src/ui/songview/viewstate.cpp src/ui/songview/trackvoiceops.cpp src/checks/projectiocheck.cpp src/checks/projectworkspacecheck.cpp src/checks/tabcheck.cpp src/checks/hostcheck.cpp src/checks/mainwindowroutingcheck.cpp src/checks/sessioncheck.cpp src/checks/selftest.cpp src/checks/checkcatalog.cpp src/checks/fwd.hpp
+deno task format --check src/project/projectworkspace.h src/project/projectworkspace.cpp src/project/projectio.h src/project/projectio.cpp src/ui/songtab.h src/ui/songtab.cpp src/ui/editorviewstate.h src/ui/editorviewstate.cpp src/mainwindow.h src/mainwindow.cpp src/ui/workspaceui.h src/ui/workspaceui.cpp src/ui/workspaceui_tabs.cpp src/ui/workspaceui_project.cpp src/ui/songview.h src/ui/songview.cpp src/ui/songview/viewstate.cpp src/ui/songview/trackvoiceops.cpp src/checks/projectiocheck.cpp src/checks/projectworkspacecheck.cpp src/checks/tabcheck.cpp src/checks/hostcheck.cpp src/checks/mainwindowroutingcheck.cpp src/checks/sessioncheck.cpp src/checks/selftest.cpp src/checks/selftest/workspace.cpp src/checks/checkcatalog.cpp src/checks/fwd.hpp
 deno task verify --filter projectiocheck --verbose
 deno task verify --filter projectworkspacecheck --verbose
 deno task verify --filter tabcheck --verbose
@@ -503,12 +506,12 @@ forbidden.
 | 1 deleted transport/UI types | Grep with pattern `\b(ViewSidecar|SidecarStage|SaveSidecarInput|SidecarWriteResult|ReadSidecarCommand)\b` and path `src;CMakeLists.txt` | empty |
 | 2 deleted paths | Grep with pattern `SongStage::Sidecar|persistViewSidecar|persistSessionViews|captureViewSnapshot|applySidecarStage` and path `src` | empty |
 | 3 deleted drawer API/check names | Grep with pattern `applyEditorDrawerState|editorDrawerStateChanged|editorDrawerStateEdited|setEditorDrawerState|m_editorDrawerState|loadEditorDrawerState|saveEditorDrawerState|runViewSidecarCheck` and path `src` | empty |
-| 4 ambiguous sidecar result fields | Grep with pattern `\b(sidecarSnapshot|sidecarSaved|sidecarError)\b` and path `src` | only retained sample-sidecar declarations/implementation under `projectworkspace.h` and `sampleregistrar*`; no workspace, tab, SongView, MainWindow, or project song transport match |
+| 4 ambiguous sidecar result fields | Grep with pattern `\b(sidecarSnapshot|sidecarSaved|sidecarError)\b` and path `src` | exactly the retained sample-provenance flow: the `SampleCommitted` declaration in `src/project/projectworkspace.h`, its commit path in `src/project/projectio.cpp`, and the sample-status consumer in `src/ui/workspaceui_samples.cpp`; no song transport, SongTab, SongView, MainWindow, or non-sample WorkspaceUi match, and `sidecarSnapshot` has no match |
 | 5 deleted build entries | Grep with pattern `viewsidecar|sidecarcheck` and path `CMakeLists.txt` | empty |
-| 6 exact settings literals | Grep with pattern `editorDrawer/` and path `src` | exactly the six literals in `src/ui/editorviewstate.cpp`; checks contain none |
+| 6 exact settings literals | Grep with pattern `editorDrawer/` and path `src` | exactly the eight literals in `src/ui/editorviewstate.cpp`; checks contain none |
 | 7 retained owners | Grep with pattern `Sidecar::ensureDir|SampleSidecar|saveRegistrationMeta|loadRegistrationMeta|clearRegistrationMeta|removeSongSidecar` and path `src` | every named retained identifier has at least one production match |
 | 8 deleted files | Glob the exact paths `src/ui/viewsidecar.h;src/ui/viewsidecar.cpp;src/checks/sidecarcheck.cpp` | empty |
-| 9 harness placement | Glob `src/**/*check.cpp`, then Read the `src/` directory | no new check outside `src/checks/`; `src/` top level remains exactly `main.cpp`, `mainwindow.cpp`, and `porydaw_scale.cpp` |
+| 9 harness placement | Glob `src/**/*check.cpp`, then Read the `src/` directory | no added `*check.cpp` anywhere, so `src/checks/` stays the sole harness root; the only check outside it is the pre-existing `src/ui/theme/themecheck.cpp`, unchanged; the three `src/` top-level `.cpp` sources remain exactly `main.cpp`, `mainwindow.cpp`, and `porydaw_scale.cpp` — Read shows no new top-level check beside them and their normal headers/pch; the `git status --porcelain -- src/checks/` fact below shows only the named check modifications plus the `sidecarcheck.cpp` deletion |
 | 10 CMake ownership | Read `CMakeLists.txt` around the application source and check registration lists | only INT's removal of the two viewsidecar source entries and one sidecarcheck entry |
 
 Each Grep call is case-sensitive, respects gitignore, and names the path shown in the table. INT
@@ -534,7 +537,7 @@ files, with no added `*check.cpp`.
 ## 12. Acceptance
 
 - Every EditorViewState origin, including a non-selected tab lane/remap origin, fans out once and
-  persists once through the exact six-entry codec; future tabs and relaunch restore it.
+  persists once through the exact eight-entry codec; future tabs and relaunch restore it.
 - Ready reload preserves all nine transient ViewState fields. Fresh/reopen establishes all exact
   canonical defaults without focus theft or intermediate event-list traffic.
 - `setSong` preserves complete global lane state. Timeline and voicegroup borrows remain valid

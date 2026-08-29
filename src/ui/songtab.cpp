@@ -37,6 +37,8 @@ SongTab::SongTab(SongName name, QWidget *parent)
 SongTab::~SongTab()
 {
     QObject::disconnect(m_document.undoStack(), nullptr, this, nullptr);
+    delete m_view;
+    m_view = nullptr;
 }
 
 void SongTab::setSampleRate(double sampleRate)
@@ -53,56 +55,46 @@ void SongTab::setSampleRate(double sampleRate)
 
 void SongTab::applyMidiStage(SongInfo info, SmfFile smf, int trackBudget)
 {
-    std::optional<ScrollPosition> scroll;
-    if (m_ready) {
-        const SongView::ViewState state = m_view->viewState();
-        scroll = ScrollPosition{state.scrollPx, state.scrollY};
-    }
-    m_pendingLoad = PendingLoad{std::move(info), std::move(smf), trackBudget, std::move(scroll)};
+    // A ready reload reapplies the complete live view state after the swap;
+    // a fresh open gets the canonical defaults. Capture before the view
+    // detaches from the old song.
+    std::optional<SongView::ViewState> restored;
+    if (m_ready)
+        restored = m_view->viewState();
     m_midiBound = false;
-    m_sidecarBound = false;
     m_voicegroupBound = false;
     m_ready = false;
     m_voicegroupId.reset();
     m_view->prepareForSongReplacement();
     m_view->setEnabled(false);
     m_presentationError.clear();
-}
-
-void SongTab::applySidecarStage(bool loaded, ViewSidecar::Snapshot snapshot)
-{
-    Q_ASSERT(m_pendingLoad.has_value());
-    PendingLoad pending = std::move(*m_pendingLoad);
-    m_pendingLoad.reset();
-
     QString error;
-    if (!m_document.adoptSmf(std::move(pending.smf), pending.info, &error)) {
+    if (!m_document.adoptSmf(std::move(smf), info, &error)) {
         m_presentationError = std::move(error);
         return;
     }
-    m_document.setTrackBudget(pending.trackBudget);
+    m_document.setTrackBudget(trackBudget);
     m_midiBound = true;
-
-    std::shared_ptr<const MidiTimeline> timeline(m_document.buildTimeline(m_sampleRate));
+    // Borrow-safe swap: the local owns the new timeline while the view still
+    // borrows the old member-owned one, the member adopts the new timeline
+    // only after setSong repoints the view, and the old voicegroup lease is
+    // freed only once setSong(..., nullptr) dropped the view's borrow.
+    std::shared_ptr<const MidiTimeline> newTimeline(m_document.buildTimeline(m_sampleRate));
     m_view->setDocument(&m_document);
-    m_view->setSong(timeline.get(), nullptr);
-    m_timeline = std::move(timeline);
+    m_view->setSong(newTimeline.get(), nullptr);
+    m_timeline = std::move(newTimeline);
     m_voicegroup = {};
-
-    if (loaded) {
-        snapshot.editor.setDrawerState(m_view->editorViewState().drawerState());
-        m_view->applyEditorViewState(snapshot.editor);
-        m_view->applyViewState(snapshot.view);
-    }
-    if (pending.scroll) {
-        SongView::ViewState state = m_view->viewState();
-        state.scrollPx = pending.scroll->horizontal;
-        state.scrollY = pending.scroll->vertical;
-        m_view->applyViewState(state);
-    } else if (loaded) {
+    if (restored) {
+        m_view->applyViewState(*restored);
+    } else {
+        // Canonical fresh defaults: a default-constructed ViewState already
+        // carries the Geometry defaults; resetScrollPosition then lands the
+        // pre-roll home and the default vertical scroll.
+        SongView::ViewState fresh;
+        fresh.valid = true;
+        m_view->applyViewState(fresh);
         m_view->resetScrollPosition();
     }
-    m_sidecarBound = true;
     updateReadiness();
 }
 
@@ -115,9 +107,10 @@ void SongTab::applyVoicegroupBound(VoicegroupId id)
 
 void SongTab::applyBankView(LoadedBankView view)
 {
-    // Atomic at the publication seam: adopt the new lease, then swap the
-    // paired view's borrow. The old bank is freed by the last lease holder.
-    m_voicegroup = view.bank;
+    // Atomic at the publication seam: the parked old lease outlives the
+    // view's borrow; the last lease holder frees the bank after the swap.
+    VoicegroupLease oldLease = std::move(m_voicegroup);
+    m_voicegroup = std::move(view.bank);
     m_view->setVoicegroup(m_voicegroup.get());
 }
 
@@ -132,11 +125,6 @@ void SongTab::applySongFailed(const QString &message)
     m_presentationError = message;
 }
 
-ViewSidecar::Snapshot SongTab::captureViewSnapshot() const
-{
-    return ViewSidecar::Snapshot{m_view->viewState(), m_view->editorViewState()};
-}
-
 void SongTab::rebuildTimeline()
 {
     m_timeline = std::shared_ptr<const MidiTimeline>(m_document.buildTimeline(m_sampleRate));
@@ -144,7 +132,7 @@ void SongTab::rebuildTimeline()
 
 void SongTab::updateReadiness()
 {
-    if (!(m_midiBound && m_sidecarBound && m_voicegroupBound))
+    if (!(m_midiBound && m_voicegroupBound))
         return;
     m_ready = true;
     m_view->setEnabled(true);

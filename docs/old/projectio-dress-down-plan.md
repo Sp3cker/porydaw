@@ -10,6 +10,15 @@ The complete type and ownership contract is declared once in
 (**Implementation-ready target interfaces**); the sections here cite that
 contract instead of declaring competing types or policies.
 
+The view-sidecar transport in this plan is superseded by
+`docs/view-sidecar-removal-plan.md`: there is no `SidecarStage`,
+`SaveSidecarInput`, `SidecarWriteResult`, or `SongStage::Sidecar`, no sidecar
+field on `SongSaved`/`SaveSongInput`, and no independent close/switch/quit
+cosmetic view operation. A successful load publishes `MidiStage`, then any
+keyed `LoadedBankView`, then terminal `VoicegroupBound`; a semantic save ends
+after MIDI/flags with bare `SongSaved`/`SongFailed`; missing or corrupt legacy
+view/editor JSON is not a load stage and is never rewritten by view code.
+
 Today, `DecompProject` provides read-only project discovery and catalog data,
 while voicegroups load through separate paths. The target extends
 `DecompProject` on the Project I/O worker with canonical `LoadedBankEntry`
@@ -306,9 +315,9 @@ Callers submit `OpenProjectInput` through `openProject()` and all other
 user-domain work through `submit(ProjectOperation)`. A save uses
 `SaveSongInput`; its `SongSaved`/`SongFailed` outcome and any keyed
 `LoadedBankView` publication follow the semantic-save contract under
-**Implementation-ready target interfaces**. `SaveSidecarInput` remains an
-independent fire-and-forget cosmetic operation for close or switch
-persistence.
+**Implementation-ready target interfaces**. Per
+`docs/view-sidecar-removal-plan.md`, no independent close, switch, or quit
+cosmetic view operation exists.
 
 The `openProject()` refusal and Open Project disablement rules are declared
 once with `ProjectState` under **Implementation-ready target interfaces**.
@@ -353,7 +362,6 @@ Small worker-only helpers perform cohesive file work, for example:
 - project open and refresh;
 - MIDI load and save;
 - voicegroup source load, edit preparation, and save;
-- sidecar load and save;
 - song create, register, and delete;
 - previews and catalog scans;
 - sample probe, import, export, and registration.
@@ -434,7 +442,7 @@ rather than inventing another event.
 `applySongUpdate()` finds the live tab by `SongName` and ignores an update when
 no match exists. It dispatches the payload's staged value or its single
 `SongFailed` value through the narrow `SongTab` apply methods declared below.
-For a successful load, `MidiStage`, `SidecarStage`, and terminal
+For a successful load, `MidiStage`, any keyed `LoadedBankView`, and terminal
 `VoicegroupBound` arrive in that order. Semantic-save handling follows the
 `SaveSongInput`, `SongSaved`, and `SongFailed` contract under
 **Implementation-ready target interfaces**; any bank event is already applied
@@ -493,8 +501,9 @@ result boundary:
    the terminal song update, creates or finds a tab when policy allows, and
    calls its passive apply method. Placement and focus remain UI policy.
 
-`SaveSidecarInput` may be submitted independently for cosmetic close or switch
-persistence. It is not a caller-managed step in the semantic song-save graph.
+Per `docs/view-sidecar-removal-plan.md`, no independent cosmetic close,
+switch, or quit view operation exists; those boundaries perform zero
+view/editor project I/O.
 Shared-bank edit confirmation and history behavior follow the canonical
 `SongHistory` and `WorkspaceUi shared-bank view coordinator` contracts under
 **Implementation-ready target interfaces**. Such edits publish keyed bank
@@ -545,7 +554,7 @@ project state has already reached `Ready`. `openProject()` itself refuses only
 while `Loading`.
 
 For every semantic song load, successful publications are ordered as
-`MidiStage`, then `SidecarStage`, then terminal `VoicegroupBound`; a failure
+`MidiStage`, then any keyed bank view, then terminal `VoicegroupBound`; a failure
 publishes one terminal `SongFailed` instead. If a loading placeholder closes
 before that terminal publication, `WorkspaceUi` adds its `SongName` tombstone,
 drops staged publications for that name, and refuses reopen until the terminal
@@ -864,14 +873,13 @@ Replace the broad request bag and kind switches with the public
 `ProjectOperation` variant and the private `ProjectCommand` and
 `ProjectResult` variants. Keep public input types directly in
 `ProjectCommand` whenever no worker enrichment is needed; retain only the
-real load/read stage tags. An exhaustive visitor dispatches one command
+real load stage tags. An exhaustive visitor dispatches one command
 at a time through `ProjectIo`, resolves catalog rows on the worker, and maps
 private failures to keyed `SongFailed` or `ProjectMutationFailure` results.
 `VoicegroupEditResult` provides total typed applied or confirmed-not-applied
 edit completion (expected mismatches and validation no-ops use the latter);
-`SidecarWriteResult` completes standalone cosmetic writes without a public
-event, and `PreviewCleanupCompleted` completes successful preview cleanup the
-same way. `SaveSongInput`, `SongSaved`, and `SongFailed` follow the
+`PreviewCleanupCompleted` completes successful preview cleanup without a
+public event. `SaveSongInput`, `SongSaved`, and `SongFailed` follow the
 semantic-save contract under **Implementation-ready target interfaces**.
 Remove cancellation and overlap machinery for actions disabled by
 `WorkspaceUi`.
@@ -886,12 +894,12 @@ consumes:
    updates** — proves the end-to-end seam: the three publication streams, the
    `openProject()`/`submit(ProjectOperation)` boundary, keyed routing, and
    placeholder lifecycle. Every later workflow reuses this plumbing.
-2. **song load/reload, live voicegroup rebind, ordered keyed application, and
-   independent cosmetic sidecar persistence** — produces loaded `SongTab`
+2. **song load/reload, live voicegroup rebind, and ordered keyed
+   application** — produces loaded `SongTab`
    state (document,
    timeline, captured snapshots) and populates `VoicegroupViewCache` through
    the bank-view events a load publishes. Workflows 3 and 4 both depend on
-   this: a save captures `SongSaveSnapshot` and sidecar from a loaded tab,
+   this: a save captures `SongSaveSnapshot` from a loaded tab,
    and a voicegroup edit resolves against the cache and the origin tab's
    `SongHistory`, neither of which exists before a load has run.
 3. **semantic song save** through `SaveSongInput`, `SongSaved`, and
@@ -1018,12 +1026,12 @@ thread or queue types.
 | --- | --- |
 | Canonical bank ownership | The worker record is `LoadedBankEntry`; `WorkspaceUi`'s private `VoicegroupViewCache` owns the published `LoadedBankView` views, and no other object is the canonical bank. |
 | Pending bank transition ownership | `SongHistory::requestUndo()`/`requestRedo()` return `HistoryRequest` under their `canUndo()`/`canRedo()` preconditions (document requests return `DocumentHistoryApplied` after crossing; bank requests return the exact `VoicegroupEditInput` with the stack index fixed); `WorkspaceUi` requires `VoicegroupViewCache::begin()` to succeed before submission, and its `Kind` selects applied handling or `resolveBankUndoConflict()`/`resolveBankRedoConflict()` for conflicts, with initial conflicts and hard errors leaving history fixed and no parallel pending state. |
-| Semantic save | `SaveSongInput` produces any independent keyed `LoadedBankView` and exactly one terminal `SongSaved` or `SongFailed` under the semantic-save contract in **Implementation-ready target interfaces**; verify its ordering, partial-write, sidecar, and no-rollback/retry outcomes there. |
-| Independent sidecar | A standalone `SaveSidecarInput` persists cosmetic state on close/switch without becoming a caller-managed song-save stage; private `SidecarWriteResult` records success or error, produces no public event, and advances FIFO, while successful `CleanupPreviewInput` returns private `PreviewCleanupCompleted`, is consumed without public publication, and advances FIFO; semantic-save sidecar handling follows the contract above. |
+| Semantic save | `SaveSongInput` produces any independent keyed `LoadedBankView` and exactly one terminal `SongSaved` or `SongFailed` under the semantic-save contract in **Implementation-ready target interfaces**; verify its ordering, partial-write, and no-rollback/retry outcomes there. |
+| Sidecar transport removal | Per `docs/view-sidecar-removal-plan.md`: no `SidecarStage`, `SaveSidecarInput`, `SidecarWriteResult`, `SongStage::Sidecar`, or sidecar field on `SongSaved`/`SaveSongInput`; load is `MidiStage` → optional keyed bank view → terminal `VoicegroupBound`; save ends after MIDI/flags with bare `SongSaved`/`SongFailed`; missing/corrupt legacy view/editor JSON is not a load stage and is never rewritten by view code; close/switch/quit perform no cosmetic view operation; successful `CleanupPreviewInput` returns private `PreviewCleanupCompleted`, is consumed without public publication, and advances FIFO. |
 | Private command/result totality | Every `ProjectCommand` alternative has a terminal private `ProjectResult`; `VoicegroupEditInput` dispatches directly to `DecompProject::applyVoicegroupEdit`, returning `std::optional<VoicegroupEditResult>`, expected mismatches and every validation no-op use `VoicegroupEditConflictResult`, and an edit hard error maps through private `CommandFailure` to keyed `VoicegroupMutationFailed`. |
 | Loading and Open Project | Open state reaches `Ready` at snapshot publication, startup loads use keyed updates, and UI policy alone keeps Open Project disabled while placeholders or submitted work remain; a save-in-flight tab refuses close, and a failed open tears down startup placeholders and re-enables the action. |
 | Event keys and failure sum | `LoadedBankView`, preview, sample, song-created, `VoicegroupEditApplied`, `VoicegroupEditConflict`, and each `ProjectMutationFailure` alternative route by domain key; only catalog-dialog events and `CatalogMutationFailed` are unkeyed. |
-| Song failures | `SongPayload` has one simple `SongFailed` with `SongStage`; sidecar absence is a nonfailure stage and project-open errors stay in optional `ProjectState.error`. |
+| Song failures | `SongPayload` has one simple `SongFailed` with `SongStage`; missing or corrupt legacy view/editor JSON is not a load stage and project-open errors stay in optional `ProjectState.error`. |
 | Shared-bank confirmation and blank slots | `VoicegroupViewCache` routes initial, undo, and redo through the unique origin `SongHistory`; applied/conflict/hard-error and blank-token behavior is verified against the canonical contract in **Implementation-ready target interfaces**, with hard errors leaving history fixed. |
 | Worker catalog resolution | Load stage commands carry only `SongName`/`VoicegroupId` and user inputs; worker execution resolves `SongInfo`, `SongCfg`, constants, players, and track budget from `DecompProject`. |
 | Close/reopen tombstone | `WorkspaceUi` keeps a transient `QSet<SongName>` only for a closed loading tab with in-flight work, refuses reopen of the same name, drops staged publications, erases the tombstone only at terminal `VoicegroupBound` or `SongFailed`, and accepted project replacement clears tombstones. |

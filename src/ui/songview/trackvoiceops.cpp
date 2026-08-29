@@ -372,9 +372,6 @@ void SongView::moveTrack(int from, int to)
 }
 void SongView::onTracksRemapped(const TrackRemap &remap)
 {
-    if (m_roll)
-        m_roll->cancelPitchBendPopup();
-    cancelActiveInteractions();
     const auto remapTrack = [&remap](int track) {
         return track >= 0 && static_cast<std::size_t>(track) < remap.engineTrackMap.size()
                    ? remap.engineTrackMap[static_cast<std::size_t>(track)]
@@ -391,6 +388,12 @@ void SongView::onTracksRemapped(const TrackRemap &remap)
         }
         return mapped;
     };
+
+    // Validate and construct the complete editor projection before changing
+    // any other SongView-owned state. A rejected remap is all-or-nothing.
+    auto remappedEditorViewState = m_editorViewState;
+    if (!remappedEditorViewState.remapEngineTracks(remap.engineTrackMap))
+        return;
 
     // Compute the complete remap before committing any SongView-owned state.
     const int oldPrimaryTrack = m_selectionModel.primaryTrack();
@@ -414,12 +417,13 @@ void SongView::onTracksRemapped(const TrackRemap &remap)
     }
     const uint32_t mute = remapMask(m_muteMask);
     const uint32_t solo = remapMask(m_soloMask);
-    auto remappedEditorViewState = m_editorViewState;
-    const bool drawerChanged = remappedEditorViewState.remapEngineTracks(remap.engineTrackMap);
 
-    // Commit external state without refreshes or application signals. The
-    // model notification below must observe this complete batch.
-    m_editorViewState = std::move(remappedEditorViewState);
+    if (m_roll)
+        m_roll->cancelPitchBendPopup();
+    cancelActiveInteractions();
+
+    // Commit the non-editor state first. The model notification below must
+    // observe this complete batch before the origin projection is published.
     const bool muteChanged = mute != m_muteMask;
     const bool soloChanged = solo != m_soloMask;
     m_muteMask = mute;
@@ -432,8 +436,8 @@ void SongView::onTracksRemapped(const TrackRemap &remap)
         Q_ASSERT(m_selectionModel.timeSelection().lanes == remappedLanes);
     m_editorDrawer->velocityArea()->tracksRemapped(remap);
     m_editorDrawer->voiceChangeArea()->tracksRemapped(remap);
-    if (drawerChanged)
-        emit editorDrawerStateChanged(m_editorViewState.drawerState());
+    setEditorViewState(remappedEditorViewState);
+
     if (muteChanged)
         emit muteMaskChanged(m_muteMask);
     if (soloChanged)

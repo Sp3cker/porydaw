@@ -16,7 +16,6 @@
 #include "projectidentity.h"
 #include "samplereg.h"
 #include "songregistry.h"
-#include "ui/viewsidecar.h"
 #include "voicegroupsource.h"
 
 extern "C" {
@@ -26,7 +25,7 @@ extern "C" {
 // The public ProjectWorkspace seam: everything the GUI may see and submit,
 // and nothing about worker scheduling or DecompProject storage. ProjectIo
 // consumes the same declarations for its private command/result layer; the
-// only private stage tags (load/read commands and worker outcomes) live
+// only private stage tags (load commands and worker outcomes) live
 // behind ProjectIo and never appear here.
 
 // ---- Project open state ----------------------------------------------------
@@ -158,11 +157,6 @@ struct MidiStage {
     SmfFile smf;
     int trackBudget = 16;
 };
-struct SidecarStage {
-    SongName song;
-    bool loaded = false; // missing or corrupt sidecar: success, entry rewritten
-    ViewSidecar::Snapshot snapshot;
-};
 struct VoicegroupBound {
     SongName song;
     VoicegroupId id;
@@ -171,18 +165,16 @@ struct SongSaved {
     SongName song;
     SongSaveSnapshot savedSnapshot;
     bool flagsWritten = false;
-    bool sidecarSaved = false;
-    std::optional<QString> sidecarError; // nonfatal cosmetic write result
 };
 
-enum class SongStage { Midi, Voicegroup, Sidecar, Reconcile, Save };
+enum class SongStage { Midi, Voicegroup, Reconcile, Save };
 // The single song load/save failure payload: fatal stages only.
 struct SongFailed {
     SongStage stage;
     QString message;
 };
 
-using SongPayload = std::variant<MidiStage, SidecarStage, VoicegroupBound, SongSaved, SongFailed>;
+using SongPayload = std::variant<MidiStage, VoicegroupBound, SongSaved, SongFailed>;
 
 // song is the public routing key; ProjectWorkspace never reconstructs it.
 struct SongUpdate {
@@ -205,14 +197,7 @@ struct OpenProjectInput {
 struct SaveSongInput {
     SongName song;
     SongSaveSnapshot snapshot;
-    ViewSidecar::Snapshot sidecarSnapshot;
     std::optional<SaveVoicegroupInput> voicegroup;
-};
-// Fire-and-forget cosmetic persistence for close or switch; its private
-// SidecarWriteResult never becomes a public event.
-struct SaveSidecarInput {
-    SongName song;
-    ViewSidecar::Snapshot snapshot;
 };
 struct RefreshProjectInput {};
 struct CleanupPreviewInput {};
@@ -276,10 +261,10 @@ struct CommitSampleInput {
 // User-domain inputs only; private worker stage tags stay behind ProjectIo.
 using ProjectOperation =
     std::variant<RefreshProjectInput, OpenSongInput, ReloadSongInput, SaveSongInput,
-                 SaveSidecarInput, VoicegroupEditInput, CreateSongInput, CreateVoicegroupInput,
-                 RegistrationPlanInput, RegisterSongInput, DeletionPlanInput, DeleteSongInput,
-                 PreviewPlanInput, PreviewInput, CleanupPreviewInput, RefreshCatalogInput,
-                 LoadSampleSetInput, ProbeSamplesInput, ReadSampleInput, CommitSampleInput>;
+                 VoicegroupEditInput, CreateSongInput, CreateVoicegroupInput, RegistrationPlanInput,
+                 RegisterSongInput, DeletionPlanInput, DeleteSongInput, PreviewPlanInput,
+                 PreviewInput, CleanupPreviewInput, RefreshCatalogInput, LoadSampleSetInput,
+                 ProbeSamplesInput, ReadSampleInput, CommitSampleInput>;
 
 // ---- ProjectWorkspace ---------------------------------------------------------
 

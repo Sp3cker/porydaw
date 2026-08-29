@@ -280,9 +280,6 @@ void WorkspaceUi::beginProjectSwitch(const QString &dir)
         m_deleteConfirmation = nullptr;
         box->close();
     }
-    // Cosmetic view state writes against the OLD project root: the FIFO
-    // carries them out before the queued open lands the new project.
-    persistSessionViews();
     cleanupPreview();
     m_openRequested = true;
     updateOpenGate();

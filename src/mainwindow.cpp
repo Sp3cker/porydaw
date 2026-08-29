@@ -59,13 +59,6 @@ const QString kSystemFontKey = QStringLiteral("systemFont");
 const QString kFollowPlayheadKey = QStringLiteral("followPlayhead");
 const QString kOutputVolumeKey = QStringLiteral("outputVolume");
 const QString kResonanceSuppressionKey = QStringLiteral("dsp/resonanceSuppression");
-const QString kDrawerVelocityVisibleKey = QStringLiteral("editorDrawer/velocityVisible");
-const QString kDrawerVelocityHeightKey = QStringLiteral("editorDrawer/velocityHeight");
-const QString kDrawerAutomationVisibleKey = QStringLiteral("editorDrawer/automationVisible");
-const QString kDrawerAutomationHeightKey = QStringLiteral("editorDrawer/automationHeight");
-const QString kDrawerVoiceChangesVisibleKey = QStringLiteral("editorDrawer/voiceChangesVisible");
-const QString kDrawerVoiceChangesHeightKey = QStringLiteral("editorDrawer/voiceChangesHeight");
-const QString kDrawerActivePageKey = QStringLiteral("editorDrawer/activePage");
 
 void resetInheritedWidgetFonts()
 {
@@ -77,65 +70,6 @@ void resetInheritedWidgetFonts()
     for (const auto &widget : widgets) {
         if (widget && widget->font().resolveMask() == 0)
             widget->setFont(QFont());
-    }
-}
-
-std::optional<int> loadDrawerHeight(const QSettings &settings, const QString &key)
-{
-    if (!settings.contains(key))
-        return std::nullopt;
-    bool ok = false;
-    const int height = settings.value(key).toInt(&ok);
-    return ok && height > 0 ? std::optional<int>(height) : std::nullopt;
-}
-
-EditorDrawerState loadEditorDrawerState(const QSettings &settings)
-{
-    EditorDrawerState state;
-    state.velocity.visible =
-        settings.value(kDrawerVelocityVisibleKey, state.velocity.visible).toBool();
-    state.velocity.height = loadDrawerHeight(settings, kDrawerVelocityHeightKey);
-    state.automation.visible =
-        settings.value(kDrawerAutomationVisibleKey, state.automation.visible).toBool();
-    state.automation.height = loadDrawerHeight(settings, kDrawerAutomationHeightKey);
-    state.voiceChanges.visible =
-        settings.value(kDrawerVoiceChangesVisibleKey, state.voiceChanges.visible).toBool();
-    state.voiceChanges.height = loadDrawerHeight(settings, kDrawerVoiceChangesHeightKey);
-    const QString activePage = settings.value(kDrawerActivePageKey).toString();
-    if (activePage == QLatin1String("velocity"))
-        state.activePage = EditorDrawerPage::Velocity;
-    else if (activePage == QLatin1String("voiceChanges"))
-        state.activePage = EditorDrawerPage::VoiceChanges;
-    return state;
-}
-
-void saveEditorDrawerState(QSettings &settings, const EditorDrawerState &state)
-{
-    settings.setValue(kDrawerVelocityVisibleKey, state.velocity.visible);
-    settings.setValue(kDrawerAutomationVisibleKey, state.automation.visible);
-    settings.setValue(kDrawerVoiceChangesVisibleKey, state.voiceChanges.visible);
-    if (state.velocity.height)
-        settings.setValue(kDrawerVelocityHeightKey, *state.velocity.height);
-    else
-        settings.remove(kDrawerVelocityHeightKey);
-    if (state.automation.height)
-        settings.setValue(kDrawerAutomationHeightKey, *state.automation.height);
-    else
-        settings.remove(kDrawerAutomationHeightKey);
-    if (state.voiceChanges.height)
-        settings.setValue(kDrawerVoiceChangesHeightKey, *state.voiceChanges.height);
-    else
-        settings.remove(kDrawerVoiceChangesHeightKey);
-    switch (state.activePage) {
-    case EditorDrawerPage::Velocity:
-        settings.setValue(kDrawerActivePageKey, QLatin1String("velocity"));
-        break;
-    case EditorDrawerPage::VoiceChanges:
-        settings.setValue(kDrawerActivePageKey, QLatin1String("voiceChanges"));
-        break;
-    case EditorDrawerPage::Automations:
-        settings.setValue(kDrawerActivePageKey, QLatin1String("automations"));
-        break;
     }
 }
 
@@ -181,10 +115,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     // system-font preference must already be in force for the first paint.
     typography::setUseSystemFont(m_themeSettings->value(kSystemFontKey, false).toBool());
     m_themeController->restore();
-    m_editorDrawerState = loadEditorDrawerState(*m_themeSettings);
+    const EditorViewState initialEditorViewState = loadEditorViewState(*m_themeSettings);
     updateWindowFrameTheme();
     m_themeDialog = std::make_unique<themes::ThemeDialog>(*m_themeController, this);
-    buildUi();
+    buildUi(initialEditorViewState);
 
     QSettings settings;
     restoreGeometry(settings.value(QStringLiteral("windowGeometry")).toByteArray());
@@ -301,7 +235,7 @@ void MainWindow::restoreSession()
     // user session is inherited.
 }
 
-void MainWindow::buildUi()
+void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
 {
     // Every user-facing action registers with the keymap so its shortcut is
     // rebindable; the registry owns defaults and re-applies user changes.
@@ -473,8 +407,9 @@ void MainWindow::buildUi()
     aboutAction->setMenuRole(QAction::AboutRole);
     keys.attach(QStringLiteral("help.about"), aboutAction);
 
-    m_workspace = std::make_unique<WorkspaceUi>(*this);
-    m_workspace->setEditorDrawerState(m_editorDrawerState);
+    // Constructor injection: the loaded global editor state seeds the hub
+    // before any tab exists; no startup write or hub transaction happens.
+    m_workspace = std::make_unique<WorkspaceUi>(*this, initialEditorViewState);
 
     {
         QSettings settings;
@@ -568,8 +503,8 @@ void MainWindow::buildUi()
         m_eventListAction->setChecked(m_selectedTab && m_selectedTab->view().eventListVisible());
         updateChrome();
     });
-    connect(m_workspace.get(), &WorkspaceUi::editorDrawerStateEdited, this,
-            &MainWindow::setEditorDrawerState);
+    connect(m_workspace.get(), &WorkspaceUi::editorViewStateChanged, this,
+            &MainWindow::persistEditorViewState);
     connect(m_workspace.get(), &WorkspaceUi::editCursorSeekRequested, this, [this](uint64_t tick) {
         if (!m_audioOk || !m_audio.songLoaded() || m_audio.transport() == Transport::Stopped)
             return;
@@ -1035,13 +970,15 @@ void MainWindow::auditionKeysplit(const QString &symbol)
 
 // ---- Chrome -----------------------------------------------------------------
 
-void MainWindow::setEditorDrawerState(const EditorDrawerState &state)
+void MainWindow::persistEditorViewState(const EditorViewState &state)
 {
-    if (m_editorDrawerState == state)
-        return;
-    m_editorDrawerState = state;
-    saveEditorDrawerState(*m_themeSettings, state);
-    m_workspace->setEditorDrawerState(state);
+    // The hub has already fanned the change out to every tab; MainWindow
+    // only writes the store — once per semantic change, no mirror.
+    // editorViewStatePersisted is a harness-only completion boundary, used
+    // to prove sink cardinality/order; production consumers must observe
+    // the WorkspaceUi hub signal, not this persistence completion.
+    saveEditorViewState(*m_themeSettings, state);
+    emit editorViewStatePersisted(state);
 }
 
 void MainWindow::updateChrome()
@@ -1496,9 +1433,8 @@ void MainWindow::closeEvent(QCloseEvent *event)
             m_closeInProgress = false;
             return;
         }
-        // Cosmetic sidecar writes and the preview cleanup ride the worker's
-        // FIFO; the destructor's shutdown order joins the worker after them.
-        m_workspace->persistSessionViews();
+        // Preview cleanup rides the worker's FIFO; the destructor's shutdown
+        // order joins the worker after it.
         m_workspace->cleanupPreview();
         if (m_persistSession) {
             QSettings settings;

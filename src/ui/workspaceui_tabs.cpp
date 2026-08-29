@@ -34,7 +34,7 @@ SongTab *WorkspaceUi::createTab(SongName name, const QString &title, bool activa
     tab->view().setVelocityColorMode(m_velocityColorMode);
     tab->view().setNoteNameMode(m_noteNameMode);
     tab->view().setFollowPlayhead(m_followPlayhead);
-    tab->view().applyEditorDrawerState(m_editorDrawerState);
+    tab->view().applyEditorViewState(m_editorViewState);
     wireTab(tab);
     m_tabPages.push_back(std::move(page));
 
@@ -80,11 +80,15 @@ void WorkspaceUi::destroyAllTabs()
         emit selectedSongTabChanged(nullptr);
     }
     m_tearingDown = true;
-    m_tabPages.clear();
+    // Block QTabWidget signals before any page is detached or destroyed:
+    // currentChanged fired during teardown would republish a selection that
+    // no longer exists, after the engine-unload publication above.
     QSignalBlocker blocker(m_tabs);
     while (m_tabs->count() > 0)
         m_tabs->removeTab(0);
     m_tabs->setCurrentIndex(-1);
+    // Destroys the pages after they have left the widget, like removeTab().
+    m_tabPages.clear();
     blocker.unblock();
     m_tearingDown = false;
     m_selectedTab = nullptr;
@@ -243,18 +247,6 @@ void WorkspaceUi::applyStagedUpdate(const SongName &name, MidiStage &stage)
     tab->applyMidiStage(std::move(stage.info), std::move(stage.smf), stage.trackBudget);
 }
 
-void WorkspaceUi::applyStagedUpdate(const SongName &name, SidecarStage &stage)
-{
-    if (m_tombstones.contains(name))
-        return;
-    SongTab *const tab = songTabFor(name);
-    if (!tab)
-        return;
-    if (m_rebindSkip.contains(name))
-        return;
-    tab->applySidecarStage(stage.loaded, std::move(stage.snapshot));
-}
-
 void WorkspaceUi::applyStagedUpdate(const SongName &name, VoicegroupBound &bound)
 {
     // Terminal: erases the tombstone and the load gate even for a tab that
@@ -266,11 +258,15 @@ void WorkspaceUi::applyStagedUpdate(const SongName &name, VoicegroupBound &bound
     SongTab *const tab = songTabFor(name);
     if (!tab)
         return;
-    tab->applyVoicegroupBound(std::move(bound.id));
     // The preceding LoadedBankView event already updated the cache; adopt
-    // the published lease from it.
-    if (const LoadedBankView *const view = bankViewFor(*tab))
+    // the published lease by the incoming id before the bind. The tab's
+    // voicegroupId is not yet installed (applyMidiStage reset it) or stale
+    // from a rebind, so tab-keyed lookup would miss or pick the wrong entry.
+    if (const LoadedBankView *const view = m_cache.find(bound.id))
         tab->applyBankView(*view);
+    // Terminal: the bind completes readiness and is the final operation
+    // that may enable the tab.
+    tab->applyVoicegroupBound(std::move(bound.id));
     m_boundArgs.insert(name, tab->document().cfg().voicegroupArg);
     refreshTabTitle(tab);
     m_startupPlaceholders.remove(name);
@@ -290,12 +286,7 @@ void WorkspaceUi::applyStagedUpdate(const SongName &name, SongSaved &saved)
         tab->applySongSaved(saved.savedSnapshot, saved.flagsWritten);
         dropSavedPendingSynths(*tab);
         refreshTabTitle(tab);
-        if (saved.sidecarError)
-            showStatus(tr("Saved %1, but saving its view state failed: %2")
-                           .arg(saved.savedSnapshot.midPath, *saved.sidecarError),
-                       8000);
-        else
-            showStatus(tr("Saved %1").arg(saved.savedSnapshot.midPath));
+        showStatus(tr("Saved %1").arg(saved.savedSnapshot.midPath));
     }
     updateOpenGate();
     if (m_closeAfterSave.remove(name))
@@ -437,7 +428,7 @@ void WorkspaceUi::submitSaveForTab(SongTab *tab, const std::function<void(bool)>
         complete(true); // nothing to save
         return;
     }
-    SaveSongInput input{name, tab->captureSaveSnapshot(), tab->captureViewSnapshot(), std::nullopt};
+    SaveSongInput input{name, tab->captureSaveSnapshot(), std::nullopt};
     if (view && view->dirty) {
         // The bank recipe rides the semantic save: the worker writes the
         // voicegroup source (plus minted synth definitions), refreshes the
@@ -507,8 +498,6 @@ void WorkspaceUi::closeTabNow(SongTab *tab)
     const SongName name = tab->name();
     if (m_inFlightLoads.contains(name))
         m_tombstones.insert(name); // closed loading: refuse reopen until terminal
-    else
-        persistViewSidecar(tab);
     m_closeAfterSave.remove(name);
     m_rebindSkip.remove(name);
     m_boundArgs.remove(name);

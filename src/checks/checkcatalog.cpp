@@ -410,15 +410,6 @@ const std::vector<CheckDefinition> &catalog()
                 .fixtureFiles = route101Files,
             },
             {
-                .name = "sidecar",
-                .argv = strings({"--check-sidecar", "{scratch}", "mus_route101"}),
-                .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runViewSidecarCheck(args[1], args[2]);
-                    },
-                .scratchKind = ScratchKind::ExistingDirectory,
-            },
-            {
                 .name = "host-adapter",
                 .argv = strings({"--check-host-adapter", "{scratch}", "mus_route101"}),
                 .handler =

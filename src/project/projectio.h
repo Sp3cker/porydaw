@@ -22,7 +22,7 @@ class QThread;
 // its publications without any request ID or envelope. The variants hold the
 // public input types from projectworkspace.h directly whenever no worker
 // enrichment is added; the only private command alternatives beyond those
-// inputs are the load/read stage tags below. They never cross the
+// inputs are the load stage tags below. They never cross the
 // ProjectWorkspace seam and carry no cached catalog rows.
 
 // The real private stage tags for the ordered song-load flow.
@@ -33,16 +33,6 @@ struct LoadVoicegroupCommand {
     SongName song;
     VoicegroupId voicegroup;
 };
-struct ReadSidecarCommand {
-    SongName song;
-};
-
-// Private SaveSidecarInput completion: consumed without a public event; it
-// merely advances the FIFO.
-struct SidecarWriteResult {
-    bool success = false;
-    std::optional<QString> error; // present iff success is false
-};
 // Private CleanupPreviewInput success; consumed without a public event.
 struct PreviewCleanupCompleted {};
 
@@ -51,11 +41,11 @@ struct PreviewCleanupCompleted {};
 // CommandFailure for every other command.
 using ProjectCommand =
     std::variant<OpenProjectInput, RefreshProjectInput, OpenSongInput, ReloadSongInput,
-                 LoadSongCommand, LoadVoicegroupCommand, ReadSidecarCommand, SaveSongInput,
-                 SaveSidecarInput, VoicegroupEditInput, CreateSongInput, CreateVoicegroupInput,
-                 RegistrationPlanInput, RegisterSongInput, DeletionPlanInput, DeleteSongInput,
-                 PreviewPlanInput, PreviewInput, CleanupPreviewInput, RefreshCatalogInput,
-                 LoadSampleSetInput, ProbeSamplesInput, ReadSampleInput, CommitSampleInput>;
+                 LoadSongCommand, LoadVoicegroupCommand, SaveSongInput, VoicegroupEditInput,
+                 CreateSongInput, CreateVoicegroupInput, RegistrationPlanInput, RegisterSongInput,
+                 DeletionPlanInput, DeleteSongInput, PreviewPlanInput, PreviewInput,
+                 CleanupPreviewInput, RefreshCatalogInput, LoadSampleSetInput, ProbeSamplesInput,
+                 ReadSampleInput, CommitSampleInput>;
 
 struct SongCommandFailure {
     SongName song;
@@ -71,11 +61,11 @@ struct CommandFailure {
 // LoadedBankView early and ends with one terminal SongSaved or
 // SongCommandFailure.
 using ProjectResult =
-    std::variant<ProjectSnapshot, MidiStage, LoadedBankView, VoicegroupBound, SidecarStage,
-                 VoicegroupEditResult, SidecarWriteResult, PreviewCleanupCompleted, SongSaved,
-                 RegistrationPlanResult, DeletionPlanResult, PreviewPlan, PreviewReady,
-                 SampleSetReady, SamplesProbed, SampleRead, SampleCommitted, SongCreated,
-                 VoicegroupCatalog, SongCommandFailure, CommandFailure>;
+    std::variant<ProjectSnapshot, MidiStage, LoadedBankView, VoicegroupBound, VoicegroupEditResult,
+                 PreviewCleanupCompleted, SongSaved, RegistrationPlanResult, DeletionPlanResult,
+                 PreviewPlan, PreviewReady, SampleSetReady, SamplesProbed, SampleRead,
+                 SampleCommitted, SongCreated, VoicegroupCatalog, SongCommandFailure,
+                 CommandFailure>;
 
 // One queued delivery: a staged or terminal result, and — on the terminal
 // result only — the original moved command, so the owner can key its

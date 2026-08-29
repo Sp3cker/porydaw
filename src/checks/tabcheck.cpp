@@ -9,6 +9,7 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPointer>
 #include <QSettings>
 #include <QSizePolicy>
 #include <QSpinBox>
@@ -45,8 +46,10 @@
 // recipe (the second half, in runTabCheck's caller, relaunches into a fresh
 // window whose ProjectWorkspace queues the saved open by itself). A clean
 // tab follows an externally touched voicegroup file through the mtime-gated
-// reload. QSettings is redirected into a temp dir; view sidecars are written
-// into the project on tab close — run against a scratch copy.
+// reload, and tab/reopen boundaries must leave the transient per-tab camera
+// at the canonical fresh defaults. QSettings is redirected into a temp dir;
+// the semantic save and the voicegroup touch write into the project — run
+// against a scratch copy.
 
 bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, const QString &songB)
 {
@@ -127,6 +130,32 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     const auto tabTitle = [tabWidget](SongTab *tab) {
         return tabWidget && tab ? tabWidget->tabText(tabWidget->indexOf(tab)) : QString();
     };
+    // Field-wise ViewState comparison (the struct has no comparison).
+    const auto viewStateEqual = [](const SongView::ViewState &a, const SongView::ViewState &b) {
+        return a.valid == b.valid && a.pxPerBeat == b.pxPerBeat && a.keyHeight == b.keyHeight &&
+               a.scrollPx == b.scrollPx && a.scrollY == b.scrollY &&
+               a.selectedTrack == b.selectedTrack && a.editCursorTick == b.editCursorTick &&
+               a.gridMinDenom == b.gridMinDenom && a.gridTriplet == b.gridTriplet &&
+               a.eventList == b.eventList;
+    };
+    // Canonical fresh-open defaults: a brand-new tab binds with the
+    // Geometry's default camera, the pre-roll home scroll, the song's first
+    // used track, and neutral grid/event-list state (plan §5.6 — every
+    // field, not scroll alone). `canonical` is the observed fresh-open
+    // ViewState for the same song in this window, covering the song-dependent
+    // vertical scroll home and first used track.
+    const auto checkFreshDefaults = [&check](const SongView &view,
+                                             const SongView::ViewState &canonical,
+                                             const char *what) {
+        const SongView::ViewState defaults;
+        const auto vs = view.viewState();
+        check(vs.valid && std::abs(vs.pxPerBeat - defaults.pxPerBeat) < 0.5 &&
+                  vs.keyHeight == defaults.keyHeight && vs.scrollPx == -view.leadPadPx() &&
+                  vs.scrollY == canonical.scrollY && vs.selectedTrack == canonical.selectedTrack &&
+                  vs.editCursorTick == 0 && vs.gridMinDenom == 0 && !vs.gridTriplet &&
+                  !vs.eventList && !view.eventListVisible(),
+              what);
+    };
 
     auto *rootCombo = findChild<QComboBox *>(QStringLiteral("transportScaleRoot"));
     auto *scaleCombo = findChild<QComboBox *>(QStringLiteral("transportScaleType"));
@@ -163,6 +192,9 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
               m_audio.voicegroup() == tabA->voicegroupLease().get(),
           "engine is not borrowing the first tab's data");
     check(m_uiTimer->interval() == 500, "paused UI cadence is not 500 ms");
+    // The canonical fresh-open ViewState for songA in this window, observed
+    // before anything touches the camera.
+    const SongView::ViewState canonicalA = tabA->view().viewState();
 
     // 2. Second song in a new tab becomes the active one.
     m_workspace->requestSongOpen(*nameB, /*newTab=*/true);
@@ -180,6 +212,8 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     if (!waitForTabReady(tabB, "second song"))
         return false;
     check(tabB->document().label() == songB, "second song did not finish loading");
+    // Same observation for songB, still untouched by any interaction.
+    const SongView::ViewState canonicalB = tabB->view().viewState();
     check(m_audio.timeline() == tabB->timeline().get(), "engine did not rebind to the new tab");
     check(m_workspace->songTabFor(*nameA) == tabA && !tabA->document().isDirty(),
           "first tab did not survive the second one opening");
@@ -613,16 +647,81 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     m_workspace->requestUndo();
     check(!tabB->document().isDirty() && docB->undoStack()->count() == 1,
           "reload precondition: clean doc with undo history");
-    m_workspace->requestSongOpen(*nameB);
+    // Row C ready reload: seed all nine transient ViewState fields with
+    // distinctive values on the ready tab. The reload must preserve them
+    // exactly while swapping the timeline and voicegroup binding beneath.
+    const auto reloadTimelineBefore = tabB->timeline();
+    SongView::ViewState seededView;
+    seededView.valid = true;
+    seededView.pxPerBeat = canonicalB.pxPerBeat * 2.0;
+    seededView.keyHeight = canonicalB.keyHeight + 9.0;
+    seededView.scrollPx = canonicalB.scrollPx + 48.0;
+    seededView.scrollY = canonicalB.scrollY + 40.0;
+    int seedTrack = -1;
+    if (reloadTimelineBefore) {
+        for (int track = 0; track < 16 && seedTrack < 0; ++track)
+            if (reloadTimelineBefore->tracks[track].used && track != canonicalB.selectedTrack)
+                seedTrack = track;
+    }
+    if (!check(seedTrack >= 0, "reload fixture has no second used engine track"))
+        return false;
+    seededView.selectedTrack = seedTrack;
+    // applyViewState clamps the cursor to the timeline length, which tracks
+    // the last note-on rather than the SMF end-of-track tick in base2, so
+    // derive a distinctive interior tick from the live timeline.
+    seededView.editCursorTick =
+        reloadTimelineBefore ? reloadTimelineBefore->lengthTicks / 2 : base2 / 2;
+    seededView.gridMinDenom = 16;
+    seededView.gridTriplet = true;
+    seededView.eventList = true;
+    tabB->view().applyViewState(seededView);
+    const SongView::ViewState reloadBaseline = tabB->view().viewState();
+    // Every seed is legal under the view's clamps, so the landed baseline is
+    // the seed verbatim — all nine fields, not a sample.
+    const bool seededViewLanded = check(viewStateEqual(reloadBaseline, seededView),
+                                        "the seeded reload state did not land on the ready tab");
+    const bool selectedTrackChanged =
+        check(reloadBaseline.selectedTrack != canonicalB.selectedTrack,
+              "the seeded reload state did not change selected track before reload");
+    if (!seededViewLanded || !selectedTrackChanged)
+        return false;
+    const SongName reloadName = tabB->name();
+    const QPointer<SongTab> reloadingTab = tabB;
+    m_workspace->requestSongOpen(reloadName);
     const auto reloadWait = checks::async_wait::waitUntil(
-        [this, tabB] { return m_workspace->songTabFor(tabB->name()) == tabB; },
-        [this, tabB, docB] {
-            return tabB->isReady() && docB->undoStack()->count() == 0 &&
+        [this, reloadName, reloadingTab] {
+            return reloadingTab && m_workspace->songTabFor(reloadName) == reloadingTab.data();
+        },
+        [this, reloadingTab] {
+            return reloadingTab && reloadingTab->isReady() &&
+                   reloadingTab->document().undoStack()->count() == 0 &&
                    m_workspace->openProjectEnabled();
         });
-    check(reloadWait == checks::async_wait::Result::Ready && m_workspace->openTabCount() == 1 &&
-              m_workspace->selectedSongTab() == tabB,
+    if (reloadWait != checks::async_wait::Result::Ready || !reloadingTab ||
+        m_workspace->songTabFor(reloadName) != reloadingTab.data()) {
+        check(false, "re-activating the open song did not reload it in place");
+        return false;
+    }
+    SongTab *const reloadedTab = reloadingTab.data();
+    check(m_workspace->openTabCount() == 1 && m_workspace->selectedSongTab() == reloadedTab,
           "re-activating the open song did not reload it in place");
+
+    // All nine seeded fields survived the ready reload, and the binding
+    // swapped underneath them; the engine and the view follow the tab's new
+    // timeline. The keyed bank cache intentionally hands back the same
+    // shared lease for the same song, so the lease pointer may repeat — what
+    // must hold is a live lease that the view borrows after readiness.
+    check(viewStateEqual(reloadedTab->view().viewState(), reloadBaseline),
+          "the ready reload did not preserve all nine captured view state fields");
+    const auto reloadedTimeline = reloadedTab->timeline();
+    check(reloadedTimeline && reloadedTimeline.get() != reloadTimelineBefore.get() &&
+              m_audio.timeline() == reloadedTimeline.get() &&
+              reloadedTab->view().timeline() == reloadedTimeline.get(),
+          "the ready reload did not swap the timeline binding for the engine and view");
+    const auto reloadedVoicegroupLease = reloadedTab->voicegroupLease();
+    check(reloadedVoicegroupLease &&
+              reloadedTab->view().voicegroup() == reloadedVoicegroupLease.get(),
+          "the ready reload did not bind the view to the reloaded voicegroup lease");
 
     // 9. Closing the final playing tab restores the no-tab UI cadence.
     m_audio.play();
@@ -642,11 +741,40 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
     tabB = openSong(*nameB, /*newTab=*/false, "post-close song reopen");
     if (!tabB)
         return false;
+    // Row C close/reopen: the fresh bind starts at every canonical default —
+    // none of the seeded nine fields leaked across the close boundary.
+    checkFreshDefaults(tabB->view(), canonicalB,
+                       "close/reopen did not restore the canonical fresh defaults");
 
-    // 10. The open-tab set is recorded for the relaunch's saved recipe.
+    // 10a. Row A fresh bind: seed the complete global editor projection, then
+    // open a brand-new tab. It adopts the seeded projection unchanged while
+    // its transient camera starts at the canonical fresh defaults; readiness
+    // gated on the terminal VoicegroupBound (isReady()).
+    EditorViewState seeded;
+    seeded.velocity = {true, 173};
+    seeded.automation = {true, 91};
+    seeded.voiceChanges = {true, 64};
+    seeded.activePage = EditorDrawerPage::VoiceChanges;
+    seeded.laneHeight = 88;
+    const EditorAutomationRowId seededLane{EditorAutomationRowKind::ControlChange, 0, 74};
+    seeded.laneHeights.emplace(seededLane, 57);
+    seeded.laneRanges.emplace(seededLane, 200);
+    seeded.emptyLanes.insert(seededLane);
+    check(seeded.hideLane(seededLane), "the seeded hidden lane was rejected");
+    m_workspace->setEditorViewState(seeded);
+    check(tabB->view().editorViewState() == seeded,
+          "the seeded global editor projection did not fan out to the open tab");
     tabA = openSong(*nameA, /*newTab=*/true, "persistence song reopen");
     if (!tabA)
         return false;
+    check(tabA->view().editorViewState() == seeded,
+          "the fresh bind did not adopt the seeded global editor projection unchanged");
+    checkFreshDefaults(tabA->view(), canonicalA,
+                       "the fresh bind did not start at the canonical fresh defaults");
+    check(tabA->timeline() && tabA->voicegroupLease() &&
+              m_audio.timeline() == tabA->timeline().get() &&
+              m_audio.voicegroup() == tabA->voicegroupLease().get(),
+          "the fresh bind did not land its timeline and voicegroup binding for the engine");
     {
         QSettings settings;
         const QStringList open = settings.value(QStringLiteral("lastOpenSongs")).toStringList();

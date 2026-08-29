@@ -199,54 +199,65 @@ void SongView::addEmptyLane(int track, uint8_t cc)
     if (track < 0 || track > 15)
         return;
     const EditorAutomationRowId lane{EditorAutomationRowKind::ControlChange, uint8_t(track), cc};
-    if (m_editorViewState.emptyLanes.insert(lane).second)
-        applyEditorViewState(m_editorViewState);
+    EditorViewState next = m_editorViewState;
+    if (!next.emptyLanes.insert(lane).second)
+        return;
+    setEditorViewState(next);
 }
 void SongView::removeEmptyLane(int track, uint8_t cc)
 {
+    if (track < 0 || track > 15)
+        return;
     const EditorAutomationRowId lane{EditorAutomationRowKind::ControlChange, uint8_t(track), cc};
-    if (m_editorViewState.emptyLanes.erase(lane) != 0)
-        applyEditorViewState(m_editorViewState);
+    EditorViewState next = m_editorViewState;
+    if (next.emptyLanes.erase(lane) == 0)
+        return;
+    setEditorViewState(next);
 }
 void SongView::setLaneDisplayRange(int track, uint8_t cc, int maxValue)
 {
     if (track < 0 || track > 15)
         return;
     const EditorAutomationRowId lane{EditorAutomationRowKind::ControlChange, uint8_t(track), cc};
-    if (maxValue > 0)
-        m_editorViewState.laneRanges[lane] = uint8_t(std::clamp(maxValue, 0, 127));
-    else
-        m_editorViewState.laneRanges.erase(lane);
-    applyEditorViewState(m_editorViewState);
+    EditorViewState next = m_editorViewState;
+    if (maxValue > 0) {
+        const uint8_t range = uint8_t(std::clamp(maxValue, 0, 127));
+        const auto it = next.laneRanges.find(lane);
+        const bool unchanged = it != next.laneRanges.end() && it->second == range;
+        next.laneRanges[lane] = range;
+        if (unchanged)
+            return;
+    } else if (next.laneRanges.erase(lane) == 0) {
+        return;
+    }
+    setEditorViewState(next);
 }
 EditorViewState SongView::editorViewState() const
 {
     return m_editorViewState;
 }
+void SongView::applyEditorViewStateToWidgets(bool drawerChanged)
+{
+    if (drawerChanged && m_editorDrawer)
+        m_editorDrawer->setViewState(m_editorViewState);
+    refreshAllDrawerPages();
+    refreshTimelineViews();
+}
 void SongView::setEditorViewState(const EditorViewState &state)
 {
+    if (m_editorViewState == state)
+        return;
     const bool drawerChanged = m_editorViewState.drawerState() != state.drawerState();
     m_editorViewState = state;
-    if (drawerChanged)
-        emit editorDrawerStateChanged(m_editorViewState.drawerState());
-}
-void SongView::applyEditorDrawerState(const EditorDrawerState &state)
-{
-    if (m_editorViewState.drawerState() == state)
-        return;
-    EditorViewState combined = m_editorViewState;
-    combined.setDrawerState(state);
-    applyEditorViewState(combined);
+    applyEditorViewStateToWidgets(drawerChanged);
+    emit editorViewStateChanged(m_editorViewState);
 }
 void SongView::applyEditorViewState(const EditorViewState &state)
 {
+    if (m_editorViewState == state)
+        return;
     const bool drawerChanged = m_editorViewState.drawerState() != state.drawerState();
     cancelActiveInteractions();
     m_editorViewState = state;
-    if (m_editorDrawer)
-        m_editorDrawer->setViewState(m_editorViewState);
-    notifyDrawerSongChanged();
-    refreshTimelineViews();
-    if (drawerChanged)
-        emit editorDrawerStateChanged(m_editorViewState.drawerState());
+    applyEditorViewStateToWidgets(drawerChanged);
 }

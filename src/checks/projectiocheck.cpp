@@ -280,12 +280,14 @@ void checkTransportContracts(const QString &projectRoot, int &failures)
     projectIo.submit(
         ProjectCommand{RegistrationPlanInput{playableSong->label, constant, playableSong->player}});
     projectIo.submit(ProjectCommand{DeletionPlanInput{*songName, constant}});
+    projectIo.submit(ProjectCommand{RefreshCatalogInput{}});
     check(int(results.size()) == orderedBase,
           "queued commands ran inline instead of behind the active command");
-    waitFor(results, orderedBase + 3, "queued FIFO commands timed out");
+    waitFor(results, orderedBase + 4, "queued FIFO commands timed out");
     check(std::holds_alternative<SamplesProbed>(results[orderedBase]) &&
               std::holds_alternative<RegistrationPlanResult>(results[orderedBase + 1]) &&
-              std::holds_alternative<DeletionPlanResult>(results[orderedBase + 2]),
+              std::holds_alternative<DeletionPlanResult>(results[orderedBase + 2]) &&
+              std::holds_alternative<VoicegroupCatalog>(results[orderedBase + 3]),
           "the FIFO did not deliver queued commands in submission order");
     if (const auto *registration = std::get_if<RegistrationPlanResult>(&results[orderedBase + 1])) {
         check(registration->song.value() == playableSong->label &&
@@ -303,6 +305,8 @@ void checkTransportContracts(const QString &projectRoot, int &failures)
                   deletion->deletableVoicegroupName.isEmpty(),
               "deletion plan did not return detached sensible values");
     }
+    if (const auto *catalog = std::get_if<VoicegroupCatalog>(&results[orderedBase + 3]))
+        check(!catalog->groupArgs.isEmpty(), "the catalog probe returned no voicegroup arguments");
 
     // ---- failed open leaves the worker project untouched ------------------------
 
@@ -319,18 +323,17 @@ void checkTransportContracts(const QString &projectRoot, int &failures)
           "a failed open replaced the accepted worker project");
 
     // ---- ordered song-load chains -----------------------------------------------
-
-    // The staged values must arrive in the fixed order MIDI, sidecar, bank
-    // view, bound update, all keyed by the same song.
+    // The staged values must arrive in the fixed order MIDI, then the keyed
+    // bank view, then the terminal bound update — there is no other stage —
+    // all keyed by the same song.
     const auto expectChain = [&](int base, const SongName &song, const char *what) {
         const auto *midi = std::get_if<MidiStage>(&results[base]);
-        const auto *sidecar = std::get_if<SidecarStage>(&results[base + 1]);
-        const auto *view = std::get_if<LoadedBankView>(&results[base + 2]);
-        const auto *bound = std::get_if<VoicegroupBound>(&results[base + 3]);
-        check(midi && sidecar && view && bound, what);
-        if (!(midi && sidecar && view && bound))
+        const auto *view = std::get_if<LoadedBankView>(&results[base + 1]);
+        const auto *bound = std::get_if<VoicegroupBound>(&results[base + 2]);
+        check(midi && view && bound, what);
+        if (!(midi && view && bound))
             return;
-        check(midi->song == song && sidecar->song == song && bound->song == song,
+        check(midi->song == song && bound->song == song,
               "staged song-load values lost their song key");
         check(!midi->smf.tracks.empty() && midi->info.label == song.value() &&
                   midi->trackBudget >= 1,
@@ -341,20 +344,20 @@ void checkTransportContracts(const QString &projectRoot, int &failures)
 
     const auto openBase = int(results.size());
     projectIo.submit(ProjectCommand{OpenSongInput{*songName}});
-    waitFor(results, openBase + 4, "song open timed out");
+    waitFor(results, openBase + 3, "song open timed out");
     expectChain(openBase, *songName, "OpenSongInput did not deliver the ordered load stages");
 
     const auto reloadBase = int(results.size());
     projectIo.submit(ProjectCommand{ReloadSongInput{*songName}});
-    waitFor(results, reloadBase + 4, "song reload timed out");
+    waitFor(results, reloadBase + 3, "song reload timed out");
     expectChain(reloadBase, *songName, "ReloadSongInput did not deliver the ordered load stages");
 
     const auto stageTagBase = int(results.size());
     projectIo.submit(ProjectCommand{LoadSongCommand{*songName}});
-    waitFor(results, stageTagBase + 4, "private song-load stage tag timed out");
+    waitFor(results, stageTagBase + 3, "private song-load stage tag timed out");
     expectChain(stageTagBase, *songName, "LoadSongCommand did not deliver the ordered load stages");
 
-    const auto *firstBound = std::get_if<VoicegroupBound>(&results[openBase + 3]);
+    const auto *firstBound = std::get_if<VoicegroupBound>(&results[openBase + 2]);
     if (!firstBound) {
         check(false, "the first song load did not bind a voicegroup");
         return;
@@ -370,17 +373,6 @@ void checkTransportContracts(const QString &projectRoot, int &failures)
           "LoadVoicegroupCommand did not stage the view before the bound update");
     if (const auto *bound = std::get_if<VoicegroupBound>(&results[vgBase + 1]))
         check(bound->id == bankId, "the voicegroup load returned a different identity");
-
-    // ---- sidecar read and standalone cosmetic write -------------------------------
-
-    projectIo.submit(ProjectCommand{ReadSidecarCommand{*songName}});
-    waitFor(results, int(results.size()) + 1, "sidecar read timed out");
-    if (const auto *sidecar = std::get_if<SidecarStage>(&results.back())) {
-        check(sidecar->song == *songName && !sidecar->loaded,
-              "a missing sidecar did not read as a successful empty stage");
-    } else {
-        check(false, "ReadSidecarCommand did not deliver a sidecar stage");
-    }
 
     projectIo.submit(ProjectCommand{PreviewPlanInput{bankId}});
     waitFor(results, int(results.size()) + 1, "preview plan timed out");
@@ -425,8 +417,10 @@ void checkTransportContracts(const QString &projectRoot, int &failures)
     check(QFile::rename(sourcePath, sourceAside), "renamed the voicegroup source aside");
     const auto missingVoicegroupBase = int(results.size());
     projectIo.submit(ProjectCommand{OpenSongInput{*songName}});
-    waitFor(results, missingVoicegroupBase + 3, "missing-voicegroup load timed out");
-    if (const auto *failure = std::get_if<SongCommandFailure>(&results[missingVoicegroupBase + 2]))
+    waitFor(results, missingVoicegroupBase + 2, "missing-voicegroup load timed out");
+    check(std::holds_alternative<MidiStage>(results[missingVoicegroupBase]),
+          "the failed bank load did not keep its staged MIDI stage");
+    if (const auto *failure = std::get_if<SongCommandFailure>(&results[missingVoicegroupBase + 1]))
         check(failure->song == *songName && failure->stage == SongStage::Voicegroup,
               "a failed bank load did not fail keyed at the exact voicegroup stage");
     else
@@ -439,8 +433,7 @@ void checkTransportContracts(const QString &projectRoot, int &failures)
         QDir(QDir::temp()).filePath(QStringLiteral("porydaw_iocheck_missing/x.mid"));
     failingSave.label = playableSong->label;
     failingSave.cfg = playableSong->cfg;
-    projectIo.submit(ProjectCommand{
-        SaveSongInput{*songName, failingSave, ViewSidecar::Snapshot{}, std::nullopt}});
+    projectIo.submit(ProjectCommand{SaveSongInput{*songName, failingSave, std::nullopt}});
     waitFor(results, int(results.size()) + 1, "failing save timed out");
     if (const auto *failure = std::get_if<SongCommandFailure>(&results.back()))
         check(failure->song == *songName && failure->stage == SongStage::Save,
@@ -448,56 +441,36 @@ void checkTransportContracts(const QString &projectRoot, int &failures)
     else
         check(false, "a failing save did not fail with SongCommandFailure");
 
-    const auto sidecarPath = ViewSidecar::pathFor(snapshot->root(), playableSong->label);
+    // ---- seeded legacy view/editor and registration bytes survive save/reload --------
+
+    // The stale per-song JSON (old view/editor roots plus pending
+    // registration metadata) is project data this transport never touches:
+    // seed distinctive bytes and compare them after every save and reload.
+    const auto songJsonPath =
+        QDir(snapshot->root())
+            .filePath(QStringLiteral(".porydaw/%1.json").arg(playableSong->label));
     check(QDir(snapshot->root()).mkpath(QStringLiteral(".porydaw")),
-          "created sidecar directory for the ProjectIo check");
-    QJsonObject seededRoot;
-    seededRoot.insert(QStringLiteral("registration"),
-                      QJsonObject{{QStringLiteral("pending"), true}});
+          "created .porydaw directory for the ProjectIo check");
+    QJsonObject legacyRoot;
+    legacyRoot.insert(QStringLiteral("view"), QJsonObject{{QStringLiteral("pxPerBeat"), 48.0},
+                                                          {QStringLiteral("selectedTrack"), 2}});
+    legacyRoot.insert(QStringLiteral("editor"), QJsonObject{{QStringLiteral("laneHeight"), 96}});
+    legacyRoot.insert(QStringLiteral("registration"),
+                      QJsonObject{{QStringLiteral("constant"), constant},
+                                  {QStringLiteral("player"), playableSong->player}});
+    const auto legacyBytes = QJsonDocument(legacyRoot).toJson(QJsonDocument::Compact);
     {
-        auto seedFile = QFile{sidecarPath};
+        auto seedFile = QFile{songJsonPath};
         const auto seedOpened = seedFile.open(QIODevice::WriteOnly | QIODevice::Truncate);
-        check(seedOpened, "seeded sidecar file for unrelated-root preservation");
+        check(seedOpened, "seeded the legacy per-song JSON fixture");
         if (seedOpened)
-            check(seedFile.write(QJsonDocument(seededRoot).toJson()) >= 0,
-                  "wrote sidecar preservation fixture");
+            check(seedFile.write(legacyBytes) == legacyBytes.size(),
+                  "wrote the legacy per-song JSON fixture");
     }
-    auto sidecarSnapshot = ViewSidecar::Snapshot{};
-    sidecarSnapshot.view.valid = true;
-    sidecarSnapshot.view.pxPerBeat = 48.0;
-    sidecarSnapshot.view.keyHeight = 12.0;
-    sidecarSnapshot.view.scrollPx = 21.5;
-    sidecarSnapshot.view.scrollY = 7.25;
-    sidecarSnapshot.view.selectedTrack = 2;
-    sidecarSnapshot.view.editCursorTick = 96;
-    sidecarSnapshot.view.gridMinDenom = 16;
-    sidecarSnapshot.view.gridTriplet = true;
-    sidecarSnapshot.view.eventList = true;
-    sidecarSnapshot.editor.laneHeight = 96;
-    projectIo.submit(ProjectCommand{SaveSidecarInput{*songName, sidecarSnapshot}});
-    waitFor(results, int(results.size()) + 1, "standalone sidecar write timed out");
-    if (const auto *write = std::get_if<SidecarWriteResult>(&results.back())) {
-        check(write->success && !write->error.has_value(),
-              "the standalone sidecar write did not succeed silently");
-    } else {
-        check(false, "SaveSidecarInput did not deliver a private SidecarWriteResult");
-    }
-    auto storedRoot = QJsonObject{};
-    {
-        auto storedFile = QFile{sidecarPath};
-        if (storedFile.open(QIODevice::ReadOnly))
-            storedRoot = QJsonDocument::fromJson(storedFile.readAll()).object();
-    }
-    check(storedRoot.value(QStringLiteral("registration"))
-              .toObject()
-              .value(QStringLiteral("pending"))
-              .toBool(),
-          "the sidecar write discarded the unrelated JSON root key");
-    auto storedSidecar = ViewSidecar::Snapshot{};
-    check(ViewSidecar::load(snapshot->root(), playableSong->label, &storedSidecar) &&
-              storedSidecar.view.pxPerBeat == sidecarSnapshot.view.pxPerBeat &&
-              storedSidecar.view.selectedTrack == sidecarSnapshot.view.selectedTrack,
-          "the sidecar write did not round-trip the detached view snapshot");
+    const auto readSongJsonBytes = [&] {
+        auto file = QFile{songJsonPath};
+        return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray{};
+    };
 
     // ---- typed voicegroup edits -----------------------------------------------------
 
@@ -553,22 +526,25 @@ void checkTransportContracts(const QString &projectRoot, int &failures)
     saveSnapshot.cfg = playableSong->cfg;
     saveSnapshot.flagsNeeded = true;
 
-    projectIo.submit(
-        ProjectCommand{SaveSongInput{*songName, saveSnapshot, sidecarSnapshot, std::nullopt}});
+    const auto legacyBytesBeforeSave = readSongJsonBytes();
+    projectIo.submit(ProjectCommand{SaveSongInput{*songName, saveSnapshot, std::nullopt}});
     waitFor(results, int(results.size()) + 1, "song save timed out");
     if (const auto *saved = std::get_if<SongSaved>(&results.back())) {
         check(saved->song == *songName && saved->savedSnapshot.label == playableSong->label &&
-                  saved->flagsWritten && saved->sidecarSaved && !saved->sidecarError.has_value(),
-              "the semantic save did not land as one terminal SongSaved");
+                  saved->flagsWritten,
+              "the semantic save did not land as one terminal bare SongSaved");
     } else {
         check(false, "SaveSongInput without a voicegroup recipe did not deliver SongSaved");
     }
+    check(readSongJsonBytes() == legacyBytesBeforeSave,
+          "the semantic save rewrote the seeded legacy per-song JSON");
 
     // The voicegroup recipe delivers its independent bank view first, while
-    // the save command is still active, then exactly one terminal outcome.
+    // the save command is still active, then exactly one terminal bare
+    // SongSaved — there is no cosmetic tail operation.
     const auto saveBase = int(results.size());
-    projectIo.submit(ProjectCommand{
-        SaveSongInput{*songName, saveSnapshot, sidecarSnapshot, SaveVoicegroupInput{bankId, {}}}});
+    projectIo.submit(
+        ProjectCommand{SaveSongInput{*songName, saveSnapshot, SaveVoicegroupInput{bankId, {}}}});
     waitFor(results, saveBase + 2, "song save with voicegroup timed out");
     if (const auto *view = std::get_if<LoadedBankView>(&results[saveBase])) {
         check(view->id == bankId, "the semantic save staged a bank view for another identity");
@@ -576,29 +552,32 @@ void checkTransportContracts(const QString &projectRoot, int &failures)
         check(false, "the semantic save did not deliver its early LoadedBankView");
     }
     if (const auto *saved = std::get_if<SongSaved>(&results[saveBase + 1])) {
-        check(saved->song == *songName && saved->flagsWritten && saved->sidecarSaved,
-              "the semantic save with a voicegroup recipe did not land as one terminal "
+        check(saved->song == *songName && saved->flagsWritten,
+              "the semantic save with a voicegroup recipe did not land as one terminal bare "
               "SongSaved");
     } else {
-        check(false, "SaveSongInput with a voicegroup recipe did not deliver one terminal "
+        check(false, "SaveSongInput with a voicegroup recipe did not deliver one terminal bare "
                      "SongSaved");
     }
+    check(readSongJsonBytes() == legacyBytesBeforeSave,
+          "the voicegroup save rewrote the seeded legacy per-song JSON");
 
-    // ---- silent completions and catalog -------------------------------------------------
+    // The reload re-reads the saved song through the same ordered stages and
+    // still leaves the seeded legacy bytes untouched.
+    const auto postSaveReloadBase = int(results.size());
+    projectIo.submit(ProjectCommand{ReloadSongInput{*songName}});
+    waitFor(results, postSaveReloadBase + 3, "post-save song reload timed out");
+    expectChain(postSaveReloadBase, *songName,
+                "the post-save reload did not deliver the ordered load stages");
+    check(readSongJsonBytes() == legacyBytesBeforeSave,
+          "the song reload rewrote the seeded legacy per-song JSON");
+
+    // ---- silent completion --------------------------------------------------------------
 
     projectIo.submit(ProjectCommand{CleanupPreviewInput{}});
     waitFor(results, int(results.size()) + 1, "preview cleanup timed out");
     check(std::holds_alternative<PreviewCleanupCompleted>(results.back()),
           "CleanupPreviewInput did not complete with the private cleanup result");
-
-    projectIo.submit(ProjectCommand{RefreshCatalogInput{}});
-    waitFor(results, int(results.size()) + 1, "catalog refresh timed out");
-    if (const auto *catalog = std::get_if<VoicegroupCatalog>(&results.back())) {
-        check(!catalog->groupArgs.isEmpty(),
-              "the catalog refresh returned no voicegroup arguments");
-    } else {
-        check(false, "RefreshCatalogInput did not deliver a catalog");
-    }
 
     // ---- hard worker errors are private and unkeyed --------------------------------------
 

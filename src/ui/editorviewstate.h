@@ -83,3 +83,11 @@ struct EditorViewState {
   private:
     std::vector<EditorAutomationRowId> m_hiddenLanes;
 };
+
+// The application-global QSettings codec for the complete editor view state.
+// Declared here without pulling <QSettings> into every UI translation unit;
+// the implementation owns every key literal.
+class QSettings;
+
+EditorViewState loadEditorViewState(const QSettings &settings);
+void saveEditorViewState(QSettings &settings, const EditorViewState &state);

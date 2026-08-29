@@ -50,7 +50,7 @@ void SongView::toggleDrawerSection(EditorDrawerPage page)
     DrawerSectionState &section = sectionFor(state, page);
     section.visible = !section.visible;
     state.activePage = page;
-    applyEditorViewState(state);
+    setEditorViewState(state);
 }
 
 void SongView::setDrawerSectionVisible(EditorDrawerPage page, bool visible)
@@ -60,7 +60,7 @@ void SongView::setDrawerSectionVisible(EditorDrawerPage page, bool visible)
     if (section.visible == visible)
         return;
     section.visible = visible;
-    applyEditorViewState(state);
+    setEditorViewState(state);
 }
 
 bool SongView::drawerSectionVisible(EditorDrawerPage page) const
@@ -77,7 +77,7 @@ void SongView::setDrawerSectionHeight(EditorDrawerPage page, std::optional<int> 
     if (section.height == height)
         return;
     section.height = height;
-    applyEditorViewState(state);
+    setEditorViewState(state);
 }
 
 int SongView::drawerSectionHeight(EditorDrawerPage page) const
@@ -92,7 +92,7 @@ void SongView::setDrawerActivePage(EditorDrawerPage page)
         return;
     EditorViewState state = m_editorViewState;
     state.activePage = page;
-    applyEditorViewState(state);
+    setEditorViewState(state);
 }
 
 EditorDrawerPage SongView::drawerActivePage() const

@@ -8,6 +8,17 @@ worker scheduling, `DecompProject` storage, or widget mechanics. The plan in
 `projectio-dress-down-plan.md` cites these declarations; it does not restate
 them.
 
+The per-song view/editor sidecar transport once declared here is superseded by
+`docs/view-sidecar-removal-plan.md`: there is no `SidecarStage`,
+`SaveSidecarInput`, `SidecarWriteResult`, or `SongStage::Sidecar`, and no
+sidecar field on `SongSaved`/`SaveSongInput`; a successful load publishes
+`MidiStage`, then any keyed `LoadedBankView`, then terminal
+`VoicegroupBound`; a semantic save ends after MIDI/flags with bare
+`SongSaved`/`SongFailed`; missing or corrupt legacy view/editor JSON is not a
+load stage and is never rewritten by view code; and no independent
+close/switch/quit cosmetic view operation exists. The declarations below are
+reconciled to that state.
+
 ### Stable identities
 
 ```cpp
@@ -566,11 +577,6 @@ struct MidiStage {
     SmfFile smf;
     int trackBudget = 16;
 };
-struct SidecarStage {
-    SongName song;
-    bool loaded = false;
-    ViewSidecar::Snapshot snapshot;
-};
 struct VoicegroupBound {
     SongName song;
     VoicegroupId id;
@@ -579,17 +585,15 @@ struct SongSaved {
     SongName song;
     SongSaveSnapshot savedSnapshot;
     bool flagsWritten = false;
-    bool sidecarSaved = false;
-    std::optional<QString> sidecarError;
 };
 
-enum class SongStage { Midi, Voicegroup, Sidecar, Reconcile, Save };
+enum class SongStage { Midi, Voicegroup, Reconcile, Save };
 struct SongFailed {
     SongStage stage;
     QString message;
 };
 
-using SongPayload = std::variant<MidiStage, SidecarStage, VoicegroupBound,
+using SongPayload = std::variant<MidiStage, VoicegroupBound,
                                  SongSaved, SongFailed>;
 
 struct SongUpdate {
@@ -603,14 +607,14 @@ Each worker stage wrapped as a `SongUpdate` carries its `SongName`;
 a secondary collection. `SongUpdate::song` remains the public routing key.
 
 `SongPayload` contains successful load stages and one `SongFailed` type. A
-fatal load or save error publishes that type with its stage. A missing sidecar
-is successful `SidecarStage{ loaded: false }`, not a failure. A corrupt sidecar
-entry is likewise not a failure: the worker discards just the corrupt object
-and rewrites that song's entry fresh, and the stage reports `loaded: false`.
+fatal load or save error publishes that type with its stage. Per
+`docs/view-sidecar-removal-plan.md`, legacy per-song view/editor JSON is not a
+load stage: missing or corrupt legacy view/editor data is ignored by the view
+path and never rewritten by it, and no sidecar stage or rewrite exists.
 Project-open failure remains only in the optional `ProjectState.error`.
 
-For a successful song load, `ProjectWorkspace` publishes `MidiStage`, then
-`SidecarStage`, then terminal `VoicegroupBound`; a failure publishes one
+For a successful song load, `ProjectWorkspace` publishes `MidiStage`, any
+keyed `LoadedBankView`, then terminal `VoicegroupBound`; a failure publishes one
 terminal `SongFailed` instead. Semantic-save behavior is specified by
 `SaveSongInput`, `SongSaved`, and `SongFailed` below. Missing or unplayable
 saved names use `SongFailed{ SongStage::Reconcile, ... }`; `WorkspaceUi` closes
@@ -628,12 +632,7 @@ struct OpenProjectInput { QString root; };
 struct SaveSongInput {
     SongName song;
     SongSaveSnapshot snapshot;
-    ViewSidecar::Snapshot sidecarSnapshot;
     std::optional<SaveVoicegroupInput> voicegroup;
-};
-struct SaveSidecarInput {
-    SongName song;
-    ViewSidecar::Snapshot snapshot;
 };
 struct RefreshProjectInput {};
 struct CleanupPreviewInput {};
@@ -678,7 +677,7 @@ struct CommitSampleInput {
 
 using ProjectOperation = std::variant<
     RefreshProjectInput, OpenSongInput, ReloadSongInput, SaveSongInput,
-    SaveSidecarInput, VoicegroupEditInput, CreateSongInput,
+    VoicegroupEditInput, CreateSongInput,
     CreateVoicegroupInput, RegistrationPlanInput, RegisterSongInput,
     DeletionPlanInput, DeleteSongInput, PreviewPlanInput, PreviewInput,
     CleanupPreviewInput, RefreshCatalogInput, LoadSampleSetInput,
@@ -714,33 +713,30 @@ It contains a name only while that name's semantic load remains in flight;
 terminal `VoicegroupBound` or `SongFailed` erases it, and accepted project
 replacement clears it. It is not project state or a tab registry.
 
-A standalone `SaveSidecarInput` in `ProjectOperation` remains a fire-and-forget
-cosmetic persistence operation for close or switch; it is not a
-caller-managed song-save stage. Its private `SidecarWriteResult` records either
-write success or an error, is consumed without a public event, and merely
-advances the FIFO.
+Per `docs/view-sidecar-removal-plan.md`, no independent close, switch, or quit
+cosmetic view operation exists, and `ProjectOperation` contains no
+`SaveSidecarInput`: those boundaries perform zero view/editor project I/O.
 
 `SaveSongInput` is one copied recipe: the `SongName`, detached
-`SongSaveSnapshot`, `ViewSidecar::Snapshot`, and optional `SaveVoicegroupInput`
+`SongSaveSnapshot`, and optional `SaveVoicegroupInput`
 cross the seam. `SaveVoicegroupInput` contains only the `VoicegroupId` and
 minted synth definitions; the worker derives source bytes and source path from
 the canonical `LoadedBankEntry` and its `VoicegroupSource`.
 
 The worker performs optional voicegroup source and synth writes plus the
 required bank refresh first when a voicegroup recipe is present, then writes
-MIDI and flags, and finally performs the cosmetic sidecar write. As soon as
+MIDI and flags; the save ends there. As soon as
 the optional voicegroup save and bank refresh land, `ProjectIo` delivers the
 resulting `LoadedBankView` while the semantic command remains active, and
 `ProjectWorkspace` publishes it as a normal keyed `ProjectEvent` before later
 MIDI or flags work. A fatal voicegroup, refresh, MIDI, or flags failure stops
 later stages while earlier writes remain; there is no transaction, rollback,
-retry, or external-file race guard. The final cosmetic sidecar write is
-nonfatal; its status and error are carried by `SongSaved`.
+retry, or external-file race guard.
 
 The semantic save publishes exactly one terminal public song outcome:
 `SongSaved` on completion or `SongFailed` for a fatal voicegroup, refresh,
-MIDI, or flags failure. `SongSaved` carries the copied snapshot,
-`flagsWritten`, sidecar success, and an optional sidecar error, but no bank
+MIDI, or flags failure. The bare `SongSaved` carries the copied snapshot and
+`flagsWritten`, but no bank
 field. If a later fatal stage publishes `SongFailed`, `WorkspaceUi` has
 already applied the independent bank event and does not leave its cache or
 lease stale. This event publication is not filesystem-stage correlation in
@@ -755,18 +751,12 @@ struct LoadVoicegroupCommand {
     SongName song;
     VoicegroupId voicegroup;
 };
-struct ReadSidecarCommand { SongName song; };
-
-struct SidecarWriteResult {
-    bool success = false;
-    std::optional<QString> error; // present iff success is false
-}; // private SaveSidecarInput completion
 struct PreviewCleanupCompleted {}; // private CleanupPreviewInput success
 
 using ProjectCommand = std::variant<
     OpenProjectInput, RefreshProjectInput, OpenSongInput, ReloadSongInput,
-    LoadSongCommand, LoadVoicegroupCommand, ReadSidecarCommand,
-    SaveSongInput, SaveSidecarInput, VoicegroupEditInput,
+    LoadSongCommand, LoadVoicegroupCommand,
+    SaveSongInput, VoicegroupEditInput,
     CreateSongInput, CreateVoicegroupInput, RegistrationPlanInput,
     RegisterSongInput, DeletionPlanInput, DeleteSongInput, PreviewPlanInput,
     PreviewInput, CleanupPreviewInput, RefreshCatalogInput,
@@ -783,7 +773,7 @@ struct CommandFailure {
 
 using ProjectResult = std::variant<
     ProjectSnapshot, MidiStage, LoadedBankView, VoicegroupBound,
-    SidecarStage, VoicegroupEditResult, SidecarWriteResult,
+    VoicegroupEditResult,
     PreviewCleanupCompleted, SongSaved,
     RegistrationPlanResult, DeletionPlanResult, PreviewPlan, PreviewReady,
     SampleSetReady, SamplesProbed, SampleRead, SampleCommitted, SongCreated,
@@ -792,7 +782,7 @@ using ProjectResult = std::variant<
 
 The private variant holds public input types directly whenever no worker
 enrichment is added. The only private command alternatives beyond those inputs
-are the listed load/read stage tags; they do not cross the
+are the listed load stage tags; they do not cross the
 `ProjectWorkspace` seam and carry no cached catalog rows.
 
 `ProjectResult` is total over `ProjectCommand`: every command alternative has a
@@ -814,8 +804,7 @@ is the helper's `std::nullopt` plus error, which `ProjectIo` turns into
 `CommandFailure`; `ProjectWorkspace` maps it to `VoicegroupMutationFailed`.
 The applied value maps to the bank view and, when needed, keyed
 `VoicegroupEditApplied`; the confirmed conflict maps to keyed
-`VoicegroupEditConflict`. `SidecarWriteResult` completes standalone cosmetic
-sidecar writes without becoming a public event. Successful
+`VoicegroupEditConflict`. Successful
 `CleanupPreviewInput` delivers `PreviewCleanupCompleted`; `ProjectWorkspace`
 consumes it without a public event and advances the FIFO, while its hard error
 is `CommandFailure`.
@@ -830,14 +819,12 @@ onto `ProjectState.error` for project open. Neither private failure crosses as
 a public unkeyed event.
 
 A keyless operation carries no `SongName`, `VoicegroupId`, sample `name`, or
-catalog-dialog destination: `OpenProjectInput`, `RefreshProjectInput`,
-`CleanupPreviewInput`, and `SaveSidecarInput`. For these, `CommandFailure`
+catalog-dialog destination: `OpenProjectInput`, `RefreshProjectInput`, and
+`CleanupPreviewInput`. For these, `CommandFailure`
 consumption is fixed per operation rather than by a key. `OpenProjectInput`
 failure maps to the present `ProjectState.error` of a `Failed` open.
 `RefreshProjectInput` and `CleanupPreviewInput` failures are consumed without
-a public event and advance the FIFO. `SaveSidecarInput` failure is recorded
-in its private `SidecarWriteResult.error` and likewise consumed without a
-public event.
+a public event and advance the FIFO.
 
 `ProjectIo` has one private `submit(ProjectCommand)` seam, one active FIFO
 command, and one private result callback. Semantic-save delivery follows the

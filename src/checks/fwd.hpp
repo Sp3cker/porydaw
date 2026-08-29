@@ -58,7 +58,6 @@ int runAutomationPopupMenuCheck(const QString &scratchProject, const QString &so
                                 const QString &screenshotPath = QString());
 int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel,
                          const QString &screenshotPath = QString());
-int runViewSidecarCheck(const QString &scratchProject, const QString &songLabel);
 int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel);
 int runMainWindowRoutingCheck(const QString &scratchProject, const QString &songA,
                               const QString &songB);

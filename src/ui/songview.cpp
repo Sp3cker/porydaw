@@ -210,9 +210,8 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
     m_timeline = timeline;
     m_voicegroup = voicegroup;
     m_model = timeline ? buildSongViewModel(*timeline) : SongViewModel();
-    const EditorDrawerState drawerState = m_editorViewState.drawerState();
-    m_editorViewState = {};
-    m_editorViewState.setDrawerState(drawerState);
+    // Song attachment preserves the complete global editor projection and
+    // rebuilds all drawer/page caches from that already-applied value.
     m_muteMask = 0;
     m_soloMask = 0;
     emit muteMaskChanged(0);
@@ -222,7 +221,8 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
     m_playing = false;
     // Fresh songs open at the camera's home position, pre-roll pad showing.
     m_events->setPlayheadTick(-1.0, false); // another song's ticks are stale
-    // Song attachment resets lane cosmetics and preserves drawer chrome.
+    // Song attachment resets transient grid controls; editor cosmetics remain
+    // global and are rebuilt above.
     m_gridFeel = GridFeel::Straight;
     m_gridMinDenom = 0;
     m_ruler->syncGridControls();
@@ -378,7 +378,8 @@ void SongView::setEventListVisible(bool visible)
         m_events->refresh();
         m_events->syncTrackSelection();
     }
-    focusContent();
+    if (isEnabled())
+        focusContent();
     emit eventListVisibilityChanged(visible);
 }
 

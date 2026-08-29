@@ -321,8 +321,6 @@ qt_add_library(porydaw_app STATIC
     src/ui/eventtabletypes.cpp
     src/ui/eventtabletypes.h
     src/ui/eventlistviewactions.cpp
-    src/ui/viewsidecar.cpp
-    src/ui/viewsidecar.h
     src/core/noteid.h
     src/core/velocitymodel.cpp
     src/core/velocitymodel.h
@@ -535,7 +533,6 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/keymapcheck.cpp
         src/checks/hostcheck.cpp
         src/checks/mainwindowroutingcheck.cpp
-        src/checks/sidecarcheck.cpp
         src/checks/noteidcheck.cpp
         src/checks/renderingplayheadcheck.cpp
         src/checks/rollcheckautomation.cpp

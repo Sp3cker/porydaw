@@ -13,7 +13,6 @@
 #include "project/projectworkspace.h"
 #include "project/songregistry.h"
 #include "project/voicegroupsource.h"
-#include "ui/viewsidecar.h"
 
 // --projectworkspacecheck <projectRoot>: drives the public ProjectWorkspace
 // seam end to end against the fixture project with redirected QSettings.
@@ -331,8 +330,10 @@ int checkWorkspaceFlows(const QString &projectRoot, int &failures)
     // ---- silent completions advance the FIFO without a publication -------------------
 
     mark = startupLog.size();
+    // Two keyless silent completions queue one behind the other and advance
+    // the FIFO to the probe without any public publication.
     restorer.submit(ProjectOperation{CleanupPreviewInput{}});
-    restorer.submit(ProjectOperation{SaveSidecarInput{*route101, ViewSidecar::Snapshot{}}});
+    restorer.submit(ProjectOperation{CleanupPreviewInput{}});
     restorer.submit(ProjectOperation{ProbeSamplesInput{}});
     waitFor([&] { return startupLog.size() > mark; },
             "the silent completions did not advance the FIFO to the next probe");
@@ -347,19 +348,15 @@ int checkWorkspaceFlows(const QString &projectRoot, int &failures)
 
     mark = startupLog.size();
     restorer.submit(ProjectOperation{OpenSongInput{*route101}});
-    waitFor([&] { return startupLog.size() >= mark + 4; },
-            "the song reload did not deliver its four ordered publications");
-    check(startupLog.size() == mark + 4, "the song reload delivered extra publications");
-    if (startupLog.size() == mark + 4) {
+    waitFor([&] { return startupLog.size() >= mark + 3; },
+            "the song reload did not deliver its three ordered publications");
+    check(startupLog.size() == mark + 3, "the song reload delivered extra publications");
+    if (startupLog.size() == mark + 3) {
         const auto *midi = std::get_if<SongUpdate>(&startupLog[mark]);
-        const auto *sidecar = std::get_if<SongUpdate>(&startupLog[mark + 1]);
-        const auto *viewEntry = std::get_if<ProjectEvent>(&startupLog[mark + 2]);
-        const auto *bound = std::get_if<SongUpdate>(&startupLog[mark + 3]);
+        const auto *viewEntry = std::get_if<ProjectEvent>(&startupLog[mark + 1]);
+        const auto *bound = std::get_if<SongUpdate>(&startupLog[mark + 2]);
         check(midi && std::holds_alternative<MidiStage>(midi->payload) && midi->song == *route101,
               "the reload did not publish the keyed MIDI stage first");
-        check(sidecar && std::holds_alternative<SidecarStage>(sidecar->payload) &&
-                  sidecar->song == *route101,
-              "the reload did not publish the keyed sidecar stage second");
         check(viewEntry && std::holds_alternative<LoadedBankView>(*viewEntry),
               "the reload did not publish the keyed bank view before its bound update");
         check(bound && std::holds_alternative<VoicegroupBound>(bound->payload) &&
@@ -369,7 +366,7 @@ int checkWorkspaceFlows(const QString &projectRoot, int &failures)
 
     // ---- voicegroup edits: conflict, applied view + receipt, hard failure -------------
 
-    const auto *viewEntry = std::get_if<ProjectEvent>(&startupLog[mark + 2]);
+    const auto *viewEntry = std::get_if<ProjectEvent>(&startupLog[mark + 1]);
     const auto *view = viewEntry ? std::get_if<LoadedBankView>(&*viewEntry) : nullptr;
     check(view && static_cast<bool>(view->bank) && !view->slotViews.isEmpty(),
           "the reload's bank view carried no usable lease");

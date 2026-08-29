@@ -102,6 +102,11 @@ class MainWindow : public QMainWindow
     // harnesses never inherit (or overwrite) the user's session.
     void restoreSession();
 
+  signals:
+    // Observable completion boundary for editor-view persistence: emitted
+    // once per semantic hub change, after the store mutation.
+    void editorViewStatePersisted(const EditorViewState &state);
+
   protected:
     void closeEvent(QCloseEvent *event) override;
     void changeEvent(QEvent *event) override;
@@ -116,7 +121,7 @@ class MainWindow : public QMainWindow
     void uiTick();
 
   private:
-    void buildUi();
+    void buildUi(const EditorViewState &initialEditorViewState);
     void updateWindowFrameTheme();
 
     // ---- Selected-tab audio handoff ----
@@ -151,8 +156,11 @@ class MainWindow : public QMainWindow
     // — the same resolution the engine does per note (resolve_voice).
     void auditionKeysplit(const QString &symbol);
 
+    // The one editor-view persistence sink: each hub change writes the
+    // complete state through *m_themeSettings. No in-memory mirror exists.
+    void persistEditorViewState(const EditorViewState &state);
+
     // ---- Chrome ----
-    void setEditorDrawerState(const EditorDrawerState &state);
     // One recomputation of every menu action's enablement from the workspace,
     // project state, and the selected tab.
     void updateChrome();
@@ -198,7 +206,6 @@ class MainWindow : public QMainWindow
     bool m_closeInProgress = false;
     bool m_closeAccepted = false;
     EngineSettings m_engineSettings;
-    EditorDrawerState m_editorDrawerState;
 
     std::unique_ptr<QSettings> m_themeSettings;
     std::unique_ptr<themes::ThemeController> m_themeController;

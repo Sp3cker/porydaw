@@ -6,6 +6,15 @@ ownership contract is
 ("the contract"). This file is the dispatch board; it declares no types,
 fields, or rules of its own.
 
+The sidecar transport steps below are superseded by
+`docs/view-sidecar-removal-plan.md`: no `SidecarStage`, `SaveSidecarInput`,
+`SidecarWriteResult`, or `SongStage::Sidecar`; no sidecar field on
+`SongSaved`/`SaveSongInput`; load is `MidiStage` → optional keyed bank view →
+terminal `VoicegroupBound`; save ends after MIDI/flags with bare
+`SongSaved`/`SongFailed`; missing/corrupt legacy view/editor JSON is not a
+load stage and is never rewritten by view code; and no independent
+close/switch/quit cosmetic view operation exists.
+
 ## Rules for every step
 
 - **Contract-pinned.** Implement only what the contract declares. No design
@@ -151,10 +160,10 @@ dependents build on it.
   sequencing.
 - **Contract:** semantic-save worker ordering under `SaveSongInput` in
   `### ProjectWorkspace semantic operations` (bank first, then MIDI/flags,
-  cosmetic sidecar last; no transaction/rollback/retry/race guard); keyed
+  no transaction/rollback/retry/race guard); keyed
   `LoadedBankView` delivery while the command stays active.
 - **Change:** optional voicegroup source + synth writes and required bank
-  refresh first; then MIDI and flags; final cosmetic sidecar nonfatal;
+  refresh first; then MIDI and flags, and the save ends there;
   deliver the resulting `LoadedBankView` as soon as voicegroup save + refresh
   land.
 - **Acceptance:** acceptance row *Semantic save* (worker ordering,
@@ -246,10 +255,10 @@ serializing `workspaceui.*` and the `MainWindow` unload hook, and runs
   private result callback; hard worker errors → private `CommandFailure` →
   keyed `SongFailed` / keyed `ProjectMutationFailure` / `ProjectState.error`
   for open; keyless operations (`OpenProjectInput`, `RefreshProjectInput`,
-  `CleanupPreviewInput`, `SaveSidecarInput`) consume failures per their fixed
+  `CleanupPreviewInput`) consume failures per their fixed
   per-operation mapping; remove cancellation/overlap machinery.
 - **Acceptance:** acceptance rows *Private command/result totality*, *Event
-  keys and failure sum*, *Independent sidecar*.
+  keys and failure sum*, *Sidecar transport removal*.
 
 ---
 
@@ -280,16 +289,18 @@ substrate the next consumes. Do not start 8.(n+1) before 8.n integrates.
 **Review gate [reviewer]** after 8.1: the seam is proven end-to-end. If it is
 wrong here, stop — everything downstream reuses it.
 
-### Step 8.2 — song load / reload / independent sidecar
-- **Target:** `OpenSongInput`, `ReloadSongInput`, `SaveSidecarInput`; live
+### Step 8.2 — song load / reload
+- **Target:** `OpenSongInput`, `ReloadSongInput`; live
   voicegroup rebind through `ReloadSongInput::voicegroupArg`; ordered keyed
   application.
-- **Contract:** `### Song publications` (MidiStage → SidecarStage →
-  VoicegroupBound); independent-sidecar rules.
-- **Slices:** load/reload/sidecar worker helpers ∥ command/result wiring ∥
+- **Contract:** `### Song publications` (MidiStage → optional keyed bank view
+  → VoicegroupBound); per `docs/view-sidecar-removal-plan.md`, missing or
+  corrupt legacy view/editor JSON is not a load stage and is never rewritten
+  by view code.
+- **Slices:** load/reload worker helpers ∥ command/result wiring ∥
   SongTab staged apply methods ∥ tabcheck/sessioncheck load-body rewire.
-- **Acceptance:** *Song failures*, *Independent sidecar*; corrupt sidecar ⇒
-  `loaded: false`, not a failure.
+- **Acceptance:** *Song failures*, *Sidecar transport removal*; no cosmetic
+  close/switch/quit view operation exists.
 
 ### Step 8.3 — semantic song save
 - **Target:** `SaveSongInput` end-to-end; terminal `SongSaved`/`SongFailed`.

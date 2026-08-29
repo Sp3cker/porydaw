@@ -111,8 +111,8 @@ class SongView : public QWidget
     // while the audio engine frees the old one).
     void setVoicegroup(const LoadedVoiceGroup *voicegroup);
 
-    // Detached camera/grid sidecar snapshot. Drawer chrome is application-wide;
-    // automation-lane cosmetics live in EditorViewState.
+    // Transient per-tab camera, selection, grid, and event-list state. It is
+    // never persisted or propagated between tabs.
     struct ViewState {
         ViewState();
         bool valid = false;
@@ -132,13 +132,11 @@ class SongView : public QWidget
     // state is a no-op.
     void applyViewState(const ViewState &state);
 
-    // Detached typed automation-lane snapshot. Runtime selection, camera,
-    // document, timeline, and voice state deliberately remain live in SongView.
+    // Complete application-wide drawer and automation-lane projection.
     EditorViewState editorViewState() const;
+    // Silent projection used by the application-wide hub.
     void applyEditorViewState(const EditorViewState &state);
-    // Applies application-wide drawer chrome while preserving this song's lane state.
-    void applyEditorDrawerState(const EditorDrawerState &state);
-    // One-way sink used by drawer and page caches when their cosmetic state changes.
+    // Origin commit used by drawer/page/lane mutations.
     void setEditorViewState(const EditorViewState &state);
 
     void toggleDrawerSection(EditorDrawerPage page);
@@ -152,9 +150,10 @@ class SongView : public QWidget
     EditorDrawer *editorDrawer() const noexcept { return m_editorDrawer; }
 
     // User-added automation lanes with no events yet (SPEC §6.1 "addable from
-    // the m4a parameter list"). They live in view state — the model derives
-    // lanes from events — and survive document rebuilds until the song is
-    // swapped; once the lane gets its first point the model carries it.
+    // the m4a parameter list). They live in the application-wide editor
+    // projection — the model derives lanes from events — and survive document
+    // rebuilds and song swaps; once the lane gets its first point the model
+    // carries it.
     void addEmptyLane(int track, uint8_t cc);
     void removeEmptyLane(int track, uint8_t cc);
 
@@ -164,8 +163,8 @@ class SongView : public QWidget
     void setLaneDisplayRange(int track, uint8_t cc, int maxValue);
 
     // Raw MIDI event list: an alternative to the piano roll in the same
-    // screen space (the ruler, headers, and automation lanes stay). Per-song
-    // view state; toggled from the View menu.
+    // screen space (the ruler, headers, and automation lanes stay). Per-tab
+    // transient view state; toggled from the View menu.
     bool eventListVisible() const;
     void setEventListVisible(bool visible);
 
@@ -213,7 +212,7 @@ class SongView : public QWidget
     void selectTrack(int track);
 
     // Scale controls are independent per-tab runtime toggles; neither is
-    // persisted with the song or its view sidecar. State and classification
+    // persisted with a song or propagated between tabs. State and classification
     // live in the ScaleController component; SongView is the only surface
     // that mutates it, and the UI side effects (signals, roll repaint, the
     // anchored rebuild) are driven directly here.
@@ -556,8 +555,8 @@ class SongView : public QWidget
     // Jump-from-context voice navigation: the main window raises the
     // voicegroup dock and selects this slot.
     void revealVoiceRequested(int program);
-    // Application-wide drawer chrome changed in this view.
-    void editorDrawerStateChanged(const EditorDrawerState &state);
+    // Complete application-wide editor state changed in this view.
+    void editorViewStateChanged(const EditorViewState &state);
 
   protected:
     void resizeEvent(QResizeEvent *event) override;
@@ -617,6 +616,7 @@ class SongView : public QWidget
     int viewportWidth() const;
     int rollViewportHeight() const;
     void setHScroll(double px);
+    void applyEditorViewStateToWidgets(bool drawerChanged);
     double minHScroll() const;
     double maxHScroll() const;
     void setVScroll(double y);

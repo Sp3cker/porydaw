@@ -19,7 +19,6 @@
 #include "project/projectidentity.h"
 #include "project/projectworkspace.h"
 #include "ui/editorviewstate.h"
-#include "ui/viewsidecar.h"
 #include "ui/voicegroupbrowser.h"
 #include "ui/voicegroupviewcache.h"
 
@@ -84,7 +83,7 @@ class WorkspaceUi final : public QObject
         qsizetype listedVoiceCount = 0;
     };
 
-    explicit WorkspaceUi(QMainWindow &host);
+    explicit WorkspaceUi(QMainWindow &host, const EditorViewState &initial);
     ~WorkspaceUi() override;
 
     // ---- Selected tab (MainWindow reads it directly for audio handoff) ----
@@ -146,8 +145,6 @@ class WorkspaceUi final : public QObject
     void runCreateVoicegroupFlow();
     void toggleDrawerPage(EditorDrawerPage page);
     void setSelectedTabEventListVisible(bool visible);
-    // Queues a cosmetic SaveSidecarInput for every open tab (shutdown).
-    void persistSessionViews();
     // Submits CleanupPreviewInput (shutdown / project switch).
     void cleanupPreview();
     // The save-all prompt chain: every dirty tab is offered a save (each
@@ -188,7 +185,7 @@ class WorkspaceUi final : public QObject
     void setVelocityColorMode(bool enabled);
     void setNoteNameMode(bool enabled);
     void setFollowPlayhead(bool enabled);
-    void setEditorDrawerState(const EditorDrawerState &state);
+    void setEditorViewState(const EditorViewState &state);
 
     ChromeObservation observeChrome() const;
 
@@ -241,7 +238,7 @@ class WorkspaceUi final : public QObject
     void selectedTabMuteMaskChanged(uint32_t mask);
     void selectedTabSoloMaskChanged(uint32_t mask);
     void selectedTabEventListChanged(bool visible);
-    void editorDrawerStateEdited(const EditorDrawerState &state);
+    void editorViewStateChanged(const EditorViewState &state);
     void editCursorSeekRequested(uint64_t tick);
     void playPauseFromRequested(uint64_t tick);
 
@@ -277,7 +274,6 @@ class WorkspaceUi final : public QObject
     const LoadedBankView *bankViewFor(const SongTab &tab) const noexcept;
     // The exhaustive SongUpdate payload dispatch, one overload per stage.
     void applyStagedUpdate(const SongName &name, MidiStage &stage);
-    void applyStagedUpdate(const SongName &name, SidecarStage &stage);
     void applyStagedUpdate(const SongName &name, VoicegroupBound &bound);
     void applyStagedUpdate(const SongName &name, SongSaved &saved);
     void applyStagedUpdate(const SongName &name, SongFailed &failed);
@@ -333,7 +329,6 @@ class WorkspaceUi final : public QObject
     void buildUi();
     void wireTab(SongTab *tab);
     void wireBrowser();
-    void persistViewSidecar(SongTab *tab);
     void showStatus(const QString &message, int timeout = 5000);
     const SongInfo *songInfoFor(const SongName &name) const;
     bool projectBusy() const noexcept;
@@ -349,6 +344,7 @@ class WorkspaceUi final : public QObject
 
     std::vector<std::unique_ptr<SongTab>> m_tabPages;
     SongTab *m_selectedTab = nullptr;
+    EditorViewState m_editorViewState;
 
     ProjectState m_state;
     SavedWorkspaceRecipe m_startRecipe;
@@ -357,7 +353,7 @@ class WorkspaceUi final : public QObject
     QSet<SongName> m_inFlightLoads;       // submitted Open/ReloadSongInput
     QSet<SongName> m_inFlightSaves;       // submitted SaveSongInput
     QSet<SongName> m_closeAfterSave;      // close the tab when its save lands
-    QSet<SongName> m_rebindSkip;          // cfg-driven reload: skip Midi/Sidecar stages
+    QSet<SongName> m_rebindSkip;          // cfg-driven reload: skip MIDI stage
     QHash<SongName, QString> m_boundArgs; // per-tab -G arg at VoicegroupBound
     QSet<SongName> m_startupPlaceholders; // recipe tabs awaiting their terminal payload
     int m_dialogOps = 0;                  // keyed dialog operations in flight
@@ -385,5 +381,4 @@ class WorkspaceUi final : public QObject
     bool m_velocityColorMode = false;
     bool m_noteNameMode = false;
     bool m_followPlayhead = true;
-    EditorDrawerState m_editorDrawerState;
 };

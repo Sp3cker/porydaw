@@ -28,7 +28,10 @@ const QString kLastSongLabelKey = QStringLiteral("lastSongLabel");
 
 } // namespace
 
-WorkspaceUi::WorkspaceUi(QMainWindow &host) : QObject(&host), m_host(host)
+WorkspaceUi::WorkspaceUi(QMainWindow &host, const EditorViewState &initial)
+    : QObject(&host)
+    , m_host(host)
+    , m_editorViewState(initial)
 {
     buildUi();
 
@@ -232,8 +235,8 @@ void WorkspaceUi::wireTab(SongTab *tab)
         if (tab == m_selectedTab)
             emit selectedTabEventListChanged(visible);
     });
-    connect(&view, &SongView::editorDrawerStateChanged, this,
-            [this](const EditorDrawerState &state) { setEditorDrawerState(state); });
+    connect(&view, &SongView::editorViewStateChanged, this,
+            [this](const EditorViewState &state) { setEditorViewState(state); });
     connect(&view, &SongView::muteMaskChanged, this, [this, tab](uint32_t mask) {
         if (tab == m_selectedTab)
             emit selectedTabMuteMaskChanged(mask);
@@ -378,12 +381,14 @@ void WorkspaceUi::setFollowPlayhead(bool enabled)
         tab->view().setFollowPlayhead(enabled);
 }
 
-void WorkspaceUi::setEditorDrawerState(const EditorDrawerState &state)
+void WorkspaceUi::setEditorViewState(const EditorViewState &state)
 {
-    m_editorDrawerState = state;
+    if (m_editorViewState == state)
+        return;
+    m_editorViewState = state;
     for (const auto &tab : m_tabPages)
-        tab->view().applyEditorDrawerState(state);
-    emit editorDrawerStateEdited(state);
+        tab->view().applyEditorViewState(state);
+    emit editorViewStateChanged(state);
 }
 
 WorkspaceUi::ChromeObservation WorkspaceUi::observeChrome() const
@@ -416,18 +421,6 @@ const SongInfo *WorkspaceUi::songInfoFor(const SongName &name) const
             return &song;
     }
     return nullptr;
-}
-
-void WorkspaceUi::persistViewSidecar(SongTab *tab)
-{
-    if (!tab || !tab->isReady())
-        return;
-    // Cosmetic and best-effort: the snapshot is captured before the tab or
-    // project can be torn down; no live view crosses threads. The worker
-    // writes it against the project root current when the command runs, so
-    // a project switch submits these before its open (FIFO keeps order).
-    emit projectOperationRequested(
-        ProjectOperation{SaveSidecarInput{tab->name(), tab->captureViewSnapshot()}});
 }
 
 void WorkspaceUi::setAudioSampleRate(double sampleRate)
@@ -478,10 +471,4 @@ void WorkspaceUi::cleanupPreview()
 {
     if (m_state.snapshot.isOpen())
         emit projectOperationRequested(ProjectOperation{CleanupPreviewInput{}});
-}
-
-void WorkspaceUi::persistSessionViews()
-{
-    for (const auto &tab : m_tabPages)
-        persistViewSidecar(tab.get());
 }

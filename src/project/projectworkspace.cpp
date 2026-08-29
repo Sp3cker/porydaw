@@ -109,7 +109,6 @@ class ProjectWorkspace::Private
             OutcomeVisitor{
                 // ---- ordered song publications; the payload carries its key ----
                 [this](MidiStage &stage) { publishSongUpdate(std::move(stage)); },
-                [this](SidecarStage &stage) { publishSongUpdate(std::move(stage)); },
                 [this](LoadedBankView &view) {
                     emit owner->projectEventPublished(std::move(view));
                 },
@@ -174,9 +173,8 @@ class ProjectWorkspace::Private
                 [this](SongCreated &event) { emit owner->projectEventPublished(std::move(event)); },
 
                 // ---- silent completions ------------------------------------------------
-                // A standalone sidecar write and a preview cleanup advance the
-                // FIFO without a public event; so do their hard errors below.
-                [](SidecarWriteResult &) {},
+                // A preview cleanup advances the FIFO without a public event;
+                // so does its hard error below.
                 [](PreviewCleanupCompleted &) {},
 
                 // ---- private failures ------------------------------------------------------
@@ -293,7 +291,6 @@ class ProjectWorkspace::Private
 
                 // Only the explicitly cosmetic completions stay silent.
                 [](const CleanupPreviewInput &) {},
-                [](const SaveSidecarInput &) {},
 
                 [this, &failure](const VoicegroupEditInput &input) {
                     emit owner->projectEventPublished(ProjectEvent{
@@ -338,7 +335,6 @@ class ProjectWorkspace::Private
                 [](const OpenSongInput &) { Q_ASSERT(false); },
                 [](const ReloadSongInput &) { Q_ASSERT(false); },
                 [](const LoadSongCommand &) { Q_ASSERT(false); },
-                [](const ReadSidecarCommand &) { Q_ASSERT(false); },
                 [](const LoadVoicegroupCommand &) { Q_ASSERT(false); },
                 [](const SaveSongInput &) { Q_ASSERT(false); },
             },

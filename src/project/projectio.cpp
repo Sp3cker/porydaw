@@ -98,15 +98,9 @@ class ProjectIo::Worker final : public QObject
                     return requireOpen() ? loadVoicegroup(input.song, input.voicegroup, stage)
                                          : closedSong(input.song);
                 },
-                [this, &stage](ReadSidecarCommand &input) {
-                    return requireOpen() ? readSidecar(input.song) : closedSong(input.song);
-                },
                 [this, &stage](SaveSongInput &input) {
                     return requireOpen() ? saveSong(std::move(input), stage)
                                          : closedSong(input.song);
-                },
-                [this](SaveSidecarInput &input) {
-                    return requireOpen() ? writeSidecar(std::move(input)) : closedProject();
                 },
                 [this](VoicegroupEditInput &input) {
                     return requireOpen() ? applyVoicegroupEdit(std::move(input)) : closedProject();
@@ -182,10 +176,9 @@ class ProjectIo::Worker final : public QObject
 
     // ---- ordered song load ---------------------------------------------------
 
-    // The load stages run in a fixed order: MIDI, then the cosmetic sidecar
-    // (missing or corrupt is a success with loaded=false), then the bank
-    // view, then the terminal bound update. The first fatal failure stops
-    // the later stages; there is no transaction or rollback.
+    // The load stages run in a fixed order: MIDI, then the bank view, then
+    // the terminal bound update. The first fatal failure stops the later
+    // stages; there is no transaction or rollback.
     ProjectResult loadSong(const SongName &song, const StageSink &stage)
     {
         const auto resolved = m_project.playableSong(song);
@@ -202,9 +195,6 @@ class ProjectIo::Worker final : public QObject
                 error.isEmpty() ? QStringLiteral("Could not read %1.").arg(resolved->midPath)
                                 : std::move(error)};
         stage(MidiStage{song, *resolved, std::move(smf), m_project.trackBudgetFor(*resolved)});
-        auto sidecar = ViewSidecar::Snapshot{};
-        const auto loaded = ViewSidecar::load(m_project.root(), song.value(), &sidecar);
-        stage(SidecarStage{song, loaded, std::move(sidecar)});
         auto view = m_project.loadBank(*resolved, &error);
         if (!view)
             return SongCommandFailure{
@@ -263,21 +253,13 @@ class ProjectIo::Worker final : public QObject
         return publishVoicegroup(song, *resolved, nullptr, stage);
     }
 
-    ProjectResult readSidecar(const SongName &song)
-    {
-        auto sidecar = ViewSidecar::Snapshot{};
-        const auto loaded = ViewSidecar::load(m_project.root(), song.value(), &sidecar);
-        return SidecarStage{song, loaded, std::move(sidecar)};
-    }
-
     // ---- semantic save --------------------------------------------------------
 
     // SaveSongInput owns the semantic save ordering: the optional voicegroup
     // source/synth writes plus the bank refresh first (delivering the
     // resulting LoadedBankView while the command is still active), then MIDI,
-    // then flags, then the cosmetic sidecar. A fatal voicegroup, refresh,
-    // MIDI, or flags failure stops the later stages while earlier writes
-    // remain; the final sidecar write is nonfatal and reported by SongSaved.
+    // then flags. A fatal voicegroup, refresh, MIDI, or flags failure stops
+    // the later stages while earlier writes remain.
     ProjectResult saveSong(SaveSongInput &&input, const StageSink &stage)
     {
         if (input.voicegroup) {
@@ -309,25 +291,7 @@ class ProjectIo::Worker final : public QObject
                         : std::move(error)};
             flagsWritten = true;
         }
-        const auto sidecarSaved =
-            ViewSidecar::save(m_project.root(), input.song.value(), input.sidecarSnapshot);
-        auto sidecarError =
-            sidecarSaved
-                ? std::nullopt
-                : std::optional<QString>{QStringLiteral("Could not write the view sidecar.")};
-        return SongSaved{input.song, std::move(input.snapshot), flagsWritten, sidecarSaved,
-                         std::move(sidecarError)};
-    }
-
-    // Standalone cosmetic persistence for close or switch; never a public
-    // event.
-    ProjectResult writeSidecar(SaveSidecarInput input)
-    {
-        const auto success =
-            ViewSidecar::save(m_project.root(), input.song.value(), input.snapshot);
-        return SidecarWriteResult{success, success ? std::nullopt
-                                                   : std::optional<QString>{QStringLiteral(
-                                                         "Could not write the view sidecar.")}};
+        return SongSaved{input.song, std::move(input.snapshot), flagsWritten};
     }
 
     // ---- voicegroup edit --------------------------------------------------------
