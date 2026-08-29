@@ -2,6 +2,7 @@
 #include <cstdio>
 
 #include "checks/editcheck/support.h"
+#include "core/xcmd.h"
 
 namespace editcheck {
 
@@ -60,6 +61,80 @@ void runSongRoundTrip(const SongInfo &song, int &checked, int &failures)
     SongCfg cfg = doc.cfg();
     cfg.masterVolume = cfg.masterVolume == 80 ? 90 : 80;
     doc.setCfg(cfg);
+
+    if (track >= 0) {
+        const int smfTrack = doc.smfTrackFor(track);
+        const uint8_t channel = doc.channelFor(track);
+        const uint8_t status = uint8_t(0xB0 | (channel & 0x0F));
+
+        SmfEvent sel1;
+        sel1.tick = base + step;
+        sel1.status = status;
+        sel1.data0 = xcmd::kSelectorController;
+        sel1.data1 = 0x08;
+        doc.insertRawEvent(smfTrack, sel1);
+
+        SmfEvent payload;
+        payload.tick = base + 2 * step;
+        payload.status = status;
+        payload.data0 = xcmd::kPayloadController;
+        payload.data1 = 34;
+        doc.insertRawEvent(smfTrack, payload);
+
+        SmfEvent sel2;
+        sel2.tick = base + 3 * step;
+        sel2.status = status;
+        sel2.data0 = xcmd::kSelectorController;
+        sel2.data1 = 0x09;
+        doc.insertRawEvent(smfTrack, sel2);
+
+        const QByteArray liveSmfBytes = doc.smf().write();
+        const int liveUndoIndex = doc.undoStack()->index();
+        const bool liveDirty = doc.isDirty();
+
+        const SongSaveSnapshot snapshot = doc.captureSaveSnapshot();
+
+        if (doc.smf().write() != liveSmfBytes)
+            scenario.fail("captureSaveSnapshot mutated live SMF bytes");
+        if (doc.undoStack()->index() != liveUndoIndex)
+            scenario.fail("captureSaveSnapshot mutated undo index");
+        if (doc.isDirty() != liveDirty)
+            scenario.fail("captureSaveSnapshot mutated dirty state");
+
+        if (smfTrack < 0 || size_t(smfTrack) >= snapshot.smf.tracks.size()) {
+            scenario.fail("save snapshot missing SMF track");
+        } else {
+            const SmfTrack &snapTrack = snapshot.smf.tracks[size_t(smfTrack)];
+            bool hasFirstSelector = false;
+            bool hasDanglingSelector = false;
+            std::vector<SmfEvent> payloadEvents;
+            for (const SmfEvent &ev : snapTrack.events) {
+                if (ev.tick == base + step && ev.isChannel() &&
+                    ev.data0 == xcmd::kSelectorController) {
+                    hasFirstSelector = true;
+                } else if (ev.tick == base + 2 * step && ev.isChannel() &&
+                           (ev.data0 == xcmd::kSelectorController ||
+                            ev.data0 == xcmd::kPayloadController)) {
+                    payloadEvents.push_back(ev);
+                } else if (ev.tick == base + 3 * step && ev.isChannel() &&
+                           ev.data0 == xcmd::kSelectorController) {
+                    hasDanglingSelector = true;
+                }
+            }
+
+            if (hasFirstSelector)
+                scenario.fail("save snapshot retained delayed CC30 selector at first tick");
+            if (payloadEvents.size() != 2 || payloadEvents[0].data0 != xcmd::kSelectorController ||
+                payloadEvents[0].data1 != 0x08 ||
+                payloadEvents[1].data0 != xcmd::kPayloadController ||
+                payloadEvents[1].data1 != 34) {
+                scenario.fail("save snapshot did not emit exact ordered CC30=0x08 then CC29=34 at "
+                              "payload tick");
+            }
+            if (hasDanglingSelector)
+                scenario.fail("save snapshot retained dangling CC30 selector");
+        }
+    }
 
     // Undo everything: the document must be byte-identical to the load.
     while (doc.undoStack()->canUndo())

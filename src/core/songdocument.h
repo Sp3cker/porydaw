@@ -474,6 +474,13 @@ class SongDocument : public QObject
 
     void applyOps(std::vector<EditOp> &ops);
     void revertOps(std::vector<EditOp> &ops);
+    // The one ordered-SMF insertion primitive: places event at its tick's
+    // canonical position (upper_bound by tick; setup channel events ahead of
+    // same-tick note events; note ends ahead of same-tick note-ons), inserts
+    // it, grows endTick, and returns the insertion index. applyOps'
+    // InsertEvent case and the detached export copy share it; note-ID
+    // minting stays with the caller.
+    static size_t insertEventIntoTrack(SmfTrack &track, const SmfEvent &event);
     void pushEdit(const QString &text, std::vector<EditOp> ops);
     void pushEdit(const QString &text, std::vector<EditOp> ops, std::vector<TempoPoint> nextTempo);
     void rebuildTrackMap();
@@ -557,6 +564,12 @@ class SongDocument : public QObject
     // event and only re-stamp its tick).
     void appendXcmdPatchOps(std::vector<std::vector<size_t>> &removals, std::vector<EditOp> &ops,
                             int smfTrack, const xcmd::Patch &patch) const;
+    // Save-path XCMD canonicalization: a deep SMF copy whose every chunk ran
+    // through xcmd::canonicalizeForExport over the xcmdEvents adapter —
+    // known epochs become explicit same-tick selector+payload pairs, payload-
+    // less known selectors drop, opaque traffic stays byte-for-byte. The
+    // document itself (m_smf, history, dirty state) is never touched.
+    SmfFile canonicalizedForExport() const;
     // Locates the loop marker event, mirroring MidiTimeline::build's rule
     // (first matching text meta in track/event order). Returns false if absent.
     bool findLoopMarkerEvent(bool endMarker, int *smfTrack, size_t *index) const;

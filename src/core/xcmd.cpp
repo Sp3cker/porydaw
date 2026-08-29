@@ -591,4 +591,27 @@ std::optional<Patch> reconcileRaw(std::span<const Event> events, std::span<const
     return emitRawReconciliation(parsed, *operations, *blockOperations);
 }
 
+Patch canonicalizeForExport(std::span<const Event> events) noexcept
+{
+    const ParsedEvents parsed = parseEvents(events);
+    RemoveSet removed;
+    std::vector<Emission> inserts;
+    for (const SelectorBlock &block : parsed.blocks) {
+        if (isKnownLaneBlock(block)) {
+            // The shared selector and raw payload bytes leave; every point
+            // is re-emitted as an explicit same-tick selector+payload pair.
+            appendPointRewriteBlockRemoval(parsed, block, removed);
+            for (const size_t eventIndex : block.payloadEvents)
+                emitKnownPoint(inserts, parsed.events[eventIndex], block, nullptr);
+        } else if (block.selectorEvent != SIZE_MAX && block.payloadEvents.empty() &&
+                   descriptorForSelector(block.selector)) {
+            // A payload-less known selector is inaudible, and stock mid2agb
+            // drops the wait that follows it: remove the dangling byte.
+            removed.add(parsed.events[block.selectorEvent].source->index);
+        }
+        // Unknown selector epochs and stray payload runs stay byte-for-byte.
+    }
+    return finishPatch(std::move(removed), std::move(inserts));
+}
+
 } // namespace xcmd

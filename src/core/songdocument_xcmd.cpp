@@ -101,6 +101,28 @@ void SongDocument::appendXcmdPatchOps(std::vector<std::vector<size_t>> &removals
     }
 }
 
+SmfFile SongDocument::canonicalizedForExport() const
+{
+    SmfFile copy = m_smf;
+    for (int smfTrack = 0; smfTrack < int(copy.tracks.size()); ++smfTrack) {
+        const xcmd::Patch patch = xcmd::canonicalizeForExport(xcmdEvents(smfTrack));
+        if (patch.removeEvents.empty() && patch.inserts.empty())
+            continue;
+        SmfTrack &track = copy.tracks[size_t(smfTrack)];
+        // Removals are ascending source indices; erase back to front so the
+        // surviving indices stay valid. Emissions are canonical pairs —
+        // canonicalizeForExport never emits verbatim re-insertions.
+        for (auto it = patch.removeEvents.rbegin(); it != patch.removeEvents.rend(); ++it)
+            track.events.erase(track.events.begin() + long(*it));
+        for (const xcmd::Emission &emission : patch.inserts) {
+            Q_ASSERT(emission.sourceIndex == SIZE_MAX);
+            insertEventIntoTrack(track, makeChannelEvent(0xB, emission.channel, emission.tick,
+                                                         emission.controller, emission.value));
+        }
+    }
+    return copy;
+}
+
 void SongDocument::addLanePoint(int engineTrack, uint8_t cc, uint64_t tick, int value)
 {
     const int smfTrack = smfTrackFor(engineTrack);

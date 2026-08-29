@@ -393,7 +393,7 @@ bool SongDocument::adoptSmf(SmfFile smf, const SongInfo &song, QString *error)
 SongSaveSnapshot SongDocument::captureSaveSnapshot() const
 {
     SongSaveSnapshot snapshot;
-    snapshot.smf = m_smf;
+    snapshot.smf = canonicalizedForExport();
     song_document_tempo::writeTempoMetas(snapshot.smf, m_tempoPoints);
     snapshot.midPath = m_midPath;
     snapshot.label = m_label;
@@ -1920,6 +1920,39 @@ std::unique_ptr<MidiTimeline> SongDocument::buildTimeline(double sampleRate) con
     return timeline;
 }
 
+// The insertion primitive behind EditOp::InsertEvent placement and the
+// detached export copy; see the declaration in songdocument.h.
+size_t SongDocument::insertEventIntoTrack(SmfTrack &track, const SmfEvent &event)
+{
+    auto &events = track.events;
+    auto it = std::upper_bound(
+        events.begin(), events.end(), event.tick,
+        [](uint64_t tick, const SmfEvent &candidate) { return tick < candidate.tick; });
+    if (event.isChannel() && event.typeNibble() >= 0xB) {
+        // Setup events stay ahead of same-tick note events.
+        while (it != events.begin()) {
+            const SmfEvent &previous = *std::prev(it);
+            if (previous.tick != event.tick || !previous.isChannel() || previous.typeNibble() > 0x9)
+                break;
+            --it;
+        }
+    }
+    if (event.isChannel() && event.isNoteEnd()) {
+        // Note ends stay ahead of same-tick note-ons.
+        while (it != events.begin()) {
+            const SmfEvent &previous = *std::prev(it);
+            if (previous.tick != event.tick || !previous.isNoteOn())
+                break;
+            --it;
+        }
+    }
+    const size_t index = size_t(it - events.begin());
+    events.insert(it, event);
+    if (event.tick > track.endTick)
+        track.endTick = event.tick;
+    return index;
+}
+
 void SongDocument::applyOps(std::vector<EditOp> &ops)
 {
     for (EditOp &op : ops) {
@@ -1927,37 +1960,13 @@ void SongDocument::applyOps(std::vector<EditOp> &ops)
         case EditOp::InsertEvent: {
             Q_ASSERT(!isTempoMeta(op.event));
             SmfTrack &track = m_smf.tracks[op.smfTrack];
-            auto &events = track.events;
             if (op.event.isNoteOn() && !op.preservesNoteId) {
                 op.event.noteId = NoteId{};
                 mintNoteId(&op.event);
                 op.preservesNoteId = true;
             }
-            auto it = std::upper_bound(
-                events.begin(), events.end(), op.event.tick,
-                [](uint64_t tick, const SmfEvent &event) { return tick < event.tick; });
-            if (op.event.isChannel() && op.event.typeNibble() >= 0xB) {
-                while (it != events.begin()) {
-                    const SmfEvent &previous = *std::prev(it);
-                    if (previous.tick != op.event.tick || !previous.isChannel() ||
-                        previous.typeNibble() > 0x9)
-                        break;
-                    --it;
-                }
-            }
-            if (op.event.isChannel() && op.event.isNoteEnd()) {
-                while (it != events.begin()) {
-                    const SmfEvent &previous = *std::prev(it);
-                    if (previous.tick != op.event.tick || !previous.isNoteOn())
-                        break;
-                    --it;
-                }
-            }
-            op.index = size_t(it - events.begin());
-            events.insert(it, op.event);
             op.oldEndTick = track.endTick;
-            if (op.event.tick > track.endTick)
-                track.endTick = op.event.tick;
+            op.index = insertEventIntoTrack(track, op.event);
             break;
         }
         case EditOp::RemoveEvent: {

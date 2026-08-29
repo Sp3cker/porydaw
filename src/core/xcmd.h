@@ -166,4 +166,12 @@ std::optional<Patch> reconcileRaw(std::span<const Event> events, std::span<const
                                   std::span<const Relocation> moves,
                                   std::span<const Relocation> copies) noexcept;
 
+// Export canonicalization for SMF saves: every known 0x08/0x09 epoch with
+// payloads is rebuilt as explicit same-tick selector+payload pairs, a
+// payload-less known selector is removed outright (stock mid2agb drops the
+// wait that follows it), and unknown selector epochs plus stray payload
+// runs are omitted from the patch — byte-for-byte preserved. Removals
+// reference source indices only; inserts are canonical emissions only.
+Patch canonicalizeForExport(std::span<const Event> events) noexcept;
+
 } // namespace xcmd
