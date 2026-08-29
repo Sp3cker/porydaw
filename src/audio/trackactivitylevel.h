@@ -11,6 +11,8 @@ template <typename T>
 struct StereoActivity {
     T left{};
     T right{};
+
+    bool operator==(const StereoActivity &) const = default;
 };
 
 using TrackActivityLevel = StereoActivity<uint8_t>;

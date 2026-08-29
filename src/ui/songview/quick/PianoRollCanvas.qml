@@ -1,5 +1,5 @@
 import QtQuick
-import Porydaw.PianoRoll
+import Porydaw.Ui
 
 Item {
     id: root

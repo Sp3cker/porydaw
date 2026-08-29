@@ -461,7 +461,7 @@ PianoRollQuickView::PianoRollQuickView(PianoRoll &roll) : QQuickWidget(&roll), m
 {
     static std::once_flag registered;
     std::call_once(registered, [] {
-        qmlRegisterType<PianoRollQuickItem>("Porydaw.PianoRoll", 1, 0, "PianoRollQuickItem");
+        qmlRegisterType<PianoRollQuickItem>("Porydaw.Ui", 1, 0, "PianoRollQuickItem");
     });
 
     setObjectName(QStringLiteral("pianoRollQuickCanvas"));
@@ -475,7 +475,7 @@ PianoRollQuickView::PianoRollQuickView(PianoRoll &roll) : QQuickWidget(&roll), m
     m_scene = new PianoRollQuickScene(this);
     rootContext()->setContextProperty(QStringLiteral("pianoRollScene"), m_scene);
 
-    setSource(QUrl(QStringLiteral("qrc:/Porydaw/PianoRoll/PianoRollCanvas.qml")));
+    setSource(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/PianoRollCanvas.qml")));
     if (status() != QQuickWidget::Ready) {
         for (const QQmlError &error : errors())
             qCritical().noquote() << error.toString();

@@ -172,8 +172,13 @@ qt_add_library(porydaw_app STATIC
     src/audio/sf2reader.h
     src/ui/activity/trackactivity.cpp
     src/ui/activity/trackactivity.h
-    src/ui/activity/trackactivitymeter.cpp
-    src/ui/activity/trackactivitymeter.h
+    src/ui/activity/trackactivitypresentation.cpp
+    src/ui/activity/trackactivitypresentation.h
+    src/ui/activity/trackactivitypresentation_p.h
+    src/ui/activity/trackactivityrender.cpp
+    src/ui/activity/trackactivityrender.h
+    src/ui/activity/trackactivityview.cpp
+    src/ui/activity/trackactivityview.h
     src/core/mid2agbtables.cpp
     src/core/mid2agbtables.h
     src/core/miditimeline.cpp
@@ -377,7 +382,9 @@ qt_add_library(porydaw_app STATIC
 )
 if(APPLE)
     target_sources(porydaw_app PRIVATE
+        src/ui/nativelayerutils_macos_p.h
         src/ui/playheadrenderer_macos.mm
+        src/ui/activity/trackactivityrenderer_macos.mm
     )
     target_compile_definitions(porydaw_app PUBLIC PORYDAW_USE_DIRECT_PLAYHEAD)
     find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
@@ -402,16 +409,23 @@ target_link_libraries(porydaw_app PRIVATE Qt6::Qml Qt6::Quick Qt6::QuickWidgets)
 if(APPLE)
     set_target_properties(porydaw_app PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
 endif()
+set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 set_source_files_properties(
     src/ui/songview/quick/PianoRollCanvas.qml
     PROPERTIES QT_RESOURCE_ALIAS PianoRollCanvas.qml
 )
+set_source_files_properties(
+    src/ui/activity/TrackActivityView.qml
+    PROPERTIES QT_RESOURCE_ALIAS TrackActivityView.qml
+)
 qt_add_qml_module(porydaw_app
-    URI Porydaw.PianoRoll
+    URI Porydaw.Ui
     VERSION 1.0
+    RESOURCE_PREFIX /qt/qml
     NO_PLUGIN
     QML_FILES
         src/ui/songview/quick/PianoRollCanvas.qml
+        src/ui/activity/TrackActivityView.qml
 )
 target_precompile_headers(porydaw_app PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
@@ -586,6 +600,7 @@ if(PORYDAW_BUILD_CHECKS)
     if(APPLE)
         target_sources(porydaw_checks PRIVATE
             src/checks/rollcheckplayhead_macos.mm
+            src/checks/trackactivitymetercheck_macos.mm
         )
     endif()
     if(APPLE)

@@ -19,6 +19,7 @@
 #include "checks/rollcheckplayhead.h"
 #include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
+#include "ui/activity/trackactivityview.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
 
@@ -164,8 +165,9 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
             fail("voice label did not return to the edit cursor after stop");
 
         // Retained rows paint an opaque base. Program-only changes invalidate
-        // both text lines as one region, but leave the meter, buttons, and
-        // separator untouched; selection styling still invalidates the row.
+        // both text lines as one region, leaving buttons and the separator
+        // untouched. Selection styling invalidates the full visible row; the
+        // panel-owned opaque activity column clips its covered gutter.
         (void)view.grab();
         auto *row = view.findChild<QWidget *>(QStringLiteral("trackHeaderRow%1").arg(track));
         if (!row) {
@@ -229,8 +231,10 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
             click(*row, QPoint(textColumn.center().x(), singlePixel));
             QCoreApplication::sendPostedEvents();
             QCoreApplication::processEvents();
-            if (paintProbe.region().boundingRect() != row->rect())
-                fail("track selection change did not repaint the full header row");
+            const int obscuredGutter = view.findChild<TrackActivityView *>() ? gutter : 0;
+            const QRect visibleRow = row->rect().adjusted(obscuredGutter, 0, 0, 0);
+            if (paintProbe.region().boundingRect() != visibleRow)
+                fail("track selection change did not repaint the full visible header row");
             view.selectTrack(previousPrimary);
             QCoreApplication::sendPostedEvents();
             QCoreApplication::processEvents();

@@ -205,6 +205,7 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
             const auto beforeStripPaint =
                 otherStrip ? otherStrip->diagnostics() : songview::TimelineSurfaceDiagnostics{};
             view.selectionModel().setTimeSelection(movedSelection);
+            QCoreApplication::processEvents();
             const QImage partialSelectionImage = check.captureQuickFramebuffer();
             if (otherStrip && otherStrip->diagnostics().contentInvalidationCount !=
                                   beforeStripPaint.contentInvalidationCount)

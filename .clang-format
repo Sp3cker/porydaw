@@ -1,7 +1,7 @@
 # porydaw code style — codifies the conventions already in the tree.
 # Qt-flavored: 4-space indent, Type *ptr, function/class braces on their
 # own line, attached braces everywhere else, 100-column limit.
-Language: Cpp
+# Default section also applies to Objective-C++ helper headers.
 Standard: c++20
 BasedOnStyle: LLVM
 IndentWidth: 4

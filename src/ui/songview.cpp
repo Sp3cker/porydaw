@@ -275,7 +275,7 @@ void SongView::rebuildAfterSongChange()
         m_pxPerTick = m_geometry.editorDefaultPixelsPerBeat / double(m_timeline->ticksPerBeat);
     else
         m_pxPerTick = 1.0;
-    m_headers->rebuild();
+    m_headers->rebuild(m_trackActivity, m_playing);
     notifyDrawerSongChanged();
     updateScrollbars();
     resetScrollPosition();
@@ -344,7 +344,7 @@ void SongView::updateSong(const MidiTimeline *timeline)
             validIds.push_back(note.noteId);
     }
     m_selectionModel.reconcileNoteSelection(std::span<const NoteId>(validIds));
-    m_headers->rebuild();
+    m_headers->rebuild(m_trackActivity, m_playing);
     notifyDrawerSongChanged();
     if (m_scaleController.scaleFold()) {
         requestProjectionRebuild();
@@ -398,7 +398,7 @@ void SongView::setDocument(SongDocument *document)
     m_document = document;
     m_events->setDocument(document);
     m_selectionModel.clearNoteSelection();
-    m_headers->rebuild();
+    m_headers->rebuild(m_trackActivity, m_playing);
     notifyDrawerSongChanged();
 }
 
@@ -501,7 +501,7 @@ void SongView::setVoicegroup(const LoadedVoiceGroup *voicegroup)
         return;
     cancelActiveInteractions();
     m_voicegroup = voicegroup;
-    m_headers->rebuild();
+    m_headers->rebuild(m_trackActivity, m_playing);
     notifyDrawerSongChanged();
     // Voicegroup replacement can change any roll domain.
     refreshTimelineViews(PianoRollQuickDirty::All);

@@ -9,7 +9,6 @@
 #include <QWidget>
 #include <optional>
 
-#include "audio/trackactivitylevel.h"
 #include "ui/layout.h"
 
 class QContextMenuEvent;
@@ -22,7 +21,6 @@ class QResizeEvent;
 class QPoint;
 class QToolButton;
 class SongView;
-class TrackActivityMeter;
 
 namespace songview {
 
@@ -59,9 +57,9 @@ class TrackHeaderRow : public QWidget
 
   public:
     TrackHeaderRow(SongView *sv, int track, QWidget *parent);
-
+    // Sole row-height formula; the panel's activity overlay consumes it too.
+    static int resolvedHeight();
     int track() const;
-    void setActivity(TrackActivityIntensity intensity, bool playing);
     bool exceedsProjectTrackBudget() const;
     void syncVoice();
     void updateToolTip();
@@ -86,7 +84,6 @@ class TrackHeaderRow : public QWidget
     QString fallbackTrackName() const;
     void resyncSong();
     SelectionState selectionState() const;
-    QRect activityMeterRect() const;
     QRect editorRect() const;
     QRect textColumnRect() const;
     void finishRename(bool commit, bool restoreFocus);
@@ -107,7 +104,6 @@ class TrackHeaderRow : public QWidget
     QToolButton *m_mute;
     QToolButton *m_solo;
     QLineEdit *m_editor = nullptr;
-    TrackActivityMeter *m_activityMeter = nullptr;
     bool m_finishing = false;
     // Program painted on the voice line, for syncVoice's changed check
     // (-2 = never painted; distinct from -1, "no voice set").

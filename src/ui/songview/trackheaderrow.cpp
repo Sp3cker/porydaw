@@ -2,7 +2,6 @@
 
 #include "ui/songview/trackheaderrow.h"
 
-#include "ui/activity/trackactivitymeter.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
@@ -96,9 +95,16 @@ RowPaintStyle resolvePaintStyle(bool primary, bool inScope, bool overBudget,
 
 } // namespace
 
+int TrackHeaderRow::resolvedHeight()
+{
+    // The row stride: defined here so the panel's overlay geometry and the
+    // rows can never disagree.
+    return lyt::fontPx(4.0);
+}
+
 TrackHeaderRow::Geometry TrackHeaderRow::Geometry::resolve()
 {
-    return {lyt::fontPx(1.5),       lyt::fontPx(4.0),        lyt::fontPx(2.0),
+    return {lyt::fontPx(1.5),       resolvedHeight(),        lyt::fontPx(2.0),
             lyt::fontPx(5.0 / 6.0), lyt::fontPx(11.0 / 6.0), lyt::fontPx(3.0),
             lyt::fontPx(4.0 / 3.0), lyt::fontPx(5.0 / 6.0),  lyt::fontPx(0.5),
             lyt::fontPx(1.0 / 6.0), lyt::fontPx(8.0 / 3.0),  lyt::fontPx(5.0 / 3.0)};
@@ -123,8 +129,6 @@ void TrackHeaderRow::refreshGeometry()
     m_geometry = Geometry::resolve();
     rebuildFontCache();
     setFixedHeight(m_geometry.trackHeaderRowHeight);
-    if (m_activityMeter)
-        m_activityMeter->setGeometry(activityMeterRect());
     if (m_mute)
         m_mute->setFixedSize(m_geometry.trackHeaderButtonExtent,
                              m_geometry.trackHeaderButtonExtent);
@@ -146,9 +150,6 @@ TrackHeaderRow::TrackHeaderRow(SongView *sv, int track, QWidget *parent)
     rebuildFontCache();
     const auto buttonExtent = m_geometry.trackHeaderButtonExtent;
     setFixedHeight(m_geometry.trackHeaderRowHeight);
-    m_activityMeter = new TrackActivityMeter(SongView::trackColor(m_track), this);
-    m_activityMeter->setGeometry(activityMeterRect());
-    setActivity(m_sv->m_trackActivity.intensity(m_track), m_sv->m_playing);
     auto *layout = new QHBoxLayout(this);
     layout->setContentsMargins(::layout::space(::layout::Space::Zero),
                                ::layout::space(::layout::Space::Zero),
@@ -213,11 +214,6 @@ int TrackHeaderRow::track() const
     return m_track;
 }
 
-void TrackHeaderRow::setActivity(TrackActivityIntensity intensity, bool playing)
-{
-    m_activityMeter->setState({intensity, playing, 1.0f});
-}
-
 // True when the track index is at or beyond the project's in-game
 // allocation (SongDocument::trackBudget). Warning-only: the track stays
 // audible and editable.
@@ -246,7 +242,7 @@ QRect TrackHeaderRow::textColumnRect() const
     const int left = lyt::space(Space::One);
     const int right = width() - m_geometry.trackHeaderButtonExtent - lyt::space(Space::One);
     // The full parent-painted gutter covers title centering offsets and
-    // antialiasing without reaching the activity meter, button column,
+    // antialiasing without reaching the activity column, button column,
     // or bottom separator.
     return QRect(left, lyt::space(Space::Zero), right - left, height() - lyt::singlePixel());
 }
@@ -425,7 +421,6 @@ void TrackHeaderRow::resyncSong()
     m_shownProgram = -2;
     m_mute->setChecked(m_sv->trackMuted(m_track));
     m_solo->setChecked(m_sv->trackSoloed(m_track));
-    setActivity(m_sv->m_trackActivity.intensity(m_track), m_sv->m_playing);
     updateToolTip();
     if (!m_paintedSelection || *m_paintedSelection != selection)
         update();
@@ -512,16 +507,8 @@ void TrackHeaderRow::resizeEvent(QResizeEvent *)
 {
     // Rows are born 100px wide and only get their real width on the
     // deferred layout pass; an open editor must follow.
-    if (m_activityMeter)
-        m_activityMeter->setGeometry(activityMeterRect());
     if (m_editor)
         m_editor->setGeometry(editorRect());
-}
-
-QRect TrackHeaderRow::activityMeterRect() const
-{
-    return QRect(lyt::space(Space::Zero), lyt::space(Space::Zero), lyt::space(Space::One),
-                 height() - lyt::singlePixel());
 }
 
 // The row's name line, clear of the color strip and the M/S column.

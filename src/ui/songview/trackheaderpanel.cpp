@@ -2,6 +2,8 @@
 
 #include "ui/songview/trackheaderpanel.h"
 
+#include "ui/activity/trackactivitypresentation.h"
+#include "ui/activity/trackactivityrender.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/trackheaderrow.h"
@@ -20,7 +22,8 @@ namespace songview {
 
 TrackHeaderPanel::Geometry TrackHeaderPanel::Geometry::resolve()
 {
-    return {lyt::fontPx(0.25)};
+    // The row height comes from the single formula in TrackHeaderRow.
+    return {lyt::fontPx(0.25), TrackHeaderRow::resolvedHeight()};
 }
 
 void TrackHeaderPanel::refreshGeometry()
@@ -29,6 +32,10 @@ void TrackHeaderPanel::refreshGeometry()
     m_indicator->setFixedHeight(m_geometry.trackHeaderReorderIndicatorHeight);
     if (m_indicator->isVisible())
         m_indicator->resize(width(), m_geometry.trackHeaderReorderIndicatorHeight);
+    // Rows settle their own FontChange around this event, but the stride is
+    // already final: rows and panel both consume TrackHeaderRow::resolvedHeight.
+    // The presentation re-applies its cached activity synchronously.
+    synchronizeTrackDefinitions();
     update();
 }
 
@@ -58,7 +65,11 @@ TrackHeaderPanel::TrackHeaderPanel(SongView *sv)
     m_indicator->setFixedHeight(m_geometry.trackHeaderReorderIndicatorHeight);
     m_indicator->setStyleSheet(QStringLiteral("background: palette(highlight);"));
     m_indicator->hide();
+    // Platform presentation owns one retained activity column for every row.
+    m_activityPresentation = std::make_unique<TrackActivityPresentation>(*this);
 }
+
+TrackHeaderPanel::~TrackHeaderPanel() = default;
 
 void TrackHeaderPanel::cancelTransientState()
 {
@@ -117,7 +128,7 @@ void TrackHeaderPanel::synchronizeLayout()
         m_layout->insertWidget(addButtonIndex, m_addButton);
 }
 
-void TrackHeaderPanel::rebuild()
+void TrackHeaderPanel::rebuild(const TrackActivity &activity, bool playing)
 {
     cancelTransientState();
 
@@ -139,6 +150,8 @@ void TrackHeaderPanel::rebuild()
     retireRows(previous);
     synchronizeLayout();
     m_addButton->setVisible(canAdd);
+    synchronizeTrackDefinitions();
+    m_activityPresentation->present(activity, playing);
 }
 
 void TrackHeaderPanel::syncSelection()
@@ -162,10 +175,23 @@ void TrackHeaderPanel::syncVoices()
         entry.second->syncVoice();
 }
 
+void TrackHeaderPanel::synchronizeTrackDefinitions()
+{
+    std::vector<TrackActivityPresentation::TrackDefinition> definitions;
+    definitions.reserve(m_trackRows.size());
+    for (const TrackHeaderRow *row : m_trackRows) {
+        const int track = row->track();
+        definitions.push_back({track, SongView::trackColor(track)});
+    }
+    const int rowHeight = m_geometry.trackHeaderRowHeight;
+    const int meterHeight = rowHeight - lyt::singlePixel();
+    m_activityPresentation->setTracks(definitions,
+                                      track_activity_render::RowGeometry{rowHeight, meterHeight});
+}
+
 void TrackHeaderPanel::syncActivity(const TrackActivity &activity, bool playing)
 {
-    for (const auto &entry : m_rowByTrack)
-        entry.second->setActivity(activity.intensity(entry.first), playing);
+    m_activityPresentation->present(activity, playing);
 }
 
 // --- header-row reorder drag (driven by TrackHeaderRow's mouse events;
