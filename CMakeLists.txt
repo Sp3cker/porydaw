@@ -76,7 +76,7 @@ if(PORYDAW_COVERAGE)
     add_link_options(-fprofile-instr-generate)
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Svg Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Sql Svg Widgets)
 
 # ---- poryaaaa engine core (MIT, statically linked) ----
 set(PORYAAAA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa/packages/poryaaaa"
@@ -202,6 +202,8 @@ qt_add_library(porydaw_app STATIC
     src/core/midiimport.h
     src/project/decompproject.cpp
     src/project/decompproject.h
+    src/project/projectindex.cpp
+    src/project/projectindex.h
     src/project/projectidentity.cpp
     src/project/projectidentity.h
     src/project/projectworkspace.cpp
@@ -398,6 +400,7 @@ target_include_directories(porydaw_app PUBLIC
 target_compile_definitions(porydaw_app PUBLIC
     PORYDAW_VERSION="${PROJECT_VERSION}")
 target_link_libraries(porydaw_app PUBLIC Qt6::Svg Qt6::Widgets poryaaaa_engine)
+target_link_libraries(porydaw_app PRIVATE Qt6::Sql)
 target_precompile_headers(porydaw_app PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
 if(WIN32)
@@ -529,6 +532,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/samplecheck/analysis.cpp
         src/checks/samplecheck/soundfont.cpp
         src/checks/samplecheck/integration.cpp
+        src/checks/projectindexcheck.cpp
         src/checks/projectiocheck.cpp
         src/checks/projectworkspacecheck.cpp
         src/checks/sessioncheck.cpp

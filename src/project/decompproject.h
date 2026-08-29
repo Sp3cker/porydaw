@@ -1,7 +1,9 @@
 #pragma once
 
 #include <QDateTime>
+#include <QDir>
 #include <QHash>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -10,6 +12,7 @@
 #include <optional>
 #include <unordered_map>
 
+#include "project/projectindex.h"
 #include "projectidentity.h"
 #include "voicegroupsource.h"
 
@@ -29,6 +32,7 @@ struct SongCfg {
     bool exactGate = false;      // -E
     bool extendedClocks = false; // -X (48 clocks/beat)
     bool noCompression = false;  // -N
+    static SongCfg fromFlags(const QStringList &flags);
 };
 
 struct MusicPlayer {
@@ -122,6 +126,12 @@ class DecompProject
     // registers a song). Song ids are reassigned.
     bool reload(QString *error);
 
+    // Persistent-index hook: open() uses storeDir when provided, otherwise
+    // ProjectIndex::defaultStoreDir(root). A matching store replaces the scan;
+    // a missing or stale store is rebuilt. PORYDAW_DISABLE_INDEX_CACHE makes
+    // the default directory empty and disables automatic persistence.
+    void setIndexCache(const QString &storeDir = QString());
+
     // ---- Worker-side voicegroup bank ownership (Project I/O worker) ----
     // The worker keeps the one canonical bank per VoicegroupId. Every
     // publication is an immutable LoadedBankView copy; a LoadedBankEntry
@@ -154,11 +164,11 @@ class DecompProject
     std::optional<LoadedBankView> saveVoicegroup(SaveVoicegroupInput input, QString *error);
 
   private:
-    bool parseSongTable(QString *error);
+    bool parseSongTable(const QDir &midiDir, const QSet<QString> &midiFiles, QString *error);
     void parseSongConstants();
     bool parseMidiCfg(); // false if midi.cfg does not exist (or can't open)
     void parseSongsMk();
-    void discoverUnregisteredSongs();
+    void discoverUnregisteredSongs(const QDir &midiDir, const QStringList &midiFiles);
 
     // The canonical, worker-owned bank record. Never published.
     struct LoadedBankEntry {
@@ -177,5 +187,6 @@ class DecompProject
     QVector<SongInfo> m_songs;
     QVector<MusicPlayer> m_players; // cached at open (one file read)
     QHash<QString, int> m_playerTrackBudgets;
+    QString m_cacheStoreDir; // empty: use ProjectIndex::defaultStoreDir()
     std::unordered_map<VoicegroupId, LoadedBankEntry, VoicegroupIdHash> m_banks;
 };
