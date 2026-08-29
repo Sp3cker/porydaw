@@ -234,7 +234,7 @@ bool PianoRoll::resolveVelocityPress(const QMouseEvent *event)
 {
     if (std::abs(event->pos().y() - m_pressPos.toPoint().y()) < QApplication::startDragDistance())
         return false; // consumes the entire event
-    applyModifierVelocitySelection();
+    applyVelocityDragSelection();
     activateLeftDrag(LeftDrag::Velocity);
     if (!m_sv->beginVelocityGesture(resolveSelection()))
         cancelVelocityInteraction();
@@ -243,8 +243,10 @@ bool PianoRoll::resolveVelocityPress(const QMouseEvent *event)
     return true;
 }
 
-void PianoRoll::applyModifierVelocitySelection()
+void PianoRoll::applyVelocityDragSelection()
 {
+    if (!noteRequiresSelectionUpdate(m_velAnchor))
+        return;
     m_sv->selectionModel().setNoteSelection({m_velAnchor.noteId});
 }
 

@@ -248,13 +248,12 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
     // chord held (Ctrl by default), a vertical drag from anywhere on note B
     // adjusts its velocity — 1px = 1 step, 15px down lands 93 -> 78 — with
     // the hover mark pinned to the note's row. Crossing the drag threshold
-    // makes the grabbed note the entire selection, so the drag edits its
-    // anchor alone no matter what was selected beforehand, and every
-    // crossing re-anchors to the note under the cursor. Without a preceding
-    // drag, Ctrl+click keeps its selection-toggle meaning (deferred to
-    // release), and a vertical jitter under the drag threshold is still
-    // that click: it toggles, changes no velocity, and pushes no undo
-    // command.
+    // preserves a selected group when the grabbed note is already selected;
+    // otherwise it re-anchors the selection to the grabbed note. Without a
+    // preceding drag, Ctrl+click keeps its selection-toggle meaning
+    // (deferred to release), and a vertical jitter under the drag threshold
+    // is still that click: it toggles, changes no velocity, and pushes no
+    // undo command.
     {
         const auto sameNoteFields = [](const DocNote &x, const DocNote &y) {
             return x.noteId == y.noteId && x.engineTrack == y.engineTrack &&
@@ -350,8 +349,8 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
             fail("the chord-held velocity drag did not push exactly one command");
 
         // Decisive regression: the anchor sits inside a multi-note selection.
-        // A chord velocity drag must collapse the selection to the anchor and
-        // edit the anchor alone, leaving the rest of the group byte-identical.
+        // A chord velocity drag must preserve the selection and apply the
+        // same delta to every selected note from its own original velocity.
         view.selectionModel().setNoteSelection({aId, bId});
         DocNote aGrouped, bGrouped;
         if (!doc.findNote(track, a.tick, uint8_t(a.key), &aGrouped) ||
@@ -364,21 +363,20 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
                                   Qt::LeftButton, Qt::ControlModifier);
         checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, a.center + QPoint(0, 15),
                                   Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
-        DocNote aCollapsed, bCollapsed;
-        if (view.selectionModel().noteSelection() != std::vector<NoteId>{aId})
-            fail("a grouped velocity drag did not collapse the selection to its anchor");
-        if (!doc.findNote(track, a.tick, uint8_t(a.key), &aCollapsed) ||
-            int(aCollapsed.velocity) != int(aGrouped.velocity) - 15)
+        DocNote aAdjusted, bAdjusted;
+        if (view.selectionModel().noteSelection() != std::vector<NoteId>({aId, bId}))
+            fail("a grouped velocity drag did not preserve the selected notes");
+        if (!doc.findNote(track, a.tick, uint8_t(a.key), &aAdjusted) ||
+            int(aAdjusted.velocity) != int(aGrouped.velocity) - 15)
             fail("the grouped velocity drag did not adjust its anchor");
-        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bCollapsed) ||
-            !sameNoteFields(bCollapsed, bGrouped))
-            fail("the grouped velocity drag also adjusted the other selected note");
+        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bAdjusted) ||
+            int(bAdjusted.velocity) != int(bGrouped.velocity) - 15)
+            fail("the grouped velocity drag did not adjust the other selected note");
         if (doc.undoStack()->count() != groupCount + 1)
             fail("the grouped velocity drag did not push exactly one command");
 
-        // Repeating the drag on the same anchor inside a fresh group behaves
-        // identically: anchor-only selection, anchor-only edit.
-        view.selectionModel().setNoteSelection({aId, bId});
+        // Repeating the drag on the same selected anchor keeps the group and
+        // applies the opposite delta to both notes.
         const int repeatCount = doc.undoStack()->count();
         checks::events::sendMouse(*roll, QEvent::MouseButtonPress, a.center, Qt::LeftButton,
                                   Qt::LeftButton, Qt::ControlModifier);
@@ -387,14 +385,14 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
         checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, a.center - QPoint(0, 15),
                                   Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
         DocNote aRepeated, bRepeated;
-        if (view.selectionModel().noteSelection() != std::vector<NoteId>{aId})
-            fail("repeating a grouped velocity drag did not keep only its anchor selected");
+        if (view.selectionModel().noteSelection() != std::vector<NoteId>({aId, bId}))
+            fail("repeating a grouped velocity drag did not preserve the selected notes");
         if (!doc.findNote(track, a.tick, uint8_t(a.key), &aRepeated) ||
-            int(aRepeated.velocity) != int(aCollapsed.velocity) + 15)
-            fail("repeating the grouped velocity drag did not adjust its anchor");
+            !sameNoteFields(aRepeated, aGrouped))
+            fail("repeating the grouped velocity drag did not restore its anchor");
         if (!doc.findNote(track, b.tick, uint8_t(b.key), &bRepeated) ||
-            !sameNoteFields(bRepeated, bCollapsed))
-            fail("repeating the grouped velocity drag also adjusted the other selected note");
+            !sameNoteFields(bRepeated, bGrouped))
+            fail("repeating the grouped velocity drag did not restore the other selected note");
         if (doc.undoStack()->count() != repeatCount + 1)
             fail("the repeated grouped velocity drag did not push exactly one command");
 

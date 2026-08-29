@@ -1239,76 +1239,44 @@ int checkRollVelocityDrag(VelocityAreaRig &rig)
                                       Qt::LeftButton, velocityDragModifiers);
             QApplication::processEvents();
         };
-        // The two graduated notes overlap, so the piano-roll hit test may resolve either
-        // duplicate. Derive the anchor from the sole selection after each staged press
-        // instead of assuming one of them.
-        const auto resolveRollAnchor = [&](const DocNote &first, const DocNote &second) {
-            struct Resolved {
-                const DocNote *anchor = nullptr;
-                const DocNote *peer = nullptr;
-            };
-            const std::vector<NoteId> selection = rig.env.view.selectionModel().noteSelection();
-            if (selection.size() != 1)
-                return Resolved{};
-            const NoteId selected = selection.front();
-            if (selected == rig.graduatedFirst.noteId)
-                return Resolved{&first, &second};
-            if (selected == rig.graduatedSecond.noteId)
-                return Resolved{&second, &first};
-            return Resolved{};
-        };
-        const auto abortRollGesture = [&]() {
-            rig.env.view.cancelActiveInteractions();
-            checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, rollDragPosition,
-                                      Qt::LeftButton, Qt::NoButton, velocityDragModifiers);
-            QApplication::processEvents();
-            rig.env.live.documentRevision = rig.env.document.revision();
-        };
-
         DocNote beforeFirst{};
         DocNote beforeSecond{};
         check(rig.env.document.findNote(rig.graduatedFirst.noteId, &beforeFirst) &&
                   rig.env.document.findNote(rig.graduatedSecond.noteId, &beforeSecond),
-              "piano-roll cancellation fixture must retain its anchor and the other selected note");
+              "piano-roll cancellation fixture must retain both selected notes");
         const uint64_t revisionBeforeRollCancel = rig.env.document.revision();
         const int undoIndexBeforeRollCancel = rig.env.document.undoStack()->index();
         const int undoCountBeforeRollCancel = rig.env.document.undoStack()->count();
         stageRollVelocityPreview();
-        const auto cancelResolved = resolveRollAnchor(beforeFirst, beforeSecond);
-        check(cancelResolved.anchor != nullptr,
-              "staged piano-roll press must resolve one overlapping duplicate as the sole "
-              "cancellation anchor");
-        if (cancelResolved.anchor == nullptr) {
-            abortRollGesture();
-            return failures;
-        }
-        const DocNote &cancelAnchor = *cancelResolved.anchor;
-        const DocNote &cancelPeer = *cancelResolved.peer;
-        const auto cancellationPreview = rig.env.view.previewVelocity(cancelAnchor.noteId);
-        check(cancellationPreview && *cancellationPreview != cancelAnchor.velocity &&
-                  !rig.env.view.previewVelocity(cancelPeer.noteId) &&
-                  rig.env.document.revision() == revisionBeforeRollCancel &&
-                  rig.env.document.undoStack()->index() == undoIndexBeforeRollCancel &&
-                  rig.env.document.undoStack()->count() == undoCountBeforeRollCancel,
-              "piano-roll cancellation must stage a changed velocity preview for its anchor only");
+        const auto cancellationFirstPreview = rig.env.view.previewVelocity(beforeFirst.noteId);
+        const auto cancellationSecondPreview = rig.env.view.previewVelocity(beforeSecond.noteId);
+        check(
+            cancellationFirstPreview && *cancellationFirstPreview != beforeFirst.velocity &&
+                cancellationSecondPreview && *cancellationSecondPreview != beforeSecond.velocity &&
+                rig.env.view.selectionModel().noteSelection() ==
+                    std::vector<NoteId>({rig.graduatedFirst.noteId, rig.graduatedSecond.noteId}) &&
+                rig.env.document.revision() == revisionBeforeRollCancel &&
+                rig.env.document.undoStack()->index() == undoIndexBeforeRollCancel &&
+                rig.env.document.undoStack()->count() == undoCountBeforeRollCancel,
+            "piano-roll cancellation must stage both selected velocity previews");
         rig.env.view.cancelActiveInteractions();
         checks::events::sendMouse(*roll, QEvent::MouseMove, rollDragPosition, Qt::NoButton,
                                   Qt::LeftButton, velocityDragModifiers);
         checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, rollDragPosition,
                                   Qt::LeftButton, Qt::NoButton, velocityDragModifiers);
         QApplication::processEvents();
-        DocNote cancelledAfterAnchor;
-        DocNote cancelledAfterPeer;
-        check(!rig.env.view.previewVelocity(cancelAnchor.noteId) &&
-                  !rig.env.view.previewVelocity(cancelPeer.noteId) &&
+        DocNote cancelledAfterFirst;
+        DocNote cancelledAfterSecond;
+        check(!rig.env.view.previewVelocity(beforeFirst.noteId) &&
+                  !rig.env.view.previewVelocity(beforeSecond.noteId) &&
                   rig.env.document.revision() == revisionBeforeRollCancel &&
                   rig.env.document.undoStack()->index() == undoIndexBeforeRollCancel &&
                   rig.env.document.undoStack()->count() == undoCountBeforeRollCancel &&
-                  rig.env.document.findNote(cancelAnchor.noteId, &cancelledAfterAnchor) &&
-                  rig.env.document.findNote(cancelPeer.noteId, &cancelledAfterPeer) &&
-                  cancelledAfterAnchor.velocity == cancelAnchor.velocity &&
-                  cancelledAfterPeer.velocity == cancelPeer.velocity,
-              "SongView cancellation must clear piano-roll local drag state and prevent commit");
+                  rig.env.document.findNote(beforeFirst.noteId, &cancelledAfterFirst) &&
+                  rig.env.document.findNote(beforeSecond.noteId, &cancelledAfterSecond) &&
+                  cancelledAfterFirst.velocity == beforeFirst.velocity &&
+                  cancelledAfterSecond.velocity == beforeSecond.velocity,
+              "SongView cancellation must clear both piano-roll previews and prevent commit");
 
         const uint64_t revisionBeforeRollDrag = rig.env.document.revision();
         const int undoBeforeRollDrag = rig.env.document.undoStack()->count();
@@ -1316,37 +1284,30 @@ int checkRollVelocityDrag(VelocityAreaRig &rig)
         DocNote dragBeforeSecond{};
         check(rig.env.document.findNote(rig.graduatedFirst.noteId, &dragBeforeFirst) &&
                   rig.env.document.findNote(rig.graduatedSecond.noteId, &dragBeforeSecond),
-              "piano-roll drag fixture must retain its anchor and the other selected note");
+              "piano-roll drag fixture must retain both selected notes");
         stageRollVelocityPreview();
-        const auto dragResolved = resolveRollAnchor(dragBeforeFirst, dragBeforeSecond);
-        check(dragResolved.anchor != nullptr,
-              "staged piano-roll press must resolve one overlapping duplicate as the sole "
-              "drag anchor");
-        if (dragResolved.anchor == nullptr) {
-            abortRollGesture();
-            return failures;
-        }
-        const DocNote &dragAnchor = *dragResolved.anchor;
-        const DocNote &dragPeer = *dragResolved.peer;
-        const uint8_t previewVelocity =
-            uint8_t(std::clamp(int(dragAnchor.velocity) + dragDelta, 1, 127));
-        const auto rollPreviewValue = rig.env.view.previewVelocity(dragAnchor.noteId);
-        const std::optional<std::size_t> previewLevel = rig.env.map.levelOf(previewVelocity);
+        const auto firstPreviewVelocity =
+            uint8_t(std::clamp(int(dragBeforeFirst.velocity) + dragDelta, 1, 127));
+        const auto secondPreviewVelocity =
+            uint8_t(std::clamp(int(dragBeforeSecond.velocity) + dragDelta, 1, 127));
+        const auto firstRollPreview = rig.env.view.previewVelocity(dragBeforeFirst.noteId);
+        const auto secondRollPreview = rig.env.view.previewVelocity(dragBeforeSecond.noteId);
+        const std::optional<std::size_t> previewLevel = rig.env.map.levelOf(firstPreviewVelocity);
         const QImage rollDragPreview = rig.env.area.grab().toImage();
-        const QPointF previewNodeCenter((double(rig.env.area.plotOrigin()) +
-                                         double(rig.env.view.contentX(double(dragAnchor.tick)))) *
-                                            rollDragPreview.devicePixelRatio(),
-                                        (previewLevel
-                                             ? rig.env.area.axis().levelToY(int(*previewLevel))
-                                             : rig.env.area.axis().velocityToY(previewVelocity)) *
-                                            rollDragPreview.devicePixelRatio());
+        const QPointF previewNodeCenter(
+            (double(rig.env.area.plotOrigin()) +
+             double(rig.env.view.contentX(double(dragBeforeFirst.tick)))) *
+                rollDragPreview.devicePixelRatio(),
+            (previewLevel ? rig.env.area.axis().levelToY(int(*previewLevel))
+                          : rig.env.area.axis().velocityToY(firstPreviewVelocity)) *
+                rollDragPreview.devicePixelRatio());
         check(rig.env.document.revision() == revisionBeforeRollDrag &&
-                  rig.env.document.undoStack()->count() == undoBeforeRollDrag && rollPreviewValue &&
-                  *rollPreviewValue == previewVelocity &&
-                  !rig.env.view.previewVelocity(dragPeer.noteId) &&
-                  rig.env.view.selectionModel().noteSelection().size() == 1 &&
-                  rig.env.view.selectionModel().noteSelection().front() == dragAnchor.noteId,
-              "piano-roll velocity preview must stage its anchor alone before release");
+                  rig.env.document.undoStack()->count() == undoBeforeRollDrag && firstRollPreview &&
+                  *firstRollPreview == firstPreviewVelocity && secondRollPreview &&
+                  *secondRollPreview == secondPreviewVelocity &&
+                  rig.env.view.selectionModel().noteSelection() ==
+                      std::vector<NoteId>({rig.graduatedFirst.noteId, rig.graduatedSecond.noteId}),
+              "piano-roll velocity preview must stage every selected note before release");
         check(previewLevel && rig.env.area.axis().graduations()[*previewLevel].active,
               "piano-roll velocity drag must update the velocity drawer's active graduation");
         check(hasDarkOutlinePixel(rollDragPreview, previewNodeCenter,
@@ -1355,18 +1316,18 @@ int checkRollVelocityDrag(VelocityAreaRig &rig)
               "piano-roll velocity drag must move the velocity drawer node before release");
         checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, rollDragPosition,
                                   Qt::LeftButton, Qt::NoButton, velocityDragModifiers);
-        DocNote committedAnchor;
-        DocNote committedPeer;
+        DocNote committedFirst;
+        DocNote committedSecond;
         check(rig.env.document.revision() == revisionBeforeRollDrag + 1 &&
                   rig.env.document.undoStack()->count() == undoBeforeRollDrag + 1 &&
-                  !rig.env.view.previewVelocity(dragAnchor.noteId) &&
-                  !rig.env.view.previewVelocity(dragPeer.noteId) &&
-                  rig.env.document.findNote(dragAnchor.noteId, &committedAnchor) &&
-                  rig.env.document.findNote(dragPeer.noteId, &committedPeer) &&
-                  committedAnchor.velocity == previewVelocity &&
-                  committedPeer.velocity == dragPeer.velocity,
-              "piano-roll velocity drag must commit its anchor alone in one command and clear "
-              "previews");
+                  !rig.env.view.previewVelocity(dragBeforeFirst.noteId) &&
+                  !rig.env.view.previewVelocity(dragBeforeSecond.noteId) &&
+                  rig.env.document.findNote(dragBeforeFirst.noteId, &committedFirst) &&
+                  rig.env.document.findNote(dragBeforeSecond.noteId, &committedSecond) &&
+                  committedFirst.velocity == firstPreviewVelocity &&
+                  committedSecond.velocity == secondPreviewVelocity,
+              "piano-roll velocity drag must commit every selected note in one command and "
+              "clear previews");
         rig.env.live.documentRevision = rig.env.document.revision();
     }
     return failures;

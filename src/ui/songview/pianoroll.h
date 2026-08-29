@@ -190,7 +190,7 @@ class PianoRoll : public TimelineSurface
     void resolveRightPress(const QMouseEvent *event);
     void resolveDrawPress(const QMouseEvent *event);
     bool resolveVelocityPress(const QMouseEvent *event);
-    void applyModifierVelocitySelection();
+    void applyVelocityDragSelection();
     void updateMoveDrag(const QMouseEvent *event);
     void auditionMovedSelection();
     void updateResizeDrag(const QMouseEvent *event);
