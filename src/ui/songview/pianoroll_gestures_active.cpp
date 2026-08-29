@@ -4,7 +4,6 @@
 
 #include "core/mid2agbtables.h"
 #include "porydaw_scale.h"
-#include "ui/keymap.h"
 #include "ui/songview.h"
 
 #include <QMouseEvent>
@@ -222,18 +221,6 @@ void PianoRoll::releasePendingVelocityClick(QMouseEvent *)
     stopNoteAudition();
 }
 
-void PianoRoll::armVelocityOneShot(const QMouseEvent *event, SongView::VelocityCommitResult result)
-{
-    const bool modifierVelocityDrag = m_modifierVelocityDrag;
-    m_modifierVelocityDrag = false;
-    if (modifierVelocityDrag && result == SongView::VelocityCommitResult::Committed &&
-        keymap::Registry::instance().matchesModifier(event->modifiers(),
-                                                     QStringLiteral("roll.velocity_drag"))) {
-        m_suppressNextVelocitySelectionAdd = true;
-        m_lastModifierVelocityDragNote = m_velAnchor.noteId;
-    }
-}
-
 void PianoRoll::commitDrawDrag()
 {
     SongDocument *doc = m_sv->document();
@@ -293,14 +280,13 @@ void PianoRoll::commitVelocityDrag(SongView::VelocityCommitResult result)
         m_lastVelocity = uint8_t(std::clamp(int(m_velAnchor.velocity) + m_dVel, 1, 127));
 }
 
-void PianoRoll::commitDrag(QMouseEvent *event)
+void PianoRoll::commitDrag(QMouseEvent *)
 {
     const LeftDrag drag = m_leftDrag; // snapshot kind first
     clearLiveDragToken();             // before any commit; kills either channel
     SongView::VelocityCommitResult velocityResult = SongView::VelocityCommitResult::NoGesture;
     if (drag == LeftDrag::Velocity)
         velocityResult = m_sv->commitVelocityGesture();
-    armVelocityOneShot(event, velocityResult); // unconditional: consumes origin flag
     SongDocument *doc = m_sv->document();
     if (drag == LeftDrag::Draw) {
         commitDrawDrag();

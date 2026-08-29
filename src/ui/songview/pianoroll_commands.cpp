@@ -108,11 +108,8 @@ void PianoRoll::keyPressEvent(QKeyEvent *event)
 
 void PianoRoll::keyReleaseEvent(QKeyEvent *event)
 {
-    if (!event->isAutoRepeat() && keymap::Registry::isModifierKey(event->key())) {
-        m_suppressNextVelocitySelectionAdd = false;
-        m_lastModifierVelocityDragNote = {};
+    if (!event->isAutoRepeat() && keymap::Registry::isModifierKey(event->key()))
         invalidateContent();
-    }
     // End the transpose audition when the shortcut's keys come up.
     // Autorepeat releases are skipped so a held transpose key keeps sounding
     // the moving pitch; the idle-state guard keeps a stray key release

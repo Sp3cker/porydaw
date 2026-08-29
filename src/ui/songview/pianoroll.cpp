@@ -138,7 +138,6 @@ void PianoRoll::cancelVelocityInteraction()
     clearLiveDragToken();
     m_leftDrag = LeftDrag::None;
     m_dVel = 0;
-    m_modifierVelocityDrag = false;
     m_velModMods = Qt::NoModifier;
     m_velAnchor = {};
     m_velAudEff = -1;
@@ -155,10 +154,6 @@ bool PianoRoll::event(QEvent *event)
     const auto type = event->type();
     const bool losesFocus =
         type == QEvent::Hide || type == QEvent::WindowDeactivate || type == QEvent::FocusOut;
-    if (losesFocus) {
-        m_suppressNextVelocitySelectionAdd = false;
-        m_lastModifierVelocityDragNote = {};
-    }
     if ((losesFocus || type == QEvent::UngrabMouse) &&
         (m_leftDrag == LeftDrag::Velocity || m_leftDrag == LeftDrag::PendingVelocity))
         cancelVelocityInteraction();

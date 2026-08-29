@@ -632,6 +632,75 @@ int runTransportCheck()
                 fail("second song-start play advanced before reaching full output gain");
         }
 
+        // Resume at a nonzero cursor: the transition must keep the sequencer
+        // parked through the zero-gain settle hold — no player advance, no
+        // note rendered below full output gain — and enter Playing at unity
+        // cut-fade gain, so the first resumed interval is neither consumed
+        // nor attenuated. Playing stays applied through the pause fade-down,
+        // so the resume cursor is captured only after the pause settles.
+        renderFrames(uint32_t(0.25 * engine.sampleRate()));
+        engine.pause();
+        auto resumePauseFrames = uint32_t{0};
+        while ((engine.m_appliedTransport != static_cast<int>(Transport::Paused) ||
+                engine.m_cutFadeActive) &&
+               resumePauseFrames < uint32_t(engine.sampleRate())) {
+            renderFrames(1);
+            ++resumePauseFrames;
+        }
+        if (engine.m_appliedTransport != static_cast<int>(Transport::Paused) ||
+            engine.m_cutFadeActive)
+            fail("pause did not settle before the resume regression");
+        else if (engine.m_player.position() == 0)
+            fail("resume regression needs a nonzero cursor");
+        else {
+            const auto resumeCursorPosition = engine.m_player.position();
+            engine.play();
+            auto resumeSettleFrames = uint32_t{0};
+            auto advancedDuringSettle = false;
+            while (engine.m_appliedTransport != static_cast<int>(Transport::Playing) &&
+                   resumeSettleFrames < uint32_t(engine.sampleRate())) {
+                renderFrames(1);
+                ++resumeSettleFrames;
+                advancedDuringSettle |= engine.m_player.position() != resumeCursorPosition;
+            }
+            if (engine.m_appliedTransport != static_cast<int>(Transport::Playing)) {
+                fail("resume was not applied for the resume regression");
+            } else {
+                if (advancedDuringSettle)
+                    fail("resume advanced the player during the zero-gain settle");
+                if (engine.m_cutFadeGain < 0.999f)
+                    fail("resume entered Playing below unity cut-fade gain");
+                if (engine.m_player.position() != resumeCursorPosition)
+                    fail("resume consumed timeline audio before full output gain");
+                renderFrames(1);
+                if (engine.m_player.position() <= resumeCursorPosition)
+                    fail("timeline did not advance after the resumed start");
+            }
+        }
+        // Rapid retarget: play requested while a pause cut is still fading
+        // down. The pending cut retargets onto already-applied Playing and
+        // must complete through the normal return ramp — no state may wait
+        // for an applied-transport change that already matches the target.
+        engine.pause();
+        renderFrames(1);
+        if (!engine.m_cutFadeActive || engine.m_cutFadeRising) {
+            fail("pause cut did not start in its fade-down for the retarget check");
+        } else {
+            engine.play();
+            auto retargetFrames = uint32_t{0};
+            while (engine.m_cutFadeActive && retargetFrames < uint32_t(engine.sampleRate())) {
+                renderFrames(1);
+                ++retargetFrames;
+            }
+            if (engine.m_cutFadeActive) {
+                fail("retargeted cut never completed");
+            } else {
+                if (engine.m_appliedTransport != static_cast<int>(Transport::Playing))
+                    fail("retargeted cut lost the playing state");
+                if (engine.m_cutFadeGain < 0.999f)
+                    fail("retargeted cut ended below unity output gain");
+            }
+        }
         // A cold song replacement is another playback boundary. Starting a
         // silent song must not reveal delayed samples from the outgoing song.
         renderFrames(uint32_t(0.5 * engine.sampleRate()));

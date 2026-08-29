@@ -592,7 +592,8 @@ void AudioEngine::beginOutputCut(int transport)
 }
 
 // Audio-thread: the exact zero-gain engine cut and deferred transport apply.
-// A start at song position zero remains deferred until the settle hold ends.
+// Every entry into Playing from another state stays deferred until the
+// settle hold ends, so the first resumed note begins at unity output gain.
 void AudioEngine::finishOutputCut()
 {
     m_cutFadeTargetTransport = m_transport.load();
@@ -606,8 +607,14 @@ void AudioEngine::finishOutputCut()
 
     const int prior = m_appliedTransport;
     const int target = m_cutFadeTargetTransport;
-    const bool fullAttackStart =
-        target == static_cast<int>(Transport::Playing) && m_player.position() == 0;
+    // Park the sequencer on the prior state for every non-Playing → Playing
+    // transition: the player neither advances nor renders a note while the
+    // gain is zero, and the hold-end completion in process() switches to
+    // Playing at unity m_cutFadeGain. A cut retargeted onto already-applied
+    // Playing keeps the normal return ramp, so the completion's applied
+    // != target guard can never stall it.
+    const bool deferredPlayingStart = target == static_cast<int>(Transport::Playing) &&
+                                      prior != static_cast<int>(Transport::Playing);
     switch (static_cast<Transport>(target)) {
     case Transport::Stopped:
         m_player.reset();
@@ -622,9 +629,9 @@ void AudioEngine::finishOutputCut()
             m4a_engine_reset_poly_stats(m_engine.get());
         break;
     }
-    if (fullAttackStart) {
-        // Skip the return ramp and keep the player stopped through the settle
-        // hold. The first rendered note then starts at unity gain.
+    if (deferredPlayingStart) {
+        // Skip the return ramp and keep the applied transport paused or
+        // stopped through the settle hold.
         m_cutFadeRemaining = 0;
     } else {
         m_appliedTransport = target;

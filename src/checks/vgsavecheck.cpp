@@ -3,14 +3,18 @@
 #include <QComboBox>
 #include <QCoreApplication>
 #include <QDialog>
+#include <QDialogButtonBox>
 #include <QDir>
 #include <QDirIterator>
 #include <QEvent>
 #include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
+#include <QFormLayout>
+#include <QLabel>
 #include <QLineEdit>
 #include <QPointer>
+#include <QPushButton>
 #include <QStatusBar>
 #include <QTimer>
 #include <cstdio>
@@ -1585,16 +1589,70 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
     {
         const QString argBefore = tab->document().cfg().voicegroupArg;
         const QString newName = QStringLiteral("vgsavecheck_created");
-        QTimer::singleShot(0, this, [this, newName] {
+        QTimer::singleShot(0, this, [this, &check, newName] {
             for (QDialog *d : findChildren<QDialog *>()) {
                 if (!d->isVisible() || d->windowTitle() != tr("New Voicegroup"))
                     continue;
-                if (QLineEdit *edit = d->findChild<QLineEdit *>()) {
-                    edit->setText(newName);
-                    d->accept();
-                } else {
+                auto *form = d->findChild<QFormLayout *>();
+                auto *edit = d->findChild<QLineEdit *>();
+                auto *sourceCombo = d->findChild<QComboBox *>();
+                auto *buttons = d->findChild<QDialogButtonBox *>();
+                // Structural guard first: a missing form, name row,
+                // source row, or button box rejects the modal so the
+                // harness never hangs in exec(); the box is dereferenced
+                // only afterwards.
+                if (!check(form && edit && sourceCombo && buttons,
+                           "New Voicegroup dialog is missing the name row, "
+                           "source row, or button box")) {
                     d->reject(); // never hang the harness in exec()
+                    return;
                 }
+                QPushButton *okButton = buttons->button(QDialogButtonBox::Ok);
+                QPushButton *cancelButton = buttons->button(QDialogButtonBox::Cancel);
+                if (!check(okButton && cancelButton,
+                           "New Voicegroup button box is missing the OK or Cancel button")) {
+                    d->reject(); // never hang the harness in exec()
+                    return;
+                }
+                // Every row must be laid out: the Name and Source fields
+                // with visible labels, and the button box itself as a
+                // laid-out, visible form row below them (item positions in
+                // the form, never child-button geometry).
+                auto *editLabel = qobject_cast<QLabel *>(form->labelForField(edit));
+                auto *sourceLabel = qobject_cast<QLabel *>(form->labelForField(sourceCombo));
+                check(editLabel && editLabel->isVisible() && sourceLabel &&
+                          sourceLabel->isVisible() &&
+                          sourceLabel->text() == WorkspaceUi::tr("Source"),
+                      "source combo is not a laid-out form row with a Source label");
+                int editRow = -1;
+                int comboRow = -1;
+                int buttonsRow = -1;
+                QFormLayout::ItemRole editRole = QFormLayout::LabelRole;
+                QFormLayout::ItemRole comboRole = QFormLayout::LabelRole;
+                QFormLayout::ItemRole buttonsRole = QFormLayout::LabelRole;
+                form->getWidgetPosition(edit, &editRow, &editRole);
+                form->getWidgetPosition(sourceCombo, &comboRow, &comboRole);
+                form->getWidgetPosition(buttons, &buttonsRow, &buttonsRole);
+                check(editRow >= 0 && editRole == QFormLayout::FieldRole && comboRow >= 0 &&
+                          comboRole == QFormLayout::FieldRole && buttonsRow >= 0 &&
+                          buttonsRole == QFormLayout::SpanningRole && editRow < comboRow &&
+                          comboRow < buttonsRow && buttons->isVisible() && edit->isVisible() &&
+                          sourceCombo->isVisible() && okButton->isVisible() &&
+                          cancelButton->isVisible() &&
+                          edit->geometry().bottom() < sourceCombo->geometry().top() &&
+                          sourceCombo->geometry().bottom() < buttons->geometry().top(),
+                      "New Voicegroup controls are not visible or laid out in order");
+                // The intended source is the copy of the song's bound
+                // voicegroup; select its row if the dialog opened elsewhere.
+                const QString intendedSource = sourceCombo->itemData(0).toString();
+                if (sourceCombo->currentIndex() != 0)
+                    sourceCombo->setCurrentIndex(0);
+                check(!intendedSource.isEmpty() &&
+                          sourceCombo->currentData().toString() == intendedSource,
+                      "source combo did not select the copy row");
+                edit->setText(newName);
+                check(edit->hasAcceptableInput(), "dialog rejected the valid name");
+                okButton->click(); // accept through the real OK button
                 return;
             }
         });

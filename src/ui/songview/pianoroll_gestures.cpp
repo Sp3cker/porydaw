@@ -99,7 +99,6 @@ void PianoRoll::beginLeftPress(const QMouseEvent *event)
     m_dKey = 0;
     m_dDur = 0;
     m_dVel = 0;
-    m_modifierVelocityDrag = false;
 }
 
 bool PianoRoll::contentPressRejectedByScaleFold(const SongDocument *doc, const ViewNote *hit) const
@@ -236,7 +235,6 @@ bool PianoRoll::resolveVelocityPress(const QMouseEvent *event)
     if (std::abs(event->pos().y() - m_pressPos.toPoint().y()) < QApplication::startDragDistance())
         return false; // consumes the entire event
     applyModifierVelocitySelection();
-    m_modifierVelocityDrag = true;
     activateLeftDrag(LeftDrag::Velocity);
     if (!m_sv->beginVelocityGesture(resolveSelection()))
         cancelVelocityInteraction();
@@ -247,22 +245,7 @@ bool PianoRoll::resolveVelocityPress(const QMouseEvent *event)
 
 void PianoRoll::applyModifierVelocitySelection()
 {
-    const NoteId id = m_velAnchor.noteId;
-    const bool switchesNotes =
-        m_suppressNextVelocitySelectionAdd && id != m_lastModifierVelocityDragNote;
-    if (switchesNotes) {
-        m_suppressNextVelocitySelectionAdd = false;
-        m_sv->selectionModel().setNoteSelection({id});
-    } else if (noteRequiresSelectionUpdate(m_velAnchor)) {
-        if (m_velModMods & Qt::ControlModifier) {
-            const auto &storedSelection = m_sv->selectionModel().noteSelection();
-            std::vector<NoteId> ids(storedSelection.begin(), storedSelection.end());
-            ids.push_back(id);
-            m_sv->selectionModel().setNoteSelection(std::move(ids));
-        } else {
-            m_sv->selectionModel().setNoteSelection({id});
-        }
-    }
+    m_sv->selectionModel().setNoteSelection({m_velAnchor.noteId});
 }
 
 void PianoRoll::beginDraw()

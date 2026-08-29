@@ -208,13 +208,12 @@ class PianoRoll : public TimelineSurface
     void releasePendingDrawClick(QMouseEvent *event);
     void releasePendingVelocityClick(QMouseEvent *);
     bool finishReleaseWithoutCommit(const QMouseEvent *event);
-    void commitDrag(QMouseEvent *event);
+    void commitDrag(QMouseEvent *);
     void commitDrawDrag();
     void commitMoveDrag();
     void commitResolvedMove(SongDocument &doc, std::vector<DocNote> &notes);
     void commitResizeDrag(LeftDrag drag, SongDocument *doc);
     void commitVelocityDrag(SongView::VelocityCommitResult);
-    void armVelocityOneShot(const QMouseEvent *, SongView::VelocityCommitResult);
     void completeProjectionGesture();
     QRectF noteRect(qreal x0, qreal x1, int key) const;
     QRectF noteRect(const ViewNote &note) const;
@@ -297,16 +296,13 @@ class PianoRoll : public TimelineSurface
     ViewNote m_velAnchor{};          // pressed note of a velocity drag (a copy)
     int m_velAudEff = -1;            // last effective velocity auditioned mid-drag
     Qt::KeyboardModifiers m_velModMods = Qt::NoModifier; // that press's chord
-    bool m_modifierVelocityDrag = false;             // active drag began with the modifier chord
-    bool m_suppressNextVelocitySelectionAdd = false; // one-shot after a committed drag
-    NoteId m_lastModifierVelocityDragNote{};         // anchor that armed the one-shot
-    int m_kbdKey = -1;                               // key sounding from a keyboard-column press
-    int m_soundingKey = -1;                          // auditioned key highlighted on the keyboard
-    int m_hoverKey = -1;                             // key row under the cursor; -1 = no mark
-    bool m_auditioned = false;                       // a drag/draw preview note is sounding
-    uint8_t m_lastVelocity = 100;                    // latches to touched/velocity-edited notes
-    bool m_panning = false;                          // middle-drag pan
-    QPointF m_panPos;                                // last pan sample, global coords
+    int m_kbdKey = -1;            // key sounding from a keyboard-column press
+    int m_soundingKey = -1;       // auditioned key highlighted on the keyboard
+    int m_hoverKey = -1;          // key row under the cursor; -1 = no mark
+    bool m_auditioned = false;    // a drag/draw preview note is sounding
+    uint8_t m_lastVelocity = 100; // latches to touched/velocity-edited notes
+    bool m_panning = false;       // middle-drag pan
+    QPointF m_panPos;             // last pan sample, global coords
     PitchBendEditor *m_bendPopup = nullptr;
     pianoroll_detail::NoteContextMenu *m_noteMenu = nullptr;
 };

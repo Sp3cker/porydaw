@@ -628,10 +628,12 @@ void WorkspaceUi::runCreateVoicegroupFlow()
             QDir(m_state.snapshot.root()).filePath(activeId->sourceRelativePath()));
     }
     sourceCombo->addItem(tr("Empty (dummy template)"), QString());
+    form->addRow(tr("Source"), sourceCombo);
     auto *const buttons =
         new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    form->addRow(buttons);
     if (dialog.exec() != QDialog::Accepted)
         return;
     if (!m_state.snapshot.isOpen() || projectBusy() || m_dialogOps > 0)
