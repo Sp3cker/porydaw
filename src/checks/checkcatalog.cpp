@@ -196,6 +196,17 @@ const std::vector<CheckDefinition> &catalog()
                 .fixtureFiles = twoSongRichFiles + strings({"sound/music_player_table.inc"}),
             },
             {
+                .name = "projectworkspacecachecheck",
+                .argv = strings({"--projectworkspacecachecheck", "{scratch}"}),
+                .handler =
+                    [](QApplication &, const QStringList &args) {
+                        return runProjectWorkspaceCacheCheck(args[1]);
+                    },
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = twoSongRichFiles + strings({"sound/music_player_table.inc"}),
+            },
+            {
                 .name = "sessioncheck",
                 .argv = strings({"--sessioncheck", "{scratch}", "mus_route101"}),
                 .handler =

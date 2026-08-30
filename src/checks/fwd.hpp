@@ -20,6 +20,7 @@ int runExportCheck(const QString &projectRoot, const QString &songLabel);
 int runMkCheck(const QString &projectRoot, const QString &songLabel);
 int runProjectIoCheck(const QString &projectRoot);
 int runProjectWorkspaceCheck(const QString &projectRoot);
+int runProjectWorkspaceCacheCheck(const QString &projectRoot);
 int runProjectIndexCheck(const QString &scratchProject, const QString &scratchDir);
 int runSessionCheck(const QString &projectRoot, const QString &songLabel);
 int runTabCheck(const QString &projectRoot, const QString &songA, const QString &songB);

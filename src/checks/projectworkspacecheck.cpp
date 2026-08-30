@@ -254,10 +254,23 @@ int checkWorkspaceFlows(const QString &projectRoot, int &failures)
     waitFor(
         [&] {
             const auto *state = lastState(startupLog);
+            return state && state->state == ProjectOpenState::Ready;
+        },
+        "the restored re-open did not publish Ready");
+    if (const auto *restored = lastState(startupLog)) {
+        check(restored->catalog.groupArgs.isEmpty(),
+              "the restored re-open scanned its catalog before a song became playable");
+    }
+    // A re-open has no restored songs, so its low-priority fallback must run
+    // after Ready. Let it settle before the per-command catalog assertions
+    // below, whose marks intentionally describe only user submissions.
+    waitFor(
+        [&] {
+            const auto *state = lastState(startupLog);
             return state && state->state == ProjectOpenState::Ready &&
                    !state->catalog.groupArgs.isEmpty();
         },
-        "the restored re-open did not publish its Ready catalog");
+        "the restored re-open did not run its deferred catalog fallback");
 
     // ---- semantic event mapping ------------------------------------------------------
 

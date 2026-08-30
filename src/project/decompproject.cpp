@@ -1,6 +1,7 @@
 #include "decompproject.h"
 
 #include <QDir>
+#include <QDebug>
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
@@ -203,64 +204,78 @@ int ProjectSnapshot::trackBudgetFor(const SongInfo &song) const
 
 bool DecompProject::open(const QString &rootDir, QString *error)
 {
+    return openImpl(rootDir, error, true);
+}
+
+bool DecompProject::openFresh(const QString &rootDir, QString *error)
+{
+    return openImpl(rootDir, error, false);
+}
+
+bool DecompProject::openImpl(const QString &rootDir, QString *error, bool useCache)
+{
     close();
 
     const QDir dir(rootDir);
-    if (!dir.exists()) {
-        if (error)
-            *error = QStringLiteral("Directory does not exist: %1").arg(rootDir);
-        return false;
-    }
     m_root = dir.absolutePath();
     const QString cacheStoreDir =
         m_cacheStoreDir.isEmpty() ? ProjectIndex::defaultStoreDir(m_root) : m_cacheStoreDir;
+    m_activeCacheStoreDir = cacheStoreDir;
 
-    // Persistent-index fast path: a store whose fingerprint still matches
-    // every input replaces the scan entirely; anything else falls through
-    // to the full rescan and is rewritten below.
-    QByteArray indexFinger;
-    QStringList midiFiles;
-    if (!cacheStoreDir.isEmpty()) {
-        // Listing feeds the fingerprint, and the scan below reuses it —
-        // sound/songs/midi is never walked twice.
-        midiFiles = ProjectIndex::listFileNames(m_root + QStringLiteral("/sound/songs/midi"),
-                                                QStringLiteral(".mid"));
-        const QStringList sidecarFiles = ProjectIndex::listFileNames(
-            m_root + QStringLiteral("/.porydaw"), QStringLiteral(".json"));
-        indexFinger = ProjectIndex::fingerprint(m_root, midiFiles, sidecarFiles);
-        if (ProjectIndex::load(cacheStoreDir, m_root, indexFinger, &m_songs, &m_players)) {
-            for (SongInfo &song : m_songs) {
-                if (!song.registered) {
-                    song.constant = SongRegistry::constantForLabel(song.label);
-                    song.player = QStringLiteral("MUSIC_PLAYER_BGM");
-                    QString constant, player;
-                    if (SongRegistry::loadRegistrationMeta(m_root, song.label, &constant,
-                                                           &player)) {
-                        if (!constant.isEmpty())
-                            song.constant = constant;
-                        if (!player.isEmpty())
-                            song.player = player;
-                    }
-                }
-            }
-            m_playerTrackBudgets = playerTrackBudgets(m_players);
-            return true;
-        }
+    // Startup's cache path is intentionally local-only. In particular, do
+    // not canonicalize, stat, list, or reread sidecars under root before the
+    // cached snapshot can start a song. Validation runs on the worker later.
+    if (tryHydrateCache(cacheStoreDir, useCache))
+        return true;
+
+    if (!dir.exists()) {
+        if (error)
+            *error = QStringLiteral("Directory does not exist: %1").arg(rootDir);
+        close();
+        return false;
     }
+
+    if (!scanAndPersist(cacheStoreDir, error)) {
+        close();
+        return false;
+    }
+    return true;
+}
+
+bool DecompProject::tryHydrateCache(const QString &cacheStoreDir, bool useCache)
+{
+    if (!useCache || cacheStoreDir.isEmpty() ||
+        !ProjectIndex::loadCached(cacheStoreDir, m_root, &m_songs, &m_players))
+        return false;
+    m_playerTrackBudgets = playerTrackBudgets(m_players);
+    m_cacheHydrated = true;
+    return true;
+}
+
+bool DecompProject::scanAndPersist(const QString &cacheStoreDir, QString *error)
+{
+    // A cache miss (and every explicit refresh) performs the complete source
+    // scan. Collecting index inputs first lets persistence reuse its MIDI
+    // listing, while a non-indexable project still opens without replacing a
+    // good local cache with a partial snapshot.
+    ProjectIndex::Inputs indexInputs;
+    const bool canPersistIndex =
+        !cacheStoreDir.isEmpty() && ProjectIndex::collectInputs(m_root, &indexInputs, nullptr);
+    QStringList midiFiles;
     const QDir midiDir(m_root + QStringLiteral("/sound/songs/midi"));
-    // Bare names-only walk: QDir::entryList's per-entry metadata stat
-    // dominates the scan on large FAT32 checkouts (see ProjectIndex::
-    // listFileNames). Listed only when the cache fast path above did not.
-    if (midiFiles.isEmpty())
-        midiFiles = ProjectIndex::listFileNames(m_root + QStringLiteral("/sound/songs/midi"),
-                                                QStringLiteral(".mid"));
+    if (canPersistIndex)
+        midiFiles = indexInputs.midiSongNames;
+    else if (!midiDir.exists() ||
+             !ProjectIndex::listFileNames(midiDir.path(), QStringLiteral(".mid"), &midiFiles)) {
+        if (error)
+            *error = QStringLiteral("Cannot list project MIDI files: %1").arg(midiDir.path());
+        return false;
+    }
     QSet<QString> midiFileNames;
     for (const QString &fileName : midiFiles)
         midiFileNames.insert(fileName);
-    if (!parseSongTable(midiDir, midiFileNames, error)) {
-        m_root.clear();
+    if (!parseSongTable(midiDir, midiFileNames, error))
         return false;
-    }
     parseSongConstants();
     discoverUnregisteredSongs(midiDir, midiFiles);
     // Which registration files still miss each song's entry — one pass over
@@ -286,8 +301,10 @@ bool DecompProject::open(const QString &rootDir, QString *error)
         parseSongsMk();
     m_players = SongRegistry::musicPlayers(m_root);
     m_playerTrackBudgets = playerTrackBudgets(m_players);
-    if (!cacheStoreDir.isEmpty())
-        ProjectIndex::save(cacheStoreDir, m_root, indexFinger, m_songs, m_players);
+    m_indexCachePersistenceError.clear();
+    m_indexCachePersisted =
+        canPersistIndex && ProjectIndex::save(cacheStoreDir, m_root, indexInputs.fingerprint,
+                                              m_songs, m_players, &m_indexCachePersistenceError);
     return true;
 }
 
@@ -297,6 +314,8 @@ void DecompProject::replaceWith(const ProjectSnapshot &snapshot)
     m_songs = snapshot.songs();
     m_players = snapshot.players();
     m_playerTrackBudgets = playerTrackBudgets(m_players);
+    m_activeCacheStoreDir.clear();
+    m_cacheHydrated = false;
 }
 
 int DecompProject::trackBudgetFor(const SongInfo &song) const
@@ -307,7 +326,54 @@ int DecompProject::trackBudgetFor(const SongInfo &song) const
 bool DecompProject::reload(QString *error)
 {
     const QString root = m_root;
-    return open(root, error);
+    return openFresh(root, error);
+}
+
+bool DecompProject::validateCachedIndex(ProjectSnapshot *updatedSnapshot, QString *error)
+{
+    if (updatedSnapshot)
+        *updatedSnapshot = {};
+    if (!m_cacheHydrated || m_activeCacheStoreDir.isEmpty())
+        return true;
+
+    ProjectIndex::Inputs inputs;
+    if (!ProjectIndex::collectInputs(m_root, &inputs, error))
+        return false;
+    if (ProjectIndex::matches(m_activeCacheStoreDir, m_root, inputs.fingerprint)) {
+        m_cacheHydrated = false;
+        return true;
+    }
+
+    // Preserve existing bank leases while the fresh candidate performs all
+    // source I/O. An unreadable source retains the usable cache snapshot; a
+    // local cache-publication failure still updates this live model from the
+    // successful fresh source scan.
+    auto refreshed = DecompProject{};
+    refreshed.setIndexCache(m_activeCacheStoreDir);
+    if (!refreshed.openFresh(m_root, error))
+        return false;
+    ProjectSnapshot refreshedSnapshot(refreshed.m_root, refreshed.m_songs, refreshed.m_players,
+                                      refreshed.m_playerTrackBudgets);
+    const bool cachePersisted = refreshed.m_indexCachePersisted;
+    const QString cachePersistenceError = refreshed.m_indexCachePersistenceError;
+    replaceWith(refreshedSnapshot);
+    m_indexCachePersisted = cachePersisted;
+    m_indexCachePersistenceError = cachePersistenceError;
+    if (updatedSnapshot)
+        *updatedSnapshot = std::move(refreshedSnapshot);
+    if (!cachePersisted) {
+        qWarning().noquote()
+            << "Project index refreshed, but its local cache could not be published:"
+            << (cachePersistenceError.isEmpty()
+                    ? QStringLiteral("unknown local cache error")
+                    : cachePersistenceError);
+    }
+    return true;
+}
+
+bool DecompProject::validateCachedIndex(QString *error)
+{
+    return validateCachedIndex(nullptr, error);
 }
 
 void DecompProject::close()
@@ -316,6 +382,10 @@ void DecompProject::close()
     m_songs.clear();
     m_players.clear();
     m_playerTrackBudgets.clear();
+    m_activeCacheStoreDir.clear();
+    m_cacheHydrated = false;
+    m_indexCachePersisted = false;
+    m_indexCachePersistenceError.clear();
     m_banks.clear();
 }
 

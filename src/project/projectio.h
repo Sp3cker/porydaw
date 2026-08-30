@@ -36,6 +36,10 @@ struct LoadVoicegroupCommand {
 struct ReadSidecarCommand {
     SongName song;
 };
+// Cache freshness is deliberately private and low priority: it must never
+// make the cached project or its first song wait on remote filesystem work.
+struct ValidateProjectIndexCommand {};
+struct IndexValidated {};
 
 // Private SaveSidecarInput completion: consumed without a public event; it
 // merely advances the FIFO.
@@ -55,7 +59,8 @@ using ProjectCommand =
                  SaveSidecarInput, VoicegroupEditInput, CreateSongInput, CreateVoicegroupInput,
                  RegistrationPlanInput, RegisterSongInput, DeletionPlanInput, DeleteSongInput,
                  PreviewPlanInput, PreviewInput, CleanupPreviewInput, RefreshCatalogInput,
-                 LoadSampleSetInput, ProbeSamplesInput, ReadSampleInput, CommitSampleInput>;
+                 LoadSampleSetInput, ProbeSamplesInput, ReadSampleInput, CommitSampleInput,
+                 ValidateProjectIndexCommand>;
 
 struct SongCommandFailure {
     SongName song;
@@ -75,7 +80,7 @@ using ProjectResult =
                  VoicegroupEditResult, SidecarWriteResult, PreviewCleanupCompleted, SongSaved,
                  RegistrationPlanResult, DeletionPlanResult, PreviewPlan, PreviewReady,
                  SampleSetReady, SamplesProbed, SampleRead, SampleCommitted, SongCreated,
-                 VoicegroupCatalog, SongCommandFailure, CommandFailure>;
+                 VoicegroupCatalog, IndexValidated, SongCommandFailure, CommandFailure>;
 
 // One queued delivery: a staged or terminal result, and — on the terminal
 // result only — the original moved command, so the owner can key its
@@ -107,11 +112,15 @@ class ProjectIo final : public QObject
     ProjectIo &operator=(ProjectIo &&) = delete;
 
     void submit(ProjectCommand command);
+    // Deferred commands run only after ordinary work already queued by the
+    // user. A new project open discards queued work for the old project.
+    void submitDeferred(ProjectCommand command);
 
   private:
     class Worker;
 
     void dispatchNext();
+    std::optional<ProjectCommand> takeNextCommand();
     void postResult(ProjectResult result, std::optional<ProjectCommand> command);
     void completeCommand();
     void drainResults();
@@ -121,6 +130,7 @@ class ProjectIo final : public QObject
     Worker *m_worker = nullptr;
     ResultSink m_sink;
     std::deque<ProjectCommand> m_queue;
+    std::deque<ProjectCommand> m_deferredQueue;
     bool m_active = false;
     std::deque<Delivery> m_results;
     std::atomic_bool m_shuttingDown = false;

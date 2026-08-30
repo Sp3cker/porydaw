@@ -96,7 +96,13 @@ class ProjectSnapshot
 class DecompProject
 {
   public:
+    // Hydrates a locally stored index before touching the project filesystem.
+    // A cache miss falls back to a full project scan.
     bool open(const QString &rootDir, QString *error);
+    // Always performs a full project scan, then refreshes the index cache.
+    // Explicit reloads and mutation follow-ups use this rather than serving
+    // a possibly stale startup snapshot.
+    bool openFresh(const QString &rootDir, QString *error);
     // Installs detached project state on the GUI thread without disk I/O.
     void replaceWith(const ProjectSnapshot &snapshot);
     void close();
@@ -126,10 +132,20 @@ class DecompProject
     // registers a song). Song ids are reassigned.
     bool reload(QString *error);
 
+    bool cacheHydrated() const noexcept { return m_cacheHydrated; }
+    // Runs after a cache-backed project has loaded. It touches remote inputs
+    // only here. When stale source data can be fully re-indexed,
+    // updatedSnapshot receives the fresh project model while existing loaded
+    // bank leases stay valid. A failed source refresh leaves the cache-backed
+    // live model intact; a local cache-write failure only affects the next
+    // startup and does not suppress the fresh live model.
+    bool validateCachedIndex(ProjectSnapshot *updatedSnapshot, QString *error);
+    bool validateCachedIndex(QString *error);
+
     // Persistent-index hook: open() uses storeDir when provided, otherwise
-    // ProjectIndex::defaultStoreDir(root). A matching store replaces the scan;
-    // a missing or stale store is rebuilt. PORYDAW_DISABLE_INDEX_CACHE makes
-    // the default directory empty and disables automatic persistence.
+    // ProjectIndex::defaultStoreDir(root). A local store hydrates startup;
+    // deferred validation rebuilds stale data. PORYDAW_DISABLE_INDEX_CACHE
+    // makes the default directory empty and disables automatic persistence.
     void setIndexCache(const QString &storeDir = QString());
 
     // ---- Worker-side voicegroup bank ownership (Project I/O worker) ----
@@ -164,6 +180,9 @@ class DecompProject
     std::optional<LoadedBankView> saveVoicegroup(SaveVoicegroupInput input, QString *error);
 
   private:
+    bool openImpl(const QString &rootDir, QString *error, bool useCache);
+    bool tryHydrateCache(const QString &cacheStoreDir, bool useCache);
+    bool scanAndPersist(const QString &cacheStoreDir, QString *error);
     bool parseSongTable(const QDir &midiDir, const QSet<QString> &midiFiles, QString *error);
     void parseSongConstants();
     bool parseMidiCfg(); // false if midi.cfg does not exist (or can't open)
@@ -188,5 +207,9 @@ class DecompProject
     QVector<MusicPlayer> m_players; // cached at open (one file read)
     QHash<QString, int> m_playerTrackBudgets;
     QString m_cacheStoreDir; // empty: use ProjectIndex::defaultStoreDir()
+    QString m_activeCacheStoreDir;
+    bool m_cacheHydrated = false;
+    bool m_indexCachePersisted = false;
+    QString m_indexCachePersistenceError;
     std::unordered_map<VoicegroupId, LoadedBankEntry, VoicegroupIdHash> m_banks;
 };

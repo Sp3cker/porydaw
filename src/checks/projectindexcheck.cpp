@@ -3,6 +3,8 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QLockFile>
+#include <QScopeGuard>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -57,7 +59,7 @@ int runProjectIndexCheck(const QString &scratchProject, const QString &scratchDi
     // Baseline un-cached scan.
     auto error = QString{};
     DecompProject baseline;
-    if (!baseline.open(scratchProject, &error)) {
+    if (!baseline.openFresh(scratchProject, &error)) {
         std::fprintf(stderr, "projectindexcheck: baseline open: %s\n", qUtf8Printable(error));
         return 1;
     }
@@ -124,6 +126,10 @@ int runProjectIndexCheck(const QString &scratchProject, const QString &scratchDi
         fail("reloaded cached open failed");
         return failures;
     }
+    if (!reloaded.cacheHydrated()) {
+        fail("reloaded project did not hydrate from SQLite before scanning source");
+        return failures;
+    }
     if (reloaded.songs().size() != baseline.songs().size()) {
         fail("reload song count differs from cold scan");
         return failures;
@@ -140,7 +146,64 @@ int runProjectIndexCheck(const QString &scratchProject, const QString &scratchDi
         }
     }
 
-    // Test 3: fingerprint invalidation when a new .mid is added.
+    // Cache hydrate must be local-only: an unavailable source tree cannot be
+    // consulted before the cached rows return.
+    const QString soundDir = scratchProject + QStringLiteral("/sound");
+    const QString offlineSoundDir = scratchProject + QStringLiteral("/sound.offline");
+    if (!QDir().rename(soundDir, offlineSoundDir)) {
+        fail("cannot temporarily hide source tree for cache-only hydrate");
+    } else {
+        DecompProject offlineCached;
+        offlineCached.setIndexCache(cacheDir);
+        if (!offlineCached.open(scratchProject, &error)) {
+            fail("cache hydrate touched the unavailable source tree");
+        } else if (!offlineCached.cacheHydrated() ||
+                   offlineCached.songs().size() != baselineSongCount) {
+            fail("offline cache hydrate did not preserve the cached snapshot");
+        } else if (offlineCached.validateCachedIndex(&error) ||
+                   offlineCached.songs().size() != baselineSongCount) {
+            fail("offline validation discarded the usable cached snapshot");
+        }
+        if (!QDir().rename(offlineSoundDir, soundDir)) {
+            fail("cannot restore source tree after cache-only hydrate");
+            return failures;
+        }
+        error.clear();
+    }
+
+    // An unavailable MIDI listing must not be interpreted as an empty song
+    // folder and overwrite a usable cache with every song marked unplayable.
+    const QByteArray cacheBeforeListingFailure = projectFingerprint(scratchProject);
+    const QString midiDir = scratchProject + QStringLiteral("/sound/songs/midi");
+    const QString offlineMidiDir = scratchProject + QStringLiteral("/sound/songs/midi.offline");
+    if (!QDir().rename(midiDir, offlineMidiDir)) {
+        fail("cannot hide the MIDI directory for checked-index validation");
+    } else {
+        DecompProject listingFailureCached;
+        listingFailureCached.setIndexCache(cacheDir);
+        if (!listingFailureCached.open(scratchProject, &error) ||
+            !listingFailureCached.cacheHydrated()) {
+            fail("cache did not hydrate before the unavailable MIDI listing");
+        } else if (listingFailureCached.validateCachedIndex(&error)) {
+            fail("validation accepted an unavailable MIDI listing");
+        } else {
+            QVector<SongInfo> retainedSongs;
+            QVector<MusicPlayer> retainedPlayers;
+            if (!ProjectIndex::load(cacheDir, scratchProject, cacheBeforeListingFailure,
+                                    &retainedSongs, &retainedPlayers) ||
+                retainedSongs.size() != baselineSongCount) {
+                fail("unavailable MIDI listing overwrote the usable cache");
+            }
+        }
+        if (!QDir().rename(offlineMidiDir, midiDir)) {
+            fail("cannot restore MIDI directory after checked-index validation");
+            return failures;
+        }
+        error.clear();
+    }
+
+    // Test 3: a stale cache still hydrates first, then deferred validation
+    // rebuilds it for the next open.
     const QByteArray fingerBefore = projectFingerprint(scratchProject);
     QFile dummyMid(scratchProject + QStringLiteral("/sound/songs/midi/mus_dummy.mid"));
     if (dummyMid.open(QIODevice::ReadOnly) &&
@@ -158,25 +221,85 @@ int runProjectIndexCheck(const QString &scratchProject, const QString &scratchDi
         if (ProjectIndex::load(cacheDir, scratchProject, fingerAfter, &staleSongs, &stalePlayers))
             fail("load accepted a store whose fingerprint predates the change");
 
-        DecompProject rescan;
-        rescan.setIndexCache(cacheDir);
-        if (!rescan.open(scratchProject, &error)) {
-            fail("rescan after fingerprint change failed");
+        DecompProject staleHydrate;
+        staleHydrate.setIndexCache(cacheDir);
+        if (!staleHydrate.open(scratchProject, &error)) {
+            fail("cache hydrate after fingerprint change failed");
+        } else if (!staleHydrate.cacheHydrated() ||
+                   staleHydrate.songs().size() != baselineSongCount ||
+                   findSong(staleHydrate.songs(), QStringLiteral("mus_probe_projectindex"))) {
+            fail("stale cache did not return its snapshot before deferred validation");
         } else {
-            if (rescan.songs().size() != baselineSongCount + 1)
-                fail("rescan did not pick up the new .mid file");
-            const SongInfo *probe =
-                findSong(rescan.songs(), QStringLiteral("mus_probe_projectindex"));
-            if (!probe || probe->registered || !probe->hasMid || probe->hasCfg) {
-                fail("dropped-in .mid was not discovered as an unregistered song");
+            ProjectSnapshot refreshedSnapshot;
+            if (!staleHydrate.validateCachedIndex(&refreshedSnapshot, &error)) {
+                fail("deferred cache validation failed");
+            } else if (!refreshedSnapshot.isOpen() ||
+                       !findSong(refreshedSnapshot.songs(), QStringLiteral("mus_probe_projectindex")) ||
+                       !findSong(staleHydrate.songs(), QStringLiteral("mus_probe_projectindex"))) {
+                fail("deferred validation did not refresh the live project snapshot");
             } else {
-                staleSongs.clear();
-                stalePlayers.clear();
-                if (!ProjectIndex::load(cacheDir, scratchProject, fingerAfter, &staleSongs,
-                                        &stalePlayers))
-                    fail("store was not rewritten after the rescan");
-                else if (staleSongs.size() != baselineSongCount + 1)
-                    fail("rewritten store lost the unregistered song");
+                DecompProject refreshedHydrate;
+                refreshedHydrate.setIndexCache(cacheDir);
+                if (!refreshedHydrate.open(scratchProject, &error)) {
+                    fail("cache hydrate after deferred validation failed");
+                } else if (refreshedHydrate.songs().size() != baselineSongCount + 1) {
+                    fail("deferred validation did not rebuild the cached song list");
+                }
+                const SongInfo *probe =
+                    findSong(refreshedHydrate.songs(), QStringLiteral("mus_probe_projectindex"));
+                if (!probe || probe->registered || !probe->hasMid || probe->hasCfg) {
+                    fail("deferred validation lost the dropped-in unregistered song");
+                } else {
+                    staleSongs.clear();
+                    stalePlayers.clear();
+                    if (!ProjectIndex::load(cacheDir, scratchProject, fingerAfter, &staleSongs,
+                                            &stalePlayers))
+                        fail("store was not rewritten after the rescan");
+                    else if (staleSongs.size() != baselineSongCount + 1)
+                        fail("rewritten store lost the unregistered song");
+                }
+            }
+        }
+    }
+
+    // A local cache publication error must not discard a successful source
+    // refresh from the currently running project.
+    const QString persistFailureCacheDir = scratchDir + QStringLiteral("/cache-persist-failure");
+    const QString persistFailureProbe = scratchProject +
+                                        QStringLiteral("/sound/songs/midi/") +
+                                        QStringLiteral("mus_probe_persist_failure.mid");
+    DecompProject persistFailureWarmup;
+    persistFailureWarmup.setIndexCache(persistFailureCacheDir);
+    if (!persistFailureWarmup.openFresh(scratchProject, &error)) {
+        fail("could not warm the persistence-failure cache");
+    } else if (!QFile::copy(scratchProject + QStringLiteral("/sound/songs/midi/mus_dummy.mid"),
+                            persistFailureProbe)) {
+        fail("could not add the persistence-failure probe MIDI");
+    } else {
+        const auto removePersistFailureProbe =
+            qScopeGuard([&] { QFile::remove(persistFailureProbe); });
+        DecompProject persistFailureCached;
+        persistFailureCached.setIndexCache(persistFailureCacheDir);
+        if (!persistFailureCached.open(scratchProject, &error) ||
+            !persistFailureCached.cacheHydrated()) {
+            fail("could not hydrate the persistence-failure cache");
+        } else {
+            QLockFile cacheLock(ProjectIndex::storePath(persistFailureCacheDir) +
+                                QStringLiteral(".lock"));
+            if (!cacheLock.tryLock()) {
+                fail("could not lock the persistence-failure cache");
+            } else {
+                ProjectSnapshot refreshedSnapshot;
+                error.clear();
+                if (!persistFailureCached.validateCachedIndex(&refreshedSnapshot, &error)) {
+                    fail("a cache publication error discarded a fresh source refresh");
+                } else if (!refreshedSnapshot.isOpen() ||
+                           !findSong(refreshedSnapshot.songs(),
+                                     QStringLiteral("mus_probe_persist_failure")) ||
+                           !findSong(persistFailureCached.songs(),
+                                     QStringLiteral("mus_probe_persist_failure"))) {
+                    fail("a cache publication error did not publish the fresh live snapshot");
+                }
             }
         }
     }
@@ -212,6 +335,27 @@ int runProjectIndexCheck(const QString &scratchProject, const QString &scratchDi
                 fail("corrupted store was not rewritten as valid cache");
             else if (songs.size() != baselineSongCount + 1)
                 fail("rewritten cache lost the dropped-in song");
+        }
+    }
+
+    // A concurrent writer must fail without deleting the previously complete
+    // SQLite store. The lock is intentionally held by this same process to
+    // exercise the portable QLockFile contention path deterministically.
+    {
+        QLockFile cacheLock(storePath + QStringLiteral(".lock"));
+        if (!cacheLock.tryLock()) {
+            fail("cannot acquire the project-index writer lock");
+        } else if (ProjectIndex::save(cacheDir, scratchProject, fingerAfter, baseline.songs(),
+                                      baseline.players())) {
+            fail("project-index writer ignored an existing lock");
+        } else {
+            QVector<SongInfo> retainedSongs;
+            QVector<MusicPlayer> retainedPlayers;
+            if (!ProjectIndex::load(cacheDir, scratchProject, fingerAfter, &retainedSongs,
+                                    &retainedPlayers) ||
+                retainedSongs.size() != baselineSongCount + 1) {
+                fail("contended cache write did not retain the previous SQLite store");
+            }
         }
     }
 
@@ -281,8 +425,8 @@ int runProjectIndexCheck(const QString &scratchProject, const QString &scratchDi
                 fail("derived midPath does not match expected path");
         }
     }
-    // Test 6: Sidecar metadata is refreshed on a true cache hit and removed
-    // metadata falls back to the same defaults as a full scan.
+    // Test 6: cache hydrate preserves stored sidecar metadata; deferred
+    // validation refreshes edited and removed metadata for the next open.
     const QString probeLabel = QStringLiteral("mus_probe_projectindex");
     const QString probeSidecar =
         scratchProject + QStringLiteral("/.porydaw/") + probeLabel + QStringLiteral(".json");
@@ -309,9 +453,21 @@ int runProjectIndexCheck(const QString &scratchProject, const QString &scratchDi
                 const SongInfo *probe = findSong(sidecarCached.songs(), probeLabel);
                 if (!probe)
                     fail("probe song missing on cached reopen");
-                else if (probe->constant != QStringLiteral("MUS_CUSTOM_CONSTANT") ||
-                         probe->player != QStringLiteral("MUSIC_PLAYER_CUSTOM"))
-                    fail("unregistered song sidecar metadata was not refreshed on cache hit");
+                else if (probe->constant != QStringLiteral("MUS_INITIAL_CONSTANT") ||
+                         probe->player != QStringLiteral("MUSIC_PLAYER_INITIAL"))
+                    fail("cache hydrate reread unregistered-song sidecar metadata");
+                if (!sidecarCached.validateCachedIndex(&error))
+                    fail("deferred sidecar validation failed");
+                DecompProject sidecarValidated;
+                sidecarValidated.setIndexCache(sidecarCacheDir);
+                if (!sidecarValidated.open(scratchProject, &error)) {
+                    fail("sidecar cache hydrate after validation failed");
+                } else {
+                    probe = findSong(sidecarValidated.songs(), probeLabel);
+                    if (!probe || probe->constant != QStringLiteral("MUS_CUSTOM_CONSTANT") ||
+                        probe->player != QStringLiteral("MUSIC_PLAYER_CUSTOM"))
+                        fail("deferred validation did not refresh sidecar metadata");
+                }
             }
             if (!writeBytes(probeSidecar, QByteArrayLiteral("{}\n"))) {
                 fail("cannot remove sidecar registration metadata");
@@ -324,9 +480,21 @@ int runProjectIndexCheck(const QString &scratchProject, const QString &scratchDi
                     const SongInfo *probe = findSong(sidecarReset.songs(), probeLabel);
                     if (!probe)
                         fail("probe song missing after sidecar reset");
-                    else if (probe->constant != SongRegistry::constantForLabel(probeLabel) ||
-                             probe->player != QStringLiteral("MUSIC_PLAYER_BGM"))
-                        fail("removed sidecar metadata did not restore scan defaults");
+                    else if (probe->constant != QStringLiteral("MUS_CUSTOM_CONSTANT") ||
+                             probe->player != QStringLiteral("MUSIC_PLAYER_CUSTOM"))
+                        fail("cache hydrate reread removed sidecar metadata");
+                    if (!sidecarReset.validateCachedIndex(&error))
+                        fail("deferred sidecar reset validation failed");
+                    DecompProject sidecarRepaired;
+                    sidecarRepaired.setIndexCache(sidecarCacheDir);
+                    if (!sidecarRepaired.open(scratchProject, &error)) {
+                        fail("sidecar cache hydrate after reset validation failed");
+                    } else {
+                        probe = findSong(sidecarRepaired.songs(), probeLabel);
+                        if (!probe || probe->constant != SongRegistry::constantForLabel(probeLabel) ||
+                            probe->player != QStringLiteral("MUSIC_PLAYER_BGM"))
+                            fail("deferred sidecar reset did not restore scan defaults");
+                    }
                 }
             }
         }

@@ -38,6 +38,14 @@ SavedWorkspaceRecipe readStartupRecipe()
                                 settings.value(QLatin1String(kLastSongLabelKey)).toString());
 }
 
+bool isTerminalSongLoad(const ProjectCommand &command)
+{
+    return std::holds_alternative<OpenSongInput>(command) ||
+           std::holds_alternative<ReloadSongInput>(command) ||
+           std::holds_alternative<LoadSongCommand>(command) ||
+           std::holds_alternative<LoadVoicegroupCommand>(command);
+}
+
 } // namespace
 
 // ---- mapping machinery --------------------------------------------------------
@@ -80,6 +88,7 @@ class ProjectWorkspace::Private
         // queues a new open.
         if (state.state == ProjectOpenState::Loading)
             return;
+        postSongStartupWorkPending = false;
         auto loading = state; // the prior snapshot may stay visible during Loading
         loading.state = ProjectOpenState::Loading;
         loading.error.reset();
@@ -101,6 +110,10 @@ class ProjectWorkspace::Private
     // One-shot: the saved recipe belongs to the startup open only; a later
     // user-driven open never enqueues saved songs.
     bool startupPending = false;
+    // Initial catalog work and cache validation stay behind the first song's
+    // terminal result, or Ready when no startup song was restored, so remote
+    // scans never delay cache-backed playability or remain pending forever.
+    bool postSongStartupWorkPending = false;
 
   private:
     void handleResult(ProjectResult result, std::optional<ProjectCommand> command)
@@ -113,7 +126,10 @@ class ProjectWorkspace::Private
                 [this](LoadedBankView &view) {
                     emit owner->projectEventPublished(std::move(view));
                 },
-                [this](VoicegroupBound &bound) { publishSongUpdate(std::move(bound)); },
+                [this, &command](VoicegroupBound &bound) {
+                    publishSongUpdate(std::move(bound));
+                    schedulePostSongStartupWork(command);
+                },
                 [this](SongSaved &saved) { publishSongUpdate(std::move(saved)); },
 
                 // ---- voicegroup edit outcomes -----------------------------------
@@ -140,9 +156,22 @@ class ProjectWorkspace::Private
 
                 // ---- project and catalog state ------------------------------------
                 [this, &command](ProjectSnapshot &snapshot) {
+                    // A deferred validation can finish after a user has
+                    // started switching projects. Its refreshed old snapshot
+                    // must not replace the new Loading/Ready state.
+                    if (command && std::holds_alternative<ValidateProjectIndexCommand>(*command) &&
+                        (state.state != ProjectOpenState::Ready ||
+                         state.snapshot.root() != snapshot.root()))
+                        return;
                     acceptSnapshot(std::move(snapshot), *command);
                 },
                 [this](VoicegroupCatalog &catalog) {
+                    // A catalog scan may have started just before a project
+                    // switch. Do not publish that old root into the new
+                    // loading or ready state.
+                    if (state.state != ProjectOpenState::Ready ||
+                        state.snapshot.root() != catalog.root)
+                        return;
                     // Catalog replacement keeps the current state, snapshot, and
                     // error invariant intact.
                     auto next = state;
@@ -172,6 +201,7 @@ class ProjectWorkspace::Private
                     emit owner->projectEventPublished(std::move(event));
                 },
                 [this](SongCreated &event) { emit owner->projectEventPublished(std::move(event)); },
+                [](IndexValidated &) {},
 
                 // ---- silent completions ------------------------------------------------
                 // A standalone sidecar write and a preview cleanup advance the
@@ -180,10 +210,11 @@ class ProjectWorkspace::Private
                 [](PreviewCleanupCompleted &) {},
 
                 // ---- private failures ------------------------------------------------------
-                [this](SongCommandFailure &failure) {
+                [this, &command](SongCommandFailure &failure) {
                     emit owner->songUpdatePublished(SongUpdate{
                         std::move(failure.song),
                         SongPayload{SongFailed{failure.stage, std::move(failure.message)}}});
+                    schedulePostSongStartupWork(command);
                 },
                 [this, &command](CommandFailure &failure) {
                     publishFailure(*command, std::move(failure));
@@ -223,28 +254,51 @@ class ProjectWorkspace::Private
         next.snapshot = std::move(snapshot);
         next.error.reset();
         publishState(std::move(next));
-        if (refreshCatalog)
-            io.submit(ProjectCommand{RefreshCatalogInput{}});
         // Ready is published before the first startup OpenSong submission.
-        if (isOpen && startupPending) {
-            startupPending = false;
-            submitStartupSongs();
+        if (isOpen) {
+            postSongStartupWorkPending = true;
+            auto queuedStartupSong = false;
+            if (startupPending) {
+                startupPending = false;
+                queuedStartupSong = submitStartupSongs();
+            }
+            if (!queuedStartupSong)
+                schedulePostSongStartupWork();
+        } else if (refreshCatalog) {
+            io.submit(ProjectCommand{RefreshCatalogInput{}});
         }
     }
 
-    void submitStartupSongs()
+    void schedulePostSongStartupWork(const std::optional<ProjectCommand> &command = std::nullopt)
+    {
+        if (!postSongStartupWorkPending)
+            return;
+        if (command && !isTerminalSongLoad(*command))
+            return;
+        postSongStartupWorkPending = false;
+        io.submitDeferred(ProjectCommand{RefreshCatalogInput{}});
+        io.submitDeferred(ProjectCommand{ValidateProjectIndexCommand{}});
+    }
+
+    bool submitStartupSongs()
     {
         // Selected first, then the other normalized names in persisted
         // order; each result is an ordinary keyed SongUpdate. There is no
         // startup-name tracking collection: the recipe is consumed once here.
-        if (startup.selected)
+        auto queued = false;
+        if (startup.selected) {
             io.submit(ProjectCommand{OpenSongInput{*startup.selected}});
+            queued = true;
+        }
         for (const auto &song : startup.orderedSongs) {
-            if (!startup.selected || !(song == *startup.selected))
+            if (!startup.selected || !(song == *startup.selected)) {
                 io.submit(ProjectCommand{OpenSongInput{song}});
+                queued = true;
+            }
         }
         startup.orderedSongs.clear();
         startup.selected.reset();
+        return queued;
     }
 
     void publishLabelFailure(const QString &label, QString message)
@@ -294,6 +348,7 @@ class ProjectWorkspace::Private
                 // Only the explicitly cosmetic completions stay silent.
                 [](const CleanupPreviewInput &) {},
                 [](const SaveSidecarInput &) {},
+                [](const ValidateProjectIndexCommand &) {},
 
                 [this, &failure](const VoicegroupEditInput &input) {
                     emit owner->projectEventPublished(ProjectEvent{
@@ -347,6 +402,11 @@ class ProjectWorkspace::Private
 
     void emitCatalogFailure(QString message)
     {
+        // A catalog command can finish just after a project switch has made
+        // the previous snapshot unavailable. Its failure is no longer useful
+        // to the newly loading project.
+        if (state.state != ProjectOpenState::Ready)
+            return;
         emit owner->projectEventPublished(ProjectEvent{CatalogMutationFailed{std::move(message)}});
     }
 };

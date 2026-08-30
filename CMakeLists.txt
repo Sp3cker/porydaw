@@ -535,6 +535,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/projectindexcheck.cpp
         src/checks/projectiocheck.cpp
         src/checks/projectworkspacecheck.cpp
+        src/checks/projectworkspacecachecheck.cpp
         src/checks/sessioncheck.cpp
         src/checks/keymapcheck.cpp
         src/checks/hostcheck.cpp

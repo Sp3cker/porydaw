@@ -33,8 +33,11 @@ extern "C" {
 
 enum class ProjectOpenState { Closed, Loading, Ready, Failed };
 
-// One published catalog of the project's voicegroup resources.
+// One published catalog of the project's voicegroup resources. The root
+// records which open produced it so a late worker result cannot replace the
+// catalog after the user has switched projects.
 struct VoicegroupCatalog {
+    QString root;
     bool perFileVoicegroups = false;
     QStringList groupArgs;
     QStringList directSound;

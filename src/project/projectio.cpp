@@ -1,6 +1,7 @@
 #include "projectio.h"
 
 #include <QDir>
+#include <QDebug>
 #include <QFile>
 #include <QFileInfo>
 #include <QMetaObject>
@@ -77,9 +78,9 @@ class ProjectIo::Worker final : public QObject
         Q_ASSERT(QThread::currentThread() == thread());
         return std::visit(
             CommandVisitor{
-                [this](OpenProjectInput &input) { return acceptProject(input.root); },
+                [this](OpenProjectInput &input) { return acceptProject(input.root, true); },
                 [this](RefreshProjectInput &) {
-                    return requireOpen() ? acceptProject(m_project.root()) : closedProject();
+                    return requireOpen() ? acceptProject(m_project.root(), false) : closedProject();
                 },
                 [this, &stage](OpenSongInput &input) {
                     return requireOpen() ? loadSong(input.song, stage) : closedSong(input.song);
@@ -141,6 +142,19 @@ class ProjectIo::Worker final : public QObject
                 [this](const RefreshCatalogInput &) {
                     return requireOpen() ? refreshCatalog() : closedProject();
                 },
+                [this](const ValidateProjectIndexCommand &) {
+                    if (!requireOpen())
+                        return ProjectResult{IndexValidated{}};
+                    auto error = QString{};
+                    auto refreshed = ProjectSnapshot{};
+                    if (!m_project.validateCachedIndex(&refreshed, &error)) {
+                        qWarning().noquote() << "Project index validation failed:" << error;
+                        return ProjectResult{CommandFailure{std::move(error)}};
+                    }
+                    if (refreshed.isOpen())
+                        return ProjectResult{std::move(refreshed)};
+                    return ProjectResult{IndexValidated{}};
+                },
                 [this](LoadSampleSetInput &input) {
                     return requireOpen() ? loadSampleSet(std::move(input)) : closedProject();
                 },
@@ -163,11 +177,11 @@ class ProjectIo::Worker final : public QObject
     // Opens the project, and on success installs it as the one canonical
     // worker state before publishing the detached snapshot. A failed open
     // leaves the previous project untouched.
-    ProjectResult acceptProject(const QString &root)
+    ProjectResult acceptProject(const QString &root, bool cacheFirst = false)
     {
         auto candidate = DecompProject{};
         auto error = QString{};
-        if (!candidate.open(root, &error))
+        if (!(cacheFirst ? candidate.open(root, &error) : candidate.openFresh(root, &error)))
             return CommandFailure{error.isEmpty() ? QStringLiteral("Could not open the project.")
                                                   : std::move(error)};
         auto trackBudgets = QHash<QString, int>{};
@@ -487,7 +501,7 @@ class ProjectIo::Worker final : public QObject
         const auto root = m_project.root();
         auto project = DecompProject{};
         auto error = QString{};
-        if (!project.open(root, &error))
+        if (!project.openFresh(root, &error))
             return CommandFailure{error.isEmpty() ? QStringLiteral("Could not re-read the project.")
                                                   : std::move(error)};
         const auto plan = SongRegistry::makeRemovalPlan(root, input.song.value(), input.constant);
@@ -690,6 +704,7 @@ class ProjectIo::Worker final : public QObject
             return {};
         }
         auto catalog = VoicegroupCatalog{};
+        catalog.root = root;
         const auto scan = VoicegroupSource::catalogScan(root);
         const auto directSound = VoicegroupSource::directSoundCatalog(root);
         catalog.perFileVoicegroups =
@@ -741,6 +756,7 @@ ProjectIo::~ProjectIo()
     // the bank leases and sample sets they carry.
     drainResults();
     m_queue.clear();
+    m_deferredQueue.clear();
     m_active = false;
 }
 
@@ -749,20 +765,32 @@ void ProjectIo::submit(ProjectCommand command)
     Q_ASSERT(QThread::currentThread() == thread());
     if (m_shuttingDown.load(std::memory_order_acquire))
         return;
+    if (std::holds_alternative<OpenProjectInput>(command))
+        m_deferredQueue.clear(); // never run old-project idle work after a switch
     m_queue.push_back(std::move(command));
+    dispatchNext();
+}
+
+void ProjectIo::submitDeferred(ProjectCommand command)
+{
+    Q_ASSERT(QThread::currentThread() == thread());
+    if (m_shuttingDown.load(std::memory_order_acquire))
+        return;
+    m_deferredQueue.push_back(std::move(command));
     dispatchNext();
 }
 
 void ProjectIo::dispatchNext()
 {
-    if (m_shuttingDown.load(std::memory_order_acquire) || m_active || m_queue.empty())
+    if (m_shuttingDown.load(std::memory_order_acquire) || m_active)
+        return;
+    auto command = takeNextCommand();
+    if (!command)
         return;
     m_active = true;
-    auto command = std::move(m_queue.front());
-    m_queue.pop_front();
     const auto invoked = QMetaObject::invokeMethod(
         m_worker,
-        [this, command = std::move(command)]() mutable {
+        [this, command = std::move(*command)]() mutable {
             const auto stage = [this](ProjectResult staged) {
                 postResult(std::move(staged), std::nullopt);
             };
@@ -772,6 +800,18 @@ void ProjectIo::dispatchNext()
         },
         Qt::QueuedConnection);
     Q_ASSERT(invoked);
+}
+
+std::optional<ProjectCommand> ProjectIo::takeNextCommand()
+{
+    std::deque<ProjectCommand> *queue = &m_queue;
+    if (queue->empty())
+        queue = &m_deferredQueue;
+    if (queue->empty())
+        return std::nullopt;
+    ProjectCommand command = std::move(queue->front());
+    queue->pop_front();
+    return command;
 }
 
 void ProjectIo::postResult(ProjectResult result, std::optional<ProjectCommand> command)
