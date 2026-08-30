@@ -16,11 +16,15 @@
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/timeruler.h"
 #include "ui/songview/trackheaderpanel.h"
-
+#include <QAbstractButton>
+#include <QAbstractSlider>
+#include <QApplication>
+#include <QDialog>
 #include <QEvent>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QKeyEvent>
+#include <QPointer>
 #include <QResizeEvent>
 #include <QScrollArea>
 #include <QScrollBar>
@@ -115,6 +119,7 @@ std::vector<songview::TimelineBand> SongView::timelineBands()
 SongView::SongView(QWidget *parent)
     : QWidget(parent)
     , m_geometry(Geometry::resolve())
+    , m_pxPerBeat(m_geometry.editorDefaultPixelsPerBeat)
     , m_keyHeight(m_geometry.pianoRollDefaultKeyHeight)
 {
     // Prime the default C-major classification (the previous controller
@@ -191,6 +196,11 @@ SongView::SongView(QWidget *parent)
             [this](int value) { setHScroll(scrollDips(value)); });
     connect(m_vbar, &QScrollBar::valueChanged, this,
             [this](int value) { setVScroll(scrollDips(value)); });
+
+    // The unbound axis's provisional camera rests at the pre-roll home;
+    // updateScrollbars() keeps re-homing it as resize resolves the lead pad
+    // until a song binds.
+    m_scrollX = minHScroll();
 }
 bool SongView::advanceTrackActivity(const TrackActivityLevels &levels, float elapsedSeconds,
                                     bool playing)
@@ -211,6 +221,7 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
         m_trackActivity.reset();
     m_timeline = timeline;
     m_voicegroup = voicegroup;
+    m_timeAxis.bind(timeline);
     m_model = timeline ? buildSongViewModel(*timeline) : SongViewModel();
     // Song attachment preserves the complete global editor projection and
     // rebuilds all drawer/page caches from that already-applied value.
@@ -271,10 +282,8 @@ void SongView::resetScrollPosition()
 
 void SongView::rebuildAfterSongChange()
 {
-    if (m_timeline)
-        m_pxPerTick = m_geometry.editorDefaultPixelsPerBeat / double(m_timeline->ticksPerBeat);
-    else
-        m_pxPerTick = 1.0;
+    // The canonical beat scale is never derived from the timeline: binding
+    // a song only changes the derived tick scale (pxPerTick()'s quotient).
     m_headers->rebuild(m_trackActivity, m_playing);
     notifyDrawerSongChanged();
     updateScrollbars();
@@ -321,6 +330,7 @@ void SongView::updateSong(const MidiTimeline *timeline)
     const PianoRollQuickDirtySet swapDirty = takeDocumentSwapHint();
     cancelActiveInteractions();
     m_timeline = timeline;
+    m_timeAxis.bind(timeline);
     m_model = timeline ? buildSongViewModel(*timeline) : SongViewModel();
     // The concrete automation page owns cosmetic empty lanes; the projection
     // remains solely the timeline model.
@@ -373,6 +383,58 @@ void SongView::prepareForSongReplacement()
     cancelActiveInteractions();
     m_headers->cancelTransientState();
     disconnectDocument();
+}
+
+void SongView::cancelTransientInput()
+{
+    ++m_transientInputGeneration;
+    if (m_roll)
+        m_roll->cancelTransientInput();
+    if (m_ruler)
+        m_ruler->cancelTransientInput();
+    cancelActiveInteractions();
+    if (m_headers)
+        m_headers->cancelTransientState();
+    if (QWidget *mouseGrabber = QWidget::mouseGrabber();
+        mouseGrabber && (mouseGrabber == this || isAncestorOf(mouseGrabber))) {
+        mouseGrabber->releaseMouse();
+    }
+    for (QAbstractButton *button : findChildren<QAbstractButton *>())
+        button->setDown(false);
+    for (QAbstractSlider *slider : findChildren<QAbstractSlider *>())
+        slider->setSliderDown(false);
+    const auto isOwnedByView = [this](const QWidget *widget) {
+        for (const QObject *ancestor = widget; ancestor; ancestor = ancestor->parent()) {
+            if (ancestor == this)
+                return true;
+        }
+        return false;
+    };
+    // Draining popups/modals in loops because closing a submenu can reveal its parent as the next active popup.
+    for (;;) {
+        QWidget *popup = QApplication::activePopupWidget();
+        if (!isOwnedByView(popup))
+            break;
+        QPointer<QWidget> closedPopup = popup;
+        popup->close();
+        if (QApplication::activePopupWidget() == closedPopup.data())
+            break;
+    }
+    for (;;) {
+        QWidget *modal = QApplication::activeModalWidget();
+        if (!isOwnedByView(modal))
+            break;
+        QPointer<QWidget> closedModal = modal;
+        if (auto *dialog = qobject_cast<QDialog *>(modal))
+            dialog->reject();
+        else
+            modal->close();
+        if (QApplication::activeModalWidget() == closedModal.data())
+            break;
+    }
+    QWidget *focused = QApplication::focusWidget();
+    if (focused && (focused == this || isAncestorOf(focused)))
+        focused->clearFocus();
 }
 
 void SongView::setDocument(SongDocument *document)
@@ -449,7 +511,7 @@ SongView::ViewState SongView::viewState() const
     if (!m_timeline)
         return state;
     state.valid = true;
-    state.pxPerBeat = m_pxPerTick * double(m_timeline->ticksPerBeat);
+    state.pxPerBeat = m_pxPerBeat;
     state.keyHeight = m_keyHeight;
     state.scrollPx = m_scrollX;
     state.scrollY = m_scrollY;
@@ -470,14 +532,13 @@ void SongView::applyViewState(const ViewState &state)
                                  ? state.gridMinDenom
                                  : 0;
     const GridFeel gridFeel = state.gridTriplet ? GridFeel::Triplet : GridFeel::Straight;
-    const double pxPerTick =
+    const double pxPerBeat =
         std::clamp(state.pxPerBeat, double(m_geometry.timelineMinimumPixelsPerBeat),
-                   double(m_geometry.timelineMaximumPixelsPerBeat)) /
-        double(m_timeline->ticksPerBeat);
-    if ((pxPerTick != m_pxPerTick || gridMinDenom != m_gridMinDenom || gridFeel != m_gridFeel) &&
+                   double(m_geometry.timelineMaximumPixelsPerBeat));
+    if ((pxPerBeat != m_pxPerBeat || gridMinDenom != m_gridMinDenom || gridFeel != m_gridFeel) &&
         m_editorDrawer)
         m_editorDrawer->cancelVisiblePageInteraction();
-    m_pxPerTick = pxPerTick;
+    m_pxPerBeat = pxPerBeat;
     m_keyHeight = std::clamp(state.keyHeight, double(m_geometry.pianoRollMinimumKeyHeight),
                              double(m_geometry.pianoRollMaximumKeyHeight));
     m_roll->refreshTextLayout();
@@ -623,7 +684,7 @@ void SongView::setPlayheadSample(uint64_t samplePos, bool playing)
         const qreal px = contentX(m_playheadTick);
         const qreal vw = viewportWidth();
         if (px < 0.0 || px > vw * 85.0 / 100.0)
-            setHScroll(m_playheadTick * m_pxPerTick - vw / 10.0);
+            setHScroll(m_playheadTick * pxPerTick() - vw / 10.0);
     }
     m_events->setPlayheadTick(m_playheadTick, playing);
     m_headers->syncVoices();

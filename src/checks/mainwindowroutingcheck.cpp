@@ -220,10 +220,14 @@ void checkFreshBind(const WorkspaceUi &workspace, const SongName &name,
     const int budget = workspace.projectState().snapshot.trackBudgetFor(*song);
     SongTab probe(name);
     probe.view().applyEditorViewState(globalState); // what createTab does for a future tab
+    check(!probe.isReady() && probe.view().isEnabled(),
+          "the fresh tab did not start not ready with its presentation enabled");
     probe.applyMidiStage(*song, smf, budget);
-    check(!probe.isReady() && !probe.view().isEnabled() && probe.view().timeline() != nullptr &&
+    check(!probe.isReady() && probe.view().timeline() != nullptr &&
               probe.view().document() == &probe.document(),
           "MidiStage alone did not swap the binding while withholding readiness");
+    check(probe.view().isEnabled(),
+          "MidiStage disabled the SongView presentation while readiness was withheld");
     check(probe.view().editorViewState() == globalState,
           "the fresh bind did not keep every complete global editor field");
     check(freshViewStateAtCanonicalDefaults(probe.view(), *probe.view().timeline()),
@@ -231,6 +235,173 @@ void checkFreshBind(const WorkspaceUi &workspace, const SongName &name,
     probe.applyVoicegroupBound(*probeIdentity);
     check(probe.isReady() && probe.view().isEnabled(),
           "readiness did not wait for the terminal VoicegroupBound");
+}
+
+// Field equality over the complete transient ViewState: capture and
+// reapplication are value-exact, so retention compares values.
+bool sameViewState(const SongView::ViewState &a, const SongView::ViewState &b)
+{
+    return a.valid == b.valid && a.pxPerBeat == b.pxPerBeat && a.keyHeight == b.keyHeight &&
+           a.scrollPx == b.scrollPx && a.scrollY == b.scrollY &&
+           a.selectedTrack == b.selectedTrack && a.editCursorTick == b.editCursorTick &&
+           a.gridMinDenom == b.gridMinDenom && a.gridTriplet == b.gridTriplet &&
+           a.eventList == b.eventList;
+}
+
+// A probe tab reaches readiness with a bank bound, seeds a distinctive
+// transient state, then walks the staged full reload: readiness drops at
+// the ReloadSongInput dispatch - before the replacement MidiStage - while
+// the old timeline lease, voicegroup identity and lease, ruler camera, and
+// complete ViewState stay live; MidiStage swaps the binding and restores
+// the captured state while readiness is still withheld; the terminal
+// VoicegroupBound restores readiness. readinessChanged must fire exactly
+// once per derived transition.
+template <class Check>
+void checkStagedFullReload(const WorkspaceUi &workspace, const SongName &name,
+                           const VoicegroupId *identity, Check &&check)
+{
+    const auto &songs = workspace.projectState().snapshot.songs();
+    const auto song = std::find_if(songs.cbegin(), songs.cend(), [&name](const SongInfo &info) {
+        return info.label == name.value();
+    });
+    auto initialStage = SmfFile{};
+    auto replacementStage = SmfFile{};
+    QString smfError;
+    const bool readable = song != songs.cend() &&
+                          SmfFile::readFile(song->midPath, &initialStage, &smfError) &&
+                          SmfFile::readFile(song->midPath, &replacementStage, &smfError);
+    check(readable, "staged-reload probe could not read the song's MIDI");
+    check(identity != nullptr, "staged-reload probe has no bound voicegroup identity");
+    if (!readable || !identity)
+        return;
+    const int budget = workspace.projectState().snapshot.trackBudgetFor(*song);
+    // Declared before the probe so the borrowed bank outlives the view's
+    // borrow.
+    LoadedVoiceGroup probeBank{};
+    SongTab probe(name);
+    probe.applyMidiStage(*song, std::move(initialStage), budget);
+    probe.applyBankView(LoadedBankView{*identity, borrowVoicegroupLease(&probeBank), QString()});
+    probe.applyVoicegroupBound(*identity);
+    check(probe.isReady() && probe.timeline() && probe.voicegroupLease().get() == &probeBank,
+          "the staged-reload probe did not reach readiness with its bank bound");
+    const MidiTimeline *const boundTimeline = probe.timeline().get();
+    const VoicegroupId boundIdentity = *probe.voicegroupId();
+
+    // A distinctive transient state makes the captured-state restoration
+    // distinguishable from a reset to the canonical fresh defaults.
+    const SongView::ViewState canonical = probe.view().viewState();
+    SongView::ViewState distinctive;
+    distinctive.valid = true;
+    distinctive.pxPerBeat = canonical.pxPerBeat * 2.0;
+    distinctive.keyHeight = canonical.keyHeight * 1.5;
+    int alternateTrack = -1;
+    for (int track = 0; track < 16 && alternateTrack < 0; ++track) {
+        if (probe.timeline()->tracks[track].used && track != canonical.selectedTrack)
+            alternateTrack = track;
+    }
+    if (alternateTrack >= 0)
+        distinctive.selectedTrack = alternateTrack;
+    distinctive.editCursorTick = probe.timeline()->ticksPerBeat * 4;
+    distinctive.gridMinDenom = 16;
+    distinctive.gridTriplet = true;
+    probe.view().applyViewState(distinctive);
+    const SongView::ViewState captured = probe.view().viewState();
+    check(captured.pxPerBeat == distinctive.pxPerBeat &&
+              captured.keyHeight == distinctive.keyHeight &&
+              captured.editCursorTick == distinctive.editCursorTick &&
+              captured.gridMinDenom == 16 && captured.gridTriplet &&
+              (alternateTrack < 0 || captured.selectedTrack == alternateTrack),
+          "the staged-reload seed did not land a distinctive transient state");
+
+    const auto readinessChanges = std::make_shared<int>(0);
+    const QMetaObject::Connection readinessSpy = QObject::connect(
+        &probe, &SongTab::readinessChanged, [readinessChanges] { ++*readinessChanges; });
+
+    // Dispatch: readiness drops here, before the replacement MidiStage,
+    // while everything loaded stays exactly as it was.
+    probe.beginMidiReload();
+    check(!probe.isReady(), "the full reload stayed ready after its ReloadSongInput dispatch");
+    check(probe.timeline().get() == boundTimeline,
+          "the full reload dropped the old timeline lease before the replacement stage");
+    check(sameViewState(probe.view().viewState(), captured),
+          "the reload dispatch disturbed the retained ruler camera or complete view state");
+    check(probe.view().isEnabled(),
+          "the reload dispatch disabled the SongView presentation while readiness was withheld");
+    check(probe.voicegroupId() && *probe.voicegroupId() == boundIdentity &&
+              probe.voicegroupLease().get() == &probeBank,
+          "the reload dispatch disturbed the old voicegroup identity or lease");
+    check(*readinessChanges == 1,
+          "the reload dispatch did not report exactly one readiness change");
+
+    // Replacement stage: the binding swaps and the captured state is
+    // restored while readiness stays withheld for the terminal stage.
+    probe.applyMidiStage(*song, std::move(replacementStage), budget);
+    check(!probe.isReady(), "the replacement MidiStage alone restored readiness");
+    check(probe.timeline().get() != boundTimeline,
+          "the replacement MidiStage did not swap the retained binding");
+    check(sameViewState(probe.view().viewState(), captured),
+          "the replacement MidiStage did not restore the captured view state");
+    check(*readinessChanges == 1,
+          "the replacement MidiStage reported a readiness change it did not derive");
+
+    // Terminal stage.
+    probe.applyVoicegroupBound(boundIdentity);
+    check(probe.isReady() && probe.view().isEnabled(),
+          "the staged reload did not restore readiness at the terminal VoicegroupBound");
+    check(sameViewState(probe.view().viewState(), captured),
+          "the terminal VoicegroupBound disturbed the restored view state");
+    check(*readinessChanges == 2,
+          "the staged reload did not report exactly one readiness change per transition");
+}
+
+// A bank-only voicegroup rebind moves just the bank binding: no load event
+// is dispatched, so readiness never drops, the retained view state is never
+// disturbed, and no readiness change is reported.
+template <class Check>
+void checkBankOnlyRebind(const WorkspaceUi &workspace, const SongName &name,
+                         const VoicegroupId *identity, Check &&check)
+{
+    const auto &songs = workspace.projectState().snapshot.songs();
+    const auto song = std::find_if(songs.cbegin(), songs.cend(), [&name](const SongInfo &info) {
+        return info.label == name.value();
+    });
+    auto stage = SmfFile{};
+    QString smfError;
+    const bool readable =
+        song != songs.cend() && SmfFile::readFile(song->midPath, &stage, &smfError);
+    check(readable, "rebind probe could not read the song's MIDI");
+    check(identity != nullptr, "rebind probe has no bound voicegroup identity");
+    if (!readable || !identity)
+        return;
+    const int budget = workspace.projectState().snapshot.trackBudgetFor(*song);
+    // Declared before the probe so the borrowed banks outlive the view's
+    // borrow.
+    LoadedVoiceGroup initialBank{};
+    LoadedVoiceGroup replacementBank{};
+    SongTab probe(name);
+    probe.applyMidiStage(*song, std::move(stage), budget);
+    probe.applyVoicegroupBound(*identity);
+    probe.applyBankView(LoadedBankView{*identity, borrowVoicegroupLease(&initialBank), QString()});
+    check(probe.isReady() && probe.voicegroupLease().get() == &initialBank,
+          "the rebind probe did not reach readiness with its bank bound");
+    const MidiTimeline *const boundTimeline = probe.timeline().get();
+    const SongView::ViewState before = probe.view().viewState();
+    const auto readinessChanges = std::make_shared<int>(0);
+    const QMetaObject::Connection readinessSpy = QObject::connect(
+        &probe, &SongTab::readinessChanged, [readinessChanges] { ++*readinessChanges; });
+
+    // The refresh re-delivers the bank view and re-binds the same identity:
+    // a bank replacement, not a load.
+    probe.applyBankView(
+        LoadedBankView{*identity, borrowVoicegroupLease(&replacementBank), QString()});
+    probe.applyVoicegroupBound(*identity);
+    check(probe.isReady() && probe.timeline().get() == boundTimeline,
+          "the bank-only rebind entered the full MIDI loading state");
+    check(probe.voicegroupLease().get() == &replacementBank,
+          "the bank-only rebind did not move the bank binding");
+    check(sameViewState(probe.view().viewState(), before),
+          "the bank-only rebind disturbed the retained view state");
+    check(*readinessChanges == 0, "the bank-only rebind reported a readiness change");
 }
 
 } // namespace
@@ -278,6 +449,11 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
         std::fprintf(stderr, "mainwindow-routing: songs did not open in two tabs\n");
         return false;
     }
+    // Fresh tabs start not ready and stay that way until both load stages
+    // land; presentation stays enabled because input gating reads readiness.
+    check(!tabA->isReady() && !tabB->isReady() && tabA->view().isEnabled() &&
+              tabB->view().isEnabled(),
+          "fresh tabs did not start not ready with their SongView presentation enabled");
     if (!waitForTabReady(*m_workspace, tabA, "mainwindow-routing song A") ||
         !waitForTabReady(*m_workspace, tabB, "mainwindow-routing song B")) {
         hide();
@@ -1036,18 +1212,42 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
               "the post-reseed reload baseline did not retain all distinctive transient fields");
         const SongName reopenedName = reopened->name();
         m_workspace->requestSongOpen(reopenedName); // the in-place reload
-        // Already ready, so the shared helper would return early; await the swap.
+        // The reload drops readiness synchronously at the ReloadSongInput
+        // dispatch, before any replacement MidiStage can arrive, and keeps
+        // the old binding until that stage lands.
+        check(reopened && !reopened->isReady() &&
+                  reopened->timeline().get() == timelineBeforeReload,
+              "the in-place reload did not become not ready at its dispatch while retaining "
+              "the old binding");
+        // The shared helper returns at readiness alone; await the swap as
+        // well, and require the retained complete state across every
+        // not-ready turn of the staged reload.
+        bool stagedStateDropped = false;
         const auto reloadLive = [this, reopened, reopenedView, reopenedName] {
             return reopened && reopenedView &&
                    m_workspace->songTabFor(reopenedName) == reopened.data() &&
                    &reopened->view() == reopenedView.data();
         };
-        const auto reloadSwapped = [reopened, reopenedView, timelineBeforeReload] {
-            return reopened && reopenedView && reopened->isReady() &&
-                   reopened->timeline().get() != timelineBeforeReload;
+        const auto reloadSwapped = [reopened, reopenedView, timelineBeforeReload, baseline,
+                                    &stagedStateDropped] {
+            if (reopened && reopenedView && reopened->isReady())
+                return reopened->timeline().get() != timelineBeforeReload;
+            // The retained complete state must survive every not-ready turn:
+            // the live state before the replacement stage, the restored
+            // capture after it.
+            const bool targetsGone = reopened.isNull() || reopenedView.isNull();
+            const bool stateIntact =
+                targetsGone || sameViewState(reopenedView->viewState(), baseline);
+            if (stateIntact)
+                return false;
+            stagedStateDropped = true;
+            return false;
         };
         const auto reloadResult = checks::async_wait::waitUntil(reloadLive, reloadSwapped);
         disconnect(eventListSpy); // the lambda captures a block-local by reference
+        check(!stagedStateDropped,
+              "the staged reload dropped the retained complete view state while readiness was "
+              "withheld");
         if (reloadResult == checks::async_wait::Result::Destroyed)
             std::fprintf(stderr, "song-load wait failed: mainwindow-routing reloaded song B tab "
                                  "was destroyed before its terminal payload\n");
@@ -1138,6 +1338,9 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
     }
     checkFreshBind(*m_workspace, *nameB, reopened ? reopened->voicegroupId() : nullptr,
                    tabAView.editorViewState(), check);
+    checkStagedFullReload(*m_workspace, *nameB, reopened ? reopened->voicegroupId() : nullptr,
+                          check);
+    checkBankOnlyRebind(*m_workspace, *nameB, reopened ? reopened->voicegroupId() : nullptr, check);
 
     // ---- Project switch and quit leave the project untouched (row F) ------
     m_workspace->requestProjectOpenAt(projectRoot);

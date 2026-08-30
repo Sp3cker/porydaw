@@ -10,7 +10,6 @@
 
 #include <QApplication>
 #include <QEvent>
-#include <QMetaObject>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <cstddef>
@@ -53,9 +52,8 @@ TrackHeaderPanel::TrackHeaderPanel(SongView *sv)
     m_addButton = new QPushButton(SongView::tr("+ Add track"), this);
     m_addButton->setFocusPolicy(Qt::NoFocus);
     m_addButton->setToolTip(SongView::tr("Add a track (picks its voice first)"));
-    connect(
-        m_addButton, &QPushButton::clicked, m_sv, [sv = m_sv] { sv->addTrack(); },
-        Qt::QueuedConnection);
+    connect(m_addButton, &QPushButton::clicked, m_sv,
+            [sv = m_sv] { sv->queueHeaderMutation([sv] { sv->addTrack(); }); });
     m_addButton->hide();
     m_layout->addWidget(m_addButton);
     m_layout->addStretch();
@@ -274,9 +272,7 @@ void TrackHeaderPanel::endRowDrag(bool commit)
         entry.second->commitOpenRename();
     // Queued: the move rebuilds this panel from inside the release
     // handler.
-    QMetaObject::invokeMethod(
-        m_sv, [sv = m_sv, from, target = *target] { sv->moveTrack(from, target); },
-        Qt::QueuedConnection);
+    m_sv->queueHeaderMutation([sv = m_sv, from, target = *target] { sv->moveTrack(from, target); });
 }
 
 bool TrackHeaderPanel::event(QEvent *event)

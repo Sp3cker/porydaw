@@ -29,21 +29,13 @@ void TimeRuler::paintEvent(QPaintEvent *)
     p.setPen(QPen(themes::color(themes::Role::song_view_separator), lyt::singlePixel()));
     p.drawLine(lyt::space(Space::Zero), rect().bottom(), width(), rect().bottom());
 
-    if (!m_sv->timeline()) {
-        p.setPen(palette().color(QPalette::PlaceholderText));
-        p.drawText(
-            rect().adjusted(m_geometry.plotOrigin + lyt::space(Space::Two), lyt::space(Space::Zero),
-                            lyt::space(Space::Zero), lyt::space(Space::Zero)),
-            Qt::AlignVCenter, SongView::tr("No song loaded — double-click a song in the browser."));
-        return;
-    }
-
     const QRect area(m_geometry.plotOrigin, lyt::space(Space::Zero),
                      width() - m_geometry.plotOrigin, height());
     p.setClipRect(area);
     drawPreRoll(p, m_sv, area, m_geometry.plotOrigin, chrome);
 
-    // Loop band across the whole ruler height.
+    // Loop band, time-selection band, and edit cursor: drawOverlays
+    // paints them only from loaded song state.
     drawOverlays(p, m_sv, area, m_geometry.plotOrigin, true);
 
     const qreal physicalPixel = logicalPhysicalPixel(dpr);
@@ -136,14 +128,13 @@ void TimeRuler::paintEvent(QPaintEvent *)
             lastLabelRight = labelX + labelWidth;
         });
 
-    const MidiTimeline *tl = m_sv->timeline();
     p.setFont(m_boldRulerFont);
 
     const QRect markers = markerRow();
     const int markerBaseline = textBaseline(markers, p.fontMetrics());
 
-    // Time-signature chips in the marker row; a placeholder 4/4 shows
-    // at tick 0 while no 0x58 meta governs the opening bars.
+    // Time-signature chips in the marker row; the axis synthesizes the
+    // opening 4/4 while no 0x58 meta governs the opening bars.
     for (const SigChip &chip : sigChips()) {
         if (chip.x > area.right() || chip.labelX + chip.labelW < area.left())
             continue;
@@ -154,15 +145,21 @@ void TimeRuler::paintEvent(QPaintEvent *)
                        timeSigLabel(chip.numerator, chip.denomPow2));
     }
 
+    // Loaded-song overlays: loop bracket glyphs, the marker /
+    // time-signature drag preview, and time-selection edge handles.
+    if (!m_sv->timeline())
+        return;
+    const TimeAxis &axis = m_sv->timeAxis();
+
     // Loop bracket glyphs above the band edges.
     p.setPen(loopEdge());
-    if (tl->loopStartTick != UINT64_MAX) {
-        const qreal x = m_sv->displayX(double(tl->loopStartTick), m_geometry.plotOrigin, dpr) +
+    if (axis.loopStartTick() != UINT64_MAX) {
+        const qreal x = m_sv->displayX(double(axis.loopStartTick()), m_geometry.plotOrigin, dpr) +
                         lyt::space(Space::Half);
         p.drawText(QPointF(x, markerBaseline), QStringLiteral("["));
     }
-    if (tl->loopEndTick != UINT64_MAX) {
-        const qreal x = m_sv->displayX(double(tl->loopEndTick), m_geometry.plotOrigin, dpr) +
+    if (axis.loopEndTick() != UINT64_MAX) {
+        const qreal x = m_sv->displayX(double(axis.loopEndTick()), m_geometry.plotOrigin, dpr) +
                         lyt::space(Space::Half);
         p.drawText(QPointF(x, markerBaseline), QStringLiteral("]"));
     }

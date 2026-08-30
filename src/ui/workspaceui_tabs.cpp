@@ -371,8 +371,14 @@ void WorkspaceUi::openSongFromList(int songId, bool newTab)
         maybeSaveTab(live, [this, name = *name](bool proceed) {
             if (!proceed || m_inFlightLoads.contains(name))
                 return;
+            SongTab *const tab = songTabFor(name);
+            if (!tab)
+                return;
             m_inFlightLoads.insert(name);
             updateOpenGate();
+            tab->beginMidiReload();
+            if (tab == m_selectedTab)
+                emit selectedSongStateChanged();
             emit projectOperationRequested(ProjectOperation{ReloadSongInput{name}});
         });
         return;

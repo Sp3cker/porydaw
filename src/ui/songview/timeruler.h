@@ -36,6 +36,7 @@ class TimeRuler : public QWidget
   public:
     explicit TimeRuler(SongView *sv);
     void syncGridControls();
+    void cancelTransientInput();
     bool gestureActive() const;
 
   protected:

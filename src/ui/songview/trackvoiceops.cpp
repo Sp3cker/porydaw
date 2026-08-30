@@ -13,7 +13,6 @@
 
 #include <QColor>
 #include <QDialog>
-#include <QMetaObject>
 #include <QStringList>
 
 #include <algorithm>
@@ -325,13 +324,10 @@ void SongView::commitTrackRename(int track, const QString &name)
     }
     // Queued: the commit arrives from the header row's editor signal, and
     // the edit rebuilds the header panel — deleting that editor mid-signal.
-    QMetaObject::invokeMethod(
-        this,
-        [this, track, trimmed] {
-            if (m_document)
-                m_document->renameTrack(track, trimmed);
-        },
-        Qt::QueuedConnection);
+    queueHeaderMutation([this, track, trimmed] {
+        if (m_document)
+            m_document->renameTrack(track, trimmed);
+    });
 }
 void SongView::addTrack()
 {

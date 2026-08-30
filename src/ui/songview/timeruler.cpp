@@ -115,6 +115,21 @@ bool TimeRuler::gestureActive() const
     return m_dragMarker >= 0 || m_dragTimeSig || m_leftPress || m_rightPress || m_dragSelEdge >= 0;
 }
 
+void TimeRuler::cancelTransientInput()
+{
+    m_divCombo->hidePopup();
+    m_feelCombo->hidePopup();
+    m_dragMarker = -1;
+    m_dragTimeSig = false;
+    m_leftPress = false;
+    m_rightPress = false;
+    m_selSweep = false;
+    m_multiTrackSweep = false;
+    m_dragSelEdge = -1;
+    unsetCursor();
+    update();
+}
+
 bool TimeRuler::event(QEvent *event)
 {
     const bool handled = QWidget::event(event);
@@ -179,26 +194,26 @@ int TimeRuler::hitMarker(QPointF pos) const
 std::vector<TimeRuler::SigChip> TimeRuler::sigChips() const
 {
     std::vector<SigChip> chips;
-    const MidiTimeline *tl = m_sv->timeline();
-    if (!tl)
-        return chips;
+    const TimeAxis &axis = m_sv->timeAxis();
     const qreal dpr = devicePixelRatioF();
     const QFontMetrics fm(m_signatureFont);
     const auto labelInset = lyt::space(Space::Half);
-    const auto add = [&](uint64_t tick, int numerator, int denomPow2, bool implicit) {
-        const qreal x = m_sv->displayX(double(tick), m_geometry.plotOrigin, dpr);
-        chips.push_back({tick, numerator, denomPow2, implicit, x, x + labelInset,
-                         qreal(fm.horizontalAdvance(timeSigLabel(numerator, denomPow2)))});
+    const auto add = [&](const TimeAxis::ResolvedTimeSignature &sig) {
+        const qreal x = m_sv->displayX(double(sig.tick), m_geometry.plotOrigin, dpr);
+        chips.push_back({sig.tick, sig.numerator, sig.denomPow2, sig.implicit, x, x + labelInset,
+                         qreal(fm.horizontalAdvance(timeSigLabel(sig.numerator, sig.denomPow2)))});
     };
-    if (tl->timeSigs.empty() || tl->timeSigs.front().tick != 0)
-        add(0, 4, 2, true);
-    for (size_t i = 0; i < tl->timeSigs.size(); i++) {
-        if (i + 1 < tl->timeSigs.size() && tl->timeSigs[i + 1].tick == tl->timeSigs[i].tick)
+    // The axis synthesizes the opening 4/4 whenever no actual signature
+    // governs tick 0 — always so on the fallback axis.
+    if (axis.hasImplicitOpeningSignature())
+        add(axis.signatureAt(0));
+    const std::span<const TimeSigPoint> sigs = axis.explicitTimeSignatures();
+    for (size_t i = 0; i < sigs.size(); i++) {
+        if (i + 1 < sigs.size() && sigs[i + 1].tick == sigs[i].tick)
             continue; // shadowed duplicate: the last at a tick wins
-        const TimeSigPoint &ts = tl->timeSigs[i];
-        add(ts.tick, ts.numerator ? ts.numerator : 4, ts.denomPow2, false);
+        add(axis.signatureAt(sigs[i].tick));
     }
-    const uint64_t loops[2] = {tl->loopStartTick, tl->loopEndTick};
+    const uint64_t loops[2] = {axis.loopStartTick(), axis.loopEndTick()};
     const qreal bracketWidth = fm.horizontalAdvance(QStringLiteral("["));
     for (SigChip &chip : chips) {
         for (uint64_t loopTick : loops) {
@@ -244,17 +259,12 @@ bool TimeRuler::hitTimeSigChip(QPointF pos, uint64_t *tick, int *numerator, int 
     return false;
 }
 
-// Values in effect at tick (4/4 before any 0x58 meta).
+// Values in effect at tick; the axis resolves the implicit opening 4/4.
 void TimeRuler::sigAtTick(uint64_t tick, int *numerator, int *denomPow2) const
 {
-    *numerator = 4;
-    *denomPow2 = 2;
-    for (const TimeSigPoint &ts : m_sv->timeline()->timeSigs) {
-        if (ts.tick > tick)
-            break;
-        *numerator = ts.numerator ? ts.numerator : 4;
-        *denomPow2 = ts.denomPow2;
-    }
+    const TimeAxis::ResolvedTimeSignature sig = m_sv->timeAxis().signatureAt(tick);
+    *numerator = sig.numerator;
+    *denomPow2 = sig.denomPow2;
 }
 
 // 0 = selection start edge, 1 = end edge, -1 = neither near pos.
