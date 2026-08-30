@@ -97,6 +97,8 @@ class PianoRoll : public QWidget
 
     bool gestureActive() const;
     void cancelPitchBendPopup();
+    // Aborts in-progress input without committing its document mutation.
+    void cancelTransientInput();
     void cancelVelocityInteraction();
     void refreshTextLayout();
     void copySelectedNotes();

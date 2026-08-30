@@ -347,8 +347,6 @@ void drawPreRoll(QPainter &p, const SongView *sv, const QRect &rect, qreal origi
 void drawGrid(QPainter &p, const SongView *sv, const QRect &rect, qreal origin,
               int timelineDetailMinimumPixelsPerBeat, int gridLineStrokeWidth)
 {
-    if (!sv->timeline())
-        return;
     const qreal dpr = p.device()->devicePixelRatioF();
     const qreal physicalPixel = logicalPhysicalPixel(dpr);
     const qreal roundingMargin = physicalPixel / 2.0;

@@ -246,9 +246,6 @@ void PianoRollQuickView::rebuildGrid()
                       roll.height());
     const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
 
-    if (!roll.m_sv->timeline())
-        return;
-
     const PitchProjection &projection = roll.m_sv->pitchProjection();
     const auto &edges = roll.rowEdges();
     const QColor accidental = detail::pianoRollAccidentalLaneColor();

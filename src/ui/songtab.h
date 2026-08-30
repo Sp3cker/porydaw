@@ -12,8 +12,7 @@
 #include "core/songhistory.h"
 #include "project/projectidentity.h"
 #include "project/voicegroupsource.h"
-
-class SongView;
+#include "ui/songview.h"
 
 // One open song page: the passive, keyed owner of everything a single song
 // edit needs. A SongTab is constructed for one SongName and permanently pairs
@@ -63,7 +62,7 @@ class SongTab final : public QWidget
     std::shared_ptr<const MidiTimeline> timeline() const { return m_timeline; }
 
     // True only after MidiStage and terminal VoicegroupBound both landed.
-    bool isReady() const { return m_ready; }
+    bool isReady() const { return m_midiBound && m_voicegroupBound; }
     // The last SongFailed message on this tab; empty otherwise.
     const QString &presentationError() const { return m_presentationError; }
 
@@ -79,6 +78,9 @@ class SongTab final : public QWidget
 
     // ---- Applied stage values (copied; WorkspaceUi unpacks SongUpdate) ----
 
+    // ReloadSongInput dispatch: captures the current transient view state and
+    // makes the tab not ready while retaining its current bindings.
+    void beginMidiReload();
     // MidiStage: adopts the detached SMF and rebinds the paired view in one
     // swap; a ready reload reapplies the captured complete view state and a
     // fresh open starts at the canonical defaults.
@@ -99,6 +101,8 @@ class SongTab final : public QWidget
     SongSaveSnapshot captureSaveSnapshot() const { return m_document.captureSaveSnapshot(); }
 
   signals:
+    // Derived readiness changed after a load fact transition.
+    void readinessChanged();
     // The timeline projection changed and is ready for the audio handoff.
     void timelineChanged();
     // The undo index settled after an edit (including undo/redo); the owner
@@ -106,8 +110,15 @@ class SongTab final : public QWidget
     void edited();
 
   private:
+    class InputGate;
+    enum class LoadEvent {
+        ReloadDispatched,
+        MidiBound,
+        VoicegroupBound,
+    };
+
     void rebuildTimeline();
-    void updateReadiness();
+    void applyLoadEvent(LoadEvent event);
 
     // Member order is destruction order's reverse: the paired view's raw
     // borrows (timeline, document) must not outlive what they point at.
@@ -115,11 +126,12 @@ class SongTab final : public QWidget
     SongDocument m_document;
     std::shared_ptr<const MidiTimeline> m_timeline;
     SongView *m_view = nullptr;
+    InputGate *m_inputGate = nullptr;
     std::optional<VoicegroupId> m_voicegroupId;
     VoicegroupLease m_voicegroup;
+    std::optional<SongView::ViewState> m_pendingReloadState;
     double m_sampleRate = 0.0;
     QString m_presentationError;
     bool m_midiBound = false;
     bool m_voicegroupBound = false;
-    bool m_ready = false;
 };

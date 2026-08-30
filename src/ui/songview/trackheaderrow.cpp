@@ -20,7 +20,6 @@
 #include <QKeySequence>
 #include <QLineEdit>
 #include <QMenu>
-#include <QMetaObject>
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
@@ -435,8 +434,7 @@ void TrackHeaderRow::mouseDoubleClickEvent(QMouseEvent *event)
     // revealed the voice in the dock); anywhere else renames. Queued:
     // the picked voice's edit rebuilds the header panel.
     if (voiceLineRect().contains(event->pos())) {
-        QMetaObject::invokeMethod(
-            m_sv, [sv = m_sv, t = m_track] { sv->editTrackVoice(t); }, Qt::QueuedConnection);
+        m_sv->queueHeaderMutation([sv = m_sv, t = m_track] { sv->editTrackVoice(t); });
         return;
     }
     beginRename();
@@ -464,16 +462,13 @@ void TrackHeaderRow::contextMenuEvent(QContextMenuEvent *event)
             [this] { m_sv->revealTrackVoice(m_track); });
     // Queued: these edits rebuild the header panel.
     connect(voiceAction, &QAction::triggered, this, [this] {
-        QMetaObject::invokeMethod(
-            m_sv, [sv = m_sv, t = m_track] { sv->editTrackVoice(t); }, Qt::QueuedConnection);
+        m_sv->queueHeaderMutation([sv = m_sv, t = m_track] { sv->editTrackVoice(t); });
     });
     connect(duplicateAction, &QAction::triggered, this, [this] {
-        QMetaObject::invokeMethod(
-            m_sv, [sv = m_sv, t = m_track] { sv->duplicateTrack(t); }, Qt::QueuedConnection);
+        m_sv->queueHeaderMutation([sv = m_sv, t = m_track] { sv->duplicateTrack(t); });
     });
     connect(deleteAction, &QAction::triggered, this, [this] {
-        QMetaObject::invokeMethod(
-            m_sv, [sv = m_sv, t = m_track] { sv->deleteTrack(t); }, Qt::QueuedConnection);
+        m_sv->queueHeaderMutation([sv = m_sv, t = m_track] { sv->deleteTrack(t); });
     });
 
     menu.exec(event->globalPos());

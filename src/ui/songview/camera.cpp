@@ -26,13 +26,12 @@ void SongView::setEditorTimeZoom(double pxPerBeatValue)
 {
     if (!m_timeline)
         return;
-    const double pxPerTick =
+    const double pxPerBeat =
         std::clamp(pxPerBeatValue, double(m_geometry.timelineMinimumPixelsPerBeat),
-                   double(m_geometry.timelineMaximumPixelsPerBeat)) /
-        double(m_timeline->ticksPerBeat);
-    if (pxPerTick != m_pxPerTick && m_editorDrawer)
+                   double(m_geometry.timelineMaximumPixelsPerBeat));
+    if (pxPerBeat != m_pxPerBeat && m_editorDrawer)
         m_editorDrawer->cancelVisiblePageInteraction();
-    m_pxPerTick = pxPerTick;
+    m_pxPerBeat = pxPerBeat;
     updateScrollbars();
     refreshTimelineViews(cPlotDirty);
     refreshDrawerPages();
@@ -41,10 +40,6 @@ qreal SongView::displayX(double tick, qreal origin, qreal dpr) const
 {
     const qreal widgetX = origin + contentX(tick);
     return dpr > 0.0 ? std::round(widgetX * dpr) / dpr : widgetX;
-}
-double SongView::pxPerBeat() const
-{
-    return m_timeline ? m_pxPerTick * m_timeline->ticksPerBeat : m_pxPerTick * 24.0;
 }
 void SongView::zoomTimelineAtWheel(const QWheelEvent *event, qreal anchorContentX)
 {
@@ -56,16 +51,18 @@ void SongView::zoomAroundContentX(double factor, qreal anchorContentX)
 {
     if (!m_timeline)
         return;
-    const double tpb = double(m_timeline->ticksPerBeat);
-    const double oldPxPerTick = m_pxPerTick;
-    const double pxPerTick =
-        std::clamp(oldPxPerTick * factor, double(m_geometry.timelineMinimumPixelsPerBeat) / tpb,
-                   double(m_geometry.timelineMaximumPixelsPerBeat) / tpb);
-    if (pxPerTick != oldPxPerTick && m_editorDrawer)
+    // Anchoring works in the canonical beat scale: the tick under the
+    // cursor is beat-space scaled by the axis's derived quotient, so a
+    // timebase change cannot alter what the zoom keeps pinned.
+    const double oldPxPerBeat = m_pxPerBeat;
+    const double pxPerBeat =
+        std::clamp(oldPxPerBeat * factor, double(m_geometry.timelineMinimumPixelsPerBeat),
+                   double(m_geometry.timelineMaximumPixelsPerBeat));
+    if (pxPerBeat != oldPxPerBeat && m_editorDrawer)
         m_editorDrawer->cancelVisiblePageInteraction();
-    m_pxPerTick = pxPerTick;
+    m_pxPerBeat = pxPerBeat;
     m_scrollX = std::clamp(
-        cursorAnchoredScroll(double(anchorContentX), oldPxPerTick, m_scrollX, m_pxPerTick),
+        cursorAnchoredScroll(double(anchorContentX), oldPxPerBeat, m_scrollX, m_pxPerBeat),
         minHScroll(), maxHScroll());
     updateScrollbars();
     refreshTimelineViews(cPlotDirty);
@@ -122,11 +119,13 @@ void SongView::setHScroll(double px)
 }
 double SongView::minHScroll() const
 {
-    return m_timeline ? -leadPadPx() : 0.0;
+    // The pre-roll floor applies in both axis states: the fallback camera
+    // rests at this home until a song binds.
+    return -leadPadPx();
 }
 double SongView::maxHScroll() const
 {
-    return m_timeline ? double(m_timeline->lengthTicks) * m_pxPerTick : 0.0;
+    return m_timeAxis.isBound() ? double(m_timeAxis.lengthTicks()) * pxPerTick() : 0.0;
 }
 void SongView::setVScroll(double y)
 {
@@ -152,7 +151,9 @@ void SongView::updateScrollbars()
     m_hbar->setRange(scrollUnits(minHScroll()), scrollUnits(maxHScroll()));
     m_hbar->setPageStep(scrollUnits(double(viewportWidth())));
     m_hbar->blockSignals(false);
-    setHScroll(m_scrollX);
+    // The unbound axis's provisional camera tracks the newly resolved
+    // pre-roll home; a bound camera stays where its user put it.
+    setHScroll(m_timeAxis.isBound() ? m_scrollX : minHScroll());
 
     m_vbar->blockSignals(true);
     m_vbar->setRange(0, scrollUnits(maxRollScroll()));
@@ -185,7 +186,7 @@ void SongView::ensureTickVisible(uint64_t tick)
     const qreal displayedX = displayX(double(tick), lyt::space(Space::Zero), dpr);
     if (displayedX >= lyt::space(Space::Zero) && displayedX <= vw - physicalPixel)
         return;
-    setHScroll(double(tick) * m_pxPerTick - vw * m_geometry.timelineRevealViewportFraction);
+    setHScroll(double(tick) * pxPerTick() - vw * m_geometry.timelineRevealViewportFraction);
 }
 void SongView::ensureRangeVisible(uint64_t startTick, uint64_t endTick, bool preferEnd)
 {

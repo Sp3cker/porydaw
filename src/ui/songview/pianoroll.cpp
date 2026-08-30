@@ -148,6 +148,51 @@ void PianoRoll::cancelPitchBendPopup()
         m_bendPopup->cancelAndClose();
 }
 
+void PianoRoll::cancelTransientInput()
+{
+    if (m_bendPopup && m_bendPopup->isVisible())
+        m_bendPopup->cancelAndCloseWithoutFocus();
+    if (m_leftDrag == LeftDrag::Velocity || m_leftDrag == LeftDrag::PendingVelocity)
+        cancelVelocityInteraction();
+    if (m_kbdKey >= 0)
+        endKbdAudition();
+    stopNoteAudition();
+    if (m_soundingKey >= 0)
+        auditionKey(m_soundingKey, 0);
+    stopBandAuditions();
+    m_panning = false;
+    m_panPos = {};
+    m_leftDrag = LeftDrag::None;
+    m_rightDrag = RightDrag::None;
+    m_pressPos = {};
+    m_curPos = {};
+    m_pressTick = 0.0;
+    m_pressKey = 0;
+    m_gripTick = 0;
+    m_gripOpposite = 0;
+    m_dTick = 0;
+    m_dKey = 0;
+    m_dDur = 0;
+    m_dVel = 0;
+    m_drawTick = 0;
+    m_drawDur = 0;
+    m_drawKey = 0;
+    m_drawAnchor = 0;
+    m_rightShift = false;
+    m_rightAnchorTick = 0;
+    m_rightHit = false;
+    m_rightHitId = {};
+    m_velAnchor = {};
+    m_velAudEff = -1;
+    m_velModMods = Qt::NoModifier;
+    m_kbdKey = -1;
+    m_soundingKey = -1;
+    setHoverKey(-1);
+    setCursor(Qt::ArrowCursor);
+    completeProjectionGesture();
+    requestQuickUpdate(cDrawCommitDirty);
+}
+
 void PianoRoll::cancelVelocityInteraction()
 {
     if (m_leftDrag != LeftDrag::Velocity && m_leftDrag != LeftDrag::PendingVelocity)

@@ -293,6 +293,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/detail.h
     src/ui/songview/camera.cpp
     src/ui/songview/grid.cpp
+    src/ui/songview/timeaxis.cpp
+    src/ui/songview/timeaxis.h
     src/ui/songview/rangeedit.cpp
     src/ui/songview/scalecontroller.cpp
     src/ui/songview/scalecontroller.h
@@ -478,6 +480,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/rollcheck.cpp
         src/checks/rollcheck/rollcheck.h
         src/checks/rollcheck/harness.cpp
+        src/checks/rollcheck/loading_ruler.cpp
         src/checks/rollcheck/identity.cpp
         src/checks/rollcheck/remap.cpp
         src/checks/rollcheck/header_reconciliation.cpp

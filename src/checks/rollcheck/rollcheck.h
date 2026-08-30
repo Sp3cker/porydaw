@@ -114,6 +114,7 @@ struct ResizeFixture {
     uint64_t snapCell = 0;
 };
 
+ScenarioContinuation runLoadingRulerScenarios(Harness &check);
 ScenarioContinuation runIdentityScenarios(Harness &check, const SongInfo &song);
 ScenarioContinuation runRemapScenarios(Harness &check, const SongInfo &song);
 ScenarioContinuation runHeaderReconciliationScenarios(Harness &check, const SongInfo &song);

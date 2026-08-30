@@ -4,6 +4,7 @@
 #include <QFlags>
 #include <QHash>
 #include <QList>
+#include <QMetaObject>
 #include <QRectF>
 #include <QSet>
 #include <QWidget>
@@ -26,6 +27,7 @@
 #include "ui/songview/clip.h"
 #include "ui/songview/editorselectionmodel.h"
 #include "ui/songview/scalecontroller.h"
+#include "ui/songview/timeaxis.h"
 #include "ui/songviewmodel.h"
 #include "ui/timelinesurface.h"
 #include "ui/velocitygesturemodel.h"
@@ -108,8 +110,10 @@ class SongView : public QWidget
     // Editing is enabled while a document is attached (may be null).
     void setDocument(SongDocument *document);
     void prepareForSongReplacement();
+    // Cancels only ephemeral user input after a readiness drop; it never
+    // changes persistent view or document state.
+    void cancelTransientInput();
     SongDocument *document() const { return m_document; }
-
     // Voicegroup swap after a -G settings change (labels only; may be null
     // while the audio engine frees the old one).
     void setVoicegroup(const LoadedVoiceGroup *voicegroup);
@@ -175,20 +179,26 @@ class SongView : public QWidget
     songview::EditorSelectionModel &selectionModel() { return m_selectionModel; }
     const songview::EditorSelectionModel &selectionModel() const { return m_selectionModel; }
     const MidiTimeline *timeline() const { return m_timeline; }
+    // The always-valid musical axis (fallback before any song binds);
+    // painters read signatures and loop markers here instead of the
+    // optional timeline.
+    const songview::TimeAxis &timeAxis() const { return m_timeAxis; }
     const SongViewModel &model() const { return m_model; }
     const LoadedVoiceGroup *voicegroup() const { return m_voicegroup; }
     std::vector<songview::TimelineBand> timelineBands();
 
-    qreal contentX(double tick) const { return qreal(tick * m_pxPerTick - m_scrollX); }
-    double tickAtContentX(qreal x) const { return (double(x) + m_scrollX) / m_pxPerTick; }
+    qreal contentX(double tick) const { return qreal(tick * pxPerTick() - m_scrollX); }
+    double tickAtContentX(qreal x) const { return (double(x) + m_scrollX) / pxPerTick(); }
     // Camera dead space before tick 0: the horizontal scroll floor is
     // -leadPadPx(), so the song start can rest inside the viewport instead
     // of pinned to its left edge (zooming near the start clamps here, which
     // keeps tick 0 on screen).
     double leadPadPx() const;
     qreal displayX(double tick, qreal origin, qreal dpr) const;
-    double pxPerTick() const { return m_pxPerTick; }
-    double pxPerBeat() const;
+    // Derived from the canonical beat scale: a resolution change can only
+    // move this quotient, never the beat positions it produces.
+    double pxPerTick() const noexcept { return m_pxPerBeat / double(m_timeAxis.ticksPerBeat()); }
+    double pxPerBeat() const { return m_pxPerBeat; }
     double scrollY() const { return m_scrollY; }
     double keyHeight() const { return m_keyHeight; }
     const songview::PitchProjection &pitchProjection() const { return m_projection; }
@@ -349,17 +359,12 @@ class SongView : public QWidget
     int gridMinDenom() const { return m_gridMinDenom; }
     void setGridMinDenom(int denom); // 4/8/16/32; anything else means 0
 
-    // Time-signature segment governing a tick. The grid — beats, snap
-    // positions, sub-beat lines — restarts at every signature change and
-    // scales the beat by the signature's denominator, exactly like
-    // forEachGridLine; a signature placed mid-measure must still leave the
-    // drawn lines snappable.
-    struct GridSeg {
-        uint64_t start = 0;         // governing signature's tick (0 = song start)
-        uint64_t next = UINT64_MAX; // next signature's tick; the grid restarts there
-        uint64_t beatTicks = 24;    // denominator-scaled beat length in ticks
-        uint64_t beatsPerBar = 4;   // numerator, matching forEachGridLine()
-    };
+    // Time-signature segment governing a tick (the axis's GridSegment).
+    // The grid — beats, snap positions, sub-beat lines — restarts at every
+    // signature change and scales the beat by the signature's denominator,
+    // exactly like forEachGridLine; a signature placed mid-measure must
+    // still leave the drawn lines snappable.
+    using GridSeg = songview::TimeAxis::GridSegment;
     GridSeg gridSegAt(uint64_t tick) const;
     // One painted visible-grid cell. Cells are half-open [start, end): a
     // tick exactly at an end belongs to the next cell.
@@ -571,6 +576,7 @@ class SongView : public QWidget
   private:
     friend class EditorDrawer;
     friend class songview::PianoRoll;
+    friend class songview::TrackHeaderPanel;
     friend class songview::TrackHeaderRow;
     struct Geometry {
         int trackHeaderWidth;
@@ -630,6 +636,20 @@ class SongView : public QWidget
     double defaultVerticalScroll() const;
     void updateScrollbars();
     void rebuildAfterSongChange();
+    // Captures the input epoch at the originating header event. Cancellation
+    // advances it, dropping stale document mutations without reordering live ones.
+    template <typename Mutation>
+    void queueHeaderMutation(Mutation &&mutation)
+    {
+        const uint64_t generation = m_transientInputGeneration;
+        QMetaObject::invokeMethod(
+            this,
+            [this, generation, mutation = std::forward<Mutation>(mutation)] {
+                if (generation == m_transientInputGeneration)
+                    mutation();
+            },
+            Qt::QueuedConnection);
+    }
     // RAII bracket for one committed roll mutation: construction installs
     // the dirty classification for the mutation's synchronous
     // documentChanged -> updateSong handoff, asserting no bracket is open;
@@ -670,9 +690,11 @@ class SongView : public QWidget
     std::optional<SongDocument::TimeScope> timeSelectionScope() const;
     std::optional<songview::Clip> readClipboardClip();
 
-    const MidiTimeline *m_timeline = nullptr;
+    songview::TimeAxis m_timeAxis;            // musical time; fallback until a song binds
+    const MidiTimeline *m_timeline = nullptr; // loaded content only
     const LoadedVoiceGroup *m_voicegroup = nullptr;
     SongDocument *m_document = nullptr;
+    uint64_t m_transientInputGeneration = 0; // advanced only by cancelTransientInput()
     SongViewModel m_model;
     songview::EditorSelectionModel m_selectionModel;
     Geometry m_geometry;
@@ -683,7 +705,7 @@ class SongView : public QWidget
     // Consumed by the next updateSong; installed by DocumentSwapHintScope.
     std::optional<songview::PianoRollQuickDirtySet> m_documentSwapHint;
 
-    double m_pxPerTick = 1.0;
+    double m_pxPerBeat = 0.0; // canonical horizontal scale; pxPerTick() derives the rest
     double m_scrollX = 0.0;
     double m_scrollY = 0.0;
     double m_keyHeight = 0.0;

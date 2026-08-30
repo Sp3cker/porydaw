@@ -51,6 +51,10 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         return 1;
     const auto earlyFailureStatus = [&] { return check.failures() ? check.failures() : 1; };
     using checks::rollcheck::ScenarioContinuation;
+    // Loading-state coverage runs first: the bare-view ruler, the fallback
+    // axis, and the loading input gate are pinned before gesture suites run.
+    if (checks::rollcheck::runLoadingRulerScenarios(check) == ScenarioContinuation::Stop)
+        return earlyFailureStatus();
 
     if (checks::rollcheck::runIdentityScenarios(check, song) == ScenarioContinuation::Stop ||
         checks::rollcheck::runRemapScenarios(check, song) == ScenarioContinuation::Stop ||

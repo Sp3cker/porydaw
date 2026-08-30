@@ -51,7 +51,8 @@ void AutomationCanvas::showTimeSelectionMenuFor(LaneHandle contextLane,
         m_page->showTimeSelectionMenu(request);
         return;
     }
-    QMenu menu;
+    // Parented to this widget so SongView ancestry checks can discover and close the menu during loading-gate cancellation.
+    QMenu menu(this);
     QAction *clear = menu.addAction(tr("Clear time selection"));
     if (menu.exec(globalPosition) == clear && model.timeSelection().active()) {
         model.clearTimeSelection();
@@ -89,7 +90,7 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPoint &globalPo
                 std::nullopt,
                 true};
         });
-    QMenu menu;
+    QMenu menu(this);
     QAction *copy = menu.addAction(kind.copyLabel);
     copy->setEnabled(!points.empty());
     QAction *paste = menu.addAction(kind.pasteLabel);
@@ -193,7 +194,7 @@ void AutomationCanvas::showAddLaneMenu(const QPoint &globalPosition)
     for (const xcmd::Descriptor &descriptor : xcmd::laneDescriptors())
         candidates.push_back(descriptor.laneController);
     candidates.push_back(CCLanes::bendController());
-    QMenu menu;
+    QMenu menu(this);
     std::vector<EditorAutomationRowId> hidden;
     for (const uint8_t controller : candidates) {
         const auto row = laneRow(track, controller);
