@@ -150,6 +150,15 @@ const std::vector<CheckDefinition> &catalog()
                  decompProjectFiles +
                  strings({"sound/songs/midi/mus_gym.mid", "sound/songs/midi/mus_oldale.mid"}) +
                  voicegroupEditorFiles},
+            {.name = "vgloadcheck",
+             .argv = strings({"--vgloadcheck", "{scratch}"}),
+             .handler =
+                 [](QApplication &, const QStringList &args) {
+                     return runVgLoadCheck(args[1], args.value(2));
+                 },
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = decompProjectFiles + voicegroupEditorFiles},
             {.name = "vgsavecheck",
              .argv = strings({"--vgsavecheck", "{scratch}", "mus_route101"}),
              .handler =

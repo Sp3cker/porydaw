@@ -8,6 +8,7 @@
 #include <QString>
 #include <QStringList>
 #include <QVector>
+#include <atomic>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -350,7 +351,8 @@ class VoicegroupSource
     static VgAdsrDefaults typicalAdsr(const QString &projectRoot);
     // Everything the voicegroup files feed the browser catalog, in one read
     // of each file (the single-dataset functions above re-run this scan).
-    static VgCatalogScan catalogScan(const QString &projectRoot);
+    static VgCatalogScan catalogScan(const QString &projectRoot,
+                                     const std::atomic_bool *cancelled = nullptr);
     // directSoundSymbols + synthInstruments from one read of the sound data
     // files instead of one each.
     static VgDirectSoundScan directSoundCatalog(const QString &projectRoot);

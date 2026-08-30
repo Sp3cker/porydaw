@@ -89,6 +89,175 @@ bool isIntArg(const QByteArray &trimmed)
     return true;
 }
 
+// Byte length of the macro word plus its separating space when the word
+// requires one.
+int macroPrefixLength(const MacroDef &def)
+{
+    return int(qstrlen(def.word)) + (def.requireSpace ? 1 : 0);
+}
+
+// The editable macro a content line starts with, matched in the loader's
+// dispatch order (requireSpace words need the trailing space), or nullptr.
+const MacroDef *matchMacroDef(const QByteArray &text)
+{
+    for (const MacroDef &def : kEditableMacros) {
+        const int wordLen = int(qstrlen(def.word));
+        if (def.requireSpace
+                ? (text.startsWith(def.word) && text.size() > wordLen && text[wordLen] == ' ')
+                : text.startsWith(def.word)) {
+            return &def;
+        }
+    }
+    return nullptr;
+}
+
+// A read-only cry / cry_reverse voice line: rendered verbatim, but still
+// consumes a slot.
+bool isReadOnlyVoiceLine(const QByteArray &text)
+{
+    for (const char *prefix : kReadOnlyPrefixes) {
+        if (text.startsWith(prefix))
+            return true;
+    }
+    return false;
+}
+
+// What kind of voice line (if any) a content line starts: an editable
+// macro, a read-only cry line, or neither.
+struct VoiceLineMatch {
+    const MacroDef *macro = nullptr;
+    bool readOnly = false;
+
+    explicit operator bool() const { return macro != nullptr || readOnly; }
+};
+
+VoiceLineMatch matchVoiceLine(const QByteArray &text)
+{
+    VoiceLineMatch match;
+    match.macro = matchMacroDef(text);
+    if (!match.macro)
+        match.readOnly = isReadOnlyVoiceLine(text);
+    return match;
+}
+
+// Rolling state for parse()'s walk over the file: where the target section
+// stands and the next free slot. Per-file sources are active from line 0
+// and never end early; a monolithic section starts at "<label>::" and,
+// once a voice has been parsed, ends at the first line with "::" past
+// position 0 or starting with ".align" (loader :1706-1724).
+struct SectionCursor {
+    QByteArray startMarker; // "<label>::"
+    bool active = false;
+    bool labeled = false;
+    bool done = false;
+    int voices = 0;
+    int nextSlot = 0;
+    int sectionBegin = -1; // the label line's index, once seen
+    int sectionEnd = -1;   // the terminator line's index, once seen
+};
+
+// Walks parse()'s section state machine for one content line. False when
+// the raw line is appended untouched (blank, outside/done section, section
+// start/end markers, or all 128 slots filled — the loader stops reading
+// there); true when the line may still be a header or voice line.
+bool stepSection(const QByteArray &text, int index, SectionCursor *cursor)
+{
+    if (cursor->done || text.isEmpty())
+        return false;
+    if (!cursor->active) {
+        if (!text.startsWith(cursor->startMarker))
+            return false;
+        cursor->active = true;
+        cursor->sectionBegin = index;
+        return true;
+    }
+    if (cursor->labeled && cursor->voices > 0) {
+        if (text.indexOf("::") > 0 || text.startsWith(".align")) {
+            cursor->done = true;
+            cursor->sectionEnd = index;
+            return false;
+        }
+    }
+    if (cursor->nextSlot >= VOICEGROUP_SIZE)
+        return false;
+    return true;
+}
+
+// The starting slot of a "voice_group NAME, n" header (comma form only), or
+// -1 when absent or invalid: the loader (:1727) only sets the slot with
+// 0 < n < 128; the bare header leaves it untouched.
+int headerStartingSlot(const QByteArray &text)
+{
+    const QByteArray rest = text.mid(12);
+    const int comma = rest.indexOf(',');
+    if (comma < 0)
+        return -1;
+    const QByteArray numText = rest.mid(comma + 1).trimmed();
+    int digits = (numText.startsWith('-') || numText.startsWith('+')) ? 1 : 0;
+    while (digits < numText.size() && numText[digits] >= '0' && numText[digits] <= '9')
+        digits++;
+    bool numOk = false;
+    const int startingNote = numText.left(digits).toInt(&numOk);
+    if (numOk && startingNote > 0 && startingNote < VOICEGROUP_SIZE)
+        return startingNote;
+    return -1;
+}
+
+// A "voice_group " header line: advances the cursor's next slot when the
+// header carries a valid starting slot. False for any other line.
+bool applyVoicegroupHeader(const QByteArray &text, SectionCursor *cursor)
+{
+    if (!text.startsWith("voice_group "))
+        return false;
+    const int startingSlot = headerStartingSlot(text);
+    if (startingSlot > 0)
+        cursor->nextSlot = startingSlot;
+    return true;
+}
+
+// Tokenizes an editable macro line's comma-separated arguments into *voice.
+// The line only counts as editable when the piece count matches the macro
+// and every argument passes its type check (symbol args non-empty, the
+// rest integers); otherwise it stays Broken and renders verbatim.
+VgLineKind decodeVoiceArgs(const MacroDef &def, const QList<QByteArray> &pieces, VgVoice *voice)
+{
+    const int expected = macroArgCount(def.macro);
+    if (pieces.size() != expected)
+        return VgLineKind::Broken;
+    QVector<QByteArray> values(expected);
+    for (int a = 0; a < expected; a++) {
+        values[a] = pieces.at(a).trimmed();
+        if (macroArgIsSymbol(def.macro, a) ? values[a].isEmpty() : !isIntArg(values[a]))
+            return VgLineKind::Broken;
+    }
+
+    voice->macro = def.macro;
+    if (def.macro == VgMacro::KeysplitAll) {
+        voice->symbol = QString::fromUtf8(values[0]);
+    } else if (def.macro == VgMacro::Keysplit) {
+        voice->symbol = QString::fromUtf8(values[0]);
+        voice->keysplitTable = QString::fromUtf8(values[1]);
+    } else {
+        voice->key = values[0].toInt();
+        voice->pan = values[1].toInt();
+        int a = 2;
+        if (vgMacroHasSymbol(def.macro))
+            voice->symbol = QString::fromUtf8(values[a++]);
+        else if (def.macro == VgMacro::Square1 || def.macro == VgMacro::Square1Alt) {
+            voice->sweep = values[a++].toInt();
+            voice->duty = values[a++].toInt();
+        } else if (def.macro == VgMacro::Square2 || def.macro == VgMacro::Square2Alt)
+            voice->duty = values[a++].toInt();
+        else
+            voice->period = values[a++].toInt();
+        voice->attack = values[a++].toInt();
+        voice->decay = values[a++].toInt();
+        voice->sustain = values[a++].toInt();
+        voice->release = values[a++].toInt();
+    }
+    return VgLineKind::Editable;
+}
+
 // Mirrors the loader's strip_comment + rtrim + ltrim: fills the content
 // region [contentStart, contentEnd) of a raw line (which keeps its '\r').
 void contentBounds(const QByteArray &raw, int *contentStart, int *contentEnd)
@@ -820,14 +989,13 @@ bool VoicegroupSource::parse(const QByteArray &content, QString *error)
 
     const QList<QByteArray> rawLines = splitLines(content, &m_endsWithNewline);
     m_lines.reserve(rawLines.size());
-    m_sectionBegin = m_sectionLabel.isEmpty() ? 0 : -1;
-    m_sectionEnd = rawLines.size();
 
-    const QByteArray sectionStart = m_sectionLabel.toUtf8() + "::";
-    bool inSection = m_sectionLabel.isEmpty();
-    bool sectionDone = false;
-    int voicesInSection = 0;
-    int nextSlot = 0;
+    SectionCursor cursor;
+    cursor.startMarker = m_sectionLabel.toUtf8() + "::";
+    cursor.active = m_sectionLabel.isEmpty();
+    cursor.labeled = !m_sectionLabel.isEmpty();
+    cursor.sectionBegin = m_sectionLabel.isEmpty() ? 0 : -1;
+    cursor.sectionEnd = rawLines.size();
 
     for (int i = 0; i < rawLines.size(); i++) {
         Line line;
@@ -837,132 +1005,44 @@ bool VoicegroupSource::parse(const QByteArray &content, QString *error)
         contentBounds(line.raw, &contentStart, &contentEnd);
         const QByteArray text = line.raw.mid(contentStart, contentEnd - contentStart);
 
-        if (sectionDone || text.isEmpty()) {
-            m_lines.append(line);
-            continue;
-        }
-        if (!inSection) {
-            if (text.startsWith(sectionStart)) {
-                inSection = true;
-                m_sectionBegin = i;
-            }
-            m_lines.append(line);
-            continue;
-        }
-        if (!m_sectionLabel.isEmpty() && voicesInSection > 0) {
-            const int labelIdx = text.indexOf("::");
-            if (labelIdx > 0 || text.startsWith(".align")) {
-                sectionDone = true;
-                m_sectionEnd = i;
-                m_lines.append(line);
-                continue;
-            }
-        }
-        if (nextSlot >= VOICEGROUP_SIZE) {
-            // The loader stops reading once all 128 slots are filled.
+        if (!stepSection(text, i, &cursor)) {
             m_lines.append(line);
             continue;
         }
 
-        if (text.startsWith("voice_group ")) {
+        if (applyVoicegroupHeader(text, &cursor)) {
             line.kind = VgLineKind::Header;
-            const QByteArray rest = text.mid(12);
-            const int comma = rest.indexOf(',');
-            if (comma >= 0) {
-                const QByteArray numText = rest.mid(comma + 1).trimmed();
-                int digits = (numText.startsWith('-') || numText.startsWith('+')) ? 1 : 0;
-                while (digits < numText.size() && numText[digits] >= '0' && numText[digits] <= '9')
-                    digits++;
-                bool numOk = false;
-                const int startingNote = numText.left(digits).toInt(&numOk);
-                if (numOk && startingNote > 0 && startingNote < VOICEGROUP_SIZE)
-                    nextSlot = startingNote;
-            }
             m_lines.append(line);
             continue;
         }
 
-        const MacroDef *matched = nullptr;
-        for (const MacroDef &def : kEditableMacros) {
-            const int wordLen = int(qstrlen(def.word));
-            if (def.requireSpace
-                    ? (text.startsWith(def.word) && text.size() > wordLen && text[wordLen] == ' ')
-                    : text.startsWith(def.word)) {
-                matched = &def;
-                break;
-            }
-        }
-        bool isReadOnlyVoice = false;
-        if (!matched) {
-            for (const char *prefix : kReadOnlyPrefixes) {
-                if (text.startsWith(prefix)) {
-                    isReadOnlyVoice = true;
-                    break;
-                }
-            }
-        }
-        if (!matched && !isReadOnlyVoice) {
+        const VoiceLineMatch voice = matchVoiceLine(text);
+        if (!voice) {
             m_lines.append(line);
             continue;
         }
 
-        line.slot = nextSlot++;
-        voicesInSection++;
-        if (isReadOnlyVoice) {
-            line.kind = VgLineKind::ReadOnlyVoice;
-        } else {
-            // Tokenize the arguments, keeping every byte for re-rendering.
-            const int prefixLen = int(qstrlen(matched->word)) + (matched->requireSpace ? 1 : 0);
+        // Every recognized voice-macro line advances the slot, even when its
+        // arguments fail to parse (the increment sits outside the check).
+        line.slot = cursor.nextSlot++;
+        cursor.voices++;
+        if (voice.macro) {
+            const int prefixLen = macroPrefixLength(*voice.macro);
             line.indent = line.raw.left(contentStart);
             line.macroText = text.left(prefixLen);
             line.tail = line.raw.mid(contentEnd);
             line.argPieces = text.mid(prefixLen).split(',');
-
-            line.kind = VgLineKind::Broken;
-            const int expected = macroArgCount(matched->macro);
-            if (line.argPieces.size() == expected) {
-                bool valid = true;
-                QVector<QByteArray> values(expected);
-                for (int a = 0; a < expected; a++) {
-                    values[a] = line.argPieces.at(a).trimmed();
-                    valid = valid && (macroArgIsSymbol(matched->macro, a) ? !values[a].isEmpty()
-                                                                          : isIntArg(values[a]));
-                }
-                if (valid) {
-                    line.kind = VgLineKind::Editable;
-                    VgVoice &v = line.voice;
-                    v.macro = matched->macro;
-                    if (v.macro == VgMacro::KeysplitAll) {
-                        v.symbol = QString::fromUtf8(values[0]);
-                    } else if (v.macro == VgMacro::Keysplit) {
-                        v.symbol = QString::fromUtf8(values[0]);
-                        v.keysplitTable = QString::fromUtf8(values[1]);
-                    } else {
-                        v.key = values[0].toInt();
-                        v.pan = values[1].toInt();
-                        int a = 2;
-                        if (vgMacroHasSymbol(v.macro))
-                            v.symbol = QString::fromUtf8(values[a++]);
-                        else if (v.macro == VgMacro::Square1 || v.macro == VgMacro::Square1Alt) {
-                            v.sweep = values[a++].toInt();
-                            v.duty = values[a++].toInt();
-                        } else if (v.macro == VgMacro::Square2 || v.macro == VgMacro::Square2Alt)
-                            v.duty = values[a++].toInt();
-                        else
-                            v.period = values[a++].toInt();
-                        v.attack = values[a++].toInt();
-                        v.decay = values[a++].toInt();
-                        v.sustain = values[a++].toInt();
-                        v.release = values[a++].toInt();
-                    }
-                }
-            }
+            line.kind = decodeVoiceArgs(*voice.macro, line.argPieces, &line.voice);
+        } else {
+            line.kind = VgLineKind::ReadOnlyVoice;
         }
         if (line.slot >= 0 && line.slot < VOICEGROUP_SIZE)
             m_slotToLine[line.slot] = i;
         m_lines.append(line);
     }
 
+    m_sectionBegin = cursor.sectionBegin;
+    m_sectionEnd = cursor.sectionEnd;
     if (!m_sectionLabel.isEmpty() && m_sectionBegin < 0) {
         if (error)
             *error = QStringLiteral("Label %1:: not found in %2").arg(m_sectionLabel, m_filePath);
@@ -1645,12 +1725,47 @@ VgCatalogScan VgScanCounts::finish() const
     return scan;
 }
 
+// The voice lines copied out of an existing voicegroup file: the whole
+// first declared voicegroup (macro or label form) when copySectionLabel is
+// empty, else the labeled section ending at the next "::" or ".align".
+// Trailing blank lines are dropped so the new file ends cleanly.
+QList<QByteArray> copiedVoicegroupLines(const QByteArray &content, const QString &copySectionLabel)
+{
+    static const QRegularExpression declRe(
+        QStringLiteral(R"(^\s*(voice_group\s+\w+|voicegroup\w+::))"));
+    QList<QByteArray> body;
+    bool copying = false;
+    bool unusedNewline = false;
+    const QList<QByteArray> lines = splitLines(content, &unusedNewline);
+    for (const QByteArray &raw : lines) {
+        QByteArray line = raw;
+        if (line.endsWith('\r'))
+            line.chop(1);
+        const QByteArray text = line.trimmed();
+        if (!copying) {
+            if (copySectionLabel.isEmpty() ? declRe.match(QString::fromUtf8(text)).hasMatch()
+                                           : text.startsWith(copySectionLabel.toUtf8() + "::"))
+                copying = true;
+            continue;
+        }
+        if (!copySectionLabel.isEmpty() && (text.indexOf("::") > 0 || text.startsWith(".align")))
+            break;
+        body.append(line);
+    }
+    while (!body.isEmpty() && body.last().trimmed().isEmpty())
+        body.removeLast();
+    return body;
+}
+
 } // namespace
 
-VgCatalogScan VoicegroupSource::catalogScan(const QString &projectRoot)
+VgCatalogScan VoicegroupSource::catalogScan(const QString &projectRoot,
+                                            const std::atomic_bool *cancelled)
 {
     VgScanCounts counts;
     for (const QString &path : voicegroupFiles(projectRoot)) {
+        if (cancelled && cancelled->load(std::memory_order_acquire))
+            return {};
         bool ok = false;
         const QByteArray content = readAllBytes(path, &ok);
         if (!ok)
@@ -1659,6 +1774,8 @@ VgCatalogScan VoicegroupSource::catalogScan(const QString &projectRoot)
         for (const QByteArray &raw : splitLines(content, &endsWithNewline))
             counts.scanLine(raw);
     }
+    if (cancelled && cancelled->load(std::memory_order_acquire))
+        return {};
     return counts.finish();
 }
 
@@ -1726,30 +1843,7 @@ bool VoicegroupSource::createVoicegroup(const QString &projectRoot, const QStrin
                 *error = QStringLiteral("Cannot read %1").arg(copyFromFile);
             return false;
         }
-        bool unusedNewline = false;
-        const QList<QByteArray> lines = splitLines(bytes, &unusedNewline);
-        static const QRegularExpression declRe(
-            QStringLiteral(R"(^\s*(voice_group\s+\w+|voicegroup\w+::))"));
-        bool copying = false;
-        for (const QByteArray &raw : lines) {
-            QByteArray line = raw;
-            if (line.endsWith('\r'))
-                line.chop(1);
-            const QByteArray text = line.trimmed();
-            if (!copying) {
-                if (copySectionLabel.isEmpty() ? declRe.match(QString::fromUtf8(text)).hasMatch()
-                                               : text.startsWith(copySectionLabel.toUtf8() + "::"))
-                    copying = true;
-                continue;
-            }
-            if (!copySectionLabel.isEmpty() &&
-                (text.indexOf("::") > 0 || text.startsWith(".align")))
-                break;
-            body.append(line);
-        }
-        // Drop trailing blank lines so the new file ends cleanly.
-        while (!body.isEmpty() && body.last().trimmed().isEmpty())
-            body.removeLast();
+        body = copiedVoicegroupLines(bytes, copySectionLabel);
         if (body.isEmpty()) {
             if (error)
                 *error = QStringLiteral("No voice lines found to copy in %1").arg(copyFromFile);
