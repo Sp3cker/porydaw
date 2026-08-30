@@ -14,6 +14,7 @@ int runSaveCheck(const QString &projectRoot, const QString &songLabel,
 int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath = QString());
 int runVgCheck(const QString &projectRoot, const QString &songLabel);
 int runVgBankCheck(const QString &projectRoot, const QString &songLabel);
+int runVgLoadCheck(const QString &projectRoot, const QString &songLabel = QString());
 int runVgSaveCheck(const QString &projectRoot, const QString &songLabel,
                    const QString &screenshotPath = QString());
 int runExportCheck(const QString &projectRoot, const QString &songLabel);

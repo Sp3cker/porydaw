@@ -33,6 +33,9 @@ struct LoadVoicegroupCommand {
     SongName song;
     VoicegroupId voicegroup;
 };
+// Private terminal result for a preempted catalog scan. It never reaches the
+// ProjectWorkspace sink: ProjectIo appends one replacement refresh instead.
+struct CatalogScanCancelled {};
 // Private CleanupPreviewInput success; consumed without a public event.
 struct PreviewCleanupCompleted {};
 
@@ -62,9 +65,9 @@ struct CommandFailure {
 // SongCommandFailure.
 using ProjectResult =
     std::variant<ProjectSnapshot, MidiStage, LoadedBankView, VoicegroupBound, VoicegroupEditResult,
-                 PreviewCleanupCompleted, SongSaved, RegistrationPlanResult, DeletionPlanResult,
-                 PreviewPlan, PreviewReady, SampleSetReady, SamplesProbed, SampleRead,
-                 SampleCommitted, SongCreated, VoicegroupCatalog, SongCommandFailure,
+                 CatalogScanCancelled, PreviewCleanupCompleted, SongSaved, RegistrationPlanResult,
+                 DeletionPlanResult, PreviewPlan, PreviewReady, SampleSetReady, SamplesProbed,
+                 SampleRead, SampleCommitted, SongCreated, VoicegroupCatalog, SongCommandFailure,
                  CommandFailure>;
 
 // One queued delivery: a staged or terminal result, and — on the terminal
@@ -77,12 +80,13 @@ struct Delivery {
 };
 
 // Owner of the project worker thread: one active FIFO command, one private
-// result callback. No request IDs, envelopes, cancellation, operation
-// identity, cached catalog rows, or GUI types cross this seam. There is no
-// per-command cancellation or old-result filter; a closed loading tab is
-// WorkspaceUi tombstone policy. Shutdown stops accepting commands, finishes
-// or discards the active result, releases undelivered owning resources, and
-// joins the worker.
+// result callback. Catalog work cooperatively yields to a submitted song and
+// requeues one refresh at the FIFO tail. No request IDs, envelopes, cached
+// catalog rows, or GUI types cross this seam. There is no per-command
+// cancellation or old-result filter; a closed loading tab is WorkspaceUi
+// tombstone policy. Shutdown stops accepting commands, finishes or discards
+// the active result, releases undelivered owning resources, and joins the
+// worker.
 class ProjectIo final : public QObject
 {
   public:
@@ -112,7 +116,9 @@ class ProjectIo final : public QObject
     ResultSink m_sink;
     std::deque<ProjectCommand> m_queue;
     bool m_active = false;
+    bool m_activeCatalog = false;
     std::deque<Delivery> m_results;
     std::atomic_bool m_shuttingDown = false;
+    std::atomic_bool m_cancelCatalog = false;
     std::mutex m_resultMutex;
 };

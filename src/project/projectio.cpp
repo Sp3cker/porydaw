@@ -51,8 +51,19 @@ QString previewLoadName(const VoicegroupId &id)
     return id.sectionLabel().isEmpty() ? QFileInfo(id.sourceRelativePath()).completeBaseName()
                                        : id.sectionLabel();
 }
-// One overload per ProjectCommand alternative and no generic fallback, so
-// an unhandled alternative fails this dispatch to compile.
+
+bool isSongCommand(const ProjectCommand &command)
+{
+    return std::holds_alternative<OpenSongInput>(command) ||
+           std::holds_alternative<ReloadSongInput>(command) ||
+           std::holds_alternative<LoadSongCommand>(command) ||
+           std::holds_alternative<LoadVoicegroupCommand>(command) ||
+           std::holds_alternative<SaveSongInput>(command);
+}
+// One overload per ProjectCommand alternative and no generic fallback in
+// the open-project dispatch, so an unhandled alternative fails it to
+// compile. The closed-state dispatch adds a generic fallback: while
+// closed, every non-song command fails the same way.
 template <typename... Ts>
 struct CommandVisitor : Ts... {
     using Ts::operator()...;
@@ -65,6 +76,10 @@ CommandVisitor(Ts...) -> CommandVisitor<Ts...>;
 class ProjectIo::Worker final : public QObject
 {
   public:
+    explicit Worker(std::atomic_bool &catalogCancellation)
+        : m_catalogCancellation(catalogCancellation)
+    {}
+
     using StageSink = std::function<void(ProjectResult)>;
     // One terminal ProjectResult per command. The command travels by
     // reference so the caller keeps ownership: the handlers move only the
@@ -75,83 +90,69 @@ class ProjectIo::Worker final : public QObject
     ProjectResult execute(ProjectCommand &command, const StageSink &stage)
     {
         Q_ASSERT(QThread::currentThread() == thread());
+        // Only opening a project makes progress while closed; everything
+        // else fails against the closed state.
+        if (!requireOpen())
+            return closedCommand(command);
         return std::visit(
             CommandVisitor{
                 [this](OpenProjectInput &input) { return acceptProject(input.root); },
-                [this](RefreshProjectInput &) {
-                    return requireOpen() ? acceptProject(m_project.root()) : closedProject();
-                },
-                [this, &stage](OpenSongInput &input) {
-                    return requireOpen() ? loadSong(input.song, stage) : closedSong(input.song);
-                },
+                [this](RefreshProjectInput &) { return acceptProject(m_project.root()); },
+                [this, &stage](OpenSongInput &input) { return loadSong(input.song, stage); },
                 [this, &stage](ReloadSongInput &input) {
-                    if (!requireOpen())
-                        return closedSong(input.song);
                     return input.voicegroupArg
                                ? rebindVoicegroup(input.song, *input.voicegroupArg, stage)
                                : loadSong(input.song, stage);
                 },
-                [this, &stage](LoadSongCommand &input) {
-                    return requireOpen() ? loadSong(input.song, stage) : closedSong(input.song);
-                },
+                [this, &stage](LoadSongCommand &input) { return loadSong(input.song, stage); },
                 [this, &stage](LoadVoicegroupCommand &input) {
-                    return requireOpen() ? loadVoicegroup(input.song, input.voicegroup, stage)
-                                         : closedSong(input.song);
+                    return loadVoicegroup(input.song, input.voicegroup, stage);
                 },
-                [this, &stage](SaveSongInput &input) {
-                    return requireOpen() ? saveSong(std::move(input), stage)
-                                         : closedSong(input.song);
-                },
+                [this, &stage](SaveSongInput &input) { return saveSong(std::move(input), stage); },
                 [this](VoicegroupEditInput &input) {
-                    return requireOpen() ? applyVoicegroupEdit(std::move(input)) : closedProject();
+                    return applyVoicegroupEdit(std::move(input));
                 },
                 [this, &stage](CreateSongInput &input) {
-                    return requireOpen() ? createSong(std::move(input), stage) : closedProject();
+                    return createSong(std::move(input), stage);
                 },
-                [this](CreateVoicegroupInput &input) {
-                    return requireOpen() ? createVoicegroup(std::move(input)) : closedProject();
-                },
-                [this](const RegistrationPlanInput &input) {
-                    return requireOpen() ? registrationPlan(input) : closedProject();
-                },
+                [this](CreateVoicegroupInput &input) { return createVoicegroup(std::move(input)); },
+                [this](const RegistrationPlanInput &input) { return registrationPlan(input); },
                 [this, &stage](const RegisterSongInput &input) {
-                    return requireOpen() ? registerSong(input, stage) : closedProject();
+                    return registerSong(input, stage);
                 },
-                [this](const DeletionPlanInput &input) {
-                    return requireOpen() ? deletionPlan(input) : closedProject();
-                },
-                [this](DeleteSongInput &input) {
-                    return requireOpen() ? deleteSong(std::move(input)) : closedProject();
-                },
-                [this](const PreviewPlanInput &input) {
-                    return requireOpen() ? previewPlan(input) : closedProject();
-                },
-                [this](PreviewInput &input) {
-                    return requireOpen() ? preview(std::move(input)) : closedProject();
-                },
-                [this](const CleanupPreviewInput &) {
-                    return requireOpen() ? cleanupPreview() : closedProject();
-                },
-                [this](const RefreshCatalogInput &) {
-                    return requireOpen() ? refreshCatalog() : closedProject();
-                },
-                [this](LoadSampleSetInput &input) {
-                    return requireOpen() ? loadSampleSet(std::move(input)) : closedProject();
-                },
-                [this](const ProbeSamplesInput &) {
-                    return requireOpen() ? probeSamples() : closedProject();
-                },
-                [this](const ReadSampleInput &input) {
-                    return requireOpen() ? readSample(input) : closedProject();
-                },
-                [this](CommitSampleInput &input) {
-                    return requireOpen() ? commitSample(std::move(input)) : closedProject();
-                },
+                [this](const DeletionPlanInput &input) { return deletionPlan(input); },
+                [this](DeleteSongInput &input) { return deleteSong(std::move(input)); },
+                [this](const PreviewPlanInput &input) { return previewPlan(input); },
+                [this](PreviewInput &input) { return preview(std::move(input)); },
+                [this](const CleanupPreviewInput &) { return cleanupPreview(); },
+                [this](const RefreshCatalogInput &) { return refreshCatalog(); },
+                [this](LoadSampleSetInput &input) { return loadSampleSet(std::move(input)); },
+                [this](const ProbeSamplesInput &) { return probeSamples(); },
+                [this](const ReadSampleInput &input) { return readSample(input); },
+                [this](CommitSampleInput &input) { return commitSample(std::move(input)); },
             },
             command);
     }
 
   private:
+    // The closed-state counterpart of execute(): only opening a project
+    // makes progress; song commands fail keyed to their song, every other
+    // command fails generically.
+    ProjectResult closedCommand(ProjectCommand &command)
+    {
+        return std::visit(
+            CommandVisitor{
+                [this](OpenProjectInput &input) { return acceptProject(input.root); },
+                [this](OpenSongInput &input) { return closedSong(input.song); },
+                [this](ReloadSongInput &input) { return closedSong(input.song); },
+                [this](LoadSongCommand &input) { return closedSong(input.song); },
+                [this](LoadVoicegroupCommand &input) { return closedSong(input.song); },
+                [this](SaveSongInput &input) { return closedSong(input.song); },
+                [this](auto &) { return closedProject(); },
+            },
+            command);
+    }
+
     // ---- project open / refresh --------------------------------------------
 
     // Opens the project, and on success installs it as the one canonical
@@ -315,25 +316,25 @@ class ProjectIo::Worker final : public QObject
 
     // ---- song creation / registration / deletion -------------------------------
 
-    ProjectResult createSong(CreateSongInput &&input, const StageSink &stage)
+    // Writes the new song's files in a fixed order: the optional voicegroup
+    // source, the MIDI file, then the song flags. The first failure stops
+    // the sequence and leaves the earlier writes in place. Returns the
+    // failure, or nullopt when the song files are complete.
+    static std::optional<ProjectResult> writeNewSongFiles(const QString &root,
+                                                          const CreateSongInput &input)
     {
-        const auto root = m_project.root();
         const auto midiDir = root + QStringLiteral("/sound/songs/midi");
         const auto midPath = midiDir + QStringLiteral("/%1.mid").arg(input.label);
         if (QFile::exists(midPath))
             return CommandFailure{QStringLiteral("MIDI file already exists: %1").arg(midPath)};
         auto error = QString{};
-        auto voicegroupOk = true;
-        if (!input.newVoicegroup.isEmpty()) {
-            voicegroupOk = VoicegroupSource::createVoicegroup(root, input.newVoicegroup, QString(),
-                                                              QString(), &error) &&
-                           VoicegroupSource::appendIncludeLine(root, input.newVoicegroup, &error);
-            if (!voicegroupOk)
-                return CommandFailure{
-                    error.isEmpty()
-                        ? QStringLiteral("Could not create %1.").arg(input.newVoicegroup)
-                        : std::move(error)};
-        }
+        if (!input.newVoicegroup.isEmpty() &&
+            !(VoicegroupSource::createVoicegroup(root, input.newVoicegroup, QString(), QString(),
+                                                 &error) &&
+              VoicegroupSource::appendIncludeLine(root, input.newVoicegroup, &error)))
+            return CommandFailure{
+                error.isEmpty() ? QStringLiteral("Could not create %1.").arg(input.newVoicegroup)
+                                : std::move(error)};
         if (!input.smf.writeFile(midPath, &error))
             return CommandFailure{error.isEmpty()
                                       ? QStringLiteral("Could not write %1.").arg(midPath)
@@ -344,9 +345,18 @@ class ProjectIo::Worker final : public QObject
                 error.isEmpty()
                     ? QStringLiteral("Could not write the flags of %1.").arg(input.label)
                     : std::move(error)};
+        return std::nullopt;
+    }
+
+    ProjectResult createSong(CreateSongInput &&input, const StageSink &stage)
+    {
+        const auto root = m_project.root();
+        if (auto failure = writeNewSongFiles(root, input))
+            return std::move(*failure);
         // SongRegistry::registerSong rederives its plan internally immediately
         // before applying the registration writes; the GUI plan is only for
         // the confirmation dialog and is never trusted as a commit.
+        auto error = QString{};
         auto songId = -1;
         const auto registered = SongRegistry::registerSong(root, input.label, input.constant,
                                                            input.player, &error, &songId);
@@ -372,8 +382,7 @@ class ProjectIo::Worker final : public QObject
                 return scanned;
             catalog = std::move(std::get<VoicegroupCatalog>(scanned));
         }
-        stage(ProjectResult{
-            SongCreated{std::move(*song), voicegroupOk, true, true, registered, songId}});
+        stage(ProjectResult{SongCreated{std::move(*song), true, true, true, registered, songId}});
         if (catalog)
             stage(ProjectResult{std::move(*catalog)});
         return refreshed;
@@ -392,6 +401,10 @@ class ProjectIo::Worker final : public QObject
         if (!created)
             return CommandFailure{error.isEmpty()
                                       ? QStringLiteral("Could not create %1.").arg(input.name)
+                                      : std::move(error)};
+        if (!m_project.rebuildVoicegroupProject(&error))
+            return CommandFailure{error.isEmpty()
+                                      ? QStringLiteral("Could not refresh the voicegroup layout.")
                                       : std::move(error)};
         return refreshCatalog();
     }
@@ -550,9 +563,11 @@ class ProjectIo::Worker final : public QObject
     {
         auto error = QString{};
         auto catalog = scanCatalog(m_project.root(), &error);
-        if (!error.isEmpty())
+        if (m_catalogCancellation.load(std::memory_order_acquire))
+            return CatalogScanCancelled{};
+        if (!catalog)
             return CommandFailure{std::move(error)};
-        return ProjectResult{std::move(catalog)};
+        return ProjectResult{std::move(*catalog)};
     }
 
     ProjectResult loadSampleSet(LoadSampleSetInput input)
@@ -582,10 +597,9 @@ class ProjectIo::Worker final : public QObject
             keysplits.push_back(utf8(pair.first));
             tables.push_back(utf8(pair.second));
         }
-        const auto rootUtf8 = m_project.root().toLocal8Bit();
-        auto *set = voicegroup_load_samples(
-            rootUtf8.constData(), samples.data(), int(samples.size()), waves.data(),
-            int(waves.size()), keysplits.data(), tables.data(), int(keysplits.size()), nullptr);
+        auto *set = m_project.loadSampleSet(samples.data(), int(samples.size()), waves.data(),
+                                            int(waves.size()), keysplits.data(), tables.data(),
+                                            int(keysplits.size()));
         if (!set)
             return CommandFailure{QStringLiteral("Could not load project samples.")};
         return SampleSetReady{SampleSetLease(set, &voicegroup_free_samples)};
@@ -631,6 +645,10 @@ class ProjectIo::Worker final : public QObject
             return CommandFailure{error.isEmpty()
                                       ? QStringLiteral("Could not commit %1.").arg(input.name)
                                       : std::move(error)};
+        if (!m_project.rebuildVoicegroupProject(&error))
+            return CommandFailure{error.isEmpty()
+                                      ? QStringLiteral("Could not refresh the project sample maps.")
+                                      : std::move(error)};
         auto sidecarSaved = false;
         auto sidecarError = QString{};
         if (input.sidecar) {
@@ -645,17 +663,24 @@ class ProjectIo::Worker final : public QObject
 
     // ---- shared helpers ---------------------------------------------------------------
 
-    VoicegroupCatalog scanCatalog(const QString &root, QString *error)
+    std::optional<VoicegroupCatalog> scanCatalog(const QString &root, QString *error)
     {
         const QDir projectRoot(root);
         if (!projectRoot.exists() ||
             !QDir(projectRoot.filePath(QStringLiteral("sound"))).exists()) {
             *error = QStringLiteral("Project sound directory is unavailable.");
-            return {};
+            return std::nullopt;
         }
+        if (m_catalogCancellation.load(std::memory_order_acquire))
+            return std::nullopt;
+
         auto catalog = VoicegroupCatalog{};
-        const auto scan = VoicegroupSource::catalogScan(root);
+        const auto scan = VoicegroupSource::catalogScan(root, &m_catalogCancellation);
+        if (m_catalogCancellation.load(std::memory_order_acquire))
+            return std::nullopt;
         const auto directSound = VoicegroupSource::directSoundCatalog(root);
+        if (m_catalogCancellation.load(std::memory_order_acquire))
+            return std::nullopt;
         catalog.perFileVoicegroups =
             QDir(QDir(root).filePath(QStringLiteral("sound/voicegroups"))).exists();
         catalog.groupArgs = scan.groupArgs;
@@ -665,6 +690,8 @@ class ProjectIo::Worker final : public QObject
         catalog.directSound = directSound.directSound;
         catalog.synths = directSound.synths;
         catalog.progWave = VoicegroupSource::progWaveSymbols(root);
+        if (m_catalogCancellation.load(std::memory_order_acquire))
+            return std::nullopt;
         return catalog;
     }
 
@@ -681,6 +708,7 @@ class ProjectIo::Worker final : public QObject
                                   QStringLiteral("No project is open.")};
     }
 
+    std::atomic_bool &m_catalogCancellation;
     DecompProject m_project;
 };
 
@@ -689,7 +717,7 @@ ProjectIo::ProjectIo(ResultSink sink, QObject *parent)
     , m_thread(new QThread(this))
     , m_sink(std::move(sink))
 {
-    m_worker = new Worker;
+    m_worker = new Worker(m_cancelCatalog);
     m_worker->moveToThread(m_thread);
     connect(m_thread, &QThread::finished, m_worker, &QObject::deleteLater);
     m_thread->start();
@@ -713,6 +741,8 @@ void ProjectIo::submit(ProjectCommand command)
     Q_ASSERT(QThread::currentThread() == thread());
     if (m_shuttingDown.load(std::memory_order_acquire))
         return;
+    if (m_activeCatalog && isSongCommand(command))
+        m_cancelCatalog.store(true, std::memory_order_release);
     m_queue.push_back(std::move(command));
     dispatchNext();
 }
@@ -724,6 +754,9 @@ void ProjectIo::dispatchNext()
     m_active = true;
     auto command = std::move(m_queue.front());
     m_queue.pop_front();
+    m_activeCatalog = std::holds_alternative<RefreshCatalogInput>(command);
+    if (m_activeCatalog)
+        m_cancelCatalog.store(false, std::memory_order_release);
     const auto invoked = QMetaObject::invokeMethod(
         m_worker,
         [this, command = std::move(command)]() mutable {
@@ -761,6 +794,7 @@ void ProjectIo::completeCommand()
         this,
         [this] {
             m_active = false;
+            m_activeCatalog = false;
             dispatchNext();
         },
         Qt::QueuedConnection);
@@ -787,6 +821,20 @@ void ProjectIo::finishResult(Delivery &&delivery)
 {
     if (m_shuttingDown.load(std::memory_order_acquire))
         return; // the destroyed temporary releases any owning payloads
+    const bool cancelledCatalog =
+        std::holds_alternative<CatalogScanCancelled>(delivery.result) ||
+        (m_cancelCatalog.load(std::memory_order_acquire) && delivery.command &&
+         std::holds_alternative<RefreshCatalogInput>(*delivery.command) &&
+         std::holds_alternative<VoicegroupCatalog>(delivery.result));
+    if (cancelledCatalog) {
+        Q_ASSERT(delivery.command &&
+                 std::holds_alternative<RefreshCatalogInput>(*delivery.command));
+        m_cancelCatalog.store(false, std::memory_order_release);
+        m_queue.emplace_back(RefreshCatalogInput{});
+        if (!m_active)
+            dispatchNext();
+        return;
+    }
     if (m_sink)
         m_sink(std::move(delivery.result), std::move(delivery.command));
 }

@@ -174,9 +174,10 @@ class ProjectWorkspace::Private
 
                 // ---- silent completions ------------------------------------------------
                 // A preview cleanup advances the FIFO without a public event;
-                // so does its hard error below.
+                // so does its hard error below. A canceled catalog is consumed
+                // in ProjectIo; reaching this private seam is a contract bug.
+                [](CatalogScanCancelled &) { Q_ASSERT(false); },
                 [](PreviewCleanupCompleted &) {},
-
                 // ---- private failures ------------------------------------------------------
                 [this](SongCommandFailure &failure) {
                     emit owner->songUpdatePublished(SongUpdate{
@@ -221,13 +222,15 @@ class ProjectWorkspace::Private
         next.snapshot = std::move(snapshot);
         next.error.reset();
         publishState(std::move(next));
-        if (refreshCatalog)
-            io.submit(ProjectCommand{RefreshCatalogInput{}});
         // Ready is published before the first startup OpenSong submission.
+        // Those reads take precedence over the catalog's broad scan, so the
+        // persisted tabs receive their MidiStage before catalog I/O begins.
         if (isOpen && startupPending) {
             startupPending = false;
             submitStartupSongs();
         }
+        if (refreshCatalog)
+            io.submit(ProjectCommand{RefreshCatalogInput{}});
     }
 
     void submitStartupSongs()

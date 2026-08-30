@@ -1,4 +1,5 @@
 #include "decompproject.h"
+#include "voicegroupprojectcontext.h"
 
 #include <QDir>
 #include <QFile>
@@ -26,6 +27,43 @@ QHash<QString, int> playerTrackBudgets(const QVector<MusicPlayer> &players)
             budgets.insert(player.name, player.trackCount >= 0 ? player.trackCount : 16);
     }
     return budgets;
+}
+
+// Stamps each song with the registration files still missing (or
+// mis-stating) its entry, from the one-pass registry statuses computed at
+// open. Reuses each list's existing buffer across opens.
+void applyRegistrationGaps(QVector<SongInfo> &songs,
+                           const QHash<QString, RegistrationStatus> &statuses)
+{
+    for (SongInfo &song : songs) {
+        const RegistrationStatus status = statuses.value(song.label);
+        QStringList &gaps = song.registrationGaps;
+        gaps.clear();
+        if (!status.inSongTable)
+            gaps.append(QStringLiteral("song_table.inc"));
+        if (!status.inSongsH)
+            gaps.append(QStringLiteral("songs.h"));
+        if (status.ldApplicable && !status.inLdScript)
+            gaps.append(QStringLiteral("ld_script.ld"));
+        if (status.charmapApplicable && !status.inCharmap)
+            gaps.append(QStringLiteral("charmap.txt"));
+        if (status.debugApplicable && !status.inDebugMenu)
+            gaps.append(QStringLiteral("src/debug.c"));
+    }
+}
+
+// Caches the project's music-player table and each player's track budget
+// at open.
+void loadPlayerConfiguration(const QString &root, QVector<MusicPlayer> &players,
+                             QHash<QString, int> &trackBudgets)
+{
+    players = SongRegistry::musicPlayers(root);
+    trackBudgets = playerTrackBudgets(players);
+}
+
+QString normalizedVoicegroupArg(const QString &voicegroupArg)
+{
+    return voicegroupArg.isEmpty() ? QStringLiteral("_dummy") : voicegroupArg;
 }
 
 } // namespace
@@ -174,6 +212,61 @@ QVector<VoicegroupSlotView> sourceSlotViews(const VoicegroupSource &source)
     return slotViews;
 }
 
+// saveVoicegroup's write stage: the optional synth-definition write, then
+// the source's byte-conservative write (which clears its dirty bit). No
+// rollback: earlier writes remain when a later stage fails.
+bool persistVoicegroupChanges(const QString &root,
+                              const QList<QPair<QString, VgSynthDesc>> &synthDefinitions,
+                              VoicegroupSource &source, QString *error)
+{
+    if (!synthDefinitions.isEmpty() &&
+        !VoicegroupSource::writeSynthDefinitions(root, synthDefinitions, error))
+        return false;
+    return source.save(error);
+}
+
+// The context a saved bank reloads from: a freshly opened replacement after
+// synth-definition changes (null on failure, error set), else the existing
+// one. The caller swaps only after the reload succeeds.
+std::unique_ptr<VoicegroupProjectContext> reopenedVoicegroupContext(const QString &root,
+                                                                    QString *error)
+{
+    auto replacement = VoicegroupProjectContext::open(root);
+    if (!replacement) {
+        if (error)
+            *error = QStringLiteral("Could not refresh the project voicegroup loader.");
+    }
+    return replacement;
+}
+
+// After a context swap every other bank's lease points into the discarded
+// context, so only the just-saved record survives. Template because the
+// bank map's entry type is private to DecompProject.
+template <typename BankMap>
+void pruneStaleBanks(BankMap &banks, const VoicegroupId &keepId)
+{
+    for (auto it = banks.begin(); it != banks.end();) {
+        if (it->first == keepId)
+            ++it;
+        else
+            it = banks.erase(it);
+    }
+}
+
+// Without a swap the other records stay valid: point memo entries for the
+// saved voicegroup at its path and fresh file time.
+template <typename ArgMemo>
+void refreshSavedVoicegroupMemos(ArgMemo &memo, const VoicegroupId &id, const QString &filePath,
+                                 const QDateTime &fileTime)
+{
+    for (auto it = memo.begin(); it != memo.end(); ++it) {
+        if (it.value().id == id) {
+            it.value().filePath = filePath;
+            it.value().sourceFileTime = fileTime;
+        }
+    }
+}
+
 } // namespace
 
 bool ProjectSnapshot::isOpen() const
@@ -201,52 +294,54 @@ int ProjectSnapshot::trackBudgetFor(const SongInfo &song) const
     return m_trackBudgets.value(song.label, 16);
 }
 
+DecompProject::DecompProject() = default;
+
+DecompProject::~DecompProject() = default;
+
+DecompProject::DecompProject(DecompProject &&) noexcept = default;
+
+DecompProject &DecompProject::operator=(DecompProject &&) noexcept = default;
+
 bool DecompProject::open(const QString &rootDir, QString *error)
 {
-    close();
-
     const QDir dir(rootDir);
     if (!dir.exists()) {
         if (error)
             *error = QStringLiteral("Directory does not exist: %1").arg(rootDir);
         return false;
     }
-    m_root = dir.absolutePath();
 
-    if (!parseSongTable(error)) {
-        m_root.clear();
+    auto candidate = DecompProject{};
+    candidate.m_root = dir.absolutePath();
+    candidate.m_voicegroupProject = VoicegroupProjectContext::open(candidate.m_root);
+    if (!candidate.m_voicegroupProject) {
+        if (error)
+            *error = QStringLiteral("Could not initialize the project voicegroup loader.");
         return false;
     }
-    parseSongConstants();
-    discoverUnregisteredSongs();
+    if (!candidate.parseSongTable(error))
+        return false;
+    candidate.parseSongConstants();
+    candidate.discoverUnregisteredSongs();
     // Which registration files still miss each song's entry — one pass over
     // the registration files for the whole project (checkRegistration per
     // song would reopen them hundreds of times).
     const QHash<QString, RegistrationStatus> statuses =
-        SongRegistry::checkRegistrations(m_root, m_songs);
-    for (SongInfo &song : m_songs) {
-        const RegistrationStatus status = statuses.value(song.label);
-        song.registrationGaps.clear();
-        if (!status.inSongTable)
-            song.registrationGaps.append(QStringLiteral("song_table.inc"));
-        if (!status.inSongsH)
-            song.registrationGaps.append(QStringLiteral("songs.h"));
-        if (status.ldApplicable && !status.inLdScript)
-            song.registrationGaps.append(QStringLiteral("ld_script.ld"));
-        if (status.charmapApplicable && !status.inCharmap)
-            song.registrationGaps.append(QStringLiteral("charmap.txt"));
-        if (status.debugApplicable && !status.inDebugMenu)
-            song.registrationGaps.append(QStringLiteral("src/debug.c"));
-    }
-    if (!parseMidiCfg())
-        parseSongsMk();
-    m_players = SongRegistry::musicPlayers(m_root);
-    m_playerTrackBudgets = playerTrackBudgets(m_players);
+        SongRegistry::checkRegistrations(candidate.m_root, candidate.m_songs);
+    applyRegistrationGaps(candidate.m_songs, statuses);
+    if (!candidate.parseMidiCfg())
+        candidate.parseSongsMk();
+    loadPlayerConfiguration(candidate.m_root, candidate.m_players, candidate.m_playerTrackBudgets);
+
+    *this = std::move(candidate);
     return true;
 }
 
 void DecompProject::replaceWith(const ProjectSnapshot &snapshot)
 {
+    m_voicegroupProject.reset();
+    m_voicegroupArgMemo.clear();
+    m_banks.clear();
     m_root = snapshot.root();
     m_songs = snapshot.songs();
     m_players = snapshot.players();
@@ -264,13 +359,34 @@ bool DecompProject::reload(QString *error)
     return open(root, error);
 }
 
+bool DecompProject::rebuildVoicegroupProject(QString *error)
+{
+    if (m_root.isEmpty()) {
+        if (error)
+            *error = QStringLiteral("Project is not open.");
+        return false;
+    }
+    auto replacement = VoicegroupProjectContext::open(m_root);
+    if (!replacement) {
+        if (error)
+            *error = QStringLiteral("Could not refresh the project voicegroup loader.");
+        return false;
+    }
+    m_voicegroupProject.swap(replacement);
+    m_voicegroupArgMemo.clear();
+    m_banks.clear();
+    return true;
+}
+
 void DecompProject::close()
 {
+    m_voicegroupProject.reset();
+    m_voicegroupArgMemo.clear();
+    m_banks.clear();
     m_root.clear();
     m_songs.clear();
     m_players.clear();
     m_playerTrackBudgets.clear();
-    m_banks.clear();
 }
 
 bool DecompProject::parseSongTable(QString *error)
@@ -516,6 +632,18 @@ LoadedBankView DecompProject::publishView(const LoadedBankEntry &entry) const
                           sourceSlotViews(*entry.source)};
 }
 
+LoadedSampleSet *DecompProject::loadSampleSet(const char *const *sampleSymbols, int sampleCount,
+                                              const char *const *waveSymbols, int waveCount,
+                                              const char *const *keysplitSymbols,
+                                              const char *const *keysplitTableSymbols,
+                                              int keysplitCount)
+{
+    if (!m_voicegroupProject)
+        return nullptr;
+    return m_voicegroupProject->loadSamples(sampleSymbols, sampleCount, waveSymbols, waveCount,
+                                            keysplitSymbols, keysplitTableSymbols, keysplitCount);
+}
+
 std::optional<LoadedBankView> DecompProject::loadBank(const SongInfo &song, QString *error)
 {
     const auto fail = [error](QString message) {
@@ -523,51 +651,59 @@ std::optional<LoadedBankView> DecompProject::loadBank(const SongInfo &song, QStr
             *error = std::move(message);
         return std::optional<LoadedBankView>{};
     };
-    if (m_root.isEmpty())
+    if (m_root.isEmpty() || !m_voicegroupProject)
         return fail(QStringLiteral("Project is not open."));
+
+    const QString voicegroupArg = normalizedVoicegroupArg(song.cfg.voicegroupArg);
+    const auto memo = m_voicegroupArgMemo.constFind(voicegroupArg);
+    if (memo != m_voicegroupArgMemo.constEnd()) {
+        const auto existing = m_banks.find(memo->id);
+        if (existing != m_banks.end() &&
+            QFileInfo(memo->filePath).lastModified() == memo->sourceFileTime) {
+            return publishView(existing->second);
+        }
+    }
 
     // Identity comes from the resolved source location, never from the song
     // or the loader alias: songs sharing a voicegroup share one record.
     auto source = std::make_unique<VoicegroupSource>();
     QString openError;
-    if (!source->open(m_root, song.cfg.voicegroupArg, &openError))
+    if (!source->open(m_root, voicegroupArg, &openError))
         return fail(openError.isEmpty() ? QStringLiteral("Could not open the voicegroup source.")
                                         : std::move(openError));
     auto id = VoicegroupId::create(QDir(m_root).relativeFilePath(source->filePath()),
                                    source->sectionLabel());
     if (!id)
         return fail(QStringLiteral("Could not identify the voicegroup source."));
-    const QDateTime fileTime = QFileInfo(source->filePath()).lastModified();
+    const QString sourcePath = source->filePath();
+    const QDateTime fileTime = QFileInfo(sourcePath).lastModified();
 
-    // Unchanged record: publish the current lease without re-running the
-    // C loader (and without disturbing the record's own source model).
+    // A different song may resolve to the same canonical source. Recheck
+    // after source resolution, then memoize the argument without a C load.
     const auto existing = m_banks.find(*id);
-    if (existing != m_banks.end() && existing->second.sourceFileTime == fileTime)
+    if (existing != m_banks.end() && existing->second.sourceFileTime == fileTime) {
+        m_voicegroupArgMemo.insert(voicegroupArg, VoicegroupArgMemo{*id, sourcePath, fileTime});
         return publishView(existing->second);
-
-    // Cache miss or modified file: load the complete candidate before the
-    // record changes, so a failure leaves the previous record untouched.
-    const QStringList candidates = voicegroupCandidates(song.cfg);
-    LoadedVoiceGroup *raw = nullptr;
-    for (const QString &candidate : candidates) {
-        const auto rootUtf8 = m_root.toLocal8Bit();
-        const auto nameUtf8 = candidate.toLocal8Bit();
-        raw = voicegroup_load(rootUtf8.constData(), nameUtf8.constData(), nullptr);
-        if (raw)
-            break;
-    }
-    if (!raw) {
-        return fail(QStringLiteral("Could not load voicegroup (tried: %1).")
-                        .arg(candidates.join(QStringLiteral(", "))));
     }
 
-    // Replace the record (or insert the first one) with the fresh candidate
-    // only now that the complete bank has loaded.
-    LoadedBankEntry fresh{*id, source->loadName(), std::move(source), wrapVoicegroupLease(raw),
-                          fileTime};
-    auto [entryIt, inserted] = m_banks.try_emplace(*id, std::move(fresh));
-    if (!inserted)
+    const QByteArray targetPath = sourcePath.toLocal8Bit();
+    const QByteArray sectionLabel = source->sectionLabel().toLocal8Bit();
+    const VoicegroupTarget target = {targetPath.constData(), sectionLabel.constData()};
+    LoadedVoiceGroup *raw = m_voicegroupProject->load(target);
+    if (!raw)
+        return fail(QStringLiteral("Could not load voicegroup source %1.").arg(sourcePath));
+
+    // Replace the record (or insert the first one) only after the complete
+    // pinned candidate has loaded, retaining any prior canonical record on
+    // source or loader failure.
+    VoicegroupLease lease = leaseWithMintedSynths(raw, *source);
+    LoadedBankEntry fresh{*id, source->loadName(), std::move(source), std::move(lease), fileTime};
+    auto entryIt = m_banks.find(*id);
+    if (entryIt == m_banks.end())
+        entryIt = m_banks.emplace(*id, std::move(fresh)).first;
+    else
         entryIt->second = std::move(fresh);
+    m_voicegroupArgMemo.insert(voicegroupArg, VoicegroupArgMemo{*id, sourcePath, fileTime});
     return publishView(entryIt->second);
 }
 
@@ -649,7 +785,7 @@ std::optional<LoadedBankView> DecompProject::saveVoicegroup(SaveVoicegroupInput 
             *error = std::move(message);
         return std::optional<LoadedBankView>{};
     };
-    if (m_root.isEmpty())
+    if (m_root.isEmpty() || !m_voicegroupProject)
         return fail(QStringLiteral("Project is not open."));
     const auto existing = m_banks.find(input.voicegroup);
     if (existing == m_banks.end()) {
@@ -658,22 +794,39 @@ std::optional<LoadedBankView> DecompProject::saveVoicegroup(SaveVoicegroupInput 
     }
     LoadedBankEntry &entry = existing->second;
 
-    // Save ordering: optional synth definitions, then the source's own
-    // byte-conservative write (which clears its dirty bit), then the bank
-    // refresh from the saved bytes. No rollback: earlier writes remain when
-    // a later stage fails.
-    if (!input.synthDefinitions.isEmpty() &&
-        !VoicegroupSource::writeSynthDefinitions(m_root, input.synthDefinitions, error))
+    // Save ordering: the writes, then the bank refresh from the saved
+    // bytes. No rollback: earlier writes remain when a later stage fails.
+    const bool mapsChanged = !input.synthDefinitions.isEmpty();
+    if (!persistVoicegroupChanges(m_root, input.synthDefinitions, *entry.source, error))
         return std::nullopt;
-    if (!entry.source->save(error))
-        return std::nullopt;
-    entry.sourceFileTime = QFileInfo(entry.source->filePath()).lastModified();
 
-    const auto rootUtf8 = m_root.toLocal8Bit();
-    const auto nameUtf8 = entry.loadName.toLocal8Bit();
-    LoadedVoiceGroup *raw = voicegroup_load(rootUtf8.constData(), nameUtf8.constData(), nullptr);
+    std::unique_ptr<VoicegroupProjectContext> replacement;
+    VoicegroupProjectContext *context = m_voicegroupProject.get();
+    if (mapsChanged) {
+        replacement = reopenedVoicegroupContext(m_root, error);
+        if (!replacement)
+            return std::nullopt;
+        context = replacement.get();
+    }
+
+    const QString sourcePath = entry.source->filePath();
+    const QDateTime fileTime = QFileInfo(sourcePath).lastModified();
+    const QByteArray targetPath = sourcePath.toLocal8Bit();
+    const QByteArray sectionLabel = entry.source->sectionLabel().toLocal8Bit();
+    const VoicegroupTarget target = {targetPath.constData(), sectionLabel.constData()};
+    LoadedVoiceGroup *raw = context->load(target);
     if (!raw)
         return fail(QStringLiteral("Saved voicegroup failed to reload."));
-    entry.current = wrapVoicegroupLease(raw);
+    VoicegroupLease lease = leaseWithMintedSynths(raw, *entry.source);
+
+    if (replacement) {
+        m_voicegroupProject.swap(replacement);
+        pruneStaleBanks(m_banks, entry.id);
+        m_voicegroupArgMemo.clear();
+    } else {
+        refreshSavedVoicegroupMemos(m_voicegroupArgMemo, entry.id, sourcePath, fileTime);
+    }
+    entry.sourceFileTime = fileTime;
+    entry.current = std::move(lease);
     return publishView(entry);
 }

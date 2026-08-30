@@ -13,6 +13,7 @@
 #include "projectidentity.h"
 #include "voicegroupsource.h"
 
+class VoicegroupProjectContext;
 // Per-song mid2agb options from the song's line in sound/songs/midi/midi.cfg
 // (or, in projects predating midi.cfg, its songs.mk rule).
 struct SongCfg {
@@ -92,6 +93,12 @@ class ProjectSnapshot
 class DecompProject
 {
   public:
+    DecompProject();
+    ~DecompProject();
+    DecompProject(const DecompProject &) = delete;
+    DecompProject &operator=(const DecompProject &) = delete;
+    DecompProject(DecompProject &&) noexcept;
+    DecompProject &operator=(DecompProject &&) noexcept;
     bool open(const QString &rootDir, QString *error);
     // Installs detached project state on the GUI thread without disk I/O.
     void replaceWith(const ProjectSnapshot &snapshot);
@@ -122,6 +129,10 @@ class DecompProject
     // registers a song). Song ids are reassigned.
     bool reload(QString *error);
 
+    // Replaces the project-wide poryaaaa maps only after a complete context
+    // opens. Existing self-contained bank leases stay published and valid.
+    bool rebuildVoicegroupProject(QString *error);
+
     // ---- Worker-side voicegroup bank ownership (Project I/O worker) ----
     // The worker keeps the one canonical bank per VoicegroupId. Every
     // publication is an immutable LoadedBankView copy; a LoadedBankEntry
@@ -138,6 +149,14 @@ class DecompProject
     // previous record (source, lease, and file time) untouched; no invalid
     // empty-identity view is ever manufactured.
     std::optional<LoadedBankView> loadBank(const SongInfo &song, QString *error);
+
+    // Loads a picker sample set through the worker-confined project context;
+    // callers receive a self-owned value and retain the existing one-shot
+    // ownership model.
+    LoadedSampleSet *loadSampleSet(const char *const *sampleSymbols, int sampleCount,
+                                   const char *const *waveSymbols, int waveCount,
+                                   const char *const *keysplitSymbols,
+                                   const char *const *keysplitTableSymbols, int keysplitCount);
 
     // Applies one typed slot edit and returns the applied outcome (the
     // complete candidate replaces the current lease) or the confirmed
@@ -160,6 +179,12 @@ class DecompProject
     void parseSongsMk();
     void discoverUnregisteredSongs();
 
+    struct VoicegroupArgMemo {
+        VoicegroupId id;
+        QString filePath;
+        QDateTime sourceFileTime;
+    };
+
     // The canonical, worker-owned bank record. Never published.
     struct LoadedBankEntry {
         VoicegroupId id;
@@ -178,4 +203,6 @@ class DecompProject
     QVector<MusicPlayer> m_players; // cached at open (one file read)
     QHash<QString, int> m_playerTrackBudgets;
     std::unordered_map<VoicegroupId, LoadedBankEntry, VoicegroupIdHash> m_banks;
+    std::unique_ptr<VoicegroupProjectContext> m_voicegroupProject;
+    QHash<QString, VoicegroupArgMemo> m_voicegroupArgMemo;
 };

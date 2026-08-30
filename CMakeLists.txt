@@ -207,6 +207,8 @@ qt_add_library(porydaw_app STATIC
     src/core/midiimport.h
     src/project/decompproject.cpp
     src/project/decompproject.h
+    src/project/voicegroupprojectcontext.cpp
+    src/project/voicegroupprojectcontext.h
     src/project/projectidentity.cpp
     src/project/projectidentity.h
     src/project/projectworkspace.cpp
@@ -528,6 +530,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/onboardcheck/import.cpp
         src/checks/onboardcheck/deletion.cpp
         src/checks/vgcheck.cpp
+        src/checks/vgloadcheck.cpp
         src/checks/vgbankcheck.cpp
         src/checks/voicegroupviewcachecheck.cpp
         src/checks/vgsavecheck.cpp
