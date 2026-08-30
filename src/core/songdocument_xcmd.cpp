@@ -1,15 +1,16 @@
 // ---------------------------------------------------------------------------
-// SongDocument-owned lane operations.
+// SongDocument-owned XCMD and lane operations.
 //
-// This TU owns every lane-point mutation surface of SongDocument: the XCMD
-// adapter (xcmdEvents / appendXcmdPatchOps) and the add / write / move /
-// delete lane methods over both descriptor lanes (0x08/0x09, through the
-// neutral event/plan machinery in core/xcmd) and plain CC/voice/bend lanes.
-// Descriptor edits are planned once per affected SMF track: callers build
-// decoder rows, project known points, rewrite points via rewritePoints, and
-// hand the resulting flat Patch to the op translator — no selector- or
-// epoch-state reasoning lives here. songdocument.cpp stays the orchestrator
-// for everything else (notes, tempo, tracks, raw events).
+// This TU owns the XCMD adapter (xcmdEvents / appendXcmdPatchOps), detached
+// save-path XCMD canonicalization, and every lane-point mutation surface of
+// SongDocument: the add / write / move / delete lane methods over both
+// descriptor lanes (0x08/0x09, through the neutral event/plan machinery in
+// core/xcmd) and plain CC/voice/bend lanes. Descriptor edits are planned once
+// per affected SMF track: callers build decoder rows, project known points,
+// rewrite points via rewritePoints, and hand the resulting flat Patch to the
+// op translator — no selector- or epoch-state reasoning lives here.
+// songdocument.cpp stays the orchestrator for everything else (notes, tempo,
+// tracks, raw events).
 // ---------------------------------------------------------------------------
 
 #include "songdocument.h"

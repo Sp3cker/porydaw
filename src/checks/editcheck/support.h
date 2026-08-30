@@ -38,6 +38,7 @@ int sameTickDuplicateFailures();
 
 bool checkSongNoteEdits(SongEditScenario &scenario);
 void checkSongRawEventContracts(SongEditScenario &scenario);
+void checkSongXcmdSaveSnapshot(SongEditScenario &scenario);
 bool checkSongRangeEdits(SongEditScenario &scenario);
 bool checkSongNoteMoveContracts(SongEditScenario &scenario);
 bool checkSongTimeRangeAndAutomation(SongEditScenario &scenario);
