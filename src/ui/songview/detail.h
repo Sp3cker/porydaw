@@ -7,20 +7,36 @@
 #include <QPoint>
 #include <QRect>
 #include <QRectF>
+#include <QSet>
+#include <QStringList>
 #include <QWheelEvent>
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <vector>
 
+#include "ui/m4asemantics.h"
 #include "ui/songview.h"
+#include "voicegroup_loader.h"
 
 namespace songview::detail {
 
 inline constexpr int kScrollUnitsPerDip = 16;
 inline constexpr int kVoiceAuditionKey = 60; // middle C, matching the voicegroup browser
 inline constexpr int kVoiceAuditionVel = 112;
+
+struct VisibleRows {
+    std::array<bool, VOICEGROUP_SIZE> rows{};
+    int matchingCount = 0;
+    int nextRow = -1;
+};
+
+VisibleRows visibleVoiceRows(const std::array<VoiceFamily, VOICEGROUP_SIZE> &families,
+                             const QStringList &displayNames, const QSet<int> &usedSlots,
+                             std::optional<VoiceFamily> family, bool usedOnly, bool namedOnly,
+                             int currentRow);
 
 qreal logicalPhysicalPixel(qreal dpr);
 int scrollUnits(double dip);

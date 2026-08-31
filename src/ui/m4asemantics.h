@@ -3,6 +3,8 @@
 #include <QString>
 #include <cstdint>
 
+#include "voicegroup/voicegroup_types.h"
+
 // The m4a semantic layer (SPEC.md §4.2): MIDI events are presented in mid2agb
 // terms. CC numbers follow tools/mid2agb/agb.cpp exactly; whether a CC gets an
 // audible automation lane follows what the embedded poryaaaa engine renders
@@ -66,6 +68,17 @@ QString m4aAdvancedCcLabel(uint8_t cc, uint8_t value);
 // "Sample (fixed pitch)", and "Sample (reverse)". Keysplit voices read as
 // "Sample".
 QString m4aVoiceTypeName(uint8_t type);
+
+// Coarse instrument family for the voice picker's facet rail. Mirrors the
+// m4aVoiceTypeName grouping: the seven families cover every 128-slot voice
+// and the function never fails.
+enum class VoiceFamily { Sample, Square1, Square2, Wave, Noise, Drumkit, Synth };
+
+// Classifies one loaded tone. Precedence: a zero-sized DirectSound
+// descriptor (the Golden Sun synth marker) is Synth, VOICE_KEYSPLIT_ALL is
+// Drumkit, and the rest map through the CGB type mask — alt variants share
+// the plain cases; DirectSound, keysplit, and cry tones are Sample.
+VoiceFamily m4aVoiceFamily(const ToneData &tone);
 
 // Plain MIDI display helpers shared by the piano roll and the event list.
 QString midiKeyName(int key);                           // "C5", "A#3" (60 = C4)

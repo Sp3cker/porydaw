@@ -13,6 +13,7 @@
 #include <QImage>
 #include <QListWidget>
 #include <QMenu>
+#include <QPointer>
 #include <QTemporaryDir>
 #include <QTimer>
 
@@ -28,7 +29,7 @@
 
 namespace {
 
-// Self-contained fixture: one synthesized two-track song, one voicegroup,
+// Self-contained fixture: one synthesized three-track song, one voicegroup,
 // and a SongView whose Voice Changes drawer page is visible. Members are
 // declared so the view is destroyed before the document it points at.
 struct AreaFixture {
@@ -50,7 +51,7 @@ bool createAreaFixture(AreaFixture &env, QString &error)
     SmfFile smf;
     smf.format = 1;
     smf.division = 24;
-    smf.tracks.resize(3);
+    smf.tracks.resize(4);
     SmfTrack &conductor = smf.tracks[0];
     SmfEvent tempo;
     tempo.status = 0xFF;
@@ -90,6 +91,18 @@ bool createAreaFixture(AreaFixture &env, QString &error)
     bassOff.data0 = 48;
     bass.events.push_back(bassOff);
     bass.endTick = 384;
+    SmfTrack &voiceLess = smf.tracks[3];
+    SmfEvent voiceLessOn;
+    voiceLessOn.status = 0x92;
+    voiceLessOn.data0 = 67;
+    voiceLessOn.data1 = 100;
+    voiceLess.events.push_back(voiceLessOn);
+    SmfEvent voiceLessOff;
+    voiceLessOff.tick = 48;
+    voiceLessOff.status = 0x82;
+    voiceLessOff.data0 = 67;
+    voiceLess.events.push_back(voiceLessOff);
+    voiceLess.endTick = 384;
     SongInfo info;
     info.label = QStringLiteral("voicechange-area-fixture");
     info.midPath = env.dir.filePath(QStringLiteral("voicechange-fixture.mid"));
@@ -98,8 +111,8 @@ bool createAreaFixture(AreaFixture &env, QString &error)
         error = QStringLiteral("voice-change fixture song failed to load: %1").arg(error);
         return false;
     }
-    if (env.document.engineTrackCount() < 2) {
-        error = QStringLiteral("voice-change fixture did not expose two engine tracks");
+    if (env.document.engineTrackCount() < 3) {
+        error = QStringLiteral("voice-change fixture did not expose three engine tracks");
         return false;
     }
     env.document.addLanePoint(0, DOC_CC_VOICE, 48, 3);
@@ -659,6 +672,318 @@ void checkAreaCommits(AreaFixture &env, int &failures)
           QStringLiteral("commit coverage did not restore its starting document"));
 }
 
+// Live picker previews must be projection-only until acceptance. This drives
+// the actual drawer and track-header callers through their modal event loop.
+void checkAreaLiveVoiceChanges(AreaFixture &env, int &failures)
+{
+    auto *area = env.area;
+    SongDocument &document = env.document;
+    const auto check = [&failures](bool condition, const QString &message) {
+        if (condition)
+            return;
+        std::fprintf(stderr, "drawer: FAIL voice-change-area: %s\n", qUtf8Printable(message));
+        ++failures;
+    };
+    const double markerY = area->height() / 2.0;
+    const int baseIndex = document.undoStack()->index();
+    const auto baseIdentity = document.history().currentDocumentIdentity();
+    const bool baseDirty = document.isDirty();
+    const QByteArray baseSmf = document.smf().write();
+
+    // An existing marker tracks each row live, without changing document
+    // history, its identity, or dirty state. Accept then lands exactly one
+    // ordinary command, whose two history navigation paths both round-trip.
+    bool opened = false;
+    QTimer::singleShot(0, [&] {
+        auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+        auto *list = dialog ? dialog->findChild<QListWidget *>() : nullptr;
+        if (!dialog || !list)
+            return;
+        opened = true;
+        const int previewIndex = document.undoStack()->index();
+        const int previewCount = document.undoStack()->count();
+        const auto previewIdentity = document.history().currentDocumentIdentity();
+        const bool previewDirty = document.isDirty();
+        for (const int voice : {3, 5, 7}) {
+            list->setCurrentRow(voice);
+            DocLanePoint live{};
+            check(document.findLanePoint(0, DOC_CC_VOICE, 48, &live) && live.value == voice &&
+                      document.undoStack()->index() == previewIndex &&
+                      document.undoStack()->count() == previewCount &&
+                      document.history().currentDocumentIdentity() == previewIdentity &&
+                      document.isDirty() == previewDirty,
+                  QStringLiteral("picker row %1 changed history or did not project the live "
+                                 "voice at tick 48")
+                      .arg(voice));
+        }
+        dialog->accept();
+    });
+    doubleClickArea(env, QPointF(xForTick(env, 48), markerY));
+    DocLanePoint accepted{};
+    const auto acceptedIdentity = document.history().currentDocumentIdentity();
+    check(opened && document.undoStack()->index() == baseIndex + 1 &&
+              document.undoStack()->count() == baseIndex + 1 &&
+              document.undoStack()->text(baseIndex) == QStringLiteral("change voice") &&
+              acceptedIdentity != baseIdentity &&
+              document.findLanePoint(0, DOC_CC_VOICE, 48, &accepted) && accepted.value == 7,
+          QStringLiteral("accepting the multi-row live preview did not add one 'change voice' "
+                         "document entry"));
+    (void)document.history().requestUndo();
+    pump();
+    check(document.history().currentDocumentIdentity() == baseIdentity &&
+              document.findLanePoint(0, DOC_CC_VOICE, 48, &accepted) && accepted.value == 3,
+          QStringLiteral("history undo did not restore the pre-preview voice"));
+    (void)document.history().requestRedo();
+    pump();
+    check(document.history().currentDocumentIdentity() == acceptedIdentity &&
+              document.findLanePoint(0, DOC_CC_VOICE, 48, &accepted) && accepted.value == 7,
+          QStringLiteral("history redo did not restore the accepted voice"));
+    document.undoStack()->undo();
+    pump();
+    check(document.findLanePoint(0, DOC_CC_VOICE, 48, &accepted) && accepted.value == 3,
+          QStringLiteral("direct undo did not restore the pre-preview voice"));
+    document.undoStack()->redo();
+    pump();
+    check(document.findLanePoint(0, DOC_CC_VOICE, 48, &accepted) && accepted.value == 7,
+          QStringLiteral("direct redo did not restore the accepted voice"));
+    document.undoStack()->setIndex(baseIndex);
+    pump();
+
+    // Rejecting after a pre-existing redo tail restores the byte-exact SMF
+    // and leaves the stack structurally untouched. Revisions may advance as
+    // the preview and its rollback publish ordinary document mutations.
+    const QByteArray cancelSmf = document.smf().write();
+    const int cancelIndex = document.undoStack()->index();
+    const int cancelCount = document.undoStack()->count();
+    const auto cancelIdentity = document.history().currentDocumentIdentity();
+    const bool cancelDirty = document.isDirty();
+    const bool cancelCanRedo = document.undoStack()->canRedo();
+    opened = false;
+    QTimer::singleShot(0, [&] {
+        auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+        auto *list = dialog ? dialog->findChild<QListWidget *>() : nullptr;
+        if (!dialog || !list)
+            return;
+        opened = true;
+        list->setCurrentRow(5);
+        list->setCurrentRow(7);
+        dialog->reject();
+    });
+    doubleClickArea(env, QPointF(xForTick(env, 48), markerY));
+    check(opened && document.smf().write() == cancelSmf &&
+              document.undoStack()->index() == cancelIndex &&
+              document.undoStack()->count() == cancelCount &&
+              document.undoStack()->canRedo() == cancelCanRedo &&
+              document.history().currentDocumentIdentity() == cancelIdentity &&
+              document.isDirty() == cancelDirty,
+          QStringLiteral("cancelling a live preview did not preserve its redo tail exactly"));
+
+    // Empty ticks insert a marker on accept even if the inherited selection
+    // was untouched; later row changes still collapse into a single insert.
+    bool untouchedOpened = false;
+    int untouchedInitial = -1;
+    QTimer::singleShot(0, [&] {
+        auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+        auto *list = dialog ? dialog->findChild<QListWidget *>() : nullptr;
+        if (!dialog || !list)
+            return;
+        untouchedOpened = true;
+        untouchedInitial = list->currentRow();
+        dialog->accept();
+    });
+    doubleClickArea(env, QPointF(xForTick(env, 96), markerY));
+    DocLanePoint inserted{};
+    check(untouchedOpened && untouchedInitial == 3 &&
+              document.undoStack()->index() == baseIndex + 1 &&
+              document.undoStack()->count() == baseIndex + 1 &&
+              document.undoStack()->text(baseIndex) == QStringLiteral("add voice change") &&
+              document.findLanePoint(0, DOC_CC_VOICE, 96, &inserted) && inserted.value == 3,
+          QStringLiteral("untouched empty-tick acceptance did not add exactly one inherited "
+                         "voice marker"));
+    document.undoStack()->undo();
+    pump();
+    check(!document.findLanePoint(0, DOC_CC_VOICE, 96, &inserted),
+          QStringLiteral("undo did not remove the untouched empty-tick marker"));
+    document.undoStack()->redo();
+    pump();
+    check(document.findLanePoint(0, DOC_CC_VOICE, 96, &inserted) && inserted.value == 3,
+          QStringLiteral("redo did not restore the untouched empty-tick marker"));
+    document.undoStack()->setIndex(baseIndex);
+    pump();
+
+    opened = false;
+    QTimer::singleShot(0, [&] {
+        auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+        auto *list = dialog ? dialog->findChild<QListWidget *>() : nullptr;
+        if (!dialog || !list)
+            return;
+        opened = true;
+        list->setCurrentRow(3);
+        list->setCurrentRow(5);
+        list->setCurrentRow(7);
+        dialog->accept();
+    });
+    doubleClickArea(env, QPointF(xForTick(env, 96), markerY));
+    check(opened && document.undoStack()->index() == baseIndex + 1 &&
+              document.undoStack()->count() == baseIndex + 1 &&
+              document.undoStack()->text(baseIndex) == QStringLiteral("add voice change") &&
+              document.findLanePoint(0, DOC_CC_VOICE, 96, &inserted) && inserted.value == 7,
+          QStringLiteral("multi-row empty-tick preview did not commit one final marker"));
+    document.undoStack()->undo();
+    pump();
+    check(!document.findLanePoint(0, DOC_CC_VOICE, 96, &inserted),
+          QStringLiteral("undo did not remove the multi-row empty-tick marker"));
+    document.undoStack()->redo();
+    pump();
+    check(document.findLanePoint(0, DOC_CC_VOICE, 96, &inserted) && inserted.value == 7,
+          QStringLiteral("redo did not restore the multi-row empty-tick marker"));
+    document.undoStack()->setIndex(baseIndex);
+    pump();
+
+    // The track-header caller takes the same live path for both its existing
+    // first program event and a track with no program event at tick zero.
+    QString trackTitle;
+    QTimer::singleShot(0, [&] {
+        auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+        auto *list = dialog ? dialog->findChild<QListWidget *>() : nullptr;
+        if (!dialog || !list)
+            return;
+        trackTitle = dialog->windowTitle();
+        list->setCurrentRow(3);
+        list->setCurrentRow(5);
+        list->setCurrentRow(7);
+        dialog->accept();
+    });
+    env.view->editTrackVoice(0);
+    check(trackTitle == QStringLiteral("Track 1 voice") &&
+              document.undoStack()->index() == baseIndex + 1 &&
+              document.undoStack()->text(baseIndex) == QStringLiteral("change voice") &&
+              document.findLanePoint(0, DOC_CC_VOICE, 0, &inserted) && inserted.value == 7,
+          QStringLiteral("editTrackVoice did not commit its existing first marker once"));
+    document.undoStack()->undo();
+    pump();
+    check(document.findLanePoint(0, DOC_CC_VOICE, 0, &inserted) && inserted.value == 0,
+          QStringLiteral("track-header undo did not restore the original first program"));
+    document.undoStack()->redo();
+    pump();
+    check(document.findLanePoint(0, DOC_CC_VOICE, 0, &inserted) && inserted.value == 7,
+          QStringLiteral("track-header redo did not restore the selected first program"));
+    document.undoStack()->setIndex(baseIndex);
+    pump();
+
+    trackTitle.clear();
+    QTimer::singleShot(0, [&] {
+        auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+        auto *list = dialog ? dialog->findChild<QListWidget *>() : nullptr;
+        if (!dialog || !list)
+            return;
+        trackTitle = dialog->windowTitle();
+        list->setCurrentRow(3);
+        list->setCurrentRow(5);
+        list->setCurrentRow(7);
+        dialog->accept();
+    });
+    env.view->editTrackVoice(2);
+    check(trackTitle == QStringLiteral("Track 3 voice") &&
+              document.undoStack()->index() == baseIndex + 1 &&
+              document.undoStack()->text(baseIndex) == QStringLiteral("add voice change") &&
+              document.findLanePoint(2, DOC_CC_VOICE, 0, &inserted) && inserted.value == 7,
+          QStringLiteral("track-header tick-zero insertion did not commit exactly once"));
+    document.undoStack()->undo();
+    pump();
+    check(!document.findLanePoint(2, DOC_CC_VOICE, 0, &inserted),
+          QStringLiteral("track-header insertion undo did not remove its tick-zero marker"));
+    document.undoStack()->redo();
+    pump();
+    check(document.findLanePoint(2, DOC_CC_VOICE, 0, &inserted) && inserted.value == 7,
+          QStringLiteral("track-header insertion redo did not restore its final voice"));
+    document.undoStack()->setIndex(baseIndex);
+    pump();
+
+    // Detaching a view rejects the owned modal synchronously; after the
+    // modal frame unwinds, its preview is restored before reattachment and
+    // any later queued row/accept action is inert.
+    const QByteArray detachedSmf = document.smf().write();
+    const int detachedIndex = document.undoStack()->index();
+    const int detachedCount = document.undoStack()->count();
+    const auto detachedIdentity = document.history().currentDocumentIdentity();
+    const bool detachedDirty = document.isDirty();
+    bool detachedOpened = false;
+    bool detachedRejected = false;
+    bool lateActionRan = false;
+    QPointer<QDialog> staleDialog;
+    QPointer<QListWidget> staleList;
+    QTimer::singleShot(0, [&] {
+        auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+        auto *list = dialog ? dialog->findChild<QListWidget *>() : nullptr;
+        if (!dialog || !list)
+            return;
+        detachedOpened = true;
+        staleDialog = dialog;
+        staleList = list;
+        list->setCurrentRow(7);
+        DocLanePoint previewed{};
+        check(document.findLanePoint(0, DOC_CC_VOICE, 48, &previewed) && previewed.value == 7,
+              QStringLiteral("detachment setup did not create the live preview"));
+        env.view->setDocument(nullptr);
+        detachedRejected = dialog->result() == QDialog::Rejected;
+        QTimer::singleShot(0, [&] {
+            lateActionRan = true;
+            if (staleList)
+                staleList->setCurrentRow(9);
+            if (staleDialog)
+                staleDialog->accept();
+        });
+    });
+    doubleClickArea(env, QPointF(xForTick(env, 48), markerY));
+    pump();
+    check(detachedOpened && detachedRejected && lateActionRan &&
+              document.smf().write() == detachedSmf &&
+              document.undoStack()->index() == detachedIndex &&
+              document.undoStack()->count() == detachedCount &&
+              document.history().currentDocumentIdentity() == detachedIdentity &&
+              document.isDirty() == detachedDirty,
+          QStringLiteral("detached picker or its queued actions created a document command"));
+    env.view->setDocument(&document);
+    pump();
+
+    // Once an unrelated mutation owns the revision, a direct session must
+    // abandon rather than restore captured indices over that mutation.
+    SongDocument guarded;
+    SongInfo guardedInfo;
+    guardedInfo.label = QStringLiteral("voicechange-revision-guard");
+    guardedInfo.midPath = env.dir.filePath(QStringLiteral("voicechange-revision-guard.mid"));
+    guardedInfo.hasMid = true;
+    QString error;
+    if (!document.smf().writeFile(guardedInfo.midPath, &error) ||
+        !guarded.load(guardedInfo, &error)) {
+        check(false, QStringLiteral("revision-abandon fixture could not load: %1").arg(error));
+    } else {
+        {
+            auto session = guarded.beginVoiceChangeLiveSession(0, 48);
+            session.select(8);
+            guarded.addLanePoint(0, DOC_CC_VOICE, 192, 6);
+            const QByteArray externallyChanged = guarded.smf().write();
+            session.select(9);
+            session.commit(9);
+            check(guarded.smf().write() == externallyChanged,
+                  QStringLiteral("revision-abandoned session accepted a later selection"));
+        }
+        DocLanePoint guardedVoice{};
+        DocLanePoint unrelated{};
+        check(guarded.findLanePoint(0, DOC_CC_VOICE, 48, &guardedVoice) &&
+                  guardedVoice.value == 8 &&
+                  guarded.findLanePoint(0, DOC_CC_VOICE, 192, &unrelated) && unrelated.value == 6 &&
+                  guarded.undoStack()->count() == 1,
+              QStringLiteral("revision-abandoned session reverted the preview or unrelated edit"));
+    }
+
+    check(document.smf().write() == baseSmf && document.undoStack()->index() == baseIndex &&
+              document.history().currentDocumentIdentity() == baseIdentity &&
+              document.isDirty() == baseDirty,
+          QStringLiteral("live-picker coverage did not restore its fixture state"));
+}
+
 // Camera: pan pauses follow and clamps at tick zero, wheel zoom pins the
 // tick under the cursor, and Escape ends a pan mid-gesture.
 void checkAreaCamera(AreaFixture &env, int &failures)
@@ -756,6 +1081,7 @@ void checkVoiceChangeAreaPage(int &failures)
     checkAreaHover(env, failures);
     checkAreaRefresh(env, failures);
     checkAreaCommits(env, failures);
+    checkAreaLiveVoiceChanges(env, failures);
     checkAreaCamera(env, failures);
     if (env.document.smf().write() != baselineSmf) {
         std::fprintf(stderr, "drawer: FAIL voice-change-area: fixture document not restored\n");

@@ -63,11 +63,11 @@ bool macroIsDsFamily(VgMacro m)
            m == VgMacro::DirectSoundAlt;
 }
 
-// A loaded DirectSound tone whose sample has size 0 is a Golden Sun synth
-// descriptor, not PCM (m4a_pcm_channel_start; 0x18 = the fix/alt type bits).
+// A zero-sized DirectSound sample is a Golden Sun synth descriptor; the
+// shared m4aVoiceFamily classifier is the single source of this rule.
 bool toneIsSynth(const ToneData &td)
 {
-    return (td.type & ~0x18) == 0 && td.wav && td.wav->size == 0 && td.wav->data;
+    return m4aVoiceFamily(td) == VoiceFamily::Synth;
 }
 
 bool macroIsDrumkit(VgMacro m)

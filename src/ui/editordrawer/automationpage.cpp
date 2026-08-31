@@ -419,11 +419,6 @@ void AutomationPage::showTimeSelectionMenu(const DrawerPageTimeSelectionMenuRequ
     m_owner.showDrawerPageTimeSelectionMenu(request);
 }
 
-bool AutomationPage::pickVoice(const QString &title, int initialVoice, int *outVoice) const
-{
-    return m_owner.pickVoice(title, initialVoice, outVoice);
-}
-
 void AutomationPage::requestRefresh() const
 {
     m_owner.refreshAllDrawerPages();

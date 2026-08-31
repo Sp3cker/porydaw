@@ -2,6 +2,7 @@
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
+#include "ui/m4asemantics.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
@@ -13,6 +14,7 @@
 
 #include <QColor>
 #include <QDialog>
+#include <QPointer>
 #include <QStringList>
 
 #include <algorithm>
@@ -223,6 +225,18 @@ QString SongView::voiceShortName(uint8_t program) const
         return type.isEmpty() ? tr("Voice") : type;
     return QStringLiteral("%1 (%2)").arg(name, type);
 }
+QString SongView::voiceDisplayName(uint8_t program) const
+{
+    if (!m_voicegroup || program >= VOICEGROUP_SIZE)
+        return QString();
+    return QString::fromUtf8(m_voicegroup->voiceNames[program]).trimmed();
+}
+VoiceFamily SongView::voiceFamily(uint8_t program) const
+{
+    if (!m_voicegroup || program >= VOICEGROUP_SIZE)
+        return VoiceFamily::Sample;
+    return m4aVoiceFamily(m_voicegroup->voices[program]);
+}
 DrawerPageVoiceContext SongView::voiceContext(uint64_t tick) const
 {
     const int primaryTrack = m_selectionModel.primaryTrack();
@@ -274,13 +288,47 @@ QSet<int> SongView::usedVoices() const
 }
 bool SongView::pickVoice(const QString &title, int initialVoice, int *outVoice)
 {
-    VoicePickerDialog dialog(this, title, initialVoice, [this](int voice, int velocity) {
-        emit auditionVoice(voice, kVoiceAuditionKey, velocity);
-    });
+    VoicePickerDialog dialog(this, title, initialVoice,
+                             [q = QPointer<SongView>(this)](int voice, int velocity) {
+                                 if (q)
+                                     emit q->auditionVoice(voice, kVoiceAuditionKey, velocity);
+                             });
     if (dialog.exec() != QDialog::Accepted)
         return false;
-    *outVoice = dialog.selectedVoice();
+    const int voice = dialog.selectedVoice();
+    if (voice < 0)
+        return false; // accepted a zero-match view
+    *outVoice = voice;
     return true;
+}
+void SongView::editVoiceChange(int track, uint64_t tick, int initialVoice, const QString &title)
+{
+    const QPointer<SongView> view(this);
+    if (!m_document)
+        return;
+    SongDocument *const sourceDocument = m_document;
+    auto session = sourceDocument->beginVoiceChangeLiveSession(track, tick);
+    if (!session.active())
+        return;
+    VoicePickerDialog dialog(
+        this, title, initialVoice,
+        [q = view](int voice, int velocity) {
+            if (q)
+                emit q->auditionVoice(voice, kVoiceAuditionKey, velocity);
+        },
+        [&session, view, sourceDocument](int voice) {
+            if (!view || view->document() != sourceDocument)
+                return;
+            session.select(voice);
+        });
+    if (dialog.exec() != QDialog::Accepted)
+        return; // cancellation restores through the stack session's destructor
+    if (!view || view->document() != sourceDocument)
+        return; // an external swap took the song: no commit
+    const int voice = dialog.selectedVoice();
+    if (voice < 0)
+        return; // zero-match view: the session destructor restores on unwind
+    session.commit(voice);
 }
 void SongView::editTrackVoice(int track)
 {
@@ -297,13 +345,7 @@ void SongView::editTrackVoice(int track)
         target = &pt;
     }
     const int initial = target ? target->value : 0;
-    int voice = initial;
-    if (!pickVoice(tr("Track %1 voice").arg(track + 1), initial, &voice))
-        return;
-    if (!target)
-        m_document->addLanePoint(track, DOC_CC_VOICE, 0, voice);
-    else if (voice != initial)
-        m_document->moveLanePoints({{track, DOC_CC_VOICE, *target, target->tick, voice}});
+    editVoiceChange(track, target ? target->tick : 0, initial, tr("Track %1 voice").arg(track + 1));
 }
 void SongView::renameTrack(int track)
 {

@@ -561,8 +561,7 @@ void VoiceChangeArea::contextMenuEvent(QContextMenuEvent *event)
 
 void VoiceChangeArea::showPicker(const QPoint &globalPosition)
 {
-    SongDocument *const sourceDocument = m_owner.document();
-    if (!sourceDocument || m_engineTrack < 0)
+    if (!m_owner.document() || m_engineTrack < 0)
         return;
     const int track = m_engineTrack;
     const qreal x = mapFromGlobal(globalPosition).x();
@@ -572,25 +571,8 @@ void VoiceChangeArea::showPicker(const QPoint &globalPosition)
         0.0, m_owner.tickAtContentX(std::max<qreal>(plotOrigin(), x) - qreal(plotOrigin())));
     const uint64_t tick = marker ? marker->tick : m_owner.snapTick(rawTick, false);
     const int current = marker ? marker->value : voiceSlotAt(tick);
-    int selectedVoice = 0;
-    if (!m_owner.pickVoice(marker ? tr("Change voice") : tr("Insert voice change"),
-                           std::max(0, current), &selectedVoice))
-        return;
-    // Modal UI can outlive its initiating song or track. Only commit back to
-    // that still-current context, and re-resolve the point so undo/import
-    // activity while the picker was open cannot create a stale undo step.
-    SongDocument *document = m_owner.document();
-    if (document != sourceDocument || primaryTrack() != track)
-        return;
-    DocLanePoint existing;
-    if (document->findLanePoint(track, DOC_CC_VOICE, tick, &existing)) {
-        if (existing.value == selectedVoice)
-            return;
-        document->moveLanePoints({{track, DOC_CC_VOICE, existing, tick, selectedVoice}});
-    } else {
-        document->addLanePoint(track, DOC_CC_VOICE, tick, selectedVoice);
-    }
-    m_owner.refreshAllDrawerPages();
+    m_owner.editVoiceChange(track, tick, std::max(0, current),
+                            marker ? tr("Change voice") : tr("Insert voice change"));
 }
 
 void VoiceChangeArea::showContextMenu(const QPoint &globalPosition)

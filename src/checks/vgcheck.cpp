@@ -1,13 +1,23 @@
-#include <QDir>
-#include <QFile>
-#include <QString>
-#include <cstdio>
-#include <cstring>
-
+#include "core/miditimeline.h"
 #include "project/decompproject.h"
 #include "project/songregistry.h"
 #include "project/voicegroupsource.h"
 #include "ui/m4asemantics.h"
+#include "ui/songview.h"
+#include "ui/songview/detail.h"
+#include "ui/songview/voicepicker.h"
+#include <QCheckBox>
+#include <QDialogButtonBox>
+#include <QDir>
+#include <QFile>
+#include <QLabel>
+#include <QListWidget>
+#include <QPushButton>
+#include <QString>
+#include <QToolButton>
+#include <array>
+#include <cstdio>
+#include <cstring>
 
 extern "C" {
 #include "voicegroup_loader.h"
@@ -97,6 +107,249 @@ bool isNoise(VgMacro m)
 bool isProgWave(VgMacro m)
 {
     return m == VgMacro::ProgWave || m == VgMacro::ProgWaveAlt;
+}
+
+void checkVoiceFamilyClassifier(int &failures)
+{
+    const auto check = [&failures](bool condition, const char *what) {
+        if (condition)
+            return;
+        std::fprintf(stderr, "vgcheck: FAIL: %s\n", what);
+        ++failures;
+    };
+    struct FamilyCase {
+        uint8_t type;
+        VoiceFamily expected;
+        bool synthDescriptor = false;
+    };
+    constexpr std::array cases = {
+        FamilyCase{VOICE_DIRECTSOUND, VoiceFamily::Sample},
+        FamilyCase{VOICE_DIRECTSOUND_NO_RESAMPLE, VoiceFamily::Sample},
+        FamilyCase{VOICE_DIRECTSOUND_ALT, VoiceFamily::Sample},
+        FamilyCase{VOICE_SQUARE_1, VoiceFamily::Square1},
+        FamilyCase{VOICE_SQUARE_1_ALT, VoiceFamily::Square1},
+        FamilyCase{VOICE_SQUARE_2, VoiceFamily::Square2},
+        FamilyCase{VOICE_SQUARE_2_ALT, VoiceFamily::Square2},
+        FamilyCase{VOICE_PROGRAMMABLE_WAVE, VoiceFamily::Wave},
+        FamilyCase{VOICE_PROGRAMMABLE_WAVE_ALT, VoiceFamily::Wave},
+        FamilyCase{VOICE_NOISE, VoiceFamily::Noise},
+        FamilyCase{VOICE_NOISE_ALT, VoiceFamily::Noise},
+        FamilyCase{VOICE_KEYSPLIT, VoiceFamily::Sample, true},
+        FamilyCase{VOICE_KEYSPLIT_ALL, VoiceFamily::Drumkit, true},
+        FamilyCase{VOICE_CRY, VoiceFamily::Sample},
+        FamilyCase{VOICE_CRY_REVERSE, VoiceFamily::Sample},
+        FamilyCase{VOICE_DIRECTSOUND, VoiceFamily::Synth, true},
+    };
+    std::array<ToneData, VOICEGROUP_SIZE> tones{};
+    std::array<WaveData, VOICEGROUP_SIZE> waves{};
+    int8_t synthByte = 0;
+    for (int slot = 0; slot < VOICEGROUP_SIZE; ++slot) {
+        const FamilyCase &test = cases[static_cast<std::size_t>(slot) % cases.size()];
+        ToneData &tone = tones[static_cast<std::size_t>(slot)];
+        tone.type = test.type;
+        if (test.synthDescriptor) {
+            WaveData &wave = waves[static_cast<std::size_t>(slot)];
+            wave.size = 0;
+            wave.data = &synthByte;
+            tone.wav = &wave;
+        }
+        if (m4aVoiceFamily(tone) != test.expected) {
+            std::fprintf(stderr, "vgcheck: FAIL: slot %d type 0x%02x family classification\n", slot,
+                         tone.type);
+            ++failures;
+        }
+    }
+    ToneData missingWave{};
+    missingWave.type = VOICE_DIRECTSOUND;
+    check(m4aVoiceFamily(missingWave) == VoiceFamily::Sample,
+          "null DirectSound descriptor classified as Synth");
+}
+
+void checkVisibleVoiceRows(int &failures)
+{
+    const auto check = [&failures](bool condition, const char *what) {
+        if (condition)
+            return;
+        std::fprintf(stderr, "vgcheck: FAIL: %s\n", what);
+        ++failures;
+    };
+    std::array<VoiceFamily, VOICEGROUP_SIZE> families;
+    families.fill(VoiceFamily::Sample);
+    families[1] = VoiceFamily::Square1;
+    families[4] = VoiceFamily::Noise;
+    families[5] = VoiceFamily::Drumkit;
+    families[8] = VoiceFamily::Square1;
+    QStringList displayNames;
+    for (int voice = 0; voice < VOICEGROUP_SIZE; ++voice)
+        displayNames.append(QString());
+    displayNames[1] = QStringLiteral("square-used");
+    displayNames[2] = QStringLiteral("square-two");
+    displayNames[4] = QStringLiteral("noise-unused");
+    displayNames[5] = QStringLiteral("drum-used");
+    const QSet<int> usedSlots{1, 5};
+    struct FilterCase {
+        const char *what;
+        std::optional<VoiceFamily> family;
+        bool usedOnly;
+        bool namedOnly;
+        int currentRow;
+        int matchingCount;
+        int nextRow;
+        int firstSlot;
+        bool firstVisible;
+        int secondSlot;
+        bool secondVisible;
+    };
+    const std::array cases = {
+        FilterCase{"all rows preserve their current selection", std::nullopt, false, false, 4, 128,
+                   4, 0, true, 127, true},
+        FilterCase{"family rows replace a hidden selection", VoiceFamily::Square1, false, false, 4,
+                   2, 1, 1, true, 8, true},
+        FilterCase{"availability facets compose with the family", VoiceFamily::Square1, true, true,
+                   8, 1, 1, 1, true, 8, false},
+        FilterCase{"empty facets clear the current selection", VoiceFamily::Noise, true, true, 1, 0,
+                   -1, 1, false, 4, false},
+        FilterCase{"clearing filters restores the first slot", std::nullopt, false, false, -1, 128,
+                   0, 0, true, 127, true},
+    };
+    for (const FilterCase &test : cases) {
+        const songview::detail::VisibleRows visible =
+            songview::detail::visibleVoiceRows(families, displayNames, usedSlots, test.family,
+                                               test.usedOnly, test.namedOnly, test.currentRow);
+        check(visible.matchingCount == test.matchingCount && visible.nextRow == test.nextRow &&
+                  visible.rows[static_cast<std::size_t>(test.firstSlot)] == test.firstVisible &&
+                  visible.rows[static_cast<std::size_t>(test.secondSlot)] == test.secondVisible,
+              test.what);
+    }
+}
+
+void checkVoicePickerFilters(int &failures)
+{
+    const auto check = [&failures](bool condition, const char *what) {
+        if (condition)
+            return;
+        std::fprintf(stderr, "vgcheck: FAIL: %s\n", what);
+        ++failures;
+    };
+    LoadedVoiceGroup voicegroup{};
+    voicegroup.voices[1].type = VOICE_SQUARE_1;
+    voicegroup.voices[2].type = VOICE_SQUARE_2;
+    voicegroup.voices[4].type = VOICE_NOISE;
+    voicegroup.voices[5].type = VOICE_KEYSPLIT_ALL;
+    voicegroup.voices[8].type = VOICE_SQUARE_1_ALT;
+    std::strncpy(voicegroup.voiceNames[1], "square-used", sizeof(voicegroup.voiceNames[1]) - 1);
+    std::strncpy(voicegroup.voiceNames[2], "square-two", sizeof(voicegroup.voiceNames[2]) - 1);
+    std::strncpy(voicegroup.voiceNames[4], "noise-unused", sizeof(voicegroup.voiceNames[4]) - 1);
+    std::strncpy(voicegroup.voiceNames[5], "drum-used", sizeof(voicegroup.voiceNames[5]) - 1);
+    MidiTimeline timeline;
+    timeline.tracks[0].used = true;
+    timeline.tracks[0].firstProgram = 1;
+    timeline.tracks[1].used = true;
+    timeline.tracks[1].firstProgram = 5;
+    SongView view;
+    view.setSong(&timeline, &voicegroup);
+    check(view.voiceDisplayName(uint8_t(1)) == QStringLiteral("square-used") &&
+              view.voiceDisplayName(uint8_t(128)).isEmpty() &&
+              view.voiceFamily(uint8_t(1)) == VoiceFamily::Square1 &&
+              view.voiceFamily(uint8_t(128)) == VoiceFamily::Sample,
+          "voice metadata accessors did not guard the 128-slot bank");
+    SongView emptyView;
+    check(emptyView.voiceDisplayName(0).isEmpty() &&
+              emptyView.voiceFamily(0) == VoiceFamily::Sample,
+          "null voicegroup metadata fallbacks changed");
+
+    songview::VoicePickerDialog dialog(&view, QStringLiteral("filter-check"), 4, [](int, int) {});
+    auto *list = dialog.findChild<QListWidget *>();
+    auto *buttonBox = dialog.findChild<QDialogButtonBox *>();
+    auto *square1 = static_cast<QToolButton *>(nullptr);
+    auto *noise = static_cast<QToolButton *>(nullptr);
+    for (QToolButton *button : dialog.findChildren<QToolButton *>()) {
+        if (button->accessibleName() == QStringLiteral("Square 1"))
+            square1 = button;
+        if (button->accessibleName() == QStringLiteral("Noise"))
+            noise = button;
+    }
+    auto *usedOnly = static_cast<QCheckBox *>(nullptr);
+    auto *namedOnly = static_cast<QCheckBox *>(nullptr);
+    for (QCheckBox *box : dialog.findChildren<QCheckBox *>()) {
+        if (box->text() == QStringLiteral("Used in this song"))
+            usedOnly = box;
+        if (box->text() == QStringLiteral("Named voices only"))
+            namedOnly = box;
+    }
+    auto *clearFilters = static_cast<QPushButton *>(nullptr);
+    for (QPushButton *button : dialog.findChildren<QPushButton *>()) {
+        if (button->text() == QStringLiteral("Clear filters"))
+            clearFilters = button;
+    }
+    const auto matchingText = [&dialog] {
+        for (QLabel *label : dialog.findChildren<QLabel *>()) {
+            if (label->text().endsWith(QStringLiteral(" matching voices")))
+                return label->text();
+        }
+        return QString();
+    };
+    const auto availabilityCount = [](const QCheckBox *box) {
+        if (!box || !box->parentWidget())
+            return QString();
+        const QList<QLabel *> labels = box->parentWidget()->findChildren<QLabel *>();
+        return labels.isEmpty() ? QString() : labels.front()->text();
+    };
+    const auto familyDescription = [&dialog](const QString &name) {
+        for (QToolButton *button : dialog.findChildren<QToolButton *>()) {
+            if (button->accessibleName() == name)
+                return button->accessibleDescription();
+        }
+        return QString();
+    };
+    QPushButton *const okButton = buttonBox ? buttonBox->button(QDialogButtonBox::Ok) : nullptr;
+    if (!list || !square1 || !noise || !usedOnly || !namedOnly || !clearFilters || !okButton) {
+        check(false, "facet picker did not expose its filter controls");
+        view.setSong(nullptr, nullptr);
+        return;
+    }
+    check(matchingText() == QStringLiteral("128 matching voices") && list->currentRow() == 4 &&
+              familyDescription(QStringLiteral("All families")) ==
+                  QStringLiteral("All families: 128 voices") &&
+              familyDescription(QStringLiteral("Sample")) == QStringLiteral("Sample: 123 voices") &&
+              square1->accessibleDescription() == QStringLiteral("Square 1: 2 voices") &&
+              familyDescription(QStringLiteral("Square 2")) ==
+                  QStringLiteral("Square 2: 1 voices") &&
+              familyDescription(QStringLiteral("Wave")) == QStringLiteral("Wave: 0 voices") &&
+              familyDescription(QStringLiteral("Noise")) == QStringLiteral("Noise: 1 voices") &&
+              familyDescription(QStringLiteral("Drumkit")) == QStringLiteral("Drumkit: 1 voices") &&
+              familyDescription(QStringLiteral("Synth (Golden Sun)")) ==
+                  QStringLiteral("Synth (Golden Sun): 0 voices") &&
+              availabilityCount(usedOnly) == QStringLiteral("2") &&
+              availabilityCount(namedOnly) == QStringLiteral("4"),
+          "facet picker did not build its static counts and initial selection");
+    square1->click();
+    check(matchingText() == QStringLiteral("2 matching voices") && list->currentRow() == 1 &&
+              !list->item(1)->isHidden() && !list->item(8)->isHidden() && list->item(4)->isHidden(),
+          "family filter did not replace a hidden selection with its first matching row");
+    usedOnly->setChecked(true);
+    namedOnly->setChecked(true);
+    check(matchingText() == QStringLiteral("1 matching voices") && list->currentRow() == 1 &&
+              !list->item(1)->isHidden() && list->item(8)->isHidden() &&
+              square1->accessibleDescription() == QStringLiteral("Square 1: 2 voices") &&
+              availabilityCount(usedOnly) == QStringLiteral("2") &&
+              availabilityCount(namedOnly) == QStringLiteral("4"),
+          "family, used, and named facets did not compose as static-count AND filters");
+    noise->click();
+    check(matchingText() == QStringLiteral("0 matching voices") && list->currentRow() == -1 &&
+              dialog.selectedVoice() == -1 && !okButton->isEnabled() && list->isHidden(),
+          "zero-result facets left an accept-capable hidden voice selection");
+    clearFilters->click();
+    check(matchingText() == QStringLiteral("128 matching voices") && list->currentRow() == 0 &&
+              okButton->isEnabled() && !list->isHidden() && !usedOnly->isChecked() &&
+              !namedOnly->isChecked(),
+          "clearing zero-result facets did not restore the all-slot selection invariant");
+    square1->click();
+    check(list->currentRow() == 1, "family filtering did not replace the all-family selection");
+    clearFilters->click();
+    check(list->currentRow() == 1,
+          "clearing a nonempty filter did not preserve its still-visible replacement selection");
+    view.setSong(nullptr, nullptr);
 }
 
 // What a loader parse of the edited line must produce, built by running the
@@ -411,6 +664,9 @@ int runVgCheck(const QString &projectRoot, const QString &songLabel)
         return 1;
     }
     int failures = 0;
+    checkVoiceFamilyClassifier(failures);
+    checkVisibleVoiceRows(failures);
+    checkVoicePickerFilters(failures);
 
     // ---- voice-type display labels ----
     {

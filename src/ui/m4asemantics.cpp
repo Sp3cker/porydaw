@@ -154,6 +154,30 @@ QString m4aVoiceTypeName(uint8_t type)
     }
 }
 
+VoiceFamily m4aVoiceFamily(const ToneData &tone)
+{
+    // A loaded DirectSound tone whose sample has size 0 is a Golden Sun synth
+    // descriptor, not PCM (m4a_pcm_channel_start; 0x18 = the fix/alt type
+    // bits). Keysplit/drumkit types (0x40/0x80) never satisfy the predicate,
+    // so testing it first is safe for every loaded slot.
+    if ((tone.type & ~0x18) == 0 && tone.wav && tone.wav->size == 0 && tone.wav->data)
+        return VoiceFamily::Synth;
+    if (tone.type == VOICE_KEYSPLIT_ALL)
+        return VoiceFamily::Drumkit;
+    switch (tone.type & VOICE_TYPE_CGB_MASK) {
+    case VOICE_SQUARE_1:
+        return VoiceFamily::Square1;
+    case VOICE_SQUARE_2:
+        return VoiceFamily::Square2;
+    case VOICE_PROGRAMMABLE_WAVE:
+        return VoiceFamily::Wave;
+    case VOICE_NOISE:
+        return VoiceFamily::Noise;
+    default:
+        return VoiceFamily::Sample;
+    }
+}
+
 QString midiKeyName(int key)
 {
     static const char *const names[] = {"C",  "C#", "D",  "D#", "E",  "F",

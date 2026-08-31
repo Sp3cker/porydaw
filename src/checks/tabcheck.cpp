@@ -2,6 +2,7 @@
 #include <QComboBox>
 #include <QDateTime>
 #include <QDial>
+#include <QDialog>
 #include <QDir>
 #include <QEventLoop>
 #include <QFile>
@@ -9,6 +10,7 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QPointer>
 #include <QSettings>
 #include <QSizePolicy>
@@ -37,6 +39,7 @@
 #include "ui/theme/themeruntime.h"
 #include "ui/transportbar.h"
 #include "ui/workspaceui.h"
+#include "voicegroup_loader.h"
 
 // --tabcheck <projectRoot> <songA> <songB>: multi-tab check. Two songs open
 // in tabs through the WorkspaceUi request seams with fully separate documents
@@ -687,7 +690,47 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         return false;
     const SongName reloadName = tabB->name();
     const QPointer<SongTab> reloadingTab = tabB;
-    m_workspace->requestSongOpen(reloadName);
+    const QByteArray previewBaseline = docB->smf().write();
+    const int previewHistoryIndex = docB->undoStack()->index();
+    const int previewHistoryCount = docB->undoStack()->count();
+    const auto previewIdentity = docB->history().currentDocumentIdentity();
+    const bool previewDirty = docB->isDirty();
+    bool pickerOpened = false;
+    bool pickerProjected = false;
+    bool reloadRequested = false;
+    bool readinessDropped = false;
+    bool pickerRejected = false;
+    QPointer<QDialog> picker;
+    const QMetaObject::Connection readinessCancellation =
+        connect(tabB, &SongTab::readinessChanged, this, [&] {
+            if (tabB->isReady())
+                return;
+            readinessDropped = true;
+            pickerRejected = picker && picker->result() == QDialog::Rejected;
+        });
+    QTimer::singleShot(0, [&] {
+        auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+        auto *list = dialog ? dialog->findChild<QListWidget *>() : nullptr;
+        if (!dialog || !list)
+            return;
+        pickerOpened = true;
+        picker = dialog;
+        list->setCurrentRow((list->currentRow() + 1) % VOICEGROUP_SIZE);
+        pickerProjected = docB->smf().write() != previewBaseline;
+        m_workspace->requestSongOpen(reloadName);
+        reloadRequested = true;
+    });
+    tabB->view().editTrackVoice(seedTrack);
+    disconnect(readinessCancellation);
+    const bool restoredBeforeAsyncReload =
+        !tabB->isReady() && docB->smf().write() == previewBaseline &&
+        docB->undoStack()->index() == previewHistoryIndex &&
+        docB->undoStack()->count() == previewHistoryCount &&
+        docB->history().currentDocumentIdentity() == previewIdentity &&
+        docB->isDirty() == previewDirty;
+    check(pickerOpened && pickerProjected && reloadRequested && readinessDropped &&
+              pickerRejected && restoredBeforeAsyncReload,
+          "ready reload did not synchronously reject and restore a live track-voice preview");
     const auto reloadWait = checks::async_wait::waitUntil(
         [this, reloadName, reloadingTab] {
             return reloadingTab && m_workspace->songTabFor(reloadName) == reloadingTab.data();

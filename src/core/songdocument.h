@@ -246,6 +246,14 @@ class SongDocument : public QObject
     void moveLanePoints(const std::vector<LanePointMove> &moves);
     // Same identity-trust rule as moveLanePoints for descriptor lanes.
     void deleteLanePoints(int engineTrack, uint8_t cc, const std::vector<DocLanePoint> &points);
+    // Live voice-change preview for the picker dialogs: the session previews
+    // DOC_CC_VOICE program events at one tick outside undo history (history
+    // identity, stack state, and dirty state stay put), restores the exact
+    // pre-session SMF bytes on cancel or destruction, and commits the
+    // accepted result as zero or one ordinary history entry. Inactive when
+    // the engine track is unmapped or the SMF has no tracks.
+    class VoiceChangeLiveSession;
+    VoiceChangeLiveSession beginVoiceChangeLiveSession(int engineTrack, uint64_t tick);
     void applyTempoEdit(const TempoEdit &edit);
     // Removes raw events and edits the global tempo stream as one undoable
     // mutation. Both payloads refer to the current document state.
@@ -467,6 +475,9 @@ class SongDocument : public QObject
         SmfTrack trackData;           // InsertTrack: content; RemoveTrack: recorded on apply
     };
     class TimeEditor;
+    // One accepted live voice change; defined beside the lane operations in
+    // songdocument_xcmd.cpp.
+    class VoiceChangeCommand;
     struct TrackMapState {
         int smfTrackCount = 0;
         std::vector<int> engineToSmf;
@@ -591,4 +602,38 @@ class SongDocument : public QObject
     std::vector<int> m_engineToSmf;       // engine track -> SMF track
     std::vector<uint8_t> m_engineChannel; // engine track -> MIDI channel
     int m_trackBudget = track_limits::kHardwareCapacity;
+};
+
+// The live voice-change preview session returned by
+// beginVoiceChangeLiveSession(): non-copyable, movable, picker-driven.
+// Destroying an active, uncommitted session restores the exact pre-session
+// program-event state; state lives in the out-of-line Impl.
+class SongDocument::VoiceChangeLiveSession
+{
+  public:
+    VoiceChangeLiveSession();
+    ~VoiceChangeLiveSession();
+    VoiceChangeLiveSession(VoiceChangeLiveSession &&) noexcept;
+    VoiceChangeLiveSession &operator=(VoiceChangeLiveSession &&) noexcept;
+
+    VoiceChangeLiveSession(const VoiceChangeLiveSession &) = delete;
+    VoiceChangeLiveSession &operator=(const VoiceChangeLiveSession &) = delete;
+
+    bool active() const;
+    // Projects the row's program event at the target tick immediately. No-op
+    // when the session is inactive, the accepted value falls outside
+    // [0, 127], the already-previewed value is selected again, or an
+    // external mutation took the document revision.
+    void select(int voice);
+    // Commits the accepted value as zero or one ordinary history entry and
+    // deactivates the session. Same guards as select().
+    void commit(int finalVoice);
+
+  private:
+    friend class SongDocument;
+
+    struct Impl;
+    explicit VoiceChangeLiveSession(std::unique_ptr<Impl> impl);
+
+    std::unique_ptr<Impl> m_impl;
 };

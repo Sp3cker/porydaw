@@ -1,8 +1,10 @@
+#include <QApplication>
+#include <QCheckBox>
 #include <QCoreApplication>
 #include <QDialog>
-#include <QDialogButtonBox>
 #include <QElapsedTimer>
 #include <QImage>
+#include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QPixmap>
@@ -10,6 +12,7 @@
 #include <QRegion>
 #include <QThread>
 #include <QTimer>
+#include <QToolButton>
 #include <QWidget>
 #include <QWindow>
 #include <algorithm>
@@ -246,33 +249,55 @@ int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel)
         fail("track header row for the selected track was not found");
     } else {
         const int undoCommands = document.undoStack()->count();
+        const int undoIndex = document.undoStack()->index();
         const QPoint voicePosition(row->width() / 2, 30);
         QTimer dialogPoll;
         dialogPoll.setInterval(0);
         bool pickerSeen = false;
-        bool searchFilteredList = false;
+        bool pickerIsParentedUnderSongView = false;
+        bool focusedVoiceList = false;
+        bool pickerHasNoTextFilter = false;
+        bool pickerHasExpectedFacets = false;
+        bool pickerHasMatchingVoicesLabel = false;
+        bool pickerHasClearFilters = false;
         QObject::connect(&dialogPoll, &QTimer::timeout, [&] {
-            auto *dialog = view.findChild<QDialog *>();
+            auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
             if (!dialog)
                 return;
             pickerSeen = true;
-            auto *searchField = dialog->findChild<QLineEdit *>();
+            pickerIsParentedUnderSongView = dialog->parentWidget() == &view;
             auto *voiceList = dialog->findChild<QListWidget *>();
-            auto *dialogButtons = dialog->findChild<QDialogButtonBox *>();
-            if (searchField && voiceList && dialogButtons && voiceList->count() == 128) {
-                searchField->setText(QStringLiteral("127  "));
-                searchFilteredList =
-                    voiceList->item(0)->isHidden() && !voiceList->item(127)->isHidden();
-                searchField->clear();
-                searchFilteredList &= !voiceList->item(0)->isHidden();
-                voiceList->setCurrentRow(127);
-                searchField->setText(QStringLiteral("1"));
-                searchFilteredList &= voiceList->currentRow() == 1 &&
-                                      !voiceList->item(1)->isHidden() &&
-                                      !voiceList->item(127)->isHidden() &&
-                                      dialogButtons->button(QDialogButtonBox::Ok)->isEnabled();
-                searchField->clear();
-                searchFilteredList &= voiceList->currentRow() == 0;
+            focusedVoiceList =
+                voiceList && voiceList->count() == 128 &&
+                (dialog->focusWidget() == voiceList || QApplication::focusWidget() == voiceList);
+            pickerHasNoTextFilter = !dialog->findChild<QLineEdit *>();
+            bool allFamilies = false;
+            for (QToolButton *button : dialog->findChildren<QToolButton *>()) {
+                if (button->accessibleName() == QStringLiteral("All families")) {
+                    allFamilies = true;
+                    break;
+                }
+            }
+            bool usedOnly = false;
+            bool namedOnly = false;
+            for (QCheckBox *box : dialog->findChildren<QCheckBox *>()) {
+                if (box->text() == QStringLiteral("Used in this song"))
+                    usedOnly = true;
+                if (box->text() == QStringLiteral("Named voices only"))
+                    namedOnly = true;
+            }
+            pickerHasExpectedFacets = allFamilies && usedOnly && namedOnly;
+            for (QLabel *label : dialog->findChildren<QLabel *>()) {
+                if (label->text().endsWith(QStringLiteral(" matching voices"))) {
+                    pickerHasMatchingVoicesLabel = true;
+                    break;
+                }
+            }
+            for (QPushButton *button : dialog->findChildren<QPushButton *>()) {
+                if (button->text() == QStringLiteral("Clear filters")) {
+                    pickerHasClearFilters = true;
+                    break;
+                }
             }
             dialog->reject();
         });
@@ -286,13 +311,24 @@ int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel)
 
         if (!pickerSeen)
             fail("voice-line double-click did not open the voice picker");
-        if (!searchFilteredList)
-            fail("voice picker search did not select and restore its first match");
+        if (!pickerIsParentedUnderSongView)
+            fail("voice picker was not parented under SongView");
+        if (!focusedVoiceList)
+            fail("voice picker did not expose a focused 128-slot list");
+        if (!pickerHasNoTextFilter)
+            fail("voice picker retained the removed text filter");
+        if (!pickerHasExpectedFacets)
+            fail("voice picker did not expose its expected facet controls");
+        if (!pickerHasMatchingVoicesLabel)
+            fail("voice picker did not expose its matching-voices label");
+        if (!pickerHasClearFilters)
+            fail("voice picker did not expose its Clear filters button");
         const auto *renameEditor = view.findChild<QLineEdit *>(QStringLiteral("trackRenameEditor"));
         if (renameEditor && !renameEditor->isHidden())
             fail("voice-line double-click opened the rename editor");
-        if (document.undoStack()->count() != undoCommands)
-            fail("voice picker navigation changed the undo stack");
+        if (document.undoStack()->count() != undoCommands ||
+            document.undoStack()->index() != undoIndex)
+            fail("rejecting voice picker changed undo history");
     }
 
     view.close();

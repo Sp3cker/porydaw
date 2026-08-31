@@ -378,6 +378,10 @@ void SongView::disconnectDocument()
 
 void SongView::prepareForSongReplacement()
 {
+    // First, always: an owned-modal loop (a live voice picker) rejects
+    // synchronously here, so its cleanup restores the preview before the
+    // document underneath it is replaced.
+    cancelTransientInput();
     if (m_roll)
         m_roll->cancelPitchBendPopup();
     cancelActiveInteractions();
@@ -440,6 +444,9 @@ void SongView::cancelTransientInput()
 void SongView::setDocument(SongDocument *document)
 {
     if (m_document != document) {
+        // First, always: reject an owned modal synchronously so its cleanup
+        // restores any preview before disconnectDocument() swaps the SMF.
+        cancelTransientInput();
         if (m_roll)
             m_roll->cancelPitchBendPopup();
         cancelActiveInteractions();
