@@ -5,7 +5,7 @@
   voicegroup entries when the reliable data is slot, name, m4a family, and
   whether the song uses the slot?
   Three variants switch with ?variant=facets|families|map. Run:
-  open src/ui/songview/voicepicker-filter-prototype.html
+  open docs/voicepicker-filter-prototype.html
 -->
 <html lang="en">
 <head>
@@ -542,7 +542,7 @@
     function filtersLabel(filter) {
       const terms = [];
       terms.push(filter.family === "all" ? "all families" : familyById[filter.family].label);
-      if (filter.usedOnly) terms.push("This Voicegroup");
+      if (filter.usedOnly) terms.push("Used in this song");
       if (filter.namedOnly) terms.push("named only");
       return terms.join(" · ");
     }
@@ -572,7 +572,7 @@
           <span class="slot">${slotText(item.slot)}</span>
           <span class="voice-name">${item.name || `<span class="unnamed">${familyOf(item).label}</span>`}</span>
           ${compact ? "" : `<span class="voice-tag">${familyOf(item).label}</span>`}
-          ${compact ? "" : item.used ? `<span class="used-tag">This Voicegroup</span>` : `<span aria-hidden="true"></span>`}
+          ${compact ? "" : item.used ? `<span class="used-tag">Used in this song</span>` : `<span aria-hidden="true"></span>`}
           <span class="audition${playing}" data-action="audition" data-slot="${item.slot}" title="Press and hold to audition">▶</span>
         </button>`;
     }
@@ -607,7 +607,7 @@
             </section>
             <section class="filter-block">
               <h3>Availability</h3>
-              <label class="toggle-row"><input type="checkbox" data-action="facet-used" ${filter.usedOnly ? "checked" : ""}> This Voicegroup <span class="count">${voices.filter((item) => item.used).length}</span></label>
+              <label class="toggle-row"><input type="checkbox" data-action="facet-used" ${filter.usedOnly ? "checked" : ""}> Used in this song <span class="count">${voices.filter((item) => item.used).length}</span></label>
               <label class="toggle-row"><input type="checkbox" data-action="facet-named" ${filter.namedOnly ? "checked" : ""}> Named voices only <span class="count">${voices.filter((item) => item.name).length}</span></label>
             </section>
           </aside>
@@ -637,8 +637,8 @@
       const results = filterVoices({ family: filter.family });
       return `
         <div class="family-layout">
-          <aside class="now-playing" aria-label="Voices in this Voicegroup">
-            <h2>This Voicegroup</h2>
+          <aside class="now-playing" aria-label="Voices used in this song">
+            <h2>Used in this song</h2>
             <div class="now-playing-list">
               ${songVoices.map((item) => `
                 <button class="song-voice${item.slot === state.selected ? " selected" : ""}" style="${familyStyle(item)}" type="button" data-action="select" data-slot="${item.slot}" aria-label="${slotText(item.slot)} ${familyOf(item).label}: ${visibleName(item)}">
@@ -687,10 +687,10 @@
           <section class="slot-map-panel">
             <header class="map-tools">
               <h2>See the whole voicegroup before narrowing it</h2>
-              <p>Family colour makes the 128 slots legible; amber dots mark slots in this Voicegroup. Chips dim non-matches without losing slot context.</p>
+              <p>Family colour makes the 128 slots legible; amber dots mark slots used in this song. Chips dim non-matches without losing slot context.</p>
               <div class="map-tool-row">
                 ${mapChip("all")}${families.map((family) => mapChip(family.id)).join("")}
-                <label class="toggle-row"><input type="checkbox" data-action="map-used" ${filter.usedOnly ? "checked" : ""}> This Voicegroup</label>
+                <label class="toggle-row"><input type="checkbox" data-action="map-used" ${filter.usedOnly ? "checked" : ""}> Used in this song</label>
                 <label class="toggle-row"><input type="checkbox" data-action="map-named" ${filter.namedOnly ? "checked" : ""}> Named</label>
               </div>
             </header>
@@ -704,7 +704,7 @@
               <h2>Selected voice</h2>
               <p class="selected-number">${slotText(selected.slot)} · ${familyOf(selected).label}</p>
               <p class="selected-name">${visibleName(selected)}</p>
-              ${selected.used ? `<span class="used-tag">This Voicegroup</span>` : `<span class="voice-tag" style="--family:${familyOf(selected).color}">${familyOf(selected).label}</span>`}
+              ${selected.used ? `<span class="used-tag">Used in this song</span>` : `<span class="voice-tag" style="--family:${familyOf(selected).color}">${familyOf(selected).label}</span>`}
             </section>
             <section class="inspector-filter"><h3>${results.length} highlighted</h3><p>The grid preserves slot position. The list below is the narrowed, keyboard-friendly result set.</p></section>
             ${voiceList(results, true)}
