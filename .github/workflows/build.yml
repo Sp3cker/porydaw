@@ -52,8 +52,8 @@ jobs:
   build-native:
     strategy:
       fail-fast: false
-    matrix:
-      os: [windows-latest, macos-latest]
+      matrix:
+        os: [windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
