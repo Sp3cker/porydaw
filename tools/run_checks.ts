@@ -44,7 +44,7 @@ const decoder = new TextDecoder();
 
 function usage(): never {
   console.error(
-    "usage: tools/run_checks.ts <porydaw-checks-binary> [--all|--no-windowing-checks] [--reporter=quiet|verbose] [--filter=<name>] [--pool=<n>]",
+    "usage: tools/run_checks.ts <porydaw-checks-binary> [--all|--no-windowing-checks] [--reporter=quiet|verbose] [--filter=<name>] [--exclude=<name>] [--pool=<n>]",
   );
   console.error("  --all (default): all checks");
   console.error(
@@ -53,6 +53,9 @@ function usage(): never {
   console.error("  --reporter=quiet|verbose (default: quiet)");
   console.error(
     "  --filter=<name>: only run harnesses whose name contains <name> (repeatable, substring)",
+  );
+  console.error(
+    "  --exclude=<name>: skip the harness with this exact name (repeatable)",
   );
   console.error("  --verbose: alias for --reporter=verbose");
   console.error(
@@ -347,6 +350,7 @@ if (Deno.args.length < 1) {
 let selection: string = "--all";
 let reporterMode: "quiet" | "verbose" = "quiet";
 const filters: string[] = [];
+const exclusions: string[] = [];
 let unifiedPoolSize = MAX_PARALLEL_CHECKS;
 for (let i = 1; i < Deno.args.length; i++) {
   const arg = Deno.args[i];
@@ -378,6 +382,14 @@ for (let i = 1; i < Deno.args.length; i++) {
     const value = Deno.args[++i];
     if (!value) usage();
     filters.push(value);
+  } else if (arg.startsWith("--exclude=")) {
+    const value = arg.slice("--exclude=".length);
+    if (value.length === 0) usage();
+    exclusions.push(value);
+  } else if (arg === "--exclude") {
+    const value = Deno.args[++i];
+    if (!value) usage();
+    exclusions.push(value);
   } else {
     usage();
   }
@@ -484,6 +496,20 @@ if (filters.length > 0) {
     );
     Deno.exit(2);
   }
+}
+if (exclusions.length > 0) {
+  const knownNames = new Set(checkManifest.map((check) => check.name));
+  const unknown = exclusions.filter((name) => !knownNames.has(name));
+  if (unknown.length > 0) {
+    console.error(
+      `run_checks: no harness matches exclusion: ${unknown.join(", ")}`,
+    );
+    Deno.exit(2);
+  }
+  const excludedNames = new Set(exclusions);
+  runnableChecks = runnableChecks.filter((check) =>
+    !excludedNames.has(check.name)
+  );
 }
 reporter = createReporter(reporterMode, runnableChecks.length);
 try {

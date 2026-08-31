@@ -135,8 +135,9 @@ jobs:
   # The harness sweep on an AddressSanitizer build stages each check's declared
   # fixture files in a private scratch directory. Qt Quick uses its software
   # backend so offscreen GUI checks do not require a graphics device. Native
-  # window paint/timing checks stay in the normal verification sweep because
-  # sanitizer overhead changes their timing and rendered pixels. Samplecheck
+  # window paint/timing checks and Qt Quick timeline harnesses stay in the
+  # normal verification sweep because sanitizer overhead changes their timing
+  # and the container cannot render the timeline scene reliably. Samplecheck
   # runs without its optional corpus pass.
   asan-checks:
     runs-on: ubuntu-latest
@@ -167,3 +168,6 @@ jobs:
           --allow-env=ASAN_OPTIONS,DISPLAY,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS
           tools/run_checks.ts build-asan/porydaw_checks
           --no-windowing-checks --pool=1
+          --exclude=vgsavecheck --exclude=tabcheck --exclude=onboardcheck
+          --exclude=sessioncheck --exclude=editor-drawer
+          --exclude=rendering-playhead
