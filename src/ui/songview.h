@@ -25,6 +25,7 @@
 #include "ui/editordrawer/drawerpage.h"
 #include "ui/editorviewstate.h"
 #include "ui/layout.h"
+#include "core/m4asemantics.h"
 #include "ui/pitchprojection.h"
 #include "ui/songview/clip.h"
 #include "ui/songview/editorselectionmodel.h"
@@ -361,6 +362,11 @@ class SongView : public QObject
     int currentProgram(int track) const;
     QString instrumentLabel(int track) const; // "042 name (type)" from the voicegroup
     QString voiceShortName(uint8_t program) const;
+    // Picker snapshot metadata. uint8_t also admits 128..255, so both
+    // accessors guard the 128-slot LoadedVoiceGroup and return their total
+    // fallbacks (empty name and Sample) for an unavailable/out-of-range slot.
+    QString voiceDisplayName(uint8_t program) const;
+    VoiceFamily voiceFamily(uint8_t program) const;
 
     // Jump-from-context: surface the program in the voicegroup dock (the
     // main window raises it and selects the slot via revealVoiceRequested).
@@ -379,7 +385,8 @@ class SongView : public QObject
     // current document identity, and document revision must still match at
     // acceptance; otherwise accepted is not called.
     void requestVoicePicker(const QString &title, int initialVoice, QObject *context,
-                            std::function<void(int)> accepted, songview::TimelineBand origin);
+                            std::function<void(int)> accepted, songview::TimelineBand origin,
+                            std::function<void(int)> selectionChanged = {});
     void cancelVoicePicker(bool restoreFocus);
     // Context-scoped hard cancellation: ends only a picker whose staged
     // context is this caller, leaving a foreign owner's picker untouched.
@@ -387,6 +394,12 @@ class SongView : public QObject
     // Track-header entry point: re-pick the voice governing the track (its
     // first program change), inserting one at tick 0 if the track has none.
     void editTrackVoice(int track);
+    // Live program-change picker seam for track and drawer callers. Browsing
+    // projects through a VoiceChangeLiveSession; accept commits and cancel
+    // restores through that session's scoped lifetime.
+    void editVoiceChange(int track, uint64_t tick, int initialVoice, const QString &title,
+                         QObject *context = nullptr,
+                         songview::TimelineBand origin = songview::TimelineBand::VoiceChanges);
 
     // Track create/duplicate/delete/reorder entry points. The complete
     // TrackRemap supplied by SongDocument re-addresses every persistent
@@ -895,6 +908,7 @@ class SongView : public QObject
         QPointer<SongDocument> document;
         uint64_t documentRevision = 0;
         std::function<void(int)> accepted;
+        std::function<void(int)> selectionChanged;
         songview::TimelineBand origin = songview::TimelineBand::Roll;
     };
     void clearVoicePicker(bool restoreFocus);

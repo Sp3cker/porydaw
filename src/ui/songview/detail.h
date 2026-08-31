@@ -4,11 +4,16 @@
 #include <QFont>
 #include <QPoint>
 #include <QRectF>
+#include <QSet>
+#include <QStringList>
 #include <QWheelEvent>
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
+#include "core/m4asemantics.h"
 #include "ui/songview/grid.h"
 extern "C" {
 #include "voicegroup_loader.h"
@@ -50,6 +55,17 @@ KeyboardRowSource keyboardRowSource(const LoadedVoiceGroup *bank, const MidiTime
 
 inline constexpr int kVoiceAuditionKey = 60; // middle C, matching the voicegroup browser
 inline constexpr int kVoiceAuditionVel = 112;
+
+struct VisibleRows {
+    std::array<bool, VOICEGROUP_SIZE> rows{};
+    int matchingCount = 0;
+    int nextRow = -1;
+};
+
+VisibleRows visibleVoiceRows(const std::array<VoiceFamily, VOICEGROUP_SIZE> &families,
+                             const QStringList &displayNames, const QSet<int> &usedSlots,
+                             std::optional<VoiceFamily> family, bool usedOnly, bool namedOnly,
+                             int currentRow);
 
 qreal logicalPhysicalPixel(qreal dpr);
 QPoint wheelDelta(const QWheelEvent *event);

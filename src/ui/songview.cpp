@@ -388,7 +388,8 @@ songview::TimelineQuickView *SongView::quickView() const noexcept
 }
 
 void SongView::requestVoicePicker(const QString &title, int initialVoice, QObject *context,
-                                  std::function<void(int)> accepted, TimelineBand origin)
+                                  std::function<void(int)> accepted, TimelineBand origin,
+                                  std::function<void(int)> selectionChanged)
 {
     songview::TimelineQuickView *const quick = quickView();
     songview::QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
@@ -427,6 +428,7 @@ void SongView::requestVoicePicker(const QString &title, int initialVoice, QObjec
     pending.document = document;
     pending.documentRevision = documentRevision;
     pending.accepted = std::move(accepted);
+    pending.selectionChanged = std::move(selectionChanged);
     pending.origin = origin;
     m_pendingVoicePicker = std::move(pending);
 
@@ -440,6 +442,21 @@ void SongView::requestVoicePicker(const QString &title, int initialVoice, QObjec
         if (m_voicePicker == picker)
             cancelVoicePicker(/*restoreFocus=*/true);
     });
+    connect(picker, &songview::VoicePicker::selectionChanged, this,
+            [this, picker](int program) {
+                if (m_voicePicker != picker || !m_pendingVoicePicker ||
+                    !m_pendingVoicePicker->selectionChanged || !m_pendingVoicePicker->context ||
+                    !m_pendingVoicePicker->document ||
+                    &m_document != m_pendingVoicePicker->document ||
+                    m_document.revision() != m_pendingVoicePicker->documentRevision) {
+                    return;
+                }
+                m_pendingVoicePicker->selectionChanged(program);
+                if (m_voicePicker == picker && m_pendingVoicePicker &&
+                    m_pendingVoicePicker->document == &m_document) {
+                    m_pendingVoicePicker->documentRevision = m_document.revision();
+                }
+            });
     connect(picker, &songview::VoicePicker::accepted, this, [this, picker](int program) {
         if (m_voicePicker != picker || !m_pendingVoicePicker)
             return;
@@ -571,6 +588,7 @@ bool SongView::advanceTrackActivity(const TrackActivityLevels &levels, float ela
 
 void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voicegroup)
 {
+    cancelVoicePicker(/*restoreFocus=*/false);
     if (m_roll) {
         m_roll->cancelVelocityPromptWithoutFocus();
         m_roll->cancelPitchBendPopup();
@@ -743,6 +761,7 @@ void SongView::suspendDocumentObservation()
 
 void SongView::prepareForSongReplacement()
 {
+    cancelVoicePicker(/*restoreFocus=*/false);
     if (m_roll) {
         m_roll->cancelVelocityPromptWithoutFocus();
         m_roll->cancelPitchBendPopup();

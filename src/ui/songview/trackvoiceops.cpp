@@ -2,6 +2,7 @@
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
+#include "core/m4asemantics.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
@@ -11,6 +12,7 @@
 #include "ui/theme/trackidentitycolors.h"
 
 #include <QColor>
+
 #include <QStringList>
 
 #include <algorithm>
@@ -19,6 +21,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -210,6 +213,18 @@ QString SongView::voiceShortName(uint8_t program) const
         return type.isEmpty() ? tr("Voice") : type;
     return QStringLiteral("%1 (%2)").arg(name, type);
 }
+QString SongView::voiceDisplayName(uint8_t program) const
+{
+    if (!m_voicegroup || program >= VOICEGROUP_SIZE)
+        return QString();
+    return QString::fromUtf8(m_voicegroup->voiceNames[program]).trimmed();
+}
+VoiceFamily SongView::voiceFamily(uint8_t program) const
+{
+    if (!m_voicegroup || program >= VOICEGROUP_SIZE)
+        return VoiceFamily::Sample;
+    return m4aVoiceFamily(m_voicegroup->voices[program]);
+}
 DrawerPageVoiceContext SongView::voiceContext(Tick tick) const
 {
     const int primaryTrack = m_selectionModel.primaryTrack();
@@ -256,6 +271,17 @@ QSet<int> SongView::usedVoices() const
         used.insert(vc.program);
     return used;
 }
+void SongView::editVoiceChange(int track, uint64_t tick, int initialVoice, const QString &title,
+                               QObject *context, TimelineBand origin)
+{
+    auto session = std::make_shared<SongDocument::VoiceChangeLiveSession>(
+        m_document.beginVoiceChangeLiveSession(track, tick));
+    if (!session->active())
+        return;
+    requestVoicePicker(title, initialVoice, context ? context : this,
+                       [session](int voice) { session->commit(voice); }, origin,
+                       [session](int voice) { session->select(voice); });
+}
 void SongView::editTrackVoice(int track)
 {
     if (track < 0 || track > 15)
@@ -270,25 +296,9 @@ void SongView::editTrackVoice(int track)
             break;
         target = &pt;
     }
-    const int initial = target ? target->value : 0;
-    requestVoicePicker(
-        tr("Track %1 voice").arg(track + 1), initial, this,
-        [this, track, initial](int voice) {
-            const std::vector<DocLanePoint> current = m_document.lanePoints(track, DOC_CC_VOICE);
-            const DocLanePoint *currentTarget = nullptr;
-            for (const DocLanePoint &pt : current) {
-                if (currentTarget && pt.tick != currentTarget->tick)
-                    break;
-                currentTarget = &pt;
-            }
-            if (!currentTarget) {
-                m_document.addLanePoint(track, DOC_CC_VOICE, 0, voice);
-            } else if (voice != initial) {
-                m_document.moveLanePoints(
-                    {{track, DOC_CC_VOICE, *currentTarget, currentTarget->tick, voice}});
-            }
-        },
-        TimelineBand::TrackHeaders);
+    const int initial = target ? target->value : std::max(0, currentProgram(track));
+    editVoiceChange(track, target ? target->tick : 0, initial,
+                    tr("Track %1 voice").arg(track + 1), this, TimelineBand::TrackHeaders);
 }
 void SongView::renameTrack(int track)
 {

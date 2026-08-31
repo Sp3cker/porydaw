@@ -133,6 +133,64 @@ PromptCard {
             }
         }
     }
+    Text {
+        objectName: "voicePickerMatchingCount"
+        color: appearance.text
+        font: appearance.font
+        text: qsTr("%1 matching voices").arg(bridge.matchingCount)
+        renderType: Text.NativeRendering
+    }
+
+    Flow {
+        width: searchFrame.implicitWidth
+        implicitHeight: childrenRect.height
+        spacing: appearance.spacing
+
+        Repeater {
+            id: voicePickerFamilyRepeater
+            model: bridge.familyFacets
+
+            PromptButton {
+                required property var modelData
+                objectName: "voicePickerFamily_" + modelData.index
+                appearance: prompt.appearance
+                claimsShortcuts: false
+                text: modelData.label + "  " + modelData.count
+                color: bridge.selectedFamily === modelData.index
+                       ? appearance.pressedBackground : appearance.buttonBackground
+                onActivated: bridge.selectedFamily = modelData.index
+            }
+        }
+    }
+
+    Row {
+        spacing: appearance.spacing
+
+        PromptButton {
+            objectName: "voicePickerUsedOnly"
+            appearance: prompt.appearance
+            claimsShortcuts: false
+            text: qsTr("Used in this song")
+            color: bridge.usedOnly ? appearance.pressedBackground : appearance.buttonBackground
+            onActivated: bridge.usedOnly = !bridge.usedOnly
+        }
+        PromptButton {
+            objectName: "voicePickerNamedOnly"
+            appearance: prompt.appearance
+            claimsShortcuts: false
+            text: qsTr("Named voices only")
+            color: bridge.namedOnly ? appearance.pressedBackground : appearance.buttonBackground
+            onActivated: bridge.namedOnly = !bridge.namedOnly
+        }
+        PromptButton {
+            objectName: "voicePickerClearFilters"
+            appearance: prompt.appearance
+            claimsShortcuts: false
+            text: qsTr("Clear filters")
+            onActivated: bridge.clearFilters()
+        }
+    }
+
 
     ListView {
         id: list
@@ -158,7 +216,9 @@ PromptCard {
             function onCurrentRowChanged() {
                 list.currentIndex = bridge.currentRow
             }
-            function onFilterChanged() {
+            function onFiltersChanged() {
+                if (search.text !== bridge.filter)
+                    search.text = bridge.filter
                 if (list.currentIndex >= 0)
                     list.positionViewAtIndex(list.currentIndex, ListView.Center)
             }

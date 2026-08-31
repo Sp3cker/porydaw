@@ -222,44 +222,9 @@ void VoiceChangeArea::openPickerForTarget(const PendingVoiceMenu &target)
     SongDocument &live = m_owner.document();
     if (primaryTrack() != target.track || live.revision() != target.revision)
         return;
-    // Serial snapshot taken before the signal-producing open: acceptance is
-    // only live while nothing hard-cancelled this band's handed-off picker.
-    const uint64_t pickerSerial = m_pickerSerial;
-    QPointer<VoiceChangeArea> self(this);
-    m_owner.requestVoicePicker(
-        target.marker ? tr("Change voice") : tr("Insert voice change"),
-        std::max(0, target.initialVoice), this,
-        [this, self, target, pickerSerial](int selectedVoice) {
-            // Self first: a late acceptance must not dereference this band
-            // through the raw pointer before it is proven alive.
-            if (!self)
-                return;
-            SongDocument &document = m_owner.document();
-            if (primaryTrack() != target.track || document.revision() != target.revision)
-                return;
-            // Irreversible surface fence: the serial advanced at every hard
-            // cancellation boundary (hidden, window deactivated, detached,
-            // session replaced). A hide→show or detach→reattach before
-            // acceptance cannot resurrect the captured pick — a current-
-            // state check alone would pass again after the band returns.
-            if (m_pickerSerial != pickerSerial)
-                return;
-            DocLanePoint existing;
-            if (document.findLanePoint(target.track, DOC_CC_VOICE, target.tick, &existing)) {
-                if (existing.value == selectedVoice)
-                    return;
-                document.moveLanePoints(
-                    {{target.track, DOC_CC_VOICE, existing, target.tick, selectedVoice}});
-            } else {
-                document.addLanePoint(target.track, DOC_CC_VOICE, target.tick, selectedVoice);
-            }
-            // The mutation's synchronous document fan-out can tear this band
-            // down before the refresh runs.
-            if (!self)
-                return;
-            m_owner.refreshAllDrawerPages(DrawerScope::Content);
-        },
-        songview::TimelineBand::VoiceChanges);
+    m_owner.editVoiceChange(target.track, target.tick, std::max(0, target.initialVoice),
+                            target.marker ? tr("Change voice") : tr("Insert voice change"), this,
+                            songview::TimelineBand::VoiceChanges);
 }
 
 void VoiceChangeArea::handleMenuAction(int actionId)
