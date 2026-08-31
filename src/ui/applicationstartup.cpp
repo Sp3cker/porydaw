@@ -13,6 +13,14 @@
 #include <QStyleHints>
 #include <QWidget>
 
+#ifdef Q_OS_WIN
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <dwmapi.h>
+#include <windows.h>
+#endif
+
 namespace ui {
 
 void installOffscreenSystemFont(QApplication &application)
@@ -71,23 +79,28 @@ bool initializeApplication(QApplication &application)
     return true;
 }
 
-void showCoveredWhileRestoring(QWidget &window, const std::function<void()> &restore)
+void showPreparedWindow(QWidget &window)
 {
-    QWidget cover(&window);
-    cover.setAutoFillBackground(true);
-    cover.setPalette(window.palette());
-    cover.show();
+#ifdef Q_OS_WIN
+    // Qt's Windows backend consumes WM_ERASEBKGND without painting it. Keep
+    // DWM from presenting that uninitialized native surface while QWidget and
+    // QQuickWidget prepare the first real backing-store frame.
+    constexpr DWORD kDwmwaCloak = 13;
+    const HWND hwnd = reinterpret_cast<HWND>(window.winId());
+    const BOOL cloak = TRUE;
+    const bool cloaked = SUCCEEDED(DwmSetWindowAttribute(hwnd, kDwmwaCloak, &cloak, sizeof(cloak)));
+#endif
+
     window.show();
-    // Sized only after show(): a restored maximized state grows the window
-    // during show(), and the cover must span the final geometry.
-    cover.setGeometry(window.rect());
-    cover.raise();
-    // One event-loop pass paints the cover now, before restore blocks; user
-    // input stays queued so nothing acts on the half-restored session.
     QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-    restore();
-    // Falling out of scope removes the cover; the restored UI paints in
-    // app.exec()'s first frame.
+
+#ifdef Q_OS_WIN
+    if (cloaked) {
+        const BOOL uncloak = FALSE;
+        if (SUCCEEDED(DwmSetWindowAttribute(hwnd, kDwmwaCloak, &uncloak, sizeof(uncloak))))
+            DwmFlush();
+    }
+#endif
 }
 
 } // namespace ui

@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 
 namespace lyt = ::layout;
 using Space = lyt::Space;
@@ -284,6 +285,10 @@ void PianoRollQuickView::rebuildGrid()
         (std::max)(0.0, roll.m_sv->tickAtContentX(plot.left() - keyboardWidth - roundingMargin));
     const double t1 =
         roll.m_sv->tickAtContentX(plot.right() - pixel - keyboardWidth + roundingMargin) + 1.0;
+    // During the first narrow resize pass the plot can end before the keyboard.
+    // Keep its negative/reversed tick range from converting to UINT64_MAX below.
+    if (!std::isfinite(t0) || !std::isfinite(t1) || t1 <= t0)
+        return;
     const std::array<QColor, 6> gridColors = {gridLineColor(125), gridLineColor(100),
                                               gridLineColor(75),  gridLineColor(160),
                                               gridLineColor(200), gridLineColor()};

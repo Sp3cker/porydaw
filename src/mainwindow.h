@@ -97,11 +97,6 @@ class MainWindow : public QMainWindow
     // redirected.
     bool runPolyGateCheck();
 
-    // Reopens the last session's project and open song tabs, if they still
-    // exist. Called after show() on interactive launches only, so the
-    // harnesses never inherit (or overwrite) the user's session.
-    void restoreSession();
-
   signals:
     // Observable completion boundary for editor-view persistence: emitted
     // once per semantic hub change, after the store mutation.

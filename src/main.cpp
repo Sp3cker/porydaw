@@ -17,6 +17,6 @@ int main(int argc, char *argv[])
         return 0;
     }
     auto window = MainWindow{};
-    ui::showCoveredWhileRestoring(window, [&window] { window.restoreSession(); });
+    ui::showPreparedWindow(window);
     return application.exec();
 }

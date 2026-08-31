@@ -224,17 +224,6 @@ MainWindow::~MainWindow()
     m_projectWorkspace.reset();
 }
 
-void MainWindow::restoreSession()
-{
-    // Startup restoration is ProjectWorkspace's one-shot now: its
-    // constructor queues the saved recipe's open (and, once it publishes
-    // Ready, the saved songs) for the next event-loop turn — right after
-    // this post-show hook runs, so the cover in showCoveredWhileRestoring
-    // hides only the first painted frame. Harnesses redirect QSettings
-    // before constructing MainWindow, so their recipe reads empty and no
-    // user session is inherited.
-}
-
 void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
 {
     // Every user-facing action registers with the keymap so its shortcut is

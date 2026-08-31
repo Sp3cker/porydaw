@@ -135,12 +135,14 @@ void TimeAxis::forEachGridLine(uint64_t tickBegin, uint64_t tickEnd,
         const uint64_t clampedEnd = (std::min)(segEnd, tickEnd);
         if (seg.start < clampedEnd) {
             uint64_t k = tickBegin > seg.start ? (tickBegin - seg.start) / seg.beatTicks : 0;
-            for (uint64_t tick = seg.start + k * seg.beatTicks; tick < clampedEnd;
-                 tick += seg.beatTicks, k++) {
-                if (tick < tickBegin)
-                    continue;
-                visitor(tick, k % seg.beatsPerBar == 0, bar + int(k / seg.beatsPerBar),
-                        int(k % seg.beatsPerBar) + 1);
+            for (uint64_t tick = seg.start + k * seg.beatTicks; tick < clampedEnd;) {
+                if (tick >= tickBegin)
+                    visitor(tick, k % seg.beatsPerBar == 0, bar + int(k / seg.beatsPerBar),
+                            int(k % seg.beatsPerBar) + 1);
+                if (seg.beatTicks >= clampedEnd - tick)
+                    break;
+                tick += seg.beatTicks;
+                ++k;
             }
         }
         if (next >= sigs.size())
