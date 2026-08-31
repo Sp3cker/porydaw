@@ -16,7 +16,6 @@
 #include "checks/support/asyncwait.h"
 #include "mainwindow.h"
 #include "project/sidecar.h"
-#include "project/songregistry.h"
 #include "ui/layout.h"
 #include "ui/songlistpanel.h"
 #include "ui/songtab.h"
@@ -75,8 +74,8 @@ std::map<QString, QByteArray> porydawSnapshot(const QString &projectRoot)
 } // namespace
 
 // --sessioncheck <projectRoot> <song>: session-persistence check. Verifies
-// that restoreSession() reopens the remembered project (and song), is a
-// no-op when nothing (or a vanished directory) is remembered, that closing
+// that construction queues reopening the remembered project (and song), is
+// a no-op when nothing (or a vanished directory) is remembered, that closing
 // a window records the session — window geometry and the song list's
 // filter state (search text, sort, category) included — and that a fresh
 // window comes back at the saved geometry with the filters reapplied.
@@ -98,7 +97,6 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
     // 1. Nothing remembered: restore is a no-op.
     {
         MainWindow window;
-        window.restoreSession();
         check(window.windowTitle() == QStringLiteral("porydaw"),
               "restore with no remembered project opened something");
     }
@@ -110,7 +108,6 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
         settings.setValue(QStringLiteral("lastSongLabel"), songLabel);
         settings.sync();
         MainWindow window;
-        window.restoreSession();
         check(waitFor([&] { return window.windowTitle() == QStringLiteral("porydaw"); }),
               "failed startup open did not tear down its placeholder");
     }
@@ -124,7 +121,6 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
         settings.remove(QStringLiteral("lastOpenSongs"));
         settings.sync();
         MainWindow window;
-        window.restoreSession();
         const QString expectedTitle =
             QStringLiteral("%1 — porydaw").arg(QDir(projectRoot).dirName());
         check(waitFor([&] { return window.windowTitle() == expectedTitle; }),
@@ -168,7 +164,6 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
     {
         QSettings().setValue(QStringLiteral("lastSongLabel"), songLabel);
         MainWindow window;
-        window.restoreSession();
         // Resolve the Songs dock's list rather than any drawer-owned list.
         auto *panel = window.findChild<SongListPanel *>();
         auto *list = panel ? panel->findChild<QListWidget *>() : nullptr;
@@ -204,15 +199,9 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
         check(loadEditorViewState(editorStateSettings) == completeEditorState,
               "the complete editor state was not readable through QSettings");
         QObject::disconnect(persistenceSpy);
-        // Row F: seed one registration-only sidecar through the retained
-        // public API, then require the whole .porydaw directory to stay
-        // byte-identical across the close and relaunch boundaries.
-        check(SongRegistry::saveRegistrationMeta(projectRoot, songLabel,
-                                                 QStringLiteral("mus_fixture"),
-                                                 QStringLiteral("ply_fixture")),
-              "could not seed the registration-only sidecar");
+        // Require the local .porydaw directory to stay byte-identical across
+        // the close and relaunch boundaries.
         projectBoundary = porydawSnapshot(projectRoot);
-        check(!projectBoundary.empty(), "the seeded sidecar is missing from the snapshot");
         // Distinctive filter state — search text, A–Z sort, a real
         // category — for block 5 to find again after the relaunch.
         auto *search = window.findChild<QLineEdit *>(QStringLiteral("songListSearch"));
@@ -254,13 +243,6 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
               "close did not save the song filter text");
         check(porydawSnapshot(projectRoot) == projectBoundary,
               "application close wrote into the project");
-        QString registrationConstant;
-        QString registrationPlayer;
-        check(SongRegistry::loadRegistrationMeta(projectRoot, songLabel, &registrationConstant,
-                                                 &registrationPlayer) &&
-                  registrationConstant == QStringLiteral("mus_fixture") &&
-                  registrationPlayer == QStringLiteral("ply_fixture"),
-              "application close disturbed the registration-only sidecar");
     }
     // Capture every redirected QSettings value after the close, including
     // the complete editor-view codec entries.
@@ -268,7 +250,7 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
 
     // 5. Relaunch: geometry, session, and song-list filters all come back.
     // The category can only reapply once the project's songs populate the
-    // combo, so it's checked after restoreSession().
+    // combo, so it is checked after asynchronous startup restoration.
     {
         MainWindow window;
         WorkspaceUi *const workspace = window.findChild<WorkspaceUi *>();
@@ -279,7 +261,7 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
             constructorInjected =
                 constructorInjected && tab && tab->view().editorViewState() == completeEditorState;
         check(constructorInjected,
-              "fresh MainWindow did not inject the complete editor state before restoreSession");
+              "fresh MainWindow did not inject the complete editor state before startup restore");
         check(settingsSnapshot() == settingsBoundary,
               "fresh MainWindow constructor wrote the redirected settings");
 
@@ -295,7 +277,6 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
                 [&hubChangesDuringRestore](const EditorViewState &) { ++hubChangesDuringRestore; });
         }
 
-        window.restoreSession();
         auto *search = window.findChild<QLineEdit *>(QStringLiteral("songListSearch"));
         auto *sort = window.findChild<QComboBox *>(QStringLiteral("songListSort"));
         auto *category = window.findChild<QComboBox *>(QStringLiteral("songListCategory"));
@@ -319,10 +300,10 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel)
                   restoredTab->view().editorViewState() == completeEditorState &&
                   restoredTab->view().editorViewState().hiddenLanes() ==
                       completeEditorState.hiddenLanes(),
-              "restoreSession did not silently project the complete editor state and hidden-lane "
+              "startup restore did not silently project the complete editor state and hidden-lane "
               "order");
         check(persistedDuringRestore == 0 && hubChangesDuringRestore == 0,
-              "restoreSession emitted an editor-state origin or persistence completion");
+              "startup restore emitted an editor-state origin or persistence completion");
         QObject::disconnect(persistenceSpy);
         if (workspace)
             QObject::disconnect(hubSpy);

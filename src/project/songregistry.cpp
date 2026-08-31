@@ -4,8 +4,6 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QPair>
 #include <QRegularExpression>
 #include <QSet>
@@ -14,7 +12,6 @@
 #include <limits>
 
 #include "core/smf.h"
-#include "project/sidecar.h"
 #include "project/songsmk.h"
 #include "project/voicegroupsource.h"
 
@@ -398,11 +395,6 @@ QString debugStripContinuation(QString text)
             text.chop(1);
     }
     return text;
-}
-
-QString sidecarPath(const QString &projectRoot, const QString &label)
-{
-    return projectRoot + QStringLiteral("/.porydaw/") + label + QStringLiteral(".json");
 }
 
 // Raw-byte line model for the registration files, so an edit touches only
@@ -1608,11 +1600,6 @@ bool removeSongFlags(const QString &midiDir, const QString &label, QString *erro
     return true;
 }
 
-void removeSongSidecar(const QString &projectRoot, const QString &label)
-{
-    QFile::remove(sidecarPath(projectRoot, label));
-}
-
 SmfFile blankSong()
 {
     SmfFile smf;
@@ -1647,68 +1634,6 @@ SmfFile blankSong()
     track.endTick = oneBar;
     smf.tracks.push_back(track);
     return smf;
-}
-
-bool saveRegistrationMeta(const QString &projectRoot, const QString &label, const QString &constant,
-                          const QString &player)
-{
-    const QString path = sidecarPath(projectRoot, label);
-    QJsonObject root;
-    {
-        QFile in(path);
-        if (in.open(QIODevice::ReadOnly))
-            root = QJsonDocument::fromJson(in.readAll()).object();
-    }
-    QJsonObject reg;
-    reg.insert(QStringLiteral("constant"), constant);
-    reg.insert(QStringLiteral("player"), player);
-    root.insert(QStringLiteral("registration"), reg);
-
-    Sidecar::ensureDir(projectRoot);
-    QFile out(path);
-    if (!out.open(QIODevice::WriteOnly))
-        return false;
-    out.write(QJsonDocument(root).toJson());
-    return true;
-}
-
-bool loadRegistrationMeta(const QString &projectRoot, const QString &label, QString *constant,
-                          QString *player)
-{
-    QFile in(sidecarPath(projectRoot, label));
-    if (!in.open(QIODevice::ReadOnly))
-        return false;
-    const QJsonObject reg = QJsonDocument::fromJson(in.readAll())
-                                .object()
-                                .value(QStringLiteral("registration"))
-                                .toObject();
-    if (reg.isEmpty())
-        return false;
-    if (constant)
-        *constant = reg.value(QStringLiteral("constant")).toString();
-    if (player)
-        *player = reg.value(QStringLiteral("player")).toString();
-    return true;
-}
-
-void clearRegistrationMeta(const QString &projectRoot, const QString &label)
-{
-    const QString path = sidecarPath(projectRoot, label);
-    QJsonObject root;
-    {
-        QFile in(path);
-        if (!in.open(QIODevice::ReadOnly))
-            return;
-        root = QJsonDocument::fromJson(in.readAll()).object();
-    }
-    root.remove(QStringLiteral("registration"));
-    if (root.isEmpty()) {
-        QFile::remove(path);
-        return;
-    }
-    QFile out(path);
-    if (out.open(QIODevice::WriteOnly))
-        out.write(QJsonDocument(root).toJson());
 }
 
 } // namespace SongRegistry

@@ -555,9 +555,9 @@ void songFailureStagesScenario(TransportRig &rig, const TransportFixtures &fixtu
         check(false, "a failing save did not fail with SongCommandFailure");
 }
 
-// The stale per-song JSON (old view/editor roots plus pending registration
-// metadata) is project data this transport never touches: seed distinctive
-// bytes and compare them after every save and reload.
+// The stale per-song JSON (old view/editor roots) is project data this
+// transport never touches: seed distinctive bytes and compare them after
+// every save and reload.
 QString seedLegacySongJsonScenario(TransportRig &rig, const TransportFixtures &fixtures)
 {
     const auto check = contractCheck(rig.failures);
@@ -570,9 +570,6 @@ QString seedLegacySongJsonScenario(TransportRig &rig, const TransportFixtures &f
     legacyRoot.insert(QStringLiteral("view"), QJsonObject{{QStringLiteral("pxPerBeat"), 48.0},
                                                           {QStringLiteral("selectedTrack"), 2}});
     legacyRoot.insert(QStringLiteral("editor"), QJsonObject{{QStringLiteral("laneHeight"), 96}});
-    legacyRoot.insert(QStringLiteral("registration"),
-                      QJsonObject{{QStringLiteral("constant"), fixtures.constant},
-                                  {QStringLiteral("player"), fixtures.playableSong->player}});
     const auto legacyBytes = QJsonDocument(legacyRoot).toJson(QJsonDocument::Compact);
     {
         auto seedFile = QFile{songJsonPath};

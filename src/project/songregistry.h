@@ -199,23 +199,9 @@ bool writeSongFlags(const QString &midiDir, const QString &label, const QStringL
 // later). Missing files or lines are a no-op success.
 bool removeSongFlags(const QString &midiDir, const QString &label, QString *error);
 
-// Deletes the song's .porydaw/<label>.json sidecar outright (view state and
-// pending-registration metadata alike) — the file describes a song that no
-// longer exists. Best-effort, like all sidecar writes.
-void removeSongSidecar(const QString &projectRoot, const QString &label);
-
 // A minimal editable song: format 1, division 24 (vanilla), a seq track with
 // tempo 120 + 4/4 time signature, and one instrument track (voice 0, VOL 100)
 // spanning one bar.
 SmfFile blankSong();
-
-// Pending-registration metadata in the sidecar (.porydaw/<label>.json), so
-// an unregistered song's chosen constant/player survive a project reopen
-// when registerSong could not complete (SPEC §6.3).
-bool saveRegistrationMeta(const QString &projectRoot, const QString &label, const QString &constant,
-                          const QString &player);
-bool loadRegistrationMeta(const QString &projectRoot, const QString &label, QString *constant,
-                          QString *player);
-void clearRegistrationMeta(const QString &projectRoot, const QString &label);
 
 } // namespace SongRegistry

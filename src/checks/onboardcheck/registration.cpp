@@ -27,10 +27,6 @@ RegisteredSongFixture runRegistrationChecks(const QString &projectRoot, const QS
     check(blank.writeFile(midPath, &error), "write blank .mid");
     check(SongRegistry::writeMidiCfgLine(midiDir, label, cfg.rawFlags, &error),
           "write midi.cfg line");
-    check(SongRegistry::saveRegistrationMeta(projectRoot, label, constant,
-                                             QStringLiteral("MUSIC_PLAYER_BGM")),
-          "save sidecar meta");
-
     // The new song must surface on reload: unregistered, playable, cfg parsed.
     check(project.reload(&error), "project reload after create");
     const SongInfo *created = nullptr;
@@ -46,7 +42,7 @@ RegisteredSongFixture runRegistrationChecks(const QString &projectRoot, const QS
               "created song cfg line not parsed back");
         check(created->constant == constant &&
                   created->player == QStringLiteral("MUSIC_PLAYER_BGM"),
-              "sidecar registration meta not recalled");
+              "unregistered song defaults not derived");
 
         SongDocument doc;
         check(doc.load(*created, &error), "created song fails to open as a document");

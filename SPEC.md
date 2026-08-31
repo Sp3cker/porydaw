@@ -414,10 +414,11 @@ reuse, and deletion alike. A registration stranded past `END_MUS` (left by
 a porydaw predating this) is flagged as mis-registered and migrates into
 the region on re-register.
 
-If registration fails (e.g. an unwritable file), the chosen constant/player
-persist in the sidecar and the song shows a badge in the song browser;
-**File → Register Song** (or right-click → **Register Song** in the browser)
-retries. The same action registers stray `.mid` files dropped into
+If registration fails (e.g. an unwritable file), the song remains available
+with a badge in the song browser; **File → Register Song** (or right-click
+→ **Register Song** in the browser) retries. Until registration succeeds,
+Porydaw derives the constant from the song label and uses `MUSIC_PLAYER_BGM`.
+The same action registers stray `.mid` files dropped into
 `sound/songs/midi/` by hand, and completes *partial* registrations — a song
 present in the table but missing an entry elsewhere (e.g. one registered
 before porydaw wrote `charmap.txt` entries) is badged "not fully registered",

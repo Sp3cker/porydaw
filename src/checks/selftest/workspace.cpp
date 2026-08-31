@@ -139,13 +139,6 @@ bool SelfTestHarness::runWorkspaceScenario()
                                   SettingsDialog::Tab::Engine, &m_window);
     qInfo("selftest-workspace: New Song wizard + unified settings dialog constructed");
     const EditorViewState original = m_view->editorViewState();
-    if (!SongRegistry::saveRegistrationMeta(m_projectRoot, m_songInfo.label,
-                                            QStringLiteral("MUS_SELFTEST"),
-                                            QStringLiteral("MUSIC_PLAYER_BGM"))) {
-        qWarning("selftest-workspace: registration metadata save failed");
-        return false;
-    }
-
     const int laneHeightMin = layout::fontPx(7.0 / 3.0);
     const int laneHeightMax = layout::fontPx(32.0 / 3.0);
     const EditorAutomationRowId tempoRow{};

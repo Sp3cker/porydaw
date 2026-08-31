@@ -43,7 +43,6 @@
 #include "mainwindow.h"
 #include "project/projectidentity.h"
 #include "project/sidecar.h"
-#include "project/songregistry.h"
 #include "ui/dragspinbox.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/editordrawer.h"
@@ -1001,12 +1000,7 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
 
     // A view-only lane mutation persists immediately while the song, its
     // history, and the project directory stay untouched.
-    check(SongRegistry::saveRegistrationMeta(projectRoot, songB, QStringLiteral("mus_fixture"),
-                                             QStringLiteral("ply_fixture")),
-          "could not seed the registration-only sidecar");
     const auto projectBoundary = porydawSnapshot(projectRoot);
-    check(!projectBoundary.empty() && projectBoundary.count(songA + QStringLiteral(".json")) == 0,
-          "the project boundary snapshot is missing the seeded sidecar");
     {
         const QByteArray midiBefore = tabB->document().smf().write();
         const uint64_t revisionBefore = tabB->document().revision();
@@ -1108,13 +1102,6 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
           "tab close did not synchronously detach the clean session");
     check(porydawSnapshot(projectRoot) == projectBoundary,
           "tab close wrote view or editor data into the project");
-    QString registrationConstant;
-    QString registrationPlayer;
-    check(SongRegistry::loadRegistrationMeta(projectRoot, songB, &registrationConstant,
-                                             &registrationPlayer) &&
-              registrationConstant == QStringLiteral("mus_fixture") &&
-              registrationPlayer == QStringLiteral("ply_fixture"),
-          "tab close disturbed the registration-only sidecar");
     m_workspace->requestSongOpen(*nameB, /*newTab=*/true);
     QPointer<SongTab> reopened = m_workspace->songTabFor(*nameB);
     check(reopened != nullptr, "reopened song did not create its tab immediately");

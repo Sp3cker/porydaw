@@ -360,10 +360,6 @@ class ProjectIo::Worker final : public QObject
         auto songId = -1;
         const auto registered = SongRegistry::registerSong(root, input.label, input.constant,
                                                            input.player, &error, &songId);
-        if (registered)
-            SongRegistry::clearRegistrationMeta(root, input.label);
-        else
-            SongRegistry::saveRegistrationMeta(root, input.label, input.constant, input.player);
         if (!registered)
             return CommandFailure{error.isEmpty()
                                       ? QStringLiteral("Could not register %1.").arg(input.label)
@@ -436,7 +432,6 @@ class ProjectIo::Worker final : public QObject
             return CommandFailure{error.isEmpty()
                                       ? QStringLiteral("Could not register %1.").arg(input.label)
                                       : std::move(error)};
-        SongRegistry::clearRegistrationMeta(root, input.label);
         auto song = SongName::create(input.label);
         if (!song)
             return CommandFailure{
@@ -501,7 +496,6 @@ class ProjectIo::Worker final : public QObject
             problems << problem;
         if (!SongRegistry::unregisterSong(root, input.song.value(), input.constant, &problem))
             problems << problem;
-        SongRegistry::removeSongSidecar(root, input.song.value());
         if (!deleteVoicegroupName.isEmpty() &&
             !VoicegroupSource::deleteVoicegroup(root, deleteVoicegroupName, &problem))
             problems << problem;

@@ -468,8 +468,8 @@ void DecompProject::discoverUnregisteredSongs()
     // .mid files with no song_table.inc entry: songs whose registration
     // never ran (dropped-in files) or failed. Listing them keeps the badge
     // visible across project reopens so Register Song can finish the job.
-    // Identity chosen in the wizard comes back from the sidecar; the
-    // constant falls back to the label-derived default.
+    // Unregistered files use the label-derived constant and default player
+    // until the user completes registration.
     QSet<QString> known;
     for (const SongInfo &song : m_songs)
         known.insert(song.label);
@@ -488,13 +488,6 @@ void DecompProject::discoverUnregisteredSongs()
         song.hasMid = true;
         song.constant = SongRegistry::constantForLabel(label);
         song.player = QStringLiteral("MUSIC_PLAYER_BGM");
-        QString constant, player;
-        if (SongRegistry::loadRegistrationMeta(m_root, label, &constant, &player)) {
-            if (!constant.isEmpty())
-                song.constant = constant;
-            if (!player.isEmpty())
-                song.player = player;
-        }
         m_songs.append(song);
     }
 }

@@ -2,9 +2,9 @@
 
 #include <QString>
 
-// The .porydaw/ sidecar directory at the project root: per-user state (view
-// sidecars, pending registrations, sample provenance) that never belongs in
-// the repo, so creating it also adds it to the project's .gitignore.
+// The .porydaw/ sidecar directory at the project root: local sample provenance
+// and recoverable trash that never belong in the repo, so creating it also
+// adds it to the project's .gitignore.
 namespace Sidecar {
 
 QString dirPath(const QString &projectRoot);
