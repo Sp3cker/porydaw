@@ -163,7 +163,7 @@ class VelocityArea final : public songview::TimelineSurface
 
     SongView &m_owner;
     DrawerPageLiveState m_live;
-    VelocityAxis m_axis{VelocityMap::resolve(nullptr, std::nullopt), {}};
+    VelocityAxis m_axis{VelocityMap::resolve(nullptr, std::nullopt, kM4aMaxVolume, 0), {}};
     Geometry m_geometry;
     QFont m_captionFont;
     QFont m_boldCaptionFont;

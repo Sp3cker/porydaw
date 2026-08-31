@@ -390,6 +390,55 @@ int checkPsgAxisContexts(VelocityAreaEnv &env)
     return failures;
 }
 
+int checkPsgControlChangeContexts(VelocityAreaEnv &env)
+{
+    int failures = 0;
+    const auto check = [&failures](bool condition, const char *message) {
+        velocityFail(failures, condition, message);
+    };
+    env.voicegroup.voices[0] = env.square;
+    env.view.setVoicegroup(&env.voicegroup);
+    env.area.songChanged();
+    const DrawerPageVoiceContext firstContext = env.view.voiceContext(env.notes[0].tick);
+    const DrawerPageVoiceContext volumeContext = env.view.voiceContext(96);
+    const DrawerPageVoiceContext panContext = env.view.voiceContext(env.notes[3].tick);
+    const VelocityMap firstMap = VelocityMap::resolve(
+        firstContext.voice, env.notes[0].key, firstContext.trackVolume, firstContext.trackPan);
+    const VelocityMap volumeMap = VelocityMap::resolve(
+        volumeContext.voice, env.notes[3].key, volumeContext.trackVolume, volumeContext.trackPan);
+    const VelocityMap panMap = VelocityMap::resolve(panContext.voice, env.notes[3].key,
+                                                    panContext.trackVolume, panContext.trackPan);
+    check(firstContext.voice == &env.voicegroup.voices[0] && firstContext.endTick == 96 &&
+              firstContext.trackVolume == kM4aMaxVolume && firstContext.trackPan == 0 &&
+              volumeContext.endTick == 100 && volumeContext.trackVolume == 64 &&
+              volumeContext.trackPan == 0 && panContext.trackVolume == 64 &&
+              panContext.trackPan == -32 && !firstMap.compatibleWith(volumeMap) &&
+              !volumeMap.compatibleWith(panMap),
+          "CC7 and CC10 must resolve distinct map state and the earliest next context boundary");
+    env.view.selectionModel().setNoteSelection({env.notes[0].noteId, env.notes[3].noteId});
+    ++env.live.editCursorTick;
+    env.area.refreshLiveState(env.live);
+    check(env.area.axis().mode() == VelocityAxis::Mode::Continuous,
+          "a PSG selection across CC7 or CC10 changes must use the continuous axis");
+    env.view.selectionModel().clearNoteSelection();
+    env.live.playback.playing = false;
+    env.live.editCursorTick = env.notes[0].tick;
+    env.area.refreshLiveState(env.live);
+    check(env.area.axis().map() == firstMap,
+          "the stopped empty-selection axis must resolve the edit-cursor CC state");
+    env.live.editCursorTick = env.notes[3].tick;
+    env.area.refreshLiveState(env.live);
+    check(env.area.axis().map() == panMap,
+          "the stopped empty-selection axis must refresh for the edit-cursor CC state");
+    env.voicegroup.voices[0] = env.noise;
+    env.view.setVoicegroup(&env.voicegroup);
+    env.view.selectionModel().setNoteSelection({env.notes[0].noteId});
+    env.area.songChanged();
+    ++env.live.editCursorTick;
+    env.area.refreshLiveState(env.live);
+    return failures;
+}
+
 int checkHoverAxisContext(VelocityAreaEnv &env)
 {
     int failures = 0;
@@ -402,7 +451,9 @@ int checkHoverAxisContext(VelocityAreaEnv &env)
                         layout::space(layout::Space::Two),
                     env.expected.densityThresholdD4 + layout::space(layout::Space::Six));
     QApplication::processEvents();
-    env.map = VelocityMap::resolve(&env.noise, env.notes[0].key);
+    const DrawerPageVoiceContext hoveredContext = env.view.voiceContext(env.notes[0].tick);
+    env.map = VelocityMap::resolve(&env.noise, env.notes[0].key, hoveredContext.trackVolume,
+                                   hoveredContext.trackPan);
     env.hoveredPsgVelocity = 74;
     env.hoveredPsgLevel = 9;
     check(env.view.beginVelocityGesture({env.notes[1]}) &&
@@ -422,7 +473,9 @@ int checkHoverAxisContext(VelocityAreaEnv &env)
     ++env.live.editCursorTick;
     env.area.refreshLiveState(env.live);
     QApplication::processEvents();
-    const VelocityMap selectedMap = VelocityMap::resolve(&env.wave, env.notes[2].key);
+    const DrawerPageVoiceContext selectedContext = env.view.voiceContext(env.notes[2].tick);
+    const VelocityMap selectedMap = VelocityMap::resolve(
+        &env.wave, env.notes[2].key, selectedContext.trackVolume, selectedContext.trackPan);
     const VelocityAxis hoveredNoiseProjection(env.map, env.area.axis().geometry());
     check(env.area.axis().map() == selectedMap && selectedMap != env.map,
           "hover context fixture must begin on the selected Wave note");
@@ -886,7 +939,9 @@ int checkStackedNodeHitPriority(VelocityAreaRig &rig)
     rig.env.live.documentRevision = rig.env.document.revision();
     rig.env.area.refreshLiveState(rig.env.live);
     QApplication::processEvents();
-    rig.currentMap = VelocityMap::resolve(&rig.env.noise, currentFirst.key);
+    const DrawerPageVoiceContext currentContext = rig.env.view.voiceContext(currentFirst.tick);
+    rig.currentMap = VelocityMap::resolve(&rig.env.noise, currentFirst.key,
+                                          currentContext.trackVolume, currentContext.trackPan);
     const std::optional<std::size_t> currentLevel = rig.currentMap.levelOf(currentFirst.velocity);
     const QPointF currentNode(double(rig.env.area.plotOrigin()) +
                                   double(currentFirst.tick) * rig.env.live.timeZoom /
@@ -1407,7 +1462,11 @@ int checkDetentUnlockGestures(VelocityAreaRig &rig)
         rig.env.live.documentRevision = rig.env.document.revision();
         ++rig.env.live.editCursorTick;
         rig.env.area.refreshLiveState(rig.env.live);
-        const VelocityMap unlockedMap = VelocityMap::resolve(&rig.env.wave, rig.env.notes[0].key);
+        const DrawerPageVoiceContext unlockedContext =
+            rig.env.view.voiceContext(rig.env.notes[0].tick);
+        const VelocityMap unlockedMap =
+            VelocityMap::resolve(&rig.env.wave, rig.env.notes[0].key, unlockedContext.trackVolume,
+                                 unlockedContext.trackPan);
         const auto isOffDetent = [&unlockedMap](int velocity) {
             return unlockedMap.canonicalize(velocity) != velocity;
         };
@@ -1865,11 +1924,12 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     smf.division = 24;
     SmfTrack track;
     track.events = {
-        noteEvent(0xC0, 0, 0, 0),   noteEvent(0x90, 12, 60, 20), noteEvent(0x90, 12, 60, 70),
-        noteEvent(0x80, 36, 60, 0), noteEvent(0x80, 36, 60, 0),  noteEvent(0x90, 60, 64, 70),
-        noteEvent(0x80, 84, 64, 0),
+        noteEvent(0xC0, 0, 0, 0),     noteEvent(0x90, 12, 60, 20), noteEvent(0x90, 12, 60, 70),
+        noteEvent(0x80, 36, 60, 0),   noteEvent(0x80, 36, 60, 0),  noteEvent(0x90, 60, 64, 70),
+        noteEvent(0x80, 84, 64, 0),   noteEvent(0xB0, 96, 7, 64),  noteEvent(0xB0, 100, 10, 32),
+        noteEvent(0x90, 108, 64, 70), noteEvent(0x80, 132, 64, 0),
     };
-    track.endTick = 84;
+    track.endTick = 132;
     smf.tracks.push_back(track);
     const QString midiPath = temporary.path() + QStringLiteral("/velocity.mid");
     SongInfo song;
@@ -1880,9 +1940,9 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     check(temporary.isValid() && smf.writeFile(midiPath, &error) && document.load(song, &error),
           "synthetic duplicate-note fixture should load");
     const std::vector<DocNote> notes = document.notesForTrack(0);
-    check(notes.size() == 3 && notes[0].noteId != notes[1].noteId,
+    check(notes.size() == 4 && notes[0].noteId != notes[1].noteId,
           "duplicate notes must keep distinct NoteId values");
-    if (notes.size() != 3)
+    if (notes.size() != 4)
         return 1;
 
     ToneData directSound{};
@@ -1932,7 +1992,10 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                         wave,     noise,          notes,      view,          area,
                         drawer,   drawerSections, velToggle,  automationBar, automationToggle,
                         nullptr,  live,           expected};
-    VelocityAreaRig rig{env, VelocityMap::resolve(&noise, notes[0].key)};
+    const DrawerPageVoiceContext firstNoteContext = view.voiceContext(notes[0].tick);
+    VelocityAreaRig rig{env,
+                        VelocityMap::resolve(&noise, notes[0].key, firstNoteContext.trackVolume,
+                                             firstNoteContext.trackPan)};
     failures += checkDrawerToggleGeometry(env);
     area.resize(expected.plotOrigin + layout::space(layout::Space::Eight),
                 expected.densityThresholdD4 + layout::space(layout::Space::Six));
@@ -1952,6 +2015,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     failures += checkPanClampAtTickZero(env);
     failures += checkContinuousGraduationDensity(env);
     failures += checkPsgAxisContexts(env);
+    failures += checkPsgControlChangeContexts(env);
     failures += checkHoverAxisContext(env);
     failures += checkVelocityRendering(env);
     failures += checkEditCursorRepaint(env);

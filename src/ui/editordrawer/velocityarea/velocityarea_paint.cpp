@@ -26,7 +26,8 @@ void VelocityArea::paintPsgLevelBands(QPainter &painter, const int origin, const
         const uint64_t sectionEnd = std::min(lastTick, context.endTick);
         if (sectionEnd <= sectionTick)
             break;
-        const VelocityMap map = VelocityMap::resolve(context.voice, std::nullopt);
+        const VelocityMap map = VelocityMap::resolve(context.voice, std::nullopt,
+                                                     context.trackVolume, context.trackPan);
         if (map.isPsg()) {
             const double left =
                 std::clamp(xForTick(sectionTick), double(origin), double(origin + width));

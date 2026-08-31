@@ -689,6 +689,10 @@ class SongView : public QWidget
     // document-mapped tracks).
     std::optional<SongDocument::TimeScope> timeSelectionScope() const;
     std::optional<songview::Clip> readClipboardClip();
+    // Resolves the selected track's effective CC7/CC10 state and shortens
+    // nextChangeTick to its next automation boundary.
+    uint8_t trackVolumeAt(int track, uint64_t tick, uint64_t &nextChangeTick) const;
+    int8_t trackPanAt(int track, uint64_t tick, uint64_t &nextChangeTick) const;
 
     songview::TimeAxis m_timeAxis;            // musical time; fallback until a song binds
     const MidiTimeline *m_timeline = nullptr; // loaded content only

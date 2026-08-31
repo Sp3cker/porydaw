@@ -158,12 +158,12 @@ int runVelocityModelCheck()
     waveTone.type = VOICE_PROGRAMMABLE_WAVE;
     ToneData directSoundTone{};
     directSoundTone.type = VOICE_DIRECTSOUND;
-    const VelocityMap square = VelocityMap::resolve(&squareTone, 60);
-    const VelocityMap squareTwo = VelocityMap::resolve(&squareTwoTone, 60);
-    const VelocityMap noise = VelocityMap::resolve(&noiseTone, 60);
-    const VelocityMap wave = VelocityMap::resolve(&waveTone, 60);
-    const VelocityMap directSound = VelocityMap::resolve(&directSoundTone, 60);
-    const VelocityMap unresolved = VelocityMap::resolve(nullptr, std::nullopt);
+    const VelocityMap square = VelocityMap::resolve(&squareTone, 60, kM4aMaxVolume);
+    const VelocityMap squareTwo = VelocityMap::resolve(&squareTwoTone, 60, kM4aMaxVolume);
+    const VelocityMap noise = VelocityMap::resolve(&noiseTone, 60, kM4aMaxVolume);
+    const VelocityMap wave = VelocityMap::resolve(&waveTone, 60, kM4aMaxVolume);
+    const VelocityMap directSound = VelocityMap::resolve(&directSoundTone, 60, kM4aMaxVolume);
+    const VelocityMap unresolved = VelocityMap::resolve(nullptr, std::nullopt, kM4aMaxVolume);
 
     check(square.isPsg() && std::strcmp(square.voiceName(), "Square 1") == 0,
           "Square 1 should resolve intrinsically");
@@ -178,18 +178,19 @@ int runVelocityModelCheck()
 
     ToneData invalidTone{};
     invalidTone.type = VOICE_CRY;
-    const VelocityMap invalid = VelocityMap::resolve(&invalidTone, 60);
+    const VelocityMap invalid = VelocityMap::resolve(&invalidTone, 60, kM4aMaxVolume);
     check(!invalid.isPsg(), "invalid voice should remain continuous");
     std::array<ToneData, 128> nestedChildren{};
     nestedChildren[60].type = VOICE_KEYSPLIT;
     ToneData nestedSplit{};
     nestedSplit.type = VOICE_KEYSPLIT_ALL;
     nestedSplit.subGroup = nestedChildren.data();
-    check(!VelocityMap::resolve(&nestedSplit, 60).isPsg(), "nested keysplit should be invalid");
+    check(!VelocityMap::resolve(&nestedSplit, 60, kM4aMaxVolume).isPsg(),
+          "nested keysplit should be invalid");
     ToneData keylessSplit{};
     keylessSplit.type = VOICE_KEYSPLIT_ALL;
     keylessSplit.subGroup = nestedChildren.data();
-    check(!VelocityMap::resolve(&keylessSplit, std::nullopt).isPsg(),
+    check(!VelocityMap::resolve(&keylessSplit, std::nullopt, kM4aMaxVolume).isPsg(),
           "keyless keysplit should remain continuous");
     std::array<ToneData, 128> splitChildren{};
     std::array<uint8_t, 128> splitTable{};
@@ -199,7 +200,7 @@ int runVelocityModelCheck()
     splitTone.type = VOICE_KEYSPLIT;
     splitTone.subGroup = splitChildren.data();
     splitTone.keySplitTable = splitTable.data();
-    const VelocityMap keyedSplit = VelocityMap::resolve(&splitTone, 60);
+    const VelocityMap keyedSplit = VelocityMap::resolve(&splitTone, 60, kM4aMaxVolume);
     check(keyedSplit.isPsg() && std::strcmp(keyedSplit.voiceName(), "Programmable Wave") == 0,
           "keyed keysplit should resolve its selected voice");
 
@@ -228,6 +229,67 @@ int runVelocityModelCheck()
     check(square.compatibleWith(square), "matching maps should be compatible");
     check(!square.compatibleWith(squareTwo) && !square.compatibleWith(noise),
           "different PSG voice identities should be incompatible");
+    const uint8_t halfVolume = m4aEffectiveTrackVolume(64, kM4aMaxVolume);
+    const uint8_t silentVolume = m4aEffectiveTrackVolume(0, kM4aMaxVolume);
+    const uint8_t panBoundaryVolume = m4aEffectiveTrackVolume(96, kM4aMaxVolume);
+    const VelocityMap halfVolumeSquare = VelocityMap::resolve(&squareTone, 60, halfVolume);
+    const VelocityMap silentSquare = VelocityMap::resolve(&squareTone, 60, silentVolume);
+    const VelocityMap centeredPanBoundarySquare =
+        VelocityMap::resolve(&squareTone, 60, panBoundaryVolume);
+    const VelocityMap pannedSquare = VelocityMap::resolve(&squareTone, 60, panBoundaryVolume, -32);
+    const VelocityMap centeredPanBoundaryWave =
+        VelocityMap::resolve(&waveTone, 60, panBoundaryVolume);
+    const VelocityMap pannedWave = VelocityMap::resolve(&waveTone, 60, panBoundaryVolume, -32);
+    const VelocityMap halfVolumePannedSquare =
+        VelocityMap::resolve(&squareTone, 60, halfVolume, -32);
+    const auto hasContiguousLevelRanges = [](const VelocityMap &map) {
+        int expectedFirst = 1;
+        for (std::size_t level = 0; level < map.levelCount(); ++level) {
+            const VelocityLevelRange range = map.levelRange(int(level));
+            if (range.first != expectedFirst || range.last < range.first)
+                return false;
+            expectedFirst = int(range.last) + 1;
+        }
+        return expectedFirst == 128;
+    };
+    const auto hasDifferentLevelRanges = [](const VelocityMap &left, const VelocityMap &right) {
+        if (left.levelCount() != right.levelCount())
+            return true;
+        for (std::size_t level = 0; level < left.levelCount(); ++level) {
+            const VelocityLevelRange leftRange = left.levelRange(int(level));
+            const VelocityLevelRange rightRange = right.levelRange(int(level));
+            if (leftRange.first != rightRange.first || leftRange.last != rightRange.last)
+                return true;
+        }
+        return false;
+    };
+    check(halfVolume == 64 && square.levelCount() > halfVolumeSquare.levelCount() &&
+              halfVolumeSquare.levelCount() > silentSquare.levelCount() &&
+              halfVolumeSquare.hasDetents() && silentSquare.levelCount() == 1 &&
+              !silentSquare.hasDetents() &&
+              VelocityAxis(silentSquare, axisGeometry(200.0)).mode() ==
+                  VelocityAxis::Mode::Continuous,
+          "lower effective volume must leave fewer levels and a silent PSG must keep the "
+          "continuous axis");
+    check(hasContiguousLevelRanges(square) && hasContiguousLevelRanges(halfVolumeSquare) &&
+              hasContiguousLevelRanges(centeredPanBoundarySquare) &&
+              hasContiguousLevelRanges(pannedSquare) &&
+              hasContiguousLevelRanges(centeredPanBoundaryWave) &&
+              hasContiguousLevelRanges(pannedWave) && hasContiguousLevelRanges(silentSquare) &&
+              hasDifferentLevelRanges(centeredPanBoundarySquare, pannedSquare) &&
+              hasDifferentLevelRanges(centeredPanBoundaryWave, pannedWave),
+          "PSG level ranges must remain contiguous, ordered, and pan-aware at every fixture state");
+    check(!square.compatibleWith(halfVolumeSquare) && !square.compatibleWith(pannedSquare) &&
+              !halfVolumeSquare.compatibleWith(halfVolumePannedSquare),
+          "CC7 and CC10 state differences must make otherwise identical PSG maps incompatible");
+    const VelocityLevelRange halfVolumeFirst = halfVolumeSquare.levelRange(0);
+    const VelocityLevelRange halfVolumeLast =
+        halfVolumeSquare.levelRange(int(halfVolumeSquare.levelCount()) - 1);
+    check(halfVolumeSquare.canonicalize(-1) == halfVolumeFirst.first &&
+              halfVolumeSquare.canonicalize(128) == halfVolumeLast.last &&
+              halfVolumeSquare.moveLevels(halfVolumeFirst.first, -1) == halfVolumeFirst.first &&
+              halfVolumeSquare.moveLevels(halfVolumeLast.last, 1) == halfVolumeLast.last,
+          "resolved PSG maps must clamp canonicalization and level movement at their endpoints");
 
     check(square.canonicalize(1) == 1 && square.canonicalize(127) == 127,
           "Square canonicalization should retain endpoints");
@@ -255,8 +317,8 @@ int runVelocityModelCheck()
               directSound.moveLevels(1, -1) == 1 && directSound.moveLevels(127, 1) == 127,
           "level movement should clamp at both velocity endpoints");
 
-    const VelocityAxis continuous(VelocityMap::resolve(nullptr, std::nullopt), axisGeometry(200.0),
-                                  std::array<uint8_t, 3>{12, 64, 100});
+    const VelocityAxis continuous(VelocityMap::resolve(nullptr, std::nullopt, kM4aMaxVolume),
+                                  axisGeometry(200.0), std::array<uint8_t, 3>{12, 64, 100});
     check(continuous.mode() == VelocityAxis::Mode::Continuous && continuous.top() == 6.0 &&
               continuous.bottom() == 194.0 && continuous.velocityToY(127) == 6.0 &&
               continuous.velocityToY(1) == 194.0 && continuous.velocityToY(64) == 100.0,

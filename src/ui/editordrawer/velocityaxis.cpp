@@ -62,7 +62,7 @@ VelocityAxis::VelocityAxis(const VelocityMap &map, const VelocityAxisGeometry &g
 
 VelocityAxis::Mode VelocityAxis::mode() const
 {
-    return m_map.levelCount() == 0 ? Mode::Continuous : Mode::Intrinsic;
+    return m_map.hasDetents() ? Mode::Intrinsic : Mode::Continuous;
 }
 
 const VelocityMap &VelocityAxis::map() const

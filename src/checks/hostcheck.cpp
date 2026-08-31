@@ -183,8 +183,9 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     smf.division = 24;
     SmfTrack primary;
     primary.events = {
-        noteEvent(0xC0, 0, 0, 0),  noteEvent(0x90, 12, 60, 20), noteEvent(0x90, 12, 60, 70),
-        noteEvent(0xC0, 24, 1, 0), noteEvent(0x80, 36, 60, 0),  noteEvent(0x80, 36, 60, 0),
+        noteEvent(0xC0, 0, 0, 0),   noteEvent(0x90, 12, 60, 20), noteEvent(0x90, 12, 60, 70),
+        noteEvent(0xC0, 24, 1, 0),  noteEvent(0xB0, 28, 7, 64),  noteEvent(0xB0, 32, 10, 32),
+        noteEvent(0x80, 36, 60, 0), noteEvent(0x80, 36, 60, 0),
     };
     primary.endTick = 36;
     SmfTrack secondary;
@@ -330,11 +331,28 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               "S from the velocity drawer did not solo the selected track");
         view.setTrackSolo(selectedTrack, false);
 
+        const DrawerPageVoiceContext initialContext = view.voiceContext(0);
+        const DrawerPageVoiceContext voiceChangeContext = view.voiceContext(24);
+        const DrawerPageVoiceContext volumeChangeContext = view.voiceContext(28);
+        const DrawerPageVoiceContext panChangeContext = view.voiceContext(32);
+        check(initialContext.voice == &voicegroup.voices[0] && initialContext.voiceSlot == 0 &&
+                  initialContext.endTick == 24 && initialContext.trackVolume == kM4aMaxVolume &&
+                  initialContext.trackPan == 0 &&
+                  voiceChangeContext.voice == &voicegroup.voices[1] &&
+                  voiceChangeContext.voiceSlot == 1 && voiceChangeContext.endTick == 28 &&
+                  voiceChangeContext.trackVolume == kM4aMaxVolume &&
+                  voiceChangeContext.trackPan == 0 && volumeChangeContext.endTick == 32 &&
+                  volumeChangeContext.trackVolume == 64 && volumeChangeContext.trackPan == 0 &&
+                  panChangeContext.trackVolume == 64 && panChangeContext.trackPan == -32,
+              "voice contexts must carry CC7 and CC10 state through the earliest next boundary");
+
         view.selectionModel().clearNoteSelection();
         view.setEditCursorTick(0);
         QCoreApplication::processEvents();
-        check(QString::fromLatin1(area->axis().map().voiceName()) == QStringLiteral("Square 1"),
-              "velocity map should resolve the edit-cursor voice while stopped");
+        check(QString::fromLatin1(area->axis().map().voiceName()) == QStringLiteral("Square 1") &&
+                  area->axis().map().trackVolume() == initialContext.trackVolume &&
+                  area->axis().map().trackPan() == initialContext.trackPan,
+              "velocity map should resolve the stopped edit-cursor context state");
 
         view.setPlayheadSample(timeline->sampleForTick(24), true);
         QCoreApplication::processEvents();
@@ -365,6 +383,24 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
                       velocityBeforeCrossing.playheadPresentationCount + 1,
               "visible velocity map should refresh and present once across a voice change");
 
+        const auto velocityBeforeVolumeChange = area->diagnostics();
+        view.setPlayheadSample(timeline->sampleForTick(28), true);
+        QCoreApplication::processEvents();
+        check(area->axis().map().trackVolume() == 64 &&
+                  area->diagnostics().contentBuildCount >
+                      velocityBeforeVolumeChange.contentBuildCount &&
+                  area->diagnostics().playheadPresentationCount ==
+                      velocityBeforeVolumeChange.playheadPresentationCount + 1,
+              "visible velocity map should refresh and present once across a CC7 change");
+        const auto velocityBeforePanChange = area->diagnostics();
+        view.setPlayheadSample(timeline->sampleForTick(32), true);
+        QCoreApplication::processEvents();
+        check(area->axis().map().trackPan() == -32 &&
+                  area->diagnostics().contentBuildCount >
+                      velocityBeforePanChange.contentBuildCount &&
+                  area->diagnostics().playheadPresentationCount ==
+                      velocityBeforePanChange.playheadPresentationCount + 1,
+              "visible velocity map should refresh and present once across a CC10 change");
         view.setPlayheadSample(timeline->sampleForTick(24), false);
         view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
         view.setDrawerActivePage(EditorDrawerPage::VoiceChanges);

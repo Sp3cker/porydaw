@@ -689,7 +689,9 @@ void SongView::setPlayheadSample(uint64_t samplePos, bool playing)
     m_events->setPlayheadTick(m_playheadTick, playing);
     m_headers->syncVoices();
     if (voiceContextVisible && (contextBefore.voice != contextAfter.voice ||
-                                contextBefore.voiceSlot != contextAfter.voiceSlot)) {
+                                contextBefore.voiceSlot != contextAfter.voiceSlot ||
+                                contextBefore.trackVolume != contextAfter.trackVolume ||
+                                contextBefore.trackPan != contextAfter.trackPan)) {
         if (velocityPageVisible)
             refreshVelocityPage();
         if (voiceChangesPageVisible)

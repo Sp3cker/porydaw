@@ -1,4 +1,5 @@
 #include "core/mid2agbtables.h"
+#include "core/velocitymodel.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
@@ -26,6 +27,31 @@
 
 using namespace songview;
 using namespace songview::detail;
+
+namespace {
+
+int ccValueAt(const SongViewModel &model, int track, uint8_t cc, int primed, uint64_t tick,
+              uint64_t &nextChangeTick)
+{
+    int value = primed;
+    const CcLane *lane = model.findLane(track, cc);
+    if (!lane)
+        return value;
+    // Lane points are tick-sorted by SongViewModel. This linear no-allocation
+    // scan runs twice per voiceContext; its first future point bounds the
+    // current context.
+    for (const LanePoint &point : lane->points) {
+        if (point.tick <= tick) {
+            value = point.value;
+            continue;
+        }
+        nextChangeTick = std::min(nextChangeTick, uint64_t(point.tick));
+        break;
+    }
+    return value;
+}
+
+} // namespace
 
 void SongView::selectTrack(int track)
 {
@@ -223,6 +249,18 @@ QString SongView::voiceShortName(uint8_t program) const
         return type.isEmpty() ? tr("Voice") : type;
     return QStringLiteral("%1 (%2)").arg(name, type);
 }
+uint8_t SongView::trackVolumeAt(int track, uint64_t tick, uint64_t &nextChangeTick) const
+{
+    return m4aEffectiveTrackVolume(
+        ccValueAt(m_model, track, 7, kM4aMaxVolume, tick, nextChangeTick),
+        m_document ? m_document->cfg().masterVolume : kM4aMaxVolume);
+}
+
+int8_t SongView::trackPanAt(int track, uint64_t tick, uint64_t &nextChangeTick) const
+{
+    return int8_t(std::clamp(ccValueAt(m_model, track, 10, 64, tick, nextChangeTick), 0, 127) - 64);
+}
+
 DrawerPageVoiceContext SongView::voiceContext(uint64_t tick) const
 {
     const int primaryTrack = m_selectionModel.primaryTrack();
@@ -239,9 +277,11 @@ DrawerPageVoiceContext SongView::voiceContext(uint64_t tick) const
         }
         program = change.program;
     }
+    const uint8_t volume = trackVolumeAt(primaryTrack, tick, endTick);
+    const int8_t pan = trackPanAt(primaryTrack, tick, endTick);
     if (program < 0 || program >= VOICEGROUP_SIZE)
-        return {nullptr, -1, endTick};
-    return {&m_voicegroup->voices[program], program, endTick};
+        return {nullptr, -1, endTick, volume, pan};
+    return {&m_voicegroup->voices[program], program, endTick, volume, pan};
 }
 void SongView::revealVoice(int program)
 {

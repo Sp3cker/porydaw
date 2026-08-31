@@ -113,7 +113,7 @@ void VelocityArea::songChanged()
     m_hoveredNote.reset();
     m_lastPresentedPlayheadTick.reset();
     m_live = {};
-    m_axis = VelocityAxis(VelocityMap::resolve(nullptr, std::nullopt), {});
+    m_axis = VelocityAxis(VelocityMap::resolve(nullptr, std::nullopt, kM4aMaxVolume, 0), {});
     publishAccessibleDescription();
     rebuildVisualState();
 }
@@ -334,15 +334,17 @@ VelocityMap VelocityArea::currentContext() const
         const uint64_t tick = m_live.playback.playing
                                   ? drawerContextTick(m_live.playback.playheadTick)
                                   : m_live.editCursorTick;
-        return VelocityMap::resolve(m_owner.voiceContext(tick).voice, std::nullopt);
+        const DrawerPageVoiceContext context = m_owner.voiceContext(tick);
+        return VelocityMap::resolve(context.voice, std::nullopt, context.trackVolume,
+                                    context.trackPan);
     }
     const VelocityMap first = contextForNote(notes.front());
     if (!first.isPsg())
-        return VelocityMap::resolve(nullptr, std::nullopt);
+        return VelocityMap::resolve(nullptr, std::nullopt, kM4aMaxVolume, 0);
     for (const DocNote &note : notes) {
         const VelocityMap next = contextForNote(note);
         if (!next.isPsg() || !first.compatibleWith(next))
-            return VelocityMap::resolve(nullptr, std::nullopt);
+            return VelocityMap::resolve(nullptr, std::nullopt, kM4aMaxVolume, 0);
     }
     return first;
 }
@@ -350,7 +352,7 @@ VelocityMap VelocityArea::currentContext() const
 VelocityMap VelocityArea::contextForNote(const DocNote &note) const
 {
     const DrawerPageVoiceContext context = m_owner.voiceContext(note.tick);
-    return VelocityMap::resolve(context.voice, note.key);
+    return VelocityMap::resolve(context.voice, note.key, context.trackVolume, context.trackPan);
 }
 
 std::vector<DocNote> VelocityArea::selectedNotes() const

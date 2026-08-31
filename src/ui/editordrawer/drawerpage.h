@@ -9,6 +9,7 @@
 #include <QPoint>
 
 #include "core/noteid.h"
+#include "core/velocitymodel.h"
 
 extern "C" {
 #include "voicegroup_loader.h"
@@ -41,6 +42,8 @@ struct DrawerPageVoiceContext {
     const ToneData *voice = nullptr;
     int voiceSlot = -1;
     uint64_t endTick = UINT64_MAX;
+    uint8_t trackVolume = uint8_t(kM4aMaxVolume);
+    int8_t trackPan = 0; // centered CC10 == 64
 };
 
 struct DrawerPageTimeSelectionMenuRequest {
