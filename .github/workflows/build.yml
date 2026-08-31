@@ -133,8 +133,11 @@ jobs:
           path: porydaw-windows
 
   # The harness sweep on an AddressSanitizer build stages each check's declared
-  # fixture files in a private scratch directory. Samplecheck runs without its
-  # optional corpus pass.
+  # fixture files in a private scratch directory. Qt Quick uses its software
+  # backend so offscreen GUI checks do not require a graphics device. Native
+  # window paint/timing checks stay in the normal verification sweep because
+  # sanitizer overhead changes their timing and rendered pixels. Samplecheck
+  # runs without its optional corpus pass.
   asan-checks:
     runs-on: ubuntu-latest
     container:
@@ -159,7 +162,8 @@ jobs:
 
       - name: Run harnesses
         run: >-
-          xvfb-run --auto-servernum --server-args='-screen 0 1280x1024x24'
+          QT_QUICK_BACKEND=software
           deno run --allow-read --allow-write --allow-run
           --allow-env=ASAN_OPTIONS,DISPLAY,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS
-          tools/run_checks.ts build-asan/porydaw_checks --pool=1
+          tools/run_checks.ts build-asan/porydaw_checks
+          --no-windowing-checks --pool=1
