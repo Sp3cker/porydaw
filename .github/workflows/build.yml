@@ -162,4 +162,4 @@ jobs:
           xvfb-run --auto-servernum --server-args='-screen 0 1280x1024x24'
           deno run --allow-read --allow-write --allow-run
           --allow-env=ASAN_OPTIONS,DISPLAY,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS
-          tools/run_checks.ts build-asan/porydaw_checks
+          tools/run_checks.ts build-asan/porydaw_checks --pool=1
