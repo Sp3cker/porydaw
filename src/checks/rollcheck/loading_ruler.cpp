@@ -256,6 +256,17 @@ void observeFallbackGrid(GeometryFixture &fx, Harness &check)
         check.fail("fallback grid segment is not implicit 4/4 at 24 ticks per beat");
 }
 
+// A viewport at the unsigned tick ceiling must stop at the ceiling instead of
+// wrapping its beat stride to zero and keeping the GUI thread in grid rebuild.
+void observeFallbackGridAtTickCeiling(GeometryFixture &fx, Harness &check)
+{
+    std::vector<uint64_t> ticks;
+    fx.bare.forEachGridLine(UINT64_MAX - kFallbackTicksPerBeat, UINT64_MAX,
+                            [&ticks](uint64_t tick, bool, int, int) { ticks.push_back(tick); });
+    if (ticks.size() > 1 || (!ticks.empty() && ticks.front() < UINT64_MAX - kFallbackTicksPerBeat))
+        check.fail("fallback grid iteration wrapped at the unsigned tick ceiling");
+}
+
 // Ordinary pre-roll: the strip left of tick 0 paints a flat shade that
 // differs from the plain chrome right of it.
 void observeFallbackPreRollShade(const RasterScan &raster, qreal plotOrigin, qreal x0, QRgb chrome,
@@ -502,6 +513,7 @@ void runGeometryScenarios(Harness &check)
     fx.bare.resize(1280, 800);
     QCoreApplication::processEvents();
     observeFallbackGrid(fx, check);
+    observeFallbackGridAtTickCeiling(fx, check);
     if (!fx.ruler) {
         check.fail("fresh view has no time ruler child");
         return;

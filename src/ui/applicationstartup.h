@@ -1,7 +1,5 @@
 #pragma once
 
-#include <functional>
-
 class QApplication;
 class QWidget;
 
@@ -17,11 +15,9 @@ bool initializePorydawApplication(QApplication &application);
 /// Installs bundled typography and initializes the shared UI modules.
 bool initializeApplication(QApplication &application);
 
-/// Shows the window beneath a flat window-background cover, paints one frame,
-/// runs the restore step, then reveals the finished UI. The up-front paint
-/// keeps the first visible frame themed (Windows otherwise flashes a white
-/// frame until the first paint after restore), and the cover hides the
-/// intermediate layouts restore produces.
-void showCoveredWhileRestoring(QWidget &window, const std::function<void()> &restore);
+/// Shows the fully constructed window only after its first themed frame has
+/// been painted. On Windows the native top-level remains DWM-cloaked during
+/// that paint so an uninitialized white redirection surface cannot flash.
+void showPreparedWindow(QWidget &window);
 
 } // namespace ui
