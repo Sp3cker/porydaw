@@ -3,9 +3,7 @@ name: Release
 # Cutting a release (docs/RELEASING.md): finalize CHANGELOG.md + bump the
 # CMake project version on main, then `git tag X.Y.Z && git push --tags`.
 # This workflow creates the GitHub release with that version's changelog
-# section as the body and attaches self-contained Linux and macOS builds.
-# The Windows build is statically linked against Qt, which CI can't produce;
-# it's built locally and uploaded to the release manually (docs/RELEASING.md).
+# section as the body and attaches self-contained Linux, macOS, and Windows builds.
 
 permissions:
   contents: write
@@ -174,5 +172,45 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ env.BUILD_NAME }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-windows:
+    needs: create-release
+    runs-on: windows-latest
+    env:
+      BUILD_NAME: porydaw-windows
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.9.*'
+          cache: true
+
+      - name: Set up MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DPORYDAW_BUILD_CHECKS=OFF
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Prep Release Directory
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "$env:BUILD_NAME"
+          Get-ChildItem -Path build -Exclude "*.obj", "*.ninja*", "CMakeFiles", ".cmake", "*.a", "*.lib", "porydaw_checks*" | Copy-Item -Destination "$env:BUILD_NAME" -Recurse
+          Copy-Item RELEASE-README.txt "$env:BUILD_NAME/README.txt"
+          Compress-Archive -Path "$env:BUILD_NAME" -DestinationPath "$env:BUILD_NAME.zip"
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: porydaw-windows.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

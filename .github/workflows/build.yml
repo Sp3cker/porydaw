@@ -4,6 +4,7 @@ on:
   push:
     branches: [fork-main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -42,6 +43,12 @@ jobs:
       - name: Build
         run: cmake --build build
 
+
+      - name: Upload Linux binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: porydaw-linux
+          path: build/porydaw
   build-native:
     strategy:
       fail-fast: false
@@ -78,6 +85,48 @@ jobs:
           if (-not (Test-Path build/Qt6Svg.dll)) { throw "Qt6Svg.dll was not deployed" }
           if (-not (Test-Path build/imageformats/qsvg.dll)) { throw "qsvg.dll was not deployed" }
           if (-not (Test-Path build/iconengines/qsvgicon.dll)) { throw "qsvgicon.dll was not deployed" }
+
+      - name: Package macOS Disk Image
+        if: runner.os == 'macOS'
+        run: |
+          macdeployqt build/porydaw.app -codesign=-
+          codesign --verify --deep --strict --verbose=2 build/porydaw.app
+          mkdir dmg-root
+          cp -R build/porydaw.app dmg-root/
+          if [ -f "RUN AFTER INSTALL.txt" ]; then cp "RUN AFTER INSTALL.txt" dmg-root/; fi
+          ln -s /Applications dmg-root/Applications
+          created=
+          for attempt in 1 2 3; do
+            if hdiutil create -volname porydaw -srcfolder dmg-root -ov \
+                -format UDZO build/porydaw.dmg; then
+              created=1
+              break
+            fi
+            sleep 5
+          done
+          [ -n "$created" ]
+
+      - name: Upload macOS artifact
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: porydaw-macos
+          path: build/porydaw.dmg
+
+      - name: Prep Windows Artifact Directory
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path porydaw-windows
+          Get-ChildItem -Path build -Exclude "*.obj", "*.ninja*", "CMakeFiles", ".cmake", "*.a", "*.lib", "porydaw_checks*" | Copy-Item -Destination porydaw-windows -Recurse
+          if (Test-Path RELEASE-README.txt) { Copy-Item RELEASE-README.txt porydaw-windows/README.txt }
+
+      - name: Upload Windows artifact
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: porydaw-windows
+          path: porydaw-windows
 
   # The harness sweep on an AddressSanitizer build stages each check's declared
   # fixture files in a private scratch directory. Samplecheck runs without its
