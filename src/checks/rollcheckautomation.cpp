@@ -35,6 +35,8 @@
 
 void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument &document,
                               DrawerPageLiveState &live, int &failures);
+void checkAutomationTerminalHold(SongView &view, AutomationPage &page, SongDocument &document,
+                                 DrawerPageLiveState &live, int &failures);
 void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDocument &document,
                                    const QString &songLabel,
                                    const AutomationGeometry &projectionGeometry, int lfoTop,
@@ -1521,8 +1523,10 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     check(stoppedVoice.voiceSlot == 3,
           QStringLiteral("stopped voice context did not use the edit cursor (slot %1)")
               .arg(stoppedVoice.voiceSlot));
-    if (!popupMenus)
+    if (!popupMenus) {
         checkAutomationNodePaint(view, page, document, live, failures);
+        checkAutomationTerminalHold(view, page, document, live, failures);
+    }
 
     view.setDocument(&document);
     while (document.undoStack()->index() > 0)

@@ -10,17 +10,21 @@
 #include <QCoreApplication>
 #include <QEvent>
 #include <QImage>
+#include <QPainter>
 #include <QString>
 #include <QUndoStack>
 #include <QWidget>
 
 #include "checks/support/eventsynth.h"
+#include "core/miditimeline.h"
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/cclanes.h"
 #include "ui/editordrawer/drawerpage.h"
+#include "ui/editordrawer/nodelane/gesture.h"
+#include "ui/editordrawer/nodelane/hover.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/nodelane/paint.h"
 #include "ui/editordrawer/tempolane.h"
@@ -582,4 +586,406 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
               document.undoStack()->index() == startSnap.undoIndex &&
               document.tempoPoints() == startTempo,
           QStringLiteral("paint coverage did not restore SMF, tempo, or undo"));
+}
+
+// Pixel oracle for the terminal hold: every held segment (committed curve,
+// phantom preview, drag preview, both pencil tails) must stop at
+// min(plot.right(), songEndX) and never paint past the song end.
+void checkAutomationTerminalHold(SongView &view, AutomationPage &page, SongDocument &document,
+                                 DrawerPageLiveState &live, int &failures)
+{
+    const auto report = [&failures](bool condition, const QString &message) {
+        if (condition)
+            return;
+        std::fprintf(stderr, "automation-check: FAIL paint: terminal hold: %s\n",
+                     qUtf8Printable(message));
+        ++failures;
+    };
+    const MidiTimeline *timeline = view.timeline();
+    if (!timeline || timeline->lengthTicks == 0) {
+        report(false, QStringLiteral("fixture song has no bounded timeline"));
+        return;
+    }
+    AutomationGeometry geometry = AutomationGeometry::resolve();
+    geometry.plotOrigin = page.canvas()->plotOrigin();
+    const qreal dpr = page.canvas()->devicePixelRatioF();
+    AutomationProjection projection(geometry, &page);
+    const uint64_t songEndTick = timeline->lengthTicks;
+    const QColor previewColor = themes::color(themes::Role::song_view_edit_preview_outline);
+    const QColor backdrop = themes::color(themes::Role::song_view_piano_roll_background);
+    const qreal pxPerTick = view.pxPerTick();
+    const qreal beatPx = qreal(timeline->ticksPerBeat) * pxPerTick;
+    const int plotDevRight = qRound(qreal(page.canvas()->width() - 1) * dpr);
+    const int capFringe = int(std::ceil(dpr));
+    const qreal lineHalf =
+        std::max(qreal(layout::singlePixel()), qreal(geometry.hoverPaintPadding + 1));
+    constexpr int heldValue = 24;
+    constexpr int nodeValue = 96;
+    constexpr int strokeValue = 60;
+    constexpr int dragValue = 127;
+
+    const auto setScroll = [&](double scroll) {
+        view.setEditorHorizontalScroll(scroll);
+        live.horizontalScroll = scroll;
+        refresh(page, document, live);
+    };
+    const auto cancel = [&] {
+        page.cancelInteraction();
+        leaveCanvas(page);
+    };
+    const auto grabCanvas = [&] {
+        leaveCanvas(page);
+        return page.canvas()->grab().toImage();
+    };
+    setScroll(qreal(timeline->lengthTicks) * pxPerTick - 300.0);
+    const std::optional<qreal> insideEnd = projection.songEndX(dpr);
+    const qreal endX = insideEnd.value_or(qreal(geometry.plotOrigin));
+    const QRect plot(geometry.plotOrigin, 0,
+                     std::max(0, page.canvas()->width() - geometry.plotOrigin), 1);
+    if (!insideEnd || endX < plot.left() + 250.0 || endX + 3.5 * beatPx + 12.0 >= plot.right()) {
+        report(false, QStringLiteral("inside fixture: song end %1 lacks plot clearance").arg(endX));
+        setScroll(0.0);
+        return;
+    }
+    const uint64_t nodeTick = view.snapTickDown(double(songEndTick) - 16.0);
+    CCLaneAdapter lane(document, 0, uint8_t{10});
+    const auto geom = laneGeom(page, kLanes[1]);
+    if (nodeTick == 0 || !geom.handle.valid() || geom.plot.isEmpty()) {
+        report(false, QStringLiteral("pan lane or trailing node is missing from the rig"));
+        setScroll(0.0);
+        return;
+    }
+    setCcPoints(page, document, live, {{0, heldValue}, {nodeTick, nodeValue}});
+    const QColor &curveColor = geom.curveColor;
+    const qreal heldY = nodelane::valueY(lane, geom.body, geometry, heldValue);
+    const qreal nodeY = nodelane::valueY(lane, geom.body, geometry, nodeValue);
+    const qreal strokeY = nodelane::valueY(lane, geom.body, geometry, strokeValue);
+    const qreal dragY = nodelane::valueY(lane, geom.body, geometry, dragValue);
+    const qreal nodeX = projection.displayX(nodeTick, dpr);
+    NodeLaneHoverState hoverState;
+    const std::vector<NodePoint> committed{{0, heldValue}, {nodeTick, nodeValue}};
+    const std::vector<NodePoint> edgeCommitted{{0, heldValue},
+                                               {uint64_t(timeline->ticksPerBeat) * 2, nodeValue}};
+
+    const auto renderLane = [&](const AutomationProjection &paintProjection,
+                                const std::vector<NodePoint> &points,
+                                std::optional<nodelane::OriginPhantomPaint> phantom) {
+        QImage image(page.canvas()->size(), QImage::Format_ARGB32_Premultiplied);
+        image.setDevicePixelRatio(dpr);
+        image.fill(backdrop);
+        QPainter painter(&image);
+        nodelane::paintNodeLane(painter, nodelane::NodeLanePaint{
+                                             .lane = lane,
+                                             .points = points,
+                                             .body = geom.body,
+                                             .geometry = geometry,
+                                             .projection = paintProjection,
+                                             .color = curveColor,
+                                             .handle = geom.handle,
+                                             .hoverState = hoverState,
+                                             .phantom = std::move(phantom),
+                                         });
+        painter.end();
+        return image;
+    };
+    const auto renderPencil = [&](const LaneGeom &paintGeom, const std::vector<NodePoint> &points,
+                                  const PencilGesture &pencilGesture) {
+        QImage image(page.canvas()->size(), QImage::Format_ARGB32_Premultiplied);
+        image.setDevicePixelRatio(dpr);
+        image.fill(backdrop);
+        QPainter painter(&image);
+        nodelane::paintNodeLane(painter, nodelane::NodeLanePaint{
+                                             .lane = lane,
+                                             .points = points,
+                                             .body = paintGeom.body,
+                                             .geometry = geometry,
+                                             .projection = projection,
+                                             .color = curveColor,
+                                             .handle = paintGeom.handle,
+                                             .hoverState = hoverState,
+                                             .pencil = &pencilGesture,
+                                             .pencilMode = true,
+                                         });
+        painter.end();
+        return image;
+    };
+    const auto lastColoredColumn = [&](const QImage &image, int xFrom, int xTo, qreal y,
+                                       const QColor &color, int tolerance) {
+        for (int x = xTo; x >= xFrom; --x) {
+            if (hasColorNear(image, QRectF(x, y - lineHalf, 1.0, 2 * lineHalf), dpr, color,
+                             tolerance))
+                return x;
+        }
+        return -1;
+    };
+    const auto beyondEnd = [&](qreal y) {
+        return QRectF(endX + 2.0, y - lineHalf, plot.right() - endX - 4.0, 2 * lineHalf);
+    };
+
+    const auto verifyInside = [&] {
+        const QImage insideCommitted = renderLane(projection, committed, std::nullopt);
+        const int endDev = qRound(endX * dpr);
+        const int insideLast = lastColoredColumn(
+            insideCommitted, qRound((nodeX + geometry.nodePaintRadius + 3.0) * dpr), plotDevRight,
+            nodeY, curveColor, 16);
+        report(insideLast >= endDev - 1 && insideLast <= endDev + capFringe,
+               QStringLiteral("committed hold ended %1 device px from the end column %2")
+                   .arg(insideLast - endDev)
+                   .arg(endDev));
+        report(lastColoredColumn(insideCommitted, endDev + capFringe + 1, plotDevRight, nodeY,
+                                 curveColor, 16) < 0,
+               QStringLiteral("committed curve painted right of the song end"));
+        const QImage insidePhantom = renderLane(
+            projection, committed,
+            nodelane::OriginPhantomPaint{OriginPhantom{geom.handle, committed.back(),
+                                                       lane.minimumValue(), lane.maximumValue()},
+                                         committed.back()});
+        report(hasColorNear(insidePhantom,
+                            QRectF(plot.left() + 2.0, nodeY - lineHalf, endX - plot.left() - 8.0,
+                                   2 * lineHalf),
+                            dpr, previewColor, 24),
+               QStringLiteral("phantom preview hold is missing before the song end"));
+        report(!hasColorNear(insidePhantom, beyondEnd(nodeY), dpr, previewColor, 24),
+               QStringLiteral("phantom preview hold ran past the song end"));
+    };
+    const auto verifyAfterAndZeroLength = [&] {
+        setScroll(0.0);
+        const std::optional<qreal> afterEnd = projection.songEndX(dpr);
+        report(afterEnd && *afterEnd > plot.right(),
+               QStringLiteral("after fixture: song end is not right of the plot"));
+        const QImage afterCommitted = renderLane(projection, edgeCommitted, std::nullopt);
+        report(lastColoredColumn(afterCommitted, 0, plotDevRight, nodeY, curveColor, 16) >=
+                   plotDevRight - capFringe,
+               QStringLiteral("hold stopped short of the plot edge with the song end right of it"));
+        MidiTimeline zeroTimeline;
+        zeroTimeline.ticksPerBeat = timeline->ticksPerBeat;
+        SongView zeroView;
+        zeroView.setSong(&zeroTimeline, nullptr);
+        zeroView.setEditorTimeZoom(live.timeZoom);
+        zeroView.setEditorHorizontalScroll(0.0);
+        AutomationProjection zeroProjection(geometry, &zeroView);
+        report(!zeroProjection.songEndX(dpr).has_value(),
+               QStringLiteral("zero-length timeline still resolved a song end"));
+        const QImage zeroCommitted = renderLane(zeroProjection, edgeCommitted, std::nullopt);
+        report(zeroCommitted == afterCommitted,
+               QStringLiteral("zero-length fallback raster differs from the past-end raster"));
+    };
+    const auto verifyBefore = [&] {
+        setScroll(qreal(timeline->lengthTicks) * pxPerTick + qreal(plot.width()));
+        const std::optional<qreal> beforeEnd = projection.songEndX(dpr);
+        report(beforeEnd && *beforeEnd < plot.left(),
+               QStringLiteral("before fixture: song end is not left of the plot"));
+        const QImage beforeCommitted = renderLane(projection, committed, std::nullopt);
+        report(lastColoredColumn(beforeCommitted, qRound(plot.left() * dpr), plotDevRight, nodeY,
+                                 curveColor, 16) < 0 &&
+                   lastColoredColumn(beforeCommitted, qRound(plot.left() * dpr), plotDevRight,
+                                     heldY, curveColor, 16) < 0,
+               QStringLiteral("held-segment pixels reached the plot with the song end left of it"));
+    };
+    const auto verifyDrag = [&] {
+        setScroll(qreal(songEndTick) * pxPerTick - 300.0);
+        const QPointF nodePos(nodeX, nodeY);
+        const int dragActivation = geometry.nodeDragActivationDistance + 8;
+        const auto reportCleanBeyondEnd = [&](const QImage &image, const char *label) {
+            report(!hasColorNear(image, beyondEnd(strokeY), dpr, previewColor, 24) &&
+                       !hasColorNear(image, beyondEnd(nodeY), dpr, curveColor, 16) &&
+                       !hasColorNear(image, beyondEnd(heldY), dpr, curveColor, 16) &&
+                       !hasColorNear(image, beyondEnd(heldY), dpr, previewColor, 24),
+                   QStringLiteral("%1 painted held pixels beyond the song end")
+                       .arg(QLatin1String(label)));
+        };
+        sendActivatedDrag(page.canvas(), nodePos, QPointF(endX - 100.0, strokeY), dragActivation,
+                          Qt::NoModifier);
+        pump();
+        const QImage dragInside = grabCanvas();
+        report(hasColorNear(dragInside, QRectF(endX - 65.0, strokeY - lineHalf, 30.0, 2 * lineHalf),
+                            dpr, previewColor, 24),
+               QStringLiteral("single drag hold is missing before the song end"));
+        reportCleanBeyondEnd(dragInside, "single drag");
+        cancel();
+        const qreal pastXMin = endX + beatPx + 4.0;
+        const qreal pastXMax = endX + 3.5 * beatPx - 4.0;
+        sendActivatedDrag(page.canvas(), nodePos, QPointF(endX + 2.5 * beatPx, strokeY),
+                          dragActivation, Qt::NoModifier);
+        pump();
+        const QImage dragPast = grabCanvas();
+        report(hasColorNear(dragPast, lineProbe(endX, (heldY + strokeY) / 2.0, 2.0, lineHalf), dpr,
+                            previewColor, 24),
+               QStringLiteral("past-end drag did not step down at the song end"));
+        report(hasColorNear(
+                   dragPast,
+                   QRectF(pastXMin, strokeY - 2 * lineHalf, pastXMax - pastXMin, 4 * lineHalf), dpr,
+                   previewColor, 24),
+               QStringLiteral("past-end drag marker is missing"));
+        report(!hasColorNear(dragPast, beyondEnd(heldY), dpr, curveColor, 16) &&
+                   !hasColorNear(dragPast, beyondEnd(heldY), dpr, previewColor, 24) &&
+                   !hasColorNear(dragPast, beyondEnd(nodeY), dpr, curveColor, 16) &&
+                   !hasColorNear(
+                       dragPast,
+                       QRectF(endX + 2.0, strokeY - lineHalf, pastXMin - endX - 6.0, 2 * lineHalf),
+                       dpr, previewColor, 24) &&
+                   !hasColorNear(dragPast,
+                                 QRectF(pastXMax + 4.0, strokeY - lineHalf,
+                                        plot.right() - pastXMax - 6.0, 2 * lineHalf),
+                                 dpr, previewColor, 24),
+               QStringLiteral("past-end drag painted held pixels beyond the song end"));
+        cancel();
+        sendActivatedDrag(page.canvas(), nodePos, QPointF(plot.right() + 120.0, strokeY),
+                          dragActivation, Qt::NoModifier);
+        pump();
+        const QImage dragOff = grabCanvas();
+        report(!hasColorNear(dragOff, beyondEnd(strokeY), dpr, previewColor, 24),
+               QStringLiteral("off-viewport drag painted a reversed segment into the plot"));
+        report(hasColorNear(dragOff, lineProbe(endX, (heldY + strokeY) / 2.0, 2.0, lineHalf), dpr,
+                            previewColor, 24),
+               QStringLiteral("off-viewport drag lost the step-down at the song end"));
+        reportCleanBeyondEnd(dragOff, "off-viewport drag");
+        cancel();
+    };
+    const auto verifyPreparedDrag = [&] {
+        songview::EditorSelectionModel::TimeSelection selection;
+        selection.startTick = 0;
+        selection.endTick = nodeTick + 1;
+        selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
+        selection.lanes = {{0, 10}};
+        view.selectionModel().setTimeSelection(selection);
+        refresh(page, document, live);
+        sendActivatedDrag(page.canvas(), QPointF(nodeX, nodeY), QPointF(nodeX, dragY),
+                          geometry.nodeDragActivationDistance + 8, Qt::NoModifier);
+        pump();
+        const QImage preparedDrag = grabCanvas();
+        report(hasColorNear(preparedDrag, QRectF(endX - 60.0, dragY - lineHalf, 54.0, 2 * lineHalf),
+                            dpr, curveColor, 16),
+               QStringLiteral("prepared drag hold is missing before the song end"));
+        report(!hasColorNear(preparedDrag, beyondEnd(dragY), dpr, curveColor, 16) &&
+                   !hasColorNear(preparedDrag, beyondEnd(dragY), dpr, previewColor, 24) &&
+                   !hasColorNear(preparedDrag, beyondEnd(nodeY), dpr, curveColor, 16),
+               QStringLiteral("prepared drag painted beyond the song end"));
+        cancel();
+        view.selectionModel().clearTimeSelection();
+        refresh(page, document, live);
+    };
+    const auto verifyPencilTails = [&] {
+        QAction *pencil = pencilModeAction(page);
+        report(pencil != nullptr, QStringLiteral("Pencil Mode action is unavailable"));
+        if (pencil) {
+            pencil->setChecked(true);
+            pump();
+            const auto pencilStroke = [&](const QPointF &from, const QPointF &to) {
+                checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, from,
+                                          Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, (from + to) / 2.0,
+                                          Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+                checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, to, Qt::NoButton,
+                                          Qt::LeftButton, Qt::NoModifier);
+                pump();
+            };
+            pencilStroke(QPointF(std::max(nodeX - 120.0, plot.left() + 20.0), strokeY),
+                         QPointF(nodeX - 80.0, strokeY));
+            const QImage retainedStroke = page.canvas()->grab().toImage();
+            report(hasColorNear(
+                       retainedStroke,
+                       QRectF(nodeX + 8.0, nodeY - lineHalf, endX - nodeX - 16.0, 2 * lineHalf),
+                       dpr, curveColor, 16),
+                   QStringLiteral("pencil retained-source tail is missing before the song end"));
+            report(!hasColorNear(retainedStroke, beyondEnd(nodeY), dpr, curveColor, 16),
+                   QStringLiteral("pencil retained-source tail ran past the song end"));
+            report(!hasColorNear(retainedStroke, beyondEnd(strokeY), dpr, previewColor, 24),
+                   QStringLiteral("pencil preview pixels ran past the retained source node"));
+            cancel();
+            setCcPoints(page, document, live, {{0, heldValue}});
+            const MidiTimeline *tailTimeline = view.timeline();
+            const uint64_t tailSongEnd = tailTimeline ? tailTimeline->lengthTicks : 0;
+            if (tailSongEnd > 0)
+                setScroll(qreal(tailSongEnd) * pxPerTick - 300.0);
+            const std::optional<qreal> tailEnd = projection.songEndX(dpr);
+            const qreal tailEndX = tailEnd.value_or(qreal(plot.left()));
+            const auto tailGeom = laneGeom(page, kLanes[1]);
+            const bool tailLaneUsable = tailGeom.handle.valid() && !tailGeom.plot.isEmpty();
+            report(tailLaneUsable, QStringLiteral("pan lane disappeared during pencil tail setup"));
+            const qreal tailStrokeY =
+                tailLaneUsable ? nodelane::valueY(lane, tailGeom.body, geometry, strokeValue)
+                               : strokeY;
+            const AutomationGridCell finalCell =
+                tailSongEnd == 0 ? AutomationGridCell{}
+                                 : projection.snapCellAt(double(tailSongEnd - 1));
+            const AutomationGridCell tailStrokeCell =
+                finalCell.tickBegin == 0 ? AutomationGridCell{}
+                                         : projection.snapCellAt(double(finalCell.tickBegin - 1));
+            const uint64_t tailCellWidth = tailStrokeCell.tickEnd - tailStrokeCell.tickBegin;
+            const bool tailCellUsable = tailLaneUsable && tailEnd &&
+                                        finalCell.tickEnd == tailSongEnd &&
+                                        tailStrokeCell.tickEnd < tailSongEnd && tailCellWidth >= 2;
+            report(tailCellUsable,
+                   QStringLiteral("pencil cells [%1, %2), [%3, %4), song end %5 are not usable")
+                       .arg(tailStrokeCell.tickBegin)
+                       .arg(tailStrokeCell.tickEnd)
+                       .arg(finalCell.tickBegin)
+                       .arg(finalCell.tickEnd)
+                       .arg(tailSongEnd));
+            if (tailCellUsable) {
+                const std::vector<NodePoint> tailSource = lane.points();
+                report(
+                    tailSource.size() == 1 && tailSource.front().tick == 0,
+                    QStringLiteral("pencil tail source retained %1 points").arg(tailSource.size()));
+                const uint64_t tailStrokeFirst = tailStrokeCell.tickBegin + tailCellWidth / 4;
+                const QPointF tailStrokeStart(projection.displayX(tailStrokeFirst, dpr),
+                                              tailStrokeY);
+                const auto mappedTailStart = projection.pointerMapping(
+                    lane, tailGeom.body, tailStrokeStart.x(), tailStrokeStart.y());
+                report(mappedTailStart.cell.tickBegin == tailStrokeCell.tickBegin &&
+                           mappedTailStart.cell.tickEnd == tailStrokeCell.tickEnd,
+                       QStringLiteral("pencil tail press mapped to [%1, %2), expected [%3, %4)")
+                           .arg(mappedTailStart.cell.tickBegin)
+                           .arg(mappedTailStart.cell.tickEnd)
+                           .arg(tailStrokeCell.tickBegin)
+                           .arg(tailStrokeCell.tickEnd));
+                auto tailStroke = AutomationPencilGesture::start(
+                    {tailGeom.handle, document.revision()}, lane.minimumValue(),
+                    lane.maximumValue(), tailSongEnd, document.ticksPerClock(), tailSource,
+                    {mappedTailStart.rawTick, tailStrokeStart.x(), mappedTailStart.point,
+                     double(mappedTailStart.point.value)},
+                    mappedTailStart.cell);
+                report(tailStroke.has_value(),
+                       QStringLiteral("pencil tail gesture could not start"));
+                if (tailStroke) {
+                    PencilGesture tailGesture{tailGeom.handle, std::move(*tailStroke)};
+                    const QImage tailPreview = renderPencil(tailGeom, tailSource, tailGesture);
+                    const qreal tailHeldY =
+                        nodelane::valueY(lane, tailGeom.body, geometry, heldValue);
+                    const qreal tailStartX = projection.displayX(tailStrokeCell.tickEnd, dpr);
+                    const int tailEndDev = qRound(tailEndX * dpr);
+                    const int previewTailLast =
+                        lastColoredColumn(tailPreview, qRound(tailStartX * dpr), plotDevRight,
+                                          tailHeldY, previewColor, 24);
+                    report(previewTailLast >= tailEndDev - 1,
+                           QStringLiteral("pencil preview-value tail ended at device column %1, "
+                                          "expected end column %2")
+                               .arg(previewTailLast)
+                               .arg(tailEndDev));
+                    const QRectF tailBeyondEnd(tailEndX + 2.0, tailHeldY - lineHalf,
+                                               plot.right() - tailEndX - 4.0, 2 * lineHalf);
+                    report(!hasColorNear(tailPreview, tailBeyondEnd, dpr, previewColor, 24),
+                           QStringLiteral("pencil preview-value tail ran past the song end"));
+                    report(!hasColorNear(tailPreview,
+                                         QRectF(tailEndX + 2.0, tailHeldY - lineHalf,
+                                                plot.right() - tailEndX - 4.0, 2 * lineHalf),
+                                         dpr, curveColor, 16),
+                           QStringLiteral("pencil committed tail appeared past the song end"));
+                }
+            }
+            pencil->setChecked(false);
+            pump();
+        }
+    };
+
+    verifyInside();
+    verifyAfterAndZeroLength();
+    verifyBefore();
+    verifyDrag();
+    verifyPreparedDrag();
+    verifyPencilTails();
+    cancel();
+    view.selectionModel().clearTimeSelection();
+    setScroll(0.0);
 }

@@ -52,6 +52,15 @@ void paintPhantom(QPainter &painter, const AutomationGeometry &geometry, const Q
     paintNode(painter, geometry, color, center);
 }
 
+// Right edge where a held segment terminates: the song end when it falls
+// inside the plot, otherwise the plot edge itself.
+[[nodiscard]] inline qreal heldEndX(const AutomationProjection &projection, const QRect &plot,
+                                    qreal dpr)
+{
+    const std::optional<qreal> endX = projection.songEndX(dpr);
+    return endX ? std::min(qreal(plot.right()), *endX) : qreal(plot.right());
+}
+
 void paintPhantomCurvePreview(QPainter &painter, const AutomationGeometry &geometry,
                               const QRect &body, const AutomationProjection &projection,
                               std::span<const NodePoint> points, const QRect &plot,
@@ -62,8 +71,8 @@ void paintPhantomCurvePreview(QPainter &painter, const AutomationGeometry &geome
                          [](uint64_t tick, const NodePoint &point) { return tick < point.tick; });
     const qreal y = AutomationProjection::valueY(body, geometry, phantom.minimumValue,
                                                  phantom.maximumValue, phantom.point.value);
-    const qreal nextX =
-        next == points.end() ? qreal(plot.right()) : projection.displayX(next->tick, dpr);
+    const qreal nextX = next == points.end() ? heldEndX(projection, plot, dpr)
+                                             : projection.displayX(next->tick, dpr);
     const QColor previewColor = themes::color(themes::Role::song_view_edit_preview_outline);
     painter.setPen(QPen(previewColor, layout::singlePixel()));
     painter.drawLine(QLineF(qreal(plot.left()), y, nextX, y));
@@ -127,14 +136,14 @@ void paintStepCurve(QPainter &painter, std::span<const NodePoint> points, const 
         if (currentOmitted || nextOmitted)
             continue;
         const qreal x0 = paint.projection.displayX(points[index].tick, dpr);
-        const qreal x1 = index + 1 < points.size()
-                             ? paint.projection.displayX(points[index + 1].tick, dpr)
-                             : plot.right();
-        if (x1 < plot.left() || x0 > plot.right())
+        const bool terminal = index + 1 == points.size();
+        const qreal x1 = terminal ? heldEndX(paint.projection, plot, dpr)
+                                  : paint.projection.displayX(points[index + 1].tick, dpr);
+        if (x1 < plot.left() || x0 > plot.right() || (terminal && x0 >= x1))
             continue;
         const qreal y = yAt(points[index].value);
         painter.drawLine(QLineF(x0, y, x1, y));
-        if (index + 1 < points.size())
+        if (!terminal)
             painter.drawLine(QLineF(x1, y, x1, yAt(points[index + 1].value)));
     }
 }
@@ -215,17 +224,24 @@ void paintDragPreview(QPainter &painter, std::span<const NodePoint> points, cons
         }
         const qreal x = tickX(grabbed.current.tick);
         const qreal y = yAt(grabbed.current.value);
+        const qreal endX = heldEndX(paint.projection, plot, dpr);
         painter.setPen(QPen(previewColor, layout::singlePixel()));
         painter.setBrush(Qt::NoBrush);
         if (previous) {
             const qreal previousY = yAt(previous->value);
-            painter.drawLine(QLineF(tickX(previous->tick), previousY, x, previousY));
-            painter.drawLine(QLineF(x, previousY, x, y));
+            const qreal holdEnd = std::min(x, endX);
+            if (holdEnd > tickX(previous->tick)) {
+                painter.drawLine(QLineF(tickX(previous->tick), previousY, holdEnd, previousY));
+                painter.drawLine(QLineF(holdEnd, previousY, holdEnd, y));
+            }
         }
-        const qreal nextX = next ? tickX(next->tick) : plot.right();
-        painter.drawLine(QLineF(x, y, nextX, y));
-        if (next)
+        if (next) {
+            const qreal nextX = tickX(next->tick);
+            painter.drawLine(QLineF(x, y, nextX, y));
             painter.drawLine(QLineF(nextX, y, nextX, yAt(next->value)));
+        } else if (x < endX) {
+            painter.drawLine(QLineF(x, y, endX, y));
+        }
         paintNode(painter, paint.geometry, previewColor, QPointF(x, y));
         paintPreviewLabel(painter, paint.hoverState, paint.handle);
         return;
@@ -279,6 +295,7 @@ void paintPencilPreview(QPainter &painter, std::span<const NodePoint> points, co
         return valueY(paint.lane, paint.body, paint.geometry, value);
     };
     const auto tickX = [&](uint64_t tick) { return paint.projection.displayX(tick, dpr); };
+    const qreal endX = heldEndX(paint.projection, plot, dpr);
     const auto drawHeld = [&](uint64_t first, uint64_t last, int value, const QColor &stroke) {
         if (first >= last)
             return;
@@ -311,10 +328,10 @@ void paintPencilPreview(QPainter &painter, std::span<const NodePoint> points, co
                 drawHeld(point.tick, last, point.value, paint.color);
                 painter.drawLine(QLineF(tickX(last), yAt(point.value), tickX(last),
                                         yAt(points[index + 1].value)));
-            } else {
+            } else if (tickX(point.tick) < endX) {
                 painter.setPen(QPen(paint.color, layout::singlePixel() + layout::singlePixel()));
                 painter.drawLine(
-                    QLineF(tickX(point.tick), yAt(point.value), plot.right(), yAt(point.value)));
+                    QLineF(tickX(point.tick), yAt(point.value), endX, yAt(point.value)));
             }
         }
     }
@@ -339,10 +356,10 @@ void paintPencilPreview(QPainter &painter, std::span<const NodePoint> points, co
         if (*previewValue != nextAfterRange->value)
             painter.drawLine(QLineF(tickX(nextAfterRange->tick), yAt(*previewValue),
                                     tickX(nextAfterRange->tick), yAt(nextAfterRange->value)));
-    } else if (previewValue) {
+    } else if (previewValue && tickX(preview.tickEnd) < endX) {
         painter.setPen(QPen(previewColor, layout::singlePixel() + layout::singlePixel()));
         painter.drawLine(
-            QLineF(tickX(preview.tickEnd), yAt(*previewValue), plot.right(), yAt(*previewValue)));
+            QLineF(tickX(preview.tickEnd), yAt(*previewValue), endX, yAt(*previewValue)));
     }
     if (paint.projection.nodeMarkersVisible()) {
         const QRectF nodeClip = painter.clipBoundingRect().intersected(QRectF(plot));

@@ -117,6 +117,14 @@ qreal AutomationProjection::displayX(uint64_t tick, qreal devicePixelRatio) cons
     return m_songView ? m_songView->displayX(tick, m_geometry.plotOrigin, devicePixelRatio) : 0.0;
 }
 
+std::optional<qreal> AutomationProjection::songEndX(qreal devicePixelRatio) const
+{
+    const MidiTimeline *timeline = this->timeline();
+    if (!timeline || timeline->lengthTicks == 0)
+        return std::nullopt;
+    return displayX(timeline->lengthTicks, devicePixelRatio);
+}
+
 uint64_t AutomationProjection::snapTickAt(qreal x, bool fine) const
 {
     const double tick = rawTickAt(x);

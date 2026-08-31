@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -69,6 +70,9 @@ class AutomationProjection
     const AutomationGeometry &geometry() const noexcept { return m_geometry; }
     double rawTickAt(qreal x) const;
     qreal displayX(uint64_t tick, qreal devicePixelRatio) const;
+    // Display x of the song's end tick at the given device pixel ratio; nullopt
+    // when the song is unbounded (null timeline or lengthTicks == 0).
+    [[nodiscard]] std::optional<qreal> songEndX(qreal devicePixelRatio) const;
     uint64_t snapTickAt(qreal x, bool fine) const;
     static qreal valueY(const QRect &bounds, const AutomationGeometry &geometry, double minimum,
                         double maximum, double value);
