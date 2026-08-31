@@ -95,7 +95,7 @@ deno task format [--check] [files...]
 ```
 
 There is no `deno task build`. Pick `build:app` or `build:checks`.
-`deno task checks` is the raw harness runner; prefer `verify`.
+`deno task checks` and `deno task verify` both build the checks before running them.
 
 Any failing assertion or check MUST be brought to the user's attention and resolved before
 handoff. Never hand off work with failing assertions or checks.

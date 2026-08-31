@@ -34,10 +34,10 @@ deno task format          # reformat TypeScript and C/C++ sources in place
 deno task format:check    # what CI runs
 ```
 
-Run the complete application check sweep against an existing build with Deno:
+Build and run the complete application check sweep with Deno:
 
 ```bash
-deno task checks build/porydaw_checks
+deno task checks
 ```
 
 ## License

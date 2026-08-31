@@ -1,5 +1,5 @@
-// Local-only coverage lane. CI never calls this — .github/workflows/build.yml
-// pins to `deno task checks`. Keeps -O0 + instrumentation out of remote builds.
+// Local-only coverage lane. CI never calls this, which keeps -O0 and
+// instrumentation out of remote builds.
 //
 // Usage: deno task coverage [-- html|report]  (default: both)
 // Env: none. Always writes to build-cov/ (gitignored via build-*/).
@@ -39,7 +39,7 @@ function which(bin: string): string {
 
 if (Deno.env.get("CI") && !Deno.env.get("PORYDAW_COVERAGE_IN_CI")) {
   console.log(
-    "coverage: CI detected — continuing because you invoked coverage explicitly. Remote CI should use `deno task checks`.",
+    "coverage: CI detected — continuing because you invoked coverage explicitly.",
   );
 }
 
@@ -86,7 +86,16 @@ await Deno.remove(PROFILES_DIR, { recursive: true }).catch(() => {});
 await Deno.mkdir(PROFILES_DIR, { recursive: true });
 const checksBin = `${BUILD_DIR}/porydaw_checks`;
 const covEnv = { LLVM_PROFILE_FILE: `${PROFILES_DIR}/cov-%p.profraw` };
-run(["deno", "task", "checks", checksBin], { env: covEnv });
+run([
+  "deno",
+  "run",
+  "--allow-read",
+  "--allow-write",
+  "--allow-run",
+  "--allow-env=ASAN_OPTIONS,DISPLAY,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS",
+  "tools/run_checks.ts",
+  checksBin,
+], { env: covEnv });
 
 // 4. Merge (glob doesn't expand in Deno.Command, so handle fallback).
 console.log("coverage: merging");

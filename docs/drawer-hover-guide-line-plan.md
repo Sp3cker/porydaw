@@ -469,19 +469,19 @@ same primitives the widget code uses — exact formulas, no `~` approximations:
 Gates and harnesses (run once at the end; stages are validated by their acceptance
 criteria plus the checks above):
 
-- `deno task build:checks`, then run the affected check binaries through
-  `deno task checks` (rollcheck, automationgesturecheck, renderingplayheadcheck).
+- Run the affected check binaries through `deno task checks` (rollcheck,
+  automationgesturecheck, renderingplayheadcheck); it builds them first.
 - Fractional-scale backing-store gates:
-  `QT_SCALE_FACTOR=1.25 PORYDAW_HOVER_GUIDE_ONLY=1 deno task checks build/porydaw_checks --filter=rollcheck`
+  `QT_SCALE_FACTOR=1.25 PORYDAW_HOVER_GUIDE_ONLY=1 deno task checks --filter=rollcheck`
   and
-  `QT_SCALE_FACTOR=1.5 PORYDAW_HOVER_GUIDE_ONLY=1 deno task checks build/porydaw_checks --filter=rollcheck`.
+  `QT_SCALE_FACTOR=1.5 PORYDAW_HOVER_GUIDE_ONLY=1 deno task checks --filter=rollcheck`.
   These exercise the device-grid strip snapping that `grab()`-based comparisons cannot
   (the backing-store flush region is exactly the trail class the
   `TimelineSurface::invalidateContent` comment warns about). The generic full rollcheck is
   not the fractional-scale gate: it has two unrelated, pre-existing scale-sensitive
   note/nudge assertions that fail identically in the trailing-hold baseline worktree.
 - `PORYDAW_FORCE_UNCACHED_TIMELINE=1 PORYDAW_HOVER_GUIDE_ONLY=1 deno task checks
-  build/porydaw_checks --filter=rollcheck`: the uncached escape hatch must paint the guide
+  --filter=rollcheck`: the uncached escape hatch must paint the guide
   identically, isolating any cache-only assumption.
 - Native-exposure windowing check (rollcheckwindowing) still passes: the guide strips ride
   the existing dirty-region flush path.

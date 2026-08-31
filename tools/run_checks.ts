@@ -2,7 +2,7 @@
 // Point this at an ASAN build (-DPORYDAW_ASAN=ON) to turn silent memory bugs
 // into aborts with stack traces.
 //
-// usage: deno task checks <porydaw-checks-binary> [--all|--no-windowing-checks] [--reporter=quiet|verbose] [--filter=<name>]
+// Internal usage: deno run <permissions> tools/run_checks.ts <porydaw-checks-binary> [options]
 //
 // env: PORYDAW_SAMPLE_CORPUS  optional built project for samplecheck's corpus
 //      ASAN_OPTIONS defaults to detect_leaks=0
@@ -44,7 +44,7 @@ const decoder = new TextDecoder();
 
 function usage(): never {
   console.error(
-    "usage: deno task checks <porydaw-checks-binary> [--all|--no-windowing-checks] [--reporter=quiet|verbose] [--filter=<name>] [--pool=<n>]",
+    "usage: tools/run_checks.ts <porydaw-checks-binary> [--all|--no-windowing-checks] [--reporter=quiet|verbose] [--filter=<name>] [--pool=<n>]",
   );
   console.error("  --all (default): all checks");
   console.error(

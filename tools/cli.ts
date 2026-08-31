@@ -3,7 +3,7 @@
 // Usage:
 // deno task build:app [--release] -> build porydaw only
 // deno task build:checks [--release] -> build porydaw + porydaw_checks + mid2agb
-// deno task verify [--verbose] [--filter <name>] [--no-build] [-- <run_checks args>]
+// deno task verify [--verbose] [--filter <name>] [-- <run_checks args>]
 // deno task format [--check] [files...]
 
 import { join } from "node:path";
@@ -18,14 +18,13 @@ function usage(): never {
   console.error(`usage:
  deno task build:app [--release]    build porydaw app only
  deno task build:checks [--release] build porydaw + checks + mid2agb
- deno task verify [--verbose] [--filter <name>] [--no-build] [-- <run_checks args>]
+ deno task verify [--verbose] [--filter <name>] [-- <run_checks args>]
  deno task format [--check] [files...]`);
   console.error("");
   console.error(
     "verify forwards --all/--no-windowing-checks/--filter to run_checks.ts",
   );
   console.error(" --verbose  show per-harness ok: lines");
-  console.error(" --no-build skip cmake build step");
   console.error(" --release  configure and build the Release configuration");
   Deno.exit(2);
 }
@@ -123,13 +122,13 @@ async function runBuild(
 }
 
 async function runVerify(rawArgs: string[]): Promise<void> {
+  if (rawArgs.includes("--no-build")) usage();
   const verbose = isVerbose(rawArgs);
-  const noBuild = rawArgs.includes("--no-build");
   const filters: string[] = [];
   const passthrough: string[] = [];
   for (let i = 0; i < rawArgs.length; i++) {
     const arg = rawArgs[i];
-    if (arg === "--verbose" || arg === "-v" || arg === "--no-build") {
+    if (arg === "--verbose" || arg === "-v") {
       continue;
     } else if (arg.startsWith("--filter=")) {
       filters.push(arg);
@@ -149,9 +148,7 @@ async function runVerify(rawArgs: string[]): Promise<void> {
     }
   }
 
-  if (!noBuild) {
-    await runBuild(["porydaw_checks", "mid2agb"]);
-  }
+  await runBuild(["porydaw", "porydaw_checks", "mid2agb"]);
 
   const binary = join(BUILD_DIR, "porydaw_checks");
   const reporterArgs = verbose ? ["--reporter=verbose"] : [];

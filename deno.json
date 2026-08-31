@@ -1,7 +1,7 @@
 {
 
   "tasks": {
-    "checks": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/run_checks.ts",
+    "checks": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/cli.ts verify",
     "build:app": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts build:app",
     "build:checks": "deno run --allow-read --allow-write --allow-run --allow-env tools/cli.ts build:checks",
     "verify": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/cli.ts verify",
