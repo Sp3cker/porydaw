@@ -53,7 +53,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        # Qt 6.9.3 does not compile against the macOS 26 SDK because
+        # qyieldcpu.h calls __yield() without including arm_acle.h
+        # (QTBUG-145239). Keep the macOS build on Xcode 16.4 until the
+        # upstream Qt fix reaches a release we can install here.
+        os: [windows-latest, macos-15]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
