@@ -283,6 +283,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview.h
     src/ui/songview/otherstrip.cpp
     src/ui/songview/otherstrip.h
+    src/ui/songview/otherstripquick.cpp
     src/ui/songview/voicepicker.cpp
     src/ui/songview/voicepicker.h
     src/ui/songview/trackheaderrow.cpp
@@ -306,8 +307,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/drawercoordination.cpp
     src/ui/songview/timeruler.cpp
     src/ui/songview/timeruler.h
-    src/ui/songview/timeruler_paint.cpp
     src/ui/songview/timeruler_interaction.cpp
+    src/ui/songview/timerulerquick.cpp
     src/ui/songview/pianoroll.cpp
     src/ui/songview/pianoroll.h
     src/ui/songview/pianoroll_geometry.cpp
@@ -318,6 +319,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/quick/pianorollquick.cpp
     src/ui/songview/quick/pianorollquick.h
     src/ui/songview/quick/pianorollquickscene.cpp
+    src/ui/songview/quick/timelinequickscene.cpp
+    src/ui/songview/quick/timelinequickscene.h
     src/ui/pitchbendeditor.cpp
     src/ui/pitchbendeditor.hpp
     src/ui/pitchbendgraph.cpp
@@ -415,6 +418,10 @@ if(APPLE)
 endif()
 set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 set_source_files_properties(
+    src/ui/songview/quick/TimelineCanvas.qml
+    PROPERTIES QT_RESOURCE_ALIAS TimelineCanvas.qml
+)
+set_source_files_properties(
     src/ui/songview/quick/PianoRollCanvas.qml
     PROPERTIES QT_RESOURCE_ALIAS PianoRollCanvas.qml
 )
@@ -428,6 +435,7 @@ qt_add_qml_module(porydaw_app
     RESOURCE_PREFIX /qt/qml
     NO_PLUGIN
     QML_FILES
+        src/ui/songview/quick/TimelineCanvas.qml
         src/ui/songview/quick/PianoRollCanvas.qml
         src/ui/activity/TrackActivityView.qml
 )

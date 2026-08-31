@@ -5,6 +5,7 @@
 #include <QHash>
 #include <QList>
 #include <QMetaObject>
+#include <QPointer>
 #include <QRectF>
 #include <QSet>
 #include <QWidget>
@@ -58,11 +59,14 @@ namespace songview {
 class TimeRuler;
 class EditorSelectionModel;
 class PianoRoll;
+class TimelineQuickView;
 class OtherStrip;
 class PlayheadOverlay;
 class TrackHeaderPanel;
 class TrackHeaderRow;
 enum class PianoRollQuickDirty : quint32;
+enum class TimelineQuickDirty : quint8;
+using TimelineQuickDirtySet = QFlags<TimelineQuickDirty>;
 using PianoRollQuickDirtySet = QFlags<PianoRollQuickDirty>;
 
 // Perceptually mixes a color toward its backdrop. Timeline surfaces use this
@@ -186,6 +190,8 @@ class SongView : public QWidget
     const SongViewModel &model() const { return m_model; }
     const LoadedVoiceGroup *voicegroup() const { return m_voicegroup; }
     std::vector<songview::TimelineBand> timelineBands();
+    // Widget-owned migrated bands route retained-scene invalidation through this seam.
+    void requestTimelineQuickUpdate(songview::TimelineQuickDirtySet dirty);
 
     qreal contentX(double tick) const { return qreal(tick * pxPerTick() - m_scrollX); }
     double tickAtContentX(qreal x) const { return (double(x) + m_scrollX) / pxPerTick(); }
@@ -617,6 +623,9 @@ class SongView : public QWidget
     // defer while a pointer gesture holds the projection lock.
     void requestProjectionRebuild();
     void syncPlayheadOverlay();
+    // Guards construction and teardown windows around the SongView-owned host.
+    void requestPianoRollQuickUpdate(songview::PianoRollQuickDirtySet dirty);
+    void syncTimelineQuickAppearance();
 
     void disconnectDocument();
     void notifyDrawerSongChanged();
@@ -728,6 +737,7 @@ class SongView : public QWidget
     songview::TimeRuler *m_ruler = nullptr;
     songview::TrackHeaderPanel *m_headers = nullptr;
     songview::PianoRoll *m_roll = nullptr;
+    QPointer<songview::TimelineQuickView> m_quickView;
     QStackedWidget *m_rollStack = nullptr; // page 0: roll (+vbar), page 1: event list
     EventListView *m_events = nullptr;
     songview::OtherStrip *m_strip = nullptr;

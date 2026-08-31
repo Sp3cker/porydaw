@@ -4,14 +4,11 @@
 
 #include "ui/layout.h"
 #include "ui/songview.h"
-#include "ui/songview/detail.h"
-#include "ui/theme/themeruntime.h"
+#include "ui/songview/quick/pianorollquick.h"
 
 #include <QEvent>
 #include <QFontMetrics>
 #include <QMouseEvent>
-#include <QPainter>
-#include <QPainterPath>
 #include <QStringList>
 #include <QToolTip>
 
@@ -21,7 +18,6 @@ namespace lyt = ::layout;
 using Space = lyt::Space;
 
 namespace songview {
-using namespace songview::detail;
 
 OtherStrip::Geometry OtherStrip::Geometry::resolve()
 {
@@ -34,6 +30,7 @@ void OtherStrip::refreshGeometry()
     m_geometry = Geometry::resolve();
     setFixedHeight(QFontMetrics(font()).height() + lyt::space(Space::Two));
     invalidateContent();
+    requestQuickUpdate();
 }
 
 OtherStrip::OtherStrip(SongView *sv)
@@ -42,49 +39,16 @@ OtherStrip::OtherStrip(SongView *sv)
     , m_geometry(Geometry::resolve())
 {
     setObjectName(QStringLiteral("otherEventsStrip"));
+    setAutoFillBackground(false);
     refreshGeometry();
     setMouseTracking(true);
 }
 
-void OtherStrip::paintContent(QPainter &p)
+void OtherStrip::paintContent(QPainter &) {}
+
+void OtherStrip::requestQuickUpdate()
 {
-    const qreal dpr = p.device()->devicePixelRatioF();
-    p.fillRect(rect(), themes::color(themes::Role::song_view_timeline_chrome_background));
-    p.setPen(themes::color(themes::Role::song_view_separator));
-    p.drawLine(lyt::space(Space::Zero), lyt::space(Space::Zero), width(), lyt::space(Space::Zero));
-
-    const SongViewModel &model = m_sv->model();
-    p.setPen(themes::color(themes::Role::song_view_primary_text));
-    const auto textInset = lyt::space(Space::Two);
-    p.drawText(
-        QRect(textInset, lyt::space(Space::Zero), m_geometry.plotOrigin - 2 * textInset, height()),
-        Qt::AlignVCenter, SongView::tr("Other events (%1)").arg(model.strip.size()));
-    if (!m_sv->timeline())
-        return;
-
-    const QRect area(m_geometry.plotOrigin, lyt::space(Space::Zero),
-                     width() - m_geometry.plotOrigin, height());
-    p.setClipRect(area, Qt::IntersectClip);
-    drawPreRoll(p, m_sv, area, m_geometry.plotOrigin,
-                themes::color(themes::Role::song_view_timeline_chrome_background));
-    drawOverlays(p, m_sv, area, m_geometry.plotOrigin, false, false);
-
-    const int cy = height() / 2;
-    for (const StripItem &item : model.strip) {
-        const qreal x = m_sv->displayX(double(item.tick), m_geometry.plotOrigin, dpr);
-        if (x < area.left() - m_geometry.otherEventHitSlop ||
-            x > area.right() + m_geometry.otherEventHitSlop)
-            continue;
-        QColor c = item.track >= 0 ? SongView::trackColor(item.track)
-                                   : themes::color(themes::Role::song_view_file_event_marker);
-        QPainterPath diamond;
-        diamond.moveTo(x, cy - m_geometry.otherEventMarkerHalfHeight);
-        diamond.lineTo(x + m_geometry.otherEventMarkerHalfWidth, cy);
-        diamond.lineTo(x, cy + m_geometry.otherEventMarkerHalfHeight);
-        diamond.lineTo(x - m_geometry.otherEventMarkerHalfWidth, cy);
-        diamond.closeSubpath();
-        p.fillPath(diamond, c);
-    }
+    m_sv->requestTimelineQuickUpdate(TimelineQuickDirty::OtherEvents);
 }
 
 bool OtherStrip::event(QEvent *event)

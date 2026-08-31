@@ -67,7 +67,7 @@ songview::PlayheadOverlay *findPlayheadOverlay(SongView &view)
     return nullptr;
 }
 
-qreal playheadCenter(const QPixmap &pixmap, const QColor &playheadColor)
+qreal playheadCenter(const QPixmap &pixmap, const QColor &playheadColor, int minimumAlpha)
 {
     const QImage image = pixmap.toImage();
     const qreal devicePixelRatio = pixmap.devicePixelRatio();
@@ -76,7 +76,7 @@ qreal playheadCenter(const QPixmap &pixmap, const QColor &playheadColor)
     for (int x = 0; x < image.width(); ++x) {
         for (int y = 0; y < image.height(); ++y) {
             const QColor pixel = image.pixelColor(x, y);
-            if (isPlayheadRed(pixel, playheadColor) && pixel.alpha() > 80) {
+            if (isPlayheadRed(pixel, playheadColor) && pixel.alpha() > minimumAlpha) {
                 weightedX += qreal(x) * pixel.alpha();
                 totalWeight += pixel.alpha();
             }

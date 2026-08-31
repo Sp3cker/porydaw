@@ -9,6 +9,9 @@ class SongView;
 
 namespace songview {
 
+class TimelineQuickScene;
+class TimelineQuickView;
+
 class OtherStrip : public TimelineSurface
 {
   private:
@@ -32,6 +35,9 @@ class OtherStrip : public TimelineSurface
     void mouseMoveEvent(QMouseEvent *event) override;
 
   private:
+    friend class TimelineQuickView;
+    void rebuildQuickScene(TimelineQuickScene &scene);
+    void requestQuickUpdate();
     SongView *m_sv;
     Geometry m_geometry;
 };

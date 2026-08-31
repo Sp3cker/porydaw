@@ -42,7 +42,7 @@ void TimeRuler::mousePressEvent(QMouseEvent *event)
     m_dragMarker = doc ? hitMarker(event->position()) : -1;
     if (m_dragMarker >= 0) {
         m_dragTick = clickTick;
-        update();
+        requestQuickUpdate();
         return;
     }
     uint64_t sigTick;
@@ -55,7 +55,7 @@ void TimeRuler::mousePressEvent(QMouseEvent *event)
         m_dragTimeSig = true;
         m_dragTimeSigFrom = sigTick;
         m_dragTick = sigTick;
-        update();
+        requestQuickUpdate();
         return;
     }
     m_dragSelEdge = doc ? hitSelEdge(event->position()) : -1;
@@ -102,7 +102,7 @@ void TimeRuler::mouseMoveEvent(QMouseEvent *event)
     }
     if (m_dragMarker >= 0 || m_dragTimeSig) {
         m_dragTick = dragTick();
-        update();
+        requestQuickUpdate();
         return;
     }
     if (m_dragSelEdge >= 0) {
@@ -167,7 +167,7 @@ void TimeRuler::mouseReleaseEvent(QMouseEvent *event)
         m_dragTimeSig = false;
         if (SongDocument *doc = m_sv->document())
             doc->moveTimeSig(m_dragTimeSigFrom, m_dragTick);
-        update();
+        requestQuickUpdate();
         return;
     }
     if (m_dragMarker < 0)
@@ -176,7 +176,7 @@ void TimeRuler::mouseReleaseEvent(QMouseEvent *event)
     m_dragMarker = -1;
     if (SongDocument *doc = m_sv->document())
         doc->setLoopTick(endMarker, int64_t(m_dragTick));
-    update();
+    requestQuickUpdate();
 }
 
 void TimeRuler::mouseDoubleClickEvent(QMouseEvent *event)
@@ -193,7 +193,7 @@ void TimeRuler::mouseDoubleClickEvent(QMouseEvent *event)
     m_dragTimeSig = false;
     if (askTimeSignature(this, &numerator, &denomPow2))
         doc->setTimeSig(sigTick, numerator, denomPow2);
-    update();
+    requestQuickUpdate();
 }
 
 void TimeRuler::showRulerMenu(uint64_t clickTick, const QPoint &globalPos)

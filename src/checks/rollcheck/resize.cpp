@@ -15,6 +15,7 @@
 
 #include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
+#include "ui/layout.h"
 #include "ui/songview.h"
 
 namespace checks::rollcheck {
@@ -56,12 +57,12 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
     // A real window system may normalize cursor DPR metadata while preserving
     // the installed pixels. Assert the public custom-cursor shape and the
     // exact left/right resource image, not platform-adjusted metadata.
+    const QSize cursorSize(layout::fontPx(2.0), layout::fontPx(2.0));
     const qreal cursorDpr = roll->devicePixelRatioF();
     const QImage leftEdgeImage =
-        QIcon(QStringLiteral(":/cursors/left-drag.png")).pixmap(QSize(24, 24), cursorDpr).toImage();
-    const QImage rightEdgeImage = QIcon(QStringLiteral(":/cursors/right-drag.png"))
-                                      .pixmap(QSize(24, 24), cursorDpr)
-                                      .toImage();
+        QIcon(QStringLiteral(":/cursors/left-drag.png")).pixmap(cursorSize, cursorDpr).toImage();
+    const QImage rightEdgeImage =
+        QIcon(QStringLiteral(":/cursors/right-drag.png")).pixmap(cursorSize, cursorDpr).toImage();
     if (leftEdgeImage == rightEdgeImage)
         fail("the left and right edge cursor images are indistinguishable");
     const auto failUnlessHoverShows = [&](const QImage &expectedImage, const char *what) {
@@ -229,13 +230,13 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
         checks::events::sendMouse(*roll, QEvent::MouseMove, leftSide, Qt::NoButton, Qt::NoButton,
                                   Qt::NoModifier);
         const QPixmap wantRightGrip =
-            QIcon(QStringLiteral(":/cursors/right-drag.png")).pixmap(QSize(24, 24), gDpr);
+            QIcon(QStringLiteral(":/cursors/right-drag.png")).pixmap(cursorSize, gDpr);
         if (roll->cursor().pixmap().toImage() != wantRightGrip.toImage())
             fail("left of an abutting boundary is not the left note's right grip");
         checks::events::sendMouse(*roll, QEvent::MouseMove, rightSide, Qt::NoButton, Qt::NoButton,
                                   Qt::NoModifier);
         const QPixmap wantLeftGrip =
-            QIcon(QStringLiteral(":/cursors/left-drag.png")).pixmap(QSize(24, 24), gDpr);
+            QIcon(QStringLiteral(":/cursors/left-drag.png")).pixmap(cursorSize, gDpr);
         if (roll->cursor().pixmap().toImage() != wantLeftGrip.toImage())
             fail("right of an abutting boundary is not the right note's left grip");
 

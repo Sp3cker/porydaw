@@ -19,7 +19,7 @@ bool usesNativeMacPlayheadRenderer();
 QPixmap grabPlayheadOverlay(SongView &view, songview::PlayheadOverlay &marker,
                             QStringList &failures);
 songview::PlayheadOverlay *findPlayheadOverlay(SongView &view);
-qreal playheadCenter(const QPixmap &pixmap, const QColor &playheadColor);
+qreal playheadCenter(const QPixmap &pixmap, const QColor &playheadColor, int minimumAlpha = 80);
 bool hasPlayheadRedLine(const QImage &image, qreal devicePixelRatio, qreal logicalX,
                         const QRect &logicalArea, const QColor &playheadColor);
 int playheadRedWidth(const QImage &image, qreal devicePixelRatio, qreal logicalX, int logicalY,

@@ -4,13 +4,16 @@
 #include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QEventLoop>
+#include <QList>
 #include <QObject>
 #include <QQuickWidget>
+#include <QRect>
 #include <QWidget>
 #include <QWindow>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <vector>
 
 #include "checks/support/eventsynth.h"
 #include "checks/support/songfixture.h"
@@ -87,10 +90,41 @@ QWidget &Harness::roll() noexcept
 
 QImage Harness::captureQuickFramebuffer()
 {
+    if (!m_roll) {
+        fail("piano roll not found");
+        return {};
+    }
+    return captureQuickBand(*m_roll);
+}
+
+QImage Harness::captureQuickBand(QWidget &band)
+{
     SongView &songView = view();
-    auto *quickCanvas = songView.findChild<QQuickWidget *>(QStringLiteral("pianoRollQuickCanvas"));
-    if (!quickCanvas) {
-        fail("Qt Quick piano-roll canvas not found");
+    const QList<QQuickWidget *> quickCanvases =
+        songView.findChildren<QQuickWidget *>(QStringLiteral("timelineQuickCanvas"));
+    if (quickCanvases.size() != 1) {
+        fail("expected exactly one Qt Quick timeline canvas");
+        return {};
+    }
+    QQuickWidget *const quickCanvas = quickCanvases.constFirst();
+    if (quickCanvas->parentWidget() != &songView) {
+        fail("Qt Quick timeline canvas is not a direct SongView child");
+        return {};
+    }
+
+    const std::vector<songview::TimelineBand> bands = songView.timelineBands();
+    if (bands.size() < 2 || !m_roll) {
+        fail("timeline bands not found");
+        return {};
+    }
+    const auto bandRectInSongView = [&songView](const QWidget &timelineBand) {
+        return QRect{timelineBand.mapTo(&songView, QPoint{}), timelineBand.size()};
+    };
+    const QRect hostUnion = bandRectInSongView(bands.front().widget)
+                                .united(bandRectInSongView(*m_roll))
+                                .united(bandRectInSongView(bands.back().widget));
+    if (quickCanvas->geometry() != hostUnion) {
+        fail("Qt Quick timeline canvas does not span the timeline bands");
         return {};
     }
 
@@ -113,14 +147,35 @@ QImage Harness::captureQuickFramebuffer()
         quickCanvas->update();
         QCoreApplication::sendPostedEvents();
         QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
-        auto framebuffer = quickCanvas->grabFramebuffer();
+        const QImage framebuffer = quickCanvas->grabFramebuffer();
         if (framebuffer.isNull() || framebuffer.size().isEmpty())
             continue;
-        framebuffer.setDevicePixelRatio(quickCanvas->devicePixelRatioF());
-        return framebuffer;
+
+        const qreal devicePixelRatio = quickCanvas->devicePixelRatioF();
+        const QPoint bandOrigin =
+            band.mapTo(&songView, QPoint{}) - quickCanvas->mapTo(&songView, QPoint{});
+        const int left = qRound(bandOrigin.x() * devicePixelRatio);
+        const int top = qRound(bandOrigin.y() * devicePixelRatio);
+        const int right = qRound((bandOrigin.x() + band.width()) * devicePixelRatio);
+        const int bottom = qRound((bandOrigin.y() + band.height()) * devicePixelRatio);
+        const QRect crop{left, top, right - left, bottom - top};
+        if (crop.width() <= 0 || crop.height() <= 0 || crop.left() < 0 || crop.top() < 0 ||
+            crop.x() + crop.width() > framebuffer.width() ||
+            crop.y() + crop.height() > framebuffer.height()) {
+            fail("timeline-band crop falls outside the Qt Quick framebuffer");
+            return {};
+        }
+
+        QImage bandFramebuffer = framebuffer.copy(crop);
+        if (bandFramebuffer.size() != crop.size()) {
+            fail("timeline-band framebuffer crop has incorrect dimensions");
+            return {};
+        }
+        bandFramebuffer.setDevicePixelRatio(devicePixelRatio);
+        return bandFramebuffer;
     }
 
-    fail("Qt Quick piano-roll framebuffer could not be captured");
+    fail("Qt Quick timeline-band framebuffer could not be captured");
     return {};
 }
 

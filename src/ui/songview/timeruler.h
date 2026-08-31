@@ -12,11 +12,13 @@
 class QComboBox;
 class QEvent;
 class QMouseEvent;
-class QPaintEvent;
 class QWheelEvent;
 class SongView;
 
 namespace songview {
+
+class TimelineQuickScene;
+class TimelineQuickView;
 
 class TimeRuler : public QWidget
 {
@@ -40,7 +42,6 @@ class TimeRuler : public QWidget
     bool gestureActive() const;
 
   protected:
-    void paintEvent(QPaintEvent *) override;
     bool event(QEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
@@ -49,6 +50,9 @@ class TimeRuler : public QWidget
     void mouseDoubleClickEvent(QMouseEvent *event) override;
 
   private:
+    friend class TimelineQuickView;
+    void rebuildQuickScene(TimelineQuickScene &scene);
+    void requestQuickUpdate();
     QRect markerRow() const;
     QRect tickRow() const;
     int textBaseline(const QRect &row, const QFontMetrics &metrics) const;
@@ -71,10 +75,10 @@ class TimeRuler : public QWidget
         qreal labelW;  // 0: label hidden behind the next chip (stem only)
     };
 
-    // Chip layout shared by paint and hit-testing: shadowed same-tick
-    // duplicates dropped, labels nudged past a loop bracket glyph sitting on
-    // the same spot, and a label hidden (stem only) when it would run into
-    // the next chip — zooming in separates them again.
+    // Chip layout shared by the Quick scene builder and hit-testing: shadowed
+    // same-tick duplicates dropped, labels nudged past a loop bracket glyph
+    // sitting on the same spot, and a label hidden (stem only) when it would
+    // run into the next chip — zooming in separates them again.
     std::vector<SigChip> sigChips() const;
 
     // Chip hit-test in the ruler's top half, including the placeholder 4/4

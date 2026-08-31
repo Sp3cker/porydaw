@@ -31,7 +31,7 @@ using detail::keyName;
 using detail::logicalPhysicalPixel;
 using detail::usedTrackMask;
 
-void addRect(PianoRollQuickScene &scene, PianoRollQuickLayer layer, const QRectF &rect,
+void addRect(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
              const QColor &color, const QRectF &clip)
 {
     const QRectF clipped = rect.normalized().intersected(clip);
@@ -40,9 +40,8 @@ void addRect(PianoRollQuickScene &scene, PianoRollQuickLayer layer, const QRectF
     scene.layer(layer).rects.push_back({clipped, color, color, color, color});
 }
 
-void addHorizontalGradient(PianoRollQuickScene &scene, PianoRollQuickLayer layer,
-                           const QRectF &rect, const QColor &left, const QColor &right,
-                           const QRectF &clip)
+void addHorizontalGradient(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
+                           const QColor &left, const QColor &right, const QRectF &clip)
 {
     const QRectF clipped = rect.normalized().intersected(clip);
     if (clipped.width() <= 0.0 || clipped.height() <= 0.0)
@@ -61,13 +60,13 @@ void addHorizontalGradient(PianoRollQuickScene &scene, PianoRollQuickLayer layer
         {clipped, clippedLeft, clippedRight, clippedRight, clippedLeft});
 }
 
-void addHorizontalLine(PianoRollQuickScene &scene, PianoRollQuickLayer layer, qreal x0, qreal x1,
+void addHorizontalLine(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x0, qreal x1,
                        qreal y, qreal width, const QColor &color, const QRectF &clip)
 {
     addRect(scene, layer, QRectF(x0, y - width / 2.0, x1 - x0, width), color, clip);
 }
 
-void addVerticalLine(PianoRollQuickScene &scene, PianoRollQuickLayer layer, qreal x, qreal y0,
+void addVerticalLine(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x, qreal y0,
                      qreal y1, qreal width, const QColor &color, const QRectF &clip)
 {
     addRect(scene, layer, QRectF(x - width / 2.0, y0, width, y1 - y0), color, clip);
@@ -80,7 +79,7 @@ int fittedFrameThickness(const QRectF &rect, int requestedPixels, int insetPixel
                       lyt::space(Space::Zero), requestedPixels);
 }
 
-int addFrame(PianoRollQuickScene &scene, PianoRollQuickLayer layer, const QRectF &rect,
+int addFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
              const QColor &color, int requestedPixels, int insetPixels, qreal dpr,
              const QRectF &clip)
 {
@@ -104,7 +103,7 @@ int addFrame(PianoRollQuickScene &scene, PianoRollQuickLayer layer, const QRectF
     return thicknessPixels;
 }
 
-void addDashedHorizontal(PianoRollQuickScene &scene, PianoRollQuickLayer layer, const QRectF &clip,
+void addDashedHorizontal(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &clip,
                          qreal x0, qreal x1, qreal y, qreal width, qreal dash, qreal gap,
                          const QColor &color)
 {
@@ -113,7 +112,7 @@ void addDashedHorizontal(PianoRollQuickScene &scene, PianoRollQuickLayer layer, 
                 clip);
 }
 
-void addDashedVertical(PianoRollQuickScene &scene, PianoRollQuickLayer layer, const QRectF &clip,
+void addDashedVertical(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &clip,
                        qreal x, qreal y0, qreal y1, qreal width, qreal dash, qreal gap,
                        const QColor &color)
 {
@@ -122,7 +121,7 @@ void addDashedVertical(PianoRollQuickScene &scene, PianoRollQuickLayer layer, co
                 clip);
 }
 
-void addDashedFrame(PianoRollQuickScene &scene, PianoRollQuickLayer layer, const QRectF &rect,
+void addDashedFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
                     const QColor &color, qreal width, qreal dash, qreal gap, const QRectF &clip)
 {
     addDashedHorizontal(scene, layer, clip, rect.left(), rect.right(), rect.top(), width, dash, gap,
@@ -135,7 +134,7 @@ void addDashedFrame(PianoRollQuickScene &scene, PianoRollQuickLayer layer, const
                       color);
 }
 
-void addNoteBorder(PianoRollQuickScene &scene, PianoRollQuickLayer layer, const QRectF &noteBox,
+void addNoteBorder(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &noteBox,
                    bool unterminated, int dashLength, int dashGap, int insetPixels, qreal dpr,
                    const QRectF &clip)
 {
@@ -176,7 +175,7 @@ void addNoteBorder(PianoRollQuickScene &scene, PianoRollQuickLayer layer, const 
     }
 }
 
-void addLoopGlow(PianoRollQuickScene &scene, PianoRollQuickLayer layer, const QRectF &rect,
+void addLoopGlow(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
                  bool fadesRight, const QRectF &clip)
 {
     auto strong = themes::color(themes::Role::song_view_loop_marker);
@@ -203,14 +202,14 @@ void addLoopGlow(PianoRollQuickScene &scene, PianoRollQuickLayer layer, const QR
     }
 }
 
-PianoRollQuickTextKey noteTextKey(PianoRollQuickTextKeyKind kind, const ViewNote &note,
-                                  std::size_t index)
+TimelineQuickTextKey noteTextKey(TimelineQuickTextKeyKind kind, const ViewNote &note,
+                                 std::size_t index)
 {
     return {kind, note.noteId, note.noteId.isAssigned() ? 0 : static_cast<quint64>(index)};
 }
 
-constexpr PianoRollQuickTextKey drawPreviewTextKey{PianoRollQuickTextKeyKind::DrawPreview};
-constexpr PianoRollQuickTextKey loadingTextKey{PianoRollQuickTextKeyKind::Loading};
+constexpr TimelineQuickTextKey drawPreviewTextKey{TimelineQuickTextKeyKind::PianoDrawPreview};
+constexpr TimelineQuickTextKey loadingTextKey{TimelineQuickTextKeyKind::PianoLoading};
 
 QFont resolvedFont(const QFont &font)
 {
@@ -224,8 +223,8 @@ QFont resolvedFont(const QFont &font)
     return resolved;
 }
 
-void appendTextRecord(std::vector<PianoRollQuickTextModel::Record> &records,
-                      const PianoRollQuickTextKey &key, const QRectF &rect, const QString &text,
+void appendTextRecord(std::vector<TimelineQuickTextModel::Record> &records,
+                      const TimelineQuickTextKey &key, const QRectF &rect, const QString &text,
                       const QFont &font, const QColor &color, Qt::Alignment horizontal,
                       Qt::Alignment vertical)
 {
@@ -236,10 +235,10 @@ void appendTextRecord(std::vector<PianoRollQuickTextModel::Record> &records,
 
 } // namespace
 
-void PianoRollQuickView::rebuildGrid()
+void TimelineQuickView::rebuildGrid()
 {
-    PianoRoll &roll = m_roll;
-    PianoRollQuickScene &scene = *m_scene;
+    PianoRoll &roll = *m_roll;
+    TimelineQuickScene &scene = *m_scene;
     const qreal dpr = roll.devicePixelRatioF();
     const qreal pixel = logicalPhysicalPixel(dpr);
     const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
@@ -257,8 +256,8 @@ void PianoRollQuickView::rebuildGrid()
         if (!rowRect.intersects(plot))
             continue;
         if (isBlackKey(key))
-            addRect(scene, PianoRollQuickLayer::Grid, rowRect, accidental, plot);
-        addHorizontalLine(scene, PianoRollQuickLayer::Grid, plot.left(), plot.right(),
+            addRect(scene, TimelineQuickLayer::PianoGrid, rowRect, accidental, plot);
+        addHorizontalLine(scene, TimelineQuickLayer::PianoGrid, plot.left(), plot.right(),
                           rowRect.bottom(), pixel, key % 12 == 0 ? octave : gridLineColor(50),
                           plot);
     }
@@ -266,7 +265,7 @@ void PianoRollQuickView::rebuildGrid()
         const QColor tint = detail::pianoRollScaleHighlightColor();
         for (int row = 0; row < projection.visibleRowCount(); ++row) {
             if (projection.isScalePitchRow(row)) {
-                addRect(scene, PianoRollQuickLayer::Grid,
+                addRect(scene, TimelineQuickLayer::PianoGrid,
                         QRectF(plot.left(), edges[row], plot.width(), edges[row + 1] - edges[row]),
                         tint, plot);
             }
@@ -275,7 +274,7 @@ void PianoRollQuickView::rebuildGrid()
 
     const qreal tickZero = roll.m_sv->displayX(0.0, keyboardWidth, dpr);
     if (tickZero > plot.left()) {
-        addRect(scene, PianoRollQuickLayer::Grid,
+        addRect(scene, TimelineQuickLayer::PianoGrid,
                 QRectF(plot.left(), plot.top(), tickZero - plot.left(), plot.height()),
                 mixTowardOklab(background, gridLineColor(), 0.15), plot);
     }
@@ -298,7 +297,7 @@ void PianoRollQuickView::rebuildGrid()
     detail::forEachSubGridLine(
         roll.m_sv, t0, t1, detailMinimumPixelsPerBeat, [&](uint64_t tick, int level) {
             const qreal x = roll.m_sv->displayX(double(tick), keyboardWidth, dpr);
-            addVerticalLine(scene, PianoRollQuickLayer::Grid, x, plot.top(), plot.bottom(),
+            addVerticalLine(scene, TimelineQuickLayer::PianoGrid, x, plot.top(), plot.bottom(),
                             gridWidth, gridColors[std::size_t(level - 1)], plot);
         });
     const bool drawBeats = roll.m_sv->pxPerBeat() >= detailMinimumPixelsPerBeat;
@@ -310,15 +309,15 @@ void PianoRollQuickView::rebuildGrid()
                 roll.m_sv->document() && roll.m_sv->gridTicksAt(tick) == roll.m_sv->fineGridTicks();
             const auto colorIndex = isBar ? 5u : finest ? 4u : 3u;
             const qreal x = roll.m_sv->displayX(double(tick), keyboardWidth, dpr);
-            addVerticalLine(scene, PianoRollQuickLayer::Grid, x, plot.top(), plot.bottom(),
+            addVerticalLine(scene, TimelineQuickLayer::PianoGrid, x, plot.top(), plot.bottom(),
                             gridWidth, gridColors[colorIndex], plot);
         });
 }
 
-void PianoRollQuickView::rebuildNoteFills()
+void TimelineQuickView::rebuildNoteFills()
 {
-    PianoRoll &roll = m_roll;
-    PianoRollQuickScene &scene = *m_scene;
+    PianoRoll &roll = *m_roll;
+    TimelineQuickScene &scene = *m_scene;
     if (!roll.m_sv->timeline())
         return;
 
@@ -345,20 +344,20 @@ void PianoRollQuickView::rebuildNoteFills()
             const QRectF box = roll.noteBox(noteRect);
             const int velocity = roll.m_sv->previewVelocity(note.noteId).value_or(note.velocity);
             if (ghost) {
-                addRect(scene, PianoRollQuickLayer::NoteFills, box,
+                addRect(scene, TimelineQuickLayer::PianoNoteFills, box,
                         ghostNoteColor(note.track, isBlackKey(note.key)), plot);
                 continue;
             }
-            addRect(scene, PianoRollQuickLayer::NoteFills, box,
+            addRect(scene, TimelineQuickLayer::PianoNoteFills, box,
                     roll.m_sv->noteFillColor(note.track, velocity), plot);
         }
     }
 }
 
-void PianoRollQuickView::rebuildDrawPreviewFill()
+void TimelineQuickView::rebuildDrawPreviewFill()
 {
-    PianoRoll &roll = m_roll;
-    PianoRollQuickScene &scene = *m_scene;
+    PianoRoll &roll = *m_roll;
+    TimelineQuickScene &scene = *m_scene;
     if (!roll.m_sv->timeline() || roll.m_leftDrag != PianoRoll::LeftDrag::Draw)
         return;
 
@@ -373,13 +372,13 @@ void PianoRollQuickView::rebuildDrawPreviewFill()
     const QRectF previewRect = roll.noteRect(x0, x1, roll.m_drawKey);
     const QRectF box = roll.noteBox(previewRect);
     const QColor fill = roll.m_sv->noteFillColor(selectedTrack, roll.m_lastVelocity);
-    addRect(scene, PianoRollQuickLayer::DrawPreviewFill, box, fill, plot);
+    addRect(scene, TimelineQuickLayer::PianoDrawPreviewFill, box, fill, plot);
 }
 
-void PianoRollQuickView::rebuildNoteBordersAndSelection()
+void TimelineQuickView::rebuildNoteBordersAndSelection()
 {
-    PianoRoll &roll = m_roll;
-    PianoRollQuickScene &scene = *m_scene;
+    PianoRoll &roll = *m_roll;
+    TimelineQuickScene &scene = *m_scene;
     if (!roll.m_sv->timeline())
         return;
 
@@ -402,15 +401,15 @@ void PianoRollQuickView::rebuildNoteBordersAndSelection()
     const auto addSelectionRing = [&](const QRectF &box, const ViewNote &note) {
         const int requested =
             (std::max)(lyt::singlePixel(), qRound(roll.m_geometry.selectionRingDipWidth * dpr));
-        const int ring = addFrame(scene, PianoRollQuickLayer::NoteBordersAndSelection, box,
+        const int ring = addFrame(scene, TimelineQuickLayer::PianoNoteBordersAndSelection, box,
                                   themes::color(themes::Role::item_selected_background), requested,
                                   0, dpr, plot);
         if (ring > 0) {
-            addNoteBorder(scene, PianoRollQuickLayer::NoteBordersAndSelection, box,
+            addNoteBorder(scene, TimelineQuickLayer::PianoNoteBordersAndSelection, box,
                           note.unterminated, roll.m_geometry.noteBorderDashLength,
                           roll.m_geometry.noteBorderDashGap, ring, dpr, plot);
         } else {
-            addRect(scene, PianoRollQuickLayer::NoteBordersAndSelection, box,
+            addRect(scene, TimelineQuickLayer::PianoNoteBordersAndSelection, box,
                     themes::color(themes::Role::item_selected_background), plot);
         }
     };
@@ -446,7 +445,7 @@ void PianoRollQuickView::rebuildNoteBordersAndSelection()
             if (selected) {
                 addSelectionRing(box, note);
             } else {
-                addNoteBorder(scene, PianoRollQuickLayer::NoteBordersAndSelection, box,
+                addNoteBorder(scene, TimelineQuickLayer::PianoNoteBordersAndSelection, box,
                               note.unterminated, roll.m_geometry.noteBorderDashLength,
                               roll.m_geometry.noteBorderDashGap, 0, dpr, plot);
             }
@@ -454,10 +453,10 @@ void PianoRollQuickView::rebuildNoteBordersAndSelection()
     }
 }
 
-void PianoRollQuickView::rebuildOverlay()
+void TimelineQuickView::rebuildOverlay()
 {
-    PianoRoll &roll = m_roll;
-    PianoRollQuickScene &scene = *m_scene;
+    PianoRoll &roll = *m_roll;
+    TimelineQuickScene &scene = *m_scene;
     if (!roll.m_sv->timeline())
         return;
 
@@ -474,7 +473,7 @@ void PianoRollQuickView::rebuildOverlay()
                                              keyboardWidth, dpr);
         const QRectF previewRect = roll.noteRect(x0, x1, roll.m_drawKey);
         const QRectF box = roll.noteBox(previewRect);
-        addNoteBorder(scene, PianoRollQuickLayer::Overlay, box, false,
+        addNoteBorder(scene, TimelineQuickLayer::PianoOverlay, box, false,
                       roll.m_geometry.noteBorderDashLength, roll.m_geometry.noteBorderDashGap, 0,
                       dpr, plot);
     }
@@ -486,8 +485,8 @@ void PianoRollQuickView::rebuildOverlay()
         const QRectF band = QRectF(roll.m_pressPos, roll.m_curPos).normalized().intersected(plot);
         QColor fill = themes::color(themes::Role::song_view_selection_fill);
         fill.setAlpha(30);
-        addRect(scene, PianoRollQuickLayer::Overlay, band, fill, plot);
-        addDashedFrame(scene, PianoRollQuickLayer::Overlay, band,
+        addRect(scene, TimelineQuickLayer::PianoOverlay, band, fill, plot);
+        addDashedFrame(scene, TimelineQuickLayer::PianoOverlay, band,
                        themes::color(themes::Role::song_view_selection_edge), pixel,
                        lyt::space(Space::One), lyt::space(Space::One), plot);
     }
@@ -497,12 +496,12 @@ void PianoRollQuickView::rebuildOverlay()
         const qreal x1 = roll.m_sv->displayX(double(timeSelection.endTick), keyboardWidth, dpr);
         QColor fill = themes::color(themes::Role::song_view_selection_fill);
         fill.setAlpha(30);
-        addRect(scene, PianoRollQuickLayer::Overlay, QRectF(x0, plot.top(), x1 - x0, plot.height()),
-                fill, plot);
-        addVerticalLine(scene, PianoRollQuickLayer::Overlay, x0, plot.top(), plot.bottom(), pixel,
-                        themes::color(themes::Role::song_view_selection_edge), plot);
-        addVerticalLine(scene, PianoRollQuickLayer::Overlay, x1, plot.top(), plot.bottom(), pixel,
-                        themes::color(themes::Role::song_view_selection_edge), plot);
+        addRect(scene, TimelineQuickLayer::PianoOverlay,
+                QRectF(x0, plot.top(), x1 - x0, plot.height()), fill, plot);
+        addVerticalLine(scene, TimelineQuickLayer::PianoOverlay, x0, plot.top(), plot.bottom(),
+                        pixel, themes::color(themes::Role::song_view_selection_edge), plot);
+        addVerticalLine(scene, TimelineQuickLayer::PianoOverlay, x1, plot.top(), plot.bottom(),
+                        pixel, themes::color(themes::Role::song_view_selection_edge), plot);
     }
 
     const MidiTimeline *timeline = roll.m_sv->timeline();
@@ -518,41 +517,41 @@ void PianoRollQuickView::rebuildOverlay()
         if (x1 > plot.left() && x0 < plot.right()) {
             const qreal glowWidth = std::min<qreal>(lyt::space(Space::Eight), x1 - x0);
             if (hasStart && glowWidth > 0)
-                addLoopGlow(scene, PianoRollQuickLayer::Overlay,
+                addLoopGlow(scene, TimelineQuickLayer::PianoOverlay,
                             QRectF(x0, plot.top(), glowWidth, plot.height()), true, plot);
             if (hasEnd && glowWidth > 0)
-                addLoopGlow(scene, PianoRollQuickLayer::Overlay,
+                addLoopGlow(scene, TimelineQuickLayer::PianoOverlay,
                             QRectF(x1 - glowWidth, plot.top(), glowWidth, plot.height()), false,
                             plot);
             if (hasStart)
-                addVerticalLine(scene, PianoRollQuickLayer::Overlay, x0, plot.top(), plot.bottom(),
-                                pixel, detail::loopEdge(), plot);
+                addVerticalLine(scene, TimelineQuickLayer::PianoOverlay, x0, plot.top(),
+                                plot.bottom(), pixel, detail::loopEdge(), plot);
             if (hasEnd)
-                addVerticalLine(scene, PianoRollQuickLayer::Overlay, x1, plot.top(), plot.bottom(),
-                                pixel, detail::loopEdge(), plot);
+                addVerticalLine(scene, TimelineQuickLayer::PianoOverlay, x1, plot.top(),
+                                plot.bottom(), pixel, detail::loopEdge(), plot);
         }
     }
 
     const qreal cursorX =
         roll.m_sv->displayX(double(roll.m_sv->editCursorTick()), keyboardWidth, dpr);
     if (cursorX >= plot.left() && cursorX <= plot.right()) {
-        addDashedVertical(scene, PianoRollQuickLayer::Overlay, plot, cursorX, plot.top(),
+        addDashedVertical(scene, TimelineQuickLayer::PianoOverlay, plot, cursorX, plot.top(),
                           plot.bottom(), pixel, lyt::space(Space::One), lyt::space(Space::One),
                           themes::color(themes::Role::song_view_edit_cursor));
     }
 }
 
-void PianoRollQuickView::rebuildKeyboardKeys()
+void TimelineQuickView::rebuildKeyboardKeys()
 {
-    PianoRoll &roll = m_roll;
-    PianoRollQuickScene &scene = *m_scene;
+    PianoRoll &roll = *m_roll;
+    TimelineQuickScene &scene = *m_scene;
     const QRectF viewport(roll.rect());
     const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
     const qreal pixel = logicalPhysicalPixel(roll.devicePixelRatioF());
     const PitchProjection &projection = roll.m_sv->pitchProjection();
     const auto &edges = roll.rowEdges();
     if (projection.visibleRowCount() > 0) {
-        addRect(scene, PianoRollQuickLayer::KeyboardKeys,
+        addRect(scene, TimelineQuickLayer::PianoKeyboardKeys,
                 QRectF(0, edges[0], keyboardWidth, edges[projection.visibleRowCount()] - edges[0]),
                 themes::color(themes::Role::song_view_piano_keyboard_natural_key), viewport);
     }
@@ -562,20 +561,20 @@ void PianoRollQuickView::rebuildKeyboardKeys()
         if (!rowRect.intersects(viewport))
             continue;
         if (isBlackKey(key)) {
-            addRect(scene, PianoRollQuickLayer::KeyboardKeys, rowRect,
+            addRect(scene, TimelineQuickLayer::PianoKeyboardKeys, rowRect,
                     themes::color(themes::Role::song_view_piano_keyboard_black_key), viewport);
         } else if (key % 12 == 0 || key % 12 == 5) {
             addHorizontalLine(
-                scene, PianoRollQuickLayer::KeyboardKeys, 0, keyboardWidth, rowRect.bottom(), pixel,
-                themes::color(themes::Role::song_view_piano_keyboard_separator), viewport);
+                scene, TimelineQuickLayer::PianoKeyboardKeys, 0, keyboardWidth, rowRect.bottom(),
+                pixel, themes::color(themes::Role::song_view_piano_keyboard_separator), viewport);
         }
     }
 }
 
-void PianoRollQuickView::rebuildKeyboardHighlights()
+void TimelineQuickView::rebuildKeyboardHighlights()
 {
-    PianoRoll &roll = m_roll;
-    PianoRollQuickScene &scene = *m_scene;
+    PianoRoll &roll = *m_roll;
+    TimelineQuickScene &scene = *m_scene;
     const QRectF viewport(roll.rect());
     const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
     const qreal pixel = logicalPhysicalPixel(roll.devicePixelRatioF());
@@ -588,11 +587,11 @@ void PianoRollQuickView::rebuildKeyboardHighlights()
             continue;
         const bool sounding = key == roll.m_soundingKey;
         if (sounding) {
-            addRect(scene, PianoRollQuickLayer::KeyboardHighlights, rowRect,
+            addRect(scene, TimelineQuickLayer::PianoKeyboardHighlights, rowRect,
                     themes::color(themes::Role::song_view_piano_keyboard_active_key), viewport);
             if (!isBlackKey(key) && (key % 12 == 0 || key % 12 == 5)) {
-                addHorizontalLine(scene, PianoRollQuickLayer::KeyboardHighlights, 0, keyboardWidth,
-                                  rowRect.bottom(), pixel,
+                addHorizontalLine(scene, TimelineQuickLayer::PianoKeyboardHighlights, 0,
+                                  keyboardWidth, rowRect.bottom(), pixel,
                                   themes::color(themes::Role::song_view_piano_keyboard_separator),
                                   viewport);
             }
@@ -600,21 +599,21 @@ void PianoRollQuickView::rebuildKeyboardHighlights()
         if (key == roll.m_hoverKey && !sounding && hoverGeometry) {
             QColor highlight = roll.palette().color(QPalette::Highlight);
             highlight.setAlpha(80);
-            addRect(scene, PianoRollQuickLayer::KeyboardHighlights, hoverGeometry->highlightRect,
-                    highlight, viewport);
+            addRect(scene, TimelineQuickLayer::PianoKeyboardHighlights,
+                    hoverGeometry->highlightRect, highlight, viewport);
         }
     }
-    addVerticalLine(scene, PianoRollQuickLayer::KeyboardHighlights, 0, 0, roll.height(), pixel,
+    addVerticalLine(scene, TimelineQuickLayer::PianoKeyboardHighlights, 0, 0, roll.height(), pixel,
                     themes::color(themes::Role::song_view_separator), viewport);
 }
 
-void PianoRollQuickView::synchronizeNoteText()
+void TimelineQuickView::synchronizeNoteText()
 {
-    PianoRoll &roll = m_roll;
-    std::vector<PianoRollQuickTextModel::Record> &records = m_noteTextRecords;
+    PianoRoll &roll = *m_roll;
+    std::vector<TimelineQuickTextModel::Record> &records = m_noteTextRecords;
     records.clear();
     if (!roll.m_sv->timeline()) {
-        m_scene->m_noteTextModel->setRecords(records);
+        m_scene->m_pianoNoteTextModel->setRecords(records);
         return;
     }
 
@@ -661,7 +660,7 @@ void PianoRollQuickView::synchronizeNoteText()
             roll.noteNameFits(noteRect, roll.displayedNoteKey(note), *noteNameMetrics)) {
             const qreal inset = lyt::space(Space::Half);
             appendTextRecord(records,
-                             noteTextKey(PianoRollQuickTextKeyKind::NoteName, note, noteIndex),
+                             noteTextKey(TimelineQuickTextKeyKind::PianoNoteName, note, noteIndex),
                              QRectF(box.left() + inset, box.top() + inset,
                                     std::max<qreal>(0, box.width() - 2.0 * inset),
                                     std::max<qreal>(0, box.height() - 2.0 * inset)),
@@ -673,8 +672,9 @@ void PianoRollQuickView::synchronizeNoteText()
             if (noteRect.width() >= velocityMetrics->horizontalAdvance(text) +
                                         roll.m_geometry.velocityLabelFitAllowance) {
                 appendTextRecord(
-                    records, noteTextKey(PianoRollQuickTextKeyKind::NoteVelocity, note, noteIndex),
-                    box, text, *velocityFont, contrastingTextColor(fill), Qt::AlignHCenter,
+                    records,
+                    noteTextKey(TimelineQuickTextKeyKind::PianoNoteVelocity, note, noteIndex), box,
+                    text, *velocityFont, contrastingTextColor(fill), Qt::AlignHCenter,
                     Qt::AlignVCenter);
             }
         }
@@ -696,13 +696,13 @@ void PianoRollQuickView::synchronizeNoteText()
         }
     }
 
-    m_scene->m_noteTextModel->setRecords(records);
+    m_scene->m_pianoNoteTextModel->setRecords(records);
 }
 
-void PianoRollQuickView::synchronizeLoadingText()
+void TimelineQuickView::synchronizeLoadingText()
 {
-    PianoRoll &roll = m_roll;
-    std::vector<PianoRollQuickTextModel::Record> &records = m_loadingTextRecords;
+    PianoRoll &roll = *m_roll;
+    std::vector<TimelineQuickTextModel::Record> &records = m_loadingTextRecords;
     records.clear();
     if (!roll.m_sv->timeline()) {
         const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
@@ -713,13 +713,13 @@ void PianoRollQuickView::synchronizeLoadingText()
                          themes::color(themes::Role::song_view_secondary_text), Qt::AlignHCenter,
                          Qt::AlignVCenter);
     }
-    m_scene->m_loadingTextModel->setRecords(records);
+    m_scene->m_pianoLoadingTextModel->setRecords(records);
 }
 
-void PianoRollQuickView::synchronizeKeyboardText()
+void TimelineQuickView::synchronizeKeyboardText()
 {
-    PianoRoll &roll = m_roll;
-    std::vector<PianoRollQuickTextModel::Record> &records = m_keyboardTextRecords;
+    PianoRoll &roll = *m_roll;
+    std::vector<TimelineQuickTextModel::Record> &records = m_keyboardTextRecords;
     records.clear();
     const QRectF viewport(roll.rect());
     const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
@@ -735,19 +735,19 @@ void PianoRollQuickView::synchronizeKeyboardText()
                 continue;
             appendTextRecord(
                 records,
-                PianoRollQuickTextKey{PianoRollQuickTextKeyKind::MidiLabel, {}, quint64(key)},
+                TimelineQuickTextKey{TimelineQuickTextKeyKind::PianoMidiLabel, {}, quint64(key)},
                 QRectF(0, rowRect.top(),
                        keyboardWidth - roll.m_geometry.pianoKeyboardLabelRightInset,
                        rowRect.height()),
                 keyName(key), font, color, Qt::AlignRight, Qt::AlignVCenter);
         }
     }
-    m_scene->m_keyboardTextModel->setRecords(records);
+    m_scene->m_pianoKeyboardTextModel->setRecords(records);
 }
 
-void PianoRollQuickView::synchronizeHoverChip()
+void TimelineQuickView::synchronizeHoverChip()
 {
-    PianoRoll &roll = m_roll;
+    PianoRoll &roll = *m_roll;
     const auto hoverGeometry = roll.keyboardHoverGeometry(roll.m_hoverKey);
     if (!hoverGeometry) {
         m_scene->setHoverChip(false, {}, {}, {}, {}, 0.0);
@@ -758,35 +758,39 @@ void PianoRollQuickView::synchronizeHoverChip()
                           roll.m_geometry.keyboardHoverChipCornerRadius);
 }
 
-void PianoRollQuickView::synchronize(PianoRollQuickDirtySet dirty)
+void TimelineQuickView::synchronize(PianoRollQuickDirtySet dirty)
 {
-    PianoRollQuickScene &scene = *m_scene;
-    const auto rebuild = [&](PianoRollQuickDirty flag, PianoRollQuickLayer layer,
-                             void (PianoRollQuickView::*builder)()) {
+    if (!m_roll)
+        return;
+    TimelineQuickScene &scene = *m_scene;
+    const auto rebuild = [&](PianoRollQuickDirty flag, TimelineQuickLayer layer,
+                             void (TimelineQuickView::*builder)()) {
         if (!(dirty & flag))
             return;
-        PianoRollQuickLayerData &data = scene.layer(layer);
+        TimelineQuickLayerData &data = scene.layer(layer);
         data.rects.clear();
+        data.triangles.clear();
         (this->*builder)();
         ++data.revision;
-        if (PianoRollQuickItem *item = m_items[static_cast<std::size_t>(layer)])
+        if (TimelineQuickItem *item = m_items[static_cast<std::size_t>(layer)])
             item->update();
     };
 
-    rebuild(PianoRollQuickDirty::Grid, PianoRollQuickLayer::Grid, &PianoRollQuickView::rebuildGrid);
-    rebuild(PianoRollQuickDirty::NoteFills, PianoRollQuickLayer::NoteFills,
-            &PianoRollQuickView::rebuildNoteFills);
-    rebuild(PianoRollQuickDirty::DrawPreviewFill, PianoRollQuickLayer::DrawPreviewFill,
-            &PianoRollQuickView::rebuildDrawPreviewFill);
+    rebuild(PianoRollQuickDirty::Grid, TimelineQuickLayer::PianoGrid,
+            &TimelineQuickView::rebuildGrid);
+    rebuild(PianoRollQuickDirty::NoteFills, TimelineQuickLayer::PianoNoteFills,
+            &TimelineQuickView::rebuildNoteFills);
+    rebuild(PianoRollQuickDirty::DrawPreviewFill, TimelineQuickLayer::PianoDrawPreviewFill,
+            &TimelineQuickView::rebuildDrawPreviewFill);
     rebuild(PianoRollQuickDirty::NoteBordersAndSelection,
-            PianoRollQuickLayer::NoteBordersAndSelection,
-            &PianoRollQuickView::rebuildNoteBordersAndSelection);
-    rebuild(PianoRollQuickDirty::Overlay, PianoRollQuickLayer::Overlay,
-            &PianoRollQuickView::rebuildOverlay);
-    rebuild(PianoRollQuickDirty::KeyboardKeys, PianoRollQuickLayer::KeyboardKeys,
-            &PianoRollQuickView::rebuildKeyboardKeys);
-    rebuild(PianoRollQuickDirty::KeyboardHighlights, PianoRollQuickLayer::KeyboardHighlights,
-            &PianoRollQuickView::rebuildKeyboardHighlights);
+            TimelineQuickLayer::PianoNoteBordersAndSelection,
+            &TimelineQuickView::rebuildNoteBordersAndSelection);
+    rebuild(PianoRollQuickDirty::Overlay, TimelineQuickLayer::PianoOverlay,
+            &TimelineQuickView::rebuildOverlay);
+    rebuild(PianoRollQuickDirty::KeyboardKeys, TimelineQuickLayer::PianoKeyboardKeys,
+            &TimelineQuickView::rebuildKeyboardKeys);
+    rebuild(PianoRollQuickDirty::KeyboardHighlights, TimelineQuickLayer::PianoKeyboardHighlights,
+            &TimelineQuickView::rebuildKeyboardHighlights);
 
     if (dirty & PianoRollQuickDirty::NoteText)
         synchronizeNoteText();

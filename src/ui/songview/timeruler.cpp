@@ -5,6 +5,7 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
+#include "ui/songview/quick/pianorollquick.h"
 #include "ui/typography.h"
 
 #include <QComboBox>
@@ -53,11 +54,12 @@ void TimeRuler::refreshGeometry()
     if (m_gridBox)
         m_gridBox->setGeometry(lyt::space(Space::Zero), lyt::space(Space::Zero),
                                m_geometry.plotOrigin - lyt::space(Space::One), rulerHeight);
-    update();
+    requestQuickUpdate();
 }
 
 TimeRuler::TimeRuler(SongView *sv) : QWidget(sv), m_sv(sv), m_geometry(Geometry::resolve())
 {
+    setAutoFillBackground(false);
     refreshGeometry();
     const auto rulerHeight = height();
     setMouseTracking(true);
@@ -107,6 +109,11 @@ void TimeRuler::syncGridControls()
     m_feelCombo->setCurrentIndex(m_sv->gridFeel() == SongView::GridFeel::Triplet ? 1 : 0);
 }
 
+void TimeRuler::requestQuickUpdate()
+{
+    m_sv->requestTimelineQuickUpdate(TimelineQuickDirty::Ruler);
+}
+
 // A mouse gesture is live (marker/time-sig/selection-edge drag or a
 // pending ruler press); the playhead follow-scroll pauses while one runs
 // so the view doesn't jump under the cursor.
@@ -127,7 +134,7 @@ void TimeRuler::cancelTransientInput()
     m_multiTrackSweep = false;
     m_dragSelEdge = -1;
     unsetCursor();
-    update();
+    requestQuickUpdate();
 }
 
 bool TimeRuler::event(QEvent *event)

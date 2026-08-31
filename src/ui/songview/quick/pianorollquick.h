@@ -1,26 +1,22 @@
 #pragma once
 
-#include "core/noteid.h"
+#include "ui/songview/quick/timelinequickscene.h"
 
-#include <QAbstractListModel>
-#include <QColor>
-#include <QFont>
-#include <QHash>
-#include <QObject>
-#include <QQuickItem>
+#include <QEvent>
+#include <QFlags>
+#include <QPointer>
 #include <QQuickWidget>
-#include <QRectF>
-#include <QString>
-#include <QVariant>
+#include <QRect>
 #include <array>
-#include <compare>
-#include <span>
 #include <vector>
+
+class SongView;
 
 namespace songview {
 
+class OtherStrip;
 class PianoRoll;
-struct PianoRollQuickScene;
+class TimeRuler;
 
 enum class PianoRollQuickDirty : quint32 {
     None = 0,
@@ -39,223 +35,52 @@ enum class PianoRollQuickDirty : quint32 {
 };
 Q_DECLARE_FLAGS(PianoRollQuickDirtySet, PianoRollQuickDirty)
 Q_DECLARE_OPERATORS_FOR_FLAGS(PianoRollQuickDirtySet)
-// The plot layers: everything the roll paints from the timeline, the
-// projection, and the x camera. The keyboard layers, hover chip, and text
-// models read vertical geometry, projection, hover state, and fonts, never
-// the x camera, so a horizontal camera change dirties exactly this.
+
 inline constexpr PianoRollQuickDirtySet cPlotDirty =
     PianoRollQuickDirty::Grid | PianoRollQuickDirty::NoteFills |
     PianoRollQuickDirty::DrawPreviewFill | PianoRollQuickDirty::NoteBordersAndSelection |
     PianoRollQuickDirty::Overlay | PianoRollQuickDirty::NoteText;
-// The plot layers plus the text models, whose records wrap to the roll
-// width: exactly what a width-only resize changes, and the generic
-// document/model replacement union for an unclassified updateSong handoff.
 inline constexpr PianoRollQuickDirtySet cPlotAndLoadingDirty =
     cPlotDirty | PianoRollQuickDirty::LoadingText;
-// A committed note mutation (move/resize/draw) changes a note's fill, its
-// border/selection ring, and its label; nothing else reads note geometry.
 inline constexpr PianoRollQuickDirtySet cNoteMutationDirty =
     PianoRollQuickDirty::NoteFills | PianoRollQuickDirty::NoteBordersAndSelection |
     PianoRollQuickDirty::NoteText;
-// A velocity change (preview or commit) re-tints fills and labels; borders
-// and selection rings are velocity-independent.
 inline constexpr PianoRollQuickDirtySet cVelocityMutationDirty =
     PianoRollQuickDirty::NoteFills | PianoRollQuickDirty::NoteText;
-// A draw-drag commit: the new note mutates, and clearing drag state removes
-// the preview fill it replaced and the drag's overlay band.
 inline constexpr PianoRollQuickDirtySet cDrawCommitDirty =
     cNoteMutationDirty | PianoRollQuickDirty::DrawPreviewFill | PianoRollQuickDirty::Overlay;
 
-struct PianoRollQuickRect {
-    QRectF rect;
-    QColor topLeft;
-    QColor topRight;
-    QColor bottomRight;
-    QColor bottomLeft;
+enum class TimelineQuickDirty : quint8 {
+    None = 0,
+    Ruler = 1u << 0,
+    OtherEvents = 1u << 1,
+    All = (1u << 2) - 1,
 };
+Q_DECLARE_FLAGS(TimelineQuickDirtySet, TimelineQuickDirty)
+Q_DECLARE_OPERATORS_FOR_FLAGS(TimelineQuickDirtySet)
 
-struct PianoRollQuickLayerData {
-    std::vector<PianoRollQuickRect> rects;
-    quint64 revision = 0;
-};
-
-// Identity of one text-model row. The label kind, the complete NoteId, and a
-// full-width fallback ordinal stay separate comparable fields, so records
-// never collide: differing kinds, note tokens, or ordinals compare unequal.
-enum class PianoRollQuickTextKeyKind : quint8 {
-    NoteName,
-    NoteVelocity,
-    DrawPreview,
-    MidiLabel,
-    Loading,
-};
-
-struct PianoRollQuickTextKey {
-    PianoRollQuickTextKeyKind kind = PianoRollQuickTextKeyKind::NoteName;
-    NoteId noteId;
-    quint64 ordinal = 0;
-
-    friend constexpr auto operator<=>(const PianoRollQuickTextKey &,
-                                      const PianoRollQuickTextKey &) = default;
-};
-
-class PianoRollQuickTextModel final : public QAbstractListModel
+class TimelineQuickView final : public QQuickWidget
 {
     Q_OBJECT
-    Q_DISABLE_COPY_MOVE(PianoRollQuickTextModel)
+    Q_DISABLE_COPY_MOVE(TimelineQuickView)
 
   public:
-    enum Role : int {
-        RectRole = Qt::UserRole + 1,
-        TextRole,
-        ColorRole,
-        FontRole,
-        HorizontalAlignmentRole,
-        VerticalAlignmentRole,
-    };
+    TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStrip &otherEvents,
+                      SongView &songView);
+    ~TimelineQuickView() override;
 
-    struct Record {
-        PianoRollQuickTextKey key;
-        QRectF rect;
-        QString text;
-        QColor color;
-        QFont font;
-        Qt::Alignment horizontalAlignment = Qt::AlignLeft;
-        Qt::Alignment verticalAlignment = Qt::AlignVCenter;
-    };
-
-    explicit PianoRollQuickTextModel(QObject *parent = nullptr);
-
-    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
-    QVariant data(const QModelIndex &index, int role) const override;
-    QHash<int, QByteArray> roleNames() const override;
-
-    void setRecords(std::span<const Record> records);
-
-  private:
-    struct KeyRowEntry {
-        PianoRollQuickTextKey key;
-        int row = 0;
-    };
-
-    std::vector<Record> m_records;
-    // Sorted key->row scratch for setRecords(); cleared per call, capacity reused.
-    std::vector<KeyRowEntry> m_targetRows;
-    std::vector<KeyRowEntry> m_currentRows;
-    QHash<int, QByteArray> m_roleNames;
-};
-
-class PianoRollQuickItem : public QQuickItem
-{
-    Q_OBJECT
-    Q_DISABLE_COPY_MOVE(PianoRollQuickItem)
-
-  public:
-    enum class Layer : quint8 {
-        Grid,
-        NoteFills,
-        DrawPreviewFill,
-        NoteBordersAndSelection,
-        Overlay,
-        KeyboardKeys,
-        KeyboardHighlights,
-        Count,
-    };
-    Q_ENUM(Layer)
-
-    Q_PROPERTY(Layer sceneLayer READ sceneLayer WRITE setSceneLayer NOTIFY sceneLayerChanged FINAL)
-
-    explicit PianoRollQuickItem(QQuickItem *parent = nullptr);
-
-    Layer sceneLayer() const noexcept;
-    void setSceneLayer(Layer layer);
-    void setScene(PianoRollQuickScene *scene);
-
-  signals:
-    void sceneLayerChanged();
-
-  protected:
-    QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *) override;
-
-  private:
-    PianoRollQuickScene *m_scene = nullptr;
-    Layer m_layer = Layer::Grid;
-};
-
-using PianoRollQuickLayer = PianoRollQuickItem::Layer;
-
-struct PianoRollQuickScene final : public QObject {
-    Q_OBJECT
-    Q_DISABLE_COPY_MOVE(PianoRollQuickScene)
-
-    Q_PROPERTY(QAbstractItemModel *noteTextModel READ noteTextModel CONSTANT FINAL)
-    Q_PROPERTY(QAbstractItemModel *loadingTextModel READ loadingTextModel CONSTANT FINAL)
-    Q_PROPERTY(QAbstractItemModel *keyboardTextModel READ keyboardTextModel CONSTANT FINAL)
-    Q_PROPERTY(bool hoverChipVisible READ hoverChipVisible NOTIFY hoverChipChanged FINAL)
-    Q_PROPERTY(QRectF hoverChipRect READ hoverChipRect NOTIFY hoverChipChanged FINAL)
-    Q_PROPERTY(QString hoverChipText READ hoverChipText NOTIFY hoverChipChanged FINAL)
-    Q_PROPERTY(QColor hoverChipFill READ hoverChipFill NOTIFY hoverChipChanged FINAL)
-    Q_PROPERTY(QFont hoverChipFont READ hoverChipFont NOTIFY hoverChipChanged FINAL)
-    Q_PROPERTY(qreal hoverChipRadius READ hoverChipRadius NOTIFY hoverChipChanged FINAL)
-
-  public:
-    explicit PianoRollQuickScene(QObject *parent = nullptr);
-
-    QAbstractItemModel *noteTextModel() const noexcept;
-    QAbstractItemModel *loadingTextModel() const noexcept;
-    QAbstractItemModel *keyboardTextModel() const noexcept;
-
-    const PianoRollQuickLayerData &layer(PianoRollQuickLayer layer) const noexcept;
-    PianoRollQuickLayerData &layer(PianoRollQuickLayer layer) noexcept;
-
-    bool hoverChipVisible() const noexcept;
-    QRectF hoverChipRect() const noexcept;
-    QString hoverChipText() const;
-    QColor hoverChipFill() const;
-    QFont hoverChipFont() const;
-    qreal hoverChipRadius() const noexcept;
-
-    void setHoverChip(bool visible, const QRectF &rect, const QString &text, const QColor &fill,
-                      const QFont &font, qreal radius);
-
-  signals:
-    void hoverChipChanged();
-
-  private:
-    friend class PianoRollQuickView;
-    std::array<PianoRollQuickLayerData, static_cast<std::size_t>(PianoRollQuickLayer::Count)>
-        m_layers{};
-    PianoRollQuickTextModel *m_noteTextModel = nullptr;
-    PianoRollQuickTextModel *m_loadingTextModel = nullptr;
-    PianoRollQuickTextModel *m_keyboardTextModel = nullptr;
-
-    bool m_hoverChipVisible = false;
-    QRectF m_hoverChipRect;
-    QString m_hoverChipText;
-    QColor m_hoverChipFill;
-    QFont m_hoverChipFont;
-    qreal m_hoverChipRadius = 0.0;
-};
-
-class PianoRollQuickView final : public QQuickWidget
-{
-    Q_OBJECT
-    Q_DISABLE_COPY_MOVE(PianoRollQuickView)
-
-  public:
-    explicit PianoRollQuickView(PianoRoll &roll);
-
-    // The one appearance seam: re-reads the theme's opaque roll background
-    // into the clear color and requests All.
     void syncAppearance();
     void requestUpdate(PianoRollQuickDirtySet dirty);
+    void requestTimelineUpdate(TimelineQuickDirtySet dirty);
 
   protected:
-    void resizeEvent(QResizeEvent *event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
   private:
+    void synchronizeHostGeometryAndVisibility();
     void flushUpdate();
     void synchronize(PianoRollQuickDirtySet dirty);
+    void synchronizeTimeline(TimelineQuickDirtySet dirty);
 
     void rebuildGrid();
     void rebuildNoteFills();
@@ -269,15 +94,21 @@ class PianoRollQuickView final : public QQuickWidget
     void synchronizeKeyboardText();
     void synchronizeHoverChip();
 
-    PianoRoll &m_roll;
-    PianoRollQuickScene *m_scene = nullptr;
-    std::array<PianoRollQuickItem *, static_cast<std::size_t>(PianoRollQuickLayer::Count)>
-        m_items{};
+    QPointer<TimeRuler> m_ruler;
+    QPointer<PianoRoll> m_roll;
+    QPointer<OtherStrip> m_otherEvents;
+    QPointer<SongView> m_songView;
+    QRect m_rulerBandRect;
+    QRect m_rollBandRect;
+    QRect m_otherEventsBandRect;
+    TimelineQuickScene *m_scene = nullptr;
+    std::array<TimelineQuickItem *, static_cast<std::size_t>(TimelineQuickLayer::Count)> m_items{};
     PianoRollQuickDirtySet m_pendingDirty = {PianoRollQuickDirty::None};
+    TimelineQuickDirtySet m_pendingTimelineDirty = {TimelineQuickDirty::None};
     bool m_flushScheduled = false;
-    std::vector<PianoRollQuickTextModel::Record> m_noteTextRecords;
-    std::vector<PianoRollQuickTextModel::Record> m_loadingTextRecords;
-    std::vector<PianoRollQuickTextModel::Record> m_keyboardTextRecords;
+    std::vector<TimelineQuickTextModel::Record> m_noteTextRecords;
+    std::vector<TimelineQuickTextModel::Record> m_loadingTextRecords;
+    std::vector<TimelineQuickTextModel::Record> m_keyboardTextRecords;
 };
 
 } // namespace songview

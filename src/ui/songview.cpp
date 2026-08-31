@@ -153,6 +153,11 @@ SongView::SongView(QWidget *parent)
     mid->addWidget(m_headerScroll);
 
     m_rollStack = new QStackedWidget(rollPane);
+    // The global theme stylesheet makes QStackedWidget opaque; this stack's
+    // nonpainting roll page must expose the lowered Quick host.
+    m_rollStack->setObjectName(QStringLiteral("songViewRollStack"));
+    m_rollStack->setStyleSheet(
+        QStringLiteral("QStackedWidget#songViewRollStack { background-color: transparent; }"));
     auto *rollPage = new QWidget(m_rollStack);
     auto *rollBox = new QHBoxLayout(rollPage);
     rollBox->setContentsMargins(lyt::space(Space::Zero), lyt::space(Space::Zero),
@@ -182,6 +187,8 @@ SongView::SongView(QWidget *parent)
     vbox->addLayout(m_hbarRow);
 
     m_editorDrawer = new EditorDrawer(*this, rollPane, m_editorViewState);
+    m_quickView = new TimelineQuickView(*m_ruler, *m_roll, *m_strip, *this);
+    m_quickView->lower();
     m_selectionModel.setObserver(
         [this](const songview::EditorSelectionModel::SelectionTransition &transition) {
             coordinateSelectionChange(transition);
@@ -607,9 +614,9 @@ void SongView::coordinateSelectionChange(
         emit selectedTrackChanged(m_selectionModel.primaryTrack());
     } else if (trackScopeChanged) {
         m_headers->syncSelection();
-        m_ruler->update();
+        requestTimelineQuickUpdate(TimelineQuickDirty::Ruler);
         requestRoll(PianoRollQuickDirty::NoteBordersAndSelection | PianoRollQuickDirty::Overlay);
-        m_strip->invalidateContent();
+        requestTimelineQuickUpdate(TimelineQuickDirty::OtherEvents);
         syncPlayheadOverlay();
         timelineViewsRefreshed = true;
     }
@@ -619,7 +626,7 @@ void SongView::coordinateSelectionChange(
     }
     if (timeSelectionChanged) {
         if (!timelineViewsRefreshed) {
-            m_ruler->update();
+            requestTimelineQuickUpdate(TimelineQuickDirty::Ruler);
             requestRoll(PianoRollQuickDirty::NoteBordersAndSelection |
                         PianoRollQuickDirty::Overlay);
             syncPlayheadOverlay();
@@ -708,6 +715,24 @@ bool SongView::userGestureActive() const
            (m_roll && m_roll->gestureActive());
 }
 
+void SongView::requestPianoRollQuickUpdate(PianoRollQuickDirtySet dirty)
+{
+    if (dirty != PianoRollQuickDirty::None && m_quickView)
+        m_quickView->requestUpdate(dirty);
+}
+
+void SongView::requestTimelineQuickUpdate(TimelineQuickDirtySet dirty)
+{
+    if (dirty != TimelineQuickDirty::None && m_quickView)
+        m_quickView->requestTimelineUpdate(dirty);
+}
+
+void SongView::syncTimelineQuickAppearance()
+{
+    if (m_quickView)
+        m_quickView->syncAppearance();
+}
+
 void SongView::syncPlayheadOverlay()
 {
     if (m_playheadOverlay) {
@@ -742,9 +767,8 @@ void SongView::goToStart()
 
 void SongView::refreshTimelineViews(PianoRollQuickDirtySet dirty)
 {
-    m_ruler->update();
+    requestTimelineQuickUpdate(TimelineQuickDirty::All);
     m_roll->requestQuickUpdate(dirty);
-    m_strip->invalidateContent();
     syncPlayheadOverlay();
 }
 

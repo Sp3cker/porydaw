@@ -42,6 +42,7 @@ class Harness final
     const MidiTimeline &timeline() const noexcept;
     QWidget &roll() noexcept;
     QImage captureQuickFramebuffer();
+    QImage captureQuickBand(QWidget &band);
     int track() const noexcept;
     int pianoKeyboardWidth() const noexcept;
     int plotOrigin() const noexcept;

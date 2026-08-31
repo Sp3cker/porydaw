@@ -18,6 +18,7 @@
 #include <QPalette>
 #include <QPoint>
 #include <QPointer>
+#include <QQuickWidget>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QWidget>
@@ -119,6 +120,37 @@ RasterScan grabRaster(QWidget &widget)
     widget.ensurePolished();
     widget.update();
     QCoreApplication::processEvents();
+
+    if (dynamic_cast<songview::TimeRuler *>(&widget)) {
+        SongView *songView = nullptr;
+        for (QWidget *ancestor = &widget; ancestor; ancestor = ancestor->parentWidget()) {
+            songView = qobject_cast<SongView *>(ancestor);
+            if (songView)
+                break;
+        }
+        const QList<QQuickWidget *> quickCanvases =
+            songView ? songView->findChildren<QQuickWidget *>(QStringLiteral("timelineQuickCanvas"))
+                     : QList<QQuickWidget *>{};
+        if (quickCanvases.size() != 1)
+            return {};
+        QQuickWidget *const quickCanvas = quickCanvases.constFirst();
+        quickCanvas->ensurePolished();
+        quickCanvas->update();
+        QCoreApplication::processEvents();
+        const QImage framebuffer = quickCanvas->grabFramebuffer();
+        const qreal dpr = quickCanvas->devicePixelRatioF();
+        const QPoint origin =
+            widget.mapTo(songView, QPoint{}) - quickCanvas->mapTo(songView, QPoint{});
+        const QRect crop{qRound(origin.x() * dpr), qRound(origin.y() * dpr),
+                         qRound((origin.x() + widget.width()) * dpr) - qRound(origin.x() * dpr),
+                         qRound((origin.y() + widget.height()) * dpr) - qRound(origin.y() * dpr)};
+        if (framebuffer.isNull() || !QRect(QPoint{}, framebuffer.size()).contains(crop))
+            return {};
+        QImage image = framebuffer.copy(crop);
+        image.setDevicePixelRatio(dpr > 0.0 ? dpr : 1.0);
+        return {image, image.devicePixelRatioF()};
+    }
+
     QImage image = widget.grab().toImage();
     const qreal dpr = widget.devicePixelRatioF();
     return {image, dpr > 0.0 ? dpr : 1.0};

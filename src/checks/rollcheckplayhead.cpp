@@ -429,11 +429,11 @@ void checkFractionalMovement(SongView &view, const MidiTimeline &timeline,
     view.setPlayheadSample(fractionalStartSample, true);
     processPaints();
     const QPixmap fractionalStartPixmap = grabPlayheadOverlay(view, marker, failures);
-    const qreal fractionalStart = playheadCenter(fractionalStartPixmap, playheadColor);
+    const qreal fractionalStart = playheadCenter(fractionalStartPixmap, playheadColor, 0);
     view.setPlayheadSample(fractionalEndSample, true);
     processPaints();
     const QPixmap fractionalEndPixmap = grabPlayheadOverlay(view, marker, failures);
-    const qreal fractionalEnd = playheadCenter(fractionalEndPixmap, playheadColor);
+    const qreal fractionalEnd = playheadCenter(fractionalEndPixmap, playheadColor, 0);
     const qreal expectedDelta = (timeline.tickForSample(fractionalEndSample) -
                                  timeline.tickForSample(fractionalStartSample)) *
                                 view.pxPerTick();

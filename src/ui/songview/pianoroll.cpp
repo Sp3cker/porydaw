@@ -13,7 +13,6 @@
 #include <QAction>
 #include <QEvent>
 #include <QMenu>
-#include <QVBoxLayout>
 #include <QWheelEvent>
 
 #include <QFontMetrics>
@@ -77,13 +76,6 @@ PianoRoll::PianoRoll(SongView *sv)
     setMouseTracking(true);
     setFocusPolicy(Qt::ClickFocus);
     rebuildFontCache();
-    auto *quickView = new PianoRollQuickView(*this);
-    auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(lyt::space(Space::Zero), lyt::space(Space::Zero),
-                               lyt::space(Space::Zero), lyt::space(Space::Zero));
-    layout->setSpacing(lyt::space(Space::Zero));
-    layout->addWidget(quickView);
-    m_quickView = quickView;
     m_noteMenu =
         new NoteContextMenu(this, [this](QPointF globalPos) { return moveNoteMenu(globalPos); });
     connect(m_noteMenu, &QMenu::triggered, this,
@@ -94,8 +86,7 @@ void PianoRoll::requestQuickUpdate(PianoRollQuickDirtySet dirty)
 {
     if (dirty == PianoRollQuickDirty::None)
         return;
-    Q_ASSERT(m_quickView);
-    m_quickView->requestUpdate(dirty);
+    m_sv->requestPianoRollQuickUpdate(dirty);
 }
 
 void PianoRoll::rebuildFontCache()
@@ -235,9 +226,7 @@ bool PianoRoll::event(QEvent *event)
             rebuildFontCache();
         else
             refreshTextLayout();
-        // m_quickView is only null for events delivered during construction.
-        if (m_quickView)
-            m_quickView->syncAppearance();
+        m_sv->syncTimelineQuickAppearance();
         break;
     default:
         break;

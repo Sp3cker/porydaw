@@ -26,7 +26,7 @@ class QPixmap;
 class QWheelEvent;
 
 namespace songview {
-class PianoRollQuickView;
+class TimelineQuickView;
 class PitchBendEditor;
 } // namespace songview
 
@@ -102,7 +102,7 @@ class PianoRoll : public QWidget
     void cancelVelocityInteraction();
     void refreshTextLayout();
     void copySelectedNotes();
-    // Routes a semantic dirty union to the retained Quick scene.
+    // Routes a semantic dirty union to SongView's retained Quick host.
     void requestQuickUpdate(PianoRollQuickDirtySet dirty);
 
   protected:
@@ -117,7 +117,7 @@ class PianoRoll : public QWidget
     void keyReleaseEvent(QKeyEvent *event) override;
 
   private:
-    friend class PianoRollQuickView;
+    friend class TimelineQuickView;
     enum class LeftDrag {
         None,
         PendingDraw,
@@ -290,7 +290,6 @@ class PianoRoll : public QWidget
     QPointF m_panPos;             // last pan sample, global coords
     PitchBendEditor *m_bendPopup = nullptr;
     pianoroll_detail::NoteContextMenu *m_noteMenu = nullptr;
-    PianoRollQuickView *m_quickView = nullptr;
 };
 
 } // namespace songview

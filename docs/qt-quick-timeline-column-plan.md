@@ -81,7 +81,7 @@ No caller receives an internal scene item or model.
 
 ## Workflow gate for every implementation step
 
-Before implementation, dispatch a `plan` agent to challenge the proposed file/symbol changes, find missing call sites, and identify a simpler cutover. Incorporate or explicitly reject each finding before editing.
+Before implementation, dispatch a `plan` agent to challenge the proposed file/symbol changes, find missing call sites, and identify a simpler cutover. Incorporate or explicitly reject each finding before editing. Reuse the same Plan agent for later steps while its session is available so reviews retain the prior design context.
 
 After implementation, send the diff and verification evidence to the same persistent `thermo-nuclear-reviewer`. Resolve every confirmed finding, then return the revision to that same reviewer. A step is complete only when that reviewer explicitly validates the resolutions and approves the step. Stage agents skip formatters and project-wide test suites; the parent runs focused checks at each step and final formatting once.
 
@@ -101,11 +101,12 @@ Files:
 
 Change:
 
-1. SongView creates and owns the current Quick host after constructing `PianoRoll`.
+1. SongView creates and owns the current Quick host after constructing the complete roll-pane and drawer tree.
 2. Remove the child layout and ownership from `PianoRoll`; keep `PianoRoll` as the input and scene-data authority.
-3. Position the host at the roll's mapped SongView rectangle and synchronize it after layout, resize, show/hide, and roll/event-list stack changes.
-4. Route existing `PianoRoll::requestQuickUpdate` and appearance refresh to the SongView-owned host without exposing QSG internals.
-5. Keep the current `PianoRollCanvas.qml`, local scene coordinates, framebuffer pixels, dirty domains, and object name during this ownership-only cutover.
+3. Lower the SongView-child Quick host beneath the ruler, roll-pane, and strip widget tree. Opt only `m_rollStack` out of the application-wide opaque `QStackedWidget` background rule; its roll page remains nonpainting and its event-list page remains self-opaque.
+4. Position the host at the roll's mapped SongView rectangle and synchronize it on roll show, hide, move, and resize events. Geometry synchronization never raises the host or schedules a redundant scene update.
+5. Route existing `PianoRoll::requestQuickUpdate` and all six appearance events through guarded SongView-owned hooks, covering the construction interval before the host exists without an attach/setter protocol.
+6. Keep the current `PianoRollCanvas.qml`, local scene coordinates, framebuffer pixels, dirty domains, and object name during this ownership-only cutover.
 
 Acceptance:
 
@@ -114,6 +115,7 @@ Acceptance:
 - the rendered roll is pixel-identical to the pre-step framebuffer;
 - roll mouse, wheel, keyboard, focus, tooltip, menus, and gesture checks still pass;
 - event-list switching hides the roll pixels and restores them without stale content;
+- the editor drawer still paints above the roll, and the event-list page remains opaque;
 - playhead stacking remains unchanged.
 
 ## Step 2 — Expand into one timeline root
@@ -207,12 +209,12 @@ Keep in `OtherStrip` C++:
 - tooltip text and display;
 - font-relative geometry policy.
 
-After cutover, `TimeRuler` and `OtherStrip` are nonpainting QWidget input hosts. `OtherStrip` stops deriving from `TimelineSurface`. Their child controls and tooltips remain QWidget-owned.
+After cutover, `TimeRuler` is a nonpainting QWidget input host. `OtherStrip` emits no migrated pixels from `paintContent`, but remains a transparent `TimelineSurface` through Step 7 so existing cache diagnostics continue to exercise the composition seam. Its `TimelineSurface` base and transparent cache are removed only with the obsolete rendering infrastructure in Step 7. Child controls and tooltips remain QWidget-owned.
 
 Acceptance:
 
 - ruler, roll, and other-events pixels come from the same Quick framebuffer and present together;
-- no ruler `paintEvent`, other-strip `paintContent`, or other-strip `TimelineSurface` cache remains;
+- no ruler `paintEvent` and no migrated other-strip pixels from `paintContent` remain; the strip's transparent `TimelineSurface` composition survives until Step 7;
 - ruler and strip QWidget grabs/composite captures match the visual contract across themes and DPR;
 - bar/beat density, signatures, loop brackets, selection, pre-roll, edit cursor, and event diamonds match before-cutover geometry and colors;
 - grid controls, ruler gestures, strip tooltips, roll gestures, and playhead stacking still work;

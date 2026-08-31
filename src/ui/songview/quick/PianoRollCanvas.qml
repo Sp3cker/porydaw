@@ -4,34 +4,33 @@ import Porydaw.Ui
 Item {
     id: root
 
-    PianoRollQuickItem {
-        objectName: "pianoRollQuickGrid"
+    TimelineQuickItem {
+        objectName: "timelineQuickPianoGrid"
         anchors.fill: parent
-        sceneLayer: PianoRollQuickItem.Grid
+        sceneLayer: TimelineQuickItem.PianoGrid
         z: 0
     }
 
-    PianoRollQuickItem {
-        objectName: "pianoRollQuickNoteFills"
+    TimelineQuickItem {
+        objectName: "timelineQuickPianoNoteFills"
         anchors.fill: parent
-        sceneLayer: PianoRollQuickItem.NoteFills
+        sceneLayer: TimelineQuickItem.PianoNoteFills
         z: 0
     }
 
-    PianoRollQuickItem {
-        objectName: "pianoRollQuickDrawPreviewFill"
+    TimelineQuickItem {
+        objectName: "timelineQuickPianoDrawPreviewFill"
         anchors.fill: parent
-        sceneLayer: PianoRollQuickItem.DrawPreviewFill
+        sceneLayer: TimelineQuickItem.PianoDrawPreviewFill
         z: 0
     }
 
     Item {
-        id: noteTextLayer
         anchors.fill: parent
         z: 1
 
         Repeater {
-            model: pianoRollScene.noteTextModel
+            model: timelineScene.pianoNoteTextModel
 
             delegate: Text {
                 required property rect labelRect
@@ -55,59 +54,56 @@ Item {
                 elide: Text.ElideNone
                 maximumLineCount: 1
                 clip: true
-                z: 0
             }
         }
     }
 
-    PianoRollQuickItem {
-        objectName: "pianoRollQuickNoteBordersAndSelection"
+    TimelineQuickItem {
+        objectName: "timelineQuickPianoNoteBordersAndSelection"
         anchors.fill: parent
-        sceneLayer: PianoRollQuickItem.NoteBordersAndSelection
+        sceneLayer: TimelineQuickItem.PianoNoteBordersAndSelection
         z: 2
     }
 
-    PianoRollQuickItem {
-        objectName: "pianoRollQuickOverlay"
+    TimelineQuickItem {
+        objectName: "timelineQuickPianoOverlay"
         anchors.fill: parent
-        sceneLayer: PianoRollQuickItem.Overlay
+        sceneLayer: TimelineQuickItem.PianoOverlay
         z: 2
     }
 
-    PianoRollQuickItem {
-        objectName: "pianoRollQuickKeyboardKeys"
+    TimelineQuickItem {
+        objectName: "timelineQuickPianoKeyboardKeys"
         anchors.fill: parent
-        sceneLayer: PianoRollQuickItem.KeyboardKeys
+        sceneLayer: TimelineQuickItem.PianoKeyboardKeys
         z: 4
     }
 
-    PianoRollQuickItem {
-        objectName: "pianoRollQuickKeyboardHighlights"
+    TimelineQuickItem {
+        objectName: "timelineQuickPianoKeyboardHighlights"
         anchors.fill: parent
-        sceneLayer: PianoRollQuickItem.KeyboardHighlights
+        sceneLayer: TimelineQuickItem.PianoKeyboardHighlights
         z: 4
     }
 
     Rectangle {
-        id: hoverChip
-        objectName: "pianoRollQuickHoverChip"
-        x: pianoRollScene.hoverChipRect.x
-        y: pianoRollScene.hoverChipRect.y
-        width: pianoRollScene.hoverChipRect.width
-        height: pianoRollScene.hoverChipRect.height
-        visible: pianoRollScene.hoverChipVisible
-        color: pianoRollScene.hoverChipFill
-        radius: pianoRollScene.hoverChipRadius
+        objectName: "timelineQuickPianoHoverChip"
+        x: timelineScene.hoverChipRect.x
+        y: timelineScene.hoverChipRect.y
+        width: timelineScene.hoverChipRect.width
+        height: timelineScene.hoverChipRect.height
+        visible: timelineScene.hoverChipVisible
+        color: timelineScene.hoverChipFill
+        radius: timelineScene.hoverChipRadius
         z: 4.5
     }
 
     Item {
-        id: keyboardTextLayer
         anchors.fill: parent
         z: 5
 
         Repeater {
-            model: pianoRollScene.keyboardTextModel
+            model: timelineScene.pianoKeyboardTextModel
 
             delegate: Text {
                 required property rect labelRect
@@ -131,22 +127,20 @@ Item {
                 elide: Text.ElideNone
                 maximumLineCount: 1
                 clip: true
-                z: 0
             }
         }
     }
 
     Text {
-        id: hoverChipText
-        objectName: "pianoRollQuickHoverChipText"
-        x: pianoRollScene.hoverChipRect.x
-        y: pianoRollScene.hoverChipRect.y
-        width: pianoRollScene.hoverChipRect.width
-        height: pianoRollScene.hoverChipRect.height
-        visible: pianoRollScene.hoverChipVisible
-        text: pianoRollScene.hoverChipText
+        objectName: "timelineQuickPianoHoverChipText"
+        x: timelineScene.hoverChipRect.x
+        y: timelineScene.hoverChipRect.y
+        width: timelineScene.hoverChipRect.width
+        height: timelineScene.hoverChipRect.height
+        visible: timelineScene.hoverChipVisible
+        text: timelineScene.hoverChipText
         color: "white"
-        font: pianoRollScene.hoverChipFont
+        font: timelineScene.hoverChipFont
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         textFormat: Text.PlainText
@@ -158,12 +152,11 @@ Item {
     }
 
     Item {
-        id: loadingTextLayer
         anchors.fill: parent
         z: 5
 
         Repeater {
-            model: pianoRollScene.loadingTextModel
+            model: timelineScene.pianoLoadingTextModel
 
             delegate: Text {
                 required property rect labelRect
@@ -187,7 +180,6 @@ Item {
                 elide: Text.ElideNone
                 maximumLineCount: 1
                 clip: true
-                z: 0
             }
         }
     }

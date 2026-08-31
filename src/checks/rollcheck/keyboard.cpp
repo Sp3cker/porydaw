@@ -1,6 +1,7 @@
 #include "checks/rollcheck/rollcheck.h"
 
 #include <QApplication>
+#include <QColor>
 #include <QEvent>
 #include <QImage>
 #include <QPixmap>
@@ -199,21 +200,68 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
             auto *otherStrip = static_cast<songview::OtherStrip *>(
                 view.findChild<QWidget *>(QStringLiteral("otherEventsStrip")));
             if (!otherStrip)
-                fail("could not find the other-events strip for repaint diagnostics");
+                fail("could not find the other-events strip");
+            const songview::TimelineBand stripBand = view.timelineBands().back();
+            const StripItem *trackEvent = nullptr;
+            for (const StripItem &item : view.model().strip) {
+                if (item.track >= 0) {
+                    trackEvent = &item;
+                    break;
+                }
+            }
+            if (!trackEvent)
+                fail("timeline fixture has no track-colored other-events marker");
+            const double originalScroll = view.viewState().scrollPx;
+            if (otherStrip && trackEvent) {
+                const qreal visibleContentX =
+                    std::max<qreal>(1.0, (otherStrip->width() - stripBand.timelineOrigin) / 3.0);
+                view.setEditorHorizontalScroll(
+                    originalScroll + view.contentX(double(trackEvent->tick)) - visibleContentX);
+                QCoreApplication::processEvents();
+            }
+            const QImage beforeStripImage =
+                otherStrip ? check.captureQuickBand(*otherStrip) : QImage{};
             auto movedSelection = view.selectionModel().timeSelection();
             ++movedSelection.endTick;
-            const auto beforeStripPaint =
-                otherStrip ? otherStrip->diagnostics() : songview::TimelineSurfaceDiagnostics{};
             view.selectionModel().setTimeSelection(movedSelection);
             QCoreApplication::processEvents();
             const QImage partialSelectionImage = check.captureQuickFramebuffer();
-            if (otherStrip && otherStrip->diagnostics().contentInvalidationCount !=
-                                  beforeStripPaint.contentInvalidationCount)
-                fail("moving a time selection invalidated the other-events strip");
+            const QImage afterStripImage =
+                otherStrip ? check.captureQuickBand(*otherStrip) : QImage{};
+            if (beforeStripImage.isNull() || afterStripImage.isNull() ||
+                beforeStripImage != afterStripImage) {
+                fail("moving a time selection changed the other-events strip pixels");
+            }
+            if (trackEvent && !afterStripImage.isNull()) {
+                const qreal stripDpr = afterStripImage.devicePixelRatioF();
+                const int markerX = qRound(
+                    view.displayX(double(trackEvent->tick), stripBand.timelineOrigin, stripDpr) *
+                    stripDpr);
+                const int plotLeft = qRound(stripBand.timelineOrigin * stripDpr);
+                const int markerY = afterStripImage.height() / 2;
+                const QRgb expected = SongView::trackColor(trackEvent->track).rgba();
+                bool foundMarker = false;
+                for (int y = markerY - 2; y <= markerY + 2 && !foundMarker; ++y) {
+                    for (int x = markerX - 2; x <= markerX + 2; ++x) {
+                        if (x >= plotLeft && y >= 0 && x < afterStripImage.width() &&
+                            y < afterStripImage.height() &&
+                            afterStripImage.pixel(x, y) == expected) {
+                            foundMarker = true;
+                            break;
+                        }
+                    }
+                }
+                if (markerX < plotLeft || markerX >= afterStripImage.width())
+                    fail("track-colored other-events marker was not positioned in the plot");
+                else if (!foundMarker)
+                    fail("other-events strip did not render a visible track-colored diamond");
+            }
             pianoRoll->requestQuickUpdate(songview::PianoRollQuickDirty::All);
             QCoreApplication::processEvents();
             if (partialSelectionImage != check.captureQuickFramebuffer())
                 fail("partial time-selection repaint differed from a full repaint");
+            view.setEditorHorizontalScroll(originalScroll);
+            QCoreApplication::processEvents();
             view.selectionModel().setTimeSelection(
                 {startTick, endTick, songview::EditorSelectionModel::TimeSelection::Tracks});
             QCoreApplication::processEvents();
