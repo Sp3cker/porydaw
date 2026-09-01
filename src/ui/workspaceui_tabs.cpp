@@ -198,6 +198,18 @@ bool WorkspaceUi::selectedSongDirty() const noexcept
            (tab->document().isDirty() || bankDirty(*tab));
 }
 
+bool WorkspaceUi::hasPendingSaveWork() const noexcept
+{
+    for (const auto &page : m_tabPages) {
+        SongTab *const tab = page.get();
+        if (!tab->isReady())
+            continue;
+        if (m_inFlightSaves.contains(tab->name()) || tab->document().isDirty() || bankDirty(*tab))
+            return true;
+    }
+    return false;
+}
+
 void WorkspaceUi::onTabEdited(SongTab *tab)
 {
     refreshTabTitle(tab);

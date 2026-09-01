@@ -1,6 +1,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QClipboard>
+#include <QCloseEvent>
 #include <QCoreApplication>
 #include <QDialog>
 #include <QDir>
@@ -1393,6 +1394,10 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
     check(porydawSnapshot(projectRoot) == projectBoundary,
           "the post-switch reopen wrote view or editor data into the project");
 
+    QCloseEvent closeEvent;
+    QApplication::sendEvent(this, &closeEvent);
+    check(closeEvent.isAccepted() && m_closeAccepted,
+          "clean application close did not accept its first close request");
     close();
     QElapsedTimer closeDeadline;
     closeDeadline.start();

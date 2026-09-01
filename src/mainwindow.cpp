@@ -1418,18 +1418,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
         event->accept();
         return;
     }
-    event->ignore();
-    if (m_closeInProgress)
-        return;
-    m_closeInProgress = true;
-    // Every dirty tab gets its prompt; a Cancel keeps the window open.
-    // Saves answered before it have already queued — standard save-all
-    // behavior, not a transaction.
-    m_workspace->promptSaveAll([this](bool succeeded) {
-        if (!succeeded) {
-            m_closeInProgress = false;
-            return;
-        }
+    const auto finalizeClose = [this] {
         // Preview cleanup rides the worker's FIFO; the destructor's shutdown
         // order joins the worker after it.
         m_workspace->cleanupPreview();
@@ -1444,6 +1433,25 @@ void MainWindow::closeEvent(QCloseEvent *event)
         }
         m_closeAccepted = true;
         m_closeInProgress = false;
+    };
+    if (!m_workspace->hasPendingSaveWork()) {
+        finalizeClose();
+        event->accept();
+        return;
+    }
+    event->ignore();
+    if (m_closeInProgress)
+        return;
+    m_closeInProgress = true;
+    // Every dirty tab gets its prompt; a Cancel keeps the window open.
+    // Saves answered before it have already queued — standard save-all
+    // behavior, not a transaction.
+    m_workspace->promptSaveAll([this, finalizeClose](bool succeeded) {
+        if (!succeeded) {
+            m_closeInProgress = false;
+            return;
+        }
+        finalizeClose();
         close();
     });
 }

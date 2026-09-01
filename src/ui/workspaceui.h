@@ -108,6 +108,9 @@ class WorkspaceUi final : public QObject
     // True when the selected tab's document or its shared bank has unsaved
     // changes and no save is in flight for it.
     bool selectedSongDirty() const noexcept;
+    // True when any ready tab is dirty or has a save in flight; application
+    // close must defer while this work exists.
+    bool hasPendingSaveWork() const noexcept;
 
     // The saved workspace recipe read once at shell construction. The named
     // placeholder tabs it describes are already created; ProjectWorkspace

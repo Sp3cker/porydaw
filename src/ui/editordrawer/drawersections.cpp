@@ -532,15 +532,13 @@ bool DrawerSections::eventFilter(QObject *watched, QEvent *event)
             return false;
         m_resizeTarget = nullptr;
         handle->releaseMouse();
-        if (!handle->rect().contains(mouse->position().toPoint()))
-            handle->unsetCursor();
+        handle->unsetCursor();
         emit statePublished(true);
         return true;
     }
     if (event->type() == QEvent::UngrabMouse && m_resizeTarget == handle) {
         m_resizeTarget = nullptr;
-        if (!handle->rect().contains(handle->mapFromGlobal(QCursor::pos())))
-            handle->unsetCursor();
+        handle->unsetCursor();
     }
     return QWidget::eventFilter(watched, event);
 }

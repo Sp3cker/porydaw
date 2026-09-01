@@ -13,6 +13,7 @@
 #include <QCoreApplication>
 #include <QEvent>
 #include <QImage>
+#include <QMouseEvent>
 #include <QStackedWidget>
 #include <QTabBar>
 #include <QToolButton>
@@ -214,6 +215,16 @@ int runEditorDrawerCheck(const QString &screenshotPath)
     check(voiceHandle->cursor().shape() == Qt::SizeVerCursor &&
               hoveredHandleColor != idleHandleColor && hoveredHandleColor.alpha() == 255,
           "resize handle did not expose its resize cursor and opaque hover color");
+    QMouseEvent pressEvent(QEvent::MouseButtonPress, QPointF(voiceHandleProbe),
+                           QPointF(voiceHandleProbe), Qt::LeftButton, Qt::LeftButton,
+                           Qt::NoModifier);
+    QApplication::sendEvent(voiceHandle, &pressEvent);
+    QMouseEvent releaseEvent(QEvent::MouseButtonRelease, QPointF(voiceHandleProbe),
+                             QPointF(voiceHandleProbe), Qt::LeftButton, Qt::NoButton,
+                             Qt::NoModifier);
+    QApplication::sendEvent(voiceHandle, &releaseEvent);
+    check(!voiceHandle->testAttribute(Qt::WA_SetCursor),
+          "resize handle did not restore the inherited cursor after dragging");
     QEvent leaveHandle(QEvent::Leave);
     QApplication::sendEvent(voiceHandle, &leaveHandle);
     check(!voiceHandle->testAttribute(Qt::WA_SetCursor),
