@@ -2,12 +2,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <optional>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "core/miditimeline.h"
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/nodelane/batchcommit.h"
@@ -159,17 +159,16 @@ bool AutomationCanvas::commitHeldGridSpan(LaneHandle handle, std::vector<NodePoi
     if (!m_page || points.empty())
         return false;
     auto *document = m_page->document();
-    const auto *timeline = m_page->timeline();
     NodeLane *lane = mutableLane(handle);
-    if (!document || !timeline || !lane || timeline->lengthTicks == 0)
+    if (!document || !lane)
         return false;
     const uint64_t tickBegin = points.front().tick;
     const uint64_t tickEnd =
-        m_page->nextGridTick(points.back().tick, fineGrid, timeline->lengthTicks);
+        m_page->nextGridTick(points.back().tick, fineGrid, std::numeric_limits<uint64_t>::max());
     const NodeLaneEdit laneEdit({handle, document->revision()}, lane->points());
-    return commitLaneEdit(laneEdit.replaceHeldSpan(tickBegin, tickEnd, timeline->lengthTicks,
-                                                   lane->minimumValue(), lane->maximumValue(),
-                                                   std::move(points), leadingPointPolicy));
+    return commitLaneEdit(laneEdit.replaceHeldSpan(
+        tickBegin, tickEnd, lane->minimumValue(), lane->maximumValue(), std::move(points),
+        leadingPointPolicy, NodeLaneEdit::TrailingPointPolicy::Restore));
 }
 
 bool AutomationCanvas::commitNodePointMoves(uint64_t expectedRevision,

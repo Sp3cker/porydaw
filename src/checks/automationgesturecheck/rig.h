@@ -90,6 +90,7 @@ class AutomationGestureCheckRig final
     Snapshot snapshot(int track, uint8_t controller) const;
 
     void documentChanged();
+    void overrideTimelineLength(uint64_t lengthTicks);
     void setAutomationZoom(double zoom);
     void setAutomationScroll(double scroll);
     void setPersistentPencil(bool enabled);

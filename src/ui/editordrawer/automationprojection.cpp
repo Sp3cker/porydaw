@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
@@ -93,7 +94,8 @@ AutomationProjection::PointerMapping AutomationProjection::pointerMapping(const 
     if (!songTimeline)
         return mapped;
     const uint64_t length = songTimeline->lengthTicks;
-    mapped.rawTick = std::clamp(rawTickAt(x), 0.0, double(length));
+    const double rawTick = std::max(0.0, rawTickAt(x));
+    mapped.rawTick = length == 0 ? rawTick : std::min(rawTick, double(length));
     mapped.point.value =
         std::clamp(qRound(valueAtY(body, m_geometry, lane.minimumValue(), lane.maximumValue(), y)),
                    lane.minimumValue(), lane.maximumValue());
@@ -162,13 +164,19 @@ bool AutomationProjection::nodeMarkersVisible() const
 AutomationGridCell AutomationProjection::snapCellAt(double rawTick) const
 {
     const MidiTimeline *songTimeline = timeline();
-    if (!songTimeline || songTimeline->lengthTicks == 0)
+    if (!songTimeline)
         return {};
     const uint64_t length = songTimeline->lengthTicks;
-    const double clamped = std::clamp(rawTick, 0.0, double(length));
-    const uint64_t tick = clamped >= double(length) ? length - 1 : uint64_t(std::floor(clamped));
+    if (length > 0) {
+        const double clamped = std::clamp(rawTick, 0.0, double(length));
+        const uint64_t tick =
+            clamped >= double(length) ? length - 1 : uint64_t(std::floor(clamped));
+        const uint64_t start = snapTickDown(double(tick), false);
+        return {start, nextGridTick(start, false, length)};
+    }
+    const uint64_t tick = uint64_t(std::floor(std::max(0.0, rawTick)));
     const uint64_t start = snapTickDown(double(tick), false);
-    return {start, nextGridTick(start, false, length)};
+    return {start, nextGridTick(start, false, std::numeric_limits<uint64_t>::max())};
 }
 
 const std::vector<AutomationGridCell> &
@@ -177,19 +185,20 @@ AutomationProjection::snapCellsCrossed(std::vector<AutomationGridCell> &cells,
 {
     cells.clear();
     const MidiTimeline *songTimeline = timeline();
-    if (!songTimeline || songTimeline->lengthTicks == 0)
+    if (!songTimeline)
         return cells;
-    const uint64_t length = songTimeline->lengthTicks;
+    const uint64_t limit = songTimeline->lengthTicks == 0 ? std::numeric_limits<uint64_t>::max()
+                                                          : songTimeline->lengthTicks;
     const bool forward = currentRawTick >= previousRawTick;
     const auto target = snapCellAt(currentRawTick);
     auto cell = snapCellAt(previousRawTick);
-    while (cell.tickBegin < cell.tickEnd && cell.tickEnd <= length) {
+    while (cell.tickBegin < cell.tickEnd && cell.tickEnd <= limit) {
         cells.push_back(cell);
         if (cell.tickBegin == target.tickBegin)
             return cells;
         if (forward) {
-            const uint64_t nextStart = nextGridTick(cell.tickBegin, false, length);
-            if (nextStart >= length)
+            const uint64_t nextStart = nextGridTick(cell.tickBegin, false, limit);
+            if (nextStart >= limit)
                 break;
             const auto next = snapCellAt(double(nextStart));
             if (next.tickBegin <= cell.tickBegin)

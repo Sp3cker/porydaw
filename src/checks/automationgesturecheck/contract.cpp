@@ -995,8 +995,9 @@ void checkSweepAndNodeGestureContracts(uint64_t revision, const AutomationGestur
     ramp.current = {10, 100};
     auto rampPoints = ramp.finishedPoints(false, stepOne);
     const auto rampCompletion = NodeLaneEdit({LaneHandle{0}, revision}, {{0, 0}, {11, 45}})
-                                    .replaceHeldSpan(1, 11, 20, 0, 127, std::move(rampPoints),
-                                                     NodeLaneEdit::LeadingPointPolicy::Preserve);
+                                    .replaceHeldSpan(1, 11, 0, 127, std::move(rampPoints),
+                                                     NodeLaneEdit::LeadingPointPolicy::Preserve,
+                                                     NodeLaneEdit::TrailingPointPolicy::Restore);
     gestureCheck.require(
         !rampCompletion.unchanged && rampCompletion.points.size() == 11 &&
             rampCompletion.points.front().tick == 1 && rampCompletion.points.front().value == 0 &&
@@ -1012,8 +1013,9 @@ void checkSweepAndNodeGestureContracts(uint64_t revision, const AutomationGestur
     auto directSweepPoints = directSweep.finishedPoints(false, nextCoarseTick);
     const auto sweepCompletion =
         NodeLaneEdit({LaneHandle{0}, revision}, {{0, 20}, {24, 60}, {72, 90}})
-            .replaceHeldSpan(24, 72, 96, 0, 127, std::move(directSweepPoints),
-                             NodeLaneEdit::LeadingPointPolicy::Reduce);
+            .replaceHeldSpan(24, 72, 0, 127, std::move(directSweepPoints),
+                             NodeLaneEdit::LeadingPointPolicy::Reduce,
+                             NodeLaneEdit::TrailingPointPolicy::Restore);
     gestureCheck.require(
         !sweepCompletion.unchanged &&
             sameNodePoints(sweepCompletion.points, {{24, 80}, {48, 100}, {72, 90}}),
@@ -1091,22 +1093,26 @@ void checkSweepAndNodeGestureContracts(uint64_t revision, const AutomationGestur
     }
 
     const NodeLaneEdit heldSpan({LaneHandle{0}, revision}, {{0, 20}, {24, 60}, {72, 90}});
-    const auto doubleClick = heldSpan.replaceHeldSpan(24, 48, 96, 0, 127, {{24, 80}},
-                                                      NodeLaneEdit::LeadingPointPolicy::Reduce);
+    const auto doubleClick = heldSpan.replaceHeldSpan(24, 48, 0, 127, {{24, 80}},
+                                                      NodeLaneEdit::LeadingPointPolicy::Reduce,
+                                                      NodeLaneEdit::TrailingPointPolicy::Restore);
     gestureCheck.require(
         !doubleClick.unchanged && sameNodePoints(doubleClick.points, {{24, 80}, {48, 60}}),
         QStringLiteral("held-span insertion did not restore the exclusive held value"));
-    const auto fineDoubleClick = heldSpan.replaceHeldSpan(30, 36, 96, 0, 127, {{30, 80}},
-                                                          NodeLaneEdit::LeadingPointPolicy::Reduce);
+    const auto fineDoubleClick = heldSpan.replaceHeldSpan(
+        30, 36, 0, 127, {{30, 80}}, NodeLaneEdit::LeadingPointPolicy::Reduce,
+        NodeLaneEdit::TrailingPointPolicy::Restore);
     gestureCheck.require(
         !fineDoubleClick.unchanged && sameNodePoints(fineDoubleClick.points, {{30, 80}, {36, 60}}),
         QStringLiteral("fine held-span insertion did not restore the exclusive held value"));
-    const auto flat = heldSpan.replaceHeldSpan(36, 48, 96, 0, 127, {{36, 60}},
-                                               NodeLaneEdit::LeadingPointPolicy::Reduce);
+    const auto flat = heldSpan.replaceHeldSpan(36, 48, 0, 127, {{36, 60}},
+                                               NodeLaneEdit::LeadingPointPolicy::Reduce,
+                                               NodeLaneEdit::TrailingPointPolicy::Restore);
     gestureCheck.require(flat.unchanged && flat.points.empty(),
                          QStringLiteral("flat held-span replacement was not an empty no-op"));
     const auto deletion =
-        heldSpan.replaceHeldSpan(24, 96, 96, 0, 127, {}, NodeLaneEdit::LeadingPointPolicy::Reduce);
+        heldSpan.replaceHeldSpan(24, 96, 0, 127, {}, NodeLaneEdit::LeadingPointPolicy::Reduce,
+                                 NodeLaneEdit::TrailingPointPolicy::Omit);
     gestureCheck.require(!deletion.unchanged && deletion.points.empty(),
                          QStringLiteral("held-span deletion was treated as unchanged"));
 }

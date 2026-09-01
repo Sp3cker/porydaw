@@ -250,6 +250,14 @@ void AutomationGestureCheckRig::documentChanged()
     pump();
 }
 
+void AutomationGestureCheckRig::overrideTimelineLength(uint64_t lengthTicks)
+{
+    m_timeline->lengthTicks = lengthTicks;
+    m_view->updateSong(m_timeline.get());
+    refreshPage();
+    pump();
+}
+
 void AutomationGestureCheckRig::setAutomationZoom(double zoom)
 {
     m_live.timeZoom = zoom;

@@ -299,6 +299,22 @@ void runSweepRamp(Context &ctx)
         QStringLiteral("Shift-ramp did not commit both mapped endpoints in one edit"));
 }
 
+void runZeroLengthSweep(Context &ctx)
+{
+    seed(ctx, kFixture);
+    ctx.rig.overrideTimelineLength(0);
+    const auto start = at(ctx, 48, 80);
+    const auto target = at(ctx, 144, 110);
+    const auto before = snapshot(ctx.rig.document());
+    activatedDrag(ctx, start.position, target.position);
+    const auto sweep = pointsOf(ctx);
+    ctx.check.require(
+        isOneEdit(before, snapshot(ctx.rig.document())) &&
+            containsPoint(sweep, target.mapped.point.tick, target.mapped.point.value),
+        QStringLiteral("zero-length timeline sweep snapped back instead of committing"));
+    ctx.rig.documentChanged();
+}
+
 void runPencil(Context &ctx)
 {
     seed(ctx, {});
@@ -473,6 +489,7 @@ constexpr std::array kScenarios{
     Scenario{"origin-phantom", runOriginPhantom},
     Scenario{"selection", runSelection},
     Scenario{"sweep-ramp", runSweepRamp},
+    Scenario{"zero-length-sweep", runZeroLengthSweep},
     Scenario{"pencil", runPencil},
     Scenario{"band-select", runBandSelect},
     Scenario{"escape", runEscapeCancel},

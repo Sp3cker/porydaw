@@ -71,12 +71,13 @@ NodeLaneEdit::NodeLaneEdit(Target target, std::vector<Point> originalPoints)
                  LeadingPointPolicy::Reduce);
 }
 
-NodeLaneEdit::Completion NodeLaneEdit::replaceHeldSpan(uint64_t tickBegin, uint64_t tickEnd,
-                                                       uint64_t songEndTick, int minimumValue,
-                                                       int maximumValue, std::vector<Point> points,
-                                                       LeadingPointPolicy leadingPointPolicy) const
+NodeLaneEdit::Completion
+NodeLaneEdit::replaceHeldSpan(uint64_t tickBegin, uint64_t tickEnd, int minimumValue,
+                              int maximumValue, std::vector<Point> points,
+                              LeadingPointPolicy leadingPointPolicy,
+                              TrailingPointPolicy trailingPointPolicy) const
 {
-    if (tickEnd < songEndTick)
+    if (trailingPointPolicy == TrailingPointPolicy::Restore)
         if (const auto endpointValue = heldValue(m_heldOriginalPoints, tickEnd, true))
             points.push_back({tickEnd, *endpointValue});
     canonicalize(points, tickBegin, tickEnd, minimumValue, maximumValue, leadingPointPolicy,

@@ -93,11 +93,14 @@ class NodeLaneEdit
         bool unchanged = false;
     };
 
+    enum class TrailingPointPolicy { Omit, Restore };
+
     NodeLaneEdit(Target target, std::vector<Point> originalPoints);
 
-    Completion replaceHeldSpan(uint64_t tickBegin, uint64_t tickEnd, uint64_t songEndTick,
-                               int minimumValue, int maximumValue, std::vector<Point> points,
-                               LeadingPointPolicy leadingPointPolicy) const;
+    Completion replaceHeldSpan(uint64_t tickBegin, uint64_t tickEnd, int minimumValue,
+                               int maximumValue, std::vector<Point> points,
+                               LeadingPointPolicy leadingPointPolicy,
+                               TrailingPointPolicy trailingPointPolicy) const;
 
   private:
     Target m_target;
