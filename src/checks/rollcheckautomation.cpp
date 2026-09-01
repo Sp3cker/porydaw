@@ -745,7 +745,6 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     waitForTimers(0);
     check(!normalDoubleClickDialog && document.revision() == normalDoubleClickRevision,
           QStringLiteral("node double-click opened value entry after single-click delete"));
-
     // A row resize boundary owns the primary click, so its idle affordance
     // must not advertise an insertion in either adjacent row.
     QEvent boundaryLeave(QEvent::Leave);

@@ -11,13 +11,14 @@
 #include <vector>
 
 class SongView;
+class VelocityArea;
+class VoiceChangeArea;
 
 namespace songview {
 
 class OtherStrip;
 class PianoRoll;
 class TimeRuler;
-
 enum class PianoRollQuickDirty : quint32 {
     None = 0,
     Grid = 1u << 0,
@@ -54,7 +55,10 @@ enum class TimelineQuickDirty : quint8 {
     None = 0,
     Ruler = 1u << 0,
     OtherEvents = 1u << 1,
-    All = (1u << 2) - 1,
+    Velocity = 1u << 2,
+    VoiceChanges = 1u << 3,
+    VoiceChangesHover = 1u << 4,
+    All = (1u << 5) - 1,
 };
 Q_DECLARE_FLAGS(TimelineQuickDirtySet, TimelineQuickDirty)
 Q_DECLARE_OPERATORS_FOR_FLAGS(TimelineQuickDirtySet)
@@ -66,7 +70,7 @@ class TimelineQuickView final : public QQuickWidget
 
   public:
     TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStrip &otherEvents,
-                      SongView &songView);
+                      VelocityArea &velocity, VoiceChangeArea &voiceChanges, SongView &songView);
     ~TimelineQuickView() override;
 
     void syncAppearance();
@@ -97,14 +101,20 @@ class TimelineQuickView final : public QQuickWidget
     QPointer<TimeRuler> m_ruler;
     QPointer<PianoRoll> m_roll;
     QPointer<OtherStrip> m_otherEvents;
+    QPointer<VelocityArea> m_velocity;
+    QPointer<VoiceChangeArea> m_voiceChanges;
     QPointer<SongView> m_songView;
     QRect m_rulerBandRect;
     QRect m_rollBandRect;
     QRect m_otherEventsBandRect;
+    QRect m_velocityBandRect;
+    QRect m_voiceChangesBandRect;
     TimelineQuickScene *m_scene = nullptr;
     std::array<TimelineQuickItem *, static_cast<std::size_t>(TimelineQuickLayer::Count)> m_items{};
     PianoRollQuickDirtySet m_pendingDirty = {PianoRollQuickDirty::None};
     TimelineQuickDirtySet m_pendingTimelineDirty = {TimelineQuickDirty::None};
+    bool m_velocityWasVisible = false;
+    bool m_voiceChangesWasVisible = false;
     bool m_flushScheduled = false;
     std::vector<TimelineQuickTextModel::Record> m_noteTextRecords;
     std::vector<TimelineQuickTextModel::Record> m_loadingTextRecords;

@@ -2,7 +2,6 @@
 
 #include <QColor>
 #include <QFont>
-#include <QLinearGradient>
 #include <QPainter>
 #include <QPoint>
 #include <QRect>
@@ -11,8 +10,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <optional>
-#include <vector>
 
 #include "ui/songview.h"
 
@@ -38,7 +35,6 @@ QString keyName(int key);
 QString contextActionText(const QString &text, const QString &commandId);
 QString timeSigLabel(int numerator, int denomPow2);
 bool askTimeSignature(QWidget *parent, int *numerator, int *denomPow2);
-QLinearGradient loopGlow(qreal edgeX, qreal transparentX);
 QColor loopEdge();
 QColor pianoRollAccidentalLaneColor();
 QColor pianoRollScaleHighlightColor();
@@ -47,8 +43,6 @@ QColor mixTowardOklabImpl(const QColor &color, const QColor &backdrop, double t)
 std::size_t trackIdentityIndex(int track);
 QColor contrastingTextColor(const QColor &backdrop);
 QColor ghostNoteColor(int track, bool accidentalRow);
-void drawOverlays(QPainter &p, const SongView *sv, const QRect &rect, qreal origin,
-                  bool timeSelCovered, bool loopMarkersVisible = true);
 int subGridLevel(uint64_t relTick, uint64_t beatTicks, bool triplet);
 
 // Calls fn(tick, level) for every sub-beat visible-grid position in [t0, t1)
@@ -85,8 +79,6 @@ void forEachSubGridLine(const SongView *sv, double t0, double t1,
 }
 
 QColor gridLineColor(int alpha = 255);
-void drawPreRoll(QPainter &p, const SongView *sv, const QRect &rect, qreal origin,
-                 const QColor &background);
 void drawGrid(QPainter &p, const SongView *sv, const QRect &rect, qreal origin,
               int timelineDetailMinimumPixelsPerBeat, int gridLineStrokeWidth);
 

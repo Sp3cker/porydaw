@@ -9,43 +9,13 @@
 #include <optional>
 #include <vector>
 
-#include <QColor>
-#include <QFont>
-#include <QImage>
-#include <QPainter>
 #include <QPointF>
-#include <QRect>
-#include <QRectF>
-#include <QSize>
-#include <QtMath>
 
 namespace {
-
-bool samePixels(const QImage &left, const QImage &right)
-{
-    if (left.size() != right.size())
-        return false;
-    for (int y = 0; y < left.height(); ++y) {
-        for (int x = 0; x < left.width(); ++x) {
-            if (left.pixel(x, y) != right.pixel(x, y))
-                return false;
-        }
-    }
-    return true;
-}
 
 bool equals(const std::optional<std::size_t> &value, std::size_t expected)
 {
     return value && *value == expected;
-}
-
-bool hasLabel(const VelocityAxis &axis, uint8_t velocity)
-{
-    for (std::size_t index = 0; index < axis.labelCount(); ++index) {
-        if (axis.labels()[index].velocity == velocity)
-            return true;
-    }
-    return false;
 }
 
 bool labelsMatch(const VelocityAxis &axis, const uint8_t *expected, std::size_t count)
@@ -268,8 +238,8 @@ int runVelocityModelCheck()
               continuous.markerCount() == 2 && continuous.markers()[0].velocity == 12 &&
               continuous.markers()[1].velocity == 100,
           "continuous inverse placement and extrema should be exact");
-    check(continuous.tickCount() == 17 && hasLabel(continuous, 127) && hasLabel(continuous, 112) &&
-              hasLabel(continuous, 1),
+    check(continuous.tickCount() == 17 && continuous.hasLabel(127) && continuous.hasLabel(112) &&
+              continuous.hasLabel(1),
           "continuous density should select the D3 band");
     check(continuous.inRuler(QPointF(0.0, 0.0), 200.0) &&
               !continuous.inRuler(QPointF(200.0, 0.0), 200.0) &&
@@ -277,52 +247,15 @@ int runVelocityModelCheck()
                   continuous.labels()[0].velocity &&
               continuous.rulerVelocityAt(QPointF(0.0, continuous.labels()[0].y + 6.01), 12.0) == -1,
           "continuous ruler hit mapping should use label tolerance and bounds");
-    QImage rulerImage(220, 200, QImage::Format_ARGB32);
-    rulerImage.fill(Qt::white);
-    VelocityAxisPaintStyle rulerStyle;
-    rulerStyle.labelColor = QColor(Qt::red);
-    rulerStyle.accentColor = QColor(Qt::blue);
-    rulerStyle.labelFont = QFont{};
-    rulerStyle.emphasizedFont = rulerStyle.labelFont;
-    rulerStyle.separatorX = 198.0;
-    rulerStyle.labelLeft = 2.0;
-    rulerStyle.labelWidth = 190.0;
-    rulerStyle.labelHeight = 12.0;
-    rulerStyle.minorTickLength = 2.0;
-    rulerStyle.majorTickLength = 6.0;
-    rulerStyle.markerTickLength = 4.0;
-    rulerStyle.graduationTickLength = 3.0;
-    rulerStyle.contentClip = QRectF(198.0, 0.0, 22.0, 200.0);
-    QPainter rulerPainter(&rulerImage);
-    continuous.paintRuler(rulerPainter, rulerStyle);
-    rulerPainter.end();
-    bool paintedTick = false;
-    for (int y = 5; y <= 7 && !paintedTick; ++y) {
-        for (int x = 192; x <= 198; ++x) {
-            if (rulerImage.pixelColor(x, y) == QColor(Qt::red)) {
-                paintedTick = true;
-                break;
-            }
-        }
-    }
-    check(paintedTick, "continuous ruler painter should render its major tick");
+    check(continuous.tickCount() == 17 && continuous.hasLabel(127) &&
+              continuous.ticks()[0].velocity == 127 && continuous.ticks()[0].y == continuous.top(),
+          "continuous major tick should be published in the axis model");
     const VelocityAxis intrinsicAxis(square, axisGeometry(200.0));
-    QImage intrinsicRulerImage(220, 200, QImage::Format_ARGB32);
-    intrinsicRulerImage.fill(Qt::white);
-    QPainter intrinsicRulerPainter(&intrinsicRulerImage);
-    intrinsicAxis.paintRuler(intrinsicRulerPainter, rulerStyle);
-    intrinsicRulerPainter.end();
-    bool paintedIntrinsicTick = false;
-    const int intrinsicTickY = qRound(intrinsicAxis.graduations()[0].y);
-    for (int y = intrinsicTickY - 1; y <= intrinsicTickY + 1 && !paintedIntrinsicTick; ++y) {
-        for (int x = 192; x <= 198; ++x) {
-            if (intrinsicRulerImage.pixelColor(x, y) == QColor(Qt::red)) {
-                paintedIntrinsicTick = true;
-                break;
-            }
-        }
-    }
-    check(paintedIntrinsicTick, "intrinsic ruler painter should render detent tick marks");
+    check(intrinsicAxis.graduationCount() == square.levelCount() &&
+              intrinsicAxis.graduations()[0].velocity == square.representative(0) &&
+              intrinsicAxis.graduations()[0].y >= intrinsicAxis.top() &&
+              intrinsicAxis.graduations()[0].y <= intrinsicAxis.bottom(),
+          "intrinsic detent ticks should be published as axis graduations");
     check(VelocityAxis(unresolved, axisGeometry(83.0)).tickCount() == 5 &&
               VelocityAxis(unresolved, axisGeometry(84.0)).tickCount() == 9 &&
               VelocityAxis(unresolved, axisGeometry(112.0)).tickCount() == 9 &&
@@ -354,23 +287,10 @@ int runVelocityModelCheck()
           "narrow label geometry should remain non-negative");
     const std::array<uint8_t, 1> selectedValue = {73};
     const VelocityAxis selectedAxis(unresolved, axisGeometry(300.0), selectedValue);
-    VelocityAxisPaintStyle selectedLabelStyle;
-    selectedLabelStyle.labelColor = Qt::black;
-    selectedLabelStyle.accentColor = Qt::blue;
-    selectedLabelStyle.labelFont = QFont();
-    selectedLabelStyle.emphasizedFont = QFont();
-    selectedLabelStyle.separatorX = 100.0;
-    selectedLabelStyle.labelWidth = 80.0;
-    selectedLabelStyle.labelHeight = 16.0;
-    const auto paintLabelColumn = [&selectedLabelStyle](const VelocityAxis &axis) {
-        QImage image(QSize(120, 300), QImage::Format_ARGB32);
-        image.fill(Qt::white);
-        QPainter painter(&image);
-        axis.paintRuler(painter, selectedLabelStyle);
-        return image.copy(QRect(0, 0, 80, 300));
-    };
-    check(samePixels(paintLabelColumn(denseAxis), paintLabelColumn(selectedAxis)),
-          "a single selected velocity must not add its value to the graduation labels");
+    check(selectedAxis.labelCount() == denseAxis.labelCount() &&
+              labelsMatch(selectedAxis, denseLabels.data(), denseLabels.size()) &&
+              selectedAxis.markerCount() == 1 && selectedAxis.markers()[0].velocity == 73,
+          "a single selected velocity must add a marker, not a graduation label");
 
     return failures == 0 ? 0 : 1;
 }

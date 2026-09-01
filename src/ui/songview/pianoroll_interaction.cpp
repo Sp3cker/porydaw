@@ -3,8 +3,7 @@
 #include "ui/songview/pianoroll.h"
 
 #include "ui/songview.h"
-#include "ui/songview/quick/pianorollquick.h"
-
+#include "ui/songview/quick/timelinequickview.h"
 #include <QEvent>
 #include <QMouseEvent>
 

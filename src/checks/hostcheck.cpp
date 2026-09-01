@@ -1,4 +1,5 @@
 #include "checks/support/eventsynth.h"
+#include "checks/support/quickframebuffer.h"
 
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
@@ -371,37 +372,40 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         QCoreApplication::processEvents();
         check(voiceChanges->isVisible(),
               "Voice Changes should be visible for voice-context checks");
-        const QImage editCursorVoiceContext = voiceChanges->grab().toImage();
+        const QImage editCursorVoiceContext =
+            checks::support::captureQuickBand(view, *voiceChanges);
         const QImage editCursorAutomation = automation->grab().toImage();
         const auto automationBeforePlayback = automation->diagnostics();
         view.setPlayheadSample(timeline->sampleForTick(24), true);
         QCoreApplication::processEvents();
-        const QImage playbackVoiceContext = voiceChanges->grab().toImage();
+        const QImage playbackVoiceContext = checks::support::captureQuickBand(view, *voiceChanges);
         check(playbackVoiceContext != editCursorVoiceContext &&
                   automation->grab().toImage() == editCursorAutomation &&
                   automation->diagnostics() == automationBeforePlayback,
               "visible Voice Changes should resolve playback voice without refreshing Automation");
         const auto warmAutomation = automation->diagnostics();
-        const QImage warmVoiceContext = voiceChanges->grab().toImage();
+        const QImage warmVoiceContext = checks::support::captureQuickBand(view, *voiceChanges);
         for (int tick = 25; tick < 27; ++tick)
             view.setPlayheadSample(timeline->sampleForTick(uint64_t(tick)), true);
         QCoreApplication::processEvents();
-        check(voiceChanges->grab().toImage() == warmVoiceContext &&
+        check(checks::support::captureQuickBand(view, *voiceChanges) == warmVoiceContext &&
                   automation->diagnostics() == warmAutomation,
               "steady same-voice playback should keep Voice Changes and Automation stable");
 
         view.setPlayheadSample(timeline->sampleForTick(26), false);
         QCoreApplication::processEvents();
-        check(voiceChanges->grab().toImage() == editCursorVoiceContext &&
+        check(checks::support::captureQuickBand(view, *voiceChanges) == editCursorVoiceContext &&
                   automation->grab().toImage() == editCursorAutomation,
               "stopping should return Voice Changes to the edit-cursor voice only");
         view.setPlayheadSample(timeline->sampleForTick(12), true);
         QCoreApplication::processEvents();
-        const QImage squarePlaybackVoiceContext = voiceChanges->grab().toImage();
+        const QImage squarePlaybackVoiceContext =
+            checks::support::captureQuickBand(view, *voiceChanges);
         const auto automationBeforeCrossing = automation->diagnostics();
         view.setPlayheadSample(timeline->sampleForTick(24), true);
         QCoreApplication::processEvents();
-        check(voiceChanges->grab().toImage() != squarePlaybackVoiceContext &&
+        check(checks::support::captureQuickBand(view, *voiceChanges) !=
+                      squarePlaybackVoiceContext &&
                   automation->diagnostics() == automationBeforeCrossing,
               "Voice Changes should refresh across a program change without refreshing Automation");
         view.setPlayheadSample(timeline->sampleForTick(24), false);

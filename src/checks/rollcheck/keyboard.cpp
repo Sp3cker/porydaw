@@ -19,8 +19,7 @@
 
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
-#include "ui/songview/quick/pianorollquick.h"
-
+#include "ui/songview/quick/timelinequickview.h"
 namespace checks::rollcheck {
 
 ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const ResizeFixture &fixture)

@@ -1,4 +1,4 @@
-#include "ui/songview/quick/pianorollquick.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 #include "ui/keymap.h"
 #include "ui/layout.h"
@@ -31,46 +31,12 @@ using detail::keyName;
 using detail::logicalPhysicalPixel;
 using detail::usedTrackMask;
 
-void addRect(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
-             const QColor &color, const QRectF &clip)
-{
-    const QRectF clipped = rect.normalized().intersected(clip);
-    if (clipped.width() <= 0.0 || clipped.height() <= 0.0)
-        return;
-    scene.layer(layer).rects.push_back({clipped, color, color, color, color});
-}
-
-void addHorizontalGradient(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
-                           const QColor &left, const QColor &right, const QRectF &clip)
-{
-    const QRectF clipped = rect.normalized().intersected(clip);
-    if (clipped.width() <= 0.0 || clipped.height() <= 0.0)
-        return;
-    const qreal fullWidth = rect.width();
-    const qreal leftT = fullWidth > 0.0 ? (clipped.left() - rect.left()) / fullWidth : 0.0;
-    const qreal rightT = fullWidth > 0.0 ? (clipped.right() - rect.left()) / fullWidth : 1.0;
-    const auto mix = [](const QColor &a, const QColor &b, qreal t) {
-        return QColor::fromRgbF(
-            a.redF() + (b.redF() - a.redF()) * t, a.greenF() + (b.greenF() - a.greenF()) * t,
-            a.blueF() + (b.blueF() - a.blueF()) * t, a.alphaF() + (b.alphaF() - a.alphaF()) * t);
-    };
-    const QColor clippedLeft = mix(left, right, leftT);
-    const QColor clippedRight = mix(left, right, rightT);
-    scene.layer(layer).rects.push_back(
-        {clipped, clippedLeft, clippedRight, clippedRight, clippedLeft});
-}
-
-void addHorizontalLine(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x0, qreal x1,
-                       qreal y, qreal width, const QColor &color, const QRectF &clip)
-{
-    addRect(scene, layer, QRectF(x0, y - width / 2.0, x1 - x0, width), color, clip);
-}
-
-void addVerticalLine(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x, qreal y0,
-                     qreal y1, qreal width, const QColor &color, const QRectF &clip)
-{
-    addRect(scene, layer, QRectF(x - width / 2.0, y0, width, y1 - y0), color, clip);
-}
+using timeline_quick::addDashedVertical;
+using timeline_quick::addHorizontalGradient;
+using timeline_quick::addHorizontalLine;
+using timeline_quick::addRect;
+using timeline_quick::addVerticalLine;
+using timeline_quick::resetLayer;
 
 int fittedFrameThickness(const QRectF &rect, int requestedPixels, int insetPixels, qreal dpr)
 {
@@ -112,15 +78,6 @@ void addDashedHorizontal(TimelineQuickScene &scene, TimelineQuickLayer layer, co
                 clip);
 }
 
-void addDashedVertical(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &clip,
-                       qreal x, qreal y0, qreal y1, qreal width, qreal dash, qreal gap,
-                       const QColor &color)
-{
-    for (qreal y = y0; y < y1; y += dash + gap)
-        addRect(scene, layer, QRectF(x - width / 2.0, y, width, (std::min)(dash, y1 - y)), color,
-                clip);
-}
-
 void addDashedFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
                     const QColor &color, qreal width, qreal dash, qreal gap, const QRectF &clip)
 {
@@ -128,10 +85,10 @@ void addDashedFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, const Q
                         color);
     addDashedHorizontal(scene, layer, clip, rect.left(), rect.right(), rect.bottom(), width, dash,
                         gap, color);
-    addDashedVertical(scene, layer, clip, rect.left(), rect.top(), rect.bottom(), width, dash, gap,
-                      color);
-    addDashedVertical(scene, layer, clip, rect.right(), rect.top(), rect.bottom(), width, dash, gap,
-                      color);
+    addDashedVertical(scene, layer, rect.left(), rect.top(), rect.bottom(), width, dash, gap, color,
+                      clip);
+    addDashedVertical(scene, layer, rect.right(), rect.top(), rect.bottom(), width, dash, gap,
+                      color, clip);
 }
 
 void addNoteBorder(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &noteBox,
@@ -535,9 +492,9 @@ void TimelineQuickView::rebuildOverlay()
     const qreal cursorX =
         roll.m_sv->displayX(double(roll.m_sv->editCursorTick()), keyboardWidth, dpr);
     if (cursorX >= plot.left() && cursorX <= plot.right()) {
-        addDashedVertical(scene, TimelineQuickLayer::PianoOverlay, plot, cursorX, plot.top(),
+        addDashedVertical(scene, TimelineQuickLayer::PianoOverlay, cursorX, plot.top(),
                           plot.bottom(), pixel, lyt::space(Space::One), lyt::space(Space::One),
-                          themes::color(themes::Role::song_view_edit_cursor));
+                          themes::color(themes::Role::song_view_edit_cursor), plot);
     }
 }
 
@@ -767,11 +724,8 @@ void TimelineQuickView::synchronize(PianoRollQuickDirtySet dirty)
                              void (TimelineQuickView::*builder)()) {
         if (!(dirty & flag))
             return;
-        TimelineQuickLayerData &data = scene.layer(layer);
-        data.rects.clear();
-        data.triangles.clear();
+        resetLayer(scene, layer);
         (this->*builder)();
-        ++data.revision;
         if (TimelineQuickItem *item = m_items[static_cast<std::size_t>(layer)])
             item->update();
     };

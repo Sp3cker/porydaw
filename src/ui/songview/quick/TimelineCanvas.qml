@@ -6,9 +6,13 @@ Item {
 
     property rect rulerBandRect: Qt.rect(0, 0, 0, 0)
     property rect rollBandRect: Qt.rect(0, 0, 0, 0)
+    property rect velocityBandRect: Qt.rect(0, 0, 0, 0)
+    property rect voiceChangesBandRect: Qt.rect(0, 0, 0, 0)
     property rect otherEventsBandRect: Qt.rect(0, 0, 0, 0)
     property bool rulerBandVisible: false
     property bool rollBandVisible: false
+    property bool velocityBandVisible: false
+    property bool voiceChangesBandVisible: false
     property bool otherEventsBandVisible: false
 
     Component {
@@ -82,6 +86,147 @@ Item {
 
         PianoRollCanvas {
             anchors.fill: parent
+        }
+    }
+
+    Item {
+        x: root.velocityBandRect.x
+        y: root.velocityBandRect.y
+        width: root.velocityBandRect.width
+        height: root.velocityBandRect.height
+        clip: true
+        visible: root.velocityBandVisible
+        z: 1
+
+        TimelineQuickItem {
+            objectName: "timelineQuickVelocityChrome"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.VelocityChrome
+            z: 0
+        }
+
+        TimelineQuickItem {
+            objectName: "timelineQuickVelocityAxis"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.VelocityAxis
+            z: 1
+        }
+
+        TimelineQuickItem {
+            objectName: "timelineQuickVelocityGrid"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.VelocityGrid
+            z: 2
+        }
+
+        TimelineQuickItem {
+            objectName: "timelineQuickVelocityBands"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.VelocityBands
+            z: 3
+        }
+
+        TimelineQuickItem {
+            objectName: "timelineQuickVelocityStems"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.VelocityStems
+            z: 4
+        }
+
+        TimelineQuickItem {
+            objectName: "timelineQuickVelocityNodes"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.VelocityNodes
+            z: 5
+        }
+
+        TimelineQuickItem {
+            objectName: "timelineQuickVelocityTransient"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.VelocityTransient
+            z: 6
+        }
+
+        Item {
+            anchors.fill: parent
+            z: 7
+
+            Repeater {
+                model: timelineScene.velocityTextModel
+                delegate: bandTextDelegate
+            }
+        }
+    }
+
+    Item {
+        x: root.voiceChangesBandRect.x
+        y: root.voiceChangesBandRect.y
+        width: root.voiceChangesBandRect.width
+        height: root.voiceChangesBandRect.height
+        clip: true
+        visible: root.voiceChangesBandVisible
+        z: 2
+
+        TimelineQuickItem {
+            objectName: "timelineQuickVoiceChangesChrome"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.VoiceChangesChrome
+            z: 0
+        }
+
+        TimelineQuickItem {
+            objectName: "timelineQuickVoiceChangesGrid"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.VoiceChangesGrid
+            z: 1
+        }
+
+        TimelineQuickItem {
+            objectName: "timelineQuickVoiceChangesSpans"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.VoiceChangesSpans
+            z: 2
+        }
+
+        TimelineQuickItem {
+            objectName: "timelineQuickVoiceChangesMarkers"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.VoiceChangesMarkers
+            z: 3
+        }
+
+        TimelineQuickItem {
+            objectName: "timelineQuickVoiceChangesTransient"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.VoiceChangesTransient
+            z: 4
+        }
+
+        TimelineQuickItem {
+            objectName: "timelineQuickVoiceChangesHover"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.VoiceChangesHover
+            z: 5
+        }
+
+        Item {
+            anchors.fill: parent
+            z: 6
+
+            Repeater {
+                model: timelineScene.voiceChangesTextModel
+                delegate: bandTextDelegate
+            }
+        }
+
+        Item {
+            anchors.fill: parent
+            z: 7
+
+            Repeater {
+                model: timelineScene.voiceChangesHoverTextModel
+                delegate: bandTextDelegate
+            }
         }
     }
 

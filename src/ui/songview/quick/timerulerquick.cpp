@@ -17,64 +17,14 @@ namespace lyt = ::layout;
 using Space = lyt::Space;
 
 namespace songview {
+using timeline_quick::addDashedVertical;
+using timeline_quick::addHorizontalGradient;
+using timeline_quick::addHorizontalLine;
+using timeline_quick::addRect;
+using timeline_quick::addVerticalLine;
+using timeline_quick::resetLayer;
+
 namespace {
-
-void resetLayer(TimelineQuickScene &scene, TimelineQuickLayer layer)
-{
-    TimelineQuickLayerData &data = scene.layer(layer);
-    data.rects.clear();
-    data.triangles.clear();
-    ++data.revision;
-}
-
-void addRect(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
-             const QColor &color, const QRectF &clip)
-{
-    const QRectF clipped = rect.normalized().intersected(clip);
-    if (clipped.isEmpty())
-        return;
-    scene.layer(layer).rects.push_back({clipped, color, color, color, color});
-}
-
-void addHorizontalGradient(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
-                           const QColor &left, const QColor &right, const QRectF &clip)
-{
-    const QRectF clipped = rect.normalized().intersected(clip);
-    if (clipped.isEmpty())
-        return;
-    const qreal denominator = std::max<qreal>(rect.width(), 1.0);
-    const auto sample = [&](const QColor &first, const QColor &last, qreal x) {
-        const qreal t = std::clamp((x - rect.left()) / denominator, 0.0, 1.0);
-        return QColor::fromRgbF(first.redF() + (last.redF() - first.redF()) * t,
-                                first.greenF() + (last.greenF() - first.greenF()) * t,
-                                first.blueF() + (last.blueF() - first.blueF()) * t,
-                                first.alphaF() + (last.alphaF() - first.alphaF()) * t);
-    };
-    const QColor clippedLeft = sample(left, right, clipped.left());
-    const QColor clippedRight = sample(left, right, clipped.right());
-    scene.layer(layer).rects.push_back(
-        {clipped, clippedLeft, clippedRight, clippedRight, clippedLeft});
-}
-
-void addHorizontalLine(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x0, qreal x1,
-                       qreal y, qreal width, const QColor &color, const QRectF &clip)
-{
-    addRect(scene, layer, QRectF(x0, y - width / 2.0, x1 - x0, width), color, clip);
-}
-
-void addVerticalLine(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x, qreal y0,
-                     qreal y1, qreal width, const QColor &color, const QRectF &clip)
-{
-    addRect(scene, layer, QRectF(x - width / 2.0, y0, width, y1 - y0), color, clip);
-}
-
-void addDashedVertical(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x, qreal y0,
-                       qreal y1, qreal width, qreal dash, qreal gap, const QColor &color,
-                       const QRectF &clip)
-{
-    for (qreal y = y0; y < y1; y += dash + gap)
-        addVerticalLine(scene, layer, x, y, std::min(y + dash, y1), width, color, clip);
-}
 
 void appendTextRecord(std::vector<TimelineQuickTextModel::Record> &records, quint64 ordinal,
                       const QRectF &rect, const QString &text, const QFont &font,

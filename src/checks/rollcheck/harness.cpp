@@ -2,20 +2,15 @@
 
 #include <QColor>
 #include <QCoreApplication>
-#include <QElapsedTimer>
-#include <QEventLoop>
-#include <QList>
 #include <QObject>
-#include <QQuickWidget>
-#include <QRect>
 #include <QWidget>
-#include <QWindow>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <vector>
 
 #include "checks/support/eventsynth.h"
+#include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
 #include "ui/layout.h"
 #include "ui/theme/themeruntime.h"
@@ -99,84 +94,11 @@ QImage Harness::captureQuickFramebuffer()
 
 QImage Harness::captureQuickBand(QWidget &band)
 {
-    SongView &songView = view();
-    const QList<QQuickWidget *> quickCanvases =
-        songView.findChildren<QQuickWidget *>(QStringLiteral("timelineQuickCanvas"));
-    if (quickCanvases.size() != 1) {
-        fail("expected exactly one Qt Quick timeline canvas");
-        return {};
-    }
-    QQuickWidget *const quickCanvas = quickCanvases.constFirst();
-    if (quickCanvas->parentWidget() != &songView) {
-        fail("Qt Quick timeline canvas is not a direct SongView child");
-        return {};
-    }
-
-    const std::vector<songview::TimelineBand> bands = songView.timelineBands();
-    if (bands.size() < 2 || !m_roll) {
-        fail("timeline bands not found");
-        return {};
-    }
-    const auto bandRectInSongView = [&songView](const QWidget &timelineBand) {
-        return QRect{timelineBand.mapTo(&songView, QPoint{}), timelineBand.size()};
-    };
-    const QRect hostUnion = bandRectInSongView(bands.front().widget)
-                                .united(bandRectInSongView(*m_roll))
-                                .united(bandRectInSongView(bands.back().widget));
-    if (quickCanvas->geometry() != hostUnion) {
-        fail("Qt Quick timeline canvas does not span the timeline bands");
-        return {};
-    }
-
-    songView.show();
-    quickCanvas->show();
-    songView.ensurePolished();
-    quickCanvas->ensurePolished();
-    quickCanvas->update();
-
-    QElapsedTimer timeout;
-    timeout.start();
-    while (timeout.elapsed() < 1000) {
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
-        QWindow *const window = songView.windowHandle();
-        if (!quickCanvas->isVisible() || !window || !window->isExposed())
-            continue;
-        const QImage initialFramebuffer = quickCanvas->grabFramebuffer();
-        if (initialFramebuffer.isNull() || initialFramebuffer.size().isEmpty())
-            continue;
-        quickCanvas->update();
-        QCoreApplication::sendPostedEvents();
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
-        const QImage framebuffer = quickCanvas->grabFramebuffer();
-        if (framebuffer.isNull() || framebuffer.size().isEmpty())
-            continue;
-
-        const qreal devicePixelRatio = quickCanvas->devicePixelRatioF();
-        const QPoint bandOrigin =
-            band.mapTo(&songView, QPoint{}) - quickCanvas->mapTo(&songView, QPoint{});
-        const int left = qRound(bandOrigin.x() * devicePixelRatio);
-        const int top = qRound(bandOrigin.y() * devicePixelRatio);
-        const int right = qRound((bandOrigin.x() + band.width()) * devicePixelRatio);
-        const int bottom = qRound((bandOrigin.y() + band.height()) * devicePixelRatio);
-        const QRect crop{left, top, right - left, bottom - top};
-        if (crop.width() <= 0 || crop.height() <= 0 || crop.left() < 0 || crop.top() < 0 ||
-            crop.x() + crop.width() > framebuffer.width() ||
-            crop.y() + crop.height() > framebuffer.height()) {
-            fail("timeline-band crop falls outside the Qt Quick framebuffer");
-            return {};
-        }
-
-        QImage bandFramebuffer = framebuffer.copy(crop);
-        if (bandFramebuffer.size() != crop.size()) {
-            fail("timeline-band framebuffer crop has incorrect dimensions");
-            return {};
-        }
-        bandFramebuffer.setDevicePixelRatio(devicePixelRatio);
-        return bandFramebuffer;
-    }
-
-    fail("Qt Quick timeline-band framebuffer could not be captured");
-    return {};
+    QString error;
+    const QImage framebuffer = checks::support::captureQuickBand(view(), band, &error);
+    if (framebuffer.isNull())
+        fail(qUtf8Printable(error));
+    return framebuffer;
 }
 
 int Harness::track() const noexcept

@@ -283,7 +283,6 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview.h
     src/ui/songview/otherstrip.cpp
     src/ui/songview/otherstrip.h
-    src/ui/songview/otherstripquick.cpp
     src/ui/songview/voicepicker.cpp
     src/ui/songview/voicepicker.h
     src/ui/songview/trackheaderrow.cpp
@@ -308,7 +307,6 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/timeruler.cpp
     src/ui/songview/timeruler.h
     src/ui/songview/timeruler_interaction.cpp
-    src/ui/songview/timerulerquick.cpp
     src/ui/songview/pianoroll.cpp
     src/ui/songview/pianoroll.h
     src/ui/songview/pianoroll_geometry.cpp
@@ -316,11 +314,15 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/pianoroll_gestures.cpp
     src/ui/songview/pianoroll_gestures_active.cpp
     src/ui/songview/pianoroll_commands.cpp
-    src/ui/songview/quick/pianorollquick.cpp
-    src/ui/songview/quick/pianorollquick.h
-    src/ui/songview/quick/pianorollquickscene.cpp
+    src/ui/songview/quick/otherstripquick.cpp
+    src/ui/songview/quick/velocityquick.cpp
+    src/ui/songview/quick/voicechangequick.cpp
     src/ui/songview/quick/timelinequickscene.cpp
     src/ui/songview/quick/timelinequickscene.h
+    src/ui/songview/quick/timelinequickview.cpp
+    src/ui/songview/quick/timelinequickview.h
+    src/ui/songview/quick/timelinequickview_pianoroll.cpp
+    src/ui/songview/quick/timerulerquick.cpp
     src/ui/pitchbendeditor.cpp
     src/ui/pitchbendeditor.hpp
     src/ui/pitchbendgraph.cpp
@@ -362,7 +364,6 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/cclanes.h
     src/ui/editordrawer/voicechangearea/voicechangearea.cpp
     src/ui/editordrawer/voicechangearea/voicechangearea.h
-    src/ui/editordrawer/voicechangearea/voicechangearea_paint.cpp
     src/ui/editordrawer/nodelane/pencilgesture.cpp
     src/ui/editordrawer/nodelane/pencilgesture.h
     src/ui/editordrawer/automationprojection.cpp
@@ -381,7 +382,6 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/velocityarea/velocityarea.cpp
     src/ui/editordrawer/velocityarea/velocityarea.h
     src/ui/editordrawer/velocityarea/velocityarea_interaction.cpp
-    src/ui/editordrawer/velocityarea/velocityarea_paint.cpp
     src/ui/editordrawer/velocityarea/detail.h
     src/ui/editordrawer/linearramp.h
     src/ui/editordrawer/velocityaxis.cpp
@@ -469,6 +469,8 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/fwd.hpp
         src/checks/support/eventsynth.cpp
         src/checks/support/eventsynth.h
+        src/checks/support/quickframebuffer.cpp
+        src/checks/support/quickframebuffer.h
         src/checks/support/songfixture.cpp
         src/checks/support/songfixture.h
         src/checks/support/voicegroupbrowserdriver.cpp

@@ -6,12 +6,7 @@
 #include <span>
 #include <string_view>
 
-#include <QColor>
-#include <QFont>
 #include <QPointF>
-#include <QRectF>
-
-class QPainter;
 
 #include "core/velocitymodel.h"
 
@@ -64,28 +59,6 @@ struct VelocityAxisMarker {
     double y = 0.0;
 };
 
-struct VelocityAxisPaintStyle {
-    QColor labelColor;
-    QColor accentColor;
-    QFont labelFont;
-    QFont emphasizedFont;
-    double separatorX = 0.0;
-    double labelLeft = 0.0;
-    double labelWidth = 0.0;
-    double labelHeight = 0.0;
-    double tickWidth = 1.0;
-    double emphasizedWidth = 1.5;
-    double markerWidth = 1.5;
-    double minorTickLength = 0.0;
-    double majorTickLength = 0.0;
-    double markerTickLength = 0.0;
-    double graduationTickLength = 0.0;
-    QRectF contentClip;
-    bool relativeGesture = false;
-    bool showIntrinsicVelocity = false;
-    bool continuousRuler = false;
-};
-
 // The ruler always maps the editable note-velocity domain 1–127. Intrinsic
 // mode additionally divides that domain into one row per compatible PSG
 // volume level. Row boundaries follow the velocities where effective volume
@@ -123,6 +96,7 @@ class VelocityAxis
     std::size_t tickCount() const;
     const std::array<VelocityAxisLabel, MaximumContinuousLabels> &labels() const;
     std::size_t labelCount() const;
+    bool hasLabel(uint8_t velocity) const noexcept;
     const std::array<VelocityAxisGraduation, MaximumIntrinsicGraduations> &graduations() const;
     std::size_t graduationCount() const;
     uint8_t intrinsicColumnCount() const;
@@ -131,7 +105,6 @@ class VelocityAxis
     std::size_t markerCount() const;
     std::string_view accessibleDescription() const;
 
-    void paintRuler(QPainter &painter, const VelocityAxisPaintStyle &style) const;
     bool inRuler(const QPointF &position, double rulerWidth) const;
     int rulerVelocityAt(const QPointF &position, double labelHeight) const;
 

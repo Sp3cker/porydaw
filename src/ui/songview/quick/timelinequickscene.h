@@ -16,6 +16,8 @@
 #include <span>
 #include <vector>
 
+class SongView;
+
 namespace songview {
 
 class TimelineQuickView;
@@ -51,6 +53,9 @@ enum class TimelineQuickTextKeyKind : quint8 {
     PianoLoading,
     Ruler,
     OtherEvents,
+    VelocityAxis,
+    VoiceChanges,
+    VoiceChangesHover,
 };
 
 struct TimelineQuickTextKey {
@@ -125,6 +130,19 @@ class TimelineQuickItem : public QQuickItem
         PianoKeyboardHighlights,
         OtherEventsChrome,
         OtherEventsMarkers,
+        VelocityChrome,
+        VelocityAxis,
+        VelocityGrid,
+        VelocityBands,
+        VelocityStems,
+        VelocityNodes,
+        VelocityTransient,
+        VoiceChangesChrome,
+        VoiceChangesGrid,
+        VoiceChangesSpans,
+        VoiceChangesMarkers,
+        VoiceChangesTransient,
+        VoiceChangesHover,
         Count,
     };
     Q_ENUM(Layer)
@@ -160,6 +178,10 @@ struct TimelineQuickScene final : public QObject {
         QAbstractItemModel *pianoKeyboardTextModel READ pianoKeyboardTextModel CONSTANT FINAL)
     Q_PROPERTY(QAbstractItemModel *rulerTextModel READ rulerTextModel CONSTANT FINAL)
     Q_PROPERTY(QAbstractItemModel *otherEventsTextModel READ otherEventsTextModel CONSTANT FINAL)
+    Q_PROPERTY(QAbstractItemModel *velocityTextModel READ velocityTextModel CONSTANT FINAL)
+    Q_PROPERTY(QAbstractItemModel *voiceChangesTextModel READ voiceChangesTextModel CONSTANT FINAL)
+    Q_PROPERTY(QAbstractItemModel *voiceChangesHoverTextModel READ voiceChangesHoverTextModel
+                   CONSTANT FINAL)
     Q_PROPERTY(bool hoverChipVisible READ hoverChipVisible NOTIFY hoverChipChanged FINAL)
     Q_PROPERTY(QRectF hoverChipRect READ hoverChipRect NOTIFY hoverChipChanged FINAL)
     Q_PROPERTY(QString hoverChipText READ hoverChipText NOTIFY hoverChipChanged FINAL)
@@ -175,8 +197,14 @@ struct TimelineQuickScene final : public QObject {
     QAbstractItemModel *pianoKeyboardTextModel() const noexcept;
     QAbstractItemModel *rulerTextModel() const noexcept;
     QAbstractItemModel *otherEventsTextModel() const noexcept;
+    QAbstractItemModel *velocityTextModel() const noexcept;
+    QAbstractItemModel *voiceChangesTextModel() const noexcept;
+    QAbstractItemModel *voiceChangesHoverTextModel() const noexcept;
     void setRulerTextRecords(std::span<const TimelineQuickTextModel::Record> records);
     void setOtherEventsTextRecords(std::span<const TimelineQuickTextModel::Record> records);
+    void setVelocityTextRecords(std::span<const TimelineQuickTextModel::Record> records);
+    void setVoiceChangesTextRecords(std::span<const TimelineQuickTextModel::Record> records);
+    void setVoiceChangesHoverTextRecords(std::span<const TimelineQuickTextModel::Record> records);
 
     const TimelineQuickLayerData &layer(TimelineQuickLayer layer) const noexcept;
     TimelineQuickLayerData &layer(TimelineQuickLayer layer) noexcept;
@@ -203,6 +231,9 @@ struct TimelineQuickScene final : public QObject {
     TimelineQuickTextModel *m_pianoKeyboardTextModel = nullptr;
     TimelineQuickTextModel *m_rulerTextModel = nullptr;
     TimelineQuickTextModel *m_otherEventsTextModel = nullptr;
+    TimelineQuickTextModel *m_velocityTextModel = nullptr;
+    TimelineQuickTextModel *m_voiceChangesTextModel = nullptr;
+    TimelineQuickTextModel *m_voiceChangesHoverTextModel = nullptr;
 
     bool m_hoverChipVisible = false;
     QRectF m_hoverChipRect;
@@ -211,5 +242,34 @@ struct TimelineQuickScene final : public QObject {
     QFont m_hoverChipFont;
     qreal m_hoverChipRadius = 0.0;
 };
+
+namespace timeline_quick {
+
+void resetLayer(TimelineQuickScene &scene, TimelineQuickLayer layer);
+void addRect(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
+             const QColor &color, const QRectF &clip);
+void addHorizontalGradient(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
+                           const QColor &left, const QColor &right, const QRectF &clip);
+void addHorizontalLine(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x0, qreal x1,
+                       qreal y, qreal width, const QColor &color, const QRectF &clip);
+void addVerticalLine(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x, qreal y0,
+                     qreal y1, qreal width, const QColor &color, const QRectF &clip);
+void composeBandedGrid(TimelineQuickScene &scene, TimelineQuickLayer layer, const ::SongView &owner,
+                       const QRectF &plot, int origin, qreal dpr);
+void addDashedVertical(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x, qreal y0,
+                       qreal y1, qreal width, qreal dash, qreal gap, const QColor &color,
+                       const QRectF &clip);
+void addClippedTriangle(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPointF &first,
+                        const QPointF &second, const QPointF &third, const QColor &color,
+                        const QRectF &clip);
+void addLine(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPointF &from,
+             const QPointF &to, qreal width, const QColor &color, const QRectF &clip);
+void addEllipse(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPointF &center,
+                qreal radiusX, qreal radiusY, const QColor &color, const QRectF &clip);
+void addEllipseRing(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPointF &center,
+                    qreal radiusX, qreal radiusY, qreal width, const QColor &color,
+                    const QRectF &clip);
+
+} // namespace timeline_quick
 
 } // namespace songview

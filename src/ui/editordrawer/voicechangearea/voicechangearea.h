@@ -6,7 +6,6 @@
 #include <vector>
 
 #include <QFont>
-#include <QFontMetrics>
 #include <QPoint>
 #include <QPointF>
 #include <QRect>
@@ -30,6 +29,11 @@ class QMouseEvent;
 class QWheelEvent;
 class QPainter;
 class SongView;
+
+namespace songview {
+class TimelineQuickScene;
+class TimelineQuickView;
+} // namespace songview
 
 // The Voice Changes drawer page: a standalone timeline surface owning held
 // program spans, change markers, hover, the voice picker, and DOC_CC_VOICE
@@ -64,6 +68,8 @@ class VoiceChangeArea final : public songview::TimelineSurface
     void contentGeometryChanged() override;
 
   private:
+    friend class songview::TimelineQuickView;
+
     enum class Interaction { None, Pan };
     struct VoiceDragState {
         enum class Phase : uint8_t {
@@ -106,6 +112,8 @@ class VoiceChangeArea final : public songview::TimelineSurface
         bool offscreen = true;
     };
     void invalidateContent(const QRect &rect = {});
+    void rebuildQuickScene(songview::TimelineQuickScene &scene);
+    void rebuildQuickHover(songview::TimelineQuickScene &scene);
     void rebuildVisualState();
     void rebuildFonts();
     void clearHover();
@@ -140,11 +148,9 @@ class VoiceChangeArea final : public songview::TimelineSurface
     uint64_t m_hoverTick = 0;
     QString m_hoverLabel;
     QRectF m_hoverLabelRect;
-    QRect m_hoverLabelBounds;
     QFont m_titleFont;
     QFont m_captionFont;
     QFont m_hoverLabelFont;
-    QFontMetrics m_hoverLabelMetrics{QFont{}};
     mutable std::array<VoicePaintText, VOICEGROUP_SIZE> m_paintTexts;
     mutable QString m_secondary;
     mutable int m_changeCount = -1;

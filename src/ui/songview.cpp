@@ -13,7 +13,7 @@
 #include "ui/playheadoverlay.h"
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
-#include "ui/songview/quick/pianorollquick.h"
+#include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timeruler.h"
 #include "ui/songview/trackheaderpanel.h"
 #include <QAbstractButton>
@@ -187,7 +187,9 @@ SongView::SongView(QWidget *parent)
     vbox->addLayout(m_hbarRow);
 
     m_editorDrawer = new EditorDrawer(*this, rollPane, m_editorViewState);
-    m_quickView = new TimelineQuickView(*m_ruler, *m_roll, *m_strip, *this);
+    m_quickView =
+        new TimelineQuickView(*m_ruler, *m_roll, *m_strip, *m_editorDrawer->velocityArea(),
+                              *m_editorDrawer->voiceChangeArea(), *this);
     m_quickView->lower();
     m_selectionModel.setObserver(
         [this](const songview::EditorSelectionModel::SelectionTransition &transition) {

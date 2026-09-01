@@ -1,6 +1,5 @@
 #include "ui/songview/detail.h"
 #include "ui/keymap.h"
-#include "ui/layout.h"
 #include "ui/theme/color_math.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/theme/trackidentitycolors.h"
@@ -21,9 +20,6 @@
 #include <climits>
 #include <cmath>
 #include <optional>
-
-namespace lyt = ::layout;
-using Space = lyt::Space;
 
 namespace songview::detail {
 
@@ -149,21 +145,6 @@ bool askTimeSignature(QWidget *parent, int *numerator, int *denomPow2)
     return true;
 }
 
-// SongView paint paths request canvas-specific roles directly, making each
-// visible element traceable without knowing a shared theme alias.
-QLinearGradient loopGlow(qreal edgeX, qreal transparentX)
-{
-    auto color = themes::color(themes::Role::song_view_loop_marker);
-    auto transparent = color;
-    color.setAlpha(150);
-    transparent.setAlpha(0);
-    QLinearGradient gradient(edgeX, 0, transparentX, 0);
-    gradient.setColorAt(0.0, color);
-    color.setAlpha(18);
-    gradient.setColorAt(0.2, color);
-    gradient.setColorAt(1.0, transparent);
-    return gradient;
-}
 QColor loopEdge()
 {
     return themes::color(themes::Role::song_view_loop_marker);
@@ -248,64 +229,6 @@ QColor ghostNoteColor(int track, bool accidentalRow)
     return colors[trackIdentityIndex(track)][accidentalRow ? 1 : 0];
 }
 
-// Draw the loop-region band across rect. x positions are
-// computed with origin = local x of timeline tick 0's content position.
-// timeSelCovered says whether this widget (or row) is inside the active time
-// selection's scope, so the selection band tints exactly the covered content.
-void drawOverlays(QPainter &p, const SongView *sv, const QRect &rect, qreal origin,
-                  bool timeSelCovered, bool loopMarkersVisible)
-{
-    const MidiTimeline *tl = sv->timeline();
-    if (!tl)
-        return;
-
-    const qreal dpr = p.device()->devicePixelRatioF();
-    const auto &tsel = sv->selectionModel().timeSelection();
-    if (timeSelCovered && tsel.active()) {
-        const qreal x0 = sv->displayX(double(tsel.startTick), origin, dpr);
-        const qreal x1 = sv->displayX(double(tsel.endTick), origin, dpr);
-        if (x1 > rect.left() && x0 < rect.right()) {
-            QColor fill = themes::color(themes::Role::song_view_selection_fill);
-            fill.setAlpha(30);
-            const QRectF selectionRect(x0, rect.top(), x1 - x0, rect.height());
-            p.fillRect(selectionRect.intersected(QRectF(rect)), fill);
-            p.setPen(
-                QPen(themes::color(themes::Role::song_view_selection_edge), lyt::singlePixel()));
-            p.drawLine(QLineF(x0, rect.top(), x0, rect.bottom()));
-            p.drawLine(QLineF(x1, rect.top(), x1, rect.bottom()));
-        }
-    }
-    if (loopMarkersVisible && (tl->loopStartTick != UINT64_MAX || tl->loopEndTick != UINT64_MAX)) {
-        const bool hasStart = tl->loopStartTick != UINT64_MAX;
-        const bool hasEnd = tl->loopEndTick != UINT64_MAX;
-        const qreal x0 =
-            hasStart ? sv->displayX(double(tl->loopStartTick), origin, dpr) : rect.left();
-        const qreal x1 = hasEnd ? sv->displayX(double(tl->loopEndTick), origin, dpr) : rect.right();
-        if (x1 > rect.left() && x0 < rect.right()) {
-            const qreal glowWidth = std::min<qreal>(lyt::space(Space::Eight), x1 - x0);
-            if (hasStart && glowWidth > 0) {
-                const QRectF glowRect(x0, rect.top(), glowWidth, rect.height());
-                p.fillRect(glowRect.intersected(QRectF(rect)), loopGlow(x0, x0 + glowWidth));
-            }
-            if (hasEnd && glowWidth > 0) {
-                const QRectF glowRect(x1 - glowWidth, rect.top(), glowWidth, rect.height());
-                p.fillRect(glowRect.intersected(QRectF(rect)), loopGlow(x1, x1 - glowWidth));
-            }
-            p.setPen(QPen(loopEdge(), lyt::singlePixel()));
-            if (hasStart)
-                p.drawLine(QLineF(x0, rect.top(), x0, rect.bottom()));
-            if (hasEnd)
-                p.drawLine(QLineF(x1, rect.top(), x1, rect.bottom()));
-        }
-    }
-    const qreal cursorX = sv->displayX(double(sv->editCursorTick()), origin, dpr);
-    if (cursorX >= rect.left() && cursorX <= rect.right()) {
-        p.setPen(QPen(themes::color(themes::Role::song_view_edit_cursor), lyt::singlePixel(),
-                      Qt::DashLine));
-        p.drawLine(QLineF(cursorX, rect.top(), cursorX, rect.bottom()));
-    }
-}
-
 // Subdivision level of a sub-beat grid tick (relative to its segment's
 // start): 1 = the beat's first split (half beat, or a third in triplet
 // feel), 2 = the next, 3 = finer. Cosmetic only (drives the line fade).
@@ -323,22 +246,6 @@ QColor gridLineColor(int alpha)
     auto color = themes::color(themes::Role::song_view_grid);
     color.setAlpha((color.alpha() * alpha + 127) / 255);
     return color;
-}
-
-// Flat fill over the camera's pre-roll pad (the scrollable dead space left
-// of tick 0). Opaque and stripe-free so it reads as "outside the song";
-// blending the surface's own background toward the grid ink dims it in
-// light themes and lifts it in dark ones. Painted before drawGrid so the
-// tick-0 bar line stays a crisp boundary on top.
-void drawPreRoll(QPainter &p, const SongView *sv, const QRect &rect, qreal origin,
-                 const QColor &background)
-{
-    const qreal dpr = p.device()->devicePixelRatioF();
-    const qreal x0 = sv->displayX(0.0, origin, dpr);
-    if (x0 <= rect.left())
-        return;
-    p.fillRect(QRectF(rect.left(), rect.top(), x0 - rect.left(), rect.height()),
-               mixTowardOklab(background, gridLineColor(), 0.15));
 }
 
 // Vertical bar/beat grid lines inside rect, with zoom-adaptive sub-beat

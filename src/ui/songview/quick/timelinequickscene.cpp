@@ -6,7 +6,14 @@
 #include <QSGVertexColorMaterial>
 
 #include <algorithm>
+#include <array>
+#include <cmath>
 #include <cstddef>
+#include <numbers>
+
+#include "ui/layout.h"
+#include "ui/songview.h"
+#include "ui/songview/detail.h"
 
 namespace songview {
 namespace {
@@ -285,6 +292,9 @@ TimelineQuickScene::TimelineQuickScene(QObject *parent) : QObject(parent)
     m_pianoKeyboardTextModel = new TimelineQuickTextModel(this);
     m_rulerTextModel = new TimelineQuickTextModel(this);
     m_otherEventsTextModel = new TimelineQuickTextModel(this);
+    m_velocityTextModel = new TimelineQuickTextModel(this);
+    m_voiceChangesTextModel = new TimelineQuickTextModel(this);
+    m_voiceChangesHoverTextModel = new TimelineQuickTextModel(this);
 }
 
 QAbstractItemModel *TimelineQuickScene::pianoNoteTextModel() const noexcept
@@ -312,6 +322,21 @@ QAbstractItemModel *TimelineQuickScene::otherEventsTextModel() const noexcept
     return m_otherEventsTextModel;
 }
 
+QAbstractItemModel *TimelineQuickScene::velocityTextModel() const noexcept
+{
+    return m_velocityTextModel;
+}
+
+QAbstractItemModel *TimelineQuickScene::voiceChangesTextModel() const noexcept
+{
+    return m_voiceChangesTextModel;
+}
+
+QAbstractItemModel *TimelineQuickScene::voiceChangesHoverTextModel() const noexcept
+{
+    return m_voiceChangesHoverTextModel;
+}
+
 void TimelineQuickScene::setRulerTextRecords(
     std::span<const TimelineQuickTextModel::Record> records)
 {
@@ -324,6 +349,24 @@ void TimelineQuickScene::setOtherEventsTextRecords(
     m_otherEventsTextModel->setRecords(records);
 }
 
+void TimelineQuickScene::setVelocityTextRecords(
+    std::span<const TimelineQuickTextModel::Record> records)
+{
+    m_velocityTextModel->setRecords(records);
+}
+
+void TimelineQuickScene::setVoiceChangesTextRecords(
+    std::span<const TimelineQuickTextModel::Record> records)
+{
+    m_voiceChangesTextModel->setRecords(records);
+}
+
+void TimelineQuickScene::setVoiceChangesHoverTextRecords(
+    std::span<const TimelineQuickTextModel::Record> records)
+{
+    m_voiceChangesHoverTextModel->setRecords(records);
+}
+
 const TimelineQuickLayerData &TimelineQuickScene::layer(TimelineQuickLayer layer) const noexcept
 {
     return m_layers[static_cast<std::size_t>(layer)];
@@ -333,6 +376,229 @@ TimelineQuickLayerData &TimelineQuickScene::layer(TimelineQuickLayer layer) noex
 {
     return m_layers[static_cast<std::size_t>(layer)];
 }
+
+namespace timeline_quick {
+
+namespace {
+
+constexpr int kEllipseSegments = 24;
+
+struct ClippedPolygon {
+    std::array<QPointF, 8> points;
+    int size = 0;
+};
+
+enum class ClipEdge {
+    Left,
+    Right,
+    Top,
+    Bottom,
+};
+
+ClippedPolygon clipToEdge(const ClippedPolygon &input, const QRectF &clip, ClipEdge edge)
+{
+    ClippedPolygon output;
+    if (input.size == 0)
+        return output;
+    const auto coordinate = [edge](const QPointF &point) {
+        return edge == ClipEdge::Left || edge == ClipEdge::Right ? point.x() : point.y();
+    };
+    const qreal boundary = edge == ClipEdge::Left    ? clip.left()
+                           : edge == ClipEdge::Right ? clip.right()
+                           : edge == ClipEdge::Top   ? clip.top()
+                                                     : clip.bottom();
+    const bool keepGreater = edge == ClipEdge::Left || edge == ClipEdge::Top;
+    const auto inside = [coordinate, boundary, keepGreater](const QPointF &point) {
+        return keepGreater ? coordinate(point) >= boundary : coordinate(point) <= boundary;
+    };
+    QPointF previous = input.points[static_cast<std::size_t>(input.size - 1)];
+    bool previousInside = inside(previous);
+    for (int index = 0; index < input.size; ++index) {
+        const QPointF current = input.points[static_cast<std::size_t>(index)];
+        const bool currentInside = inside(current);
+        if (currentInside != previousInside) {
+            const qreal from = coordinate(previous);
+            const qreal to = coordinate(current);
+            const qreal fraction = (boundary - from) / (to - from);
+            output.points[static_cast<std::size_t>(output.size++)] =
+                previous + (current - previous) * fraction;
+        }
+        if (currentInside)
+            output.points[static_cast<std::size_t>(output.size++)] = current;
+        previous = current;
+        previousInside = currentInside;
+    }
+    return output;
+}
+
+} // namespace
+
+void resetLayer(TimelineQuickScene &scene, TimelineQuickLayer layer)
+{
+    TimelineQuickLayerData &data = scene.layer(layer);
+    data.rects.clear();
+    data.triangles.clear();
+    ++data.revision;
+}
+
+void addRect(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
+             const QColor &color, const QRectF &clip)
+{
+    const QRectF clipped = rect.normalized().intersected(clip);
+    if (clipped.width() <= 0.0 || clipped.height() <= 0.0)
+        return;
+    scene.layer(layer).rects.push_back({clipped, color, color, color, color});
+}
+
+void addHorizontalGradient(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
+                           const QColor &left, const QColor &right, const QRectF &clip)
+{
+    const QRectF source = rect.normalized();
+    const QRectF clipped = source.intersected(clip.normalized());
+    if (clipped.width() <= 0.0 || clipped.height() <= 0.0)
+        return;
+    const qreal fullWidth = source.width();
+    const auto interpolationAt = [source, fullWidth](qreal x) {
+        const qreal interpolation = (x - source.left()) / fullWidth;
+        return (std::min)(1.0, (std::max)(0.0, interpolation));
+    };
+    const auto mix = [](const QColor &a, const QColor &b, qreal t) {
+        return QColor::fromRgbF(
+            a.redF() + (b.redF() - a.redF()) * t, a.greenF() + (b.greenF() - a.greenF()) * t,
+            a.blueF() + (b.blueF() - a.blueF()) * t, a.alphaF() + (b.alphaF() - a.alphaF()) * t);
+    };
+    const QColor clippedLeft = mix(left, right, interpolationAt(clipped.left()));
+    const QColor clippedRight = mix(left, right, interpolationAt(clipped.right()));
+    scene.layer(layer).rects.push_back(
+        {clipped, clippedLeft, clippedRight, clippedRight, clippedLeft});
+}
+
+void addHorizontalLine(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x0, qreal x1,
+                       qreal y, qreal width, const QColor &color, const QRectF &clip)
+{
+    addRect(scene, layer, QRectF(x0, y - width / 2.0, x1 - x0, width), color, clip);
+}
+
+void addVerticalLine(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x, qreal y0,
+                     qreal y1, qreal width, const QColor &color, const QRectF &clip)
+{
+    addRect(scene, layer, QRectF(x - width / 2.0, y0, width, y1 - y0), color, clip);
+}
+
+void composeBandedGrid(TimelineQuickScene &scene, TimelineQuickLayer layer, const ::SongView &owner,
+                       const QRectF &plot, int origin, qreal dpr)
+{
+    const qreal physicalPixel = detail::logicalPhysicalPixel(dpr);
+    const qreal roundingMargin = physicalPixel / 2.0;
+    const double t0 =
+        std::max(0.0, owner.tickAtContentX(plot.left() - qreal(origin) - roundingMargin));
+    const double t1 =
+        owner.tickAtContentX(plot.right() - physicalPixel - qreal(origin) + roundingMargin) + 1.0;
+    if (!std::isfinite(t0) || !std::isfinite(t1) || t1 <= t0)
+        return;
+    const std::array<QColor, 6> gridColors = {
+        detail::gridLineColor(125), detail::gridLineColor(100), detail::gridLineColor(75),
+        detail::gridLineColor(160), detail::gridLineColor(200), detail::gridLineColor()};
+    const int detailMinimumPixelsPerBeat = ::layout::fontPx(5.0 / 6.0);
+    const qreal gridWidth = ::layout::fontPx(1.0 / 6.0) * physicalPixel;
+    detail::forEachSubGridLine(
+        &owner, t0, t1, detailMinimumPixelsPerBeat, [&](uint64_t tick, int level) {
+            const qreal x = owner.displayX(double(tick), origin, dpr);
+            addVerticalLine(scene, layer, x, plot.top(), plot.bottom(), gridWidth,
+                            gridColors[std::size_t(level - 1)], plot);
+        });
+    const bool drawBeats = owner.pxPerBeat() >= detailMinimumPixelsPerBeat;
+    owner.forEachGridLine(uint64_t(t0), uint64_t(t1), [&](uint64_t tick, bool isBar, int, int) {
+        if (!isBar && !drawBeats)
+            return;
+        const bool finest = owner.document() && owner.gridTicksAt(tick) == owner.fineGridTicks();
+        const std::size_t color = isBar ? 5u : finest ? 4u : 3u;
+        const qreal x = owner.displayX(double(tick), origin, dpr);
+        addVerticalLine(scene, layer, x, plot.top(), plot.bottom(), gridWidth, gridColors[color],
+                        plot);
+    });
+}
+
+void addDashedVertical(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x, qreal y0,
+                       qreal y1, qreal width, qreal dash, qreal gap, const QColor &color,
+                       const QRectF &clip)
+{
+    for (qreal y = y0; y < y1; y += dash + gap)
+        addVerticalLine(scene, layer, x, y, (std::min)(y + dash, y1), width, color, clip);
+}
+
+void addClippedTriangle(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPointF &first,
+                        const QPointF &second, const QPointF &third, const QColor &color,
+                        const QRectF &clip)
+{
+    ClippedPolygon polygon{{first, second, third}, 3};
+    polygon = clipToEdge(polygon, clip, ClipEdge::Left);
+    polygon = clipToEdge(polygon, clip, ClipEdge::Right);
+    polygon = clipToEdge(polygon, clip, ClipEdge::Top);
+    polygon = clipToEdge(polygon, clip, ClipEdge::Bottom);
+    TimelineQuickLayerData &data = scene.layer(layer);
+    for (int index = 1; index + 1 < polygon.size; ++index) {
+        data.triangles.push_back(
+            {polygon.points[0], polygon.points[static_cast<std::size_t>(index)],
+             polygon.points[static_cast<std::size_t>(index + 1)], color, color, color});
+    }
+}
+
+void addLine(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPointF &from,
+             const QPointF &to, qreal width, const QColor &color, const QRectF &clip)
+{
+    const QPointF delta = to - from;
+    const qreal length = std::hypot(delta.x(), delta.y());
+    if (length == 0.0)
+        return;
+    const QPointF normal(-delta.y() * width / (2.0 * length), delta.x() * width / (2.0 * length));
+    addClippedTriangle(scene, layer, from + normal, to + normal, to - normal, color, clip);
+    addClippedTriangle(scene, layer, from + normal, to - normal, from - normal, color, clip);
+}
+
+void addEllipse(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPointF &center,
+                qreal radiusX, qreal radiusY, const QColor &color, const QRectF &clip)
+{
+    for (int index = 0; index < kEllipseSegments; ++index) {
+        const qreal firstAngle =
+            2.0 * std::numbers::pi_v<qreal> * qreal(index) / qreal(kEllipseSegments);
+        const qreal secondAngle =
+            2.0 * std::numbers::pi_v<qreal> * qreal(index + 1) / qreal(kEllipseSegments);
+        const QPointF first(center.x() + radiusX * std::cos(firstAngle),
+                            center.y() + radiusY * std::sin(firstAngle));
+        const QPointF second(center.x() + radiusX * std::cos(secondAngle),
+                             center.y() + radiusY * std::sin(secondAngle));
+        addClippedTriangle(scene, layer, center, first, second, color, clip);
+    }
+}
+
+void addEllipseRing(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPointF &center,
+                    qreal radiusX, qreal radiusY, qreal width, const QColor &color,
+                    const QRectF &clip)
+{
+    const qreal outerX = radiusX + width / 2.0;
+    const qreal outerY = radiusY + width / 2.0;
+    const qreal innerX = std::max<qreal>(0.0, radiusX - width / 2.0);
+    const qreal innerY = std::max<qreal>(0.0, radiusY - width / 2.0);
+    for (int index = 0; index < kEllipseSegments; ++index) {
+        const qreal firstAngle =
+            2.0 * std::numbers::pi_v<qreal> * qreal(index) / qreal(kEllipseSegments);
+        const qreal secondAngle =
+            2.0 * std::numbers::pi_v<qreal> * qreal(index + 1) / qreal(kEllipseSegments);
+        const QPointF outerFirst(center.x() + outerX * std::cos(firstAngle),
+                                 center.y() + outerY * std::sin(firstAngle));
+        const QPointF outerSecond(center.x() + outerX * std::cos(secondAngle),
+                                  center.y() + outerY * std::sin(secondAngle));
+        const QPointF innerFirst(center.x() + innerX * std::cos(firstAngle),
+                                 center.y() + innerY * std::sin(firstAngle));
+        const QPointF innerSecond(center.x() + innerX * std::cos(secondAngle),
+                                  center.y() + innerY * std::sin(secondAngle));
+        addClippedTriangle(scene, layer, outerFirst, outerSecond, innerSecond, color, clip);
+        addClippedTriangle(scene, layer, outerFirst, innerSecond, innerFirst, color, clip);
+    }
+}
+
+} // namespace timeline_quick
 
 bool TimelineQuickScene::hoverChipVisible() const noexcept
 {

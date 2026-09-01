@@ -6,8 +6,7 @@
 #include "ui/songview.h"
 #include "ui/songview/clipmime.h"
 #include "ui/songview/detail.h"
-#include "ui/songview/quick/pianorollquick.h"
-
+#include "ui/songview/quick/timelinequickview.h"
 #include <QAction>
 #include <QDialog>
 #include <QDialogButtonBox>

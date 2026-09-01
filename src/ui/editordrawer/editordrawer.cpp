@@ -14,8 +14,7 @@
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
-#include "ui/songview/quick/pianorollquick.h"
-
+#include "ui/songview/quick/timelinequickview.h"
 EditorDrawer::EditorDrawer(SongView &owner, QWidget *parent, EditorViewState viewState)
     : QWidget(parent)
     , m_owner(owner)

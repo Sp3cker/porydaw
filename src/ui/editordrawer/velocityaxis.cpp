@@ -6,8 +6,6 @@
 #include <cstdio>
 #include <initializer_list>
 
-#include <QPainter>
-
 namespace {
 
 constexpr int kMinimumVelocity = 1;
@@ -21,15 +19,6 @@ double nonNegative(double value)
 uint8_t clampVelocity(int velocity)
 {
     return uint8_t(std::clamp(velocity, kMinimumVelocity, kMaximumVelocity));
-}
-
-bool hasLabel(const VelocityAxis &axis, uint8_t velocity)
-{
-    for (std::size_t index = 0; index < axis.labelCount(); ++index) {
-        if (axis.labels()[index].velocity == velocity)
-            return true;
-    }
-    return false;
 }
 
 } // namespace
@@ -153,6 +142,15 @@ std::size_t VelocityAxis::labelCount() const
     return m_labelCount;
 }
 
+bool VelocityAxis::hasLabel(uint8_t velocity) const noexcept
+{
+    for (std::size_t index = 0; index < m_labelCount; ++index) {
+        if (m_labels[index].velocity == velocity)
+            return true;
+    }
+    return false;
+}
+
 const std::array<VelocityAxisGraduation, VelocityAxis::MaximumIntrinsicGraduations> &
 VelocityAxis::graduations() const
 {
@@ -187,68 +185,6 @@ std::size_t VelocityAxis::markerCount() const
 std::string_view VelocityAxis::accessibleDescription() const
 {
     return m_accessibleDescription.data();
-}
-
-void VelocityAxis::paintRuler(QPainter &painter, const VelocityAxisPaintStyle &style) const
-{
-    painter.save();
-    if (mode() == Mode::Intrinsic && !style.continuousRuler) {
-        for (std::size_t index = 0; index < m_graduationCount; ++index) {
-            const VelocityAxisGraduation &graduation = m_graduations[index];
-            const bool emphasizeLabel =
-                graduation.active && (style.relativeGesture || !graduation.labelVisible);
-            painter.setPen(QPen(graduation.active ? style.accentColor : style.labelColor,
-                                graduation.active ? style.markerWidth : style.tickWidth));
-            painter.drawLine(QPointF(style.separatorX - style.graduationTickLength, graduation.y),
-                             QPointF(style.separatorX, graduation.y));
-            if ((!style.relativeGesture && graduation.labelVisible) || emphasizeLabel) {
-                painter.setFont(emphasizeLabel ? style.emphasizedFont : style.labelFont);
-                painter.setPen(style.labelColor);
-                const QString label =
-                    style.showIntrinsicVelocity
-                        ? QString::number(graduation.velocity)
-                        : QStringLiteral("Vol %1").arg(unsigned(graduation.level) + 1);
-                painter.drawText(QRectF(style.labelLeft, graduation.y - style.labelHeight / 2.0,
-                                        style.labelWidth, style.labelHeight),
-                                 Qt::AlignRight | Qt::AlignVCenter, label);
-            }
-        }
-    } else {
-        painter.setPen(QPen(style.labelColor, style.tickWidth));
-        for (std::size_t index = 0; index < m_tickCount; ++index) {
-            const VelocityAxisTick &tick = m_ticks[index];
-            const double tickLength =
-                hasLabel(*this, tick.velocity) ? style.majorTickLength : style.minorTickLength;
-            painter.drawLine(QPointF(style.separatorX - tickLength, tick.y),
-                             QPointF(style.separatorX, tick.y));
-        }
-        if (!style.relativeGesture) {
-            painter.setFont(style.labelFont);
-            painter.setPen(style.labelColor);
-            for (std::size_t index = 0; index < m_labelCount; ++index) {
-                const VelocityAxisLabel &label = m_labels[index];
-                painter.drawText(QRectF(style.labelLeft, label.y - style.labelHeight / 2.0,
-                                        style.labelWidth, style.labelHeight),
-                                 Qt::AlignRight | Qt::AlignVCenter,
-                                 QString::fromLatin1(label.label.data()));
-            }
-        }
-        for (std::size_t index = 0; index < m_markerCount; ++index) {
-            const VelocityAxisMarker &marker = m_markers[index];
-            painter.setPen(QPen(style.accentColor, style.markerWidth));
-            painter.drawLine(QPointF(style.separatorX - style.markerTickLength, marker.y),
-                             QPointF(style.separatorX, marker.y));
-            if (style.relativeGesture) {
-                painter.setFont(style.emphasizedFont);
-                painter.setPen(style.labelColor);
-                painter.drawText(QRectF(style.labelLeft, marker.y - style.labelHeight / 2.0,
-                                        style.labelWidth, style.labelHeight),
-                                 Qt::AlignRight | Qt::AlignVCenter,
-                                 QString::number(marker.velocity));
-            }
-        }
-    }
-    painter.restore();
 }
 
 bool VelocityAxis::inRuler(const QPointF &position, double rulerWidth) const

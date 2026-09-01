@@ -12,6 +12,7 @@
 #include <QFocusEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QRegion>
 #include <QWheelEvent>
 
 #include "core/miditimeline.h"
@@ -20,23 +21,8 @@
 #include "ui/m4asemantics.h"
 #include "ui/songview.h"
 #include "ui/songview/editorselectionmodel.h"
+#include "ui/songview/quick/timelinequickview.h"
 #include "ui/typography.h"
-
-namespace {
-
-// Dirty rectangle covering one painted hover line plus its held label; the
-// line rect is derived because the exact header stores only the label bounds.
-QRect hoverDirtyRect(qreal hoverX, const QRect &labelBounds, const QRect &plot, int paintPadding)
-{
-    QRect dirty = QRectF(hoverX - paintPadding, plot.top(), 2.0 * paintPadding, plot.height())
-                      .toAlignedRect();
-    if (!labelBounds.isEmpty())
-        dirty = dirty.united(
-            labelBounds.adjusted(-paintPadding, -paintPadding, paintPadding, paintPadding));
-    return dirty;
-}
-
-} // namespace
 
 void VoiceChangeArea::Geometry::resolve()
 {
@@ -58,9 +44,12 @@ VoiceChangeArea::VoiceChangeArea(SongView &owner, QWidget *parent)
 {
     m_geometry.resolve();
     rebuildFonts();
+    setAutoFillBackground(false);
     setMouseTracking(true);
     setFocusPolicy(Qt::ClickFocus);
 }
+
+void VoiceChangeArea::paintContent(QPainter &) {}
 
 bool VoiceChangeArea::event(QEvent *event)
 {
@@ -180,6 +169,7 @@ void VoiceChangeArea::invalidateContent(const QRect &rect)
         songview::TimelineSurface::invalidateContent();
     else
         songview::TimelineSurface::invalidateContent(QRegion(rect));
+    m_owner.requestTimelineQuickUpdate(songview::TimelineQuickDirty::VoiceChanges);
 }
 
 void VoiceChangeArea::contentGeometryChanged()
@@ -216,16 +206,12 @@ void VoiceChangeArea::clearHover()
 {
     if (!m_hoverActive)
         return;
-    const QRect previousBounds =
-        hoverDirtyRect(m_hoverX, m_hoverLabelBounds, plotRect(), m_geometry.hoverPaintPadding);
     m_hoverActive = false;
     m_hoverX = 0.0;
     m_hoverTick = 0;
     m_hoverLabel.clear();
     m_hoverLabelRect = QRectF();
-    m_hoverLabelBounds = QRect();
-    if (!previousBounds.isEmpty())
-        invalidateContent(previousBounds);
+    m_owner.requestTimelineQuickUpdate(songview::TimelineQuickDirty::VoiceChangesHover);
 }
 
 void VoiceChangeArea::updateHover(qreal x)
@@ -250,38 +236,25 @@ void VoiceChangeArea::updateHover(qreal x)
             hoverLabel = paintTextFor(slot).hoverLabel;
     }
     QRectF labelRect;
-    QRect labelBounds;
     if (!hoverLabel.isEmpty()) {
         ensureHoverLabelFontCache();
         labelRect = QRectF(lineX + layout::space(layout::Space::One), plot.top(),
                            std::max<qreal>(0, plot.right() - lineX), plot.height());
-        labelBounds = m_hoverLabelMetrics.boundingRect(
-            labelRect.toAlignedRect(), Qt::AlignLeft | Qt::AlignVCenter, hoverLabel);
     }
     if (m_hoverActive && m_hoverX == lineX && m_hoverTick == hoverTick &&
-        m_hoverLabel == hoverLabel && m_hoverLabelRect == labelRect &&
-        m_hoverLabelBounds == labelBounds)
+        m_hoverLabel == hoverLabel && m_hoverLabelRect == labelRect)
         return;
-    const QRect previousBounds = m_hoverActive ? hoverDirtyRect(m_hoverX, m_hoverLabelBounds, plot,
-                                                                m_geometry.hoverPaintPadding)
-                                               : QRect();
     m_hoverActive = true;
     m_hoverX = lineX;
     m_hoverTick = hoverTick;
     m_hoverLabel = std::move(hoverLabel);
     m_hoverLabelRect = labelRect;
-    m_hoverLabelBounds = labelBounds;
-    const QRect dirty =
-        hoverDirtyRect(lineX, labelBounds, plot, m_geometry.hoverPaintPadding).intersected(rect());
-    QRegion region(previousBounds);
-    region += dirty;
-    songview::TimelineSurface::invalidateContent(region);
+    m_owner.requestTimelineQuickUpdate(songview::TimelineQuickDirty::VoiceChangesHover);
 }
 
 void VoiceChangeArea::ensureHoverLabelFontCache()
 {
     m_hoverLabelFont = typography::noteName(font());
-    m_hoverLabelMetrics = QFontMetrics(m_hoverLabelFont);
 }
 
 bool VoiceChangeArea::ready() const noexcept

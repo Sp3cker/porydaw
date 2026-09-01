@@ -17,6 +17,7 @@
 #include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelinequickview.h"
 #include "ui/typography.h"
 
 using velocityarea::detail::contains;
@@ -76,6 +77,7 @@ VelocityArea::VelocityArea(SongView &owner, QWidget *parent)
 {
     m_geometry.resolve();
     rebuildFonts();
+    setAutoFillBackground(false);
     setMouseTracking(true);
     setFocusPolicy(Qt::ClickFocus);
     rebuildAxis();
@@ -204,9 +206,7 @@ void VelocityArea::setContextChangedCallback(std::function<void()> callback)
 
 VelocityAreaDiagnostics VelocityArea::diagnostics() const noexcept
 {
-    auto diagnostics = m_diagnostics;
-    diagnostics.contentBuildCount = songview::TimelineSurface::diagnostics().contentPaintCount;
-    return diagnostics;
+    return m_diagnostics;
 }
 
 int VelocityArea::plotOrigin() const
@@ -239,12 +239,15 @@ void VelocityArea::velocityGestureChanged()
     rebuildVisualState();
 }
 
+void VelocityArea::paintContent(QPainter &) {}
+
 void VelocityArea::invalidateContent(const QRect &rect)
 {
     if (rect.isEmpty())
         songview::TimelineSurface::invalidateContent();
     else
         songview::TimelineSurface::invalidateContent(QRegion(rect));
+    m_owner.requestTimelineQuickUpdate(songview::TimelineQuickDirty::Velocity);
 }
 
 void VelocityArea::contentGeometryChanged()

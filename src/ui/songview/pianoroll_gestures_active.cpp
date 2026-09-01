@@ -5,8 +5,7 @@
 #include "core/mid2agbtables.h"
 #include "porydaw_scale.h"
 #include "ui/songview.h"
-#include "ui/songview/quick/pianorollquick.h"
-
+#include "ui/songview/quick/timelinequickview.h"
 #include <QMouseEvent>
 
 #include <algorithm>

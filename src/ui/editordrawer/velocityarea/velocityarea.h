@@ -27,7 +27,14 @@ class QWheelEvent;
 
 class QPainter;
 
+namespace songview {
+class TimelineQuickScene;
+class TimelineQuickView;
+} // namespace songview
+
 struct VelocityAreaDiagnostics {
+    // Counts coalesced Quick scene rebuilds, not invalidation requests or
+    // asynchronously rendered frames.
     uint64_t contentBuildCount = 0;
     uint64_t playheadPresentationCount = 0;
     double presentedPlayheadTick = 0.0;
@@ -74,6 +81,7 @@ class VelocityArea final : public songview::TimelineSurface
     void contentGeometryChanged() override;
 
   private:
+    friend class songview::TimelineQuickView;
     enum class Interaction {
         None,
         Relative,
@@ -120,6 +128,15 @@ class VelocityArea final : public songview::TimelineSurface
     };
 
     void invalidateContent(const QRect &rect = {});
+    void rebuildQuickScene(songview::TimelineQuickScene &scene);
+    void rebuildQuickChrome(songview::TimelineQuickScene &scene, const QRectF &full, int origin,
+                            int separatorX);
+    void rebuildQuickAxis(songview::TimelineQuickScene &scene, const QRectF &full, int separatorX);
+    void rebuildQuickGrid(songview::TimelineQuickScene &scene, const QRectF &plot, int origin,
+                          qreal dpr);
+    void rebuildQuickPsgBands(songview::TimelineQuickScene &scene, const QRectF &plot);
+    void rebuildQuickNotes(songview::TimelineQuickScene &scene, const QRectF &plot, qreal dpr);
+    void rebuildQuickTransient(songview::TimelineQuickScene &scene, const QRectF &plot);
     void rebuildVisualState();
     void rebuildFonts();
     void rebuildAxis();
@@ -148,8 +165,6 @@ class VelocityArea final : public songview::TimelineSurface
     void appendFrozenNotes(const std::vector<DocNote> &notes);
     void beginVelocityPaint(const QPointF &position, bool detentUnlock);
     void paintSelectedNodesBetween(const QPointF &first, const QPointF &last);
-    void paintPsgLevelBands(QPainter &painter, int origin, int width, uint64_t firstTick,
-                            uint64_t lastTick) const;
     void beginFrozenGesture(const std::vector<DocNote> &notes, Interaction interaction,
                             const QPointF &position, bool detentUnlock);
     void updateRelativePreview(const QPointF &position);
