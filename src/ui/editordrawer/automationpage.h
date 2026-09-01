@@ -14,8 +14,6 @@ class QAction;
 class QObject;
 class QKeyEvent;
 class QWheelEvent;
-class QPainter;
-class QRect;
 class AutomationCanvas;
 class TempoLane;
 class CCLanes;
@@ -35,6 +33,7 @@ class AutomationPage final : public QWidget
 
     AutomationCanvas *canvas() noexcept { return m_canvas; }
     const AutomationCanvas *canvas() const noexcept { return m_canvas; }
+    QWidget *scrollViewport() const noexcept;
     bool event(QEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
     const EditorViewState &automationViewState() const noexcept { return m_viewState; }
@@ -53,10 +52,10 @@ class AutomationPage final : public QWidget
     friend class CCLanes;
     friend class TempoLane;
     friend struct NodeLaneHoverState;
+    friend class songview::TimelineQuickView;
     // Read-only access to the timeline mapping queries (tickAtContentX,
     // displayX, visible grid cells) and m_viewState row layout.
     friend class AutomationProjection;
-
     struct Geometry {
         int rowDefaultHeight = 0;
         int addLaneStripHeight = 0;
@@ -95,9 +94,9 @@ class AutomationPage final : public QWidget
     void showTimeSelectionMenu(const DrawerPageTimeSelectionMenuRequest &request) const;
     bool pickVoice(const QString &title, int initialVoice, int *outVoice) const;
     void requestRefresh() const;
+    void requestQuickUpdate(songview::TimelineQuickDirtySet dirty) const;
     void commitEditCursor(uint64_t tick) const;
     void announce(const QString &message) const;
-    bool paintGrid(QPainter &painter, const QRect &bounds, qreal origin) const;
 
     bool matchesPencilShortcut(const QKeyEvent *event) const noexcept;
 

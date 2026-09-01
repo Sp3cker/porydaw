@@ -252,29 +252,35 @@ Topology runCase(AutomationGestureCheckRig &rig, const Case &row,
         geometry.nodePaintRadius + geometry.nodeOutlineDipWidth + 2 * layout::singlePixel();
     const qreal lineHalf =
         std::max(qreal(layout::singlePixel()), qreal(geometry.hoverPaintPadding + 1));
+    const QPoint captureOffset = rig.automationContentToViewport(QPoint{});
+    const auto inViewport = [captureOffset](const QRectF &rect) {
+        return rect.translated(captureOffset);
+    };
     const auto previewUnchanged = [&](const char *label) {
         probe.require(
             isUnchanged(before, snapshot(rig.document())),
             QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
     };
-    probe.require(lane.nodeX - radius >= 0 && lane.nodeX + radius < rig.canvas().width() &&
-                      lane.nodeY - radius >= 0 && lane.nodeY + radius < rig.canvas().height(),
-                  QStringLiteral("existing-node hover probe is outside the canvas"));
+    const QRectF nodeBounds = nodeProbe(lane.nodeX, lane.nodeY, radius);
+    probe.require(QRectF(rig.automationViewportInContent()).contains(nodeBounds),
+                  QStringLiteral("existing-node hover probe is outside the automation viewport"));
 
     rig.mouseMove(lane.insertionPos, Qt::NoButton);
     rig.pump();
-    const QImage insertion = rig.renderArea();
+    const QImage insertion = rig.renderAutomationViewport();
     previewUnchanged("insertion preview");
     const qreal insertionLineY = lineSampleY(lane.plot, lane.heldY, radius + kLineSampleClearance);
-    topology.insertionLine = changedPixels(idle, insertion,
-                                           lineProbe(lane.insertionX, insertionLineY, lineHalf,
-                                                     kInsertionProbeHalfHeight),
-                                           dpr) > 0;
-    const int ghostPixels =
-        changedPixels(idle, insertion, nodeProbe(lane.insertionX, lane.heldY, radius), dpr);
+    topology.insertionLine =
+        changedPixels(idle, insertion,
+                      inViewport(lineProbe(lane.insertionX, insertionLineY, lineHalf,
+                                           kInsertionProbeHalfHeight)),
+                      dpr) > 0;
+    const int ghostPixels = changedPixels(
+        idle, insertion, inViewport(nodeProbe(lane.insertionX, lane.heldY, radius)), dpr);
     topology.heldGhost = ghostPixels > lineBudget(radius, dpr);
     topology.insertionLabel =
-        changedPixels(idle, insertion, labelProbe(lane.insertionX, lane.heldY, lane.plot), dpr) > 0;
+        changedPixels(idle, insertion,
+                      inViewport(labelProbe(lane.insertionX, lane.heldY, lane.plot)), dpr) > 0;
     probe.require(topology.insertionLine,
                   QStringLiteral("inter-node hover did not paint an insertion line"));
     probe.require(topology.heldGhost,
@@ -282,28 +288,26 @@ Topology runCase(AutomationGestureCheckRig &rig, const Case &row,
     probe.require(topology.insertionLabel,
                   QStringLiteral("inter-node hover did not paint a value label"));
 
-    const auto afterInsertion = rig.canvas().diagnostics();
     rig.mouseMove(lane.insertionPos, Qt::NoButton);
     rig.pump();
-    const auto afterRepeat = rig.canvas().diagnostics();
-    const QImage repeated = rig.renderArea();
+    const QImage repeated = rig.renderAutomationViewport();
     previewUnchanged("repeat hover");
-    topology.noRepeatChurn =
-        afterRepeat.contentInvalidationCount == afterInsertion.contentInvalidationCount &&
-        repeated == insertion;
+    topology.noRepeatChurn = repeated == insertion;
     probe.require(topology.noRepeatChurn,
                   QStringLiteral("repeat hover at the same coordinate churned a stale repaint"));
 
     rig.mouseMove(lane.nodePos, Qt::NoButton);
     rig.pump();
-    const QImage nodeHover = rig.renderArea();
+    const QImage nodeHover = rig.renderAutomationViewport();
     previewUnchanged("node hover");
     topology.nodeRing =
-        changedPixels(idle, nodeHover, nodeProbe(lane.nodeX, lane.nodeY, radius), dpr) > 0;
+        changedPixels(idle, nodeHover, inViewport(nodeProbe(lane.nodeX, lane.nodeY, radius)), dpr) >
+        0;
     topology.nodeLabel =
-        changedPixels(idle, nodeHover, labelProbe(lane.nodeX, lane.nodeY, lane.plot), dpr) > 0;
-    const int strayGhost =
-        changedPixels(idle, nodeHover, nodeProbe(lane.nodeX, lane.priorHeldY, radius), dpr);
+        changedPixels(idle, nodeHover, inViewport(labelProbe(lane.nodeX, lane.nodeY, lane.plot)),
+                      dpr) > 0;
+    const int strayGhost = changedPixels(
+        idle, nodeHover, inViewport(nodeProbe(lane.nodeX, lane.priorHeldY, radius)), dpr);
     topology.noInsertionGhost = strayGhost >= 0 &&
                                 std::abs(lane.nodeY - lane.priorHeldY) > 2 * radius &&
                                 strayGhost <= lineBudget(radius, dpr);
@@ -317,11 +321,12 @@ Topology runCase(AutomationGestureCheckRig &rig, const Case &row,
     leaveCanvas(rig);
     const QImage transitioned = rig.renderArea();
     previewUnchanged("lane transition");
-    const bool transitionCleared = cropUnchanged(idle, transitioned, lane.plot, dpr);
+    const bool transitionCleared = cropUnchanged(idle, transitioned, inViewport(lane.plot), dpr);
     leaveCanvas(rig);
     const QImage left = rig.renderArea();
     previewUnchanged("leave");
-    topology.leaveCleared = transitionCleared && cropUnchanged(idle, left, lane.plot, dpr);
+    topology.leaveCleared =
+        transitionCleared && cropUnchanged(idle, left, inViewport(lane.plot), dpr);
     probe.require(topology.leaveCleared,
                   QStringLiteral("lane transition or leave left dirty hover bounds"));
     return topology;

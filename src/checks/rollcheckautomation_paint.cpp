@@ -15,14 +15,14 @@
 #include <QWidget>
 
 #include "checks/support/eventsynth.h"
-#include "core/songdocument.h"
+#include "checks/support/quickframebuffer.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/cclanes.h"
 #include "ui/editordrawer/drawerpage.h"
+#include "ui/editordrawer/nodelane/hover.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
-#include "ui/editordrawer/nodelane/paint.h"
 #include "ui/editordrawer/tempolane.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
@@ -87,6 +87,29 @@ void pump()
     QCoreApplication::sendPostedEvents();
     QCoreApplication::processEvents();
 }
+QImage captureAutomationViewport(SongView &view, AutomationPage &page, int &failures)
+{
+    QString error;
+    QWidget *const viewport = page.scrollViewport();
+    const QImage image =
+        viewport ? checks::support::captureQuickBand(view, *viewport, &error) : QImage{};
+    if (!image.isNull())
+        return image;
+    std::fprintf(stderr, "automation-check: FAIL paint: %s\n", qUtf8Printable(error));
+    ++failures;
+    return {};
+}
+
+QPoint automationContentToViewport(const AutomationPage &page)
+{
+    QWidget *const viewport = page.scrollViewport();
+    return viewport ? page.canvas()->mapTo(viewport, QPoint{}) : QPoint{};
+}
+
+QRectF toViewport(const QRectF &content, const QPoint &origin)
+{
+    return content.translated(origin);
+}
 
 void leaveCanvas(AutomationPage &page)
 {
@@ -115,11 +138,13 @@ QRect deviceRect(const QRectF &logical, qreal dpr, const QSize &bound)
     return {left, top, std::max(0, right - left), std::max(0, bottom - top)};
 }
 
-int changedPixels(const QImage &idle, const QImage &hover, const QRectF &logical, qreal dpr)
+int changedPixels(const QImage &idle, const QImage &hover, const QRectF &logical,
+                  const QPoint &origin, qreal dpr)
 {
     if (idle.size() != hover.size() || idle.format() != hover.format())
         return -1;
-    const QRect rect = deviceRect(logical, dpr, idle.size()).intersected(idle.rect());
+    const QRect rect =
+        deviceRect(toViewport(logical, origin), dpr, idle.size()).intersected(idle.rect());
     if (rect.isEmpty())
         return -1;
     auto count = 0;
@@ -132,10 +157,11 @@ int changedPixels(const QImage &idle, const QImage &hover, const QRectF &logical
     return count;
 }
 
-bool hasColorNear(const QImage &image, const QRectF &logical, qreal dpr, const QColor &expected,
-                  int tolerance)
+bool hasColorNear(const QImage &image, const QRectF &logical, const QPoint &origin, qreal dpr,
+                  const QColor &expected, int tolerance)
 {
-    const QRect rect = deviceRect(logical, dpr, image.size()).intersected(image.rect());
+    const QRect rect =
+        deviceRect(toViewport(logical, origin), dpr, image.size()).intersected(image.rect());
     for (int y = rect.top(); y <= rect.bottom(); ++y) {
         for (int x = rect.left(); x <= rect.right(); ++x) {
             const QColor actual(image.pixel(x, y));
@@ -228,18 +254,18 @@ void setCcPoints(AutomationPage &page, SongDocument &document, DrawerPageLiveSta
     refresh(page, document, live);
 }
 
-bool toggleTempoExpanded(AutomationPage &page, bool wantExpanded, int &failures)
+bool toggleTempoExpanded(SongView &view, AutomationPage &page, bool wantExpanded, int &failures)
 {
     const bool expanded = !page.canvas()->laneBody(LaneHandle{0}).isEmpty();
     if (expanded == wantExpanded)
         return expanded;
-    const QImage beforeToggle = page.canvas()->grab().toImage();
+    const QImage beforeToggle = captureAutomationViewport(view, page, failures);
     checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, tempoHeaderPoint(page),
                               Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
     checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, tempoHeaderPoint(page),
                               Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     pump();
-    if (page.canvas()->grab().toImage() == beforeToggle) {
+    if (captureAutomationViewport(view, page, failures) == beforeToggle) {
         std::fprintf(stderr, "automation-check: FAIL paint: tempo header toggle did not repaint\n");
         ++failures;
     }
@@ -306,12 +332,18 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     const auto startTempo = document.tempoPoints();
     TempoLane tempoLane(document);
     CCLaneAdapter ccLane(document, 0, uint8_t{10});
-    const bool tempoExpanded = toggleTempoExpanded(page, true, failures);
+    const bool tempoExpanded = toggleTempoExpanded(view, page, true, failures);
     check(tempoExpanded, QStringLiteral("Tempo header did not expose the expanded body"));
     checkAutomationCanvasFontPaint(view, page, document, live, failures);
     auto geometry = AutomationGeometry::resolve();
     geometry.plotOrigin = page.canvas()->plotOrigin();
     const qreal dpr = page.canvas()->devicePixelRatioF();
+    const QPoint captureOrigin = automationContentToViewport(page);
+    QWidget *const automationViewport = page.scrollViewport();
+    const QRect viewportContent = automationViewport
+                                      ? QRect{page.canvas()->mapFrom(automationViewport, QPoint{}),
+                                              automationViewport->size()}
+                                      : QRect{};
     const qreal radius = nodelane::hoverRingRadius(geometry);
     const qreal lineHalf =
         std::max(qreal(layout::singlePixel()), qreal(geometry.hoverPaintPadding + 1));
@@ -330,7 +362,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     setTempoPoints(page, document, live, {});
     leaveCanvas(page);
     const auto emptySnap = snapshot(document);
-    const QImage emptyTempo = page.canvas()->grab().toImage();
+    const QImage emptyTempo = captureAutomationViewport(view, page, failures);
     paintUnchanged("empty Tempo paint", emptySnap);
     const auto tempoGeom = laneGeom(page, kLanes[0]);
     check(!tempoGeom.plot.isEmpty(), QStringLiteral("Tempo: expanded body plot is empty"));
@@ -342,22 +374,25 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     const qreal xMid = tickX(48);
     const qreal x96 = tickX(kNodeTick);
     report("Tempo",
-           !hasColorNear(emptyTempo, lineProbe(xMid, y120, 8, lineHalf), dpr, tempoGeom.curveColor,
-                         12),
+           !hasColorNear(emptyTempo, lineProbe(xMid, y120, 8, lineHalf), captureOrigin, dpr,
+                         tempoGeom.curveColor, 12),
            QStringLiteral("empty storage painted a 120 lead-in curve"));
     report("Tempo",
-           !hasColorNear(emptyTempo, nodeProbe(x0, y120, radius), dpr, tempoGeom.curveColor, 12),
+           !hasColorNear(emptyTempo, nodeProbe(x0, y120, radius), captureOrigin, dpr,
+                         tempoGeom.curveColor, 12),
            QStringLiteral("empty storage painted a 120 lead-in node"));
     setTempoPoints(page, document, live,
                    {{kNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoNode)}});
     const auto leadSnap = snapshot(document);
     leaveCanvas(page);
-    const QImage leadTempo = page.canvas()->grab().toImage();
+    const QImage leadTempo = captureAutomationViewport(view, page, failures);
     paintUnchanged("Tempo lead-in paint", leadSnap);
-    const int leadLine =
-        changedPixels(emptyTempo, leadTempo, lineProbe(xMid, y120, 8, lineHalf), dpr);
-    const int leadOrigin = changedPixels(emptyTempo, leadTempo, nodeProbe(x0, y120, radius), dpr);
-    const int leadNode = changedPixels(emptyTempo, leadTempo, nodeProbe(x96, y200, radius), dpr);
+    const int leadLine = changedPixels(emptyTempo, leadTempo, lineProbe(xMid, y120, 8, lineHalf),
+                                       captureOrigin, dpr);
+    const int leadOrigin =
+        changedPixels(emptyTempo, leadTempo, nodeProbe(x0, y120, radius), captureOrigin, dpr);
+    const int leadNode =
+        changedPixels(emptyTempo, leadTempo, nodeProbe(x96, y200, radius), captureOrigin, dpr);
     report("Tempo", leadLine > 0, QStringLiteral("first nonzero point painted no 120 lead-in"));
     report("Tempo", leadOrigin > 0 && leadOrigin <= lineBudget(radius, dpr),
            QStringLiteral("120 lead-in painted a tick-0 node"));
@@ -367,14 +402,15 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
                    {{0, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoHeld)}});
     const auto tick0Snap = snapshot(document);
     leaveCanvas(page);
-    const QImage tick0Tempo = page.canvas()->grab().toImage();
+    const QImage tick0Tempo = captureAutomationViewport(view, page, failures);
     paintUnchanged("Tempo tick-0 paint", tick0Snap);
     report("Tempo",
-           changedPixels(emptyTempo, tick0Tempo, nodeProbe(x0, y80, radius), dpr) >
+           changedPixels(emptyTempo, tick0Tempo, nodeProbe(x0, y80, radius), captureOrigin, dpr) >
                lineBudget(radius, dpr),
            QStringLiteral("explicit tick-0 point painted no node"));
     report("Tempo",
-           changedPixels(emptyTempo, tick0Tempo, lineProbe(xMid, y120, 8, lineHalf), dpr) <= 0,
+           changedPixels(emptyTempo, tick0Tempo, lineProbe(xMid, y120, 8, lineHalf), captureOrigin,
+                         dpr) <= 0,
            QStringLiteral("explicit tick-0 point did not suppress 120 lead-in"));
     // Normal curves, selected rings, and live gesture previews for both lanes.
     for (const auto &row : kLanes) {
@@ -395,6 +431,11 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
             report(row.name, false, QStringLiteral("lane body is missing from the canvas stack"));
             continue;
         }
+        if (!QRectF(viewportContent).contains(QRectF(geom.body))) {
+            report(row.name, false,
+                   QStringLiteral("lane paint probe is outside the automation scroll viewport"));
+            continue;
+        }
         const int held = row.kind == LaneKind::Tempo ? kTempoHeld : kCcHeld;
         const int node = row.kind == LaneKind::Tempo ? kTempoNode : kCcNode;
         const int second = row.kind == LaneKind::Tempo ? kTempoSecond : kCcSecond;
@@ -407,13 +448,15 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         const qreal midX = tickX(48);
         leaveCanvas(page);
         const auto idleSnap = snapshot(document);
-        const QImage idle = page.canvas()->grab().toImage();
+        const QImage idle = captureAutomationViewport(view, page, failures);
         paintUnchanged(row.name, idleSnap);
         report(row.name,
-               hasColorNear(idle, lineProbe(midX, heldY, 8, lineHalf), dpr, geom.curveColor, 16),
+               hasColorNear(idle, lineProbe(midX, heldY, 8, lineHalf), captureOrigin, dpr,
+                            geom.curveColor, 16),
                QStringLiteral("normal step curve is missing"));
         report(row.name,
-               hasColorNear(idle, nodeProbe(nodeX, nodeY, radius), dpr, geom.curveColor, 16),
+               hasColorNear(idle, nodeProbe(nodeX, nodeY, radius), captureOrigin, dpr,
+                            geom.curveColor, 16),
                QStringLiteral("normal node is missing"));
         songview::EditorSelectionModel::TimeSelection selection;
         selection.startTick = kNodeTick;
@@ -427,20 +470,24 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         refresh(page, document, live);
         leaveCanvas(page);
         const auto selectedSnap = snapshot(document);
-        const QImage selected = page.canvas()->grab().toImage();
+        const QImage selected = captureAutomationViewport(view, page, failures);
         paintUnchanged(row.name, selectedSnap);
         const qreal ringOuter = geometry.selectedNodeRingRadius + layout::singlePixel();
-        report(row.name, changedPixels(idle, selected, nodeProbe(nodeX, nodeY, ringOuter), dpr) > 0,
+        report(row.name,
+               changedPixels(idle, selected, nodeProbe(nodeX, nodeY, ringOuter), captureOrigin,
+                             dpr) > 0,
                QStringLiteral("selected ring did not paint above the node"));
         report(
             row.name,
             hasColorNear(selected,
                          QRectF((tickX(kNodeTick) + tickX(kNodeTick + 1)) / 2.0 - 2.0,
                                 geom.plot.top() + 2.0, 4.0, 6.0),
-                         dpr, themes::color(themes::Role::song_view_selection_edge), 24) ||
+                         captureOrigin, dpr, themes::color(themes::Role::song_view_selection_edge),
+                         24) ||
                 hasColorNear(selected,
                              QRectF(tickX(kNodeTick) + 4.0, geom.body.center().y() - 2.0, 8.0, 4.0),
-                             dpr, themes::color(themes::Role::song_view_selection_fill), 24),
+                             captureOrigin, dpr,
+                             themes::color(themes::Role::song_view_selection_fill), 24),
             QStringLiteral("selection reticle did not paint"));
         view.selectionModel().clearTimeSelection();
         refresh(page, document, live);
@@ -451,10 +498,11 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         sendActivatedDrag(page.canvas(), nodePos, dragTarget, drag, Qt::NoModifier);
         pump();
         const auto dragSnap = snapshot(document);
-        const QImage dragPreview = page.canvas()->grab().toImage();
+        const QImage dragPreview = captureAutomationViewport(view, page, failures);
         paintUnchanged(row.name, dragSnap);
         report(row.name,
-               hasColorNear(dragPreview, nodeProbe(dragTarget.x(), dragTarget.y(), radius), dpr,
+               hasColorNear(dragPreview, nodeProbe(dragTarget.x(), dragTarget.y(), radius),
+                            captureOrigin, dpr,
                             themes::color(themes::Role::song_view_edit_preview_outline), 24),
                QStringLiteral("node drag preview is missing"));
         cancel();
@@ -470,15 +518,17 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         sendActivatedDrag(page.canvas(), nodePos, multiTarget, drag, Qt::NoModifier);
         pump();
         const auto multiSnap = snapshot(document);
-        const QImage multiPreview = page.canvas()->grab().toImage();
+        const QImage multiPreview = captureAutomationViewport(view, page, failures);
         paintUnchanged(row.name, multiSnap);
         const QPointF secondPreview(secondX,
                                     nodelane::valueY(lane, geom.body, geometry, second - 24));
         report(row.name,
-               hasColorNear(multiPreview, nodeProbe(multiTarget.x(), multiTarget.y(), radius), dpr,
+               hasColorNear(multiPreview, nodeProbe(multiTarget.x(), multiTarget.y(), radius),
+                            captureOrigin, dpr,
                             themes::color(themes::Role::song_view_edit_preview_outline), 24) &&
                    hasColorNear(multiPreview,
-                                nodeProbe(secondPreview.x(), secondPreview.y(), radius), dpr,
+                                nodeProbe(secondPreview.x(), secondPreview.y(), radius),
+                                captureOrigin, dpr,
                                 themes::color(themes::Role::song_view_edit_preview_outline), 24),
                QStringLiteral("multi-drag preview is missing"));
         cancel();
@@ -491,10 +541,11 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         sendActivatedDrag(page.canvas(), sweepStart, sweepTarget, drag, Qt::NoModifier);
         pump();
         const auto sweepSnap = snapshot(document);
-        const QImage sweepPreview = page.canvas()->grab().toImage();
+        const QImage sweepPreview = captureAutomationViewport(view, page, failures);
         paintUnchanged(row.name, sweepSnap);
         report(row.name,
-               hasColorNear(sweepPreview, nodeProbe(sweepTarget.x(), sweepTarget.y(), radius), dpr,
+               hasColorNear(sweepPreview, nodeProbe(sweepTarget.x(), sweepTarget.y(), radius),
+                            captureOrigin, dpr,
                             themes::color(themes::Role::song_view_edit_preview_outline), 24),
                QStringLiteral("sweep preview is missing"));
         cancel();
@@ -508,13 +559,14 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
                                   Qt::LeftButton, Qt::ShiftModifier);
         pump();
         const auto rampSnap = snapshot(document);
-        const QImage rampPreview = page.canvas()->grab().toImage();
+        const QImage rampPreview = captureAutomationViewport(view, page, failures);
         paintUnchanged(row.name, rampSnap);
         const QPointF rampMid((rampStart.x() + rampEnd.x()) / 2.0,
                               (rampStart.y() + rampEnd.y()) / 2.0);
         report(row.name,
                hasColorNear(rampPreview, QRectF(rampMid.x() - 3.0, rampMid.y() - 3.0, 6.0, 6.0),
-                            dpr, themes::color(themes::Role::song_view_edit_preview_outline), 24),
+                            captureOrigin, dpr,
+                            themes::color(themes::Role::song_view_edit_preview_outline), 24),
                QStringLiteral("Shift-ramp preview is missing"));
         cancel();
         if (row.kind != LaneKind::Cc)
@@ -536,15 +588,17 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
                                   Qt::LeftButton, Qt::NoModifier);
         pump();
         const auto pencilSnap = snapshot(document);
-        const QImage pencilPreview = page.canvas()->grab().toImage();
+        const QImage pencilPreview = captureAutomationViewport(view, page, failures);
         paintUnchanged(row.name, pencilSnap);
         report(row.name,
-               hasColorNear(pencilPreview, lineProbe(tickX(48), pencilHold.y(), 8, lineHalf), dpr,
+               hasColorNear(pencilPreview, lineProbe(tickX(48), pencilHold.y(), 8, lineHalf),
+                            captureOrigin, dpr,
                             themes::color(themes::Role::song_view_edit_preview_outline), 24),
                QStringLiteral("Pencil preview curve is missing"));
         report(row.name,
                changedPixels(idle, pencilPreview,
-                             labelProbe(pencilEnd.x(), pencilEnd.y(), geom.plot), dpr) > 0,
+                             labelProbe(pencilEnd.x(), pencilEnd.y(), geom.plot), captureOrigin,
+                             dpr) > 0,
                QStringLiteral("Pencil preview value label is missing"));
         cancel();
         pencil->setChecked(false);
@@ -554,16 +608,16 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     refresh(page, document, live);
     leaveCanvas(page);
     const auto cursorSnap = snapshot(document);
-    const QImage cursorA = page.canvas()->grab().toImage();
+    const QImage cursorA = captureAutomationViewport(view, page, failures);
     paintUnchanged("edit cursor", cursorSnap);
     live.editCursorTick = 96;
     refresh(page, document, live);
     leaveCanvas(page);
-    const QImage cursorB = page.canvas()->grab().toImage();
+    const QImage cursorB = captureAutomationViewport(view, page, failures);
     paintUnchanged("edit cursor move", cursorSnap);
     const qreal cursorX = tickX(96);
     check(cursorA != cursorB, QStringLiteral("moving the edit cursor did not repaint the canvas"));
-    check(hasColorNear(cursorB, QRectF(cursorX - 2.0, 4.0, 4.0, 12.0), dpr,
+    check(hasColorNear(cursorB, QRectF(cursorX - 2.0, 4.0, 4.0, 12.0), captureOrigin, dpr,
                        themes::color(themes::Role::song_view_edit_cursor), 16),
           QStringLiteral("canvas did not paint the edit cursor"));
     checkAutomationTempoOcclusion(view, page, document, live, failures);
@@ -576,7 +630,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     live.editCursorTick = 24;
     page.documentChanged();
     page.refreshLiveState(live);
-    toggleTempoExpanded(page, false, failures);
+    toggleTempoExpanded(view, page, false, failures);
     pump();
     check(document.smf().write() == startSnap.smf &&
               document.undoStack()->index() == startSnap.undoIndex &&

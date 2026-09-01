@@ -242,11 +242,6 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
         }
     }
 
-    const qreal cursorX = m_owner.displayX(double(m_live.editCursorTick), origin, dpr);
-    timeline_quick::addDashedVertical(scene, TimelineQuickLayer::VoiceChangesTransient, cursorX,
-                                      plot.top(), plot.bottom(), lyt::singlePixel(),
-                                      lyt::space(Space::One), lyt::space(Space::One),
-                                      themes::color(themes::Role::song_view_edit_cursor), plot);
     scene.setVoiceChangesTextRecords(textRecords);
 }
 
@@ -262,10 +257,6 @@ void VoiceChangeArea::rebuildQuickHover(songview::TimelineQuickScene &scene)
         !m_owner.timeline() || m_engineTrack < 0 || m_engineTrack >= 16) {
         return;
     }
-    const qreal pixel = lyt::singlePixel();
-    timeline_quick::addDashedVertical(scene, hoverLayer, m_hoverX, plot.top(), plot.bottom(), pixel,
-                                      pixel, 2.0 * pixel,
-                                      themes::color(themes::Role::song_view_secondary_text), plot);
     if (m_hoverLabel.isEmpty())
         return;
     const TimelineQuickTextModel::Record label = {

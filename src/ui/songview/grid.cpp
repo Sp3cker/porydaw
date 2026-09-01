@@ -1,12 +1,8 @@
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
-#include "ui/songview/detail.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timeruler.h"
-
-#include <QPainter>
-#include <QRect>
 
 #include <algorithm>
 #include <array>
@@ -18,7 +14,6 @@
 #include <numeric>
 
 using namespace songview;
-using namespace songview::detail;
 
 void SongView::setGridFeel(GridFeel feel)
 {
@@ -54,11 +49,11 @@ SongView::GridCell SongView::visibleGridCellContaining(uint64_t tick) const
     const bool drawBeats = pxPerBeat() >= m_geometry.timelineDetailMinimumPixelsPerBeat;
     uint64_t grid = seg.beatTicks;
     if (!drawBeats) {
-        // drawGrid paints only bars at this zoom.
+        // The retained scene draws only bars at this zoom.
         grid *= seg.beatsPerBar;
     } else if (pxPerTick() * double(seg.beatTicks) >=
                m_geometry.timelineDetailMinimumPixelsPerBeat) {
-        // drawGrid also paints the current visible sub-grid in this segment.
+        // The retained scene also draws the current visible sub-grid in this segment.
         grid = gridTicksIn(seg, pxPerTick(), /*snap=*/false);
     }
     grid = std::max<uint64_t>(1, grid);
@@ -171,12 +166,6 @@ uint64_t SongView::snapTickUp(double tick) const
 DrawerPageGridState SongView::gridState(uint64_t tick, bool fineMode) const
 {
     return {gridTicksAt(tick), fineMode ? fineGridTicks() : snapTicksAt(tick)};
-}
-bool SongView::paintGrid(QPainter &painter, const QRect &rect, qreal origin) const
-{
-    drawGrid(painter, this, rect, origin, m_geometry.timelineDetailMinimumPixelsPerBeat,
-             m_geometry.gridLineStrokeWidth);
-    return true;
 }
 void SongView::forEachGridLine(uint64_t tickBegin, uint64_t tickEnd,
                                const std::function<void(uint64_t, bool, int, int)> &fn) const

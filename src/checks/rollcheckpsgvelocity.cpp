@@ -20,7 +20,6 @@
 #include <QEvent>
 #include <QFontMetricsF>
 #include <QImage>
-#include <QPainter>
 #include <QTemporaryDir>
 #include <QToolButton>
 
@@ -288,31 +287,18 @@ int checkGridContinuesPastSongEnd(VelocityAreaEnv &env)
         qRound((double(env.area.plotOrigin()) + double(firstBarPastSongEnd) * env.live.timeZoom /
                                                     double(env.timeline->ticksPerBeat)) *
                gridScale);
-    auto expectedGrid = QImage(gridPastSongEnd.size(), QImage::Format_ARGB32);
-    expectedGrid.setDevicePixelRatio(gridScale);
-    const auto gridBackground = themes::color(themes::Role::song_view_piano_roll_background).rgba();
-    expectedGrid.fill(gridBackground);
-    {
-        auto expectedGridPainter = QPainter(&expectedGrid);
-        env.view.paintGrid(expectedGridPainter,
-                           QRect(env.area.plotOrigin(), 0, env.area.plotWidth(), env.area.height()),
-                           env.area.plotOrigin());
-    }
-    const auto pastSongEndBounds = QRect(firstBarPastSongEndX - 2, 0, 5, gridPastSongEnd.height())
-                                       .intersected(gridPastSongEnd.rect());
-    auto matchedExpectedGrid = false;
-    for (int y = pastSongEndBounds.top(); y <= pastSongEndBounds.bottom(); ++y) {
-        for (int x = pastSongEndBounds.left(); x <= pastSongEndBounds.right(); ++x) {
-            if (expectedGrid.pixel(x, y) != gridBackground &&
-                gridPastSongEnd.pixel(x, y) == expectedGrid.pixel(x, y)) {
-                matchedExpectedGrid = true;
-                break;
-            }
-        }
-        if (matchedExpectedGrid)
-            break;
-    }
-    check(matchedExpectedGrid, "velocity grid must continue to the piano grid beyond the song end");
+    const QRect pastSongEndBounds = QRect(firstBarPastSongEndX - 2, 0, 5, gridPastSongEnd.height())
+                                        .intersected(gridPastSongEnd.rect());
+    const QColor grid = themes::color(themes::Role::song_view_grid);
+    const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
+    const auto compositeChannel = [&grid](int source, int destination) {
+        return (source * grid.alpha() + destination * (255 - grid.alpha()) + 127) / 255;
+    };
+    const QColor expectedGrid(compositeChannel(grid.red(), background.red()),
+                              compositeChannel(grid.green(), background.green()),
+                              compositeChannel(grid.blue(), background.blue()));
+    check(hasColorNear(gridPastSongEnd, pastSongEndBounds, expectedGrid, 4),
+          "velocity grid must continue to the piano grid beyond the song end");
     return failures;
 }
 

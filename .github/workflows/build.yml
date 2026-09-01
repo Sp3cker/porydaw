@@ -170,4 +170,3 @@ jobs:
           --no-windowing-checks --pool=1
           --exclude=vgsavecheck --exclude=tabcheck --exclude=onboardcheck
           --exclude=sessioncheck --exclude=editor-drawer
-          --exclude=rendering-playhead

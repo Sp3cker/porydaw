@@ -12,7 +12,6 @@
 #include "ui/editordrawer/velocityarea/detail.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
-#include "ui/songview/detail.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/theme/themeruntime.h"
 
@@ -20,47 +19,16 @@ namespace lyt = ::layout;
 using Space = lyt::Space;
 
 namespace songview {
-using timeline_quick::addDashedVertical;
 using timeline_quick::addEllipse;
 using timeline_quick::addEllipseRing;
 using timeline_quick::addHorizontalLine;
 using timeline_quick::addLine;
 using timeline_quick::addRect;
+using timeline_quick::addSelectionReticle;
 using timeline_quick::addVerticalLine;
 using timeline_quick::resetLayer;
 
 namespace {
-constexpr int kSelectionFillAlpha = 30;
-constexpr qreal kSelectionDashMultiplier = 4.0;
-constexpr qreal kSelectionGapMultiplier = 2.0;
-
-void addDashedHorizontal(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x0, qreal x1,
-                         qreal y, qreal width, qreal dash, qreal gap, const QColor &color,
-                         const QRectF &clip)
-{
-    for (qreal x = x0; x < x1; x += dash + gap)
-        addHorizontalLine(scene, layer, x, std::min(x + dash, x1), y, width, color, clip);
-}
-
-void addSelectionReticle(TimelineQuickScene &scene, const QRectF &rect, const QRectF &clip)
-{
-    QColor fill = themes::color(themes::Role::song_view_selection_fill);
-    fill.setAlpha(kSelectionFillAlpha);
-    constexpr TimelineQuickLayer layer = TimelineQuickLayer::VelocityTransient;
-    addRect(scene, layer, rect, fill, clip);
-    const QColor edge = themes::color(themes::Role::song_view_selection_edge);
-    const qreal width = lyt::singlePixel();
-    const qreal dash = kSelectionDashMultiplier * width;
-    const qreal gap = kSelectionGapMultiplier * width;
-    addDashedHorizontal(scene, layer, rect.left(), rect.right(), rect.top(), width, dash, gap, edge,
-                        clip);
-    addDashedHorizontal(scene, layer, rect.left(), rect.right(), rect.bottom(), width, dash, gap,
-                        edge, clip);
-    addDashedVertical(scene, layer, rect.left(), rect.top(), rect.bottom(), width, dash, gap, edge,
-                      clip);
-    addDashedVertical(scene, layer, rect.right(), rect.top(), rect.bottom(), width, dash, gap, edge,
-                      clip);
-}
 
 void appendAxisText(std::vector<TimelineQuickTextModel::Record> &records, quint64 ordinal,
                     const QRectF &rect, const QString &text, const QColor &color, const QFont &font)
@@ -273,11 +241,7 @@ void VelocityArea::rebuildQuickTransient(songview::TimelineQuickScene &scene, co
                 themes::color(themes::Role::song_view_edit_preview_outline), plot);
     }
     if (m_interaction == Interaction::Band)
-        addSelectionReticle(scene, m_bandRect, plot);
-    const qreal cursorX = xForTick(m_live.editCursorTick);
-    addDashedVertical(scene, transientLayer, cursorX, plot.top(), plot.bottom(), lyt::singlePixel(),
-                      lyt::space(Space::One), lyt::space(Space::One),
-                      themes::color(themes::Role::song_view_edit_cursor), plot);
+        addSelectionReticle(scene, transientLayer, m_bandRect, plot);
 }
 
 void VelocityArea::rebuildQuickScene(songview::TimelineQuickScene &scene)

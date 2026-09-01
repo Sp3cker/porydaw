@@ -443,17 +443,6 @@ const std::vector<CheckDefinition> &catalog()
                 .fixtureFiles = twoSongRichFiles,
             },
             {
-                .name = "rendering-playhead",
-                .argv = strings({"--check-rendering-playhead", "{scratch}", "mus_route101"}),
-                .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runRenderingPlayheadCheck(args[1], args[2], optional(args, 3));
-                    },
-                .scratchKind = ScratchKind::ExistingDirectory,
-                .fixtureRootKind = FixtureRootKind::DecompProject,
-                .fixtureFiles = route101Files,
-            },
-            {
                 .name = "host-integration",
                 .argv = strings(
                     {"--check-host-integration", "{scratch}", "mus_route101", "mus_petalburg"}),

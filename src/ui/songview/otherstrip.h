@@ -1,10 +1,10 @@
 #pragma once
 
-#include "ui/timelinesurface.h"
+#include <QWidget>
 
 class QEvent;
 class QMouseEvent;
-class QPainter;
+class QResizeEvent;
 class SongView;
 
 namespace songview {
@@ -12,7 +12,7 @@ namespace songview {
 class TimelineQuickScene;
 class TimelineQuickView;
 
-class OtherStrip : public TimelineSurface
+class OtherStrip : public QWidget
 {
   private:
     struct Geometry {
@@ -30,8 +30,8 @@ class OtherStrip : public TimelineSurface
     explicit OtherStrip(SongView *sv);
 
   protected:
-    void paintContent(QPainter &p) override;
     bool event(QEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
 
   private:

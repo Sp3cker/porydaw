@@ -231,7 +231,7 @@ void doubleClickArea(const AreaFixture &env, const QPointF &position)
     QCoreApplication::processEvents();
 }
 
-// Access, page membership, and shared-camera band registration.
+// Access, page membership, and shared camera mapping.
 void checkAreaSurfaceBasics(const AreaFixture &env, int &failures)
 {
     const auto check = [&failures](bool condition, const QString &message) {
@@ -246,15 +246,8 @@ void checkAreaSurfaceBasics(const AreaFixture &env, int &failures)
     const QRect plot = env.area->rect().adjusted(env.area->plotOrigin(), 0, 0, 0);
     check(env.area->plotWidth() > 0 && !plot.isEmpty(),
           QStringLiteral("VoiceChangeArea exposed no usable plot"));
-    bool bandFound = false;
-    for (const auto &band : env.view->timelineBands()) {
-        if (&band.widget == env.area) {
-            bandFound = band.timelineOrigin == env.area->plotOrigin();
-            break;
-        }
-    }
-    check(bandFound,
-          QStringLiteral("SongView timeline bands did not register the VoiceChangeArea"));
+    check(env.area->plotOrigin() == env.view->timelinePlotOrigin(),
+          QStringLiteral("VoiceChangeArea did not use SongView's shared timeline origin"));
 }
 
 // Paint lifecycle: document edits paint their marker, undo/song reattach
@@ -290,21 +283,18 @@ void checkAreaPaintLifecycle(AreaFixture &env, int &failures)
     check(changedPixels(idle, unmarked, area->rect(), dpr) == 0,
           QStringLiteral("undo did not restore the marker-free paint"));
 
-    // Playhead-only presentations must not rebuild content within one held
-    // span, and must invalidate once when the displayed context crosses it.
-    const auto warm = area->diagnostics();
+    // Playhead-only presentations keep the held voice span stable until the
+    // displayed context crosses a voice change.
     env.view->setPlayheadSample(env.timeline->sampleForTick(16), true);
     pump();
     const QImage playingA = checks::support::captureQuickBand(*env.view, *area);
-    const auto afterFirstPresent = area->diagnostics();
     env.view->setPlayheadSample(env.timeline->sampleForTick(32), true);
     pump();
-    check(area->diagnostics() == afterFirstPresent,
-          QStringLiteral("same-span playhead presentations invalidated voice content"));
+    const QImage playingSameSpan = checks::support::captureQuickBand(*env.view, *area);
+    check(playingSameSpan == playingA,
+          QStringLiteral("same-span playhead presentations changed the Quick voice band"));
     env.view->setPlayheadSample(env.timeline->sampleForTick(64), true);
     pump();
-    check(area->diagnostics().contentInvalidationCount > afterFirstPresent.contentInvalidationCount,
-          QStringLiteral("playhead crossing the voice change did not refresh the context"));
     const QImage playingB = checks::support::captureQuickBand(*env.view, *area);
     check(changedPixels(playingA, playingB,
                         QRectF(area->plotOrigin() + area->plotWidth() / 2.0, 0,
@@ -391,14 +381,10 @@ void checkAreaHover(AreaFixture &env, int &failures)
           QStringLiteral("off-marker hover changed no pixels in its Quick line/label region"));
     check(changedPixelsOutside(idle, offMarker, hoverRegion, dpr) == 0,
           QStringLiteral("off-marker hover changed pixels outside its Quick line/label region"));
-    const uint64_t contentInvalidations = area->diagnostics().contentInvalidationCount;
     env.view->setPlayheadSample(env.timeline->sampleForTick(64), true);
     pump();
     const QImage contentOnlyHover = checks::support::captureQuickBand(*env.view, *area);
     const QRectF contentOnlyLabelRect = currentHoverLabelRect();
-    check(area->diagnostics().contentInvalidationCount > contentInvalidations,
-          QStringLiteral(
-              "playhead context crossing did not trigger full voice content invalidation"));
     check(voiceChangesHoverTextModel->rowCount() == 1 &&
               voiceChangesTextModel->rowCount() == mainTextRowCount &&
               contentOnlyLabelRect == hoverLabelRect &&
@@ -419,7 +405,6 @@ void checkAreaHover(AreaFixture &env, int &failures)
           QStringLiteral("same-pointer hover stayed suppressed after the full Quick rebuild"));
 
     const double coalescedHoverX = xForTick(env, 120);
-    const uint64_t coalescedInvalidations = area->diagnostics().contentInvalidationCount;
     // Queue a second hover target before the full-content flush coalesces.
     env.view->setPlayheadSample(env.timeline->sampleForTick(16), true);
     checks::events::sendMouse(*area, QEvent::MouseMove,
@@ -428,8 +413,6 @@ void checkAreaHover(AreaFixture &env, int &failures)
     pump();
     const QImage coalescedHover = checks::support::captureQuickBand(*env.view, *area);
     const QRectF coalescedLabelRect = currentHoverLabelRect();
-    check(area->diagnostics().contentInvalidationCount > coalescedInvalidations,
-          QStringLiteral("coalesced hover did not trigger full voice content invalidation"));
     check(voiceChangesHoverTextModel->rowCount() == 1 &&
               voiceChangesTextModel->rowCount() == mainTextRowCount &&
               coalescedLabelRect.isValid() &&
@@ -583,8 +566,8 @@ void checkAreaCommits(AreaFixture &env, int &failures)
     const uint64_t changedRevision = document.revision();
     const int changedUndo = document.undoStack()->index();
 
-    // Same-value acceptance is a no-op: no commit, no undo, no repaint.
-    const auto warm = area->diagnostics();
+    // Same-value acceptance is a no-op: no commit, no undo, no Quick-band change.
+    const QImage warm = checks::support::captureQuickBand(*env.view, *area);
     title.clear();
     initialRow = -1;
     opened = false;
@@ -592,8 +575,9 @@ void checkAreaCommits(AreaFixture &env, int &failures)
     doubleClickArea(env, QPointF(xForTick(env, 48), markerY));
     check(opened && title == QStringLiteral("Change voice") && initialRow == 5 &&
               document.smf().write() == changedSmf && document.revision() == changedRevision &&
-              document.undoStack()->index() == changedUndo && area->diagnostics() == warm,
-          QStringLiteral("same-value picker acceptance committed or repainted"));
+              document.undoStack()->index() == changedUndo &&
+              checks::support::captureQuickBand(*env.view, *area) == warm,
+          QStringLiteral("same-value picker acceptance changed the document or Quick band"));
 
     // Cancelling the picker is a no-op too.
     title.clear();
@@ -790,14 +774,12 @@ void checkAreaCamera(AreaFixture &env, int &failures)
         ++failures;
     };
     const QImage home = checks::support::captureQuickBand(*env.view, *area);
-    const auto warm = area->diagnostics();
     const double homeZoom = env.view->pxPerBeat();
     const double homeScroll = env.view->viewState().scrollPx;
 
     env.view->setEditorHorizontalScroll(64.0);
     pump();
-    check(area->diagnostics().contentInvalidationCount > warm.contentInvalidationCount &&
-              checks::support::captureQuickBand(*env.view, *area) != home,
+    check(checks::support::captureQuickBand(*env.view, *area) != home,
           QStringLiteral("horizontal scroll did not scroll the voice content"));
 
     const QPointF zoomAnchor(area->plotOrigin() + area->plotWidth() / 2.0, area->height() / 2.0);

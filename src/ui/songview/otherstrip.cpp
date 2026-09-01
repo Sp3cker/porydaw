@@ -28,22 +28,16 @@ void OtherStrip::refreshGeometry()
 {
     m_geometry = Geometry::resolve();
     setFixedHeight(QFontMetrics(font()).height() + lyt::space(Space::Two));
-    invalidateContent();
     requestQuickUpdate();
 }
 
-OtherStrip::OtherStrip(SongView *sv)
-    : TimelineSurface(sv)
-    , m_sv(sv)
-    , m_geometry(Geometry::resolve())
+OtherStrip::OtherStrip(SongView *sv) : QWidget(sv), m_sv(sv), m_geometry(Geometry::resolve())
 {
     setObjectName(QStringLiteral("otherEventsStrip"));
     setAutoFillBackground(false);
     refreshGeometry();
     setMouseTracking(true);
 }
-
-void OtherStrip::paintContent(QPainter &) {}
 
 void OtherStrip::requestQuickUpdate()
 {
@@ -52,10 +46,16 @@ void OtherStrip::requestQuickUpdate()
 
 bool OtherStrip::event(QEvent *event)
 {
-    const bool handled = TimelineSurface::event(event);
+    const bool handled = QWidget::event(event);
     if (event->type() == QEvent::FontChange)
         refreshGeometry();
     return handled;
+}
+
+void OtherStrip::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+    requestQuickUpdate();
 }
 
 void OtherStrip::mouseMoveEvent(QMouseEvent *event)

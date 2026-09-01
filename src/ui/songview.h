@@ -30,7 +30,6 @@
 #include "ui/songview/scalecontroller.h"
 #include "ui/songview/timeaxis.h"
 #include "ui/songviewmodel.h"
-#include "ui/timelinesurface.h"
 #include "ui/velocitygesturemodel.h"
 
 extern "C" {
@@ -46,7 +45,6 @@ class QScrollBar;
 class QSpacerItem;
 class QStackedWidget;
 class QWheelEvent;
-class QPainter;
 class SongDocument;
 class AutomationPage;
 class EditorDrawer;
@@ -61,12 +59,12 @@ class EditorSelectionModel;
 class PianoRoll;
 class TimelineQuickView;
 class OtherStrip;
-class PlayheadOverlay;
 class TrackHeaderPanel;
 class TrackHeaderRow;
 enum class PianoRollQuickDirty : quint32;
-enum class TimelineQuickDirty : quint8;
+enum class TimelineQuickDirty : quint16;
 using TimelineQuickDirtySet = QFlags<TimelineQuickDirty>;
+enum class TimelineQuickHoverOwner : quint8;
 using PianoRollQuickDirtySet = QFlags<PianoRollQuickDirty>;
 
 // Perceptually mixes a color toward its backdrop. Timeline surfaces use this
@@ -189,7 +187,9 @@ class SongView : public QWidget
     const songview::TimeAxis &timeAxis() const { return m_timeAxis; }
     const SongViewModel &model() const { return m_model; }
     const LoadedVoiceGroup *voicegroup() const { return m_voicegroup; }
-    std::vector<songview::TimelineBand> timelineBands();
+    qreal timelinePlotOrigin() const noexcept { return m_geometry.plotOrigin; }
+    void publishTimelineQuickHover(songview::TimelineQuickHoverOwner owner, uint64_t tick);
+    void clearTimelineQuickHover(songview::TimelineQuickHoverOwner owner);
     // Widget-owned migrated bands route retained-scene invalidation through this seam.
     void requestTimelineQuickUpdate(songview::TimelineQuickDirtySet dirty);
 
@@ -387,8 +387,8 @@ class SongView : public QWidget
     // Every tick-spacing accessor below returns a value >= 1 (floored at
     // ticksPerClock()), so callers may divide by them or use them as loop
     // strides without clamping.
-    // Zoom-adaptive subdivision selected for the grid before drawGrid
-    // suppresses sub-beat or beat lines at low detail.
+    // Zoom-adaptive subdivision selected for the grid before the retained
+    // scene suppresses sub-beat or beat lines at low detail.
     // It is not the painted-cell spacing; use visibleGridCellContaining().
     // The subdivision follows the governing segment's beat at the current
     // feel, floored at the minimum and never finer than the clock base.
@@ -411,7 +411,6 @@ class SongView : public QWidget
     uint64_t snapTickDown(double tick) const;
     uint64_t snapTickUp(double tick) const;
     DrawerPageGridState gridState(uint64_t tick, bool fineMode) const;
-    bool paintGrid(QPainter &, const QRect &, qreal origin) const;
 
     DrawerPageVoiceContext voiceContext(uint64_t tick) const;
     // Shared deferred velocity gesture; document mutation happens only when
@@ -622,7 +621,7 @@ class SongView : public QWidget
     // Fold-relevant model change (song swap, track switch): rebuild now, or
     // defer while a pointer gesture holds the projection lock.
     void requestProjectionRebuild();
-    void syncPlayheadOverlay();
+    void syncTimelineQuickChrome();
     // Guards construction and teardown windows around the SongView-owned host.
     void requestPianoRollQuickUpdate(songview::PianoRollQuickDirtySet dirty);
     void syncTimelineQuickAppearance();
@@ -741,7 +740,6 @@ class SongView : public QWidget
     QStackedWidget *m_rollStack = nullptr; // page 0: roll (+vbar), page 1: event list
     EventListView *m_events = nullptr;
     songview::OtherStrip *m_strip = nullptr;
-    songview::PlayheadOverlay *m_playheadOverlay = nullptr;
     QScrollBar *m_hbar = nullptr;
     QScrollArea *m_headerScroll = nullptr;
     QHBoxLayout *m_hbarRow = nullptr;

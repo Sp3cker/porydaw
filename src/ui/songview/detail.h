@@ -2,9 +2,7 @@
 
 #include <QColor>
 #include <QFont>
-#include <QPainter>
 #include <QPoint>
-#include <QRect>
 #include <QRectF>
 #include <QWheelEvent>
 #include <algorithm>
@@ -79,7 +77,5 @@ void forEachSubGridLine(const SongView *sv, double t0, double t1,
 }
 
 QColor gridLineColor(int alpha = 255);
-void drawGrid(QPainter &p, const SongView *sv, const QRect &rect, qreal origin,
-              int timelineDetailMinimumPixelsPerBeat, int gridLineStrokeWidth);
 
 } // namespace songview::detail

@@ -4,10 +4,12 @@
 
 #include <QCoreApplication>
 #include <QEvent>
+#include <QImage>
 #include <QScrollArea>
 #include <QScrollBar>
 
 #include "checks/support/eventsynth.h"
+#include "checks/support/quickframebuffer.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/songview.h"
@@ -50,6 +52,13 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
         std::fprintf(stderr, "automation-check: %s FAIL %s\n", qUtf8Printable(songLabel),
                      qUtf8Printable(message));
         ++failures;
+    };
+    const auto captureAutomationViewport = [&] {
+        QString error;
+        const QImage image = checks::support::captureQuickBand(view, *scroll->viewport(), &error);
+        check(!image.isNull(),
+              QStringLiteral("automation viewport framebuffer capture failed: %1").arg(error));
+        return image;
     };
     const AutomationGeometry geometry = AutomationGeometry::resolve();
     const EditorAutomationRowId tempoRow{EditorAutomationRowKind::Tempo, 0, 0};
@@ -94,15 +103,10 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
     const int scrollBefore = vertical->value();
     const QRect bodyBeforeScroll = page.canvas()->laneBody(LaneHandle{0});
     const QPoint pageBeforeScroll = page.canvas()->mapTo(&page, QPoint(0, bodyBeforeScroll.top()));
-    const auto scrollPaintBefore = page.canvas()->diagnostics();
+    const QImage viewportBeforeScroll = captureAutomationViewport();
     vertical->setValue(vertical->maximum());
     pump();
-    const auto scrollPaintAfter = page.canvas()->diagnostics();
-    const quint64 scrollPaintPixels =
-        scrollPaintAfter.contentPaintPixelCount - scrollPaintBefore.contentPaintPixelCount;
-    const qreal dpr = page.canvas()->devicePixelRatioF();
-    const quint64 fullCanvasPixels = quint64(qRound(page.canvas()->width() * dpr)) *
-                                     quint64(qRound(page.canvas()->height() * dpr));
+    const QImage viewportAfterScroll = captureAutomationViewport();
     const int scrollAfter = vertical->value();
     const QRect bodyAfterScroll = page.canvas()->laneBody(LaneHandle{0});
     const QPoint pageAfterScroll = page.canvas()->mapTo(&page, QPoint(0, bodyAfterScroll.top()));
@@ -119,9 +123,8 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
             trailingContentBottom <= bodyAfterScroll.top() &&
             trailingPageBottom.y() <= pageAfterScroll.y(),
         QStringLiteral("Tempo must stay pinned while CC and add-lane content scrolls beneath it"));
-    check(scrollPaintAfter.contentInvalidationCount > scrollPaintBefore.contentInvalidationCount &&
-              scrollPaintPixels > 0 && scrollPaintPixels < fullCanvasPixels,
-          QStringLiteral("vertical scroll repainted the full automation canvas cache"));
+    check(!viewportBeforeScroll.isNull() && viewportAfterScroll != viewportBeforeScroll,
+          QStringLiteral("vertical scroll did not update the automation Quick viewport"));
 
     const int viewportHeightBeforeResize = scroll->viewport()->height();
     const int scrollBeforeViewportResize = vertical->value();

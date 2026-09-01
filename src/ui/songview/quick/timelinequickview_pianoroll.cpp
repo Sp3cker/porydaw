@@ -488,14 +488,6 @@ void TimelineQuickView::rebuildOverlay()
                                 plot.bottom(), pixel, detail::loopEdge(), plot);
         }
     }
-
-    const qreal cursorX =
-        roll.m_sv->displayX(double(roll.m_sv->editCursorTick()), keyboardWidth, dpr);
-    if (cursorX >= plot.left() && cursorX <= plot.right()) {
-        addDashedVertical(scene, TimelineQuickLayer::PianoOverlay, cursorX, plot.top(),
-                          plot.bottom(), pixel, lyt::space(Space::One), lyt::space(Space::One),
-                          themes::color(themes::Role::song_view_edit_cursor), plot);
-    }
 }
 
 void TimelineQuickView::rebuildKeyboardKeys()

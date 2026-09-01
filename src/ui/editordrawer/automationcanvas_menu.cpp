@@ -56,7 +56,7 @@ void AutomationCanvas::showTimeSelectionMenuFor(LaneHandle contextLane,
     QAction *clear = menu.addAction(tr("Clear time selection"));
     if (menu.exec(globalPosition) == clear && model.timeSelection().active()) {
         model.clearTimeSelection();
-        invalidateContent();
+        requestSelectionQuickUpdate();
     }
 }
 

@@ -120,25 +120,29 @@ void runLfoTitle(TransactionContext &ctx)
         {EditorAutomationRowKind::ControlChange, 0, expressionController}, 0, expressionController};
     const auto lfoHandleBefore = rig.handleFor(rig.lfo);
     QImage lfoTitleBefore;
+    bool lfoTitleBeforeVisible = false;
     if (lfoHandleBefore.valid()) {
         const QRect lfoBody = rig.bodyFor(lfoHandleBefore);
-        lfoTitleBefore =
-            rig.canvas()
-                .grab(QRect(0, lfoBody.top(), rig.canvas().plotOrigin(), lfoBody.height()))
-                .toImage();
+        const QRect lfoTitle(0, lfoBody.top(), rig.canvas().plotOrigin(), lfoBody.height());
+        lfoTitleBeforeVisible = rig.automationViewportInContent().contains(lfoTitle);
+        if (lfoTitleBeforeVisible)
+            lfoTitleBefore = rig.renderAutomationContent(lfoTitle);
     }
     rig.page().addEmptyLane(expression.track, expression.controller);
     rig.pump();
     const auto lfoHandleAfter = rig.handleFor(rig.lfo);
     QImage lfoTitleAfter;
+    bool lfoTitleAfterVisible = false;
     if (lfoHandleAfter.valid()) {
         const QRect lfoBody = rig.bodyFor(lfoHandleAfter);
-        lfoTitleAfter =
-            rig.canvas()
-                .grab(QRect(0, lfoBody.top(), rig.canvas().plotOrigin(), lfoBody.height()))
-                .toImage();
+        const QRect lfoTitle(0, lfoBody.top(), rig.canvas().plotOrigin(), lfoBody.height());
+        lfoTitleAfterVisible = rig.automationViewportInContent().contains(lfoTitle);
+        if (lfoTitleAfterVisible)
+            lfoTitleAfter = rig.renderAutomationContent(lfoTitle);
     }
-    ctx.check(lfoHandleBefore.valid() && lfoHandleAfter.valid() && lfoTitleBefore == lfoTitleAfter,
+    ctx.check(lfoHandleBefore.valid() && lfoHandleAfter.valid() && lfoTitleBeforeVisible &&
+                  lfoTitleAfterVisible && !lfoTitleBefore.isNull() && !lfoTitleAfter.isNull() &&
+                  lfoTitleBefore == lfoTitleAfter,
               QStringLiteral("adding CC 11 changed the existing LFO lane title"));
     ctx.check(rig.rowIndex(expression) >= 0 && rowsHaveUniqueIds(rig),
               QStringLiteral("adding CC 11 did not create one uniquely identified automation "
@@ -157,16 +161,17 @@ void runPreview(TransactionContext &ctx)
     const auto previewEnd =
         nextCellPoint(rig, rig.pan, nextCellPoint(rig, rig.pan, previewStart, 72), 104);
     const auto previewBefore = rig.snapshot(rig.pan.track, rig.pan.controller);
-    const QImage previewImageBefore = rig.canvas().grab().toImage();
+    const QImage previewImageBefore = rig.renderAutomationViewport();
     rig.mousePress(previewStart.position);
     rig.mouseMove(previewEnd.position);
     rig.pump();
     const auto previewDuring = rig.snapshot(rig.pan.track, rig.pan.controller);
-    const QImage previewImageDuring = rig.canvas().grab().toImage();
-    ctx.check(sameSnapshot(previewBefore, previewDuring) &&
-                  previewImageDuring != previewImageBefore,
-              QStringLiteral("Pencil live preview was not visible while preserving SMF, revision, "
-                             "Undo, and lane points before release"));
+    const QImage previewImageDuring = rig.renderAutomationViewport();
+    ctx.check(
+        !previewImageBefore.isNull() && previewImageBefore.size() == previewImageDuring.size() &&
+            previewImageDuring != previewImageBefore && sameSnapshot(previewBefore, previewDuring),
+        QStringLiteral("Pencil live preview was not visible while preserving SMF, revision, "
+                       "Undo, and lane points before release"));
     rig.mouseRelease(previewEnd.position);
     const auto previewAfter = rig.snapshot(rig.pan.track, rig.pan.controller);
     ctx.check(oneLaneEdit(previewBefore, previewAfter),

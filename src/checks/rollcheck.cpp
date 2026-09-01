@@ -14,12 +14,6 @@
 int runRollCheck(const QString &projectRoot, const QString &songLabel,
                  const QString &screenshotPath)
 {
-#ifdef Q_OS_WIN
-    // DirectComposition pixels are not part of QWidget::grab(). The native
-    // path has its own rendering harness; this check exercises the widget
-    // fallback whose paint geometry it can inspect.
-    qputenv("PORYDAW_FORCE_WIDGET_PLAYHEAD", "1");
-#endif
     QString error;
     QElapsedTimer timer;
     timer.start();
@@ -37,14 +31,6 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
 
     SongDocument &document = rig->document();
     const QByteArray baseline = document.smf().write();
-    if (qEnvironmentVariableIsSet("PORYDAW_FORCE_UNCACHED_TIMELINE")) {
-        // The diagnostic mode invalidates every paint-budget assertion below.
-        std::fprintf(stderr,
-                     "rollcheck: FAIL %s: unset PORYDAW_FORCE_UNCACHED_TIMELINE "
-                     "(diagnostic mode breaks the cache paint budgets)\n",
-                     qUtf8Printable(songLabel));
-        return 1;
-    }
 
     checks::rollcheck::Harness check(*rig, songLabel);
     if (!check.prepare())

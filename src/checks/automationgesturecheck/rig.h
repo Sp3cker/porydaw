@@ -6,6 +6,7 @@
 
 #include <QByteArray>
 #include <QEvent>
+#include <QPoint>
 #include <QPointF>
 #include <QRect>
 
@@ -25,6 +26,7 @@ class AutomationPage;
 class QImage;
 class MidiTimeline;
 class QObject;
+class QString;
 class SongView;
 class VoiceChangeArea;
 
@@ -82,12 +84,17 @@ class AutomationGestureCheckRig final
     InputPoint pointAt(LaneHandle handle, double tick, int value) const;
     AutomationProjection::PointerMapping mappingAt(LaneHandle handle,
                                                    const QPointF &position) const;
-    bool expandTempo();
-    InputPoint pointAt(const Lane &lane, double tick, int value) const;
     QPointF tempoHeaderPoint() const;
     QPointF tempoBodyPoint(double tick, int bpm) const;
-    QImage renderArea();
     Snapshot snapshot(int track, uint8_t controller) const;
+    bool expandTempo();
+    InputPoint pointAt(const Lane &lane, double tick, int value) const;
+    QPoint automationContentToViewport(const QPoint &position) const;
+    QRect automationContentToViewport(const QRect &rect) const;
+    QRect automationViewportInContent() const;
+    QImage renderAutomationViewport(QString *error = nullptr);
+    QImage renderAutomationContent(const QRect &contentRect, QString *error = nullptr);
+    QImage renderArea();
 
     void documentChanged();
     void setAutomationZoom(double zoom);

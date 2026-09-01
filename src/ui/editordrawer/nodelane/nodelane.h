@@ -7,6 +7,8 @@
 #include <span>
 #include <vector>
 
+#include <QRect>
+#include <QRectF>
 #include <QString>
 
 struct NodePoint {
@@ -49,6 +51,7 @@ std::optional<OriginPhantom> originPhantomAt(std::span<const NodePoint> points, 
 }
 
 class QWidget;
+struct AutomationGeometry;
 class NodeLane
 {
   public:
@@ -68,6 +71,15 @@ class NodeLane
     virtual void replaceSpan(uint64_t first, uint64_t last,
                              const std::vector<NodePoint> &points) = 0;
 };
+
+namespace nodelane {
+
+QRect plotRect(const QRect &body, const AutomationGeometry &geometry);
+qreal valueY(const NodeLane &lane, const QRect &body, const AutomationGeometry &geometry,
+             int value);
+QRectF nodeOverflowClip(const QRect &plot, const AutomationGeometry &geometry);
+
+} // namespace nodelane
 
 class NodeLaneEdit
 {

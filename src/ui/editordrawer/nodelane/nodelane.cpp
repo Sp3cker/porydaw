@@ -5,7 +5,34 @@
 #include <optional>
 #include <utility>
 
+#include "ui/editordrawer/automationprojection.h"
+#include "ui/layout.h"
+
 NodeLane::~NodeLane() = default;
+
+namespace nodelane {
+
+QRect plotRect(const QRect &body, const AutomationGeometry &geometry)
+{
+    return {geometry.plotOrigin, body.top(), std::max<int>(0, body.width() - geometry.plotOrigin),
+            body.height()};
+}
+
+qreal valueY(const NodeLane &lane, const QRect &body, const AutomationGeometry &geometry, int value)
+{
+    return AutomationProjection::valueY(body, geometry, lane.minimumValue(), lane.maximumValue(),
+                                        value);
+}
+
+QRectF nodeOverflowClip(const QRect &plot, const AutomationGeometry &geometry)
+{
+    const qreal extent =
+        std::max<qreal>(geometry.nodePaintRadius, geometry.selectedNodeRingRadius) +
+        layout::singlePixel();
+    return QRectF(plot).adjusted(-extent, -extent, extent, extent);
+}
+
+} // namespace nodelane
 
 namespace {
 

@@ -6,6 +6,7 @@
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QKeyEvent>
+#include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -700,11 +701,24 @@ bool VoicegroupBrowser::eventFilter(QObject *watched, QEvent *event)
 {
     if (watched == m_tree->viewport() && event->type() == QEvent::MouseButtonRelease)
         releaseVoice();
-    // Leave plain Space unaccepted so the window-level play/pause shortcut
-    // fires instead of the input inserting a space / toggling.
+    // Leave window-level transport and history shortcuts unaccepted by the
+    // focused editor control. ADSR changes are already committed through the
+    // song history; letting the internal line edit claim Undo/Redo makes
+    // those bank edits appear non-undoable.
     if (event->type() == QEvent::ShortcutOverride) {
         auto *keyEvent = static_cast<QKeyEvent *>(event);
-        if (keyEvent->key() == Qt::Key_Space && keyEvent->modifiers() == Qt::NoModifier) {
+        const auto *watchedWidget = qobject_cast<QWidget *>(watched);
+        const auto isAdsrField = [watchedWidget](const QWidget *field) {
+            return watchedWidget == field || field->isAncestorOf(watchedWidget);
+        };
+        const bool adsrField =
+            watchedWidget && (isAdsrField(m_attackSpin) || isAdsrField(m_decaySpin) ||
+                              isAdsrField(m_sustainSpin) || isAdsrField(m_releaseSpin));
+        const bool windowShortcut =
+            (keyEvent->key() == Qt::Key_Space && keyEvent->modifiers() == Qt::NoModifier) ||
+            (adsrField &&
+             (keyEvent->matches(QKeySequence::Undo) || keyEvent->matches(QKeySequence::Redo)));
+        if (windowShortcut) {
             keyEvent->ignore();
             return true;
         }

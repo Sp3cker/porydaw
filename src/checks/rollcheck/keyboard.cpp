@@ -20,7 +20,21 @@
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/timeruler.h"
 namespace checks::rollcheck {
+namespace {
+
+template <typename T>
+T *findWidgetDescendant(QWidget &root)
+{
+    for (QWidget *widget : root.findChildren<QWidget *>()) {
+        if (auto *typed = dynamic_cast<T *>(widget))
+            return typed;
+    }
+    return nullptr;
+}
+
+} // namespace
 
 ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const ResizeFixture &fixture)
 {
@@ -107,16 +121,14 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
     // command; mark a save point so the time-selection presses below get
     // their own commands (merges never cross the stack's clean index).
     doc.undoStack()->setClean();
-    {
-        const songview::TimelineBand rulerBand = view.timelineBands().front();
-        QWidget *ruler = &rulerBand.widget;
+    if (auto *ruler = findWidgetDescendant<songview::TimeRuler>(view); ruler) {
         const qreal rulerDpr = ruler->devicePixelRatioF();
+        const qreal rulerOrigin = view.timelinePlotOrigin();
         const uint64_t startTick = d.tick + snapCell;
         const uint64_t endTick = d.tick + 2 * snapCell;
-        const QPoint start(
-            qRound(view.displayX(double(startTick), rulerBand.timelineOrigin, rulerDpr)),
-            ruler->height() - 2);
-        const QPoint end(qRound(view.displayX(double(endTick), rulerBand.timelineOrigin, rulerDpr)),
+        const QPoint start(qRound(view.displayX(double(startTick), rulerOrigin, rulerDpr)),
+                           ruler->height() - 2);
+        const QPoint end(qRound(view.displayX(double(endTick), rulerOrigin, rulerDpr)),
                          ruler->height() - 2);
 
         view.selectionModel().clearTimeSelection();
@@ -196,11 +208,9 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
             }
             view.applyViewState(priorViewState);
             auto *pianoRoll = static_cast<songview::PianoRoll *>(roll);
-            auto *otherStrip = static_cast<songview::OtherStrip *>(
-                view.findChild<QWidget *>(QStringLiteral("otherEventsStrip")));
+            auto *otherStrip = findWidgetDescendant<songview::OtherStrip>(view);
             if (!otherStrip)
                 fail("could not find the other-events strip");
-            const songview::TimelineBand stripBand = view.timelineBands().back();
             const StripItem *trackEvent = nullptr;
             for (const StripItem &item : view.model().strip) {
                 if (item.track >= 0) {
@@ -213,7 +223,7 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
             const double originalScroll = view.viewState().scrollPx;
             if (otherStrip && trackEvent) {
                 const qreal visibleContentX =
-                    std::max<qreal>(1.0, (otherStrip->width() - stripBand.timelineOrigin) / 3.0);
+                    std::max<qreal>(1.0, (otherStrip->width() - view.timelinePlotOrigin()) / 3.0);
                 view.setEditorHorizontalScroll(
                     originalScroll + view.contentX(double(trackEvent->tick)) - visibleContentX);
                 QCoreApplication::processEvents();
@@ -234,9 +244,9 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
             if (trackEvent && !afterStripImage.isNull()) {
                 const qreal stripDpr = afterStripImage.devicePixelRatioF();
                 const int markerX = qRound(
-                    view.displayX(double(trackEvent->tick), stripBand.timelineOrigin, stripDpr) *
+                    view.displayX(double(trackEvent->tick), view.timelinePlotOrigin(), stripDpr) *
                     stripDpr);
-                const int plotLeft = qRound(stripBand.timelineOrigin * stripDpr);
+                const int plotLeft = qRound(view.timelinePlotOrigin() * stripDpr);
                 const int markerY = afterStripImage.height() / 2;
                 const QRgb expected = SongView::trackColor(trackEvent->track).rgba();
                 bool foundMarker = false;
@@ -270,7 +280,7 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
                 fail("time-scoped secondary header did not render its selection indicator");
         }
         const QPoint outsideSelection(
-            qRound(view.displayX(double(endTick + snapCell), rulerBand.timelineOrigin, rulerDpr)),
+            qRound(view.displayX(double(endTick + snapCell), rulerOrigin, rulerDpr)),
             ruler->height() - 2);
         checks::events::sendMouse(*ruler, QEvent::MouseButtonPress, outsideSelection,
                                   Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
@@ -295,7 +305,8 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
         });
         checks::events::sendMouse(*ruler, QEvent::MouseButtonRelease, end, Qt::RightButton,
                                   Qt::NoButton, Qt::NoModifier);
-    }
+    } else
+        fail("could not find the time ruler");
 
     // The same shortcuts on a time selection (no notes selected): the band
     // over the note's cell transposes every covered note of the scoped

@@ -9,6 +9,7 @@
 #include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
+#include <QImage>
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QLineEdit>
@@ -38,6 +39,7 @@
 #include "checks/clipcheck_support.h"
 #include "checks/support/asyncwait.h"
 #include "checks/support/eventsynth.h"
+#include "checks/support/quickframebuffer.h"
 #include "core/miditimeline.h"
 #include "core/smf.h"
 #include "mainwindow.h"
@@ -45,12 +47,12 @@
 #include "project/sidecar.h"
 #include "ui/dragspinbox.h"
 #include "ui/editordrawer/automationcanvas.h"
+#include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
-#include "ui/playheadoverlay.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
 #include "ui/songview/clipmime.h"
@@ -1486,7 +1488,17 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                 if (foundSteadySamples) {
                     view.setPlayheadSample(session->timeline()->sampleForTick(firstTick), true);
                     QCoreApplication::processEvents();
-                    const auto automationBefore = automation->diagnostics();
+                    AutomationPage *const automationPage = drawer->automationPage();
+                    QWidget *const automationViewport =
+                        automationPage ? automationPage->scrollViewport() : nullptr;
+                    QString automationCaptureError;
+                    const QImage automationBefore =
+                        automationViewport ? checks::support::captureQuickBand(
+                                                 view, *automationViewport, &automationCaptureError)
+                                           : QImage{};
+                    check(!automationBefore.isNull(),
+                          qPrintable(QStringLiteral("automation Quick viewport capture failed: %1")
+                                         .arg(automationCaptureError)));
                     const auto velocityBefore = velocity->diagnostics();
                     for (uint64_t tick = firstTick + 1; tick <= finalTick; ++tick)
                         view.setPlayheadSample(session->timeline()->sampleForTick(tick), true);
@@ -1496,7 +1508,15 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                     check(velocity->diagnostics().playheadPresentationCount ==
                               velocityBefore.playheadPresentationCount + 120,
                           "velocity page did not receive all distinct playhead samples");
-                    check(automation->diagnostics() == automationBefore &&
+                    QString automationAfterError;
+                    const QImage automationAfter =
+                        automationViewport ? checks::support::captureQuickBand(
+                                                 view, *automationViewport, &automationAfterError)
+                                           : QImage{};
+                    check(!automationAfter.isNull(),
+                          qPrintable(QStringLiteral("automation Quick viewport capture failed: %1")
+                                         .arg(automationAfterError)));
+                    check(automationAfter == automationBefore &&
                               velocity->diagnostics().contentBuildCount ==
                                   velocityBefore.contentBuildCount,
                           "steady SongView playhead ticks rebuilt hosted page content");
@@ -1555,13 +1575,25 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                       "zoom did not invalidate affected velocity content");
                 view.setDrawerActivePage(EditorDrawerPage::Automations);
                 QCoreApplication::processEvents();
-                const auto automationThemeBefore = automation->diagnostics();
+                AutomationPage *const automationThemePage = drawer->automationPage();
+                QWidget *const automationThemeViewport =
+                    automationThemePage ? automationThemePage->scrollViewport() : nullptr;
+                QString themeBeforeError;
+                const QImage automationThemeBefore =
+                    automationThemeViewport ? checks::support::captureQuickBand(
+                                                  view, *automationThemeViewport, &themeBeforeError)
+                                            : QImage{};
                 QEvent automationThemeChange(QEvent::PaletteChange);
                 QApplication::sendEvent(automation, &automationThemeChange);
                 QCoreApplication::processEvents();
-                check(automation->diagnostics().contentInvalidationCount >
-                          automationThemeBefore.contentInvalidationCount,
-                      "theme change did not invalidate affected automation content");
+                QString themeAfterError;
+                const QImage automationThemeAfter =
+                    automationThemeViewport ? checks::support::captureQuickBand(
+                                                  view, *automationThemeViewport, &themeAfterError)
+                                            : QImage{};
+                check(!automationThemeBefore.isNull() && !automationThemeAfter.isNull() &&
+                          automationThemeAfter == automationThemeBefore,
+                      "theme change did not preserve the automation Quick viewport");
                 view.setDrawerActivePage(EditorDrawerPage::Velocity);
 
                 if (noteTrack >= 0) {

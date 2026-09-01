@@ -11,18 +11,21 @@
 #include <QFontInfo>
 #include <QFontMetrics>
 #include <QImage>
+#include <QPoint>
 #include <QRegion>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QUndoStack>
 
 #include "checks/support/eventsynth.h"
+#include "checks/support/quickframebuffer.h"
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/cclanes.h"
-#include "ui/editordrawer/nodelane/paint.h"
+#include "ui/editordrawer/nodelane/hover.h"
+#include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/tempolane.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
@@ -46,6 +49,34 @@ void pump()
 {
     QCoreApplication::sendPostedEvents();
     QCoreApplication::processEvents();
+}
+QImage captureAutomationViewport(SongView &view, AutomationPage &page, int &failures)
+{
+    QString error;
+    QWidget *const viewport = page.scrollViewport();
+    const QImage image =
+        viewport ? checks::support::captureQuickBand(view, *viewport, &error) : QImage{};
+    if (!image.isNull())
+        return image;
+    std::fprintf(stderr, "automation-check: FAIL paint: %s\n", qUtf8Printable(error));
+    ++failures;
+    return {};
+}
+
+QPoint automationContentToViewport(const AutomationPage &page)
+{
+    QWidget *const viewport = page.scrollViewport();
+    return viewport ? page.canvas()->mapTo(viewport, QPoint{}) : QPoint{};
+}
+
+QRegion toViewport(const QRegion &content, const QPoint &origin)
+{
+    return content.translated(origin);
+}
+
+QRectF toViewport(const QRectF &content, const QPoint &origin)
+{
+    return content.translated(origin);
 }
 
 void leaveCanvas(AutomationPage &page)
@@ -78,18 +109,18 @@ QPointF tempoHeaderPoint(const AutomationPage &page)
     return {page.canvas()->plotOrigin() / 2.0, qreal(tempo.center().y())};
 }
 
-bool toggleTempoExpanded(AutomationPage &page, bool wantExpanded, int &failures)
+bool toggleTempoExpanded(SongView &view, AutomationPage &page, bool wantExpanded, int &failures)
 {
     const bool expanded = !page.canvas()->laneBody(LaneHandle{0}).isEmpty();
     if (expanded == wantExpanded)
         return expanded;
-    const QImage beforeToggle = page.canvas()->grab().toImage();
+    const QImage beforeToggle = captureAutomationViewport(view, page, failures);
     checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, tempoHeaderPoint(page),
                               Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
     checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, tempoHeaderPoint(page),
                               Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     pump();
-    if (page.canvas()->grab().toImage() == beforeToggle) {
+    if (captureAutomationViewport(view, page, failures) == beforeToggle) {
         std::fprintf(stderr, "automation-check: FAIL paint: tempo header toggle did not repaint\n");
         ++failures;
     }
@@ -105,13 +136,14 @@ QRect deviceRect(const QRectF &logical, qreal dpr, const QSize &bound)
     return {left, top, std::max(0, right - left), std::max(0, bottom - top)};
 }
 
-int changedPixels(const QImage &before, const QImage &after, const QRegion &logical, qreal dpr)
+int changedPixels(const QImage &before, const QImage &after, const QRegion &logical,
+                  const QPoint &origin, qreal dpr)
 {
     if (before.size() != after.size() || before.format() != after.format())
         return -1;
     int changed = 0;
     bool compared = false;
-    for (const QRect &logicalRect : logical) {
+    for (const QRect &logicalRect : toViewport(logical, origin)) {
         const QRect rect =
             deviceRect(QRectF(logicalRect), dpr, before.size()).intersected(before.rect());
         if (rect.isEmpty())
@@ -127,10 +159,11 @@ int changedPixels(const QImage &before, const QImage &after, const QRegion &logi
     return compared ? changed : -1;
 }
 
-bool hasColorNear(const QImage &image, const QRectF &logical, qreal dpr, const QColor &expected,
-                  int tolerance)
+bool hasColorNear(const QImage &image, const QRectF &logical, const QPoint &origin, qreal dpr,
+                  const QColor &expected, int tolerance)
 {
-    const QRect rect = deviceRect(logical, dpr, image.size()).intersected(image.rect());
+    const QRect rect =
+        deviceRect(toViewport(logical, origin), dpr, image.size()).intersected(image.rect());
     for (int y = rect.top(); y <= rect.bottom(); ++y) {
         for (int x = rect.left(); x <= rect.right(); ++x) {
             const QColor actual(image.pixel(x, y));
@@ -248,14 +281,17 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
         const QRegion covered(expandedCc->overlap);
         const QRegion visible = QRegion(expandedCc->body).subtracted(QRegion(expandedTempo));
         const QRectF probe = overlapProbe(expandedCc->overlap, tickX(kNodeTick), radius);
+        const QPoint expandedCaptureOrigin = automationContentToViewport(page);
         leaveCanvas(page);
-        const QImage before = page.canvas()->grab().toImage();
+        const QImage before = captureAutomationViewport(view, page, failures);
         setCcPoints(page, document, live, int(expandedCc->id.track), expandedCc->id.controller,
                     mutation);
         leaveCanvas(page);
-        const QImage after = page.canvas()->grab().toImage();
-        const int coveredChanges = changedPixels(before, after, covered, dpr);
-        const int visibleChanges = changedPixels(before, after, visible, dpr);
+        const QImage after = captureAutomationViewport(view, page, failures);
+        const int coveredChanges =
+            changedPixels(before, after, covered, expandedCaptureOrigin, dpr);
+        const int visibleChanges =
+            changedPixels(before, after, visible, expandedCaptureOrigin, dpr);
         report(!expandedTempo.isEmpty() && !covered.isEmpty() && !visible.isEmpty() &&
                    !probe.isEmpty() && QRectF(expandedTempo).contains(probe) &&
                    QRectF(expandedCc->body).contains(probe) && coveredChanges == 0 &&
@@ -270,10 +306,10 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
         view.selectionModel().setTimeSelection(tempoSelection);
         refresh(page, document, live);
         leaveCanvas(page);
-        const QImage reticle = page.canvas()->grab().toImage();
-        report(changedPixels(after, reticle, covered, dpr) > 0,
+        const QImage reticle = captureAutomationViewport(view, page, failures);
+        report(changedPixels(after, reticle, covered, expandedCaptureOrigin, dpr) > 0,
                QStringLiteral("Tempo selection reticle did not repaint the covered body"));
-        report(hasColorNear(reticle, probe, dpr,
+        report(hasColorNear(reticle, probe, expandedCaptureOrigin, dpr,
                             themes::color(themes::Role::song_view_selection_edge), 24),
                QStringLiteral("Tempo selection reticle did not paint its selection edge"));
         view.selectionModel().clearTimeSelection();
@@ -282,7 +318,7 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
                     points);
     }
 
-    const bool tempoCollapsed = toggleTempoExpanded(page, false, failures);
+    const bool tempoCollapsed = toggleTempoExpanded(view, page, false, failures);
     std::optional<CcCoverageLane> collapsedCc;
     if (tempoCollapsed && scroll)
         collapsedCc = scrollToCollapsedCcOverlap(page, *scroll, geometry.addLaneStripHeight);
@@ -303,15 +339,16 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
         };
         const QRegion covered(collapsedCc->overlap);
         const QRegion visible = QRegion(collapsedCc->body).subtracted(QRegion(header));
+        const QPoint collapsedCaptureOrigin = automationContentToViewport(page);
         leaveCanvas(page);
-        const QImage before = page.canvas()->grab().toImage();
+        const QImage before = captureAutomationViewport(view, page, failures);
         setCcPoints(page, document, live, int(collapsedCc->id.track), collapsedCc->id.controller,
                     mutation);
         leaveCanvas(page);
-        const QImage after = page.canvas()->grab().toImage();
+        const QImage after = captureAutomationViewport(view, page, failures);
         report(tempoCollapsed && !covered.isEmpty() && !visible.isEmpty() &&
-                   changedPixels(before, after, covered, dpr) == 0 &&
-                   changedPixels(before, after, visible, dpr) > 0,
+                   changedPixels(before, after, covered, collapsedCaptureOrigin, dpr) == 0 &&
+                   changedPixels(before, after, visible, collapsedCaptureOrigin, dpr) > 0,
                QStringLiteral("collapsed Tempo header did not occlude CC paint"));
         setCcPoints(page, document, live, int(collapsedCc->id.track), collapsedCc->id.controller,
                     points);
@@ -350,11 +387,11 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
         document.undoStack()->setIndex(originalUndoIndex);
         view.selectionModel().setTimeSelection(originalSelection);
         refresh(page, document, live);
-        toggleTempoExpanded(page, originallyExpanded, failures);
+        toggleTempoExpanded(view, page, originallyExpanded, failures);
         leaveCanvas(page);
     };
     view.selectionModel().clearTimeSelection();
-    const bool expanded = toggleTempoExpanded(page, true, failures);
+    const bool expanded = toggleTempoExpanded(view, page, true, failures);
     report(expanded, QStringLiteral("Tempo header did not expose labels for font coverage"));
     TempoEdit edit;
     edit.remove = document.tempoPoints();
@@ -371,6 +408,7 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
     }();
     const QRect body = canvas->laneBody(LaneHandle{0});
     const qreal dpr = canvas->devicePixelRatioF();
+    const QPoint captureOrigin = automationContentToViewport(page);
     const auto laneLabel = [&](const QRect &laneBody, const AutomationGeometry &laneGeometry,
                                bool summary) {
         const QRect gutter = canvas->labelGutter();
@@ -402,22 +440,23 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
         y = std::clamp(y, plot.top(), std::max(plot.top(), plot.bottom() - height + 1));
         return QRect(x, y, width, height);
     };
-    const QImage idle = canvas->grab().toImage();
+    const QImage idle = captureAutomationViewport(view, page, failures);
     const QRect title = laneLabel(body, geometry, false);
     const QRect summary = laneLabel(body, geometry, true);
     const QRect ccBody = canvas->laneBody(LaneHandle{1});
     const QRect ccLabels = labelColumn(ccBody);
     report(!body.isEmpty() && !title.isEmpty() && !summary.isEmpty(),
            QStringLiteral("expanded Tempo lane has no label bounds"));
-    report(hasColorNear(idle, title, dpr, themes::color(themes::Role::song_view_primary_text), 24),
+    report(hasColorNear(idle, title, captureOrigin, dpr,
+                        themes::color(themes::Role::song_view_primary_text), 24),
            QStringLiteral("Tempo title label did not render"));
-    report(
-        hasColorNear(idle, summary, dpr, themes::color(themes::Role::song_view_secondary_text), 24),
-        QStringLiteral("Tempo caption label did not render"));
+    report(hasColorNear(idle, summary, captureOrigin, dpr,
+                        themes::color(themes::Role::song_view_secondary_text), 24),
+           QStringLiteral("Tempo caption label did not render"));
     report(!ccLabels.isEmpty() &&
-               hasColorNear(idle, ccLabels, dpr,
+               hasColorNear(idle, ccLabels, captureOrigin, dpr,
                             themes::color(themes::Role::song_view_primary_text), 24) &&
-               hasColorNear(idle, ccLabels, dpr,
+               hasColorNear(idle, ccLabels, captureOrigin, dpr,
                             themes::color(themes::Role::song_view_secondary_text), 24),
            QStringLiteral("CC lane title or caption label did not render"));
 
@@ -428,8 +467,8 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
     checks::events::sendMouse(*canvas, QEvent::MouseMove, node, Qt::NoButton, Qt::NoButton,
                               Qt::NoModifier);
     pump();
-    const QImage hovered = canvas->grab().toImage();
-    report(changedPixels(idle, hovered, QRegion(hoverLabel), dpr) > 0,
+    const QImage hovered = captureAutomationViewport(view, page, failures);
+    report(changedPixels(idle, hovered, QRegion(hoverLabel), captureOrigin, dpr) > 0,
            QStringLiteral("Tempo hover value label did not render"));
 
     const QString systemFamily = typography::systemFontFamily();
@@ -440,7 +479,7 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
     if (!systemFamily.isEmpty() && systemBody) {
         canvas->setFont(*systemBody);
         pump();
-        const QImage systemHover = canvas->grab().toImage();
+        const QImage systemHover = captureAutomationViewport(view, page, failures);
         const AutomationGeometry systemGeometry = [&] {
             auto resolved = AutomationGeometry::resolve();
             resolved.plotOrigin = canvas->plotOrigin();
@@ -459,9 +498,9 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
         laneLabels += labelColumn(canvas->laneBody(LaneHandle{1}));
         report(QFontInfo(canvas->font()).family() == systemFamily,
                QStringLiteral("AutomationCanvas did not receive the system font"));
-        report(changedPixels(hovered, systemHover, laneLabels, dpr) > 0,
+        report(changedPixels(hovered, systemHover, laneLabels, captureOrigin, dpr) > 0,
                QStringLiteral("FontChange did not refresh lane label geometry or pixels"));
-        report(hasColorNear(systemHover, systemHoverLabel, dpr,
+        report(hasColorNear(systemHover, systemHoverLabel, captureOrigin, dpr,
                             themes::color(themes::Role::song_view_primary_text), 12),
                QStringLiteral("FontChange lost the visible Tempo hover value label"));
     }

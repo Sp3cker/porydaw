@@ -7,7 +7,6 @@
 
 #include <QFont>
 #include <QPointF>
-#include <QRect>
 #include <QRectF>
 #include <QWidget>
 
@@ -15,7 +14,6 @@
 #include "core/velocitymodel.h"
 #include "ui/editordrawer/drawerpage.h"
 #include "ui/editordrawer/velocityaxis.h"
-#include "ui/timelinesurface.h"
 
 class SongView;
 class QContextMenuEvent;
@@ -25,7 +23,7 @@ class QKeyEvent;
 class QMouseEvent;
 class QWheelEvent;
 
-class QPainter;
+class QResizeEvent;
 
 namespace songview {
 class TimelineQuickScene;
@@ -43,7 +41,7 @@ struct VelocityAreaDiagnostics {
 // The velocity editor owns pointer geometry and gesture presentation while
 // SongView owns the deferred document-bound velocity preview.
 // Mouse movement never mutates the document; release commits or cancels it.
-class VelocityArea final : public songview::TimelineSurface
+class VelocityArea final : public QWidget
 {
   public:
     explicit VelocityArea(SongView &owner, QWidget *parent = nullptr);
@@ -69,7 +67,7 @@ class VelocityArea final : public songview::TimelineSurface
   protected:
     bool event(QEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
-    void paintContent(QPainter &painter) override;
+    void resizeEvent(QResizeEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
@@ -78,7 +76,6 @@ class VelocityArea final : public songview::TimelineSurface
     void keyPressEvent(QKeyEvent *event) override;
     void focusOutEvent(QFocusEvent *event) override;
     void contextMenuEvent(QContextMenuEvent *event) override;
-    void contentGeometryChanged() override;
 
   private:
     friend class songview::TimelineQuickView;
@@ -127,7 +124,7 @@ class VelocityArea final : public songview::TimelineSurface
         uint8_t exactOrigin = 1;
     };
 
-    void invalidateContent(const QRect &rect = {});
+    void requestQuickUpdate();
     void rebuildQuickScene(songview::TimelineQuickScene &scene);
     void rebuildQuickChrome(songview::TimelineQuickScene &scene, const QRectF &full, int origin,
                             int separatorX);

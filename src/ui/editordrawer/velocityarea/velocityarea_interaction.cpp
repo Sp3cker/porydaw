@@ -200,7 +200,7 @@ void VelocityArea::updateBandPreview(const QPointF &position)
         if (m_bandRect.intersects(nodeRect(note)))
             m_bandPreview.push_back(note.noteId);
     }
-    invalidateContent();
+    requestQuickUpdate();
 }
 
 void VelocityArea::finishGesture(bool commit)
@@ -362,7 +362,7 @@ void VelocityArea::mouseMoveEvent(QMouseEvent *event)
             m_live.horizontalScroll - (position.x() - m_previousPosition.x());
         m_owner.setEditorHorizontalScroll(requestedScroll);
         m_live.horizontalScroll = m_owner.viewState().scrollPx;
-        invalidateContent();
+        requestQuickUpdate();
     }
     m_previousPosition = position;
     event->accept();
@@ -371,7 +371,7 @@ void VelocityArea::mouseMoveEvent(QMouseEvent *event)
 void VelocityArea::leaveEvent(QEvent *event)
 {
     setHoveredNote(std::nullopt);
-    songview::TimelineSurface::leaveEvent(event);
+    QWidget::leaveEvent(event);
 }
 
 void VelocityArea::mouseReleaseEvent(QMouseEvent *event)

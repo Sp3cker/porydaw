@@ -15,10 +15,15 @@
 
 namespace checks::support {
 
-QImage captureQuickBand(SongView &view, QWidget &band, QString *error)
+QImage captureQuickBand(SongView &view, const QRect &rectInSongView, QString *error)
 {
     if (error)
         error->clear();
+    if (rectInSongView.isEmpty()) {
+        if (error)
+            *error = QStringLiteral("Qt Quick framebuffer crop is empty");
+        return {};
+    }
 
     const auto quickCanvases =
         view.findChildren<QQuickWidget *>(QStringLiteral("timelineQuickCanvas"));
@@ -31,23 +36,6 @@ QImage captureQuickBand(SongView &view, QWidget &band, QString *error)
     if (quickCanvas->parentWidget() != &view) {
         if (error)
             *error = QStringLiteral("Qt Quick timeline canvas is not a direct SongView child");
-        return {};
-    }
-
-    const auto bands = view.timelineBands();
-    if (bands.size() < 2) {
-        if (error)
-            *error = QStringLiteral("timeline bands not found");
-        return {};
-    }
-    const auto bandRectInSongView = [&view](const QWidget &timelineBand) {
-        return QRect{timelineBand.mapTo(&view, QPoint{}), timelineBand.size()};
-    };
-    const QRect hostUnion =
-        bandRectInSongView(bands.front().widget).united(bandRectInSongView(bands.back().widget));
-    if (quickCanvas->geometry() != hostUnion) {
-        if (error)
-            *error = QStringLiteral("Qt Quick timeline canvas does not span the timeline bands");
         return {};
     }
 
@@ -75,25 +63,22 @@ QImage captureQuickBand(SongView &view, QWidget &band, QString *error)
             continue;
 
         const qreal devicePixelRatio = quickCanvas->devicePixelRatioF();
-        const QPoint bandOrigin = band.mapTo(&view, QPoint{}) - quickCanvas->mapTo(&view, QPoint{});
-        const int left = qRound(bandOrigin.x() * devicePixelRatio);
-        const int top = qRound(bandOrigin.y() * devicePixelRatio);
-        const int right = qRound((bandOrigin.x() + band.width()) * devicePixelRatio);
-        const int bottom = qRound((bandOrigin.y() + band.height()) * devicePixelRatio);
+        const QPoint cropOrigin = rectInSongView.topLeft() - quickCanvas->mapTo(&view, QPoint{});
+        const int left = qRound(cropOrigin.x() * devicePixelRatio);
+        const int top = qRound(cropOrigin.y() * devicePixelRatio);
+        const int right = qRound((cropOrigin.x() + rectInSongView.width()) * devicePixelRatio);
+        const int bottom = qRound((cropOrigin.y() + rectInSongView.height()) * devicePixelRatio);
         const QRect crop{left, top, right - left, bottom - top};
-        if (crop.width() <= 0 || crop.height() <= 0 || crop.left() < 0 || crop.top() < 0 ||
-            crop.x() + crop.width() > framebuffer.width() ||
-            crop.y() + crop.height() > framebuffer.height()) {
+        if (crop.width() <= 0 || crop.height() <= 0 || !framebuffer.rect().contains(crop)) {
             if (error)
-                *error =
-                    QStringLiteral("timeline-band crop falls outside the Qt Quick framebuffer");
+                *error = QStringLiteral("requested crop falls outside the Qt Quick framebuffer");
             return {};
         }
 
         QImage bandFramebuffer = framebuffer.copy(crop);
         if (bandFramebuffer.size() != crop.size()) {
             if (error)
-                *error = QStringLiteral("timeline-band framebuffer crop has incorrect dimensions");
+                *error = QStringLiteral("Qt Quick framebuffer crop has incorrect dimensions");
             return {};
         }
         bandFramebuffer.setDevicePixelRatio(devicePixelRatio);
@@ -101,8 +86,13 @@ QImage captureQuickBand(SongView &view, QWidget &band, QString *error)
     }
 
     if (error)
-        *error = QStringLiteral("Qt Quick timeline-band framebuffer could not be captured");
+        *error = QStringLiteral("Qt Quick framebuffer crop could not be captured");
     return {};
+}
+
+QImage captureQuickBand(SongView &view, QWidget &band, QString *error)
+{
+    return captureQuickBand(view, QRect{band.mapTo(&view, QPoint{}), band.size()}, error);
 }
 
 } // namespace checks::support

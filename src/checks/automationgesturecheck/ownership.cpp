@@ -51,9 +51,10 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
         rig.documentChanged();
 
         const auto ringPaintedAt = [&](const QImage &image, const QPointF &position) {
+            const QPoint captureOrigin = rig.automationContentToViewport(QPoint{});
             const qreal dpr = rig.canvas().devicePixelRatioF();
-            const int centerX = qRound(position.x() * dpr);
-            const int centerY = qRound(position.y() * dpr);
+            const int centerX = qRound((position.x() + captureOrigin.x()) * dpr);
+            const int centerY = qRound((position.y() + captureOrigin.y()) * dpr);
             const auto paintGeometry = rig.geometry();
             const int radius = qRound(paintGeometry.selectedNodeRingRadius * dpr);
             const int tolerance = std::max(2, qRound(paintGeometry.selectedNodeRingDipWidth * dpr));

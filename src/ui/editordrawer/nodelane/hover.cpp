@@ -8,7 +8,6 @@
 
 #include "ui/editordrawer/nodelane/gesture.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
-#include "ui/editordrawer/nodelane/paint.h"
 #include "ui/layout.h"
 #include "ui/typography.h"
 
@@ -22,6 +21,15 @@ int valueAtY(const NodeLane &lane, const QRect &body, const AutomationGeometry &
 }
 
 } // namespace
+
+namespace nodelane {
+
+qreal hoverRingRadius(const AutomationGeometry &geometry)
+{
+    return geometry.nodePaintRadius + geometry.nodeOutlineDipWidth + layout::singlePixel();
+}
+
+} // namespace nodelane
 
 void NodeLaneHoverState::invalidateCaches()
 {

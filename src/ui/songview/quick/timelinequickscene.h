@@ -56,6 +56,10 @@ enum class TimelineQuickTextKeyKind : quint8 {
     VelocityAxis,
     VoiceChanges,
     VoiceChangesHover,
+    AutomationHeader,
+    AutomationAddLane,
+    AutomationHover,
+    AutomationTransient,
 };
 
 struct TimelineQuickTextKey {
@@ -143,6 +147,12 @@ class TimelineQuickItem : public QQuickItem
         VoiceChangesMarkers,
         VoiceChangesTransient,
         VoiceChangesHover,
+        AutomationGrid,
+        AutomationCurves,
+        AutomationNodes,
+        AutomationSelection,
+        AutomationTransient,
+        AutomationHover,
         Count,
     };
     Q_ENUM(Layer)
@@ -182,6 +192,11 @@ struct TimelineQuickScene final : public QObject {
     Q_PROPERTY(QAbstractItemModel *voiceChangesTextModel READ voiceChangesTextModel CONSTANT FINAL)
     Q_PROPERTY(QAbstractItemModel *voiceChangesHoverTextModel READ voiceChangesHoverTextModel
                    CONSTANT FINAL)
+    Q_PROPERTY(QAbstractItemModel *automationTextModel READ automationTextModel CONSTANT FINAL)
+    Q_PROPERTY(
+        QAbstractItemModel *automationHoverTextModel READ automationHoverTextModel CONSTANT FINAL)
+    Q_PROPERTY(QAbstractItemModel *automationTransientTextModel READ automationTransientTextModel
+                   CONSTANT FINAL)
     Q_PROPERTY(bool hoverChipVisible READ hoverChipVisible NOTIFY hoverChipChanged FINAL)
     Q_PROPERTY(QRectF hoverChipRect READ hoverChipRect NOTIFY hoverChipChanged FINAL)
     Q_PROPERTY(QString hoverChipText READ hoverChipText NOTIFY hoverChipChanged FINAL)
@@ -200,11 +215,17 @@ struct TimelineQuickScene final : public QObject {
     QAbstractItemModel *velocityTextModel() const noexcept;
     QAbstractItemModel *voiceChangesTextModel() const noexcept;
     QAbstractItemModel *voiceChangesHoverTextModel() const noexcept;
+    QAbstractItemModel *automationTextModel() const noexcept;
+    QAbstractItemModel *automationHoverTextModel() const noexcept;
+    QAbstractItemModel *automationTransientTextModel() const noexcept;
     void setRulerTextRecords(std::span<const TimelineQuickTextModel::Record> records);
     void setOtherEventsTextRecords(std::span<const TimelineQuickTextModel::Record> records);
     void setVelocityTextRecords(std::span<const TimelineQuickTextModel::Record> records);
     void setVoiceChangesTextRecords(std::span<const TimelineQuickTextModel::Record> records);
     void setVoiceChangesHoverTextRecords(std::span<const TimelineQuickTextModel::Record> records);
+    void setAutomationTextRecords(std::span<const TimelineQuickTextModel::Record> records);
+    void setAutomationHoverTextRecords(std::span<const TimelineQuickTextModel::Record> records);
+    void setAutomationTransientTextRecords(std::span<const TimelineQuickTextModel::Record> records);
 
     const TimelineQuickLayerData &layer(TimelineQuickLayer layer) const noexcept;
     TimelineQuickLayerData &layer(TimelineQuickLayer layer) noexcept;
@@ -234,6 +255,9 @@ struct TimelineQuickScene final : public QObject {
     TimelineQuickTextModel *m_velocityTextModel = nullptr;
     TimelineQuickTextModel *m_voiceChangesTextModel = nullptr;
     TimelineQuickTextModel *m_voiceChangesHoverTextModel = nullptr;
+    TimelineQuickTextModel *m_automationTextModel = nullptr;
+    TimelineQuickTextModel *m_automationHoverTextModel = nullptr;
+    TimelineQuickTextModel *m_automationTransientTextModel = nullptr;
 
     bool m_hoverChipVisible = false;
     QRectF m_hoverChipRect;
@@ -259,6 +283,11 @@ void composeBandedGrid(TimelineQuickScene &scene, TimelineQuickLayer layer, cons
 void addDashedVertical(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x, qreal y0,
                        qreal y1, qreal width, qreal dash, qreal gap, const QColor &color,
                        const QRectF &clip);
+void addDashedHorizontal(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x0, qreal x1,
+                         qreal y, qreal width, qreal dash, qreal gap, const QColor &color,
+                         const QRectF &clip);
+void addSelectionReticle(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
+                         const QRectF &clip);
 void addClippedTriangle(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPointF &first,
                         const QPointF &second, const QPointF &third, const QColor &color,
                         const QRectF &clip);

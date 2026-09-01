@@ -259,8 +259,6 @@ qt_add_library(porydaw_app STATIC
     src/ui/songlistpanel.h
     src/ui/songviewmodel.cpp
     src/ui/songviewmodel.h
-    src/ui/selectionreticle.cpp
-    src/ui/selectionreticle.h
     src/ui/transportbar.cpp
     src/ui/transportbar.h
     src/ui/workspaceui.cpp
@@ -273,8 +271,6 @@ qt_add_library(porydaw_app STATIC
     src/ui/songtab.h
     src/ui/voicegroupviewcache.cpp
     src/ui/voicegroupviewcache.h
-    src/ui/timelinesurface.cpp
-    src/ui/timelinesurface.h
     src/ui/contextmenu.cpp
     src/ui/contextmenu.h
     src/ui/pitchprojection.cpp
@@ -315,9 +311,14 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/pianoroll_gestures_active.cpp
     src/ui/songview/pianoroll_commands.cpp
     src/ui/songview/quick/otherstripquick.cpp
+    src/ui/songview/quick/automationnodelanequick.cpp
+    src/ui/songview/quick/automationnodelanequick.h
+    src/ui/songview/quick/automationquick.cpp
     src/ui/songview/quick/velocityquick.cpp
     src/ui/songview/quick/voicechangequick.cpp
     src/ui/songview/quick/timelinequickscene.cpp
+    src/ui/songview/quick/timelinequickchrome.cpp
+    src/ui/songview/quick/timelinequickchrome.h
     src/ui/songview/quick/timelinequickscene.h
     src/ui/songview/quick/timelinequickview.cpp
     src/ui/songview/quick/timelinequickview.h
@@ -327,8 +328,6 @@ qt_add_library(porydaw_app STATIC
     src/ui/pitchbendeditor.hpp
     src/ui/pitchbendgraph.cpp
     src/ui/pitchbendgraph.hpp
-    src/ui/playheadoverlay.cpp
-    src/ui/playheadoverlay.h
     src/ui/eventlistview.cpp
     src/ui/eventlistview.h
     src/ui/eventtablemodel.cpp
@@ -353,7 +352,6 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/automationcanvas_gesture.cpp
     src/ui/editordrawer/automationcanvas_input.cpp
     src/ui/editordrawer/automationcanvas_menu.cpp
-    src/ui/editordrawer/automationcanvas_paint.cpp
     src/ui/editordrawer/laneselection.cpp
     src/ui/editordrawer/laneselection.h
     src/ui/editordrawer/nodelane/gesture.cpp
@@ -374,8 +372,6 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/nodelane/nodelane.h
     src/ui/editordrawer/nodelane/batchcommit.cpp
     src/ui/editordrawer/nodelane/batchcommit.h
-    src/ui/editordrawer/nodelane/paint.cpp
-    src/ui/editordrawer/nodelane/paint.h
     src/ui/editordrawer/nodelane/tempoadapter.cpp
     src/ui/editordrawer/tempolane.cpp
     src/ui/editordrawer/tempolane.h
@@ -390,10 +386,8 @@ qt_add_library(porydaw_app STATIC
 if(APPLE)
     target_sources(porydaw_app PRIVATE
         src/ui/nativelayerutils_macos_p.h
-        src/ui/playheadrenderer_macos.mm
         src/ui/activity/trackactivityrenderer_macos.mm
     )
-    target_compile_definitions(porydaw_app PUBLIC PORYDAW_USE_DIRECT_PLAYHEAD)
     find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
     find_library(QUARTZCORE_FRAMEWORK QuartzCore REQUIRED)
     target_link_libraries(porydaw_app PRIVATE
@@ -441,11 +435,6 @@ qt_add_qml_module(porydaw_app
 )
 target_precompile_headers(porydaw_app PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
-if(WIN32)
-    target_sources(porydaw_app PRIVATE src/ui/playheadrenderer_dcomp.cpp)
-    target_compile_definitions(porydaw_app PUBLIC PORYDAW_USE_DIRECT_PLAYHEAD)
-    target_link_libraries(porydaw_app PRIVATE d2d1 d3d11 dcomp dxgi)
-endif()
 if(UNIX AND NOT APPLE)
     find_package(Threads REQUIRED)
     target_link_libraries(porydaw_app PRIVATE Threads::Threads ${CMAKE_DL_LIBS})
@@ -511,8 +500,6 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/rollcheckwindowing.cpp
         src/checks/rollcheckplayhead.cpp
         src/checks/rollcheckplayhead.h
-        src/checks/rollcheckrendering.cpp
-        src/checks/rollcheckrendering.h
         src/checks/viewcheck.cpp
         src/checks/roundtrip.cpp
         src/checks/editcheck.cpp
@@ -581,7 +568,6 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/hostcheck.cpp
         src/checks/mainwindowroutingcheck.cpp
         src/checks/noteidcheck.cpp
-        src/checks/renderingplayheadcheck.cpp
         src/checks/rollcheckautomation.cpp
         src/checks/rollcheckautomation_tempo.cpp
         src/checks/rollcheckautomation_paint.cpp
@@ -615,7 +601,6 @@ if(PORYDAW_BUILD_CHECKS)
     )
     if(APPLE)
         target_sources(porydaw_checks PRIVATE
-            src/checks/rollcheckplayhead_macos.mm
             src/checks/trackactivitymetercheck_macos.mm
         )
     endif()

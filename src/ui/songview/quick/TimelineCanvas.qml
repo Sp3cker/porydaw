@@ -9,11 +9,13 @@ Item {
     property rect velocityBandRect: Qt.rect(0, 0, 0, 0)
     property rect voiceChangesBandRect: Qt.rect(0, 0, 0, 0)
     property rect otherEventsBandRect: Qt.rect(0, 0, 0, 0)
+    property rect automationBandRect: Qt.rect(0, 0, 0, 0)
     property bool rulerBandVisible: false
     property bool rollBandVisible: false
     property bool velocityBandVisible: false
     property bool voiceChangesBandVisible: false
     property bool otherEventsBandVisible: false
+    property bool automationBandVisible: false
 
     Component {
         id: bandTextDelegate
@@ -40,6 +42,47 @@ Item {
             elide: Text.ElideNone
             maximumLineCount: 1
             clip: true
+        }
+    }
+
+    component TimelineChromeBand: Item {
+        required property rect bandRect
+        required property bool bandVisible
+        required property string bandName
+        property bool rulerBand: false
+
+        TimelineChromeItem {
+            objectName: bandName + "HoverChrome"
+            x: timelineQuickView.hoverRootContentX - bandRect.x
+            width: parent.width
+            height: parent.height
+            visible: timelineQuickView.hoverVisible && bandVisible
+            kind: TimelineChromeItem.Hover
+            z: 9
+        }
+
+        TimelineChromeItem {
+            objectName: bandName + "EditChrome"
+            x: timelineQuickView.editRootContentX - bandRect.x
+            width: parent.width
+            height: parent.height
+            visible: timelineQuickView.editVisible && bandVisible
+            kind: TimelineChromeItem.Edit
+            z: 10
+        }
+
+        TimelineChromeItem {
+            objectName: bandName + "PlayheadChrome"
+            x: timelineQuickView.playheadRootContentX - bandRect.x
+            width: parent.width
+            height: parent.height
+            visible: timelineQuickView.playheadVisible && bandVisible
+            kind: TimelineChromeItem.Playhead
+            playing: timelineQuickView.playheadPlaying
+            rulerTriangle: rulerBand
+                           ? (root.rollBandVisible ? TimelineChromeItem.Down : TimelineChromeItem.Up)
+                           : TimelineChromeItem.None
+            z: 11
         }
     }
 
@@ -74,7 +117,15 @@ Item {
                 delegate: bandTextDelegate
             }
         }
+        TimelineChromeBand {
+            anchors.fill: parent
+            bandRect: root.rulerBandRect
+            bandVisible: root.rulerBandVisible
+            bandName: "timelineQuickRuler"
+            rulerBand: true
+        }
     }
+
 
     Item {
         x: root.rollBandRect.x
@@ -87,7 +138,103 @@ Item {
         PianoRollCanvas {
             anchors.fill: parent
         }
+        TimelineChromeBand {
+            anchors.fill: parent
+            bandRect: root.rollBandRect
+            bandVisible: root.rollBandVisible
+            bandName: "timelineQuickRoll"
+        }
     }
+
+
+    Item {
+        x: root.automationBandRect.x
+        y: root.automationBandRect.y
+        width: root.automationBandRect.width
+        height: root.automationBandRect.height
+        clip: true
+        visible: root.automationBandVisible
+        z: 1
+
+        TimelineQuickItem {
+            objectName: "timelineQuickAutomationGrid"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.AutomationGrid
+            z: 0
+        }
+
+        TimelineQuickItem {
+            objectName: "timelineQuickAutomationCurves"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.AutomationCurves
+            z: 1
+        }
+
+        TimelineQuickItem {
+            objectName: "timelineQuickAutomationNodes"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.AutomationNodes
+            z: 2
+        }
+
+        TimelineQuickItem {
+            objectName: "timelineQuickAutomationSelection"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.AutomationSelection
+            z: 3
+        }
+
+        TimelineQuickItem {
+            objectName: "timelineQuickAutomationTransient"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.AutomationTransient
+            z: 4
+        }
+
+        TimelineQuickItem {
+            objectName: "timelineQuickAutomationHover"
+            anchors.fill: parent
+            sceneLayer: TimelineQuickItem.AutomationHover
+            z: 5
+        }
+
+        Item {
+            anchors.fill: parent
+            z: 6
+
+            Repeater {
+                model: timelineScene.automationTextModel
+                delegate: bandTextDelegate
+            }
+        }
+
+        Item {
+            anchors.fill: parent
+            z: 7
+
+            Repeater {
+                model: timelineScene.automationHoverTextModel
+                delegate: bandTextDelegate
+            }
+        }
+
+        Item {
+            anchors.fill: parent
+            z: 8
+
+            Repeater {
+                model: timelineScene.automationTransientTextModel
+                delegate: bandTextDelegate
+            }
+        }
+        TimelineChromeBand {
+            anchors.fill: parent
+            bandRect: root.automationBandRect
+            bandVisible: root.automationBandVisible
+            bandName: "timelineQuickAutomation"
+        }
+    }
+
 
     Item {
         x: root.velocityBandRect.x
@@ -156,7 +303,14 @@ Item {
                 delegate: bandTextDelegate
             }
         }
+        TimelineChromeBand {
+            anchors.fill: parent
+            bandRect: root.velocityBandRect
+            bandVisible: root.velocityBandVisible
+            bandName: "timelineQuickVelocity"
+        }
     }
+
 
     Item {
         x: root.voiceChangesBandRect.x
@@ -228,7 +382,14 @@ Item {
                 delegate: bandTextDelegate
             }
         }
+        TimelineChromeBand {
+            anchors.fill: parent
+            bandRect: root.voiceChangesBandRect
+            bandVisible: root.voiceChangesBandVisible
+            bandName: "timelineQuickVoiceChanges"
+        }
     }
+
 
     Item {
         x: root.otherEventsBandRect.x
@@ -261,5 +422,12 @@ Item {
                 delegate: bandTextDelegate
             }
         }
+        TimelineChromeBand {
+            anchors.fill: parent
+            bandRect: root.otherEventsBandRect
+            bandVisible: root.otherEventsBandVisible
+            bandName: "timelineQuickOtherEvents"
+        }
     }
+
 }

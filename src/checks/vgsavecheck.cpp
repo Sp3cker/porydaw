@@ -1,5 +1,6 @@
 #include <algorithm>
 
+#include <QApplication>
 #include <QComboBox>
 #include <QCoreApplication>
 #include <QDialog>
@@ -11,6 +12,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QFormLayout>
+#include <QKeyEvent>
+#include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPointer>
@@ -330,12 +333,16 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         }
     }
 
-    // 1. A voice edit is a bank edit: the shared bank view dirties, the
+    // 1. An ADSR edit is a bank edit: the shared bank view dirties, the
     // document and the window title stay clean, and the engine converges on
     // the edited voice.
     VgVoice edited = original;
     edited.release = original.release == 25 ? 26 : 25;
-    voicegroupDriver.submitPickerEdit(dsSlot, edited);
+    voicegroupDriver.selectSlot(dsSlot);
+    DragSpinBox *const releaseSpin = voicegroupDriver.releaseSpinBox();
+    check(releaseSpin != nullptr, "release ADSR field is unavailable");
+    if (releaseSpin)
+        releaseSpin->setValue(edited.release);
     check(settled([&] {
               const LoadedBankView *const applied = voicegroupDriver.selectedBankView();
               return applied && applied->dirty && !tab->document().isDirty() &&
@@ -351,8 +358,45 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
     check(scalarEditWait == checks::async_wait::Result::Ready,
           "voice edit did not reach the audio engine");
 
-    // 2. Undo restores the byte-exact on-disk state, nothing written.
-    if (historyStep(true, "undoing the voice edit did not settle")) {
+    // 2. The standard Undo shortcut must escape the focused ADSR line edit
+    // and restore the byte-exact on-disk state without writing.
+    QLineEdit *const releaseField = voicegroupDriver.releaseField();
+    check(releaseField != nullptr, "release ADSR text field is unavailable");
+    check(m_undoAction->shortcutContext() == Qt::WindowShortcut,
+          "Undo action is not a window shortcut");
+    const QList<QKeySequence> undoBindings = m_undoAction->shortcuts();
+    check(!undoBindings.isEmpty(), "Undo action has no shortcut binding");
+    auto undoTriggerCount = 0;
+    const QMetaObject::Connection undoConnection = connect(
+        m_undoAction, &QAction::triggered, this, [&undoTriggerCount] { ++undoTriggerCount; });
+    if (releaseSpin && !undoBindings.isEmpty()) {
+        show();
+        activateWindow();
+        raise();
+        QCoreApplication::processEvents();
+        releaseSpin->setFocus(Qt::OtherFocusReason);
+        QCoreApplication::processEvents();
+        QWidget *const target = QApplication::focusWidget();
+        const bool adsrFocused =
+            target && (target == releaseSpin || releaseSpin->isAncestorOf(target));
+        check(adsrFocused, "release ADSR control did not receive focus");
+        if (adsrFocused) {
+            const QKeyCombination undoKey = undoBindings.constFirst()[0];
+            QKeyEvent overrideEvent(QEvent::ShortcutOverride, undoKey.key(),
+                                    undoKey.keyboardModifiers());
+            overrideEvent.ignore();
+            QApplication::sendEvent(target, &overrideEvent);
+            check(!overrideEvent.isAccepted(), "release ADSR field claimed the Undo shortcut");
+            QKeyEvent press(QEvent::KeyPress, undoKey.key(), undoKey.keyboardModifiers());
+            QKeyEvent release(QEvent::KeyRelease, undoKey.key(), undoKey.keyboardModifiers());
+            QApplication::sendEvent(target, &press);
+            QApplication::sendEvent(target, &release);
+        }
+    }
+    check(undoTriggerCount == 1, "Undo shortcut did not trigger the Edit action exactly once");
+    disconnect(undoConnection);
+    if (check(settled([] { return true; }) == checks::async_wait::Result::Ready,
+              "undoing the voice edit did not settle")) {
         const auto undoWait = settled([this, tab, dsSlot, &voicegroupDriver, &original] {
             const LoadedBankView *const applied = voicegroupDriver.selectedBankView();
             const LoadedVoiceGroup *engine = m_audio.voicegroup();

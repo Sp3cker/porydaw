@@ -15,7 +15,6 @@
 
 #include "core/songdocument.h"
 #include "ui/editordrawer/drawerpage.h"
-#include "ui/timelinesurface.h"
 
 extern "C" {
 #include "voicegroup_loader.h"
@@ -27,7 +26,7 @@ class QFocusEvent;
 class QKeyEvent;
 class QMouseEvent;
 class QWheelEvent;
-class QPainter;
+class QResizeEvent;
 class SongView;
 
 namespace songview {
@@ -40,7 +39,7 @@ class TimelineQuickView;
 // commits for the current primary track. SongView owns the shared camera and
 // document; this surface captures the primary track and live camera state on
 // every refresh, so it never holds a persistent track identity.
-class VoiceChangeArea final : public songview::TimelineSurface
+class VoiceChangeArea final : public QWidget
 {
   public:
     explicit VoiceChangeArea(SongView &owner, QWidget *parent = nullptr);
@@ -55,7 +54,7 @@ class VoiceChangeArea final : public songview::TimelineSurface
 
   protected:
     bool event(QEvent *event) override;
-    void paintContent(QPainter &painter) override;
+    void resizeEvent(QResizeEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
@@ -65,7 +64,6 @@ class VoiceChangeArea final : public songview::TimelineSurface
     void keyPressEvent(QKeyEvent *event) override;
     void focusOutEvent(QFocusEvent *event) override;
     void contextMenuEvent(QContextMenuEvent *event) override;
-    void contentGeometryChanged() override;
 
   private:
     friend class songview::TimelineQuickView;
@@ -111,7 +109,7 @@ class VoiceChangeArea final : public songview::TimelineSurface
         QRectF rect;
         bool offscreen = true;
     };
-    void invalidateContent(const QRect &rect = {});
+    void requestQuickUpdate();
     void rebuildQuickScene(songview::TimelineQuickScene &scene);
     void rebuildQuickHover(songview::TimelineQuickScene &scene);
     void rebuildVisualState();

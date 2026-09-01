@@ -442,10 +442,9 @@ void runOriginPhantom(Context &ctx)
     const qreal nextX = at(ctx, 288, 64).position.x();
     const QRect body = ctx.rig.bodyFor(ctx.handle);
     const qreal probeWidth = nextX - originX - 4.0 * radius;
-    const qreal dpr = ctx.rig.canvas().devicePixelRatioF();
-    const QRect probe(qRound((originX + 2.0 * radius) * dpr), qRound(body.top() * dpr),
-                      qRound(probeWidth * dpr), qRound(body.height() * dpr));
-    const auto curveCrop = [&] { return ctx.rig.renderArea().copy(probe); };
+    const QRect probe(qRound(originX + 2.0 * radius), body.top(), qRound(probeWidth),
+                      body.height());
+    const auto curveCrop = [&] { return ctx.rig.renderAutomationContent(probe); };
     ctx.rig.mousePress(start);
     ctx.rig.mouseMove(activation);
     ctx.rig.pump();

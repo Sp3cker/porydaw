@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "checks/support/eventsynth.h"
+#include "checks/support/quickframebuffer.h"
 #include "core/miditimeline.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
@@ -224,9 +225,65 @@ QPointF AutomationGestureCheckRig::tempoBodyPoint(double tick, int bpm) const
     return pointAt(kTempoHandle, tick, bpm).position;
 }
 
+QPoint AutomationGestureCheckRig::automationContentToViewport(const QPoint &position) const
+{
+    QWidget *const viewport = page().scrollViewport();
+    return viewport ? canvas().mapTo(viewport, position) : QPoint{};
+}
+
+QRect AutomationGestureCheckRig::automationContentToViewport(const QRect &rect) const
+{
+    return rect.translated(automationContentToViewport(QPoint{}));
+}
+
+QRect AutomationGestureCheckRig::automationViewportInContent() const
+{
+    QWidget *const viewport = page().scrollViewport();
+    return viewport ? QRect{canvas().mapFrom(viewport, QPoint{}), viewport->size()} : QRect{};
+}
+
+QImage AutomationGestureCheckRig::renderAutomationViewport(QString *error)
+{
+    QWidget *const viewport = page().scrollViewport();
+    if (!viewport) {
+        if (error)
+            *error = QStringLiteral("Automation scroll viewport is unavailable");
+        return {};
+    }
+    return checks::support::captureQuickBand(view(), *viewport, error);
+}
+
+QImage AutomationGestureCheckRig::renderAutomationContent(const QRect &contentRect, QString *error)
+{
+    const QRect viewportRect = automationContentToViewport(contentRect);
+    QWidget *const viewport = page().scrollViewport();
+    if (!viewport || !viewport->rect().contains(viewportRect)) {
+        if (error)
+            *error = QStringLiteral("Automation content crop is outside the scroll viewport");
+        return {};
+    }
+    const QImage viewportImage = renderAutomationViewport(error);
+    if (viewportImage.isNull())
+        return {};
+    const qreal dpr = viewportImage.devicePixelRatio();
+    const int left = qRound(viewportRect.left() * dpr);
+    const int top = qRound(viewportRect.top() * dpr);
+    const int right = qRound((viewportRect.right() + 1) * dpr);
+    const int bottom = qRound((viewportRect.bottom() + 1) * dpr);
+    const QRect crop{left, top, right - left, bottom - top};
+    if (!viewportImage.rect().contains(crop)) {
+        if (error)
+            *error = QStringLiteral("Automation content crop is outside the viewport framebuffer");
+        return {};
+    }
+    QImage result = viewportImage.copy(crop);
+    result.setDevicePixelRatio(dpr);
+    return result;
+}
+
 QImage AutomationGestureCheckRig::renderArea()
 {
-    return canvas().grab().toImage();
+    return renderAutomationViewport();
 }
 
 AutomationGestureCheckRig::Snapshot AutomationGestureCheckRig::snapshot(int track,

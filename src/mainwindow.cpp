@@ -159,6 +159,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
                   .arg(m_audio.backendName()));
     // Tabs build their timeline projections at the engine's resolved rate.
     m_workspace->setAudioSampleRate(m_audio.sampleRate());
+    m_workspace->setSampleAuditionEngine(m_audioOk ? &m_audio : nullptr);
 
     m_projectWorkspace = std::make_unique<ProjectWorkspace>();
     // Direct publication wiring — no relays. WorkspaceUi's apply slots are

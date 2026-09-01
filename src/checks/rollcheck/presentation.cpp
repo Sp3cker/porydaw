@@ -88,9 +88,9 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
         view.scrollByPx(view.contentX(0.0) - home); // back where it started
     }
 
-    // A stopped playhead is a thin child overlay. Moving it must preserve the
-    // timeline parents' backing stores instead of repainting their contents.
-    for (const QString &error : playheadOverlayCheckFailures(view, check.timeline()))
+    // A stopped playhead uses retained Quick chrome. Moving it must preserve
+    // timeline scene-layer revisions instead of rebuilding their contents.
+    for (const QString &error : timelineChromeCheckFailures(view, check.timeline()))
         fail(qUtf8Printable(error));
 
     // Inline track rename: renameTrack opens a line editor on the header

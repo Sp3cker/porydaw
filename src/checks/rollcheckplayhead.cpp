@@ -1,667 +1,128 @@
 #include "rollcheckplayhead.h"
+
 #include "checks/support/eventsynth.h"
-#include "rollcheckrendering.h"
+#include "checks/support/quickframebuffer.h"
 
 #include <QCoreApplication>
 #include <QEvent>
-#include <QObject>
-#include <QPaintEvent>
-#include <QPainter>
-#include <QPixmap>
-#include <QWidget>
+#include <QImage>
+#include <QQuickItem>
+#include <QQuickWidget>
+#include <QScrollArea>
+
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <vector>
+#include <cstdint>
 
 #include "core/miditimeline.h"
-#include "ui/layout.h"
-#include "ui/playheadoverlay.h"
+#include "ui/editordrawer/automationcanvas.h"
+#include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/drawerpage.h"
+#include "ui/editordrawer/editordrawer.h"
 #include "ui/songview.h"
-#include "ui/timelinesurface.h"
+#include "ui/songview/quick/timelinequickchrome.h"
+#include "ui/songview/quick/timelinequickscene.h"
+#include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/timeruler.h"
 
 namespace {
-using namespace rollcheck::rendering;
-struct ExpectedTimelineGeometry {
-    int plotOrigin;
+template <typename T>
+T *findWidgetDescendant(QWidget &root)
+{
+    for (QWidget *widget : root.findChildren<QWidget *>()) {
+        if (auto *typed = dynamic_cast<T *>(widget))
+            return typed;
+    }
+    return nullptr;
+}
+
+void pumpQuick()
+{
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents();
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents();
+}
+
+struct ChromeCopies {
+    const char *name;
+    songview::TimelineChromeItem *hover = nullptr;
+    songview::TimelineChromeItem *edit = nullptr;
+    songview::TimelineChromeItem *playhead = nullptr;
 };
 
-ExpectedTimelineGeometry expectedTimelineGeometry()
+std::array<ChromeCopies, 6> chromeCopies(QQuickItem &root)
 {
-    return {layout::fontPx(17.5 + 13.0 / 3.0)};
-}
-
-QPixmap grabSongViewWithPlayhead(SongView &view, songview::PlayheadOverlay &marker,
-                                 QStringList &failures)
-{
-    QPixmap pixmap = view.grab();
-#ifdef __APPLE__
-    if (usesNativeMacPlayheadRenderer()) {
-        const QPixmap overlay = renderMacPlayheadOverlay(view, failures);
-        if (!overlay.isNull()) {
-            QPainter painter(&pixmap);
-            painter.drawPixmap(marker.mapTo(&view, QPoint()), overlay);
-        }
-    }
-#else
-    (void)marker;
-    (void)failures;
-#endif
-    return pixmap;
-}
-
-class PaintRegionProbe : public QObject
-{
-  public:
-    void clear() { m_regions.clear(); }
-
-    bool repainted(const QWidget *widget) const
-    {
-        return std::any_of(m_regions.cbegin(), m_regions.cend(),
-                           [=](const DirtyRegion &region) { return region.widget == widget; });
-    }
-
-    int maxPaintWidth(const QWidget *widget) const
-    {
-        int maxWidth = 0;
-        for (const DirtyRegion &region : m_regions) {
-            if (region.widget == widget)
-                maxWidth = std::max(maxWidth, region.bounds.width());
-        }
-        return maxWidth;
-    }
-
-    bool repaintedAnyBroadly(const QWidget *allowed, int maxWidth) const
-    {
-        return std::any_of(m_regions.cbegin(), m_regions.cend(), [=](const DirtyRegion &region) {
-            return region.widget != allowed && region.bounds.width() > maxWidth;
-        });
-    }
-
-    bool repaintedBroadly(const QWidget *widget, int maxWidth) const
-    {
-        return std::any_of(m_regions.cbegin(), m_regions.cend(), [=](const DirtyRegion &region) {
-            return region.widget == widget && region.bounds.width() > maxWidth;
-        });
-    }
-
-  private:
-    struct DirtyRegion {
-        QWidget *widget;
-        QRect bounds;
-    };
-
-    bool eventFilter(QObject *watched, QEvent *event) override
-    {
-        if (event->type() == QEvent::Paint) {
-            m_regions.push_back({static_cast<QWidget *>(watched),
-                                 static_cast<QPaintEvent *>(event)->region().boundingRect()});
-        }
-        return QObject::eventFilter(watched, event);
-    }
-
-    std::vector<DirtyRegion> m_regions;
-};
-
-// A dense serpentine cursor sweep across the whole surface, then leave: the
-// hover ink must restore every pixel it touched. Guards the partial-repaint
-// path of the content cache — at fractional device pixel ratios (125%/150%),
-// misaligned patch transforms or clip regions leave one-device-pixel "cursor
-// trails" that this catches (originally reproduced with 83 ghost pixels at
-// 1.25x; run rollcheck under QT_SCALE_FACTOR=1.25 to exercise that case).
-void checkHoverSweepRestores(songview::TimelineSurface &surface, const QString &name,
-                             QStringList &failures)
-{
-    QEvent leaveEvent(QEvent::Leave);
-    QCoreApplication::sendEvent(&surface, &leaveEvent);
-    processPaints();
-    const QImage baseline = surface.grab().toImage();
-    processPaints();
-
-    bool leftToRight = true;
-    for (int y = 4; y < surface.height(); y += 8) {
-        const int x0 = 2;
-        const int x1 = surface.width() - 2;
-        for (int i = 0; i <= 20; ++i) {
-            const int x = leftToRight ? x0 + (x1 - x0) * i / 20 : x1 - (x1 - x0) * i / 20;
-            const QPoint pos(x, y);
-            checks::events::sendMouse(surface, QEvent::MouseMove, QPointF(pos), Qt::NoButton,
-                                      Qt::NoButton, Qt::NoModifier);
-            processPaints();
-        }
-        leftToRight = !leftToRight;
-    }
-    QCoreApplication::sendEvent(&surface, &leaveEvent);
-    processPaints();
-
-    const QImage after = surface.grab().toImage();
-    if (after == baseline)
-        return;
-    int ghostPixels = 0;
-    for (int y = 0; y < baseline.height(); ++y) {
-        for (int x = 0; x < baseline.width(); ++x) {
-            if (after.pixel(x, y) != baseline.pixel(x, y))
-                ++ghostPixels;
-        }
-    }
-    failures.append(
-        QStringLiteral("%1 cursor sweep left %2 ghost pixels behind").arg(name).arg(ghostPixels));
-}
-
-void checkAutomationHoverCacheUpdate(songview::TimelineSurface &lanes, PaintRegionProbe &paintProbe,
-                                     QStringList &failures)
-{
-    const auto geometry = expectedTimelineGeometry();
-    QEvent leaveEvent(QEvent::Leave);
-    QCoreApplication::sendEvent(&lanes, &leaveEvent);
-    processPaints();
-    const QImage baseline = lanes.grab().toImage();
-    processPaints();
-
-    const int plotLeft = geometry.plotOrigin;
-    const int plotWidth = lanes.width() - plotLeft;
-    if (plotWidth <= 32 || lanes.height() <= 0) {
-        failures.append("automation hover check has no visible curve area");
-        return;
-    }
-
-    struct HoverResult {
-        QPoint position;
-        QImage image;
-        songview::TimelineSurfaceDiagnostics before;
-        songview::TimelineSurfaceDiagnostics after;
-        int repaintWidth = 0;
-        bool repainted = false;
-    };
-    HoverResult hover;
-    bool foundReadout = false;
-    const std::array<int, 3> candidateXs{{
-        plotLeft + (plotWidth * 3) / 4,
-        plotLeft + plotWidth / 2,
-        plotLeft + plotWidth - std::min(24, plotWidth / 8),
+    std::array<ChromeCopies, 6> copies{{
+        {"Ruler"},
+        {"Roll"},
+        {"Automation"},
+        {"Velocity"},
+        {"VoiceChanges"},
+        {"OtherEvents"},
     }};
-    constexpr int candidateRowStep = 12;
-    for (int y = candidateRowStep / 2; y < lanes.height() && !foundReadout; y += candidateRowStep) {
-        for (const int candidateX : candidateXs) {
-            const QPoint position(std::clamp(candidateX, plotLeft, lanes.width() - 1), y);
-            hover.position = position;
-            hover.before = lanes.diagnostics();
-            paintProbe.clear();
-            checks::events::sendMouse(lanes, QEvent::MouseMove, QPointF(position), Qt::NoButton,
-                                      Qt::NoButton, Qt::NoModifier);
-            processPaints();
-            hover.repainted = paintProbe.repainted(&lanes);
-            hover.repaintWidth = paintProbe.maxPaintWidth(&lanes);
-            hover.after = lanes.diagnostics();
-            hover.image = lanes.grab().toImage();
-            foundReadout = hover.image.size() == baseline.size() &&
-                           hover.image.devicePixelRatio() == baseline.devicePixelRatio() &&
-                           hover.image != baseline;
-            if (foundReadout)
-                break;
-            QCoreApplication::sendEvent(&lanes, &leaveEvent);
-            processPaints();
-        }
+    for (ChromeCopies &copy : copies) {
+        const QString prefix = QStringLiteral("timelineQuick") + QString::fromLatin1(copy.name);
+        copy.hover = root.findChild<songview::TimelineChromeItem *>(prefix + "HoverChrome");
+        copy.edit = root.findChild<songview::TimelineChromeItem *>(prefix + "EditChrome");
+        copy.playhead = root.findChild<songview::TimelineChromeItem *>(prefix + "PlayheadChrome");
     }
-    if (!foundReadout) {
-        failures.append("automation idle hover did not render a visible readout");
-        paintProbe.clear();
-        return;
-    }
-
-    const qreal dpr = lanes.devicePixelRatioF();
-    const int maxReadoutWidth = std::min(192, std::max(64, lanes.width() / 3));
-    const quint64 maxReadoutPaintPixels =
-        quint64(qCeil(maxReadoutWidth * dpr)) * quint64(qCeil(std::min(64, lanes.height()) * dpr));
-    const quint64 wholeSurfacePixels =
-        quint64(qCeil(lanes.width() * dpr)) * quint64(qCeil(lanes.height() * dpr));
-    if (!hover.repainted || hover.repaintWidth > maxReadoutWidth) {
-        failures.append(QStringLiteral("automation hover repainted %1 px (budget %2)")
-                            .arg(hover.repaintWidth)
-                            .arg(maxReadoutWidth));
-    }
-    if (hover.after.contentPaintCount <= hover.before.contentPaintCount ||
-        hover.after.contentPaintPixelCount <= hover.before.contentPaintPixelCount) {
-        failures.append("automation hover did not paint lane content");
-    } else {
-        const quint64 hoverPaintPixels =
-            hover.after.contentPaintPixelCount - hover.before.contentPaintPixelCount;
-        if (hoverPaintPixels > maxReadoutPaintPixels ||
-            hoverPaintPixels * 2 >= wholeSurfacePixels) {
-            failures.append(QStringLiteral("automation hover painted %1 device pixels "
-                                           "(readout budget %2)")
-                                .arg(hoverPaintPixels)
-                                .arg(maxReadoutPaintPixels));
-        }
-    }
-
-    const int moveDistance = std::min(96, std::max(48, plotWidth / 6));
-    int secondX = std::min(lanes.width() - 1, hover.position.x() + moveDistance);
-    if (secondX - hover.position.x() < std::min(24, plotWidth / 4))
-        secondX = std::max(plotLeft, hover.position.x() - moveDistance);
-    const QPoint secondPosition(secondX, hover.position.y());
-    const songview::TimelineSurfaceDiagnostics beforeMove = lanes.diagnostics();
-    paintProbe.clear();
-    checks::events::sendMouse(lanes, QEvent::MouseMove, QPointF(secondPosition), Qt::NoButton,
-                              Qt::NoButton, Qt::NoModifier);
-    processPaints();
-    const bool moveRepainted = paintProbe.repainted(&lanes);
-    const int moveRepaintWidth = paintProbe.maxPaintWidth(&lanes);
-    const songview::TimelineSurfaceDiagnostics afterMove = lanes.diagnostics();
-    const QImage moved = lanes.grab().toImage();
-    bool firstReadoutPixelsRestored = false;
-    if (moved.size() == baseline.size() &&
-        moved.devicePixelRatio() == baseline.devicePixelRatio()) {
-        for (int y = 0; y < baseline.height() && !firstReadoutPixelsRestored; ++y) {
-            for (int x = 0; x < baseline.width(); ++x) {
-                if (hover.image.pixel(x, y) != baseline.pixel(x, y) &&
-                    moved.pixel(x, y) == baseline.pixel(x, y)) {
-                    firstReadoutPixelsRestored = true;
-                    break;
-                }
-            }
-        }
-    }
-    if (moved == hover.image || moved == baseline)
-        failures.append("automation hover move did not move its visible readout");
-    if (!firstReadoutPixelsRestored) {
-        failures.append("automation hover move did not restore the old readout pixels");
-    }
-    const int maxMoveRepaintWidth =
-        std::min(lanes.width(), maxReadoutWidth + std::abs(secondX - hover.position.x()));
-    if (!moveRepainted || moveRepaintWidth > maxMoveRepaintWidth) {
-        failures.append(QStringLiteral("automation hover move repainted %1 px (budget %2)")
-                            .arg(moveRepaintWidth)
-                            .arg(maxMoveRepaintWidth));
-    }
-    if (afterMove.contentPaintCount <= beforeMove.contentPaintCount ||
-        afterMove.contentPaintPixelCount <= beforeMove.contentPaintPixelCount) {
-        failures.append("automation hover move did not paint lane content");
-    } else {
-        const quint64 movePaintPixels =
-            afterMove.contentPaintPixelCount - beforeMove.contentPaintPixelCount;
-        const quint64 maxMovePaintPixels = maxReadoutPaintPixels * 2;
-        if (movePaintPixels > maxMovePaintPixels || movePaintPixels * 2 >= wholeSurfacePixels) {
-            failures.append(QStringLiteral("automation hover move painted %1 device pixels "
-                                           "(old/new readout budget %2)")
-                                .arg(movePaintPixels)
-                                .arg(maxMovePaintPixels));
-        }
-    }
-
-    const songview::TimelineSurfaceDiagnostics beforeClear = lanes.diagnostics();
-    paintProbe.clear();
-    QCoreApplication::sendEvent(&lanes, &leaveEvent);
-    processPaints();
-    const bool clearRepainted = paintProbe.repainted(&lanes);
-    const int clearRepaintWidth = paintProbe.maxPaintWidth(&lanes);
-    const songview::TimelineSurfaceDiagnostics afterClear = lanes.diagnostics();
-    const QImage cleared = lanes.grab().toImage();
-    if (cleared != baseline)
-        failures.append("automation hover pixels did not restore after leave");
-    if (!clearRepainted || clearRepaintWidth > maxReadoutWidth) {
-        failures.append(QStringLiteral("automation hover clear repainted %1 px (budget %2)")
-                            .arg(clearRepaintWidth)
-                            .arg(maxReadoutWidth));
-    }
-    if (afterClear.contentPaintCount <= beforeClear.contentPaintCount ||
-        afterClear.contentPaintPixelCount <= beforeClear.contentPaintPixelCount) {
-        failures.append("automation hover clear did not paint lane content");
-    } else {
-        const quint64 clearPaintPixels =
-            afterClear.contentPaintPixelCount - beforeClear.contentPaintPixelCount;
-        if (clearPaintPixels > maxReadoutPaintPixels ||
-            clearPaintPixels * 2 >= wholeSurfacePixels) {
-            failures.append(QStringLiteral("automation hover clear painted %1 device pixels "
-                                           "(readout budget %2)")
-                                .arg(clearPaintPixels)
-                                .arg(maxReadoutPaintPixels));
-        }
-    }
-
-    checks::events::sendMouse(lanes, QEvent::MouseMove, QPointF(secondPosition), Qt::NoButton,
-                              Qt::NoButton, Qt::NoModifier);
-    processPaints();
-    QWidget *window = lanes.window();
-    const QSize initialWindowSize = window ? window->size() : QSize();
-    const QSize initialLaneSize = lanes.size();
-    if (window)
-        window->resize(initialWindowSize.width() + 80, initialWindowSize.height());
-    processPaints();
-    if (!window || lanes.size() == initialLaneSize)
-        failures.append("automation hover check could not resize the lane surface");
-    lanes.grab();
-    processPaints();
-    paintProbe.clear();
-    QCoreApplication::sendEvent(&lanes, &leaveEvent);
-    processPaints();
-    const int resizedClearRepaintWidth = paintProbe.maxPaintWidth(&lanes);
-    const QImage locallyClearedAfterResize = lanes.grab().toImage();
-    lanes.invalidateContent();
-    processPaints();
-    const QImage fullyClearedAfterResize = lanes.grab().toImage();
-    if (locallyClearedAfterResize != fullyClearedAfterResize)
-        failures.append("automation hover left stale pixels after surface resizing");
-    if (resizedClearRepaintWidth > maxReadoutWidth) {
-        failures.append(QStringLiteral("automation hover clear after surface resizing repainted %1 "
-                                       "px (budget %2)")
-                            .arg(resizedClearRepaintWidth)
-                            .arg(maxReadoutWidth));
-    }
-    if (window)
-        window->resize(initialWindowSize);
-    processPaints();
+    return copies;
 }
 
-// A full invalidation of the automation lanes — every drag move does one —
-// must rasterize only the rows the scroll viewport exposes; off-viewport
-// dirt stays pending until scrolled in. Shrinks the view so the lanes are
-// guaranteed taller than their viewport, then bounds the painted pixels.
-void checkLanesViewportBoundedRepaint(SongView &view, songview::TimelineSurface &lanes,
-                                      QStringList &failures)
+qreal rootX(const QQuickItem &item, QQuickItem &root)
 {
-    const QSize savedSize = view.size();
-    view.resize(savedSize.width(), 360);
-    processPaints();
-    const QWidget *viewport = lanes.parentWidget();
-    if (!viewport || lanes.height() <= viewport->height()) {
-        failures.append("could not make the lanes taller than their viewport "
-                        "for the bounded-repaint check");
-        view.resize(savedSize);
-        processPaints();
-        return;
-    }
-
-    // Settle the resize-induced full repaint before measuring.
-    (void)lanes.grab();
-    processPaints();
-
-    const songview::TimelineSurfaceDiagnostics before = lanes.diagnostics();
-    lanes.invalidateContent();
-    processPaints();
-    const songview::TimelineSurfaceDiagnostics after = lanes.diagnostics();
-    const qreal dpr = lanes.devicePixelRatioF();
-    const quint64 painted = after.contentPaintPixelCount - before.contentPaintPixelCount;
-    // + 9: room for the cache's device-alignment expansion (up to 4 logical
-    // px per edge at quarter scale factors) plus edge rounding.
-    const quint64 viewportBudget =
-        quint64(qCeil(lanes.width() * dpr)) * quint64(qCeil((viewport->height() + 9) * dpr));
-    if (after.contentPaintCount <= before.contentPaintCount || painted == 0) {
-        failures.append("lanes full invalidation painted no content");
-    } else if (painted > viewportBudget) {
-        failures.append(QStringLiteral("lanes full invalidation painted %1 device pixels "
-                                       "(viewport budget %2): off-viewport rows were "
-                                       "rasterized")
-                            .arg(painted)
-                            .arg(viewportBudget));
-    }
-    view.resize(savedSize);
-    processPaints();
+    return item.mapToItem(&root, QPointF{}).x();
 }
 
-void checkFractionalMovement(SongView &view, const MidiTimeline &timeline,
-                             songview::PlayheadOverlay &marker, const QColor &playheadColor,
-                             uint64_t firstTick, QStringList &failures)
+std::array<quint64, static_cast<std::size_t>(songview::TimelineQuickLayer::Count)>
+layerRevisions(const songview::TimelineQuickScene &scene)
 {
-    uint64_t fractionalStartSample = timeline.sampleForTick(firstTick);
-    uint64_t fractionalEndSample = fractionalStartSample;
-    double playheadTick = timeline.tickForSample(fractionalStartSample);
-    int fractionalBucketX = view.contentX(playheadTick);
-    double fractionalStartX = playheadTick * view.pxPerTick();
-    const uint64_t fractionalSearchEnd = timeline.sampleForTick(firstTick + 2);
-    for (uint64_t sample = fractionalStartSample + 1; sample <= fractionalSearchEnd; ++sample) {
-        playheadTick = timeline.tickForSample(sample);
-        const int x = view.contentX(playheadTick);
-        const double exactX = playheadTick * view.pxPerTick();
-        if (x != fractionalBucketX) {
-            fractionalStartSample = sample;
-            fractionalBucketX = x;
-            fractionalStartX = exactX;
-        } else if (exactX - fractionalStartX >= 0.4) {
-            fractionalEndSample = sample;
-            break;
-        }
-    }
-    if (fractionalEndSample == fractionalStartSample) {
-        failures.append("could not choose fractional playhead positions");
-        return;
-    }
-    view.setPlayheadSample(fractionalStartSample, true);
-    processPaints();
-    const QPixmap fractionalStartPixmap = grabPlayheadOverlay(view, marker, failures);
-    const qreal fractionalStart = playheadCenter(fractionalStartPixmap, playheadColor, 0);
-    view.setPlayheadSample(fractionalEndSample, true);
-    processPaints();
-    const QPixmap fractionalEndPixmap = grabPlayheadOverlay(view, marker, failures);
-    const qreal fractionalEnd = playheadCenter(fractionalEndPixmap, playheadColor, 0);
-    const qreal expectedDelta = (timeline.tickForSample(fractionalEndSample) -
-                                 timeline.tickForSample(fractionalStartSample)) *
-                                view.pxPerTick();
-    // Unconditional, including dpr 1 (main asserted 0.2px there): the widget
-    // path must place the strips subpixel-accurately, not snap to pixels.
-    if (std::abs((fractionalEnd - fractionalStart) - expectedDelta) > 0.2) {
-        failures.append("fractional playhead movement did not match its timeline "
-                        "position");
-    }
+    std::array<quint64, static_cast<std::size_t>(songview::TimelineQuickLayer::Count)> revisions{};
+    for (std::size_t index = 0; index < revisions.size(); ++index)
+        revisions[index] = scene.layer(static_cast<songview::TimelineQuickLayer>(index)).revision;
+    return revisions;
 }
 
-void checkPlayheadRendering(SongView &view, const MidiTimeline &timeline,
-                            songview::PlayheadOverlay &marker, QStringList &failures)
+void checkAutomationHover(SongView &view, QStringList &failures)
 {
-    const auto geometry = expectedTimelineGeometry();
-    const int plotWidth = view.width() - geometry.plotOrigin;
-    if (plotWidth <= 64) {
-        failures.append("timeline plot is too narrow for the playhead check");
+    auto *page = view.editorDrawer() ? view.editorDrawer()->automationPage() : nullptr;
+    auto *canvas = page ? page->canvas() : nullptr;
+    auto *viewport = page ? page->scrollViewport() : nullptr;
+    if (!canvas || !viewport)
+        return;
+    QString captureError;
+    QEvent leave(QEvent::Leave);
+    QCoreApplication::sendEvent(canvas, &leave);
+    pumpQuick();
+    const QImage baseline = checks::support::captureQuickBand(view, *viewport, &captureError);
+    if (baseline.isNull()) {
+        failures.append(
+            QStringLiteral("automation Quick framebuffer capture failed: %1").arg(captureError));
         return;
     }
-    const auto tickAtContentX = [&view](int x) {
-        return uint64_t(std::ceil(std::max(0.0, view.tickAtContentX(x))));
-    };
-    uint64_t firstTick = 0;
-    uint64_t firstSample = 0, secondSample = 0;
-    int firstX = 0, secondX = 0;
-    bool foundInterval = false;
-    for (int x = plotWidth / 3; x + 12 < plotWidth; ++x) {
-        const uint64_t candidateFirstTick = tickAtContentX(x);
-        const uint64_t candidateSecondTick = tickAtContentX(x + 12);
-        const int candidateFirstX = view.contentX(double(candidateFirstTick));
-        const int candidateSecondX = view.contentX(double(candidateSecondTick));
-        if (candidateFirstX < 0 || candidateSecondX >= plotWidth ||
-            candidateSecondX <= candidateFirstX || candidateSecondX - candidateFirstX > 32)
-            continue;
-        // Skip intervals straddling a program change: the frames at the two
-        // probe positions would then differ beyond the playhead itself.
-        const uint64_t candidateFirstSample = timeline.sampleForTick(candidateFirstTick);
-        const uint64_t candidateSecondSample = timeline.sampleForTick(candidateSecondTick);
-        const uint64_t firstDisplayTick = uint64_t(timeline.tickForSample(candidateFirstSample));
-        const uint64_t secondDisplayTick = uint64_t(timeline.tickForSample(candidateSecondSample));
-        const bool crossesProgramChange = std::any_of(
-            timeline.events.cbegin(), timeline.events.cend(), [=](const TimelineEvent &event) {
-                return event.type == 0xC && event.tick > firstDisplayTick &&
-                       event.tick <= secondDisplayTick;
-            });
-        if (crossesProgramChange)
-            continue;
-        firstTick = candidateFirstTick;
-        firstSample = candidateFirstSample;
-        secondSample = candidateSecondSample;
-        firstX = candidateFirstX;
-        secondX = candidateSecondX;
-        foundInterval = true;
-        break;
-    }
-    if (!foundInterval) {
-        failures.append("could not choose nearby visible playhead ticks");
-        return;
-    }
-
-    const std::vector<songview::TimelineBand> bands = view.timelineBands();
-    struct CachedSurfaceCheck {
-        const char *name;
-        songview::TimelineSurface *surface;
-    };
-    const std::array<const char *, 5> bandNames{{
-        "time ruler",
-        "piano roll",
-        "automation lanes",
-        "velocity",
-        "event strip",
-    }};
-    std::vector<CachedSurfaceCheck> cachedSurfaces;
-    cachedSurfaces.reserve(bands.size());
-    for (std::size_t index = 0; index < bands.size(); ++index) {
-        auto *surface = dynamic_cast<songview::TimelineSurface *>(&bands[index].widget);
-        if (!surface)
-            continue;
-        const char *name = index < bandNames.size() ? bandNames[index] : "timeline surface";
-        cachedSurfaces.push_back({name, surface});
-    }
-    if (bands.size() < bandNames.size() || cachedSurfaces.size() < 4) {
-        failures.append("SongView did not expose the expected timeline band order");
-        return;
-    }
-    auto *lanes = dynamic_cast<songview::TimelineSurface *>(&bands[2].widget);
-    if (!lanes) {
-        failures.append("SongView timeline band order did not expose the automation cache");
-        return;
-    }
-
-    PaintRegionProbe probe;
-    view.installEventFilter(&probe);
-    for (QWidget *child : view.findChildren<QWidget *>())
-        child->installEventFilter(&probe);
-    const QColor playheadColor(226, 66, 66);
-    const auto expectedCenter = [&](uint64_t sample) {
-        const auto &rulerBand = bands.front();
-        const QPoint timelineOrigin =
-            rulerBand.widget.mapTo(&view, QPoint(rulerBand.timelineOrigin, 0));
-        return qreal(marker.mapFrom(&view, timelineOrigin).x()) +
-               view.contentX(timeline.tickForSample(sample));
-    };
-    const auto checkCenter = [&](qreal center, uint64_t sample, const QString &state) {
-        const qreal expected = expectedCenter(sample);
-        if (!marker.isVisible() || center < 0.0 || std::abs(center - expected) > 1.0) {
-            failures.append(
-                QStringLiteral("%1 playhead did not render at its expected position").arg(state));
-        }
-    };
-    view.setPlayheadSample(0, false);
-    for (const CachedSurfaceCheck &cached : cachedSurfaces)
-        cached.surface->update();
-    processPaints();
-    for (const CachedSurfaceCheck &cached : cachedSurfaces) {
-        if (cached.surface->diagnostics().estimatedContentCacheBytes == 0)
-            (void)cached.surface->grab();
-    }
-    processPaints();
-    for (const CachedSurfaceCheck &cached : cachedSurfaces) {
-        const songview::TimelineSurfaceDiagnostics diagnostics = cached.surface->diagnostics();
-        const QString surfaceName = QString::fromLatin1(cached.name);
-        if (diagnostics.contentPaintCount == 0 || diagnostics.contentPaintPixelCount == 0) {
-            failures.append(
-                QStringLiteral("%1 did not warm its timeline content cache").arg(surfaceName));
-        }
-
-        const qreal dpr = cached.surface->devicePixelRatioF();
-        const quint64 expectedCacheBytes = quint64(qCeil(cached.surface->width() * dpr)) *
-                                           quint64(qCeil(cached.surface->height() * dpr)) *
-                                           quint64(4);
-        constexpr quint64 maxEstimatedCacheBytes = 256ULL * 1024ULL * 1024ULL;
-        if (expectedCacheBytes > 0 && expectedCacheBytes <= maxEstimatedCacheBytes &&
-            diagnostics.estimatedContentCacheBytes != expectedCacheBytes) {
-            failures.append(QStringLiteral("%1 reported %2 estimated cache bytes (expected %3)")
-                                .arg(surfaceName)
-                                .arg(diagnostics.estimatedContentCacheBytes)
-                                .arg(expectedCacheBytes));
-        }
-    }
-
-    checkAutomationHoverCacheUpdate(*lanes, probe, failures);
-    checkHoverSweepRestores(*lanes, QStringLiteral("automation lanes"), failures);
-    probe.clear();
-    const auto diagnosticsBefore = [&cachedSurfaces] {
-        std::vector<songview::TimelineSurfaceDiagnostics> diagnostics;
-        diagnostics.reserve(cachedSurfaces.size());
-        for (const CachedSurfaceCheck &cached : cachedSurfaces)
-            diagnostics.push_back(cached.surface->diagnostics());
-        return diagnostics;
-    }();
-    view.setPlayheadSample(firstSample, false);
-    processPaints();
-    const qreal firstMarkerCenter =
-        playheadCenter(grabPlayheadOverlay(view, marker, failures), playheadColor);
-    checkCenter(firstMarkerCenter, firstSample, QStringLiteral("stopped"));
-    const QRect rulerArea(bands.front().widget.mapTo(&view, QPoint()), bands.front().widget.size());
-    if (firstMarkerCenter >= 0.0) {
-        const QPixmap composedPixmap = grabSongViewWithPlayhead(view, marker, failures);
-        const qreal playheadX = marker.mapTo(&view, QPoint()).x() + firstMarkerCenter;
-        if (hasPlayheadRedLine(composedPixmap.toImage(), composedPixmap.devicePixelRatio(),
-                               playheadX, rulerArea, playheadColor)) {
-            failures.append("playhead rendered in the time ruler");
-        }
-    }
-    view.setPlayheadSample(firstSample, true);
-    processPaints();
-    probe.clear();
-#ifdef __APPLE__
-    if (usesNativeMacPlayheadRenderer() && renderMacPlayheadOverlay(view, failures).isNull())
-        return;
-#endif
-    view.setPlayheadSample(secondSample, true);
-    processPaints();
-    const auto diagnosticsAfter = [&cachedSurfaces] {
-        std::vector<songview::TimelineSurfaceDiagnostics> diagnostics(cachedSurfaces.size());
-        for (std::size_t i = 0; i < diagnostics.size(); ++i)
-            diagnostics[i] = cachedSurfaces[i].surface->diagnostics();
-        return diagnostics;
-    }();
-    bool cacheRegenerated = false;
-    for (std::size_t i = 0; i < diagnosticsBefore.size(); ++i) {
-        if (diagnosticsAfter[i] != diagnosticsBefore[i]) {
-            cacheRegenerated = true;
-            break;
-        }
-    }
-    if (cacheRegenerated)
-        failures.append("playhead move regenerated cached timeline content");
-    // Dirty strip: move delta + full glow diameter + full triangle width.
-    const int maxPlayheadExposureWidth = secondX - firstX + 2 * songview::kPlayheadGlowRadius +
-                                         2 * songview::kPlayheadTriangleHalfWidth;
-    const bool overlayPaintedBroadly = probe.repaintedBroadly(&marker, maxPlayheadExposureWidth);
-    const bool anotherWidgetPaintedBroadly =
-        probe.repaintedAnyBroadly(&marker, maxPlayheadExposureWidth);
-    const QPixmap playingPixmap = grabPlayheadOverlay(view, marker, failures);
-    const qreal playingMarkerCenter = playheadCenter(playingPixmap, playheadColor);
-    checkCenter(playingMarkerCenter, secondSample, QStringLiteral("playing"));
-    if (overlayPaintedBroadly)
-        failures.append("playhead move repainted the overlay broadly");
-    if (anotherWidgetPaintedBroadly)
-        failures.append("playhead move repainted another timeline widget broadly");
-    view.setPlayheadSample(secondSample, false);
-    processPaints();
-    const QPixmap stoppedPixmap = grabPlayheadOverlay(view, marker, failures);
-    const qreal stoppedMarkerCenter = playheadCenter(stoppedPixmap, playheadColor);
-    checkCenter(stoppedMarkerCenter, secondSample, QStringLiteral("stopped"));
-    if (playingPixmap.toImage() == stoppedPixmap.toImage())
-        failures.append("playing and stopped playheads rendered identically");
-    checkFractionalMovement(view, timeline, marker, playheadColor, firstTick, failures);
-    checkLanesViewportBoundedRepaint(view, *lanes, failures);
+    const QPoint position(std::max(canvas->plotOrigin() + 1, canvas->width() * 2 / 3),
+                          canvas->mapFrom(viewport, viewport->rect().center()).y());
+    checks::events::sendMouse(*canvas, QEvent::MouseMove, position, Qt::NoButton, Qt::NoButton,
+                              Qt::NoModifier);
+    pumpQuick();
+    const QImage hovered = checks::support::captureQuickBand(view, *viewport, &captureError);
+    if (hovered == baseline)
+        failures.append("automation hover did not retain its local Quick decoration");
+    QCoreApplication::sendEvent(canvas, &leave);
+    pumpQuick();
+    if (checks::support::captureQuickBand(view, *viewport, &captureError) != baseline)
+        failures.append("automation hover did not clear its local Quick decoration");
 }
 
-// The transport bar's Follow Playhead toggle: on (the default), playback
-// scrolls once the playhead crosses 85% of the viewport; off, the camera
-// stays exactly where the user put it however far the playhead runs.
 void checkFollowScroll(SongView &view, const MidiTimeline &timeline, QStringList &failures)
 {
     const SongView::ViewState saved = view.viewState();
     SongView::ViewState parked = saved;
     parked.scrollPx = 0.0;
-    // Zoom in far enough that the content is guaranteed wider than the
-    // viewport — the follow-scroll clamps to the scrollable range, so a
-    // short song at a narrow zoom would make the follow-on case a no-op.
     parked.pxPerBeat = 512.0;
     view.applyViewState(parked);
-    // A tick well past the right edge of the parked viewport.
     const uint64_t farTick = uint64_t(double(view.width()) * 4.0 / view.pxPerTick()) + 1;
     const uint64_t farSample = timeline.sampleForTick(farTick);
     view.setPlayheadSample(farSample, true);
@@ -678,34 +139,172 @@ void checkFollowScroll(SongView &view, const MidiTimeline &timeline, QStringList
         failures.append("re-enabled follow did not scroll to the playhead");
     view.applyViewState(saved);
 }
+
 } // namespace
 
-QStringList playheadOverlayCheckFailures(SongView &view, const MidiTimeline &timeline)
+QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &timeline)
 {
     QStringList failures;
-#ifdef __APPLE__
-    if (usesNativeMacPlayheadRenderer())
-        checkMacPlayheadLifecycle(failures);
-#endif
     const bool viewWasVisible = view.isVisible();
-    const bool viewHadDontShowOnScreen = view.testAttribute(Qt::WA_DontShowOnScreen);
-    if (auto *marker = findPlayheadOverlay(view)) {
-        if (!viewWasVisible) {
-            view.setAttribute(Qt::WA_DontShowOnScreen);
-            view.show();
-            processPaints();
-            (void)view.grab();
-            processPaints();
-        }
-        checkPlayheadRendering(view, timeline, *marker, failures);
-        checkFollowScroll(view, timeline, failures);
-    } else {
-        failures.append("unified playhead overlay not found");
+    const bool hadDontShowOnScreen = view.testAttribute(Qt::WA_DontShowOnScreen);
+    if (!viewWasVisible) {
+        view.setAttribute(Qt::WA_DontShowOnScreen);
+        view.show();
     }
+    pumpQuick();
+
+    auto *quick =
+        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    auto *root = quick ? qobject_cast<QQuickItem *>(quick->rootObject()) : nullptr;
+    auto *scene = quick ? quick->findChild<songview::TimelineQuickScene *>() : nullptr;
+    auto *ruler = findWidgetDescendant<songview::TimeRuler>(view);
+    if (!quick || !root || !scene || !ruler) {
+        failures.append("SongView did not expose its retained Quick timeline chrome");
+    } else {
+        const auto copies = chromeCopies(*root);
+        if (root->findChildren<songview::TimelineChromeItem *>().size() != 18)
+            failures.append("Quick timeline did not retain exactly three chrome copies per band");
+        for (const ChromeCopies &copy : copies) {
+            if (!copy.hover || !copy.edit || !copy.playhead) {
+                failures.append(
+                    QStringLiteral("Quick timeline is missing %1 chrome").arg(copy.name));
+                continue;
+            }
+            if (copy.hover->z() != 9.0 || copy.edit->z() != 10.0 || copy.playhead->z() != 11.0) {
+                failures.append(QStringLiteral("%1 chrome does not stack hover, edit, playhead")
+                                    .arg(copy.name));
+            }
+        }
+
+        const uint64_t tick =
+            uint64_t(std::max(0.0, view.tickAtContentX(std::max<qreal>(
+                                       1.0, view.width() / 2.0 - view.timelinePlotOrigin()))));
+        const uint64_t sample = timeline.sampleForTick(tick);
+        view.setEditCursorTick(tick);
+        view.setPlayheadSample(sample, false);
+        view.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation, tick);
+        pumpQuick();
+
+        const auto expected = [&view](double chromeTick) {
+            return view.timelinePlotOrigin() + view.contentX(chromeTick);
+        };
+        const qreal expectedHover = expected(tick);
+        const qreal expectedEdit = expected(view.editCursorTick());
+        const qreal expectedPlayhead = expected(timeline.tickForSample(sample));
+        if (std::abs(quick->hoverRootContentX() - expectedHover) > 0.2 ||
+            std::abs(quick->editRootContentX() - expectedEdit) > 0.2 ||
+            std::abs(quick->playheadRootContentX() - expectedPlayhead) > 0.2) {
+            failures.append("Quick chrome root coordinates do not follow SongView content x");
+        }
+        if (expectedPlayhead < view.timelinePlotOrigin())
+            failures.append("playhead chrome escaped into the timeline gutter");
+        for (const ChromeCopies &copy : copies) {
+            if (!copy.hover || !copy.edit || !copy.playhead)
+                continue;
+            if (std::abs(rootX(*copy.hover, *root) - expectedHover) > 0.2 ||
+                std::abs(rootX(*copy.edit, *root) - expectedEdit) > 0.2 ||
+                std::abs(rootX(*copy.playhead, *root) - expectedPlayhead) > 0.2) {
+                failures.append(
+                    QStringLiteral("%1 chrome did not align across Quick bands").arg(copy.name));
+            }
+        }
+
+        const qreal oldPlayheadX = quick->playheadRootContentX();
+        view.setEditorHorizontalScroll(view.viewState().scrollPx + view.pxPerBeat());
+        pumpQuick();
+        const qreal cameraPlayheadX = expected(view.playheadTick());
+        if (std::abs(quick->playheadRootContentX() - cameraPlayheadX) > 0.2 ||
+            (cameraPlayheadX != oldPlayheadX && quick->playheadRootContentX() == oldPlayheadX)) {
+            failures.append("camera motion did not update retained Quick chrome");
+        }
+
+        view.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::VoiceChanges, tick + 1);
+        view.clearTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation);
+        pumpQuick();
+        if (!quick->hoverVisible() ||
+            std::abs(quick->hoverRootContentX() - expected(tick + 1)) > 0.2)
+            failures.append("a stale hover clear hid the newer owner chrome");
+        view.clearTimelineQuickHover(songview::TimelineQuickHoverOwner::VoiceChanges);
+        if (quick->hoverVisible())
+            failures.append("the owning hover clear did not hide Quick chrome");
+        view.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation, tick);
+
+        view.setEventListVisible(true);
+        pumpQuick();
+        if (copies[1].playhead && copies[1].playhead->isVisible())
+            failures.append("hidden piano-roll chrome remained visible over the event list");
+        if (copies[0].playhead && !copies[0].playhead->isVisible())
+            failures.append("event-list replacement hid ruler chrome");
+        if (copies[0].playhead && copies[0].playhead->rulerTriangle() !=
+                                      songview::TimelineChromeItem::RulerTriangle::Up) {
+            failures.append("ruler triangle did not flip up when the roll was hidden");
+        }
+        view.setEventListVisible(false);
+        pumpQuick();
+        if (copies[0].playhead && copies[0].playhead->rulerTriangle() !=
+                                      songview::TimelineChromeItem::RulerTriangle::Down) {
+            failures.append("ruler triangle did not point down above the roll");
+        }
+
+        const SongView::ViewState savedState = view.viewState();
+        view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
+        view.setDrawerActivePage(EditorDrawerPage::Velocity);
+        pumpQuick();
+        if (copies[3].playhead && !copies[3].playhead->isVisible())
+            failures.append("velocity drawer did not expose clipped Quick chrome");
+        view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
+        view.setDrawerActivePage(EditorDrawerPage::VoiceChanges);
+        pumpQuick();
+        if (copies[4].playhead && !copies[4].playhead->isVisible())
+            failures.append("voice-change drawer did not expose clipped Quick chrome");
+        view.applyViewState(savedState);
+        pumpQuick();
+
+        const auto beforeMoves = layerRevisions(*scene);
+        const uint64_t laterSample = timeline.sampleForTick(tick + 256);
+        for (uint64_t move = 0; move < 128; ++move)
+            view.setPlayheadSample(sample + (laterSample - sample) * move / 127, false);
+        pumpQuick();
+        if (layerRevisions(*scene) != beforeMoves)
+            failures.append("120 retained playhead moves rebuilt TimelineQuickLayer data");
+
+        const uint64_t fractionalEnd = timeline.sampleForTick(tick + 2);
+        uint64_t fractionalSample = sample;
+        for (uint64_t candidate = sample + 1; candidate < fractionalEnd; ++candidate) {
+            const qreal candidateX = expected(timeline.tickForSample(candidate));
+            if (std::abs(candidateX - std::round(candidateX)) > 0.1) {
+                fractionalSample = candidate;
+                break;
+            }
+        }
+        view.setPlayheadSample(fractionalSample, false);
+        pumpQuick();
+        if (std::abs(quick->playheadRootContentX() -
+                     expected(timeline.tickForSample(fractionalSample))) > 0.2) {
+            failures.append("fractional Quick playhead placement exceeded 0.2 pixels");
+        }
+
+        QString captureError;
+        const QImage paused = checks::support::captureQuickBand(view, *ruler, &captureError);
+        view.setPlayheadSample(fractionalSample, true);
+        pumpQuick();
+        const QImage playing = checks::support::captureQuickBand(view, *ruler, &captureError);
+        if (paused.isNull() || playing.isNull()) {
+            failures.append(
+                QStringLiteral("playhead Quick framebuffer capture failed: %1").arg(captureError));
+        } else if (paused == playing) {
+            failures.append("paused and playing retained Quick playheads rendered identically");
+        }
+
+        checkAutomationHover(view, failures);
+    }
+
+    checkFollowScroll(view, timeline, failures);
+    view.clearTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation);
     view.setPlayheadSample(0, false);
-    processPaints();
+    pumpQuick();
     if (!viewWasVisible)
         view.hide();
-    view.setAttribute(Qt::WA_DontShowOnScreen, viewHadDontShowOnScreen);
+    view.setAttribute(Qt::WA_DontShowOnScreen, hadDontShowOnScreen);
     return failures;
 }

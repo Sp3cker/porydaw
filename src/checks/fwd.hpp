@@ -62,8 +62,6 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
 int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel);
 int runMainWindowRoutingCheck(const QString &scratchProject, const QString &songA,
                               const QString &songB);
-int runRenderingPlayheadCheck(const QString &scratchProject, const QString &songLabel,
-                              const QString &screenshotPath = QString());
 int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                             const QString &songB, const QString &screenshotPath = QString());
 int runThemeHarness(QApplication &application, const QString &command);

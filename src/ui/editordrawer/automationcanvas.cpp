@@ -10,6 +10,7 @@
 #include <QEvent>
 #include <QIcon>
 #include <QPixmap>
+#include <QResizeEvent>
 #include <QScrollArea>
 #include <QScrollBar>
 
@@ -17,6 +18,8 @@
 #include "ui/contextmenu.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/layout.h"
+#include "ui/songview/quick/timelinequickview.h"
+#include "ui/typography.h"
 
 void AutomationCanvas::refreshGeometry()
 {
@@ -33,22 +36,47 @@ void AutomationCanvas::refreshGeometry()
         std::max(layout::space(layout::Space::Zero), m_geometry.plotOrigin - 2 * gutterMargin),
         layout::space(layout::Space::Zero));
     layoutLaneStack();
-    // Lane layout is content: the surface cache must re-rasterize, a plain
-    // update() would keep blitting the stale pre-layout pixels.
-    invalidateContent();
-    updateGeometry();
-    update();
-}
-
-void AutomationCanvas::contentGeometryChanged()
-{
-    refreshGeometry();
     syncHoverValueLabel();
     syncPreviewValueLabel();
+    updateGeometry();
+    requestFullQuickUpdate();
+}
+
+void AutomationCanvas::rebuildFontCache()
+{
+    m_laneTitleFont = typography::bold(typography::caption(font()));
+    m_laneCaptionFont = typography::regular(typography::caption(font()));
+    m_laneTextLayout = layout::twoLineText(m_laneTitleFont, m_laneTitleFont, m_laneCaptionFont,
+                                           layout::Space::Zero);
+}
+
+const QString &AutomationCanvas::refreshCcSummaryText(CCLanes::RowTextCache &cache,
+                                                      std::span<const NodePoint> points,
+                                                      const NodeLane &lane)
+{
+    if (!points.empty()) {
+        const auto pointCount = points.size();
+        const int minimum = lane.minimumValue();
+        const int maximum = lane.maximumValue();
+        if (cache.summaryKind != CCLanes::SummaryKind::Points || cache.pointCount != pointCount ||
+            cache.minimum != minimum || cache.maximum != maximum) {
+            cache.secondary = tr("%1 points · %2..%3").arg(pointCount).arg(minimum).arg(maximum);
+            cache.summaryKind = CCLanes::SummaryKind::Points;
+            cache.pointCount = pointCount;
+            cache.minimum = minimum;
+            cache.maximum = maximum;
+        }
+        return cache.secondary;
+    }
+    if (cache.summaryKind != CCLanes::SummaryKind::EmptyControl) {
+        cache.secondary = tr("empty · click to add points");
+        cache.summaryKind = CCLanes::SummaryKind::EmptyControl;
+    }
+    return cache.secondary;
 }
 
 AutomationCanvas::AutomationCanvas(AutomationPage *page, QScrollArea *scroll)
-    : songview::TimelineSurface(nullptr)
+    : QWidget(nullptr)
     , m_geometry(AutomationGeometry::resolve())
     , m_page(page)
     , m_scroll(scroll)
@@ -57,19 +85,26 @@ AutomationCanvas::AutomationCanvas(AutomationPage *page, QScrollArea *scroll)
     , m_laneSelection(page->m_owner.selectionModel(), m_rowData.rows(), page->usedTrackMask())
 {
     setObjectName(QStringLiteral("automationCanvas"));
+    setAutoFillBackground(false);
     setMouseTracking(true);
     setFocusPolicy(Qt::ClickFocus);
     rebuildFontCache();
     setMinimumHeight(m_tempoLane.totalHeight(m_geometry) + m_geometry.rowDefaultHeight);
     if (m_scroll && m_scroll->verticalScrollBar()) {
         const auto updatePinnedTempo = [this] {
-            const QRegion dirty = syncPinnedTempoLayout();
+            syncPinnedTempoLayout();
             syncHoverValueLabel();
-            songview::TimelineSurface::invalidateContent(dirty);
+            syncPreviewValueLabel();
+            requestViewportQuickUpdate();
         };
         connect(m_scroll->verticalScrollBar(), &QScrollBar::valueChanged, this, updatePinnedTempo);
         connect(m_scroll->verticalScrollBar(), &QScrollBar::rangeChanged, this, updatePinnedTempo);
     }
+}
+void AutomationCanvas::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+    refreshGeometry();
 }
 AutomationProjection AutomationCanvas::projection() const
 {
@@ -86,12 +121,126 @@ NodeLaneHoverTarget AutomationCanvas::hoverTarget() const
     target.ready = m_page && m_page->ready();
     return target;
 }
-
-void AutomationCanvas::invalidateContent()
+void AutomationCanvas::invalidateSelectedNodeMultiplicity() const noexcept
 {
-    syncHoverValueLabel();
-    songview::TimelineSurface::invalidateContent();
+    m_selectedNodeMultiplicity.valid = false;
 }
+
+bool AutomationCanvas::hasMultipleSelectedNodes(
+    const std::optional<std::pair<uint64_t, uint64_t>> &selectedTickRange) const
+{
+    if (!selectedTickRange)
+        return false;
+    const uint64_t documentRevision = m_page ? m_page->liveState().documentRevision : 0;
+    if (m_selectedNodeMultiplicity.valid &&
+        m_selectedNodeMultiplicity.documentRevision == documentRevision) {
+        return m_selectedNodeMultiplicity.multiple;
+    }
+    const auto [firstTick, lastTick] = *selectedTickRange;
+    auto selectedCount = 0;
+    for (std::size_t index = 0; index < m_nodeStack.size(); ++index) {
+        const NodeLaneSlot &slot = m_nodeStack[index];
+        const LaneHandle handle{int(index)};
+        if (!slot.lane ||
+            (!m_laneSelection.coversNodes(slot.id) && !bandPreviewContainsLane(handle))) {
+            continue;
+        }
+        for (const NodePoint &point : slot.lane->points()) {
+            if (point.tick < firstTick || point.tick >= lastTick)
+                continue;
+            if (++selectedCount > 1) {
+                m_selectedNodeMultiplicity = {
+                    .documentRevision = documentRevision, .valid = true, .multiple = true};
+                return true;
+            }
+        }
+    }
+    m_selectedNodeMultiplicity = {
+        .documentRevision = documentRevision, .valid = true, .multiple = false};
+    return false;
+}
+
+void AutomationCanvas::requestQuickUpdate(songview::TimelineQuickDirtySet dirty) const
+{
+    if (dirty.testFlag(songview::TimelineQuickDirty::AutomationHover))
+        syncTimelineQuickHover();
+    if (m_page)
+        m_page->requestQuickUpdate(dirty);
+}
+
+void AutomationCanvas::syncTimelineQuickHover() const
+{
+    if (!m_page)
+        return;
+    if (!m_hoverState.hover.lane.valid()) {
+        m_page->m_owner.clearTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation);
+        return;
+    }
+    const uint64_t tick =
+        uint64_t(std::max(0.0, m_hoverState.insertionTick(projection(), m_pencilMode)));
+    m_page->m_owner.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation, tick);
+}
+
+void AutomationCanvas::requestFullQuickUpdate() const
+{
+    requestQuickUpdate(songview::cAutomationMask);
+}
+
+void AutomationCanvas::requestViewportQuickUpdate() const
+{
+    requestQuickUpdate(songview::TimelineQuickDirty::AutomationGrid |
+                       songview::TimelineQuickDirty::AutomationCurves |
+                       songview::TimelineQuickDirty::AutomationNodes |
+                       songview::TimelineQuickDirty::AutomationSelection |
+                       songview::TimelineQuickDirty::AutomationText);
+}
+
+void AutomationCanvas::requestSelectionQuickUpdate() const
+{
+    invalidateSelectedNodeMultiplicity();
+    requestQuickUpdate(songview::TimelineQuickDirty::AutomationSelection |
+                       songview::TimelineQuickDirty::AutomationNodes);
+}
+
+void AutomationCanvas::requestHoverQuickUpdate() const
+{
+    requestQuickUpdate(songview::TimelineQuickDirty::AutomationHover |
+                       songview::TimelineQuickDirty::AutomationHoverText);
+}
+
+void AutomationCanvas::requestGestureBeginQuickUpdate(bool band) const
+{
+    if (band)
+        invalidateSelectedNodeMultiplicity();
+    auto dirty = songview::TimelineQuickDirty::AutomationTransient |
+                 songview::TimelineQuickDirty::AutomationTransientText |
+                 songview::TimelineQuickDirty::AutomationNodes;
+    dirty |= band ? songview::TimelineQuickDirty::AutomationSelection
+                  : songview::TimelineQuickDirty::AutomationCurves;
+    requestQuickUpdate(dirty);
+}
+
+void AutomationCanvas::requestGestureMoveQuickUpdate() const
+{
+    if (m_band.active)
+        invalidateSelectedNodeMultiplicity();
+    requestQuickUpdate(songview::TimelineQuickDirty::AutomationTransient |
+                       songview::TimelineQuickDirty::AutomationTransientText);
+}
+
+void AutomationCanvas::requestGestureEndQuickUpdate() const
+{
+    invalidateSelectedNodeMultiplicity();
+    requestQuickUpdate(songview::TimelineQuickDirty::AutomationCurves |
+                       songview::TimelineQuickDirty::AutomationNodes |
+                       songview::TimelineQuickDirty::AutomationSelection |
+                       songview::TimelineQuickDirty::AutomationTransient |
+                       songview::TimelineQuickDirty::AutomationHover |
+                       songview::TimelineQuickDirty::AutomationText |
+                       songview::TimelineQuickDirty::AutomationHoverText |
+                       songview::TimelineQuickDirty::AutomationTransientText);
+}
+
 bool AutomationCanvas::bandPreviewContainsLane(LaneHandle handle) const noexcept
 {
     return m_band.coversLane(handle);
@@ -99,11 +248,12 @@ bool AutomationCanvas::bandPreviewContainsLane(LaneHandle handle) const noexcept
 void AutomationCanvas::setPencilMode(bool enabled)
 {
     if (!m_activeGesture)
-        invalidateContent(m_hoverState.clearHover());
+        m_hoverState.clearHover();
     m_pencilMode = enabled;
     syncHoverValueLabel();
     syncPreviewValueLabel();
     updatePencilCursor();
+    requestHoverQuickUpdate();
     if (m_page)
         m_page->announce(enabled ? tr("Pencil mode on") : tr("Pencil mode off"));
 }
@@ -135,18 +285,19 @@ bool AutomationCanvas::event(QEvent *event)
         m_hoverState.invalidateFontCache();
         m_hoverState.hoverValueLabel = {};
         m_hoverState.previewValueLabel = {};
-        invalidateContent();
         syncHoverValueLabel();
         syncPreviewValueLabel();
+        requestFullQuickUpdate();
     }
     if (event->type() == QEvent::Hide || event->type() == QEvent::WindowDeactivate ||
         event->type() == QEvent::UngrabMouse)
         cancelInteraction();
-    return songview::TimelineSurface::event(event);
+    return QWidget::event(event);
 }
 void AutomationCanvas::rebuildRows()
 {
     cancelInteraction();
+    invalidateSelectedNodeMultiplicity();
     m_hoverState.invalidateCaches();
     m_hoverState.hoverValueLabel = {};
     m_hoverState.previewValueLabel = {};
@@ -154,7 +305,7 @@ void AutomationCanvas::rebuildRows()
     if (m_page)
         m_laneSelection.setUsedTrackMask(m_page->usedTrackMask());
     layoutLaneStack();
-    invalidateContent();
+    requestFullQuickUpdate();
 }
 
 void AutomationCanvas::updateTempoLayout()
@@ -168,9 +319,8 @@ int AutomationCanvas::tempoTop() const
            m_tempoLane.totalHeight(m_geometry);
 }
 
-QRegion AutomationCanvas::syncPinnedTempoLayout()
+void AutomationCanvas::syncPinnedTempoLayout()
 {
-    QRegion dirty(pinnedTempoRect());
     m_tempoLane.updateLayout(width(), tempoTop(), m_geometry);
     for (NodeLaneSlot &slot : m_nodeStack) {
         if (slot.isTempo()) {
@@ -178,8 +328,6 @@ QRegion AutomationCanvas::syncPinnedTempoLayout()
             break;
         }
     }
-    dirty += pinnedTempoRect();
-    return dirty;
 }
 
 void AutomationCanvas::layoutLaneStack()
@@ -197,7 +345,7 @@ void AutomationCanvas::rebuildNodeStack()
     cancelNodeGestures();
     m_hoverState.hover.highlightLocked = false;
     m_hoverState.invalidateCaches();
-    invalidateContent(m_hoverState.clearHover());
+    m_hoverState.clearHover();
     m_nodeStack.clear();
     m_ccAdapters.clear();
     m_nodeStack.push_back(
@@ -240,6 +388,28 @@ AutomationCanvas::pointerLaneAt(const QPoint &position) const noexcept
     }
     const bool tempoHeader = m_tempoLane.containsHeader(position);
     return {tempoHeader ? tempoHandle : laneAt(position.y()), tempoHeader};
+}
+void AutomationCanvas::refreshHoverAt(const QPointF &position)
+{
+    if (!m_page || !rect().contains(position.toPoint())) {
+        m_hoverState.clearHover();
+        return;
+    }
+    const PointerLaneHit pointer = pointerLaneAt(position.toPoint());
+    if (pointer.tempoHeader) {
+        m_hoverState.clearHover();
+        return;
+    }
+    const qreal x = position.x();
+    const LaneHandle handle =
+        x >= m_geometry.plotOrigin - m_geometry.pointHitRadius ? pointer.lane : LaneHandle{};
+    const auto *slot = resolveSlot(handle);
+    if (!slot) {
+        m_hoverState.clearHover();
+        return;
+    }
+    m_hoverState.updateHover(hoverTarget(), m_geometry, *slot->lane, slot->body, handle,
+                             projection(), x, position.toPoint().y(), m_pencilMode);
 }
 
 const AutomationCanvas::NodeLaneSlot *
@@ -288,8 +458,8 @@ void AutomationCanvas::syncHoverValueLabel()
     const NodeLane *lane = nullptr;
     QRect body;
     const bool resolved = resolveLane(m_hoverState.hover.lane, &lane, &body);
-    invalidateContent(m_hoverState.updateHoverValueLabel(
-        hoverTarget(), m_geometry, resolved ? lane : nullptr, body, projection(), m_pencilMode));
+    m_hoverState.updateHoverValueLabel(hoverTarget(), m_geometry, resolved ? lane : nullptr, body,
+                                       projection(), m_pencilMode);
 }
 
 void AutomationCanvas::syncPreviewValueLabel()
@@ -325,8 +495,7 @@ void AutomationCanvas::syncPreviewValueLabel()
             }
         }
     }
-    invalidateContent(m_hoverState.updatePreviewValueLabel(hoverTarget(), m_geometry, lane, body,
-                                                           handle, x, value));
+    m_hoverState.updatePreviewValueLabel(hoverTarget(), m_geometry, lane, body, handle, x, value);
 }
 
 void AutomationCanvas::highlightHoveredPoint(LaneHandle handle, const QPointF &position,
@@ -336,9 +505,9 @@ void AutomationCanvas::highlightHoveredPoint(LaneHandle handle, const QPointF &p
     QRect body;
     if (!resolveLane(handle, &lane, &body))
         return;
-    invalidateContent(m_hoverState.setContextPointHighlight(hoverTarget(), m_geometry, *lane, body,
-                                                            handle, projection(), position, point,
-                                                            m_pencilMode));
+    m_hoverState.setContextPointHighlight(hoverTarget(), m_geometry, *lane, body, handle,
+                                          projection(), position, point, m_pencilMode);
+    requestHoverQuickUpdate();
 }
 
 int AutomationCanvas::ccRowIndexAt(int y) const noexcept
@@ -396,13 +565,16 @@ void AutomationCanvas::cancelInteraction()
     m_tempoLane.cancel();
     m_hoverState.previewValueLabel = {};
     m_hoverState.hover.highlightLocked = false;
-    invalidateContent(m_hoverState.clearHover());
+    refreshHoverAt(mapFromGlobal(QCursor::pos()));
     updateAxisLockCursor(AxisLock::None);
     if (mouseGrabber() == this)
         releaseMouse();
-    if (wasActive)
+    if (wasActive) {
         setGestureActive(false);
-    invalidateContent();
+        requestGestureEndQuickUpdate();
+    } else {
+        requestHoverQuickUpdate();
+    }
 }
 
 void AutomationCanvas::cancelNodeGestures()

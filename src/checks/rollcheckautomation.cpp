@@ -22,6 +22,7 @@
 #include <QTimer>
 
 #include "checks/support/eventsynth.h"
+#include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
@@ -239,6 +240,44 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     const auto popupCheck = [&](bool condition, const QString &message) {
         if (popupMenus && !condition)
             recordFailure(message);
+    };
+    QWidget *const automationViewport = page.scrollViewport();
+    check(automationViewport, QStringLiteral("automation page did not expose its scroll viewport"));
+    const auto captureAutomationViewport = [&] {
+        QString captureError;
+        const QImage image =
+            automationViewport
+                ? checks::support::captureQuickBand(view, *automationViewport, &captureError)
+                : QImage{};
+        check(
+            !image.isNull(),
+            QStringLiteral("automation viewport framebuffer capture failed: %1").arg(captureError));
+        return image;
+    };
+    const auto contentToViewport = [&](const QRect &content) {
+        return automationViewport
+                   ? content.translated(page.canvas()->mapTo(automationViewport, QPoint{}))
+                   : QRect{};
+    };
+    const auto captureAutomationContent = [&](const QRect &content) {
+        const QRect viewportRect = contentToViewport(content);
+        check(automationViewport && automationViewport->rect().contains(viewportRect),
+              QStringLiteral("automation content crop is outside the scroll viewport"));
+        const QImage image = captureAutomationViewport();
+        if (image.isNull() || !automationViewport ||
+            !automationViewport->rect().contains(viewportRect))
+            return QImage{};
+        const qreal imageDpr = image.devicePixelRatio();
+        const int left = qRound(viewportRect.left() * imageDpr);
+        const int top = qRound(viewportRect.top() * imageDpr);
+        const int right = qRound((viewportRect.right() + 1) * imageDpr);
+        const int bottom = qRound((viewportRect.bottom() + 1) * imageDpr);
+        const QRect crop(left, top, right - left, bottom - top);
+        check(image.rect().contains(crop),
+              QStringLiteral("automation content crop exceeds the viewport framebuffer"));
+        QImage result = image.copy(crop);
+        result.setDevicePixelRatio(imageDpr);
+        return result;
     };
     auto *automationScroll = page.findChild<QScrollArea *>(QStringLiteral("automationScroll"));
     check(automationScroll, QStringLiteral("automation page did not expose its scroll area"));
@@ -523,9 +562,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     if (popupMenus)
         checkAutomationLanePopupMenus(view, page, document, songLabel, projectionGeometry, lfoTop,
                                       lfoHeight, automationRowsHeight(page), failures);
-
-    page.canvas()->invalidateContent();
-    page.canvas()->grab();
+    page.canvas()->requestFullQuickUpdate();
+    (void)captureAutomationViewport();
     const DrawerPageGridState meterGrid = view.gridState(48, false);
     check(meterGrid.gridTicks > 0 && meterGrid.snapTicks > 0,
           QStringLiteral("automation grid did not resolve through its SongView owner"));
@@ -751,28 +789,23 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     QCoreApplication::sendEvent(page.canvas(), &boundaryLeave);
     QCoreApplication::processEvents();
     const QPoint boundaryPoint(expected.plotOrigin + 48, lfoTop + lfoHeight);
-    const QImage boundaryBaseline = page.canvas()->grab().toImage();
+    const QImage boundaryBaseline = captureAutomationViewport();
     checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, boundaryPoint, Qt::NoButton,
                               Qt::NoButton, Qt::NoModifier);
     QCoreApplication::processEvents();
-    const QImage boundaryHover = page.canvas()->grab().toImage();
+    const QImage boundaryHover = captureAutomationViewport();
     check(page.canvas()->cursor().shape() == Qt::SplitVCursor,
           QStringLiteral("automation row boundary did not advertise its resize action"));
-    check(boundaryHover == boundaryBaseline,
+    check(!boundaryBaseline.isNull() && boundaryHover == boundaryBaseline,
           QStringLiteral("automation row boundary painted an insertion preview"));
-    // Adding and removing an empty cosmetic lane must not alter existing lanes.
     check(document.lanePoints(0, 11).empty(),
           QStringLiteral("empty-lane fixture CC 11 already has document points"));
-    const QImage lfoGutterBefore =
-        page.canvas()
-            ->grab(QRect(0, automationRowTop(page, lfo), expected.plotOrigin, heightFor(lfo)))
-            .toImage();
+    const QImage lfoGutterBefore = captureAutomationContent(
+        QRect(0, automationRowTop(page, lfo), expected.plotOrigin, heightFor(lfo)));
     page.addEmptyLane(0, 11);
     QCoreApplication::processEvents();
-    const QImage lfoGutterAfter =
-        page.canvas()
-            ->grab(QRect(0, automationRowTop(page, lfo), expected.plotOrigin, heightFor(lfo)))
-            .toImage();
+    const QImage lfoGutterAfter = captureAutomationContent(
+        QRect(0, automationRowTop(page, lfo), expected.plotOrigin, heightFor(lfo)));
     check(lfoGutterAfter == lfoGutterBefore,
           QStringLiteral("adding a lane changed an existing automation lane title"));
     check(rowsHaveUniqueIds(page.canvas()->rows()),
@@ -1203,16 +1236,23 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             view.setEditorHorizontalScroll(live.horizontalScroll);
             page.refreshLiveState(live);
             QCoreApplication::processEvents();
-            return page.canvas()->grab().toImage();
+            return captureAutomationViewport();
         };
         const QImage rangeExcludedImage = trackRangeImage(groupB);
         const QImage rangeIncludedImage = trackRangeImage(groupB + 1);
-        const int bendTop = automationRowTop(page, bend);
-        const QPoint bendPoint(qRound(view.displayX(double(groupB), expected.plotOrigin, dpr)),
-                               bendTop + expected.valuePlotPadding);
+        const QPoint bendPoint = groupBPoint;
+        const QPoint bendViewportPoint =
+            automationViewport ? page.canvas()->mapTo(automationViewport, bendPoint) : QPoint{};
+        const qreal bendOuter = expected.velocitySelectedNodeRingRadius + layout::singlePixel();
+        check(automationViewport &&
+                  automationViewport->rect().contains(QRectF(bendViewportPoint.x() - bendOuter,
+                                                             bendViewportPoint.y() - bendOuter,
+                                                             2 * bendOuter, 2 * bendOuter)
+                                                          .toAlignedRect()),
+              QStringLiteral("automation selection node probe is outside the scroll viewport"));
         const auto bendRingChanged = [&] {
             const qreal imageDpr = rangeIncludedImage.devicePixelRatio();
-            const QPointF pixelCenter = QPointF(bendPoint) * imageDpr;
+            const QPointF pixelCenter = QPointF(bendViewportPoint) * imageDpr;
             const qreal inner = expected.velocityNodePaintRadius * imageDpr;
             const qreal outer =
                 (expected.velocitySelectedNodeRingRadius + layout::singlePixel()) * imageDpr;
@@ -1505,7 +1545,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     for (const double playhead : {-3.0, 10.49, 10.5, 10.51}) {
         live.playback = {playhead, true};
         page.refreshLiveState(live);
-        page.canvas()->grab();
+        (void)captureAutomationViewport();
         const uint64_t contextTick = drawerContextTick(playhead);
         const auto ownerContext = view.voiceContext(contextTick);
         check(ownerContext.voice == &voicegroup.voices[0] && ownerContext.voiceSlot == 0,
@@ -1515,7 +1555,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     live.playback.playing = false;
     live.editCursorTick = 24;
     page.refreshLiveState(live);
-    page.canvas()->grab();
+    (void)captureAutomationViewport();
     const auto stoppedVoice = view.voiceContext(24);
     check(stoppedVoice.voiceSlot == 3,
           QStringLiteral("stopped voice context did not use the edit cursor (slot %1)")

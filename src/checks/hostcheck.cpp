@@ -10,8 +10,8 @@
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/layout.h"
-#include "ui/playheadoverlay.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 #include <QApplication>
 #include <QCoreApplication>
@@ -69,15 +69,6 @@ AutomationCanvas *automationCanvas(SongView &view)
     auto *drawer = editorDrawer(view);
     auto *page = drawer ? drawer->automationPage() : nullptr;
     return page ? page->canvas() : nullptr;
-}
-
-songview::PlayheadOverlay *playheadOverlay(SongView &view)
-{
-    for (QWidget *widget : view.findChildren<QWidget *>()) {
-        if (auto *overlay = dynamic_cast<songview::PlayheadOverlay *>(widget))
-            return overlay;
-    }
-    return nullptr;
 }
 
 QPointF nodePosition(const SongView &view, const VelocityArea &area, const MidiTimeline &timeline,
@@ -220,10 +211,10 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     QCoreApplication::processEvents();
 
     auto *area = velocityArea(view);
-    auto *overlay = playheadOverlay(view);
+    auto *quick = view.findChild<songview::TimelineQuickView *>();
     check(area != nullptr, "host should construct the velocity page");
-    check(overlay != nullptr, "host should construct the playhead overlay");
-    if (!area || !overlay)
+    check(quick != nullptr, "host should construct retained timeline Quick chrome");
+    if (!area || !quick)
         return 1;
 
     EditorViewState editorState;
@@ -299,7 +290,11 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               "drawer section chrome should center its toggles beneath the piano keys");
     }
     if (otherStrip) {
-        const QImage stripWithoutLoopMarkers = otherStrip->grab().toImage();
+        QString stripCaptureError;
+        const QImage stripWithoutLoopMarkers =
+            checks::support::captureQuickBand(view, *otherStrip, &stripCaptureError);
+        check(stripCaptureError.isEmpty() && !stripWithoutLoopMarkers.isNull(),
+              "Other Events strip Quick capture should succeed");
         document.setLoopTick(false, 6);
         document.setLoopTick(true, 18);
         std::unique_ptr<MidiTimeline> loopTimeline = document.buildTimeline(44100.0);
@@ -309,7 +304,11 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
             view.updateSong(loopTimeline.get());
             timeline = std::move(loopTimeline);
             QCoreApplication::processEvents();
-            check(otherStrip->grab().toImage() == stripWithoutLoopMarkers,
+            QString loopCaptureError;
+            const QImage stripWithLoopMarkers =
+                checks::support::captureQuickBand(view, *otherStrip, &loopCaptureError);
+            check(loopCaptureError.isEmpty() && !stripWithLoopMarkers.isNull() &&
+                      stripWithLoopMarkers == stripWithoutLoopMarkers,
                   "loop markers should not appear in the Other Events strip");
         }
     }
@@ -374,39 +373,45 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               "Voice Changes should be visible for voice-context checks");
         const QImage editCursorVoiceContext =
             checks::support::captureQuickBand(view, *voiceChanges);
-        const QImage editCursorAutomation = automation->grab().toImage();
-        const auto automationBeforePlayback = automation->diagnostics();
+        const QImage editCursorAutomation =
+            checks::support::captureQuickBand(view, *automationScroll->viewport());
         view.setPlayheadSample(timeline->sampleForTick(24), true);
         QCoreApplication::processEvents();
         const QImage playbackVoiceContext = checks::support::captureQuickBand(view, *voiceChanges);
-        check(playbackVoiceContext != editCursorVoiceContext &&
-                  automation->grab().toImage() == editCursorAutomation &&
-                  automation->diagnostics() == automationBeforePlayback,
+        const QImage playbackAutomation =
+            checks::support::captureQuickBand(view, *automationScroll->viewport());
+        check(!editCursorAutomation.isNull() && playbackVoiceContext != editCursorVoiceContext &&
+                  playbackAutomation == editCursorAutomation,
               "visible Voice Changes should resolve playback voice without refreshing Automation");
-        const auto warmAutomation = automation->diagnostics();
+        const QImage warmAutomation =
+            checks::support::captureQuickBand(view, *automationScroll->viewport());
         const QImage warmVoiceContext = checks::support::captureQuickBand(view, *voiceChanges);
         for (int tick = 25; tick < 27; ++tick)
             view.setPlayheadSample(timeline->sampleForTick(uint64_t(tick)), true);
         QCoreApplication::processEvents();
         check(checks::support::captureQuickBand(view, *voiceChanges) == warmVoiceContext &&
-                  automation->diagnostics() == warmAutomation,
+                  checks::support::captureQuickBand(view, *automationScroll->viewport()) ==
+                      warmAutomation,
               "steady same-voice playback should keep Voice Changes and Automation stable");
 
         view.setPlayheadSample(timeline->sampleForTick(26), false);
         QCoreApplication::processEvents();
         check(checks::support::captureQuickBand(view, *voiceChanges) == editCursorVoiceContext &&
-                  automation->grab().toImage() == editCursorAutomation,
+                  checks::support::captureQuickBand(view, *automationScroll->viewport()) ==
+                      editCursorAutomation,
               "stopping should return Voice Changes to the edit-cursor voice only");
         view.setPlayheadSample(timeline->sampleForTick(12), true);
         QCoreApplication::processEvents();
         const QImage squarePlaybackVoiceContext =
             checks::support::captureQuickBand(view, *voiceChanges);
-        const auto automationBeforeCrossing = automation->diagnostics();
+        const QImage automationBeforeCrossing =
+            checks::support::captureQuickBand(view, *automationScroll->viewport());
         view.setPlayheadSample(timeline->sampleForTick(24), true);
         QCoreApplication::processEvents();
         check(checks::support::captureQuickBand(view, *voiceChanges) !=
                       squarePlaybackVoiceContext &&
-                  automation->diagnostics() == automationBeforeCrossing,
+                  checks::support::captureQuickBand(view, *automationScroll->viewport()) ==
+                      automationBeforeCrossing,
               "Voice Changes should refresh across a program change without refreshing Automation");
         view.setPlayheadSample(timeline->sampleForTick(24), false);
         QCoreApplication::processEvents();
@@ -872,6 +877,17 @@ int runHostSeamsCheck()
           "SongView must own all three concrete drawer pages");
     if (!drawer || !automation || !velocity || !voiceChanges)
         return 1;
+    auto *automationScroll =
+        automation->findChild<QScrollArea *>(QStringLiteral("automationScroll"));
+    check(
+        automationScroll && automationScroll->viewport() &&
+            !automationScroll->autoFillBackground() &&
+            !automationScroll->viewport()->autoFillBackground() &&
+            automationScroll->styleSheet().contains(
+                QStringLiteral("background-color: transparent")) &&
+            automationScroll->viewport()->styleSheet().contains(
+                QStringLiteral("background-color: transparent")),
+        "Automation scroll host and viewport must remain transparent over the shared Quick scene");
 
     view.applyEditorViewState(changedState);
     check(view.editorViewState() == changedState &&

@@ -14,6 +14,7 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
+#include "ui/theme/themeruntime.h"
 
 namespace songview {
 namespace {
@@ -295,6 +296,9 @@ TimelineQuickScene::TimelineQuickScene(QObject *parent) : QObject(parent)
     m_velocityTextModel = new TimelineQuickTextModel(this);
     m_voiceChangesTextModel = new TimelineQuickTextModel(this);
     m_voiceChangesHoverTextModel = new TimelineQuickTextModel(this);
+    m_automationTextModel = new TimelineQuickTextModel(this);
+    m_automationHoverTextModel = new TimelineQuickTextModel(this);
+    m_automationTransientTextModel = new TimelineQuickTextModel(this);
 }
 
 QAbstractItemModel *TimelineQuickScene::pianoNoteTextModel() const noexcept
@@ -337,6 +341,21 @@ QAbstractItemModel *TimelineQuickScene::voiceChangesHoverTextModel() const noexc
     return m_voiceChangesHoverTextModel;
 }
 
+QAbstractItemModel *TimelineQuickScene::automationTextModel() const noexcept
+{
+    return m_automationTextModel;
+}
+
+QAbstractItemModel *TimelineQuickScene::automationHoverTextModel() const noexcept
+{
+    return m_automationHoverTextModel;
+}
+
+QAbstractItemModel *TimelineQuickScene::automationTransientTextModel() const noexcept
+{
+    return m_automationTransientTextModel;
+}
+
 void TimelineQuickScene::setRulerTextRecords(
     std::span<const TimelineQuickTextModel::Record> records)
 {
@@ -367,6 +386,24 @@ void TimelineQuickScene::setVoiceChangesHoverTextRecords(
     m_voiceChangesHoverTextModel->setRecords(records);
 }
 
+void TimelineQuickScene::setAutomationTextRecords(
+    std::span<const TimelineQuickTextModel::Record> records)
+{
+    m_automationTextModel->setRecords(records);
+}
+
+void TimelineQuickScene::setAutomationHoverTextRecords(
+    std::span<const TimelineQuickTextModel::Record> records)
+{
+    m_automationHoverTextModel->setRecords(records);
+}
+
+void TimelineQuickScene::setAutomationTransientTextRecords(
+    std::span<const TimelineQuickTextModel::Record> records)
+{
+    m_automationTransientTextModel->setRecords(records);
+}
+
 const TimelineQuickLayerData &TimelineQuickScene::layer(TimelineQuickLayer layer) const noexcept
 {
     return m_layers[static_cast<std::size_t>(layer)];
@@ -382,6 +419,9 @@ namespace timeline_quick {
 namespace {
 
 constexpr int kEllipseSegments = 24;
+constexpr int kSelectionFillAlpha = 30;
+constexpr qreal kSelectionDashMultiplier = 4.0;
+constexpr qreal kSelectionGapMultiplier = 2.0;
 
 struct ClippedPolygon {
     std::array<QPointF, 8> points;
@@ -525,6 +565,34 @@ void addDashedVertical(TimelineQuickScene &scene, TimelineQuickLayer layer, qrea
 {
     for (qreal y = y0; y < y1; y += dash + gap)
         addVerticalLine(scene, layer, x, y, (std::min)(y + dash, y1), width, color, clip);
+}
+
+void addDashedHorizontal(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x0, qreal x1,
+                         qreal y, qreal width, qreal dash, qreal gap, const QColor &color,
+                         const QRectF &clip)
+{
+    for (qreal x = x0; x < x1; x += dash + gap)
+        addHorizontalLine(scene, layer, x, std::min(x + dash, x1), y, width, color, clip);
+}
+
+void addSelectionReticle(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
+                         const QRectF &clip)
+{
+    QColor fill = themes::color(themes::Role::song_view_selection_fill);
+    fill.setAlpha(kSelectionFillAlpha);
+    addRect(scene, layer, rect, fill, clip);
+    const QColor edge = themes::color(themes::Role::song_view_selection_edge);
+    const qreal width = ::layout::singlePixel();
+    const qreal dash = kSelectionDashMultiplier * width;
+    const qreal gap = kSelectionGapMultiplier * width;
+    addDashedHorizontal(scene, layer, rect.left(), rect.right(), rect.top(), width, dash, gap, edge,
+                        clip);
+    addDashedHorizontal(scene, layer, rect.left(), rect.right(), rect.bottom(), width, dash, gap,
+                        edge, clip);
+    addDashedVertical(scene, layer, rect.left(), rect.top(), rect.bottom(), width, dash, gap, edge,
+                      clip);
+    addDashedVertical(scene, layer, rect.right(), rect.top(), rect.bottom(), width, dash, gap, edge,
+                      clip);
 }
 
 void addClippedTriangle(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPointF &first,

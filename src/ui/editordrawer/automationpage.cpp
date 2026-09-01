@@ -28,6 +28,14 @@ Qt::KeyboardModifiers shortcutModifiers(Qt::KeyboardModifiers modifiers)
            (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier | Qt::MetaModifier);
 }
 
+bool sameLiveState(const DrawerPageLiveState &a, const DrawerPageLiveState &b)
+{
+    return a.documentRevision == b.documentRevision && a.timeZoom == b.timeZoom &&
+           a.horizontalScroll == b.horizontalScroll && a.editCursorTick == b.editCursorTick &&
+           a.trackColor == b.trackColor && a.playback.playheadTick == b.playback.playheadTick &&
+           a.playback.playing == b.playback.playing;
+}
+
 } // namespace
 class AutomationPage::ScrollArea final : public QScrollArea
 {
@@ -51,12 +59,12 @@ class AutomationPage::ScrollArea final : public QScrollArea
         QPalette pal = palette();
         pal.setColor(QPalette::Window, bg);
         setPalette(pal);
-        setAutoFillBackground(true);
+        setAutoFillBackground(false);
         if (QWidget *vp = viewport()) {
             QPalette vpPal = vp->palette();
             vpPal.setColor(QPalette::Window, bg);
             vp->setPalette(vpPal);
-            vp->setAutoFillBackground(true);
+            vp->setAutoFillBackground(false);
         }
     }
 };
@@ -80,6 +88,10 @@ int AutomationPage::scrollGutter() const noexcept
 {
     return m_scroll ? m_scroll->gutter() : 0;
 }
+QWidget *AutomationPage::scrollViewport() const noexcept
+{
+    return m_scroll ? m_scroll->viewport() : nullptr;
+}
 int AutomationPage::laneHeightFor(const EditorAutomationRowId &row) const noexcept
 {
     const int shared =
@@ -98,6 +110,8 @@ AutomationPage::AutomationPage(SongView &owner, QWidget *parent)
     box->setSpacing(0);
     m_scroll = new ScrollArea(this);
     m_scroll->setObjectName(QStringLiteral("automationScroll"));
+    m_scroll->setStyleSheet(
+        QStringLiteral("QScrollArea#automationScroll { background-color: transparent; }"));
     m_scroll->setFrameShape(QFrame::NoFrame);
     m_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_scroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
@@ -109,9 +123,10 @@ AutomationPage::AutomationPage(SongView &owner, QWidget *parent)
     m_canvas->setLayoutDirection(Qt::LeftToRight);
     m_scroll->setWidget(m_canvas);
     m_scroll->updateScrollbarGutter(false);
+    m_scroll->viewport()->setStyleSheet(QStringLiteral("background-color: transparent;"));
     m_scroll->syncBackground();
     if (m_canvas)
-        m_canvas->contentGeometryChanged();
+        m_canvas->refreshGeometry();
     m_pencilModeAction = new QAction(tr("Pencil Mode"), this);
     m_pencilModeAction->setCheckable(true);
     m_pencilModeAction->setShortcutContext(Qt::WindowShortcut);
@@ -130,18 +145,23 @@ AutomationPage::~AutomationPage()
 
 bool AutomationPage::event(QEvent *event)
 {
-    if (event->type() == QEvent::FontChange) {
+    const QEvent::Type type = event->type();
+    if (type == QEvent::FontChange) {
         refreshGeometry();
         if (m_scroll)
             m_scroll->syncBackground();
     }
-    if (event->type() == QEvent::StyleChange || event->type() == QEvent::ThemeChange ||
-        event->type() == QEvent::PaletteChange ||
-        event->type() == QEvent::ApplicationPaletteChange) {
+    if (type == QEvent::StyleChange || type == QEvent::ThemeChange ||
+        type == QEvent::PaletteChange || type == QEvent::ApplicationPaletteChange) {
         if (m_scroll)
             m_scroll->syncBackground();
     }
-    if (event->type() == QEvent::Hide || event->type() == QEvent::WindowDeactivate) {
+    if (type == QEvent::FontChange || type == QEvent::StyleChange || type == QEvent::ThemeChange ||
+        type == QEvent::PaletteChange || type == QEvent::ApplicationPaletteChange) {
+        if (m_canvas)
+            m_canvas->requestFullQuickUpdate();
+    }
+    if (type == QEvent::Hide || type == QEvent::WindowDeactivate) {
         cancelInteraction();
     }
     return QWidget::event(event);
@@ -233,15 +253,20 @@ void AutomationPage::songChanged()
 void AutomationPage::refreshLiveState(const DrawerPageLiveState &liveState)
 {
     const EditorViewState viewState = m_owner.editorViewState();
+    const bool liveChanged = !sameLiveState(m_liveState, liveState);
+    const bool viewStateChanged = m_viewState != viewState;
     const bool preservePan = m_canvas->isPanning() &&
                              m_liveState.documentRevision == liveState.documentRevision &&
-                             m_viewState == viewState;
+                             !viewStateChanged;
     m_liveState = liveState;
     m_viewState = viewState;
-    if (preservePan)
-        m_canvas->invalidateContent();
-    else
+    if (!liveChanged && !viewStateChanged) {
+        m_canvas->requestSelectionQuickUpdate();
+    } else if (preservePan) {
+        m_canvas->requestFullQuickUpdate();
+    } else {
         m_canvas->rebuildRows();
+    }
 }
 
 void AutomationPage::cancelInteraction()
@@ -375,7 +400,7 @@ void AutomationPage::setLaneRange(const EditorAutomationRowId &row, uint8_t rang
 {
     m_viewState.laneRanges[row] = range;
     publishViewState();
-    m_canvas->invalidateContent();
+    m_canvas->requestFullQuickUpdate();
 }
 
 bool AutomationPage::scaleSharedHeight(int wheelSteps, const AutomationGeometry &geometry)
@@ -428,6 +453,10 @@ void AutomationPage::requestRefresh() const
 {
     m_owner.refreshAllDrawerPages();
 }
+void AutomationPage::requestQuickUpdate(songview::TimelineQuickDirtySet dirty) const
+{
+    m_owner.requestTimelineQuickUpdate(dirty);
+}
 
 void AutomationPage::commitEditCursor(uint64_t tick) const
 {
@@ -437,9 +466,4 @@ void AutomationPage::commitEditCursor(uint64_t tick) const
 void AutomationPage::announce(const QString &message) const
 {
     m_owner.announce(message);
-}
-
-bool AutomationPage::paintGrid(QPainter &painter, const QRect &bounds, qreal origin) const
-{
-    return m_owner.paintGrid(painter, bounds, origin);
 }

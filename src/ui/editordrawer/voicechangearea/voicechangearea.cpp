@@ -12,7 +12,7 @@
 #include <QFocusEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
-#include <QRegion>
+#include <QResizeEvent>
 #include <QWheelEvent>
 
 #include "core/miditimeline.h"
@@ -38,9 +38,7 @@ void VoiceChangeArea::rebuildFonts()
     m_captionFont = typography::regular(typography::caption(font()));
 }
 
-VoiceChangeArea::VoiceChangeArea(SongView &owner, QWidget *parent)
-    : songview::TimelineSurface(parent)
-    , m_owner(owner)
+VoiceChangeArea::VoiceChangeArea(SongView &owner, QWidget *parent) : QWidget(parent), m_owner(owner)
 {
     m_geometry.resolve();
     rebuildFonts();
@@ -48,8 +46,6 @@ VoiceChangeArea::VoiceChangeArea(SongView &owner, QWidget *parent)
     setMouseTracking(true);
     setFocusPolicy(Qt::ClickFocus);
 }
-
-void VoiceChangeArea::paintContent(QPainter &) {}
 
 bool VoiceChangeArea::event(QEvent *event)
 {
@@ -60,7 +56,7 @@ bool VoiceChangeArea::event(QEvent *event)
         m_geometry.resolve();
         rebuildVisualState();
     }
-    return songview::TimelineSurface::event(event);
+    return QWidget::event(event);
 }
 
 void VoiceChangeArea::songChanged()
@@ -120,7 +116,7 @@ void VoiceChangeArea::cancelInteraction()
         m_owner.setFollowScrollPaused(false);
     if (wasDragging) {
         unsetCursor();
-        invalidateContent(plotRect());
+        requestQuickUpdate();
     }
     clearHover();
 }
@@ -151,35 +147,30 @@ int VoiceChangeArea::plotWidth() const
 
 void VoiceChangeArea::presentPlayhead(double tick)
 {
-    // The playhead line itself is painted by SongView's shared overlay; this
-    // only keeps the right-aligned context readout truthful, so content
-    // re-rasterizes solely when the displayed program context changes.
+    // The playhead line itself is painted by SongView's shared Quick chrome; this
+    // updates the right-aligned context readout only when the displayed program
+    // context changes.
     if (m_live.playback.playing && m_lastPresentedPlayheadTick &&
         *m_lastPresentedPlayheadTick != tick &&
         voiceSlotAt(uint64_t(std::round(std::max(0.0, *m_lastPresentedPlayheadTick)))) !=
             voiceSlotAt(uint64_t(std::round(std::max(0.0, tick)))))
-        invalidateContent();
+        requestQuickUpdate();
     m_live.playback.playheadTick = tick;
     m_lastPresentedPlayheadTick = tick;
 }
 
-void VoiceChangeArea::invalidateContent(const QRect &rect)
+void VoiceChangeArea::requestQuickUpdate()
 {
-    if (rect.isEmpty())
-        songview::TimelineSurface::invalidateContent();
-    else
-        songview::TimelineSurface::invalidateContent(QRegion(rect));
     m_owner.requestTimelineQuickUpdate(songview::TimelineQuickDirty::VoiceChanges);
 }
 
-void VoiceChangeArea::contentGeometryChanged()
+void VoiceChangeArea::resizeEvent(QResizeEvent *event)
 {
-    // The surface cache self-invalidates on resize; only the hover label
-    // geometry is width-derived and needs re-deriving from the stored tick.
+    QWidget::resizeEvent(event);
     if (m_hoverActive) {
         updateHover(m_owner.displayX(double(m_hoverTick), plotOrigin(), devicePixelRatioF()));
     } else {
-        invalidateContent();
+        requestQuickUpdate();
     }
 }
 
@@ -199,7 +190,7 @@ void VoiceChangeArea::rebuildVisualState()
         m_changeCount = -1;
     }
     clearHover();
-    invalidateContent();
+    requestQuickUpdate();
 }
 
 void VoiceChangeArea::clearHover()
@@ -211,6 +202,7 @@ void VoiceChangeArea::clearHover()
     m_hoverTick = 0;
     m_hoverLabel.clear();
     m_hoverLabelRect = QRectF();
+    m_owner.clearTimelineQuickHover(songview::TimelineQuickHoverOwner::VoiceChanges);
     m_owner.requestTimelineQuickUpdate(songview::TimelineQuickDirty::VoiceChangesHover);
 }
 
@@ -249,6 +241,7 @@ void VoiceChangeArea::updateHover(qreal x)
     m_hoverTick = hoverTick;
     m_hoverLabel = std::move(hoverLabel);
     m_hoverLabelRect = labelRect;
+    m_owner.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::VoiceChanges, m_hoverTick);
     m_owner.requestTimelineQuickUpdate(songview::TimelineQuickDirty::VoiceChangesHover);
 }
 
@@ -420,7 +413,7 @@ void VoiceChangeArea::mouseMoveEvent(QMouseEvent *event)
             clearHover();
             m_owner.setFollowScrollPaused(true);
             setCursor(Qt::SizeHorCursor);
-            invalidateContent(plotRect());
+            requestQuickUpdate();
         }
         const double rawTick =
             std::max(0.0, m_owner.tickAtContentX(std::max<qreal>(plotOrigin(), position.x()) -
@@ -428,7 +421,7 @@ void VoiceChangeArea::mouseMoveEvent(QMouseEvent *event)
         const uint64_t tick = m_owner.snapTick(rawTick, event->modifiers() & Qt::AltModifier);
         if (tick != m_voiceDrag->previewTick) {
             m_voiceDrag->previewTick = tick;
-            invalidateContent(plotRect());
+            requestQuickUpdate();
         }
         m_previousPosition = position;
         event->accept();
@@ -439,7 +432,7 @@ void VoiceChangeArea::mouseMoveEvent(QMouseEvent *event)
             m_live.horizontalScroll - (position.x() - m_previousPosition.x());
         m_owner.setEditorHorizontalScroll(requestedScroll);
         m_live.horizontalScroll = m_owner.viewState().scrollPx;
-        invalidateContent();
+        requestQuickUpdate();
     } else if (m_interaction == Interaction::None) {
         updateHover(position.x());
     }
@@ -462,7 +455,7 @@ void VoiceChangeArea::mouseReleaseEvent(QMouseEvent *event)
         if (active) {
             m_owner.setFollowScrollPaused(false);
             unsetCursor();
-            invalidateContent(plotRect());
+            requestQuickUpdate();
         }
         SongDocument *document = m_owner.document();
         if (active && completed.previewTick != completed.point.tick && document &&
@@ -480,7 +473,7 @@ void VoiceChangeArea::mouseReleaseEvent(QMouseEvent *event)
 void VoiceChangeArea::leaveEvent(QEvent *event)
 {
     clearHover();
-    songview::TimelineSurface::leaveEvent(event);
+    QWidget::leaveEvent(event);
 }
 
 void VoiceChangeArea::wheelEvent(QWheelEvent *event)

@@ -14,26 +14,8 @@ using Space = lyt::Space;
 
 namespace songview {
 using timeline_quick::addClippedTriangle;
-using timeline_quick::addDashedVertical;
 using timeline_quick::addRect;
 using timeline_quick::resetLayer;
-
-namespace {
-
-void addEditCursor(TimelineQuickScene &scene, TimelineQuickLayer layer, const SongView &songView,
-                   const QRectF &area, qreal origin, qreal dpr)
-{
-    if (!songView.timeline())
-        return;
-    const qreal cursorX = songView.displayX(double(songView.editCursorTick()), origin, dpr);
-    if (cursorX >= area.left() && cursorX <= area.right()) {
-        addDashedVertical(scene, layer, cursorX, area.top(), area.bottom(), lyt::singlePixel(),
-                          lyt::space(Space::One), lyt::space(Space::One),
-                          themes::color(themes::Role::song_view_edit_cursor), area);
-    }
-}
-
-} // namespace
 
 void OtherStrip::rebuildQuickScene(TimelineQuickScene &scene)
 {
@@ -71,7 +53,6 @@ void OtherStrip::rebuildQuickScene(TimelineQuickScene &scene)
                 QRectF(area.left(), area.top(), tickZero - area.left(), area.height()),
                 mixTowardOklab(chrome, detail::gridLineColor(), 0.15), area);
     }
-    addEditCursor(scene, chromeLayer, *m_sv, area, m_geometry.plotOrigin, dpr);
 
     const int markerY = height() / 2;
     for (const StripItem &item : model.strip) {

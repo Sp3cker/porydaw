@@ -11,11 +11,8 @@
 #include <QHBoxLayout>
 #include <QKeySequence>
 #include <QLabel>
-#include <QLineF>
-#include <QPen>
 #include <QSpinBox>
 #include <QVBoxLayout>
-#include <QVector>
 #include <array>
 #include <climits>
 #include <cmath>
@@ -246,46 +243,6 @@ QColor gridLineColor(int alpha)
     auto color = themes::color(themes::Role::song_view_grid);
     color.setAlpha((color.alpha() * alpha + 127) / 255);
     return color;
-}
-
-// Vertical bar/beat grid lines inside rect, with zoom-adaptive sub-beat
-// lines at the snap grid's positions fading lighter per subdivision level.
-// Lines are batched per level so each color is a single drawLines() call.
-void drawGrid(QPainter &p, const SongView *sv, const QRect &rect, qreal origin,
-              int timelineDetailMinimumPixelsPerBeat, int gridLineStrokeWidth)
-{
-    const qreal dpr = p.device()->devicePixelRatioF();
-    const qreal physicalPixel = logicalPhysicalPixel(dpr);
-    const qreal roundingMargin = physicalPixel / 2.0;
-    const double t0 = std::max(0.0, sv->tickAtContentX(rect.left() - origin - roundingMargin));
-    const double t1 =
-        sv->tickAtContentX(rect.x() + rect.width() - physicalPixel - origin + roundingMargin) + 1;
-    const bool drawBeats = sv->pxPerBeat() >= timelineDetailMinimumPixelsPerBeat;
-    // Batches 0-2 hold sub-grid levels 1-3 (fading lighter), 3 beats, 4
-    // finest-grid beats, 5 bars; painted in that order so beats and bars
-    // land on top.
-    const std::array<QColor, 6> colors = {gridLineColor(125), gridLineColor(100), gridLineColor(75),
-                                          gridLineColor(160), gridLineColor(200), gridLineColor()};
-    std::array<QVector<QLineF>, 6> batches;
-    forEachSubGridLine(sv, t0, t1, timelineDetailMinimumPixelsPerBeat,
-                       [&](uint64_t tick, int level) {
-                           const qreal x = sv->displayX(double(tick), origin, dpr);
-                           batches[level - 1].append(QLineF(x, rect.top(), x, rect.bottom()));
-                       });
-    sv->forEachGridLine(uint64_t(t0), uint64_t(t1), [&](uint64_t tick, bool isBar, int, int) {
-        if (!isBar && !drawBeats)
-            return;
-        const qreal x = sv->displayX(double(tick), origin, dpr);
-        const bool atFinestGrid = sv->document() && sv->gridTicksAt(tick) == sv->fineGridTicks();
-        batches[isBar ? 5 : atFinestGrid ? 4 : 3].append(QLineF(x, rect.top(), x, rect.bottom()));
-    });
-    for (size_t i = 0; i < batches.size(); ++i) {
-        if (batches[i].isEmpty())
-            continue;
-        // Grid lines use the resolved physical width on every display scale.
-        p.setPen(QPen(colors[i], gridLineStrokeWidth * physicalPixel));
-        p.drawLines(batches[i]);
-    }
 }
 
 } // namespace songview::detail

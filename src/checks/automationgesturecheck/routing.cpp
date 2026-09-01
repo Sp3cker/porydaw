@@ -13,6 +13,7 @@
 #include <QPointF>
 #include <QString>
 
+#include "checks/support/quickframebuffer.h"
 #include "rig.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
@@ -136,13 +137,19 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         const QPointF target = voicePoint(rig, 72);
         const uint64_t destination = voiceSnapTick(rig, target.x(), false);
         const auto before = snapshot(rig.document());
-        const QImage idleVoice = rig.voiceArea().grab().toImage();
+        QString idleCaptureError;
+        const QImage idleVoice =
+            checks::support::captureQuickBand(rig.view(), rig.voiceArea(), &idleCaptureError);
         activateVoiceDrag(rig, source, target);
-        const QImage previewVoice = rig.voiceArea().grab().toImage();
-        check(isUnchanged(before, snapshot(rig.document())) && rig.view().userGestureActive() &&
+        QString previewCaptureError;
+        const QImage previewVoice =
+            checks::support::captureQuickBand(rig.view(), rig.voiceArea(), &previewCaptureError);
+        check(idleCaptureError.isEmpty() && previewCaptureError.isEmpty() &&
+                  isUnchanged(before, snapshot(rig.document())) && rig.view().userGestureActive() &&
                   rig.voiceArea().cursor().shape() == Qt::SizeHorCursor && !idleVoice.isNull() &&
                   idleVoice.size() == previewVoice.size() && idleVoice != previewVoice,
-              QStringLiteral("Voice crossing preview was not local-only and visibly active"));
+              QStringLiteral("Voice crossing preview capture failed (%1; %2)")
+                  .arg(idleCaptureError, previewCaptureError));
         rig.voiceMouseRelease(target);
         rig.pump();
         const auto after = snapshot(rig.document());
@@ -291,9 +298,13 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         const QPointF target = voicePoint(rig, 72);
         const uint64_t destination = voiceSnapTick(rig, target.x(), false);
         const QRect voiceBounds = rig.voiceArea().rect();
-        const QImage idleVoice = rig.voiceArea().grab().toImage();
+        QString idleCaptureError;
+        const QImage idleVoice =
+            checks::support::captureQuickBand(rig.view(), rig.voiceArea(), &idleCaptureError);
         activateVoiceDrag(rig, source, target);
-        const QImage previewVoice = rig.voiceArea().grab().toImage();
+        QString previewCaptureError;
+        const QImage previewVoice =
+            checks::support::captureQuickBand(rig.view(), rig.voiceArea(), &previewCaptureError);
         const qreal destinationX = rig.view().displayX(
             double(destination), rig.voiceArea().plotOrigin(), rig.voiceArea().devicePixelRatioF());
         const QImage idleSourceColumn = markerColumnCrop(idleVoice, voiceBounds, source.x());
@@ -301,8 +312,10 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         const QImage idleDestinationColumn = markerColumnCrop(idleVoice, voiceBounds, destinationX);
         const QImage previewDestinationColumn =
             markerColumnCrop(previewVoice, voiceBounds, destinationX);
-        check(isUnchanged(before, snapshot(rig.document())) && rig.view().userGestureActive(),
-              QStringLiteral("duplicate Voice occurrence preview changed the document"));
+        check(idleCaptureError.isEmpty() && previewCaptureError.isEmpty() &&
+                  isUnchanged(before, snapshot(rig.document())) && rig.view().userGestureActive(),
+              QStringLiteral("duplicate Voice occurrence preview capture failed (%1; %2)")
+                  .arg(idleCaptureError, previewCaptureError));
         check(!idleSourceColumn.isNull() && !previewSourceColumn.isNull() &&
                   idleSourceColumn.size() == previewSourceColumn.size() &&
                   idleSourceColumn == previewSourceColumn,

@@ -17,7 +17,6 @@ namespace lyt = ::layout;
 using Space = lyt::Space;
 
 namespace songview {
-using timeline_quick::addDashedVertical;
 using timeline_quick::addHorizontalGradient;
 using timeline_quick::addHorizontalLine;
 using timeline_quick::addRect;
@@ -128,14 +127,6 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
                     addVerticalLine(scene, chromeLayer, x1, area.top(), area.bottom(),
                                     lyt::singlePixel(), detail::loopEdge(), area);
             }
-        }
-
-        const qreal cursorX =
-            m_sv->displayX(double(m_sv->editCursorTick()), m_geometry.plotOrigin, dpr);
-        if (cursorX >= area.left() && cursorX <= area.right()) {
-            addDashedVertical(scene, chromeLayer, cursorX, area.top(), area.bottom(),
-                              lyt::singlePixel(), lyt::space(Space::One), lyt::space(Space::One),
-                              themes::color(themes::Role::song_view_edit_cursor), area);
         }
     }
 

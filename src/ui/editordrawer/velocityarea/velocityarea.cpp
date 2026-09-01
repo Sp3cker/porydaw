@@ -11,7 +11,7 @@
 #include <QFontMetrics>
 #include <QKeyEvent>
 #include <QObject>
-#include <QRegion>
+#include <QResizeEvent>
 
 #include "ui/editordrawer/velocityarea/detail.h"
 #include "ui/keymap.h"
@@ -71,9 +71,7 @@ void VelocityArea::rebuildFonts()
     m_captionFontHeight = QFontMetrics(m_captionFont).height();
 }
 
-VelocityArea::VelocityArea(SongView &owner, QWidget *parent)
-    : songview::TimelineSurface(parent)
-    , m_owner(owner)
+VelocityArea::VelocityArea(SongView &owner, QWidget *parent) : QWidget(parent), m_owner(owner)
 {
     m_geometry.resolve();
     rebuildFonts();
@@ -93,7 +91,7 @@ bool VelocityArea::event(QEvent *event)
         m_geometry.resolve();
         rebuildVisualState();
     }
-    return songview::TimelineSurface::event(event);
+    return QWidget::event(event);
 }
 
 bool VelocityArea::eventFilter(QObject *watched, QEvent *event)
@@ -103,10 +101,10 @@ bool VelocityArea::eventFilter(QObject *watched, QEvent *event)
         const int key = static_cast<QKeyEvent *>(event)->key();
         if (key == Qt::Key_Control || key == Qt::Key_Shift || key == Qt::Key_Alt ||
             key == Qt::Key_Meta) {
-            invalidateContent();
+            requestQuickUpdate();
         }
     }
-    return songview::TimelineSurface::eventFilter(watched, event);
+    return QWidget::eventFilter(watched, event);
 }
 
 void VelocityArea::songChanged()
@@ -196,7 +194,7 @@ void VelocityArea::setUseDetents(bool on)
         return;
     m_useDetents = on;
     cancelInteraction();
-    invalidateContent();
+    requestQuickUpdate();
 }
 
 void VelocityArea::setContextChangedCallback(std::function<void()> callback)
@@ -239,26 +237,22 @@ void VelocityArea::velocityGestureChanged()
     rebuildVisualState();
 }
 
-void VelocityArea::paintContent(QPainter &) {}
-
-void VelocityArea::invalidateContent(const QRect &rect)
+void VelocityArea::requestQuickUpdate()
 {
-    if (rect.isEmpty())
-        songview::TimelineSurface::invalidateContent();
-    else
-        songview::TimelineSurface::invalidateContent(QRegion(rect));
     m_owner.requestTimelineQuickUpdate(songview::TimelineQuickDirty::Velocity);
 }
 
-void VelocityArea::contentGeometryChanged()
+void VelocityArea::resizeEvent(QResizeEvent *event)
 {
+    QWidget::resizeEvent(event);
     rebuildAxis();
+    requestQuickUpdate();
 }
 
 void VelocityArea::rebuildVisualState()
 {
     rebuildAxis();
-    invalidateContent();
+    requestQuickUpdate();
 }
 
 void VelocityArea::rebuildAxis()
@@ -303,7 +297,7 @@ void VelocityArea::setHoveredNote(std::optional<NoteId> noteId)
         return;
     m_hoveredNote = noteId;
     rebuildAxis();
-    invalidateContent();
+    requestQuickUpdate();
 }
 
 void VelocityArea::updateHoveredNote(const QPointF &position)

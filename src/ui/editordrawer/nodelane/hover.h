@@ -15,6 +15,12 @@
 class AutomationProjection;
 struct AutomationGeometry;
 
+namespace nodelane {
+
+qreal hoverRingRadius(const AutomationGeometry &geometry);
+
+} // namespace nodelane
+
 struct NodeLaneHoverTarget {
     QRect widgetBounds;
     QFont font;
