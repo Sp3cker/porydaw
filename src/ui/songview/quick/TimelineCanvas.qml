@@ -86,345 +86,237 @@ Item {
 
     }
 
-    Item {
-        x: root.rulerBandRect.x
-        y: root.rulerBandRect.y
-        width: root.rulerBandRect.width
-        height: root.rulerBandRect.height
+    component TimelineSceneBand: Item {
+        id: sceneBand
+
+        required property rect bandRect
+        required property bool bandVisible
+        required property string bandName
+
+        x: bandRect.x
+        y: bandRect.y
+        width: bandRect.width
+        height: bandRect.height
         clip: true
-        visible: root.rulerBandVisible
+        visible: bandVisible
 
-        TimelineQuickItem {
-            objectName: "timelineQuickRulerChrome"
-            anchors.fill: parent
-            sceneLayer: TimelineQuickItem.RulerChrome
-            z: 0
-        }
-
-        TimelineQuickItem {
-            objectName: "timelineQuickRulerMarks"
-            anchors.fill: parent
-            sceneLayer: TimelineQuickItem.RulerMarks
-            z: 1
-        }
-
-        Item {
-            anchors.fill: parent
-            z: 2
-
-            Repeater {
-                model: timelineScene.rulerTextModel
-                delegate: bandTextDelegate
-            }
-        }
         TimelineChromeBand {
             anchors.fill: parent
-            bandRect: root.rulerBandRect
-            bandVisible: root.rulerBandVisible
-            bandName: "timelineQuickRuler"
+            bandRect: sceneBand.bandRect
+            bandVisible: sceneBand.bandVisible
+            bandName: sceneBand.bandName
         }
     }
 
-    Item {
-        x: root.rollBandRect.x
-        y: root.rollBandRect.y
-        width: root.rollBandRect.width
-        height: root.rollBandRect.height
-        clip: true
-        visible: root.rollBandVisible
+    component TimelineSceneLayer: TimelineQuickItem {
+        anchors.fill: parent
+    }
+
+    component TimelineTextLayer: Item {
+        id: textLayer
+
+        required property var textModel
+
+        anchors.fill: parent
+
+        Repeater {
+            model: textLayer.textModel
+            delegate: bandTextDelegate
+        }
+    }
+
+    TimelineSceneBand {
+        bandRect: root.rulerBandRect
+        bandVisible: root.rulerBandVisible
+        bandName: "timelineQuickRuler"
+
+        TimelineSceneLayer {
+            objectName: "timelineQuickRulerChrome"
+            sceneLayer: TimelineQuickItem.RulerChrome
+            z: 0
+        }
+        TimelineSceneLayer {
+            objectName: "timelineQuickRulerMarks"
+            sceneLayer: TimelineQuickItem.RulerMarks
+            z: 1
+        }
+        TimelineTextLayer {
+            textModel: timelineScene.rulerTextModel
+            z: 2
+        }
+    }
+
+    TimelineSceneBand {
+        bandRect: root.rollBandRect
+        bandVisible: root.rollBandVisible
+        bandName: "timelineQuickRoll"
 
         PianoRollCanvas {
             anchors.fill: parent
         }
-        TimelineChromeBand {
-            anchors.fill: parent
-            bandRect: root.rollBandRect
-            bandVisible: root.rollBandVisible
-            bandName: "timelineQuickRoll"
-        }
     }
 
-
-    Item {
-        x: root.automationBandRect.x
-        y: root.automationBandRect.y
-        width: root.automationBandRect.width
-        height: root.automationBandRect.height
-        clip: true
-        visible: root.automationBandVisible
+    TimelineSceneBand {
+        bandRect: root.automationBandRect
+        bandVisible: root.automationBandVisible
+        bandName: "timelineQuickAutomation"
         z: 1
 
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickAutomationGrid"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.AutomationGrid
             z: 0
         }
-
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickAutomationCurves"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.AutomationCurves
             z: 1
         }
-
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickAutomationNodes"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.AutomationNodes
             z: 2
         }
-
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickAutomationSelection"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.AutomationSelection
             z: 3
         }
-
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickAutomationTransient"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.AutomationTransient
             z: 4
         }
-
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickAutomationHover"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.AutomationHover
             z: 5
         }
-
-        Item {
-            anchors.fill: parent
+        TimelineTextLayer {
+            textModel: timelineScene.automationTextModel
             z: 6
-
-            Repeater {
-                model: timelineScene.automationTextModel
-                delegate: bandTextDelegate
-            }
         }
-
-        Item {
-            anchors.fill: parent
+        TimelineTextLayer {
+            textModel: timelineScene.automationHoverTextModel
             z: 7
-
-            Repeater {
-                model: timelineScene.automationHoverTextModel
-                delegate: bandTextDelegate
-            }
         }
-
-        Item {
-            anchors.fill: parent
+        TimelineTextLayer {
+            textModel: timelineScene.automationTransientTextModel
             z: 8
-
-            Repeater {
-                model: timelineScene.automationTransientTextModel
-                delegate: bandTextDelegate
-            }
-        }
-        TimelineChromeBand {
-            anchors.fill: parent
-            bandRect: root.automationBandRect
-            bandVisible: root.automationBandVisible
-            bandName: "timelineQuickAutomation"
         }
     }
 
-
-    Item {
-        x: root.velocityBandRect.x
-        y: root.velocityBandRect.y
-        width: root.velocityBandRect.width
-        height: root.velocityBandRect.height
-        clip: true
-        visible: root.velocityBandVisible
+    TimelineSceneBand {
+        bandRect: root.velocityBandRect
+        bandVisible: root.velocityBandVisible
+        bandName: "timelineQuickVelocity"
         z: 1
 
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickVelocityChrome"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.VelocityChrome
             z: 0
         }
-
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickVelocityAxis"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.VelocityAxis
             z: 1
         }
-
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickVelocityGrid"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.VelocityGrid
             z: 2
         }
-
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickVelocityBands"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.VelocityBands
             z: 3
         }
-
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickVelocityStems"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.VelocityStems
             z: 4
         }
-
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickVelocityNodes"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.VelocityNodes
             z: 5
         }
-
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickVelocityTransient"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.VelocityTransient
             z: 6
         }
-
-        Item {
-            anchors.fill: parent
+        TimelineTextLayer {
+            textModel: timelineScene.velocityTextModel
             z: 7
-
-            Repeater {
-                model: timelineScene.velocityTextModel
-                delegate: bandTextDelegate
-            }
-        }
-        TimelineChromeBand {
-            anchors.fill: parent
-            bandRect: root.velocityBandRect
-            bandVisible: root.velocityBandVisible
-            bandName: "timelineQuickVelocity"
         }
     }
 
-
-    Item {
-        x: root.voiceChangesBandRect.x
-        y: root.voiceChangesBandRect.y
-        width: root.voiceChangesBandRect.width
-        height: root.voiceChangesBandRect.height
-        clip: true
-        visible: root.voiceChangesBandVisible
+    TimelineSceneBand {
+        bandRect: root.voiceChangesBandRect
+        bandVisible: root.voiceChangesBandVisible
+        bandName: "timelineQuickVoiceChanges"
         z: 2
 
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickVoiceChangesChrome"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.VoiceChangesChrome
             z: 0
         }
-
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickVoiceChangesGrid"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.VoiceChangesGrid
             z: 1
         }
-
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickVoiceChangesSpans"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.VoiceChangesSpans
             z: 2
         }
-
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickVoiceChangesMarkers"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.VoiceChangesMarkers
             z: 3
         }
-
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickVoiceChangesTransient"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.VoiceChangesTransient
             z: 4
         }
-
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickVoiceChangesHover"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.VoiceChangesHover
             z: 5
         }
-
-        Item {
-            anchors.fill: parent
+        TimelineTextLayer {
+            textModel: timelineScene.voiceChangesTextModel
             z: 6
-
-            Repeater {
-                model: timelineScene.voiceChangesTextModel
-                delegate: bandTextDelegate
-            }
         }
-
-        Item {
-            anchors.fill: parent
+        TimelineTextLayer {
+            textModel: timelineScene.voiceChangesHoverTextModel
             z: 7
-
-            Repeater {
-                model: timelineScene.voiceChangesHoverTextModel
-                delegate: bandTextDelegate
-            }
-        }
-        TimelineChromeBand {
-            anchors.fill: parent
-            bandRect: root.voiceChangesBandRect
-            bandVisible: root.voiceChangesBandVisible
-            bandName: "timelineQuickVoiceChanges"
         }
     }
 
+    TimelineSceneBand {
+        bandRect: root.otherEventsBandRect
+        bandVisible: root.otherEventsBandVisible
+        bandName: "timelineQuickOtherEvents"
 
-    Item {
-        x: root.otherEventsBandRect.x
-        y: root.otherEventsBandRect.y
-        width: root.otherEventsBandRect.width
-        height: root.otherEventsBandRect.height
-        clip: true
-        visible: root.otherEventsBandVisible
-
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickOtherEventsChrome"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.OtherEventsChrome
             z: 0
         }
-
-        TimelineQuickItem {
+        TimelineSceneLayer {
             objectName: "timelineQuickOtherEventsMarkers"
-            anchors.fill: parent
             sceneLayer: TimelineQuickItem.OtherEventsMarkers
             z: 1
         }
-
-        Item {
-            anchors.fill: parent
+        TimelineTextLayer {
+            textModel: timelineScene.otherEventsTextModel
             z: 2
-
-            Repeater {
-                model: timelineScene.otherEventsTextModel
-                delegate: bandTextDelegate
-            }
-        }
-        TimelineChromeBand {
-            anchors.fill: parent
-            bandRect: root.otherEventsBandRect
-            bandVisible: root.otherEventsBandVisible
-            bandName: "timelineQuickOtherEvents"
         }
     }
 
