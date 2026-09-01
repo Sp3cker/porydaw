@@ -11,7 +11,10 @@
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/otherstrip.h"
+#include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/timeruler.h"
 
 #include <QApplication>
 #include <QCoreApplication>
@@ -23,8 +26,10 @@
 #include <QScrollBar>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <QVariant>
 #include <QWidget>
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <memory>
@@ -47,6 +52,16 @@ SmfEvent noteEvent(uint8_t status, uint64_t tick, uint8_t key, uint8_t velocity)
 uint64_t drawerContextTick(double tick)
 {
     return static_cast<uint64_t>(std::floor(std::max(0.0, tick) + 0.5));
+}
+
+template <typename T>
+T *findWidgetDescendant(QWidget &root)
+{
+    for (QWidget *widget : root.findChildren<QWidget *>()) {
+        if (auto *typed = dynamic_cast<T *>(widget))
+            return typed;
+    }
+    return nullptr;
 }
 
 EditorDrawer *editorDrawer(SongView &view)
@@ -78,6 +93,27 @@ QPointF nodePosition(const SongView &view, const VelocityArea &area, const MidiT
                      double(note.tick) * view.pxPerBeat() / double(timeline.ticksPerBeat) -
                      view.viewState().scrollPx;
     return {x, area.axis().velocityToY(note.velocity)};
+}
+
+void pumpZeroDelayTimers()
+{
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents();
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents();
+}
+
+template <std::size_t Size>
+std::optional<QRect> visibleBandUnion(QWidget &owner, const std::array<QWidget *, Size> &bands)
+{
+    std::optional<QRect> result;
+    for (QWidget *band : bands) {
+        if (!band || !band->isVisibleTo(&owner))
+            continue;
+        const QRect rect(band->mapTo(&owner, QPoint()), band->size());
+        result = result ? result->united(rect) : rect;
+    }
+    return result;
 }
 
 } // namespace
@@ -288,6 +324,53 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
                                              layout::space(layout::Space::One) &&
                   std::abs(toggleGroup.center().x() - pianoKeysCenter) <= 1,
               "drawer section chrome should center its toggles beneath the piano keys");
+    }
+
+    auto *rulerBand = findWidgetDescendant<songview::TimeRuler>(view);
+    auto *rollBand = view.findChild<songview::PianoRoll *>();
+    auto *typedOtherStrip = findWidgetDescendant<songview::OtherStrip>(view);
+    auto *automationViewport =
+        drawer && drawer->automationPage() ? drawer->automationPage()->scrollViewport() : nullptr;
+    auto *voiceChangesBand = drawer ? drawer->voiceChangeArea() : nullptr;
+    QObject *const quickRoot = quick->rootObject();
+    const std::array<QWidget *, 6> quickBands{
+        rulerBand, rollBand, typedOtherStrip, automationViewport, area, voiceChangesBand,
+    };
+    check(rulerBand && rollBand && typedOtherStrip && automationViewport && voiceChangesBand &&
+              quickRoot,
+          "host should expose all six retained Quick band hosts");
+    if (rulerBand && rollBand && typedOtherStrip && automationViewport && voiceChangesBand &&
+        quickRoot) {
+        view.setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
+        pumpZeroDelayTimers();
+        const QRect staleGeometry(view.width() * 20, view.height() * 20, view.width() * 9,
+                                  view.height() * 7);
+        area->setGeometry(staleGeometry);
+        check(area->isHidden() && area->geometry() == staleGeometry,
+              "hidden-band fixture should retain its extreme stale geometry");
+        pumpZeroDelayTimers();
+
+        const std::optional<QRect> hiddenUnion = visibleBandUnion(view, quickBands);
+        check(hiddenUnion && quick->geometry() == *hiddenUnion && quick->isVisible() &&
+                  !quick->geometry().intersects(staleGeometry),
+              "Quick host geometry should exclude a hidden band's stale rectangle");
+        check(!quickRoot->property("velocityBandVisible").toBool() &&
+                  quickRoot->property("velocityBandRect").toRectF().isEmpty(),
+              "hidden velocity band should publish no retained Quick rectangle");
+
+        view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
+        view.setDrawerActivePage(EditorDrawerPage::Velocity);
+        pumpZeroDelayTimers();
+        const std::optional<QRect> shownUnion = visibleBandUnion(view, quickBands);
+        const QRect velocityInView(area->mapTo(&view, QPoint()), area->size());
+        const QRectF expectedVelocityRect =
+            QRectF(velocityInView.translated(-quick->geometry().topLeft()));
+        check(shownUnion && quick->geometry() == *shownUnion && quick->isVisible() &&
+                  area->isVisibleTo(&view) && area->geometry() != staleGeometry,
+              "Quick host geometry should resume from the shown band's current rectangle");
+        check(quickRoot->property("velocityBandVisible").toBool() &&
+                  quickRoot->property("velocityBandRect").toRectF() == expectedVelocityRect,
+              "shown velocity band should republish its current retained Quick rectangle");
     }
     if (otherStrip) {
         QString stripCaptureError;

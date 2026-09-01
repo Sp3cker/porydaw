@@ -14,7 +14,6 @@
 #include <QListWidget>
 #include <QMenu>
 #include <QQuickItem>
-#include <QQuickWidget>
 #include <QTemporaryDir>
 #include <QTimer>
 
@@ -28,6 +27,7 @@
 #include "ui/editorviewstate.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickscene.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 namespace {
 
@@ -196,6 +196,15 @@ QImage labelCrop(const QImage &image, double lineX, qreal dpr)
     return image.copy(QRect(left, 0, width, image.height()));
 }
 
+bool hasVoiceChangeMarkerAt(const songview::TimelineQuickScene &scene, qreal x)
+{
+    const auto &markers = scene.layer(songview::TimelineQuickLayer::VoiceChangesMarkers);
+    return std::any_of(markers.rects.cbegin(), markers.rects.cend(),
+                       [x](const songview::TimelineQuickRect &marker) {
+                           return marker.rect.left() <= x && x <= marker.rect.right();
+                       });
+}
+
 double xForTick(const AreaFixture &env, double tick)
 {
     return env.view->displayX(tick, env.area->plotOrigin(), env.area->devicePixelRatioF());
@@ -261,27 +270,39 @@ void checkAreaPaintLifecycle(AreaFixture &env, int &failures)
         std::fprintf(stderr, "drawer: FAIL voice-change-area: %s\n", qUtf8Printable(message));
         ++failures;
     };
+    auto *scene = env.view->findChild<songview::TimelineQuickScene *>();
+    if (!scene) {
+        check(false, QStringLiteral("Voice Changes retained Quick scene was not available"));
+        return;
+    }
     const QImage idle = checks::support::captureQuickBand(*env.view, *area);
     const qreal dpr = idle.devicePixelRatio();
     const uint64_t revisionBefore = env.document.revision();
     const int undoBefore = env.document.undoStack()->index();
+    const quint64 markerRevisionBefore =
+        scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers).revision;
 
     env.document.addLanePoint(0, DOC_CC_VOICE, 120, 5);
     pump();
     const QImage marked = checks::support::captureQuickBand(*env.view, *area);
     const double markerX = xForTick(env, 120);
+    const QRectF markerProbe(markerX - 8, 0, 16, area->height());
     check(env.document.revision() == revisionBefore + 1 &&
               env.document.undoStack()->index() == undoBefore + 1 &&
               env.document.undoStack()->text(undoBefore) == QStringLiteral("add voice change"),
           QStringLiteral("document commit was not one undo step labelled 'add voice change'"));
-    check(changedPixels(idle, marked, QRectF(markerX - 8, 0, 16, area->height()), dpr) > 0,
-          QStringLiteral("added voice change marker painted no column at its tick"));
+    check(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers).revision >
+                  markerRevisionBefore &&
+              hasVoiceChangeMarkerAt(*scene, markerX) &&
+              changedPixels(idle, marked, markerProbe, dpr) > 0,
+          QStringLiteral("added voice change did not reach the retained Quick marker output"));
 
     env.document.undoStack()->undo();
     pump();
     const QImage unmarked = checks::support::captureQuickBand(*env.view, *area);
-    check(changedPixels(idle, unmarked, area->rect(), dpr) == 0,
-          QStringLiteral("undo did not restore the marker-free paint"));
+    check(!hasVoiceChangeMarkerAt(*scene, markerX) &&
+              changedPixels(marked, unmarked, markerProbe, dpr) > 0,
+          QStringLiteral("undo did not remove the marker from the retained Quick output"));
 
     // Playhead-only presentations keep the held voice span stable until the
     // displayed context crosses a voice change.
@@ -307,9 +328,11 @@ void checkAreaPaintLifecycle(AreaFixture &env, int &failures)
           QStringLiteral("stopping playback did not restore the edit-cursor voice context"));
 
     // Reattaching resets the song-scoped camera and drawer state by contract;
-    // restore those public settings before comparing the same surface.
+    // restore those public settings before checking the marker output.
     const double zoom = env.view->pxPerBeat();
     const double scroll = env.view->viewState().scrollPx;
+    const quint64 markerRevisionBeforeReattach =
+        scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers).revision;
     env.view->setSong(env.timeline.get(), &env.voicegroup);
     env.view->selectTrack(0);
     env.view->setDrawerActivePage(EditorDrawerPage::VoiceChanges);
@@ -319,9 +342,12 @@ void checkAreaPaintLifecycle(AreaFixture &env, int &failures)
     env.view->setEditorHorizontalScroll(scroll);
     env.view->setEditCursorTick(24);
     pump();
-    check(changedPixels(idle, checks::support::captureQuickBand(*env.view, *area), area->rect(),
-                        dpr) == 0,
-          QStringLiteral("song re-attach did not restore the marker-free paint"));
+    const QImage reattached = checks::support::captureQuickBand(*env.view, *area);
+    check(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers).revision >
+                  markerRevisionBeforeReattach &&
+              !hasVoiceChangeMarkerAt(*scene, markerX) &&
+              changedPixels(unmarked, reattached, markerProbe, dpr) == 0,
+          QStringLiteral("song re-attach did not restore the marker-free Quick output"));
 }
 
 // Hover: dotted line plus held label away from markers, label suppressed on
@@ -344,10 +370,16 @@ void checkAreaHover(AreaFixture &env, int &failures)
     const QImage idle = checks::support::captureQuickBand(*env.view, *area);
     const qreal dpr = idle.devicePixelRatio();
     auto *scene = env.view->findChild<songview::TimelineQuickScene *>();
+    auto *quickCanvas =
+        env.view->findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    auto *quickRoot = quickCanvas ? quickCanvas->rootObject() : nullptr;
+    auto *voiceHoverChrome = quickRoot ? quickRoot->findChild<QQuickItem *>(
+                                             QStringLiteral("timelineQuickVoiceChangesHoverChrome"))
+                                       : nullptr;
     auto *voiceChangesTextModel = scene ? scene->voiceChangesTextModel() : nullptr;
     auto *voiceChangesHoverTextModel = scene ? scene->voiceChangesHoverTextModel() : nullptr;
-    if (!voiceChangesTextModel || !voiceChangesHoverTextModel) {
-        check(false, QStringLiteral("Voice Changes Quick text models were not available"));
+    if (!voiceChangesTextModel || !voiceChangesHoverTextModel || !voiceHoverChrome) {
+        check(false, QStringLiteral("Voice Changes Quick retained scene was not available"));
         return;
     }
     const auto currentHoverLabelRect = [voiceChangesHoverTextModel] {
@@ -428,7 +460,12 @@ void checkAreaHover(AreaFixture &env, int &failures)
     check(voiceChangesHoverTextModel->rowCount() == 0 &&
               voiceChangesTextModel->rowCount() == mainTextRowCount,
           QStringLiteral("marker hover did not keep the Quick text models isolated"));
-    check(changedPixels(offMarker, onMarker, QRectF(markerX - 8, 0, 16, area->height()), dpr) > 0,
+    const qreal expectedMarkerHoverX = env.view->timelinePlotOrigin() + env.view->contentX(48);
+    check(hasVoiceChangeMarkerAt(*scene, markerX) && voiceHoverChrome->isVisible() &&
+              std::abs(voiceHoverChrome->mapToItem(quickRoot, QPointF{}).x() -
+                       expectedMarkerHoverX) <= 0.2 &&
+              changedPixels(coalescedHover, onMarker,
+                            hoverProbe(coalescedHoverX, coalescedLabelRect), dpr) > 0,
           QStringLiteral("hover did not track the marker tick"));
     check(labelCrop(onMarker, markerX, dpr) == labelCrop(idle, markerX, dpr),
           QStringLiteral("hovering the marker painted a held label on top of it"));
@@ -483,7 +520,8 @@ void checkAreaRefresh(AreaFixture &env, int &failures)
     check(track1 != track0,
           QStringLiteral("selecting another primary track did not recapture the area"));
 
-    auto *quickCanvas = env.view->findChild<QQuickWidget *>(QStringLiteral("timelineQuickCanvas"));
+    auto *quickCanvas =
+        env.view->findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
     auto *quickRoot = quickCanvas ? quickCanvas->rootObject() : nullptr;
     if (!quickRoot) {
         check(false, QStringLiteral("Voice Changes Quick root was not available"));

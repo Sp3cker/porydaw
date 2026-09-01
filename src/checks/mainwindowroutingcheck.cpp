@@ -13,6 +13,7 @@
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QLineEdit>
+#include <QList>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -31,6 +32,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <functional>
+#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -53,9 +55,10 @@
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
+#include "ui/playheadoverlay.h"
 #include "ui/songtab.h"
-#include "ui/songview.h"
 #include "ui/songview/clipmime.h"
+#include "ui/songview/quick/timelinequickview.h"
 #include "ui/workspaceui.h"
 
 namespace {
@@ -538,6 +541,29 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
         }
     }
     check(tabBNote.has_value(), "active-tab Copy check found no note in the second song");
+    m_workspace->selectSongTab(tabA);
+    QCoreApplication::processEvents();
+    m_workspace->selectSongTab(tabB);
+    QCoreApplication::processEvents();
+    tabBView.setPlayheadSample(tabB->timeline()->sampleForTick(auditionTick), false);
+    QCoreApplication::processEvents();
+    auto *const overlay = descendant<songview::PlayheadOverlay>(tabBView);
+    auto *const quick = descendant<songview::TimelineQuickView>(tabBView);
+    const auto quickChildren =
+        quick ? quick->findChildren<QWidget *>(QString{}, Qt::FindDirectChildrenOnly)
+              : QList<QWidget *>{};
+    QWidget *const quickContainer = quickChildren.size() == 1 ? quickChildren.front() : nullptr;
+    check(overlay && overlay->focusPolicy() == Qt::NoFocus,
+          "native playhead overlay did not enforce its no-focus contract");
+    check(quickContainer && quickContainer->focusPolicy() == Qt::NoFocus,
+          "TimelineQuickView native container did not enforce its no-focus contract");
+    auto *const focusTarget = QApplication::focusWidget();
+    check(focusTarget && (focusTarget == &tabBView || tabBView.isAncestorOf(focusTarget)),
+          "tab switch/playhead update did not restore active-surface focus");
+    check(focusTarget != overlay, "tab switch/playhead update focused the native playhead overlay");
+    check(focusTarget != quickContainer,
+          "tab switch/playhead update focused the TimelineQuickView native container");
+
     if (copyAction && tabBNote) {
         auto copyTriggerCount = 0;
         const QMetaObject::Connection triggerSpy = connect(
@@ -732,6 +758,8 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
           "drawer hide did not retain globally shared page and height");
     m_workspace->selectSongTab(tabA);
     m_workspace->selectSongTab(tabB);
+    QCoreApplication::processEvents();
+    QCoreApplication::sendPostedEvents();
     QCoreApplication::processEvents();
     QWidget *focusAfterTabSwitch = QApplication::focusWidget();
     check(focusAfterTabSwitch &&
@@ -1147,19 +1175,38 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
         distinctive.valid = true;
         distinctive.pxPerBeat = before.pxPerBeat * 2.0;
         distinctive.keyHeight = before.keyHeight * 1.5;
-        distinctive.scrollPx = before.scrollPx + 500.0;
-        distinctive.scrollY = before.scrollY + 300.0;
+        // The native Quick root can change available canvas dimensions. Seed
+        // each camera axis beyond its range so applyViewState captures the
+        // actual reachable endpoint rather than assuming a fixed viewport.
+        distinctive.scrollPx = std::numeric_limits<double>::max();
+        distinctive.scrollY = std::numeric_limits<double>::max();
         distinctive.selectedTrack = *alternateTrack;
         distinctive.editCursorTick = reopened->timeline()->ticksPerBeat * 4;
         distinctive.gridMinDenom = 16;
         distinctive.gridTriplet = true;
         distinctive.eventList = true;
         reopenedView->applyViewState(distinctive);
-        const SongView::ViewState seeded = reopenedView->viewState();
+        SongView::ViewState seeded = reopenedView->viewState();
+        if (seeded.scrollPx == before.scrollPx || seeded.scrollY == before.scrollY) {
+            if (seeded.scrollPx == before.scrollPx)
+                distinctive.scrollPx = 0.0;
+            if (seeded.scrollY == before.scrollY)
+                distinctive.scrollY = 0.0;
+            reopenedView->applyViewState(distinctive);
+            seeded = reopenedView->viewState();
+        }
+        distinctive = seeded;
         check(seeded.pxPerBeat != before.pxPerBeat && seeded.keyHeight != before.keyHeight &&
                   seeded.scrollPx != before.scrollPx && seeded.scrollY != before.scrollY &&
-                  seeded.editCursorTick != 0 && seeded.gridMinDenom == 16 && seeded.gridTriplet &&
-                  seeded.eventList,
+                  seeded.selectedTrack == *alternateTrack &&
+                  seeded.selectedTrack != before.selectedTrack &&
+                  seeded.editCursorTick == distinctive.editCursorTick &&
+                  seeded.editCursorTick != before.editCursorTick &&
+                  seeded.gridMinDenom == distinctive.gridMinDenom &&
+                  seeded.gridMinDenom != before.gridMinDenom &&
+                  seeded.gridTriplet == distinctive.gridTriplet &&
+                  seeded.gridTriplet != before.gridTriplet &&
+                  seeded.eventList == distinctive.eventList && seeded.eventList != before.eventList,
               "the reload seed did not land nine distinct transient fields");
         QTabBar *const reloadFocusTarget = findChild<QTabBar *>();
         check(reloadFocusTarget && reloadFocusTarget->isVisible() && reloadFocusTarget->isEnabled(),
@@ -1591,9 +1638,12 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                     automationThemeViewport ? checks::support::captureQuickBand(
                                                   view, *automationThemeViewport, &themeAfterError)
                                             : QImage{};
-                check(!automationThemeBefore.isNull() && !automationThemeAfter.isNull() &&
+                check(themeBeforeError.isEmpty() && !automationThemeBefore.isNull() &&
+                          themeAfterError.isEmpty() && !automationThemeAfter.isNull() &&
                           automationThemeAfter == automationThemeBefore,
-                      "theme change did not preserve the automation Quick viewport");
+                      qPrintable(QStringLiteral("theme change did not preserve the automation "
+                                                "Quick viewport: before=%1 after=%2")
+                                     .arg(themeBeforeError, themeAfterError)));
                 view.setDrawerActivePage(EditorDrawerPage::Velocity);
 
                 if (noteTrack >= 0) {

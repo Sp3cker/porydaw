@@ -1,18 +1,45 @@
 #include "domains.h"
 
 #include <algorithm>
-#include <cstdint>
+#include <cmath>
 #include <iterator>
 #include <limits>
 #include <vector>
 
 #include <QColor>
 #include <QImage>
-#include <QPalette>
 
 #include "rig.h"
 #include "ui/editordrawer/automationcanvas.h"
+#include "ui/layout.h"
+#include "ui/songview/quick/timelinequickscene.h"
+
 #include "ui/songview.h"
+
+namespace {
+
+bool hasRingAt(const songview::TimelineQuickLayerData &layer, const QPointF &center, qreal radius,
+               qreal width, const QColor &color)
+{
+    const qreal tolerance = layout::singlePixel();
+    const qreal inner = std::max<qreal>(0.0, radius - width / 2.0 - tolerance);
+    const qreal outer = radius + width / 2.0 + tolerance;
+    const qreal innerSquared = inner * inner;
+    const qreal outerSquared = outer * outer;
+    const auto onRing = [&](const QPointF &point) {
+        const QPointF delta = point - center;
+        const qreal distanceSquared = delta.x() * delta.x() + delta.y() * delta.y();
+        return distanceSquared >= innerSquared && distanceSquared <= outerSquared;
+    };
+    return std::count_if(layer.triangles.cbegin(), layer.triangles.cend(),
+                         [&](const songview::TimelineQuickTriangle &triangle) {
+                             return triangle.firstColor == color && triangle.secondColor == color &&
+                                    triangle.thirdColor == color && onRing(triangle.first) &&
+                                    onRing(triangle.second) && onRing(triangle.third);
+                         }) >= 4;
+}
+
+} // namespace
 
 void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
                                     const AutomationGestureCheck &check)
@@ -50,30 +77,8 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
                                        {{48, 32}, {96, 64}, {144, 96}, {192, 80}});
         rig.documentChanged();
 
-        const auto ringPaintedAt = [&](const QImage &image, const QPointF &position) {
-            const QPoint captureOrigin = rig.automationContentToViewport(QPoint{});
-            const qreal dpr = rig.canvas().devicePixelRatioF();
-            const int centerX = qRound((position.x() + captureOrigin.x()) * dpr);
-            const int centerY = qRound((position.y() + captureOrigin.y()) * dpr);
-            const auto paintGeometry = rig.geometry();
-            const int radius = qRound(paintGeometry.selectedNodeRingRadius * dpr);
-            const int tolerance = std::max(2, qRound(paintGeometry.selectedNodeRingDipWidth * dpr));
-            const int inner = std::max(0, radius - tolerance);
-            const int outer = radius + tolerance;
-            const QColor highlight = rig.canvas().palette().highlight().color();
-            for (int dy = -outer; dy <= outer; ++dy) {
-                for (int dx = -outer; dx <= outer; ++dx) {
-                    const int distance = dx * dx + dy * dy;
-                    if (distance < inner * inner || distance > outer * outer)
-                        continue;
-                    const int x = centerX + dx;
-                    const int y = centerY + dy;
-                    if (image.rect().contains(x, y) && image.pixelColor(x, y) == highlight)
-                        return true;
-                }
-            }
-            return false;
-        };
+        const auto nodesBefore =
+            rig.quickScene().layer(songview::TimelineQuickLayer::AutomationNodes);
 
         const auto selected48 = rig.pointAt(rig.pan, 48, 32);
         const auto selected96 = rig.pointAt(rig.pan, 96, 64);
@@ -85,12 +90,23 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
         tracksSelection.scope = songview::EditorSelectionModel::TimeSelection::Tracks;
         rig.view().selectionModel().setTimeSelection(tracksSelection);
         rig.pump();
-        const QImage selectedImage = rig.renderArea();
-        check(ringPaintedAt(selectedImage, selected48.position) &&
-                  ringPaintedAt(selectedImage, selected96.position) &&
-                  ringPaintedAt(selectedImage, selected144.position) &&
-                  !ringPaintedAt(selectedImage, endpoint.position),
-              QStringLiteral("Tracks-scope CC selection did not paint one half-open node set"));
+        QString selectionCaptureError;
+        const QImage selectionFramebuffer = rig.renderAutomationViewport(&selectionCaptureError);
+        const auto &nodeLayer =
+            rig.quickScene().layer(songview::TimelineQuickLayer::AutomationNodes);
+        const qreal ringRadius = geometry.selectedNodeRingRadius;
+        const qreal ringWidth = geometry.selectedNodeRingDipWidth;
+        const QColor selectionColor = rig.canvas().palette().highlight().color();
+        const auto ringPaintedAt = [&](const QPointF &position) {
+            return hasRingAt(nodeLayer, rig.automationContentToViewport(position), ringRadius,
+                             ringWidth, selectionColor);
+        };
+        check(selectionCaptureError.isEmpty() && !selectionFramebuffer.isNull() &&
+                  nodeLayer.revision > nodesBefore.revision && ringPaintedAt(selected48.position) &&
+                  ringPaintedAt(selected96.position) && ringPaintedAt(selected144.position) &&
+                  !ringPaintedAt(endpoint.position),
+              QStringLiteral("Tracks-scope CC selection did not retain one half-open Quick node "
+                             "ring set"));
 
         const auto before = snapshot(rig.document());
         const auto grab = rig.pointAt(rig.pan, 96, 64);

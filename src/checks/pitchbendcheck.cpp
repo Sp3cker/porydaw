@@ -28,6 +28,7 @@
 
 #include "checks/support/eventsynth.h"
 #include "ui/pitchbendeditor.hpp"
+#include "ui/theme/themeruntime.h"
 
 namespace {
 
@@ -140,8 +141,37 @@ class PitchBendCheckContext final
             fail("G did not open the selected note's pitch-bend popup");
             return {};
         }
-        if (bendPopup->isWindow() || QApplication::activePopupWidget() == bendPopup)
-            fail("pitch-bend editor used a native popup window");
+        if (!bendPopup->isWindow() || bendPopup->windowType() != Qt::Tool ||
+            QApplication::activePopupWidget() == bendPopup) {
+            fail("pitch-bend editor did not use a non-modal tool window");
+        }
+        if (!bendPopup->windowHandle() || !bendPopup->testAttribute(Qt::WA_OpaquePaintEvent)) {
+            fail("pitch-bend editor does not own an opaque top-level surface");
+        }
+        const QPixmap surfacePixmap = bendPopup->grab();
+        const QImage surfaceImage = surfacePixmap.toImage();
+        const qreal surfaceDpr = surfacePixmap.devicePixelRatio();
+        bool opaqueSurface = !surfaceImage.isNull();
+        for (int y = 0; opaqueSurface && y < surfaceImage.height(); ++y) {
+            for (int x = 0; x < surfaceImage.width(); ++x) {
+                if (surfaceImage.pixelColor(x, y).alpha() != 255) {
+                    opaqueSurface = false;
+                    break;
+                }
+            }
+        }
+        if (!opaqueSurface)
+            fail("pitch-bend editor did not render an opaque surface");
+        const QColor background = themes::color(themes::Role::window_background);
+        const auto backgroundAt = [&surfaceImage, surfaceDpr, &background](QPoint logical) {
+            const int x = qRound(double(logical.x()) * surfaceDpr);
+            const int y = qRound(double(logical.y()) * surfaceDpr);
+            return x >= 0 && x < surfaceImage.width() && y >= 0 && y < surfaceImage.height() &&
+                   surfaceImage.pixelColor(x, y) == background;
+        };
+        if (!backgroundAt(QPoint(4, 24)) || !backgroundAt(QPoint(4, 80)) ||
+            !backgroundAt(QPoint(4, bendPopup->height() - 4)))
+            fail("pitch-bend editor did not retain its window background");
         const QPoint popupCenter = bendPopup->mapToGlobal(bendPopup->rect().center());
         QWidget *host = bendPopup->parentWidget();
         const QRect hostGlobal(host->mapToGlobal(host->rect().topLeft()), host->rect().size());

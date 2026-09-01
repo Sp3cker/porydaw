@@ -13,10 +13,12 @@
 #include <QPointF>
 #include <QString>
 
-#include "checks/support/quickframebuffer.h"
 #include "rig.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
+#include "ui/layout.h"
+#include "ui/songview/quick/timelinequickscene.h"
+
 #include "ui/songview.h"
 
 namespace {
@@ -77,19 +79,13 @@ uint64_t voiceSnapTick(const AutomationGestureCheckRig &rig, qreal x, bool fine)
     return rig.view().snapTick(rawTick, fine);
 }
 
-QImage markerColumnCrop(const QImage &image, const QRect &capturedBounds, qreal canvasX)
+int markerCountAt(const songview::TimelineQuickLayerData &layer, qreal x)
 {
-    if (image.isNull() || capturedBounds.width() <= 0)
-        return {};
-    const qreal dpr = image.devicePixelRatio();
-    if (dpr <= 0.0)
-        return {};
-    // The marker is 2 logical pixels wide; retain one device pixel of paint fringe, not its label.
-    const qreal localX = canvasX - capturedBounds.x();
-    const qreal halfWidth = 1.0 + 1.0 / dpr;
-    const int left = std::clamp(int(std::floor((localX - halfWidth) * dpr)), 0, image.width());
-    const int right = std::clamp(int(std::ceil((localX + halfWidth) * dpr)), 0, image.width());
-    return right > left ? image.copy(left, 0, right - left, image.height()) : QImage{};
+    const qreal tolerance = layout::singlePixel();
+    return int(std::count_if(layer.rects.cbegin(), layer.rects.cend(),
+                             [x, tolerance](const songview::TimelineQuickRect &marker) {
+                                 return std::abs(marker.rect.center().x() - x) <= tolerance;
+                             }));
 }
 
 void seedVoice(AutomationGestureCheckRig &rig,
@@ -138,12 +134,10 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         const uint64_t destination = voiceSnapTick(rig, target.x(), false);
         const auto before = snapshot(rig.document());
         QString idleCaptureError;
-        const QImage idleVoice =
-            checks::support::captureQuickBand(rig.view(), rig.voiceArea(), &idleCaptureError);
+        const QImage idleVoice = rig.renderVoiceChanges(&idleCaptureError);
         activateVoiceDrag(rig, source, target);
         QString previewCaptureError;
-        const QImage previewVoice =
-            checks::support::captureQuickBand(rig.view(), rig.voiceArea(), &previewCaptureError);
+        const QImage previewVoice = rig.renderVoiceChanges(&previewCaptureError);
         check(idleCaptureError.isEmpty() && previewCaptureError.isEmpty() &&
                   isUnchanged(before, snapshot(rig.document())) && rig.view().userGestureActive() &&
                   rig.voiceArea().cursor().shape() == Qt::SizeHorCursor && !idleVoice.isNull() &&
@@ -297,34 +291,34 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         const QPointF source = voicePoint(rig, 48);
         const QPointF target = voicePoint(rig, 72);
         const uint64_t destination = voiceSnapTick(rig, target.x(), false);
-        const QRect voiceBounds = rig.voiceArea().rect();
         QString idleCaptureError;
-        const QImage idleVoice =
-            checks::support::captureQuickBand(rig.view(), rig.voiceArea(), &idleCaptureError);
+        const QImage idleFramebuffer = rig.renderVoiceChanges(&idleCaptureError);
+        const auto idleMarkers =
+            rig.quickScene().layer(songview::TimelineQuickLayer::VoiceChangesMarkers);
         activateVoiceDrag(rig, source, target);
         QString previewCaptureError;
-        const QImage previewVoice =
-            checks::support::captureQuickBand(rig.view(), rig.voiceArea(), &previewCaptureError);
+        const QImage previewFramebuffer = rig.renderVoiceChanges(&previewCaptureError);
+        const auto previewMarkers =
+            rig.quickScene().layer(songview::TimelineQuickLayer::VoiceChangesMarkers);
         const qreal destinationX = rig.view().displayX(
             double(destination), rig.voiceArea().plotOrigin(), rig.voiceArea().devicePixelRatioF());
-        const QImage idleSourceColumn = markerColumnCrop(idleVoice, voiceBounds, source.x());
-        const QImage previewSourceColumn = markerColumnCrop(previewVoice, voiceBounds, source.x());
-        const QImage idleDestinationColumn = markerColumnCrop(idleVoice, voiceBounds, destinationX);
-        const QImage previewDestinationColumn =
-            markerColumnCrop(previewVoice, voiceBounds, destinationX);
+        const int idleSourceCount = markerCountAt(idleMarkers, source.x());
+        const int previewSourceCount = markerCountAt(previewMarkers, source.x());
+        const int idleDestinationCount = markerCountAt(idleMarkers, destinationX);
+        const int previewDestinationCount = markerCountAt(previewMarkers, destinationX);
         check(idleCaptureError.isEmpty() && previewCaptureError.isEmpty() &&
-                  isUnchanged(before, snapshot(rig.document())) && rig.view().userGestureActive(),
-              QStringLiteral("duplicate Voice occurrence preview capture failed (%1; %2)")
-                  .arg(idleCaptureError, previewCaptureError));
-        check(!idleSourceColumn.isNull() && !previewSourceColumn.isNull() &&
-                  idleSourceColumn.size() == previewSourceColumn.size() &&
-                  idleSourceColumn == previewSourceColumn,
-              QStringLiteral("duplicate Voice occurrence preview removed the source marker"));
-        check(
-            !idleDestinationColumn.isNull() && !previewDestinationColumn.isNull() &&
-                idleDestinationColumn.size() == previewDestinationColumn.size() &&
-                idleDestinationColumn != previewDestinationColumn,
-            QStringLiteral("duplicate Voice occurrence preview did not add a destination marker"));
+                  !idleFramebuffer.isNull() && !previewFramebuffer.isNull() &&
+                  idleFramebuffer.size() == previewFramebuffer.size() &&
+                  isUnchanged(before, snapshot(rig.document())) && rig.view().userGestureActive() &&
+                  previewMarkers.revision > idleMarkers.revision,
+              QStringLiteral("duplicate Voice occurrence did not publish a Quick preview"));
+        check(idleSourceCount == 2 && previewSourceCount == 1,
+              QStringLiteral("duplicate Voice occurrence preview did not retain one source "
+                             "marker"));
+        check(idleDestinationCount == 0 && previewDestinationCount == 1 &&
+                  idleMarkers.rects.size() == previewMarkers.rects.size(),
+              QStringLiteral("duplicate Voice occurrence preview did not add one destination "
+                             "marker"));
         rig.voiceMouseRelease(target);
         rig.pump();
         const auto points = rig.document().lanePoints(0, DOC_CC_VOICE);

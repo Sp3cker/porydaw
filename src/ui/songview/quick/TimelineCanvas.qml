@@ -20,28 +20,41 @@ Item {
     Component {
         id: bandTextDelegate
 
-        Text {
+        Item {
             required property rect labelRect
+            required property rect labelClipRect
             required property string labelText
             required property color labelColor
             required property font labelFont
             required property int labelHorizontalAlignment
             required property int labelVerticalAlignment
 
-            x: labelRect.x
-            y: labelRect.y
-            width: labelRect.width
-            height: labelRect.height
-            text: labelText
-            color: labelColor
-            font: labelFont
-            horizontalAlignment: labelHorizontalAlignment
-            verticalAlignment: labelVerticalAlignment
-            textFormat: Text.PlainText
-            renderType: Text.NativeRendering
-            elide: Text.ElideNone
-            maximumLineCount: 1
+            readonly property rect effectiveClipRect: labelClipRect.width > 0
+                                                       && labelClipRect.height > 0
+                                                       ? labelClipRect : labelRect
+
+            x: effectiveClipRect.x
+            y: effectiveClipRect.y
+            width: effectiveClipRect.width
+            height: effectiveClipRect.height
             clip: true
+
+            Text {
+                x: labelRect.x - parent.x
+                y: labelRect.y - parent.y
+                width: labelRect.width
+                height: labelRect.height
+                text: labelText
+                color: labelColor
+                font: labelFont
+                horizontalAlignment: labelHorizontalAlignment
+                verticalAlignment: labelVerticalAlignment
+                textFormat: Text.PlainText
+                renderType: Text.NativeRendering
+                elide: Text.ElideNone
+                maximumLineCount: 1
+                clip: true
+            }
         }
     }
 
@@ -49,7 +62,7 @@ Item {
         required property rect bandRect
         required property bool bandVisible
         required property string bandName
-        property bool rulerBand: false
+        z: 9
 
         TimelineChromeItem {
             objectName: bandName + "HoverChrome"
@@ -66,24 +79,11 @@ Item {
             x: timelineQuickView.editRootContentX - bandRect.x
             width: parent.width
             height: parent.height
-            visible: timelineQuickView.editVisible && bandVisible
+            visible: timelineQuickView.editVisible && !timelineQuickView.hoverVisible && bandVisible
             kind: TimelineChromeItem.Edit
             z: 10
         }
 
-        TimelineChromeItem {
-            objectName: bandName + "PlayheadChrome"
-            x: timelineQuickView.playheadRootContentX - bandRect.x
-            width: parent.width
-            height: parent.height
-            visible: timelineQuickView.playheadVisible && bandVisible
-            kind: TimelineChromeItem.Playhead
-            playing: timelineQuickView.playheadPlaying
-            rulerTriangle: rulerBand
-                           ? (root.rollBandVisible ? TimelineChromeItem.Down : TimelineChromeItem.Up)
-                           : TimelineChromeItem.None
-            z: 11
-        }
     }
 
     Item {
@@ -122,10 +122,8 @@ Item {
             bandRect: root.rulerBandRect
             bandVisible: root.rulerBandVisible
             bandName: "timelineQuickRuler"
-            rulerBand: true
         }
     }
-
 
     Item {
         x: root.rollBandRect.x

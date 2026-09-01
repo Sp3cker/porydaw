@@ -5,11 +5,13 @@
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 #include <QApplication>
 
 #include <QAction>
 #include <QCoreApplication>
+#include <QEvent>
 #include <QImage>
 #include <QStackedWidget>
 #include <QTabBar>
@@ -52,9 +54,12 @@ int runEditorDrawerCheck(const QString &screenshotPath)
     auto *automationCanvas = automationPage ? automationPage->canvas() : nullptr;
     auto *velocityCanvas = drawer ? drawer->velocityArea() : nullptr;
     auto *voiceCanvas = drawer ? drawer->voiceChangeArea() : nullptr;
-    check(drawer && roll && automationPage && automationCanvas && velocityCanvas && voiceCanvas,
-          "concrete SongView did not expose its drawer pages");
-    if (!drawer || !roll || !automationPage || !automationCanvas || !velocityCanvas || !voiceCanvas)
+    auto *quick = view.findChild<songview::TimelineQuickView *>();
+    check(drawer && roll && automationPage && automationCanvas && velocityCanvas && voiceCanvas &&
+              quick,
+          "concrete SongView did not expose its drawer pages and Quick host");
+    if (!drawer || !roll || !automationPage || !automationCanvas || !velocityCanvas ||
+        !voiceCanvas || !quick)
         return 1;
     check(drawer->minimumSectionHeight() == layout::fontPx(17.0 / 5.0),
           "drawer minimum body height did not use the compact sizing contract");
@@ -79,15 +84,16 @@ int runEditorDrawerCheck(const QString &screenshotPath)
     auto *automationToggle =
         drawer->findChild<QToolButton *>(QStringLiteral("automationDrawerToggle"));
     auto *detentToggle = drawer->findChild<QToolButton *>(QStringLiteral("velocityDetentToggle"));
+    auto *automationBar = drawer->findChild<QWidget *>(QStringLiteral("automationDrawerBar"));
     check(sections.size() == 1 && drawerSections == sections.front() && drawerSections->isVisible(),
           "drawer did not create exactly one velocity section");
     check(!drawer->findChild<QTabBar *>() && !drawer->findChild<QStackedWidget *>(),
           "drawer retained legacy tab or stacked-page chrome");
     check(velocityHandle && automationHandle && voiceHandle && velocityToggle && voiceToggle &&
-              automationToggle && detentToggle,
-          "drawer did not expose section handles and velocity controls");
+              automationToggle && detentToggle && automationBar,
+          "drawer did not expose section handles, toggles, and bar");
     if (!velocityHandle || !automationHandle || !voiceHandle || !velocityToggle || !voiceToggle ||
-        !automationToggle || !detentToggle)
+        !automationToggle || !detentToggle || !automationBar)
         return 1;
     const QImage activeDetentIcon =
         detentToggle->icon().pixmap(QSize(64, 64), QIcon::Normal, QIcon::On).toImage();
@@ -181,6 +187,37 @@ int runEditorDrawerCheck(const QString &screenshotPath)
           "voice changes action did not preserve the open automation and velocity sections");
     check(voiceHandle->isVisible() && velocityHandle->isVisible() && automationHandle->isVisible(),
           "all three section handles were not visible while voice changes was shown");
+    QCoreApplication::processEvents();
+    const auto quickMaskContains = [&view, quick](const QWidget &widget) {
+        const QPoint rootPoint =
+            widget.mapTo(&view, widget.rect().center()) - quick->geometry().topLeft();
+        return quick->quickWindow()->mask().contains(rootPoint);
+    };
+    check(!quick->quickWindow()->mask().isEmpty() && !quickMaskContains(*voiceHandle) &&
+              !quickMaskContains(*velocityHandle) && !quickMaskContains(*automationHandle) &&
+              !quickMaskContains(*automationBar),
+          "Quick window mask did not expose native drawer handles and toggle bar");
+    const QImage automationBarImage = automationBar->grab().toImage();
+    const QPoint automationBarProbe(std::max(0, automationBarImage.width() - 2),
+                                    automationBarImage.height() / 2);
+    check(!automationBarImage.isNull() &&
+              automationBarImage.pixelColor(automationBarProbe).alpha() == 255 &&
+              !voiceToggle->icon().isNull() && !automationToggle->icon().isNull() &&
+              !velocityToggle->icon().isNull(),
+          "drawer toggle bar was transparent or its toggle icons were missing");
+
+    const QPoint voiceHandleProbe = voiceHandle->rect().center();
+    const QColor idleHandleColor = voiceHandle->grab().toImage().pixelColor(voiceHandleProbe);
+    QEvent enterHandle(QEvent::Enter);
+    QApplication::sendEvent(voiceHandle, &enterHandle);
+    const QColor hoveredHandleColor = voiceHandle->grab().toImage().pixelColor(voiceHandleProbe);
+    check(voiceHandle->cursor().shape() == Qt::SizeVerCursor &&
+              hoveredHandleColor != idleHandleColor && hoveredHandleColor.alpha() == 255,
+          "resize handle did not expose its resize cursor and opaque hover color");
+    QEvent leaveHandle(QEvent::Leave);
+    QApplication::sendEvent(voiceHandle, &leaveHandle);
+    check(!voiceHandle->testAttribute(Qt::WA_SetCursor),
+          "resize handle did not restore the inherited cursor after hover");
     check(!detentToggle->isVisible(), "showing voice changes exposed the velocity detent toggle");
 
     // Stack order: voice handle/body above velocity above automation; the
@@ -241,6 +278,8 @@ int runEditorDrawerCheck(const QString &screenshotPath)
                               QPointF(voiceHandleCenter - QPoint(0, 40)), Qt::LeftButton,
                               Qt::NoButton, Qt::NoModifier);
     QCoreApplication::processEvents();
+    check(!voiceHandle->testAttribute(Qt::WA_SetCursor),
+          "resize handle retained its resize cursor after an outside release");
     const int voiceHeightAfter = view.drawerSectionHeight(EditorDrawerPage::VoiceChanges);
     check(voiceHeightAfter == voiceCanvasHeightAfterMove &&
               voiceHeightAfter <= drawer->maximumSectionHeight() &&
@@ -363,7 +402,7 @@ int runEditorDrawerCheck(const QString &screenshotPath)
               view.editorViewState().automation.height > automationHeightBefore,
           "state reload did not retain collapsed section heights");
 
-    QApplication::setActiveWindow(&view);
+    view.activateWindow();
     view.focusContent();
     QCoreApplication::processEvents();
     QWidget *contentFocus = QApplication::focusWidget();

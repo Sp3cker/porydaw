@@ -201,9 +201,10 @@ bool AutomationPage::matchesPencilShortcut(const QKeyEvent *event) const noexcep
         return false;
     const QKeyCombination combination = shortcut[0];
     const int key = int(combination.key());
-    return combination.keyboardModifiers() == Qt::NoModifier && key != 0 &&
-           key != Qt::Key_unknown && !keymap::Registry::isModifierKey(key) && event->key() == key &&
-           shortcutModifiers(event->modifiers()) == Qt::NoModifier;
+    return key != 0 && key != Qt::Key_unknown && !keymap::Registry::isModifierKey(key) &&
+           event->key() == key &&
+           shortcutModifiers(event->modifiers()) ==
+               shortcutModifiers(combination.keyboardModifiers());
 }
 
 bool AutomationPage::ready() const noexcept

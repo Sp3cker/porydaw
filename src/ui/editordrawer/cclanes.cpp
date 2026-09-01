@@ -198,6 +198,21 @@ int CCLaneAdapter::neutralValue() const
     return -1;
 }
 
+std::optional<NodePoint> CCLaneAdapter::leadIn() const
+{
+    if (CoreTimeDefaults::hasEngineDefaultNode(m_controller))
+        return std::nullopt;
+    const auto documentPoints = m_document.lanePoints(m_engineTrack, m_controller);
+    if (std::ranges::any_of(documentPoints,
+                            [](const DocLanePoint &point) { return point.tick == 0; })) {
+        return std::nullopt;
+    }
+    const int defaultValue = m_controller == CCLanes::bendController()
+                                 ? 0
+                                 : CoreTimeDefaults::controllerDefault(m_controller);
+    return defaultValue >= 0 ? std::optional<NodePoint>{{0, defaultValue}} : std::nullopt;
+}
+
 void CCLaneAdapter::replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points)
 {
     std::vector<SongDocument::LanePointValue> written;

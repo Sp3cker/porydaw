@@ -517,15 +517,24 @@ void checkEngineDefaultNodes(Session &session, const AutomationGestureCheck &fn)
     setLaneValues(document, session.engineTrack, 7, {});
     setLaneValues(document, session.engineTrack, 10, {});
     setLaneValues(document, session.engineTrack, 1, {});
+    setLaneValues(document, session.engineTrack, DOC_CC_BEND, {});
     CCLaneAdapter volume(document, session.engineTrack, 7);
     CCLaneAdapter pan(document, session.engineTrack, 10);
     CCLaneAdapter modulation(document, session.engineTrack, 1);
+    CCLaneAdapter bend(document, session.engineTrack, DOC_CC_BEND);
     check.require(sameNodePoints(volume.points(), {{0, 127}}),
                   QStringLiteral("Volume did not expose its engine-default tick-zero node"));
     check.require(sameNodePoints(pan.points(), {{0, 64}}),
                   QStringLiteral("Pan did not expose its engine-default tick-zero node"));
     check.require(modulation.points().empty(),
                   QStringLiteral("a non-Volume/Pan lane exposed a synthetic default node"));
+    const auto modulationLeadIn = modulation.leadIn();
+    const auto bendLeadIn = bend.leadIn();
+    check.require(modulationLeadIn && modulationLeadIn->tick == 0 && modulationLeadIn->value == 0,
+                  QStringLiteral("Modulation did not expose its implicit held value"));
+    check.require(bend.points().empty() && bendLeadIn && bendLeadIn->tick == 0 &&
+                      bendLeadIn->value == 0,
+                  QStringLiteral("Pitch Bend did not expose its implicit centered held value"));
 
     const auto checkPromotion = [&](CCLaneAdapter &lane, uint8_t controller, int value,
                                     const QString &name) {

@@ -9,6 +9,7 @@
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/eventlistview.h"
 #include "ui/layout.h"
+#include "ui/playheadoverlay.h"
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -89,10 +90,28 @@ void SongView::refreshGeometry()
                                  QSizePolicy::Minimum);
         m_hbarRow->invalidate();
     }
+    if (m_playheadOverlay) {
+        m_playheadOverlay->updateBands({*m_ruler, m_geometry.plotOrigin}, *m_roll,
+                                       playheadClipBands());
+    }
     updateScrollbars();
     // Global geometry replacement: every roll domain may change.
     refreshTimelineViews(PianoRollQuickDirty::All);
     refreshDrawerPages();
+}
+
+std::vector<PlayheadBand> SongView::playheadClipBands() const
+{
+    auto *automation = m_editorDrawer->automationPage();
+    auto *velocity = m_editorDrawer->velocityArea();
+    auto *voiceChanges = m_editorDrawer->voiceChangeArea();
+    return {
+        {*m_roll, m_geometry.pianoKeyboardWidth},
+        {*automation->scrollViewport(), automation->canvas()->plotOrigin()},
+        {*velocity, velocity->plotOrigin()},
+        {*voiceChanges, voiceChanges->plotOrigin()},
+        {*m_strip, m_geometry.plotOrigin},
+    };
 }
 
 SongView::SongView(QWidget *parent)
@@ -170,6 +189,8 @@ SongView::SongView(QWidget *parent)
         *m_ruler, *m_roll, *m_strip, *m_editorDrawer->automationPage(),
         *m_editorDrawer->velocityArea(), *m_editorDrawer->voiceChangeArea(), *this);
     m_quickView->lower();
+    m_playheadOverlay =
+        new PlayheadOverlay(*this, {*m_ruler, m_geometry.plotOrigin}, *m_roll, playheadClipBands());
     m_selectionModel.setObserver(
         [this](const songview::EditorSelectionModel::SelectionTransition &transition) {
             coordinateSelectionChange(transition);
@@ -593,7 +614,7 @@ void SongView::coordinateSelectionChange(
         requestTimelineQuickUpdate(TimelineQuickDirty::Ruler);
         requestRoll(PianoRollQuickDirty::NoteBordersAndSelection | PianoRollQuickDirty::Overlay);
         requestTimelineQuickUpdate(TimelineQuickDirty::OtherEvents);
-        syncTimelineQuickChrome();
+        syncTimelineIndicators();
         timelineViewsRefreshed = true;
     }
     if (noteSelectionChanged) {
@@ -605,7 +626,7 @@ void SongView::coordinateSelectionChange(
             requestTimelineQuickUpdate(TimelineQuickDirty::Ruler);
             requestRoll(PianoRollQuickDirty::NoteBordersAndSelection |
                         PianoRollQuickDirty::Overlay);
-            syncTimelineQuickChrome();
+            syncTimelineIndicators();
         }
         refreshAutomationPage();
     }
@@ -682,7 +703,7 @@ void SongView::setPlayheadSample(uint64_t samplePos, bool playing)
         m_editorDrawer->velocityArea()->presentPlayhead(m_playheadTick);
     if (voiceChangesPageVisible)
         m_editorDrawer->voiceChangeArea()->presentPlayhead(m_playheadTick);
-    syncTimelineQuickChrome();
+    syncTimelineIndicators();
 }
 
 bool SongView::userGestureActive() const
@@ -721,14 +742,18 @@ void SongView::clearTimelineQuickHover(songview::TimelineQuickHoverOwner owner)
         m_quickView->clearHover(owner);
 }
 
-void SongView::syncTimelineQuickChrome()
+void SongView::syncTimelineIndicators()
 {
-    if (!m_quickView)
-        return;
     const qreal rootOriginX = timelinePlotOrigin();
-    m_quickView->synchronizeChrome(rootOriginX, rootOriginX + contentX(m_editCursorTick),
-                                   m_timeline != nullptr, rootOriginX + contentX(m_playheadTick),
-                                   m_timeline != nullptr, m_playing);
+    std::optional<qreal> editRootContentX;
+    if (m_timeline)
+        editRootContentX = rootOriginX + contentX(m_editCursorTick);
+
+    if (m_playheadOverlay)
+        m_playheadOverlay->setPlayhead(contentX(m_playheadTick), m_timeline != nullptr, m_playing);
+    if (m_quickView) {
+        m_quickView->synchronizeGuides(rootOriginX, editRootContentX);
+    }
 }
 
 void SongView::setEditCursorTick(uint64_t tick)
@@ -737,7 +762,7 @@ void SongView::setEditCursorTick(uint64_t tick)
         return;
     m_editCursorTick = tick;
     m_headers->syncVoices();
-    syncTimelineQuickChrome();
+    syncTimelineIndicators();
     refreshDrawerPages();
 }
 
@@ -759,7 +784,7 @@ void SongView::refreshTimelineViews(PianoRollQuickDirtySet dirty)
 {
     requestTimelineQuickUpdate(TimelineQuickDirty::All);
     m_roll->requestQuickUpdate(dirty);
-    syncTimelineQuickChrome();
+    syncTimelineIndicators();
 }
 
 void SongView::resizeEvent(QResizeEvent *event)
@@ -767,4 +792,5 @@ void SongView::resizeEvent(QResizeEvent *event)
     QWidget::resizeEvent(event);
     updateScrollbars();
     refreshDrawerPages();
+    syncTimelineIndicators();
 }

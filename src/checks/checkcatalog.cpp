@@ -385,6 +385,7 @@ const std::vector<CheckDefinition> &catalog()
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = route101Files,
+                .windowing = Windowing::WindowSystem,
             },
             {
                 .name = "automation-popup-menus",
@@ -407,6 +408,7 @@ const std::vector<CheckDefinition> &catalog()
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = route101Files,
+                .windowing = Windowing::WindowSystem,
             },
             {
                 .name = "velocity-page",
@@ -441,6 +443,18 @@ const std::vector<CheckDefinition> &catalog()
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = twoSongRichFiles,
+            },
+            {
+                .name = "rendering-playhead",
+                .argv = strings({"--check-rendering-playhead", "{scratch}", "mus_route101"}),
+                .handler =
+                    [](QApplication &, const QStringList &args) {
+                        return runRenderingPlayheadCheck(args[1], args[2], optional(args, 3));
+                    },
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = route101Files,
+                .windowing = Windowing::WindowSystem,
             },
             {
                 .name = "host-integration",

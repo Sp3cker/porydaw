@@ -1,24 +1,23 @@
 #include <algorithm>
-#include <cmath>
 #include <cstdio>
 #include <limits>
 #include <optional>
 #include <vector>
 
+#include <QAbstractItemModel>
+#include <QColor>
 #include <QCoreApplication>
 #include <QEvent>
 #include <QFont>
 #include <QFontInfo>
-#include <QFontMetrics>
-#include <QImage>
 #include <QPoint>
 #include <QRegion>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QUndoStack>
+#include <QWidget>
 
 #include "checks/support/eventsynth.h"
-#include "checks/support/quickframebuffer.h"
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
@@ -30,7 +29,9 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/editorselectionmodel.h"
+#include "ui/songview/quick/timelinequickscene.h"
 #include "ui/theme/themeruntime.h"
+#include "ui/theme/trackidentitycolors.h"
 #include "ui/typography.h"
 
 namespace {
@@ -49,34 +50,14 @@ void pump()
 {
     QCoreApplication::sendPostedEvents();
     QCoreApplication::processEvents();
-}
-QImage captureAutomationViewport(SongView &view, AutomationPage &page, int &failures)
-{
-    QString error;
-    QWidget *const viewport = page.scrollViewport();
-    const QImage image =
-        viewport ? checks::support::captureQuickBand(view, *viewport, &error) : QImage{};
-    if (!image.isNull())
-        return image;
-    std::fprintf(stderr, "automation-check: FAIL paint: %s\n", qUtf8Printable(error));
-    ++failures;
-    return {};
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents();
 }
 
 QPoint automationContentToViewport(const AutomationPage &page)
 {
     QWidget *const viewport = page.scrollViewport();
     return viewport ? page.canvas()->mapTo(viewport, QPoint{}) : QPoint{};
-}
-
-QRegion toViewport(const QRegion &content, const QPoint &origin)
-{
-    return content.translated(origin);
-}
-
-QRectF toViewport(const QRectF &content, const QPoint &origin)
-{
-    return content.translated(origin);
 }
 
 void leaveCanvas(AutomationPage &page)
@@ -109,68 +90,44 @@ QPointF tempoHeaderPoint(const AutomationPage &page)
     return {page.canvas()->plotOrigin() / 2.0, qreal(tempo.center().y())};
 }
 
-bool toggleTempoExpanded(SongView &view, AutomationPage &page, bool wantExpanded, int &failures)
+bool toggleTempoExpanded(SongView &, AutomationPage &page, bool wantExpanded, int &)
 {
     const bool expanded = !page.canvas()->laneBody(LaneHandle{0}).isEmpty();
     if (expanded == wantExpanded)
         return expanded;
-    const QImage beforeToggle = captureAutomationViewport(view, page, failures);
     checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, tempoHeaderPoint(page),
                               Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
     checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, tempoHeaderPoint(page),
                               Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     pump();
-    if (captureAutomationViewport(view, page, failures) == beforeToggle) {
-        std::fprintf(stderr, "automation-check: FAIL paint: tempo header toggle did not repaint\n");
-        ++failures;
-    }
     return !page.canvas()->laneBody(LaneHandle{0}).isEmpty() == wantExpanded;
 }
 
-QRect deviceRect(const QRectF &logical, qreal dpr, const QSize &bound)
+QRectF bounds(const songview::TimelineQuickTriangle &triangle)
 {
-    const int left = std::clamp(int(std::floor(logical.left() * dpr)), 0, bound.width());
-    const int top = std::clamp(int(std::floor(logical.top() * dpr)), 0, bound.height());
-    const int right = std::clamp(int(std::ceil(logical.right() * dpr)), 0, bound.width());
-    const int bottom = std::clamp(int(std::ceil(logical.bottom() * dpr)), 0, bound.height());
-    return {left, top, std::max(0, right - left), std::max(0, bottom - top)};
+    const qreal left = std::min({triangle.first.x(), triangle.second.x(), triangle.third.x()});
+    const qreal right = std::max({triangle.first.x(), triangle.second.x(), triangle.third.x()});
+    const qreal top = std::min({triangle.first.y(), triangle.second.y(), triangle.third.y()});
+    const qreal bottom = std::max({triangle.first.y(), triangle.second.y(), triangle.third.y()});
+    return QRectF(QPointF(left, top), QPointF(right, bottom));
 }
 
-int changedPixels(const QImage &before, const QImage &after, const QRegion &logical,
-                  const QPoint &origin, qreal dpr)
+bool layerHasColorIn(const songview::TimelineQuickLayerData &layer, const QRegion &contentRegion,
+                     const QPoint &contentOrigin, const QColor &color)
 {
-    if (before.size() != after.size() || before.format() != after.format())
-        return -1;
-    int changed = 0;
-    bool compared = false;
-    for (const QRect &logicalRect : toViewport(logical, origin)) {
-        const QRect rect =
-            deviceRect(QRectF(logicalRect), dpr, before.size()).intersected(before.rect());
-        if (rect.isEmpty())
-            continue;
-        compared = true;
-        for (int y = rect.top(); y <= rect.bottom(); ++y) {
-            for (int x = rect.left(); x <= rect.right(); ++x) {
-                if (before.pixel(x, y) != after.pixel(x, y))
-                    ++changed;
-            }
+    const QRegion region = contentRegion.translated(contentOrigin);
+    for (const songview::TimelineQuickRect &rect : layer.rects) {
+        if (region.intersects(rect.rect.toAlignedRect()) &&
+            (rect.topLeft == color || rect.topRight == color || rect.bottomRight == color ||
+             rect.bottomLeft == color)) {
+            return true;
         }
     }
-    return compared ? changed : -1;
-}
-
-bool hasColorNear(const QImage &image, const QRectF &logical, const QPoint &origin, qreal dpr,
-                  const QColor &expected, int tolerance)
-{
-    const QRect rect =
-        deviceRect(toViewport(logical, origin), dpr, image.size()).intersected(image.rect());
-    for (int y = rect.top(); y <= rect.bottom(); ++y) {
-        for (int x = rect.left(); x <= rect.right(); ++x) {
-            const QColor actual(image.pixel(x, y));
-            if (std::abs(actual.red() - expected.red()) <= tolerance &&
-                std::abs(actual.green() - expected.green()) <= tolerance &&
-                std::abs(actual.blue() - expected.blue()) <= tolerance)
-                return true;
+    for (const songview::TimelineQuickTriangle &triangle : layer.triangles) {
+        if (region.intersects(bounds(triangle).toAlignedRect()) &&
+            (triangle.firstColor == color || triangle.secondColor == color ||
+             triangle.thirdColor == color)) {
+            return true;
         }
     }
     return false;
@@ -189,18 +146,6 @@ std::optional<CcCoverageLane> ccCoveredBy(const AutomationPage &page, const QRec
             return CcCoverageLane{rows[std::size_t(index)].id, body, overlap};
     }
     return std::nullopt;
-}
-
-QRectF overlapProbe(const QRect &overlap, qreal x, qreal radius)
-{
-    if (overlap.isEmpty())
-        return {};
-    const QRectF bounds(overlap);
-    const qreal half = std::min(radius, std::min(bounds.width(), bounds.height()) / 4.0);
-    if (half <= 0.0)
-        return {};
-    const qreal probeX = std::clamp(x, bounds.left() + half, bounds.right() - half);
-    return {probeX - half, bounds.center().y() - half, 2 * half, 2 * half};
 }
 
 std::optional<CcCoverageLane> scrollToCollapsedCcOverlap(AutomationPage &page, QScrollArea &scroll,
@@ -237,20 +182,21 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
         std::fprintf(stderr, "automation-check: FAIL paint: Tempo: %s\n", qUtf8Printable(message));
         ++failures;
     };
-    AutomationGeometry geometry = AutomationGeometry::resolve();
-    geometry.plotOrigin = page.canvas()->plotOrigin();
-    const qreal dpr = page.canvas()->devicePixelRatioF();
-    const qreal radius = nodelane::hoverRingRadius(geometry);
-    const auto tickX = [&](uint64_t tick) {
-        return view.displayX(double(tick), geometry.plotOrigin, dpr);
-    };
+    auto *quickScene = view.findChild<songview::TimelineQuickScene *>();
+    report(quickScene, QStringLiteral("retained Quick automation scene was not available"));
+    if (!quickScene)
+        return;
+    const AutomationGeometry geometry = AutomationGeometry::resolve();
 
     const int originalPageHeight = page.height();
+    const int originalSectionHeight = view.drawerSectionHeight(EditorDrawerPage::Automations);
+    const int sectionChromeHeight = std::max(0, originalSectionHeight - originalPageHeight);
     QScrollArea *scroll = page.findChild<QScrollArea *>(QStringLiteral("automationScroll"));
     const int originalScroll =
         scroll && scroll->verticalScrollBar() ? scroll->verticalScrollBar()->value() : 0;
     const auto originalSelection = view.selectionModel().timeSelection();
-    page.resize(page.width(), 2 * geometry.rowDefaultHeight);
+    view.setDrawerSectionHeight(EditorDrawerPage::Automations,
+                                2 * geometry.rowDefaultHeight + sectionChromeHeight);
     pump();
     refresh(page, document, live);
     if (scroll && scroll->verticalScrollBar()) {
@@ -280,24 +226,30 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
         };
         const QRegion covered(expandedCc->overlap);
         const QRegion visible = QRegion(expandedCc->body).subtracted(QRegion(expandedTempo));
-        const QRectF probe = overlapProbe(expandedCc->overlap, tickX(kNodeTick), radius);
         const QPoint expandedCaptureOrigin = automationContentToViewport(page);
-        leaveCanvas(page);
-        const QImage before = captureAutomationViewport(view, page, failures);
+        const QColor ccColor =
+            themes::trackIdentityColor(expandedCc->id.track % themes::trackIdentityColorCount);
+        const quint64 curvesRevision =
+            quickScene ? quickScene->layer(songview::TimelineQuickLayer::AutomationCurves).revision
+                       : 0;
         setCcPoints(page, document, live, int(expandedCc->id.track), expandedCc->id.controller,
                     mutation);
         leaveCanvas(page);
-        const QImage after = captureAutomationViewport(view, page, failures);
-        const int coveredChanges =
-            changedPixels(before, after, covered, expandedCaptureOrigin, dpr);
-        const int visibleChanges =
-            changedPixels(before, after, visible, expandedCaptureOrigin, dpr);
+        const auto &curves = quickScene->layer(songview::TimelineQuickLayer::AutomationCurves);
         report(!expandedTempo.isEmpty() && !covered.isEmpty() && !visible.isEmpty() &&
-                   !probe.isEmpty() && QRectF(expandedTempo).contains(probe) &&
-                   QRectF(expandedCc->body).contains(probe) && coveredChanges == 0 &&
-                   visibleChanges > 0,
-               QStringLiteral("expanded Tempo body did not occlude CC paint"));
+                   !layerHasColorIn(curves, covered, expandedCaptureOrigin, ccColor) &&
+                   layerHasColorIn(curves, visible, expandedCaptureOrigin, ccColor),
+               QStringLiteral("expanded Tempo body did not clip retained Quick CC composition"));
+        report(quickScene &&
+                   quickScene->layer(songview::TimelineQuickLayer::AutomationCurves).revision >
+                       curvesRevision,
+               QStringLiteral("expanded Tempo occlusion did not rebuild the retained Quick "
+                              "curve layer"));
 
+        const quint64 selectionRevision =
+            quickScene
+                ? quickScene->layer(songview::TimelineQuickLayer::AutomationSelection).revision
+                : 0;
         songview::EditorSelectionModel::TimeSelection tempoSelection;
         tempoSelection.startTick = kNodeTick;
         tempoSelection.endTick = kNodeTick + 1;
@@ -306,12 +258,17 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
         view.selectionModel().setTimeSelection(tempoSelection);
         refresh(page, document, live);
         leaveCanvas(page);
-        const QImage reticle = captureAutomationViewport(view, page, failures);
-        report(changedPixels(after, reticle, covered, expandedCaptureOrigin, dpr) > 0,
-               QStringLiteral("Tempo selection reticle did not repaint the covered body"));
-        report(hasColorNear(reticle, probe, expandedCaptureOrigin, dpr,
-                            themes::color(themes::Role::song_view_selection_edge), 24),
-               QStringLiteral("Tempo selection reticle did not paint its selection edge"));
+        const auto &selectionLayer =
+            quickScene->layer(songview::TimelineQuickLayer::AutomationSelection);
+        report(layerHasColorIn(selectionLayer, covered, expandedCaptureOrigin,
+                               themes::color(themes::Role::song_view_selection_edge)),
+               QStringLiteral("Tempo selection reticle is missing from the retained Quick "
+                              "covered body"));
+        report(quickScene &&
+                   quickScene->layer(songview::TimelineQuickLayer::AutomationSelection).revision >
+                       selectionRevision,
+               QStringLiteral("Tempo reticle did not rebuild the retained Quick selection "
+                              "layer"));
         view.selectionModel().clearTimeSelection();
         refresh(page, document, live);
         setCcPoints(page, document, live, int(expandedCc->id.track), expandedCc->id.controller,
@@ -320,7 +277,16 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
 
     const bool tempoCollapsed = toggleTempoExpanded(view, page, false, failures);
     std::optional<CcCoverageLane> collapsedCc;
-    if (tempoCollapsed && scroll)
+    QScrollBar *const bar = scroll ? scroll->verticalScrollBar() : nullptr;
+    if (tempoCollapsed && bar && bar->maximum() > bar->minimum()) {
+        const int midpoint = bar->minimum() + (bar->maximum() - bar->minimum()) / 2;
+        bar->setValue(midpoint);
+        pump();
+        collapsedCc = ccCoveredBy(page, page.canvas()->pinnedTempoRect());
+    }
+    report(collapsedCc.has_value(),
+           QStringLiteral("mid-scroll collapsed Tempo header did not overlap a visible CC lane"));
+    if (!collapsedCc && tempoCollapsed && scroll)
         collapsedCc = scrollToCollapsedCcOverlap(page, *scroll, geometry.addLaneStripHeight);
     report(collapsedCc.has_value(),
            QStringLiteral("collapsed Tempo header did not overlap a visible CC lane"));
@@ -340,21 +306,30 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
         const QRegion covered(collapsedCc->overlap);
         const QRegion visible = QRegion(collapsedCc->body).subtracted(QRegion(header));
         const QPoint collapsedCaptureOrigin = automationContentToViewport(page);
-        leaveCanvas(page);
-        const QImage before = captureAutomationViewport(view, page, failures);
+        const QColor ccColor =
+            themes::trackIdentityColor(collapsedCc->id.track % themes::trackIdentityColorCount);
+        const quint64 curvesRevision =
+            quickScene ? quickScene->layer(songview::TimelineQuickLayer::AutomationCurves).revision
+                       : 0;
         setCcPoints(page, document, live, int(collapsedCc->id.track), collapsedCc->id.controller,
                     mutation);
         leaveCanvas(page);
-        const QImage after = captureAutomationViewport(view, page, failures);
+        const auto &curves = quickScene->layer(songview::TimelineQuickLayer::AutomationCurves);
         report(tempoCollapsed && !covered.isEmpty() && !visible.isEmpty() &&
-                   changedPixels(before, after, covered, collapsedCaptureOrigin, dpr) == 0 &&
-                   changedPixels(before, after, visible, collapsedCaptureOrigin, dpr) > 0,
-               QStringLiteral("collapsed Tempo header did not occlude CC paint"));
+                   !layerHasColorIn(curves, covered, collapsedCaptureOrigin, ccColor) &&
+                   layerHasColorIn(curves, visible, collapsedCaptureOrigin, ccColor),
+               QStringLiteral("collapsed Tempo header did not clip retained Quick CC "
+                              "composition"));
+        report(quickScene &&
+                   quickScene->layer(songview::TimelineQuickLayer::AutomationCurves).revision >
+                       curvesRevision,
+               QStringLiteral("collapsed Tempo occlusion did not rebuild the retained Quick "
+                              "curve layer"));
         setCcPoints(page, document, live, int(collapsedCc->id.track), collapsedCc->id.controller,
                     points);
     }
 
-    page.resize(page.width(), originalPageHeight);
+    view.setDrawerSectionHeight(EditorDrawerPage::Automations, originalSectionHeight);
     pump();
     if (scroll && scroll->verticalScrollBar()) {
         QScrollBar *bar = scroll->verticalScrollBar();
@@ -380,12 +355,36 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
     const int originalUndoIndex = document.undoStack()->index();
     const auto originalSelection = view.selectionModel().timeSelection();
     const bool originallyExpanded = !canvas->laneBody(LaneHandle{0}).isEmpty();
+    const int originalSectionHeight = view.drawerSectionHeight(EditorDrawerPage::Automations);
+    auto *quickScene = view.findChild<songview::TimelineQuickScene *>();
+    QAbstractItemModel *const automationTextModel =
+        quickScene ? quickScene->automationTextModel() : nullptr;
+    const auto firstTextRecord = [](QAbstractItemModel *model) -> std::optional<QRectF> {
+        if (!model)
+            return std::nullopt;
+        for (int row = 0; row < model->rowCount(); ++row) {
+            const QModelIndex index = model->index(row, 0);
+            const QString text =
+                model->data(index, songview::TimelineQuickTextModel::TextRole).toString();
+            const QRectF rect =
+                model->data(index, songview::TimelineQuickTextModel::RectRole).toRectF();
+            const QColor color =
+                model->data(index, songview::TimelineQuickTextModel::ColorRole).value<QColor>();
+            if (!text.isEmpty() && !rect.isEmpty() && color.isValid() && color.alpha() > 0)
+                return rect;
+        }
+        return std::nullopt;
+    };
+    QAbstractItemModel *const automationHoverTextModel =
+        quickScene ? quickScene->automationHoverTextModel() : nullptr;
     const auto restore = [&] {
         typography::setUseSystemFont(false);
         canvas->setFont(originalFont);
         pump();
         document.undoStack()->setIndex(originalUndoIndex);
         view.selectionModel().setTimeSelection(originalSelection);
+        view.setDrawerSectionHeight(EditorDrawerPage::Automations, originalSectionHeight);
+        pump();
         refresh(page, document, live);
         toggleTempoExpanded(view, page, originallyExpanded, failures);
         leaveCanvas(page);
@@ -399,6 +398,21 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
                 {kNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(180)}};
     document.applyTempoEdit(edit);
     refresh(page, document, live);
+    const AutomationGeometry sizingGeometry = AutomationGeometry::resolve();
+    int laneStackBottom = 0;
+    for (int index = 0; index < int(canvas->rows().size()); ++index)
+        laneStackBottom =
+            std::max(laneStackBottom, canvas->laneBody(LaneHandle{index + 1}).bottom() + 1);
+    QWidget *const viewport = page.scrollViewport();
+    const int neededViewportHeight = laneStackBottom + sizingGeometry.addLaneStripHeight +
+                                     canvas->laneBody(LaneHandle{0}).height();
+    if (viewport && neededViewportHeight > viewport->height()) {
+        view.setDrawerSectionHeight(EditorDrawerPage::Automations, originalSectionHeight +
+                                                                       neededViewportHeight -
+                                                                       viewport->height());
+        pump();
+        refresh(page, document, live);
+    }
     leaveCanvas(page);
 
     const AutomationGeometry geometry = [&] {
@@ -425,51 +439,85 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
         return QRect(gutter.x(), laneBody.top(), gutter.width(), laneBody.height())
             .intersected(laneBody);
     };
-    const auto valueLabel = [](const QPointF &anchor, const QRect &plot, const QFont &font) {
-        const QFontMetrics metrics(typography::noteName(font));
-        const int gap = layout::space(layout::Space::One);
-        const int width = metrics.horizontalAdvance(QStringLiteral("0000"));
-        const int height = metrics.height();
-        int x = qCeil(anchor.x() - gap - width);
-        int y = qRound(anchor.y()) - gap - height;
-        if (x < plot.left())
-            x = qFloor(anchor.x() + gap);
-        if (y < plot.top())
-            y = qRound(anchor.y()) + gap;
-        x = std::clamp(x, plot.left(), std::max(plot.left(), plot.right() - width + 1));
-        y = std::clamp(y, plot.top(), std::max(plot.top(), plot.bottom() - height + 1));
-        return QRect(x, y, width, height);
-    };
-    const QImage idle = captureAutomationViewport(view, page, failures);
+    report(automationTextModel && automationTextModel->rowCount() > 0,
+           QStringLiteral("retained Quick automation text model was empty"));
     const QRect title = laneLabel(body, geometry, false);
     const QRect summary = laneLabel(body, geometry, true);
-    const QRect ccBody = canvas->laneBody(LaneHandle{1});
-    const QRect ccLabels = labelColumn(ccBody);
+    const QSize viewportSize = viewport ? viewport->size() : QSize{};
+    const QRectF viewportBounds(QPointF{}, QSizeF(viewportSize));
+    const auto viewportLabelBounds = [&](const QRect &contentBounds) {
+        return QRectF(contentBounds.translated(captureOrigin)).intersected(viewportBounds);
+    };
+    QRectF scrollableViewportBounds = viewportBounds;
+    const QRectF tempoViewportBounds =
+        QRectF(body.translated(captureOrigin)).intersected(viewportBounds);
+    if (!tempoViewportBounds.isEmpty()) {
+        scrollableViewportBounds.setBottom(
+            std::min(scrollableViewportBounds.bottom(), tempoViewportBounds.top()));
+    }
+    const auto textRecord = [&](const QString &expectedText,
+                                const QRectF &expectedBounds) -> std::optional<QRectF> {
+        if (!automationTextModel)
+            return std::nullopt;
+        for (int row = 0; row < automationTextModel->rowCount(); ++row) {
+            const QModelIndex index = automationTextModel->index(row, 0);
+            const QString text =
+                automationTextModel->data(index, songview::TimelineQuickTextModel::TextRole)
+                    .toString();
+            const QRectF rect =
+                automationTextModel->data(index, songview::TimelineQuickTextModel::RectRole)
+                    .toRectF();
+            const QColor color =
+                automationTextModel->data(index, songview::TimelineQuickTextModel::ColorRole)
+                    .value<QColor>();
+            if (!text.isEmpty() && color.isValid() && color.alpha() > 0 &&
+                (expectedText.isEmpty() || text == expectedText) &&
+                rect.intersects(expectedBounds)) {
+                return rect;
+            }
+        }
+        return std::nullopt;
+    };
+    const auto checkMainText = [&](const QString &label, const QString &expectedText,
+                                   const QRectF &expectedBounds) {
+        const auto record = textRecord(expectedText, expectedBounds);
+        const bool placed = !expectedBounds.isEmpty() && record && !record->isEmpty() &&
+                            viewportBounds.contains(*record) && expectedBounds.contains(*record);
+        report(placed, QStringLiteral("%1 has no viewport-local retained Quick left-gutter record")
+                           .arg(label));
+    };
     report(!body.isEmpty() && !title.isEmpty() && !summary.isEmpty(),
            QStringLiteral("expanded Tempo lane has no label bounds"));
-    report(hasColorNear(idle, title, captureOrigin, dpr,
-                        themes::color(themes::Role::song_view_primary_text), 24),
-           QStringLiteral("Tempo title label did not render"));
-    report(hasColorNear(idle, summary, captureOrigin, dpr,
-                        themes::color(themes::Role::song_view_secondary_text), 24),
-           QStringLiteral("Tempo caption label did not render"));
-    report(!ccLabels.isEmpty() &&
-               hasColorNear(idle, ccLabels, captureOrigin, dpr,
-                            themes::color(themes::Role::song_view_primary_text), 24) &&
-               hasColorNear(idle, ccLabels, captureOrigin, dpr,
-                            themes::color(themes::Role::song_view_secondary_text), 24),
-           QStringLiteral("CC lane title or caption label did not render"));
+    checkMainText(QStringLiteral("Tempo title"), canvas->tr("Tempo (BPM)"),
+                  viewportLabelBounds(title));
+    checkMainText(QStringLiteral("Tempo summary"), QString{}, viewportLabelBounds(summary));
+    const auto &visibleRows = canvas->rows();
+    for (int index = 0; index < int(visibleRows.size()); ++index) {
+        const QRectF bounds =
+            viewportLabelBounds(labelColumn(canvas->laneBody(LaneHandle{index + 1})))
+                .intersected(scrollableViewportBounds);
+        if (bounds.isEmpty())
+            continue;
+        checkMainText(QStringLiteral("CC row %1 title").arg(index),
+                      CCLanes::laneLabel(visibleRows[std::size_t(index)].id.controller), bounds);
+    }
+    const int addLaneTop = visibleRows.empty()
+                               ? 0
+                               : canvas->laneBody(LaneHandle{int(visibleRows.size())}).bottom() + 1;
+    const QRect gutter = canvas->labelGutter();
+    const QRect addLaneLabel(gutter.x(), addLaneTop, gutter.width(), geometry.addLaneStripHeight);
+    checkMainText(QStringLiteral("Add automation lane"), canvas->tr("Add automation lane"),
+                  viewportLabelBounds(addLaneLabel).intersected(scrollableViewportBounds));
 
     TempoLane tempoLane(document);
     const QPointF node(view.displayX(double(kNodeTick), geometry.plotOrigin, dpr),
                        nodelane::valueY(tempoLane, body, geometry, 180));
-    const QRect hoverLabel = valueLabel(node, nodelane::plotRect(body, geometry), canvas->font());
     checks::events::sendMouse(*canvas, QEvent::MouseMove, node, Qt::NoButton, Qt::NoButton,
                               Qt::NoModifier);
     pump();
-    const QImage hovered = captureAutomationViewport(view, page, failures);
-    report(changedPixels(idle, hovered, QRegion(hoverLabel), captureOrigin, dpr) > 0,
-           QStringLiteral("Tempo hover value label did not render"));
+    const auto hoverText = firstTextRecord(automationHoverTextModel);
+    report(hoverText && !hoverText->isEmpty(),
+           QStringLiteral("Tempo hover value label did not reach the retained Quick text model"));
 
     const QString systemFamily = typography::systemFontFamily();
     report(!systemFamily.isEmpty(), QStringLiteral("platform font family is unavailable"));
@@ -479,7 +527,36 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
     if (!systemFamily.isEmpty() && systemBody) {
         canvas->setFont(*systemBody);
         pump();
-        const QImage systemHover = captureAutomationViewport(view, page, failures);
+        const auto modelUsesFont = [](QAbstractItemModel *model, const QFont &expected) {
+            if (!model || model->rowCount() == 0)
+                return false;
+            const QFontInfo expectedInfo(expected);
+            for (int row = 0; row < model->rowCount(); ++row) {
+                const QModelIndex index = model->index(row, 0);
+                const QFont actual =
+                    model->data(index, songview::TimelineQuickTextModel::FontRole).value<QFont>();
+                const QFontInfo actualInfo(actual);
+                if (actualInfo.family() != expectedInfo.family() ||
+                    actualInfo.pixelSize() != expectedInfo.pixelSize()) {
+                    return false;
+                }
+            }
+            return true;
+        };
+        const auto modelHasOpaqueText = [](QAbstractItemModel *model) {
+            if (!model || model->rowCount() == 0)
+                return false;
+            for (int row = 0; row < model->rowCount(); ++row) {
+                const QModelIndex index = model->index(row, 0);
+                const QString text =
+                    model->data(index, songview::TimelineQuickTextModel::TextRole).toString();
+                const QColor color =
+                    model->data(index, songview::TimelineQuickTextModel::ColorRole).value<QColor>();
+                if (text.isEmpty() || !color.isValid() || color.alpha() == 0)
+                    return false;
+            }
+            return true;
+        };
         const AutomationGeometry systemGeometry = [&] {
             auto resolved = AutomationGeometry::resolve();
             resolved.plotOrigin = canvas->plotOrigin();
@@ -488,21 +565,21 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
         const QRect systemBody = canvas->laneBody(LaneHandle{0});
         const QPointF systemNode(view.displayX(double(kNodeTick), systemGeometry.plotOrigin, dpr),
                                  nodelane::valueY(tempoLane, systemBody, systemGeometry, 180));
-        const QRect systemHoverLabel =
-            valueLabel(systemNode, nodelane::plotRect(systemBody, systemGeometry), canvas->font());
-        QRegion laneLabels(title);
-        laneLabels += summary;
-        laneLabels += ccLabels;
-        laneLabels += laneLabel(systemBody, systemGeometry, false);
-        laneLabels += laneLabel(systemBody, systemGeometry, true);
-        laneLabels += labelColumn(canvas->laneBody(LaneHandle{1}));
+        checks::events::sendMouse(*canvas, QEvent::MouseMove, systemNode, Qt::NoButton,
+                                  Qt::NoButton, Qt::NoModifier);
+        pump();
+        const QFont systemCaption = typography::caption(canvas->font());
+        const QFont systemHover = typography::noteName(canvas->font());
+        report(modelUsesFont(automationTextModel, systemCaption) &&
+                   modelHasOpaqueText(automationTextModel) &&
+                   modelUsesFont(automationHoverTextModel, systemHover) &&
+                   modelHasOpaqueText(automationHoverTextModel),
+               QStringLiteral("FontChange did not rebuild retained Quick text metrics and colors"));
         report(QFontInfo(canvas->font()).family() == systemFamily,
                QStringLiteral("AutomationCanvas did not receive the system font"));
-        report(changedPixels(hovered, systemHover, laneLabels, captureOrigin, dpr) > 0,
-               QStringLiteral("FontChange did not refresh lane label geometry or pixels"));
-        report(hasColorNear(systemHover, systemHoverLabel, captureOrigin, dpr,
-                            themes::color(themes::Role::song_view_primary_text), 12),
-               QStringLiteral("FontChange lost the visible Tempo hover value label"));
+        const auto systemHoverText = firstTextRecord(automationHoverTextModel);
+        report(systemHoverText && !systemHoverText->isEmpty(),
+               QStringLiteral("FontChange lost the retained Quick Tempo hover value label"));
     }
 
     restore();

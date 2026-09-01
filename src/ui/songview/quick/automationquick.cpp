@@ -44,16 +44,21 @@ QRectF rectF(const QRect &rect)
 }
 
 void appendText(std::vector<TimelineQuickTextModel::Record> &records, TimelineQuickTextKeyKind kind,
+                quint64 ordinal, const QRectF &rect, const QString &text, const QColor &color,
+                const QFont &font, Qt::Alignment horizontal = Qt::AlignLeft, QRectF clip = {})
+{
+    if ((!clip.isNull() && !rect.intersects(clip)) || rect.width() <= 0.0 || rect.height() <= 0.0 ||
+        text.isEmpty())
+        return;
+    records.push_back(
+        {{kind, {}, ordinal}, rect, text, color, font, horizontal, Qt::AlignVCenter, clip});
+}
+
+void appendText(std::vector<TimelineQuickTextModel::Record> &records, TimelineQuickTextKeyKind kind,
                 quint64 ordinal, const QRect &rect, const QString &text, const QColor &color,
                 const QFont &font, Qt::Alignment horizontal = Qt::AlignLeft, QRectF clip = {})
 {
-    QRectF local = rectF(rect);
-    if (!clip.isNull())
-        local = local.intersected(clip);
-    if (local.width() <= 0.0 || local.height() <= 0.0 || text.isEmpty())
-        return;
-    records.push_back(
-        {{kind, {}, ordinal}, local, text, color, font, horizontal, Qt::AlignVCenter});
+    appendText(records, kind, ordinal, rectF(rect), text, color, font, horizontal, clip);
 }
 
 void addHeaderChrome(TimelineQuickScene &scene, const QRectF &band, const QRectF &textClip,
@@ -267,9 +272,9 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         hoverTextRecords.reserve(1);
     if (transientText)
         transientTextRecords.reserve(1);
-    const NodeLaneQuickPaint::Outputs outputs{.hoverText = hoverText ? &hoverTextRecords : nullptr,
-                                              .transientText =
-                                                  transientText ? &transientTextRecords : nullptr};
+    // Text must retain its pre-clip rectangle: the QML automation band clips
+    // viewport-local glyphs without changing their alignment origin.
+    const NodeLaneQuickPaint::Outputs outputs;
     const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
     const QColor primaryText = themes::color(themes::Role::song_view_primary_text);
     const QColor secondaryText = themes::color(themes::Role::song_view_secondary_text);
@@ -290,12 +295,10 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                                    lane.body.height());
             const auto textBoxes =
                 m_laneTextLayout->align(textBounds, layout::VerticalAlignment::Center);
-            const QColor color =
-                themes::trackIdentityColor(lane.slot->id.track % themes::trackIdentityColorCount);
             const QString &summary = refreshCcSummaryText(rowText, lane.points, *lane.slot->lane);
             appendText(mainText, TimelineQuickTextKeyKind::AutomationHeader,
-                       quint64(2 * lane.handle.index), textBoxes.primary, rowText.title, color,
-                       m_laneTitleFont, Qt::AlignLeft, lane.clip);
+                       quint64(2 * lane.handle.index), textBoxes.primary, rowText.title,
+                       primaryText, m_laneTitleFont, Qt::AlignLeft, lane.clip);
             appendText(mainText, TimelineQuickTextKeyKind::AutomationHeader,
                        quint64(2 * lane.handle.index + 1), textBoxes.secondary, summary,
                        secondaryText, m_laneCaptionFont, Qt::AlignLeft, lane.clip);
@@ -502,6 +505,28 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         NodeLaneQuickPaint::composeTransient(context, transient, m_band.active, outputs);
         NodeLaneQuickPaint::composeHover(context, hover, outputs);
     }
+    const auto appendValueLabel = [&lanes, verticalScroll](
+                                      std::vector<TimelineQuickTextModel::Record> &records,
+                                      TimelineQuickTextKeyKind kind,
+                                      const NodeLaneHoverState::ValueLabelCache &label) {
+        if (!label.valid || label.text.isEmpty())
+            return;
+        const auto lane =
+            std::find_if(lanes.cbegin(), lanes.cend(),
+                         [&label](const VisibleLane &item) { return item.handle == label.lane; });
+        if (lane == lanes.cend())
+            return;
+        appendText(records, kind, quint64(label.lane.index),
+                   QRectF(label.rect).translated(0.0, -verticalScroll), label.text,
+                   themes::color(themes::Role::song_view_primary_text), label.font,
+                   Qt::AlignHCenter, lane->overflow);
+    };
+    if (hover && hoverText)
+        appendValueLabel(hoverTextRecords, TimelineQuickTextKeyKind::AutomationHover,
+                         m_hoverState.hoverValueLabel);
+    if (transient && transientText && m_activeGesture)
+        appendValueLabel(transientTextRecords, TimelineQuickTextKeyKind::AutomationTransient,
+                         m_hoverState.previewValueLabel);
     if (text)
         scene.setAutomationTextRecords(mainText);
     if (hoverText)

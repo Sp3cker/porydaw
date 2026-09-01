@@ -8,24 +8,36 @@
 #include <limits>
 #include <vector>
 
+#include <QAbstractItemModel>
 #include <QCoreApplication>
+#include <QDeadlineTimer>
 #include <QEvent>
 #include <QImage>
+
 #include <QPointF>
-#include <QRect>
-#include <QRectF>
-#include <QString>
+#include <QQuickItem>
+#include <QWidget>
 
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
 #include "rig.h"
 #include "ui/editordrawer/automationcanvas.h"
+#include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/nodelane/hover.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelinequickscene.h"
+#include "ui/songview/quick/timelinequickview.h"
+#include <QRect>
+#include <QRectF>
+#include <QString>
+#include <QtGlobal>
 
+#ifdef Q_OS_MACOS
+bool postAutomationHoverMouseMove(QWidget &target, const QPointF &position);
+#endif
 namespace {
 
 enum class AdapterKind { Tempo, Cc };
@@ -49,7 +61,6 @@ struct Topology {
 struct PreparedLane {
     LaneHandle handle;
     QRect body;
-    QRect plot;
     QPointF insertionPos;
     QPointF nodePos;
     uint64_t insertionTick = 0;
@@ -57,7 +68,6 @@ struct PreparedLane {
     qreal heldY = 0;
     qreal nodeX = 0;
     qreal nodeY = 0;
-    qreal priorHeldY = 0;
 };
 
 constexpr std::array kCases{
@@ -70,13 +80,6 @@ constexpr uint64_t kNodeTick = 144;
 constexpr double kHeldBodyFraction = 0.25;
 constexpr double kNodeBodyFraction = 0.75;
 constexpr double kCursorBodyFraction = 0.50;
-// Ghost-ring tolerance and label probe metrics (see lineBudget/labelProbe).
-constexpr double kGhostBudgetRadiusMultiple = 6.0;
-constexpr int kGhostBudgetFloor = 4;
-constexpr double kLabelWidthFontScale = 2.0;
-constexpr double kLabelHeightFontScale = 1.0;
-constexpr qreal kInsertionProbeHalfHeight = 6;
-constexpr qreal kLineSampleClearance = 4;
 
 int valueAtBodyFraction(int minimum, int maximum, double fractionFromBottom)
 {
@@ -90,73 +93,169 @@ void leaveCanvas(AutomationGestureCheckRig &rig)
     rig.pump();
 }
 
-QRect deviceRect(const QRectF &logical, qreal dpr, const QSize &bound)
+struct HoverObservation {
+    songview::TimelineQuickLayerData layer;
+    QImage framebuffer;
+    int textRows = 0;
+    int valueTextRows = 0;
+    int drawableValueTextRows = 0;
+    int viewportValueTextRows = 0;
+    QString text;
+    QRectF rect;
+    QRectF clip;
+    bool chromeVisible = false;
+    bool framebufferReady = false;
+};
+
+HoverObservation observeHover(AutomationGestureCheckRig &rig)
 {
-    const int left = std::clamp(int(std::floor(logical.left() * dpr)), 0, bound.width());
-    const int top = std::clamp(int(std::floor(logical.top() * dpr)), 0, bound.height());
-    const int right = std::clamp(int(std::ceil(logical.right() * dpr)), 0, bound.width());
-    const int bottom = std::clamp(int(std::ceil(logical.bottom() * dpr)), 0, bound.height());
-    return {left, top, std::max(0, right - left), std::max(0, bottom - top)};
+    HoverObservation observation;
+    QString captureError;
+    observation.framebuffer = rig.renderAutomationViewport(&captureError);
+    observation.framebufferReady = captureError.isEmpty() && !observation.framebuffer.isNull();
+    observation.layer = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
+    const QWidget *const viewport = rig.page().scrollViewport();
+    const QRectF viewportRect(0.0, 0.0, viewport ? viewport->width() : 0.0,
+                              viewport ? viewport->height() : 0.0);
+    const QAbstractItemModel *const model = rig.quickScene().automationHoverTextModel();
+    observation.textRows = model->rowCount();
+    for (int row = 0; row < observation.textRows; ++row) {
+        const QModelIndex index = model->index(row, 0);
+        const QString text =
+            model->data(index, songview::TimelineQuickTextModel::TextRole).toString();
+        if (text.isEmpty())
+            continue;
+        ++observation.valueTextRows;
+        observation.text = text;
+        observation.rect = model->data(index, songview::TimelineQuickTextModel::RectRole).toRectF();
+        observation.clip =
+            model->data(index, songview::TimelineQuickTextModel::ClipRectRole).toRectF();
+        if (!observation.rect.isEmpty() && !observation.clip.isEmpty() &&
+            observation.rect.intersects(observation.clip)) {
+            ++observation.drawableValueTextRows;
+        }
+        if (viewportRect.contains(observation.clip))
+            ++observation.viewportValueTextRows;
+    }
+    songview::TimelineQuickView *const quickHost =
+        rig.view().findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    const QQuickItem *const root = quickHost ? quickHost->rootObject() : nullptr;
+    const QQuickItem *const chrome =
+        root ? root->findChild<QQuickItem *>(QStringLiteral("timelineQuickAutomationHoverChrome"))
+             : nullptr;
+    observation.chromeVisible = chrome && chrome->isVisible();
+    return observation;
 }
 
-int changedPixels(const QImage &idle, const QImage &hover, const QRectF &logical, qreal dpr)
+bool hasFilledNodeAt(const songview::TimelineQuickLayerData &layer, const QPointF &center)
 {
-    if (idle.size() != hover.size() || idle.format() != hover.format())
-        return -1;
-    const QRect rect = deviceRect(logical, dpr, idle.size()).intersected(idle.rect());
-    if (rect.isEmpty())
-        return -1;
-    auto count = 0;
-    for (int y = rect.top(); y <= rect.bottom(); ++y) {
-        for (int x = rect.left(); x <= rect.right(); ++x) {
-            if (idle.pixel(x, y) != hover.pixel(x, y))
-                ++count;
+    const qreal tolerance = layout::singlePixel();
+    const auto nearCenter = [&](const QPointF &point) {
+        const QPointF delta = point - center;
+        return delta.x() * delta.x() + delta.y() * delta.y() <= tolerance * tolerance;
+    };
+    return std::any_of(layer.triangles.cbegin(), layer.triangles.cend(),
+                       [&](const songview::TimelineQuickTriangle &triangle) {
+                           return nearCenter(triangle.first) || nearCenter(triangle.second) ||
+                                  nearCenter(triangle.third);
+                       });
+}
+
+bool hasAnnulusPixelChanges(const QImage &before, const QImage &after, const QPointF &center,
+                            qreal radius, qreal width)
+{
+    if (before.isNull() || after.isNull() || before.size() != after.size())
+        return false;
+    const qreal dpr = after.devicePixelRatio();
+    if (dpr <= 0.0 || !qFuzzyCompare(before.devicePixelRatio(), dpr))
+        return false;
+    const qreal tolerance = 2 * layout::singlePixel();
+    const qreal inner = std::max<qreal>(0.0, radius - width / 2.0 - tolerance);
+    const qreal outer = radius + width / 2.0 + tolerance;
+    const qreal innerSquared = inner * inner;
+    const qreal outerSquared = outer * outer;
+    const int left = std::max(0, qFloor((center.x() - outer) * dpr));
+    const int top = std::max(0, qFloor((center.y() - outer) * dpr));
+    const int right = std::min(after.width() - 1, qCeil((center.x() + outer) * dpr));
+    const int bottom = std::min(after.height() - 1, qCeil((center.y() + outer) * dpr));
+    int changedPixels = 0;
+    for (int y = top; y <= bottom; ++y) {
+        for (int x = left; x <= right; ++x) {
+            const QPointF delta((x + 0.5) / dpr - center.x(), (y + 0.5) / dpr - center.y());
+            const qreal distanceSquared = delta.x() * delta.x() + delta.y() * delta.y();
+            if (distanceSquared < innerSquared || distanceSquared > outerSquared)
+                continue;
+            const QColor oldPixel = before.pixelColor(x, y);
+            const QColor newPixel = after.pixelColor(x, y);
+            const int difference = std::abs(newPixel.alpha() - oldPixel.alpha()) +
+                                   std::abs(newPixel.red() - oldPixel.red()) +
+                                   std::abs(newPixel.green() - oldPixel.green()) +
+                                   std::abs(newPixel.blue() - oldPixel.blue());
+            if (newPixel.alpha() >= 32 && difference >= 32 && ++changedPixels == 2)
+                return true;
         }
     }
-    return count;
+    return false;
 }
 
-bool cropUnchanged(const QImage &idle, const QImage &hover, const QRectF &logical, qreal dpr)
+bool pixelChangedAt(const QImage &before, const QImage &after, const QPointF &point)
 {
-    const QRect rect = deviceRect(logical, dpr, idle.size()).intersected(idle.rect());
-    return !rect.isEmpty() && idle.size() == hover.size() && idle.copy(rect) == hover.copy(rect);
+    if (before.isNull() || after.isNull() || before.size() != after.size())
+        return false;
+    const qreal dpr = after.devicePixelRatio();
+    if (dpr <= 0.0 || !qFuzzyCompare(before.devicePixelRatio(), dpr))
+        return false;
+    const int x = std::clamp(qRound(point.x() * dpr), 0, after.width() - 1);
+    const int y = std::clamp(qRound(point.y() * dpr), 0, after.height() - 1);
+    const QColor oldPixel = before.pixelColor(x, y);
+    const QColor newPixel = after.pixelColor(x, y);
+    return std::abs(newPixel.alpha() - oldPixel.alpha()) +
+               std::abs(newPixel.red() - oldPixel.red()) +
+               std::abs(newPixel.green() - oldPixel.green()) +
+               std::abs(newPixel.blue() - oldPixel.blue()) >=
+           32;
 }
 
-QRectF nodeProbe(qreal x, qreal y, qreal radius)
+bool pixelClearedAt(const QImage &idle, const QImage &cleared, const QPointF &point)
 {
-    return {x - radius, y - radius, 2 * radius, 2 * radius};
+    if (idle.isNull() || cleared.isNull() || idle.size() != cleared.size())
+        return false;
+    const qreal dpr = cleared.devicePixelRatio();
+    if (dpr <= 0.0 || !qFuzzyCompare(idle.devicePixelRatio(), dpr))
+        return false;
+    const int x = std::clamp(qRound(point.x() * dpr), 0, cleared.width() - 1);
+    const int y = std::clamp(qRound(point.y() * dpr), 0, cleared.height() - 1);
+    const QColor idlePixel = idle.pixelColor(x, y);
+    const QColor clearedPixel = cleared.pixelColor(x, y);
+    return std::abs(clearedPixel.alpha() - idlePixel.alpha()) <= 8 &&
+           std::abs(clearedPixel.red() - idlePixel.red()) <= 8 &&
+           std::abs(clearedPixel.green() - idlePixel.green()) <= 8 &&
+           std::abs(clearedPixel.blue() - idlePixel.blue()) <= 8;
 }
 
-QRectF lineProbe(qreal x, qreal y, qreal halfWidth, qreal halfHeight)
+bool hasValueText(const HoverObservation &observation)
 {
-    return {x - halfWidth, y - halfHeight, 2 * halfWidth, 2 * halfHeight};
+    return observation.framebufferReady && observation.valueTextRows == 1 &&
+           observation.drawableValueTextRows == 1 && observation.viewportValueTextRows == 1 &&
+           !observation.layer.rects.empty();
 }
 
-QRectF labelProbe(qreal x, qreal y, const QRect &plot)
+bool isClear(const HoverObservation &observation)
 {
-    const int gap = layout::space(layout::Space::One);
-    const int width = layout::fontPx(kLabelWidthFontScale);
-    const int height = layout::fontPx(kLabelHeightFontScale);
-    QRectF rect(x - gap - width, y - gap - height, width, height);
-    if (rect.left() < plot.left())
-        rect.moveLeft(x + gap);
-    if (rect.top() < plot.top())
-        rect.moveTop(y + gap);
-    return rect.intersected(plot);
+    return observation.framebufferReady && observation.layer.rects.empty() &&
+           observation.layer.triangles.empty() && observation.textRows == 0 &&
+           !observation.chromeVisible;
 }
 
-qreal lineSampleY(const QRect &plot, qreal avoidY, qreal clearance)
+bool sameRetainedHover(const HoverObservation &left, const HoverObservation &right)
 {
-    const qreal top = plot.top() + clearance;
-    const qreal bottom = plot.bottom() - clearance;
-    if (std::abs(top - avoidY) >= std::abs(bottom - avoidY))
-        return top;
-    return bottom;
-}
-
-int lineBudget(qreal radius, qreal dpr)
-{
-    return std::max(kGhostBudgetFloor, int(std::ceil(kGhostBudgetRadiusMultiple * radius * dpr)));
+    return left.framebufferReady && right.framebufferReady &&
+           left.framebuffer == right.framebuffer && left.textRows == right.textRows &&
+           left.valueTextRows == right.valueTextRows &&
+           left.drawableValueTextRows == right.drawableValueTextRows &&
+           left.viewportValueTextRows == right.viewportValueTextRows && left.text == right.text &&
+           left.rect == right.rect && left.clip == right.clip &&
+           left.chromeVisible == right.chromeVisible;
 }
 
 void setTempoPoints(AutomationGestureCheckRig &rig, const std::vector<TempoPoint> &points)
@@ -218,9 +317,6 @@ PreparedLane prepareLane(AutomationGestureCheckRig &rig, const Case &row)
                          valueY(lane.body, geometry, minimum, maximum, cursor)};
     lane.heldY = valueY(lane.body, geometry, minimum, maximum, held);
     lane.nodeY = valueY(lane.body, geometry, minimum, maximum, node);
-    lane.priorHeldY = lane.heldY;
-    lane.plot = {geometry.plotOrigin, lane.body.top(),
-                 std::max(0, rig.canvas().width() - geometry.plotOrigin), lane.body.height()};
     NodeLaneHoverState insertionProbe;
     insertionProbe.hover.lane = lane.handle;
     insertionProbe.hover.pos = lane.insertionPos;
@@ -230,6 +326,87 @@ PreparedLane prepareLane(AutomationGestureCheckRig &rig, const Case &row)
     lane.nodePos = QPointF(lane.nodeX, lane.nodeY);
     return lane;
 }
+#ifdef Q_OS_MACOS
+void checkNativeHoverRoute(AutomationGestureCheckRig &rig, const PreparedLane &lane,
+                           const AutomationGestureCheck &check)
+{
+    const Check probe{check, "native hover"};
+    songview::TimelineQuickView *const quickHost =
+        rig.view().findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    probe.require(quickHost && quickHost->quickWindow(),
+                  QStringLiteral("native Quick timeline host is unavailable"));
+    if (!quickHost || !quickHost->quickWindow())
+        return;
+
+    probe.require(quickHost->quickWindow()->flags().testFlag(Qt::WindowTransparentForInput),
+                  QStringLiteral("native Quick timeline host accepts pointer input"));
+    leaveCanvas(rig);
+    const auto idle = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
+    probe.require(postAutomationHoverMouseMove(rig.canvas(), lane.insertionPos),
+                  QStringLiteral("native mouse-move event could not be posted"));
+
+    const qreal expectedRootX = rig.view().timelinePlotOrigin() +
+                                rig.view().contentX(lane.insertionTick) - quickHost->geometry().x();
+    QDeadlineTimer timeout{1000};
+    auto hoverLayer = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
+    while ((!quickHost->hoverVisible() ||
+            std::abs(quickHost->hoverRootContentX() - expectedRootX) > layout::singlePixel() ||
+            hoverLayer.revision <= idle.revision) &&
+           !timeout.hasExpired()) {
+        rig.pump();
+        hoverLayer = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
+    }
+
+    probe.require(quickHost->hoverVisible(),
+                  QStringLiteral("native mouse move did not publish the automation hover guide"));
+    probe.require(std::abs(quickHost->hoverRootContentX() - expectedRootX) <= layout::singlePixel(),
+                  QStringLiteral("native mouse move left the automation hover guide at x=%1, "
+                                 "expected x=%2")
+                      .arg(quickHost->hoverRootContentX())
+                      .arg(expectedRootX));
+    probe.require(hoverLayer.revision > idle.revision,
+                  QStringLiteral("native mouse move did not rebuild the automation hover layer"));
+    const HoverObservation routed = observeHover(rig);
+    const QPointF insertionCenter =
+        rig.automationContentToViewport(QPointF(lane.insertionX, lane.heldY));
+    probe.require(
+        hasFilledNodeAt(routed.layer, insertionCenter),
+        QStringLiteral("native mouse move did not render the held-value insertion point"));
+    probe.require(hasValueText(routed),
+                  QStringLiteral("native mouse move did not render the insertion value"));
+    QEvent topLevelLeave(QEvent::Leave);
+    QCoreApplication::sendEvent(rig.canvas().window(), &topLevelLeave);
+    QDeadlineTimer leaveTimeout{1000};
+    HoverObservation cleared = observeHover(rig);
+    while (!isClear(cleared) && !leaveTimeout.hasExpired()) {
+        rig.pump();
+        cleared = observeHover(rig);
+    }
+    probe.require(isClear(cleared),
+                  QStringLiteral("native hover survived its top-level window leave"));
+    rig.mousePress(lane.insertionPos);
+    QEvent canvasDeactivate(QEvent::WindowDeactivate);
+    QCoreApplication::sendEvent(&rig.canvas(), &canvasDeactivate);
+    QEvent topLevelDeactivate(QEvent::WindowDeactivate);
+    QCoreApplication::sendEvent(rig.canvas().window(), &topLevelDeactivate);
+    rig.pump();
+    const auto deactivated = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
+    probe.require(postAutomationHoverMouseMove(rig.canvas(), lane.insertionPos),
+                  QStringLiteral("passive mouse move could not be posted after deactivation"));
+    QDeadlineTimer resumeTimeout{1000};
+    hoverLayer = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
+    while ((!quickHost->hoverVisible() ||
+            std::abs(quickHost->hoverRootContentX() - expectedRootX) > layout::singlePixel() ||
+            hoverLayer.revision <= deactivated.revision) &&
+           !resumeTimeout.hasExpired()) {
+        rig.pump();
+        hoverLayer = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
+    }
+    probe.require(quickHost->hoverVisible() && hoverLayer.revision > deactivated.revision,
+                  QStringLiteral("deactivation latched native passive hover off"));
+    QCoreApplication::sendEvent(rig.canvas().window(), &topLevelLeave);
+}
+#endif
 
 Topology runCase(AutomationGestureCheckRig &rig, const Case &row,
                  const AutomationGestureCheck &check)
@@ -237,98 +414,103 @@ Topology runCase(AutomationGestureCheckRig &rig, const Case &row,
     Topology topology;
     const Check probe{check, row.name};
     const auto lane = prepareLane(rig, row);
-    if (!lane.handle.valid() || lane.plot.isEmpty()) {
+    if (!lane.handle.valid() || lane.body.isEmpty()) {
         probe.require(false, QStringLiteral("lane body is missing from the canvas stack"));
         return topology;
     }
     probe.require(lane.insertionTick != kHeldTick && lane.insertionTick != kNodeTick,
                   QStringLiteral("inter-node insertion landed on an existing node"));
     leaveCanvas(rig);
-    const QImage idle = rig.renderArea();
+    const HoverObservation idle = observeHover(rig);
     const auto before = snapshot(rig.document());
-    const auto geometry = rig.geometry();
-    const qreal dpr = rig.canvas().devicePixelRatioF();
-    const qreal radius =
-        geometry.nodePaintRadius + geometry.nodeOutlineDipWidth + 2 * layout::singlePixel();
-    const qreal lineHalf =
-        std::max(qreal(layout::singlePixel()), qreal(geometry.hoverPaintPadding + 1));
-    const QPoint captureOffset = rig.automationContentToViewport(QPoint{});
-    const auto inViewport = [captureOffset](const QRectF &rect) {
-        return rect.translated(captureOffset);
-    };
     const auto previewUnchanged = [&](const char *label) {
         probe.require(
             isUnchanged(before, snapshot(rig.document())),
             QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
     };
-    const QRectF nodeBounds = nodeProbe(lane.nodeX, lane.nodeY, radius);
-    probe.require(QRectF(rig.automationViewportInContent()).contains(nodeBounds),
-                  QStringLiteral("existing-node hover probe is outside the automation viewport"));
+    probe.require(idle.framebufferReady,
+                  QStringLiteral("Quick automation framebuffer was unavailable"));
+    const auto geometry = rig.geometry();
+    const QPointF insertionCenter =
+        rig.automationContentToViewport(QPointF(lane.insertionX, lane.heldY));
+    const QPointF nodeCenter = rig.automationContentToViewport(QPointF(lane.nodeX, lane.nodeY));
+    const QPointF strayGhostCenter =
+        rig.automationContentToViewport(QPointF(lane.nodeX, lane.heldY));
 
     rig.mouseMove(lane.insertionPos, Qt::NoButton);
     rig.pump();
-    const QImage insertion = rig.renderAutomationViewport();
+    const HoverObservation insertion = observeHover(rig);
     previewUnchanged("insertion preview");
-    const qreal insertionLineY = lineSampleY(lane.plot, lane.heldY, radius + kLineSampleClearance);
-    topology.insertionLine =
-        changedPixels(idle, insertion,
-                      inViewport(lineProbe(lane.insertionX, insertionLineY, lineHalf,
-                                           kInsertionProbeHalfHeight)),
-                      dpr) > 0;
-    const int ghostPixels = changedPixels(
-        idle, insertion, inViewport(nodeProbe(lane.insertionX, lane.heldY, radius)), dpr);
-    topology.heldGhost = ghostPixels > lineBudget(radius, dpr);
-    topology.insertionLabel =
-        changedPixels(idle, insertion,
-                      inViewport(labelProbe(lane.insertionX, lane.heldY, lane.plot)), dpr) > 0;
+    topology.insertionLine = insertion.framebufferReady && insertion.chromeVisible;
+    topology.heldGhost = insertion.framebufferReady &&
+                         insertion.layer.revision > idle.layer.revision &&
+                         hasFilledNodeAt(insertion.layer, insertionCenter) &&
+                         pixelChangedAt(idle.framebuffer, insertion.framebuffer, insertionCenter);
+    topology.insertionLabel = hasValueText(insertion);
     probe.require(topology.insertionLine,
-                  QStringLiteral("inter-node hover did not paint an insertion line"));
+                  QStringLiteral("inter-node hover did not retain its Quick insertion line"));
     probe.require(topology.heldGhost,
-                  QStringLiteral("inter-node hover did not paint a held-value ghost"));
+                  QStringLiteral("inter-node hover did not retain its Quick held-value ghost"));
     probe.require(topology.insertionLabel,
-                  QStringLiteral("inter-node hover did not paint a value label"));
+                  QStringLiteral("inter-node hover did not retain its Quick value text"));
 
     rig.mouseMove(lane.insertionPos, Qt::NoButton);
     rig.pump();
-    const QImage repeated = rig.renderAutomationViewport();
+    const HoverObservation repeated = observeHover(rig);
     previewUnchanged("repeat hover");
-    topology.noRepeatChurn = repeated == insertion;
+    topology.noRepeatChurn = sameRetainedHover(insertion, repeated);
     probe.require(topology.noRepeatChurn,
-                  QStringLiteral("repeat hover at the same coordinate churned a stale repaint"));
+                  QStringLiteral("repeat hover at the same coordinate churned Quick state"));
 
     rig.mouseMove(lane.nodePos, Qt::NoButton);
-    rig.pump();
-    const QImage nodeHover = rig.renderAutomationViewport();
+    const auto awaitHoverRevision = [&](quint64 priorRevision) {
+        QDeadlineTimer timeout{1000};
+        HoverObservation observation = observeHover(rig);
+        while ((!observation.framebufferReady || observation.layer.revision <= priorRevision) &&
+               !timeout.hasExpired()) {
+            rig.pump();
+            observation = observeHover(rig);
+        }
+        return observation;
+    };
+    const HoverObservation nodeHover = awaitHoverRevision(insertion.layer.revision);
     previewUnchanged("node hover");
     topology.nodeRing =
-        changedPixels(idle, nodeHover, inViewport(nodeProbe(lane.nodeX, lane.nodeY, radius)), dpr) >
-        0;
-    topology.nodeLabel =
-        changedPixels(idle, nodeHover, inViewport(labelProbe(lane.nodeX, lane.nodeY, lane.plot)),
-                      dpr) > 0;
-    const int strayGhost = changedPixels(
-        idle, nodeHover, inViewport(nodeProbe(lane.nodeX, lane.priorHeldY, radius)), dpr);
-    topology.noInsertionGhost = strayGhost >= 0 &&
-                                std::abs(lane.nodeY - lane.priorHeldY) > 2 * radius &&
-                                strayGhost <= lineBudget(radius, dpr);
+        nodeHover.framebufferReady && nodeHover.layer.revision > insertion.layer.revision &&
+        !nodeHover.layer.triangles.empty() &&
+        hasAnnulusPixelChanges(insertion.framebuffer, nodeHover.framebuffer, nodeCenter,
+                               nodelane::hoverRingRadius(geometry), 2 * layout::singlePixel());
+    topology.nodeLabel = hasValueText(nodeHover);
+    topology.noInsertionGhost = !hasFilledNodeAt(nodeHover.layer, strayGhostCenter);
     probe.require(topology.nodeRing,
-                  QStringLiteral("existing-node hover did not paint a node ring"));
+                  QStringLiteral("existing-node hover did not retain its Quick node ring"));
     probe.require(topology.nodeLabel,
-                  QStringLiteral("existing-node hover did not paint a value label"));
+                  QStringLiteral("existing-node hover did not retain its Quick value text"));
     probe.require(topology.noInsertionGhost,
-                  QStringLiteral("existing-node hover painted an insertion ghost"));
+                  QStringLiteral("existing-node hover retained an insertion ghost"));
 
     leaveCanvas(rig);
-    const QImage transitioned = rig.renderArea();
+    const auto awaitClear = [&] {
+        QDeadlineTimer timeout{1000};
+        HoverObservation observation = observeHover(rig);
+        while (!isClear(observation) && !timeout.hasExpired()) {
+            rig.pump();
+            observation = observeHover(rig);
+        }
+        return observation;
+    };
+    const HoverObservation transitioned = awaitClear();
     previewUnchanged("lane transition");
-    const bool transitionCleared = cropUnchanged(idle, transitioned, inViewport(lane.plot), dpr);
     leaveCanvas(rig);
-    const QImage left = rig.renderArea();
+    const HoverObservation left = awaitClear();
     previewUnchanged("leave");
     topology.leaveCleared =
-        transitionCleared && cropUnchanged(idle, left, inViewport(lane.plot), dpr);
+        isClear(transitioned) && isClear(left) &&
+        pixelClearedAt(idle.framebuffer, nodeHover.framebuffer, insertionCenter) &&
+        pixelClearedAt(idle.framebuffer, transitioned.framebuffer, insertionCenter) &&
+        pixelClearedAt(idle.framebuffer, left.framebuffer, insertionCenter);
     probe.require(topology.leaveCleared,
-                  QStringLiteral("lane transition or leave left dirty hover bounds"));
+                  QStringLiteral("lane transition or leave retained dirty Quick hover state"));
     return topology;
 }
 
@@ -366,4 +548,13 @@ void checkNodeLaneHoverParity(AutomationGestureCheckRig &rig, const AutomationGe
     }
     check(sameTopology(topologies.front(), topologies.back()),
           QStringLiteral("Tempo and CC hover chrome topology diverged"));
+#ifdef Q_OS_MACOS
+    const PreparedLane nativeLane = prepareLane(rig, kCases[1]);
+    if (nativeLane.handle.valid() && !nativeLane.body.isEmpty())
+        checkNativeHoverRoute(rig, nativeLane, check);
+    else
+        check(false, QStringLiteral("CC lane was unavailable for native hover routing"));
+    setTempoPoints(rig, initialTempo);
+    setCcPoints(rig, laneValues(initialPan));
+#endif
 }

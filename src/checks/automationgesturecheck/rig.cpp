@@ -21,6 +21,7 @@
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelinequickscene.h"
 
 namespace {
 constexpr double kCheckSampleRate = 48000.0;
@@ -96,6 +97,10 @@ VoiceChangeArea &AutomationGestureCheckRig::voiceArea() noexcept
 const VoiceChangeArea &AutomationGestureCheckRig::voiceArea() const noexcept
 {
     return *m_voiceArea;
+}
+const songview::TimelineQuickScene &AutomationGestureCheckRig::quickScene() const noexcept
+{
+    return *m_quickScene;
 }
 
 QAction *AutomationGestureCheckRig::pencilModeAction() const noexcept
@@ -225,6 +230,12 @@ QPointF AutomationGestureCheckRig::tempoBodyPoint(double tick, int bpm) const
     return pointAt(kTempoHandle, tick, bpm).position;
 }
 
+QPointF AutomationGestureCheckRig::automationContentToViewport(const QPointF &position) const
+{
+    QWidget *const viewport = page().scrollViewport();
+    return viewport ? position + QPointF(canvas().mapTo(viewport, QPoint{})) : QPointF{};
+}
+
 QPoint AutomationGestureCheckRig::automationContentToViewport(const QPoint &position) const
 {
     QWidget *const viewport = page().scrollViewport();
@@ -281,9 +292,9 @@ QImage AutomationGestureCheckRig::renderAutomationContent(const QRect &contentRe
     return result;
 }
 
-QImage AutomationGestureCheckRig::renderArea()
+QImage AutomationGestureCheckRig::renderVoiceChanges(QString *error)
 {
-    return renderAutomationViewport();
+    return checks::support::captureQuickBand(view(), voiceArea(), error);
 }
 
 AutomationGestureCheckRig::Snapshot AutomationGestureCheckRig::snapshot(int track,
@@ -432,7 +443,9 @@ void AutomationGestureCheckRig::keyToWindow(QEvent::Type type, int key,
 void AutomationGestureCheckRig::pump()
 {
     QCoreApplication::sendPostedEvents();
-    QCoreApplication::processEvents();
+    waitForTimers(0);
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents(QEventLoop::AllEvents);
 }
 
 void AutomationGestureCheckRig::waitForTimers(int milliseconds)
@@ -457,6 +470,7 @@ void AutomationGestureCheckRig::resetView(double zoom, double scroll)
 void AutomationGestureCheckRig::commitTimers(int milliseconds)
 {
     waitForTimers(milliseconds);
+    pump();
 }
 
 bool AutomationGestureCheckRig::initialize(QString &error)
@@ -490,8 +504,9 @@ bool AutomationGestureCheckRig::initialize(QString &error)
     auto *drawer = m_view->editorDrawer();
     m_page = drawer ? drawer->automationPage() : nullptr;
     m_voiceArea = drawer ? drawer->voiceChangeArea() : nullptr;
-    if (!m_page || !m_voiceArea) {
-        error = QStringLiteral("concrete SongView did not expose drawer pages");
+    m_quickScene = m_view->findChild<songview::TimelineQuickScene *>();
+    if (!m_page || !m_voiceArea || !m_quickScene) {
+        error = QStringLiteral("concrete SongView did not expose drawer pages and Quick scene");
         return false;
     }
     m_page->resize(960, 360);

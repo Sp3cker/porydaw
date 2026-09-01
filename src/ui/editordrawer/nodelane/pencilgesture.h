@@ -24,10 +24,12 @@ class AutomationPencilGesture
     };
 
     // Edit snap cells are produced by AutomationProjection.
+    // `leadIn` supplies an implicit pre-roll held value excluded from the
+    // lane's editable point list.
     static std::optional<AutomationPencilGesture>
     start(Target target, int minimumValue, int maximumValue, uint64_t songEndTick,
           uint64_t documentClockTicks, std::vector<NodeLaneEdit::Point> originalPoints,
-          Sample firstSample, AutomationGridCell firstCell);
+          std::optional<NodePoint> leadIn, Sample firstSample, AutomationGridCell firstCell);
 
     bool applySnappedSegment(Sample sample, const std::vector<AutomationGridCell> &cells);
     bool applyFreehandSegment(Sample sample);

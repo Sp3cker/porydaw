@@ -7,25 +7,31 @@
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/timeruler.h"
-#include "ui/theme/themeruntime.h"
-
+#include <QColor>
 #include <QPoint>
 #include <QQmlContext>
-#include <QQmlEngine>
+#include <QQmlError>
+#include <QQuickView>
+#include <QRegion>
+#include <QSurfaceFormat>
 #include <QUrl>
 #include <QVariant>
 #include <QtQml>
-
+#include <algorithm>
 #include <array>
+#include <chrono>
 #include <mutex>
 #include <utility>
+#ifdef Q_OS_MACOS
+void installMacAutomationHoverPassThrough(AutomationCanvas &canvas, QObject &owner);
+#endif
 
 namespace songview {
 
 TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStrip &otherEvents,
                                      AutomationPage &automation, VelocityArea &velocity,
                                      VoiceChangeArea &voiceChanges, SongView &songView)
-    : QQuickWidget(&songView)
+    : QWidget(&songView)
     , m_ruler(&ruler)
     , m_roll(&roll)
     , m_otherEvents(&otherEvents)
@@ -35,6 +41,14 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     , m_voiceChanges(&voiceChanges)
     , m_songView(&songView)
 {
+    m_layoutTimer.setSingleShot(true);
+    m_layoutTimer.setInterval(std::chrono::milliseconds::zero());
+    connect(&m_layoutTimer, &QTimer::timeout, this,
+            &TimelineQuickView::synchronizeHostGeometryAndVisibility);
+    m_flushTimer.setSingleShot(true);
+    m_flushTimer.setInterval(std::chrono::milliseconds::zero());
+    connect(&m_flushTimer, &QTimer::timeout, this, &TimelineQuickView::flushUpdate);
+
     static std::once_flag registered;
     std::call_once(registered, [] {
         qmlRegisterType<TimelineChromeItem>("Porydaw.Ui", 1, 0, "TimelineChromeItem");
@@ -43,17 +57,28 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
 
     setObjectName(QStringLiteral("timelineQuickCanvas"));
     setAttribute(Qt::WA_TransparentForMouseEvents);
-    setAttribute(Qt::WA_OpaquePaintEvent, true);
-    setAttribute(Qt::WA_AlwaysStackOnTop, false);
     setFocusPolicy(Qt::NoFocus);
-    setResizeMode(QQuickWidget::SizeRootObjectToView);
+
+    m_quickView = new QQuickView;
+    QSurfaceFormat surfaceFormat = m_quickView->format();
+    surfaceFormat.setAlphaBufferSize(8);
+    m_quickView->setFormat(surfaceFormat);
+    m_quickView->setColor(Qt::transparent);
+    m_quickView->setFlag(Qt::WindowTransparentForInput);
+    m_quickView->setFlag(Qt::WindowDoesNotAcceptFocus);
+    m_quickView->setResizeMode(QQuickView::SizeRootObjectToView);
+    m_quickContainer = QWidget::createWindowContainer(m_quickView, this);
+    m_quickContainer->setAttribute(Qt::WA_TransparentForMouseEvents);
+    m_quickContainer->setFocusPolicy(Qt::NoFocus);
+    m_quickContainer->installEventFilter(this);
+    m_quickContainer->setGeometry(rect());
 
     m_scene = new TimelineQuickScene(this);
-    rootContext()->setContextProperty(QStringLiteral("timelineQuickView"), this);
-    rootContext()->setContextProperty(QStringLiteral("timelineScene"), m_scene);
-    setSource(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml")));
-    if (status() != QQuickWidget::Ready) {
-        for (const QQmlError &error : errors())
+    m_quickView->rootContext()->setContextProperty(QStringLiteral("timelineQuickView"), this);
+    m_quickView->rootContext()->setContextProperty(QStringLiteral("timelineScene"), m_scene);
+    m_quickView->setSource(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml")));
+    if (m_quickView->status() != QQuickView::Ready) {
+        for (const QQmlError &error : m_quickView->errors())
             qCritical().noquote() << error.toString();
         qFatal("Qt Quick timeline QML failed to load");
     }
@@ -112,24 +137,18 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     static constexpr std::array chromeItems = {
         std::pair{TimelineChromeItem::Kind::Hover, "timelineQuickRulerHoverChrome"},
         std::pair{TimelineChromeItem::Kind::Edit, "timelineQuickRulerEditChrome"},
-        std::pair{TimelineChromeItem::Kind::Playhead, "timelineQuickRulerPlayheadChrome"},
         std::pair{TimelineChromeItem::Kind::Hover, "timelineQuickRollHoverChrome"},
         std::pair{TimelineChromeItem::Kind::Edit, "timelineQuickRollEditChrome"},
-        std::pair{TimelineChromeItem::Kind::Playhead, "timelineQuickRollPlayheadChrome"},
         std::pair{TimelineChromeItem::Kind::Hover, "timelineQuickAutomationHoverChrome"},
         std::pair{TimelineChromeItem::Kind::Edit, "timelineQuickAutomationEditChrome"},
-        std::pair{TimelineChromeItem::Kind::Playhead, "timelineQuickAutomationPlayheadChrome"},
         std::pair{TimelineChromeItem::Kind::Hover, "timelineQuickVelocityHoverChrome"},
         std::pair{TimelineChromeItem::Kind::Edit, "timelineQuickVelocityEditChrome"},
-        std::pair{TimelineChromeItem::Kind::Playhead, "timelineQuickVelocityPlayheadChrome"},
         std::pair{TimelineChromeItem::Kind::Hover, "timelineQuickVoiceChangesHoverChrome"},
         std::pair{TimelineChromeItem::Kind::Edit, "timelineQuickVoiceChangesEditChrome"},
-        std::pair{TimelineChromeItem::Kind::Playhead, "timelineQuickVoiceChangesPlayheadChrome"},
         std::pair{TimelineChromeItem::Kind::Hover, "timelineQuickOtherEventsHoverChrome"},
         std::pair{TimelineChromeItem::Kind::Edit, "timelineQuickOtherEventsEditChrome"},
-        std::pair{TimelineChromeItem::Kind::Playhead, "timelineQuickOtherEventsPlayheadChrome"},
     };
-    static_assert(chromeItems.size() == 18);
+    static_assert(chromeItems.size() == 12);
     for (std::size_t index = 0; index < chromeItems.size(); ++index) {
         const auto &[kind, name] = chromeItems[index];
         auto *item = root->findChild<TimelineChromeItem *>(QString::fromLatin1(name));
@@ -150,6 +169,25 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     m_automation->installEventFilter(this);
     if (m_automationScrollViewport)
         m_automationScrollViewport->installEventFilter(this);
+    static constexpr std::array nativeChromeNames = {
+        "velocityResizeHandle", "voiceChangesResizeHandle", "automationResizeHandle",
+        "automationDrawerBar",  "velocityDetentToggle",
+    };
+    QWidget *const drawerSections = m_velocity->parentWidget();
+    for (std::size_t index = 0; index < nativeChromeNames.size(); ++index) {
+        QWidget *const chrome = drawerSections ? drawerSections->findChild<QWidget *>(
+                                                     QString::fromLatin1(nativeChromeNames[index]),
+                                                     Qt::FindDirectChildrenOnly)
+                                               : nullptr;
+        if (!chrome)
+            qFatal("Timeline Quick host cannot find drawer chrome '%s'", nativeChromeNames[index]);
+        chrome->installEventFilter(this);
+        m_nativeChrome[index] = chrome;
+    }
+#ifdef Q_OS_MACOS
+    if (AutomationCanvas *const canvas = automation.canvas())
+        installMacAutomationHoverPassThrough(*canvas, *this);
+#endif
     synchronizeHostGeometryAndVisibility();
     syncAppearance();
 }
@@ -170,61 +208,61 @@ TimelineQuickView::~TimelineQuickView()
         m_automation->removeEventFilter(this);
     if (m_automationScrollViewport)
         m_automationScrollViewport->removeEventFilter(this);
+    for (QWidget *chrome : m_nativeChrome) {
+        if (chrome)
+            chrome->removeEventFilter(this);
+    }
+    if (m_quickContainer)
+        m_quickContainer->removeEventFilter(this);
+    m_quickView->setSource(QUrl{});
 }
 
 qreal TimelineQuickView::hoverRootContentX() const noexcept
 {
-    return m_hoverChrome.rootContentX;
+    return m_hoverSongViewContentX ? quickRootXForSongViewX(*m_hoverSongViewContentX) : 0.0;
 }
 
 bool TimelineQuickView::hoverVisible() const noexcept
 {
-    return m_hoverChrome.visible;
+    return m_hoverSongViewContentX.has_value();
 }
 
 qreal TimelineQuickView::editRootContentX() const noexcept
 {
-    return m_editChrome.rootContentX;
+    return m_editSongViewContentX ? quickRootXForSongViewX(*m_editSongViewContentX) : 0.0;
 }
 
 bool TimelineQuickView::editVisible() const noexcept
 {
-    return m_editChrome.visible;
+    return m_editSongViewContentX.has_value();
 }
 
-qreal TimelineQuickView::playheadRootContentX() const noexcept
+void TimelineQuickView::synchronizeGuides(qreal songViewTimelineOriginX,
+                                          std::optional<qreal> editSongViewContentX)
 {
-    return m_playheadChrome.rootContentX;
-}
-
-bool TimelineQuickView::playheadVisible() const noexcept
-{
-    return m_playheadChrome.visible;
-}
-
-bool TimelineQuickView::playheadPlaying() const noexcept
-{
-    return m_playheadChrome.playing;
-}
-
-void TimelineQuickView::synchronizeChrome(qreal rootOriginX, qreal editRootContentX,
-                                          bool editVisible, qreal playheadRootContentX,
-                                          bool playheadVisible, bool playheadPlaying)
-{
-    setEditChrome(editRootContentX, editVisible);
-    setPlayheadChrome(playheadRootContentX, playheadVisible, playheadPlaying);
+    setEditChrome(editSongViewContentX);
     if (m_hoverOwner != TimelineQuickHoverOwner::None && m_songView)
-        setHoverChrome(rootOriginX + m_songView->contentX(m_hoverTick), true);
+        setHoverChrome(songViewTimelineOriginX + m_songView->contentX(m_hoverTick));
 }
 
 void TimelineQuickView::publishHover(TimelineQuickHoverOwner owner, uint64_t tick,
-                                     qreal rootContentX)
+                                     qreal songViewContentX)
 {
     if (owner == TimelineQuickHoverOwner::None)
         return;
     m_hoverOwner = owner;
     m_hoverTick = tick;
-    setHoverChrome(rootContentX, true);
+    setHoverChrome(songViewContentX);
+}
+
+QQuickItem *TimelineQuickView::rootObject() const
+{
+    return m_quickView->rootObject();
+}
+
+QQuickWindow *TimelineQuickView::quickWindow() const
+{
+    return m_quickView;
 }
 
 void TimelineQuickView::clearHover(TimelineQuickHoverOwner owner)
@@ -232,182 +270,187 @@ void TimelineQuickView::clearHover(TimelineQuickHoverOwner owner)
     if (m_hoverOwner != owner)
         return;
     m_hoverOwner = TimelineQuickHoverOwner::None;
-    setHoverChrome(m_hoverChrome.rootContentX, false);
+    setHoverChrome(std::nullopt);
 }
 
-void TimelineQuickView::setHoverChrome(qreal rootContentX, bool visible)
+qreal TimelineQuickView::quickRootXForSongViewX(qreal songViewX) const noexcept
 {
-    if (m_hoverChrome.rootContentX == rootContentX && m_hoverChrome.visible == visible)
+    return songViewX - geometry().x();
+}
+
+std::optional<qreal> TimelineQuickView::guideSongViewContentXAtOrAfterStart(
+    std::optional<qreal> songViewContentX) const noexcept
+{
+    if (!songViewContentX || !m_songView)
+        return std::nullopt;
+    const qreal songStartX = m_songView->timelinePlotOrigin() + m_songView->contentX(0.0);
+    return *songViewContentX >= songStartX ? songViewContentX : std::nullopt;
+}
+
+void TimelineQuickView::setHoverChrome(std::optional<qreal> songViewContentX)
+{
+    songViewContentX = guideSongViewContentXAtOrAfterStart(songViewContentX);
+    if (m_hoverSongViewContentX == songViewContentX)
         return;
-    m_hoverChrome = {.rootContentX = rootContentX, .visible = visible};
+    m_hoverSongViewContentX = songViewContentX;
     emit hoverChromeChanged();
 }
 
-void TimelineQuickView::setEditChrome(qreal rootContentX, bool visible)
+void TimelineQuickView::setEditChrome(std::optional<qreal> songViewContentX)
 {
-    if (m_editChrome.rootContentX == rootContentX && m_editChrome.visible == visible)
+    songViewContentX = guideSongViewContentXAtOrAfterStart(songViewContentX);
+    if (m_editSongViewContentX == songViewContentX)
         return;
-    m_editChrome = {.rootContentX = rootContentX, .visible = visible};
+    m_editSongViewContentX = songViewContentX;
     emit editChromeChanged();
-}
-
-void TimelineQuickView::setPlayheadChrome(qreal rootContentX, bool visible, bool playing)
-{
-    if (m_playheadChrome.rootContentX == rootContentX && m_playheadChrome.visible == visible &&
-        m_playheadChrome.playing == playing) {
-        return;
-    }
-    m_playheadChrome = {
-        .rootContentX = rootContentX,
-        .visible = visible,
-        .playing = playing,
-    };
-    emit playheadChromeChanged();
 }
 
 bool TimelineQuickView::eventFilter(QObject *watched, QEvent *event)
 {
-    if (watched == m_ruler.data() || watched == m_roll.data() || watched == m_otherEvents.data() ||
-        watched == m_automation.data() || watched == m_automationScrollViewport.data() ||
-        watched == m_velocity.data() || watched == m_voiceChanges.data()) {
+    if (watched == m_quickContainer && event->type() == QEvent::FocusIn) {
+        if (m_songView)
+            m_songView->focusActiveSurface();
+        return true;
+    }
+    const bool watchedBand = watched == m_ruler.data() || watched == m_roll.data() ||
+                             watched == m_otherEvents.data() || watched == m_automation.data() ||
+                             watched == m_automationScrollViewport.data() ||
+                             watched == m_velocity.data() || watched == m_voiceChanges.data();
+    const bool watchedNativeChrome = std::any_of(
+        m_nativeChrome.cbegin(), m_nativeChrome.cend(),
+        [watched](const QPointer<QWidget> &chrome) { return chrome.data() == watched; });
+    if (watchedBand || watchedNativeChrome) {
         switch (event->type()) {
         case QEvent::Show:
         case QEvent::Hide:
         case QEvent::ParentChange:
-            scheduleHostGeometryAndVisibilitySync();
-            break;
         case QEvent::Move:
         case QEvent::Resize:
-            synchronizeHostGeometryAndVisibility();
+            scheduleHostGeometryAndVisibilitySync();
             break;
         default:
             break;
         }
     }
-    return QQuickWidget::eventFilter(watched, event);
+    return QWidget::eventFilter(watched, event);
+}
+
+void TimelineQuickView::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+    m_quickContainer->setGeometry(rect());
 }
 
 void TimelineQuickView::scheduleHostGeometryAndVisibilitySync()
 {
-    if (m_hostSyncScheduled)
-        return;
-    m_hostSyncScheduled = true;
-    QMetaObject::invokeMethod(
-        this,
-        [this] {
-            m_hostSyncScheduled = false;
-            synchronizeHostGeometryAndVisibility();
-        },
-        Qt::QueuedConnection);
+    m_layoutTimer.start();
 }
 
 void TimelineQuickView::synchronizeHostGeometryAndVisibility()
 {
-    if (!m_ruler || !m_roll || !m_otherEvents || !m_velocity || !m_voiceChanges || !m_songView)
+    QWidget *const songView = m_songView.data();
+    if (!songView)
         return;
 
-    const auto bandRectInSongView = [songView = m_songView.data()](const QWidget &band) {
-        const QRect localRect = band.rect();
-        return QRect{band.mapTo(songView, localRect.topLeft()), localRect.size()};
+    static constexpr std::size_t bandCount = static_cast<std::size_t>(Band::Count);
+    const std::array<QWidget *, bandCount> bandWidgets = {
+        m_ruler.data(),       m_roll.data(),
+        m_otherEvents.data(), m_automationScrollViewport.data(),
+        m_velocity.data(),    m_voiceChanges.data(),
     };
-    const QRect rulerBandRect = bandRectInSongView(*m_ruler);
-    const QRect rollBandRect = bandRectInSongView(*m_roll);
-    const QRect otherEventsBandRect = bandRectInSongView(*m_otherEvents);
-    const QRect velocityBandRect = bandRectInSongView(*m_velocity);
-    const QRect voiceChangesBandRect = bandRectInSongView(*m_voiceChanges);
-    QRect automationBandRect;
-    if (m_automationScrollViewport)
-        automationBandRect = bandRectInSongView(*m_automationScrollViewport);
+    PublishedLayout layout;
+    for (std::size_t index = 0; index < bandWidgets.size(); ++index) {
+        QWidget *const band = bandWidgets[index];
+        if (!band || !band->isVisibleTo(songView))
+            continue;
+        const QRect localRect = band->rect();
+        layout[index] = QRect{band->mapTo(songView, localRect.topLeft()), localRect.size()};
+    }
 
-    QRect hostRect = rulerBandRect.united(rollBandRect)
-                         .united(otherEventsBandRect)
-                         .united(velocityBandRect)
-                         .united(voiceChangesBandRect);
-    if (m_automationScrollViewport)
-        hostRect = hostRect.united(automationBandRect);
-    if (geometry() != hostRect)
-        setGeometry(hostRect);
+    std::optional<QRect> hostRect;
+    for (const std::optional<QRect> &bandRect : layout) {
+        if (!bandRect)
+            continue;
+        hostRect = hostRect ? hostRect->united(*bandRect) : *bandRect;
+    }
+    const QRect publishedHostRect = hostRect.value_or(QRect{});
+    const bool hostXChanged = geometry().x() != publishedHostRect.x();
+    if (geometry() != publishedHostRect)
+        setGeometry(publishedHostRect);
+    if (isVisible() != hostRect.has_value())
+        setVisible(hostRect.has_value());
 
     QObject *root = rootObject();
     if (!root)
         qFatal("Qt Quick timeline QML has no root object");
 
-    const auto localBandRect = [&hostRect](const QRect &bandRect) {
-        return QRectF{bandRect.translated(-hostRect.topLeft())};
+    static constexpr std::array bandRectProperties = {
+        "rulerBandRect",      "rollBandRect",     "otherEventsBandRect",
+        "automationBandRect", "velocityBandRect", "voiceChangesBandRect",
     };
-    const bool rulerVisible = m_ruler->isVisibleTo(m_songView.data());
-    const bool rollVisible = m_roll->isVisibleTo(m_songView.data());
-    const bool otherEventsVisible = m_otherEvents->isVisibleTo(m_songView.data());
-    const bool automationVisible =
-        m_automationScrollViewport && m_automationScrollViewport->isVisibleTo(m_songView.data());
-    const bool velocityVisible = m_velocity->isVisibleTo(m_songView.data());
-    const bool voiceChangesVisible = m_voiceChanges->isVisibleTo(m_songView.data());
-    const bool anyBandVisible = rulerVisible || rollVisible || otherEventsVisible ||
-                                automationVisible || velocityVisible || voiceChangesVisible;
-    if (isVisible() != anyBandVisible)
-        setVisible(anyBandVisible);
+    static constexpr std::array bandVisibleProperties = {
+        "rulerBandVisible",      "rollBandVisible",     "otherEventsBandVisible",
+        "automationBandVisible", "velocityBandVisible", "voiceChangesBandVisible",
+    };
+    static_assert(bandRectProperties.size() == bandCount);
+    static_assert(bandVisibleProperties.size() == bandCount);
 
-    if (!root->setProperty("rulerBandRect", QVariant::fromValue(localBandRect(rulerBandRect))) ||
-        !root->setProperty("rollBandRect", QVariant::fromValue(localBandRect(rollBandRect))) ||
-        !root->setProperty("otherEventsBandRect",
-                           QVariant::fromValue(localBandRect(otherEventsBandRect))) ||
-        !root->setProperty("automationBandRect",
-                           QVariant::fromValue(automationVisible ? localBandRect(automationBandRect)
-                                                                 : QRectF{})) ||
-        !root->setProperty(
-            "velocityBandRect",
-            QVariant::fromValue(velocityVisible ? localBandRect(velocityBandRect) : QRectF{})) ||
-        !root->setProperty("voiceChangesBandRect",
-                           QVariant::fromValue(voiceChangesVisible
-                                                   ? localBandRect(voiceChangesBandRect)
-                                                   : QRectF{})) ||
-        !root->setProperty("rulerBandVisible", QVariant::fromValue(rulerVisible)) ||
-        !root->setProperty("rollBandVisible", QVariant::fromValue(rollVisible)) ||
-        !root->setProperty("otherEventsBandVisible", QVariant::fromValue(otherEventsVisible)) ||
-        !root->setProperty("automationBandVisible", QVariant::fromValue(automationVisible)) ||
-        !root->setProperty("velocityBandVisible", QVariant::fromValue(velocityVisible)) ||
-        !root->setProperty("voiceChangesBandVisible", QVariant::fromValue(voiceChangesVisible))) {
-        qFatal("Qt Quick timeline QML has incomplete band properties");
+    const auto localBandRect = [&publishedHostRect](const std::optional<QRect> &bandRect) {
+        return bandRect ? QRectF{bandRect->translated(-publishedHostRect.topLeft())} : QRectF{};
+    };
+    for (std::size_t index = 0; index < layout.size(); ++index) {
+        if (!root->setProperty(bandRectProperties[index],
+                               QVariant::fromValue(localBandRect(layout[index]))) ||
+            !root->setProperty(bandVisibleProperties[index],
+                               QVariant::fromValue(layout[index].has_value()))) {
+            qFatal("Qt Quick timeline QML has incomplete band properties");
+        }
     }
+    QRegion quickMask(QRect(QPoint{}, publishedHostRect.size()));
+    for (QWidget *chrome : m_nativeChrome) {
+        if (!chrome || !chrome->isVisibleTo(songView))
+            continue;
+        const QRect songViewRect(chrome->mapTo(songView, chrome->rect().topLeft()), chrome->size());
+        quickMask -= songViewRect.translated(-publishedHostRect.topLeft());
+    }
+    m_quickView->setMask(quickMask);
 
-    if (m_rollBandRect.isValid() && m_rollBandRect.size() != rollBandRect.size()) {
-        const bool widthOnly = m_rollBandRect.height() == rollBandRect.height();
+    const auto indexOf = [](Band band) { return static_cast<std::size_t>(band); };
+    const auto becameVisibleOrChangedSize = [this, &layout, &indexOf](Band band) {
+        const std::size_t index = indexOf(band);
+        const std::optional<QRect> &published = m_publishedLayout[index];
+        const std::optional<QRect> &current = layout[index];
+        return current && (!published || published->size() != current->size());
+    };
+
+    if (becameVisibleOrChangedSize(Band::Ruler))
+        requestTimelineUpdate(TimelineQuickDirty::Ruler);
+    if (becameVisibleOrChangedSize(Band::Roll)) {
+        const std::optional<QRect> &published = m_publishedLayout[indexOf(Band::Roll)];
+        const std::optional<QRect> &current = layout[indexOf(Band::Roll)];
+        const bool widthOnly = published && published->height() == current->height();
         requestUpdate(widthOnly ? cPlotAndLoadingDirty : PianoRollQuickDirty::All);
     }
-    if (m_rulerBandRect.isValid() && m_rulerBandRect.size() != rulerBandRect.size())
-        requestTimelineUpdate(TimelineQuickDirty::Ruler);
-    if (m_otherEventsBandRect.isValid() &&
-        m_otherEventsBandRect.size() != otherEventsBandRect.size()) {
+    if (becameVisibleOrChangedSize(Band::OtherEvents))
         requestTimelineUpdate(TimelineQuickDirty::OtherEvents);
-    }
-    if (m_automationScrollViewport && m_automationBandRect.isValid() &&
-        m_automationBandRect.size() != automationBandRect.size()) {
+    if (becameVisibleOrChangedSize(Band::Automation))
         requestTimelineUpdate(cAutomationMask);
+    if (becameVisibleOrChangedSize(Band::Velocity))
+        requestTimelineUpdate(TimelineQuickDirty::Velocity);
+    if (becameVisibleOrChangedSize(Band::VoiceChanges))
+        requestTimelineUpdate(TimelineQuickDirty::VoiceChanges);
+
+    m_publishedLayout = std::move(layout);
+    if (hostXChanged) {
+        if (m_hoverSongViewContentX)
+            emit hoverChromeChanged();
+        if (m_editSongViewContentX)
+            emit editChromeChanged();
     }
-    if (!m_automationWasVisible && automationVisible)
-        requestTimelineUpdate(cAutomationMask);
-    if (m_velocityBandRect.isValid() && m_velocityBandRect.size() != velocityBandRect.size())
-        requestTimelineUpdate(TimelineQuickDirty::Velocity);
-    if (!m_velocityWasVisible && velocityVisible)
-        requestTimelineUpdate(TimelineQuickDirty::Velocity);
-    if (!m_voiceChangesWasVisible && voiceChangesVisible)
-        requestTimelineUpdate(TimelineQuickDirty::VoiceChanges);
-    if (m_voiceChangesBandRect.size() != voiceChangesBandRect.size())
-        requestTimelineUpdate(TimelineQuickDirty::VoiceChanges);
-    m_rulerBandRect = rulerBandRect;
-    m_rollBandRect = rollBandRect;
-    m_otherEventsBandRect = otherEventsBandRect;
-    m_automationBandRect = automationBandRect;
-    m_velocityBandRect = velocityBandRect;
-    m_voiceChangesBandRect = voiceChangesBandRect;
-    m_automationWasVisible = automationVisible;
-    m_velocityWasVisible = velocityVisible;
-    m_voiceChangesWasVisible = voiceChangesVisible;
 }
 
 void TimelineQuickView::syncAppearance()
 {
-    setClearColor(themes::color(themes::Role::song_view_piano_roll_background));
     for (TimelineChromeItem *item : m_chromeItems) {
         if (item)
             item->update();
@@ -421,10 +464,7 @@ void TimelineQuickView::requestUpdate(PianoRollQuickDirtySet dirty)
     if (dirty == PianoRollQuickDirty::None)
         return;
     m_pendingDirty |= dirty;
-    if (m_flushScheduled)
-        return;
-    m_flushScheduled = true;
-    QMetaObject::invokeMethod(this, [this] { flushUpdate(); }, Qt::QueuedConnection);
+    m_flushTimer.start();
 }
 
 void TimelineQuickView::requestTimelineUpdate(TimelineQuickDirtySet dirty)
@@ -432,15 +472,11 @@ void TimelineQuickView::requestTimelineUpdate(TimelineQuickDirtySet dirty)
     if (dirty == TimelineQuickDirty::None)
         return;
     m_pendingTimelineDirty |= dirty;
-    if (m_flushScheduled)
-        return;
-    m_flushScheduled = true;
-    QMetaObject::invokeMethod(this, [this] { flushUpdate(); }, Qt::QueuedConnection);
+    m_flushTimer.start();
 }
 
 void TimelineQuickView::flushUpdate()
 {
-    m_flushScheduled = false;
     const PianoRollQuickDirtySet pianoDirty =
         std::exchange(m_pendingDirty, PianoRollQuickDirty::None);
     const TimelineQuickDirtySet timelineDirty =

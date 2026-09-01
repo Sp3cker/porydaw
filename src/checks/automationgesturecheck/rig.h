@@ -16,6 +16,10 @@
 #include "ui/editordrawer/drawerpage.h"
 #include "ui/editorviewstate.h"
 
+namespace songview {
+class TimelineQuickScene;
+}
+
 extern "C" {
 #include "voicegroup_loader.h"
 }
@@ -81,6 +85,8 @@ class AutomationGestureCheckRig final
     LaneHandle handleFor(const Lane &lane) const noexcept;
     QRect bodyFor(LaneHandle handle) const;
     QRect bodyFor(const Lane &lane) const;
+    const songview::TimelineQuickScene &quickScene() const noexcept;
+
     InputPoint pointAt(LaneHandle handle, double tick, int value) const;
     AutomationProjection::PointerMapping mappingAt(LaneHandle handle,
                                                    const QPointF &position) const;
@@ -89,20 +95,22 @@ class AutomationGestureCheckRig final
     Snapshot snapshot(int track, uint8_t controller) const;
     bool expandTempo();
     InputPoint pointAt(const Lane &lane, double tick, int value) const;
+    QPointF automationContentToViewport(const QPointF &position) const;
+
     QPoint automationContentToViewport(const QPoint &position) const;
     QRect automationContentToViewport(const QRect &rect) const;
     QRect automationViewportInContent() const;
     QImage renderAutomationViewport(QString *error = nullptr);
     QImage renderAutomationContent(const QRect &contentRect, QString *error = nullptr);
-    QImage renderArea();
+    QImage renderVoiceChanges(QString *error = nullptr);
 
     void documentChanged();
     void setAutomationZoom(double zoom);
     void setAutomationScroll(double scroll);
     void setPersistentPencil(bool enabled);
 
-    // True when no canvas pan or view gesture is in flight. Callers pump
-    // first; the paint cache and gesture state are per-view.
+    // True when no canvas pan or view gesture is in flight. Callers pump first;
+    // the retained Quick scene and gesture state are per-view.
     bool isIdle() const noexcept;
     // Zoom/scroll a fixture view back to the canonical pencil-test framing.
     void resetView(double zoom = 96.0, double scroll = 0.0);
@@ -157,4 +165,5 @@ class AutomationGestureCheckRig final
     std::unique_ptr<SongView> m_view;
     AutomationPage *m_page = nullptr;
     VoiceChangeArea *m_voiceArea = nullptr;
+    songview::TimelineQuickScene *m_quickScene = nullptr;
 };

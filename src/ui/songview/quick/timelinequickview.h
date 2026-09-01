@@ -6,14 +6,19 @@
 #include <QEvent>
 #include <QFlags>
 #include <QPointer>
-#include <QQuickWidget>
-#include <QRect>
+#include <QQuickItem>
+#include <QQuickWindow>
+#include <QResizeEvent>
+#include <QTimer>
+#include <QWidget>
 #include <array>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <vector>
 
 class AutomationPage;
+class QQuickView;
 class SongView;
 class VelocityArea;
 class VoiceChangeArea;
@@ -91,7 +96,7 @@ inline constexpr TimelineQuickDirtySet cAutomationMask =
 
 static_assert(static_cast<quint32>(TimelineQuickDirty::All) <= std::numeric_limits<quint16>::max());
 
-class TimelineQuickView final : public QQuickWidget
+class TimelineQuickView final : public QWidget
 {
     Q_OBJECT
     Q_DISABLE_COPY_MOVE(TimelineQuickView)
@@ -100,10 +105,6 @@ class TimelineQuickView final : public QQuickWidget
     Q_PROPERTY(bool hoverVisible READ hoverVisible NOTIFY hoverChromeChanged FINAL)
     Q_PROPERTY(qreal editRootContentX READ editRootContentX NOTIFY editChromeChanged FINAL)
     Q_PROPERTY(bool editVisible READ editVisible NOTIFY editChromeChanged FINAL)
-    Q_PROPERTY(
-        qreal playheadRootContentX READ playheadRootContentX NOTIFY playheadChromeChanged FINAL)
-    Q_PROPERTY(bool playheadVisible READ playheadVisible NOTIFY playheadChromeChanged FINAL)
-    Q_PROPERTY(bool playheadPlaying READ playheadPlaying NOTIFY playheadChromeChanged FINAL)
 
   public:
     TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStrip &otherEvents,
@@ -111,45 +112,47 @@ class TimelineQuickView final : public QQuickWidget
                       VoiceChangeArea &voiceChanges, SongView &songView);
     ~TimelineQuickView() override;
 
+    // Quick-root coordinates; guide publication arrives in SongView coordinates.
     qreal hoverRootContentX() const noexcept;
     bool hoverVisible() const noexcept;
     qreal editRootContentX() const noexcept;
     bool editVisible() const noexcept;
-    qreal playheadRootContentX() const noexcept;
-    bool playheadVisible() const noexcept;
-    bool playheadPlaying() const noexcept;
-
-    void synchronizeChrome(qreal rootOriginX, qreal editRootContentX, bool editVisible,
-                           qreal playheadRootContentX, bool playheadVisible, bool playheadPlaying);
-    void publishHover(TimelineQuickHoverOwner owner, uint64_t tick, qreal rootContentX);
+    void synchronizeGuides(qreal songViewTimelineOriginX,
+                           std::optional<qreal> editSongViewContentX);
+    void publishHover(TimelineQuickHoverOwner owner, uint64_t tick, qreal songViewContentX);
     void clearHover(TimelineQuickHoverOwner owner);
-
+    QQuickItem *rootObject() const;
+    QQuickWindow *quickWindow() const;
     void syncAppearance();
+
     void requestUpdate(PianoRollQuickDirtySet dirty);
     void requestTimelineUpdate(TimelineQuickDirtySet dirty);
 
   signals:
     void hoverChromeChanged();
     void editChromeChanged();
-    void playheadChromeChanged();
 
   protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
   private:
-    struct PositionChrome {
-        qreal rootContentX = 0.0;
-        bool visible = false;
+    enum class Band : std::size_t {
+        Ruler,
+        Roll,
+        OtherEvents,
+        Automation,
+        Velocity,
+        VoiceChanges,
+        Count,
     };
-    struct PlayheadChrome {
-        qreal rootContentX = 0.0;
-        bool visible = false;
-        bool playing = false;
-    };
+    using PublishedLayout = std::array<std::optional<QRect>, static_cast<std::size_t>(Band::Count)>;
 
-    void setHoverChrome(qreal rootContentX, bool visible);
-    void setEditChrome(qreal rootContentX, bool visible);
-    void setPlayheadChrome(qreal rootContentX, bool visible, bool playing);
+    qreal quickRootXForSongViewX(qreal songViewX) const noexcept;
+    std::optional<qreal>
+    guideSongViewContentXAtOrAfterStart(std::optional<qreal> songViewContentX) const noexcept;
+    void setHoverChrome(std::optional<qreal> songViewContentX);
+    void setEditChrome(std::optional<qreal> songViewContentX);
 
     void scheduleHostGeometryAndVisibilitySync();
     void synchronizeHostGeometryAndVisibility();
@@ -177,27 +180,21 @@ class TimelineQuickView final : public QQuickWidget
     QPointer<VelocityArea> m_velocity;
     QPointer<VoiceChangeArea> m_voiceChanges;
     QPointer<SongView> m_songView;
-    QRect m_rulerBandRect;
-    QRect m_rollBandRect;
-    QRect m_otherEventsBandRect;
-    QRect m_automationBandRect;
-    QRect m_velocityBandRect;
-    QRect m_voiceChangesBandRect;
     TimelineQuickScene *m_scene = nullptr;
+    QQuickView *m_quickView = nullptr;
+    QWidget *m_quickContainer = nullptr;
     std::array<TimelineQuickItem *, static_cast<std::size_t>(TimelineQuickLayer::Count)> m_items{};
-    std::array<TimelineChromeItem *, 18> m_chromeItems{};
-    PositionChrome m_hoverChrome;
-    PositionChrome m_editChrome;
-    PlayheadChrome m_playheadChrome;
+    std::array<TimelineChromeItem *, 12> m_chromeItems{};
+    std::array<QPointer<QWidget>, 5> m_nativeChrome;
+    PublishedLayout m_publishedLayout;
+    std::optional<qreal> m_hoverSongViewContentX;
+    std::optional<qreal> m_editSongViewContentX;
     TimelineQuickHoverOwner m_hoverOwner = TimelineQuickHoverOwner::None;
     uint64_t m_hoverTick = 0;
     PianoRollQuickDirtySet m_pendingDirty = {PianoRollQuickDirty::None};
     TimelineQuickDirtySet m_pendingTimelineDirty = {TimelineQuickDirty::None};
-    bool m_automationWasVisible = false;
-    bool m_velocityWasVisible = false;
-    bool m_voiceChangesWasVisible = false;
-    bool m_hostSyncScheduled = false;
-    bool m_flushScheduled = false;
+    QTimer m_layoutTimer;
+    QTimer m_flushTimer;
     std::vector<TimelineQuickTextModel::Record> m_noteTextRecords;
     std::vector<TimelineQuickTextModel::Record> m_loadingTextRecords;
     std::vector<TimelineQuickTextModel::Record> m_keyboardTextRecords;

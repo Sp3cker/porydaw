@@ -10,7 +10,9 @@
 #include <QPixmap>
 #include <QRect>
 
+#include "core/timedefaults.h"
 #include "rig.h"
+
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 
@@ -203,6 +205,91 @@ void runRestore(TransactionContext &ctx)
                              "one SMF, revision, and Undo edit"));
 }
 
+void runTempoTailRestore(TransactionContext &ctx)
+{
+    AutomationGestureCheckRig &rig = ctx.rig;
+    SongDocument &document = rig.document();
+    if (!document.tempoPoints().empty()) {
+        TempoEdit clear;
+        clear.remove = document.tempoPoints();
+        document.applyTempoEdit(clear);
+        rig.documentChanged();
+    }
+    if (!rig.expandTempo()) {
+        ctx.check(false, QStringLiteral("Tempo body was unavailable for the tail restore test"));
+        return;
+    }
+    rig.setPersistentPencil(true);
+    const auto finalNode = rig.pointAt(AutomationGestureCheckRig::kTempoHandle, 48, 200);
+    const AutomationGridCell finalCell = finalNode.mapped.cell;
+    const int finalValue = finalNode.mapped.point.value;
+    const uint64_t beforeRevision = document.revision();
+    const int beforeUndo = document.undoStack()->index();
+    rig.mousePress(finalNode.position);
+    rig.mouseRelease(finalNode.position);
+    const auto &points = document.tempoPoints();
+    const auto painted = std::find_if(
+        points.cbegin(), points.cend(), [finalCell, finalValue](const TempoPoint &point) {
+            return point.tick == finalCell.tickBegin &&
+                   point.microsecondsPerQuarterNote ==
+                       CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(finalValue);
+        });
+    const auto restored =
+        std::find_if(points.cbegin(), points.cend(), [finalCell](const TempoPoint &point) {
+            return point.tick == finalCell.tickEnd &&
+                   point.microsecondsPerQuarterNote ==
+                       CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(
+                           CoreTimeDefaults::kTempoBpm);
+        });
+    QString actual;
+    for (const TempoPoint &point : points) {
+        actual += QStringLiteral(" %1:%2")
+                      .arg(point.tick)
+                      .arg(CoreTimeDefaults::tempoBpm(point.microsecondsPerQuarterNote));
+    }
+    ctx.check(points.size() == 2 && painted != points.cend() && restored != points.cend() &&
+                  document.revision() == beforeRevision + 1 &&
+                  document.undoStack()->index() == beforeUndo + 1,
+              QStringLiteral("Pencil final node on an empty Tempo lane did not restore the "
+                             "implicit held value at the following cell boundary; actual:%1")
+                  .arg(actual));
+}
+
+void runBendTailRestore(TransactionContext &ctx)
+{
+    AutomationGestureCheckRig &rig = ctx.rig;
+    constexpr Lane bend{{EditorAutomationRowKind::ControlChange, 0, DOC_CC_BEND}, 0, DOC_CC_BEND};
+    rig.document().writeLanePoints(bend.track, bend.controller, 0,
+                                   std::numeric_limits<uint64_t>::max(), {});
+    rig.documentChanged();
+    if (rig.rowIndex(bend) < 0) {
+        ctx.check(false,
+                  QStringLiteral("Pitch Bend body was unavailable for the tail restore test"));
+        return;
+    }
+    rig.setPersistentPencil(true);
+    const auto finalNode = pointInCell(rig, bend, 48, 4096);
+    const AutomationGridCell finalCell = finalNode.mapped.cell;
+    const int finalValue = finalNode.mapped.point.value;
+    const auto before = rig.snapshot(bend.track, bend.controller);
+    rig.mousePress(finalNode.position);
+    rig.mouseRelease(finalNode.position);
+    const auto after = rig.snapshot(bend.track, bend.controller);
+    const auto painted =
+        std::find_if(after.lanePoints.cbegin(), after.lanePoints.cend(),
+                     [finalCell, finalValue](const DocLanePoint &point) {
+                         return point.tick == finalCell.tickBegin && point.value == finalValue;
+                     });
+    const auto restored = std::find_if(
+        after.lanePoints.cbegin(), after.lanePoints.cend(), [finalCell](const DocLanePoint &point) {
+            return point.tick == finalCell.tickEnd && point.value == 0;
+        });
+    ctx.check(after.lanePoints.size() == 2 && painted != after.lanePoints.cend() &&
+                  restored != after.lanePoints.cend() && oneLaneEdit(before, after),
+              QStringLiteral("Pencil final node on an empty Pitch Bend lane did not restore "
+                             "center at the following cell boundary"));
+}
+
 void runFlat(TransactionContext &ctx)
 {
     AutomationGestureCheckRig &rig = ctx.rig;
@@ -307,11 +394,13 @@ void runCancellations(TransactionContext &ctx)
 }
 
 using TransactionScenario = void (*)(TransactionContext &);
-constexpr std::array<std::pair<const char *, TransactionScenario>, 7> kTransactionScenarios{
+constexpr std::array<std::pair<const char *, TransactionScenario>, 9> kTransactionScenarios{
     {{"emptyLane", &runEmptyLane},
      {"lfoTitle", &runLfoTitle},
      {"preview", &runPreview},
      {"restore", &runRestore},
+     {"tempoTailRestore", &runTempoTailRestore},
+     {"bendTailRestore", &runBendTailRestore},
      {"flat", &runFlat},
      {"delete", &runDelete},
      {"cancellations", &runCancellations}}};

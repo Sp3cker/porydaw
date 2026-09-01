@@ -1,5 +1,6 @@
 #include "ui/editordrawer/drawersections.h"
 
+#include <QCursor>
 #include <QEvent>
 #include <QFrame>
 #include <QIcon>
@@ -168,7 +169,6 @@ DrawerSections::DrawerSections(QWidget *parent, AutomationPage *automation, Velo
         handle->setObjectName(name);
         handle->setAccessibleName(toolTip);
         handle->setToolTip(toolTip);
-        handle->setCursor(Qt::SizeVerCursor);
         handle->setMouseTracking(true);
         handle->installEventFilter(this);
         return handle;
@@ -474,10 +474,19 @@ bool DrawerSections::eventFilter(QObject *watched, QEvent *event)
     ensureChrome();
     auto *handle = static_cast<QWidget *>(watched);
     const EditorDrawerPage page = resizePageForHandle(handle);
+    if (event->type() == QEvent::Enter) {
+        handle->setCursor(Qt::SizeVerCursor);
+        return false;
+    }
+    if (event->type() == QEvent::Leave && m_resizeTarget != handle) {
+        handle->unsetCursor();
+        return false;
+    }
     if (event->type() == QEvent::MouseButtonPress) {
         auto *mouse = static_cast<QMouseEvent *>(event);
         if (mouse->button() != Qt::LeftButton)
             return false;
+        handle->setCursor(Qt::SizeVerCursor);
         m_resizeTarget = handle;
         m_resizeStartGlobalY = mouse->globalPosition().y();
         m_resizeOriginalBodyHeight = pageStoredHeight(page);
@@ -523,11 +532,15 @@ bool DrawerSections::eventFilter(QObject *watched, QEvent *event)
             return false;
         m_resizeTarget = nullptr;
         handle->releaseMouse();
+        if (!handle->rect().contains(mouse->position().toPoint()))
+            handle->unsetCursor();
         emit statePublished(true);
         return true;
     }
     if (event->type() == QEvent::UngrabMouse && m_resizeTarget == handle) {
         m_resizeTarget = nullptr;
+        if (!handle->rect().contains(handle->mapFromGlobal(QCursor::pos())))
+            handle->unsetCursor();
     }
     return QWidget::eventFilter(watched, event);
 }

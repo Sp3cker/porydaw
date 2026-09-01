@@ -784,7 +784,14 @@ void MainWindow::onSelectedTabChanged(SongTab *tab)
     }
 
     onSelectedTabReady(tab);
-    m_selectedTab->view().focusActiveSurface();
+    // A native QQuickView completes its tab-activation handoff after
+    // QTabWidget emits currentChanged. Restore content focus on the next
+    // turn, after that non-focusable overlay has settled.
+    const QPointer<SongTab> focusTab(tab);
+    QTimer::singleShot(0, this, [this, focusTab] {
+        if (focusTab && focusTab == m_selectedTab && focusTab->isReady())
+            focusTab->view().focusActiveSurface();
+    });
 }
 
 void MainWindow::onSelectedTabReady(SongTab *tab)

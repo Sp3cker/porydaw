@@ -5,8 +5,10 @@
 #include <cstdio>
 #include <cstring>
 #include <memory>
+#include <optional>
 #include <vector>
 
+#include <QAbstractItemModel>
 #include <QAction>
 #include <QApplication>
 #include <QCoreApplication>
@@ -16,6 +18,7 @@
 #include <QImage>
 #include <QInputDialog>
 #include <QMenu>
+#include <QRectF>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QStringList>
@@ -33,6 +36,7 @@
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelinequickscene.h"
 
 void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument &document,
                               DrawerPageLiveState &live, int &failures);
@@ -79,8 +83,6 @@ struct ExpectedAutomationGeometry {
     int timelineMaximumPixelsPerBeat;
     int plotOrigin;
     int valuePlotPadding;
-    qreal velocityNodePaintRadius;
-    qreal velocitySelectedNodeRingRadius;
 };
 
 ExpectedAutomationGeometry expectedAutomationGeometry()
@@ -99,8 +101,6 @@ ExpectedAutomationGeometry expectedAutomationGeometry()
         layout::fontPx(17.5 + 13.0 / 3.0),
         qRound(std::max(layout::fontPxF(7.0 / 24.0) * 0.75 + layout::fontPxF(1.0 / 12.0),
                         layout::fontPxF(3.0 / 8.0) * 0.75 + layout::fontPxF(1.0 / 6.0) * 0.5)),
-        layout::fontPxF(7.0 / 24.0),
-        layout::fontPxF(3.0 / 8.0),
     };
 }
 
@@ -134,16 +134,33 @@ int automationRowTop(const AutomationPage &page, const EditorAutomationRowId &id
 }
 QRect automationRowBody(const AutomationPage &page, const EditorAutomationRowId &id)
 {
-    const int top = automationRowTop(page, id);
-    if (top < 0)
-        return {};
-    const auto &state = page.automationViewState();
-    const auto expected = expectedAutomationGeometry();
-    const int shared = state.laneHeight > 0 ? state.laneHeight : expected.defaultRowHeight;
-    const auto it = state.laneHeights.find(id);
-    const int height = std::clamp(it == state.laneHeights.cend() ? shared : it->second,
-                                  expected.minimumRowHeight, expected.maximumRowHeight);
-    return {0, top, page.canvas()->width(), height};
+    const auto &rows = page.canvas()->rows();
+    for (int index = 0; index < int(rows.size()); ++index) {
+        if (rows[std::size_t(index)].id == id)
+            return page.canvas()->laneBody(LaneHandle{index + 1});
+    }
+    return {};
+}
+
+void pumpQuickEvents()
+{
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents(QEventLoop::AllEvents);
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents(QEventLoop::AllEvents);
+}
+
+std::optional<QRectF> quickTextRect(QAbstractItemModel *model, const QString &text)
+{
+    if (!model)
+        return std::nullopt;
+    for (int row = 0; row < model->rowCount(); ++row) {
+        const QModelIndex index = model->index(row, 0);
+        if (model->data(index, songview::TimelineQuickTextModel::TextRole).toString() == text) {
+            return model->data(index, songview::TimelineQuickTextModel::RectRole).toRectF();
+        }
+    }
+    return std::nullopt;
 }
 QPointF automationNodePoint(SongView &view, const AutomationPage &page,
                             const AutomationGeometry &geometry, const EditorAutomationRowId &id,
@@ -203,7 +220,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
     view.setDrawerSectionHeight(EditorDrawerPage::Automations, 360);
     view.show();
-    QCoreApplication::processEvents();
+    pumpQuickEvents();
     auto *drawer = view.editorDrawer();
     auto *pagePtr = drawer ? drawer->automationPage() : nullptr;
     if (!pagePtr) {
@@ -211,17 +228,16 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         return 1;
     }
     auto &page = *pagePtr;
-    page.resize(960, 360);
     page.songChanged();
     DrawerPageLiveState live;
     live.documentRevision = document.revision();
     live.timeZoom = 96.0;
     view.setEditorTimeZoom(live.timeZoom);
     live.horizontalScroll = view.viewState().scrollPx;
-    live.editCursorTick = 24;
+    view.setEditCursorTick(24);
     page.refreshLiveState(live);
     page.show();
-    QCoreApplication::processEvents();
+    pumpQuickEvents();
     expected.plotOrigin = page.canvas()->plotOrigin();
     auto projectionGeometry = AutomationGeometry::resolve();
     projectionGeometry.plotOrigin = expected.plotOrigin;
@@ -243,7 +259,10 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     };
     QWidget *const automationViewport = page.scrollViewport();
     check(automationViewport, QStringLiteral("automation page did not expose its scroll viewport"));
+    auto *quickScene = view.findChild<songview::TimelineQuickScene *>();
+    check(quickScene, QStringLiteral("automation page did not expose its retained Quick scene"));
     const auto captureAutomationViewport = [&] {
+        pumpQuickEvents();
         QString captureError;
         const QImage image =
             automationViewport
@@ -256,7 +275,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     };
     const auto contentToViewport = [&](const QRect &content) {
         return automationViewport
-                   ? content.translated(page.canvas()->mapTo(automationViewport, QPoint{}))
+                   ? QRect{page.canvas()->mapTo(automationViewport, content.topLeft()),
+                           content.size()}
                    : QRect{};
     };
     const auto captureAutomationContent = [&](const QRect &content) {
@@ -524,6 +544,31 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                   restored.points[0].value == 80 && restored.points[1].tick == 48 &&
                   restored.points[1].value == 60,
               QStringLiteral("held-span replacement did not restore its endpoint value"));
+        const AutomationPencilGesture::Sample finalSample{24.0, 24.0, {24, 80}, 80.0};
+        auto emptyLaneGesture = AutomationPencilGesture::start(
+            target, 0, 127, 96, 24, {}, NodePoint{0, 20}, finalSample, {24, 48});
+        check(emptyLaneGesture.has_value(),
+              QStringLiteral("empty-lane pencil gesture did not start with its held lead-in"));
+        if (emptyLaneGesture) {
+            const auto completion = std::move(*emptyLaneGesture).finish();
+            check(!completion.unchanged && completion.points.size() == 2 &&
+                      completion.points[0].tick == 24 && completion.points[0].value == 80 &&
+                      completion.points[1].tick == 48 && completion.points[1].value == 20,
+                  QStringLiteral("empty-lane pencil final node did not restore its held value "
+                                 "at the following cell boundary"));
+        }
+        auto pastLastGesture = AutomationPencilGesture::start(target, 0, 127, 96, 24, {{0, 20}},
+                                                              std::nullopt, finalSample, {24, 48});
+        check(pastLastGesture.has_value(),
+              QStringLiteral("past-last-point pencil gesture did not start"));
+        if (pastLastGesture) {
+            const auto completion = std::move(*pastLastGesture).finish();
+            check(!completion.unchanged && completion.points.size() == 2 &&
+                      completion.points[0].tick == 24 && completion.points[0].value == 80 &&
+                      completion.points[1].tick == 48 && completion.points[1].value == 20,
+                  QStringLiteral("past-last-point pencil final node changed the unpainted "
+                                 "held value"));
+        }
         const auto flat = heldSpan.replaceHeldSpan(36, 48, 96, 0, 127, {{36, 60}});
         check(flat.unchanged && flat.points.empty(),
               QStringLiteral("flat held-span replacement was not reduced to an empty no-op"));
@@ -800,14 +845,24 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
           QStringLiteral("automation row boundary painted an insertion preview"));
     check(document.lanePoints(0, 11).empty(),
           QStringLiteral("empty-lane fixture CC 11 already has document points"));
-    const QImage lfoGutterBefore = captureAutomationContent(
-        QRect(0, automationRowTop(page, lfo), expected.plotOrigin, heightFor(lfo)));
+    pumpQuickEvents();
+    QAbstractItemModel *const automationTextModel =
+        quickScene ? quickScene->automationTextModel() : nullptr;
+    const QString lfoTitle = CCLanes::laneLabel(lfo.controller);
+    const quint64 titleGridRevision =
+        quickScene ? quickScene->layer(songview::TimelineQuickLayer::AutomationGrid).revision : 0;
+    const auto lfoTextBefore = quickTextRect(automationTextModel, lfoTitle);
+    const QString newLaneTitle = CCLanes::laneLabel(11);
     page.addEmptyLane(0, 11);
-    QCoreApplication::processEvents();
-    const QImage lfoGutterAfter = captureAutomationContent(
-        QRect(0, automationRowTop(page, lfo), expected.plotOrigin, heightFor(lfo)));
-    check(lfoGutterAfter == lfoGutterBefore,
-          QStringLiteral("adding a lane changed an existing automation lane title"));
+    pumpQuickEvents();
+    const auto lfoTextAfter = quickTextRect(automationTextModel, lfoTitle);
+    const auto newLaneText = quickTextRect(automationTextModel, newLaneTitle);
+    check(lfoTextBefore && lfoTextAfter && newLaneText,
+          QStringLiteral("adding a lane did not retain the existing Quick title text or publish "
+                         "the new automation lane title"));
+    check(quickScene && quickScene->layer(songview::TimelineQuickLayer::AutomationGrid).revision >
+                            titleGridRevision,
+          QStringLiteral("adding a lane did not rebuild the retained Quick automation grid"));
     check(rowsHaveUniqueIds(page.canvas()->rows()),
           QStringLiteral("adding a lane created a duplicate automation lane"));
     resetDrawFixture();
@@ -1216,10 +1271,9 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         live.documentRevision = document.revision();
         page.refreshLiveState(live);
         QCoreApplication::processEvents();
-        const int groupPanTop = automationRowTop(page, pan);
-        const int groupPanHeight = heightFor(pan);
-        const int groupPlotTop = groupPanTop + expected.valuePlotPadding;
-        const int groupPlotBottom = groupPanTop + groupPanHeight - expected.valuePlotPadding;
+        const QRect groupPanBody = automationRowBody(page, pan);
+        const int groupPlotTop = groupPanBody.top() + expected.valuePlotPadding;
+        const int groupPlotBottom = groupPanBody.bottom() + 1 - expected.valuePlotPadding;
         const auto groupPointAt = [&](uint64_t tick, int value) {
             return QPoint(qRound(view.displayX(double(tick), expected.plotOrigin, dpr)),
                           groupPlotBottom - value * (groupPlotBottom - groupPlotTop) / 127);
@@ -1227,7 +1281,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         const QPoint groupAPoint = groupPointAt(groupA, groupAValue);
         const QPoint groupBPoint = groupPointAt(groupB, groupBValue);
         const QPoint groupCPoint = groupPointAt(groupC, groupCValue);
-        const auto trackRangeImage = [&](uint64_t endTick) {
+        const auto setTrackRange = [&](uint64_t endTick) {
             songview::EditorSelectionModel::TimeSelection selection;
             selection.startTick = groupA;
             selection.endTick = endTick;
@@ -1235,48 +1289,94 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             live.horizontalScroll = 0.0;
             view.setEditorHorizontalScroll(live.horizontalScroll);
             page.refreshLiveState(live);
-            QCoreApplication::processEvents();
-            return captureAutomationViewport();
+            pumpQuickEvents();
         };
-        const QImage rangeExcludedImage = trackRangeImage(groupB);
-        const QImage rangeIncludedImage = trackRangeImage(groupB + 1);
-        const QPoint bendPoint = groupBPoint;
-        const QPoint bendViewportPoint =
-            automationViewport ? page.canvas()->mapTo(automationViewport, bendPoint) : QPoint{};
-        const qreal bendOuter = expected.velocitySelectedNodeRingRadius + layout::singlePixel();
-        check(automationViewport &&
-                  automationViewport->rect().contains(QRectF(bendViewportPoint.x() - bendOuter,
-                                                             bendViewportPoint.y() - bendOuter,
-                                                             2 * bendOuter, 2 * bendOuter)
-                                                          .toAlignedRect()),
-              QStringLiteral("automation selection node probe is outside the scroll viewport"));
-        const auto bendRingChanged = [&] {
-            const qreal imageDpr = rangeIncludedImage.devicePixelRatio();
-            const QPointF pixelCenter = QPointF(bendViewportPoint) * imageDpr;
-            const qreal inner = expected.velocityNodePaintRadius * imageDpr;
-            const qreal outer =
-                (expected.velocitySelectedNodeRingRadius + layout::singlePixel()) * imageDpr;
-            const int left = std::max(0, int(std::floor(pixelCenter.x() - outer)));
+        const quint64 nodesRevisionBefore =
+            quickScene ? quickScene->layer(songview::TimelineQuickLayer::AutomationNodes).revision
+                       : 0;
+        setTrackRange(groupB);
+        const songview::TimelineQuickLayerData excludedNodes =
+            quickScene ? quickScene->layer(songview::TimelineQuickLayer::AutomationNodes)
+                       : songview::TimelineQuickLayerData{};
+        const QImage excludedNodesFramebuffer = captureAutomationViewport();
+        setTrackRange(groupB + 1);
+        const songview::TimelineQuickLayerData includedNodes =
+            quickScene ? quickScene->layer(songview::TimelineQuickLayer::AutomationNodes)
+                       : songview::TimelineQuickLayerData{};
+        const QImage includedNodesFramebuffer = captureAutomationViewport();
+        const QColor selectionColor = page.canvas()->palette().highlight().color();
+        const qreal ringRadius = projectionGeometry.selectedNodeRingRadius;
+        const qreal ringWidth = projectionGeometry.selectedNodeRingDipWidth;
+        const auto hasSelectionRing = [&](const songview::TimelineQuickLayerData &layer,
+                                          const QPoint &contentPoint) {
+            const QPointF center = contentToViewport(QRect(contentPoint, QSize(1, 1))).topLeft();
+            const qreal tolerance = layout::singlePixel();
+            const qreal inner = std::max<qreal>(0.0, ringRadius - ringWidth / 2.0 - tolerance);
+            const qreal outer = ringRadius + ringWidth / 2.0 + tolerance;
+            const qreal innerSquared = inner * inner;
+            const qreal outerSquared = outer * outer;
+            const auto onRing = [&](const QPointF &point) {
+                const QPointF delta = point - center;
+                const qreal distanceSquared = delta.x() * delta.x() + delta.y() * delta.y();
+                return distanceSquared >= innerSquared && distanceSquared <= outerSquared;
+            };
+            return std::count_if(layer.triangles.cbegin(), layer.triangles.cend(),
+                                 [&](const songview::TimelineQuickTriangle &triangle) {
+                                     return triangle.firstColor == selectionColor &&
+                                            triangle.secondColor == selectionColor &&
+                                            triangle.thirdColor == selectionColor &&
+                                            onRing(triangle.first) && onRing(triangle.second) &&
+                                            onRing(triangle.third);
+                                 }) >= 4;
+        };
+        const auto hasRenderedSelectionRing = [&](const QImage &framebuffer,
+                                                  const QPoint &contentPoint) {
+            if (framebuffer.isNull())
+                return false;
+            const qreal framebufferDpr = framebuffer.devicePixelRatio();
+            if (framebufferDpr <= 0.0)
+                return false;
+            const QPointF center = contentToViewport(QRect(contentPoint, QSize(1, 1))).topLeft();
+            const qreal tolerance = 2 * layout::singlePixel();
+            const qreal inner = std::max<qreal>(0.0, ringRadius - ringWidth / 2.0 - tolerance);
+            const qreal outer = ringRadius + ringWidth / 2.0 + tolerance;
+            const qreal innerSquared = inner * inner;
+            const qreal outerSquared = outer * outer;
+            const int left = std::max(0, qFloor((center.x() - outer) * framebufferDpr));
+            const int top = std::max(0, qFloor((center.y() - outer) * framebufferDpr));
             const int right =
-                std::min(rangeIncludedImage.width() - 1, int(std::ceil(pixelCenter.x() + outer)));
-            const int top = std::max(0, int(std::floor(pixelCenter.y() - outer)));
+                std::min(framebuffer.width() - 1, qCeil((center.x() + outer) * framebufferDpr));
             const int bottom =
-                std::min(rangeIncludedImage.height() - 1, int(std::ceil(pixelCenter.y() + outer)));
+                std::min(framebuffer.height() - 1, qCeil((center.y() + outer) * framebufferDpr));
             for (int y = top; y <= bottom; ++y) {
                 for (int x = left; x <= right; ++x) {
-                    const qreal dx = qreal(x) - pixelCenter.x();
-                    const qreal dy = qreal(y) - pixelCenter.y();
-                    const qreal distanceSquared = dx * dx + dy * dy;
-                    if (distanceSquared <= inner * inner || distanceSquared > outer * outer)
-                        continue;
-                    if (rangeExcludedImage.pixel(x, y) != rangeIncludedImage.pixel(x, y))
+                    const QPointF delta((x + 0.5) / framebufferDpr - center.x(),
+                                        (y + 0.5) / framebufferDpr - center.y());
+                    const qreal distanceSquared = delta.x() * delta.x() + delta.y() * delta.y();
+                    const QColor pixel = framebuffer.pixelColor(x, y);
+                    if (distanceSquared >= innerSquared && distanceSquared <= outerSquared &&
+                        pixel.alpha() >= 32 && std::abs(pixel.red() - selectionColor.red()) <= 64 &&
+                        std::abs(pixel.green() - selectionColor.green()) <= 64 &&
+                        std::abs(pixel.blue() - selectionColor.blue()) <= 64) {
                         return true;
+                    }
                 }
             }
             return false;
         };
-        check(bendRingChanged(),
-              QStringLiteral("track time selection did not half-open-highlight automation nodes"));
+        check(quickScene && excludedNodes.revision > nodesRevisionBefore &&
+                  includedNodes.revision > excludedNodes.revision &&
+                  hasSelectionRing(excludedNodes, groupAPoint) &&
+                  !hasSelectionRing(excludedNodes, groupBPoint) &&
+                  !hasSelectionRing(excludedNodes, groupCPoint) &&
+                  hasSelectionRing(includedNodes, groupAPoint) &&
+                  hasSelectionRing(includedNodes, groupBPoint) &&
+                  !hasSelectionRing(includedNodes, groupCPoint) &&
+                  hasRenderedSelectionRing(excludedNodesFramebuffer, groupAPoint) &&
+                  hasRenderedSelectionRing(includedNodesFramebuffer, groupAPoint) &&
+                  hasRenderedSelectionRing(includedNodesFramebuffer, groupBPoint),
+              QStringLiteral("track time selection did not retain or render half-open Quick node "
+                             "rings in the automation nodes layer"));
 
         songview::EditorSelectionModel::TimeSelection groupSelection;
         groupSelection.startTick = groupA;
@@ -1553,7 +1653,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                   .arg(playhead));
     }
     live.playback.playing = false;
-    live.editCursorTick = 24;
+    view.setEditCursorTick(24);
     page.refreshLiveState(live);
     (void)captureAutomationViewport();
     const auto stoppedVoice = view.voiceContext(24);

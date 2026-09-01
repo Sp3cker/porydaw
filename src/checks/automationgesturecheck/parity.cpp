@@ -3,14 +3,17 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <vector>
 
 #include <QCoreApplication>
 #include <QEvent>
 #include <QResizeEvent>
 #include <QSize>
+
 #include <QString>
 
 #include "core/songdocument.h"
@@ -18,6 +21,9 @@
 #include "rig.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
+#include "ui/layout.h"
+#include "ui/songview/quick/timelinequickscene.h"
+
 #include "ui/songview.h"
 #include "ui/songview/editorselectionmodel.h"
 
@@ -70,6 +76,29 @@ bool containsPoint(const std::vector<NodePoint> &points, uint64_t tick, int valu
     return std::any_of(points.cbegin(), points.cend(), [tick, value](const NodePoint &point) {
         return point.tick == tick && point.value == value;
     });
+}
+
+struct HorizontalSpan {
+    qreal y = 0.0;
+    qreal length = 0.0;
+};
+
+std::optional<HorizontalSpan> longestHorizontalSpan(const songview::TimelineQuickLayerData &layer)
+{
+    const qreal tolerance = layout::singlePixel();
+    std::optional<HorizontalSpan> result;
+    for (const auto &triangle : layer.triangles) {
+        const qreal minX = std::min({triangle.first.x(), triangle.second.x(), triangle.third.x()});
+        const qreal maxX = std::max({triangle.first.x(), triangle.second.x(), triangle.third.x()});
+        const qreal minY = std::min({triangle.first.y(), triangle.second.y(), triangle.third.y()});
+        const qreal maxY = std::max({triangle.first.y(), triangle.second.y(), triangle.third.y()});
+        const qreal length = maxX - minX;
+        if (maxY - minY <= 2.0 * tolerance && length > 0.0 &&
+            (!result || length > result->length)) {
+            result = HorizontalSpan{(minY + maxY) / 2.0, length};
+        }
+    }
+    return result;
 }
 
 std::vector<NodePoint> pointsOf(const Context &ctx)
@@ -438,22 +467,30 @@ void runOriginPhantom(Context &ctx)
     const qreal arm = qreal(ctx.rig.geometry().nodeDragActivationDistance + 2);
     const QPointF activation = start + QPointF(0.0, target.y() < start.y() ? -arm : arm);
     const QPointF end = activation + target - start;
-    const qreal radius = ctx.rig.geometry().pointHitRadius;
-    const qreal nextX = at(ctx, 288, 64).position.x();
-    const QRect body = ctx.rig.bodyFor(ctx.handle);
-    const qreal probeWidth = nextX - originX - 4.0 * radius;
-    const QRect probe(qRound(originX + 2.0 * radius), body.top(), qRound(probeWidth),
-                      body.height());
-    const auto curveCrop = [&] { return ctx.rig.renderAutomationContent(probe); };
+    const qreal minimumCurveSpan = 2.0 * ctx.rig.geometry().pointHitRadius;
+    const auto transientBefore =
+        ctx.rig.quickScene().layer(songview::TimelineQuickLayer::AutomationTransient);
     ctx.rig.mousePress(start);
     ctx.rig.mouseMove(activation);
     ctx.rig.pump();
-    const auto originalCurve = curveCrop();
+    const auto originalLayer =
+        ctx.rig.quickScene().layer(songview::TimelineQuickLayer::AutomationTransient);
     ctx.rig.mouseMove(end);
     ctx.rig.pump();
-    const auto movedCurve = curveCrop();
-    ctx.check.require(probeWidth > 0.0 && !originalCurve.isNull() && movedCurve != originalCurve,
-                      QStringLiteral("origin phantom drag did not repaint its held-value curve"));
+    const auto movedLayer =
+        ctx.rig.quickScene().layer(songview::TimelineQuickLayer::AutomationTransient);
+    const auto originalCurve = longestHorizontalSpan(originalLayer);
+    const auto movedCurve = longestHorizontalSpan(movedLayer);
+    const qreal targetDelta = target.y() - start.y();
+    const bool curveUpdated =
+        originalCurve && movedCurve && originalCurve->length > minimumCurveSpan &&
+        movedCurve->length > minimumCurveSpan &&
+        std::abs(movedCurve->y - originalCurve->y) > layout::singlePixel() / 2.0 &&
+        (movedCurve->y - originalCurve->y) * targetDelta > 0.0;
+    ctx.check.require(originalLayer.revision > transientBefore.revision &&
+                          movedLayer.revision > originalLayer.revision && curveUpdated,
+                      QStringLiteral("origin phantom drag did not update its retained Quick "
+                                     "held-value curve"));
     ctx.check.require(isUnchanged(before, snapshot(ctx.rig.document())),
                       QStringLiteral("origin phantom preview mutated the document before release"));
     ctx.rig.mouseRelease(end);

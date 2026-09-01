@@ -28,6 +28,9 @@
 #include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/detail.h"
+#include "ui/songview/quick/timelinequickscene.h"
+#include "ui/songview/quick/timelinequickview.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
 #include "ui/velocitygesturemodel.h"
@@ -61,45 +64,6 @@ bool samePixels(const QImage &left, const QImage &right)
     return true;
 }
 
-bool hasColorNear(const QImage &image, const QRect &bounds, const QColor &expected, int tolerance)
-{
-    const QRect clipped = bounds.intersected(image.rect());
-    for (int y = clipped.top(); y <= clipped.bottom(); ++y) {
-        for (int x = clipped.left(); x <= clipped.right(); ++x) {
-            const QColor actual(image.pixel(x, y));
-            if (std::abs(actual.red() - expected.red()) <= tolerance &&
-                std::abs(actual.green() - expected.green()) <= tolerance &&
-                std::abs(actual.blue() - expected.blue()) <= tolerance) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-bool hasDarkOutlinePixel(const QImage &image, const QPointF center, qreal innerRadius,
-                         qreal outerRadius)
-{
-    const int left = std::max(0, int(std::floor(center.x() - outerRadius)));
-    const int right = std::min(image.width() - 1, int(std::ceil(center.x() + outerRadius)));
-    const int top = std::max(0, int(std::floor(center.y() - outerRadius)));
-    const int bottom = std::min(image.height() - 1, int(std::ceil(center.y() + outerRadius)));
-    for (int y = top; y <= bottom; ++y) {
-        for (int x = left; x <= right; ++x) {
-            const qreal dx = qreal(x) + 0.5 - center.x();
-            const qreal dy = qreal(y) + 0.5 - center.y();
-            const qreal distance = std::hypot(dx, dy);
-            if (dx >= 0.0 || distance < innerRadius || distance > outerRadius)
-                continue;
-            const QColor pixel(image.pixel(x, y));
-            if (std::max({pixel.red(), pixel.green(), pixel.blue()}) <= 160 &&
-                pixel.red() + pixel.green() + pixel.blue() <= 320) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
 void velocityFail(int &failures, bool condition, const char *message)
 {
     if (!condition)
@@ -150,15 +114,80 @@ struct VelocityAreaEnv {
     QWidget *automationBar = nullptr;
     QToolButton *automationToggle = nullptr;
     QToolButton *detentToggle = nullptr;
+    songview::TimelineQuickScene *quickScene = nullptr;
+    songview::TimelineQuickView *quickView = nullptr;
     DrawerPageLiveState &live;
     ExpectedVelocityGeometry expected;
     VelocityMap map;
     uint8_t hoveredPsgVelocity = 0;
     std::size_t hoveredPsgLevel = 0;
     qreal imageScale = 1.0;
-    qreal outlineRadius = 0.0;
-    qreal outlineWidth = 0.0;
 };
+
+bool colorsMatch(const QColor &actual, const QColor &expected)
+{
+    return actual == expected;
+}
+
+bool layerTouches(const songview::TimelineQuickScene *scene, songview::TimelineQuickLayer layer,
+                  const QRectF &probe, const QColor &expected)
+{
+    if (!scene || probe.isEmpty())
+        return false;
+    const auto &data = scene->layer(layer);
+    const auto rectMatches = [&probe, &expected](const songview::TimelineQuickRect &rect) {
+        return rect.rect.intersects(probe) &&
+               (colorsMatch(rect.topLeft, expected) || colorsMatch(rect.topRight, expected) ||
+                colorsMatch(rect.bottomRight, expected) || colorsMatch(rect.bottomLeft, expected));
+    };
+    if (std::any_of(data.rects.cbegin(), data.rects.cend(), rectMatches))
+        return true;
+    const auto triangleMatches = [&probe,
+                                  &expected](const songview::TimelineQuickTriangle &triangle) {
+        const QRectF bounds = QRectF(triangle.first, triangle.second)
+                                  .normalized()
+                                  .united(QRectF(triangle.first, triangle.third).normalized())
+                                  .united(QRectF(triangle.second, triangle.third).normalized());
+        return bounds.intersects(probe) && (colorsMatch(triangle.firstColor, expected) ||
+                                            colorsMatch(triangle.secondColor, expected) ||
+                                            colorsMatch(triangle.thirdColor, expected));
+    };
+    return std::any_of(data.triangles.cbegin(), data.triangles.cend(), triangleMatches);
+}
+std::optional<QRectF> solidLayerRect(const songview::TimelineQuickScene *scene,
+                                     songview::TimelineQuickLayer layer, const QColor &color)
+{
+    if (!scene)
+        return std::nullopt;
+    const auto &rects = scene->layer(layer).rects;
+    const auto match = [&color](const songview::TimelineQuickRect &rect) {
+        return colorsMatch(rect.topLeft, color) && colorsMatch(rect.topRight, color) &&
+               colorsMatch(rect.bottomRight, color) && colorsMatch(rect.bottomLeft, color);
+    };
+    const auto found = std::find_if(rects.cbegin(), rects.cend(), match);
+    return found == rects.cend() ? std::nullopt : std::optional<QRectF>{found->rect};
+}
+
+quint64 layerRevision(const VelocityAreaEnv &env, songview::TimelineQuickLayer layer)
+{
+    return env.quickScene ? env.quickScene->layer(layer).revision : quint64{0};
+}
+
+bool layerIsEmpty(const songview::TimelineQuickScene *scene, songview::TimelineQuickLayer layer)
+{
+    if (!scene)
+        return false;
+    const auto &data = scene->layer(layer);
+    return data.rects.empty() && data.triangles.empty();
+}
+
+bool velocityNodeHasColor(const VelocityAreaEnv &env, const QPointF &center, const QColor &color)
+{
+    const qreal radius = env.expected.nodePaintRadius;
+    return layerTouches(
+        env.quickScene, songview::TimelineQuickLayer::VelocityNodes,
+        QRectF(center.x() - radius, center.y() - radius, 2.0 * radius, 2.0 * radius), color);
+}
 
 struct VelocityAreaRig {
     VelocityAreaEnv &env;
@@ -276,28 +305,29 @@ int checkGridContinuesPastSongEnd(VelocityAreaEnv &env)
     // This fixture has no time signature, so the implicit grid is 4/4.
     const auto ticksPerBar = uint64_t{env.timeline->ticksPerBeat} * 4;
     const auto firstBarPastSongEnd = (env.timeline->lengthTicks / ticksPerBar + 1) * ticksPerBar;
-    env.area.resize(env.area.plotOrigin() +
-                        qCeil(double(firstBarPastSongEnd + env.timeline->ticksPerBeat) *
-                              env.live.timeZoom / double(env.timeline->ticksPerBeat)),
+    // Retained scene geometry is local to the VelocityGrid QQuickItem, not the native
+    // QQuickView window. Match the renderer's snapped, camera-relative local x.
+    const qreal dpr = env.area.devicePixelRatioF();
+    const auto gridX = [&env, dpr](uint64_t tick) {
+        return env.view.displayX(double(tick), env.area.plotOrigin(), dpr);
+    };
+    const qreal firstBarPastSongEndX = gridX(firstBarPastSongEnd);
+    env.area.resize(std::max(env.area.plotOrigin() + layout::space(layout::Space::Eight),
+                             qCeil(gridX(firstBarPastSongEnd + env.timeline->ticksPerBeat))),
                     env.expected.densityThresholdD4 + layout::space(layout::Space::Six));
     QApplication::processEvents();
-    const auto gridPastSongEnd = checks::support::captureQuickBand(env.view, env.area);
-    const auto gridScale = gridPastSongEnd.devicePixelRatio();
-    const auto firstBarPastSongEndX =
-        qRound((double(env.area.plotOrigin()) + double(firstBarPastSongEnd) * env.live.timeZoom /
-                                                    double(env.timeline->ticksPerBeat)) *
-               gridScale);
-    const QRect pastSongEndBounds = QRect(firstBarPastSongEndX - 2, 0, 5, gridPastSongEnd.height())
-                                        .intersected(gridPastSongEnd.rect());
-    const QColor grid = themes::color(themes::Role::song_view_grid);
-    const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
-    const auto compositeChannel = [&grid](int source, int destination) {
-        return (source * grid.alpha() + destination * (255 - grid.alpha()) + 127) / 255;
+    const std::array gridColors = {
+        songview::detail::gridLineColor(125), songview::detail::gridLineColor(100),
+        songview::detail::gridLineColor(75),  songview::detail::gridLineColor(160),
+        songview::detail::gridLineColor(200), songview::detail::gridLineColor(),
     };
-    const QColor expectedGrid(compositeChannel(grid.red(), background.red()),
-                              compositeChannel(grid.green(), background.green()),
-                              compositeChannel(grid.blue(), background.blue()));
-    check(hasColorNear(gridPastSongEnd, pastSongEndBounds, expectedGrid, 4),
+    const QRectF gridProbe(firstBarPastSongEndX - 2.0, 0.0, 4.0, env.area.height());
+    check(std::any_of(gridColors.cbegin(), gridColors.cend(),
+                      [&](const QColor &color) {
+                          return layerTouches(env.quickScene,
+                                              songview::TimelineQuickLayer::VelocityGrid, gridProbe,
+                                              color);
+                      }),
           "velocity grid must continue to the piano grid beyond the song end");
     return failures;
 }
@@ -462,6 +492,7 @@ int checkVelocityRendering(VelocityAreaEnv &env)
                         double(env.area.plotOrigin() - 2 * layout::space(layout::Space::Two)),
                         env.area.height()),
                  env.imageScale);
+    const quint64 axisBeforeHover = layerRevision(env, songview::TimelineQuickLayer::VelocityAxis);
     checks::events::sendMouse(env.area, QEvent::MouseMove, QPointF(paintNodeX, unselectedY),
                               Qt::NoButton, Qt::NoButton, Qt::NoModifier);
     QApplication::processEvents();
@@ -475,11 +506,15 @@ int checkVelocityRendering(VelocityAreaEnv &env)
               hoveredPreview && *hoveredPreview == env.hoveredPsgVelocity &&
               env.map.representative(int(env.hoveredPsgLevel)) == 76 &&
               hoveredGraduations[env.hoveredPsgLevel].active && activeHoveredGraduationCount == 1 &&
+              layerRevision(env, songview::TimelineQuickLayer::VelocityAxis) > axisBeforeHover &&
+              !velocityImage.isNull() && !hoveredVelocityImage.isNull() &&
               !samePixels(velocityImage.copy(velocityLabelBounds),
                           hoveredVelocityImage.copy(velocityLabelBounds)),
           "with PSG detents enabled, hovering MIDI velocity 74 must isolate Noise Vol 10 "
           "instead of raw MIDI 74");
     env.area.setUseDetents(false);
+    const quint64 axisBeforeRawHover =
+        layerRevision(env, songview::TimelineQuickLayer::VelocityAxis);
     QApplication::processEvents();
     const QImage rawHoveredVelocityImage = checks::support::captureQuickBand(env.view, env.area);
     const auto &rawHoveredMarkers = env.area.axis().markers();
@@ -487,65 +522,71 @@ int checkVelocityRendering(VelocityAreaEnv &env)
               rawHoveredMarkers[0].velocity == env.hoveredPsgVelocity &&
               std::abs(rawHoveredMarkers[0].y -
                        env.area.axis().velocityToY(env.hoveredPsgVelocity)) < 0.001 &&
+              layerRevision(env, songview::TimelineQuickLayer::VelocityAxis) > axisBeforeRawHover &&
+              !rawHoveredVelocityImage.isNull() &&
               !samePixels(hoveredVelocityImage.copy(velocityLabelBounds),
                           rawHoveredVelocityImage.copy(velocityLabelBounds)),
           "with PSG detents disabled, hovering MIDI velocity 74 must isolate raw MIDI 74");
     env.area.setUseDetents(true);
+    const quint64 axisBeforeLeave = layerRevision(env, songview::TimelineQuickLayer::VelocityAxis);
     QEvent velocityLeave(QEvent::Leave);
     QApplication::sendEvent(&env.area, &velocityLeave);
     QApplication::processEvents();
     const QImage restoredVelocityImage = checks::support::captureQuickBand(env.view, env.area);
-    check(samePixels(velocityImage.copy(velocityLabelBounds),
-                     restoredVelocityImage.copy(velocityLabelBounds)),
+    check(layerRevision(env, songview::TimelineQuickLayer::VelocityAxis) > axisBeforeLeave &&
+              !restoredVelocityImage.isNull() &&
+              samePixels(velocityImage.copy(velocityLabelBounds),
+                         restoredVelocityImage.copy(velocityLabelBounds)),
           "leaving a hovered velocity node must restore the graduation labels");
-    const QRect stemBounds =
-        toPixels(QRectF(paintNodeX + 8.0, unselectedY - 3.0, 16.0, 6.0), env.imageScale);
-    const QPointF unselectedNodeCenter(paintNodeX * env.imageScale, unselectedY * env.imageScale);
-    const qreal outlineRadius = env.expected.nodePaintRadius * env.imageScale;
-    const qreal outlineWidth = env.expected.nodeOutlineDipWidth * env.imageScale;
-    env.outlineRadius = outlineRadius;
-    env.outlineWidth = outlineWidth;
-    const QRect selectedRingBounds =
-        toPixels(QRectF(paintNodeX - 6.0, selectedY - 6.0, 4.0, 12.0), env.imageScale);
-    check(selectedLevel && unselectedLevel &&
-              hasColorNear(velocityImage, stemBounds, expectedStem, 4),
+    const QRectF selectedNodeProbe(
+        paintNodeX - env.expected.nodePaintRadius, selectedY - env.expected.nodePaintRadius,
+        2.0 * env.expected.nodePaintRadius, 2.0 * env.expected.nodePaintRadius);
+    const QRectF unselectedNodeProbe(
+        paintNodeX - env.expected.nodePaintRadius, unselectedY - env.expected.nodePaintRadius,
+        2.0 * env.expected.nodePaintRadius, 2.0 * env.expected.nodePaintRadius);
+    check(selectedLevel && unselectedLevel && !velocityImage.isNull() &&
+              layerTouches(env.quickScene, songview::TimelineQuickLayer::VelocityStems,
+                           QRectF(paintNodeX, unselectedY - layout::singlePixel(),
+                                  env.notes[1].duration * env.live.timeZoom /
+                                      double(env.timeline->ticksPerBeat),
+                                  2.0 * layout::singlePixel()),
+                           expectedStem),
           "unselected velocity duration stems must use the OKLab track shade");
-    check(hasDarkOutlinePixel(velocityImage, unselectedNodeCenter,
-                              std::max(0.0, env.outlineRadius - env.outlineWidth),
-                              env.outlineRadius + env.outlineWidth),
+    check(layerTouches(env.quickScene, songview::TimelineQuickLayer::VelocityNodes,
+                       unselectedNodeProbe, Qt::black),
           "unselected velocity nodes must retain black outlines");
-    check(
-        hasColorNear(velocityImage, selectedRingBounds, env.area.palette().highlight().color(), 16),
-        "selected velocity nodes must retain selection rings");
-    const QRect unselectedNodeFillBounds =
-        toPixels(QRectF(paintNodeX - 3.0, unselectedY - 3.0, 6.0, 6.0), env.imageScale);
-    check(hasColorNear(velocityImage, unselectedNodeFillBounds, env.live.trackColor, 4),
+    check(layerTouches(env.quickScene, songview::TimelineQuickLayer::VelocityNodes,
+                       selectedNodeProbe, env.area.palette().highlight().color()),
+          "selected velocity nodes must retain selection rings");
+    check(layerTouches(env.quickScene, songview::TimelineQuickLayer::VelocityNodes,
+                       unselectedNodeProbe, env.live.trackColor),
           "a single-node selection must preserve unselected velocity node colors");
     env.view.selectionModel().setNoteSelection({env.notes[0].noteId, env.notes[2].noteId});
     ++env.live.editCursorTick;
     env.area.refreshLiveState(env.live);
     QApplication::processEvents();
     const QImage multiSelectionImage = checks::support::captureQuickBand(env.view, env.area);
-    check(hasColorNear(multiSelectionImage, unselectedNodeFillBounds,
-                       env.area.palette().mid().color(), 4),
+    check(!multiSelectionImage.isNull() &&
+              layerTouches(env.quickScene, songview::TimelineQuickLayer::VelocityNodes,
+                           unselectedNodeProbe, env.area.palette().mid().color()),
           "nodes outside a multi-node velocity selection must turn gray");
-    check(!hasDarkOutlinePixel(multiSelectionImage, unselectedNodeCenter,
-                               std::max(0.0, env.outlineRadius - env.outlineWidth),
-                               env.outlineRadius + env.outlineWidth),
+    check(!layerTouches(env.quickScene, songview::TimelineQuickLayer::VelocityNodes,
+                        unselectedNodeProbe, Qt::black),
           "nodes outside a multi-node velocity selection must omit their outlines");
     env.view.cancelVelocityGesture();
     QApplication::processEvents();
     env.view.selectionModel().setNoteSelection({env.notes[0].noteId});
     ++env.live.editCursorTick;
     env.area.refreshLiveState(env.live);
-    const QRect rulerAccentBounds =
-        toPixels(QRectF(double(env.area.plotOrigin() - layout::singlePixel() -
-                               3 * layout::space(layout::Space::Half) - 1),
-                        selectedY - 2.0, double(3 * layout::space(layout::Space::Half) + 2), 4.0),
-                 env.imageScale);
-    check(
-        hasColorNear(velocityImage, rulerAccentBounds, env.area.palette().highlight().color(), 16),
-        "intrinsic ruler paint must preserve the emphasized accent tick");
+    const QRectF rulerAccentBounds(double(env.area.plotOrigin() - layout::singlePixel() -
+                                          3 * layout::space(layout::Space::Half) - 1),
+                                   selectedY - 2.0,
+                                   double(3 * layout::space(layout::Space::Half) + 2), 4.0);
+    const QImage rulerImage = checks::support::captureQuickBand(env.view, env.area);
+    check(!rulerImage.isNull() &&
+              layerTouches(env.quickScene, songview::TimelineQuickLayer::VelocityAxis,
+                           rulerAccentBounds, env.area.palette().highlight().color()),
+          "intrinsic ruler paint must preserve the emphasized accent tick");
     return failures;
 }
 
@@ -555,23 +596,27 @@ int checkEditCursorRepaint(VelocityAreaEnv &env)
     const auto check = [&failures](bool condition, const char *message) {
         velocityFail(failures, condition, message);
     };
-    const qreal imageScale = env.imageScale;
+    const uint64_t viewCursorBefore = env.view.editCursorTick();
+    const auto quickCursorAt = [&env](uint64_t tick) {
+        return env.view.timelinePlotOrigin() + qreal(env.view.contentX(double(tick)));
+    };
     env.live.editCursorTick = 12;
+    env.view.setEditCursorTick(env.live.editCursorTick);
+    QApplication::processEvents();
     env.area.refreshLiveState(env.live);
-    const QImage firstEditCursor = checks::support::captureQuickBand(env.view, env.area);
+    const qreal firstQuickCursor = env.quickView->editRootContentX();
     env.live.editCursorTick = 18;
+    env.view.setEditCursorTick(env.live.editCursorTick);
+    QApplication::processEvents();
     env.area.refreshLiveState(env.live);
-    const QImage secondEditCursor = checks::support::captureQuickBand(env.view, env.area);
-    const qreal cursorX = (double(env.area.plotOrigin()) +
-                           18.0 * env.live.timeZoom / double(env.timeline->ticksPerBeat) -
-                           env.live.horizontalScroll) *
-                          env.imageScale;
-    const QRect cursorBounds(qRound(cursorX) - 2, 0, 5, secondEditCursor.height());
-    check(!samePixels(firstEditCursor, secondEditCursor),
+    const qreal secondQuickCursor = env.quickView->editRootContentX();
+    check(env.quickView->editVisible() && std::abs(firstQuickCursor - quickCursorAt(12)) < 0.001 &&
+              std::abs(secondQuickCursor - quickCursorAt(18)) < 0.001 &&
+              std::abs(secondQuickCursor - firstQuickCursor) > 0.001,
           "moving the edit cursor must repaint the velocity lane");
-    check(hasColorNear(secondEditCursor, cursorBounds,
-                       themes::color(themes::Role::song_view_edit_cursor), 16),
-          "velocity lane must paint the shared edit cursor");
+    env.view.setEditCursorTick(viewCursorBefore);
+    QApplication::processEvents();
+    env.area.refreshLiveState(env.live);
     return failures;
 }
 
@@ -679,9 +724,13 @@ int checkRelativeDragDefersCommit(VelocityAreaRig &rig)
     const double firstDraggedY = firstDraggedLevel
                                      ? rig.env.area.axis().levelToY(int(*firstDraggedLevel))
                                      : rig.env.area.axis().velocityToY(firstPreviewVelocity);
-    const QRect activeDragRing = toPixels(QRectF(rig.nodeX - 6.0, firstDraggedY - 6.0, 4.0, 12.0),
-                                          activeDrag.devicePixelRatio());
-    check(hasColorNear(activeDrag, activeDragRing, rig.env.area.palette().highlight().color(), 16),
+    const QRectF activeDragRing(rig.nodeX - rig.env.expected.nodePaintRadius,
+                                firstDraggedY - rig.env.expected.nodePaintRadius,
+                                2.0 * rig.env.expected.nodePaintRadius,
+                                2.0 * rig.env.expected.nodePaintRadius);
+    check(!activeDrag.isNull() &&
+              layerTouches(rig.env.quickScene, songview::TimelineQuickLayer::VelocityNodes,
+                           activeDragRing, rig.env.area.palette().highlight().color()),
           "dragging a selected velocity node must retain its visible selection ring");
     checks::events::sendMouse(rig.env.area, QEvent::MouseMove, drag, Qt::NoButton, Qt::LeftButton,
                               Qt::NoModifier);
@@ -765,81 +814,59 @@ int checkDragBandOverlay(VelocityAreaRig &rig)
     const auto check = [&failures](bool condition, const char *message) {
         velocityFail(failures, condition, message);
     };
-    const QRect selectorProbe(rig.env.area.plotOrigin() + layout::space(layout::Space::One),
-                              rig.env.area.height() / 3, 2 * layout::space(layout::Space::Eight),
-                              layout::space(layout::Space::Eight));
-    const auto grabSelectorProbe = [&rig, &selectorProbe] {
-        const QImage image = checks::support::captureQuickBand(rig.env.view, rig.env.area);
-        const qreal dpr = image.devicePixelRatio();
-        const int left = qFloor(selectorProbe.left() * dpr);
-        const int top = qFloor(selectorProbe.top() * dpr);
-        const int right = qCeil((selectorProbe.left() + selectorProbe.width()) * dpr);
-        const int bottom = qCeil((selectorProbe.top() + selectorProbe.height()) * dpr);
-        return image.copy(QRect(left, top, right - left, bottom - top));
-    };
-    const QPointF selectorStart(selectorProbe.left(), selectorProbe.top());
-    const QPointF selectorEnd(selectorProbe.right(), selectorProbe.bottom());
+    const QRectF selectorProbe(rig.env.area.plotOrigin() + layout::space(layout::Space::One),
+                               rig.env.area.height() / 3, 2 * layout::space(layout::Space::Eight),
+                               layout::space(layout::Space::Eight));
+    const QPointF selectorStart = selectorProbe.topLeft();
+    const QPointF selectorEnd = selectorProbe.bottomRight();
     const QPointF selectorContractedEnd =
         selectorStart + QPointF(selectorProbe.width() / 2.0, selectorProbe.height() / 2.0);
-    const auto abandonedCorner = [](const QImage &image) {
-        return image.copy(QRect(image.width() * 3 / 4, image.height() * 3 / 4, image.width() / 4,
-                                image.height() / 4));
+    QColor selectionFill = themes::color(themes::Role::song_view_selection_fill);
+    selectionFill.setAlpha(30);
+    const QColor selectionEdge = themes::color(themes::Role::song_view_selection_edge);
+    const auto selectionRect = [&rig, &selectionFill] {
+        return solidLayerRect(rig.env.quickScene, songview::TimelineQuickLayer::VelocityTransient,
+                              selectionFill);
     };
-    const QImage bandBaseline = grabSelectorProbe();
+    const quint64 transientBeforeBand =
+        layerRevision(rig.env, songview::TimelineQuickLayer::VelocityTransient);
     checks::events::sendMouse(rig.env.area, QEvent::MouseButtonPress, selectorStart,
                               Qt::RightButton, Qt::RightButton, Qt::NoModifier);
     checks::events::sendMouse(rig.env.area, QEvent::MouseMove, selectorEnd, Qt::NoButton,
                               Qt::RightButton, Qt::NoModifier);
     QApplication::processEvents();
-    const QImage activeBand = grabSelectorProbe();
-    check(!samePixels(bandBaseline, activeBand),
+    const auto activeSelectionRect = selectionRect();
+    check(layerRevision(rig.env, songview::TimelineQuickLayer::VelocityTransient) >
+                  transientBeforeBand &&
+              activeSelectionRect && activeSelectionRect->contains(selectorProbe.center()) &&
+              layerTouches(rig.env.quickScene, songview::TimelineQuickLayer::VelocityTransient,
+                           selectorProbe, selectionEdge),
           "drag-select must visibly paint its selector overlay");
-    QColor selectionFill = themes::color(themes::Role::song_view_selection_fill);
-    selectionFill.setAlpha(30);
-    const auto blendedChannel = [&selectionFill](int background, int foreground) {
-        return (foreground * selectionFill.alpha() + background * (255 - selectionFill.alpha()) +
-                127) /
-               255;
-    };
-    const auto channelDifference = [](int left, int right) { return std::abs(left - right); };
-    const int interiorMargin = qCeil(2.0 * activeBand.devicePixelRatio());
-    int sampledPixels = 0;
-    int translucentPixels = 0;
-    for (int y = interiorMargin; y < activeBand.height() - interiorMargin; ++y) {
-        for (int x = interiorMargin; x < activeBand.width() - interiorMargin; ++x) {
-            const QColor baselinePixel(bandBaseline.pixel(x, y));
-            const QColor activePixel(activeBand.pixel(x, y));
-            const QColor expectedPixel(blendedChannel(baselinePixel.red(), selectionFill.red()),
-                                       blendedChannel(baselinePixel.green(), selectionFill.green()),
-                                       blendedChannel(baselinePixel.blue(), selectionFill.blue()));
-            ++sampledPixels;
-            if (channelDifference(activePixel.red(), expectedPixel.red()) <= 1 &&
-                channelDifference(activePixel.green(), expectedPixel.green()) <= 1 &&
-                channelDifference(activePixel.blue(), expectedPixel.blue()) <= 1) {
-                ++translucentPixels;
-            }
-        }
-    }
-    check(sampledPixels > 0 && translucentPixels * 2 >= sampledPixels,
+    check(activeSelectionRect && activeSelectionRect->contains(selectorProbe.center()),
           "drag-select must composite the translucent selection fill over velocity content");
     checks::events::sendMouse(rig.env.area, QEvent::MouseMove, selectorContractedEnd, Qt::NoButton,
                               Qt::RightButton, Qt::NoModifier);
     QApplication::processEvents();
-    const QImage contractedBand = grabSelectorProbe();
-    check(!samePixels(bandBaseline, contractedBand) &&
-              samePixels(abandonedCorner(bandBaseline), abandonedCorner(contractedBand)),
+    const auto contractedSelectionRect = selectionRect();
+    const QPointF abandonedPoint = (selectorEnd + selectorContractedEnd) / 2.0;
+    const QPointF contractedInterior = (selectorStart + selectorContractedEnd) / 2.0;
+    check(activeSelectionRect && contractedSelectionRect &&
+              activeSelectionRect->contains(abandonedPoint) &&
+              !contractedSelectionRect->contains(abandonedPoint) &&
+              contractedSelectionRect->contains(contractedInterior) &&
+              contractedSelectionRect->width() < activeSelectionRect->width() &&
+              contractedSelectionRect->height() < activeSelectionRect->height(),
           "contracting drag-select must clear the abandoned selector area");
     checks::events::sendMouse(rig.env.area, QEvent::MouseButtonRelease, selectorContractedEnd,
                               Qt::RightButton, Qt::NoButton, Qt::NoModifier);
     QApplication::processEvents();
-    check(samePixels(bandBaseline, grabSelectorProbe()),
+    check(layerIsEmpty(rig.env.quickScene, songview::TimelineQuickLayer::VelocityTransient),
           "completed drag-select must clear its selector overlay");
 
     rig.env.view.selectionModel().setNoteSelection({rig.env.notes[0].noteId});
     ++rig.env.live.editCursorTick;
     rig.env.area.refreshLiveState(rig.env.live);
     QApplication::processEvents();
-    const QImage cancelledBandBaseline = grabSelectorProbe();
     checks::events::sendMouse(rig.env.area, QEvent::MouseButtonPress, selectorStart,
                               Qt::RightButton, Qt::RightButton, Qt::NoModifier);
     checks::events::sendMouse(rig.env.area, QEvent::MouseMove, selectorEnd, Qt::NoButton,
@@ -850,7 +877,7 @@ int checkDragBandOverlay(VelocityAreaRig &rig)
     QApplication::processEvents();
     check(rig.env.view.selectionModel().noteSelection() ==
                   std::vector<NoteId>{rig.env.notes[0].noteId} &&
-              samePixels(cancelledBandBaseline, grabSelectorProbe()),
+              layerIsEmpty(rig.env.quickScene, songview::TimelineQuickLayer::VelocityTransient),
           "cancelled drag-select must clear its selector overlay and restore selection");
     rig.env.live.documentRevision = rig.env.document.revision();
     rig.env.area.refreshLiveState(rig.env.live);
@@ -957,12 +984,11 @@ int checkStackedNodeHitPriority(VelocityAreaRig &rig)
                                   Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
         QApplication::processEvents();
         const QImage circleHeld = checks::support::captureQuickBand(rig.env.view, rig.env.area);
-        const QRect circleRingBounds = toPixels(
-            QRectF(circleNode.x() - 6.0, circleNode.y() - 6.0, 4.0, 12.0), rig.env.imageScale);
         check(rig.env.view.selectionModel().noteSelection() ==
                       std::vector<NoteId>{overlapNote.noteId} &&
-                  hasColorNear(circleHeld, circleRingBounds,
-                               rig.env.area.palette().highlight().color(), 16),
+                  !circleHeld.isNull() &&
+                  velocityNodeHasColor(rig.env, circleNode,
+                                       rig.env.area.palette().highlight().color()),
               "a circle hit must outrank stem-only overlap and paint one selected ring");
         const QPointF movedRelease = velocityNode(currentFirst);
         checks::events::sendMouse(rig.env.area, QEvent::MouseMove, movedRelease, Qt::NoButton,
@@ -985,14 +1011,12 @@ int checkStackedNodeHitPriority(VelocityAreaRig &rig)
                                   Qt::RightButton, Qt::RightButton, Qt::NoModifier);
         QApplication::processEvents();
         const QImage rightNodeHeld = checks::support::captureQuickBand(rig.env.view, rig.env.area);
-        const QRect rightNodeRingBounds =
-            toPixels(QRectF(rightTargetNode.x() - 6.0, rightTargetNode.y() - 6.0, 4.0, 12.0),
-                     rig.env.imageScale);
         check(
             rig.env.view.selectionModel().noteSelection() ==
                     std::vector<NoteId>{rightTarget.noteId} &&
-                hasColorNear(rightNodeHeld, rightNodeRingBounds,
-                             rig.env.area.palette().highlight().color(), 16),
+                !rightNodeHeld.isNull() &&
+                velocityNodeHasColor(rig.env, rightTargetNode,
+                                     rig.env.area.palette().highlight().color()),
             "plain right press on an unselected velocity node must select and ring it immediately");
         checks::events::sendMouse(rig.env.area, QEvent::MouseButtonRelease, rightTargetNode,
                                   Qt::RightButton, Qt::NoButton, Qt::NoModifier);
@@ -1001,8 +1025,9 @@ int checkStackedNodeHitPriority(VelocityAreaRig &rig)
             checks::support::captureQuickBand(rig.env.view, rig.env.area);
         check(rig.env.view.selectionModel().noteSelection() ==
                       std::vector<NoteId>{rightTarget.noteId} &&
-                  hasColorNear(rightNodeReleased, rightNodeRingBounds,
-                               rig.env.area.palette().highlight().color(), 16),
+                  !rightNodeReleased.isNull() &&
+                  velocityNodeHasColor(rig.env, rightTargetNode,
+                                       rig.env.area.palette().highlight().color()),
               "plain right release must retain its selected velocity node and ring");
         rig.env.view.selectionModel().setNoteSelection(
             {rig.env.notes[0].noteId, rightTarget.noteId});
@@ -1015,13 +1040,11 @@ int checkStackedNodeHitPriority(VelocityAreaRig &rig)
         QApplication::processEvents();
         const QImage selectedRightHeld =
             checks::support::captureQuickBand(rig.env.view, rig.env.area);
-        const QRect selectedRightRingBounds =
-            toPixels(QRectF(selectedRightNode.x() - 6.0, selectedRightNode.y() - 6.0, 4.0, 12.0),
-                     rig.env.imageScale);
         check(rig.env.view.selectionModel().noteSelection() ==
                       std::vector<NoteId>({rig.env.notes[0].noteId, rightTarget.noteId}) &&
-                  hasColorNear(selectedRightHeld, selectedRightRingBounds,
-                               rig.env.area.palette().highlight().color(), 16),
+                  !selectedRightHeld.isNull() &&
+                  velocityNodeHasColor(rig.env, selectedRightNode,
+                                       rig.env.area.palette().highlight().color()),
               "plain right press on a selected velocity node must retain its visual group");
         checks::events::sendMouse(rig.env.area, QEvent::MouseButtonRelease, selectedRightNode,
                                   Qt::RightButton, Qt::NoButton, Qt::NoModifier);
@@ -1030,8 +1053,9 @@ int checkStackedNodeHitPriority(VelocityAreaRig &rig)
             checks::support::captureQuickBand(rig.env.view, rig.env.area);
         check(rig.env.view.selectionModel().noteSelection() ==
                       std::vector<NoteId>({rig.env.notes[0].noteId, rightTarget.noteId}) &&
-                  hasColorNear(selectedRightReleased, selectedRightRingBounds,
-                               rig.env.area.palette().highlight().color(), 16),
+                  !selectedRightReleased.isNull() &&
+                  velocityNodeHasColor(rig.env, selectedRightNode,
+                                       rig.env.area.palette().highlight().color()),
               "plain right release on a selected velocity node must retain its group ring");
         rig.env.document.deleteNotes({overlapNote});
         rig.env.live.documentRevision = rig.env.document.revision();
@@ -1126,10 +1150,10 @@ int checkRampGestureCommits(VelocityAreaRig &rig)
               "holding a velocity ramp must update preview while deferring document changes");
         const QPointF rampQuarter = rampStart + 0.25 * (rampEnd - rampStart);
         const QImage rampPreview = checks::support::captureQuickBand(rig.env.view, rig.env.area);
-        check(hasColorNear(rampPreview,
-                           toPixels(QRectF(rampQuarter.x() - 2.0, rampQuarter.y() - 2.0, 5.0, 5.0),
-                                    rig.env.imageScale),
-                           themes::color(themes::Role::song_view_edit_preview_outline), 24),
+        check(!rampPreview.isNull() &&
+                  layerTouches(rig.env.quickScene, songview::TimelineQuickLayer::VelocityTransient,
+                               QRectF(rampQuarter.x() - 2.0, rampQuarter.y() - 2.0, 5.0, 5.0),
+                               themes::color(themes::Role::song_view_edit_preview_outline)),
               "velocity Shift-drag did not render its ramp line preview");
         checks::events::sendMouse(rig.env.area, QEvent::MouseButtonRelease, rampEnd, Qt::LeftButton,
                                   Qt::NoButton, Qt::ShiftModifier);
@@ -1206,8 +1230,6 @@ int checkRollVelocityDrag(VelocityAreaRig &rig)
     const auto check = [&failures](bool condition, const char *message) {
         velocityFail(failures, condition, message);
     };
-    const qreal outlineRadius = rig.env.outlineRadius;
-    const qreal outlineWidth = rig.env.outlineWidth;
     auto *roll = rig.env.view.findChild<QWidget *>(QStringLiteral("pianoRoll"));
     const auto velocityDragModifiers =
         keymap::Registry::instance().modifierBinding(QStringLiteral("roll.velocity_drag"));
@@ -1286,12 +1308,10 @@ int checkRollVelocityDrag(VelocityAreaRig &rig)
         const QImage rollDragPreview =
             checks::support::captureQuickBand(rig.env.view, rig.env.area);
         const QPointF previewNodeCenter(
-            (double(rig.env.area.plotOrigin()) +
-             double(rig.env.view.contentX(double(dragBeforeFirst.tick)))) *
-                rollDragPreview.devicePixelRatio(),
-            (previewLevel ? rig.env.area.axis().levelToY(int(*previewLevel))
-                          : rig.env.area.axis().velocityToY(firstPreviewVelocity)) *
-                rollDragPreview.devicePixelRatio());
+            double(rig.env.area.plotOrigin()) +
+                double(rig.env.view.contentX(double(dragBeforeFirst.tick))),
+            previewLevel ? rig.env.area.axis().levelToY(int(*previewLevel))
+                         : rig.env.area.axis().velocityToY(firstPreviewVelocity));
         check(rig.env.document.revision() == revisionBeforeRollDrag &&
                   rig.env.document.undoStack()->count() == undoBeforeRollDrag && firstRollPreview &&
                   *firstRollPreview == firstPreviewVelocity && secondRollPreview &&
@@ -1301,9 +1321,8 @@ int checkRollVelocityDrag(VelocityAreaRig &rig)
               "piano-roll velocity preview must stage every selected note before release");
         check(previewLevel && rig.env.area.axis().graduations()[*previewLevel].active,
               "piano-roll velocity drag must update the velocity drawer's active graduation");
-        check(hasDarkOutlinePixel(rollDragPreview, previewNodeCenter,
-                                  std::max(0.0, rig.env.outlineRadius - rig.env.outlineWidth),
-                                  rig.env.outlineRadius + rig.env.outlineWidth),
+        check(!rollDragPreview.isNull() &&
+                  velocityNodeHasColor(rig.env, previewNodeCenter, Qt::black),
               "piano-roll velocity drag must move the velocity drawer node before release");
         checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, rollDragPosition,
                                   Qt::LeftButton, Qt::NoButton, velocityDragModifiers);
@@ -1457,6 +1476,8 @@ int checkDetentUnlockGestures(VelocityAreaRig &rig)
             QApplication::processEvents();
             const QImage directSoundRuler =
                 checks::support::captureQuickBand(rig.env.view, rig.env.area);
+            const quint64 directAxisRevision =
+                layerRevision(rig.env, songview::TimelineQuickLayer::VelocityAxis);
             rig.env.voicegroup.voices[0] = rig.env.wave;
             rig.env.area.songChanged();
             check(rig.env.detentToggle->isVisible() && rig.env.detentToggle->isEnabled(),
@@ -1470,9 +1491,12 @@ int checkDetentUnlockGestures(VelocityAreaRig &rig)
                 qFloor(double(detentBounds.top() - areaOrigin.y()) * rulerScale);
             const QRect rulerBounds(0, 0, qCeil(double(rig.env.area.plotOrigin()) * rulerScale),
                                     rulerHeight);
-            check(
-                samePixels(directSoundRuler.copy(rulerBounds), unlockedPsgRuler.copy(rulerBounds)),
-                "disabled PSG detents must show the continuous sample-voice ruler");
+            check(!directSoundRuler.isNull() && !unlockedPsgRuler.isNull() &&
+                      layerRevision(rig.env, songview::TimelineQuickLayer::VelocityAxis) >
+                          directAxisRevision &&
+                      samePixels(directSoundRuler.copy(rulerBounds),
+                                 unlockedPsgRuler.copy(rulerBounds)),
+                  "disabled PSG detents must show the continuous sample-voice ruler");
             const int toggleUnlockedVelocity = 73;
             const QPointF toggleUnlockedRuler(
                 double(rig.env.area.plotOrigin()) - 1.0,
@@ -1492,15 +1516,11 @@ int checkDetentUnlockGestures(VelocityAreaRig &rig)
                   "disabled velocity detents must write exact PSG velocities without a modifier");
             const QImage unlockedNodeImage =
                 checks::support::captureQuickBand(rig.env.view, rig.env.area);
-            const qreal unlockedNodeScale = unlockedNodeImage.devicePixelRatio();
             const QPointF unlockedNodeCenter(
-                rig.paintGestureX(toggleUnlockedFirst) * unlockedNodeScale,
-                rig.env.area.axis().velocityToY(toggleUnlockedVelocity) * unlockedNodeScale);
-            check(hasDarkOutlinePixel(
-                      unlockedNodeImage, unlockedNodeCenter,
-                      std::max(0.0, rig.env.expected.nodePaintRadius * unlockedNodeScale -
-                                        rig.env.expected.nodeOutlineDipWidth * unlockedNodeScale),
-                      rig.env.expected.nodePaintRadius * unlockedNodeScale),
+                rig.paintGestureX(toggleUnlockedFirst),
+                rig.env.area.axis().velocityToY(toggleUnlockedVelocity));
+            check(!unlockedNodeImage.isNull() &&
+                      velocityNodeHasColor(rig.env, unlockedNodeCenter, Qt::black),
                   "disabled velocity detents must keep idle nodes at exact velocity positions");
             rig.env.detentToggle->click();
             check(rig.env.detentToggle->isChecked(),
@@ -1580,16 +1600,12 @@ int checkDetentUnlockGestures(VelocityAreaRig &rig)
                                   Qt::LeftButton, Qt::NoModifier);
         const QImage unlockedPaintPreview =
             checks::support::captureQuickBand(rig.env.view, rig.env.area);
-        const qreal unlockedPaintScale = unlockedPaintPreview.devicePixelRatio();
         const QPointF unlockedPaintCenter(
-            rig.paintGestureX(paintUnlockedFirst) * unlockedPaintScale,
-            rig.env.area.axis().velocityToY(unlockedPaintFirstVelocity) * unlockedPaintScale);
+            rig.paintGestureX(paintUnlockedFirst),
+            rig.env.area.axis().velocityToY(unlockedPaintFirstVelocity));
         check(rig.env.document.revision() == revisionBeforeUnlockedPaint &&
-                  hasDarkOutlinePixel(
-                      unlockedPaintPreview, unlockedPaintCenter,
-                      std::max(0.0, rig.env.expected.nodePaintRadius * unlockedPaintScale -
-                                        rig.env.expected.nodeOutlineDipWidth * unlockedPaintScale),
-                      rig.env.expected.nodePaintRadius * unlockedPaintScale),
+                  !unlockedPaintPreview.isNull() &&
+                  velocityNodeHasColor(rig.env, unlockedPaintCenter, Qt::black),
               "unlocked paint preview must remain at its continuous y position");
         checks::events::sendMouse(rig.env.area, QEvent::MouseButtonRelease, unlockedPaintEnd,
                                   Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
@@ -1921,12 +1937,19 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         drawerSections
             ? drawerSections->findChild<QToolButton *>(QStringLiteral("automationDrawerToggle"))
             : nullptr;
+    auto *quickView =
+        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    auto *quickScene = view.findChild<songview::TimelineQuickScene *>();
+    check(quickView && quickScene,
+          "concrete SongView should expose its retained Quick velocity renderer");
+    if (!quickView || !quickScene)
+        return 1;
     auto &area = *areaPtr;
     DrawerPageLiveState live;
     VelocityAreaEnv env{document, timeline,       voicegroup, directSound,   square,
                         wave,     noise,          notes,      view,          area,
                         drawer,   drawerSections, velToggle,  automationBar, automationToggle,
-                        nullptr,  live,           expected};
+                        nullptr,  quickScene,     quickView,  live,          expected};
     VelocityAreaRig rig{env, VelocityMap::resolve(&noise, notes[0].key)};
     failures += checkDrawerToggleGeometry(env);
     area.resize(expected.plotOrigin + layout::space(layout::Space::Eight),

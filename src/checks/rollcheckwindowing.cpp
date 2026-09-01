@@ -16,7 +16,9 @@
 #include "core/songdocument.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
+#include "ui/playheadoverlay.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 namespace {
 
@@ -39,6 +41,16 @@ bool waitForNativeWindowExposure(QWidget &widget)
         QThread::msleep(10);
     } while (elapsed.elapsed() < 1000);
     return false;
+}
+
+template <typename T>
+T *findDirectWidgetChild(QWidget &owner)
+{
+    for (QWidget *child : owner.findChildren<QWidget *>(QString{}, Qt::FindDirectChildrenOnly)) {
+        if (auto *typed = dynamic_cast<T *>(child))
+            return typed;
+    }
+    return nullptr;
 }
 
 } // namespace
@@ -72,6 +84,19 @@ int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel)
 
     if (!waitForNativeWindowExposure(view))
         fail("SongView did not create an exposed native window");
+
+    auto *quick = view.findChild<songview::TimelineQuickView *>(
+        QStringLiteral("timelineQuickCanvas"), Qt::FindDirectChildrenOnly);
+    auto *overlay = findDirectWidgetChild<songview::PlayheadOverlay>(view);
+    if (!quick || !overlay) {
+        fail("SongView did not create direct Quick and native playhead children");
+    } else {
+        const QObjectList stackingOrder = view.children();
+        if (overlay->parentWidget() != &view || overlay->geometry() != view.rect())
+            fail("playhead overlay was reparented away from the SongView");
+        if (stackingOrder.indexOf(quick) >= stackingOrder.indexOf(overlay))
+            fail("native playhead overlay is stacked below the retained Quick host");
+    }
 
     const int track = view.selectionModel().primaryTrack();
     auto *row = view.findChild<QWidget *>(QStringLiteral("trackHeaderRow%1").arg(track));

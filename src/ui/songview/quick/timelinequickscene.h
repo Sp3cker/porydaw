@@ -84,6 +84,7 @@ class TimelineQuickTextModel final : public QAbstractListModel
         FontRole,
         HorizontalAlignmentRole,
         VerticalAlignmentRole,
+        ClipRectRole,
     };
 
     struct Record {
@@ -94,6 +95,7 @@ class TimelineQuickTextModel final : public QAbstractListModel
         QFont font;
         Qt::Alignment horizontalAlignment = Qt::AlignLeft;
         Qt::Alignment verticalAlignment = Qt::AlignVCenter;
+        QRectF clipRect;
     };
 
     explicit TimelineQuickTextModel(QObject *parent = nullptr);

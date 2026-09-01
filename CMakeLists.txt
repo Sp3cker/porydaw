@@ -277,6 +277,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/pitchprojection.h
     src/ui/songview.cpp
     src/ui/songview.h
+    src/ui/playheadoverlay.cpp
+    src/ui/playheadoverlay.h
     src/ui/songview/otherstrip.cpp
     src/ui/songview/otherstrip.h
     src/ui/songview/voicepicker.cpp
@@ -386,14 +388,25 @@ qt_add_library(porydaw_app STATIC
 if(APPLE)
     target_sources(porydaw_app PRIVATE
         src/ui/nativelayerutils_macos_p.h
+        src/ui/playheadrenderer_macos.mm
         src/ui/activity/trackactivityrenderer_macos.mm
+        src/ui/songview/quick/automationhoverpassthrough_macos.mm
     )
+    target_compile_definitions(porydaw_app PUBLIC PORYDAW_USE_MACOS_PLAYHEAD_IMAGES)
     find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
     find_library(QUARTZCORE_FRAMEWORK QuartzCore REQUIRED)
     target_link_libraries(porydaw_app PRIVATE
         ${APPKIT_FRAMEWORK}
         ${QUARTZCORE_FRAMEWORK}
     )
+elseif(WIN32)
+    target_sources(porydaw_app PRIVATE
+        src/ui/playheadrenderer_dcomp.cpp
+    )
+    target_link_libraries(porydaw_app PRIVATE d2d1 d3d11 dcomp dxgi)
+endif()
+if(APPLE OR WIN32)
+    target_compile_definitions(porydaw_app PUBLIC PORYDAW_USE_DIRECT_PLAYHEAD)
 endif()
 target_include_directories(porydaw_app PUBLIC
     src
@@ -499,6 +512,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/rollcheck/scale_editing.cpp
         src/checks/rollcheckwindowing.cpp
         src/checks/rollcheckplayhead.cpp
+        src/checks/rollcheckplayhead_fallback.cpp
         src/checks/rollcheckplayhead.h
         src/checks/viewcheck.cpp
         src/checks/roundtrip.cpp
@@ -602,6 +616,8 @@ if(PORYDAW_BUILD_CHECKS)
     if(APPLE)
         target_sources(porydaw_checks PRIVATE
             src/checks/trackactivitymetercheck_macos.mm
+            src/checks/rollcheckplayhead_macos.mm
+            src/checks/automationgesturecheck/nativehover_macos.mm
         )
     endif()
     if(APPLE)

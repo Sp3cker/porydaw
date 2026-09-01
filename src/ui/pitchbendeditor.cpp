@@ -70,8 +70,7 @@ class PitchBendCloseController final : public QObject
             m_dismiss();
             return false;
         }
-        if (event->type() == QEvent::ApplicationDeactivate ||
-            (event->type() == QEvent::WindowDeactivate && watched == m_popup->window())) {
+        if (event->type() == QEvent::ApplicationDeactivate) {
             m_dismiss();
             return false;
         }
@@ -91,7 +90,7 @@ namespace songview {
 PitchBendEditor::PitchBendEditor(::SongView *songView, SongDocument *document, const DocNote &note,
                                  QPointer<QWidget> focusTarget,
                                  std::function<bool(QPointF)> focusNoteUnderCursor)
-    : QFrame(songView->window())
+    : QFrame(songView->window(), Qt::Tool | Qt::FramelessWindowHint)
     , m_songView(songView)
     , m_document(document)
     , m_focusTarget(focusTarget)
@@ -101,6 +100,7 @@ PitchBendEditor::PitchBendEditor(::SongView *songView, SongDocument *document, c
     , m_unterminated(note.unterminated())
 {
     setObjectName(QStringLiteral("pitchBendPopup"));
+    setAttribute(Qt::WA_OpaquePaintEvent);
     setFixedSize(kPopupWidth, kPopupHeight);
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
@@ -202,9 +202,10 @@ void PitchBendEditor::openAt(const QRect &noteGlobal, double noteFraction)
     const QPoint popupPos = hostClippedPopupPosition(noteHost, host->rect(), size());
     m_pitchGraph->setKeyboardFraction(fraction);
     m_modGraph->setKeyboardFraction(fraction);
-    move(popupPos);
+    move(host->mapToGlobal(popupPos));
     show();
     raise();
+    activateWindow();
     m_pitchGraph->setFocus(Qt::PopupFocusReason);
 }
 

@@ -124,7 +124,7 @@ void AutomationCanvas::beginPencilPress(const QMouseEvent &event, LaneHandle han
                                                  double(mapped.point.value)};
     auto stroke = AutomationPencilGesture::start(
         target, lane.minimumValue(), lane.maximumValue(), timeline->lengthTicks,
-        m_page->document()->ticksPerClock(), lane.points(), sample, mapped.cell);
+        m_page->document()->ticksPerClock(), lane.points(), lane.leadIn(), sample, mapped.cell);
     if (!stroke)
         return;
     PencilGesture pencil{handle, std::move(*stroke)};

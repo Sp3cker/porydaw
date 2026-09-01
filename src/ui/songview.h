@@ -58,6 +58,8 @@ class TimeRuler;
 class EditorSelectionModel;
 class PianoRoll;
 class TimelineQuickView;
+class PlayheadOverlay;
+struct PlayheadBand;
 class OtherStrip;
 class TrackHeaderPanel;
 class TrackHeaderRow;
@@ -605,6 +607,7 @@ class SongView : public QWidget
     };
 
     void refreshGeometry();
+    std::vector<songview::PlayheadBand> playheadClipBands() const;
     // Both exits floor at the clock base: the result is >= 1 for any
     // segment, so snap math may divide by it unchecked.
     uint64_t gridTicksIn(const GridSeg &seg, double pixelsPerTick, bool snap = false) const;
@@ -621,7 +624,7 @@ class SongView : public QWidget
     // Fold-relevant model change (song swap, track switch): rebuild now, or
     // defer while a pointer gesture holds the projection lock.
     void requestProjectionRebuild();
-    void syncTimelineQuickChrome();
+    void syncTimelineIndicators();
     // Guards construction and teardown windows around the SongView-owned host.
     void requestPianoRollQuickUpdate(songview::PianoRollQuickDirtySet dirty);
     void syncTimelineQuickAppearance();
@@ -737,6 +740,7 @@ class SongView : public QWidget
     songview::TrackHeaderPanel *m_headers = nullptr;
     songview::PianoRoll *m_roll = nullptr;
     QPointer<songview::TimelineQuickView> m_quickView;
+    songview::PlayheadOverlay *m_playheadOverlay = nullptr;
     QStackedWidget *m_rollStack = nullptr; // page 0: roll (+vbar), page 1: event list
     EventListView *m_events = nullptr;
     songview::OtherStrip *m_strip = nullptr;

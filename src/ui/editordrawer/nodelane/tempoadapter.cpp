@@ -45,7 +45,7 @@ std::optional<NodePoint> TempoLane::leadIn() const
     if (!document)
         return std::nullopt;
     const auto &tempoPoints = document->tempoPoints();
-    if (tempoPoints.empty() || tempoPoints.front().tick == 0)
+    if (!tempoPoints.empty() && tempoPoints.front().tick == 0)
         return std::nullopt;
     return NodePoint{0, CoreTimeDefaults::kTempoBpm};
 }

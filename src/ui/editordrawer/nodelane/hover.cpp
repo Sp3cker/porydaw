@@ -272,6 +272,7 @@ QRegion NodeLaneHoverState::updateHoverValueLabel(const NodeLaneHoverTarget &tar
     }
     auto &label = hoverValueLabel;
     label.lane = hover.lane;
+    label.text = text;
     const auto &fontCache = valueLabelFontCache(target.font);
     label.font = fontCache.font;
     const QRect plot = nodelane::plotRect(body, geometry);

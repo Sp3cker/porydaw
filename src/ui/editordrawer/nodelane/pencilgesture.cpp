@@ -60,15 +60,20 @@ bool collinearForward(double previousDeltaAxis, double previousDeltaValue, doubl
 
 } // namespace
 
-std::optional<AutomationPencilGesture>
-AutomationPencilGesture::start(Target target, int minimumValue, int maximumValue,
-                               uint64_t songEndTick, uint64_t documentClockTicks,
-                               std::vector<NodeLaneEdit::Point> originalPoints, Sample firstSample,
-                               AutomationGridCell firstCell)
+std::optional<AutomationPencilGesture> AutomationPencilGesture::start(
+    Target target, int minimumValue, int maximumValue, uint64_t songEndTick,
+    uint64_t documentClockTicks, std::vector<NodeLaneEdit::Point> originalPoints,
+    std::optional<NodePoint> leadIn, Sample firstSample, AutomationGridCell firstCell)
 {
     if (!target.lane.valid() || minimumValue > maximumValue || documentClockTicks == 0 ||
         !finiteSample(firstSample) || !validCell(firstCell, songEndTick))
         return std::nullopt;
+    if (leadIn) {
+        const auto position = std::lower_bound(originalPoints.cbegin(), originalPoints.cend(),
+                                               leadIn->tick, lessPointTick);
+        if (position == originalPoints.cend() || position->tick != leadIn->tick)
+            originalPoints.insert(position, *leadIn);
+    }
     return AutomationPencilGesture(target, minimumValue, maximumValue, songEndTick,
                                    documentClockTicks, std::move(originalPoints), firstSample,
                                    firstCell);

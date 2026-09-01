@@ -121,6 +121,8 @@ int changedRoles(const TimelineQuickTextModel::Record &oldRecord,
         roles |= 1 << 4;
     if (oldRecord.verticalAlignment != newRecord.verticalAlignment)
         roles |= 1 << 5;
+    if (oldRecord.clipRect != newRecord.clipRect)
+        roles |= 1 << 6;
     return roles;
 }
 
@@ -139,6 +141,8 @@ QList<int> roleList(int mask)
         roles.append(TimelineQuickTextModel::HorizontalAlignmentRole);
     if (mask & (1 << 5))
         roles.append(TimelineQuickTextModel::VerticalAlignmentRole);
+    if (mask & (1 << 6))
+        roles.append(TimelineQuickTextModel::ClipRectRole);
     return roles;
 }
 
@@ -152,6 +156,7 @@ TimelineQuickTextModel::TimelineQuickTextModel(QObject *parent) : QAbstractListM
     m_roleNames.insert(FontRole, QByteArrayLiteral("labelFont"));
     m_roleNames.insert(HorizontalAlignmentRole, QByteArrayLiteral("labelHorizontalAlignment"));
     m_roleNames.insert(VerticalAlignmentRole, QByteArrayLiteral("labelVerticalAlignment"));
+    m_roleNames.insert(ClipRectRole, QByteArrayLiteral("labelClipRect"));
 }
 
 int TimelineQuickTextModel::rowCount(const QModelIndex &parent) const
@@ -180,6 +185,8 @@ QVariant TimelineQuickTextModel::data(const QModelIndex &index, int role) const
         return static_cast<int>(record.horizontalAlignment);
     case VerticalAlignmentRole:
         return static_cast<int>(record.verticalAlignment);
+    case ClipRectRole:
+        return record.clipRect;
     }
     return {};
 }
