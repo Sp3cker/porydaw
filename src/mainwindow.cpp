@@ -34,7 +34,7 @@
 #include <windows.h>
 #endif
 
-#include <utility>
+#include <functional>
 
 #include "audio/wavexport.h"
 #include "core/miditimeline.h"
@@ -159,6 +159,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
                   .arg(m_audio.backendName()));
     // Tabs build their timeline projections at the engine's resolved rate.
     m_workspace->setAudioSampleRate(m_audio.sampleRate());
+    // Publish both the initialized and unavailable states so WorkspaceUi has
+    // no separate audition-engine installation invariant.
+    WorkspaceUi::SampleAuditionEngineBorrow auditionEngine = std::nullopt;
+    if (m_audioOk)
+        auditionEngine.emplace(m_audio);
+    m_workspace->setSampleAuditionEngine(auditionEngine);
 
     m_projectWorkspace = std::make_unique<ProjectWorkspace>();
     // Direct publication wiring — no relays. WorkspaceUi's apply slots are

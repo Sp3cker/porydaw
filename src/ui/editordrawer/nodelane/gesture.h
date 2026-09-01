@@ -138,10 +138,6 @@ struct SweepGesture {
     std::optional<QPointF> dragPosition(QPointF position, bool activate, int activationDistance);
     template <typename NextGridTick>
     std::vector<NodePoint> finishedPoints(bool fineGrid, NextGridTick &&nextGridTick) const;
-    template <typename NextGridTick>
-    NodeLaneEdit::Completion finish(LaneHandle handle, uint64_t revision,
-                                    const std::vector<NodePoint> &existing, bool fineGrid,
-                                    NextGridTick &&nextGridTick) const;
 };
 
 struct PencilGesture {
@@ -332,19 +328,4 @@ std::vector<NodePoint> SweepGesture::finishedPoints(bool fineGrid,
         tick = nextGridTick(tick, fineGrid, last);
     }
     return result;
-}
-
-template <typename NextGridTick>
-NodeLaneEdit::Completion SweepGesture::finish(LaneHandle handle, uint64_t revision,
-                                              const std::vector<NodePoint> &existing, bool fineGrid,
-                                              NextGridTick &&nextGridTick) const
-{
-    std::vector<NodePoint> result =
-        finishedPoints(fineGrid, std::forward<NextGridTick>(nextGridTick));
-    if (result.empty())
-        return {};
-    const uint64_t tickBegin = result.front().tick;
-    const uint64_t tickEnd = result.back().tick;
-    const NodeLaneEdit laneEdit({handle, revision}, existing);
-    return laneEdit.replacePointRange(tickBegin, tickEnd, std::move(result));
 }

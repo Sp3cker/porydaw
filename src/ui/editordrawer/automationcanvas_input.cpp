@@ -450,22 +450,15 @@ void AutomationCanvas::mouseDoubleClickEvent(QMouseEvent *event)
     m_hoverState.previewValueLabel = {};
     setGestureActive(false);
     const AutomationProjection proj = projection();
-    const uint64_t tick = m_page->snapTick(proj.rawTickAt(event->position().x()),
-                                           event->modifiers() & Qt::AltModifier);
-    int value = mappedForLane(handle, event->position(), false, false, proj).value;
+    const bool fineGrid = event->modifiers() & Qt::AltModifier;
+    const uint64_t tick = m_page->snapTick(proj.rawTickAt(event->position().x()), fineGrid);
+    int value = mappedForLane(handle, event->position(), fineGrid, false, proj).value;
     bool accepted = lane->promptValue(this, value, &value);
     if (!accepted)
         return;
-    NodeLane *target = laneSlot->lane;
-    if (!target)
-        return;
-    const std::vector<NodePoint> existing = target->points();
-    for (const NodePoint &point : existing) {
-        if (point.tick == tick && point.value == value)
-            return;
-    }
-    target->replaceSpan(tick, tick, {{tick, value}});
-    m_page->requestRefresh();
+    if (commitHeldGridSpan(handle, std::vector<NodePoint>{{tick, value}}, fineGrid,
+                           NodeLaneEdit::LeadingPointPolicy::Reduce))
+        m_page->requestRefresh();
 }
 
 void AutomationCanvas::keyPressEvent(QKeyEvent *event)

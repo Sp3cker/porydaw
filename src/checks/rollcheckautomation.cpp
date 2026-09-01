@@ -28,8 +28,6 @@
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/cclanes.h"
 #include "ui/editordrawer/editordrawer.h"
-#include "ui/editordrawer/nodelane/gesture.h"
-#include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
 
@@ -301,197 +299,6 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
           QStringLiteral("middle-button automation pan stopped after its first scroll refresh"));
     view.setEditorHorizontalScroll(0.0);
     live.horizontalScroll = 0.0;
-    // ---- 3 cheap-fix regression oracles (template / mappedForLane / GestureCommit) ----
-    {
-        // 1. Sweep template stepping: extendSweepPoints must interpolate without std::function
-        SweepGesture g;
-        g.lane = LaneHandle{0};
-        g.current = {10, 100};
-        g.previousRawTick = 0.0;
-        g.previousValue = 0;
-        g.points.clear();
-        auto stepOne = [](uint64_t t, bool, uint64_t) -> uint64_t { return t + 1; };
-        extendSweepPoints(g, 0, 10, 10.0, false, stepOne);
-        bool sweepOk = g.points.size() == 11;
-        for (size_t i = 0; i < g.points.size() && sweepOk; ++i) {
-            if (g.points[i].tick != i || g.points[i].value != int(i) * 10)
-                sweepOk = false;
-        }
-        check(sweepOk, QStringLiteral(
-                           "Sweep extendSweepPoints template did not interpolate 0..10 -> 0..100"));
-        SweepGesture g2;
-        g2.lane = LaneHandle{0};
-        g2.current = {0, 0};
-        g2.previousRawTick = 0.0;
-        g2.previousValue = 0;
-        NodePoint mapped{5, 50};
-        g2.update(mapped, 0, 5, 5.0, false, stepOne);
-        check(g2.current.tick == 5 && g2.current.value == 50 && g2.points.size() >= 6,
-              QStringLiteral("Sweep::update template did not forward to extendSweepPoints"));
-        SweepGesture ramp;
-        ramp.mode = SweepGesture::Mode::Ramp;
-        ramp.anchor = {0, 0};
-        ramp.current = {10, 100};
-        std::vector<NodePoint> existing;
-        auto rampCompletion =
-            ramp.finish(LaneHandle{0}, document.revision(), existing, false, stepOne);
-        bool rampOk = !rampCompletion.unchanged && rampCompletion.points.size() == 11 &&
-                      rampCompletion.points.front().value == 0 &&
-                      rampCompletion.points.back().value == 100;
-        check(rampOk, QStringLiteral("Sweep ramp finish did not step via nextGridTick"));
-    }
-    {
-        // 2. mappedForLane core: updateValuePoint with snap-value neutral snapping
-        const int panTop = automationRowTop(page, pan);
-        check(panTop >= 0, QStringLiteral("pan lane not found for snap-value test"));
-        if (panTop >= 0) {
-            const auto it = state.laneHeights.find(pan);
-            const int shared = state.laneHeight > 0 ? state.laneHeight : expected.defaultRowHeight;
-            const int panHeight = std::clamp(it == state.laneHeights.cend() ? shared : it->second,
-                                             expected.minimumRowHeight, expected.maximumRowHeight);
-            const QRect panBody(0, panTop, page.canvas()->width(), panHeight);
-            AutomationProjection proj(projectionGeometry, &page);
-            CCLaneAdapter panLane(document, 0, pan.controller);
-            const int span = panLane.maximumValue() - panLane.minimumValue();
-            const int snapThresh =
-                span * projectionGeometry.neutralSnapRadius / std::max(1, panHeight);
-            int yNear = -1;
-            int vNear = -1;
-            for (int y = panTop; y < panTop + panHeight; ++y) {
-                int v = qRound(AutomationProjection::valueAtY(panBody, projectionGeometry,
-                                                              panLane.minimumValue(),
-                                                              panLane.maximumValue(), qreal(y)));
-                if (yNear < 0 && v != 64 && std::abs(v - 64) <= snapThresh &&
-                    std::abs(v - 64) > 0) {
-                    yNear = y;
-                    vNear = v;
-                }
-            }
-            check(yNear >= 0, QStringLiteral("yNear not found for snap-value test"));
-            if (yNear >= 0) {
-                NodePoint p;
-                updateValuePoint(proj, panLane, panBody, p, yNear, 100, false,
-                                 projectionGeometry.neutralSnapRadius, 64);
-                const bool withoutSnapValue = p.value == vNear;
-                updateValuePoint(proj, panLane, panBody, p, yNear, 100, true,
-                                 projectionGeometry.neutralSnapRadius, 64);
-                const bool withSnapValue = p.value == 64;
-                check(withoutSnapValue && withSnapValue,
-                      QStringLiteral("updateValuePoint snap-value did not snap %1->64 for pan")
-                          .arg(vNear));
-            }
-            const qreal yAt64f = AutomationProjection::valueY(
-                panBody, projectionGeometry, panLane.minimumValue(), panLane.maximumValue(), 64);
-            const int yAt64 = qRound(yAt64f);
-            NodePoint p;
-            updateValuePoint(proj, panLane, panBody, p, yAt64, 200, true,
-                             projectionGeometry.neutralSnapRadius, 64);
-            check(
-                p.value == 64 && p.tick == 200,
-                QStringLiteral("updateValuePoint with snap-value corrupted tick/value at neutral"));
-        }
-    }
-    {
-        // 3. Domain-neutral NodeDragGesture outcomes.
-        const auto laneNode = [](const DocLanePoint &point, NodePoint current) {
-            return NodeDrag{LaneHandle{0}, {point.tick, point.value}, current, 0, 127};
-        };
-        {
-            NodeDragGesture gesture;
-            const NodeDragFinish finish = gesture.finish();
-            check(finish.release == PointDragRelease::NoOp && !finish.changed,
-                  QStringLiteral("empty NodeDragGesture should finish as unchanged NoOp"));
-        }
-        {
-            NodeDragGesture gesture;
-            const DocLanePoint original{0, 7, 24, 60};
-            gesture.points = {laneNode(original, {24, 60})};
-            gesture.drag.press({100.0, 100.0}, false);
-            const NodeDragFinish finish = gesture.finish();
-            check(finish.release == PointDragRelease::NoOp && !finish.changed,
-                  QStringLiteral("Shift stationary node drag should be unchanged NoOp"));
-        }
-        {
-            NodeDragGesture gesture;
-            const DocLanePoint original{0, 7, 24, 60};
-            gesture.points = {laneNode(original, {24, 60})};
-            gesture.drag.press({100.0, 100.0}, true);
-            const NodeDragFinish finish = gesture.finish();
-            check(finish.release == PointDragRelease::StationaryDelete && !finish.changed,
-                  QStringLiteral("stationary node drag did not report deletion"));
-        }
-        {
-            NodeDragGesture gesture;
-            const DocLanePoint original{0, 7, 24, 60};
-            gesture.points = {laneNode(original, {24, 60})};
-            gesture.drag.press({100.0, 100.0}, true);
-            gesture.drag.dragSlop.markExceeded({105.0, 100.0});
-            const NodeDragFinish unchanged = gesture.finish();
-            check(unchanged.release == PointDragRelease::Move && !unchanged.changed,
-                  QStringLiteral("unchanged dragged node should be an unchanged Move"));
-
-            gesture.points.front().current = {30, 80};
-            const NodeDragFinish moved = gesture.finish();
-            check(moved.release == PointDragRelease::Move && moved.changed && moved.dTick == 6,
-                  QStringLiteral("changed node drag did not report its tick delta"));
-        }
-        {
-            NodeDragGesture gesture;
-            const DocLanePoint original0{0, 7, 24, 60};
-            const DocLanePoint original1{0, 7, 48, 80};
-            gesture.points = {
-                laneNode(original0, {30, 70}),
-                laneNode(original1, {54, 90}),
-            };
-            gesture.selectionDrag = true;
-            gesture.drag.press({100.0, 100.0}, true);
-            gesture.drag.dragSlop.markExceeded({105.0, 100.0});
-            const NodeDragFinish finish = gesture.finish();
-            check(finish.release == PointDragRelease::Move && finish.changed && finish.dTick == 6 &&
-                      finish.selectionDrag && gesture.points[0].current.tick == 30 &&
-                      gesture.points[1].current.tick == 54,
-                  QStringLiteral("multi-node drag outcome lost shared movement state"));
-        }
-        {
-            const DocLanePoint original{0, 7, 24, 60};
-            PhantomGesture gesture;
-            gesture.point = laneNode(original, {24, 60});
-            gesture.drag.press({100.0, 100.0}, false);
-            gesture.update({PointDragUpdate::Phase::Reset, {}, AxisLock::None}, 127);
-            check(gesture.point.current.tick == 24 && gesture.point.current.value == 60,
-                  QStringLiteral("phantom reset did not restore its source point"));
-            gesture.drag.dragSlop.markExceeded({100.0, 110.0});
-            gesture.update({PointDragUpdate::Phase::Dragging, {}, AxisLock::None}, 200);
-            const auto moved = gesture.finish();
-            check(moved && moved->original.tick == moved->current.tick &&
-                      moved->current.value == 127,
-                  QStringLiteral("phantom drag did not stay value-only and clamp to its range"));
-        }
-    }
-    {
-        using LaneEdit = NodeLaneEdit;
-        const auto target = LaneEdit::Target{LaneHandle{0}, document.revision()};
-        const auto pointRange = LaneEdit(target, {{24, 64}, {48, 64}});
-        const auto identical = pointRange.replacePointRange(24, 48, {{24, 64}, {48, 64}});
-        check(identical.unchanged,
-              QStringLiteral("identical automation point range was not unchanged"));
-        const auto structurallyDifferent = pointRange.replacePointRange(24, 48, {{24, 64}});
-        check(!structurallyDifferent.unchanged,
-              QStringLiteral("point range used held-value equality instead of exact points"));
-
-        const auto heldSpan = LaneEdit(target, {{0, 20}, {24, 60}, {72, 90}});
-        const auto restored = heldSpan.replaceHeldSpan(24, 48, 96, 0, 127, {{24, 80}});
-        check(!restored.unchanged && restored.points.size() == 2 && restored.points[0].tick == 24 &&
-                  restored.points[0].value == 80 && restored.points[1].tick == 48 &&
-                  restored.points[1].value == 60,
-              QStringLiteral("held-span replacement did not restore its endpoint value"));
-        const auto flat = heldSpan.replaceHeldSpan(36, 48, 96, 0, 127, {{36, 60}});
-        check(flat.unchanged && flat.points.empty(),
-              QStringLiteral("flat held-span replacement was not reduced to an empty no-op"));
-        const auto deletion = heldSpan.replaceHeldSpan(24, 96, 96, 0, 127, {});
-        check(!deletion.unchanged && deletion.points.empty(),
-              QStringLiteral("empty held-span deletion was treated as unchanged"));
-    }
     const auto &rows = page.canvas()->rows();
     const bool voiceIsCcRow = std::any_of(rows.cbegin(), rows.cend(), [](const AutomationRow &row) {
         return row.id.controller == DOC_CC_VOICE;
@@ -745,6 +552,53 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     waitForTimers(0);
     check(!normalDoubleClickDialog && document.revision() == normalDoubleClickRevision,
           QStringLiteral("node double-click opened value entry after single-click delete"));
+    const uint64_t doubleClickCellEnd =
+        AutomationProjection(projectionGeometry, &page).snapCellAt(normalNodeTick).tickEnd;
+    document.writeLanePoints(0, pan.controller, 0, timeline->lengthTicks,
+                             {{0, 20}, {doubleClickCellEnd, 60}});
+    page.documentChanged();
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, normalNodePoint,
+                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, normalNodePoint,
+                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    bool doubleClickValueDialog = false;
+    const uint64_t doubleClickRevision = document.revision();
+    const int doubleClickUndo = document.undoStack()->index();
+    QTimer::singleShot(0, [&] {
+        if (auto *dialog = qobject_cast<QInputDialog *>(QApplication::activeModalWidget())) {
+            doubleClickValueDialog = true;
+            dialog->setIntValue(16);
+            dialog->accept();
+        }
+    });
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonDblClick, normalNodePoint,
+                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, normalNodePoint,
+                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    waitForTimers(0);
+    const auto doubleClickPoints = document.lanePoints(0, pan.controller);
+    QStringList doubleClickState;
+    for (const auto &point : doubleClickPoints)
+        doubleClickState.push_back(QStringLiteral("%1:%2").arg(point.tick).arg(point.value));
+    DocLanePoint doubleClickPoint;
+    DocLanePoint restoredDoubleClickPoint;
+    check(doubleClickValueDialog &&
+              document.findLanePoint(0, pan.controller, normalNodeTick, &doubleClickPoint) &&
+              doubleClickPoint.value == 80 &&
+              document.findLanePoint(0, pan.controller, doubleClickCellEnd,
+                                     &restoredDoubleClickPoint) &&
+              restoredDoubleClickPoint.value == 60 &&
+              document.revision() == doubleClickRevision + 1 &&
+              document.undoStack()->index() == doubleClickUndo + 1,
+          QStringLiteral("double-click insertion did not restore the prior held value at its "
+                         "exclusive cell boundary (dialog %1, points %2, revision %3/%4, undo "
+                         "%5/%6)")
+              .arg(doubleClickValueDialog)
+              .arg(doubleClickState.join(QStringLiteral(", ")))
+              .arg(document.revision())
+              .arg(doubleClickRevision + 1)
+              .arg(document.undoStack()->index())
+              .arg(doubleClickUndo + 1));
 
     // A row resize boundary owns the primary click, so its idle affordance
     // must not advertise an insertion in either adjacent row.

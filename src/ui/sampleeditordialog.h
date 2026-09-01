@@ -6,6 +6,7 @@
 #include <QUndoStack>
 
 #include <functional>
+#include <optional>
 #include <vector>
 
 #include "audio/auditionslots.h"
@@ -52,12 +53,14 @@ class SampleEditorDialog : public QDialog
     // (SampleRegistrar::validateSampleName bound to the project).
     using NameValidator = std::function<bool(const QString &, QString *)>;
 
-    // engine may be null (audition strip disabled). destAdsr, when given,
-    // is the destination voice's envelope (browser-initiated flow) and
-    // enables the "use destination voice ADSR" audition option.
-    SampleEditorDialog(ImportedSample sample, NameValidator validator,
-                       AudioEngine *engine = nullptr, const AuditionSlots::Adsr *destAdsr = nullptr,
-                       QWidget *parent = nullptr);
+    // Required at no-audio call sites so an audition-capable dialog cannot
+    // silently lose its engine.
+    struct NoAudio final {};
+
+    SampleEditorDialog(ImportedSample sample, NameValidator validator, AudioEngine &engine,
+                       const AuditionSlots::Adsr *destAdsr = nullptr, QWidget *parent = nullptr);
+    SampleEditorDialog(ImportedSample sample, NameValidator validator, NoAudio,
+                       const AuditionSlots::Adsr *destAdsr = nullptr, QWidget *parent = nullptr);
 
     // The validated registration name (valid whenever the dialog accepts).
     QString sampleName() const;
@@ -85,6 +88,9 @@ class SampleEditorDialog : public QDialog
     bool eventFilter(QObject *watched, QEvent *event) override;
 
   private:
+    SampleEditorDialog(ImportedSample sample, NameValidator validator,
+                       std::optional<std::reference_wrapper<AudioEngine>> engine,
+                       const AuditionSlots::Adsr *destAdsr, QWidget *parent);
     void applyParamsFromUi(int mergeKey);
     void commitParams(const SampleEditParams &params, int mergeKey);
     void syncUiFromParams();
@@ -108,7 +114,7 @@ class SampleEditorDialog : public QDialog
 
     SampleDocument m_doc;
     NameValidator m_validator;
-    AudioEngine *m_engine = nullptr;
+    std::optional<std::reference_wrapper<AudioEngine>> m_engine;
     bool m_hasDestAdsr = false;
     AuditionSlots::Adsr m_destAdsr;
     QUndoStack m_undo;

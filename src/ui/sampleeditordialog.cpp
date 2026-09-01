@@ -165,8 +165,21 @@ class SampleParamsCommand : public QUndoCommand
 };
 
 SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator validator,
-                                       AudioEngine *engine, const AuditionSlots::Adsr *destAdsr,
+                                       AudioEngine &engine, const AuditionSlots::Adsr *destAdsr,
                                        QWidget *parent)
+    : SampleEditorDialog(std::move(sample), std::move(validator),
+                         std::optional<std::reference_wrapper<AudioEngine>>{std::ref(engine)},
+                         destAdsr, parent)
+{}
+
+SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator validator, NoAudio,
+                                       const AuditionSlots::Adsr *destAdsr, QWidget *parent)
+    : SampleEditorDialog(std::move(sample), std::move(validator), std::nullopt, destAdsr, parent)
+{}
+
+SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator validator,
+                                       std::optional<std::reference_wrapper<AudioEngine>> engine,
+                                       const AuditionSlots::Adsr *destAdsr, QWidget *parent)
     : QDialog(parent)
     , m_doc(std::move(sample))
     , m_validator(std::move(validator))
@@ -1005,7 +1018,8 @@ void SampleEditorDialog::startAudition(bool looped)
     if (m_hasDestAdsr && m_useDestAdsr->isChecked())
         adsr = m_destAdsr;
     const uint8_t key = uint8_t(m_auditionKey->value());
-    m_republishPending = !m_engine->auditionSample(bytes, out.freq, loopStart, loopFlag, key, adsr);
+    m_republishPending =
+        !m_engine->get().auditionSample(bytes, out.freq, loopStart, loopFlag, key, adsr);
     m_auditionMode = looped ? AuditionMode::Loop : AuditionMode::Once;
     m_auditionLooped = loopFlag;
     m_auditionSize = quint32(bytes.size());
@@ -1024,7 +1038,7 @@ void SampleEditorDialog::startAudition(bool looped)
 void SampleEditorDialog::stopAudition()
 {
     if (m_engine)
-        m_engine->auditionSampleOff();
+        m_engine->get().auditionSampleOff();
     m_auditionMode = AuditionMode::None;
     m_republishPending = false;
     m_auditionTimer.stop();

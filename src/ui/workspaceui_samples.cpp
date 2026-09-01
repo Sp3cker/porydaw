@@ -204,26 +204,32 @@ void WorkspaceUi::continueImportFlow(const SampleFormatProbe &probe)
             hasDestAdsr = true;
         }
     }
-    SampleEditorDialog dialog(
-        std::move(sample),
-        [this](const QString &name, QString *validationError) {
-            return validateNewSampleName(name, validationError);
-        },
-        /*engine=*/nullptr, hasDestAdsr ? &destAdsr : nullptr, &m_host);
-    if (dialog.exec() != QDialog::Accepted)
+    SampleEditorDialog::NameValidator validateSampleName = [this](const QString &name,
+                                                                  QString *validationError) {
+        return validateNewSampleName(name, validationError);
+    };
+    std::optional<SampleEditorDialog> dialog;
+    if (m_sampleAuditionEngine) {
+        dialog.emplace(std::move(sample), std::move(validateSampleName),
+                       m_sampleAuditionEngine->get(), hasDestAdsr ? &destAdsr : nullptr, &m_host);
+    } else {
+        dialog.emplace(std::move(sample), std::move(validateSampleName),
+                       SampleEditorDialog::NoAudio{}, hasDestAdsr ? &destAdsr : nullptr, &m_host);
+    }
+    if (dialog->exec() != QDialog::Accepted)
         return;
 
     if (!m_state.snapshot.isOpen() || projectBusy() || m_dialogOps > 0)
         return;
     CommitSampleInput input;
-    input.name = dialog.sampleName();
-    input.wavBytes = dialog.wavBytes();
+    input.name = dialog->sampleName();
+    input.wavBytes = dialog->wavBytes();
     SampleSidecar sidecar;
     sidecar.sourcePath = QFileInfo(path).absoluteFilePath();
     sidecar.sourceSha256 = SampleRegistrar::sourceHashHex(sourceBytes);
     sidecar.leftOnly = leftOnly;
     sidecar.sf2Zone = sf2Zone;
-    sidecar.params = dialog.document()->params();
+    sidecar.params = dialog->document()->params();
     input.sidecar = std::move(sidecar);
     m_pendingImportSlot = slot; // for the committed assignment
     m_dialogOps++;
@@ -333,30 +339,35 @@ void WorkspaceUi::continueEditSampleFlow(const SampleRead &read)
                     uint8_t(voice->release)};
         hasDestAdsr = true;
     }
-    SampleEditorDialog dialog(
-        std::move(sample),
-        [name](const QString &candidate, QString *validationError) {
-            if (candidate == name)
-                return true;
-            if (validationError)
-                *validationError =
-                    QObject::tr("the sample keeps its registered name (%1).").arg(name);
-            return false;
-        },
-        /*engine=*/nullptr, hasDestAdsr ? &destAdsr : nullptr, &m_host);
-    dialog.setEditTarget(name);
+    SampleEditorDialog::NameValidator validateSampleName = [name](const QString &candidate,
+                                                                  QString *validationError) {
+        if (candidate == name)
+            return true;
+        if (validationError)
+            *validationError = QObject::tr("the sample keeps its registered name (%1).").arg(name);
+        return false;
+    };
+    std::optional<SampleEditorDialog> dialog;
+    if (m_sampleAuditionEngine) {
+        dialog.emplace(std::move(sample), std::move(validateSampleName),
+                       m_sampleAuditionEngine->get(), hasDestAdsr ? &destAdsr : nullptr, &m_host);
+    } else {
+        dialog.emplace(std::move(sample), std::move(validateSampleName),
+                       SampleEditorDialog::NoAudio{}, hasDestAdsr ? &destAdsr : nullptr, &m_host);
+    }
+    dialog->setEditTarget(name);
     if (fromSource)
-        dialog.applyParamsExternal(sidecar.params);
-    if (dialog.exec() != QDialog::Accepted)
+        dialog->applyParamsExternal(sidecar.params);
+    if (dialog->exec() != QDialog::Accepted)
         return;
 
     if (!m_state.snapshot.isOpen() || projectBusy() || m_dialogOps > 0)
         return;
     CommitSampleInput input;
     input.name = name;
-    input.wavBytes = dialog.wavBytes();
+    input.wavBytes = dialog->wavBytes();
     if (fromSource) {
-        sidecar.params = dialog.document()->params();
+        sidecar.params = dialog->document()->params();
         input.sidecar = std::move(sidecar);
     } else {
         input.removeSidecar = true;

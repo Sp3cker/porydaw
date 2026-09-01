@@ -1,11 +1,14 @@
 #include "domains.h"
 
+#include <algorithm>
+#include <cstdlib>
 #include <limits>
 
 #include "core/timedefaults.h"
 #include "rig.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationprojection.h"
+#include "ui/editordrawer/cclanes.h"
 #include "ui/editordrawer/nodelane/hover.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/songview.h"
@@ -60,6 +63,40 @@ void checkAutomationPencilMapping(AutomationGestureCheckRig &rig,
     check(panHandle.valid(), QStringLiteral("Pencil indicator lanes are missing from the stack"));
     if (!panHandle.valid())
         return;
+    const QRect snapBody = rig.bodyFor(panHandle);
+    CCLaneAdapter panLane(rig.document(), rig.pan.track, rig.pan.controller);
+    const int span = panLane.maximumValue() - panLane.minimumValue();
+    const int snapThreshold =
+        span * rig.geometry().neutralSnapRadius / std::max(1, snapBody.height());
+    auto snapY = -1;
+    auto unsnappedValue = -1;
+    for (int y = snapBody.top(); y <= snapBody.bottom(); ++y) {
+        const int value = qRound(AutomationProjection::valueAtY(
+            snapBody, rig.geometry(), panLane.minimumValue(), panLane.maximumValue(), qreal(y)));
+        if (value != 64 && std::abs(value - 64) <= snapThreshold && std::abs(value - 64) > 0) {
+            snapY = y;
+            unsnappedValue = value;
+            break;
+        }
+    }
+    check(snapY >= 0, QStringLiteral("Pencil snap-value fixture did not resolve near neutral"));
+    if (snapY >= 0) {
+        NodePoint point;
+        updateValuePoint(projection, panLane, snapBody, point, snapY, 100, false,
+                         rig.geometry().neutralSnapRadius, 64);
+        const bool withoutSnapValue = point.value == unsnappedValue;
+        updateValuePoint(projection, panLane, snapBody, point, snapY, 100, true,
+                         rig.geometry().neutralSnapRadius, 64);
+        check(withoutSnapValue && point.value == 64,
+              QStringLiteral("Pencil snap-value mapping did not snap to pan neutral"));
+    }
+    const qreal yAt64 = AutomationProjection::valueY(
+        snapBody, rig.geometry(), panLane.minimumValue(), panLane.maximumValue(), 64);
+    NodePoint neutralPoint;
+    updateValuePoint(projection, panLane, snapBody, neutralPoint, qRound(yAt64), 200, true,
+                     rig.geometry().neutralSnapRadius, 64);
+    check(neutralPoint.value == 64 && neutralPoint.tick == 200,
+          QStringLiteral("Pencil neutral mapping corrupted its tick or value"));
     const auto seed = rig.pointAt(rig.pan, 24, 72);
     const auto indicatorCell = projection.snapCellAt(seed.mapped.rawTick);
     const double indicatorTick =

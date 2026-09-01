@@ -253,7 +253,8 @@ void AutomationPencilGesture::rebuildPreview()
         m_provisionalFreehandEndpoint->tick <= m_tickEnd)
         upsertByTick(points, *m_provisionalFreehandEndpoint);
     m_cachedPreview = m_laneEdit.replaceHeldSpan(m_tickBegin, m_tickEnd, m_songEndTick,
-                                                 m_minimumValue, m_maximumValue, std::move(points));
+                                                 m_minimumValue, m_maximumValue, std::move(points),
+                                                 NodeLaneEdit::LeadingPointPolicy::Reduce);
 }
 
 void AutomationPencilGesture::eraseStrokePointsIn(uint64_t tickBegin, uint64_t tickEnd)

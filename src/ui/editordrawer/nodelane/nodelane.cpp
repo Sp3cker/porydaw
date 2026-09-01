@@ -11,8 +11,8 @@ namespace {
 
 using Point = NodeLaneEdit::Point;
 void canonicalize(std::vector<Point> &points, uint64_t tickBegin, uint64_t tickEnd,
-                  int minimumValue = std::numeric_limits<int>::min(),
-                  int maximumValue = std::numeric_limits<int>::max(),
+                  int minimumValue, int maximumValue,
+                  NodeLaneEdit::LeadingPointPolicy leadingPointPolicy,
                   std::optional<int> priorValue = std::nullopt)
 {
     std::stable_sort(points.begin(), points.end(),
@@ -25,7 +25,9 @@ void canonicalize(std::vector<Point> &points, uint64_t tickBegin, uint64_t tickE
         if (point.tick < tickBegin || point.tick > tickEnd)
             continue;
         point.value = std::clamp(point.value, minimumValue, maximumValue);
-        if (priorValue && *priorValue == point.value)
+        if (priorValue && *priorValue == point.value &&
+            (leadingPointPolicy != NodeLaneEdit::LeadingPointPolicy::Preserve ||
+             point.tick != tickBegin))
             continue;
         points[kept++] = point;
         priorValue = point.value;
@@ -62,28 +64,22 @@ bool rangeMatches(const std::vector<Point> &original, uint64_t tickBegin, uint64
 
 NodeLaneEdit::NodeLaneEdit(Target target, std::vector<Point> originalPoints)
     : m_target(target)
-    , m_originalPoints(std::move(originalPoints))
-    , m_heldOriginalPoints(m_originalPoints)
+    , m_heldOriginalPoints(std::move(originalPoints))
 {
-    canonicalize(m_heldOriginalPoints, 0, std::numeric_limits<uint64_t>::max());
-}
-
-NodeLaneEdit::Completion NodeLaneEdit::replacePointRange(uint64_t tickBegin, uint64_t tickEnd,
-                                                         std::vector<Point> points) const
-{
-    const bool unchanged = rangeMatches(m_originalPoints, tickBegin, tickEnd, points);
-    return {m_target, tickBegin, tickEnd, std::move(points), unchanged};
+    canonicalize(m_heldOriginalPoints, 0, std::numeric_limits<uint64_t>::max(),
+                 std::numeric_limits<int>::min(), std::numeric_limits<int>::max(),
+                 LeadingPointPolicy::Reduce);
 }
 
 NodeLaneEdit::Completion NodeLaneEdit::replaceHeldSpan(uint64_t tickBegin, uint64_t tickEnd,
                                                        uint64_t songEndTick, int minimumValue,
-                                                       int maximumValue,
-                                                       std::vector<Point> points) const
+                                                       int maximumValue, std::vector<Point> points,
+                                                       LeadingPointPolicy leadingPointPolicy) const
 {
     if (tickEnd < songEndTick)
         if (const auto endpointValue = heldValue(m_heldOriginalPoints, tickEnd, true))
             points.push_back({tickEnd, *endpointValue});
-    canonicalize(points, tickBegin, tickEnd, minimumValue, maximumValue,
+    canonicalize(points, tickBegin, tickEnd, minimumValue, maximumValue, leadingPointPolicy,
                  heldValue(m_heldOriginalPoints, tickBegin, false));
     const bool unchanged = rangeMatches(m_heldOriginalPoints, tickBegin, tickEnd, points);
     return {m_target, tickBegin, tickEnd, std::move(points), unchanged};

@@ -257,14 +257,17 @@ void runProvenanceChecks(Reporter &reporter, const RegisteredSampleProject &proj
         // The dialog in edit mode: locked name, "Save Sample" commit, and
         // sidecar params applied as the baseline (not an undo entry).
         {
-            SampleEditorDialog dialog(hiRes, [](const QString &candidate, QString *err) {
-                if (candidate == QStringLiteral("provenance_tone"))
-                    return true;
-                if (err)
-                    *err = QStringLiteral("the sample keeps its "
-                                          "registered name.");
-                return false;
-            });
+            SampleEditorDialog dialog(
+                hiRes,
+                [](const QString &candidate, QString *err) {
+                    if (candidate == QStringLiteral("provenance_tone"))
+                        return true;
+                    if (err)
+                        *err = QStringLiteral("the sample keeps its "
+                                              "registered name.");
+                    return false;
+                },
+                SampleEditorDialog::NoAudio{});
             dialog.setEditTarget(QStringLiteral("provenance_tone"));
             dialog.applyParamsExternal(p);
             dialog.show();

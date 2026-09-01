@@ -73,6 +73,12 @@ class NodeLaneEdit
 {
   public:
     using Point = NodePoint;
+    // Whether canonicalization may remove the point at a held span's start
+    // when it repeats the prior held value.
+    enum class LeadingPointPolicy : uint8_t {
+        Reduce,
+        Preserve,
+    };
 
     struct Target {
         LaneHandle lane;
@@ -89,13 +95,11 @@ class NodeLaneEdit
 
     NodeLaneEdit(Target target, std::vector<Point> originalPoints);
 
-    Completion replacePointRange(uint64_t tickBegin, uint64_t tickEnd,
-                                 std::vector<Point> points) const;
     Completion replaceHeldSpan(uint64_t tickBegin, uint64_t tickEnd, uint64_t songEndTick,
-                               int minimumValue, int maximumValue, std::vector<Point> points) const;
+                               int minimumValue, int maximumValue, std::vector<Point> points,
+                               LeadingPointPolicy leadingPointPolicy) const;
 
   private:
     Target m_target;
-    std::vector<Point> m_originalPoints;
     std::vector<Point> m_heldOriginalPoints;
 };

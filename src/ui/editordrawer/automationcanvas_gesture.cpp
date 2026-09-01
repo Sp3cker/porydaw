@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/miditimeline.h"
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/nodelane/batchcommit.h"
@@ -151,6 +152,25 @@ bool AutomationCanvas::commitLaneEdit(const NodeLaneEdit::Completion &completion
     lane->replaceSpan(completion.tickBegin, completion.tickEnd, completion.points);
     return true;
 }
+bool AutomationCanvas::commitHeldGridSpan(LaneHandle handle, std::vector<NodePoint> points,
+                                          bool fineGrid,
+                                          NodeLaneEdit::LeadingPointPolicy leadingPointPolicy)
+{
+    if (!m_page || points.empty())
+        return false;
+    auto *document = m_page->document();
+    const auto *timeline = m_page->timeline();
+    NodeLane *lane = mutableLane(handle);
+    if (!document || !timeline || !lane || timeline->lengthTicks == 0)
+        return false;
+    const uint64_t tickBegin = points.front().tick;
+    const uint64_t tickEnd =
+        m_page->nextGridTick(points.back().tick, fineGrid, timeline->lengthTicks);
+    const NodeLaneEdit laneEdit({handle, document->revision()}, lane->points());
+    return commitLaneEdit(laneEdit.replaceHeldSpan(tickBegin, tickEnd, timeline->lengthTicks,
+                                                   lane->minimumValue(), lane->maximumValue(),
+                                                   std::move(points), leadingPointPolicy));
+}
 
 bool AutomationCanvas::commitNodePointMoves(uint64_t expectedRevision,
                                             const std::vector<NodeDrag> &points)
@@ -279,9 +299,6 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
     if (!document)
         return;
     const AutomationProjection proj = projection();
-    const LaneHandle handle =
-        std::visit([](const auto &gesture) { return gesture.lane; }, *m_activeGesture);
-    NodeLane *lane = mutableLane(handle);
     bool changed = false;
     if (const auto *gesture = std::get_if<NodeDragGesture>(&*m_activeGesture)) {
         if (document->revision() != gesture->expectedRevision)
@@ -321,14 +338,16 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
         if (gesture->mode == SweepGesture::Mode::Drag && !gesture->slop.exceeded) {
             m_page->commitEditCursor(
                 m_page->snapTick(proj.rawTickAt(gesture->pressPosition.x()), false));
-        } else if (lane) {
-            auto completion =
-                gesture->finish(handle, document->revision(), lane->points(), fineMode,
-                                [this](uint64_t tick, bool fineGrid, uint64_t last) {
-                                    return m_page->nextGridTick(tick, fineGrid, last);
-                                });
-            if (!completion.unchanged)
-                changed = commitLaneEdit(completion);
+        } else {
+            auto points = gesture->finishedPoints(
+                fineMode, [this](uint64_t tick, bool fineGrid, uint64_t last) {
+                    return m_page->nextGridTick(tick, fineGrid, last);
+                });
+            const auto leadingPointPolicy = gesture->mode == SweepGesture::Mode::Ramp
+                                                ? NodeLaneEdit::LeadingPointPolicy::Preserve
+                                                : NodeLaneEdit::LeadingPointPolicy::Reduce;
+            changed =
+                commitHeldGridSpan(gesture->lane, std::move(points), fineMode, leadingPointPolicy);
         }
     } else if (auto *gesture = std::get_if<PencilGesture>(&*m_activeGesture)) {
         auto completion = std::move(*gesture).finish();

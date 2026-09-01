@@ -11,9 +11,9 @@
 #include <QVector>
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
-#include <vector>
 
 #include "porydaw_scale.h"
 #include "project/projectidentity.h"
@@ -23,6 +23,7 @@
 #include "ui/voicegroupviewcache.h"
 
 class QAction;
+class AudioEngine;
 class QDockWidget;
 class QMainWindow;
 class QMenu;
@@ -158,6 +159,13 @@ class WorkspaceUi final : public QObject
     // Copied engine sample rate for tab timeline projections; applies to the
     // open tabs and to every tab created afterwards.
     void setAudioSampleRate(double sampleRate);
+    // The explicit optional borrow published by MainWindow after engine
+    // initialization; std::nullopt means the audio device was unavailable.
+    using SampleAuditionEngineBorrow = std::optional<std::reference_wrapper<AudioEngine>>;
+    void setSampleAuditionEngine(SampleAuditionEngineBorrow engine) noexcept
+    {
+        m_sampleAuditionEngine = engine;
+    }
     // The audition sample set for engine auditions; empty until loaded.
     SampleSetLease sampleSet() const noexcept { return m_sampleSet; }
 
@@ -374,6 +382,7 @@ class WorkspaceUi final : public QObject
     QPointer<QMessageBox> m_deleteConfirmation;
 
     double m_audioSampleRate = 0.0;
+    SampleAuditionEngineBorrow m_sampleAuditionEngine = std::nullopt;
     bool m_openRequested = false;      // this class submitted an open
     bool m_awaitingStartupOpen = true; // startup placeholders await the first terminal
     bool m_openGatePublished = true;

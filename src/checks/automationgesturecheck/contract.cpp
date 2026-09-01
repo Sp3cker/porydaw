@@ -19,6 +19,7 @@
 #include "ui/editordrawer/cclanes.h"
 #include "ui/editordrawer/laneselection.h"
 #include "ui/editordrawer/nodelane/batchcommit.h"
+#include "ui/editordrawer/nodelane/gesture.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/tempolane.h"
 #include "ui/m4asemantics.h"
@@ -961,6 +962,155 @@ void checkRowRebuildHandles(AutomationGestureCheckRig &rig, const AutomationGest
                      QStringLiteral("removing the rebuilt row did not restore CC handle mapping"));
 }
 
+void checkSweepAndNodeGestureContracts(uint64_t revision, const AutomationGestureCheck &check)
+{
+    const Check gestureCheck{check, QStringLiteral("gesture")};
+    const auto stepOne = [](uint64_t tick, bool, uint64_t) -> uint64_t { return tick + 1; };
+    SweepGesture sweep;
+    sweep.lane = LaneHandle{0};
+    sweep.current = {10, 100};
+    sweep.previousRawTick = 0.0;
+    sweep.previousValue = 0;
+    extendSweepPoints(sweep, 0, 10, 10.0, false, stepOne);
+    auto interpolated = sweep.points.size() == 11;
+    for (auto i = std::size_t{0}; i < sweep.points.size() && interpolated; ++i) {
+        if (sweep.points[i].tick != i || sweep.points[i].value != int(i) * 10)
+            interpolated = false;
+    }
+    gestureCheck.require(interpolated,
+                         QStringLiteral("extendSweepPoints did not interpolate 0..10 to 0..100"));
+    SweepGesture updated;
+    updated.lane = LaneHandle{0};
+    updated.current = {0, 0};
+    updated.previousRawTick = 0.0;
+    updated.previousValue = 0;
+    updated.update({5, 50}, 0, 5, 5.0, false, stepOne);
+    gestureCheck.require(updated.current.tick == 5 && updated.current.value == 50 &&
+                             updated.points.size() >= 6,
+                         QStringLiteral("SweepGesture::update did not extend the sweep"));
+
+    SweepGesture ramp;
+    ramp.mode = SweepGesture::Mode::Ramp;
+    ramp.anchor = {1, 0};
+    ramp.current = {10, 100};
+    auto rampPoints = ramp.finishedPoints(false, stepOne);
+    const auto rampCompletion = NodeLaneEdit({LaneHandle{0}, revision}, {{0, 0}, {11, 45}})
+                                    .replaceHeldSpan(1, 11, 20, 0, 127, std::move(rampPoints),
+                                                     NodeLaneEdit::LeadingPointPolicy::Preserve);
+    gestureCheck.require(
+        !rampCompletion.unchanged && rampCompletion.points.size() == 11 &&
+            rampCompletion.points.front().tick == 1 && rampCompletion.points.front().value == 0 &&
+            rampCompletion.points[9].tick == 10 && rampCompletion.points[9].value == 100 &&
+            rampCompletion.points.back().tick == 11 && rampCompletion.points.back().value == 45,
+        QStringLiteral("ramp leading point was not preserved with its exclusive held endpoint"));
+
+    const auto nextCoarseTick = [](uint64_t tick, bool, uint64_t limit) {
+        return std::min(tick + 24, limit);
+    };
+    SweepGesture directSweep;
+    directSweep.points = {{24, 80}, {48, 100}};
+    auto directSweepPoints = directSweep.finishedPoints(false, nextCoarseTick);
+    const auto sweepCompletion =
+        NodeLaneEdit({LaneHandle{0}, revision}, {{0, 20}, {24, 60}, {72, 90}})
+            .replaceHeldSpan(24, 72, 96, 0, 127, std::move(directSweepPoints),
+                             NodeLaneEdit::LeadingPointPolicy::Reduce);
+    gestureCheck.require(
+        !sweepCompletion.unchanged &&
+            sameNodePoints(sweepCompletion.points, {{24, 80}, {48, 100}, {72, 90}}),
+        QStringLiteral("direct sweep did not retain points and restore the exclusive endpoint"));
+
+    const auto laneNode = [](NodePoint original, NodePoint current) {
+        return NodeDrag{LaneHandle{0}, original, current, 0, 127};
+    };
+    {
+        NodeDragGesture gesture;
+        const NodeDragFinish finish = gesture.finish();
+        gestureCheck.require(finish.release == PointDragRelease::NoOp && !finish.changed,
+                             QStringLiteral("empty NodeDragGesture was not an unchanged NoOp"));
+    }
+    {
+        NodeDragGesture gesture;
+        gesture.points = {laneNode({24, 60}, {24, 60})};
+        gesture.drag.press({100.0, 100.0}, false);
+        const NodeDragFinish finish = gesture.finish();
+        gestureCheck.require(finish.release == PointDragRelease::NoOp && !finish.changed,
+                             QStringLiteral("stationary node drag was not an unchanged NoOp"));
+    }
+    {
+        NodeDragGesture gesture;
+        gesture.points = {laneNode({24, 60}, {24, 60})};
+        gesture.drag.press({100.0, 100.0}, true);
+        const NodeDragFinish finish = gesture.finish();
+        gestureCheck.require(finish.release == PointDragRelease::StationaryDelete &&
+                                 !finish.changed,
+                             QStringLiteral("stationary node drag did not report deletion"));
+    }
+    {
+        NodeDragGesture gesture;
+        gesture.points = {laneNode({24, 60}, {24, 60})};
+        gesture.drag.press({100.0, 100.0}, true);
+        gesture.drag.dragSlop.markExceeded({105.0, 100.0});
+        const NodeDragFinish unchanged = gesture.finish();
+        gestureCheck.require(unchanged.release == PointDragRelease::Move && !unchanged.changed,
+                             QStringLiteral("unchanged dragged node was not an unchanged Move"));
+        gesture.points.front().current = {30, 80};
+        const NodeDragFinish moved = gesture.finish();
+        gestureCheck.require(moved.release == PointDragRelease::Move && moved.changed &&
+                                 moved.dTick == 6,
+                             QStringLiteral("changed node drag did not report its tick delta"));
+    }
+    {
+        NodeDragGesture gesture;
+        gesture.points = {
+            laneNode({24, 60}, {30, 70}),
+            laneNode({48, 80}, {54, 90}),
+        };
+        gesture.selectionDrag = true;
+        gesture.drag.press({100.0, 100.0}, true);
+        gesture.drag.dragSlop.markExceeded({105.0, 100.0});
+        const NodeDragFinish finish = gesture.finish();
+        gestureCheck.require(finish.release == PointDragRelease::Move && finish.changed &&
+                                 finish.dTick == 6 && finish.selectionDrag &&
+                                 gesture.points[0].current.tick == 30 &&
+                                 gesture.points[1].current.tick == 54,
+                             QStringLiteral("multi-node drag outcome lost shared movement state"));
+    }
+    {
+        PhantomGesture gesture;
+        gesture.point = laneNode({24, 60}, {24, 60});
+        gesture.drag.press({100.0, 100.0}, false);
+        gesture.update({PointDragUpdate::Phase::Reset, {}, AxisLock::None}, 127);
+        gestureCheck.require(gesture.point.current.tick == 24 && gesture.point.current.value == 60,
+                             QStringLiteral("phantom reset did not restore its source point"));
+        gesture.drag.dragSlop.markExceeded({100.0, 110.0});
+        gesture.update({PointDragUpdate::Phase::Dragging, {}, AxisLock::None}, 200);
+        const auto moved = gesture.finish();
+        gestureCheck.require(moved && moved->original.tick == moved->current.tick &&
+                                 moved->current.value == 127,
+                             QStringLiteral("phantom drag did not stay value-only and clamp"));
+    }
+
+    const NodeLaneEdit heldSpan({LaneHandle{0}, revision}, {{0, 20}, {24, 60}, {72, 90}});
+    const auto doubleClick = heldSpan.replaceHeldSpan(24, 48, 96, 0, 127, {{24, 80}},
+                                                      NodeLaneEdit::LeadingPointPolicy::Reduce);
+    gestureCheck.require(
+        !doubleClick.unchanged && sameNodePoints(doubleClick.points, {{24, 80}, {48, 60}}),
+        QStringLiteral("held-span insertion did not restore the exclusive held value"));
+    const auto fineDoubleClick = heldSpan.replaceHeldSpan(30, 36, 96, 0, 127, {{30, 80}},
+                                                          NodeLaneEdit::LeadingPointPolicy::Reduce);
+    gestureCheck.require(
+        !fineDoubleClick.unchanged && sameNodePoints(fineDoubleClick.points, {{30, 80}, {36, 60}}),
+        QStringLiteral("fine held-span insertion did not restore the exclusive held value"));
+    const auto flat = heldSpan.replaceHeldSpan(36, 48, 96, 0, 127, {{36, 60}},
+                                               NodeLaneEdit::LeadingPointPolicy::Reduce);
+    gestureCheck.require(flat.unchanged && flat.points.empty(),
+                         QStringLiteral("flat held-span replacement was not an empty no-op"));
+    const auto deletion =
+        heldSpan.replaceHeldSpan(24, 96, 96, 0, 127, {}, NodeLaneEdit::LeadingPointPolicy::Reduce);
+    gestureCheck.require(!deletion.unchanged && deletion.points.empty(),
+                         QStringLiteral("held-span deletion was treated as unchanged"));
+}
+
 constexpr std::array kCases{
     Case{"points", checkEffectivePoints},
     Case{"ranges", checkRangesTextSelection},
@@ -997,6 +1147,7 @@ void checkNodeContract(AutomationGestureCheckRig &rig, const AutomationGestureCh
             row.run(context);
         }
     }
+    checkSweepAndNodeGestureContracts(document.revision(), check);
     checkEngineDefaultNodes(session, check);
     checkLogicalXcmdEdits(session, check);
     checkXcmdSweepPreservesNotes(session, check);

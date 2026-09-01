@@ -61,9 +61,12 @@ void runPipelineDialogChecks(Reporter &reporter, const RegisteredSampleProject &
                                         &prepared, &error),
                         "prepared sample re-imports from the project");
         const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-        SampleEditorDialog dialog(prepared, [&](const QString &name, QString *validationError) {
-            return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
-        });
+        SampleEditorDialog dialog(
+            prepared,
+            [&](const QString &name, QString *validationError) {
+                return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+            },
+            SampleEditorDialog::NoAudio{});
         auto *nameEdit = dialog.findChild<QLineEdit *>(QStringLiteral("sampleNameEdit"));
         auto *addButton = dialog.findChild<QPushButton *>(QStringLiteral("sampleAddButton"));
         auto *status = dialog.findChild<QLabel *>(QStringLiteral("sampleNameStatus"));
@@ -174,9 +177,12 @@ void runEditorChecks(Reporter &reporter, const RegisteredSampleProject &project,
     {
         const int before = reporter.failureCount();
         const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-        SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
-            return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
-        });
+        SampleEditorDialog dialog(
+            hiRes,
+            [&](const QString &name, QString *validationError) {
+                return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+            },
+            SampleEditorDialog::NoAudio{});
         dialog.resize(900, 640);
         dialog.show();
         QApplication::processEvents();
@@ -448,7 +454,7 @@ void runEditorChecks(Reporter &reporter, const RegisteredSampleProject &project,
                         qUtf8Printable(audioError));
         } else {
             SampleEditorDialog dialog(
-                hiRes, [](const QString &, QString *) { return true; }, &engine);
+                hiRes, [](const QString &, QString *) { return true; }, engine);
             dialog.resize(900, 640);
             dialog.show();
             QApplication::processEvents();
