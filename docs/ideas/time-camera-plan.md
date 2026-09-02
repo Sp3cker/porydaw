@@ -296,6 +296,16 @@ Gate protocol, identical each phase:
 
 ## Explicitly rejected / out of scope
 
+- **Raw wheel normalization inside `TimeCamera`.** `TimelineWheelInput`
+  carries Qt input-adapter facts (`QPoint` pixel/angle deltas,
+  `Qt::ScrollPhase`, modifiers, and device inversion). Moving that type or
+  its momentum/device interpretation into the camera would either violate
+  the Qt-free header rule or duplicate Qt event vocabulary behind a nominally
+  pure interface. The timeline input/SongView adapter converts raw wheel
+  input to a dimensionless zoom factor; `TimeCamera` owns applying that
+  factor at an anchor, including zoom limits and scroll clamping. This keeps
+  alternate inputs such as keyboard commands or future pinch gestures from
+  pretending to be wheel events.
 - Narrow `EditorSession` port; intent-emission for mutations; observer
   callbacks on the camera (children keep mutating through `SongView`
   wrappers — a scroll moves every band, so host mediation is the real
