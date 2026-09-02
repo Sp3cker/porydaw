@@ -634,10 +634,6 @@ class SongView : public QWidget
     void synchronizeTimelineBandLayout();
     // Positions retained band chrome over parent-owned spacer rows.
     void positionBandWidgets();
-    // Migration assertion for Q_ASSERT call sites: every published band equals
-    // the retained widget that visually owns it while both exist. Only valid
-    // after positionBandWidgets() and synchronizeTimelineBandLayout() settle.
-    bool bandWidgetsMatchCanonicalLayout() const;
     // Both exits floor at the clock base: the result is >= 1 for any
     // segment, so snap math may divide by it unchecked.
     uint64_t gridTicksIn(const GridSeg &seg, double pixelsPerTick, bool snap = false) const;

@@ -153,6 +153,23 @@ The six baseline QWidget input surfaces are:
   remaining mandatory defects after detach cancellation, pointer-leave cursor clearing, and
   geometry-only host appearance notifications were corrected.
 
+### Phase 8 implementation record
+
+- All six `TimelineInputItem`s are present and attached to their matching non-widget interaction.
+  `SongView` now explicitly detaches Automation with the other five bands before the Quick host is
+  destroyed.
+- The migration-only retained-widget geometry assertion and its settled-layout call sites are
+  deleted. Canonical rectangles continue to come from the retained native layout owners: SongView
+  spacer/page rows, drawer bodies, and the AutomationPage scroll viewport.
+- `host-adapter` now verifies all six attachments, event-list removal of roll pixels and input,
+  hidden automation/velocity/voice-change input, cross-band pointer-grab ownership, and mask holes
+  for every visible retained native control.
+- Focused `host`, `mainwindow-routing`, `editor-drawer`, `automation`, `velocity-page`, and
+  `rollwindowingcheck` checks pass.
+- Static deletion gates found no target domain class deriving from `QWidget`, obsolete widget event
+  handlers, Quick input-transparency flags, automation hover synthesizer, or band-owned outer
+  geometry mutator. Independent thermo-nuclear and Qt 6 reviews found no mandatory defects.
+
 ## Goal
 
 Make the existing Qt Quick timeline scene own raw pointer, wheel, hover, focus, and keyboard input

@@ -132,7 +132,6 @@ void SongView::refreshGeometry()
     synchronizeTimelineBandLayout();
     // Global geometry replacement: every roll domain may change.
     refreshTimelineViews(PianoRollQuickDirty::All);
-    Q_ASSERT(bandWidgetsMatchCanonicalLayout());
 }
 
 // Canonical band geometry, resolved only from parent-owned layout values:
@@ -187,27 +186,6 @@ void SongView::synchronizeTimelineBandLayout()
         m_playheadOverlay->updateBands(m_timelineBandLayout);
 }
 
-// Migration assertion: every published retained-widget band equals the widget
-// that visually owns it while both exist. Band rects derive from parent-owned
-// rectangles (spacer rows, the roll page minus its scrollbar column, drawer
-// bodies, the automation scroll viewport), so a drift between the two breaks
-// the playhead/Quick masks. Only valid at settled call sites — a synchronize
-// during layout activation can legitimately observe a not-yet-moved widget.
-bool SongView::bandWidgetsMatchCanonicalLayout() const
-{
-    const auto widgetRect = [this](const QWidget &widget) {
-        return QRect(widget.mapTo(this, QPoint(0, 0)), widget.size());
-    };
-    const auto matches = [this, &widgetRect](TimelineBand band, const QWidget *widget) {
-        const std::optional<TimelineBandGeometry> &canonical = m_timelineBandLayout.geometry(band);
-        return !canonical || !widget || widgetRect(*widget) == canonical->rect;
-    };
-    const AutomationPage *automation = m_editorDrawer ? m_editorDrawer->automationPage() : nullptr;
-    // Converted bands have no widget; their canonical rectangles come
-    // directly from their parent-owned spacer/body geometry. The roll band
-    // likewise derives from the roll page minus its scrollbar column.
-    return matches(TimelineBand::Automation, automation ? automation->scrollViewport() : nullptr);
-}
 // The native ruler controls overlay the gutter of the parent-owned ruler row.
 void SongView::positionBandWidgets()
 {
@@ -323,7 +301,6 @@ SongView::SongView(QWidget *parent)
     positionBandWidgets();
     // Both consumers exist: publish the first canonical layout handoff.
     synchronizeTimelineBandLayout();
-    Q_ASSERT(bandWidgetsMatchCanonicalLayout());
 
     // The unbound axis's provisional camera rests at the pre-roll home;
     // updateScrollbars() keeps re-homing it as resize resolves the lead pad
@@ -338,6 +315,7 @@ SongView::~SongView()
     m_quickView->detachInputInteraction(TimelineBand::Ruler);
     m_quickView->detachInputInteraction(TimelineBand::Roll);
     m_quickView->detachInputInteraction(TimelineBand::OtherEvents);
+    m_quickView->detachInputInteraction(TimelineBand::Automation);
     m_quickView->detachInputInteraction(TimelineBand::Velocity);
     m_quickView->detachInputInteraction(TimelineBand::VoiceChanges);
 }
@@ -618,7 +596,6 @@ void SongView::setEventListVisible(bool visible)
     // The roll band exists only on the roll page; resync immediately so the
     // index swap cannot leave a stale canonical Roll entry.
     synchronizeTimelineBandLayout();
-    Q_ASSERT(bandWidgetsMatchCanonicalLayout());
     if (visible) {
         // The list skips refreshes while hidden; catch up when shown.
         m_events->refresh();
@@ -827,7 +804,6 @@ bool SongView::event(QEvent *event)
             m_quickView->refreshBandLayout();
         if (m_playheadOverlay)
             m_playheadOverlay->updateBands(m_timelineBandLayout);
-        Q_ASSERT(bandWidgetsMatchCanonicalLayout());
     }
     if (event->type() == QEvent::FontChange)
         refreshGeometry();
@@ -977,5 +953,4 @@ void SongView::resizeEvent(QResizeEvent *event)
     refreshDrawerPages();
     syncTimelineIndicators();
     synchronizeTimelineBandLayout();
-    Q_ASSERT(bandWidgetsMatchCanonicalLayout());
 }
