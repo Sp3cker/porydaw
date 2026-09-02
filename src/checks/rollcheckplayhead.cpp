@@ -32,7 +32,6 @@
 #include "ui/layout.h"
 #include "ui/playheadoverlay.h"
 #include "ui/songview.h"
-#include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelinequickchrome.h"
 #include "ui/songview/quick/timelinequickscene.h"
@@ -310,15 +309,14 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
     auto *scene = quick ? quick->findChild<songview::TimelineQuickScene *>() : nullptr;
     auto *ruler = checks::support::findWidgetDescendant<songview::TimeRuler>(view);
     auto *roll = checks::support::findWidgetDescendant<songview::PianoRoll>(view);
-    auto *otherEvents = checks::support::findWidgetDescendant<songview::OtherStrip>(view);
     auto *overlay = checks::support::findWidgetDescendant<songview::PlayheadOverlay>(view);
     auto *drawer = view.editorDrawer();
     auto *automationPage = drawer ? drawer->automationPage() : nullptr;
     auto *automationViewport = automationPage ? automationPage->scrollViewport() : nullptr;
     auto *velocity = drawer ? drawer->velocityArea() : nullptr;
     auto *voiceChanges = drawer ? drawer->voiceChangeArea() : nullptr;
-    if (!quick || !root || !scene || !ruler || !roll || !otherEvents || !overlay ||
-        !automationViewport || !velocity || !voiceChanges) {
+    if (!quick || !root || !scene || !ruler || !roll || !overlay || !automationViewport ||
+        !velocity || !voiceChanges) {
         failures.append("SongView did not expose its Quick chrome and native playhead bands");
     } else {
         if (overlay->parentWidget() != &view || overlay->geometry() != view.rect())
@@ -542,10 +540,13 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         // Band widgets are overlays, not canonical sources: moving them must
         // not drag the Quick host, whose geometry is the canonical union.
         const QRect widgetMoveHostBefore = quick->geometry();
-        // The voice changes page has no native widget to displace; the five
+        // Two converted bands have no native widget to displace; the four
         // retained widget bands still must not drag the Quick host.
-        const std::array<QWidget *, 5> guideBands = {
-            ruler, roll, otherEvents, automationViewport, velocity,
+        const std::array<QWidget *, 4> guideBands = {
+            ruler,
+            roll,
+            automationViewport,
+            velocity,
         };
         std::array<QRect, guideBands.size()> guideBandGeometries;
         const int hostShift = layout::space(layout::Space::One);
@@ -814,7 +815,10 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         view.setDrawerActivePage(EditorDrawerPage::Automations);
         checks::support::pumpQuick();
         checkVisibleBand(*automationViewport, "automation viewport");
-        checkVisibleBand(*otherEvents, "other-events");
+        checkVisibleBandRect(bandLayout.geometry(songview::TimelineBand::OtherEvents)
+                                 .value_or(songview::TimelineBandGeometry{})
+                                 .rect,
+                             "other-events");
         // Equal-layout lifecycle events (Show, WinIdChange, density, screen)
         // republish the stored layout without touching the canonical value:
         // the Quick host frame, window mask, QML band geometry, and playhead

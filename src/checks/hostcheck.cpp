@@ -11,7 +11,6 @@
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
-#include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -31,6 +30,7 @@
 #include <QScrollBar>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <QToolTip>
 #include <QVariant>
 #include <QWidget>
 #include <algorithm>
@@ -140,24 +140,22 @@ bool publishedQmlRectsMatchCanonical(const QWidget &quick, QObject &quickRoot,
     return true;
 }
 
-// The converted VoiceChanges band owns no widget: its canonical rectangle,
-// the QML band rectangle, and the timelineVoiceChangesInput bounds must
-// describe the same parent-owned region, and the native-window mask must
-// expose that region while the band is visible.
-bool voiceInputMatchesCanonical(const SongView &view, const songview::TimelineQuickView &quick,
-                                QObject &quickRoot)
+// A converted band owns no widget: its canonical rectangle, QML band
+// rectangle, and TimelineInputItem bounds must describe the same parent-owned
+// region, and the native-window mask must expose that region while visible.
+bool inputMatchesCanonical(const SongView &view, const songview::TimelineQuickView &quick,
+                           QObject &quickRoot, songview::TimelineBand band,
+                           const QString &inputObjectName)
 {
     const std::optional<songview::TimelineBandGeometry> &geometry =
-        view.timelineBandLayout().geometry(songview::TimelineBand::VoiceChanges);
-    const auto *voiceInput = quickRoot.findChild<songview::TimelineInputItem *>(
-        QStringLiteral("timelineVoiceChangesInput"));
-    if (!geometry || !voiceInput)
+        view.timelineBandLayout().geometry(band);
+    const auto *input = quickRoot.findChild<songview::TimelineInputItem *>(inputObjectName);
+    if (!geometry || !input)
         return false;
     const QRect canonicalRect = geometry->rect.translated(-quick.geometry().topLeft());
-    const QRectF inputRect(voiceInput->mapToItem(quick.rootObject(), QPointF()),
-                           voiceInput->size());
-    return voiceInput->isVisible() &&
-           voiceInput->bounds() ==
+    const QRectF inputRect(input->mapToItem(quick.rootObject(), QPointF()), input->size());
+    return input->isVisible() &&
+           input->bounds() ==
                QRectF(QPointF{}, QSizeF(geometry->rect.width(), geometry->rect.height())) &&
            inputRect == QRectF(canonicalRect) &&
            quick.quickWindow()->mask().contains(canonicalRect);
@@ -329,7 +327,8 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
 
     auto *drawer = editorDrawer(view);
     check(drawer && drawer->isVisible(), "drawer should remain visible above other events");
-    auto *otherStrip = view.findChild<QWidget *>(QStringLiteral("otherEventsStrip"));
+    const std::optional<songview::TimelineBandGeometry> otherEventsGeometry =
+        view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents);
     auto *sections =
         drawer ? drawer->findChild<QWidget *>(QStringLiteral("drawerSections")) : nullptr;
     auto *velocityHandle =
@@ -344,18 +343,19 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         drawer ? drawer->findChild<QWidget *>(QStringLiteral("voiceChangesDrawerToggle")) : nullptr;
     auto *automationBar =
         drawer ? drawer->findChild<QWidget *>(QStringLiteral("automationDrawerBar")) : nullptr;
-    check(otherStrip && otherStrip->isVisible(), "other events strip should remain visible");
+    check(otherEventsGeometry.has_value(),
+          "other events strip should remain visible in canonical layout");
     check(sections && velocityHandle && automationHandle && velocityToggle && automationToggle &&
               voiceChangesToggle && automationBar,
           "drawer should create independent section chrome");
-    if (drawer && otherStrip && sections && velocityHandle && automationHandle && velocityToggle &&
-        automationToggle && voiceChangesToggle && automationBar) {
+    if (drawer && otherEventsGeometry && sections && velocityHandle && automationHandle &&
+        velocityToggle && automationToggle && voiceChangesToggle && automationBar) {
         const QRect drawerBounds(drawer->mapTo(&view, QPoint()), drawer->size());
         const QRect toggleGroup = voiceChangesToggle->geometry()
                                       .united(automationToggle->geometry())
                                       .united(velocityToggle->geometry());
         const int pianoKeysCenter = area->geometry().x() + area->plotOrigin() / 2;
-        check(drawerBounds.bottom() < otherStrip->geometry().top(),
+        check(drawerBounds.bottom() < otherEventsGeometry->rect.top(),
               "drawer should stack above the other events strip");
         check(sections->geometry() == drawer->rect() && !velocityHandle->isHidden() &&
                   automationHandle->isHidden() && area->isVisible() &&
@@ -375,26 +375,28 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
 
     auto *rulerBand = findWidgetDescendant<songview::TimeRuler>(view);
     auto *rollBand = view.findChild<songview::PianoRoll *>();
-    auto *typedOtherStrip = findWidgetDescendant<songview::OtherStrip>(view);
     auto *automationViewport =
         drawer && drawer->automationPage() ? drawer->automationPage()->scrollViewport() : nullptr;
     QObject *const quickRoot = quick->rootObject();
-    const std::array<QWidget *, 5> quickBands{
-        rulerBand, rollBand, typedOtherStrip, automationViewport, area,
+    const std::array<QWidget *, 4> quickBands{
+        rulerBand,
+        rollBand,
+        automationViewport,
+        area,
     };
-    check(rulerBand && rollBand && typedOtherStrip && automationViewport && quickRoot,
+    check(rulerBand && rollBand && automationViewport && quickRoot,
           "host should expose the retained Quick band widgets and the Quick root");
-    if (rulerBand && rollBand && typedOtherStrip && automationViewport && quickRoot) {
+    if (rulerBand && rollBand && automationViewport && quickRoot) {
         const songview::TimelineBandLayout &bandLayout = view.timelineBandLayout();
         const std::array<songview::TimelineBand, quickBands.size()> bandIds{
-            songview::TimelineBand::Ruler,       songview::TimelineBand::Roll,
-            songview::TimelineBand::OtherEvents, songview::TimelineBand::Automation,
+            songview::TimelineBand::Ruler,
+            songview::TimelineBand::Roll,
+            songview::TimelineBand::Automation,
             songview::TimelineBand::Velocity,
         };
-        // While both sources survive, every visible retained widget band must
-        // exactly fill its canonical parent-owned rectangle, and every hidden
-        // band must leave a nullopt entry behind. The converted VoiceChanges
-        // band contributes through its canonical entry alone.
+        // Every visible retained widget band must exactly fill its canonical
+        // parent-owned rectangle, and every hidden band must leave a nullopt
+        // entry behind. Converted bands contribute through canonical entries.
         const auto canonicalMatchesWidgets = [&] {
             for (std::size_t index = 0; index < bandIds.size(); ++index) {
                 const QWidget &band = *quickBands[index];
@@ -439,6 +441,39 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               "drawer body rectangle should map onto the canonical velocity rectangle");
         check(publishedQmlRectsMatchCanonical(*quick, *quickRoot, bandLayout),
               "published Quick band properties should translate the canonical layout");
+        check(inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::OtherEvents,
+                                    QStringLiteral("timelineOtherEventsInput")),
+              "Other Events input item should match its canonical band");
+        auto *otherEventsInput = quickRoot->findChild<songview::TimelineInputItem *>(
+            QStringLiteral("timelineOtherEventsInput"));
+        const StripItem *hoveredStripItem = nullptr;
+        QPointF hoveredStripPosition;
+        if (otherEventsInput) {
+            for (const StripItem &item : view.model().strip) {
+                const qreal x = view.displayX(double(item.tick), qRound(view.timelinePlotOrigin()),
+                                              otherEventsInput->devicePixelRatio());
+                if (x >= view.timelinePlotOrigin() && x < otherEventsInput->width()) {
+                    hoveredStripItem = &item;
+                    hoveredStripPosition = QPointF(x, otherEventsInput->height() / 2.0);
+                    break;
+                }
+            }
+        }
+        check(hoveredStripItem,
+              "other-events fixture should provide a visible marker for Quick hover");
+        if (otherEventsInput && hoveredStripItem) {
+            QToolTip::hideText();
+            checks::events::sendMouse(*otherEventsInput, QEvent::MouseMove, hoveredStripPosition,
+                                      Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+            QCoreApplication::processEvents();
+            check(QToolTip::text().contains(hoveredStripItem->label),
+                  "Other Events Quick hover should show the matching native tooltip");
+            checks::events::sendMouse(*otherEventsInput, QEvent::Leave, hoveredStripPosition,
+                                      Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+            QCoreApplication::processEvents();
+            check(QToolTip::text().isEmpty(),
+                  "Other Events Quick leave should hide the native tooltip");
+        }
 
         view.setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
         pumpZeroDelayTimers();
@@ -530,10 +565,14 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
                   publishedQmlRectsMatchCanonical(*quick, *quickRoot, bandLayout),
               "restored roll view should republish the canonical roll entry and Quick geometry");
     }
-    if (otherStrip) {
+    const std::optional<songview::TimelineBandGeometry> captureOtherEventsGeometry =
+        view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents);
+    check(captureOtherEventsGeometry.has_value(),
+          "Other Events band should remain visible before Quick capture");
+    if (captureOtherEventsGeometry) {
         QString stripCaptureError;
-        const QImage stripWithoutLoopMarkers =
-            checks::support::captureQuickBand(view, *otherStrip, &stripCaptureError);
+        const QImage stripWithoutLoopMarkers = checks::support::captureQuickBand(
+            view, captureOtherEventsGeometry->rect, &stripCaptureError);
         check(stripCaptureError.isEmpty() && !stripWithoutLoopMarkers.isNull(),
               "Other Events strip Quick capture should succeed");
         document.setLoopTick(false, 6);
@@ -545,10 +584,16 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
             view.updateSong(loopTimeline.get());
             timeline = std::move(loopTimeline);
             QCoreApplication::processEvents();
+            const std::optional<songview::TimelineBandGeometry> loopOtherEventsGeometry =
+                view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents);
             QString loopCaptureError;
             const QImage stripWithLoopMarkers =
-                checks::support::captureQuickBand(view, *otherStrip, &loopCaptureError);
-            check(loopCaptureError.isEmpty() && !stripWithLoopMarkers.isNull() &&
+                loopOtherEventsGeometry
+                    ? checks::support::captureQuickBand(view, loopOtherEventsGeometry->rect,
+                                                        &loopCaptureError)
+                    : QImage{};
+            check(loopOtherEventsGeometry && loopCaptureError.isEmpty() &&
+                      !stripWithLoopMarkers.isNull() &&
                       stripWithLoopMarkers == stripWithoutLoopMarkers,
                   "loop markers should not appear in the Other Events strip");
         }
@@ -613,7 +658,9 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         const std::optional<songview::TimelineBandGeometry> &voiceGeometry =
             bandLayout.geometry(songview::TimelineBand::VoiceChanges);
         check(voiceGeometry && quickRoot->property("voiceChangesBandVisible").toBool() &&
-                  voiceInputMatchesCanonical(view, *quick, *quickRoot),
+                  inputMatchesCanonical(view, *quick, *quickRoot,
+                                        songview::TimelineBand::VoiceChanges,
+                                        QStringLiteral("timelineVoiceChangesInput")),
               "Voice Changes should be visible with its input item matching the canonical band");
         const QImage editCursorVoiceContext =
             checks::support::captureQuickBand(view, voiceGeometry->rect);

@@ -100,6 +100,14 @@ QImage Harness::captureQuickBand(QWidget &band)
         fail(qUtf8Printable(error));
     return framebuffer;
 }
+QImage Harness::captureQuickBand(const QRect &bandRect)
+{
+    QString error;
+    const QImage framebuffer = checks::support::captureQuickBand(view(), bandRect, &error);
+    if (framebuffer.isNull())
+        fail(qUtf8Printable(error));
+    return framebuffer;
+}
 
 int Harness::track() const noexcept
 {

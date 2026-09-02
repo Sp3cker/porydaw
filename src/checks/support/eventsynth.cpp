@@ -30,10 +30,11 @@ void sendWheel(QWidget &target, const QPointF &localPosition, const QPoint &pixe
 void sendMouse(QQuickItem &target, QEvent::Type type, const QPointF &localPosition,
                Qt::MouseButton button, Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers)
 {
-    if (type == QEvent::Leave) {
-        const QPointF scenePosition = target.mapToScene(localPosition);
-        QHoverEvent event(QEvent::HoverLeave, scenePosition, target.mapToGlobal(localPosition),
-                          scenePosition);
+    if (type == QEvent::Leave || (type == QEvent::MouseMove && buttons == Qt::NoButton)) {
+        const QEvent::Type hoverType =
+            type == QEvent::Leave ? QEvent::HoverLeave : QEvent::HoverMove;
+        QHoverEvent event(hoverType, localPosition, target.mapToGlobal(localPosition),
+                          localPosition, modifiers);
         QCoreApplication::sendEvent(&target, &event);
         return;
     }

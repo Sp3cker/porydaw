@@ -58,6 +58,19 @@ The six baseline QWidget input surfaces are:
 - Class declaration deviation: `TimelineInputItem` cannot be declared `final` because Qt 6.11's `qmlRegisterType` internally instantiates `QQmlElement<T>`, which derives from `T`. This is a toolchain-required C++ inheritance constraint, not a compatibility shim.
 - Focus seam plan correction: `focusBand()` returns `false` only when the target band's input item is absent in that phase; otherwise it issues the focus request and returns `true`. This avoids an asynchronous `QWindowContainer` / `QQuickWindow` fallback race without caching focus state, keeping `focusedBand()` as the sole live active-focus truth.
 
+### Phase 3 implementation record
+
+- Build checks: `deno task build:checks` passed.
+- Focused checks: `host-integration`, `rollwindowingcheck`, `rendering-playhead`,
+  `editor-drawer`, and `mainwindow-routing` pass. `host-integration` now verifies that the
+  `timelineOtherEventsInput` rectangle matches the canonical band, marker hover shows the
+  SongView-associated native tooltip, and leave hides it.
+- Unconverted band state: `Ruler`, `PianoRoll`, `Automation`, and `Velocity` continue to render
+  but remain deliberately noninteractive in Phase 3.
+- Expected test failures: `rollcheck` retains the same four PianoRoll/pitch-bend input assertions,
+  and `automation-gestures` retains its native AutomationCanvas hover/move assertions. No
+  OtherStrip assertion fails after its checks move to the canonical Quick band and input item.
+
 ## Goal
 
 Make the existing Qt Quick timeline scene own raw pointer, wheel, hover, focus, and keyboard input

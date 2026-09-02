@@ -17,7 +17,6 @@
 #include "core/songdocument.h"
 #include "ui/songview.h"
 
-#include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timeruler.h"
@@ -208,9 +207,10 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
             }
             view.applyViewState(priorViewState);
             auto *pianoRoll = static_cast<songview::PianoRoll *>(roll);
-            auto *otherStrip = findWidgetDescendant<songview::OtherStrip>(view);
-            if (!otherStrip)
-                fail("could not find the other-events strip");
+            const std::optional<songview::TimelineBandGeometry> otherEvents =
+                view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents);
+            if (!otherEvents)
+                fail("could not find the canonical other-events band");
             const StripItem *trackEvent = nullptr;
             for (const StripItem &item : view.model().strip) {
                 if (item.track >= 0) {
@@ -221,22 +221,22 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
             if (!trackEvent)
                 fail("timeline fixture has no track-colored other-events marker");
             const double originalScroll = view.viewState().scrollPx;
-            if (otherStrip && trackEvent) {
-                const qreal visibleContentX =
-                    std::max<qreal>(1.0, (otherStrip->width() - view.timelinePlotOrigin()) / 3.0);
+            if (otherEvents && trackEvent) {
+                const qreal visibleContentX = std::max<qreal>(
+                    1.0, (otherEvents->rect.width() - view.timelinePlotOrigin()) / 3.0);
                 view.setEditorHorizontalScroll(
                     originalScroll + view.contentX(double(trackEvent->tick)) - visibleContentX);
                 QCoreApplication::processEvents();
             }
             const QImage beforeStripImage =
-                otherStrip ? check.captureQuickBand(*otherStrip) : QImage{};
+                otherEvents ? check.captureQuickBand(otherEvents->rect) : QImage{};
             auto movedSelection = view.selectionModel().timeSelection();
             ++movedSelection.endTick;
             view.selectionModel().setTimeSelection(movedSelection);
             QCoreApplication::processEvents();
             const QImage partialSelectionImage = check.captureQuickFramebuffer();
             const QImage afterStripImage =
-                otherStrip ? check.captureQuickBand(*otherStrip) : QImage{};
+                otherEvents ? check.captureQuickBand(otherEvents->rect) : QImage{};
             if (beforeStripImage.isNull() || afterStripImage.isNull() ||
                 beforeStripImage != afterStripImage) {
                 fail("moving a time selection changed the other-events strip pixels");

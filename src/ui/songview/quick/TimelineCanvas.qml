@@ -323,6 +323,12 @@ Item {
             textModel: timelineScene.otherEventsTextModel
             z: 2
         }
+
+        TimelineInputItem {
+            objectName: "timelineOtherEventsInput"
+            anchors.fill: parent
+            Accessible.description: accessibilityDescription
+        }
     }
 
 }

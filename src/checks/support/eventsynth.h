@@ -21,8 +21,8 @@ void sendKey(QObject &target, QEvent::Type type, int key, Qt::KeyboardModifiers 
              const QString &text, bool autoRepeat, ushort count);
 
 // Direct delivery into a converted band's Quick input item. sendKey()
-// already targets QObject; the mouse overload maps QEvent::Leave to
-// QEvent::HoverLeave, the leave semantic of QQuickItem hover handling.
+// already targets QObject; the mouse overload maps passive moves and Leave
+// to the QQuickItem hover events they represent in production.
 void sendMouse(QQuickItem &target, QEvent::Type type, const QPointF &localPosition,
                Qt::MouseButton button, Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers);
 void sendWheel(QQuickItem &target, const QPointF &localPosition, const QPoint &pixelDelta,

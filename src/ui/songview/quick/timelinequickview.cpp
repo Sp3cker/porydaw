@@ -182,14 +182,20 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
             qFatal("Qt Quick timeline QML has no band property '%s'", properties.visible);
     }
 
-    // Phase 2 wires the first Quick input seam: the voice-changes band owns
-    // the only TimelineInputItem; later band phases add the other five.
+    // Converted bands attach through their matching input items; unconverted
+    // bands deliberately remain without an entry until their phase lands.
     TimelineInputItem *const voiceChangesInput =
         root->findChild<TimelineInputItem *>(QStringLiteral("timelineVoiceChangesInput"));
     if (!voiceChangesInput)
         qFatal("Qt Quick timeline QML has no input item 'timelineVoiceChangesInput'");
     voiceChangesInput->setInteraction(m_voiceChanges.data());
     m_inputItems[timelineBandIndex(TimelineBand::VoiceChanges)] = voiceChangesInput;
+    TimelineInputItem *const otherEventsInput =
+        root->findChild<TimelineInputItem *>(QStringLiteral("timelineOtherEventsInput"));
+    if (!otherEventsInput)
+        qFatal("Qt Quick timeline QML has no input item 'timelineOtherEventsInput'");
+    otherEventsInput->setInteraction(m_otherEvents.data());
+    m_inputItems[timelineBandIndex(TimelineBand::OtherEvents)] = otherEventsInput;
 
     static constexpr std::array nativeChromeNames = {
         "velocityResizeHandle", "voiceChangesResizeHandle", "automationResizeHandle",

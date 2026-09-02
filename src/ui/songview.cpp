@@ -65,8 +65,7 @@ int resolveRulerRowHeight()
     return markerMetrics.height() + lyt::singlePixel() + tickMetrics.height() + lyt::singlePixel();
 }
 
-// Fixed other-events-row height: one body line plus two spacing units — the
-// same formula OtherStrip applies to itself.
+// Parent-owned other-events-row height: one body line plus two spacing units.
 int resolveOtherEventsRowHeight()
 {
     return QFontMetrics(QApplication::font()).height() + lyt::space(Space::Two);
@@ -191,8 +190,8 @@ void SongView::synchronizeTimelineBandLayout()
         m_playheadOverlay->updateBands(m_timelineBandLayout);
 }
 
-// Migration assertion: every published band equals the retained widget that
-// visually owns it while both exist. Band rects derive from parent-owned
+// Migration assertion: every published retained-widget band equals the widget
+// that visually owns it while both exist. Band rects derive from parent-owned
 // rectangles (spacer rows, the roll page minus its scrollbar column, drawer
 // bodies, the automation scroll viewport), so a drift between the two breaks
 // the playhead/Quick masks. Only valid at settled call sites — a synchronize
@@ -207,25 +206,22 @@ bool SongView::bandWidgetsMatchCanonicalLayout() const
         return !canonical || !widget || widgetRect(*widget) == canonical->rect;
     };
     const AutomationPage *automation = m_editorDrawer ? m_editorDrawer->automationPage() : nullptr;
-    // VoiceChanges has no widget since its Quick conversion; its canonical
-    // rectangle comes straight from DrawerSections::bodyRect().
+    // Converted bands have no widget; their canonical rectangles come
+    // directly from their parent-owned spacer/body geometry.
     return matches(TimelineBand::Ruler, m_ruler) && matches(TimelineBand::Roll, m_roll) &&
-           matches(TimelineBand::OtherEvents, m_strip) &&
            matches(TimelineBand::Automation, automation ? automation->scrollViewport() : nullptr) &&
            matches(TimelineBand::Velocity,
                    m_editorDrawer ? m_editorDrawer->velocityArea() : nullptr);
 }
 
-// The ruler and other-events widgets no longer occupy layout slots; they
-// overlay the fixed-height spacer rows the layout owns.
+// The ruler widget no longer occupies its layout slot; it overlays the
+// fixed-height spacer row the layout owns.
 void SongView::positionBandWidgets()
 {
     if (layout())
         layout()->activate();
     if (m_ruler && m_rulerSpacer)
         m_ruler->setGeometry(m_rulerSpacer->geometry());
-    if (m_strip && m_stripSpacer)
-        m_strip->setGeometry(m_stripSpacer->geometry());
 }
 
 SongView::SongView(QWidget *parent)
@@ -291,7 +287,7 @@ SongView::SongView(QWidget *parent)
     mid->addWidget(m_rollStack, 1);
     vbox->addWidget(rollPane, 1);
 
-    m_strip = new OtherStrip(this);
+    m_strip = new OtherStrip(*this);
     m_stripSpacer = new QSpacerItem(m_geometry.plotOrigin, m_geometry.otherEventsHeight,
                                     QSizePolicy::Minimum, QSizePolicy::Fixed);
     vbox->addSpacerItem(m_stripSpacer);
@@ -308,10 +304,11 @@ SongView::SongView(QWidget *parent)
     m_quickView = new TimelineQuickView(
         *m_ruler, *m_roll, *m_strip, *m_editorDrawer->automationPage(),
         *m_editorDrawer->velocityArea(), *m_editorDrawer->voiceChangeArea(), *this);
-    // VoiceChangeArea is a SongView-owned interaction, not drawer chrome.
-    // Reparenting after the Quick host is attached makes QObject teardown
-    // destroy/detach the host before the interaction module.
+    // Converted drawer/strip interactions are SongView-owned, not native
+    // chrome. Parenting them after the Quick host makes QObject teardown
+    // destroy and detach the host before either interaction module.
     m_editorDrawer->voiceChangeArea()->setParent(this);
+    m_strip->setParent(this);
     m_quickView->lower();
     m_playheadOverlay = new PlayheadOverlay(*this, timelineBandLayout());
     m_selectionModel.setObserver(

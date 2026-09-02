@@ -42,7 +42,8 @@
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/eventlistview.h"
 #include "ui/songtab.h"
-#include "ui/songview/otherstrip.h"
+#include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timeruler.h"
 #include "ui/songview/trackheaderpanel.h"
 
@@ -560,7 +561,12 @@ struct GateFixture {
         ruler = descendant<songview::TimeRuler>(view);
         roll = view.findChild<QWidget *>(QStringLiteral("pianoRoll"));
         headers = descendant<songview::TrackHeaderPanel>(view);
-        strip = descendant<songview::OtherStrip>(view);
+        auto *quick =
+            view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+        stripInput = quick && quick->rootObject()
+                         ? quick->rootObject()->findChild<songview::TimelineInputItem *>(
+                               QStringLiteral("timelineOtherEventsInput"))
+                         : nullptr;
         events = view.findChild<EventListView *>();
         drawer = view.editorDrawer();
         for (QScrollBar *scrollbar : view.findChildren<QScrollBar *>()) {
@@ -588,10 +594,10 @@ struct GateFixture {
     void checkSurfacesEnabled(Harness &check) const
     {
         const std::pair<const char *, QWidget *> surfaces[] = {
-            {"time ruler", ruler.data()},          {"piano roll", roll.data()},
-            {"track headers", headers.data()},     {"other strip", strip.data()},
-            {"event list", events.data()},         {"editor drawer", drawer.data()},
-            {"horizontal scrollbar", hbar.data()}, {"vertical scrollbar", vbar.data()},
+            {"time ruler", ruler.data()},        {"piano roll", roll.data()},
+            {"track headers", headers.data()},   {"event list", events.data()},
+            {"editor drawer", drawer.data()},    {"horizontal scrollbar", hbar.data()},
+            {"vertical scrollbar", vbar.data()},
         };
         for (const auto &[name, widget] : surfaces) {
             if (!widget)
@@ -600,6 +606,10 @@ struct GateFixture {
                 check.fail(qUtf8Printable(
                     QObject::tr("loading %1 was disabled instead of gated").arg(name)));
         }
+        if (!stripInput)
+            check.fail("loading view is missing its other-events Quick input");
+        else if (!stripInput->isEnabled())
+            check.fail("loading other-events Quick input was disabled instead of gated");
     }
 
     // The ruler's grid controls must all stay enabled while loading.
@@ -643,7 +653,7 @@ struct GateFixture {
     QPointer<songview::TimeRuler> ruler;
     QPointer<QWidget> roll;
     QPointer<songview::TrackHeaderPanel> headers;
-    QPointer<songview::OtherStrip> strip;
+    QPointer<songview::TimelineInputItem> stripInput;
     QPointer<EventListView> events;
     QPointer<QWidget> drawer;
     QPointer<QScrollBar> hbar;

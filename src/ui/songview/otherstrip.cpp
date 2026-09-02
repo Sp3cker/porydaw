@@ -5,9 +5,6 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickview.h"
-#include <QEvent>
-#include <QFontMetrics>
-#include <QMouseEvent>
 #include <QStringList>
 #include <QToolTip>
 
@@ -20,59 +17,57 @@ namespace songview {
 
 OtherStrip::Geometry OtherStrip::Geometry::resolve()
 {
-    return {lyt::fontPx(17.5 + 13.0 / 3.0), lyt::fontPx(1.0 / 3.0), lyt::fontPx(1.0 / 3.0),
-            lyt::fontPx(5.0 / 12.0)};
+    return {lyt::fontPx(1.0 / 3.0), lyt::fontPx(1.0 / 3.0), lyt::fontPx(5.0 / 12.0)};
 }
 
 void OtherStrip::refreshGeometry()
 {
     m_geometry = Geometry::resolve();
-    setFixedHeight(QFontMetrics(font()).height() + lyt::space(Space::Two));
     requestQuickUpdate();
 }
 
-OtherStrip::OtherStrip(SongView *sv) : QWidget(sv), m_sv(sv), m_geometry(Geometry::resolve())
-{
-    setObjectName(QStringLiteral("otherEventsStrip"));
-    setAutoFillBackground(false);
-    refreshGeometry();
-    setMouseTracking(true);
-}
+OtherStrip::OtherStrip(SongView &owner, QObject *parent)
+    : QObject(parent)
+    , m_owner(owner)
+    , m_geometry(Geometry::resolve())
+{}
 
 void OtherStrip::requestQuickUpdate()
 {
-    m_sv->requestTimelineQuickUpdate(TimelineQuickDirty::OtherEvents);
+    m_owner.requestTimelineQuickUpdate(TimelineQuickDirty::OtherEvents);
 }
 
-bool OtherStrip::event(QEvent *event)
+void OtherStrip::attachInputHost(TimelineInputHost &host)
 {
-    const bool handled = QWidget::event(event);
-    if (event->type() == QEvent::FontChange)
-        refreshGeometry();
-    return handled;
+    Q_ASSERT(!m_inputHost || m_inputHost == &host);
+    m_inputHost = &host;
 }
 
-void OtherStrip::resizeEvent(QResizeEvent *event)
+void OtherStrip::detachInputHost(TimelineInputHost &host)
 {
-    QWidget::resizeEvent(event);
-    requestQuickUpdate();
-}
-
-void OtherStrip::mouseMoveEvent(QMouseEvent *event)
-{
-    const MidiTimeline *tl = m_sv->timeline();
-    if (!tl || event->position().x() < m_geometry.plotOrigin) {
-        QToolTip::hideText();
+    Q_ASSERT(m_inputHost == &host);
+    if (m_inputHost != &host)
         return;
+    QToolTip::hideText();
+    m_inputHost = nullptr;
+}
+
+bool OtherStrip::pointerMove(const TimelinePointerInput &input)
+{
+    const MidiTimeline *timeline = m_owner.timeline();
+    const qreal plotOrigin = m_owner.timelinePlotOrigin();
+    if (!m_inputHost || !timeline || input.position.x() < plotOrigin) {
+        QToolTip::hideText();
+        return true;
     }
     QStringList lines;
-    for (const StripItem &item : m_sv->model().strip) {
+    for (const StripItem &item : m_owner.model().strip) {
         const qreal x =
-            m_sv->displayX(double(item.tick), m_geometry.plotOrigin, devicePixelRatioF());
-        if (std::abs(x - event->position().x()) > m_geometry.otherEventHitSlop)
+            m_owner.displayX(double(item.tick), plotOrigin, m_inputHost->devicePixelRatio());
+        if (std::abs(x - input.position.x()) > m_geometry.otherEventHitSlop)
             continue;
-        const double seconds = double(tl->sampleForTick(item.tick)) / tl->sampleRate;
-        QString where =
+        const double seconds = double(timeline->sampleForTick(item.tick)) / timeline->sampleRate;
+        const QString where =
             item.track >= 0 ? SongView::tr("Track %1").arg(item.track + 1) : SongView::tr("File");
         lines << QStringLiteral("%1:%2 · %3 · %4")
                      .arg(int(seconds) / 60)
@@ -86,8 +81,24 @@ void OtherStrip::mouseMoveEvent(QMouseEvent *event)
     if (lines.isEmpty())
         QToolTip::hideText();
     else
-        QToolTip::showText(event->globalPosition().toPoint(), lines.join(QStringLiteral("\n")),
-                           this);
+        QToolTip::showText(input.globalPosition.toPoint(), lines.join(QStringLiteral("\n")),
+                           &m_owner);
+    return true;
+}
+
+void OtherStrip::pointerLeave()
+{
+    QToolTip::hideText();
+}
+
+void OtherStrip::inputCancelled(TimelineInputCancelReason)
+{
+    QToolTip::hideText();
+}
+
+void OtherStrip::hostAppearanceChanged()
+{
+    refreshGeometry();
 }
 
 } // namespace songview

@@ -4,6 +4,7 @@
 #include <QImage>
 #include <QMetaObject>
 #include <QPoint>
+#include <QRect>
 #include <QRectF>
 #include <QString>
 #include <QtGlobal>
@@ -43,6 +44,7 @@ class Harness final
     QWidget &roll() noexcept;
     QImage captureQuickFramebuffer();
     QImage captureQuickBand(QWidget &band);
+    QImage captureQuickBand(const QRect &bandRect);
     int track() const noexcept;
     int pianoKeyboardWidth() const noexcept;
     int plotOrigin() const noexcept;

@@ -1,10 +1,8 @@
 #pragma once
 
-#include <QWidget>
+#include "ui/songview/quick/timelineinput.h"
 
-class QEvent;
-class QMouseEvent;
-class QResizeEvent;
+#include <QObject>
 class SongView;
 
 namespace songview {
@@ -12,11 +10,11 @@ namespace songview {
 class TimelineQuickScene;
 class TimelineQuickView;
 
-class OtherStrip : public QWidget
+class OtherStrip final : public QObject, public TimelineBandInteraction
 {
+    Q_OBJECT
   private:
     struct Geometry {
-        int plotOrigin;
         int otherEventHitSlop;
         int otherEventMarkerHalfWidth;
         int otherEventMarkerHalfHeight;
@@ -27,18 +25,21 @@ class OtherStrip : public QWidget
     void refreshGeometry();
 
   public:
-    explicit OtherStrip(SongView *sv);
+    explicit OtherStrip(SongView &owner, QObject *parent = nullptr);
 
-  protected:
-    bool event(QEvent *event) override;
-    void resizeEvent(QResizeEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *event) override;
+    void attachInputHost(TimelineInputHost &host) override;
+    void detachInputHost(TimelineInputHost &host) override;
+    bool pointerMove(const TimelinePointerInput &input) override;
+    void pointerLeave() override;
+    void inputCancelled(TimelineInputCancelReason reason) override;
+    void hostAppearanceChanged() override;
 
   private:
     friend class TimelineQuickView;
     void rebuildQuickScene(TimelineQuickScene &scene);
     void requestQuickUpdate();
-    SongView *m_sv;
+    SongView &m_owner;
+    TimelineInputHost *m_inputHost = nullptr;
     Geometry m_geometry;
 };
 

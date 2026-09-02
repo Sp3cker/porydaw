@@ -25,7 +25,6 @@
 #include "ui/layout.h"
 #include "ui/playheadoverlay.h"
 #include "ui/songview.h"
-#include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -83,13 +82,12 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
     auto *ruler = checks::support::findWidgetDescendant<songview::TimeRuler>(probe);
     auto *roll = checks::support::findWidgetDescendant<songview::PianoRoll>(probe);
     auto *eventList = checks::support::findWidgetDescendant<EventListView>(probe);
-    auto *otherEvents = checks::support::findWidgetDescendant<songview::OtherStrip>(probe);
     auto *drawer = probe.editorDrawer();
     auto *automation = drawer ? drawer->automationPage() : nullptr;
     auto *velocity = drawer ? drawer->velocityArea() : nullptr;
     auto *voiceChanges = drawer ? drawer->voiceChangeArea() : nullptr;
-    if (!quick || !scene || !overlay || !ruler || !roll || !eventList || !otherEvents ||
-        !automation || !velocity || !voiceChanges) {
+    if (!quick || !scene || !overlay || !ruler || !roll || !eventList || !automation || !velocity ||
+        !voiceChanges) {
         failures.append("forced QWidget playhead fallback did not expose its rendering surfaces");
         probe.hide();
         return failures;
@@ -128,8 +126,8 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
         }
     };
     const songview::TimelineBandLayout &bandLayout = probe.timelineBandLayout();
-    // The voice changes page renders in the Quick scene instead of a native
-    // widget: its clip check probes the canonical SongView-local band rect.
+    // Converted bands render in the Quick scene instead of native widgets;
+    // their clip checks probe canonical SongView-local rectangles.
     const auto checkVisibleBodyRect = [&](const QRect &bandRect, const char *name) {
         const QImage image = fallbackImage();
         const QRect bodyProbe{qRound(playheadX()) - layout::singlePixel(), bandRect.center().y(),
@@ -163,7 +161,10 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
 
     checkVisibleBody(*ruler, "ruler");
     checkVisibleBody(*roll, "piano roll");
-    checkVisibleBody(*otherEvents, "other-events");
+    checkVisibleBodyRect(bandLayout.geometry(songview::TimelineBand::OtherEvents)
+                             .value_or(songview::TimelineBandGeometry{})
+                             .rect,
+                         "other-events");
     checkRulerTriangle(fallbackImage(), false, "roll view");
 
     const QRect rollRect = checks::support::widgetRectIn(*roll, probe);
@@ -220,7 +221,10 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
     probe.setDrawerActivePage(EditorDrawerPage::Automations);
     checks::support::pumpQuick();
     checkVisibleBody(*automation->scrollViewport(), "automation viewport");
-    checkVisibleBody(*otherEvents, "other-events");
+    checkVisibleBodyRect(bandLayout.geometry(songview::TimelineBand::OtherEvents)
+                             .value_or(songview::TimelineBandGeometry{})
+                             .rect,
+                         "other-events");
 
     // The drawer setup above queues Quick dirty flushes and posted resize
     // events for the newly shown bodies that outlive its pump; those land in
