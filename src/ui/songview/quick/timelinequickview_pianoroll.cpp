@@ -710,7 +710,7 @@ void TimelineQuickView::synchronizeHoverChip()
                           roll.m_geometry.keyboardHoverChipCornerRadius);
 }
 
-void TimelineQuickView::synchronize(PianoRollQuickDirtySet dirty)
+void TimelineQuickView::syncPianoRoll(PianoRollQuickDirtySet dirty)
 {
     if (!m_roll)
         return;

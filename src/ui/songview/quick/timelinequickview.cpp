@@ -581,40 +581,62 @@ void TimelineQuickView::flushUpdate()
     const AutomationRefreshSet automationRefresh =
         std::exchange(m_pendingAutomationRefresh, AutomationRefresh::None);
     if (pianoDirty != PianoRollQuickDirty::None)
-        synchronize(pianoDirty);
-    if (timelineDirty != TimelineQuickDirty::None)
-        synchronizeTimeline(timelineDirty);
+        syncPianoRoll(pianoDirty);
+    if (timelineDirty & TimelineQuickDirty::Ruler)
+        syncRuler();
+    if (timelineDirty & TimelineQuickDirty::OtherEvents)
+        syncOtherEvents();
     if (automationRefresh != AutomationRefresh::None)
         syncAutomation(automationRefresh);
+    if (timelineDirty & TimelineQuickDirty::Velocity)
+        syncVelocity();
+    if (timelineDirty & (TimelineQuickDirty::VoiceChanges | TimelineQuickDirty::VoiceChangesHover))
+        syncVoiceChanges(timelineDirty);
 }
 
-void TimelineQuickView::synchronizeTimeline(TimelineQuickDirtySet dirty)
+void TimelineQuickView::updateLayer(TimelineQuickLayer layer)
 {
-    const auto updateLayer = [this](TimelineQuickLayer layer) {
-        if (TimelineQuickItem *item = m_items[static_cast<std::size_t>(layer)])
-            item->update();
-    };
-    if ((dirty & TimelineQuickDirty::Ruler) && m_ruler) {
-        m_ruler->rebuildQuickScene(*m_scene);
-        updateLayer(TimelineQuickLayer::RulerChrome);
-        updateLayer(TimelineQuickLayer::RulerMarks);
-    }
-    if ((dirty & TimelineQuickDirty::OtherEvents) && m_otherEvents) {
-        m_otherEvents->rebuildQuickScene(*m_scene);
-        updateLayer(TimelineQuickLayer::OtherEventsChrome);
-        updateLayer(TimelineQuickLayer::OtherEventsMarkers);
-    }
-    if ((dirty & TimelineQuickDirty::Velocity) && m_velocity) {
-        m_velocity->rebuildQuickScene(*m_scene);
-        updateLayer(TimelineQuickLayer::VelocityChrome);
-        updateLayer(TimelineQuickLayer::VelocityAxis);
-        updateLayer(TimelineQuickLayer::VelocityGrid);
-        updateLayer(TimelineQuickLayer::VelocityBands);
-        updateLayer(TimelineQuickLayer::VelocityStems);
-        updateLayer(TimelineQuickLayer::VelocityNodes);
-        updateLayer(TimelineQuickLayer::VelocityTransient);
-    }
-    if ((dirty & TimelineQuickDirty::VoiceChanges) && m_voiceChanges) {
+    if (TimelineQuickItem *item = m_items[static_cast<std::size_t>(layer)])
+        item->update();
+}
+
+void TimelineQuickView::syncRuler()
+{
+    if (!m_ruler)
+        return;
+    m_ruler->rebuildQuickScene(*m_scene);
+    updateLayer(TimelineQuickLayer::RulerChrome);
+    updateLayer(TimelineQuickLayer::RulerMarks);
+}
+
+void TimelineQuickView::syncOtherEvents()
+{
+    if (!m_otherEvents)
+        return;
+    m_otherEvents->rebuildQuickScene(*m_scene);
+    updateLayer(TimelineQuickLayer::OtherEventsChrome);
+    updateLayer(TimelineQuickLayer::OtherEventsMarkers);
+}
+
+void TimelineQuickView::syncVelocity()
+{
+    if (!m_velocity)
+        return;
+    m_velocity->rebuildQuickScene(*m_scene);
+    updateLayer(TimelineQuickLayer::VelocityChrome);
+    updateLayer(TimelineQuickLayer::VelocityAxis);
+    updateLayer(TimelineQuickLayer::VelocityGrid);
+    updateLayer(TimelineQuickLayer::VelocityBands);
+    updateLayer(TimelineQuickLayer::VelocityStems);
+    updateLayer(TimelineQuickLayer::VelocityNodes);
+    updateLayer(TimelineQuickLayer::VelocityTransient);
+}
+
+void TimelineQuickView::syncVoiceChanges(TimelineQuickDirtySet dirty)
+{
+    if (!m_voiceChanges)
+        return;
+    if (dirty & TimelineQuickDirty::VoiceChanges) {
         m_voiceChanges->rebuildQuickScene(*m_scene);
         updateLayer(TimelineQuickLayer::VoiceChangesChrome);
         updateLayer(TimelineQuickLayer::VoiceChangesGrid);
@@ -624,7 +646,7 @@ void TimelineQuickView::synchronizeTimeline(TimelineQuickDirtySet dirty)
         if (m_voiceChanges->m_hoverActive)
             m_voiceChanges->rebuildQuickHover(*m_scene);
         updateLayer(TimelineQuickLayer::VoiceChangesHover);
-    } else if ((dirty & TimelineQuickDirty::VoiceChangesHover) && m_voiceChanges) {
+    } else if (dirty & TimelineQuickDirty::VoiceChangesHover) {
         m_voiceChanges->rebuildQuickHover(*m_scene);
         updateLayer(TimelineQuickLayer::VoiceChangesHover);
     }
@@ -632,10 +654,6 @@ void TimelineQuickView::synchronizeTimeline(TimelineQuickDirtySet dirty)
 
 void TimelineQuickView::syncAutomation(AutomationRefreshSet refresh)
 {
-    const auto updateLayer = [this](TimelineQuickLayer layer) {
-        if (TimelineQuickItem *item = m_items[static_cast<std::size_t>(layer)])
-            item->update();
-    };
     if (refresh == AutomationRefresh::None || !m_automation || !m_automation->canvas())
         return;
     m_automation->canvas()->rebuildQuickScene(*m_scene, refresh);

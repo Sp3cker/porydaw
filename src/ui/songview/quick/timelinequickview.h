@@ -136,9 +136,15 @@ class TimelineQuickView final : public QWidget
 
     void publishTimelineBandLayout();
     void flushUpdate();
-    void synchronize(PianoRollQuickDirtySet dirty);
-    void synchronizeTimeline(TimelineQuickDirtySet dirty);
+    // One sync entry point per band; flushUpdate dispatches one call per
+    // dirty band, and each sync owns that band's rebuild + layer updates.
+    void syncPianoRoll(PianoRollQuickDirtySet dirty);
+    void syncRuler();
+    void syncOtherEvents();
+    void syncVelocity();
+    void syncVoiceChanges(TimelineQuickDirtySet dirty);
     void syncAutomation(AutomationRefreshSet refresh);
+    void updateLayer(TimelineQuickLayer layer);
 
     void rebuildGrid();
     void rebuildNoteFills();
