@@ -9,9 +9,6 @@
 #include <QSize>
 #include <QWidget>
 #include <memory>
-#ifdef PORYDAW_USE_MACOS_PLAYHEAD_IMAGES
-#include <QImage>
-#endif
 
 class QEvent;
 class QPaintEvent;
@@ -66,9 +63,6 @@ class PlayheadOverlay final : public QWidget
     void setPlatformLayout();
     void setPlatformImages();
     bool setPlatformPosition();
-#ifdef PORYDAW_USE_MACOS_PLAYHEAD_IMAGES
-    bool updateImages();
-#endif
 #endif
     void updatePlayhead();
 
@@ -76,26 +70,6 @@ class PlayheadOverlay final : public QWidget
     QColor m_color;
     QPainterPath m_playheadTrianglePath;
     QSize m_playheadTrianglePathSize;
-
-#ifdef PORYDAW_USE_MACOS_PLAYHEAD_IMAGES
-    // Pre-rendered strips are used only by the CALayer renderer. DirectComposition
-    // paints its own D2D surfaces, and the QWidget fallback allocates no images.
-    QImage m_bodyImage;
-    qreal m_bodyImageLeftExtent = 0.0;
-    QImage m_triangleImage;
-
-    int m_cachedBodyHeight = -1;
-    bool m_cachedBodyPlaying = false;
-    qreal m_cachedBodyDpr = 0.0;
-    QColor m_cachedBodyThemeColor;
-    bool m_cachedBodyValid = false;
-
-    bool m_cachedTrianglePointsUp = false;
-    qreal m_cachedTriangleDpr = 0.0;
-    QColor m_cachedTriangleThemeColor;
-    QSize m_cachedTriangleSize;
-    bool m_cachedTriangleValid = false;
-#endif
 
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD
     std::unique_ptr<Platform, PlatformDeleter> m_platform;

@@ -42,6 +42,19 @@ int countPlayheadLayers(CALayer *ownerLayer)
     return count;
 }
 
+bool layerTreeHasContents(CALayer *layer)
+{
+    if (layer.contents)
+        return true;
+    if (layer.mask && layerTreeHasContents(layer.mask))
+        return true;
+    for (CALayer *child in layer.sublayers) {
+        if (layerTreeHasContents(child))
+            return true;
+    }
+    return false;
+}
+
 struct RetainedObjectGuard {
     id object = nil;
 
@@ -132,47 +145,75 @@ void checkMacPlayheadLifecycle(SongView &view, songview::PlayheadOverlay &overla
     CALayer *const triangleClip = root.sublayers[1];
     CALayer *const body = bodyClip.sublayers.firstObject;
     CALayer *const triangle = triangleClip.sublayers.firstObject;
-    if (!body || !triangle || ![bodyClip.mask isKindOfClass:[CAShapeLayer class]] ||
-        ![triangleClip.mask isKindOfClass:[CAShapeLayer class]]) {
+    if (!body || ![triangle isKindOfClass:[CAShapeLayer class]] ||
+        ![bodyClip.mask isKindOfClass:[CAShapeLayer class]] ||
+        ![triangleClip.mask isKindOfClass:[CAShapeLayer class]] || body.sublayers.count != 3) {
         failures.append("macOS playhead native layer tree is incomplete");
         return;
     }
+    CAGradientLayer *const leftGlow = (CAGradientLayer *)body.sublayers[0];
+    CAGradientLayer *const rightGlow = (CAGradientLayer *)body.sublayers[1];
+    CALayer *const core = body.sublayers[2];
+    if (![leftGlow isKindOfClass:[CAGradientLayer class]] ||
+        ![rightGlow isKindOfClass:[CAGradientLayer class]] ||
+        [core isKindOfClass:[CAGradientLayer class]]) {
+        failures.append("macOS playhead body does not use native gradient and core layers");
+        return;
+    }
+    CAShapeLayer *const resolvedTriangle = (CAShapeLayer *)triangle;
     CAShapeLayer *const resolvedBodyMask = (CAShapeLayer *)bodyClip.mask;
     CAShapeLayer *const resolvedTriangleMask = (CAShapeLayer *)triangleClip.mask;
 
     const qreal baseX = view.camera().contentX(view.playheadTick());
     overlay.setPlayhead(baseX, true, false);
     processLayers();
-    RetainedObjectGuard pausedBodyContents{body.contents};
-    if (!pausedBodyContents.object)
-        failures.append("paused macOS playhead did not publish a body image");
+    if (layerTreeHasContents(root))
+        failures.append("paused macOS playhead retained raster layer contents");
+    const CGRect pausedBodyBounds = body.bounds;
+    RetainedObjectGuard pausedLeftColors{leftGlow.colors};
 
     overlay.setPlayhead(baseX, true, true);
     processLayers();
-    if (body.contents == pausedBodyContents.object)
-        failures.append("macOS play/pause did not regenerate the motion-dependent body image");
+    if (CGRectEqualToRect(body.bounds, pausedBodyBounds) ||
+        leftGlow.colors == pausedLeftColors.object) {
+        failures.append("macOS play/pause did not update native glow layers");
+    }
+    if (layerTreeHasContents(root))
+        failures.append("playing macOS playhead retained raster layer contents");
 
-    RetainedObjectGuard movingBodyContents{body.contents};
-    RetainedObjectGuard movingTriangleContents{triangle.contents};
+    RetainedObjectGuard movingLeftColors{leftGlow.colors};
+    RetainedObjectGuard movingRightColors{rightGlow.colors};
     RetainedPathGuard bodyPath{resolvedBodyMask.path};
-    RetainedPathGuard trianglePath{resolvedTriangleMask.path};
+    RetainedPathGuard triangleClipPath{resolvedTriangleMask.path};
+    RetainedPathGuard trianglePath{resolvedTriangle.path};
     const CGRect rootBounds = root.bounds;
     const CGRect bodyClipBounds = bodyClip.bounds;
+    const CGRect bodyBounds = body.bounds;
+    const CGRect leftGlowBounds = leftGlow.bounds;
+    const CGRect rightGlowBounds = rightGlow.bounds;
+    const CGRect coreBounds = core.bounds;
     const CGRect triangleClipBounds = triangleClip.bounds;
+    const CGRect triangleBounds = triangle.bounds;
     const CGPoint startingBodyPosition = body.position;
 
     for (int move = 1; move <= 128; ++move)
         overlay.setPlayhead(baseX + qreal(move) / 3.0, true, true);
     processLayers();
-    if (body.contents != movingBodyContents.object ||
-        triangle.contents != movingTriangleContents.object) {
-        failures.append("position-only macOS updates regenerated native playhead images");
+    if (layerTreeHasContents(root)) {
+        failures.append("position-only macOS updates introduced raster layer contents");
     }
-    if (resolvedBodyMask.path != bodyPath.path || resolvedTriangleMask.path != trianglePath.path ||
-        !CGRectEqualToRect(root.bounds, rootBounds) ||
+    if (leftGlow.colors != movingLeftColors.object ||
+        rightGlow.colors != movingRightColors.object || resolvedBodyMask.path != bodyPath.path ||
+        resolvedTriangleMask.path != triangleClipPath.path ||
+        resolvedTriangle.path != trianglePath.path || !CGRectEqualToRect(root.bounds, rootBounds) ||
         !CGRectEqualToRect(bodyClip.bounds, bodyClipBounds) ||
-        !CGRectEqualToRect(triangleClip.bounds, triangleClipBounds)) {
-        failures.append("position-only macOS updates regenerated native playhead layout");
+        !CGRectEqualToRect(body.bounds, bodyBounds) ||
+        !CGRectEqualToRect(leftGlow.bounds, leftGlowBounds) ||
+        !CGRectEqualToRect(rightGlow.bounds, rightGlowBounds) ||
+        !CGRectEqualToRect(core.bounds, coreBounds) ||
+        !CGRectEqualToRect(triangleClip.bounds, triangleClipBounds) ||
+        !CGRectEqualToRect(triangle.bounds, triangleBounds)) {
+        failures.append("position-only macOS updates regenerated native playhead geometry");
     }
     if (CGPointEqualToPoint(body.position, startingBodyPosition))
         failures.append("position-only macOS updates did not move the native playhead");

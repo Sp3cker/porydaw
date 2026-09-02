@@ -9,9 +9,6 @@
 #include <QPainterPath>
 #include <QPen>
 #include <QtGlobal>
-#ifdef PORYDAW_USE_MACOS_PLAYHEAD_IMAGES
-#include <QtMath>
-#endif
 #include <algorithm>
 #include <utility>
 
@@ -128,18 +125,10 @@ void PlayheadOverlay::setPlayhead(qreal timelineX, bool visible, bool playing)
     if (m_timelineX == timelineX && m_visible == visible && m_playing == playing)
         return;
 
-#ifdef PORYDAW_USE_MACOS_PLAYHEAD_IMAGES
-    const bool playingChanged = m_playing != playing;
-#endif
-
     m_timelineX = timelineX;
     m_visible = visible;
     m_playing = playing;
 
-#ifdef PORYDAW_USE_MACOS_PLAYHEAD_IMAGES
-    if (m_platform && playingChanged && updateImages())
-        setPlatformImages();
-#endif
     updatePlayhead();
 }
 
@@ -262,14 +251,8 @@ void PlayheadOverlay::changeEvent(QEvent *event)
         if (m_color != newColor) {
             m_color = newColor;
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD
-            if (m_platform) {
-#ifdef PORYDAW_USE_MACOS_PLAYHEAD_IMAGES
-                if (updateImages())
-                    setPlatformImages();
-#else
+            if (m_platform)
                 setPlatformImages();
-#endif
-            }
 #endif
             updatePlayhead();
             if (!m_platformApplied && !m_fallbackPaintRegion.isEmpty())
@@ -345,14 +328,8 @@ void PlayheadOverlay::synchronizeGeometry()
             platformCreated = true;
         }
     }
-#ifdef PORYDAW_USE_MACOS_PLAYHEAD_IMAGES
-    const bool imagesChanged = m_platform && updateImages();
-    if (m_platform && (imagesChanged || platformCreated))
-        setPlatformImages();
-#else
     if (m_platform && platformCreated)
         setPlatformImages();
-#endif
     if (m_platform)
         setPlatformLayout();
 #endif
@@ -368,104 +345,5 @@ void PlayheadOverlay::updatePlayhead()
 #endif
     updateFallbackRegion();
 }
-
-#ifdef PORYDAW_USE_MACOS_PLAYHEAD_IMAGES
-bool PlayheadOverlay::updateImages()
-{
-    const QColor currentThemeColor = m_color;
-    const int currentHeight = m_bodyGeometry.height();
-    const qreal currentDpr = m_devicePixelRatio > 0.0 ? m_devicePixelRatio : 1.0;
-    const bool geometryValid = !m_bodyGeometry.isEmpty() && currentHeight > 0;
-    bool imagesChanged = false;
-
-    if (!geometryValid) {
-        imagesChanged = !m_bodyImage.isNull() || !m_triangleImage.isNull();
-        m_bodyImage = QImage();
-        m_triangleImage = QImage();
-        m_cachedBodyValid = false;
-        m_cachedTriangleValid = false;
-        return imagesChanged;
-    }
-
-    const bool bodyNeedsUpdate = !m_cachedBodyValid || m_cachedBodyHeight != currentHeight ||
-                                 m_cachedBodyPlaying != m_playing ||
-                                 m_cachedBodyDpr != currentDpr ||
-                                 m_cachedBodyThemeColor != currentThemeColor;
-
-    if (bodyNeedsUpdate) {
-        imagesChanged = true;
-        m_cachedBodyHeight = currentHeight;
-        m_cachedBodyPlaying = m_playing;
-        m_cachedBodyDpr = currentDpr;
-        m_cachedBodyThemeColor = currentThemeColor;
-        m_cachedBodyValid = true;
-
-        const qreal leftExtent = playheadGlowLeftExtent(m_playing);
-        const qreal rightExtent = playheadGlowRightExtent(m_playing);
-        m_bodyImageLeftExtent = leftExtent;
-
-        const qreal bodyWidthLogical = leftExtent + rightExtent;
-        const int bodyPixelWidth = qCeil(bodyWidthLogical * currentDpr);
-        const int bodyPixelHeight = qCeil(currentHeight * currentDpr);
-
-        if (bodyPixelWidth > 0 && bodyPixelHeight > 0) {
-            QImage bodyImg(bodyPixelWidth, bodyPixelHeight, QImage::Format_ARGB32_Premultiplied);
-            bodyImg.setDevicePixelRatio(currentDpr);
-            bodyImg.fill(Qt::transparent);
-
-            QPainter painter(&bodyImg);
-            painter.setRenderHint(QPainter::Antialiasing);
-            // The bar sits leftExtent from the image's left edge; the
-            // platform renderers position the image so it lands on finalX.
-            paintPlayheadBody(painter, leftExtent, 0, currentHeight, m_playing, currentThemeColor);
-            painter.end();
-
-            m_bodyImage = std::move(bodyImg);
-        } else {
-            m_bodyImage = QImage();
-        }
-    }
-
-    const QSize currentTriangleSize(2 * playheadTriangleHalfWidth(), playheadTriangleHeight());
-    const bool triangleNeedsUpdate =
-        !m_cachedTriangleValid || m_cachedTrianglePointsUp != m_trianglePointsUp ||
-        m_cachedTriangleDpr != currentDpr || m_cachedTriangleThemeColor != currentThemeColor ||
-        m_cachedTriangleSize != currentTriangleSize;
-
-    if (triangleNeedsUpdate) {
-        imagesChanged = true;
-        m_cachedTrianglePointsUp = m_trianglePointsUp;
-        m_cachedTriangleDpr = currentDpr;
-        m_cachedTriangleThemeColor = currentThemeColor;
-        m_cachedTriangleSize = currentTriangleSize;
-        m_cachedTriangleValid = true;
-
-        const qreal triWidthLogical = currentTriangleSize.width();
-        const qreal triHeightLogical = currentTriangleSize.height();
-        const int triPixelWidth = qCeil(triWidthLogical * currentDpr);
-        const int triPixelHeight = qCeil(triHeightLogical * currentDpr);
-
-        if (triPixelWidth > 0 && triPixelHeight > 0) {
-            QImage triImg(triPixelWidth, triPixelHeight, QImage::Format_ARGB32_Premultiplied);
-            triImg.setDevicePixelRatio(currentDpr);
-            triImg.fill(Qt::transparent);
-
-            QPainter painter(&triImg);
-            painter.setRenderHint(QPainter::Antialiasing);
-            painter.translate(currentTriangleSize.width() / 2.0,
-                              m_trianglePointsUp ? triHeightLogical : 0);
-            if (m_trianglePointsUp)
-                painter.scale(1.0, -1.0);
-            painter.fillPath(playheadTrianglePath(), currentThemeColor);
-            painter.end();
-
-            m_triangleImage = std::move(triImg);
-        } else {
-            m_triangleImage = QImage();
-        }
-    }
-    return imagesChanged;
-}
-#endif // PORYDAW_USE_MACOS_PLAYHEAD_IMAGES
 
 } // namespace songview

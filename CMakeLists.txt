@@ -397,7 +397,6 @@ if(APPLE)
         src/ui/playheadrenderer_macos.mm
         src/ui/activity/trackactivityrenderer_macos.mm
     )
-    target_compile_definitions(porydaw_app PUBLIC PORYDAW_USE_MACOS_PLAYHEAD_IMAGES)
     find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
     find_library(QUARTZCORE_FRAMEWORK QuartzCore REQUIRED)
     target_link_libraries(porydaw_app PRIVATE
