@@ -27,7 +27,147 @@
 
 namespace {
 constexpr double kCheckSampleRate = 48000.0;
+
+// Rig helpers speak content coordinates; normalized TimelinePointerInput
+// values speak viewport coordinates, so convert once here and map globals
+// through the recorded host.
+songview::TimelinePointerInput pointerInput(const AutomationGestureCheckRig &rig,
+                                            const QPointF &position, Qt::MouseButton button,
+                                            Qt::MouseButtons buttons,
+                                            Qt::KeyboardModifiers modifiers)
+{
+    const QPointF viewportPosition = rig.automationContentToViewport(position);
+    return {viewportPosition, rig.automationHost().mapToGlobal(viewportPosition), button, buttons,
+            modifiers};
+}
 } // namespace
+
+AutomationInputHost::AutomationInputHost(const AutomationPage &page)
+    : m_page(page)
+    , m_dpr(page.devicePixelRatioF())
+{}
+
+QCursor AutomationInputHost::cursor() const noexcept
+{
+    return m_cursorSet ? m_cursor : QCursor{Qt::ArrowCursor};
+}
+
+bool AutomationInputHost::cursorSet() const noexcept
+{
+    return m_cursorSet;
+}
+
+int AutomationInputHost::cursorAssignments() const noexcept
+{
+    return m_cursorAssignments;
+}
+
+int AutomationInputHost::cursorClears() const noexcept
+{
+    return m_cursorClears;
+}
+
+int AutomationInputHost::focusRequests() const noexcept
+{
+    return m_focusRequests;
+}
+
+Qt::FocusReason AutomationInputHost::lastFocusReason() const noexcept
+{
+    return m_lastFocusReason;
+}
+
+int AutomationInputHost::grabReleases() const noexcept
+{
+    return m_grabReleases;
+}
+
+int AutomationInputHost::globalMappings() const noexcept
+{
+    return m_globalMappings;
+}
+
+const QString &AutomationInputHost::accessibilityDescription() const noexcept
+{
+    return m_accessibilityDescription;
+}
+
+const QPointF &AutomationInputHost::globalOffset() const noexcept
+{
+    return m_globalOffset;
+}
+
+void AutomationInputHost::setDevicePixelRatio(qreal dpr) noexcept
+{
+    m_dpr = dpr;
+}
+
+void AutomationInputHost::setGlobalOffset(QPointF offset) noexcept
+{
+    m_globalOffset = offset;
+}
+
+QRectF AutomationInputHost::bounds() const
+{
+    const QSize size = m_page.automationViewportSize();
+    return QRectF(0.0, 0.0, qreal(size.width()), qreal(size.height()));
+}
+
+qreal AutomationInputHost::devicePixelRatio() const
+{
+    return m_dpr;
+}
+
+QFont AutomationInputHost::font() const
+{
+    return m_page.font();
+}
+
+QPalette AutomationInputHost::palette() const
+{
+    return m_page.palette();
+}
+
+QPointF AutomationInputHost::mapFromGlobal(QPointF position) const
+{
+    ++m_globalMappings;
+    return position - m_globalOffset;
+}
+
+QPointF AutomationInputHost::mapToGlobal(QPointF position) const
+{
+    ++m_globalMappings;
+    return position + m_globalOffset;
+}
+
+void AutomationInputHost::requestFocus(Qt::FocusReason reason)
+{
+    ++m_focusRequests;
+    m_lastFocusReason = reason;
+}
+
+void AutomationInputHost::setCursor(const QCursor &cursor)
+{
+    m_cursor = cursor;
+    m_cursorSet = true;
+    ++m_cursorAssignments;
+}
+
+void AutomationInputHost::clearCursor()
+{
+    m_cursorSet = false;
+    ++m_cursorClears;
+}
+
+void AutomationInputHost::releasePointerGrab()
+{
+    ++m_grabReleases;
+}
+
+void AutomationInputHost::setAccessibilityDescription(const QString &description)
+{
+    m_accessibilityDescription = description;
+}
 
 std::unique_ptr<AutomationGestureCheckRig>
 AutomationGestureCheckRig::create(const QString &project, const QString &song, QString &error)
@@ -45,6 +185,11 @@ AutomationGestureCheckRig::create(const QString &project, const QString &song, Q
 
 AutomationGestureCheckRig::~AutomationGestureCheckRig()
 {
+    if (m_page && m_inputHost) {
+        m_page->canvas()->detachInputHost(*m_inputHost);
+        if (m_productionInput && m_productionInteraction)
+            m_productionInput->setInteraction(m_productionInteraction);
+    }
     if (m_view) {
         m_view->setSong(nullptr, nullptr);
         m_view->setDocument(nullptr);
@@ -91,6 +236,52 @@ const AutomationCanvas &AutomationGestureCheckRig::canvas() const noexcept
     return *m_page->canvas();
 }
 
+AutomationInputHost &AutomationGestureCheckRig::automationHost() noexcept
+{
+    return *m_inputHost;
+}
+
+const AutomationInputHost &AutomationGestureCheckRig::automationHost() const noexcept
+{
+    return *m_inputHost;
+}
+
+QCursor AutomationGestureCheckRig::automationCursor() const noexcept
+{
+    return m_inputHost->cursor();
+}
+
+bool AutomationGestureCheckRig::automationCursorSet() const noexcept
+{
+    return m_inputHost->cursorSet();
+}
+
+qreal AutomationGestureCheckRig::automationDpr() const noexcept
+{
+    return m_inputHost->devicePixelRatio();
+}
+
+int AutomationGestureCheckRig::automationContentHeight() const noexcept
+{
+    return page().automationContentHeight();
+}
+
+QSize AutomationGestureCheckRig::automationViewportSize() const noexcept
+{
+    return page().automationViewportSize();
+}
+
+void AutomationGestureCheckRig::resizeAutomationViewport(const QSize &size)
+{
+    if (QWidget *viewport = page().scrollViewport())
+        viewport->resize(size);
+}
+
+void AutomationGestureCheckRig::canvasHostAppearanceChanged()
+{
+    canvas().hostAppearanceChanged();
+}
+
 songview::TimelineInputItem &AutomationGestureCheckRig::voiceInput() noexcept
 {
     return *m_voiceInput;
@@ -100,6 +291,7 @@ const songview::TimelineInputItem &AutomationGestureCheckRig::voiceInput() const
 {
     return *m_voiceInput;
 }
+
 const songview::TimelineQuickScene &AutomationGestureCheckRig::quickScene() const noexcept
 {
     return *m_quickScene;
@@ -200,7 +392,7 @@ AutomationGestureCheckRig::pointAt(LaneHandle handle, double tick, int value) co
     const auto geom = geometry();
     const auto range = valueRange(handle);
     const QRect body = bodyFor(handle);
-    const QPointF position(m_view->displayX(tick, geom.plotOrigin, canvas().devicePixelRatioF()),
+    const QPointF position(m_view->displayX(tick, geom.plotOrigin, automationDpr()),
                            AutomationProjection::valueY(body, geom, range.min, range.max, value));
     return {position, mappingAt(handle, position)};
 }
@@ -234,14 +426,12 @@ QPointF AutomationGestureCheckRig::tempoBodyPoint(double tick, int bpm) const
 
 QPointF AutomationGestureCheckRig::automationContentToViewport(const QPointF &position) const
 {
-    QWidget *const viewport = page().scrollViewport();
-    return viewport ? position + QPointF(canvas().mapTo(viewport, QPoint{})) : QPointF{};
+    return {position.x(), position.y() - qreal(page().verticalScroll())};
 }
 
 QPoint AutomationGestureCheckRig::automationContentToViewport(const QPoint &position) const
 {
-    QWidget *const viewport = page().scrollViewport();
-    return viewport ? canvas().mapTo(viewport, position) : QPoint{};
+    return {position.x(), position.y() - page().verticalScroll()};
 }
 
 QRect AutomationGestureCheckRig::automationContentToViewport(const QRect &rect) const
@@ -251,8 +441,7 @@ QRect AutomationGestureCheckRig::automationContentToViewport(const QRect &rect) 
 
 QRect AutomationGestureCheckRig::automationViewportInContent() const
 {
-    QWidget *const viewport = page().scrollViewport();
-    return viewport ? QRect{canvas().mapFrom(viewport, QPoint{}), viewport->size()} : QRect{};
+    return {QPoint(0, page().verticalScroll()), page().automationViewportSize()};
 }
 
 QImage AutomationGestureCheckRig::renderAutomationViewport(QString *error)
@@ -347,43 +536,36 @@ void AutomationGestureCheckRig::setPersistentPencil(bool enabled)
 void AutomationGestureCheckRig::mousePress(const QPointF &position, Qt::KeyboardModifiers modifiers,
                                            Qt::MouseButton button)
 {
-    checks::events::sendMouse(canvas(), QEvent::MouseButtonPress, position, button, button,
-                              modifiers);
+    canvas().pointerPress(
+        pointerInput(*this, position, button, Qt::MouseButtons(button), modifiers));
 }
 
 bool AutomationGestureCheckRig::dispatchMousePress(const QPointF &position,
                                                    Qt::KeyboardModifiers modifiers,
                                                    Qt::MouseButton button)
 {
-    // checks::events::sendMouse owns its event and cannot expose acceptance.
-    // Match its construction here so this check can set and inspect that state.
-    QMouseEvent event(QEvent::MouseButtonPress, position,
-                      QPointF(canvas().mapToGlobal(position.toPoint())), button, button, modifiers);
-    event.setAccepted(false);
-    QCoreApplication::sendEvent(&canvas(), &event);
-    return event.isAccepted();
+    return canvas().pointerPress(
+        pointerInput(*this, position, button, Qt::MouseButtons(button), modifiers));
 }
 
 void AutomationGestureCheckRig::mouseMove(const QPointF &position, Qt::MouseButtons buttons,
                                           Qt::KeyboardModifiers modifiers)
 {
-    checks::events::sendMouse(canvas(), QEvent::MouseMove, position, Qt::NoButton, buttons,
-                              modifiers);
+    canvas().pointerMove(pointerInput(*this, position, Qt::NoButton, buttons, modifiers));
 }
 
 void AutomationGestureCheckRig::mouseRelease(const QPointF &position,
                                              Qt::KeyboardModifiers modifiers,
                                              Qt::MouseButton button)
 {
-    checks::events::sendMouse(canvas(), QEvent::MouseButtonRelease, position, button, Qt::NoButton,
-                              modifiers);
+    canvas().pointerRelease(pointerInput(*this, position, button, Qt::NoButton, modifiers));
 }
 
 void AutomationGestureCheckRig::mouseDoubleClick(const QPointF &position,
                                                  Qt::KeyboardModifiers modifiers)
 {
-    checks::events::sendMouse(canvas(), QEvent::MouseButtonDblClick, position, Qt::LeftButton,
-                              Qt::LeftButton, modifiers);
+    canvas().pointerDoubleClick(
+        pointerInput(*this, position, Qt::LeftButton, Qt::LeftButton, modifiers));
 }
 
 void AutomationGestureCheckRig::voiceMousePress(const QPointF &position,
@@ -426,7 +608,11 @@ void AutomationGestureCheckRig::keyToVoiceArea(QEvent::Type type, int key,
 void AutomationGestureCheckRig::keyToArea(QEvent::Type type, int key,
                                           Qt::KeyboardModifiers modifiers, bool autoRepeat)
 {
-    checks::events::sendKey(canvas(), type, key, modifiers, QString{}, autoRepeat, 1);
+    const songview::TimelineKeyInput keyInput{key, modifiers, QString{}, autoRepeat};
+    if (type == QEvent::KeyPress)
+        canvas().keyPress(keyInput);
+    else if (type == QEvent::KeyRelease)
+        canvas().keyRelease(keyInput);
 }
 
 void AutomationGestureCheckRig::keyToView(QEvent::Type type, int key,
@@ -517,6 +703,16 @@ bool AutomationGestureCheckRig::initialize(QString &error)
             "concrete SongView did not expose drawer pages and the Quick voice input");
         return false;
     }
+    m_inputHost = std::make_unique<AutomationInputHost>(*m_page);
+    m_productionInput = quickCanvas && quickCanvas->rootObject()
+                            ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(
+                                  QStringLiteral("timelineAutomationInput"))
+                            : nullptr;
+    m_productionInteraction = m_productionInput ? m_productionInput->interaction() : nullptr;
+    if (m_productionInput && m_productionInteraction)
+        m_productionInput->setInteraction(nullptr);
+    m_page->canvas()->attachInputHost(*m_inputHost);
+    m_page->canvas()->hostAppearanceChanged();
     m_page->resize(960, 360);
     m_page->songChanged();
     m_live.documentRevision = songDocument.revision();

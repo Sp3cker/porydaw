@@ -9,9 +9,6 @@
 #include <optional>
 #include <vector>
 
-#include <QCoreApplication>
-#include <QEvent>
-#include <QResizeEvent>
 #include <QSize>
 
 #include <QString>
@@ -405,13 +402,12 @@ void runRebuildCancel(Context &ctx)
     ctx.rig.pump();
     ctx.check.require(isUnchanged(before, snapshot(ctx.rig.document())) && ctx.rig.isIdle(),
                       QStringLiteral("release after document rebuild committed a stale handle"));
-    const QSize size = ctx.rig.canvas().size();
+    const QSize size = ctx.rig.automationViewportSize();
     before = snapshot(ctx.rig.document());
     ctx.rig.mousePress(at(ctx, kFixtureTick, 100).position);
     ctx.rig.mouseMove(at(ctx, kFixtureTick, 100).position + QPointF(arm, 0.0));
     ctx.rig.pump();
-    QResizeEvent resize(QSize(size.width() + 48, size.height()), size);
-    QCoreApplication::sendEvent(&ctx.rig.canvas(), &resize);
+    ctx.rig.resizeAutomationViewport(QSize(size.width() + 48, size.height()));
     ctx.rig.pump();
     ctx.rig.mouseRelease(at(ctx, kFixtureTick, 100).position + QPointF(arm, 0.0));
     ctx.rig.pump();
@@ -461,7 +457,7 @@ void runOriginPhantom(Context &ctx)
                               : start;
     ctx.rig.mouseMove(hover, Qt::NoButton);
     ctx.rig.pump();
-    ctx.check.require(ctx.rig.canvas().cursor().shape() == Qt::ArrowCursor,
+    ctx.check.require(ctx.rig.automationCursor().shape() == Qt::ArrowCursor,
                       QStringLiteral("origin phantom hover did not keep the arrow cursor"));
     const auto before = snapshot(ctx.rig.document());
     const qreal arm = qreal(ctx.rig.geometry().nodeDragActivationDistance + 2);

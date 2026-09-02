@@ -33,10 +33,10 @@ bool AutomationCanvas::nodePointHit(LaneHandle handle, const QPointF &position,
 {
     const NodeLane *lane = nullptr;
     QRect body;
-    if (!resolveLane(handle, &lane, &body) || !lane || !m_page)
+    if (!resolveLane(handle, &lane, &body) || !lane)
         return false;
-    if (hitNodePoint(*lane, body, proj, m_geometry, position, devicePixelRatioF(), m_pencilMode,
-                     point))
+    if (hitNodePoint(*lane, body, proj, m_geometry, position,
+                     m_inputHost ? m_inputHost->devicePixelRatio() : 1.0, m_pencilMode, point))
         return true;
     const auto phantom = originPhantomAt(handle, position, proj);
     if (!phantom)
@@ -52,7 +52,7 @@ AutomationCanvas::originPhantomAt(LaneHandle handle, const QPointF &position,
 {
     const NodeLane *lane = nullptr;
     QRect body;
-    if (!resolveLane(handle, &lane, &body) || !lane || !m_page)
+    if (!resolveLane(handle, &lane, &body) || !lane)
         return std::nullopt;
     const auto points = lane->points();
     const auto phantom = originPhantom(handle, proj, points);
@@ -73,20 +73,22 @@ AutomationCanvas::originPhantom(LaneHandle handle, const AutomationProjection &p
 {
     const NodeLane *lane = nullptr;
     QRect body;
-    if (!resolveLane(handle, &lane, &body) || !lane || !m_page)
+    if (!resolveLane(handle, &lane, &body) || !lane)
         return std::nullopt;
-    return ::originPhantomAt(
-        points, handle, lane->minimumValue(), lane->maximumValue(), double(m_geometry.plotOrigin),
-        [this, &proj](uint64_t tick) { return proj.displayX(tick, devicePixelRatioF()); });
+    return ::originPhantomAt(points, handle, lane->minimumValue(), lane->maximumValue(),
+                             double(m_geometry.plotOrigin), [this, &proj](uint64_t tick) {
+                                 return proj.displayX(
+                                     tick, m_inputHost ? m_inputHost->devicePixelRatio() : 1.0);
+                             });
 }
 
 bool AutomationCanvas::commitResolvedNodeLaneChanges(std::optional<uint64_t> expectedRevision,
                                                      const std::vector<NodeLaneChange> &changes,
                                                      const QString &undoLabel)
 {
-    if (!m_page || !m_page->document() || changes.empty())
+    if (!m_page.document() || changes.empty())
         return false;
-    auto *document = m_page->document();
+    auto *document = m_page.document();
     if (expectedRevision && document->revision() != *expectedRevision)
         return false;
     SongDocument::RangeEdit edit;
@@ -141,9 +143,9 @@ bool AutomationCanvas::commitResolvedNodeLaneChanges(std::optional<uint64_t> exp
 
 bool AutomationCanvas::commitLaneEdit(const NodeLaneEdit::Completion &completion)
 {
-    if (completion.unchanged || !m_page || !m_page->document())
+    if (completion.unchanged || !m_page.document())
         return false;
-    if (m_page->document()->revision() != completion.target.expectedRevision)
+    if (m_page.document()->revision() != completion.target.expectedRevision)
         return false;
     NodeLane *lane = mutableLane(completion.target.lane);
     if (!lane)
@@ -193,18 +195,18 @@ bool AutomationCanvas::commitNodePointDeletes(std::optional<uint64_t> expectedRe
 void AutomationCanvas::updateActiveGesture(const QPointF &position, Qt::KeyboardModifiers modifiers,
                                            bool activateSweep)
 {
-    if (!m_activeGesture || !m_page)
+    if (!m_activeGesture)
         return;
     const bool fineGrid = modifiers & Qt::AltModifier;
     const bool snapValue = modifiers & Qt::ControlModifier;
     const AutomationProjection proj = projection();
     AxisLock axisCursor = AxisLock::None;
     auto snappedRange = [&](double a, double b) -> std::pair<uint64_t, uint64_t> {
-        return {m_page->snapTick(std::min(a, b), fineGrid),
-                m_page->snapTick(std::max(a, b), fineGrid)};
+        return {m_page.snapTick(std::min(a, b), fineGrid),
+                m_page.snapTick(std::max(a, b), fineGrid)};
     };
     auto nextGridTick = [this](uint64_t tick, bool useFineGrid, uint64_t limit) -> uint64_t {
-        return m_page->nextGridTick(tick, useFineGrid, limit);
+        return m_page.nextGridTick(tick, useFineGrid, limit);
     };
     std::visit(
         Visitor{
@@ -273,9 +275,9 @@ void AutomationCanvas::updateActiveGesture(const QPointF &position, Qt::Keyboard
 
 void AutomationCanvas::finishActiveGesture(bool fineMode)
 {
-    if (!m_page || !m_activeGesture)
+    if (!m_activeGesture)
         return;
-    auto *document = m_page->document();
+    auto *document = m_page.document();
     if (!document)
         return;
     const AutomationProjection proj = projection();
@@ -296,7 +298,7 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
         } else if (finish.release == PointDragRelease::Move && finish.changed) {
             changed = commitNodePointMoves(gesture->expectedRevision, gesture->points);
             if (changed && finish.dTick != 0 && finish.selectionDrag) {
-                const auto &selection = m_page->m_owner.selectionModel().timeSelection();
+                const auto &selection = m_page.m_owner.selectionModel().timeSelection();
                 if (selection.active()) {
                     const auto startTick =
                         uint64_t(std::max<int64_t>(0, int64_t(selection.startTick) + finish.dTick));
@@ -306,8 +308,7 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
                         auto movedSelection = selection;
                         movedSelection.startTick = startTick;
                         movedSelection.endTick = endTick;
-                        m_page->m_owner.selectionModel().setTimeSelection(
-                            std::move(movedSelection));
+                        m_page.m_owner.selectionModel().setTimeSelection(std::move(movedSelection));
                     }
                 }
             }
@@ -319,13 +320,13 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
             changed = commitNodePointMoves(gesture->expectedRevision, {*point});
     } else if (const auto *gesture = std::get_if<SweepGesture>(&*m_activeGesture)) {
         if (gesture->mode == SweepGesture::Mode::Drag && !gesture->slop.exceeded) {
-            m_page->commitEditCursor(
-                m_page->snapTick(proj.rawTickAt(gesture->pressPosition.x()), false));
+            m_page.commitEditCursor(
+                m_page.snapTick(proj.rawTickAt(gesture->pressPosition.x()), false));
         } else if (lane) {
             auto completion =
                 gesture->finish(handle, document->revision(), lane->points(), fineMode,
                                 [this](uint64_t tick, bool fineGrid, uint64_t last) {
-                                    return m_page->nextGridTick(tick, fineGrid, last);
+                                    return m_page.nextGridTick(tick, fineGrid, last);
                                 });
             if (!completion.unchanged)
                 changed = commitLaneEdit(completion);
@@ -336,13 +337,13 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
             changed = commitLaneEdit(completion);
     }
     if (changed)
-        m_page->requestRefresh();
+        m_page.requestRefresh();
 }
 
 NodeDragGesture AutomationCanvas::collectSelectedNodeDrags() const
 {
     NodeDragGesture result;
-    if (!m_page || !m_page->document())
+    if (!m_page.document())
         return result;
     const auto activeTickRange = m_laneSelection.activeTickRange();
     for (std::size_t index = 0; index < m_nodeStack.size(); ++index) {
@@ -369,16 +370,15 @@ AutomationCanvas::nodeDragGestureAt(LaneHandle handle, const QPointF &position, 
 {
     const NodeLaneSlot *slot = resolveSlot(handle);
     const NodeLane *lane = slot ? slot->lane : nullptr;
-    if (!slot || !lane || !m_page || !m_page->document() ||
-        (pencilMode && !projection.nodeMarkersVisible()))
+    if (!slot || !lane || !m_page.document() || (pencilMode && !projection.nodeMarkersVisible()))
         return std::nullopt;
     NodePoint hit;
-    if (!hitNodePoint(*lane, slot->body, projection, m_geometry, position, devicePixelRatioF(),
-                      pencilMode, &hit))
+    if (!hitNodePoint(*lane, slot->body, projection, m_geometry, position,
+                      m_inputHost ? m_inputHost->devicePixelRatio() : 1.0, pencilMode, &hit))
         return std::nullopt;
     NodeDragGesture state;
     state.lane = handle;
-    state.expectedRevision = m_page->document()->revision();
+    state.expectedRevision = m_page.document()->revision();
     const NodeDrag grabbed{handle, hit, hit, lane->minimumValue(), lane->maximumValue()};
     const auto activeTickRange = m_laneSelection.activeTickRange();
     const bool hitSelected = m_laneSelection.coversNodes(slot->id) && activeTickRange &&
@@ -395,7 +395,7 @@ AutomationCanvas::nodeDragGestureAt(LaneHandle handle, const QPointF &position, 
             selected.selectionDrag = true;
             state = std::move(selected);
             state.lane = handle;
-            state.expectedRevision = m_page->document()->revision();
+            state.expectedRevision = m_page.document()->revision();
         }
     }
     if (state.points.empty())
@@ -415,14 +415,14 @@ AutomationCanvas::nodeDragGestureAt(LaneHandle handle, const QPointF &position, 
 std::optional<PhantomGesture> AutomationCanvas::phantomDragGestureAt(LaneHandle handle,
                                                                      const QPointF &position) const
 {
-    if (!m_page || !m_page->document())
+    if (!m_page.document())
         return std::nullopt;
     const auto phantom = originPhantomAt(handle, position, projection());
     if (!phantom)
         return std::nullopt;
     PhantomGesture state;
     state.lane = handle;
-    state.expectedRevision = m_page->document()->revision();
+    state.expectedRevision = m_page.document()->revision();
     state.point = {handle, phantom->point, phantom->point, phantom->minimumValue,
                    phantom->maximumValue};
     state.drag.press(position, false);

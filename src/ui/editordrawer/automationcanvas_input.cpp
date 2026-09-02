@@ -2,11 +2,7 @@
 
 #include <algorithm>
 
-#include <QKeyEvent>
-#include <QMouseEvent>
-#include <QScrollArea>
-#include <QScrollBar>
-#include <QWheelEvent>
+#include <QCursor>
 
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationpage.h"
@@ -25,65 +21,62 @@ bool AutomationCanvas::isEditablePencilHit(const QPointF &position) const noexce
 
 void AutomationCanvas::updatePencilCursor()
 {
+    if (!m_inputHost)
+        return;
     if (!m_pencilMode) {
-        setCursor(Qt::ArrowCursor);
+        m_inputHost->clearCursor();
         return;
     }
-    setCursor(isEditablePencilHit(mapFromGlobal(QCursor::pos())) ? pencilCursor()
-                                                                 : QCursor(Qt::ArrowCursor));
+    const QPointF position = contentPositionFromGlobal(QCursor::pos());
+    if (isEditablePencilHit(position))
+        m_inputHost->setCursor(pencilCursor());
+    else
+        m_inputHost->clearCursor();
 }
 
-void AutomationCanvas::wheelEvent(QWheelEvent *event)
+bool AutomationCanvas::wheel(const songview::TimelineWheelInput &input)
 {
-    if (!m_page || !m_page->ready())
-        return;
-    const QPoint pixelDelta = event->pixelDelta();
-    const QPoint delta = pixelDelta.isNull() ? event->angleDelta() : pixelDelta;
+    if (!m_page.ready())
+        return false;
+    const QPoint delta = input.pixelDelta.isNull() ? input.angleDelta : input.pixelDelta;
     const int vertical = delta.y() != 0 ? delta.y() : delta.x();
-    if (event->modifiers() & Qt::ControlModifier) {
+    const QPointF position = contentPosition(input.position);
+    if (input.modifiers & Qt::ControlModifier) {
         m_resize.wheelRemainder += vertical;
         const int steps = m_resize.wheelRemainder / 120;
         if (steps != 0) {
             m_resize.wheelRemainder -= steps * 120;
-            if (m_page->scaleSharedHeight(steps, m_geometry)) {
-                layoutLaneStack();
-                syncHoverValueLabel();
-                syncPreviewValueLabel();
-                requestFullQuickUpdate();
-            }
+            if (m_page.scaleSharedHeight(steps, m_geometry))
+                contentGeometryChanged();
         }
-    } else if (event->modifiers() & Qt::ShiftModifier) {
-        m_page->requestHorizontalScroll(m_page->liveState().horizontalScroll - vertical);
+    } else if (input.modifiers & Qt::ShiftModifier) {
+        m_page.requestHorizontalScroll(m_page.liveState().horizontalScroll - vertical);
     } else if (delta.x() != 0 && delta.y() == 0) {
-        m_page->requestHorizontalScroll(m_page->liveState().horizontalScroll - delta.x());
-    } else if (event->position().x() < m_geometry.plotOrigin) {
-        event->ignore();
-        return;
+        m_page.requestHorizontalScroll(m_page.liveState().horizontalScroll - delta.x());
+    } else if (position.x() < m_geometry.plotOrigin) {
+        return m_page.scrollVertically(input);
     } else if (vertical != 0) {
-        m_page->requestTimeZoom(event, event->position().x() - m_geometry.plotOrigin);
+        m_page.requestTimeZoom(input, position.x() - m_geometry.plotOrigin);
     }
-    event->accept();
+    return true;
 }
 
-void AutomationCanvas::clearTimeSelectionIfOutsidePress(const QMouseEvent &event,
+void AutomationCanvas::clearTimeSelectionIfOutsidePress(QPointF position,
                                                         const AutomationProjection &projection,
                                                         LaneHandle lane, const NodeLaneSlot *slot)
 {
-    auto &model = m_page->m_owner.selectionModel();
-    // mousePressEvent enters this leaf only while the shared time selection is
-    // active. Keep that private precondition explicit before dereferencing its
-    // equivalent ordered range.
+    auto &model = m_page.m_owner.selectionModel();
     const auto activeTickRange = m_laneSelection.activeTickRange();
     Q_ASSERT(activeTickRange);
     const auto [firstTick, lastTick] = *activeTickRange;
     auto laneSelectionHit = false;
     auto selectedNode = false;
     if (slot) {
-        laneSelectionHit = m_laneSelection.hitTest(slot->id, event.position().x(), projection,
-                                                   devicePixelRatioF());
+        laneSelectionHit = m_laneSelection.hitTest(slot->id, position.x(), projection,
+                                                   m_inputHost->devicePixelRatio());
         if (m_laneSelection.coversNodes(slot->id)) {
             NodePoint selectedPoint;
-            if (nodePointHit(lane, event.position(), projection, &selectedPoint)) {
+            if (nodePointHit(lane, position, projection, &selectedPoint)) {
                 selectedNode =
                     std::clamp(selectedPoint.tick, firstTick, lastTick - 1) == selectedPoint.tick;
             }
@@ -95,18 +88,17 @@ void AutomationCanvas::clearTimeSelectionIfOutsidePress(const QMouseEvent &event
     requestSelectionQuickUpdate();
 }
 
-void AutomationCanvas::beginPencilPress(const QMouseEvent &event, LaneHandle handle,
-                                        const NodeLane &lane, const QRect &body,
+bool AutomationCanvas::beginPencilPress(QPointF position, Qt::KeyboardModifiers modifiers,
+                                        LaneHandle handle, const NodeLane &lane, const QRect &body,
                                         const AutomationProjection &projection)
 {
-    const auto *timeline = m_page->timeline();
+    const auto *timeline = m_page.timeline();
     if (!timeline)
-        return;
+        return false;
     const AutomationProjection::PointerMapping mapped =
-        projection.pointerMapping(lane, body, event.position().x(), event.position().y());
-    if (auto nodeGesture =
-            nodeDragGestureAt(handle, event.position(), event.modifiers() & Qt::ShiftModifier,
-                              projection, m_pencilMode)) {
+        projection.pointerMapping(lane, body, position.x(), position.y());
+    if (auto nodeGesture = nodeDragGestureAt(handle, position, modifiers & Qt::ShiftModifier,
+                                             projection, m_pencilMode)) {
         const auto grabbedPoint = nodeGesture->grabbedPoint;
         if (grabbedPoint < nodeGesture->points.size()) {
             const uint64_t hitTick = nodeGesture->points[grabbedPoint].original.tick;
@@ -115,196 +107,193 @@ void AutomationCanvas::beginPencilPress(const QMouseEvent &event, LaneHandle han
                 setGestureActive(true);
                 syncPreviewValueLabel();
                 requestGestureBeginQuickUpdate(false);
-                return;
+                return true;
             }
         }
     }
-    const AutomationPencilGesture::Target target{handle, m_page->document()->revision()};
-    const AutomationPencilGesture::Sample sample{mapped.rawTick, event.position().x(), mapped.point,
+    const AutomationPencilGesture::Target target{handle, m_page.document()->revision()};
+    const AutomationPencilGesture::Sample sample{mapped.rawTick, position.x(), mapped.point,
                                                  double(mapped.point.value)};
     auto stroke = AutomationPencilGesture::start(
         target, lane.minimumValue(), lane.maximumValue(), timeline->lengthTicks,
-        m_page->document()->ticksPerClock(), lane.points(), lane.leadIn(), sample, mapped.cell);
+        m_page.document()->ticksPerClock(), lane.points(), lane.leadIn(), sample, mapped.cell);
     if (!stroke)
-        return;
+        return false;
     PencilGesture pencil{handle, std::move(*stroke)};
-    pencil.verticalSlop.origin = event.position();
-    pencil.previousY = event.position().y();
+    pencil.verticalSlop.origin = position;
+    pencil.previousY = position.y();
     m_activeGesture.emplace(std::move(pencil));
     setGestureActive(true);
     syncPreviewValueLabel();
     requestGestureBeginQuickUpdate(false);
+    return true;
 }
 
-void AutomationCanvas::beginDragOrSweep(const QMouseEvent &event, LaneHandle handle,
-                                        const AutomationProjection &projection)
+bool AutomationCanvas::beginDragOrSweep(QPointF position, Qt::KeyboardModifiers modifiers,
+                                        LaneHandle handle, const AutomationProjection &projection)
 {
-    const bool fine = event.modifiers() & Qt::AltModifier;
-    const NodePoint mapped = mappedForLane(handle, event.position(), fine,
-                                           event.modifiers() & Qt::ControlModifier, projection);
+    const bool fine = modifiers & Qt::AltModifier;
+    const NodePoint mapped =
+        mappedForLane(handle, position, fine, modifiers & Qt::ControlModifier, projection);
     setGestureActive(true);
-    if (auto nodeGesture =
-            nodeDragGestureAt(handle, event.position(), event.modifiers() & Qt::ShiftModifier,
-                              projection, m_pencilMode)) {
+    if (auto nodeGesture = nodeDragGestureAt(handle, position, modifiers & Qt::ShiftModifier,
+                                             projection, m_pencilMode)) {
         m_activeGesture.emplace(std::move(*nodeGesture));
-    } else if (auto phantomGesture = phantomDragGestureAt(handle, event.position())) {
+    } else if (auto phantomGesture = phantomDragGestureAt(handle, position)) {
         m_activeGesture.emplace(std::move(*phantomGesture));
     } else {
         SweepGesture sweep;
         sweep.lane = handle;
-        sweep.mode = event.modifiers() & Qt::ShiftModifier ? SweepGesture::Mode::Ramp
-                                                           : SweepGesture::Mode::Drag;
+        sweep.mode =
+            modifiers & Qt::ShiftModifier ? SweepGesture::Mode::Ramp : SweepGesture::Mode::Drag;
         sweep.anchor = mapped;
         sweep.current = mapped;
-        sweep.previousRawTick = projection.rawTickAt(event.position().x());
+        sweep.previousRawTick = projection.rawTickAt(position.x());
         sweep.previousValue = mapped.value;
-        sweep.pressPosition = event.position();
-        sweep.slop.origin = event.position();
+        sweep.pressPosition = position;
+        sweep.slop.origin = position;
         if (sweep.mode == SweepGesture::Mode::Ramp)
-            sweep.slop.markExceeded(event.position());
+            sweep.slop.markExceeded(position);
         m_activeGesture.emplace(std::move(sweep));
     }
     syncPreviewValueLabel();
     requestGestureBeginQuickUpdate(false);
+    return true;
 }
 
-void AutomationCanvas::mousePressEvent(QMouseEvent *event)
+bool AutomationCanvas::pointerPress(const songview::TimelinePointerInput &input)
 {
     m_hoverState.clearHover();
     requestHoverQuickUpdate();
     m_deletedNodeClick.clear();
-    if (!m_page || !m_page->document())
-        return;
-    if (event->button() == Qt::MiddleButton) {
+    if (!m_page.document())
+        return false;
+    const QPointF position = contentPosition(input.position);
+    if (input.button == Qt::MiddleButton) {
         m_pan.active = true;
-        m_pan.pos = event->position();
-        m_pan.startHScroll = m_page->liveState().horizontalScroll;
-        m_pan.startVScroll = m_scroll ? m_scroll->verticalScrollBar()->value() : 0;
-        setCursor(Qt::ClosedHandCursor);
+        m_pan.pos = position;
+        m_pan.startHScroll = m_page.liveState().horizontalScroll;
+        m_pan.startVScroll = m_page.verticalScroll();
+        m_inputHost->setCursor(QCursor(Qt::ClosedHandCursor));
+        m_inputHost->requestFocus(Qt::MouseFocusReason);
         setGestureActive(true);
-        event->accept();
-        return;
+        return true;
     }
     const AutomationProjection proj = projection();
-    const PointerLaneHit pointer = pointerLaneAt(event->pos());
+    const PointerLaneHit pointer = pointerLaneAt(position.toPoint());
     const bool inTempoHeader = pointer.tempoHeader;
     const LaneHandle pointerLane = pointer.lane;
     const auto *pointerSlot = resolveSlot(pointerLane);
     const bool inTempo = pointerSlot && pointerSlot->isTempo();
-    if (event->button() == Qt::LeftButton || event->button() == Qt::RightButton) {
+    if (input.button == Qt::LeftButton || input.button == Qt::RightButton) {
         if (m_laneSelection.active()) {
             const NodeLaneSlot *selectionSlot = pointerSlot;
-            if (event->position().x() < m_geometry.plotOrigin)
+            if (position.x() < m_geometry.plotOrigin)
                 selectionSlot = nullptr;
-            clearTimeSelectionIfOutsidePress(*event, proj, pointerLane, selectionSlot);
+            clearTimeSelectionIfOutsidePress(position, proj, pointerLane, selectionSlot);
         }
     }
     if (inTempoHeader) {
-        if (event->button() == Qt::LeftButton) {
+        if (input.button == Qt::LeftButton) {
             m_tempoLane.toggleExpanded();
             updateTempoLayout();
-        } else if (event->button() == Qt::RightButton) {
-            m_band.press(event->pos(), m_page->snapTick(proj.rawTickAt(event->position().x()),
-                                                        event->modifiers() & Qt::AltModifier));
+        } else if (input.button == Qt::RightButton) {
+            m_band.press(position.toPoint(), m_page.snapTick(proj.rawTickAt(position.x()),
+                                                             input.modifiers & Qt::AltModifier));
             m_band.pressLane(pointerLane);
             setGestureActive(true);
             requestGestureBeginQuickUpdate(true);
+        } else {
+            return false;
         }
-        setFocus();
-        event->accept();
-        return;
+        m_inputHost->requestFocus(Qt::MouseFocusReason);
+        return true;
     }
     const int boundary =
-        !inTempo && event->button() == Qt::LeftButton ? ccRowBoundaryAt(event->pos().y()) : -1;
+        !inTempo && input.button == Qt::LeftButton ? ccRowBoundaryAt(position.toPoint().y()) : -1;
     if (boundary >= 0) {
         m_resize.row = boundary;
         m_resize.startHeight = ccLaneHeight(m_rowData.rows()[std::size_t(boundary)]);
-        m_resize.startY = event->pos().y();
+        m_resize.startY = position.toPoint().y();
+        m_inputHost->requestFocus(Qt::MouseFocusReason);
         setGestureActive(true);
-        return;
+        return true;
     }
-    const QRect addRect(layout::space(layout::Space::Zero), addLaneStripTop(), width(),
-                        m_geometry.addLaneStripHeight);
-    if (!inTempo && (event->button() == Qt::LeftButton || event->button() == Qt::RightButton) &&
-        addRect.contains(event->pos())) {
-        showAddLaneMenu(event->globalPosition().toPoint());
-        return;
+    const QRect addRect(layout::space(layout::Space::Zero), addLaneStripTop(),
+                        m_page.automationViewportSize().width(), m_geometry.addLaneStripHeight);
+    if (!inTempo && (input.button == Qt::LeftButton || input.button == Qt::RightButton) &&
+        addRect.contains(position.toPoint())) {
+        showAddLaneMenu(input.globalPosition.toPoint());
+        return true;
     }
-    const LaneHandle handle = pointerLane;
-    const auto *laneSlot = resolveSlot(handle);
+    const auto *laneSlot = resolveSlot(pointerLane);
     if (!laneSlot)
-        return;
+        return false;
     const NodeLane *lane = laneSlot->lane;
     const QRect body = laneSlot->body;
-    setFocus();
-    if (event->position().x() < m_geometry.plotOrigin) {
-        if (event->button() == Qt::RightButton)
-            showLaneMenuFor(handle, event->globalPosition().toPoint());
-        return;
+    m_inputHost->requestFocus(Qt::MouseFocusReason);
+    if (position.x() < m_geometry.plotOrigin) {
+        if (input.button == Qt::RightButton)
+            showLaneMenuFor(pointerLane, input.globalPosition.toPoint());
+        return input.button == Qt::RightButton;
     }
-    if (event->button() == Qt::RightButton) {
-        m_band.press(event->pos(), m_page->snapTick(proj.rawTickAt(event->position().x()),
-                                                    event->modifiers() & Qt::AltModifier));
-        m_band.pressLane(handle);
+    if (input.button == Qt::RightButton) {
+        m_band.press(position.toPoint(), m_page.snapTick(proj.rawTickAt(position.x()),
+                                                         input.modifiers & Qt::AltModifier));
+        m_band.pressLane(pointerLane);
         NodePoint point;
-        if (nodePointHit(handle, event->position(), proj, &point))
-            highlightHoveredPoint(handle, event->position(), point);
+        if (nodePointHit(pointerLane, position, proj, &point))
+            highlightHoveredPoint(pointerLane, position, point);
         setGestureActive(true);
         requestGestureBeginQuickUpdate(true);
-        return;
+        return true;
     }
-    if (event->button() != Qt::LeftButton)
-        return;
-    if (m_pencilMode) {
-        beginPencilPress(*event, handle, *lane, body, proj);
-        return;
-    }
-    beginDragOrSweep(*event, handle, proj);
-    return;
+    if (input.button != Qt::LeftButton)
+        return false;
+    if (m_pencilMode)
+        return beginPencilPress(position, input.modifiers, pointerLane, *lane, body, proj);
+    return beginDragOrSweep(position, input.modifiers, pointerLane, proj);
 }
 
-void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
+bool AutomationCanvas::pointerMove(const songview::TimelinePointerInput &input)
 {
+    const QPointF position = contentPosition(input.position);
     if (m_pan.active) {
-        if (!(event->buttons() & Qt::MiddleButton)) {
+        if (!(input.buttons & Qt::MiddleButton)) {
             m_pan.active = false;
-            unsetCursor();
+            m_inputHost->clearCursor();
             setGestureActive(false);
-            return;
+            return true;
         }
-        const QPointF delta = event->position() - m_pan.pos;
-        m_page->requestHorizontalScroll(m_pan.startHScroll - delta.x());
-        if (m_scroll)
-            m_scroll->verticalScrollBar()->setValue(m_pan.startVScroll - int(delta.y()));
-        event->accept();
-        return;
+        const QPointF delta = position - m_pan.pos;
+        m_page.requestHorizontalScroll(m_pan.startHScroll - delta.x());
+        m_page.setVerticalScroll(m_pan.startVScroll - qRound(delta.y()));
+        return true;
     }
     const AutomationProjection proj = projection();
     if (m_resize.row >= 0 && m_resize.row < int(m_rowData.rows().size())) {
-        const int height = std::clamp(m_resize.startHeight + event->pos().y() - m_resize.startY,
-                                      m_geometry.rowMinimumHeight, m_geometry.rowMaximumHeight);
+        const int height =
+            std::clamp(m_resize.startHeight + position.toPoint().y() - m_resize.startY,
+                       m_geometry.rowMinimumHeight, m_geometry.rowMaximumHeight);
         if (height != ccLaneHeight(m_rowData.rows()[std::size_t(m_resize.row)])) {
-            m_page->m_viewState.laneHeights[m_rowData.rows()[std::size_t(m_resize.row)].id] =
-                height;
-            m_page->publishViewState();
-            layoutLaneStack();
-            syncHoverValueLabel();
-            syncPreviewValueLabel();
-            requestFullQuickUpdate();
+            m_page.m_viewState.laneHeights[m_rowData.rows()[std::size_t(m_resize.row)].id] = height;
+            m_page.publishViewState();
+            contentGeometryChanged();
         }
-        return;
+        return true;
     }
     if (m_band.pending) {
-        if (m_band.move(event->pos(), m_page->snapTick(proj.rawTickAt(event->position().x()),
-                                                       event->modifiers() & Qt::AltModifier))) {
+        if (m_band.move(position.toPoint(), m_page.snapTick(proj.rawTickAt(position.x()),
+                                                            input.modifiers & Qt::AltModifier))) {
             m_hoverState.hover.highlightLocked = false;
             m_hoverState.clearHover();
         }
         if (m_band.active) {
             const int lastY = std::max(layout::space(layout::Space::Zero),
                                        addLaneStripTop() - layout::singlePixel());
-            const int y = std::clamp(event->pos().y(), layout::space(layout::Space::Zero), lastY);
-            const LaneHandle candidate = pointerLaneAt(QPoint(event->pos().x(), y)).lane;
+            const int y =
+                std::clamp(position.toPoint().y(), layout::space(layout::Space::Zero), lastY);
+            const LaneHandle candidate = pointerLaneAt(QPoint(position.toPoint().x(), y)).lane;
             const auto *startSlot = resolveSlot(m_band.laneRange().first);
             const auto *candidateSlot = resolveSlot(candidate);
             const bool compatible =
@@ -312,59 +301,59 @@ void AutomationCanvas::mouseMoveEvent(QMouseEvent *event)
             m_band.extendTo(candidate, compatible);
             requestGestureMoveQuickUpdate();
         }
-        return;
+        return true;
     }
     if (!m_activeGesture) {
-        const PointerLaneHit pointer = pointerLaneAt(event->pos());
+        const PointerLaneHit pointer = pointerLaneAt(position.toPoint());
         if (pointer.tempoHeader) {
             m_hoverState.clearHover();
             requestHoverQuickUpdate();
-            setCursor(Qt::ArrowCursor);
-            return;
+            m_inputHost->clearCursor();
+            return true;
         }
-        const LaneHandle pointerLane = pointer.lane;
-        const auto *pointerSlot = resolveSlot(pointerLane);
+        const auto *pointerSlot = resolveSlot(pointer.lane);
         const bool inTempo = pointerSlot && pointerSlot->isTempo();
-        if (!inTempo && ccRowBoundaryAt(event->pos().y()) >= 0) {
+        if (!inTempo && ccRowBoundaryAt(position.toPoint().y()) >= 0) {
             m_hoverState.clearHover();
             requestHoverQuickUpdate();
-            setCursor(Qt::SplitVCursor);
-            return;
+            m_inputHost->setCursor(QCursor(Qt::SplitVCursor));
+            return true;
         }
-        const qreal x = event->position().x();
-        const int y = event->pos().y();
+        const qreal x = position.x();
+        const int y = position.toPoint().y();
         const LaneHandle handle =
-            x >= m_geometry.plotOrigin - m_geometry.pointHitRadius ? pointerLane : LaneHandle{};
+            x >= m_geometry.plotOrigin - m_geometry.pointHitRadius ? pointer.lane : LaneHandle{};
         const auto *slot = resolveSlot(handle);
-        if (!m_page || !slot)
+        if (!slot)
             m_hoverState.clearHover();
         else
             m_hoverState.updateHover(hoverTarget(), m_geometry, *slot->lane, slot->body, handle,
                                      proj, x, y, m_pencilMode);
         requestHoverQuickUpdate();
         if (m_hoverState.hover.originPhantom)
-            setCursor(Qt::ArrowCursor);
-        else if (m_pencilMode && isEditablePencilHit(event->position()))
-            setCursor(pencilCursor());
+            m_inputHost->clearCursor();
+        else if (m_pencilMode && isEditablePencilHit(position))
+            m_inputHost->setCursor(pencilCursor());
         else
-            setCursor(Qt::ArrowCursor);
-        return;
+            m_inputHost->clearCursor();
+        return true;
     }
-    updateActiveGesture(event->position(), event->modifiers(), true);
+    updateActiveGesture(position, input.modifiers, true);
     requestGestureMoveQuickUpdate();
+    return true;
 }
 
-void AutomationCanvas::mouseReleaseEvent(QMouseEvent *event)
+bool AutomationCanvas::pointerRelease(const songview::TimelinePointerInput &input)
 {
-    if (event->button() == Qt::MiddleButton && m_pan.active) {
+    const QPointF position = contentPosition(input.position);
+    if (input.button == Qt::MiddleButton && m_pan.active) {
         m_pan.active = false;
-        unsetCursor();
+        m_inputHost->clearCursor();
         setGestureActive(false);
-        event->accept();
-        return;
+        return true;
     }
-    if (event->button() == Qt::RightButton && m_band.pending) {
-        const LaneHandle pointerLane = pointerLaneAt(event->pos()).lane;
+    if (input.button == Qt::RightButton && m_band.pending) {
+        const LaneHandle pointerLane = pointerLaneAt(position.toPoint()).lane;
         const auto *startSlot = resolveSlot(m_band.laneRange().first);
         const auto *candidateSlot = resolveSlot(pointerLane);
         const bool compatible =
@@ -377,7 +366,7 @@ void AutomationCanvas::mouseReleaseEvent(QMouseEvent *event)
             laneLast.valid()) {
             publishBandSelection(selection->first, selection->second, laneFirst, laneLast);
         } else if (selection) {
-            auto &model = m_page->m_owner.selectionModel();
+            auto &model = m_page.m_owner.selectionModel();
             if (model.timeSelection().active()) {
                 model.clearTimeSelection();
                 requestSelectionQuickUpdate();
@@ -385,110 +374,110 @@ void AutomationCanvas::mouseReleaseEvent(QMouseEvent *event)
         } else {
             m_hoverState.hover.highlightLocked = false;
             m_hoverState.clearHover();
-            if (!showPointMenuNear(contextLane, event->pos(), event->globalPosition().toPoint())) {
-                const bool inPlot = event->position().x() >= m_geometry.plotOrigin;
+            if (!showPointMenuNear(contextLane, position.toPoint(),
+                                   input.globalPosition.toPoint())) {
+                const bool inPlot = position.x() >= m_geometry.plotOrigin;
                 const auto *contextSlot = resolveSlot(contextLane);
                 const bool selected =
                     contextSlot && inPlot &&
-                    m_laneSelection.hitTest(contextSlot->id, event->position().x(), projection(),
-                                            devicePixelRatioF());
+                    m_laneSelection.hitTest(contextSlot->id, position.x(), projection(),
+                                            m_inputHost->devicePixelRatio());
                 if (selected)
-                    showTimeSelectionMenuFor(contextLane, event->globalPosition().toPoint());
+                    showTimeSelectionMenuFor(contextLane, input.globalPosition.toPoint());
                 else if (contextLane.valid())
-                    showLaneMenuFor(contextLane, event->globalPosition().toPoint());
+                    showLaneMenuFor(contextLane, input.globalPosition.toPoint());
             }
         }
         if (!m_hoverState.hover.highlightLocked)
-            refreshHoverAt(event->position());
+            refreshHoverAt(position);
         setGestureActive(false);
         requestGestureEndQuickUpdate();
-        return;
+        return true;
     }
-    if (event->button() == Qt::LeftButton && m_resize.row >= 0) {
+    if (input.button == Qt::LeftButton && m_resize.row >= 0) {
         m_resize.row = -1;
         setGestureActive(false);
-        return;
+        return true;
     }
-    if (event->button() != Qt::LeftButton || !m_activeGesture)
-        return;
-    updateActiveGesture(event->position(), event->modifiers(), false);
-    finishActiveGesture(event->modifiers() & Qt::AltModifier);
+    if (input.button != Qt::LeftButton || !m_activeGesture)
+        return false;
+    updateActiveGesture(position, input.modifiers, false);
+    finishActiveGesture(input.modifiers & Qt::AltModifier);
     m_activeGesture.reset();
     m_hoverState.previewValueLabel = {};
-    refreshHoverAt(event->position());
+    refreshHoverAt(position);
     setGestureActive(false);
     updateAxisLockCursor(AxisLock::None);
     requestGestureEndQuickUpdate();
+    return true;
 }
 
-void AutomationCanvas::mouseDoubleClickEvent(QMouseEvent *event)
+bool AutomationCanvas::pointerDoubleClick(const songview::TimelinePointerInput &input)
 {
-    if (!m_page || !m_page->document())
-        return;
-    const PointerLaneHit pointer = pointerLaneAt(event->pos());
-    const bool inTempoHeader = pointer.tempoHeader;
-    const LaneHandle handle = pointer.lane;
-    const auto *slot = resolveSlot(handle);
+    if (!m_page.document())
+        return false;
+    const QPointF position = contentPosition(input.position);
+    const PointerLaneHit pointer = pointerLaneAt(position.toPoint());
+    const auto *slot = resolveSlot(pointer.lane);
     const bool inTempo = slot && slot->isTempo();
-    if (inTempoHeader) {
+    if (pointer.tempoHeader) {
         m_hoverState.clearHover();
         requestHoverQuickUpdate();
-        if (event->button() == Qt::LeftButton) {
-            m_tempoLane.toggleExpanded();
-            updateTempoLayout();
-        }
-        return;
+        if (input.button != Qt::LeftButton)
+            return false;
+        m_tempoLane.toggleExpanded();
+        updateTempoLayout();
+        return true;
     }
-    if (event->button() != Qt::LeftButton)
-        return;
-    if (!inTempo && event->position().x() < m_geometry.plotOrigin)
-        return;
-    const auto *laneSlot = resolveSlot(handle);
-    if (!laneSlot)
-        return;
+    if (input.button != Qt::LeftButton || (!inTempo && position.x() < m_geometry.plotOrigin))
+        return false;
+    const auto *laneSlot = resolveSlot(pointer.lane);
+    if (!laneSlot || m_deletedNodeClick.consume())
+        return false;
     const NodeLane *lane = laneSlot->lane;
-    if (m_deletedNodeClick.consume())
-        return;
     NodePoint hit;
-    if (nodePointHit(handle, event->position(), &hit))
-        return;
+    if (nodePointHit(pointer.lane, position, &hit))
+        return true;
     if (m_pencilMode) {
         m_activeGesture.reset();
         m_hoverState.previewValueLabel = {};
-        refreshHoverAt(event->position());
+        refreshHoverAt(position);
         setGestureActive(false);
         requestGestureEndQuickUpdate();
-        return;
+        return true;
     }
     m_activeGesture.reset();
     m_hoverState.previewValueLabel = {};
     setGestureActive(false);
     const AutomationProjection proj = projection();
-    const uint64_t tick = m_page->snapTick(proj.rawTickAt(event->position().x()),
-                                           event->modifiers() & Qt::AltModifier);
-    int value = mappedForLane(handle, event->position(), false, false, proj).value;
-    bool accepted = lane->promptValue(this, value, &value);
+    const uint64_t tick =
+        m_page.snapTick(proj.rawTickAt(position.x()), input.modifiers & Qt::AltModifier);
+    int value = mappedForLane(pointer.lane, position, false, false, proj).value;
+    const bool accepted = lane->promptValue(&m_page, value, &value);
+    if (m_inputHost)
+        m_inputHost->requestFocus(Qt::PopupFocusReason);
     if (!accepted)
-        return;
+        return true;
     NodeLane *target = laneSlot->lane;
     if (!target)
-        return;
+        return true;
     const std::vector<NodePoint> existing = target->points();
     for (const NodePoint &point : existing) {
         if (point.tick == tick && point.value == value)
-            return;
+            return true;
     }
     target->replaceSpan(tick, tick, {{tick, value}});
-    m_page->requestRefresh();
+    m_page.requestRefresh();
+    return true;
 }
 
-void AutomationCanvas::keyPressEvent(QKeyEvent *event)
+bool AutomationCanvas::keyPress(const songview::TimelineKeyInput &input)
 {
-    if (event->key() == Qt::Key_Escape) {
+    if (input.key == Qt::Key_Escape) {
         if (m_band.pending || m_activeGesture) {
             cancelInteraction();
         } else {
-            auto &model = m_page->m_owner.selectionModel();
+            auto &model = m_page.m_owner.selectionModel();
             if (model.timeSelection().active()) {
                 model.clearTimeSelection();
                 requestSelectionQuickUpdate();
@@ -496,18 +485,16 @@ void AutomationCanvas::keyPressEvent(QKeyEvent *event)
             m_hoverState.clearHover();
             requestHoverQuickUpdate();
         }
-        event->accept();
-        return;
+        return true;
     }
-    if ((event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace)) {
+    if (input.key == Qt::Key_Delete || input.key == Qt::Key_Backspace) {
         auto selected = collectSelectedNodeDrags();
         if (!selected.points.empty()) {
             commitNodePointDeletes(std::nullopt, selected.points);
             m_hoverState.clearHover();
             requestHoverQuickUpdate();
-            m_page->requestRefresh();
-            event->accept();
-            return;
+            m_page.requestRefresh();
+            return true;
         }
         if (m_pencilMode && m_hoverState.hover.lane.valid()) {
             NodePoint point;
@@ -516,21 +503,33 @@ void AutomationCanvas::keyPressEvent(QKeyEvent *event)
                     NodeLane *lane = slot->lane;
                     const NodeDrag drag{m_hoverState.hover.lane, point, point, lane->minimumValue(),
                                         lane->maximumValue()};
-                    commitNodePointDeletes(m_page->document()->revision(), {drag});
+                    commitNodePointDeletes(m_page.document()->revision(), {drag});
                     m_hoverState.clearHover();
                     requestHoverQuickUpdate();
-                    m_page->requestRefresh();
+                    m_page.requestRefresh();
                 }
             }
-            event->accept();
-            return;
+            return true;
         }
     }
-    QWidget::keyPressEvent(event);
+    return false;
 }
 
-void AutomationCanvas::leaveEvent(QEvent *)
+void AutomationCanvas::pointerLeave()
 {
     m_hoverState.clearHover();
+    if (m_inputHost)
+        m_inputHost->clearCursor();
     requestHoverQuickUpdate();
+}
+
+void AutomationCanvas::inputCancelled(songview::TimelineInputCancelReason reason)
+{
+    if (reason == songview::TimelineInputCancelReason::FocusLost)
+        return;
+    cancelInteraction();
+    m_hoverState.clearHover();
+    m_hoverState.previewValueLabel = {};
+    m_inputHost->clearCursor();
+    requestGestureEndQuickUpdate();
 }

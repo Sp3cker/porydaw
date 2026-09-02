@@ -27,6 +27,36 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/editorselectionmodel.h"
+#include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/quick/timelinequickview.h"
+namespace {
+
+songview::TimelineInputItem *automationInputItem(SongView &view)
+{
+    auto *quickCanvas =
+        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    return quickCanvas && quickCanvas->rootObject()
+               ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(
+                     QStringLiteral("timelineAutomationInput"))
+               : nullptr;
+}
+
+// Band input delivery: the Quick input item normalizes raw events in
+// viewport coordinates, so content-coordinate probes shift by the page
+// scroll before each send.
+struct AutomationBandInput {
+    AutomationPage &page;
+    songview::TimelineInputItem &item;
+
+    void mouse(QEvent::Type type, const QPointF &contentPosition, Qt::MouseButton button,
+               Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers) const
+    {
+        checks::events::sendMouse(item, type, contentPosition - QPointF(0.0, page.verticalScroll()),
+                                  button, buttons, modifiers);
+    }
+};
+
+} // namespace
 
 void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDocument &document,
                                    const QString &songLabel,
@@ -44,6 +74,12 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
     const bool tempoWasExpanded = !page.canvas()->laneBody(LaneHandle{0}).isEmpty();
     const std::vector<TempoPoint> originalTempo = document.tempoPoints();
     const std::vector<DocLanePoint> originalLfo = document.lanePoints(0, 21);
+    const AutomationBandInput band{page, *automationInputItem(view)};
+    const qreal dpr = band.item.devicePixelRatio();
+    const auto assertPageParent = [&](const QMenu *menu) {
+        popupCheck(menu->parentWidget() == &page,
+                   QStringLiteral("automation context menu was not parented to AutomationPage"));
+    };
 
     const auto menuAction = [&](const QPointF &position, const QString &trigger,
                                 QStringList *actions) {
@@ -52,6 +88,7 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
             auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
             if (!menu)
                 return;
+            assertPageParent(menu);
             QAction *selected = nullptr;
             for (QAction *action : menu->actions()) {
                 if (actions)
@@ -80,10 +117,10 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
             if (QApplication::activePopupWidget() == menu)
                 menu->close();
         });
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, position,
-                                  Qt::RightButton, Qt::RightButton, Qt::NoModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, position,
-                                  Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonPress, position, Qt::RightButton, Qt::RightButton,
+                   Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonRelease, position, Qt::RightButton, Qt::NoButton,
+                   Qt::NoModifier);
         QCoreApplication::processEvents();
         return triggered;
     };
@@ -98,16 +135,17 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
     bool leftGutterMenuOpened = false;
     QTimer::singleShot(0, [&] {
         if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget())) {
+            assertPageParent(menu);
             leftGutterMenuOpened = true;
             menu->close();
         }
     });
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress,
-                              QPoint(layout::space(layout::Space::One), lfoTop + lfoHeight / 2),
-                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease,
-                              QPoint(layout::space(layout::Space::One), lfoTop + lfoHeight / 2),
-                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonPress,
+               QPointF(layout::space(layout::Space::One), lfoTop + lfoHeight / 2), Qt::LeftButton,
+               Qt::LeftButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonRelease,
+               QPointF(layout::space(layout::Space::One), lfoTop + lfoHeight / 2), Qt::LeftButton,
+               Qt::NoButton, Qt::NoModifier);
     QCoreApplication::processEvents();
     popupCheck(!leftGutterMenuOpened,
                QStringLiteral("left click in a control-row gutter opened its menu"));
@@ -116,13 +154,13 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
         auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
         if (!menu)
             return;
+        assertPageParent(menu);
         for (QAction *action : menu->actions())
             addLaneActions.push_back(action->text());
         menu->close();
     });
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress,
-                              QPoint(layout::space(layout::Space::One), rowsHeight + 1),
-                              Qt::RightButton, Qt::RightButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonPress, QPointF(layout::space(layout::Space::One), rowsHeight + 1),
+               Qt::RightButton, Qt::RightButton, Qt::NoModifier);
     popupCheck(addLaneActions.contains(QStringLiteral("Show: Volume (VOL) (hidden)")),
                QStringLiteral("right-click add-lane menu lost hidden-lane label or order"));
     popupCheck(addLaneActions.contains(QStringLiteral("Hidden CC lanes")),
@@ -139,16 +177,17 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
         auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
         if (!menu)
             return;
+        assertPageParent(menu);
         for (QAction *action : menu->actions())
             ccLaneActions.push_back(action->text());
         menu->close();
     });
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress,
-                              QPoint(layout::space(layout::Space::One), lfoTop + lfoHeight / 2),
-                              Qt::RightButton, Qt::RightButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease,
-                              QPoint(layout::space(layout::Space::One), lfoTop + lfoHeight / 2),
-                              Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonPress,
+               QPointF(layout::space(layout::Space::One), lfoTop + lfoHeight / 2), Qt::RightButton,
+               Qt::RightButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonRelease,
+               QPointF(layout::space(layout::Space::One), lfoTop + lfoHeight / 2), Qt::RightButton,
+               Qt::NoButton, Qt::NoModifier);
     popupCheck(ccLaneActions.contains(QStringLiteral("Copy CC lane")) &&
                    ccLaneActions.contains(QStringLiteral("Hide CC lane")) &&
                    ccLaneActions.contains(QStringLiteral("Delete CC lane")),
@@ -156,10 +195,10 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
     const QRect tempoRect = page.canvas()->pinnedTempoRect();
     const QPoint tempoHeader(projectionGeometry.plotOrigin / 2, tempoRect.center().y());
     if (!tempoWasExpanded) {
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, tempoHeader,
-                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, tempoHeader,
-                                  Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonPress, tempoHeader, Qt::LeftButton, Qt::LeftButton,
+                   Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonRelease, tempoHeader, Qt::LeftButton, Qt::NoButton,
+                   Qt::NoModifier);
         QCoreApplication::processEvents();
     }
     QStringList tempoHeaderActions;
@@ -167,14 +206,15 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
         auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
         if (!menu)
             return;
+        assertPageParent(menu);
         for (QAction *action : menu->actions())
             tempoHeaderActions.push_back(action->text());
         menu->close();
     });
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, tempoHeader,
-                              Qt::RightButton, Qt::RightButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, tempoHeader,
-                              Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonPress, tempoHeader, Qt::RightButton, Qt::RightButton,
+               Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonRelease, tempoHeader, Qt::RightButton, Qt::NoButton,
+               Qt::NoModifier);
     popupCheck(tempoHeaderActions.contains(QStringLiteral("Copy")) &&
                    tempoHeaderActions.contains(QStringLiteral("Paste")) &&
                    tempoHeaderActions.contains(QStringLiteral("Clear Tempo")),
@@ -186,23 +226,24 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
     page.documentChanged();
     QCoreApplication::processEvents();
     const QRect tempoBody = page.canvas()->laneBody(LaneHandle{0});
-    const QPointF tempoNode(
-        view.displayX(96.0, projectionGeometry.plotOrigin, page.canvas()->devicePixelRatioF()),
-        AutomationProjection::valueY(tempoBody, projectionGeometry, CoreTimeDefaults::kMinTempoBpm,
-                                     CoreTimeDefaults::kMaxTempoBpm, 120));
+    const QPointF tempoNode(view.displayX(96.0, projectionGeometry.plotOrigin, dpr),
+                            AutomationProjection::valueY(tempoBody, projectionGeometry,
+                                                         CoreTimeDefaults::kMinTempoBpm,
+                                                         CoreTimeDefaults::kMaxTempoBpm, 120));
     QStringList tempoNodeActions;
     QTimer::singleShot(0, [&] {
         auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
         if (!menu)
             return;
+        assertPageParent(menu);
         for (QAction *action : menu->actions())
             tempoNodeActions.push_back(action->text());
         menu->close();
     });
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, tempoNode, Qt::RightButton,
-                              Qt::RightButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, tempoNode,
-                              Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonPress, tempoNode, Qt::RightButton, Qt::RightButton,
+               Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonRelease, tempoNode, Qt::RightButton, Qt::NoButton,
+               Qt::NoModifier);
     popupCheck(tempoNodeActions ==
                    QStringList({QStringLiteral("Set Value"), QStringLiteral("Delete")}),
                QStringLiteral("Tempo node context menu actions were not exactly Set Value, "
@@ -231,7 +272,7 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
 
         const QRect lfoBody = page.canvas()->laneBody(lfoHandle);
         const QPointF lfoNode(
-            view.displayX(96.0, projectionGeometry.plotOrigin, page.canvas()->devicePixelRatioF()),
+            view.displayX(96.0, projectionGeometry.plotOrigin, dpr),
             AutomationProjection::valueY(lfoBody, projectionGeometry, 0, 127, 96));
         QStringList selectedCcActions;
         menuAction(lfoNode, {}, &selectedCcActions);
@@ -322,10 +363,10 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
     }
     const bool tempoIsExpanded = !page.canvas()->laneBody(LaneHandle{0}).isEmpty();
     if (tempoIsExpanded != tempoWasExpanded) {
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, tempoHeader,
-                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, tempoHeader,
-                                  Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonPress, tempoHeader, Qt::LeftButton, Qt::LeftButton,
+                   Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonRelease, tempoHeader, Qt::LeftButton, Qt::NoButton,
+                   Qt::NoModifier);
         QCoreApplication::processEvents();
     }
     view.selectionModel().setTimeSelection(originalTimeSelection);

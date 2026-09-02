@@ -105,8 +105,7 @@ AutomationGestureCheckRig::InputPoint rawPoint(AutomationGestureCheckRig &rig, d
                                                int value)
 {
     auto point = rig.pointAt(rig.pan, uint64_t(std::floor(tick)), value);
-    point.position.setX(
-        rig.view().displayX(tick, rig.geometry().plotOrigin, rig.canvas().devicePixelRatioF()));
+    point.position.setX(rig.view().displayX(tick, rig.geometry().plotOrigin, rig.automationDpr()));
     point.mapped = rig.mappingAt(rig.handleFor(rig.pan), point.position);
     return point;
 }

@@ -216,6 +216,11 @@ Item {
             textModel: timelineScene.automationTransientTextModel
             z: 8
         }
+        TimelineInputItem {
+            objectName: "timelineAutomationInput"
+            anchors.fill: parent
+            Accessible.description: accessibilityDescription
+        }
     }
 
     TimelineSceneBand {

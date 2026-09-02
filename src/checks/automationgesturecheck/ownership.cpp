@@ -96,7 +96,7 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
             rig.quickScene().layer(songview::TimelineQuickLayer::AutomationNodes);
         const qreal ringRadius = geometry.selectedNodeRingRadius;
         const qreal ringWidth = geometry.selectedNodeRingDipWidth;
-        const QColor selectionColor = rig.canvas().palette().highlight().color();
+        const QColor selectionColor = rig.automationHost().palette().highlight().color();
         const auto ringPaintedAt = [&](const QPointF &position) {
             return hasRingAt(nodeLayer, rig.automationContentToViewport(position), ringRadius,
                              ringWidth, selectionColor);
@@ -164,7 +164,7 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
         const QPointF boundary(lfoPoint.position.x(), lfoBody.top() + lfoBody.height());
         rig.mouseMove(boundary, Qt::NoButton);
         rig.pump();
-        check(rig.canvas().cursor().shape() == Qt::SplitVCursor,
+        check(rig.automationCursor().shape() == Qt::SplitVCursor,
               QStringLiteral("Pencil row boundary did not retain resize cursor precedence"));
     }
 

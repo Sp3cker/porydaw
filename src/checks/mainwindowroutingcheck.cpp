@@ -703,8 +703,10 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
               statusBar()->currentMessage() == QStringLiteral("Voice changes hidden"),
           "voice changes route did not globally close its page");
 
-    auto *automationSurface = descendant<AutomationCanvas>(tabBView);
     EditorDrawer *const focusDrawer = tabBView.editorDrawer();
+    AutomationPage *const focusAutomationPage =
+        focusDrawer ? focusDrawer->automationPage() : nullptr;
+    auto *automationSurface = focusAutomationPage ? focusAutomationPage->canvas() : nullptr;
     auto *velocitySurface = focusDrawer ? focusDrawer->velocityArea() : nullptr;
     auto *voiceSurface = focusDrawer ? focusDrawer->voiceChangeArea() : nullptr;
     check(automationSurface && velocitySurface && voiceSurface,
@@ -739,14 +741,16 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
         QCoreApplication::processEvents();
         check(!tabBView.drawerSectionVisible(EditorDrawerPage::Velocity) &&
                   tabBView.drawerSectionVisible(EditorDrawerPage::Automations) &&
-                  QApplication::focusWidget() == automationSurface,
+                  tabBView.focusedTimelineBand() == songview::TimelineBand::Automation,
               "closing focused velocity did not focus the remaining automation drawer");
         if (QWidget *focus = QApplication::focusWidget()) {
             sendKeyStroke(*focus, Qt::Key_A, Qt::NoModifier, false);
         }
         QCoreApplication::processEvents();
         QWidget *focusAfterFocusedClose = QApplication::focusWidget();
-        check(!tabBView.hasVisibleDrawerSection() && focusAfterFocusedClose &&
+        check(!tabBView.hasVisibleDrawerSection() &&
+                  tabBView.focusedTimelineBand() == songview::TimelineBand::Roll &&
+                  focusAfterFocusedClose &&
                   (focusAfterFocusedClose == &tabBView ||
                    tabBView.isAncestorOf(focusAfterFocusedClose)),
               "closing focused automation did not return focus to active content");
@@ -1516,8 +1520,9 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
             view.setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
             view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
             QCoreApplication::processEvents();
-            auto *automation = descendant<AutomationCanvas>(view);
             auto *drawer = view.editorDrawer();
+            AutomationPage *const hostAutomationPage = drawer ? drawer->automationPage() : nullptr;
+            auto *automation = hostAutomationPage ? hostAutomationPage->canvas() : nullptr;
             auto *velocity = drawer ? drawer->velocityArea() : nullptr;
             check(automation && velocity && drawer,
                   "host flow did not expose drawer and page diagnostics");
@@ -1647,8 +1652,17 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                     automationThemeViewport ? checks::support::captureQuickBand(
                                                   view, *automationThemeViewport, &themeBeforeError)
                                             : QImage{};
-                QEvent automationThemeChange(QEvent::PaletteChange);
-                QApplication::sendEvent(automation, &automationThemeChange);
+                auto *themeQuickCanvas = view.findChild<songview::TimelineQuickView *>(
+                    QStringLiteral("timelineQuickCanvas"));
+                auto *automationThemeInput =
+                    themeQuickCanvas && themeQuickCanvas->rootObject()
+                        ? themeQuickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(
+                              QStringLiteral("timelineAutomationInput"))
+                        : nullptr;
+                check(automationThemeInput != nullptr,
+                      "automation theme check requires the Quick automation input item");
+                if (automationThemeInput)
+                    automationThemeInput->notifyHostAppearanceChanged();
                 QCoreApplication::processEvents();
                 QString themeAfterError;
                 const QImage automationThemeAfter =
@@ -1671,6 +1685,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                     document->addLanePoint(noteTrack, 74, 0, 64);
                     view.setDrawerActivePage(EditorDrawerPage::Automations);
                     QCoreApplication::processEvents();
+                    AutomationPage *const automationPage = drawer->automationPage();
                     const EditorAutomationRowId lane{EditorAutomationRowKind::ControlChange,
                                                      uint8_t(noteTrack), 74};
                     const auto laneRow =
@@ -1687,28 +1702,63 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                         const int rowHeight = layout::fontPx(4.0);
                         const qreal rowY = qreal(rowIndex * rowHeight + rowHeight / 2);
                         const QPointF automationPoint(layout::fontPx(17.5 + 13.0 / 3.0), rowY);
-                        const auto beginAutomation = [&](Qt::MouseButton button,
-                                                         Qt::KeyboardModifiers modifiers,
-                                                         qreal xOffset) {
-                            view.setDrawerActivePage(EditorDrawerPage::Automations);
-                            view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
-                            checks::events::sendMouse(*automation, QEvent::MouseButtonPress,
-                                                      automationPoint + QPointF(xOffset, 0.0),
-                                                      button, Qt::MouseButtons(button), modifiers);
-                            checks::events::sendMouse(
-                                *automation, QEvent::MouseMove,
-                                automationPoint + QPointF(xOffset + 32.0, 12.0), Qt::NoButton,
-                                Qt::MouseButtons(button), modifiers);
-                        };
                         auto *quickCanvas = view.findChild<songview::TimelineQuickView *>(
                             QStringLiteral("timelineQuickCanvas"));
+                        auto *automationInput =
+                            quickCanvas && quickCanvas->rootObject()
+                                ? quickCanvas->rootObject()
+                                      ->findChild<songview::TimelineInputItem *>(
+                                          QStringLiteral("timelineAutomationInput"))
+                                : nullptr;
                         auto *velocityInput = quickCanvas && quickCanvas->rootObject()
                                                   ? quickCanvas->rootObject()
                                                         ->findChild<songview::TimelineInputItem *>(
                                                             QStringLiteral("timelineVelocityInput"))
                                                   : nullptr;
+                        check(automationInput != nullptr,
+                              "Quick canvas must expose timelineAutomationInput");
                         check(velocityInput != nullptr,
                               "Quick canvas must expose timelineVelocityInput");
+                        QScrollArea *const automationLifecycleScroll =
+                            automationPage ? automationPage->findChild<QScrollArea *>(
+                                                 QStringLiteral("automationScroll"))
+                                           : nullptr;
+                        QScrollBar *const automationScrollbar =
+                            automationLifecycleScroll
+                                ? automationLifecycleScroll->verticalScrollBar()
+                                : nullptr;
+                        // Automation input positions are viewport coordinates; convert
+                        // content positions through the live scrollbar offset.
+                        const auto automationViewportPoint = [&](const QPointF &contentPoint) {
+                            return QPointF(
+                                contentPoint.x(),
+                                contentPoint.y() -
+                                    qreal(automationScrollbar ? automationScrollbar->value() : 0));
+                        };
+                        const auto identityPoint = [](const QPointF &point) { return point; };
+                        const auto beginAutomation = [&](Qt::MouseButton button,
+                                                         Qt::KeyboardModifiers modifiers,
+                                                         qreal xOffset) {
+                            view.setDrawerActivePage(EditorDrawerPage::Automations);
+                            view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
+                            if (automationScrollbar) {
+                                automationScrollbar->setValue(
+                                    qBound(0, int(rowY) - automationScrollbar->pageStep() / 2,
+                                           automationScrollbar->maximum()));
+                            }
+                            if (automationInput) {
+                                checks::events::sendMouse(
+                                    *automationInput, QEvent::MouseButtonPress,
+                                    automationViewportPoint(automationPoint +
+                                                            QPointF(xOffset, 0.0)),
+                                    button, Qt::MouseButtons(button), modifiers);
+                                checks::events::sendMouse(
+                                    *automationInput, QEvent::MouseMove,
+                                    automationViewportPoint(automationPoint +
+                                                            QPointF(xOffset + 32.0, 12.0)),
+                                    Qt::NoButton, Qt::MouseButtons(button), modifiers);
+                            }
+                        };
                         const auto beginVelocity = [&](Qt::MouseButton button,
                                                        const QPointF &position) {
                             view.setDrawerActivePage(EditorDrawerPage::Velocity);
@@ -1729,7 +1779,8 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                             }
                         };
                         const auto verifyTermination = [&](auto &surface, Qt::MouseButton button,
-                                                           const QPointF &release, auto begin) {
+                                                           const QPointF &release,
+                                                           const auto &toViewport, auto begin) {
                             const auto exercise = [&](const char *route, auto cancel,
                                                       bool clearsSelection) {
                                 const QByteArray midi = document->smf().write();
@@ -1746,7 +1797,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                                 cancel();
                                 const bool interactionTerminated = !view.userGestureActive();
                                 checks::events::sendMouse(surface, QEvent::MouseButtonRelease,
-                                                          release, button, Qt::NoButton,
+                                                          toViewport(release), button, Qt::NoButton,
                                                           Qt::NoModifier);
                                 QCoreApplication::processEvents();
                                 const bool previewCleared = std::none_of(
@@ -1759,7 +1810,9 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                                                                     std::decay_t<decltype(item)>>) {
                                         return QWidget::mouseGrabber() != &item;
                                     } else {
-                                        return true;
+                                        const QQuickWindow *itemWindow = item.window();
+                                        return !itemWindow ||
+                                               itemWindow->mouseGrabberItem() != &item;
                                     }
                                 }(surface);
                                 check(interactionStarted && interactionTerminated &&
@@ -1832,16 +1885,20 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                                 false);
                         };
                         verifyTermination(
-                            *automation, Qt::LeftButton, automationPoint + QPointF(32, 12),
+                            *automationInput, Qt::LeftButton, automationPoint + QPointF(32, 12),
+                            automationViewportPoint,
                             [&] { beginAutomation(Qt::LeftButton, Qt::NoModifier, 0.0); });
                         verifyTermination(
-                            *automation, Qt::LeftButton, automationPoint + QPointF(112, 12),
+                            *automationInput, Qt::LeftButton, automationPoint + QPointF(112, 12),
+                            automationViewportPoint,
                             [&] { beginAutomation(Qt::LeftButton, Qt::NoModifier, 80.0); });
                         verifyTermination(
-                            *automation, Qt::LeftButton, automationPoint + QPointF(192, 12),
+                            *automationInput, Qt::LeftButton, automationPoint + QPointF(192, 12),
+                            automationViewportPoint,
                             [&] { beginAutomation(Qt::LeftButton, Qt::ShiftModifier, 160.0); });
                         verifyTermination(
-                            *automation, Qt::RightButton, automationPoint + QPointF(272, 12),
+                            *automationInput, Qt::RightButton, automationPoint + QPointF(272, 12),
+                            automationViewportPoint,
                             [&] { beginAutomation(Qt::RightButton, Qt::NoModifier, 240.0); });
 
                         const auto live = document->notesForTrack(noteTrack);
@@ -1851,16 +1908,18 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                             std::max(double(velocity->plotOrigin() + 1), velocityPoint.x() - 32.0),
                             8.0);
                         if (velocityInput) {
-                            verifyTermination(
-                                *velocityInput, Qt::LeftButton, velocityPoint + QPointF(32, -24),
-                                [&] { beginVelocity(Qt::LeftButton, velocityPoint); });
                             verifyTermination(*velocityInput, Qt::LeftButton,
-                                              velocityPaintPoint + QPointF(32.0, -24.0), [&] {
-                                                  beginVelocity(Qt::LeftButton, velocityPaintPoint);
+                                              velocityPoint + QPointF(32, -24), identityPoint, [&] {
+                                                  beginVelocity(Qt::LeftButton, velocityPoint);
                                               });
                             verifyTermination(
-                                *velocityInput, Qt::RightButton, velocityPoint + QPointF(32, -24),
-                                [&] { beginVelocity(Qt::RightButton, velocityPoint); });
+                                *velocityInput, Qt::LeftButton,
+                                velocityPaintPoint + QPointF(32.0, -24.0), identityPoint,
+                                [&] { beginVelocity(Qt::LeftButton, velocityPaintPoint); });
+                            verifyTermination(*velocityInput, Qt::RightButton,
+                                              velocityPoint + QPointF(32, -24), identityPoint, [&] {
+                                                  beginVelocity(Qt::RightButton, velocityPoint);
+                                              });
                         }
                         const auto startVelocityRelative = [&] {
                             beginVelocity(Qt::LeftButton, velocityPoint);

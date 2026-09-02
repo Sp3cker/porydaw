@@ -22,6 +22,7 @@
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/cclanes.h"
 #include "ui/editordrawer/nodelane/hover.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
@@ -29,12 +30,40 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/editorselectionmodel.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
+#include "ui/songview/quick/timelinequickview.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/theme/trackidentitycolors.h"
 #include "ui/typography.h"
 
 namespace {
+
+songview::TimelineInputItem *automationInputItem(SongView &view)
+{
+    auto *quickCanvas =
+        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    return quickCanvas && quickCanvas->rootObject()
+               ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(
+                     QStringLiteral("timelineAutomationInput"))
+               : nullptr;
+}
+
+// Band input delivery: the Quick input item normalizes raw events in
+// viewport coordinates, so content-coordinate probes shift by the page
+// scroll before each send.
+struct AutomationBandInput {
+    AutomationPage &page;
+    songview::TimelineInputItem &item;
+
+    void mouse(QEvent::Type type, const QPointF &contentPosition, Qt::MouseButton button,
+               Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers) const
+    {
+        checks::events::sendMouse(item, type, contentPosition - QPointF(0.0, page.verticalScroll()),
+                                  button, buttons, modifiers);
+    }
+    void leave() const { mouse(QEvent::Leave, {}, Qt::NoButton, Qt::NoButton, Qt::NoModifier); }
+};
 
 constexpr uint64_t kHeldTick = 48;
 constexpr uint64_t kNodeTick = 96;
@@ -56,14 +85,12 @@ void pump()
 
 QPoint automationContentToViewport(const AutomationPage &page)
 {
-    QWidget *const viewport = page.scrollViewport();
-    return viewport ? page.canvas()->mapTo(viewport, QPoint{}) : QPoint{};
+    return {0, -page.verticalScroll()};
 }
 
-void leaveCanvas(AutomationPage &page)
+void leaveCanvas(const AutomationBandInput &band)
 {
-    QEvent leave(QEvent::Leave);
-    QCoreApplication::sendEvent(page.canvas(), &leave);
+    band.leave();
     pump();
 }
 
@@ -90,15 +117,16 @@ QPointF tempoHeaderPoint(const AutomationPage &page)
     return {page.canvas()->plotOrigin() / 2.0, qreal(tempo.center().y())};
 }
 
-bool toggleTempoExpanded(SongView &, AutomationPage &page, bool wantExpanded, int &)
+bool toggleTempoExpanded(SongView &view, AutomationPage &page, bool wantExpanded, int &)
 {
     const bool expanded = !page.canvas()->laneBody(LaneHandle{0}).isEmpty();
     if (expanded == wantExpanded)
         return expanded;
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, tempoHeaderPoint(page),
-                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, tempoHeaderPoint(page),
-                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    AutomationBandInput band{page, *automationInputItem(view)};
+    band.mouse(QEvent::MouseButtonPress, tempoHeaderPoint(page), Qt::LeftButton, Qt::LeftButton,
+               Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonRelease, tempoHeaderPoint(page), Qt::LeftButton, Qt::NoButton,
+               Qt::NoModifier);
     pump();
     return !page.canvas()->laneBody(LaneHandle{0}).isEmpty() == wantExpanded;
 }
@@ -182,6 +210,7 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
         std::fprintf(stderr, "automation-check: FAIL paint: Tempo: %s\n", qUtf8Printable(message));
         ++failures;
     };
+    const AutomationBandInput band{page, *automationInputItem(view)};
     auto *quickScene = view.findChild<songview::TimelineQuickScene *>();
     report(quickScene, QStringLiteral("retained Quick automation scene was not available"));
     if (!quickScene)
@@ -234,7 +263,7 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
                        : 0;
         setCcPoints(page, document, live, int(expandedCc->id.track), expandedCc->id.controller,
                     mutation);
-        leaveCanvas(page);
+        leaveCanvas(band);
         const auto &curves = quickScene->layer(songview::TimelineQuickLayer::AutomationCurves);
         report(!expandedTempo.isEmpty() && !covered.isEmpty() && !visible.isEmpty() &&
                    !layerHasColorIn(curves, covered, expandedCaptureOrigin, ccColor) &&
@@ -257,7 +286,7 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
         tempoSelection.tempo = true;
         view.selectionModel().setTimeSelection(tempoSelection);
         refresh(page, document, live);
-        leaveCanvas(page);
+        leaveCanvas(band);
         const auto &selectionLayer =
             quickScene->layer(songview::TimelineQuickLayer::AutomationSelection);
         report(layerHasColorIn(selectionLayer, covered, expandedCaptureOrigin,
@@ -313,7 +342,7 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
                        : 0;
         setCcPoints(page, document, live, int(collapsedCc->id.track), collapsedCc->id.controller,
                     mutation);
-        leaveCanvas(page);
+        leaveCanvas(band);
         const auto &curves = quickScene->layer(songview::TimelineQuickLayer::AutomationCurves);
         report(tempoCollapsed && !covered.isEmpty() && !visible.isEmpty() &&
                    !layerHasColorIn(curves, covered, collapsedCaptureOrigin, ccColor) &&
@@ -350,7 +379,8 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
         ++failures;
     };
     AutomationCanvas *canvas = page.canvas();
-    const QFont originalFont = canvas->font();
+    const AutomationBandInput band{page, *automationInputItem(view)};
+    const QFont originalFont = band.item.font();
     const QByteArray originalSmf = document.smf().write();
     const int originalUndoIndex = document.undoStack()->index();
     const auto originalSelection = view.selectionModel().timeSelection();
@@ -379,7 +409,8 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
         quickScene ? quickScene->automationHoverTextModel() : nullptr;
     const auto restore = [&] {
         typography::setUseSystemFont(false);
-        canvas->setFont(originalFont);
+        band.item.setHostAppearance(originalFont, band.item.palette());
+        band.item.notifyHostAppearanceChanged();
         pump();
         document.undoStack()->setIndex(originalUndoIndex);
         view.selectionModel().setTimeSelection(originalSelection);
@@ -387,7 +418,7 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
         pump();
         refresh(page, document, live);
         toggleTempoExpanded(view, page, originallyExpanded, failures);
-        leaveCanvas(page);
+        leaveCanvas(band);
     };
     view.selectionModel().clearTimeSelection();
     const bool expanded = toggleTempoExpanded(view, page, true, failures);
@@ -413,7 +444,7 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
         pump();
         refresh(page, document, live);
     }
-    leaveCanvas(page);
+    leaveCanvas(band);
 
     const AutomationGeometry geometry = [&] {
         auto resolved = AutomationGeometry::resolve();
@@ -421,7 +452,7 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
         return resolved;
     }();
     const QRect body = canvas->laneBody(LaneHandle{0});
-    const qreal dpr = canvas->devicePixelRatioF();
+    const qreal dpr = band.item.devicePixelRatio();
     const QPoint captureOrigin = automationContentToViewport(page);
     const auto laneLabel = [&](const QRect &laneBody, const AutomationGeometry &laneGeometry,
                                bool summary) {
@@ -512,8 +543,7 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
     TempoLane tempoLane(document);
     const QPointF node(view.displayX(double(kNodeTick), geometry.plotOrigin, dpr),
                        nodelane::valueY(tempoLane, body, geometry, 180));
-    checks::events::sendMouse(*canvas, QEvent::MouseMove, node, Qt::NoButton, Qt::NoButton,
-                              Qt::NoModifier);
+    band.mouse(QEvent::MouseMove, node, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
     pump();
     const auto hoverText = firstTextRecord(automationHoverTextModel);
     report(hoverText && !hoverText->isEmpty(),
@@ -525,7 +555,8 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
     const auto systemBody = typography::bodyFont();
     report(systemBody.has_value(), QStringLiteral("system Body font is unavailable"));
     if (!systemFamily.isEmpty() && systemBody) {
-        canvas->setFont(*systemBody);
+        band.item.setHostAppearance(*systemBody, band.item.palette());
+        band.item.notifyHostAppearanceChanged();
         pump();
         const auto modelUsesFont = [](QAbstractItemModel *model, const QFont &expected) {
             if (!model || model->rowCount() == 0)
@@ -565,17 +596,16 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
         const QRect systemBody = canvas->laneBody(LaneHandle{0});
         const QPointF systemNode(view.displayX(double(kNodeTick), systemGeometry.plotOrigin, dpr),
                                  nodelane::valueY(tempoLane, systemBody, systemGeometry, 180));
-        checks::events::sendMouse(*canvas, QEvent::MouseMove, systemNode, Qt::NoButton,
-                                  Qt::NoButton, Qt::NoModifier);
+        band.mouse(QEvent::MouseMove, systemNode, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
         pump();
-        const QFont systemCaption = typography::caption(canvas->font());
-        const QFont systemHover = typography::noteName(canvas->font());
+        const QFont systemCaption = typography::caption(band.item.font());
+        const QFont systemHover = typography::noteName(band.item.font());
         report(modelUsesFont(automationTextModel, systemCaption) &&
                    modelHasOpaqueText(automationTextModel) &&
                    modelUsesFont(automationHoverTextModel, systemHover) &&
                    modelHasOpaqueText(automationHoverTextModel),
                QStringLiteral("FontChange did not rebuild retained Quick text metrics and colors"));
-        report(QFontInfo(canvas->font()).family() == systemFamily,
+        report(QFontInfo(band.item.font()).family() == systemFamily,
                QStringLiteral("AutomationCanvas did not receive the system font"));
         const auto systemHoverText = firstTextRecord(automationHoverTextModel);
         report(systemHoverText && !systemHoverText->isEmpty(),

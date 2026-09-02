@@ -1,14 +1,7 @@
 #include "ui/editordrawer/automationcanvas.h"
 
-#include <algorithm>
-#include <optional>
-#include <utility>
-#include <variant>
-#include <vector>
-
 #include <QPalette>
-#include <QScrollArea>
-#include <QScrollBar>
+#include <QSize>
 
 #include "ui/editordrawer/automationpage.h"
 #include "ui/layout.h"
@@ -33,7 +26,7 @@ bool hasDirty(TimelineQuickDirtySet mask, TimelineQuickDirty dirty)
     return mask.testFlag(dirty);
 }
 
-QRect viewportRect(const QRect &content, int verticalScroll)
+QRect translatedToViewport(const QRect &content, int verticalScroll)
 {
     return content.translated(0, -verticalScroll);
 }
@@ -121,16 +114,15 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         scene.setAutomationHoverTextRecords({});
     if (transientText)
         scene.setAutomationTransientTextRecords({});
-    if (!m_page || !m_scroll || !m_scroll->viewport() || !m_page->document())
+    if (!m_inputHost || !m_page.document())
         return;
 
-    const QWidget *viewportWidget = m_scroll->viewport();
-    const QRectF viewport(0, 0, viewportWidget->width(), viewportWidget->height());
+    const QSize viewportSize = m_page.automationViewportSize();
+    const QRectF viewport(0, 0, viewportSize.width(), viewportSize.height());
     if (viewport.width() <= 0.0 || viewport.height() <= 0.0)
         return;
-    const QScrollBar *verticalBar = m_scroll->verticalScrollBar();
-    const int verticalScroll = verticalBar ? verticalBar->value() : 0;
-    const qreal dpr = devicePixelRatioF();
+    const int verticalScroll = m_page.verticalScroll();
+    const qreal dpr = m_inputHost->devicePixelRatio();
     const AutomationProjection projection = this->projection();
     const auto selectedTickRange = [this]() -> std::optional<std::pair<uint64_t, uint64_t>> {
         if (m_band.active) {
@@ -184,7 +176,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     const bool tempoExpanded = m_tempoLane.expanded();
     const QRect tempoBandContent =
         tempoExpanded ? m_tempoLane.bodyRect() : m_tempoLane.headerRect();
-    const QRect tempoBand = viewportRect(tempoBandContent, verticalScroll);
+    const QRect tempoBand = translatedToViewport(tempoBandContent, verticalScroll);
     const QRectF tempoClip = rectF(tempoBand).intersected(viewport);
     QRectF scrollableViewport = viewport;
     if (!tempoClip.isEmpty())
@@ -196,7 +188,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         const NodeLaneSlot &slot = m_nodeStack[std::size_t(index)];
         if (!slot.lane || slot.isTempo())
             continue;
-        const QRect body = viewportRect(slot.body, verticalScroll);
+        const QRect body = translatedToViewport(slot.body, verticalScroll);
         const QRectF clip = rectF(body).intersected(scrollableViewport);
         if (clip.isEmpty())
             continue;
@@ -226,7 +218,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
              .needsPoints = curves || nodes || text || needsTransientPoints || needsHoverPoints});
     }
     if (tempoSlot && !tempoClip.isEmpty()) {
-        const QRect tempoBody = viewportRect(tempoSlot->body, verticalScroll);
+        const QRect tempoBody = translatedToViewport(tempoSlot->body, verticalScroll);
         const LaneHandle handle = tempoHandle;
         const bool bandLane = bandPreviewContainsLane(handle);
         const bool selectedNodesLane = m_laneSelection.coversNodes(tempoSlot->id) || bandLane;
@@ -284,7 +276,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
 
     for (const VisibleLane &lane : lanes) {
         if (!lane.tempo && grid) {
-            composeBandedGrid(scene, TimelineQuickLayer::AutomationGrid, m_page->m_owner, lane.plot,
+            composeBandedGrid(scene, TimelineQuickLayer::AutomationGrid, m_page.m_owner, lane.plot,
                               m_geometry.plotOrigin, dpr);
             addHeaderChrome(scene, rectF(lane.band), rectF(lane.band), std::nullopt, true, true,
                             lane.clip);
@@ -326,7 +318,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                 }(),
                 tempoExpanded, false, lane.clip);
             if (tempoExpanded) {
-                composeBandedGrid(scene, TimelineQuickLayer::AutomationGrid, m_page->m_owner,
+                composeBandedGrid(scene, TimelineQuickLayer::AutomationGrid, m_page.m_owner,
                                   lane.plot, m_geometry.plotOrigin, dpr);
             }
         }
@@ -370,9 +362,9 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
 
     if (grid) {
         const QRect strip =
-            viewportRect(QRect(layout::space(layout::Space::Zero), addLaneStripTop(), width(),
-                               m_geometry.addLaneStripHeight),
-                         verticalScroll);
+            translatedToViewport(QRect(layout::space(layout::Space::Zero), addLaneStripTop(),
+                                       viewportSize.width(), m_geometry.addLaneStripHeight),
+                                 verticalScroll);
         const QRectF stripClip = rectF(strip).intersected(scrollableViewport);
         if (!stripClip.isEmpty()) {
             addRect(scene, TimelineQuickLayer::AutomationGrid, rectF(strip), background, stripClip);
@@ -381,9 +373,9 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     }
     if (text) {
         const QRect strip =
-            viewportRect(QRect(layout::space(layout::Space::Zero), addLaneStripTop(), width(),
-                               m_geometry.addLaneStripHeight),
-                         verticalScroll);
+            translatedToViewport(QRect(layout::space(layout::Space::Zero), addLaneStripTop(),
+                                       viewportSize.width(), m_geometry.addLaneStripHeight),
+                                 verticalScroll);
         const QRectF stripClip = rectF(strip).intersected(scrollableViewport);
         if (!stripClip.isEmpty()) {
             appendText(mainText, TimelineQuickTextKeyKind::AutomationAddLane, 0,
@@ -419,8 +411,8 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
             .hoverState = m_hoverState,
             .handle = lane.handle,
             .color = color,
-            .selectedColor = palette().highlight().color(),
-            .dimmedColor = palette().mid().color(),
+            .selectedColor = m_inputHost->palette().highlight().color(),
+            .dimmedColor = m_inputHost->palette().mid().color(),
             .devicePixelRatio = dpr,
             .selectedTickRange = selectedTickRange,
             .selectedLane = lane.selectedLane,
@@ -475,8 +467,8 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
             .hoverState = m_hoverState,
             .handle = lane.handle,
             .color = color,
-            .selectedColor = palette().highlight().color(),
-            .dimmedColor = palette().mid().color(),
+            .selectedColor = m_inputHost->palette().highlight().color(),
+            .dimmedColor = m_inputHost->palette().mid().color(),
             .devicePixelRatio = dpr,
             .selectedTickRange = selectedTickRange,
             .selectedLane = lane.selectedLane,

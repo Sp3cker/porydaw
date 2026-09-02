@@ -23,6 +23,7 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 namespace checks::rollcheck {
 
@@ -71,14 +72,20 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
                                   Qt::NoButton, Qt::NoModifier);
     };
     // Playhead follow-scroll pauses while a mouse gesture is live: with a
-    // middle-button pan held in the roll (or the lanes), a playing playhead
-    // far past the right edge must not move the view; releasing the button
-    // lets the next playhead tick scroll again.
-    auto *lanes = view.findChild<QWidget *>(QStringLiteral("automationCanvas"));
+    // middle-button pan held in the roll (or the automation lanes), a playing
+    // playhead far past the right edge must not move the view; releasing the
+    // button lets the next playhead tick scroll again.
+    auto *automationQuick =
+        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    auto *lanes = automationQuick && automationQuick->rootObject()
+                      ? automationQuick->rootObject()->findChild<songview::TimelineInputItem *>(
+                            QStringLiteral("timelineAutomationInput"))
+                      : nullptr;
     if (!lanes)
-        fail("automation area not found");
-    // The roll is the Quick input item and the lanes stay a widget; both run
-    // the same middle-drag pan probe against their own input surface.
+        fail("automation input item not found");
+    // Roll and automation lanes are both Quick input items with attached
+    // non-widget interactions; both run the same middle-drag pan probe
+    // against their own input surface.
     const auto panFollowProbe = [&](auto &panned) {
         const int home = view.contentX(0.0);
         const uint64_t farTick = uint64_t(std::max(0.0, view.tickAtContentX(vw * 2)));

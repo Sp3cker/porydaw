@@ -13,7 +13,6 @@
 #include <cmath>
 #include <optional>
 
-#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
@@ -430,19 +429,20 @@ EditorDrawerPage DrawerSections::resizePageForHandle(const QWidget *handle) cons
 void DrawerSections::focusActivePage()
 {
     const auto focusPage = [this](EditorDrawerPage page) {
-        if (page == EditorDrawerPage::VoiceChanges || page == EditorDrawerPage::Velocity) {
-            const bool visible =
-                page == EditorDrawerPage::VoiceChanges ? voiceChangesVisible() : velocityVisible();
-            const songview::TimelineBand band = page == EditorDrawerPage::VoiceChanges
-                                                    ? songview::TimelineBand::VoiceChanges
-                                                    : songview::TimelineBand::Velocity;
-            return visible && m_owner.focusTimelineBand(band, Qt::OtherFocusReason);
+        switch (page) {
+        case EditorDrawerPage::VoiceChanges:
+            return voiceChangesVisible() &&
+                   m_owner.focusTimelineBand(songview::TimelineBand::VoiceChanges,
+                                             Qt::OtherFocusReason);
+        case EditorDrawerPage::Velocity:
+            return velocityVisible() && m_owner.focusTimelineBand(songview::TimelineBand::Velocity,
+                                                                  Qt::OtherFocusReason);
+        case EditorDrawerPage::Automations:
+            return automationVisible() &&
+                   m_owner.focusTimelineBand(songview::TimelineBand::Automation,
+                                             Qt::OtherFocusReason);
         }
-        QWidget *const canvas = m_automation->canvas();
-        if (!canvas || !canvas->isVisible())
-            return false;
-        canvas->setFocus(Qt::OtherFocusReason);
-        return true;
+        Q_UNREACHABLE();
     };
     if (focusPage(m_activePage))
         return;

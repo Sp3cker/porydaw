@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include <QSize>
 #include <QWidget>
 
 #include "ui/editordrawer/drawerpage.h"
@@ -9,11 +10,9 @@
 #include "ui/songview.h"
 #include "ui/songviewmodel.h"
 
-class QEvent;
 class QAction;
+class QEvent;
 class QObject;
-class QKeyEvent;
-class QWheelEvent;
 class AutomationCanvas;
 class TempoLane;
 class CCLanes;
@@ -22,6 +21,10 @@ class MidiTimeline;
 class SongDocument;
 class SongView;
 struct AutomationGeometry;
+
+namespace songview {
+struct TimelineWheelInput;
+}
 
 // The concrete automation page owns its scroll surface and keeps a stable
 // SongView owner for shared song data and editor routing.
@@ -34,6 +37,9 @@ class AutomationPage final : public QWidget
     AutomationCanvas *canvas() noexcept { return m_canvas; }
     const AutomationCanvas *canvas() const noexcept { return m_canvas; }
     QWidget *scrollViewport() const noexcept;
+    QSize automationViewportSize() const noexcept;
+    int automationContentHeight() const noexcept;
+    int verticalScroll() const noexcept;
     bool event(QEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
     const EditorViewState &automationViewState() const noexcept { return m_viewState; }
@@ -65,6 +71,9 @@ class AutomationPage final : public QWidget
     };
 
     void refreshGeometry();
+    void synchronizeAutomationViewport();
+    void setVerticalScroll(int value);
+    bool scrollVertically(const songview::TimelineWheelInput &input);
     int scrollGutter() const noexcept;
     int laneHeightFor(const EditorAutomationRowId &row) const noexcept;
     bool scaleSharedHeight(int wheelSteps, const AutomationGeometry &geometry);
@@ -83,7 +92,7 @@ class AutomationPage final : public QWidget
     qreal displayX(double tick, qreal origin, qreal dpr) const noexcept;
     double pxPerBeat() const noexcept;
     void requestHorizontalScroll(double value) const;
-    void requestTimeZoom(const QWheelEvent *event, qreal anchorContentX) const;
+    void requestTimeZoom(const songview::TimelineWheelInput &input, qreal anchorContentX) const;
     void setFollowScrollPaused(bool paused) const;
     void publishViewState();
     void rebuildModel();
@@ -98,7 +107,8 @@ class AutomationPage final : public QWidget
     void commitEditCursor(uint64_t tick) const;
     void announce(const QString &message) const;
 
-    bool matchesPencilShortcut(const QKeyEvent *event) const noexcept;
+    bool matchesPencilShortcut(int key, Qt::KeyboardModifiers modifiers) const noexcept;
+    bool belongsToPageWindow(const QObject *target) const noexcept;
 
     Geometry m_geometry;
     SongView &m_owner;
@@ -107,4 +117,6 @@ class AutomationPage final : public QWidget
     EditorViewState m_viewState;
     ScrollArea *m_scroll = nullptr;
     AutomationCanvas *m_canvas = nullptr;
+    int m_automationContentHeight = 0;
+    qreal m_verticalWheelRemainder = 0.0;
 };

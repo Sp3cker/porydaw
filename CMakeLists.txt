@@ -393,7 +393,6 @@ if(APPLE)
         src/ui/nativelayerutils_macos_p.h
         src/ui/playheadrenderer_macos.mm
         src/ui/activity/trackactivityrenderer_macos.mm
-        src/ui/songview/quick/automationhoverpassthrough_macos.mm
     )
     target_compile_definitions(porydaw_app PUBLIC PORYDAW_USE_MACOS_PLAYHEAD_IMAGES)
     find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
@@ -620,7 +619,6 @@ if(PORYDAW_BUILD_CHECKS)
         target_sources(porydaw_checks PRIVATE
             src/checks/trackactivitymetercheck_macos.mm
             src/checks/rollcheckplayhead_macos.mm
-            src/checks/automationgesturecheck/nativehover_macos.mm
         )
     endif()
     if(APPLE)

@@ -1,13 +1,11 @@
 #include "ui/editordrawer/editordrawer.h"
 
 #include <QAction>
-#include <QApplication>
 #include <QEvent>
 
 #include <algorithm>
 #include <optional>
 
-#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/drawersections.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
@@ -27,9 +25,6 @@ EditorDrawer::EditorDrawer(SongView &owner, QWidget *parent, EditorViewState vie
     m_automationPage = new AutomationPage(owner, this);
     m_velocityArea = new VelocityArea(owner, this);
     m_voiceChangeArea = new VoiceChangeArea(owner, this);
-    m_automationPage->setFocusPolicy(Qt::NoFocus);
-    if (m_automationPage->canvas())
-        m_automationPage->canvas()->installEventFilter(this);
     m_sections =
         new DrawerSections(owner, this, m_automationPage, m_velocityArea, m_voiceChangeArea);
     connect(m_sections, &DrawerSections::geometryChanged, this, &EditorDrawer::arrange);
@@ -144,7 +139,6 @@ void EditorDrawer::finishViewStateTransition(const DrawerDiff &diff, bool drawer
     }
     if (drawerOwnedFocus && diff.becameFullyHidden) {
         m_owner.focusContent();
-        m_drawerCanvasOwnsFocus = false;
     }
 }
 
@@ -259,14 +253,6 @@ std::optional<QRect> EditorDrawer::bodyRect(EditorDrawerPage page) const noexcep
 
 bool EditorDrawer::eventFilter(QObject *watched, QEvent *event)
 {
-    // Converted drawer-band focus is Quick-owned; only the automation canvas
-    // still reports native focus events.
-    if (watched == m_automationPage->canvas()) {
-        if (event->type() == QEvent::FocusIn)
-            m_drawerCanvasOwnsFocus = true;
-        else if (event->type() == QEvent::FocusOut)
-            m_drawerCanvasOwnsFocus = false;
-    }
     if (watched == parentWidget() && m_usesParentBounds &&
         (event->type() == QEvent::Resize || event->type() == QEvent::LayoutRequest)) {
         arrange();
@@ -346,16 +332,13 @@ void EditorDrawer::cancelPageInteraction(EditorDrawerPage page)
 
 bool EditorDrawer::ownsFocus() const
 {
-    // Converted drawer-band focus lives in the matching Quick input item.
     if (const std::optional<songview::TimelineBand> focused = m_owner.focusedTimelineBand();
         focused && (*focused == songview::TimelineBand::Velocity ||
-                    *focused == songview::TimelineBand::VoiceChanges))
+                    *focused == songview::TimelineBand::VoiceChanges ||
+                    *focused == songview::TimelineBand::Automation)) {
         return true;
-    QWidget *focus = QApplication::focusWidget();
-    if (m_drawerCanvasOwnsFocus || !focus)
-        return m_drawerCanvasOwnsFocus;
-    const QWidget *const canvas = m_automationPage->canvas();
-    return canvas && (focus == canvas || canvas->isAncestorOf(focus));
+    }
+    return false;
 }
 
 QRect EditorDrawer::resolvedHostBounds() const noexcept

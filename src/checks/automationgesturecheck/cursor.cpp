@@ -20,9 +20,9 @@ void checkAutomationPencilCursor(AutomationGestureCheckRig &rig,
     if (!panHandle.valid() || panBody.isEmpty())
         return;
 
-    const auto pencilShown = [&rig] { return !rig.canvas().cursor().pixmap().isNull(); };
+    const auto pencilShown = [&rig] { return !rig.automationCursor().pixmap().isNull(); };
     const auto shapeIs = [&rig](Qt::CursorShape shape) {
-        return rig.canvas().cursor().shape() == shape;
+        return rig.automationCursor().shape() == shape;
     };
 
     const QPointF plotPoint = rig.pointAt(rig.pan, 24, 64).position;
@@ -47,7 +47,7 @@ void checkAutomationPencilCursor(AutomationGestureCheckRig &rig,
 
     if (!rig.canvas().rows().empty()) {
         const qreal addLaneY =
-            qreal(rig.canvas().height()) - qreal(geometry.addLaneStripHeight) / 2.0;
+            qreal(rig.automationContentHeight()) - qreal(geometry.addLaneStripHeight) / 2.0;
         rig.mouseMove(QPointF(geometry.plotOrigin + 40.0, addLaneY), Qt::NoButton);
         rig.pump();
         check(shapeIs(Qt::ArrowCursor),
@@ -69,6 +69,20 @@ void checkAutomationPencilCursor(AutomationGestureCheckRig &rig,
                          "bitmap pencil cursor"));
     rig.mousePress(rig.tempoHeaderPoint());
     rig.mouseRelease(rig.tempoHeaderPoint());
+    rig.pump();
+
+    // The pencil cursor bitmap is rebuilt against the host DPR, not a widget
+    // device ratio; doubling the host DPR must double the cursor's ratio.
+    const qreal dpr = rig.automationDpr();
+    rig.automationHost().setDevicePixelRatio(dpr * 2.0);
+    rig.canvasHostAppearanceChanged();
+    rig.mouseMove(plotPoint, Qt::NoButton);
+    rig.pump();
+    check(qFuzzyCompare(rig.automationCursor().pixmap().devicePixelRatio(), dpr * 2.0),
+          QStringLiteral("Pencil cursor did not rebuild for the host device pixel ratio"));
+    rig.automationHost().setDevicePixelRatio(dpr);
+    rig.canvasHostAppearanceChanged();
+    rig.mouseMove(plotPoint, Qt::NoButton);
     rig.pump();
 
     rig.setPersistentPencil(false);

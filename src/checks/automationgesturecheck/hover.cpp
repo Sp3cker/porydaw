@@ -9,9 +9,7 @@
 #include <vector>
 
 #include <QAbstractItemModel>
-#include <QCoreApplication>
 #include <QDeadlineTimer>
-#include <QEvent>
 #include <QImage>
 
 #include <QPointF>
@@ -35,9 +33,6 @@
 #include <QString>
 #include <QtGlobal>
 
-#ifdef Q_OS_MACOS
-bool postAutomationHoverMouseMove(QWidget &target, const QPointF &position);
-#endif
 namespace {
 
 enum class AdapterKind { Tempo, Cc };
@@ -88,8 +83,7 @@ int valueAtBodyFraction(int minimum, int maximum, double fractionFromBottom)
 
 void leaveCanvas(AutomationGestureCheckRig &rig)
 {
-    QEvent leave(QEvent::Leave);
-    QCoreApplication::sendEvent(&rig.canvas(), &leave);
+    rig.canvas().pointerLeave();
     rig.pump();
 }
 
@@ -310,7 +304,7 @@ PreparedLane prepareLane(AutomationGestureCheckRig &rig, const Case &row)
         setCcPoints(rig, {{kHeldTick, held}, {kNodeTick, node}});
     }
     const auto geometry = rig.geometry();
-    const qreal dpr = rig.canvas().devicePixelRatioF();
+    const qreal dpr = rig.automationDpr();
     const auto projection = rig.projection();
     lane.body = rig.bodyFor(lane.handle);
     lane.insertionPos = {projection.displayX(kFixtureTick, dpr),
@@ -326,11 +320,11 @@ PreparedLane prepareLane(AutomationGestureCheckRig &rig, const Case &row)
     lane.nodePos = QPointF(lane.nodeX, lane.nodeY);
     return lane;
 }
-#ifdef Q_OS_MACOS
-void checkNativeHoverRoute(AutomationGestureCheckRig &rig, const PreparedLane &lane,
+
+void checkDirectHoverRoute(AutomationGestureCheckRig &rig, const PreparedLane &lane,
                            const AutomationGestureCheck &check)
 {
-    const Check probe{check, "native hover"};
+    const Check probe{check, "direct hover"};
     songview::TimelineQuickView *const quickHost =
         rig.view().findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
     probe.require(quickHost && quickHost->quickWindow(),
@@ -338,13 +332,23 @@ void checkNativeHoverRoute(AutomationGestureCheckRig &rig, const PreparedLane &l
     if (!quickHost || !quickHost->quickWindow())
         return;
 
-    probe.require(quickHost->quickWindow()->flags().testFlag(Qt::WindowTransparentForInput),
+    probe.require(!quickHost->quickWindow()->flags().testFlag(Qt::WindowTransparentForInput),
                   QStringLiteral("native Quick timeline host accepts pointer input"));
+    probe.require(!rig.automationHost().accessibilityDescription().isEmpty(),
+                  QStringLiteral("attaching the input host did not publish an accessibility "
+                                 "description"));
+
+    const auto before = snapshot(rig.document());
+    const auto previewUnchanged = [&](const char *label) {
+        probe.require(
+            isUnchanged(before, snapshot(rig.document())),
+            QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
+    };
+
     leaveCanvas(rig);
     const auto idle = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
-    probe.require(postAutomationHoverMouseMove(rig.canvas(), lane.insertionPos),
-                  QStringLiteral("native mouse-move event could not be posted"));
-
+    rig.mouseMove(lane.insertionPos, Qt::NoButton);
+    rig.pump();
     const qreal expectedRootX = rig.view().timelinePlotOrigin() +
                                 rig.view().contentX(lane.insertionTick) - quickHost->geometry().x();
     QDeadlineTimer timeout{1000};
@@ -356,57 +360,101 @@ void checkNativeHoverRoute(AutomationGestureCheckRig &rig, const PreparedLane &l
         rig.pump();
         hoverLayer = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
     }
-
+    previewUnchanged("direct hover");
     probe.require(quickHost->hoverVisible(),
-                  QStringLiteral("native mouse move did not publish the automation hover guide"));
+                  QStringLiteral("direct pointer move did not publish the automation hover "
+                                 "guide"));
     probe.require(std::abs(quickHost->hoverRootContentX() - expectedRootX) <= layout::singlePixel(),
-                  QStringLiteral("native mouse move left the automation hover guide at x=%1, "
+                  QStringLiteral("direct pointer move left the automation hover guide at x=%1, "
                                  "expected x=%2")
                       .arg(quickHost->hoverRootContentX())
                       .arg(expectedRootX));
     probe.require(hoverLayer.revision > idle.revision,
-                  QStringLiteral("native mouse move did not rebuild the automation hover layer"));
+                  QStringLiteral("direct pointer move did not rebuild the automation hover "
+                                 "layer"));
     const HoverObservation routed = observeHover(rig);
     const QPointF insertionCenter =
         rig.automationContentToViewport(QPointF(lane.insertionX, lane.heldY));
-    probe.require(
-        hasFilledNodeAt(routed.layer, insertionCenter),
-        QStringLiteral("native mouse move did not render the held-value insertion point"));
+    probe.require(hasFilledNodeAt(routed.layer, insertionCenter),
+                  QStringLiteral("direct pointer move did not render the held-value insertion "
+                                 "point"));
     probe.require(hasValueText(routed),
-                  QStringLiteral("native mouse move did not render the insertion value"));
-    QEvent topLevelLeave(QEvent::Leave);
-    QCoreApplication::sendEvent(rig.canvas().window(), &topLevelLeave);
+                  QStringLiteral("direct pointer move did not render the insertion value"));
+
+    const int cursorClearsBeforeLeave = rig.automationHost().cursorClears();
+    // A direct pointer leave clears the hover chrome completely.
+    leaveCanvas(rig);
     QDeadlineTimer leaveTimeout{1000};
     HoverObservation cleared = observeHover(rig);
     while (!isClear(cleared) && !leaveTimeout.hasExpired()) {
         rig.pump();
         cleared = observeHover(rig);
     }
-    probe.require(isClear(cleared),
-                  QStringLiteral("native hover survived its top-level window leave"));
+    previewUnchanged("pointer leave");
+    probe.require(isClear(cleared), QStringLiteral("hover survived its pointer leave"));
+    probe.require(rig.automationHost().cursorClears() > cursorClearsBeforeLeave,
+                  QStringLiteral("pointer leave did not clear the automation cursor"));
+
+    // FocusLost is a no-op while a press is live: native menus temporarily
+    // transfer focus and must not tear down gesture state.
+    const int grabsBefore = rig.automationHost().grabReleases();
     rig.mousePress(lane.insertionPos);
-    QEvent canvasDeactivate(QEvent::WindowDeactivate);
-    QCoreApplication::sendEvent(&rig.canvas(), &canvasDeactivate);
-    QEvent topLevelDeactivate(QEvent::WindowDeactivate);
-    QCoreApplication::sendEvent(rig.canvas().window(), &topLevelDeactivate);
     rig.pump();
-    const auto deactivated = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
-    probe.require(postAutomationHoverMouseMove(rig.canvas(), lane.insertionPos),
-                  QStringLiteral("passive mouse move could not be posted after deactivation"));
+    previewUnchanged("press");
+    probe.require(rig.automationHost().focusRequests() > 0 &&
+                      rig.automationHost().lastFocusReason() == Qt::MouseFocusReason,
+                  QStringLiteral("handled automation press did not request input focus through "
+                                 "the host"));
+    rig.canvas().inputCancelled(songview::TimelineInputCancelReason::FocusLost);
+    rig.pump();
+    previewUnchanged("focus-lost cancellation");
+    probe.require(rig.automationHost().grabReleases() == grabsBefore,
+                  QStringLiteral("focus-lost cancellation released the pointer grab"));
+
+    // Strong cancellation: releases the grab, clears hover and gesture, and
+    // mutates nothing.
+    rig.canvas().inputCancelled(songview::TimelineInputCancelReason::WindowDeactivated);
+    rig.pump();
+    previewUnchanged("window-deactivation cancellation");
+    probe.require(rig.isIdle(),
+                  QStringLiteral("window-deactivation cancellation left a live gesture"));
+    probe.require(rig.automationHost().grabReleases() > grabsBefore,
+                  QStringLiteral("window-deactivation cancellation did not release the pointer "
+                                 "grab"));
+    QDeadlineTimer cancelTimeout{1000};
+    HoverObservation cancelled = observeHover(rig);
+    while (!isClear(cancelled) && !cancelTimeout.hasExpired()) {
+        rig.pump();
+        cancelled = observeHover(rig);
+    }
+    probe.require(isClear(cancelled),
+                  QStringLiteral("hover survived strong window-deactivation cancellation"));
+
+    // Cancellation must not latch passive hover off.
+    rig.mouseMove(lane.insertionPos, Qt::NoButton);
+    rig.pump();
     QDeadlineTimer resumeTimeout{1000};
     hoverLayer = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
     while ((!quickHost->hoverVisible() ||
             std::abs(quickHost->hoverRootContentX() - expectedRootX) > layout::singlePixel() ||
-            hoverLayer.revision <= deactivated.revision) &&
+            hoverLayer.revision <= cancelled.layer.revision) &&
            !resumeTimeout.hasExpired()) {
         rig.pump();
         hoverLayer = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
     }
-    probe.require(quickHost->hoverVisible() && hoverLayer.revision > deactivated.revision,
-                  QStringLiteral("deactivation latched native passive hover off"));
-    QCoreApplication::sendEvent(rig.canvas().window(), &topLevelLeave);
+    probe.require(quickHost->hoverVisible() && hoverLayer.revision > cancelled.layer.revision,
+                  QStringLiteral("cancellation latched passive hover off"));
+
+    // The remaining strong reasons cancel cleanly while idle.
+    const auto idleReasonsBefore = snapshot(rig.document());
+    rig.canvas().inputCancelled(songview::TimelineInputCancelReason::Hidden);
+    rig.canvas().inputCancelled(songview::TimelineInputCancelReason::PointerUngrabbed);
+    rig.pump();
+    probe.require(
+        isUnchanged(idleReasonsBefore, snapshot(rig.document())) && rig.isIdle(),
+        QStringLiteral("hidden or ungrab cancellation mutated the document or left a gesture"));
+    leaveCanvas(rig);
 }
-#endif
 
 Topology runCase(AutomationGestureCheckRig &rig, const Case &row,
                  const AutomationGestureCheck &check)
@@ -548,13 +596,11 @@ void checkNodeLaneHoverParity(AutomationGestureCheckRig &rig, const AutomationGe
     }
     check(sameTopology(topologies.front(), topologies.back()),
           QStringLiteral("Tempo and CC hover chrome topology diverged"));
-#ifdef Q_OS_MACOS
-    const PreparedLane nativeLane = prepareLane(rig, kCases[1]);
-    if (nativeLane.handle.valid() && !nativeLane.body.isEmpty())
-        checkNativeHoverRoute(rig, nativeLane, check);
+    const PreparedLane directLane = prepareLane(rig, kCases[1]);
+    if (directLane.handle.valid() && !directLane.body.isEmpty())
+        checkDirectHoverRoute(rig, directLane, check);
     else
-        check(false, QStringLiteral("CC lane was unavailable for native hover routing"));
+        check(false, QStringLiteral("CC lane was unavailable for direct hover routing"));
     setTempoPoints(rig, initialTempo);
     setCcPoints(rig, laneValues(initialPan));
-#endif
 }

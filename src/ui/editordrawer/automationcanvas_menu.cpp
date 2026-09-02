@@ -34,12 +34,10 @@ struct LaneMenuKind {
 void AutomationCanvas::showTimeSelectionMenuFor(LaneHandle contextLane,
                                                 const QPoint &globalPosition)
 {
-    if (!m_page)
-        return;
     const auto *slot = resolveSlot(contextLane);
     if (!slot)
         return;
-    auto &model = m_page->m_owner.selectionModel();
+    auto &model = m_page.m_owner.selectionModel();
     const auto &selection = model.timeSelection();
     if (selection.active()) {
         DrawerPageTimeSelectionMenuRequest request{.startTick = selection.startTick,
@@ -48,13 +46,17 @@ void AutomationCanvas::showTimeSelectionMenuFor(LaneHandle contextLane,
                                                    .globalPosition = globalPosition};
         if (!request.tempo)
             request.lanes = m_laneSelection.visibleLanes();
-        m_page->showTimeSelectionMenu(request);
+        m_page.showTimeSelectionMenu(request);
+        if (m_inputHost)
+            m_inputHost->requestFocus(Qt::PopupFocusReason);
         return;
     }
-    // Parented to this widget so SongView ancestry checks can discover and close the menu during loading-gate cancellation.
-    QMenu menu(this);
+    QMenu menu(&m_page);
     QAction *clear = menu.addAction(tr("Clear time selection"));
-    if (menu.exec(globalPosition) == clear && model.timeSelection().active()) {
+    const QAction *chosen = menu.exec(globalPosition);
+    if (m_inputHost)
+        m_inputHost->requestFocus(Qt::PopupFocusReason);
+    if (chosen == clear && model.timeSelection().active()) {
         model.clearTimeSelection();
         requestSelectionQuickUpdate();
     }
@@ -63,7 +65,7 @@ void AutomationCanvas::showTimeSelectionMenuFor(LaneHandle contextLane,
 void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPoint &globalPosition)
 {
     const auto *slot = resolveSlot(handle);
-    if (!m_page || !slot || !slot->lane)
+    if (!slot || !slot->lane)
         return;
     NodeLane *lane = slot->lane;
     const auto rowId = slot->id;
@@ -90,7 +92,7 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPoint &globalPo
                 std::nullopt,
                 true};
         });
-    QMenu menu(this);
+    QMenu menu(&m_page);
     QAction *copy = menu.addAction(kind.copyLabel);
     copy->setEnabled(!points.empty());
     QAction *paste = menu.addAction(kind.pasteLabel);
@@ -108,8 +110,8 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPoint &globalPo
         hide = menu.addAction(tr("Hide CC lane"));
         if (CCLanes::rangeZoomable(controller)) {
             auto *rangeMenu = menu.addMenu(tr("Value range"));
-            const auto range = m_page->m_viewState.laneRanges.find(rowId);
-            const uint8_t current = range == m_page->m_viewState.laneRanges.cend()
+            const auto range = m_page.m_viewState.laneRanges.find(rowId);
+            const uint8_t current = range == m_page.m_viewState.laneRanges.cend()
                                         ? CCLanes::defaultRange(controller)
                                         : range->second;
             for (const uint8_t value :
@@ -125,18 +127,20 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPoint &globalPo
         }
     }
     QAction *chosen = menu.exec(globalPosition);
+    if (m_inputHost)
+        m_inputHost->requestFocus(Qt::PopupFocusReason);
     if (!chosen)
         return;
     for (const auto &[action, range] : ranges) {
         if (chosen == action) {
-            m_page->setLaneRange(rowId, range);
+            m_page.setLaneRange(rowId, range);
             return;
         }
     }
     const auto maxTick = std::numeric_limits<uint64_t>::max();
     if (chosen == copy) {
         m_clipboard = points;
-        m_page->announce(kind.copiedMessage);
+        m_page.announce(kind.copiedMessage);
     } else if (chosen == paste) {
         std::vector<NodePoint> replacement;
         replacement.reserve(m_clipboard.size());
@@ -145,47 +149,48 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPoint &globalPo
         for (const auto &point : m_clipboard)
             replacement.push_back({point.tick, std::clamp(point.value, minimum, maximum)});
         lane->replaceSpan(0, maxTick, replacement);
-        m_page->requestRefresh();
-        m_page->announce(kind.pastedMessage);
+        m_page.requestRefresh();
+        m_page.announce(kind.pastedMessage);
     } else if (chosen == clear) {
         lane->replaceSpan(0, maxTick, {});
         if (kind.hasLaneActions)
-            m_page->addEmptyLane(int(rowId.track), rowId.controller);
-        m_page->requestRefresh();
+            m_page.addEmptyLane(int(rowId.track), rowId.controller);
+        m_page.requestRefresh();
         if (kind.clearedMessage)
-            m_page->announce(*kind.clearedMessage);
+            m_page.announce(*kind.clearedMessage);
     } else if (kind.hasLaneActions && chosen == remove) {
         const int track = int(rowId.track);
         const uint8_t controller = rowId.controller;
-        if (!points.empty() &&
-            QMessageBox::question(
-                this, tr("Delete CC lane"),
-                tr("Delete the %1 CC lane and its %2 events?").arg(laneTitle).arg(points.size())) !=
-                QMessageBox::Yes)
-            return;
+        if (!points.empty()) {
+            const auto answer = QMessageBox::question(
+                &m_page, tr("Delete CC lane"),
+                tr("Delete the %1 CC lane and its %2 events?").arg(laneTitle).arg(points.size()));
+            if (m_inputHost)
+                m_inputHost->requestFocus(Qt::PopupFocusReason);
+            if (answer != QMessageBox::Yes)
+                return;
+        }
         if (!points.empty())
             lane->replaceSpan(0, maxTick, {});
-        m_page->removeEmptyLane(track, controller);
+        m_page.removeEmptyLane(track, controller);
         if (points.empty() && CoreTimeDefaults::isDefaultVisibleController(controller) &&
-            m_page->m_viewState.hideLane(rowId)) {
-            m_page->publishViewState();
+            m_page.m_viewState.hideLane(rowId)) {
+            m_page.publishViewState();
             rebuildRows();
         }
-        m_page->requestRefresh();
+        m_page.requestRefresh();
     } else if (kind.hasLaneActions && chosen == hide) {
-        if (m_page->m_viewState.hideLane(rowId)) {
-            m_page->publishViewState();
+        if (m_page.m_viewState.hideLane(rowId)) {
+            m_page.publishViewState();
             rebuildRows();
-            m_page->announce(tr("Hid the %1 CC lane").arg(laneTitle));
+            m_page.announce(tr("Hid the %1 CC lane").arg(laneTitle));
         }
     }
 }
 
 void AutomationCanvas::showAddLaneMenu(const QPoint &globalPosition)
 {
-    if (!m_page)
-        return;
-    const int track = m_page->m_owner.selectionModel().primaryTrack();
+    const int track = m_page.m_owner.selectionModel().primaryTrack();
     if (track < 0)
         return;
     std::vector<uint8_t> candidates{CoreTimeDefaults::kCcModulation, CoreTimeDefaults::kCcVolume,
@@ -194,17 +199,17 @@ void AutomationCanvas::showAddLaneMenu(const QPoint &globalPosition)
     for (const xcmd::Descriptor &descriptor : xcmd::laneDescriptors())
         candidates.push_back(descriptor.laneController);
     candidates.push_back(CCLanes::bendController());
-    QMenu menu(this);
+    QMenu menu(&m_page);
     std::vector<EditorAutomationRowId> hidden;
     for (const uint8_t controller : candidates) {
         const auto row = laneRow(track, controller);
-        if (m_page->m_viewState.isLaneHidden(row) || m_page->model().findLane(track, controller) ||
-            m_page->m_viewState.emptyLanes.find(row) != m_page->m_viewState.emptyLanes.cend())
+        if (m_page.m_viewState.isLaneHidden(row) || m_page.model().findLane(track, controller) ||
+            m_page.m_viewState.emptyLanes.find(row) != m_page.m_viewState.emptyLanes.cend())
             continue;
         auto *action = menu.addAction(CCLanes::laneLabel(controller));
         action->setData(int(controller));
     }
-    for (const auto &row : m_page->m_viewState.hiddenLanes())
+    for (const auto &row : m_page.m_viewState.hiddenLanes())
         if (row.kind == EditorAutomationRowKind::ControlChange && row.track == uint8_t(track))
             hidden.push_back(row);
     if (menu.isEmpty())
@@ -219,18 +224,20 @@ void AutomationCanvas::showAddLaneMenu(const QPoint &globalPosition)
         }
     }
     QAction *chosen = menu.exec(globalPosition);
+    if (m_inputHost)
+        m_inputHost->requestFocus(Qt::PopupFocusReason);
     if (!chosen || !chosen->data().isValid())
         return;
     const int value = chosen->data().toInt();
     if (value >= 256) {
         const auto row = laneRow(track, uint8_t(value - 256));
-        if (m_page->m_viewState.unhideLane(row)) {
-            m_page->publishViewState();
+        if (m_page.m_viewState.unhideLane(row)) {
+            m_page.publishViewState();
             rebuildRows();
-            m_page->announce(tr("Showed the %1 CC lane").arg(CCLanes::laneLabel(row.controller)));
+            m_page.announce(tr("Showed the %1 CC lane").arg(CCLanes::laneLabel(row.controller)));
         }
     } else {
-        m_page->addEmptyLane(track, uint8_t(value));
-        m_page->announce(tr("Added %1 CC lane").arg(CCLanes::laneLabel(uint8_t(value))));
+        m_page.addEmptyLane(track, uint8_t(value));
+        m_page.announce(tr("Added %1 CC lane").arg(CCLanes::laneLabel(uint8_t(value))));
     }
 }

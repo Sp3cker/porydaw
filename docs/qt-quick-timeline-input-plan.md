@@ -132,6 +132,27 @@ The six baseline QWidget input surfaces are:
   noninteractive until Phase 7; its native hover/move failures remain the only expected migration
   failures.
 
+### Phase 7 implementation record
+
+- `AutomationCanvas` is now an `AutomationPage`-owned `QObject` interaction attached to
+  `timelineAutomationInput`; the retained `QScrollArea` viewport owns the canonical band rectangle
+  and the native vertical scrollbar owns scroll state.
+- `AutomationPage` computes content height and scrollbar range without a full-height child widget.
+  Viewport resize, row resize, lane changes, tempo layout, font changes, and vertical scrolling
+  synchronize content geometry before rebuilding the visible Quick domains.
+- Pointer, double-click, wheel, keyboard, hover, focus, cursor, DPR, grab, cancellation,
+  accessibility, popup placement, and global-coordinate services flow through
+  `TimelineInputHost`. Native menus and dialogs remain parented to `AutomationPage`.
+- The two macOS automation-hover synthesizers and their CMake entries are deleted. Native
+  `QQuickWindow` hover delivery now drives the automation interaction directly.
+- `deno task build:checks` passed. Focused checks `automation-gestures`,
+  `automation-popup-menus`, `automation`, `rollcheck`, `host-adapter`, `host-integration`,
+  `mainwindow-routing`, `editor-drawer`, `rendering-playhead`, and `rollwindowingcheck` pass.
+- Targeted deletion searches found no child-widget attachment, AutomationCanvas Qt event-pointer
+  API, or hover-synthesizer reference. Independent thermo-nuclear and Qt 6 reviews found no
+  remaining mandatory defects after detach cancellation, pointer-leave cursor clearing, and
+  geometry-only host appearance notifications were corrected.
+
 ## Goal
 
 Make the existing Qt Quick timeline scene own raw pointer, wheel, hover, focus, and keyboard input

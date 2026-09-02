@@ -23,9 +23,6 @@
 #include <chrono>
 #include <mutex>
 #include <utility>
-#ifdef Q_OS_MACOS
-void installMacAutomationHoverPassThrough(AutomationCanvas &canvas, QObject &owner);
-#endif
 
 namespace songview {
 
@@ -182,8 +179,7 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
             qFatal("Qt Quick timeline QML has no band property '%s'", properties.visible);
     }
 
-    // Converted bands attach through their matching input items; the
-    // automation band deliberately remains without an entry until its phase.
+    // All six bands attach through their matching input items.
     TimelineInputItem *const rulerInput =
         root->findChild<TimelineInputItem *>(QStringLiteral("timelineRulerInput"));
     if (!rulerInput)
@@ -214,6 +210,12 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
         qFatal("Qt Quick timeline QML has no input item 'timelineRollInput'");
     rollInput->setInteraction(m_roll.data());
     m_inputItems[timelineBandIndex(TimelineBand::Roll)] = rollInput;
+    TimelineInputItem *const automationInput =
+        root->findChild<TimelineInputItem *>(QStringLiteral("timelineAutomationInput"));
+    if (!automationInput)
+        qFatal("Qt Quick timeline QML has no input item 'timelineAutomationInput'");
+    automationInput->setInteraction(m_automation->canvas());
+    m_inputItems[timelineBandIndex(TimelineBand::Automation)] = automationInput;
 
     QWidget *const rulerControls = m_songView->findChild<QWidget *>(
         QStringLiteral("timeRulerControls"), Qt::FindDirectChildrenOnly);
@@ -236,10 +238,6 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
             qFatal("Timeline Quick host cannot find drawer chrome '%s'", nativeChromeNames[index]);
         m_nativeChrome[index + 1] = chrome;
     }
-#ifdef Q_OS_MACOS
-    if (AutomationCanvas *const canvas = automation.canvas())
-        installMacAutomationHoverPassThrough(*canvas, *this);
-#endif
     syncAppearance();
 }
 

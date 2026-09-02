@@ -28,6 +28,7 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/editorselectionmodel.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/theme/themeruntime.h"
@@ -38,6 +39,32 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
                                     DrawerPageLiveState &live, int &failures);
 
 namespace {
+
+songview::TimelineInputItem *automationInputItem(SongView &view)
+{
+    auto *quickCanvas =
+        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    return quickCanvas && quickCanvas->rootObject()
+               ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(
+                     QStringLiteral("timelineAutomationInput"))
+               : nullptr;
+}
+
+// Band input delivery: the Quick input item normalizes raw events in
+// viewport coordinates, so content-coordinate probes shift by the page
+// scroll before each send.
+struct AutomationBandInput {
+    AutomationPage &page;
+    songview::TimelineInputItem &item;
+
+    void mouse(QEvent::Type type, const QPointF &contentPosition, Qt::MouseButton button,
+               Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers) const
+    {
+        checks::events::sendMouse(item, type, contentPosition - QPointF(0.0, page.verticalScroll()),
+                                  button, buttons, modifiers);
+    }
+    void leave() const { mouse(QEvent::Leave, {}, Qt::NoButton, Qt::NoButton, Qt::NoModifier); }
+};
 
 enum class LaneKind { Tempo, Cc };
 
@@ -73,16 +100,14 @@ constexpr int kCcHeld = 24;
 constexpr int kCcNode = 96;
 constexpr int kCcSecond = 72;
 
-void sendActivatedDrag(QWidget *widget, const QPointF &start, const QPointF &target,
+void sendActivatedDrag(const AutomationBandInput &band, const QPointF &start, const QPointF &target,
                        int activationDistance, Qt::KeyboardModifiers modifiers)
 {
     const QPointF activation = start + QPointF(activationDistance, 0);
-    checks::events::sendMouse(*widget, QEvent::MouseButtonPress, start, Qt::LeftButton,
-                              Qt::LeftButton, modifiers);
-    checks::events::sendMouse(*widget, QEvent::MouseMove, activation, Qt::NoButton, Qt::LeftButton,
-                              modifiers);
-    checks::events::sendMouse(*widget, QEvent::MouseMove, activation + target - start, Qt::NoButton,
-                              Qt::LeftButton, modifiers);
+    band.mouse(QEvent::MouseButtonPress, start, Qt::LeftButton, Qt::LeftButton, modifiers);
+    band.mouse(QEvent::MouseMove, activation, Qt::NoButton, Qt::LeftButton, modifiers);
+    band.mouse(QEvent::MouseMove, activation + target - start, Qt::NoButton, Qt::LeftButton,
+               modifiers);
 }
 
 void pump()
@@ -95,14 +120,12 @@ void pump()
 
 QPoint automationContentToViewport(const AutomationPage &page)
 {
-    QWidget *const viewport = page.scrollViewport();
-    return viewport ? page.canvas()->mapTo(viewport, QPoint{}) : QPoint{};
+    return {0, -page.verticalScroll()};
 }
 
-void leaveCanvas(AutomationPage &page)
+void leaveCanvas(const AutomationBandInput &band)
 {
-    QEvent leave(QEvent::Leave);
-    QCoreApplication::sendEvent(page.canvas(), &leave);
+    band.leave();
     pump();
 }
 
@@ -274,15 +297,16 @@ void setCcPoints(AutomationPage &page, SongDocument &document, DrawerPageLiveSta
     refresh(page, document, live);
 }
 
-bool toggleTempoExpanded(SongView &, AutomationPage &page, bool wantExpanded, int &)
+bool toggleTempoExpanded(SongView &view, AutomationPage &page, bool wantExpanded, int &)
 {
     const bool expanded = !page.canvas()->laneBody(LaneHandle{0}).isEmpty();
     if (expanded == wantExpanded)
         return expanded;
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, tempoHeaderPoint(page),
-                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, tempoHeaderPoint(page),
-                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    AutomationBandInput band{page, *automationInputItem(view)};
+    band.mouse(QEvent::MouseButtonPress, tempoHeaderPoint(page), Qt::LeftButton, Qt::LeftButton,
+               Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonRelease, tempoHeaderPoint(page), Qt::LeftButton, Qt::NoButton,
+               Qt::NoModifier);
     pump();
     return !page.canvas()->laneBody(LaneHandle{0}).isEmpty() == wantExpanded;
 }
@@ -354,7 +378,8 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     };
     auto geometry = AutomationGeometry::resolve();
     geometry.plotOrigin = page.canvas()->plotOrigin();
-    const qreal dpr = page.canvas()->devicePixelRatioF();
+    const AutomationBandInput band{page, *automationInputItem(view)};
+    const qreal dpr = band.item.devicePixelRatio();
     const QPoint captureOrigin = automationContentToViewport(page);
     const auto captureAutomationViewport = [&] {
         QWidget *const viewport = page.scrollViewport();
@@ -377,11 +402,11 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     };
     const auto cancel = [&] {
         page.cancelInteraction();
-        leaveCanvas(page);
+        leaveCanvas(band);
     };
     // Tempo leadIn: empty storage, first nonzero point, explicit tick-0.
     setTempoPoints(page, document, live, {});
-    leaveCanvas(page);
+    leaveCanvas(band);
     const auto emptySnap = snapshot(document);
     paintUnchanged("empty Tempo paint", emptySnap);
     const auto tempoGeom = laneGeom(page, kLanes[0]);
@@ -404,7 +429,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     setTempoPoints(page, document, live,
                    {{kNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoNode)}});
     const auto leadSnap = snapshot(document);
-    leaveCanvas(page);
+    leaveCanvas(band);
     paintUnchanged("Tempo lead-in paint", leadSnap);
     report("Tempo",
            layerHas(songview::TimelineQuickLayer::AutomationCurves,
@@ -421,7 +446,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     setTempoPoints(page, document, live,
                    {{0, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoHeld)}});
     const auto tick0Snap = snapshot(document);
-    leaveCanvas(page);
+    leaveCanvas(band);
     paintUnchanged("Tempo tick-0 paint", tick0Snap);
     report("Tempo",
            layerHas(songview::TimelineQuickLayer::AutomationNodes, nodeProbe(x0, y80, radius),
@@ -461,7 +486,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         const qreal nodeX = tickX(kNodeTick);
         const qreal secondX = tickX(kSecondTick);
         const qreal midX = tickX(48);
-        leaveCanvas(page);
+        leaveCanvas(band);
         const auto idleSnap = snapshot(document);
         paintUnchanged(row.name, idleSnap);
         report(row.name,
@@ -499,21 +524,21 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
             selection.lanes = {{0, 10}};
         view.selectionModel().setTimeSelection(selection);
         refresh(page, document, live);
-        leaveCanvas(page);
+        leaveCanvas(band);
         const auto selectedSnap = snapshot(document);
         paintUnchanged(row.name, selectedSnap);
         const qreal ringOuter = geometry.selectedNodeRingRadius + layout::singlePixel();
         report(row.name,
                layerHas(songview::TimelineQuickLayer::AutomationNodes,
                         nodeProbe(nodeX, nodeY, ringOuter), captureOrigin,
-                        page.canvas()->palette().highlight().color()),
+                        band.item.palette().highlight().color()),
                QStringLiteral("selected ring is missing from the retained Quick node layer"));
         const QImage selectedFramebuffer = captureAutomationViewport();
         report(row.name,
                framebufferHasColorNear(selectedFramebuffer,
                                        QPointF(captureOrigin) +
                                            QPointF(nodeX, nodeY - geometry.selectedNodeRingRadius),
-                                       page.canvas()->palette().highlight().color()),
+                                       band.item.palette().highlight().color()),
                QStringLiteral("selected ring did not render at its Quick node position"));
         report(row.name,
                layerRevision(songview::TimelineQuickLayer::AutomationSelection) >
@@ -539,7 +564,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         const int drag = geometry.nodeDragActivationDistance + 8;
         const QPointF dragTarget(tickX(kNodeTick + 48),
                                  nodelane::valueY(lane, geom.body, geometry, node - 24));
-        sendActivatedDrag(page.canvas(), nodePos, dragTarget, drag, Qt::NoModifier);
+        sendActivatedDrag(band, nodePos, dragTarget, drag, Qt::NoModifier);
         pump();
         const auto dragSnap = snapshot(document);
         paintUnchanged(row.name, dragSnap);
@@ -563,7 +588,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         const quint64 multiRevision =
             layerRevision(songview::TimelineQuickLayer::AutomationTransient);
         const QPointF multiTarget(nodeX, nodelane::valueY(lane, geom.body, geometry, node - 24));
-        sendActivatedDrag(page.canvas(), nodePos, multiTarget, drag, Qt::NoModifier);
+        sendActivatedDrag(band, nodePos, multiTarget, drag, Qt::NoModifier);
         pump();
         const auto multiSnap = snapshot(document);
         paintUnchanged(row.name, multiSnap);
@@ -589,7 +614,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
                                  nodelane::valueY(lane, geom.body, geometry, (held + node) / 2));
         const QPointF sweepTarget(
             tickX(144), nodelane::valueY(lane, geom.body, geometry, (held + node) / 2 + 40));
-        sendActivatedDrag(page.canvas(), sweepStart, sweepTarget, drag, Qt::NoModifier);
+        sendActivatedDrag(band, sweepStart, sweepTarget, drag, Qt::NoModifier);
         pump();
         const auto sweepSnap = snapshot(document);
         paintUnchanged(row.name, sweepSnap);
@@ -606,12 +631,11 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
             layerRevision(songview::TimelineQuickLayer::AutomationTransient);
         const QPointF rampStart(tickX(48), heldY);
         const QPointF rampEnd(tickX(kSecondTick), nodeY);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, rampStart,
-                                  Qt::LeftButton, Qt::LeftButton, Qt::ShiftModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, rampStart + QPointF(drag, 0),
-                                  Qt::NoButton, Qt::LeftButton, Qt::ShiftModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, rampEnd, Qt::NoButton,
-                                  Qt::LeftButton, Qt::ShiftModifier);
+        band.mouse(QEvent::MouseButtonPress, rampStart, Qt::LeftButton, Qt::LeftButton,
+                   Qt::ShiftModifier);
+        band.mouse(QEvent::MouseMove, rampStart + QPointF(drag, 0), Qt::NoButton, Qt::LeftButton,
+                   Qt::ShiftModifier);
+        band.mouse(QEvent::MouseMove, rampEnd, Qt::NoButton, Qt::LeftButton, Qt::ShiftModifier);
         pump();
         const auto rampSnap = snapshot(document);
         paintUnchanged(row.name, rampSnap);
@@ -639,12 +663,10 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         const QPointF pencilStart(tickX(24), nodelane::valueY(lane, geom.body, geometry, 40));
         const QPointF pencilHold(tickX(72), nodelane::valueY(lane, geom.body, geometry, 40));
         const QPointF pencilEnd(tickX(120), nodelane::valueY(lane, geom.body, geometry, 100));
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, pencilStart,
-                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, pencilHold, Qt::NoButton,
-                                  Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, pencilEnd, Qt::NoButton,
-                                  Qt::LeftButton, Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonPress, pencilStart, Qt::LeftButton, Qt::LeftButton,
+                   Qt::NoModifier);
+        band.mouse(QEvent::MouseMove, pencilHold, Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        band.mouse(QEvent::MouseMove, pencilEnd, Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
         pump();
         const auto pencilSnap = snapshot(document);
         paintUnchanged(row.name, pencilSnap);
@@ -671,14 +693,14 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     }
     view.setEditCursorTick(24);
     pump();
-    leaveCanvas(page);
+    leaveCanvas(band);
     const auto cursorSnap = snapshot(document);
     const qreal cursorA = quickView ? quickView->editRootContentX() : 0.0;
     const bool cursorAVisible = quickView && quickView->editVisible();
     paintUnchanged("edit cursor", cursorSnap);
     view.setEditCursorTick(96);
     pump();
-    leaveCanvas(page);
+    leaveCanvas(band);
     const qreal cursorB = quickView ? quickView->editRootContentX() : 0.0;
     const bool cursorBVisible = quickView && quickView->editVisible();
     paintUnchanged("edit cursor move", cursorSnap);

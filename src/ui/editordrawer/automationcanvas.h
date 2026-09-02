@@ -9,10 +9,12 @@
 
 #include <QCursor>
 #include <QFont>
+#include <QObject>
+#include <QPalette>
 #include <QPointF>
 #include <QRect>
+#include <QSize>
 #include <QString>
-#include <QWidget>
 
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/cclanes.h"
@@ -24,30 +26,28 @@
 #include "ui/editorviewstate.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelineinput.h"
 #include "ui/songviewmodel.h"
 
 class AutomationPage;
-class QEvent;
-class QKeyEvent;
-class QResizeEvent;
-class QScrollArea;
-class QWheelEvent;
-class QMouseEvent;
 
 namespace songview {
 class TimelineQuickScene;
 class TimelineQuickView;
 } // namespace songview
 
-// AutomationCanvas is the transparent input and layout surface owned by AutomationPage.
-// Temporary gesture state stays local to this canvas; song data and routing
-// are obtained from the page's stable SongView owner.
-class AutomationCanvas final : public QWidget
+// AutomationCanvas owns automation interaction and content geometry. AutomationPage owns the
+// viewport and scroll range; the attached TimelineInputHost provides input-surface services.
+class AutomationCanvas final : public QObject, public songview::TimelineBandInteraction
 {
-  public:
-    explicit AutomationCanvas(AutomationPage *page, QScrollArea *scroll);
-    void requestFullQuickUpdate() const;
+    Q_OBJECT
+    Q_DISABLE_COPY_MOVE(AutomationCanvas)
 
+  public:
+    explicit AutomationCanvas(AutomationPage &page);
+    ~AutomationCanvas() override = default;
+
+    void requestFullQuickUpdate() const;
     const std::vector<AutomationRow> &rows() const noexcept { return m_rowData.rows(); }
     void rebuildRows();
     void updateTempoLayout();
@@ -59,21 +59,24 @@ class AutomationCanvas final : public QWidget
     int plotOrigin() const noexcept { return m_geometry.plotOrigin; }
     QRect laneBody(LaneHandle handle) const;
     QRect pinnedTempoRect() const noexcept;
+    int minimumContentHeight() const noexcept;
 
-  protected:
-    bool event(QEvent *event) override;
-    void resizeEvent(QResizeEvent *event) override;
-    void wheelEvent(QWheelEvent *event) override;
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *event) override;
-    void mouseReleaseEvent(QMouseEvent *event) override;
-    void mouseDoubleClickEvent(QMouseEvent *event) override;
-    void keyPressEvent(QKeyEvent *event) override;
-    void leaveEvent(QEvent *event) override;
+    void attachInputHost(songview::TimelineInputHost &host) override;
+    void detachInputHost(songview::TimelineInputHost &host) override;
+    bool pointerPress(const songview::TimelinePointerInput &input) override;
+    bool pointerDoubleClick(const songview::TimelinePointerInput &input) override;
+    bool pointerMove(const songview::TimelinePointerInput &input) override;
+    bool pointerRelease(const songview::TimelinePointerInput &input) override;
+    void pointerLeave() override;
+    bool wheel(const songview::TimelineWheelInput &input) override;
+    bool keyPress(const songview::TimelineKeyInput &input) override;
+    void inputCancelled(songview::TimelineInputCancelReason reason) override;
+    void hostAppearanceChanged() override;
 
   private:
     friend class AutomationPage;
     friend class songview::TimelineQuickView;
+
     void rebuildQuickScene(songview::TimelineQuickScene &scene,
                            songview::TimelineQuickDirtySet mask);
     void requestQuickUpdate(songview::TimelineQuickDirtySet dirty) const;
@@ -101,8 +104,6 @@ class AutomationCanvas final : public QWidget
         {
             return id.kind == EditorAutomationRowKind::Tempo;
         }
-        // Single dispatch point for the tempo/CC kind split. The node stack
-        // only ever holds these two kinds, so the visit is total.
         template <class TempoFn, class CcFn>
         decltype(auto) visit(TempoFn &&tempoFn, CcFn &&ccFn) const
         {
@@ -116,19 +117,25 @@ class AutomationCanvas final : public QWidget
         std::vector<NodePointMove> moves;
         std::vector<uint64_t> deleteTicks;
     };
+    void viewportResized();
+    void scrollStateChanged();
+    void relayoutContent();
+    void contentGeometryChanged();
+    QPointF contentPosition(QPointF viewportPosition) const noexcept;
+    QPointF viewportPosition(QPointF contentPosition) const noexcept;
+    QPointF contentPositionFromGlobal(QPointF globalPosition) const;
+    QRect viewportRect(QRect contentRect) const noexcept;
+    QRect contentBounds() const noexcept;
     void refreshGeometry();
     void rebuildFontCache();
     const QString &refreshCcSummaryText(CCLanes::RowTextCache &cache,
                                         std::span<const NodePoint> points, const NodeLane &lane);
 
-    // Pixel <-> tick mapping over the current geometry and page timeline.
     AutomationProjection projection() const;
     NodeLaneHoverTarget hoverTarget() const;
     bool showPointMenuNear(LaneHandle handle, const QPoint &position, const QPoint &globalPosition);
 
     bool commitLaneEdit(const NodeLaneEdit::Completion &completion);
-    // Point-level actions treat an origin phantom as its covered source node.
-    // Drag construction distinguishes concrete nodes from value-only phantoms.
     bool nodePointHit(LaneHandle handle, const QPointF &position, NodePoint *point) const;
     bool nodePointHit(LaneHandle handle, const QPointF &position, const AutomationProjection &proj,
                       NodePoint *point) const;
@@ -148,13 +155,14 @@ class AutomationCanvas final : public QWidget
     bool isEditablePencilHit(const QPointF &position) const noexcept;
     void updatePencilCursor();
     void updateAxisLockCursor(AxisLock lock);
-    void clearTimeSelectionIfOutsidePress(const QMouseEvent &event,
+    void clearTimeSelectionIfOutsidePress(QPointF contentPosition,
                                           const AutomationProjection &projection, LaneHandle lane,
                                           const NodeLaneSlot *slot);
-    void beginPencilPress(const QMouseEvent &event, LaneHandle handle, const NodeLane &lane,
-                          const QRect &body, const AutomationProjection &projection);
-    void beginDragOrSweep(const QMouseEvent &event, LaneHandle handle,
+    bool beginPencilPress(QPointF contentPosition, Qt::KeyboardModifiers modifiers,
+                          LaneHandle handle, const NodeLane &lane, const QRect &body,
                           const AutomationProjection &projection);
+    bool beginDragOrSweep(QPointF contentPosition, Qt::KeyboardModifiers modifiers,
+                          LaneHandle handle, const AutomationProjection &projection);
     NodePoint mappedForLane(LaneHandle handle, QPointF pos, bool fine, bool snapValue,
                             const AutomationProjection &proj) const;
     void updateActiveGesture(const QPointF &position, Qt::KeyboardModifiers modifiers,
@@ -190,13 +198,17 @@ class AutomationCanvas final : public QWidget
     void publishBandSelection(uint64_t first, uint64_t last, LaneHandle start,
                               LaneHandle end) const;
     void setGestureActive(bool active);
+
     AutomationGeometry m_geometry;
     QFont m_laneTitleFont;
     QFont m_laneCaptionFont;
     std::optional<layout::TwoLineTextLayout> m_laneTextLayout;
     QRect m_labelGutter;
-    AutomationPage *m_page = nullptr;
-    QScrollArea *m_scroll = nullptr;
+    AutomationPage &m_page;
+    songview::TimelineInputHost *m_inputHost = nullptr;
+    QFont m_hostFont;
+    QPalette m_hostPalette;
+    qreal m_hostDpr = 0.0;
     CCLanes m_rowData;
     TempoLane m_tempoLane;
     std::vector<CCLaneAdapter> m_ccAdapters;

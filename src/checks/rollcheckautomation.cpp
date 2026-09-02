@@ -36,7 +36,9 @@
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument &document,
                               DrawerPageLiveState &live, int &failures);
@@ -149,7 +151,6 @@ void pumpQuickEvents()
     QCoreApplication::sendPostedEvents();
     QCoreApplication::processEvents(QEventLoop::AllEvents);
 }
-
 std::optional<QRectF> quickTextRect(QAbstractItemModel *model, const QString &text)
 {
     if (!model)
@@ -162,12 +163,49 @@ std::optional<QRectF> quickTextRect(QAbstractItemModel *model, const QString &te
     }
     return std::nullopt;
 }
-QPointF automationNodePoint(SongView &view, const AutomationPage &page,
+
+songview::TimelineInputItem *automationInputItem(SongView &view)
+{
+    auto *quickCanvas =
+        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    return quickCanvas && quickCanvas->rootObject()
+               ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(
+                     QStringLiteral("timelineAutomationInput"))
+               : nullptr;
+}
+
+// Band input delivery: the Quick input item normalizes raw events in
+// viewport coordinates, so content-coordinate probes shift by the page
+// scroll before each send.
+struct AutomationBandInput {
+    AutomationPage &page;
+    songview::TimelineInputItem &item;
+
+    void mouse(QEvent::Type type, const QPointF &contentPosition, Qt::MouseButton button,
+               Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers) const
+    {
+        checks::events::sendMouse(item, type, contentPosition - QPointF(0.0, page.verticalScroll()),
+                                  button, buttons, modifiers);
+    }
+    void wheel(const QPointF &contentPosition, const QPoint &pixelDelta, const QPoint &angleDelta,
+               Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers, Qt::ScrollPhase phase,
+               bool inverted) const
+    {
+        checks::events::sendWheel(item, contentPosition - QPointF(0.0, page.verticalScroll()),
+                                  pixelDelta, angleDelta, buttons, modifiers, phase, inverted);
+    }
+    void key(QEvent::Type type, int key, Qt::KeyboardModifiers modifiers) const
+    {
+        checks::events::sendKey(item, type, key, modifiers, QString{}, false, ushort{1});
+    }
+    void leave() const { mouse(QEvent::Leave, {}, Qt::NoButton, Qt::NoButton, Qt::NoModifier); }
+};
+QPointF automationNodePoint(SongView &view, const AutomationPage &page, qreal dpr,
                             const AutomationGeometry &geometry, const EditorAutomationRowId &id,
                             uint64_t tick, int value)
 {
     const QRect body = automationRowBody(page, id);
-    return {view.displayX(double(tick), geometry.plotOrigin, page.canvas()->devicePixelRatioF()),
+    return {view.displayX(double(tick), geometry.plotOrigin, dpr),
             AutomationProjection::valueY(body, geometry,
                                          CoreTimeDefaults::laneValueMinimum(id.controller),
                                          CoreTimeDefaults::laneValueMaximum(id.controller), value)};
@@ -259,8 +297,18 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     };
     QWidget *const automationViewport = page.scrollViewport();
     check(automationViewport, QStringLiteral("automation page did not expose its scroll viewport"));
+    songview::TimelineInputItem *const automationInput = automationInputItem(view);
+    check(automationInput != nullptr,
+          QStringLiteral("automation page did not expose its Quick input item"));
     auto *quickScene = view.findChild<songview::TimelineQuickScene *>();
     check(quickScene, QStringLiteral("automation page did not expose its retained Quick scene"));
+    const AutomationBandInput band{page, *automationInput};
+    // Viewport positions: content probes shift up by the page's vertical scroll.
+    const auto viewportPosition = [&](const QPointF &contentPosition) {
+        return contentPosition - QPointF(0.0, page.verticalScroll());
+    };
+    const qreal dpr = automationInput->devicePixelRatio();
+    const QSize automationViewportSize = page.automationViewportSize();
     const auto captureAutomationViewport = [&] {
         pumpQuickEvents();
         QString captureError;
@@ -275,8 +323,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     };
     const auto contentToViewport = [&](const QRect &content) {
         return automationViewport
-                   ? QRect{page.canvas()->mapTo(automationViewport, content.topLeft()),
-                           content.size()}
+                   ? QRect{viewportPosition(content.topLeft()).toPoint(), content.size()}
                    : QRect{};
     };
     const auto captureAutomationContent = [&](const QRect &content) {
@@ -308,58 +355,51 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
           QStringLiteral("automation scrollbar must remain permanently visible"));
     const bool automationScrollbarOnLeft =
         automationScroll && automationScroll->verticalScrollBar()->isVisible() &&
+        automationViewport &&
         automationScroll->verticalScrollBar()->mapTo(&view, QPoint(0, 0)).x() <
-            page.canvas()->mapTo(&view, QPoint(0, 0)).x();
+            automationViewport->mapTo(&view, QPoint(0, 0)).x();
     check(automationScrollbarOnLeft,
           QStringLiteral("automation scrollbar must remain on the left side of the lanes"));
     const int automationPlotStart = page.canvas()->plotOrigin();
     const QRect labelGutter = page.canvas()->labelGutter();
     // The painted header includes the label gutter's symmetric horizontal margins.
     const QRect headerRect(0, 0, labelGutter.width() + 2 * labelGutter.x(),
-                           page.canvas()->height());
+                           automationViewportSize.height());
     const QRect plot(automationPlotStart, 0,
-                     std::max(0, page.canvas()->width() - automationPlotStart),
-                     page.canvas()->height());
+                     std::max(0, automationViewportSize.width() - automationPlotStart),
+                     automationViewportSize.height());
     const bool headerEndsAtPlotOrigin = headerRect.right() + 1 == automationPlotStart;
     const std::optional<songview::TimelineBandGeometry> rollBandGeometry =
         view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
-    const int pianoGridStartOnView = rollBandGeometry ? rollBandGeometry->rect.x() +
-                                                            rollBandGeometry->timelineOrigin +
-                                                            layout::fontPx(13.0 / 3.0)
-                                                      : -1;
+    const int pianoGridStartOnView =
+        rollBandGeometry ? rollBandGeometry->rect.x() + rollBandGeometry->timelineOrigin : -1;
     const int automationPlotStartOnView =
-        page.canvas()->mapTo(&view, QPoint(automationPlotStart, 0)).x();
+        automationViewport ? automationViewport->mapTo(&view, QPoint(automationPlotStart, 0)).x()
+                           : -1;
     check(rollBandGeometry && automationPlotStartOnView == pianoGridStartOnView,
           QStringLiteral("editable automation lanes must start vertically inline with the piano "
-                         "grid (automation %1 = %2 + %3, piano %4 = %5 + %6)")
+                         "grid (automation %1 = %2 + %3, piano %4)")
               .arg(automationPlotStartOnView)
-              .arg(page.canvas()->mapTo(&view, QPoint(0, 0)).x())
+              .arg(automationViewport ? automationViewport->mapTo(&view, QPoint(0, 0)).x() : -1)
               .arg(automationPlotStart)
-              .arg(pianoGridStartOnView)
-              .arg(rollBandGeometry ? rollBandGeometry->rect.x() + rollBandGeometry->timelineOrigin
-                                    : -1)
-              .arg(layout::fontPx(13.0 / 3.0)));
+              .arg(pianoGridStartOnView));
     check(headerEndsAtPlotOrigin && labelGutter.left() >= headerRect.left() &&
               labelGutter.right() < automationPlotStart && plot.left() == automationPlotStart &&
-              plot.width() == std::max(0, page.canvas()->width() - automationPlotStart),
+              plot.width() == std::max(0, automationViewportSize.width() - automationPlotStart),
           QStringLiteral("automation header must end exactly at the editable lane start"));
     const QPointF panStart(expected.plotOrigin + 160, expected.defaultRowHeight / 2);
     const QPointF panFirstMove = panStart - QPointF(24, 0);
     const QPointF panSecondMove = panStart - QPointF(48, 0);
     constexpr uint64_t panProbeTick = 240;
-    const qreal panProbeBefore = view.displayX(double(panProbeTick), expected.plotOrigin,
-                                               page.canvas()->devicePixelRatioF());
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, panStart, Qt::MiddleButton,
-                              Qt::MiddleButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, panFirstMove, Qt::NoButton,
-                              Qt::MiddleButton, Qt::NoModifier);
-    const bool panRemainedActive = page.canvas()->cursor().shape() == Qt::ClosedHandCursor;
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, panSecondMove, Qt::NoButton,
-                              Qt::MiddleButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, panSecondMove,
-                              Qt::MiddleButton, Qt::NoButton, Qt::NoModifier);
-    const qreal panProbeAfter = view.displayX(double(panProbeTick), expected.plotOrigin,
-                                              page.canvas()->devicePixelRatioF());
+    const qreal panProbeBefore = view.displayX(double(panProbeTick), expected.plotOrigin, dpr);
+    band.mouse(QEvent::MouseButtonPress, panStart, Qt::MiddleButton, Qt::MiddleButton,
+               Qt::NoModifier);
+    band.mouse(QEvent::MouseMove, panFirstMove, Qt::NoButton, Qt::MiddleButton, Qt::NoModifier);
+    const bool panRemainedActive = automationInput->cursor().shape() == Qt::ClosedHandCursor;
+    band.mouse(QEvent::MouseMove, panSecondMove, Qt::NoButton, Qt::MiddleButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonRelease, panSecondMove, Qt::MiddleButton, Qt::NoButton,
+               Qt::NoModifier);
+    const qreal panProbeAfter = view.displayX(double(panProbeTick), expected.plotOrigin, dpr);
     check(panRemainedActive && qAbs((panProbeBefore - panProbeAfter) - 48.0) < 0.5,
           QStringLiteral("middle-button automation pan stopped after its first scroll refresh"));
     view.setEditorHorizontalScroll(0.0);
@@ -412,7 +452,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             const int shared = state.laneHeight > 0 ? state.laneHeight : expected.defaultRowHeight;
             const int panHeight = std::clamp(it == state.laneHeights.cend() ? shared : it->second,
                                              expected.minimumRowHeight, expected.maximumRowHeight);
-            const QRect panBody(0, panTop, page.canvas()->width(), panHeight);
+            const QRect panBody(0, panTop, automationViewportSize.width(), panHeight);
             AutomationProjection proj(projectionGeometry, &page);
             CCLaneAdapter panLane(document, 0, pan.controller);
             const int span = panLane.maximumValue() - panLane.minimumValue();
@@ -634,7 +674,6 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         QTimer::singleShot(milliseconds, &loop, &QEventLoop::quit);
         loop.exec();
     };
-    const qreal dpr = page.canvas()->devicePixelRatioF();
     const int panTop = automationRowTop(page, pan);
     const int panHeight = heightFor(pan);
     const int panY = panTop + panHeight / 2;
@@ -644,10 +683,10 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     const QByteArray clickMidi = document.smf().write();
     const uint64_t clickRevision = document.revision();
     const int clickUndo = document.undoStack()->index();
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, clickPoint, Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, clickPoint,
-                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonPress, clickPoint, Qt::LeftButton, Qt::LeftButton,
+               Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonRelease, clickPoint, Qt::LeftButton, Qt::NoButton,
+               Qt::NoModifier);
     check(document.smf().write() == clickMidi && document.revision() == clickRevision &&
               document.undoStack()->index() == clickUndo,
           QStringLiteral("stationary automation click did not park the edit cursor"));
@@ -656,13 +695,12 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     page.documentChanged();
     const int sweepActivationDistance = expected.nodeDragActivationDistance;
     const QPoint subThresholdMove(0, std::max(0, sweepActivationDistance - 1));
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, clickPoint, Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, clickPoint + subThresholdMove,
-                              Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease,
-                              clickPoint + subThresholdMove, Qt::LeftButton, Qt::NoButton,
-                              Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonPress, clickPoint, Qt::LeftButton, Qt::LeftButton,
+               Qt::NoModifier);
+    band.mouse(QEvent::MouseMove, clickPoint + subThresholdMove, Qt::NoButton, Qt::LeftButton,
+               Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonRelease, clickPoint + subThresholdMove, Qt::LeftButton,
+               Qt::NoButton, Qt::NoModifier);
     waitForTimers(QApplication::doubleClickInterval() + 1);
     check(document.smf().write() == clickMidi && document.revision() == clickRevision &&
               document.undoStack()->index() == clickUndo,
@@ -671,29 +709,27 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         document.undoStack()->setIndex(clickUndo);
     page.documentChanged();
     const QPoint verticalThresholdMove(0, sweepActivationDistance);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, clickPoint, Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, clickPoint + verticalThresholdMove,
-                              Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease,
-                              clickPoint + verticalThresholdMove, Qt::LeftButton, Qt::NoButton,
-                              Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonPress, clickPoint, Qt::LeftButton, Qt::LeftButton,
+               Qt::NoModifier);
+    band.mouse(QEvent::MouseMove, clickPoint + verticalThresholdMove, Qt::NoButton, Qt::LeftButton,
+               Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonRelease, clickPoint + verticalThresholdMove, Qt::LeftButton,
+               Qt::NoButton, Qt::NoModifier);
     check(document.smf().write() == clickMidi && document.revision() == clickRevision &&
               document.undoStack()->index() == clickUndo,
           QStringLiteral("automation sweep applied its activation slop as movement"));
     page.documentChanged();
     const QPoint verticalDragMove = verticalThresholdMove + QPoint(0, 1);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, clickPoint, Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, clickPoint + verticalThresholdMove,
-                              Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, clickPoint + verticalDragMove,
-                              Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease,
-                              clickPoint + verticalDragMove, Qt::LeftButton, Qt::NoButton,
-                              Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonPress, clickPoint, Qt::LeftButton, Qt::LeftButton,
+               Qt::NoModifier);
+    band.mouse(QEvent::MouseMove, clickPoint + verticalThresholdMove, Qt::NoButton, Qt::LeftButton,
+               Qt::NoModifier);
+    band.mouse(QEvent::MouseMove, clickPoint + verticalDragMove, Qt::NoButton, Qt::LeftButton,
+               Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonRelease, clickPoint + verticalDragMove, Qt::LeftButton,
+               Qt::NoButton, Qt::NoModifier);
     const AutomationProjection sweepProjection(projectionGeometry, &page);
-    const QRect sweepBody(0, panTop, page.canvas()->width(), panHeight);
+    const QRect sweepBody(0, panTop, automationViewportSize.width(), panHeight);
     const uint64_t sweepTick = view.snapTick(sweepProjection.rawTickAt(clickPoint.x()), false);
     const int sweepValue = qRound(
         AutomationProjection::valueAtY(sweepBody, projectionGeometry, 0, 127, clickPoint.y() + 1));
@@ -711,7 +747,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         page.documentChanged();
     };
     const auto pdPointAt = [&](uint64_t tick, int value) {
-        return automationNodePoint(view, page, projectionGeometry, pan, tick, value);
+        return automationNodePoint(view, page, dpr, projectionGeometry, pan, tick, value);
     };
     resetDrawFixture();
     const uint64_t normalNodeTick = view.snapTickDown(120.5);
@@ -778,10 +814,10 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             });
             activatePointMenuAction(menu, setValueAction);
         });
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, normalNodePoint,
-                                  Qt::RightButton, Qt::RightButton, Qt::NoModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, normalNodePoint,
-                                  Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonPress, normalNodePoint, Qt::RightButton, Qt::RightButton,
+                   Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonRelease, normalNodePoint, Qt::RightButton, Qt::NoButton,
+                   Qt::NoModifier);
         popupCheck(normalPointMenuActions == normalPointMenuExpected,
                    QStringLiteral("normal automation point context menu actions were not exactly "
                                   "Set Value, Delete"));
@@ -798,10 +834,10 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             dialog->reject();
         }
     });
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, normalNodePoint,
-                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, normalNodePoint,
-                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonPress, normalNodePoint, Qt::LeftButton, Qt::LeftButton,
+               Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonRelease, normalNodePoint, Qt::LeftButton, Qt::NoButton,
+               Qt::NoModifier);
     waitForTimers(0);
     const auto normalClickPointsAfter = document.lanePoints(0, pan.controller);
     check(!normalClickDeleteDialog &&
@@ -825,25 +861,23 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             dialog->reject();
         }
     });
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonDblClick, normalNodePoint,
-                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, normalNodePoint,
-                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonDblClick, normalNodePoint, Qt::LeftButton, Qt::LeftButton,
+               Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonRelease, normalNodePoint, Qt::LeftButton, Qt::NoButton,
+               Qt::NoModifier);
     waitForTimers(0);
     check(!normalDoubleClickDialog && document.revision() == normalDoubleClickRevision,
           QStringLiteral("node double-click opened value entry after single-click delete"));
     // A row resize boundary owns the primary click, so its idle affordance
     // must not advertise an insertion in either adjacent row.
-    QEvent boundaryLeave(QEvent::Leave);
-    QCoreApplication::sendEvent(page.canvas(), &boundaryLeave);
+    band.leave();
     QCoreApplication::processEvents();
     const QPoint boundaryPoint(expected.plotOrigin + 48, lfoTop + lfoHeight);
     const QImage boundaryBaseline = captureAutomationViewport();
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, boundaryPoint, Qt::NoButton,
-                              Qt::NoButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseMove, boundaryPoint, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
     QCoreApplication::processEvents();
     const QImage boundaryHover = captureAutomationViewport();
-    check(page.canvas()->cursor().shape() == Qt::SplitVCursor,
+    check(automationInput->cursor().shape() == Qt::SplitVCursor,
           QStringLiteral("automation row boundary did not advertise its resize action"));
     check(!boundaryBaseline.isNull() && boundaryHover == boundaryBaseline,
           QStringLiteral("automation row boundary painted an insertion preview"));
@@ -892,10 +926,10 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             popupNodeDeleteActionAvailable = deleteAction != nullptr;
             activatePointMenuAction(menu, deleteAction);
         });
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, popupNodePoint,
-                                  Qt::RightButton, Qt::RightButton, Qt::NoModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, popupNodePoint,
-                                  Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonPress, popupNodePoint, Qt::RightButton, Qt::RightButton,
+                   Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonRelease, popupNodePoint, Qt::RightButton, Qt::NoButton,
+                   Qt::NoModifier);
         waitForTimers(0);
         DocLanePoint popupNodeAfterDelete;
         popupCheck(
@@ -907,22 +941,21 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     }
     const int duplicateTop = automationRowTop(page, lfo);
     check(duplicateTop >= 0, QStringLiteral("same-tick duplicate lane is missing"));
-    const QPointF duplicatePoint = automationNodePoint(view, page, projectionGeometry, lfo, 96, 96);
+    const QPointF duplicatePoint =
+        automationNodePoint(view, page, dpr, projectionGeometry, lfo, 96, 96);
     const QPointF duplicateTarget =
-        automationNodePoint(view, page, projectionGeometry, lfo, 120, 96);
+        automationNodePoint(view, page, dpr, projectionGeometry, lfo, 120, 96);
     const uint64_t duplicateRevision = document.revision();
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, duplicatePoint,
-                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonPress, duplicatePoint, Qt::LeftButton, Qt::LeftButton,
+               Qt::NoModifier);
     {
         const int arm = expected.nodeDragActivationDistance + 2;
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseMove,
-                                  duplicatePoint + QPoint(arm, 0), Qt::NoButton, Qt::LeftButton,
-                                  Qt::NoModifier);
+        band.mouse(QEvent::MouseMove, duplicatePoint + QPoint(arm, 0), Qt::NoButton, Qt::LeftButton,
+                   Qt::NoModifier);
     }
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, duplicateTarget, Qt::NoButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, duplicateTarget,
-                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseMove, duplicateTarget, Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonRelease, duplicateTarget, Qt::LeftButton, Qt::NoButton,
+               Qt::NoModifier);
     check(document.revision() == duplicateRevision + 1,
           QStringLiteral("same-tick automation point drag did not commit"));
     const auto duplicateRun = document.lanePoints(0, lfo.controller);
@@ -974,10 +1007,10 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         });
         const uint64_t pointEditRevision = document.revision();
         const int pointEditUndo = document.undoStack()->index();
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, duplicatePoint,
-                                  Qt::RightButton, Qt::RightButton, Qt::NoModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, duplicatePoint,
-                                  Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonPress, duplicatePoint, Qt::RightButton, Qt::RightButton,
+                   Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonRelease, duplicatePoint, Qt::RightButton, Qt::NoButton,
+                   Qt::NoModifier);
         QCoreApplication::processEvents();
         const auto editedRun = document.lanePoints(0, lfo.controller);
         QStringList editedState;
@@ -1011,8 +1044,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         constexpr int retargetValue = 32;
         document.addLanePoint(0, lfo.controller, retargetTick, retargetValue);
         page.documentChanged();
-        const QPointF retargetNodePoint =
-            automationNodePoint(view, page, projectionGeometry, lfo, retargetTick, retargetValue);
+        const QPointF retargetNodePoint = automationNodePoint(view, page, dpr, projectionGeometry,
+                                                              lfo, retargetTick, retargetValue);
         const auto retargetBeforePoints = document.lanePoints(0, lfo.controller);
         auto retargetExpectedPoints = retargetBeforePoints;
         const auto retargetPointIt = std::find_if(
@@ -1042,7 +1075,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                 menu->close();
                 return;
             }
-            const QPoint pointBGlobal = page.canvas()->mapToGlobal(retargetNodePoint.toPoint());
+            const QPoint pointBGlobal =
+                automationInput->mapToGlobal(viewportPosition(retargetNodePoint)).toPoint();
             checks::events::sendMouse(*menu, QEvent::MouseButtonPress,
                                       menu->mapFromGlobal(pointBGlobal), Qt::RightButton,
                                       Qt::RightButton, Qt::NoModifier);
@@ -1055,10 +1089,10 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         });
         const uint64_t retargetDeleteRevision = document.revision();
         const int retargetDeleteUndo = document.undoStack()->index();
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, duplicatePoint,
-                                  Qt::RightButton, Qt::RightButton, Qt::NoModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, duplicatePoint,
-                                  Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonPress, duplicatePoint, Qt::RightButton, Qt::RightButton,
+                   Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonRelease, duplicatePoint, Qt::RightButton, Qt::NoButton,
+                   Qt::NoModifier);
         QCoreApplication::processEvents();
         const auto retargetAfterPoints = document.lanePoints(0, lfo.controller);
         const auto hasRetargetPoint = [](const std::vector<DocLanePoint> &points, uint64_t tick,
@@ -1129,8 +1163,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                             expected.defaultRowHeight / 2);
     const double tickBeforeZoom = view.tickAtContentX(zoomAnchorContentX);
     const double zoomBefore = view.pxPerBeat();
-    checks::events::sendWheel(*page.canvas(), QPointF(zoomAnchor), QPoint(), QPoint(0, 120),
-                              Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+    band.wheel(zoomAnchor, QPoint(), QPoint(0, 120), Qt::NoButton, Qt::NoModifier,
+               Qt::NoScrollPhase, false);
     QCoreApplication::processEvents();
     check(view.pxPerBeat() > zoomBefore,
           QStringLiteral("plain wheel did not change automation time zoom"));
@@ -1142,9 +1176,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     QCoreApplication::processEvents();
 
     const int initialHeight = page.automationViewState().laneHeight;
-    checks::events::sendWheel(
-        *page.canvas(), QPointF(QPoint(expected.plotOrigin + 20, expected.defaultRowHeight / 2)),
-        QPoint(), QPoint(0, 120), Qt::NoButton, Qt::ControlModifier, Qt::NoScrollPhase, false);
+    band.wheel(QPointF(QPoint(expected.plotOrigin + 20, expected.defaultRowHeight / 2)), QPoint(),
+               QPoint(0, 120), Qt::NoButton, Qt::ControlModifier, Qt::NoScrollPhase, false);
     check(page.automationViewState().laneHeight > initialHeight,
           QStringLiteral("Ctrl-wheel did not publish typed row-height state"));
     const EditorViewState afterAutomationPublication = view.editorViewState();
@@ -1159,12 +1192,11 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     const QPoint selectionEnd(expected.plotOrigin + 216, selectionRowY);
     const QPoint selectionContractedEnd((selectionStart.x() + selectionEnd.x()) / 2,
                                         selectionEnd.y());
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, selectionStart,
-                              Qt::RightButton, Qt::RightButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, selectionEnd, Qt::NoButton,
-                              Qt::RightButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, selectionContractedEnd,
-                              Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonPress, selectionStart, Qt::RightButton, Qt::RightButton,
+               Qt::NoModifier);
+    band.mouse(QEvent::MouseMove, selectionEnd, Qt::NoButton, Qt::RightButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonRelease, selectionContractedEnd, Qt::RightButton, Qt::NoButton,
+               Qt::NoModifier);
     const auto timeSelection = view.selectionModel().timeSelection();
     check(timeSelection.active() &&
               timeSelection.scope == songview::EditorSelectionModel::TimeSelection::Lanes &&
@@ -1181,42 +1213,41 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             menu->close();
         });
         const QPoint selectionInside(expected.plotOrigin + 100, selectionRowY);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, selectionInside,
-                                  Qt::RightButton, Qt::RightButton, Qt::NoModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, selectionInside,
-                                  Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonPress, selectionInside, Qt::RightButton, Qt::RightButton,
+                   Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonRelease, selectionInside, Qt::RightButton, Qt::NoButton,
+                   Qt::NoModifier);
         popupCheck(selectionActions.contains(QStringLiteral("Clear time selection")),
                    QStringLiteral("right click inside a time selection did not open its menu"));
     }
     const QPoint selectionOutside(expected.plotOrigin + 260, selectionRowY);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, selectionOutside,
-                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonPress, selectionOutside, Qt::LeftButton, Qt::LeftButton,
+               Qt::NoModifier);
     check(!view.selectionModel().timeSelection().active(),
           QStringLiteral("left click outside a time selection did not clear it"));
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, selectionOutside,
-                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonRelease, selectionOutside, Qt::LeftButton, Qt::NoButton,
+               Qt::NoModifier);
     view.selectionModel().setTimeSelection(timeSelection);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, selectionOutside,
-                              Qt::RightButton, Qt::RightButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonPress, selectionOutside, Qt::RightButton, Qt::RightButton,
+               Qt::NoModifier);
     check(!view.selectionModel().timeSelection().active(),
           QStringLiteral("right click outside a time selection did not clear it"));
     QTimer::singleShot(0, [] {
         if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget()))
             menu->close();
     });
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, selectionOutside,
-                              Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonRelease, selectionOutside, Qt::RightButton, Qt::NoButton,
+               Qt::NoModifier);
     view.selectionModel().setTimeSelection(timeSelection);
     const QPoint laneHeader(expected.plotOrigin - layout::space(layout::Space::One), selectionRowY);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, laneHeader, Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, laneHeader,
-                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonPress, laneHeader, Qt::LeftButton, Qt::LeftButton,
+               Qt::NoModifier);
+    band.mouse(QEvent::MouseButtonRelease, laneHeader, Qt::LeftButton, Qt::NoButton,
+               Qt::NoModifier);
     check(!view.selectionModel().timeSelection().active(),
           QStringLiteral("left click in a lane header did not clear the time selection"));
     view.selectionModel().setTimeSelection(timeSelection);
-    checks::events::sendKey(*page.canvas(), QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier,
-                            QString{}, false, 1);
+    band.key(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
     QCoreApplication::processEvents();
     check(!view.selectionModel().timeSelection().active() &&
               view.selectionModel().timeSelection().scope ==
@@ -1246,9 +1277,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     noncontiguous.lanes = {{int(lfo.track), lfo.controller}};
     view.selectionModel().setTimeSelection(noncontiguous);
     page.refreshLiveState(live);
-    QCoreApplication::processEvents();
-    checks::events::sendKey(*page.canvas(), QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier,
-                            QString{}, false, 1);
+    band.key(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
     QCoreApplication::processEvents();
     check(!view.selectionModel().timeSelection().active() &&
               view.selectionModel().timeSelection().lanes.empty(),
@@ -1308,7 +1337,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             quickScene ? quickScene->layer(songview::TimelineQuickLayer::AutomationNodes)
                        : songview::TimelineQuickLayerData{};
         const QImage includedNodesFramebuffer = captureAutomationViewport();
-        const QColor selectionColor = page.canvas()->palette().highlight().color();
+        const QColor selectionColor = automationInput->palette().highlight().color();
         const qreal ringRadius = projectionGeometry.selectedNodeRingRadius;
         const qreal ringWidth = projectionGeometry.selectedNodeRingDipWidth;
         const auto hasSelectionRing = [&](const songview::TimelineQuickLayerData &layer,
@@ -1401,14 +1430,12 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         const int groupArm = expected.nodeDragActivationDistance + 2;
         const QPoint groupDragArm = groupAPoint + QPoint(groupArm, 0);
         const QPoint groupDragEnd = groupAPoint + QPoint(48, -18);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, groupAPoint,
-                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, groupDragArm, Qt::NoButton,
-                                  Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, groupDragEnd, Qt::NoButton,
-                                  Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, groupDragEnd,
-                                  Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonPress, groupAPoint, Qt::LeftButton, Qt::LeftButton,
+                   Qt::NoModifier);
+        band.mouse(QEvent::MouseMove, groupDragArm, Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        band.mouse(QEvent::MouseMove, groupDragEnd, Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonRelease, groupDragEnd, Qt::LeftButton, Qt::NoButton,
+                   Qt::NoModifier);
         QCoreApplication::processEvents();
         DocLanePoint stayedC{};
         const bool foundA = document.findLanePoint(0, pan.controller, groupA, nullptr);
@@ -1477,8 +1504,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             QCoreApplication::processEvents();
             const uint64_t beforeDelete = document.revision();
             const int undoBeforeDelete = document.undoStack()->index();
-            checks::events::sendKey(*page.canvas(), QEvent::KeyPress, key, Qt::NoModifier,
-                                    QString{}, false, 1);
+            band.key(QEvent::KeyPress, key, Qt::NoModifier);
             QCoreApplication::processEvents();
             DocLanePoint untouchedC{};
             check(!document.findLanePoint(0, pan.controller, groupA, nullptr) &&
@@ -1539,14 +1565,14 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         const QPoint horizontalArm = lockAPoint + QPoint(dragThreshold, 0);
         const QPoint horizontalEnd = lockAPoint + QPoint(dragThreshold + 40, 4);
         const uint64_t beforeHorizontal = document.revision();
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, lockAPoint,
-                                  Qt::LeftButton, Qt::LeftButton, Qt::ShiftModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, horizontalArm, Qt::NoButton,
-                                  Qt::LeftButton, Qt::ShiftModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, horizontalEnd, Qt::NoButton,
-                                  Qt::LeftButton, Qt::ShiftModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, horizontalEnd,
-                                  Qt::LeftButton, Qt::NoButton, Qt::ShiftModifier);
+        band.mouse(QEvent::MouseButtonPress, lockAPoint, Qt::LeftButton, Qt::LeftButton,
+                   Qt::ShiftModifier);
+        band.mouse(QEvent::MouseMove, horizontalArm, Qt::NoButton, Qt::LeftButton,
+                   Qt::ShiftModifier);
+        band.mouse(QEvent::MouseMove, horizontalEnd, Qt::NoButton, Qt::LeftButton,
+                   Qt::ShiftModifier);
+        band.mouse(QEvent::MouseButtonRelease, horizontalEnd, Qt::LeftButton, Qt::NoButton,
+                   Qt::ShiftModifier);
         QCoreApplication::processEvents();
         DocLanePoint horizontalA{};
         DocLanePoint horizontalB{};
@@ -1574,14 +1600,12 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         const QPoint verticalArm = lockAPoint + QPoint(0, -dragThreshold);
         const QPoint verticalEnd = lockAPoint + QPoint(0, -(dragThreshold + 24));
         const uint64_t beforeVertical = document.revision();
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, lockAPoint,
-                                  Qt::LeftButton, Qt::LeftButton, Qt::ShiftModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, verticalArm, Qt::NoButton,
-                                  Qt::LeftButton, Qt::ShiftModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, verticalEnd, Qt::NoButton,
-                                  Qt::LeftButton, Qt::ShiftModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease, verticalEnd,
-                                  Qt::LeftButton, Qt::NoButton, Qt::ShiftModifier);
+        band.mouse(QEvent::MouseButtonPress, lockAPoint, Qt::LeftButton, Qt::LeftButton,
+                   Qt::ShiftModifier);
+        band.mouse(QEvent::MouseMove, verticalArm, Qt::NoButton, Qt::LeftButton, Qt::ShiftModifier);
+        band.mouse(QEvent::MouseMove, verticalEnd, Qt::NoButton, Qt::LeftButton, Qt::ShiftModifier);
+        band.mouse(QEvent::MouseButtonRelease, verticalEnd, Qt::LeftButton, Qt::NoButton,
+                   Qt::ShiftModifier);
         QCoreApplication::processEvents();
         DocLanePoint verticalA{};
         DocLanePoint verticalB{};
@@ -1599,22 +1623,19 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         QCoreApplication::processEvents();
     }
 
-    QEvent leave(QEvent::Leave);
-    QCoreApplication::sendEvent(page.canvas(), &leave);
+    band.leave();
 
     const auto checkCancelledGesture = [&](auto cancel, const QString &route) {
         const uint64_t revision = document.revision();
         const int undoIndex = document.undoStack()->index();
         const QPoint start(expected.plotOrigin + 24,
                            automationRowTop(page, pan) + heightFor(pan) / 2);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonPress, start, Qt::LeftButton,
-                                  Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseMove, start + QPoint(80, 12),
-                                  Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonPress, start, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        band.mouse(QEvent::MouseMove, start + QPoint(80, 12), Qt::NoButton, Qt::LeftButton,
+                   Qt::NoModifier);
         cancel();
-        checks::events::sendMouse(*page.canvas(), QEvent::MouseButtonRelease,
-                                  start + QPoint(80, 12), Qt::LeftButton, Qt::NoButton,
-                                  Qt::NoModifier);
+        band.mouse(QEvent::MouseButtonRelease, start + QPoint(80, 12), Qt::LeftButton, Qt::NoButton,
+                   Qt::NoModifier);
         check(document.revision() == revision && document.undoStack()->index() == undoIndex,
               QStringLiteral("%1 cancellation changed the document").arg(route));
     };
@@ -1623,21 +1644,16 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     checkCancelledGesture(
         [&] {
             QEvent event(QEvent::UngrabMouse);
-            QCoreApplication::sendEvent(page.canvas(), &event);
+            QCoreApplication::sendEvent(automationInput, &event);
         },
         QStringLiteral("mouse-grab loss"));
     checkCancelledGesture(
         [&] {
-            QEvent event(QEvent::WindowDeactivate);
-            QCoreApplication::sendEvent(page.canvas(), &event);
+            page.canvas()->inputCancelled(songview::TimelineInputCancelReason::WindowDeactivated);
         },
         QStringLiteral("window loss"));
-    checkCancelledGesture(
-        [&] {
-            checks::events::sendKey(*page.canvas(), QEvent::KeyPress, Qt::Key_Escape,
-                                    Qt::NoModifier, QString{}, false, 1);
-        },
-        QStringLiteral("Escape"));
+    checkCancelledGesture([&] { band.key(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier); },
+                          QStringLiteral("Escape"));
     checkCancelledGesture(
         [&] {
             page.hide();

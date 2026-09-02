@@ -422,11 +422,11 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         const int distance = std::max(1, rig.geometry().rowWheelIncrement);
         const int delta = grow > 0 ? std::min(grow, distance) : -std::min(shrink, distance);
         const bool accepted = rig.dispatchMousePress(input);
-        check(!accepted && !rig.canvas().isPanning() && rig.view().userGestureActive() &&
+        check(accepted && !rig.canvas().isPanning() && rig.view().userGestureActive() &&
                   !rig.canvas().bandPreviewContainsLane(panHandle) &&
                   isUnchanged(before, snapshot(rig.document())) &&
                   beforeHeights == laneHeights(rig) && rig.view().editCursorTick() == cursorBefore,
-              QStringLiteral("row-boundary press did not stop in unaccepted resize state"));
+              QStringLiteral("row-boundary Quick press did not enter resize state"));
         const QPointF moved = input + QPointF(0, delta);
         rig.mouseMove(moved);
         const auto afterHeights = laneHeights(rig);
@@ -447,11 +447,11 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         const uint64_t cursorBefore = rig.view().editCursorTick();
         const bool accepted =
             rig.dispatchMousePress(input.position, Qt::NoModifier, Qt::RightButton);
-        check(!accepted && !rig.canvas().isPanning() && rig.view().userGestureActive() &&
+        check(accepted && !rig.canvas().isPanning() && rig.view().userGestureActive() &&
                   !rig.canvas().bandPreviewContainsLane(panHandle) &&
                   isUnchanged(before, snapshot(rig.document())) &&
                   beforeHeights == laneHeights(rig) && rig.view().editCursorTick() == cursorBefore,
-              QStringLiteral("body-right press did not stop in unaccepted band state"));
+              QStringLiteral("body-right Quick press did not enter band state"));
         rig.mouseMove(input.position + QPointF(20, 0), Qt::RightButton);
         check(rig.canvas().bandPreviewContainsLane(panHandle) &&
                   isUnchanged(before, snapshot(rig.document())) &&
@@ -477,11 +477,11 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         const auto tempoBefore = rig.document().tempoPoints();
         const uint64_t cursorBefore = rig.view().editCursorTick();
         const bool accepted = rig.dispatchMousePress(input.position);
-        check(!accepted && !rig.canvas().isPanning() && rig.view().userGestureActive() &&
+        check(accepted && !rig.canvas().isPanning() && rig.view().userGestureActive() &&
                   !rig.canvas().bandPreviewContainsLane(panHandle) &&
                   isUnchanged(before, snapshot(rig.document())) &&
                   beforeHeights == laneHeights(rig) && rig.view().editCursorTick() == cursorBefore,
-              QStringLiteral("Pencil press did not stop in its unaccepted gesture state"));
+              QStringLiteral("Pencil Quick press did not enter its gesture state"));
         rig.mouseRelease(input.position);
         rig.commitTimers();
         const auto after = snapshot(rig.document());
@@ -515,11 +515,11 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         const uint64_t expectedCursor =
             rig.view().snapTick(rig.projection().rawTickAt(input.position.x()), false);
         const bool accepted = rig.dispatchMousePress(input.position);
-        check(!accepted && !rig.canvas().isPanning() && rig.view().userGestureActive() &&
+        check(accepted && !rig.canvas().isPanning() && rig.view().userGestureActive() &&
                   !rig.canvas().bandPreviewContainsLane(panHandle) &&
                   isUnchanged(before, snapshot(rig.document())) &&
                   beforeHeights == laneHeights(rig) && rig.view().editCursorTick() == cursorBefore,
-              QStringLiteral("default body press did not stop in its unaccepted gesture state"));
+              QStringLiteral("default body Quick press did not enter its gesture state"));
         rig.mouseRelease(input.position);
         rig.pump();
         check(expectedCursor != cursorBefore && rig.view().editCursorTick() == expectedCursor &&

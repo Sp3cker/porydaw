@@ -113,9 +113,20 @@ void checkAutomationHover(SongView &view, QStringList &failures)
         failures.append("automation hover fixture did not keep the automation page visible");
         return;
     }
+    auto *quickCanvas =
+        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    auto *automationInput =
+        quickCanvas && quickCanvas->rootObject()
+            ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(
+                  QStringLiteral("timelineAutomationInput"))
+            : nullptr;
+    if (!automationInput) {
+        failures.append("automation hover fixture did not expose the Quick automation input");
+        return;
+    }
     QString captureError;
-    QEvent leave(QEvent::Leave);
-    QCoreApplication::sendEvent(canvas, &leave);
+    checks::events::sendMouse(*automationInput, QEvent::Leave, QPointF{}, Qt::NoButton,
+                              Qt::NoButton, Qt::NoModifier);
     checks::support::pumpQuick();
     const QImage baseline = checks::support::captureQuickBand(view, *viewport, &captureError);
     if (baseline.isNull()) {
@@ -123,15 +134,19 @@ void checkAutomationHover(SongView &view, QStringList &failures)
             QStringLiteral("automation Quick framebuffer capture failed: %1").arg(captureError));
         return;
     }
-    const QPoint position(std::max(canvas->plotOrigin() + 1, canvas->width() * 2 / 3),
-                          canvas->mapFrom(viewport, viewport->rect().center()).y());
-    checks::events::sendMouse(*canvas, QEvent::MouseMove, position, Qt::NoButton, Qt::NoButton,
-                              Qt::NoModifier);
+    // Automation input positions are viewport coordinates; the plot probe
+    // rides two-thirds across the visible band at the viewport mid-height.
+    const QSize viewportSize = page->automationViewportSize();
+    const QPoint position(std::max(canvas->plotOrigin() + 1, viewportSize.width() * 2 / 3),
+                          viewportSize.height() / 2);
+    checks::events::sendMouse(*automationInput, QEvent::MouseMove, position, Qt::NoButton,
+                              Qt::NoButton, Qt::NoModifier);
     checks::support::pumpQuick();
     const QImage hovered = checks::support::captureQuickBand(view, *viewport, &captureError);
     if (hovered == baseline)
         failures.append("automation hover did not retain its local Quick decoration");
-    QCoreApplication::sendEvent(canvas, &leave);
+    checks::events::sendMouse(*automationInput, QEvent::Leave, QPointF{}, Qt::NoButton,
+                              Qt::NoButton, Qt::NoModifier);
     checks::support::pumpQuick();
     if (checks::support::captureQuickBand(view, *viewport, &captureError) != baseline)
         failures.append("automation hover did not clear its local Quick decoration");

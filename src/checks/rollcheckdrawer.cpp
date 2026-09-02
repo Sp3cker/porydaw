@@ -1,5 +1,4 @@
 #include "core/miditimeline.h"
-#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/drawersections.h"
 #include "ui/editordrawer/editordrawer.h"
@@ -362,6 +361,8 @@ int runEditorDrawerCheck(const QString &screenshotPath)
               bandInputMatchesCanonical(songview::TimelineBand::Velocity,
                                         QStringLiteral("timelineVelocityInput")) &&
               canonicalRectMatches(songview::TimelineBand::Automation, *automationViewport) &&
+              bandInputMatchesCanonical(songview::TimelineBand::Automation,
+                                        QStringLiteral("timelineAutomationInput")) &&
               bandInputMatchesCanonical(songview::TimelineBand::VoiceChanges,
                                         QStringLiteral("timelineVoiceChangesInput")),
           "canonical layout should track the resized drawer section rectangles");
@@ -549,18 +550,15 @@ int runEditorDrawerCheck(const QString &screenshotPath)
     QCoreApplication::processEvents();
     drawer->velocityAction()->trigger();
     QCoreApplication::processEvents();
-    QWidget *velocityFallback = QApplication::focusWidget();
-    check(!view.drawerSectionVisible(EditorDrawerPage::Velocity) && velocityFallback &&
-              !view.focusedTimelineBand() &&
-              (velocityFallback == automationCanvas ||
-               automationCanvas->isAncestorOf(velocityFallback)),
+    check(!view.drawerSectionVisible(EditorDrawerPage::Velocity) &&
+              view.focusedTimelineBand() == songview::TimelineBand::Automation,
           "hiding the focused velocity page did not focus the automation page");
     drawer->automationAction()->trigger();
     QCoreApplication::processEvents();
     QWidget *contentFallback = QApplication::focusWidget();
     check(!view.hasVisibleDrawerSection() &&
-              view.focusedTimelineBand() == songview::TimelineBand::Roll &&
-              (!contentFallback || !automationCanvas->isAncestorOf(contentFallback)),
+              view.focusedTimelineBand() == songview::TimelineBand::Roll && contentFallback &&
+              (contentFallback == &view || view.isAncestorOf(contentFallback)),
           "hiding the last drawer page did not return focus to content");
 
     const QRect parentBounds = drawer->parentWidget()->rect();

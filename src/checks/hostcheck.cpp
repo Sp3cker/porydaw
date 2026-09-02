@@ -654,6 +654,54 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     check(automation != nullptr && automationScroll != nullptr,
           "host should construct the Automation and Voice Changes timeline surfaces");
     if (automation && automationScroll) {
+        auto *automationInput = quickRoot->findChild<songview::TimelineInputItem *>(
+            QStringLiteral("timelineAutomationInput"));
+        check(automationInput && automationInput->isVisible() &&
+                  automationInput->interaction() == automation,
+              "Automation input item should host the page canvas inside its canonical band");
+        check(inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::Automation,
+                                    QStringLiteral("timelineAutomationInput")),
+              "Automation input item should match its canonical band");
+        auto *automationScrollbar = automationScroll->verticalScrollBar();
+        check(automationScrollbar && !quick->quickWindow()->mask().intersects(
+                                         QRect(automationScrollbar->mapTo(&view, QPoint()),
+                                               automationScrollbar->size())
+                                             .translated(-quick->geometry().topLeft())),
+              "Quick window mask should leave the native automation scrollbar to native clicks");
+        if (automationInput) {
+            const uint64_t panRevision = document.revision();
+            const int panUndo = document.undoStack()->count();
+            const QPointF panPress(automationInput->width() / 2.0, automationInput->height() / 2.0);
+            const auto sendAutomationWindowMouse = [&](QEvent::Type type, const QPointF &position,
+                                                       Qt::MouseButton button,
+                                                       Qt::MouseButtons buttons) {
+                QQuickWindow *const window = quick->quickWindow();
+                const QPointF windowPosition = automationInput->mapToScene(position);
+                QMouseEvent event(type, windowPosition,
+                                  QPointF(window->mapToGlobal(windowPosition.toPoint())), button,
+                                  buttons, Qt::NoModifier);
+                QCoreApplication::sendEvent(window, &event);
+            };
+            sendAutomationWindowMouse(QEvent::MouseButtonPress, panPress, Qt::MiddleButton,
+                                      Qt::MiddleButton);
+            pumpZeroDelayTimers();
+            check(view.focusedTimelineBand() == songview::TimelineBand::Automation &&
+                      quick->quickWindow()->mouseGrabberItem() == automationInput &&
+                      automation->isPanning(),
+                  "automation pan press should focus, grab, and start panning through Quick");
+            QFocusEvent panFocusOut(QEvent::FocusOut, Qt::OtherFocusReason);
+            QApplication::sendEvent(automationInput, &panFocusOut);
+            check(automation->isPanning(),
+                  "automation pan should ignore input focus loss like the native canvas");
+            QEvent panDeactivate(QEvent::WindowDeactivate);
+            QApplication::sendEvent(quick->quickWindow(), &panDeactivate);
+            check(!automation->isPanning(),
+                  "Quick-window deactivation should cancel the automation pan gesture");
+            sendAutomationWindowMouse(QEvent::MouseButtonRelease, panPress, Qt::MiddleButton,
+                                      Qt::NoButton);
+            check(document.revision() == panRevision && document.undoStack()->count() == panUndo,
+                  "automation pan integration should complete without document mutation");
+        }
         const int selectedTrack = view.selectionModel().primaryTrack();
         view.setTrackSolo(selectedTrack, false);
         auto *velocityInput = quickRoot->findChild<songview::TimelineInputItem *>(
@@ -762,34 +810,30 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               "Voice Changes should refresh across a program change without refreshing Automation");
         view.setPlayheadSample(timeline->sampleForTick(24), false);
         QCoreApplication::processEvents();
-        const int pinnedTempoHeaderY =
-            automation
-                ->mapFrom(automationScroll->viewport(),
-                          QPoint(0, automationScroll->viewport()->height() - 1))
-                .y();
+        const qreal pinnedTempoHeaderY = qreal(automationScroll->viewport()->height()) - 1.0;
         const QPointF menuStart(layout::fontPx(17.5 + 13.0 / 3.0) + 4.0, pinnedTempoHeaderY);
         const QPointF menuEnd = menuStart + QPointF(48.0, 0.0);
-        checks::events::sendMouse(*automation, QEvent::MouseButtonPress, menuStart, Qt::RightButton,
+        checks::events::sendMouse(*automationInput, QEvent::MouseButtonPress, menuStart,
+                                  Qt::RightButton, Qt::RightButton, Qt::NoModifier);
+        checks::events::sendMouse(*automationInput, QEvent::MouseMove, menuEnd, Qt::NoButton,
                                   Qt::RightButton, Qt::NoModifier);
-        checks::events::sendMouse(*automation, QEvent::MouseMove, menuEnd, Qt::NoButton,
-                                  Qt::RightButton, Qt::NoModifier);
-        checks::events::sendMouse(*automation, QEvent::MouseButtonRelease, menuEnd, Qt::RightButton,
-                                  Qt::NoButton, Qt::NoModifier);
+        checks::events::sendMouse(*automationInput, QEvent::MouseButtonRelease, menuEnd,
+                                  Qt::RightButton, Qt::NoButton, Qt::NoModifier);
         const auto &dragSelection = view.selectionModel().timeSelection();
         const qreal menuFirst =
             view.displayX(double(dragSelection.startTick), automation->plotOrigin(),
-                          automation->devicePixelRatioF());
+                          automationInput->devicePixelRatio());
         const qreal menuLast =
             view.displayX(double(dragSelection.endTick), automation->plotOrigin(),
-                          automation->devicePixelRatioF());
+                          automationInput->devicePixelRatio());
         const QPointF menuPoint((menuFirst + menuLast) / 2.0, menuStart.y());
-        checks::events::sendMouse(*automation, QEvent::MouseButtonPress, menuPoint, Qt::RightButton,
-                                  Qt::RightButton, Qt::NoModifier);
+        checks::events::sendMouse(*automationInput, QEvent::MouseButtonPress, menuPoint,
+                                  Qt::RightButton, Qt::RightButton, Qt::NoModifier);
         QTimer::singleShot(0, [] {
             if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget()))
                 menu->close();
         });
-        checks::events::sendMouse(*automation, QEvent::MouseButtonRelease, menuPoint,
+        checks::events::sendMouse(*automationInput, QEvent::MouseButtonRelease, menuPoint,
                                   Qt::RightButton, Qt::NoButton, Qt::NoModifier);
         const songview::EditorSelectionModel::TimeSelection &menuSelection =
             view.selectionModel().timeSelection();

@@ -77,7 +77,6 @@ class EditorDrawer final : public QWidget
     SongView &m_owner;
     QRect m_hostBounds;
     bool m_usesParentBounds = true;
-    bool m_drawerCanvasOwnsFocus = false;
     AutomationPage *m_automationPage = nullptr;
     VelocityArea *m_velocityArea = nullptr;
     VoiceChangeArea *m_voiceChangeArea = nullptr;
