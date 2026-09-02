@@ -10,6 +10,8 @@ namespace songview {
 
 bool PianoRoll::pointerPress(const TimelinePointerInput &input)
 {
+    m_curPos = input.position;
+    m_curPosValid = true;
     if (!m_sv->timeline())
         return false;
     m_inputHost->requestFocus(Qt::MouseFocusReason);
@@ -38,6 +40,8 @@ bool PianoRoll::pointerPress(const TimelinePointerInput &input)
 
 bool PianoRoll::pointerDoubleClick(const TimelinePointerInput &input)
 {
+    m_curPos = input.position;
+    m_curPosValid = true;
     // Double-click on empty space drops a grid-sized note (committed on
     // release; dragging before release still sizes it); on a note it
     // deletes that note. Anywhere else a fast click-click behaves as two
@@ -64,6 +68,8 @@ bool PianoRoll::pointerDoubleClick(const TimelinePointerInput &input)
 
 bool PianoRoll::pointerMove(const TimelinePointerInput &input)
 {
+    m_curPos = input.position;
+    m_curPosValid = true;
     updateHoverKey(input);
     if (m_panning) {
         panMove(input);
@@ -73,7 +79,6 @@ bool PianoRoll::pointerMove(const TimelinePointerInput &input)
         kbdGlissandoMove(input);
         return true;
     }
-    m_curPos = input.position;
     if (!resolvePendingPresses(input))
         return true;
     if (!dragLive()) {
@@ -122,6 +127,7 @@ void PianoRoll::updateLeftDragMove(const TimelinePointerInput &input)
 
 void PianoRoll::pointerLeave()
 {
+    m_curPosValid = false;
     setHoverKey(-1);
 }
 
@@ -231,8 +237,12 @@ void PianoRoll::auditionKey(int key, int velocity)
     }
 }
 
-void PianoRoll::inputCancelled(TimelineInputCancelReason)
+void PianoRoll::inputCancelled(TimelineInputCancelReason reason)
 {
+    if (reason == TimelineInputCancelReason::Hidden ||
+        reason == TimelineInputCancelReason::WindowDeactivated) {
+        m_curPosValid = false;
+    }
     // Mirrors the former event() rule for every cancellation cause: only a
     // pending or active velocity drag cancels. Song/tab/project cancellation
     // takes the stronger cancelTransientInput() route instead.

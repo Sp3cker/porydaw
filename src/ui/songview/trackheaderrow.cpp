@@ -312,6 +312,13 @@ QRect TrackHeaderRow::voiceLineRect() const
 
 void TrackHeaderRow::mousePressEvent(QMouseEvent *event)
 {
+    // The native Quick window overlaps the header column. Mouse presses reach
+    // this QWidget, but the platform context-menu event is retargeted to the
+    // Quick window, so open the native menu while this row still owns the press.
+    if (event->button() == Qt::RightButton) {
+        showContextMenu(event->globalPosition().toPoint());
+        return;
+    }
     m_sv->trackHeaderClicked(m_track, event->modifiers());
     // A plain left press may become a reorder drag (the track's chunk
     // moves — AGB track order is chunk order).
@@ -442,6 +449,11 @@ void TrackHeaderRow::mouseDoubleClickEvent(QMouseEvent *event)
 
 void TrackHeaderRow::contextMenuEvent(QContextMenuEvent *event)
 {
+    showContextMenu(event->globalPos());
+}
+
+void TrackHeaderRow::showContextMenu(const QPoint &globalPosition)
+{
     if (!m_sv->document())
         return;
     // A right-click with the left button still down is a mid-drag
@@ -471,7 +483,7 @@ void TrackHeaderRow::contextMenuEvent(QContextMenuEvent *event)
         m_sv->queueHeaderMutation([sv = m_sv, t = m_track] { sv->deleteTrack(t); });
     });
 
-    menu.exec(event->globalPos());
+    menu.exec(globalPosition);
 }
 
 bool TrackHeaderRow::eventFilter(QObject *watched, QEvent *event)

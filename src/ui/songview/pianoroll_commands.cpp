@@ -10,8 +10,7 @@
 #include "ui/songview/detail.h"
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelinequickview.h"
-#include "ui/songview/timecamera.h"
-#include <QCursor>
+#include <QApplication>
 #include <QInputDialog>
 #include <QMetaObject>
 #include <QObject>
@@ -135,7 +134,6 @@ void PianoRoll::openPitchBendEditor()
         m_sv->announce(SongView::tr("Select one note to edit pitch bend."));
         return;
     }
-    const QPointF cursorLocal = m_inputHost->mapFromGlobal(QCursor::pos());
     double noteFraction = -1.0;
     QRect noteGlobal;
     for (const ViewNote &viewNote : m_sv->model().notes) {
@@ -145,9 +143,12 @@ void PianoRoll::openPitchBendEditor()
         const QPointF noteTopGlobal = m_inputHost->mapToGlobal(noteLocalRect.topLeft());
         const QPointF noteBottomGlobal = m_inputHost->mapToGlobal(noteLocalRect.bottomRight());
         noteGlobal = QRect(noteTopGlobal.toPoint(), noteBottomGlobal.toPoint());
-        if (noteLocalRect.contains(cursorLocal)) {
+        // Fractional opening only when the retained pointer position sits
+        // on the selected note; keyboard G without a known inside pointer
+        // keeps the -1 fallback.
+        if (m_curPosValid && noteLocalRect.contains(m_curPos)) {
             noteFraction =
-                double(m_camera.tickAtContentX(cursorLocal.x() - m_geometry.pianoKeyboardWidth) -
+                double(m_camera.tickAtContentX(m_curPos.x() - m_geometry.pianoKeyboardWidth) -
                        double(notes.front().tick)) /
                 double(popup->endTick() - notes.front().tick);
             noteFraction = std::clamp(noteFraction, 0.0, 1.0);
@@ -163,9 +164,16 @@ void PianoRoll::openPitchBendEditor()
     connect(popup, &QObject::destroyed, this, [this, popup] {
         if (m_bendPopup == popup)
             m_bendPopup = nullptr;
-        // The pointer can be stationary when the overlay disappears.
-        // Recompute after the platform has applied any pending cursor warp.
-        QMetaObject::invokeMethod(this, [this] { refreshHoverAtCursor(); }, Qt::QueuedConnection);
+        // The pointer can be stationary when the overlay disappears and Qt
+        // will not deliver a fresh hover. Queue the refresh so popup teardown
+        // finishes first; QObject cancels it if the roll is destroyed.
+        QMetaObject::invokeMethod(
+            this,
+            [this] {
+                if (m_curPosValid && m_inputHost && m_inputHost->bounds().contains(m_curPos))
+                    refreshHoverCursor(m_curPos, QApplication::keyboardModifiers());
+            },
+            Qt::QueuedConnection);
     });
     popup->openAt(noteGlobal, noteFraction);
 }

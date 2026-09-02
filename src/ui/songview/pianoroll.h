@@ -227,7 +227,6 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     bool nearRightEdge(const ViewNote &note, QPointF pos) const;
     bool nearLeftEdge(const ViewNote &note, QPointF pos) const;
     void refreshHoverCursor(QPointF pos, Qt::KeyboardModifiers modifiers);
-    void refreshHoverAtCursor();
 
     void openPitchBendEditor();
     std::vector<DocNote> resolveSelection() const;
@@ -275,7 +274,8 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     LeftDrag m_leftDrag = LeftDrag::None;
     RightDrag m_rightDrag = RightDrag::None;
     QPointF m_pressPos;
-    QPointF m_curPos;
+    QPointF m_curPos;           // last local pointer position
+    bool m_curPosValid = false; // valid while the pointer is inside the roll
     double m_pressTick = 0.0;
     int m_pressKey = 0;
     uint64_t m_gripTick = 0;     // edge tick grabbed by a resize drag

@@ -4,7 +4,6 @@
 #include <QByteArray>
 #include <QColor>
 #include <QCoreApplication>
-#include <QCursor>
 #include <QEvent>
 #include <QImage>
 #include <QKeyEvent>
@@ -147,7 +146,10 @@ class PitchBendCheckContext final
     RangePopupState openRangePopup()
     {
         const QPoint noteGlobal = m_roll->mapToGlobal(QPointF(m_noteCenter)).toPoint();
-        QCursor::setPos(noteGlobal + QPoint(300, 0));
+        // Deliberately hover away from the note: G must anchor the popup to the
+        // selected note, never to the pointer.
+        checks::events::sendMouse(*m_roll, QEvent::MouseMove, m_noteCenter + QPoint(300, 0),
+                                  Qt::NoButton, Qt::NoButton, Qt::NoModifier);
         checks::rollcheck::sendKeyStroke(*m_roll, Qt::Key_G, Qt::NoModifier, false);
         QWidget *popupWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
         auto *bendPopup = dynamic_cast<songview::PitchBendEditor *>(popupWidget);
@@ -607,7 +609,8 @@ class PitchBendCheckContext final
         }
         sendKeyStroke(*range.popup, Qt::Key_Escape, Qt::NoModifier, false);
         drainPopupDeletes();
-        QCursor::setPos(m_roll->mapToGlobal(QPointF(m_noteCenter)).toPoint());
+        checks::events::sendMouse(*m_roll, QEvent::MouseMove, m_noteCenter, Qt::NoButton,
+                                  Qt::NoButton, Qt::NoModifier);
         checks::rollcheck::sendKeyStroke(*m_roll, Qt::Key_G, Qt::NoModifier, false);
         QWidget *popupWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
         auto *resyncedPopup = dynamic_cast<songview::PitchBendEditor *>(popupWidget);
@@ -1039,7 +1042,8 @@ class PitchBendCheckContext final
 
     bool reopenPersistedAltPopup(PersistedAltPopupState *state)
     {
-        QCursor::setPos(m_roll->mapToGlobal(QPointF(m_noteCenter)).toPoint());
+        checks::events::sendMouse(*m_roll, QEvent::MouseMove, m_noteCenter, Qt::NoButton,
+                                  Qt::NoButton, Qt::NoModifier);
         checks::rollcheck::sendKeyStroke(*m_roll, Qt::Key_G, Qt::NoModifier, false);
         QWidget *popupWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
         auto *popup = dynamic_cast<songview::PitchBendEditor *>(popupWidget);
@@ -1131,7 +1135,8 @@ class PitchBendCheckContext final
     void runResetAndAudition()
     {
         drainPopupDeletes();
-        QCursor::setPos(m_roll->mapToGlobal(QPointF(m_noteCenter)).toPoint());
+        checks::events::sendMouse(*m_roll, QEvent::MouseMove, m_noteCenter, Qt::NoButton,
+                                  Qt::NoButton, Qt::NoModifier);
         checks::rollcheck::sendKeyStroke(*m_roll, Qt::Key_G, Qt::NoModifier, false);
         QWidget *resetWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
         auto *resetPopup = dynamic_cast<songview::PitchBendEditor *>(resetWidget);
@@ -1211,7 +1216,8 @@ class PitchBendCheckContext final
     void runFocusHandoff()
     {
         drainPopupDeletes();
-        QCursor::setPos(m_roll->mapToGlobal(QPointF(m_noteCenter)).toPoint());
+        checks::events::sendMouse(*m_roll, QEvent::MouseMove, m_noteCenter, Qt::NoButton,
+                                  Qt::NoButton, Qt::NoModifier);
         checks::rollcheck::sendKeyStroke(*m_roll, Qt::Key_G, Qt::NoModifier, false);
         QWidget *popupWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
         QPointer<songview::PitchBendEditor> popup =
@@ -1269,14 +1275,14 @@ class PitchBendCheckContext final
             fail("replacing the pitch-bend popup did not retain graph focus");
             return;
         }
-        const QPoint edgeGlobal = m_roll->mapToGlobal(QPointF(edgeHandle)).toPoint();
-        QCursor::setPos(edgeGlobal);
-        QCoreApplication::processEvents();
-        const bool cursorWarped = QCursor::pos() == edgeGlobal;
+        // Park the pointer on the note edge while the popup is open; teardown
+        // must refresh hover for that stationary synthetic pointer.
+        checks::events::sendMouse(*m_roll, QEvent::MouseMove, edgeHandle, Qt::NoButton,
+                                  Qt::NoButton, Qt::NoModifier);
         sendKeyStroke(*popup, Qt::Key_Escape, Qt::NoModifier, false);
         drainPopupDeletes();
         QCoreApplication::processEvents();
-        if (cursorWarped && m_roll->cursor().pixmap().isNull())
+        if (m_roll->cursor().pixmap().isNull())
             fail("dismissing the pitch-bend popup did not restore the note-edge cursor");
     }
 
@@ -1396,7 +1402,8 @@ class PitchBendCheckContext final
     {
         m_view.selectTrack(m_engineTrack);
         m_view.selectionModel().setNoteSelection({fixture.fixtureNote.noteId});
-        QCursor::setPos(m_roll->mapToGlobal(QPointF(m_noteCenter)).toPoint());
+        checks::events::sendMouse(*m_roll, QEvent::MouseMove, m_noteCenter, Qt::NoButton,
+                                  Qt::NoButton, Qt::NoModifier);
         checks::rollcheck::sendKeyStroke(*m_roll, Qt::Key_G, Qt::NoModifier, false);
         QWidget *popupWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
         auto *popup = dynamic_cast<songview::PitchBendEditor *>(popupWidget);

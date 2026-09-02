@@ -18,31 +18,28 @@
 #include <QTemporaryDir>
 #include <QTimer>
 
+#include "checks/support/editorrig.h"
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "core/miditimeline.h"
 #include "core/smf.h"
 #include "core/songdocument.h"
 #include "ui/editordrawer/editordrawer.h"
-#include "ui/editorviewstate.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
-#include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timelinebandlayout.h"
 
 namespace {
 
-// Self-contained fixture: one synthesized two-track song, one voicegroup,
-// and a SongView whose Voice Changes drawer page is visible. Members are
-// declared so the view is destroyed before the document it points at.
+// Self-contained fixture: one synthesized two-track song and one voicegroup
+// feeding the shared EditorRig assembly. The rig is declared last so the
+// view is destroyed before the document it points at.
 struct AreaFixture {
     QTemporaryDir dir;
     SongDocument document;
     LoadedVoiceGroup voicegroup{};
-    std::unique_ptr<MidiTimeline> timeline;
-    std::unique_ptr<SongView> view;
-    songview::TimelineInputItem *voiceInput = nullptr;
+    std::unique_ptr<checks::EditorRig> rig;
 };
 
 bool createAreaFixture(AreaFixture &env, QString &error)
@@ -114,31 +111,16 @@ bool createAreaFixture(AreaFixture &env, QString &error)
     env.voicegroup.voices[5].type = VOICE_NOISE;
     std::strncpy(env.voicegroup.voiceNames[5], "alt-voice",
                  sizeof(env.voicegroup.voiceNames[5]) - 1);
-    env.timeline = env.document.buildTimeline(48000.0);
-    env.view = std::make_unique<SongView>();
-    env.view->resize(1000, 640);
-    env.view->setDocument(&env.document);
-    env.view->setSong(env.timeline.get(), &env.voicegroup);
-    env.view->selectTrack(0);
-    env.view->setDrawerActivePage(EditorDrawerPage::VoiceChanges);
-    env.view->setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
-    env.view->setDrawerSectionHeight(EditorDrawerPage::VoiceChanges, 160);
-    env.view->show();
-    QCoreApplication::processEvents();
-    auto *quickCanvas =
-        env.view->findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
-    env.voiceInput = quickCanvas && quickCanvas->rootObject()
-                         ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(
-                               QStringLiteral("timelineVoiceChangesInput"))
-                         : nullptr;
-    if (!env.voiceInput) {
-        error = QStringLiteral("concrete SongView did not expose the voice Quick input item");
-        return false;
-    }
-    env.view->setEditorTimeZoom(96.0);
-    env.view->setEditCursorTick(24);
-    QCoreApplication::processEvents();
-    return true;
+    checks::EditorRigConfig config;
+    config.voicegroup = &env.voicegroup;
+    config.track = 0;
+    config.activePage = EditorDrawerPage::VoiceChanges;
+    config.sections = {{EditorDrawerPage::VoiceChanges, 160}};
+    config.timeZoom = 96.0;
+    config.applyEditCursor = true;
+    config.editCursorTick = 24;
+    env.rig = checks::EditorRig::create(env.document, config, error);
+    return bool(env.rig);
 }
 
 void pump()
@@ -151,7 +133,7 @@ void pump()
 // drives the QML band, the Quick input item, and these probes alike.
 const std::optional<songview::TimelineBandGeometry> &voiceGeometry(const AreaFixture &env)
 {
-    return env.view->timelineBandLayout().geometry(songview::TimelineBand::VoiceChanges);
+    return env.rig->view().timelineBandLayout().geometry(songview::TimelineBand::VoiceChanges);
 }
 
 QRect voiceRect(const AreaFixture &env)
@@ -171,7 +153,7 @@ int voicePlotWidth(const AreaFixture &env)
 
 qreal voiceDpr(const AreaFixture &env)
 {
-    return env.voiceInput->devicePixelRatio();
+    return env.rig->voiceInput().devicePixelRatio();
 }
 
 QRect deviceRect(const QRectF &logical, qreal dpr, const QSize &bound)
@@ -240,7 +222,7 @@ bool hasVoiceChangeMarkerAt(const songview::TimelineQuickScene &scene, qreal x)
 
 double xForTick(const AreaFixture &env, double tick)
 {
-    return env.view->camera().displayX(tick, voicePlotOrigin(env), voiceDpr(env));
+    return env.rig->view().camera().displayX(tick, voicePlotOrigin(env), voiceDpr(env));
 }
 
 // Schedules one pickerDialog acceptance: records the modal picker's title and
@@ -266,10 +248,10 @@ void driveVoicePicker(int row, QString *title, int *initialRow, bool *opened)
 
 void doubleClickArea(const AreaFixture &env, const QPointF &position)
 {
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseButtonDblClick, position,
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseButtonDblClick, position,
                               Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseButtonRelease, position, Qt::LeftButton,
-                              Qt::NoButton, Qt::NoModifier);
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseButtonRelease, position,
+                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     QCoreApplication::processEvents();
 }
 
@@ -282,15 +264,15 @@ void checkAreaSurfaceBasics(const AreaFixture &env, int &failures)
         std::fprintf(stderr, "drawer: FAIL voice-change-area: %s\n", qUtf8Printable(message));
         ++failures;
     };
-    check(env.view->drawerActivePage() == EditorDrawerPage::VoiceChanges &&
-              env.view->drawerSectionVisible(EditorDrawerPage::VoiceChanges),
+    check(env.rig->view().drawerActivePage() == EditorDrawerPage::VoiceChanges &&
+              env.rig->view().drawerSectionVisible(EditorDrawerPage::VoiceChanges),
           QStringLiteral("Voice Changes page was not the visible drawer page"));
     const QRect plot = voiceGeometry(env)
                            ? voiceGeometry(env)->rect.adjusted(voicePlotOrigin(env), 0, 0, 0)
                            : QRect{};
     check(voicePlotWidth(env) > 0 && !plot.isEmpty(),
           QStringLiteral("VoiceChangeArea exposed no usable plot"));
-    check(voicePlotOrigin(env) == env.view->timelinePlotOrigin(),
+    check(voicePlotOrigin(env) == env.rig->view().timelinePlotOrigin(),
           QStringLiteral("VoiceChangeArea did not use SongView's shared timeline origin"));
 }
 
@@ -304,14 +286,14 @@ void checkAreaPaintLifecycle(AreaFixture &env, int &failures)
         std::fprintf(stderr, "drawer: FAIL voice-change-area: %s\n", qUtf8Printable(message));
         ++failures;
     };
-    auto *scene = env.view->findChild<songview::TimelineQuickScene *>();
+    auto *scene = env.rig->quickScene();
     if (!scene) {
         check(false, QStringLiteral("Voice Changes retained Quick scene was not available"));
         return;
     }
     const QRect bandRect = voiceRect(env);
     const int bandHeight = bandRect.height();
-    const QImage idle = checks::support::captureQuickBand(*env.view, bandRect);
+    const QImage idle = checks::support::captureQuickBand(env.rig->view(), bandRect);
     const qreal dpr = idle.devicePixelRatio();
     const uint64_t revisionBefore = env.document.revision();
     const int undoBefore = env.document.undoStack()->index();
@@ -320,7 +302,7 @@ void checkAreaPaintLifecycle(AreaFixture &env, int &failures)
 
     env.document.addLanePoint(0, DOC_CC_VOICE, 120, 5);
     pump();
-    const QImage marked = checks::support::captureQuickBand(*env.view, bandRect);
+    const QImage marked = checks::support::captureQuickBand(env.rig->view(), bandRect);
     const double markerX = xForTick(env, 120);
     const QRectF markerProbe(markerX - 8, 0, 16, bandHeight);
     check(env.document.revision() == revisionBefore + 1 &&
@@ -335,50 +317,50 @@ void checkAreaPaintLifecycle(AreaFixture &env, int &failures)
 
     env.document.undoStack()->undo();
     pump();
-    const QImage unmarked = checks::support::captureQuickBand(*env.view, bandRect);
+    const QImage unmarked = checks::support::captureQuickBand(env.rig->view(), bandRect);
     check(!hasVoiceChangeMarkerAt(*scene, markerX) &&
               changedPixels(marked, unmarked, markerProbe, dpr) > 0,
           QStringLiteral("undo did not remove the marker from the retained Quick output"));
 
     // Playhead-only presentations keep the held voice span stable until the
     // displayed context crosses a voice change.
-    env.view->setPlayheadSample(env.timeline->sampleForTick(16), true);
+    env.rig->view().setPlayheadSample(env.rig->timeline().sampleForTick(16), true);
     pump();
-    const QImage playingA = checks::support::captureQuickBand(*env.view, bandRect);
-    env.view->setPlayheadSample(env.timeline->sampleForTick(32), true);
+    const QImage playingA = checks::support::captureQuickBand(env.rig->view(), bandRect);
+    env.rig->view().setPlayheadSample(env.rig->timeline().sampleForTick(32), true);
     pump();
-    const QImage playingSameSpan = checks::support::captureQuickBand(*env.view, bandRect);
+    const QImage playingSameSpan = checks::support::captureQuickBand(env.rig->view(), bandRect);
     check(playingSameSpan == playingA,
           QStringLiteral("same-span playhead presentations changed the Quick voice band"));
-    env.view->setPlayheadSample(env.timeline->sampleForTick(64), true);
+    env.rig->view().setPlayheadSample(env.rig->timeline().sampleForTick(64), true);
     pump();
-    const QImage playingB = checks::support::captureQuickBand(*env.view, bandRect);
+    const QImage playingB = checks::support::captureQuickBand(env.rig->view(), bandRect);
     check(changedPixels(playingA, playingB,
                         QRectF(voicePlotOrigin(env) + voicePlotWidth(env) / 2.0, 0,
                                voicePlotWidth(env) / 2.0, bandHeight),
                         dpr) > 0,
           QStringLiteral("playhead crossing did not repaint the current-voice readout"));
-    env.view->setPlayheadSample(0, false);
+    env.rig->view().setPlayheadSample(0, false);
     pump();
-    check(checks::support::captureQuickBand(*env.view, bandRect) == idle,
+    check(checks::support::captureQuickBand(env.rig->view(), bandRect) == idle,
           QStringLiteral("stopping playback did not restore the edit-cursor voice context"));
 
     // Reattaching resets the song-scoped camera and drawer state by contract;
     // restore those public settings before checking the marker output.
-    const double zoom = env.view->camera().pxPerBeat();
-    const double scroll = env.view->camera().scrollX();
+    const double zoom = env.rig->view().camera().pxPerBeat();
+    const double scroll = env.rig->view().camera().scrollX();
     const quint64 markerRevisionBeforeReattach =
         scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers).revision;
-    env.view->setSong(env.timeline.get(), &env.voicegroup);
-    env.view->selectTrack(0);
-    env.view->setDrawerActivePage(EditorDrawerPage::VoiceChanges);
-    env.view->setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
-    env.view->setDrawerSectionHeight(EditorDrawerPage::VoiceChanges, 160);
-    env.view->setEditorTimeZoom(zoom);
-    env.view->setEditorHorizontalScroll(scroll);
-    env.view->setEditCursorTick(24);
+    env.rig->view().setSong(&env.rig->timeline(), &env.voicegroup);
+    env.rig->view().selectTrack(0);
+    env.rig->view().setDrawerActivePage(EditorDrawerPage::VoiceChanges);
+    env.rig->view().setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
+    env.rig->view().setDrawerSectionHeight(EditorDrawerPage::VoiceChanges, 160);
+    env.rig->view().setEditorTimeZoom(zoom);
+    env.rig->view().setEditorHorizontalScroll(scroll);
+    env.rig->view().setEditCursorTick(24);
     pump();
-    const QImage reattached = checks::support::captureQuickBand(*env.view, bandRect);
+    const QImage reattached = checks::support::captureQuickBand(env.rig->view(), bandRect);
     check(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers).revision >
                   markerRevisionBeforeReattach &&
               !hasVoiceChangeMarkerAt(*scene, markerX) &&
@@ -398,18 +380,16 @@ void checkAreaHover(AreaFixture &env, int &failures)
     };
     // Enter playback before establishing hover so crossing the voice slot
     // below is a presentation-only content invalidation, not a lifecycle reset.
-    env.view->setPlayheadSample(env.timeline->sampleForTick(64), true);
+    env.rig->view().setPlayheadSample(env.rig->timeline().sampleForTick(64), true);
     pump();
-    env.view->setPlayheadSample(env.timeline->sampleForTick(16), true);
+    env.rig->view().setPlayheadSample(env.rig->timeline().sampleForTick(16), true);
     pump();
     const QRect bandRect = voiceRect(env);
     const qreal bandHeight = bandRect.height();
-    const QImage idle = checks::support::captureQuickBand(*env.view, bandRect);
+    const QImage idle = checks::support::captureQuickBand(env.rig->view(), bandRect);
     const qreal dpr = idle.devicePixelRatio();
-    auto *scene = env.view->findChild<songview::TimelineQuickScene *>();
-    auto *quickCanvas =
-        env.view->findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
-    auto *quickRoot = quickCanvas ? quickCanvas->rootObject() : nullptr;
+    auto *scene = env.rig->quickScene();
+    auto *quickRoot = env.rig->quickRoot();
     auto *voiceHoverChrome = quickRoot ? quickRoot->findChild<QQuickItem *>(
                                              QStringLiteral("timelineQuickVoiceChangesHoverChrome"))
                                        : nullptr;
@@ -430,11 +410,11 @@ void checkAreaHover(AreaFixture &env, int &failures)
           QStringLiteral("Voice Changes hover model was not empty before hovering"));
 
     const double offMarkerX = xForTick(env, 96);
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseMove,
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseMove,
                               QPointF(offMarkerX, bandHeight / 2.0), Qt::NoButton, Qt::NoButton,
                               Qt::NoModifier);
     pump();
-    const QImage offMarker = checks::support::captureQuickBand(*env.view, bandRect);
+    const QImage offMarker = checks::support::captureQuickBand(env.rig->view(), bandRect);
     const QRectF hoverLabelRect = currentHoverLabelRect();
     const QRectF hoverRegion = QRectF(offMarkerX - 2.0, 0.0, 4.0, bandHeight)
                                    .united(hoverLabelRect.adjusted(-2.0, -2.0, 2.0, 2.0));
@@ -451,9 +431,9 @@ void checkAreaHover(AreaFixture &env, int &failures)
           QStringLiteral("off-marker hover changed no pixels in its Quick line/label region"));
     check(changedPixelsOutside(idle, offMarker, hoverRegion, dpr) == 0,
           QStringLiteral("off-marker hover changed pixels outside its Quick line/label region"));
-    env.view->setPlayheadSample(env.timeline->sampleForTick(64), true);
+    env.rig->view().setPlayheadSample(env.rig->timeline().sampleForTick(64), true);
     pump();
-    const QImage contentOnlyHover = checks::support::captureQuickBand(*env.view, bandRect);
+    const QImage contentOnlyHover = checks::support::captureQuickBand(env.rig->view(), bandRect);
     const QRectF contentOnlyLabelRect = currentHoverLabelRect();
     check(voiceChangesHoverTextModel->rowCount() == 1 &&
               voiceChangesTextModel->rowCount() == mainTextRowCount &&
@@ -462,11 +442,11 @@ void checkAreaHover(AreaFixture &env, int &failures)
                             dpr) > 0,
           QStringLiteral("full Voice Changes rebuild did not restore active Quick hover"));
 
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseMove,
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseMove,
                               QPointF(offMarkerX, bandHeight / 2.0), Qt::NoButton, Qt::NoButton,
                               Qt::NoModifier);
     pump();
-    const QImage samePointerHover = checks::support::captureQuickBand(*env.view, bandRect);
+    const QImage samePointerHover = checks::support::captureQuickBand(env.rig->view(), bandRect);
     const QRectF samePointerLabelRect = currentHoverLabelRect();
     check(voiceChangesHoverTextModel->rowCount() == 1 &&
               samePointerLabelRect == contentOnlyLabelRect &&
@@ -477,12 +457,12 @@ void checkAreaHover(AreaFixture &env, int &failures)
 
     const double coalescedHoverX = xForTick(env, 120);
     // Queue a second hover target before the full-content flush coalesces.
-    env.view->setPlayheadSample(env.timeline->sampleForTick(16), true);
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseMove,
+    env.rig->view().setPlayheadSample(env.rig->timeline().sampleForTick(16), true);
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseMove,
                               QPointF(coalescedHoverX, bandHeight / 2.0), Qt::NoButton,
                               Qt::NoButton, Qt::NoModifier);
     pump();
-    const QImage coalescedHover = checks::support::captureQuickBand(*env.view, bandRect);
+    const QImage coalescedHover = checks::support::captureQuickBand(env.rig->view(), bandRect);
     const QRectF coalescedLabelRect = currentHoverLabelRect();
     check(voiceChangesHoverTextModel->rowCount() == 1 &&
               voiceChangesTextModel->rowCount() == mainTextRowCount &&
@@ -492,16 +472,16 @@ void checkAreaHover(AreaFixture &env, int &failures)
           QStringLiteral("coalesced Voice Changes content and hover rebuild lost Quick hover"));
 
     const double markerX = xForTick(env, 48);
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseMove,
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseMove,
                               QPointF(markerX, bandHeight / 2.0), Qt::NoButton, Qt::NoButton,
                               Qt::NoModifier);
     pump();
-    const QImage onMarker = checks::support::captureQuickBand(*env.view, bandRect);
+    const QImage onMarker = checks::support::captureQuickBand(env.rig->view(), bandRect);
     check(voiceChangesHoverTextModel->rowCount() == 0 &&
               voiceChangesTextModel->rowCount() == mainTextRowCount,
           QStringLiteral("marker hover did not keep the Quick text models isolated"));
     const qreal expectedMarkerHoverX =
-        env.view->timelinePlotOrigin() + env.view->camera().contentX(48);
+        env.rig->view().timelinePlotOrigin() + env.rig->view().camera().contentX(48);
     check(hasVoiceChangeMarkerAt(*scene, markerX) && voiceHoverChrome->isVisible() &&
               std::abs(voiceHoverChrome->mapToItem(quickRoot, QPointF{}).x() -
                        expectedMarkerHoverX) <= 0.2 &&
@@ -511,34 +491,34 @@ void checkAreaHover(AreaFixture &env, int &failures)
     check(labelCrop(onMarker, markerX, dpr) == labelCrop(idle, markerX, dpr),
           QStringLiteral("hovering the marker painted a held label on top of it"));
 
-    checks::events::sendMouse(*env.voiceInput, QEvent::Leave, QPointF{}, Qt::NoButton, Qt::NoButton,
-                              Qt::NoModifier);
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::Leave, QPointF{}, Qt::NoButton,
+                              Qt::NoButton, Qt::NoModifier);
     pump();
-    check(checks::support::captureQuickBand(*env.view, bandRect) == idle &&
+    check(checks::support::captureQuickBand(env.rig->view(), bandRect) == idle &&
               voiceChangesHoverTextModel->rowCount() == 0 &&
               voiceChangesTextModel->rowCount() == mainTextRowCount,
           QStringLiteral("leave did not clear the Quick hover state"));
 
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseMove,
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseMove,
                               QPointF(offMarkerX, bandHeight / 2.0), Qt::NoButton, Qt::NoButton,
                               Qt::NoModifier);
     pump();
-    checks::events::sendKey(*env.voiceInput, QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier,
+    checks::events::sendKey(env.rig->voiceInput(), QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier,
                             QString{}, false, 1);
     pump();
-    check(checks::support::captureQuickBand(*env.view, bandRect) == idle &&
+    check(checks::support::captureQuickBand(env.rig->view(), bandRect) == idle &&
               voiceChangesHoverTextModel->rowCount() == 0 &&
               voiceChangesTextModel->rowCount() == mainTextRowCount,
           QStringLiteral("Escape did not clear the Quick hover state"));
 
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseMove,
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseMove,
                               QPointF(offMarkerX, bandHeight / 2.0), Qt::NoButton, Qt::NoButton,
                               Qt::NoModifier);
     pump();
-    env.view->setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
-    env.view->setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
+    env.rig->view().setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
+    env.rig->view().setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
     pump();
-    check(checks::support::captureQuickBand(*env.view, bandRect) == idle &&
+    check(checks::support::captureQuickBand(env.rig->view(), bandRect) == idle &&
               voiceChangesHoverTextModel->rowCount() == 0 &&
               voiceChangesTextModel->rowCount() == mainTextRowCount,
           QStringLiteral("page hide and re-show did not clear the Quick hover state"));
@@ -555,59 +535,57 @@ void checkAreaRefresh(AreaFixture &env, int &failures)
         ++failures;
     };
     const QRect bandRect = voiceRect(env);
-    const QImage track0 = checks::support::captureQuickBand(*env.view, bandRect);
+    const QImage track0 = checks::support::captureQuickBand(env.rig->view(), bandRect);
 
-    env.view->selectTrack(1);
+    env.rig->view().selectTrack(1);
     pump();
-    const QImage track1 = checks::support::captureQuickBand(*env.view, bandRect);
+    const QImage track1 = checks::support::captureQuickBand(env.rig->view(), bandRect);
     check(track1 != track0,
           QStringLiteral("selecting another primary track did not recapture the area"));
 
-    auto *quickCanvas =
-        env.view->findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
-    auto *quickRoot = quickCanvas ? quickCanvas->rootObject() : nullptr;
+    auto *quickRoot = env.rig->quickRoot();
     if (!quickRoot) {
         check(false, QStringLiteral("Voice Changes Quick root was not available"));
         return;
     }
-    env.view->setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
+    env.rig->view().setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
     pump();
     // The canonical layout drops hidden bands, so crop the last visible band
     // rectangle to prove its pixels actually left the Quick framebuffer.
-    const QImage hidden = checks::support::captureQuickBand(*env.view, bandRect);
-    check(!env.voiceInput->isVisible() &&
+    const QImage hidden = checks::support::captureQuickBand(env.rig->view(), bandRect);
+    check(!env.rig->voiceInput().isVisible() &&
               !quickRoot->property("voiceChangesBandVisible").toBool() &&
               quickRoot->property("voiceChangesBandRect").toRectF().isEmpty() && hidden != track1,
           QStringLiteral("hiding Voice Changes did not remove its Quick band"));
-    env.view->selectTrack(0);
-    env.view->setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
+    env.rig->view().selectTrack(0);
+    env.rig->view().setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
     pump();
-    const QImage reopened = checks::support::captureQuickBand(*env.view, bandRect);
+    const QImage reopened = checks::support::captureQuickBand(env.rig->view(), bandRect);
     check(reopened == track0,
           QStringLiteral("reopening Voice Changes after a hidden context change was stale"));
 
-    env.view->setVoicegroup(nullptr);
+    env.rig->view().setVoicegroup(nullptr);
     pump();
-    check(checks::support::captureQuickBand(*env.view, bandRect) != track0,
+    check(checks::support::captureQuickBand(env.rig->view(), bandRect) != track0,
           QStringLiteral("clearing the voicegroup did not repaint unresolved labels"));
-    env.view->setVoicegroup(&env.voicegroup);
+    env.rig->view().setVoicegroup(&env.voicegroup);
     pump();
-    check(checks::support::captureQuickBand(*env.view, bandRect) == track0,
+    check(checks::support::captureQuickBand(env.rig->view(), bandRect) == track0,
           QStringLiteral("restoring the voicegroup did not repaint cached labels"));
 
     std::strncpy(env.voicegroup.voiceNames[3], "renamed-check",
                  sizeof(env.voicegroup.voiceNames[3]) - 1);
-    env.view->setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
-    env.view->setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
+    env.rig->view().setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
+    env.rig->view().setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
     pump();
-    check(checks::support::captureQuickBand(*env.view, bandRect) != track0,
+    check(checks::support::captureQuickBand(env.rig->view(), bandRect) != track0,
           QStringLiteral("renaming a voice in place did not refresh the cached labels"));
     std::strncpy(env.voicegroup.voiceNames[3], "voice-check",
                  sizeof(env.voicegroup.voiceNames[3]) - 1);
-    env.view->setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
-    env.view->setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
+    env.rig->view().setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
+    env.rig->view().setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
     pump();
-    check(checks::support::captureQuickBand(*env.view, bandRect) == track0,
+    check(checks::support::captureQuickBand(env.rig->view(), bandRect) == track0,
           QStringLiteral("restoring the voice name did not refresh the cached labels"));
 }
 
@@ -650,7 +628,7 @@ void checkAreaCommits(AreaFixture &env, int &failures)
     const int changedUndo = document.undoStack()->index();
 
     // Same-value acceptance is a no-op: no commit, no undo, no Quick-band change.
-    const QImage warm = checks::support::captureQuickBand(*env.view, voiceRect(env));
+    const QImage warm = checks::support::captureQuickBand(env.rig->view(), voiceRect(env));
     title.clear();
     initialRow = -1;
     opened = false;
@@ -659,7 +637,7 @@ void checkAreaCommits(AreaFixture &env, int &failures)
     check(opened && title == QStringLiteral("Change voice") && initialRow == 5 &&
               document.smf().write() == changedSmf && document.revision() == changedRevision &&
               document.undoStack()->index() == changedUndo &&
-              checks::support::captureQuickBand(*env.view, voiceRect(env)) == warm,
+              checks::support::captureQuickBand(env.rig->view(), voiceRect(env)) == warm,
           QStringLiteral("same-value picker acceptance changed the document or Quick band"));
 
     // Cancelling the picker is a no-op too.
@@ -685,7 +663,7 @@ void checkAreaCommits(AreaFixture &env, int &failures)
         opened = true;
         title = dialog->windowTitle();
         initialRow = list->currentRow();
-        env.view->setDocument(nullptr);
+        env.rig->view().setDocument(nullptr);
         list->setCurrentRow(7);
         dialog->accept();
     });
@@ -694,7 +672,7 @@ void checkAreaCommits(AreaFixture &env, int &failures)
               document.smf().write() == changedSmf && document.revision() == changedRevision &&
               document.undoStack()->index() == changedUndo,
           QStringLiteral("picker committed through a detached document"));
-    env.view->setDocument(&document);
+    env.rig->view().setDocument(&document);
     pump();
 
     // Double-click on empty plot inserts at the snapped tick seeded with the
@@ -721,11 +699,12 @@ void checkAreaCommits(AreaFixture &env, int &failures)
     // Undo/redo round-trips the insert visually.
     document.undoStack()->undo();
     pump();
-    const QImage afterUndo = checks::support::captureQuickBand(*env.view, voiceRect(env));
+    const QImage afterUndo = checks::support::captureQuickBand(env.rig->view(), voiceRect(env));
     document.undoStack()->redo();
     pump();
     check(document.findLanePoint(0, DOC_CC_VOICE, 96, &inserted) && inserted.value == 3 &&
-              changedPixels(afterUndo, checks::support::captureQuickBand(*env.view, voiceRect(env)),
+              changedPixels(afterUndo,
+                            checks::support::captureQuickBand(env.rig->view(), voiceRect(env)),
                             QRectF(xForTick(env, 96) - 8, 0, 16, voiceRect(env).height()),
                             afterUndo.devicePixelRatio()) > 0,
           QStringLiteral("undo/redo did not remove and restore the inserted marker"));
@@ -770,11 +749,11 @@ void checkAreaCommits(AreaFixture &env, int &failures)
             dialog->accept();
         });
     });
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseButtonPress,
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseButtonPress,
                               QPointF(xForTick(env, 144), markerY), Qt::RightButton,
                               Qt::RightButton, Qt::NoModifier);
     QCoreApplication::processEvents();
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseButtonRelease,
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseButtonRelease,
                               QPointF(xForTick(env, 144), markerY), Qt::RightButton, Qt::NoButton,
                               Qt::NoModifier);
     pump();
@@ -819,11 +798,11 @@ void checkAreaCommits(AreaFixture &env, int &failures)
         }
         activateMenuAction(menu, remove);
     });
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseButtonPress,
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseButtonPress,
                               QPointF(xForTick(env, 144), markerY), Qt::RightButton,
                               Qt::RightButton, Qt::NoModifier);
     QCoreApplication::processEvents();
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseButtonRelease,
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseButtonRelease,
                               QPointF(xForTick(env, 144), markerY), Qt::RightButton, Qt::NoButton,
                               Qt::NoModifier);
     pump();
@@ -858,75 +837,75 @@ void checkAreaCamera(AreaFixture &env, int &failures)
         ++failures;
     };
     const QRect bandRect = voiceRect(env);
-    const QImage home = checks::support::captureQuickBand(*env.view, bandRect);
-    const double homeZoom = env.view->camera().pxPerBeat();
-    const double homeScroll = env.view->camera().scrollX();
+    const QImage home = checks::support::captureQuickBand(env.rig->view(), bandRect);
+    const double homeZoom = env.rig->view().camera().pxPerBeat();
+    const double homeScroll = env.rig->view().camera().scrollX();
 
-    env.view->setEditorHorizontalScroll(64.0);
+    env.rig->view().setEditorHorizontalScroll(64.0);
     pump();
-    check(checks::support::captureQuickBand(*env.view, bandRect) != home,
+    check(checks::support::captureQuickBand(env.rig->view(), bandRect) != home,
           QStringLiteral("horizontal scroll did not scroll the voice content"));
 
     const QPointF zoomAnchor(voicePlotOrigin(env) + voicePlotWidth(env) / 2.0,
                              bandRect.height() / 2.0);
     const double tickBeforeZoom =
-        env.view->camera().tickAtContentX(zoomAnchor.x() - voicePlotOrigin(env));
-    const double zoomBefore = env.view->camera().pxPerBeat();
-    checks::events::sendWheel(*env.voiceInput, zoomAnchor, QPoint(), QPoint(0, 120), Qt::NoButton,
-                              Qt::NoModifier, Qt::NoScrollPhase, false);
+        env.rig->view().camera().tickAtContentX(zoomAnchor.x() - voicePlotOrigin(env));
+    const double zoomBefore = env.rig->view().camera().pxPerBeat();
+    checks::events::sendWheel(env.rig->voiceInput(), zoomAnchor, QPoint(), QPoint(0, 120),
+                              Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
     pump();
-    check(env.view->camera().pxPerBeat() > zoomBefore,
+    check(env.rig->view().camera().pxPerBeat() > zoomBefore,
           QStringLiteral("plain wheel did not zoom the shared timeline camera"));
     const qreal anchoredX =
-        env.view->camera().displayX(tickBeforeZoom, voicePlotOrigin(env), voiceDpr(env));
+        env.rig->view().camera().displayX(tickBeforeZoom, voicePlotOrigin(env), voiceDpr(env));
     check(std::abs(anchoredX - zoomAnchor.x()) <= 1.0 / voiceDpr(env),
           QStringLiteral("wheel zoom did not preserve the tick under the cursor"));
 
     // The canonical camera's tick-zero home includes its documented lead pad.
     // Dragging farther left must clamp at that floor without changing paint.
-    const double minScroll = -env.view->camera().leadPadPx();
-    env.view->setEditorTimeZoom(homeZoom);
-    env.view->setEditorHorizontalScroll(minScroll);
+    const double minScroll = -env.rig->view().camera().leadPadPx();
+    env.rig->view().setEditorTimeZoom(homeZoom);
+    env.rig->view().setEditorHorizontalScroll(minScroll);
     pump();
-    const QImage atZero = checks::support::captureQuickBand(*env.view, bandRect);
+    const QImage atZero = checks::support::captureQuickBand(env.rig->view(), bandRect);
     const QPointF panStart(voicePlotOrigin(env) + 40, bandRect.height() / 2.0);
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseButtonPress, panStart, Qt::MiddleButton,
-                              Qt::MiddleButton, Qt::NoModifier);
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseMove, panStart + QPointF(80, 0),
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseButtonPress, panStart,
+                              Qt::MiddleButton, Qt::MiddleButton, Qt::NoModifier);
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseMove, panStart + QPointF(80, 0),
                               Qt::NoButton, Qt::MiddleButton, Qt::NoModifier);
     pump();
-    check(env.view->camera().scrollX() == minScroll &&
-              checks::support::captureQuickBand(*env.view, bandRect) == atZero,
+    check(env.rig->view().camera().scrollX() == minScroll &&
+              checks::support::captureQuickBand(env.rig->view(), bandRect) == atZero,
           QStringLiteral("panning left at tick-zero home overscrolled the voice lane"));
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseButtonRelease,
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseButtonRelease,
                               panStart + QPointF(80, 0), Qt::MiddleButton, Qt::NoButton,
                               Qt::NoModifier);
     pump();
 
     // A rightward pan scrolls; Escape mid-pan stops further movement.
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseButtonPress, panStart, Qt::MiddleButton,
-                              Qt::MiddleButton, Qt::NoModifier);
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseMove, panStart + QPointF(-48, 0),
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseButtonPress, panStart,
+                              Qt::MiddleButton, Qt::MiddleButton, Qt::NoModifier);
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseMove, panStart + QPointF(-48, 0),
                               Qt::NoButton, Qt::MiddleButton, Qt::NoModifier);
     pump();
-    const double scrolled = env.view->camera().scrollX();
+    const double scrolled = env.rig->view().camera().scrollX();
     check(scrolled > minScroll, QStringLiteral("middle drag did not pan the voice lane"));
-    checks::events::sendKey(*env.voiceInput, QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier,
+    checks::events::sendKey(env.rig->voiceInput(), QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier,
                             QString{}, false, 1);
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseMove, panStart + QPointF(-96, 0),
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseMove, panStart + QPointF(-96, 0),
                               Qt::NoButton, Qt::MiddleButton, Qt::NoModifier);
-    checks::events::sendMouse(*env.voiceInput, QEvent::MouseButtonRelease,
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseButtonRelease,
                               panStart + QPointF(-96, 0), Qt::MiddleButton, Qt::NoButton,
                               Qt::NoModifier);
     pump();
-    check(env.view->camera().scrollX() == scrolled,
+    check(env.rig->view().camera().scrollX() == scrolled,
           QStringLiteral("Escape did not stop the voice-lane pan"));
-    checks::events::sendMouse(*env.voiceInput, QEvent::Leave, QPointF{}, Qt::NoButton, Qt::NoButton,
-                              Qt::NoModifier);
-    env.view->setEditorTimeZoom(homeZoom);
-    env.view->setEditorHorizontalScroll(homeScroll);
+    checks::events::sendMouse(env.rig->voiceInput(), QEvent::Leave, QPointF{}, Qt::NoButton,
+                              Qt::NoButton, Qt::NoModifier);
+    env.rig->view().setEditorTimeZoom(homeZoom);
+    env.rig->view().setEditorHorizontalScroll(homeScroll);
     pump();
-    check(changedPixels(home, checks::support::captureQuickBand(*env.view, bandRect),
+    check(changedPixels(home, checks::support::captureQuickBand(env.rig->view(), bandRect),
                         QRectF(0, 0, bandRect.width(), bandRect.height()),
                         home.devicePixelRatio()) == 0,
           QStringLiteral("camera probes did not restore the home framing"));
@@ -954,6 +933,6 @@ void checkVoiceChangeAreaPage(int &failures)
         std::fprintf(stderr, "drawer: FAIL voice-change-area: fixture document not restored\n");
         ++failures;
     }
-    env.view->hide();
+    env.rig->view().hide();
     pump();
 }

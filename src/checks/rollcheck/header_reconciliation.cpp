@@ -1,14 +1,18 @@
 #include "checks/rollcheck/rollcheck.h"
 
+#include <QApplication>
 #include <QCoreApplication>
 #include <QEvent>
 #include <QLineEdit>
+#include <QMenu>
 #include <QPointer>
 #include <QPushButton>
+#include <QTimer>
 #include <QToolButton>
 #include <QWidget>
 #include <vector>
 
+#include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
 
@@ -17,6 +21,40 @@ namespace checks::rollcheck {
 ScenarioContinuation runHeaderReconciliationScenarios(Harness &check, const SongInfo &song)
 {
     auto fail = [&](const char *what) { check.fail(what); };
+    const int originalTrack = check.view().selectionModel().primaryTrack();
+    QWidget *menuHeader = nullptr;
+    int menuTrack = -1;
+    for (QWidget *candidate : check.view().findChildren<QWidget *>()) {
+        const QString name = candidate->objectName();
+        if (!name.startsWith(QStringLiteral("trackHeaderRow")))
+            continue;
+        bool ok = false;
+        const int track = name.mid(14).toInt(&ok);
+        if (ok && track != originalTrack) {
+            menuHeader = candidate;
+            menuTrack = track;
+            break;
+        }
+    }
+    if (!menuHeader) {
+        fail("context-menu fixture lacks a secondary track header");
+    } else {
+        bool menuOpened = false;
+        QTimer::singleShot(0, [&menuOpened] {
+            if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget())) {
+                menuOpened = menu->actions().size() == 5;
+                menu->close();
+            }
+        });
+        const QPointF position(menuHeader->width() / 3.0, menuHeader->height() / 2.0);
+        checks::events::sendMouse(*menuHeader, QEvent::MouseButtonPress, position, Qt::RightButton,
+                                  Qt::RightButton, Qt::NoModifier);
+        checks::events::sendMouse(*menuHeader, QEvent::MouseButtonRelease, position,
+                                  Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+        if (!menuOpened || check.view().selectionModel().primaryTrack() != menuTrack)
+            fail("right press did not select its track and open the context menu");
+        check.view().selectTrack(originalTrack);
+    }
     // Header rows reconcile by engine index: a slot used on both sides of
     // a rebuild keeps its row QObject, only added slots allocate, only
     // dropped slots are retired, and the Add Track button survives every

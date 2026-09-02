@@ -8,8 +8,8 @@
 #include "ui/songview/detail.h"
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelinequickview.h"
-#include <QApplication>
 #include <QFontMetrics>
+#include <QGuiApplication>
 #include <QIcon>
 #include <QPixmap>
 
@@ -292,15 +292,6 @@ void PianoRoll::refreshHoverCursor(QPointF pos, Qt::KeyboardModifiers modifiers)
         m_inputHost->setCursor(Qt::SizeVerCursor);
     else
         m_inputHost->clearCursor();
-}
-
-void PianoRoll::refreshHoverAtCursor()
-{
-    if (!m_inputHost)
-        return;
-    const QPointF local = m_inputHost->mapFromGlobal(QCursor::pos());
-    if (m_inputHost->bounds().contains(local))
-        refreshHoverCursor(local, QApplication::keyboardModifiers());
 }
 
 QRectF PianoRoll::displayedNoteRect(const ViewNote &note) const
