@@ -85,6 +85,7 @@ class TrackHeaderRow : public QWidget
     void resyncSong();
     SelectionState selectionState() const;
     QRect editorRect() const;
+    void showContextMenu(const QPoint &globalPosition);
     QRect textColumnRect() const;
     void finishRename(bool commit, bool restoreFocus);
     void updateVisibleTitleCenteringCache(const QString &visibleTitle);
