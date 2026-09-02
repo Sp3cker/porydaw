@@ -1305,7 +1305,12 @@ int checkRollVelocityDrag(VelocityAreaRig &rig)
     const auto check = [&failures](bool condition, const char *message) {
         velocityFail(failures, condition, message);
     };
-    auto *roll = rig.env.view.findChild<QWidget *>(QStringLiteral("pianoRoll"));
+    auto *quickView = rig.env.view.findChild<songview::TimelineQuickView *>(
+        QStringLiteral("timelineQuickCanvas"));
+    auto *roll = quickView && quickView->rootObject()
+                     ? quickView->rootObject()->findChild<songview::TimelineInputItem *>(
+                           QStringLiteral("timelineRollInput"))
+                     : nullptr;
     const auto velocityDragModifiers =
         keymap::Registry::instance().modifierBinding(QStringLiteral("roll.velocity_drag"));
     check(roll != nullptr && velocityDragModifiers != Qt::NoModifier,

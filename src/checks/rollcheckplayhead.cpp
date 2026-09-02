@@ -33,6 +33,7 @@
 #include "ui/playheadoverlay.h"
 #include "ui/songview.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickchrome.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -317,13 +318,21 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
     auto *root = quick ? qobject_cast<QQuickItem *>(quick->rootObject()) : nullptr;
     auto *scene = quick ? quick->findChild<songview::TimelineQuickScene *>() : nullptr;
-    auto *roll = checks::support::findWidgetDescendant<songview::PianoRoll>(view);
-    auto *overlay = checks::support::findWidgetDescendant<songview::PlayheadOverlay>(view);
+    auto *roll = view.findChild<songview::PianoRoll *>();
+    auto *rollInput =
+        root ? root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineRollInput"))
+             : nullptr;
+    const auto rollBandCenterY = [&view] {
+        const std::optional<songview::TimelineBandGeometry> &band =
+            view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
+        return band ? band->rect.center().y() : 0;
+    };
     auto *drawer = view.editorDrawer();
     auto *automationPage = drawer ? drawer->automationPage() : nullptr;
     auto *automationViewport = automationPage ? automationPage->scrollViewport() : nullptr;
     auto *velocity = drawer ? drawer->velocityArea() : nullptr;
     auto *voiceChanges = drawer ? drawer->voiceChangeArea() : nullptr;
+    auto *overlay = checks::support::findWidgetDescendant<songview::PlayheadOverlay>(view);
     if (!quick || !root || !scene ||
         !view.timelineBandLayout().geometry(songview::TimelineBand::Ruler) || !roll || !overlay ||
         !automationViewport || !velocity || !voiceChanges) {
@@ -416,9 +425,8 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
                 (refreshedRuler ? refreshedRuler->rect.x() + refreshedRuler->timelineOrigin
                                 : qRound(view.timelinePlotOrigin())) +
                 view.contentX(tick);
-            const qreal refreshedPlayheadX = playheadCenterAt(
-                refreshedPlayhead, checks::support::widgetRectIn(*roll, view).center().y(),
-                playheadColor);
+            const qreal refreshedPlayheadX =
+                playheadCenterAt(refreshedPlayhead, rollBandCenterY(), playheadColor);
             const int triangleTop = refreshedRulerRect.bottom() -
                                     songview::playheadTriangleHeight() + layout::singlePixel();
             const int triangleTopWidth = checks::support::playheadWidthAt(
@@ -551,10 +559,9 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         // Band widgets are overlays, not canonical sources: moving them must
         // not drag the Quick host, whose geometry is the canonical union.
         const QRect widgetMoveHostBefore = quick->geometry();
-        // Four converted bands have no native widget to displace; the two
-        // retained widget bands still must not drag the Quick host.
-        const std::array<QWidget *, 2> guideBands = {
-            roll,
+        // Five converted bands have no native widget to displace; the one
+        // retained widget band still must not drag the Quick host.
+        const std::array<QWidget *, 1> guideBands = {
             automationViewport,
         };
         std::array<QRect, guideBands.size()> guideBandGeometries;
@@ -586,8 +593,9 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         }
         const std::optional<songview::TimelineBandGeometry> &resizedRoll =
             bandLayout.geometry(songview::TimelineBand::Roll);
-        if (!resizedRoll ||
-            resizedRoll->rect != QRect(roll->mapTo(&view, QPoint()), roll->size())) {
+        if (!resizedRoll || !rollInput ||
+            QRectF(rollInput->mapToItem(root, QPointF()), rollInput->size()) !=
+                QRectF(resizedRoll->rect.translated(-quick->geometry().topLeft()))) {
             failures.append("canonical roll rectangle went stale after the canonical resize");
         }
         if (std::abs(quick->hoverRootContentX() - quickContentX(expectedHover)) > 0.2 ||
@@ -664,16 +672,15 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         view.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation, tick);
 
         const bool eventListWasVisible = view.eventListVisible();
-        view.setEventListVisible(false);
-        checks::support::pumpQuick();
         const auto canonicalRollMatchesRoll = [&] {
             const std::optional<songview::TimelineBandGeometry> &geometry =
                 bandLayout.geometry(songview::TimelineBand::Roll);
-            return geometry && roll->isVisibleTo(&view) &&
-                   geometry->rect == QRect(roll->mapTo(&view, QPoint()), roll->size());
+            return geometry && rollInput && rollInput->isVisible() &&
+                   QRectF(rollInput->mapToItem(root, QPointF()), rollInput->size()) ==
+                       QRectF(geometry->rect.translated(-quick->geometry().topLeft()));
         };
         if (!canonicalRollMatchesRoll())
-            failures.append("roll view canonical entry diverged from the piano-roll widget");
+            failures.append("roll view canonical entry diverged from the piano-roll input item");
         const QColor playheadColor = themes::color(themes::Role::song_view_playhead);
         const std::optional<songview::TimelineBandGeometry> &rulerBand =
             bandLayout.geometry(songview::TimelineBand::Ruler);
@@ -681,7 +688,9 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
                                          : qRound(view.timelinePlotOrigin())) +
                               view.contentX(timeline.tickForSample(sample));
         qreal renderedNativeX = nativeX;
-        const QRect rollRect = checks::support::widgetRectIn(*roll, view);
+        const QRect rollRect = bandLayout.geometry(songview::TimelineBand::Roll)
+                                   .value_or(songview::TimelineBandGeometry{})
+                                   .rect;
         const QRect rulerRect = rulerBand.value_or(songview::TimelineBandGeometry{}).rect;
         const bool captureExpected = expectsCapturablePlayhead();
         QImage paused;
@@ -875,7 +884,7 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
             failures.append(
                 "lifecycle republish dropped the QML roll band geometry or window mask");
         }
-        checkVisibleBand(*roll, "piano roll after lifecycle republish");
+        checkVisibleBandRect(lifecycleRoll, "piano roll after lifecycle republish");
         checkVisibleBandRect(bandLayout.geometry(songview::TimelineBand::Velocity)
                                  .value_or(songview::TimelineBandGeometry{})
                                  .rect,

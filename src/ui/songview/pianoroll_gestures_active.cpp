@@ -6,7 +6,6 @@
 #include "porydaw_scale.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickview.h"
-#include <QMouseEvent>
 
 #include <algorithm>
 #include <cmath>
@@ -15,13 +14,13 @@
 
 namespace songview {
 
-void PianoRoll::updateMoveDrag(const QMouseEvent *event)
+void PianoRoll::updateMoveDrag(const TimelinePointerInput &input)
 {
-    const double tick = m_sv->tickAtContentX(event->position().x() - m_geometry.pianoKeyboardWidth);
+    const double tick = m_sv->tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth);
     const int64_t grid = int64_t(m_sv->snapTicksAt(uint64_t(std::max(0.0, m_pressTick))));
     const int64_t snappedD = int64_t(std::llround((tick - m_pressTick) / double(grid))) * grid;
-    const int dKey = m_sv->scaleFold() ? foldDegreeDeltaForPointer(event->position().y())
-                                       : yToKey(event->position().y()) - m_pressKey;
+    const int dKey = m_sv->scaleFold() ? foldDegreeDeltaForPointer(input.position.y())
+                                       : yToKey(input.position.y()) - m_pressKey;
     if (snappedD != m_dTick || dKey != m_dKey) {
         m_dTick = snappedD;
         if (dKey != m_dKey) {
@@ -47,9 +46,9 @@ void PianoRoll::auditionMovedSelection()
     }
 }
 
-void PianoRoll::updateResizeDrag(const QMouseEvent *event)
+void PianoRoll::updateResizeDrag(const TimelinePointerInput &input)
 {
-    const double tick = m_sv->tickAtContentX(event->position().x() - m_geometry.pianoKeyboardWidth);
+    const double tick = m_sv->tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth);
     const double desired = double(m_gripTick) + (tick - m_pressTick);
     const uint64_t snapped =
         m_leftDrag == LeftDrag::Resize
@@ -66,9 +65,9 @@ void PianoRoll::updateResizeDrag(const QMouseEvent *event)
     }
 }
 
-void PianoRoll::updateVelocityDrag(const QMouseEvent *event)
+void PianoRoll::updateVelocityDrag(const TimelinePointerInput &input)
 {
-    const int dv = m_pressPos.toPoint().y() - event->pos().y(); // up = louder
+    const int dv = m_pressPos.toPoint().y() - input.position.toPoint().y(); // up = louder
     if (dv != m_dVel) {
         m_dVel = dv;
         const int vel = std::clamp(int(m_velAnchor.velocity) + m_dVel, 1, 127);
@@ -86,14 +85,14 @@ void PianoRoll::updateVelocityDrag(const QMouseEvent *event)
     }
 }
 
-void PianoRoll::updateDrawDrag(const QMouseEvent *event)
+void PianoRoll::updateDrawDrag(const TimelinePointerInput &input)
 {
-    const double tick = m_sv->tickAtContentX(event->position().x() - m_geometry.pianoKeyboardWidth);
+    const double tick = m_sv->tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth);
     const uint64_t grid = m_sv->snapTicksAt(uint64_t(std::max(0.0, m_pressTick)));
     uint64_t start;
     int64_t dur;
     drawSpanAt(tick, grid, start, dur);
-    const int key = yToKey(event->position().y());
+    const int key = yToKey(input.position.y());
     const bool isScaleKey = isDrawableKey(key);
     if (start != m_drawTick || dur != m_drawDur || (isScaleKey && key != m_drawKey)) {
         m_drawTick = start;
@@ -127,9 +126,9 @@ void PianoRoll::drawSpanAt(double tick, uint64_t grid, uint64_t &start, int64_t 
     }
 }
 
-void PianoRoll::updateTimeSelDrag(const QMouseEvent *event)
+void PianoRoll::updateTimeSelDrag(const TimelinePointerInput &input)
 {
-    const double tick = m_sv->tickAtContentX(event->position().x() - m_geometry.pianoKeyboardWidth);
+    const double tick = m_sv->tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth);
     const uint64_t t = m_sv->snapTick(tick);
     EditorSelectionModel::TimeSelection sel;
     sel.startTick = std::min(m_rightAnchorTick, t);
@@ -158,7 +157,7 @@ void PianoRoll::abortLiveLeftDrag()
     }
 }
 
-void PianoRoll::releaseRightPress(QMouseEvent *event)
+void PianoRoll::releaseRightPress(const TimelinePointerInput &input)
 {
     SongDocument *doc = m_sv->document();
     const RightDrag drag = m_rightDrag; // snapshot first
@@ -172,32 +171,32 @@ void PianoRoll::releaseRightPress(QMouseEvent *event)
     } else if (drag == RightDrag::Band) {
         stopBandAuditions();
         selectBand(QRectF(m_pressPos, m_curPos).normalized(),
-                   event->modifiers() & Qt::ControlModifier);
+                   input.modifiers & Qt::ControlModifier);
     } else {
-        releasePendingMenu(event, doc);
+        releasePendingMenu(input, doc);
     }
     requestQuickUpdate(PianoRollQuickDirty::NoteBordersAndSelection | PianoRollQuickDirty::Overlay);
     completeProjectionGesture(); // NO stopNoteAudition on this path
 }
 
-void PianoRoll::releasePendingMenu(QMouseEvent *event, SongDocument *doc)
+void PianoRoll::releasePendingMenu(const TimelinePointerInput &input, SongDocument *doc)
 {
     if (doc && m_rightHit) {
         const auto &selection = m_sv->selectionModel().noteSelection();
         if (std::find(selection.begin(), selection.end(), m_rightHitId) == selection.end())
             m_sv->selectionModel().setNoteSelection({m_rightHitId});
-        showNoteMenu(event->position());
-    } else if (insideTimeSelection(event->position().x())) {
-        m_sv->showTimeSelectionMenu(event->globalPosition().toPoint());
+        showNoteMenu(input.position);
+    } else if (insideTimeSelection(input.position.x())) {
+        m_sv->showTimeSelectionMenu(input.globalPosition.toPoint());
     } else {
         m_sv->selectionModel().clearNoteSelection();
         m_sv->selectionModel().clearTimeSelection();
     }
 }
 
-void PianoRoll::releasePendingDrawClick(QMouseEvent *event)
+void PianoRoll::releasePendingDrawClick(const TimelinePointerInput &input)
 {
-    if (insideTimeSelection(event->position().x()))
+    if (insideTimeSelection(input.position.x()))
         m_sv->selectionModel().clearTimeSelection();
     m_sv->commitEditCursor(m_sv->snapTick(m_pressTick));
     requestQuickUpdate(PianoRollQuickDirty::NoteBordersAndSelection | PianoRollQuickDirty::Overlay);
@@ -205,7 +204,7 @@ void PianoRoll::releasePendingDrawClick(QMouseEvent *event)
     stopNoteAudition(); // unique tail order: invalidate -> complete -> stop
 }
 
-void PianoRoll::releasePendingVelocityClick(QMouseEvent *)
+void PianoRoll::releasePendingVelocityClick()
 {
     const NoteId id = m_velAnchor.noteId;
     if (m_velModMods & Qt::ControlModifier) {
@@ -288,7 +287,7 @@ void PianoRoll::commitVelocityDrag(SongView::VelocityCommitResult result)
         m_lastVelocity = uint8_t(std::clamp(int(m_velAnchor.velocity) + m_dVel, 1, 127));
 }
 
-void PianoRoll::commitDrag(QMouseEvent *)
+void PianoRoll::commitDrag()
 {
     const LeftDrag drag = m_leftDrag; // snapshot kind first
     clearLiveDragToken();             // before any commit; kills either channel

@@ -159,8 +159,9 @@ void SongView::rebuildProjectionWithAnchoring()
         return;
 
     const double centerY = rollViewportHeight() / 2.0;
-    const int centerPitch =
-        m_projection.yToPitch(centerY, m_keyHeight, m_scrollY, m_roll->devicePixelRatioF());
+    const int centerPitch = m_projection.yToPitch(centerY, m_keyHeight, m_scrollY,
+                                                  m_quickView ? m_quickView->quickDevicePixelRatio()
+                                                              : devicePixelRatioF());
     updateScaleProjection();
 
     double newScrollY = m_scrollY;

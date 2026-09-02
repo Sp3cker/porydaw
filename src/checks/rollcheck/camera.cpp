@@ -4,13 +4,14 @@
 #include <QEvent>
 #include <QImage>
 #include <QPoint>
-#include <QWidget>
 #include <algorithm>
 #include <cmath>
 
 #include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
+#include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/timelineinputitem.h"
 
 namespace checks::rollcheck {
 
@@ -18,7 +19,7 @@ ScenarioContinuation runCameraScenarios(Harness &check)
 {
     SongDocument &doc = check.document();
     SongView &view = check.view();
-    QWidget *roll = &check.roll();
+    songview::TimelineInputItem *roll = &check.rollInput();
     const int track = check.track();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const int plotOrigin = check.plotOrigin();
@@ -48,6 +49,14 @@ ScenarioContinuation runCameraScenarios(Harness &check)
         if (std::abs(view.keyHeight() - partialHeight) > 1e-12 ||
             std::abs(view.scrollY() - partialScroll) > 1e-10)
             fail("four partial Ctrl-wheel deltas differ from one full notch");
+
+        const double settledHeight = view.keyHeight();
+        const double settledScroll = view.scrollY();
+        checks::events::sendWheel(*roll, anchor, QPoint(0, 0), QPoint(0, 120), Qt::NoButton,
+                                  Qt::ControlModifier, Qt::ScrollMomentum, false);
+        if (std::abs(view.keyHeight() - settledHeight) > 1e-12 ||
+            std::abs(view.scrollY() - settledScroll) > 1e-10)
+            fail("Ctrl-wheel momentum changed the settled key-height camera");
 
         view.applyViewState(zoom);
         const double anchoredRow = (anchor.y() + view.scrollY()) / view.keyHeight();
@@ -96,18 +105,18 @@ ScenarioContinuation runCameraScenarios(Harness &check)
             fail("fractional vertical view state did not round-trip");
 
         const int boundaryRow = 40;
-        const qreal dpr = roll->devicePixelRatioF();
+        const qreal dpr = roll->devicePixelRatio();
         const qreal boundary =
             std::round((boundaryRow * view.keyHeight() - view.scrollY()) * dpr) / dpr;
         checks::events::sendMouse(*roll, QEvent::MouseMove,
                                   QPointF(pianoKeyboardWidth + 40.0, boundary - 0.25), Qt::NoButton,
                                   Qt::NoButton, Qt::NoModifier);
-        if (roll->property("hoverKey").toInt() != 128 - boundaryRow)
+        if (check.roll().property("hoverKey").toInt() != 128 - boundaryRow)
             fail("hovering above a snapped pitch boundary chose the wrong key");
         checks::events::sendMouse(*roll, QEvent::MouseMove,
                                   QPointF(pianoKeyboardWidth + 40.0, boundary + 0.25), Qt::NoButton,
                                   Qt::NoButton, Qt::NoModifier);
-        if (roll->property("hoverKey").toInt() != 127 - boundaryRow)
+        if (check.roll().property("hoverKey").toInt() != 127 - boundaryRow)
             fail("hovering below a snapped pitch boundary chose the wrong key");
 
         // Integer-valued legacy vertical state still applies unchanged after the
@@ -244,7 +253,7 @@ ScenarioContinuation runCameraScenarios(Harness &check)
                 std::abs(applied.scrollPx - probe.scrollPx) > 1e-12)
                 fail("fractional projection camera did not apply exactly");
 
-            const qreal visibleWidth = qreal(roll->width() - pianoKeyboardWidth);
+            const qreal visibleWidth = roll->bounds().width() - pianoKeyboardWidth;
             uint64_t tick = view.snapTickUp(std::max(0.0, view.tickAtContentX(0.0)));
             int visibleTicks = 0;
             bool mappingFailed = false;
@@ -435,19 +444,19 @@ ScenarioContinuation runCameraScenarios(Harness &check)
     // on the keyboard column (mirrored in the hoverKey property); leaving
     // the widget clears the mark.
     {
-        const int y = roll->height() / 2;
+        const int y = int(roll->height()) / 2;
         const int expected = rows.keyAt(y);
         checks::events::sendMouse(*roll, QEvent::MouseMove, QPoint(pianoKeyboardWidth + 40, y),
                                   Qt::NoButton, Qt::NoButton, Qt::NoModifier);
-        if (roll->property("hoverKey").toInt() != expected)
+        if (check.roll().property("hoverKey").toInt() != expected)
             fail("hovering the notes area did not mark its key row");
         checks::events::sendMouse(*roll, QEvent::MouseMove, QPoint(4, rows.centerY(expected - 1)),
                                   Qt::NoButton, Qt::NoButton, Qt::NoModifier);
-        if (roll->property("hoverKey").toInt() != expected - 1)
+        if (check.roll().property("hoverKey").toInt() != expected - 1)
             fail("hovering the keyboard column did not follow the key row");
-        QEvent leave(QEvent::Leave);
-        QCoreApplication::sendEvent(roll, &leave);
-        if (roll->property("hoverKey").toInt() != -1)
+        events::sendMouse(*roll, QEvent::Leave, QPointF(pianoKeyboardWidth + 40, y), Qt::NoButton,
+                          Qt::NoButton, Qt::NoModifier);
+        if (check.roll().property("hoverKey").toInt() != -1)
             fail("leaving the roll did not clear the hover mark");
     }
 

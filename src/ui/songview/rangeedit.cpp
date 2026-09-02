@@ -647,16 +647,16 @@ void SongView::pasteFromClipboard()
 // Maps the four transpose commands to their semitone step, 0 when the event
 // matches none. Shared by the note-selection and time-selection key paths so
 // a rebinding changes both at once.
-int SongView::transposeStepFor(const QKeyEvent *event) const
+int SongView::transposeStepFor(const songview::TimelineKeyInput &input) const
 {
     const auto &keys = keymap::Registry::instance();
-    if (keys.matches(event, QStringLiteral("roll.transpose_up")))
+    if (keys.matches(input.key, input.modifiers, QStringLiteral("roll.transpose_up")))
         return 1;
-    if (keys.matches(event, QStringLiteral("roll.transpose_down")))
+    if (keys.matches(input.key, input.modifiers, QStringLiteral("roll.transpose_down")))
         return -1;
-    if (keys.matches(event, QStringLiteral("roll.transpose_up_octave")))
+    if (keys.matches(input.key, input.modifiers, QStringLiteral("roll.transpose_up_octave")))
         return 12;
-    if (keys.matches(event, QStringLiteral("roll.transpose_down_octave")))
+    if (keys.matches(input.key, input.modifiers, QStringLiteral("roll.transpose_down_octave")))
         return -12;
     return 0;
 }
@@ -672,12 +672,15 @@ std::optional<Clip> SongView::readClipboardClip()
         announce(tr("Cannot paste: clipboard clip could not be decoded"));
     return std::nullopt;
 }
-bool SongView::handleEditKey(QKeyEvent *event)
+bool SongView::handleEditKey(const songview::TimelineKeyInput &input)
 {
     if (!m_document)
         return false;
     const auto &keys = keymap::Registry::instance();
-    if (keys.matches(event, QStringLiteral("roll.copy"))) {
+    const auto matches = [&keys, &input](const char *id) {
+        return keys.matches(input.key, input.modifiers, QLatin1String(id));
+    };
+    if (matches("roll.copy")) {
         // MainWindow's Edit action owns the live application shortcut, with
         // its focus-widget copy pre-emption for text fields. This direct
         // path remains only for standalone SongViews and harnesses outside a
@@ -685,53 +688,43 @@ bool SongView::handleEditKey(QKeyEvent *event)
         if (qobject_cast<MainWindow *>(window()))
             return false;
         copySelection();
-        event->accept();
         return true;
     }
     const bool sel = m_selectionModel.timeSelection().active();
-    if (sel && keys.matches(event, QStringLiteral("roll.cut"))) {
+    if (sel && matches("roll.cut")) {
         copyTimeSelection();
         deleteTimeSelection();
-        event->accept();
         return true;
     }
-    if (sel && keys.matches(event, QStringLiteral("roll.duplicate_time"))) {
+    if (sel && matches("roll.duplicate_time")) {
         duplicateTimeSelection();
-        event->accept();
         return true;
     }
-    if (sel && keys.matches(event, QStringLiteral("roll.delete"))) {
+    if (sel && matches("roll.delete")) {
         deleteTimeSelection();
-        event->accept();
         return true;
     }
     if (sel) {
-        const int transpose = transposeStepFor(event);
+        const int transpose = transposeStepFor(input);
         if (transpose != 0) {
             transposeTimeSelection(transpose);
-            event->accept();
             return true;
         }
     }
-    if (sel && (keys.matches(event, QStringLiteral("roll.nudge_left")) ||
-                keys.matches(event, QStringLiteral("roll.nudge_right")))) {
-        nudgeTimeSelection(keys.matches(event, QStringLiteral("roll.nudge_right")));
-        event->accept();
+    if (sel && (matches("roll.nudge_left") || matches("roll.nudge_right"))) {
+        nudgeTimeSelection(matches("roll.nudge_right"));
         return true;
     }
-    if (keys.matches(event, QStringLiteral("roll.paste"))) {
+    if (matches("roll.paste")) {
         pasteFromClipboard();
-        event->accept();
         return true;
     }
-    if (keys.matches(event, QStringLiteral("roll.mute_tracks"))) {
+    if (matches("roll.mute_tracks")) {
         toggleMuteOnSelectedTracks();
-        event->accept();
         return true;
     }
-    if (keys.matches(event, QStringLiteral("roll.solo_tracks"))) {
+    if (matches("roll.solo_tracks")) {
         toggleSoloOnSelectedTracks();
-        event->accept();
         return true;
     }
     return false;

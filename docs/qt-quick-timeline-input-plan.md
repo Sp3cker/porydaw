@@ -109,6 +109,29 @@ The six baseline QWidget input surfaces are:
 - Independent thermo-nuclear and Qt 6 reviews passed after detached-host rebuild guards, explicit
   converted-interaction teardown, and direct Quick focus/ungrab coverage were added.
 
+### Phase 6 implementation record
+
+- `PianoRoll` is now a `QObject` interaction attached to `timelineRollInput`; `SongView` no longer
+  inserts or sizes a full-area piano-roll widget.
+- Pointer, double-click, wheel, keyboard, cursor, grab, focus, font, palette, DPR, accessibility,
+  and global-coordinate services flow through `TimelineInputHost`. Roll viewport calculations use
+  the canonical parent-owned band geometry.
+- `NoteContextMenu` and `PitchBendEditor` remain native `SongView`-owned surfaces. Popup dismissal
+  returns focus through `SongView::focusTimelineBand`, and synthetic Quick-input checks explicitly
+  synchronize native tool-window activation before driving child controls.
+- `deno task build:checks` passed. Focused checks `rollcheck`, `host-adapter`,
+  `host-integration`, `mainwindow-routing`, `editor-drawer`, `rendering-playhead`,
+  `rollwindowingcheck`, and `keymapcheck` pass.
+- The migrated wheel checks cover partial deltas, cursor anchoring, pixel wheels, and momentum
+  suppression. Host integration covers real `QQuickWindow` pointer delivery and window
+  deactivation without document or undo-history mutation.
+- Independent thermo-nuclear and Qt 6 reviews passed after queued popup callbacks gained guarded
+  lifetimes, Quick activation stopped relying on `QWindow::isActive()`, DPR fallbacks used the
+  native host, and view-state cursor application moved after state transitions.
+- Unconverted band state: `AutomationCanvas` continues to render but remains deliberately
+  noninteractive until Phase 7; its native hover/move failures remain the only expected migration
+  failures.
+
 ## Goal
 
 Make the existing Qt Quick timeline scene own raw pointer, wheel, hover, focus, and keyboard input

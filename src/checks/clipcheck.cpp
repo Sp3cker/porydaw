@@ -13,6 +13,8 @@
 #include "ui/songview.h"
 #include "ui/songview/clip.h"
 #include "ui/songview/clipmime.h"
+#include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 #include <QApplication>
 #include <QClipboard>
@@ -95,7 +97,7 @@ struct Rig {
     std::unique_ptr<MidiTimeline> timeline;
     SongView view;
     QStringList announcements;
-    QWidget *roll = nullptr;
+    songview::TimelineInputItem *roll = nullptr;
 
     Rig()
     {
@@ -122,7 +124,14 @@ struct Rig {
         view.setSong(timeline.get(), nullptr);
         view.setDocument(&doc);
         (void)view.grab();
-        roll = view.findChild<QWidget *>(QStringLiteral("pianoRoll"));
+        {
+            auto *quick = view.findChild<songview::TimelineQuickView *>(
+                QStringLiteral("timelineQuickCanvas"));
+            roll = quick && quick->rootObject()
+                       ? quick->rootObject()->findChild<songview::TimelineInputItem *>(
+                             QStringLiteral("timelineRollInput"))
+                       : nullptr;
+        }
         QObject::connect(&view, &SongView::statusMessage, &view,
                          [this](const QString &text) { announcements.push_back(text); });
         if (forcedTicksPerBeat == 0) {

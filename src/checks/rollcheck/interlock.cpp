@@ -4,13 +4,13 @@
 #include <QEvent>
 #include <QObject>
 #include <QPoint>
-#include <QWidget>
 #include <algorithm>
 #include <vector>
 
 #include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelineinputitem.h"
 
 namespace checks::rollcheck {
 
@@ -19,7 +19,7 @@ ScenarioContinuation runGestureInterlockScenarios(Harness &check,
 {
     SongDocument &doc = check.document();
     SongView &view = check.view();
-    QWidget *roll = &check.roll();
+    songview::TimelineInputItem *roll = &check.rollInput();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const SnappedRows rows{view, *roll};
     const Cell &a = fixture.a;

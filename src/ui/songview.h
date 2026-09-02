@@ -47,7 +47,6 @@ class QScrollArea;
 class QScrollBar;
 class QSpacerItem;
 class QStackedWidget;
-class QWheelEvent;
 class SongDocument;
 class AutomationPage;
 class EditorDrawer;
@@ -490,10 +489,10 @@ class SongView : public QWidget
     // copy/cut/delete while a time selection is active, paste of range
     // clips, and transpose/nudge of the selection (keymap commands).
     // Returns true when consumed.
-    bool handleEditKey(QKeyEvent *event);
-    // Semitone step for the transpose command the event matches (0 if none);
+    bool handleEditKey(const songview::TimelineKeyInput &input);
+    // Semitone step for the transpose command the input matches (0 if none);
     // shared by the note- and time-selection key paths.
-    int transposeStepFor(const QKeyEvent *event) const;
+    int transposeStepFor(const songview::TimelineKeyInput &input) const;
     // Copy/Cut/Delete/Paste/Clear context menu on the active selection.
     void showTimeSelectionMenu(const QPoint &globalPos);
 
@@ -534,8 +533,8 @@ class SongView : public QWidget
     void zoomTimelineAtWheel(const songview::TimelineWheelInput &wheel, qreal anchorContentX);
     void zoomAroundContentX(double factor, qreal anchorContentX);
     // Vertical roll zoom (key height) from Ctrl+wheel, pinning the key under
-    // the cursor. The wheel event supplies continuous deltas.
-    void zoomKeyHeight(const QWheelEvent *event);
+    // the cursor. The normalized wheel input supplies continuous deltas.
+    void zoomKeyHeight(const songview::TimelineWheelInput &input);
     void scrollByPx(double dx);
     void scrollRollBy(double dy);
     // Scrolls horizontally so the tick sits a third of the way into the

@@ -14,12 +14,16 @@
 #include "ui/songview.h"
 
 class MidiTimeline;
-class QWidget;
-class QObject;
+class QQuickItem;
 
 namespace checks {
 class SongViewRig;
 }
+
+namespace songview {
+class PianoRoll;
+class TimelineInputItem;
+} // namespace songview
 
 namespace checks::rollcheck {
 
@@ -41,10 +45,13 @@ class Harness final
     SongDocument &document() noexcept;
     SongView &view() noexcept;
     const MidiTimeline &timeline() const noexcept;
-    QWidget &roll() noexcept;
+    // The roll interaction object (hover-key property, Quick update requests)
+    // and the Quick input item that receives the suite's pointer/wheel/keys.
+    songview::PianoRoll &roll() noexcept;
+    songview::TimelineInputItem &rollInput() noexcept;
     QImage captureQuickFramebuffer();
-    QImage captureQuickBand(QWidget &band);
     QImage captureQuickBand(const QRect &bandRect);
+    QRect rollBandRect() const noexcept;
     int track() const noexcept;
     int pianoKeyboardWidth() const noexcept;
     int plotOrigin() const noexcept;
@@ -60,7 +67,8 @@ class Harness final
   private:
     SongViewRig &m_rig;
     QString m_songLabel;
-    QWidget *m_roll = nullptr;
+    songview::PianoRoll *m_roll = nullptr;
+    songview::TimelineInputItem *m_rollInput = nullptr;
     int m_track = -1;
     int m_pianoKeyboardWidth = 0;
     int m_plotOrigin = 0;
@@ -73,7 +81,7 @@ class Harness final
 // the independently-snapped row bounds without exposing SongView paint geometry.
 struct SnappedRows {
     const SongView &view;
-    const QWidget &roll;
+    const songview::TimelineInputItem &roll;
 
     qreal dpr() const;
     qreal pixel() const;
@@ -142,9 +150,10 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
 ScenarioContinuation runScaleProjectionScenarios(Harness &check);
 ScenarioContinuation runScaleFoldScenarios(Harness &check);
 ScenarioContinuation runScaleEditingScenarios(Harness &check);
+ScenarioContinuation runQuickLifecycleScenarios(Harness &check);
 
-void click(QWidget &widget, QPoint position);
-void drawNote(QWidget &widget, QPoint position);
+void click(QQuickItem &item, QPoint position);
+void drawNote(QQuickItem &item, QPoint position);
 void sendKeyStroke(QObject &target, int key, Qt::KeyboardModifiers modifiers, bool autoRepeat);
 
 } // namespace checks::rollcheck

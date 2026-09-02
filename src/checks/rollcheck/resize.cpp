@@ -9,7 +9,6 @@
 #include <QPointF>
 #include <QRectF>
 #include <QSize>
-#include <QWidget>
 #include <algorithm>
 #include <vector>
 
@@ -17,6 +16,7 @@
 #include "core/songdocument.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelineinputitem.h"
 
 namespace checks::rollcheck {
 
@@ -25,7 +25,7 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
 {
     SongDocument &doc = check.document();
     SongView &view = check.view();
-    QWidget *roll = &check.roll();
+    songview::TimelineInputItem *roll = &check.rollInput();
     const int track = check.track();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const SnappedRows rows{view, *roll};
@@ -48,9 +48,9 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
     doc.addNote(track, d.tick, uint8_t(d.key), offDur, 100);
     const int rowY = rows.centerY(d.key);
     const qreal resizeNoteLeftX =
-        view.displayX(double(d.tick), pianoKeyboardWidth, roll->devicePixelRatioF());
+        view.displayX(double(d.tick), pianoKeyboardWidth, roll->devicePixelRatio());
     const qreal resizeNoteRightX =
-        view.displayX(double(d.tick + offDur), pianoKeyboardWidth, roll->devicePixelRatioF());
+        view.displayX(double(d.tick + offDur), pianoKeyboardWidth, roll->devicePixelRatio());
     // Probe 2.8 DIPs inward at both ends on the note row.
     const QPointF leftHandle(resizeNoteLeftX + 2.8, rowY);
     const QPointF rightHandle(resizeNoteRightX - 2.8, rowY);
@@ -58,7 +58,7 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
     // the installed pixels. Assert the public custom-cursor shape and the
     // exact left/right resource image, not platform-adjusted metadata.
     const QSize cursorSize(layout::fontPx(2.0), layout::fontPx(2.0));
-    const qreal cursorDpr = roll->devicePixelRatioF();
+    const qreal cursorDpr = roll->devicePixelRatio();
     const QImage leftEdgeImage =
         QIcon(QStringLiteral(":/cursors/left-drag.png")).pixmap(cursorSize, cursorDpr).toImage();
     const QImage rightEdgeImage =
@@ -95,7 +95,7 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
     // resizes the whole selection — both notes — in one undo command. A
     // stationary Ctrl+edge click just joins, editing nothing.
     {
-        const qreal dpr = roll->devicePixelRatioF();
+        const qreal dpr = roll->devicePixelRatio();
         const QPointF ctrlEdge(
             view.displayX(double(d.tick + 2 * d.dur), pianoKeyboardWidth, dpr) - 2.8, rowY);
         click(*roll, b.center); // selection = {B}
@@ -220,7 +220,7 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
         const int undoIndexBefore = doc.undoStack()->index();
         doc.addNote(track, g.tick, uint8_t(g.key), uint32_t(g.dur), 100);
         doc.addNote(track, g.tick + g.dur, uint8_t(g.key), uint32_t(g.dur), 100);
-        const qreal gDpr = roll->devicePixelRatioF();
+        const qreal gDpr = roll->devicePixelRatio();
         const uint64_t gSnap = view.snapTicksAt(g.tick);
         const qreal boundaryX = view.displayX(double(g.tick + g.dur), pianoKeyboardWidth, gDpr);
         const int gRowY = rows.centerY(g.key);

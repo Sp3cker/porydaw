@@ -417,19 +417,23 @@ QStringList Registry::modifierConflicts(const QString &excludeId, Context contex
     return out;
 }
 
-bool Registry::matches(const QKeyEvent *event, const QString &id) const
+bool Registry::matches(int key, Qt::KeyboardModifiers modifiers, const QString &id) const
 {
-    const int key = event->key();
     if (key == 0 || key == Qt::Key_unknown || isModifierKey(key))
         return false;
     // Keypad arrows arrive with KeypadModifier set; bindings never carry it.
-    const auto mods = shortcutModifiers(event->modifiers());
+    const auto mods = shortcutModifiers(modifiers);
     const int combined = key | int(mods.toInt());
     for (const QKeySequence &seq : bindings(id)) {
         if (seq.count() == 1 && seq[0].toCombined() == combined)
             return true;
     }
     return false;
+}
+
+bool Registry::matches(const QKeyEvent *event, const QString &id) const
+{
+    return matches(event->key(), event->modifiers(), id);
 }
 
 void Registry::attach(const QString &id, QAction *action)

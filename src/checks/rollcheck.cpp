@@ -73,6 +73,7 @@ int runRollCheck(const QString &projectRoot, const QString &songLabel,
         return earlyFailureStatus();
     if (checks::rollcheck::runKeyboardAndTimelineScenarios(check, *resizeFixture) ==
             ScenarioContinuation::Stop ||
+        checks::rollcheck::runQuickLifecycleScenarios(check) == ScenarioContinuation::Stop ||
         checks::rollcheck::runHeaderAndPresentationScenarios(
             check, *velocityFixture, screenshotPath) == ScenarioContinuation::Stop)
         return earlyFailureStatus();

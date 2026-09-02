@@ -4,7 +4,6 @@
 #include <QEvent>
 #include <QImage>
 #include <QPoint>
-#include <QWidget>
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -12,6 +11,7 @@
 #include "core/songdocument.h"
 #include "porydaw_scale.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelineinputitem.h"
 
 namespace checks::rollcheck {
 
@@ -19,7 +19,7 @@ ScenarioContinuation runScaleProjectionScenarios(Harness &check)
 {
     SongDocument &doc = check.document();
     SongView &view = check.view();
-    QWidget *roll = &check.roll();
+    songview::TimelineInputItem *roll = &check.rollInput();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const int pianoRollDefaultKeyHeight = check.pianoRollDefaultKeyHeight();
     const SnappedRows rows{view, *roll};
@@ -44,7 +44,7 @@ ScenarioContinuation runScaleProjectionScenarios(Harness &check)
         const int r = view.pitchProjection().rowForPitch(pitch);
         if (r == songview::PitchProjection::cHiddenRow)
             return -1;
-        const qreal dpr = roll->devicePixelRatioF();
+        const qreal dpr = roll->devicePixelRatio();
         const qreal top = std::round((double(r) * view.keyHeight() - view.scrollY()) * dpr) / dpr;
         const qreal bot =
             std::round((double(r + 1) * view.keyHeight() - view.scrollY()) * dpr) / dpr;

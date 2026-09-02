@@ -22,6 +22,7 @@
 #include "ui/activity/trackactivityview.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelineinputitem.h"
 
 namespace checks::rollcheck {
 
@@ -53,14 +54,22 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
 {
     SongDocument &doc = check.document();
     SongView &view = check.view();
-    QWidget *roll = &check.roll();
+    songview::TimelineInputItem *roll = &check.rollInput();
     const int track = check.track();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const SnappedRows rows{view, *roll};
     const Cell &a = fixture.a;
-    const qreal vw = std::max(50, roll->width() - pianoKeyboardWidth);
+    const qreal vw = std::max<qreal>(50, roll->width() - pianoKeyboardWidth);
     const int undoBaseline = doc.undoStack()->index();
     auto fail = [&](const char *what) { check.fail(what); };
+    // The suite-wide click() helper targets the roll's Quick input item, so
+    // the widget-based header rows press/release through the synth directly.
+    const auto clickWidget = [](QWidget &widget, QPoint position) {
+        checks::events::sendMouse(widget, QEvent::MouseButtonPress, position, Qt::LeftButton,
+                                  Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(widget, QEvent::MouseButtonRelease, position, Qt::LeftButton,
+                                  Qt::NoButton, Qt::NoModifier);
+    };
     // Playhead follow-scroll pauses while a mouse gesture is live: with a
     // middle-button pan held in the roll (or the lanes), a playing playhead
     // far past the right edge must not move the view; releasing the button
@@ -68,25 +77,28 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
     auto *lanes = view.findChild<QWidget *>(QStringLiteral("automationCanvas"));
     if (!lanes)
         fail("automation area not found");
-    for (QWidget *panned : {roll, lanes}) {
-        if (!panned)
-            continue;
+    // The roll is the Quick input item and the lanes stay a widget; both run
+    // the same middle-drag pan probe against their own input surface.
+    const auto panFollowProbe = [&](auto &panned) {
         const int home = view.contentX(0.0);
         const uint64_t farTick = uint64_t(std::max(0.0, view.tickAtContentX(vw * 2)));
-        const QPoint mid(panned->width() / 2, panned->height() / 2);
-        checks::events::sendMouse(*panned, QEvent::MouseButtonPress, mid, Qt::MiddleButton,
+        const QPointF mid(panned.width() / 2.0, panned.height() / 2.0);
+        checks::events::sendMouse(panned, QEvent::MouseButtonPress, mid, Qt::MiddleButton,
                                   Qt::MiddleButton, Qt::NoModifier);
         view.setPlayheadSample(check.timeline().sampleForTick(farTick), true);
         if (view.contentX(0.0) != home)
             fail("playhead follow-scroll moved the view during a pan gesture");
-        checks::events::sendMouse(*panned, QEvent::MouseButtonRelease, mid, Qt::MiddleButton,
+        checks::events::sendMouse(panned, QEvent::MouseButtonRelease, mid, Qt::MiddleButton,
                                   Qt::NoButton, Qt::NoModifier);
         view.setPlayheadSample(check.timeline().sampleForTick(farTick), true);
         if (view.contentX(0.0) == home)
             fail("playhead follow-scroll did not resume after the pan ended");
         view.setPlayheadSample(0, false);
         view.scrollByPx(view.contentX(0.0) - home); // back where it started
-    }
+    };
+    panFollowProbe(*roll);
+    if (lanes)
+        panFollowProbe(*lanes);
 
     // A stopped playhead uses retained Quick chrome. Moving it must preserve
     // timeline scene-layer revisions instead of rebuilding their contents.
@@ -228,7 +240,7 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
             QCoreApplication::sendPostedEvents();
             QCoreApplication::processEvents();
             paintProbe.clear();
-            click(*row, QPoint(textColumn.center().x(), singlePixel));
+            clickWidget(*row, QPoint(textColumn.center().x(), singlePixel));
             QCoreApplication::sendPostedEvents();
             QCoreApplication::processEvents();
             const int obscuredGutter = view.findChild<TrackActivityView *>() ? gutter : 0;
@@ -262,10 +274,10 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
                 });
             const int preCount = doc.undoStack()->count();
             const QPoint voicePos(row->width() / 2, 30); // the painted voice line
-            click(*row, voicePos);
+            clickWidget(*row, voicePos);
             if (reveals != 1 || revealed != view.currentProgram(track))
                 fail("voice-line click did not request the track's program");
-            click(*row, QPoint(row->width() / 2, 10)); // the name line
+            clickWidget(*row, QPoint(row->width() / 2, 10)); // the name line
             if (reveals != 1)
                 fail("a name-line click requested a voice reveal");
             // A press on the voice line that becomes a reorder drag must
@@ -514,8 +526,8 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
     view.setPlayheadSample(check.timeline().sampleForTick(screenshotTick), false);
     // Park the cursor mid-roll so the shot shows the hover mark + name chip.
     checks::events::sendMouse(*roll, QEvent::MouseMove,
-                              QPoint(pianoKeyboardWidth + 60, roll->height() / 3), Qt::NoButton,
-                              Qt::NoButton, Qt::NoModifier);
+                              QPointF(pianoKeyboardWidth + 60.0, roll->height() / 3.0),
+                              Qt::NoButton, Qt::NoButton, Qt::NoModifier);
     const QImage image = view.grab().toImage();
     if (image.isNull())
         fail("offscreen render produced no image");

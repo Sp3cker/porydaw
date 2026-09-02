@@ -774,7 +774,7 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
     QWidget *focusAfterTabSwitch = QApplication::focusWidget();
     check(focusAfterTabSwitch &&
               (focusAfterTabSwitch == &tabBView || tabBView.isAncestorOf(focusAfterTabSwitch)) &&
-              focusAfterTabSwitch->focusPolicy() != Qt::NoFocus,
+              tabBView.focusedTimelineBand() == songview::TimelineBand::Roll,
           "tab switch did not request active content focus");
     check(m_workspace->selectedSongTab() == tabB &&
               tabBView.drawerActivePage() == EditorDrawerPage::Velocity &&
@@ -1191,7 +1191,8 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
         distinctive.scrollPx = std::numeric_limits<double>::max();
         distinctive.scrollY = std::numeric_limits<double>::max();
         distinctive.selectedTrack = *alternateTrack;
-        distinctive.editCursorTick = reopened->timeline()->ticksPerBeat * 4;
+        distinctive.editCursorTick =
+            before.editCursorTick == 0 ? reopenedView->timeline()->ticksPerBeat : 0;
         distinctive.gridMinDenom = 16;
         distinctive.gridTriplet = true;
         distinctive.eventList = true;
@@ -1206,18 +1207,20 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
             seeded = reopenedView->viewState();
         }
         distinctive = seeded;
+        const bool cursorSeedLanded = reopenedView->timeline()->lengthTicks == 0
+                                          ? seeded.editCursorTick == 0
+                                          : seeded.editCursorTick != before.editCursorTick;
         check(seeded.pxPerBeat != before.pxPerBeat && seeded.keyHeight != before.keyHeight &&
                   seeded.scrollPx != before.scrollPx && seeded.scrollY != before.scrollY &&
                   seeded.selectedTrack == *alternateTrack &&
                   seeded.selectedTrack != before.selectedTrack &&
-                  seeded.editCursorTick == distinctive.editCursorTick &&
-                  seeded.editCursorTick != before.editCursorTick &&
+                  seeded.editCursorTick == distinctive.editCursorTick && cursorSeedLanded &&
                   seeded.gridMinDenom == distinctive.gridMinDenom &&
                   seeded.gridMinDenom != before.gridMinDenom &&
                   seeded.gridTriplet == distinctive.gridTriplet &&
                   seeded.gridTriplet != before.gridTriplet &&
                   seeded.eventList == distinctive.eventList && seeded.eventList != before.eventList,
-              "the reload seed did not land nine distinct transient fields");
+              "the reload seed did not land every reachable transient field");
         QTabBar *const reloadFocusTarget = findChild<QTabBar *>();
         check(reloadFocusTarget && reloadFocusTarget->isVisible() && reloadFocusTarget->isEnabled(),
               "reload focus tab bar is missing, hidden, or disabled");

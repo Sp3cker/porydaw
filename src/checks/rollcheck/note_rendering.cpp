@@ -8,7 +8,6 @@
 #include <QPoint>
 #include <QRect>
 #include <QRectF>
-#include <QWidget>
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -17,6 +16,7 @@
 #include "core/songdocument.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/theme/color_math.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
@@ -28,14 +28,14 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
 {
     SongDocument &doc = check.document();
     SongView &view = check.view();
-    QWidget *roll = &check.roll();
+    songview::TimelineInputItem *roll = &check.rollInput();
     const int track = check.track();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const SnappedRows rows{view, *roll};
     const Cell &a = fixture.a;
     const DocNote &noteA = fixture.noteA;
     const int undoBaseline = doc.undoStack()->index();
-    const qreal displayDpr = roll->devicePixelRatioF();
+    const qreal displayDpr = roll->devicePixelRatio();
     const qreal noteLeftX = view.displayX(double(noteA.tick), pianoKeyboardWidth, displayDpr);
     const qreal noteRightX =
         view.displayX(double(noteA.tick + noteA.duration), pianoKeyboardWidth, displayDpr);
@@ -409,7 +409,7 @@ ScenarioContinuation runSelectionRasterScenarios(Harness &check,
 {
     SongDocument &doc = check.document();
     SongView &view = check.view();
-    QWidget *roll = &check.roll();
+    songview::TimelineInputItem *roll = &check.rollInput();
     const int track = check.track();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const Cell &a = fixture.a;

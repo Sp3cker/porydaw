@@ -102,6 +102,10 @@ class Registry : public QObject
     // Single-keystroke match against the command's effective bindings.
     // Keypad/GroupSwitch modifiers are ignored so numpad arrows keep working.
     bool matches(const QKeyEvent *event, const QString &id) const;
+    // Value form of the same match: key and modifiers from any event source
+    // (the converted TimelineKeyInput bands). Identical rejection of zero,
+    // Key_unknown, and bare modifier keys.
+    bool matches(int key, Qt::KeyboardModifiers modifiers, const QString &id) const;
 
     // Applies the command's bindings to the action now and re-applies them on
     // every user change for the action's lifetime.

@@ -196,11 +196,11 @@ void TimelineQuickView::rebuildGrid()
 {
     PianoRoll &roll = *m_roll;
     TimelineQuickScene &scene = *m_scene;
-    const qreal dpr = roll.devicePixelRatioF();
+    const qreal dpr = roll.devicePixelRatio();
     const qreal pixel = logicalPhysicalPixel(dpr);
     const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
-    const QRectF plot(keyboardWidth, 0, std::max<qreal>(0, roll.width() - keyboardWidth),
-                      roll.height());
+    const QRectF plot(keyboardWidth, 0, std::max<qreal>(0, roll.bounds().width() - keyboardWidth),
+                      roll.bounds().height());
     const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
 
     const PitchProjection &projection = roll.m_sv->pitchProjection();
@@ -279,8 +279,8 @@ void TimelineQuickView::rebuildNoteFills()
         return;
 
     const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
-    const QRectF plot(keyboardWidth, 0, std::max<qreal>(0, roll.width() - keyboardWidth),
-                      roll.height());
+    const QRectF plot(keyboardWidth, 0, std::max<qreal>(0, roll.bounds().width() - keyboardWidth),
+                      roll.bounds().height());
     const PitchProjection &projection = roll.m_sv->pitchProjection();
     const int selectedTrack = roll.m_sv->selectionModel().primaryTrack();
     const auto &notes = roll.m_sv->model().notes;
@@ -318,10 +318,10 @@ void TimelineQuickView::rebuildDrawPreviewFill()
     if (!roll.m_sv->timeline() || roll.m_leftDrag != PianoRoll::LeftDrag::Draw)
         return;
 
-    const qreal dpr = roll.devicePixelRatioF();
+    const qreal dpr = roll.devicePixelRatio();
     const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
-    const QRectF plot(keyboardWidth, 0, std::max<qreal>(0, roll.width() - keyboardWidth),
-                      roll.height());
+    const QRectF plot(keyboardWidth, 0, std::max<qreal>(0, roll.bounds().width() - keyboardWidth),
+                      roll.bounds().height());
     const int selectedTrack = roll.m_sv->selectionModel().primaryTrack();
     const qreal x0 = roll.m_sv->displayX(double(roll.m_drawTick), keyboardWidth, dpr);
     const qreal x1 =
@@ -339,11 +339,11 @@ void TimelineQuickView::rebuildNoteBordersAndSelection()
     if (!roll.m_sv->timeline())
         return;
 
-    const qreal dpr = roll.devicePixelRatioF();
+    const qreal dpr = roll.devicePixelRatio();
     const qreal pixel = logicalPhysicalPixel(dpr);
     const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
-    const QRectF plot(keyboardWidth, 0, std::max<qreal>(0, roll.width() - keyboardWidth),
-                      roll.height());
+    const QRectF plot(keyboardWidth, 0, std::max<qreal>(0, roll.bounds().width() - keyboardWidth),
+                      roll.bounds().height());
     const PitchProjection &projection = roll.m_sv->pitchProjection();
     const auto &selection = roll.m_sv->selectionModel();
     const int selectedTrack = selection.primaryTrack();
@@ -417,11 +417,11 @@ void TimelineQuickView::rebuildOverlay()
     if (!roll.m_sv->timeline())
         return;
 
-    const qreal dpr = roll.devicePixelRatioF();
+    const qreal dpr = roll.devicePixelRatio();
     const qreal pixel = logicalPhysicalPixel(dpr);
     const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
-    const QRectF plot(keyboardWidth, 0, std::max<qreal>(0, roll.width() - keyboardWidth),
-                      roll.height());
+    const QRectF plot(keyboardWidth, 0, std::max<qreal>(0, roll.bounds().width() - keyboardWidth),
+                      roll.bounds().height());
     const int selectedTrack = roll.m_sv->selectionModel().primaryTrack();
 
     if (roll.m_leftDrag == PianoRoll::LeftDrag::Draw) {
@@ -494,9 +494,9 @@ void TimelineQuickView::rebuildKeyboardKeys()
 {
     PianoRoll &roll = *m_roll;
     TimelineQuickScene &scene = *m_scene;
-    const QRectF viewport(roll.rect());
+    const QRectF viewport = roll.bounds();
     const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
-    const qreal pixel = logicalPhysicalPixel(roll.devicePixelRatioF());
+    const qreal pixel = logicalPhysicalPixel(roll.devicePixelRatio());
     const PitchProjection &projection = roll.m_sv->pitchProjection();
     const auto &edges = roll.rowEdges();
     if (projection.visibleRowCount() > 0) {
@@ -524,9 +524,9 @@ void TimelineQuickView::rebuildKeyboardHighlights()
 {
     PianoRoll &roll = *m_roll;
     TimelineQuickScene &scene = *m_scene;
-    const QRectF viewport(roll.rect());
+    const QRectF viewport = roll.bounds();
     const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
-    const qreal pixel = logicalPhysicalPixel(roll.devicePixelRatioF());
+    const qreal pixel = logicalPhysicalPixel(roll.devicePixelRatio());
     const PitchProjection &projection = roll.m_sv->pitchProjection();
     const auto hoverGeometry = roll.keyboardHoverGeometry(roll.m_hoverKey);
     for (int row = 0; row < projection.visibleRowCount(); ++row) {
@@ -552,8 +552,9 @@ void TimelineQuickView::rebuildKeyboardHighlights()
                     hoverGeometry->highlightRect, highlight, viewport);
         }
     }
-    addVerticalLine(scene, TimelineQuickLayer::PianoKeyboardHighlights, 0, 0, roll.height(), pixel,
-                    themes::color(themes::Role::song_view_separator), viewport);
+    addVerticalLine(scene, TimelineQuickLayer::PianoKeyboardHighlights, 0, 0,
+                    roll.bounds().height(), pixel, themes::color(themes::Role::song_view_separator),
+                    viewport);
 }
 
 void TimelineQuickView::synchronizeNoteText()
@@ -566,10 +567,10 @@ void TimelineQuickView::synchronizeNoteText()
         return;
     }
 
-    const qreal dpr = roll.devicePixelRatioF();
+    const qreal dpr = roll.devicePixelRatio();
     const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
-    const QRectF plot(keyboardWidth, 0, std::max<qreal>(0, roll.width() - keyboardWidth),
-                      roll.height());
+    const QRectF plot(keyboardWidth, 0, std::max<qreal>(0, roll.bounds().width() - keyboardWidth),
+                      roll.bounds().height());
     const PitchProjection &projection = roll.m_sv->pitchProjection();
     const int selectedTrack = roll.m_sv->selectionModel().primaryTrack();
     const auto &notes = roll.m_sv->model().notes;
@@ -655,8 +656,9 @@ void TimelineQuickView::synchronizeLoadingText()
     records.clear();
     if (!roll.m_sv->timeline()) {
         const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
-        const QRectF plot(keyboardWidth, 0, std::max<qreal>(0, roll.width() - keyboardWidth),
-                          roll.height());
+        const QRectF plot(keyboardWidth, 0,
+                          std::max<qreal>(0, roll.bounds().width() - keyboardWidth),
+                          roll.bounds().height());
         const QFont font = resolvedFont(typography::caption(roll.font()));
         appendTextRecord(records, loadingTextKey, plot, SongView::tr("Loading..."), font,
                          themes::color(themes::Role::song_view_secondary_text), Qt::AlignHCenter,
@@ -670,7 +672,7 @@ void TimelineQuickView::synchronizeKeyboardText()
     PianoRoll &roll = *m_roll;
     std::vector<TimelineQuickTextModel::Record> &records = m_keyboardTextRecords;
     records.clear();
-    const QRectF viewport(roll.rect());
+    const QRectF viewport = roll.bounds();
     const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
     const PitchProjection &projection = roll.m_sv->pitchProjection();
     if (roll.m_keyboardLabelFont) {

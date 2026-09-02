@@ -7,7 +7,6 @@
 #include <QObject>
 #include <QPoint>
 #include <QRectF>
-#include <QWidget>
 #include <algorithm>
 #include <utility>
 #include <vector>
@@ -16,6 +15,8 @@
 #include "core/songdocument.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/typography.h"
 
 namespace checks::rollcheck {
@@ -25,7 +26,7 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
 {
     SongDocument &doc = check.document();
     SongView &view = check.view();
-    QWidget *roll = &check.roll();
+    songview::TimelineInputItem *roll = &check.rollInput();
     const int track = check.track();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const SnappedRows rows{view, *roll};
@@ -57,7 +58,7 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
         view.selectionModel().clearNoteSelection();
         // The band is provisional until release, but covered notes should
         // use the same selection ring as the velocity drawer's live preview.
-        const qreal previewDpr = roll->devicePixelRatioF();
+        const qreal previewDpr = roll->devicePixelRatio();
         const QRectF previewNoteBox = rows.noteBox(rows.noteRect(
             view.displayX(double(noteA.tick), pianoKeyboardWidth, previewDpr),
             view.displayX(double(noteA.tick + noteA.duration), pianoKeyboardWidth, previewDpr),
@@ -265,7 +266,7 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
                                   Qt::LeftButton, Qt::ControlModifier);
         checks::events::sendMouse(*roll, QEvent::MouseMove, b.center + QPoint(0, 15), Qt::NoButton,
                                   Qt::LeftButton, Qt::ControlModifier);
-        if (roll->property("hoverKey").toInt() != b.key)
+        if (check.roll().property("hoverKey").toInt() != b.key)
             fail("modifier velocity drag did not pin the hover mark");
         checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 15),
                                   Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);

@@ -9,7 +9,6 @@
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include <QApplication>
-#include <QMouseEvent>
 
 #include <algorithm>
 #include <cmath>
@@ -53,16 +52,17 @@ void PianoRoll::clearLiveDragToken()
     }
 }
 
-void PianoRoll::beginPanGesture(const QMouseEvent *event)
+void PianoRoll::beginPanGesture(const TimelinePointerInput &input)
 {
     m_panning = true;
-    m_panPos = event->globalPosition();
-    setCursor(Qt::ClosedHandCursor);
+    m_panPos = input.globalPosition;
+    if (m_inputHost)
+        m_inputHost->setCursor(Qt::ClosedHandCursor);
 }
 
-void PianoRoll::beginKbdAudition(const QMouseEvent *event)
+void PianoRoll::beginKbdAudition(const TimelinePointerInput &input)
 {
-    m_kbdKey = yToKey(event->position().y());
+    m_kbdKey = yToKey(input.position.y());
     m_sv->selectionModel().setNoteSelection(notesOnKey(m_kbdKey));
     auditionKey(m_kbdKey, 100);
 }
@@ -78,23 +78,23 @@ std::vector<NoteId> PianoRoll::notesOnKey(int key) const
     return ids;
 }
 
-void PianoRoll::beginPendingMenu(const QMouseEvent *event, const ViewNote *hit)
+void PianoRoll::beginPendingMenu(const TimelinePointerInput &input, const ViewNote *hit)
 {
-    m_pressPos = m_curPos = event->position();
+    m_pressPos = m_curPos = input.position;
     m_rightDrag = RightDrag::PendingMenu;
-    m_rightShift = event->modifiers() & Qt::ShiftModifier;
+    m_rightShift = input.modifiers & Qt::ShiftModifier;
     m_rightAnchorTick =
-        m_sv->snapTick(m_sv->tickAtContentX(event->position().x() - m_geometry.pianoKeyboardWidth));
+        m_sv->snapTick(m_sv->tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth));
     m_rightHit = hit != nullptr;
     if (hit)
         m_rightHitId = hit->noteId;
 }
 
-void PianoRoll::beginLeftPress(const QMouseEvent *event)
+void PianoRoll::beginLeftPress(const TimelinePointerInput &input)
 {
-    m_pressPos = m_curPos = event->position();
-    m_pressTick = m_sv->tickAtContentX(event->position().x() - m_geometry.pianoKeyboardWidth);
-    m_pressKey = yToKey(event->position().y());
+    m_pressPos = m_curPos = input.position;
+    m_pressTick = m_sv->tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth);
+    m_pressKey = yToKey(input.position.y());
     m_dTick = 0;
     m_dKey = 0;
     m_dDur = 0;
@@ -108,31 +108,31 @@ bool PianoRoll::contentPressRejectedByScaleFold(const SongDocument *doc, const V
             !porydaw_scale::isScalePitch(m_sv->scaleId(), m_sv->scaleRoot(), m_pressKey));
 }
 
-void PianoRoll::pressContent(QMouseEvent *event)
+void PianoRoll::pressContent(const TimelinePointerInput &input)
 {
-    beginLeftPress(event);
+    beginLeftPress(input);
     SongDocument *doc = m_sv->document();
-    const ViewNote *hit = doc ? hitNote(event->position()) : nullptr;
+    const ViewNote *hit = doc ? hitNote(input.position) : nullptr;
     if (contentPressRejectedByScaleFold(doc, hit))
         return;
     if (hit) {
-        beginNotePress(*hit, event);
+        beginNotePress(*hit, input);
         if (m_leftDrag == LeftDrag::PendingVelocity) // deferred path already invalidated
             return;
     } else if (doc) {
-        beginPendingDraw(event);
+        beginPendingDraw();
     } else {
         m_sv->commitEditCursor(m_sv->snapTick(m_pressTick));
     }
     requestQuickUpdate(PianoRollQuickDirty::NoteBordersAndSelection | PianoRollQuickDirty::Overlay);
 }
 
-void PianoRoll::beginNotePress(const ViewNote &note, const QMouseEvent *event)
+void PianoRoll::beginNotePress(const ViewNote &note, const TimelinePointerInput &input)
 {
-    const bool rightEdge = nearRightEdge(note, event->position());
-    const bool leftEdge = nearLeftEdge(note, event->position());
+    const bool rightEdge = nearRightEdge(note, input.position);
+    const bool leftEdge = nearLeftEdge(note, input.position);
     const auto &keys = keymap::Registry::instance();
-    const auto pressMods = event->modifiers();
+    const auto pressMods = input.modifiers;
     if (keys.matchesModifier(pressMods, QStringLiteral("roll.velocity_drag")) && !rightEdge &&
         !leftEdge) {
         m_leftDrag = LeftDrag::PendingVelocity;
@@ -144,7 +144,7 @@ void PianoRoll::beginNotePress(const ViewNote &note, const QMouseEvent *event)
     applyNotePressSelection(note, rightEdge || leftEdge, pressMods);
     m_sv->announceNote(note);
     m_lastVelocity = note.velocity;
-    armNoteDrag(note, event->position());
+    armNoteDrag(note, input.position);
     auditionKey(note.key, note.velocity); // runs even when the velocity gesture failed
     m_auditioned = true;
 }
@@ -201,7 +201,7 @@ void PianoRoll::beginVelocityPress(const ViewNote &note)
     requestQuickUpdate(PianoRollQuickDirty::KeyboardHighlights);
 }
 
-void PianoRoll::beginPendingDraw(const QMouseEvent *)
+void PianoRoll::beginPendingDraw()
 {
     m_leftDrag = LeftDrag::PendingDraw; // pending: direct assignment, no activation
     m_sv->selectionModel().clearNoteSelection();
@@ -209,30 +209,31 @@ void PianoRoll::beginPendingDraw(const QMouseEvent *)
     m_auditioned = true;
 }
 
-void PianoRoll::resolveRightPress(const QMouseEvent *event)
+void PianoRoll::resolveRightPress(const TimelinePointerInput &input)
 {
-    if (!dragLive() && (event->pos() - m_pressPos.toPoint()).manhattanLength() >=
+    if (!dragLive() && (input.position.toPoint() - m_pressPos.toPoint()).manhattanLength() >=
                            QApplication::startDragDistance()) {
         m_rightDrag = m_rightShift ? RightDrag::TimeSel : RightDrag::Band;
         m_bandAud.clear();
     }
 }
 
-void PianoRoll::resolveDrawPress(const QMouseEvent *event)
+void PianoRoll::resolveDrawPress(const TimelinePointerInput &input)
 {
-    const int key = yToKey(event->position().y());
+    const int key = yToKey(input.position.y());
     if (key != m_pressKey) { // row glissando BEFORE threshold and beginDraw
         m_pressKey = key;
         auditionKey(key, m_lastVelocity);
         m_auditioned = true;
     }
-    if (std::abs(event->position().x() - m_pressPos.x()) >= lyt::space(Space::One))
+    if (std::abs(input.position.x() - m_pressPos.x()) >= lyt::space(Space::One))
         beginDraw();
 }
 
-bool PianoRoll::resolveVelocityPress(const QMouseEvent *event)
+bool PianoRoll::resolveVelocityPress(const TimelinePointerInput &input)
 {
-    if (std::abs(event->pos().y() - m_pressPos.toPoint().y()) < QApplication::startDragDistance())
+    if (std::abs(input.position.toPoint().y() - m_pressPos.toPoint().y()) <
+        QApplication::startDragDistance())
         return false; // consumes the entire event
     applyVelocityDragSelection();
     activateLeftDrag(LeftDrag::Velocity);

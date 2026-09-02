@@ -148,8 +148,7 @@ void TimelineInputItem::requestFocus(Qt::FocusReason reason)
     if (!itemWindow)
         return;
     forceActiveFocus(reason);
-    if (!itemWindow->isActive())
-        itemWindow->requestActivate();
+    itemWindow->requestActivate();
 }
 
 void TimelineInputItem::setCursor(const QCursor &cursor)
@@ -277,6 +276,8 @@ void TimelineInputItem::geometryChange(const QRectF &newGeometry, const QRectF &
 
 void TimelineInputItem::itemChange(ItemChange change, const ItemChangeData &data)
 {
+    if (change == ItemDevicePixelRatioHasChanged && m_interaction)
+        m_interaction->hostAppearanceChanged();
     if (change == ItemVisibleHasChanged && !data.boolValue) {
         if (m_interaction)
             m_interaction->inputCancelled(TimelineInputCancelReason::Hidden);

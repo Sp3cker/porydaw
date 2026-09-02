@@ -131,6 +131,10 @@ class TimelineQuickView final : public QWidget
     // Republishes the stored band layout after native-window lifecycle events
     // (show, WinId, DPR); changes neither the canonical value nor dirty domains.
     void refreshBandLayout();
+    // Live Quick-window device pixel ratio for camera and projection math;
+    // 1.0 only before the Quick window exists. Not named devicePixelRatio()
+    // — this QWidget already inherits that QPaintDevice method.
+    qreal quickDevicePixelRatio() const;
 
     // Focus bridge over the converted bands' input items. focusBand() returns
     // false only when a band's input item does not exist yet; otherwise it

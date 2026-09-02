@@ -565,13 +565,14 @@ struct GateFixture {
         QCoreApplication::processEvents();
 
         SongView &view = tab.view();
-        roll = view.findChild<QWidget *>(QStringLiteral("pianoRoll"));
         headers = descendant<songview::TrackHeaderPanel>(view);
         controls = view.findChild<QWidget *>(QStringLiteral("timeRulerControls"),
                                              Qt::FindDirectChildrenOnly);
         auto *quick =
             view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
         if (quick && quick->rootObject()) {
+            rollInput = quick->rootObject()->findChild<songview::TimelineInputItem *>(
+                QStringLiteral("timelineRollInput"));
             stripInput = quick->rootObject()->findChild<songview::TimelineInputItem *>(
                 QStringLiteral("timelineOtherEventsInput"));
             rulerInput = quick->rootObject()->findChild<songview::TimelineInputItem *>(
@@ -604,10 +605,9 @@ struct GateFixture {
     void checkSurfacesEnabled(Harness &check) const
     {
         const std::pair<const char *, QWidget *> surfaces[] = {
-            {"ruler controls", controls.data()}, {"piano roll", roll.data()},
-            {"track headers", headers.data()},   {"event list", events.data()},
-            {"editor drawer", drawer.data()},    {"horizontal scrollbar", hbar.data()},
-            {"vertical scrollbar", vbar.data()},
+            {"ruler controls", controls.data()},   {"track headers", headers.data()},
+            {"event list", events.data()},         {"editor drawer", drawer.data()},
+            {"horizontal scrollbar", hbar.data()}, {"vertical scrollbar", vbar.data()},
         };
         for (const auto &[name, widget] : surfaces) {
             if (!widget)
@@ -616,6 +616,10 @@ struct GateFixture {
                 check.fail(qUtf8Printable(
                     QObject::tr("loading %1 was disabled instead of gated").arg(name)));
         }
+        if (!rollInput)
+            check.fail("loading view is missing its roll Quick input");
+        else if (!rollInput->isEnabled())
+            check.fail("loading roll Quick input was disabled instead of gated");
         if (!stripInput)
             check.fail("loading view is missing its other-events Quick input");
         else if (!stripInput->isEnabled())
@@ -665,7 +669,7 @@ struct GateFixture {
 
     SongTab tab;
     QPointer<QWidget> controls;
-    QPointer<QWidget> roll;
+    QPointer<songview::TimelineInputItem> rollInput;
     QPointer<songview::TrackHeaderPanel> headers;
     QPointer<songview::TimelineInputItem> rulerInput;
     QPointer<songview::TimelineInputItem> stripInput;
@@ -718,7 +722,7 @@ struct RollWheelSample {
 };
 
 // One wheel tick over the piano roll at the covered point.
-RollWheelSample wheelRoll(Harness &check, QWidget &roll, SongView &view)
+RollWheelSample wheelRoll(Harness &check, songview::TimelineInputItem &roll, SongView &view)
 {
     RollWheelSample sample;
     sample.zoomBefore = view.pxPerBeat();
@@ -800,9 +804,9 @@ void checkReadyScrollWheel(Harness &check, GateFixture &probe)
 // The loading gate consumes a roll wheel zoom.
 void checkGatedRollWheel(Harness &check, GateFixture &probe)
 {
-    if (!probe.roll)
+    if (!probe.rollInput)
         return;
-    const RollWheelSample sample = wheelRoll(check, *probe.roll, probe.tab.view());
+    const RollWheelSample sample = wheelRoll(check, *probe.rollInput, probe.tab.view());
     if (!qFuzzyCompare(sample.zoomAfter, sample.zoomBefore))
         check.fail("roll wheel zoomed while the tab was loading");
 }
@@ -810,9 +814,9 @@ void checkGatedRollWheel(Harness &check, GateFixture &probe)
 // Once ready the same wheel tick zooms again.
 void checkReadyRollWheel(Harness &check, GateFixture &probe)
 {
-    if (!probe.roll)
+    if (!probe.rollInput)
         return;
-    const RollWheelSample sample = wheelRoll(check, *probe.roll, probe.tab.view());
+    const RollWheelSample sample = wheelRoll(check, *probe.rollInput, probe.tab.view());
     if (qFuzzyCompare(sample.zoomAfter, sample.zoomBefore))
         check.fail("roll wheel did not zoom after readiness");
 }

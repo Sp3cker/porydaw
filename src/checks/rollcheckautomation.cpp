@@ -321,19 +321,23 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                      std::max(0, page.canvas()->width() - automationPlotStart),
                      page.canvas()->height());
     const bool headerEndsAtPlotOrigin = headerRect.right() + 1 == automationPlotStart;
-    auto *pianoRoll = view.findChild<QWidget *>(QStringLiteral("pianoRoll"));
-    const int pianoGridStartOnView =
-        pianoRoll ? pianoRoll->mapTo(&view, QPoint(layout::fontPx(13.0 / 3.0), 0)).x() : -1;
+    const std::optional<songview::TimelineBandGeometry> rollBandGeometry =
+        view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
+    const int pianoGridStartOnView = rollBandGeometry ? rollBandGeometry->rect.x() +
+                                                            rollBandGeometry->timelineOrigin +
+                                                            layout::fontPx(13.0 / 3.0)
+                                                      : -1;
     const int automationPlotStartOnView =
         page.canvas()->mapTo(&view, QPoint(automationPlotStart, 0)).x();
-    check(pianoRoll && automationPlotStartOnView == pianoGridStartOnView,
+    check(rollBandGeometry && automationPlotStartOnView == pianoGridStartOnView,
           QStringLiteral("editable automation lanes must start vertically inline with the piano "
                          "grid (automation %1 = %2 + %3, piano %4 = %5 + %6)")
               .arg(automationPlotStartOnView)
               .arg(page.canvas()->mapTo(&view, QPoint(0, 0)).x())
               .arg(automationPlotStart)
               .arg(pianoGridStartOnView)
-              .arg(pianoRoll ? pianoRoll->mapTo(&view, QPoint(0, 0)).x() : -1)
+              .arg(rollBandGeometry ? rollBandGeometry->rect.x() + rollBandGeometry->timelineOrigin
+                                    : -1)
               .arg(layout::fontPx(13.0 / 3.0)));
     check(headerEndsAtPlotOrigin && labelGutter.left() >= headerRect.left() &&
               labelGutter.right() < automationPlotStart && plot.left() == automationPlotStart &&

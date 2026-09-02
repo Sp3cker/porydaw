@@ -78,7 +78,12 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
         probe.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
     auto *scene = quick ? quick->findChild<songview::TimelineQuickScene *>() : nullptr;
     auto *overlay = checks::support::findWidgetDescendant<songview::PlayheadOverlay>(probe);
-    auto *roll = checks::support::findWidgetDescendant<songview::PianoRoll>(probe);
+    auto *roll = probe.findChild<songview::PianoRoll *>();
+    const auto rollBandRect = [&probe] {
+        const std::optional<songview::TimelineBandGeometry> &band =
+            probe.timelineBandLayout().geometry(songview::TimelineBand::Roll);
+        return band ? band->rect : QRect{};
+    };
     auto *eventList = checks::support::findWidgetDescendant<EventListView>(probe);
     auto *drawer = probe.editorDrawer();
     auto *automation = drawer ? drawer->automationPage() : nullptr;
@@ -167,14 +172,14 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
                              .value_or(songview::TimelineBandGeometry{})
                              .rect,
                          "ruler");
-    checkVisibleBody(*roll, "piano roll");
+    checkVisibleBodyRect(rollBandRect(), "piano roll");
     checkVisibleBodyRect(bandLayout.geometry(songview::TimelineBand::OtherEvents)
                              .value_or(songview::TimelineBandGeometry{})
                              .rect,
                          "other-events");
     checkRulerTriangle(fallbackImage(), false, "roll view");
 
-    const QRect rollRect = checks::support::widgetRectIn(*roll, probe);
+    const QRect rollRect = rollBandRect();
     const QRect keyboardGutterRect{0, rollRect.top(), qRound(probe.timelinePlotOrigin()),
                                    rollRect.height()};
     const SongView::ViewState savedKeyboardViewport = probe.viewState();

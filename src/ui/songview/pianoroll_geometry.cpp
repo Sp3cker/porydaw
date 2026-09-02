@@ -82,7 +82,7 @@ bool PianoRoll::insideTimeSelection(qreal x) const
         !m_sv->selectionModel().timeSelectionCoversTrack(m_sv->selectionModel().primaryTrack(),
                                                          usedTrackMask(m_sv->timeline())))
         return false;
-    const qreal dpr = devicePixelRatioF();
+    const qreal dpr = devicePixelRatio();
     const qreal startX = m_sv->displayX(double(sel.startTick), m_geometry.pianoKeyboardWidth, dpr);
     const qreal endX = m_sv->displayX(double(sel.endTick), m_geometry.pianoKeyboardWidth, dpr);
     return x >= startX && x < endX;
@@ -90,7 +90,7 @@ bool PianoRoll::insideTimeSelection(qreal x) const
 
 const std::array<qreal, PitchProjection::cMaxRows + 1> &PianoRoll::rowEdges() const
 {
-    const qreal dpr = devicePixelRatioF();
+    const qreal dpr = devicePixelRatio();
     const qreal keyHeight = m_sv->keyHeight();
     const qreal scrollY = m_sv->scrollY();
     const PitchProjection &projection = m_sv->pitchProjection();
@@ -133,14 +133,14 @@ QRectF PianoRoll::keyRect(int key, qreal x, qreal width) const
 int PianoRoll::yToKey(qreal y) const
 {
     return m_sv->pitchProjection().yToPitch(y, m_sv->keyHeight(), m_sv->scrollY(),
-                                            devicePixelRatioF());
+                                            devicePixelRatio());
 }
 
 int PianoRoll::foldDegreeDeltaForPointer(qreal y) const
 {
     const PitchProjection &projection = m_sv->pitchProjection();
     const int pointerRow =
-        projection.yToRow(y, m_sv->keyHeight(), m_sv->scrollY(), devicePixelRatioF());
+        projection.yToRow(y, m_sv->keyHeight(), m_sv->scrollY(), devicePixelRatio());
     const int grabRow = projection.rowForPitch(m_pressKey);
     if (pointerRow == PitchProjection::cHiddenRow || grabRow == PitchProjection::cHiddenRow)
         return 0;
@@ -161,7 +161,7 @@ int PianoRoll::foldDegreeDeltaForPointer(qreal y) const
 
 qreal PianoRoll::physicalPixel() const
 {
-    return logicalPhysicalPixel(devicePixelRatioF());
+    return logicalPhysicalPixel(devicePixelRatio());
 }
 
 std::optional<PianoRoll::KeyboardHoverGeometry> PianoRoll::keyboardHoverGeometry(int key) const
@@ -177,7 +177,7 @@ std::optional<PianoRoll::KeyboardHoverGeometry> PianoRoll::keyboardHoverGeometry
     const int chipHeight = m_keyboardHoverChipHeight;
     const qreal chipY =
         std::clamp(highlight.center().y() - chipHeight / 2.0, qreal(lyt::space(Space::Zero)),
-                   qreal(std::max(lyt::space(Space::Zero), height() - chipHeight)));
+                   std::max<qreal>(lyt::space(Space::Zero), bounds().height() - chipHeight));
     const QRectF chip(m_geometry.pianoKeyboardWidth - m_geometry.keyboardHoverChipRightInset -
                           chipWidth,
                       chipY, chipWidth, chipHeight);
@@ -209,7 +209,7 @@ QRectF PianoRoll::noteRect(qreal x0, qreal x1, int key) const
 
 QRectF PianoRoll::noteRect(const ViewNote &note) const
 {
-    const qreal dpr = devicePixelRatioF();
+    const qreal dpr = devicePixelRatio();
     return noteRect(m_sv->displayX(double(note.startTick), m_geometry.pianoKeyboardWidth, dpr),
                     m_sv->displayX(double(note.endTick), m_geometry.pianoKeyboardWidth, dpr),
                     note.key);
@@ -276,26 +276,28 @@ bool PianoRoll::nearLeftEdge(const ViewNote &note, QPointF pos) const
 
 void PianoRoll::refreshHoverCursor(QPointF pos, Qt::KeyboardModifiers modifiers)
 {
-    if (m_cursors.dpr != devicePixelRatioF())
-        m_cursors = loadMidiCursors(devicePixelRatioF(), m_geometry.midiCursorExtent);
+    if (m_cursors.dpr != devicePixelRatio())
+        m_cursors = loadMidiCursors(devicePixelRatio(), m_geometry.midiCursorExtent);
     const ViewNote *hit =
         m_sv->document() && pos.x() >= m_geometry.pianoKeyboardWidth ? hitNote(pos) : nullptr;
     // Resize edges win over the modifier velocity hover.
     const auto &keys = keymap::Registry::instance();
     if (hit && nearRightEdge(*hit, pos))
-        setCursor(m_cursors.rightEdge);
+        m_inputHost->setCursor(m_cursors.rightEdge);
     else if (hit && nearLeftEdge(*hit, pos))
-        setCursor(m_cursors.leftEdge);
+        m_inputHost->setCursor(m_cursors.leftEdge);
     else if (hit && keys.matchesModifier(modifiers, QStringLiteral("roll.velocity_drag")))
-        setCursor(Qt::SizeVerCursor);
+        m_inputHost->setCursor(Qt::SizeVerCursor);
     else
-        setCursor(Qt::ArrowCursor);
+        m_inputHost->clearCursor();
 }
 
 void PianoRoll::refreshHoverAtCursor()
 {
-    const QPoint local = mapFromGlobal(QCursor::pos());
-    if (rect().contains(local))
+    if (!m_inputHost)
+        return;
+    const QPointF local = m_inputHost->mapFromGlobal(QCursor::pos());
+    if (m_inputHost->bounds().contains(local))
         refreshHoverCursor(local, QApplication::keyboardModifiers());
 }
 
@@ -316,7 +318,7 @@ QRectF PianoRoll::displayedNoteRect(const ViewNote &note) const
         endTick = std::max<int64_t>(tick + 1, int64_t(note.endTick) + m_dTick + m_dDur);
     }
     const int key = displayedNoteKey(note);
-    const qreal dpr = devicePixelRatioF();
+    const qreal dpr = devicePixelRatio();
     const qreal x0 = m_sv->displayX(double(tick), m_geometry.pianoKeyboardWidth, dpr);
     const qreal x1 = m_sv->displayX(double(endTick), m_geometry.pianoKeyboardWidth, dpr);
     return noteRect(x0, x1, key);

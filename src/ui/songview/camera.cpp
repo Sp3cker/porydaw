@@ -8,7 +8,6 @@
 #include <QScrollBar>
 #include <QSizePolicy>
 #include <QSpacerItem>
-#include <QWheelEvent>
 
 #include <algorithm>
 #include <cmath>
@@ -85,11 +84,15 @@ void SongView::zoomAroundContentX(double factor, qreal anchorContentX)
     refreshTimelineViews(cPlotDirty);
     refreshDrawerPages();
 }
-void SongView::zoomKeyHeight(const QWheelEvent *event)
+void SongView::zoomKeyHeight(const songview::TimelineWheelInput &input)
 {
     if (!m_timeline)
         return;
-    const double zoomDelta = wheelAngleUnits(event);
+    if (input.phase == Qt::ScrollMomentum)
+        return;
+    // Same momentum/pixel/angle weighting as wheelAngleUnits(), value form.
+    const QPoint delta = input.pixelDelta.isNull() ? input.angleDelta : input.pixelDelta;
+    const double zoomDelta = double(delta.y()) * (input.pixelDelta.isNull() ? 1.0 : 5.0);
     if (zoomDelta == 0.0)
         return;
     const double oldH = m_keyHeight;
@@ -99,7 +102,7 @@ void SongView::zoomKeyHeight(const QWheelEvent *event)
     if (newH == m_keyHeight)
         return;
     // Pin the content row under the cursor before projecting to the scrollbar.
-    const double anchorY = event->position().y();
+    const double anchorY = input.position.y();
     const double anchoredScroll = cursorAnchoredScroll(anchorY, oldH, m_scrollY, newH);
     m_keyHeight = newH;
     m_roll->refreshTextLayout();
@@ -180,13 +183,20 @@ void SongView::updateScrollbars()
 }
 int SongView::viewportWidth() const
 {
-    return std::max(m_geometry.timelineViewportMinimumWidth,
-                    m_roll->width() - m_geometry.pianoKeyboardWidth);
+    // The canonical roll rectangle already excludes the vertical scrollbar;
+    // its timeline origin is the piano-keyboard column.
+    const std::optional<songview::TimelineBandGeometry> &roll =
+        m_timelineBandLayout.geometry(songview::TimelineBand::Roll);
+    const int width = roll ? roll->rect.width() - roll->timelineOrigin : 0;
+    return std::max(m_geometry.timelineViewportMinimumWidth, width);
 }
 int SongView::rollViewportHeight() const
 {
     const int drawerHeight = m_editorDrawer ? m_editorDrawer->height() : 0;
-    return std::max(0, m_roll->height() - drawerHeight);
+    const std::optional<songview::TimelineBandGeometry> &roll =
+        m_timelineBandLayout.geometry(songview::TimelineBand::Roll);
+    const int height = roll ? roll->rect.height() : 0;
+    return std::max(0, height - drawerHeight);
 }
 double SongView::leadPadPx() const
 {
@@ -198,7 +208,7 @@ double SongView::leadPadPx() const
 void SongView::ensureTickVisible(uint64_t tick)
 {
     const qreal vw = viewportWidth();
-    const qreal dpr = m_roll->devicePixelRatioF();
+    const qreal dpr = m_quickView ? m_quickView->quickDevicePixelRatio() : devicePixelRatioF();
     const qreal physicalPixel = logicalPhysicalPixel(dpr);
     const qreal displayedX = displayX(double(tick), lyt::space(Space::Zero), dpr);
     if (displayedX >= lyt::space(Space::Zero) && displayedX <= vw - physicalPixel)
@@ -210,7 +220,7 @@ void SongView::ensureRangeVisible(uint64_t startTick, uint64_t endTick, bool pre
     const qreal x0 = contentX(double(startTick));
     const qreal x1 = contentX(double(endTick));
     const qreal vw = viewportWidth();
-    const qreal dpr = m_roll->devicePixelRatioF();
+    const qreal dpr = m_quickView ? m_quickView->quickDevicePixelRatio() : devicePixelRatioF();
     const qreal physicalPixel = logicalPhysicalPixel(dpr);
     const qreal displayedX0 = displayX(double(startTick), lyt::space(Space::Zero), dpr);
     const qreal displayedX1 = displayX(double(endTick), lyt::space(Space::Zero), dpr);

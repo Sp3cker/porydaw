@@ -146,10 +146,7 @@ TimelineBandLayout SongView::resolveTimelineBandLayout() const
     if (m_rulerSpacer && m_ruler)
         layout.geometry(TimelineBand::Ruler) = {m_rulerSpacer->geometry(), m_geometry.plotOrigin};
     // The roll band is the retained roll page minus the vertical scrollbar
-    // column — exactly where PianoRoll sits today because the page's
-    // zero-margin, zero-spacing layout gives the roll every pixel left of the
-    // scrollbar (asserted in bandWidgetsMatchCanonicalLayout()). Nullopt
-    // while the event list replaces the roll page.
+    // column. Nullopt while the event list replaces the roll page.
     if (!eventListVisible()) {
         const QWidget *rollPage = m_rollStack->widget(0);
         QRect rollRect(rollPage->mapTo(this, QPoint(0, 0)), rollPage->size());
@@ -207,11 +204,10 @@ bool SongView::bandWidgetsMatchCanonicalLayout() const
     };
     const AutomationPage *automation = m_editorDrawer ? m_editorDrawer->automationPage() : nullptr;
     // Converted bands have no widget; their canonical rectangles come
-    // directly from their parent-owned spacer/body geometry.
-    return matches(TimelineBand::Roll, m_roll) &&
-           matches(TimelineBand::Automation, automation ? automation->scrollViewport() : nullptr);
+    // directly from their parent-owned spacer/body geometry. The roll band
+    // likewise derives from the roll page minus its scrollbar column.
+    return matches(TimelineBand::Automation, automation ? automation->scrollViewport() : nullptr);
 }
-
 // The native ruler controls overlay the gutter of the parent-owned ruler row.
 void SongView::positionBandWidgets()
 {
@@ -277,7 +273,6 @@ SongView::SongView(QWidget *parent)
                                 lyt::space(Space::Zero), lyt::space(Space::Zero));
     rollBox->setSpacing(lyt::space(Space::Zero));
     m_roll = new PianoRoll(this);
-    rollBox->addWidget(m_roll, 1);
     m_vbar = new QScrollBar(Qt::Vertical, rollPage);
     ::layout::configureListPositionIndicator(*m_vbar);
     m_vbar->setSingleStep(kScrollUnitsPerDip);
@@ -307,10 +302,12 @@ SongView::SongView(QWidget *parent)
         *m_editorDrawer->velocityArea(), *m_editorDrawer->voiceChangeArea(), *this);
     // Converted drawer/strip interactions are SongView-owned, not native
     // chrome. Parenting them after the Quick host makes QObject teardown
-    // destroy and detach the host before any interaction module.
+    // destroy and detach the host before any interaction module. The roll
+    // interaction joins them: a plain QObject, attached to timelineRollInput.
     m_editorDrawer->velocityArea()->setParent(this);
     m_editorDrawer->voiceChangeArea()->setParent(this);
     m_strip->setParent(this);
+    m_roll->setParent(this);
     m_quickView->lower();
     m_playheadOverlay = new PlayheadOverlay(*this, timelineBandLayout());
     m_selectionModel.setObserver(
@@ -339,11 +336,11 @@ SongView::~SongView()
     if (!m_quickView)
         return;
     m_quickView->detachInputInteraction(TimelineBand::Ruler);
+    m_quickView->detachInputInteraction(TimelineBand::Roll);
     m_quickView->detachInputInteraction(TimelineBand::OtherEvents);
     m_quickView->detachInputInteraction(TimelineBand::Velocity);
     m_quickView->detachInputInteraction(TimelineBand::VoiceChanges);
 }
-
 bool SongView::advanceTrackActivity(const TrackActivityLevels &levels, float elapsedSeconds,
                                     bool playing)
 {
@@ -637,9 +634,8 @@ void SongView::focusContent()
     if (eventListVisible())
         m_events->setFocus();
     else
-        m_roll->setFocus();
+        focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason);
 }
-
 void SongView::focusActiveSurface()
 {
     if (hasVisibleDrawerSection())
@@ -702,7 +698,6 @@ void SongView::applyViewState(const ViewState &state)
     m_roll->refreshTextLayout();
     setGridMinDenom(state.gridMinDenom); // setter validates the denominator
     setGridFeel(state.gridTriplet ? GridFeel::Triplet : GridFeel::Straight);
-    m_editCursorTick = std::min<uint64_t>(state.editCursorTick, m_timeline->lengthTicks);
     if (state.selectedTrack >= 0 && state.selectedTrack < 16 &&
         m_timeline->tracks[state.selectedTrack].used)
         selectTrack(state.selectedTrack);
@@ -710,6 +705,7 @@ void SongView::applyViewState(const ViewState &state)
     setHScroll(state.scrollPx); // setHScroll clamps to the camera's range
     setVScroll(state.scrollY);
     setEventListVisible(state.eventList);
+    m_editCursorTick = std::min<uint64_t>(state.editCursorTick, m_timeline->lengthTicks);
     // Whole view-state applied: every roll domain may differ.
     refreshTimelineViews(PianoRollQuickDirty::All);
 }
@@ -809,7 +805,13 @@ bool SongView::event(QEvent *event)
         if (keyEvent->key() == Qt::Key_Escape)
             cancelActiveInteractions();
         // Drawer canvases pass unclaimed keys up to their SongView parent.
-        if (handleEditKey(keyEvent))
+        const songview::TimelineKeyInput keyInput{
+            .key = keyEvent->key(),
+            .modifiers = keyEvent->modifiers(),
+            .text = keyEvent->text(),
+            .autoRepeat = keyEvent->isAutoRepeat(),
+        };
+        if (handleEditKey(keyInput))
             return true;
     }
     const bool handled = QWidget::event(event);

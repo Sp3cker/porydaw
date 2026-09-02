@@ -1,6 +1,5 @@
 #include "checks/rollcheck/rollcheck.h"
 
-#include <QWidget>
 #include <algorithm>
 #include <cmath>
 #include <utility>
@@ -9,6 +8,7 @@
 #include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songviewmodel.h"
 
 namespace checks::rollcheck {
@@ -16,7 +16,7 @@ namespace checks::rollcheck {
 ScenarioContinuation runIdentityScenarios(Harness &check, const SongInfo &song)
 {
     SongView &view = check.view();
-    QWidget *roll = &check.roll();
+    songview::TimelineInputItem *roll = &check.rollInput();
     const int track = check.track();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     auto fail = [&](const char *what) { check.fail(what); };
@@ -84,53 +84,47 @@ ScenarioContinuation runIdentityScenarios(Harness &check, const SongInfo &song)
                     if (!identityView.selectionModel().noteSelection().empty())
                         fail("plain click on the active track header did not clear note selection");
 
-                    auto *identityRoll =
-                        identityView.findChild<QWidget *>(QStringLiteral("pianoRoll"));
-                    if (!identityRoll) {
-                        fail("duplicate identity fixture could not find the SongView roll");
-                    } else {
-                        const DocNote firstBefore = duplicates[0];
-                        const DocNote secondBefore = duplicates[1];
-                        const auto sameNoteIdentityAndValue = [](const DocNote &lhs,
-                                                                 const DocNote &rhs) {
-                            return lhs.noteId == rhs.noteId && lhs.engineTrack == rhs.engineTrack &&
-                                   lhs.smfTrack == rhs.smfTrack && lhs.tick == rhs.tick &&
-                                   lhs.duration == rhs.duration && lhs.key == rhs.key &&
-                                   lhs.velocity == rhs.velocity && lhs.channel == rhs.channel;
-                        };
-                        identityView.selectionModel().setNoteSelection({firstBefore.noteId});
-                        projectionDoc.moveNotes({firstBefore}, 0, 1);
-                        DocNote firstMoved;
-                        DocNote secondUntouched;
-                        DocNote expectedMoved = firstBefore;
-                        expectedMoved.key++;
-                        const bool firstEdit =
-                            projectionDoc.findNote(firstBefore.noteId, &firstMoved) &&
-                            sameNoteIdentityAndValue(firstMoved, expectedMoved);
-                        const bool secondStable =
-                            projectionDoc.findNote(secondBefore.noteId, &secondUntouched) &&
-                            sameNoteIdentityAndValue(secondUntouched, secondBefore);
-                        const std::vector<NoteId> &editedSelection =
-                            identityView.selectionModel().noteSelection();
-                        if (!firstEdit || !secondStable || editedSelection.size() != 1 ||
-                            editedSelection.front() != firstBefore.noteId) {
-                            fail("one-ID edit changed the wrong duplicate");
-                        }
+                    const DocNote firstBefore = duplicates[0];
+                    const DocNote secondBefore = duplicates[1];
+                    const auto sameNoteIdentityAndValue = [](const DocNote &lhs,
+                                                             const DocNote &rhs) {
+                        return lhs.noteId == rhs.noteId && lhs.engineTrack == rhs.engineTrack &&
+                               lhs.smfTrack == rhs.smfTrack && lhs.tick == rhs.tick &&
+                               lhs.duration == rhs.duration && lhs.key == rhs.key &&
+                               lhs.velocity == rhs.velocity && lhs.channel == rhs.channel;
+                    };
+                    identityView.selectionModel().setNoteSelection({firstBefore.noteId});
+                    projectionDoc.moveNotes({firstBefore}, 0, 1);
+                    DocNote firstMoved;
+                    DocNote secondUntouched;
+                    DocNote expectedMoved = firstBefore;
+                    expectedMoved.key++;
+                    const bool firstEdit =
+                        projectionDoc.findNote(firstBefore.noteId, &firstMoved) &&
+                        sameNoteIdentityAndValue(firstMoved, expectedMoved);
+                    const bool secondStable =
+                        projectionDoc.findNote(secondBefore.noteId, &secondUntouched) &&
+                        sameNoteIdentityAndValue(secondUntouched, secondBefore);
+                    const std::vector<NoteId> &editedSelection =
+                        identityView.selectionModel().noteSelection();
+                    if (!firstEdit || !secondStable || editedSelection.size() != 1 ||
+                        editedSelection.front() != firstBefore.noteId) {
+                        fail("one-ID edit changed the wrong duplicate");
+                    }
 
-                        projectionDoc.undoStack()->undo();
-                        DocNote firstRestored;
-                        DocNote secondRestored;
-                        const bool undoRestored =
-                            projectionDoc.findNote(firstBefore.noteId, &firstRestored) &&
-                            projectionDoc.findNote(secondBefore.noteId, &secondRestored) &&
-                            sameNoteIdentityAndValue(firstRestored, firstBefore) &&
-                            sameNoteIdentityAndValue(secondRestored, secondBefore);
-                        const std::vector<NoteId> &undoSelection =
-                            identityView.selectionModel().noteSelection();
-                        if (!undoRestored || undoSelection.size() != 1 ||
-                            undoSelection.front() != firstBefore.noteId) {
-                            fail("one-ID SongView edit did not restore both duplicates on Undo");
-                        }
+                    projectionDoc.undoStack()->undo();
+                    DocNote firstRestored;
+                    DocNote secondRestored;
+                    const bool undoRestored =
+                        projectionDoc.findNote(firstBefore.noteId, &firstRestored) &&
+                        projectionDoc.findNote(secondBefore.noteId, &secondRestored) &&
+                        sameNoteIdentityAndValue(firstRestored, firstBefore) &&
+                        sameNoteIdentityAndValue(secondRestored, secondBefore);
+                    const std::vector<NoteId> &undoSelection =
+                        identityView.selectionModel().noteSelection();
+                    if (!undoRestored || undoSelection.size() != 1 ||
+                        undoSelection.front() != firstBefore.noteId) {
+                        fail("one-ID SongView edit did not restore both duplicates on Undo");
                     }
 
                     identityView.selectionModel().setNoteSelection(
@@ -202,10 +196,9 @@ ScenarioContinuation runIdentityScenarios(Harness &check, const SongInfo &song)
         const double tpb = double(check.timeline().ticksPerBeat);
         const double maxHScroll =
             std::max(0.0, double(check.timeline().lengthTicks) * expected.pxPerBeat / tpb + 100.0 -
-                              double(std::max(50, roll->width() - pianoKeyboardWidth)));
+                              std::max<qreal>(50, roll->width() - pianoKeyboardWidth));
         expected.scrollPx = std::clamp(perturbed.scrollPx, 0.0, maxHScroll);
-        const double maxRollScroll =
-            std::max(0.0, 128.0 * expected.keyHeight - double(roll->height()));
+        const double maxRollScroll = std::max(0.0, 128.0 * expected.keyHeight - roll->height());
         expected.scrollY = std::clamp(perturbed.scrollY, 0.0, maxRollScroll);
         expected.selectedTrack = snapshot.selectedTrack;
         if (perturbed.selectedTrack >= 0 && perturbed.selectedTrack < 16 &&

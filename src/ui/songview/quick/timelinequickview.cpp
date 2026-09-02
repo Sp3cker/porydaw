@@ -182,8 +182,8 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
             qFatal("Qt Quick timeline QML has no band property '%s'", properties.visible);
     }
 
-    // Converted bands attach through their matching input items; unconverted
-    // bands deliberately remain without an entry until their phase lands.
+    // Converted bands attach through their matching input items; the
+    // automation band deliberately remains without an entry until its phase.
     TimelineInputItem *const rulerInput =
         root->findChild<TimelineInputItem *>(QStringLiteral("timelineRulerInput"));
     if (!rulerInput)
@@ -208,6 +208,12 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
         qFatal("Qt Quick timeline QML has no input item 'timelineOtherEventsInput'");
     otherEventsInput->setInteraction(m_otherEvents.data());
     m_inputItems[timelineBandIndex(TimelineBand::OtherEvents)] = otherEventsInput;
+    TimelineInputItem *const rollInput =
+        root->findChild<TimelineInputItem *>(QStringLiteral("timelineRollInput"));
+    if (!rollInput)
+        qFatal("Qt Quick timeline QML has no input item 'timelineRollInput'");
+    rollInput->setInteraction(m_roll.data());
+    m_inputItems[timelineBandIndex(TimelineBand::Roll)] = rollInput;
 
     QWidget *const rulerControls = m_songView->findChild<QWidget *>(
         QStringLiteral("timeRulerControls"), Qt::FindDirectChildrenOnly);
@@ -250,6 +256,11 @@ void TimelineQuickView::detachInputInteraction(TimelineBand band)
 {
     if (TimelineInputItem *const item = m_inputItems[timelineBandIndex(band)])
         item->setInteraction(nullptr);
+}
+
+qreal TimelineQuickView::quickDevicePixelRatio() const
+{
+    return m_quickView ? m_quickView->effectiveDevicePixelRatio() : devicePixelRatioF();
 }
 
 qreal TimelineQuickView::hoverRootContentX() const noexcept

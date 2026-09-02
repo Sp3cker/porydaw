@@ -3,16 +3,17 @@
 #include <QColor>
 #include <QCoreApplication>
 #include <QObject>
-#include <QWidget>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <vector>
 
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
 #include "ui/layout.h"
+#include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/quick/timelinequickview.h"
 #include "ui/theme/themeruntime.h"
 
 namespace checks::rollcheck {
@@ -39,8 +40,17 @@ bool Harness::prepare()
     m_pianoKeyboardWidth = layout::fontPx(13.0 / 3.0);
     m_plotOrigin = layout::fontPx(17.5 + 13.0 / 3.0);
     m_pianoRollDefaultKeyHeight = layout::fontPx(1.0);
-    m_roll = songView.findChild<QWidget *>(QStringLiteral("pianoRoll"));
-    if (!m_roll || m_roll->width() <= m_pianoKeyboardWidth || m_roll->height() <= 0) {
+    auto *quick =
+        songView.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    m_roll = songView.findChild<songview::PianoRoll *>();
+    m_rollInput = quick && quick->rootObject()
+                      ? quick->rootObject()->findChild<songview::TimelineInputItem *>(
+                            QStringLiteral("timelineRollInput"))
+                      : nullptr;
+    const QRect rollBand = rollBandRect();
+    if (!m_roll || !m_rollInput || rollBand.width() <= m_pianoKeyboardWidth ||
+        rollBand.height() <= 0 ||
+        m_rollInput->bounds() != QRectF(QPointF{}, QSizeF(rollBand.width(), rollBand.height()))) {
         fail("piano roll not found or not laid out");
         return false;
     }
@@ -78,9 +88,21 @@ const MidiTimeline &Harness::timeline() const noexcept
     return m_rig.timeline();
 }
 
-QWidget &Harness::roll() noexcept
+songview::PianoRoll &Harness::roll() noexcept
 {
     return *m_roll;
+}
+
+songview::TimelineInputItem &Harness::rollInput() noexcept
+{
+    return *m_rollInput;
+}
+
+QRect Harness::rollBandRect() const noexcept
+{
+    const std::optional<songview::TimelineBandGeometry> band =
+        m_rig.view().timelineBandLayout().geometry(songview::TimelineBand::Roll);
+    return band ? band->rect : QRect{};
 }
 
 QImage Harness::captureQuickFramebuffer()
@@ -89,17 +111,9 @@ QImage Harness::captureQuickFramebuffer()
         fail("piano roll not found");
         return {};
     }
-    return captureQuickBand(*m_roll);
+    return captureQuickBand(rollBandRect());
 }
 
-QImage Harness::captureQuickBand(QWidget &band)
-{
-    QString error;
-    const QImage framebuffer = checks::support::captureQuickBand(view(), band, &error);
-    if (framebuffer.isNull())
-        fail(qUtf8Printable(error));
-    return framebuffer;
-}
 QImage Harness::captureQuickBand(const QRect &bandRect)
 {
     QString error;
@@ -170,23 +184,24 @@ bool Harness::isOccupied(uint64_t tick, uint64_t dur, int key, bool checkAllTrac
 Cell Harness::findFreeCell(int firstProbe, bool checkAllTracks)
 {
     const SongView &songView = view();
-    const QWidget &pianoRoll = roll();
+    const songview::TimelineInputItem &pianoRoll = rollInput();
     const SnappedRows rows{songView, pianoRoll};
 
     for (int key = 115; key >= 24; --key) {
         const qreal top = rows.top(key);
         const qreal bottom = rows.bottom(key);
-        if (top < 0 || bottom > pianoRoll.height())
+        if (top < 0 || bottom > pianoRoll.bounds().height())
             continue;
-        for (int probe = firstProbe; probe < pianoRoll.width() - m_pianoKeyboardWidth - 40;
-             probe += 24) {
+        for (int probe = firstProbe;
+             probe < int(pianoRoll.bounds().width()) - m_pianoKeyboardWidth - 40; probe += 24) {
             const uint64_t tick = songView.snapTickDown(songView.tickAtContentX(probe));
             const uint64_t dur = songView.gridTicksAt(tick);
             const int x0 = m_pianoKeyboardWidth + songView.contentX(double(tick));
             const int x1 = m_pianoKeyboardWidth + songView.contentX(double(tick + dur));
             const int xs =
                 m_pianoKeyboardWidth + songView.contentX(double(tick + songView.snapTicksAt(tick)));
-            if (x0 < m_pianoKeyboardWidth || x1 - x0 < 12 || xs - x0 < 8 || x1 >= pianoRoll.width())
+            if (x0 < m_pianoKeyboardWidth || x1 - x0 < 12 || xs - x0 < 8 ||
+                x1 >= int(pianoRoll.bounds().width()))
                 continue;
             if (isOccupied(tick, dur, key, checkAllTracks))
                 continue;
@@ -204,7 +219,7 @@ Cell Harness::findFreeCell(int firstProbe, bool checkAllTracks)
 
 qreal SnappedRows::dpr() const
 {
-    return roll.devicePixelRatioF();
+    return roll.devicePixelRatio();
 }
 
 qreal SnappedRows::pixel() const
@@ -260,19 +275,19 @@ bool isSelectionRingColor(QRgb pixel)
            std::abs(actualColor.blue() - selectionRingColor.blue()) <= 16;
 }
 
-void click(QWidget &widget, QPoint position)
+void click(QQuickItem &item, QPoint position)
 {
-    events::sendMouse(widget, QEvent::MouseButtonPress, position, Qt::LeftButton, Qt::LeftButton,
+    events::sendMouse(item, QEvent::MouseButtonPress, position, Qt::LeftButton, Qt::LeftButton,
                       Qt::NoModifier);
-    events::sendMouse(widget, QEvent::MouseButtonRelease, position, Qt::LeftButton, Qt::NoButton,
+    events::sendMouse(item, QEvent::MouseButtonRelease, position, Qt::LeftButton, Qt::NoButton,
                       Qt::NoModifier);
 }
 
-void drawNote(QWidget &widget, QPoint position)
+void drawNote(QQuickItem &item, QPoint position)
 {
-    events::sendMouse(widget, QEvent::MouseButtonDblClick, position, Qt::LeftButton, Qt::LeftButton,
+    events::sendMouse(item, QEvent::MouseButtonDblClick, position, Qt::LeftButton, Qt::LeftButton,
                       Qt::NoModifier);
-    events::sendMouse(widget, QEvent::MouseButtonRelease, position, Qt::LeftButton, Qt::NoButton,
+    events::sendMouse(item, QEvent::MouseButtonRelease, position, Qt::LeftButton, Qt::NoButton,
                       Qt::NoModifier);
 }
 

@@ -11,9 +11,8 @@
 #include "ui/typography.h"
 
 #include <QAction>
-#include <QEvent>
 #include <QMenu>
-#include <QWheelEvent>
+#include <QPointer>
 
 #include <QFontMetrics>
 #include <algorithm>
@@ -64,20 +63,13 @@ namespace songview {
 using namespace songview::detail;
 using namespace songview::pianoroll_detail;
 
-PianoRoll::PianoRoll(SongView *sv)
-    : QWidget(sv)
-    , m_sv(sv)
-    , m_geometry(PianoRollGeometry::resolve())
-    , m_cursors(loadMidiCursors(devicePixelRatioF(), m_geometry.midiCursorExtent))
+PianoRoll::PianoRoll(SongView *sv) : m_sv(sv), m_geometry(PianoRollGeometry::resolve())
 {
     setObjectName(QStringLiteral("pianoRoll")); // findChild for tests
-    setMinimumHeight(m_geometry.minimumVisiblePianoRollHeight);
-    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    setMouseTracking(true);
-    setFocusPolicy(Qt::ClickFocus);
-    rebuildFontCache();
-    m_noteMenu =
-        new NoteContextMenu(this, [this](QPointF globalPos) { return moveNoteMenu(globalPos); });
+    const QPointer<PianoRoll> guardedThis(this);
+    m_noteMenu = new NoteContextMenu(sv, [guardedThis](QPointF globalPos) {
+        return guardedThis && guardedThis->moveNoteMenu(globalPos);
+    });
     connect(m_noteMenu, &QMenu::triggered, this,
             [this](QAction *action) { handleNoteMenuChoice(m_noteMenu->handleAction(action)); });
 }
@@ -89,15 +81,71 @@ void PianoRoll::requestQuickUpdate(PianoRollQuickDirtySet dirty)
     m_sv->requestPianoRollQuickUpdate(dirty);
 }
 
+QRectF PianoRoll::bounds() const
+{
+    Q_ASSERT(m_inputHost);
+    return m_inputHost ? m_inputHost->bounds() : QRectF{};
+}
+
+qreal PianoRoll::devicePixelRatio() const
+{
+    Q_ASSERT(m_inputHost);
+    return m_inputHost ? m_inputHost->devicePixelRatio() : 1.0;
+}
+
+QFont PianoRoll::font() const
+{
+    Q_ASSERT(m_inputHost);
+    return m_inputHost ? m_inputHost->font() : QFont{};
+}
+
+QPalette PianoRoll::palette() const
+{
+    Q_ASSERT(m_inputHost);
+    return m_inputHost ? m_inputHost->palette() : QPalette{};
+}
+
+void PianoRoll::attachInputHost(TimelineInputHost &host)
+{
+    Q_ASSERT(!m_inputHost);
+    m_inputHost = &host;
+    m_cursors = loadMidiCursors(host.devicePixelRatio(), m_geometry.midiCursorExtent);
+    rebuildFontCache();
+    m_rowEdgesValid = false;
+    requestQuickUpdate(PianoRollQuickDirty::All);
+}
+
+void PianoRoll::detachInputHost(TimelineInputHost &host)
+{
+    Q_ASSERT(m_inputHost == &host);
+    if (m_inputHost != &host)
+        return;
+    cancelTransientInput();
+    host.clearCursor();
+    m_inputHost = nullptr;
+}
+
+void PianoRoll::hostAppearanceChanged()
+{
+    if (!m_inputHost)
+        return;
+    m_geometry = PianoRollGeometry::resolve();
+    m_cursors = loadMidiCursors(m_inputHost->devicePixelRatio(), m_geometry.midiCursorExtent);
+    m_rowEdgesValid = false;
+    rebuildFontCache();
+    requestQuickUpdate(PianoRollQuickDirty::All);
+}
+
 void PianoRoll::rebuildFontCache()
 {
-    m_fixedNoteNameFont = typography::noteName(font());
+    const QFont hostFont = font();
+    m_fixedNoteNameFont = typography::noteName(hostFont);
     m_fixedNoteNameFont.setPixelSize(
         std::max(lyt::singlePixel(), m_fixedNoteNameFont.pixelSize() - 2 * lyt::singlePixel()));
     const QFontMetrics noteMetrics(m_fixedNoteNameFont);
     m_fixedNoteNameOccupiedHeight = noteMetrics.ascent() + noteMetrics.descent();
 
-    m_keyboardHoverChipFont = typography::caption(font());
+    m_keyboardHoverChipFont = typography::caption(hostFont);
     const QFontMetrics hoverMetrics(m_keyboardHoverChipFont);
     m_keyboardHoverChipHeight = hoverMetrics.height() + m_geometry.keyboardHoverChipVerticalPadding;
     for (int key = 0; key < int(m_keyboardHoverNameWidths.size()); ++key)
@@ -179,7 +227,8 @@ void PianoRoll::cancelTransientInput()
     m_kbdKey = -1;
     m_soundingKey = -1;
     setHoverKey(-1);
-    setCursor(Qt::ArrowCursor);
+    if (m_inputHost)
+        m_inputHost->clearCursor();
     completeProjectionGesture();
     requestQuickUpdate(cDrawCommitDirty);
 }
@@ -202,67 +251,26 @@ void PianoRoll::cancelVelocityInteraction()
     requestQuickUpdate(PianoRollQuickDirty::NoteFills | PianoRollQuickDirty::NoteText);
 }
 
-bool PianoRoll::event(QEvent *event)
-{
-    const auto type = event->type();
-    const bool losesFocus =
-        type == QEvent::Hide || type == QEvent::WindowDeactivate || type == QEvent::FocusOut;
-    if ((losesFocus || type == QEvent::UngrabMouse) &&
-        (m_leftDrag == LeftDrag::Velocity || m_leftDrag == LeftDrag::PendingVelocity))
-        cancelVelocityInteraction();
-    const bool handled = QWidget::event(event);
-    switch (type) {
-    case QEvent::PaletteChange:
-    case QEvent::ApplicationPaletteChange:
-    case QEvent::StyleChange:
-    case QEvent::ThemeChange:
-    case QEvent::FontChange:
-    case QEvent::DevicePixelRatioChange:
-        m_geometry = PianoRollGeometry::resolve();
-        setMinimumHeight(m_geometry.minimumVisiblePianoRollHeight);
-        m_cursors = loadMidiCursors(devicePixelRatioF(), m_geometry.midiCursorExtent);
-        m_rowEdgesValid = false;
-        if (type == QEvent::FontChange)
-            rebuildFontCache();
-        else
-            refreshTextLayout();
-        m_sv->syncTimelineQuickAppearance();
-        break;
-    default:
-        break;
-    }
-    return handled;
-}
-
-void PianoRoll::wheelEvent(QWheelEvent *event)
+bool PianoRoll::wheel(const TimelineWheelInput &input)
 {
     // Reaper-style bindings: plain wheel over the notes area zooms the
     // timeline, over the keyboard column it scrolls the note range.
     // Ctrl+wheel zooms the key height (the track-height analog); Shift
     // (or a trackpad's horizontal delta) scrolls horizontally.
-    const QPoint delta = wheelDelta(event);
+    const QPoint delta = input.pixelDelta.isNull() ? input.angleDelta : input.pixelDelta;
     const int d = delta.y() ? delta.y() : delta.x();
-    if (event->modifiers() & Qt::ControlModifier) {
-        m_sv->zoomKeyHeight(event);
-    } else if (event->modifiers() & Qt::ShiftModifier) {
+    if (input.modifiers & Qt::ControlModifier) {
+        m_sv->zoomKeyHeight(input);
+    } else if (input.modifiers & Qt::ShiftModifier) {
         m_sv->scrollByPx(-d);
     } else if (delta.x() && !delta.y()) {
         m_sv->scrollByPx(-delta.x());
-    } else if (event->position().x() < m_geometry.pianoKeyboardWidth) {
+    } else if (input.position.x() < m_geometry.pianoKeyboardWidth) {
         m_sv->scrollRollBy(-delta.y() / 2.0);
     } else {
-        const TimelineWheelInput wheel{
-            .position = event->position(),
-            .globalPosition = event->globalPosition(),
-            .pixelDelta = event->pixelDelta(),
-            .angleDelta = event->angleDelta(),
-            .modifiers = event->modifiers(),
-            .phase = event->phase(),
-            .inverted = event->inverted(),
-        };
-        m_sv->zoomTimelineAtWheel(wheel, event->position().x() - m_geometry.pianoKeyboardWidth);
+        m_sv->zoomTimelineAtWheel(input, input.position.x() - m_geometry.pianoKeyboardWidth);
     }
-    event->accept();
+    return true;
 }
 
 } // namespace songview

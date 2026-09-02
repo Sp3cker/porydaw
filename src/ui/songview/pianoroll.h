@@ -2,10 +2,9 @@
 
 #include <QCursor>
 #include <QFont>
-#include <QMouseEvent>
+#include <QObject>
 #include <QRectF>
 #include <QString>
-#include <QWidget>
 #include <array>
 #include <cstdint>
 #include <functional>
@@ -16,14 +15,12 @@
 #include "ui/contextmenu.h"
 #include "ui/pitchprojection.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelineinput.h"
 #include "ui/songviewmodel.h"
 
 class QAction;
-class QEvent;
 class QFontMetricsF;
-class QKeyEvent;
 class QPixmap;
-class QWheelEvent;
 
 namespace songview {
 class TimelineQuickView;
@@ -40,6 +37,8 @@ enum class NoteMenuChoice {
     Delete,
 };
 
+// Retained native chrome, parented to the SongView (never to the interaction
+// module, which is a plain QObject now).
 class NoteContextMenu final : public ui::ContextMenu
 {
   public:
@@ -88,12 +87,13 @@ MidiCursors loadMidiCursors(qreal devicePixelRatio, int cursorExtent);
 
 namespace songview {
 
-class PianoRoll : public QWidget
+class PianoRoll final : public QObject, public TimelineBandInteraction
 {
     Q_OBJECT
     Q_DISABLE_COPY_MOVE(PianoRoll)
+
   public:
-    explicit PianoRoll(SongView *sv);
+    explicit PianoRoll(SongView *songView);
 
     bool gestureActive() const;
     void cancelPitchBendPopup();
@@ -105,16 +105,18 @@ class PianoRoll : public QWidget
     // Routes a semantic dirty union to SongView's retained Quick host.
     void requestQuickUpdate(PianoRollQuickDirtySet dirty);
 
-  protected:
-    bool event(QEvent *event) override;
-    void wheelEvent(QWheelEvent *event) override;
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseDoubleClickEvent(QMouseEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *event) override;
-    void leaveEvent(QEvent *) override;
-    void mouseReleaseEvent(QMouseEvent *event) override;
-    void keyPressEvent(QKeyEvent *event) override;
-    void keyReleaseEvent(QKeyEvent *event) override;
+    void attachInputHost(TimelineInputHost &host) override;
+    void detachInputHost(TimelineInputHost &host) override;
+    bool pointerPress(const TimelinePointerInput &input) override;
+    bool pointerDoubleClick(const TimelinePointerInput &input) override;
+    bool pointerMove(const TimelinePointerInput &input) override;
+    bool pointerRelease(const TimelinePointerInput &input) override;
+    void pointerLeave() override;
+    bool wheel(const TimelineWheelInput &input) override;
+    bool keyPress(const TimelineKeyInput &input) override;
+    bool keyRelease(const TimelineKeyInput &input) override;
+    void inputCancelled(TimelineInputCancelReason reason) override;
+    void hostAppearanceChanged() override;
 
   private:
     friend class TimelineQuickView;
@@ -129,6 +131,14 @@ class PianoRoll : public QWidget
         Velocity
     };
     enum class RightDrag { None, PendingMenu, Band, TimeSel };
+
+    // Host services replacing the former QWidget surface. Every geometry,
+    // font, palette, DPR, cursor, focus, and coordinate-mapping read goes
+    // through the attached TimelineInputHost.
+    QRectF bounds() const;
+    qreal devicePixelRatio() const;
+    QFont font() const;
+    QPalette palette() const;
 
     bool insideTimeSelection(qreal x) const;
     const std::array<qreal, PitchProjection::cMaxRows + 1> &rowEdges() const;
@@ -149,9 +159,9 @@ class PianoRoll : public QWidget
 
     std::optional<KeyboardHoverGeometry> keyboardHoverGeometry(int key) const;
     void setHoverKey(int key);
-    void updateHoverKey(const QMouseEvent *event);
-    void panMove(const QMouseEvent *event);
-    void kbdGlissandoMove(const QMouseEvent *event);
+    void updateHoverKey(const TimelinePointerInput &input);
+    void panMove(const TimelinePointerInput &input);
+    void kbdGlissandoMove(const TimelinePointerInput &input);
     void endPanGesture();
     void endKbdAudition();
     void stopNoteAudition();
@@ -163,44 +173,44 @@ class PianoRoll : public QWidget
     void activateLeftDrag(LeftDrag state);
     void clearLiveDragToken();
     void abortLiveLeftDrag();
-    bool resolvePendingPresses(const QMouseEvent *event);
-    void beginPanGesture(const QMouseEvent *event);
-    void beginKbdAudition(const QMouseEvent *event);
+    bool resolvePendingPresses(const TimelinePointerInput &input);
+    void beginPanGesture(const TimelinePointerInput &input);
+    void beginKbdAudition(const TimelinePointerInput &input);
     std::vector<NoteId> notesOnKey(int key) const;
-    void beginPendingMenu(const QMouseEvent *event, const ViewNote *hit);
-    void beginLeftPress(const QMouseEvent *event);
-    void pressContent(QMouseEvent *event);
+    void beginPendingMenu(const TimelinePointerInput &input, const ViewNote *hit);
+    void beginLeftPress(const TimelinePointerInput &input);
+    void pressContent(const TimelinePointerInput &input);
     bool contentPressRejectedByScaleFold(const SongDocument *doc, const ViewNote *hit) const;
-    void beginNotePress(const ViewNote &note, const QMouseEvent *event);
+    void beginNotePress(const ViewNote &note, const TimelinePointerInput &input);
     void applyNotePressSelection(const ViewNote &note, bool onEdge,
                                  Qt::KeyboardModifiers modifiers);
     bool noteRequiresSelectionUpdate(const ViewNote &note) const;
     void armNoteDrag(const ViewNote &note, QPointF position);
     void beginVelocityPress(const ViewNote &note);
-    void beginPendingDraw(const QMouseEvent *);
+    void beginPendingDraw();
     void beginDraw();
-    void resolveRightPress(const QMouseEvent *event);
-    void resolveDrawPress(const QMouseEvent *event);
-    bool resolveVelocityPress(const QMouseEvent *event);
+    void resolveRightPress(const TimelinePointerInput &input);
+    void resolveDrawPress(const TimelinePointerInput &input);
+    bool resolveVelocityPress(const TimelinePointerInput &input);
     void applyVelocityDragSelection();
-    void updateMoveDrag(const QMouseEvent *event);
+    void updateMoveDrag(const TimelinePointerInput &input);
     void auditionMovedSelection();
-    void updateResizeDrag(const QMouseEvent *event);
-    void updateVelocityDrag(const QMouseEvent *event);
-    void updateDrawDrag(const QMouseEvent *event);
+    void updateResizeDrag(const TimelinePointerInput &input);
+    void updateVelocityDrag(const TimelinePointerInput &input);
+    void updateDrawDrag(const TimelinePointerInput &input);
     bool isDrawableKey(int key) const;
     void drawSpanAt(double tick, uint64_t grid, uint64_t &start, int64_t &dur) const;
-    void updateTimeSelDrag(const QMouseEvent *event);
+    void updateTimeSelDrag(const TimelinePointerInput &input);
     void updateBandDrag();
-    void updateLeftDragMove(const QMouseEvent *event);
-    void dispatchLiveDragMove(const QMouseEvent *event);
-    void releaseRightPress(QMouseEvent *event);
-    void releasePendingMenu(QMouseEvent *event, SongDocument *doc);
-    bool releasePendingLeftPress(QMouseEvent *event);
-    void releasePendingDrawClick(QMouseEvent *event);
-    void releasePendingVelocityClick(QMouseEvent *);
-    bool finishReleaseWithoutCommit(const QMouseEvent *event);
-    void commitDrag(QMouseEvent *);
+    void updateLeftDragMove(const TimelinePointerInput &input);
+    void dispatchLiveDragMove(const TimelinePointerInput &input);
+    void releaseRightPress(const TimelinePointerInput &input);
+    void releasePendingMenu(const TimelinePointerInput &input, SongDocument *doc);
+    bool releasePendingLeftPress(const TimelinePointerInput &input);
+    void releasePendingDrawClick(const TimelinePointerInput &input);
+    void releasePendingVelocityClick();
+    bool finishReleaseWithoutCommit(const TimelinePointerInput &input);
+    void commitDrag();
     void commitDrawDrag();
     void commitMoveDrag();
     void commitResolvedMove(SongDocument &doc, std::vector<DocNote> &notes);
@@ -247,7 +257,8 @@ class PianoRoll : public QWidget
     QFont m_keyboardHoverChipFont;
     int m_keyboardHoverChipHeight = 0;
     std::array<int, 128> m_keyboardHoverNameWidths{};
-    SongView *m_sv;
+    SongView *const m_sv;
+    TimelineInputHost *m_inputHost = nullptr;
     pianoroll_detail::PianoRollGeometry m_geometry;
     pianoroll_detail::MidiCursors m_cursors;
     mutable std::array<qreal, PitchProjection::cMaxRows + 1> m_rowEdges{};

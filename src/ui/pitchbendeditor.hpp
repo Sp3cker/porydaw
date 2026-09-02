@@ -26,7 +26,6 @@ class PitchBendEditor final : public QFrame
 {
   public:
     PitchBendEditor(::SongView *songView, SongDocument *document, const DocNote &note,
-                    QPointer<QWidget> focusTarget,
                     std::function<bool(QPointF)> focusNoteUnderCursor);
 
     void openAt(const QRect &noteGlobal, double noteFraction);
@@ -80,9 +79,8 @@ class PitchBendEditor final : public QFrame
 
     bool noteSpanStillPresent() const;
 
-    ::SongView *m_songView = nullptr;
+    QPointer<::SongView> m_songView;
     SongDocument *m_document = nullptr;
-    QPointer<QWidget> m_focusTarget;
     DocNote m_noteSnapshot;
     int m_engineTrack = -1;
     uint64_t m_startTick = 0;

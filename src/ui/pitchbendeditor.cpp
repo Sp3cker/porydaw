@@ -10,6 +10,7 @@
 #include <QMetaObject>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPointer>
 #include <QSignalBlocker>
 #include <QUndoStack>
 #include <algorithm>
@@ -58,8 +59,8 @@ class PitchBendCloseController final : public QObject
         if (!m_popup || !m_popup->isVisible())
             return false;
         if (event->type() == QEvent::MouseButtonPress) {
-            QWidget *target = qobject_cast<QWidget *>(watched);
-            if (!target || target == m_popup || m_popup->isAncestorOf(target))
+            QWidget *const target = qobject_cast<QWidget *>(watched);
+            if (target && (target == m_popup || m_popup->isAncestorOf(target)))
                 return false;
             auto *mouseEvent = static_cast<QMouseEvent *>(event);
             if (m_focusNoteUnderCursor && m_focusNoteUnderCursor(mouseEvent->globalPosition())) {
@@ -88,12 +89,10 @@ class PitchBendCloseController final : public QObject
 namespace songview {
 
 PitchBendEditor::PitchBendEditor(::SongView *songView, SongDocument *document, const DocNote &note,
-                                 QPointer<QWidget> focusTarget,
                                  std::function<bool(QPointF)> focusNoteUnderCursor)
     : QFrame(songView->window(), Qt::Tool | Qt::FramelessWindowHint)
     , m_songView(songView)
     , m_document(document)
-    , m_focusTarget(focusTarget)
     , m_noteSnapshot(note)
     , m_engineTrack(note.engineTrack)
     , m_startTick(note.tick)
@@ -345,19 +344,18 @@ void PitchBendEditor::hideEvent(QHideEvent *event)
     else
         commitCurve();
     m_closeState = CloseState::Closed;
-    if (m_closeFocus == CloseFocus::Restore && m_focusTarget) {
-        const QPointer<QWidget> focusTarget = m_focusTarget;
+    if (m_closeFocus == CloseFocus::Restore && m_songView) {
+        const QPointer<::SongView> songView = m_songView;
         QMetaObject::invokeMethod(
-            focusTarget,
-            [focusTarget] {
-                if (focusTarget)
-                    focusTarget->setFocus(Qt::PopupFocusReason);
+            songView.data(),
+            [songView] {
+                if (songView)
+                    songView->focusTimelineBand(songview::TimelineBand::Roll, Qt::PopupFocusReason);
             },
             Qt::QueuedConnection);
     }
     deleteLater();
 }
-
 PitchBendGraph *PitchBendEditor::focusedGraph() const
 {
     return m_modGraph && m_modGraph->hasFocus() ? m_modGraph : m_pitchGraph;

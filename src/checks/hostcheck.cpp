@@ -389,8 +389,7 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     auto *automationViewport =
         drawer && drawer->automationPage() ? drawer->automationPage()->scrollViewport() : nullptr;
     QObject *const quickRoot = quick->rootObject();
-    const std::array<QWidget *, 2> quickBands{
-        rollBand,
+    const std::array<QWidget *, 1> quickBands{
         automationViewport,
     };
     check(rollBand && automationViewport && quickRoot && rulerControls,
@@ -398,7 +397,6 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     if (rollBand && automationViewport && quickRoot && rulerControls) {
         const songview::TimelineBandLayout &bandLayout = view.timelineBandLayout();
         const std::array<songview::TimelineBand, quickBands.size()> bandIds{
-            songview::TimelineBand::Roll,
             songview::TimelineBand::Automation,
         };
         // Every visible retained widget band must exactly fill its canonical
@@ -430,6 +428,9 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         };
         check(canonicalMatchesWidgets(),
               "canonical layout should equal every visible retained band widget rectangle");
+        check(inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::Roll,
+                                    QStringLiteral("timelineRollInput")),
+              "Roll input item should match its canonical band");
         check(bandLayout.geometry(songview::TimelineBand::Velocity) &&
                   bandLayout.geometry(songview::TimelineBand::Velocity)->timelineOrigin ==
                       area->plotOrigin() &&
@@ -1059,6 +1060,13 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
             QApplication::sendEvent(&view, &ungrab);
         },
         false, "mouse-grab loss should terminate the visible page gesture");
+    cancelGesture(
+        lifecycleNode,
+        [&] {
+            QEvent deactivate(QEvent::WindowDeactivate);
+            QApplication::sendEvent(quick->quickWindow(), &deactivate);
+        },
+        false, "Quick-window deactivation should cancel the hosted velocity gesture", true);
     cancelGesture(
         lifecycleNode,
         [&] {

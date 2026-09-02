@@ -5,7 +5,7 @@
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
-#include "ui/songview.h"
+#include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timelinebandlayout.h"
@@ -54,7 +54,12 @@ int runEditorDrawerCheck(const QString &screenshotPath)
     QCoreApplication::processEvents();
 
     auto *drawer = view.editorDrawer();
-    auto *roll = view.findChild<QWidget *>(QStringLiteral("pianoRoll"));
+    auto *roll = view.findChild<songview::PianoRoll *>();
+    const auto rollBandRect = [&view] {
+        const std::optional<songview::TimelineBandGeometry> &band =
+            view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
+        return band ? band->rect : QRect{};
+    };
     auto *automationPage = drawer ? drawer->automationPage() : nullptr;
     auto *automationCanvas = automationPage ? automationPage->canvas() : nullptr;
     auto *velocityCanvas = drawer ? drawer->velocityArea() : nullptr;
@@ -78,7 +83,7 @@ int runEditorDrawerCheck(const QString &screenshotPath)
         publishedStates.push_back(view.editorViewState());
     };
 
-    const QRect rollBefore = roll->geometry();
+    const QRect rollBefore = rollBandRect();
     const auto sections = drawer->findChildren<QWidget *>(QStringLiteral("drawerSections"));
     auto *drawerSections = drawer->findChild<QWidget *>(QStringLiteral("drawerSections"));
     auto *typedSections = drawerSections ? dynamic_cast<DrawerSections *>(drawerSections) : nullptr;
@@ -135,7 +140,7 @@ int runEditorDrawerCheck(const QString &screenshotPath)
           "velocity toggle disappeared while the velocity pane was hidden");
     check(drawer->parentWidget() &&
               drawer->geometry().bottom() == drawer->parentWidget()->rect().bottom() &&
-              roll->geometry() == rollBefore && drawer->plotOrigin() == plotOrigin &&
+              rollBandRect() == rollBefore && drawer->plotOrigin() == plotOrigin &&
               drawer->plotWidth() > 0,
           "drawer overlay changed the roll geometry or plot origin");
     check(drawer->automationAction()->shortcuts().isEmpty() &&
@@ -352,7 +357,8 @@ int runEditorDrawerCheck(const QString &screenshotPath)
                   std::optional<QRect>(typedSections->bodyRect(EditorDrawerPage::VoiceChanges)
                                            ->translated(drawer->mapTo(&view, QPoint()))),
           "drawer body rectangle should map the section-local body into SongView coordinates");
-    check(canonicalRectMatches(songview::TimelineBand::Roll, *roll) &&
+    check(bandInputMatchesCanonical(songview::TimelineBand::Roll,
+                                    QStringLiteral("timelineRollInput")) &&
               bandInputMatchesCanonical(songview::TimelineBand::Velocity,
                                         QStringLiteral("timelineVelocityInput")) &&
               canonicalRectMatches(songview::TimelineBand::Automation, *automationViewport) &&
@@ -503,6 +509,12 @@ int runEditorDrawerCheck(const QString &screenshotPath)
           "state reload did not retain collapsed section heights");
 
     view.activateWindow();
+    // Direct Quick focus requests need deterministic widget-window activation
+    // in this synthetic top-level SongView harness.
+    QT_WARNING_PUSH
+    QT_WARNING_DISABLE_DEPRECATED
+    QApplication::setActiveWindow(&view);
+    QT_WARNING_POP
     view.focusContent();
     QCoreApplication::processEvents();
     QWidget *contentFocus = QApplication::focusWidget();
@@ -546,7 +558,8 @@ int runEditorDrawerCheck(const QString &screenshotPath)
     drawer->automationAction()->trigger();
     QCoreApplication::processEvents();
     QWidget *contentFallback = QApplication::focusWidget();
-    check(!view.hasVisibleDrawerSection() && !view.focusedTimelineBand() &&
+    check(!view.hasVisibleDrawerSection() &&
+              view.focusedTimelineBand() == songview::TimelineBand::Roll &&
               (!contentFallback || !automationCanvas->isAncestorOf(contentFallback)),
           "hiding the last drawer page did not return focus to content");
 
@@ -554,10 +567,10 @@ int runEditorDrawerCheck(const QString &screenshotPath)
     const int narrowWidth = std::max(0, drawer->plotOrigin() - layout::singlePixel());
     const QRect narrowBounds(parentBounds.left(), parentBounds.top(), narrowWidth,
                              parentBounds.height());
-    const QRect rollBeforeNarrow = roll->geometry();
+    const QRect rollBeforeNarrow = rollBandRect();
     drawer->setHostBounds(narrowBounds);
-    check(drawer->plotWidth() == 0 && roll->geometry().top() == rollBeforeNarrow.top() &&
-              roll->geometry().height() == rollBeforeNarrow.height(),
+    check(drawer->plotWidth() == 0 && rollBandRect().top() == rollBeforeNarrow.top() &&
+              rollBandRect().height() == rollBeforeNarrow.height(),
           "narrow drawer changed the roll geometry");
     // Vertical host clamp: with all three pages open, a too-short host must
     // never produce negative geometry and must keep the stack order.

@@ -11,10 +11,8 @@
 #include "ui/songview/quick/timelinequickview.h"
 #include <QCursor>
 #include <QInputDialog>
-#include <QKeyEvent>
 #include <QMetaObject>
 #include <QObject>
-#include <QPointer>
 
 #include <algorithm>
 #include <climits>
@@ -29,22 +27,24 @@ namespace songview {
 using namespace songview::detail;
 using namespace songview::pianoroll_detail;
 
-void PianoRoll::keyPressEvent(QKeyEvent *event)
+bool PianoRoll::keyPress(const TimelineKeyInput &input)
 {
-    if (!event->isAutoRepeat() && keymap::Registry::isModifierKey(event->key()))
+    if (!input.autoRepeat && keymap::Registry::isModifierKey(input.key))
         requestQuickUpdate(PianoRollQuickDirty::NoteText);
     const auto &keys = keymap::Registry::instance();
+    const auto matches = [&keys, &input](const char *id) {
+        return keys.matches(input.key, input.modifiers, QLatin1String(id));
+    };
     SongDocument *doc = m_sv->document();
-    if (doc && keys.matches(event, QStringLiteral("roll.paste"))) {
+    if (doc && matches("roll.paste")) {
         pasteAtEditCursor();
-        event->accept();
-        return;
+        return true;
     }
     // Shared Copy dispatch runs first so time and note selections use the
     // same command from every editor surface.
-    if (m_sv->handleEditKey(event))
-        return;
-    if (doc && keys.matches(event, QStringLiteral("roll.cut"))) {
+    if (m_sv->handleEditKey(input))
+        return true;
+    if (doc && matches("roll.cut")) {
         const std::vector<DocNote> notes = resolveSelection();
         if (!notes.empty()) {
             copyNotes(notes);
@@ -52,49 +52,42 @@ void PianoRoll::keyPressEvent(QKeyEvent *event)
             doc->deleteNotes(notes);
             m_sv->selectionModel().clearNoteSelection();
         }
-        event->accept();
-        return;
+        return true;
     }
-    if (doc && keys.matches(event, QStringLiteral("roll.select_all"))) {
+    if (doc && matches("roll.select_all")) {
         selectAllNotes();
-        event->accept();
-        return;
+        return true;
     }
-    if (doc && keys.matches(event, QStringLiteral("roll.delete"))) {
+    if (doc && matches("roll.delete")) {
         const std::vector<DocNote> notes = resolveSelection();
         if (!notes.empty()) {
             const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
             doc->deleteNotes(notes);
             m_sv->selectionModel().clearNoteSelection();
         }
-        event->accept();
-        return;
+        return true;
     }
-    if (doc && keys.matches(event, QStringLiteral("roll.pitch_bend"))) {
-        if (!event->isAutoRepeat())
+    if (doc && matches("roll.pitch_bend")) {
+        if (!input.autoRepeat)
             openPitchBendEditor();
-        event->accept();
-        return;
+        return true;
     }
     if (doc) {
-        const int transpose = m_sv->transposeStepFor(event);
+        const int transpose = m_sv->transposeStepFor(input);
         if (transpose != 0) {
             if (m_sv->scaleFold() && (transpose == 1 || transpose == -1)) {
                 m_sv->foldTransposeSelection(transpose);
             } else {
                 transposeSelection(transpose);
             }
-            event->accept();
-            return;
+            return true;
         }
     }
-    if (doc && (keys.matches(event, QStringLiteral("roll.nudge_left")) ||
-                keys.matches(event, QStringLiteral("roll.nudge_right")))) {
-        nudgeSelection(keys.matches(event, QStringLiteral("roll.nudge_right")));
-        event->accept();
-        return;
+    if (doc && (matches("roll.nudge_left") || matches("roll.nudge_right"))) {
+        nudgeSelection(matches("roll.nudge_right"));
+        return true;
     }
-    if (event->key() == Qt::Key_Escape) {
+    if (input.key == Qt::Key_Escape) {
         cancelVelocityInteraction();
         m_leftDrag = LeftDrag::None;
         m_rightDrag = RightDrag::None;
@@ -102,24 +95,23 @@ void PianoRoll::keyPressEvent(QKeyEvent *event)
         m_sv->selectionModel().clearNoteSelection();
         m_sv->selectionModel().clearTimeSelection();
         requestQuickUpdate(cDrawCommitDirty);
-        event->accept();
-        return;
+        return true;
     }
-    QWidget::keyPressEvent(event);
+    return false;
 }
 
-void PianoRoll::keyReleaseEvent(QKeyEvent *event)
+bool PianoRoll::keyRelease(const TimelineKeyInput &input)
 {
-    if (!event->isAutoRepeat() && keymap::Registry::isModifierKey(event->key())) {
+    if (!input.autoRepeat && keymap::Registry::isModifierKey(input.key)) {
         requestQuickUpdate(PianoRollQuickDirty::NoteText);
     }
     // End the transpose audition when the shortcut's keys come up.
     // Autorepeat releases are skipped so a held transpose key keeps sounding
     // the moving pitch; the idle-state guard keeps a stray key release
     // from cutting a mouse gesture's preview short.
-    if (!event->isAutoRepeat() && !dragLive())
+    if (!input.autoRepeat && !dragLive())
         stopNoteAudition();
-    QWidget::keyReleaseEvent(event);
+    return false;
 }
 
 void PianoRoll::openPitchBendEditor()
@@ -134,22 +126,24 @@ void PianoRoll::openPitchBendEditor()
         m_bendPopup = nullptr;
     }
     auto *popup =
-        new PitchBendEditor(m_sv, m_sv->document(), notes.front(), QPointer<QWidget>(this),
+        new PitchBendEditor(m_sv, m_sv->document(), notes.front(),
                             [this](QPointF globalPos) { return focusNoteUnderCursor(globalPos); });
     if (!popup->hasEditableSpan()) {
         popup->deleteLater();
         m_sv->announce(SongView::tr("Select one note to edit pitch bend."));
         return;
     }
-    const QPoint cursorLocal = mapFromGlobal(QCursor::pos());
+    const QPointF cursorLocal = m_inputHost->mapFromGlobal(QCursor::pos());
     double noteFraction = -1.0;
     QRect noteGlobal;
     for (const ViewNote &viewNote : m_sv->model().notes) {
         if (viewNote.noteId != notes.front().noteId)
             continue;
-        const QRect noteLocal = noteRect(viewNote).toAlignedRect();
-        noteGlobal = QRect(mapToGlobal(noteLocal.topLeft()), mapToGlobal(noteLocal.bottomRight()));
-        if (noteLocal.contains(cursorLocal)) {
+        const QRectF noteLocalRect = noteRect(viewNote);
+        const QPointF noteTopGlobal = m_inputHost->mapToGlobal(noteLocalRect.topLeft());
+        const QPointF noteBottomGlobal = m_inputHost->mapToGlobal(noteLocalRect.bottomRight());
+        noteGlobal = QRect(noteTopGlobal.toPoint(), noteBottomGlobal.toPoint());
+        if (noteLocalRect.contains(cursorLocal)) {
             noteFraction =
                 double(m_sv->tickAtContentX(cursorLocal.x() - m_geometry.pianoKeyboardWidth) -
                        double(notes.front().tick)) /
@@ -311,13 +305,12 @@ void PianoRoll::showNoteMenu(QPointF localPos)
     const std::vector<DocNote> notes = resolveSelection();
     if (notes.empty())
         return;
-    m_noteMenu->showMenuAt(mapToGlobal(localPos.toPoint()), notes.front().velocity);
+    m_noteMenu->showMenuAt(m_inputHost->mapToGlobal(localPos).toPoint(), notes.front().velocity);
 }
 
 bool PianoRoll::focusNoteUnderCursor(QPointF globalPos)
 {
-    const QPointF pos =
-        globalPos - QPointF(mapToGlobal(QPoint(lyt::space(Space::Zero), lyt::space(Space::Zero))));
+    const QPointF pos = m_inputHost->mapFromGlobal(globalPos);
     const ViewNote *hit =
         m_sv->document() && pos.x() >= m_geometry.pianoKeyboardWidth ? hitNote(pos) : nullptr;
     if (!hit)
@@ -325,7 +318,7 @@ bool PianoRoll::focusNoteUnderCursor(QPointF globalPos)
     if (hit->track != m_sv->selectionModel().primaryTrack() || !hit->noteId.isAssigned() ||
         !m_sv->selectionModel().isNoteSelected(hit->noteId))
         m_sv->selectionModel().setNoteSelection({hit->noteId});
-    setFocus(Qt::MouseFocusReason);
+    m_inputHost->requestFocus(Qt::MouseFocusReason);
     requestQuickUpdate(PianoRollQuickDirty::NoteBordersAndSelection);
     return true;
 }
@@ -334,8 +327,7 @@ bool PianoRoll::moveNoteMenu(QPointF globalPos)
 {
     if (!focusNoteUnderCursor(globalPos))
         return false;
-    const QPointF pos = globalPos - QPointF(mapToGlobal(QPoint(0, 0)));
-    showNoteMenu(pos);
+    showNoteMenu(m_inputHost->mapFromGlobal(globalPos));
     return true;
 }
 
@@ -360,7 +352,7 @@ void PianoRoll::handleNoteMenuChoice(NoteMenuChoice choice)
     }
     case NoteMenuChoice::Velocity: {
         bool ok = false;
-        const int velocity = QInputDialog::getInt(this, SongView::tr("Note velocity"),
+        const int velocity = QInputDialog::getInt(m_sv, SongView::tr("Note velocity"),
                                                   SongView::tr("Velocity (1-127):"),
                                                   notes.front().velocity, 1, 127, 1, &ok);
         if (ok) {

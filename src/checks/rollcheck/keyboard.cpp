@@ -27,7 +27,7 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
 {
     SongDocument &doc = check.document();
     SongView &view = check.view();
-    QWidget *roll = &check.roll();
+    songview::TimelineInputItem *roll = &check.rollInput();
     const int track = check.track();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const SnappedRows rows{view, *roll};
@@ -79,7 +79,7 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
     // paste jump). Then ride it right across the viewport: once the end
     // crosses the right edge, it must stay flush there.
     uint64_t nStart = d.tick + snapCell;
-    const qreal dpr = roll->devicePixelRatioF();
+    const qreal dpr = roll->devicePixelRatio();
     const qreal physicalPixel = dpr > 0.0 ? 1.0 / dpr : 1.0;
     view.scrollByPx(view.contentX(double(nStart + snapCell)) + 40);
     if (view.displayX(double(nStart + snapCell), 0.0, dpr) >= 0.0)
@@ -89,7 +89,7 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
     if (view.displayX(double(nStart), 0.0, dpr) != 0.0)
         fail("Right off-screen-left did not scroll the start flush to the "
              "left edge");
-    const qreal vw = std::max(50, roll->width() - pianoKeyboardWidth);
+    const qreal vw = std::max<qreal>(50, roll->width() - pianoKeyboardWidth);
     const qreal cellPx = view.contentX(double(nStart + snapCell)) - view.contentX(double(nStart));
     const int rides = (vw - view.contentX(double(nStart + snapCell))) / cellPx + 2;
     for (int i = 0; i < rides; i++)
@@ -202,7 +202,7 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
                     fail("time-scoped ghost note did not render its selection ring");
             }
             view.applyViewState(priorViewState);
-            auto *pianoRoll = static_cast<songview::PianoRoll *>(roll);
+            songview::PianoRoll &pianoRoll = check.roll();
             const std::optional<songview::TimelineBandGeometry> otherEvents =
                 view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents);
             if (!otherEvents)
@@ -261,7 +261,7 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
                 else if (!foundMarker)
                     fail("other-events strip did not render a visible track-colored diamond");
             }
-            pianoRoll->requestQuickUpdate(songview::PianoRollQuickDirty::All);
+            pianoRoll.requestQuickUpdate(songview::PianoRollQuickDirty::All);
             QCoreApplication::processEvents();
             if (partialSelectionImage != check.captureQuickFramebuffer())
                 fail("partial time-selection repaint differed from a full repaint");
@@ -385,8 +385,8 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
             view.editCursorTick() != firstEnd || !hasNoteAt(firstStart)) {
             fail("Ctrl+D did not duplicate once and advance the time selection");
         }
-        const qreal duplicateDpr = roll->devicePixelRatioF();
-        const qreal duplicateViewport = std::max(50, roll->width() - pianoKeyboardWidth);
+        const qreal duplicateDpr = roll->devicePixelRatio();
+        const qreal duplicateViewport = std::max<qreal>(50, roll->width() - pianoKeyboardWidth);
         if (view.displayX(double(firstStart), 0.0, duplicateDpr) < 0.0 ||
             view.displayX(double(firstEnd), 0.0, duplicateDpr) > duplicateViewport) {
             fail("first duplicated range was not made visible");

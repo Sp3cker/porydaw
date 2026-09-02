@@ -4,168 +4,170 @@
 
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickview.h"
-#include <QEvent>
-#include <QMouseEvent>
 
 namespace songview {
 
-void PianoRoll::mousePressEvent(QMouseEvent *event)
+bool PianoRoll::pointerPress(const TimelinePointerInput &input)
 {
-    setFocus();
     if (!m_sv->timeline())
-        return;
+        return false;
+    m_inputHost->requestFocus(Qt::MouseFocusReason);
     m_sv->setProjectionLocked(true);
-    if (event->button() == Qt::MiddleButton) {
-        beginPanGesture(event);
-        return;
+    if (input.button == Qt::MiddleButton) {
+        beginPanGesture(input);
+        return true;
     }
-    if (event->position().x() < m_geometry.pianoKeyboardWidth) {
-        if (event->button() == Qt::LeftButton)
-            beginKbdAudition(event);
-        return;
+    if (input.position.x() < m_geometry.pianoKeyboardWidth) {
+        if (input.button != Qt::LeftButton)
+            return false;
+        beginKbdAudition(input);
+        return true;
     }
-    if (event->button() == Qt::RightButton) {
-        if (m_sv->document())
-            beginPendingMenu(event, hitNote(event->position()));
-        return;
+    if (input.button == Qt::RightButton) {
+        if (!m_sv->document())
+            return false;
+        beginPendingMenu(input, hitNote(input.position));
+        return true;
     }
-    if (event->button() != Qt::LeftButton)
-        return;
-    pressContent(event);
+    if (input.button != Qt::LeftButton)
+        return false;
+    pressContent(input);
+    return true;
 }
 
-void PianoRoll::mouseDoubleClickEvent(QMouseEvent *event)
+bool PianoRoll::pointerDoubleClick(const TimelinePointerInput &input)
 {
     // Double-click on empty space drops a grid-sized note (committed on
     // release; dragging before release still sizes it); on a note it
     // deletes that note. Anywhere else a fast click-click behaves as two
     // presses — Qt replaces the second press with this event.
     SongDocument *doc = m_sv->document();
-    if (event->button() == Qt::LeftButton && doc &&
-        event->position().x() >= m_geometry.pianoKeyboardWidth) {
-        m_sv->setProjectionLocked(true);
-        setFocus();
-        if (const ViewNote *hit = hitNote(event->position())) {
-            DocNote note;
-            if (doc->findNote(hit->noteId, &note)) {
-                const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
-                doc->deleteNotes({note});
-                m_sv->selectionModel().clearNoteSelection();
-            }
-            return;
+    if (input.button != Qt::LeftButton || !doc ||
+        input.position.x() < m_geometry.pianoKeyboardWidth)
+        return pointerPress(input);
+    m_sv->setProjectionLocked(true);
+    m_inputHost->requestFocus(Qt::MouseFocusReason);
+    if (const ViewNote *hit = hitNote(input.position)) {
+        DocNote note;
+        if (doc->findNote(hit->noteId, &note)) {
+            const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+            doc->deleteNotes({note});
+            m_sv->selectionModel().clearNoteSelection();
         }
-        beginLeftPress(event);
-        beginDraw();
-        return;
+        return true;
     }
-    mousePressEvent(event);
-}
-
-void PianoRoll::mouseMoveEvent(QMouseEvent *event)
-{
-    updateHoverKey(event);
-    if (m_panning) {
-        panMove(event);
-        return;
-    }
-    if (m_kbdKey >= 0) {
-        kbdGlissandoMove(event);
-        return;
-    }
-    m_curPos = event->position();
-    if (!resolvePendingPresses(event))
-        return;
-    if (!dragLive()) {
-        refreshHoverCursor(event->position(), event->modifiers());
-        return;
-    }
-    dispatchLiveDragMove(event);
-}
-
-bool PianoRoll::resolvePendingPresses(const QMouseEvent *event)
-{
-    if (m_rightDrag == RightDrag::PendingMenu)
-        resolveRightPress(event);
-    if (m_leftDrag == LeftDrag::PendingDraw && !dragLive())
-        resolveDrawPress(event);
-    if (m_leftDrag == LeftDrag::PendingVelocity && !dragLive())
-        return resolveVelocityPress(event);
+    beginLeftPress(input);
+    beginDraw();
     return true;
 }
 
-void PianoRoll::dispatchLiveDragMove(const QMouseEvent *event)
+bool PianoRoll::pointerMove(const TimelinePointerInput &input)
+{
+    updateHoverKey(input);
+    if (m_panning) {
+        panMove(input);
+        return true;
+    }
+    if (m_kbdKey >= 0) {
+        kbdGlissandoMove(input);
+        return true;
+    }
+    m_curPos = input.position;
+    if (!resolvePendingPresses(input))
+        return true;
+    if (!dragLive()) {
+        refreshHoverCursor(input.position, input.modifiers);
+        return true;
+    }
+    dispatchLiveDragMove(input);
+    return true;
+}
+
+bool PianoRoll::resolvePendingPresses(const TimelinePointerInput &input)
+{
+    if (m_rightDrag == RightDrag::PendingMenu)
+        resolveRightPress(input);
+    if (m_leftDrag == LeftDrag::PendingDraw && !dragLive())
+        resolveDrawPress(input);
+    if (m_leftDrag == LeftDrag::PendingVelocity && !dragLive())
+        return resolveVelocityPress(input);
+    return true;
+}
+
+void PianoRoll::dispatchLiveDragMove(const TimelinePointerInput &input)
 {
     if (m_rightDrag == RightDrag::Band) {
         updateBandDrag();
         return;
     }
     if (m_rightDrag == RightDrag::TimeSel) {
-        updateTimeSelDrag(event);
+        updateTimeSelDrag(input);
         return;
     }
-    updateLeftDragMove(event);
+    updateLeftDragMove(input);
 }
 
-void PianoRoll::updateLeftDragMove(const QMouseEvent *event)
+void PianoRoll::updateLeftDragMove(const TimelinePointerInput &input)
 {
     if (m_leftDrag == LeftDrag::Move)
-        updateMoveDrag(event);
+        updateMoveDrag(input);
     else if (m_leftDrag == LeftDrag::Resize || m_leftDrag == LeftDrag::ResizeLeft)
-        updateResizeDrag(event);
+        updateResizeDrag(input);
     else if (m_leftDrag == LeftDrag::Velocity)
-        updateVelocityDrag(event);
+        updateVelocityDrag(input);
     else if (m_leftDrag == LeftDrag::Draw)
-        updateDrawDrag(event);
+        updateDrawDrag(input);
 }
 
-void PianoRoll::leaveEvent(QEvent *)
+void PianoRoll::pointerLeave()
 {
     setHoverKey(-1);
 }
 
-void PianoRoll::mouseReleaseEvent(QMouseEvent *event)
+bool PianoRoll::pointerRelease(const TimelinePointerInput &input)
 {
-    if (event->button() == Qt::MiddleButton && m_panning) {
+    if (input.button == Qt::MiddleButton && m_panning) {
         endPanGesture();
-        return;
+        return true;
     }
     if (m_kbdKey >= 0) {
         endKbdAudition();
     }
-    if (event->button() == Qt::RightButton && m_rightDrag != RightDrag::None) {
-        releaseRightPress(event);
-        return;
+    if (input.button == Qt::RightButton && m_rightDrag != RightDrag::None) {
+        releaseRightPress(input);
+        return true;
     }
-    if (releasePendingLeftPress(event))
-        return;
-    if (finishReleaseWithoutCommit(event))
-        return;
-    commitDrag(event);
+    if (releasePendingLeftPress(input))
+        return true;
+    if (finishReleaseWithoutCommit(input))
+        return true;
+    commitDrag();
+    return true;
 }
 
-bool PianoRoll::releasePendingLeftPress(QMouseEvent *event)
+bool PianoRoll::releasePendingLeftPress(const TimelinePointerInput &input)
 {
-    if (event->button() == Qt::LeftButton && m_leftDrag == LeftDrag::PendingDraw) {
+    if (input.button == Qt::LeftButton && m_leftDrag == LeftDrag::PendingDraw) {
         m_leftDrag = LeftDrag::None;
         if (!dragLive()) {
-            releasePendingDrawClick(event);
+            releasePendingDrawClick(input);
             return true;
         }
         // live right drag: fall through to commitDrag (clears the right token)
     }
-    if (event->button() == Qt::LeftButton && m_leftDrag == LeftDrag::PendingVelocity) {
+    if (input.button == Qt::LeftButton && m_leftDrag == LeftDrag::PendingVelocity) {
         m_leftDrag = LeftDrag::None;
-        releasePendingVelocityClick(event);
+        releasePendingVelocityClick();
         return true; // intentionally no dragLive gate/token clear
     }
     return false;
 }
 
-bool PianoRoll::finishReleaseWithoutCommit(const QMouseEvent *event)
+bool PianoRoll::finishReleaseWithoutCommit(const TimelinePointerInput &input)
 {
     // catch-all stays LAST — the only projection guarantee for stray releases
-    if (event->button() != Qt::LeftButton || !dragLive()) {
-        if (event->button() != Qt::LeftButton && m_leftDrag == LeftDrag::Velocity)
+    if (input.button != Qt::LeftButton || !dragLive()) {
+        if (input.button != Qt::LeftButton && m_leftDrag == LeftDrag::Velocity)
             cancelVelocityInteraction();
         completeProjectionGesture();
         stopNoteAudition();
@@ -174,22 +176,22 @@ bool PianoRoll::finishReleaseWithoutCommit(const QMouseEvent *event)
     return false;
 }
 
-void PianoRoll::updateHoverKey(const QMouseEvent *event)
+void PianoRoll::updateHoverKey(const TimelinePointerInput &input)
 {
-    setHoverKey(m_leftDrag == LeftDrag::Velocity ? m_velAnchor.key : yToKey(event->position().y()));
+    setHoverKey(m_leftDrag == LeftDrag::Velocity ? m_velAnchor.key : yToKey(input.position.y()));
 }
 
-void PianoRoll::panMove(const QMouseEvent *event)
+void PianoRoll::panMove(const TimelinePointerInput &input)
 {
-    const QPointF d = event->globalPosition() - m_panPos;
-    m_panPos = event->globalPosition();
+    const QPointF d = input.globalPosition - m_panPos;
+    m_panPos = input.globalPosition;
     m_sv->scrollByPx(-d.x());
     m_sv->scrollRollBy(-d.y());
 }
 
-void PianoRoll::kbdGlissandoMove(const QMouseEvent *event)
+void PianoRoll::kbdGlissandoMove(const TimelinePointerInput &input)
 {
-    const int key = yToKey(event->position().y());
+    const int key = yToKey(input.position.y());
     if (key != m_kbdKey) {
         m_kbdKey = key;
         auditionKey(m_kbdKey, 100);
@@ -199,7 +201,8 @@ void PianoRoll::kbdGlissandoMove(const QMouseEvent *event)
 void PianoRoll::endPanGesture()
 {
     m_panning = false;
-    setCursor(Qt::ArrowCursor);
+    if (m_inputHost)
+        m_inputHost->clearCursor();
     completeProjectionGesture();
 }
 
@@ -225,5 +228,14 @@ void PianoRoll::auditionKey(int key, int velocity)
         m_soundingKey = sounding;
         requestQuickUpdate(PianoRollQuickDirty::KeyboardHighlights);
     }
+}
+
+void PianoRoll::inputCancelled(TimelineInputCancelReason)
+{
+    // Mirrors the former event() rule for every cancellation cause: only a
+    // pending or active velocity drag cancels. Song/tab/project cancellation
+    // takes the stronger cancelTransientInput() route instead.
+    if (m_leftDrag == LeftDrag::Velocity || m_leftDrag == LeftDrag::PendingVelocity)
+        cancelVelocityInteraction();
 }
 } // namespace songview

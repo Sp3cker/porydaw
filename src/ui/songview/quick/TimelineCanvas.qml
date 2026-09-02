@@ -160,6 +160,12 @@ Item {
         PianoRollCanvas {
             anchors.fill: parent
         }
+
+        TimelineInputItem {
+            objectName: "timelineRollInput"
+            anchors.fill: parent
+            Accessible.description: accessibilityDescription
+        }
     }
 
     TimelineSceneBand {

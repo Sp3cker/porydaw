@@ -8,7 +8,6 @@
 #include <QPointF>
 #include <QRectF>
 #include <QSize>
-#include <QWidget>
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -17,6 +16,7 @@
 #include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songviewmodel.h"
 #include "ui/theme/themeruntime.h"
 
@@ -26,7 +26,7 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
 {
     SongDocument &doc = check.document();
     SongView &view = check.view();
-    QWidget *roll = &check.roll();
+    songview::TimelineInputItem *roll = &check.rollInput();
     const int track = check.track();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const SnappedRows rows{view, *roll};
@@ -59,7 +59,7 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
             QPointF center;
         } probe;
         const qreal origin = qreal(pianoKeyboardWidth);
-        const qreal dpr = roll->devicePixelRatioF();
+        const qreal dpr = roll->devicePixelRatio();
         const qreal rightLimit = qreal(roll->width()) - 4.0;
 
         for (int key = 115; key >= 24 && probe.key < 0; --key) {
@@ -173,7 +173,7 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
     QT_WARNING_DISABLE_DEPRECATED
     QApplication::setActiveWindow(&view);
     QT_WARNING_POP
-    roll->setFocus(Qt::OtherFocusReason);
+    roll->forceActiveFocus(Qt::OtherFocusReason);
     QCoreApplication::processEvents();
 
     check.addFailures(runPitchBendCheck(doc, view, roll, track, noteA, a.center, songLabel));
