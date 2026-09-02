@@ -28,6 +28,7 @@
 #include "ui/pitchprojection.h"
 #include "ui/songview/clip.h"
 #include "ui/songview/editorselectionmodel.h"
+#include "ui/songview/grid.h"
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelineinput.h"
 #include "ui/songview/scalecontroller.h"
@@ -212,6 +213,7 @@ class SongView : public QWidget
     void requestAutomationQuickUpdate(songview::AutomationRefreshSet refresh);
 
     const songview::TimeCamera &camera() const noexcept { return m_camera; }
+    const songview::Grid &grid() const noexcept { return m_grid; }
 
     // Derived from the canonical beat scale: a resolution change can only
     // move this quotient, never the beat positions it produces.
@@ -378,58 +380,8 @@ class SongView : public QWidget
     // one beat — stops the DRAWN grid from refining past the note value the
     // user cares about (display only; snapping still steps one rung finer).
     // 0 keeps the default clock-grid floor. Per-song view state.
-    enum class GridFeel { Straight, Triplet };
-    GridFeel gridFeel() const { return m_gridFeel; }
-    void setGridFeel(GridFeel feel);
-    int gridMinDenom() const { return m_gridMinDenom; }
+    void setGridFeel(songview::GridFeel feel);
     void setGridMinDenom(int denom); // 4/8/16/32; anything else means 0
-
-    // Time-signature segment governing a tick (the axis's GridSegment).
-    // The grid — beats, snap positions, sub-beat lines — restarts at every
-    // signature change and scales the beat by the signature's denominator,
-    // exactly like forEachGridLine; a signature placed mid-measure must
-    // still leave the drawn lines snappable.
-    using GridSeg = songview::TimeAxis::GridSegment;
-    GridSeg gridSegAt(uint64_t tick) const;
-    // One painted visible-grid cell. Cells are half-open [start, end): a
-    // tick exactly at an end belongs to the next cell.
-    struct GridCell {
-        uint64_t start = 0;
-        uint64_t end = 0;
-    };
-    // Visible-grid cell queries follow the painted grid, rather than the
-    // finer edit snap grid, and restart at time-signature changes.
-    uint64_t visibleGridTickDown(uint64_t tick) const;
-    uint64_t visibleGridTickUp(uint64_t tick) const;
-    GridCell visibleGridCellContaining(uint64_t tick) const;
-
-    // Every tick-spacing accessor below returns a value >= 1 (floored at
-    // ticksPerClock()), so callers may divide by them or use them as loop
-    // strides without clamping.
-    // Zoom-adaptive subdivision selected for the grid before the retained
-    // scene suppresses sub-beat or beat lines at low detail.
-    // It is not the painted-cell spacing; use visibleGridCellContaining().
-    // The subdivision follows the governing segment's beat at the current
-    // feel, floored at the minimum and never finer than the clock base.
-    uint64_t gridTicksAt(uint64_t tick) const;
-    // Visible grid at an explicit pixels-per-tick scale, using the
-    // time-signature segment governing tick.
-    uint64_t gridTicksAtScale(uint64_t tick, double pixelsPerTick) const;
-    // Snap grid in ticks at a position: one feel-ladder step finer than the
-    // visible grid, so edits can land halfway between drawn lines (thirds
-    // stepping from beats in triplet feel). The minimum subdivision is a
-    // display floor only — snapping steps past it — but the clock base
-    // still bounds it, and it always divides the visible grid.
-    uint64_t snapTicksAt(uint64_t tick) const;
-    // Fine placement (Alt-drag in the lanes): the mid2agb clock grid — the
-    // document's real resolution — regardless of the zoom-dependent grid.
-    uint64_t fineGridTicks() const;
-    // Nearest / previous snap-grid position, anchored at the governing
-    // time-signature segment (fine snap stays on the absolute clock grid).
-    uint64_t snapTick(double tick, bool fine = false) const;
-    uint64_t snapTickDown(double tick) const;
-    uint64_t snapTickUp(double tick) const;
-    DrawerPageGridState gridState(uint64_t tick, bool fineMode) const;
 
     DrawerPageVoiceContext voiceContext(uint64_t tick) const;
     // Shared deferred velocity gesture; document mutation happens only when
@@ -631,15 +583,15 @@ class SongView : public QWidget
     // Feeds the camera the geometry-derived zoom clamp bounds; call after
     // Geometry::resolve().
     void pushCameraGeometryLimits();
+    // Feeds the grid the geometry-derived visible-grid detail floors; call
+    // after Geometry::resolve().
+    void pushGridGeometryThresholds();
     // Canonical band layout: resolve from parent-owned rectangles, compare,
     // store, then push synchronously to the Quick host and playhead overlay.
     songview::TimelineBandLayout resolveTimelineBandLayout() const;
     void synchronizeTimelineBandLayout();
     // Positions retained band chrome over parent-owned spacer rows.
     void positionBandWidgets();
-    // Both exits floor at the clock base: the result is >= 1 for any
-    // segment, so snap math may divide by it unchecked.
-    uint64_t gridTicksIn(const GridSeg &seg, double pixelsPerTick, bool snap = false) const;
     // Document remap handler: re-addresses all SongView-owned track state
     // before the following documentChanged rebuild.
     void onTracksRemapped(const TrackRemap &remap);
@@ -750,13 +702,12 @@ class SongView : public QWidget
     std::optional<songview::PianoRollQuickDirtySet> m_documentSwapHint;
 
     songview::TimeCamera m_camera; // zoom/scroll state over m_timeAxis + m_projection
+    songview::Grid m_grid;         // zoom-adaptive grid state over m_timeAxis + m_camera
     double m_playheadTick = 0.0;
     uint64_t m_editCursorTick = 0;
     bool m_playing = false;
     uint32_t m_muteMask = 0;
     uint32_t m_soloMask = 0;
-    GridFeel m_gridFeel = GridFeel::Straight;
-    int m_gridMinDenom = 0;           // note denominator; 0 = clock-grid floor
     bool m_velocityColorMode = false; // velocityNoteColor fills (View menu)
     bool m_noteNameMode = false;      // pitch labels on notes (View menu)
     bool m_followPlayhead = true;     // playback follow-scroll (transport bar)

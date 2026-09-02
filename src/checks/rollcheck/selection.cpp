@@ -145,7 +145,7 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
         if (doc.undoStack()->count() != preCount)
             fail("a plain empty-space click edited the document");
         if (view.editCursorTick() !=
-            view.snapTick(view.camera().tickAtContentX(e.center.x() - pianoKeyboardWidth)))
+            view.grid().snapTick(view.camera().tickAtContentX(e.center.x() - pianoKeyboardWidth)))
             fail("the press audition broke the click's edit-cursor park");
         // Draw growth: press the still-free cell again and drag right past
         // the drag threshold; the press's preview must carry into the draw
@@ -240,7 +240,7 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
                                   Qt::NoButton, Qt::NoModifier);
         if (!doc.findNote(track, f.tick, uint8_t(f.key), &tiny))
             fail("a Space::One horizontal drag did not draw a note");
-        else if (tiny.duration != view.snapTicksAt(f.tick))
+        else if (tiny.duration != view.grid().snapTicksAt(f.tick))
             fail("the minimum-distance note is not one snap cell long");
     }
 
@@ -421,7 +421,7 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
             view.setScaleFold(foldBefore);
             return ScenarioContinuation::Stop;
         }
-        const uint64_t snap = view.snapTicksAt(cell.tick);
+        const uint64_t snap = view.grid().snapTicksAt(cell.tick);
         const qreal cellPx = view.camera().contentX(double(cell.tick + snap)) -
                              view.camera().contentX(double(cell.tick));
         uint64_t widthTicks = snap * 4;

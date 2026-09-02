@@ -42,6 +42,7 @@ AutomationProjection::AutomationProjection(const AutomationGeometry &geometry,
     : m_geometry(geometry)
     , m_songView(songView)
     , m_camera(songView ? &songView->camera() : nullptr)
+    , m_grid(songView ? &songView->grid() : nullptr)
 {}
 
 const MidiTimeline *AutomationProjection::timeline() const
@@ -55,8 +56,8 @@ uint64_t AutomationProjection::gridSnapTicks(uint64_t tick, bool fine) const
 {
     if (m_page)
         return m_page->gridState(tick, fine).snapTicks;
-    if (m_songView)
-        return m_songView->gridState(tick, fine).snapTicks;
+    if (m_grid)
+        return fine ? m_grid->fineGridTicks() : m_grid->snapTicksAt(tick);
     return 1;
 }
 
@@ -66,7 +67,7 @@ uint64_t AutomationProjection::snapTickDown(double tick, bool fine) const
     if (!fine) {
         if (m_page)
             return m_page->snapTickDown(tick, false);
-        return m_songView ? m_songView->snapTickDown(tick) : 0;
+        return m_grid ? m_grid->snapTickDown(tick) : 0;
     }
     const uint64_t spacing = gridSnapTicks(uint64_t(tick), true);
     return uint64_t(tick / double(spacing)) * spacing;
@@ -130,7 +131,7 @@ uint64_t AutomationProjection::snapTickAt(qreal x, bool fine) const
     const double tick = rawTickAt(x);
     if (m_page)
         return m_page->snapTick(tick, fine);
-    return m_songView ? m_songView->snapTick(tick, fine) : 0;
+    return m_grid ? m_grid->snapTick(tick, fine) : 0;
 }
 
 qreal AutomationProjection::valueY(const QRect &bounds, const AutomationGeometry &geometry,
@@ -157,7 +158,7 @@ uint64_t AutomationProjection::fineSnapTick(double rawTick) const
 {
     if (m_page)
         return m_page->snapTick(rawTick, true);
-    return m_songView ? m_songView->snapTick(rawTick, true) : 0;
+    return m_grid ? m_grid->snapTick(rawTick, true) : 0;
 }
 
 bool AutomationProjection::nodeMarkersVisible() const

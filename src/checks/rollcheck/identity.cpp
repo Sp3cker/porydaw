@@ -171,7 +171,7 @@ ScenarioContinuation runIdentityScenarios(Harness &check, const SongInfo &song)
         view.applyEditorViewState(cosmetics);
         if (view.editorViewState() != cosmetics)
             fail("SongView did not retain typed cosmetic EditorViewState");
-        view.setEditCursorTick(view.snapTick(96.0));
+        view.setEditCursorTick(view.grid().snapTick(96.0));
         const SongView::ViewState snapshot = view.viewState();
         SongView::ViewState perturbed = snapshot;
         perturbed.pxPerBeat = snapshot.pxPerBeat < 64.0 ? 64.0 : 16.0;

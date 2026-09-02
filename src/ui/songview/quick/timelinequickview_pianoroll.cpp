@@ -253,8 +253,9 @@ void TimelineQuickView::rebuildGrid()
     // Keep these values aligned with the corresponding SongView geometry metrics.
     const int detailMinimumPixelsPerBeat = lyt::fontPx(5.0 / 6.0);
     const qreal gridWidth = lyt::fontPx(1.0 / 6.0) * pixel;
+    const Grid &grid = roll.m_sv->grid();
     detail::forEachSubGridLine(
-        roll.m_sv, t0, t1, detailMinimumPixelsPerBeat, [&](uint64_t tick, int level) {
+        grid, roll.m_camera, t0, t1, detailMinimumPixelsPerBeat, [&](uint64_t tick, int level) {
             const qreal x = roll.m_camera.displayX(double(tick), keyboardWidth, dpr);
             addVerticalLine(scene, TimelineQuickLayer::PianoGrid, x, plot.top(), plot.bottom(),
                             gridWidth, gridColors[std::size_t(level - 1)], plot);
@@ -265,7 +266,7 @@ void TimelineQuickView::rebuildGrid()
             if (!isBar && !drawBeats)
                 return;
             const bool finest =
-                roll.m_sv->document() && roll.m_sv->gridTicksAt(tick) == roll.m_sv->fineGridTicks();
+                roll.m_sv->document() && grid.gridTicksAt(tick) == grid.fineGridTicks();
             const auto colorIndex = isBar ? 5u : finest ? 4u : 3u;
             const qreal x = roll.m_camera.displayX(double(tick), keyboardWidth, dpr);
             addVerticalLine(scene, TimelineQuickLayer::PianoGrid, x, plot.top(), plot.bottom(),

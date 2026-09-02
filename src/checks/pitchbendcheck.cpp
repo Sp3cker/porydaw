@@ -1027,7 +1027,7 @@ class PitchBendCheckContext final
         }
         bool fineLinearRamp = angled.size() >= 3;
         for (size_t i = 1; i < angled.size(); i++) {
-            if (angled[i].tick - angled[i - 1].tick > m_view.fineGridTicks() ||
+            if (angled[i].tick - angled[i - 1].tick > m_view.grid().fineGridTicks() ||
                 angled[i].value <= angled[i - 1].value) {
                 fineLinearRamp = false;
                 break;
@@ -1309,7 +1309,7 @@ class PitchBendCheckContext final
         uint64_t boundaryTick = 0;
         uint8_t fixtureKey = 0;
         double pixelsPerTick = 0.0;
-        SongView::GridSeg initialSegment;
+        songview::Grid::Segment initialSegment;
         uint64_t initialCell = 0;
         DocNote fixtureNote;
     };
@@ -1347,10 +1347,10 @@ class PitchBendCheckContext final
         m_view.applyViewState(fixture.beforeViewState);
         m_view.selectionModel().setNoteSelection(fixture.beforeSelection);
         QCoreApplication::processEvents();
-        if (m_view.gridFeel() != (fixture.beforeViewState.gridTriplet
-                                      ? SongView::GridFeel::Triplet
-                                      : SongView::GridFeel::Straight) ||
-            m_view.gridMinDenom() != fixture.beforeViewState.gridMinDenom ||
+        if (m_view.grid().feel() != (fixture.beforeViewState.gridTriplet
+                                         ? songview::GridFeel::Triplet
+                                         : songview::GridFeel::Straight) ||
+            m_view.grid().minDenom() != fixture.beforeViewState.gridMinDenom ||
             m_view.selectionModel().noteSelection() != fixture.beforeSelection)
             fail("active-grid fixture did not restore view grid settings and selection");
         if (!m_document.containsNoteSpan(m_engineTrack, m_note, m_endTick))
@@ -1415,9 +1415,9 @@ class PitchBendCheckContext final
             return false;
         const QRect graph = popup->graphRect();
         fixture->pixelsPerTick = double(graph.width()) / double(fixture->span);
-        fixture->initialSegment = m_view.gridSegAt(fixture->fixtureTick);
+        fixture->initialSegment = m_view.grid().segmentAt(fixture->fixtureTick);
         fixture->initialCell =
-            m_view.gridTicksAtScale(fixture->fixtureTick, fixture->pixelsPerTick);
+            m_view.grid().gridTicksAtScale(fixture->fixtureTick, fixture->pixelsPerTick);
         sendKeyStroke(*popup, Qt::Key_Escape, Qt::NoModifier, false);
         drainPopupDeletes();
         if (fixture->initialCell == 0) {
@@ -1447,9 +1447,9 @@ class PitchBendCheckContext final
                 uint64_t oldTick = fixture->initialSegment.start + steps * fixture->initialCell;
                 while (oldTick < fixture->fixtureEndTick) {
                     if (oldTick > candidate) {
-                        const SongView::GridSeg segment = m_view.gridSegAt(oldTick);
+                        const songview::Grid::Segment segment = m_view.grid().segmentAt(oldTick);
                         const uint64_t cell =
-                            m_view.gridTicksAtScale(oldTick, fixture->pixelsPerTick);
+                            m_view.grid().gridTicksAtScale(oldTick, fixture->pixelsPerTick);
                         if (cell == 0 || oldTick < segment.start ||
                             (oldTick - segment.start) % cell != 0) {
                             oldStartAnchorWouldFail = true;
@@ -1523,8 +1523,8 @@ class PitchBendCheckContext final
         for (const DocLanePoint &point : m_document.lanePoints(m_engineTrack, DOC_CC_BEND)) {
             if (point.tick <= fixture.fixtureTick || point.tick >= fixture.fixtureEndTick)
                 continue;
-            const SongView::GridSeg segment = m_view.gridSegAt(point.tick);
-            const uint64_t cell = m_view.gridTicksAtScale(point.tick, fixture.pixelsPerTick);
+            const songview::Grid::Segment segment = m_view.grid().segmentAt(point.tick);
+            const uint64_t cell = m_view.grid().gridTicksAtScale(point.tick, fixture.pixelsPerTick);
             const bool aligned =
                 cell > 0 && point.tick >= segment.start && (point.tick - segment.start) % cell == 0;
             if (!aligned)

@@ -163,7 +163,7 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
         m_camera.pxPerBeat() >= m_geometry.timelineDetailMinimumPixelsPerBeat;
 
     detail::forEachSubGridLine(
-        &m_owner, t0, t1, m_geometry.timelineDetailMinimumPixelsPerBeat,
+        m_owner.grid(), m_camera, t0, t1, m_geometry.timelineDetailMinimumPixelsPerBeat,
         [&](uint64_t tick, int level) {
             const qreal x = m_camera.displayX(double(tick), plotOrigin, dpr);
             const int tickHeight = level == 1 ? lyt::space(Space::Half) : lyt::singlePixel();

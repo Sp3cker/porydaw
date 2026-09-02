@@ -536,6 +536,7 @@ void composeBandedGrid(TimelineQuickScene &scene, TimelineQuickLayer layer, cons
                        const QRectF &plot, int origin, qreal dpr)
 {
     const TimeCamera &camera = owner.camera();
+    const Grid &grid = owner.grid();
     const qreal physicalPixel = detail::logicalPhysicalPixel(dpr);
     const qreal roundingMargin = physicalPixel / 2.0;
     const double t0 =
@@ -550,7 +551,7 @@ void composeBandedGrid(TimelineQuickScene &scene, TimelineQuickLayer layer, cons
     const int detailMinimumPixelsPerBeat = ::layout::fontPx(5.0 / 6.0);
     const qreal gridWidth = ::layout::fontPx(1.0 / 6.0) * physicalPixel;
     detail::forEachSubGridLine(
-        &owner, t0, t1, detailMinimumPixelsPerBeat, [&](uint64_t tick, int level) {
+        grid, camera, t0, t1, detailMinimumPixelsPerBeat, [&](uint64_t tick, int level) {
             const qreal x = camera.displayX(double(tick), origin, dpr);
             addVerticalLine(scene, layer, x, plot.top(), plot.bottom(), gridWidth,
                             gridColors[std::size_t(level - 1)], plot);
@@ -559,7 +560,7 @@ void composeBandedGrid(TimelineQuickScene &scene, TimelineQuickLayer layer, cons
     owner.forEachGridLine(uint64_t(t0), uint64_t(t1), [&](uint64_t tick, bool isBar, int, int) {
         if (!isBar && !drawBeats)
             return;
-        const bool finest = owner.document() && owner.gridTicksAt(tick) == owner.fineGridTicks();
+        const bool finest = owner.document() && grid.gridTicksAt(tick) == grid.fineGridTicks();
         const std::size_t color = isBar ? 5u : finest ? 4u : 3u;
         const qreal x = camera.displayX(double(tick), origin, dpr);
         addVerticalLine(scene, layer, x, plot.top(), plot.bottom(), gridWidth, gridColors[color],

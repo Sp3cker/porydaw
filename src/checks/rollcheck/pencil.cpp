@@ -67,17 +67,19 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
             const qreal bottom = rows.bottom(key);
             if (top < 0.0 || bottom > roll->height())
                 continue;
-            uint64_t tick = view.snapTickUp(std::max(0.0, view.camera().tickAtContentX(4.0)));
+            uint64_t tick =
+                view.grid().snapTickUp(std::max(0.0, view.camera().tickAtContentX(4.0)));
             for (int guard = 0; guard < 1000; ++guard) {
-                const uint64_t next = view.snapTickUp(double(tick) + 1.0);
+                const uint64_t next = view.grid().snapTickUp(double(tick) + 1.0);
                 if (next <= tick)
                     break;
                 const qreal leftX = view.camera().displayX(double(tick), origin, dpr);
                 const qreal rightX = view.camera().displayX(double(next), origin, dpr);
                 if (leftX > rightLimit)
                     break;
-                const uint64_t dur = view.gridTicksAt(tick);
-                const uint64_t previous = tick == 0 ? tick : view.snapTickDown(double(tick) - 1.0);
+                const uint64_t dur = view.grid().gridTicksAt(tick);
+                const uint64_t previous =
+                    tick == 0 ? tick : view.grid().snapTickDown(double(tick) - 1.0);
                 if (leftX >= origin + 4.0 && rightX <= rightLimit && rightX - leftX >= 4.0 &&
                     !check.isOccupied(tick, dur, key)) {
                     const qreal centerX = (leftX + rightX) / 2.0;
@@ -86,8 +88,8 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
                         continue;
                     }
                     const QPointF center(centerX, (top + bottom) / 2.0);
-                    if (view.snapTickDown(view.camera().tickAtContentX(center.x() - origin)) ==
-                        tick) {
+                    if (view.grid().snapTickDown(
+                            view.camera().tickAtContentX(center.x() - origin)) == tick) {
                         probe.tick = tick;
                         probe.previous = previous;
                         probe.next = next;

@@ -444,11 +444,13 @@ ScenarioContinuation runSelectionRasterScenarios(Harness &check,
                 if (shortRows.top(key) < 3.0 || shortRows.bottom(key) > roll->height() - 3.0)
                     continue;
                 for (int probe = 8; probe < roll->width() - pianoKeyboardWidth - 40; probe += 24) {
-                    const uint64_t tick = view.snapTickDown(view.camera().tickAtContentX(probe));
-                    const uint64_t dur = view.gridTicksAt(tick);
+                    const uint64_t tick =
+                        view.grid().snapTickDown(view.camera().tickAtContentX(probe));
+                    const uint64_t dur = view.grid().gridTicksAt(tick);
                     const int x0 = pianoKeyboardWidth + view.camera().contentX(double(tick));
-                    const int xs = pianoKeyboardWidth +
-                                   view.camera().contentX(double(tick + view.snapTicksAt(tick)));
+                    const int xs =
+                        pianoKeyboardWidth +
+                        view.camera().contentX(double(tick + view.grid().snapTicksAt(tick)));
                     const int x2 =
                         pianoKeyboardWidth + view.camera().contentX(double(tick + 2 * dur));
                     if (x0 < pianoKeyboardWidth || xs - x0 < 8 || x2 - x0 < 24 ||

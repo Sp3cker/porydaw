@@ -168,7 +168,7 @@ class DestinationMapper
     std::optional<int> m_singleSource;
 };
 
-std::optional<uint64_t> askInsertTimeSpan(QWidget *parent, const SongView::GridSeg &segment)
+std::optional<uint64_t> askInsertTimeSpan(QWidget *parent, const songview::Grid::Segment &segment)
 {
     QDialog dialog(parent);
     dialog.setObjectName(QStringLiteral("insertTimeDialog"));
@@ -309,9 +309,10 @@ void SongView::copyTimeSelection()
     for (const TimeRangeContents::TrackNotes &track : contents.tracks) {
         ClipTrack ct{track.track, {}};
         for (const DocNote &note : track.notes) {
-            ct.notes.push_back({uint32_t(note.tick - range.startTick), note.key,
-                                note.duration ? note.duration : uint32_t(gridTicksAt(note.tick)),
-                                note.velocity});
+            ct.notes.push_back(
+                {uint32_t(note.tick - range.startTick), note.key,
+                 note.duration ? note.duration : uint32_t(m_grid.gridTicksAt(note.tick)),
+                 note.velocity});
         }
         noteCount += int(ct.notes.size());
         clip.tracks.push_back(std::move(ct));
@@ -440,7 +441,8 @@ void SongView::nudgeTimeSelection(bool right)
         return;
     const uint64_t s = selection.startTick;
     const uint64_t e = selection.endTick;
-    const uint64_t snapped = right ? snapTickUp(double(s) + 1.0) : snapTickDown(double(s) - 1.0);
+    const uint64_t snapped =
+        right ? m_grid.snapTickUp(double(s) + 1.0) : m_grid.snapTickDown(double(s) - 1.0);
     const int64_t dTick = int64_t(snapped) - int64_t(s);
     if (dTick == 0)
         return;
@@ -497,7 +499,7 @@ void SongView::insertTimeAtPlaybackCursor()
     const uint64_t cursorTick =
         m_playing ? uint64_t(std::clamp(m_playheadTick, 0.0, double(m_timeline->lengthTicks)) + 0.5)
                   : m_editCursorTick;
-    const std::optional<uint64_t> span = askInsertTimeSpan(this, gridSegAt(cursorTick));
+    const std::optional<uint64_t> span = askInsertTimeSpan(this, m_grid.segmentAt(cursorTick));
     if (!span)
         return;
     if (*span > (std::numeric_limits<uint64_t>::max)() - cursorTick) {
@@ -556,7 +558,7 @@ void SongView::pasteRangeAtEditCursor(const Clip &clip)
 {
     if (!m_document || !m_timeline || clip.span == 0 || clip.empty())
         return;
-    const uint64_t s = snapTick(double(m_editCursorTick));
+    const uint64_t s = m_grid.snapTick(double(m_editCursorTick));
     const uint64_t e = s + clip.span;
 
     // A clip whose content came from one track retargets to the selected
@@ -625,7 +627,7 @@ void SongView::pasteFromClipboard()
     // selected track at the edit cursor (the roll's note-paste path).
     if (clip->tracks.empty() || clip->tracks.front().notes.empty())
         return;
-    const uint64_t base = snapTick(double(m_editCursorTick));
+    const uint64_t base = m_grid.snapTick(double(m_editCursorTick));
     const int selectedTrack = m_selectionModel.primaryTrack();
     const std::vector<DocNote> before = m_document->notesForTrack(selectedTrack);
     std::vector<SongDocument::NewNote> notes;

@@ -67,6 +67,7 @@ using namespace songview::pianoroll_detail;
 PianoRoll::PianoRoll(SongView *sv)
     : m_sv(sv)
     , m_camera(sv->camera())
+    , m_grid(sv->grid())
     , m_geometry(PianoRollGeometry::resolve())
 {
     setObjectName(QStringLiteral("pianoRoll")); // findChild for tests

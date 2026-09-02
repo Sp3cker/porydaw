@@ -84,8 +84,8 @@ void PianoRoll::beginPendingMenu(const TimelinePointerInput &input, const ViewNo
     m_pressPos = m_curPos = input.position;
     m_rightDrag = RightDrag::PendingMenu;
     m_rightShift = input.modifiers & Qt::ShiftModifier;
-    m_rightAnchorTick =
-        m_sv->snapTick(m_camera.tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth));
+    m_rightAnchorTick = m_grid.snapTick(
+        m_camera.tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth));
     m_rightHit = hit != nullptr;
     if (hit)
         m_rightHitId = hit->noteId;
@@ -123,7 +123,7 @@ void PianoRoll::pressContent(const TimelinePointerInput &input)
     } else if (doc) {
         beginPendingDraw();
     } else {
-        m_sv->commitEditCursor(m_sv->snapTick(m_pressTick));
+        m_sv->commitEditCursor(m_grid.snapTick(m_pressTick));
     }
     requestQuickUpdate(PianoRollQuickDirty::NoteBordersAndSelection | PianoRollQuickDirty::Overlay);
 }
@@ -257,9 +257,9 @@ void PianoRoll::beginDraw()
     if (m_sv->scaleFold() && (m_pressKey < 0 || !m_sv->isScalePitch(m_pressKey))) {
         return;
     }
-    m_drawAnchor = m_sv->snapTickDown(m_pressTick);
+    m_drawAnchor = m_grid.snapTickDown(m_pressTick);
     m_drawTick = m_drawAnchor;
-    m_drawDur = int64_t(m_sv->gridTicksAt(m_drawAnchor));
+    m_drawDur = int64_t(m_grid.gridTicksAt(m_drawAnchor));
     m_drawKey = m_pressKey;
     activateLeftDrag(LeftDrag::Draw);
     m_sv->selectionModel().clearNoteSelection();

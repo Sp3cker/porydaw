@@ -1090,7 +1090,7 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
 
     if (insertTimeAction && tabBNote) {
         const DocNote source = *tabBNote;
-        const SongView::GridSeg segment = tabBView.gridSegAt(source.tick);
+        const songview::Grid::Segment segment = tabBView.grid().segmentAt(source.tick);
         const QByteArray before = tabB->document().smf().write();
         const int undoIndex = tabB->document().undoStack()->index();
         const auto insertAndCheck = [&](bool playing, int bars, int beats, int fractions,

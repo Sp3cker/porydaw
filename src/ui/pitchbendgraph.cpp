@@ -18,6 +18,7 @@ PitchBendGraph::PitchBendGraph(::SongView *songView, int engineTrack, uint64_t s
                                uint64_t endTick, bool unterminated, Lane lane, QWidget *parent)
     : QWidget(parent)
     , m_songView(songView)
+    , m_grid(songView ? &songView->grid() : nullptr)
     , m_engineTrack(engineTrack)
     , m_startTick(startTick)
     , m_endTick(endTick)
@@ -186,7 +187,7 @@ std::vector<SongDocument::LanePointValue> PitchBendGraph::curvePoints() const
 {
     std::vector<SongDocument::LanePointValue> points;
     points.reserve(m_points.size());
-    const uint64_t fineTick = m_songView ? m_songView->fineGridTicks() : 1;
+    const uint64_t fineTick = m_grid ? m_grid->fineGridTicks() : 1;
     int previous = 0;
     uint64_t previousTick = 0;
     bool havePrevious = false;
@@ -333,10 +334,10 @@ void PitchBendGraph::focusOutEvent(QFocusEvent *event)
 void PitchBendGraph::paintGrid(QPainter &painter)
 {
     painter.setPen(QPen(themes::color(themes::Role::song_view_grid), 1));
-    if (m_songView && m_endTick > m_startTick) {
+    if (m_grid && m_endTick > m_startTick) {
         uint64_t segmentTick = m_startTick;
         while (segmentTick < m_endTick) {
-            const SongView::GridSeg segment = m_songView->gridSegAt(segmentTick);
+            const Grid::Segment segment = m_grid->segmentAt(segmentTick);
             const uint64_t segmentEnd = std::min(m_endTick, segment.next);
             const uint64_t cell = normalCellTicksAt(segmentTick);
             const uint64_t anchor = segment.start;
@@ -369,7 +370,7 @@ void PitchBendGraph::paintCurve(QPainter &painter)
     painter.save();
     painter.setClipRect(canvasRect(), Qt::IntersectClip);
     painter.setPen(QPen(curveColor, 2));
-    const uint64_t fineTick = m_songView ? m_songView->fineGridTicks() : 1;
+    const uint64_t fineTick = m_grid ? m_grid->fineGridTicks() : 1;
     for (auto it = m_points.cbegin(); it != m_points.cend(); ++it) {
         const auto next = std::next(it);
         const int x0 = xAtTick(it->first);
@@ -599,16 +600,16 @@ PitchBendGraph::Sampling PitchBendGraph::gestureSampling() const
 
 uint64_t PitchBendGraph::normalCellTicksAt(uint64_t tick) const
 {
-    if (!m_songView)
+    if (!m_grid)
         return 1;
     const uint64_t span = std::max<uint64_t>(1, m_endTick - m_startTick);
     const double pixelsPerTick = double(canvasRect().width() - 1) / double(span);
-    return m_songView->gridTicksAtScale(tick, pixelsPerTick);
+    return m_grid->gridTicksAtScale(tick, pixelsPerTick);
 }
 
 uint64_t PitchBendGraph::samplingCellTicksAt(uint64_t tick, Sampling sampling) const
 {
-    return sampling == Sampling::Fine ? (m_songView ? m_songView->fineGridTicks() : 1)
+    return sampling == Sampling::Fine ? (m_grid ? m_grid->fineGridTicks() : 1)
                                       : normalCellTicksAt(tick);
 }
 
@@ -619,9 +620,9 @@ uint64_t PitchBendGraph::nextSampleTick(uint64_t tick, Sampling sampling) const
     const uint64_t cell = samplingCellTicksAt(tick, sampling);
     uint64_t segmentEnd = m_endTick;
     const uint64_t anchor =
-        sampling == Sampling::Fine ? 0 : (m_songView ? m_songView->gridSegAt(tick).start : 0);
-    if (sampling == Sampling::Normal && m_songView)
-        segmentEnd = std::min(m_endTick, m_songView->gridSegAt(tick).next);
+        sampling == Sampling::Fine ? 0 : (m_grid ? m_grid->segmentAt(tick).start : 0);
+    if (sampling == Sampling::Normal && m_grid)
+        segmentEnd = std::min(m_endTick, m_grid->segmentAt(tick).next);
     const uint64_t offset = tick > anchor ? tick - anchor : 0;
     const uint64_t quotient = offset / cell;
     if (quotient >= UINT64_MAX / cell)
@@ -641,7 +642,7 @@ uint64_t PitchBendGraph::lastEditableTick(Sampling sampling) const
     const uint64_t lastRaw = m_endTick - 1;
     const uint64_t cell = samplingCellTicksAt(lastRaw, sampling);
     const uint64_t anchor =
-        sampling == Sampling::Fine ? 0 : (m_songView ? m_songView->gridSegAt(lastRaw).start : 0);
+        sampling == Sampling::Fine ? 0 : (m_grid ? m_grid->segmentAt(lastRaw).start : 0);
     const uint64_t tick =
         lastRaw < anchor ? m_startTick : anchor + ((lastRaw - anchor) / cell) * cell;
     return std::clamp(tick, m_startTick, lastRaw);
@@ -657,13 +658,13 @@ uint64_t PitchBendGraph::tickAtFraction(double fraction, Sampling sampling) cons
         std::clamp<uint64_t>(uint64_t(std::max(0.0, std::round(raw))), m_startTick, m_endTick);
     const uint64_t cell = samplingCellTicksAt(rawTick, sampling);
     const uint64_t anchor =
-        sampling == Sampling::Fine ? 0 : (m_songView ? m_songView->gridSegAt(rawTick).start : 0);
+        sampling == Sampling::Fine ? 0 : (m_grid ? m_grid->segmentAt(rawTick).start : 0);
     const double snapped =
         double(anchor) + std::round((raw - double(anchor)) / double(cell)) * cell;
     if (snapped <= double(m_startTick))
         return m_startTick;
-    if (sampling == Sampling::Normal && m_songView) {
-        const uint64_t segmentEnd = std::min(m_endTick, m_songView->gridSegAt(rawTick).next);
+    if (sampling == Sampling::Normal && m_grid) {
+        const uint64_t segmentEnd = std::min(m_endTick, m_grid->segmentAt(rawTick).next);
         if (snapped >= double(segmentEnd) && segmentEnd < m_endTick)
             return segmentEnd;
     }

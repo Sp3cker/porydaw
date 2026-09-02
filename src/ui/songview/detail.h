@@ -45,25 +45,24 @@ int subGridLevel(uint64_t relTick, uint64_t beatTicks, bool triplet);
 
 // Calls fn(tick, level) for every sub-beat visible-grid position in [t0, t1)
 // that is not a beat line, at the current zoom's drawn resolution
-// (SongView::gridTicksAt, which bottoms out at the mid2agb clock grid; the
+// (Grid::gridTicksAt, which bottoms out at the mid2agb clock grid; the
 // snap grid runs one ladder step finer between these lines).
 // Walks time-signature segments so the positions stay snappable and match
 // the beat lines. No callbacks in segments whose grid is at (or coarser
 // than) whole beats.
 template <typename F>
-void forEachSubGridLine(const SongView *sv, double t0, double t1,
+void forEachSubGridLine(const Grid &grid, const TimeCamera &camera, double t0, double t1,
                         int timelineDetailMinimumPixelsPerBeat, F &&fn)
 {
-    const bool triplet = sv->gridFeel() == SongView::GridFeel::Triplet;
+    const bool triplet = grid.feel() == GridFeel::Triplet;
     uint64_t at = uint64_t(std::max(0.0, t0));
     const uint64_t end = t1 <= 0.0 ? 0 : uint64_t(t1);
     while (at < end) {
-        const SongView::GridSeg seg = sv->gridSegAt(at);
+        const Grid::Segment seg = grid.segmentAt(at);
         const uint64_t segEnd = std::min(seg.next, end);
-        const uint64_t g = sv->gridTicksAt(at);
+        const uint64_t g = grid.gridTicksAt(at);
         if (g > 0 && g < seg.beatTicks &&
-            sv->camera().pxPerTick() * double(seg.beatTicks) >=
-                timelineDetailMinimumPixelsPerBeat) {
+            camera.pxPerTick() * double(seg.beatTicks) >= timelineDetailMinimumPixelsPerBeat) {
             const uint64_t k = at > seg.start ? (at - seg.start + g - 1) / g : 0;
             for (uint64_t tick = seg.start + k * g; tick < segEnd; tick += g) {
                 if ((tick - seg.start) % seg.beatTicks == 0)

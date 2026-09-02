@@ -275,7 +275,7 @@ void observeFallbackGrid(GeometryFixture &fx, Harness &check)
             barNumber != k / 4 + 1 || beatNumber != k % 4 + 1)
             check.fail("fallback grid iteration does not match implicit 4/4");
     }
-    const SongView::GridSeg seg = fx.bare.gridSegAt(0);
+    const songview::Grid::Segment seg = fx.bare.grid().segmentAt(0);
     if (seg.start != 0 || seg.next != UINT64_MAX || seg.beatTicks != kFallbackTicksPerBeat ||
         seg.beatsPerBar != kFallbackBeatsPerBar)
         check.fail("fallback grid segment is not implicit 4/4 at 24 ticks per beat");
@@ -476,7 +476,7 @@ void runTpbBindScenarios(GeometryFixture &fx, Harness &check)
 // and the pre-binding beat positions stay put.
 void observeSignaturePublicGeometry(GeometryFixture &fx, qreal rulerHeightBefore, Harness &check)
 {
-    const SongView::GridSeg seg = fx.bare.gridSegAt(0);
+    const songview::Grid::Segment seg = fx.bare.grid().segmentAt(0);
     if (seg.start != 0 || seg.next != UINT64_MAX || seg.beatTicks != kFallbackTicksPerBeat ||
         seg.beatsPerBar != 3)
         check.fail("3/4 binding did not resolve its grid segment");

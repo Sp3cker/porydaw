@@ -23,8 +23,9 @@ class SongView;
 struct AutomationGeometry;
 
 namespace songview {
+class Grid;
 struct TimelineWheelInput;
-}
+} // namespace songview
 
 // The concrete automation page owns its scroll surface and keeps a stable
 // SongView owner for shared song data and editor routing.
@@ -112,6 +113,7 @@ class AutomationPage final : public QWidget
 
     Geometry m_geometry;
     SongView &m_owner;
+    const songview::Grid &m_grid;
     QAction *m_pencilModeAction = nullptr;
     DrawerPageLiveState m_liveState;
     EditorViewState m_viewState;

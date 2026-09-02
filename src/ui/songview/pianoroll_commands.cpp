@@ -222,7 +222,7 @@ void PianoRoll::nudgeSelection(bool right)
     for (const DocNote &note : notes)
         anchor = std::min(anchor, note.tick);
     const uint64_t snapped =
-        right ? m_sv->snapTickUp(double(anchor) + 1.0) : m_sv->snapTickDown(double(anchor) - 1.0);
+        right ? m_grid.snapTickUp(double(anchor) + 1.0) : m_grid.snapTickDown(double(anchor) - 1.0);
     const int64_t dTick = int64_t(snapped) - int64_t(anchor);
     if (dTick == 0)
         return;
@@ -257,7 +257,7 @@ void PianoRoll::copyNotes(const std::vector<DocNote> &notes)
     ClipTrack ct{m_sv->selectionModel().primaryTrack(), {}};
     for (const DocNote &note : notes)
         ct.notes.push_back({uint32_t(note.tick - base), note.key,
-                            note.duration ? note.duration : uint32_t(m_sv->gridTicksAt(note.tick)),
+                            note.duration ? note.duration : uint32_t(m_grid.gridTicksAt(note.tick)),
                             note.velocity});
     clip.tracks.push_back(std::move(ct));
     writeClipboard(clip, m_sv->timeline()->ticksPerBeat);

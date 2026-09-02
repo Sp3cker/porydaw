@@ -655,20 +655,21 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                                       lfoHeight, automationRowsHeight(page), failures);
     page.canvas()->requestFullQuickUpdate();
     (void)captureAutomationViewport();
-    const DrawerPageGridState meterGrid = view.gridState(48, false);
+    const DrawerPageGridState meterGrid = {view.grid().gridTicksAt(48),
+                                           view.grid().snapTicksAt(48)};
     check(meterGrid.gridTicks > 0 && meterGrid.snapTicks > 0,
           QStringLiteral("automation grid did not resolve through its SongView owner"));
     live.timeZoom = 96.0;
     view.setEditorTimeZoom(live.timeZoom);
     page.refreshLiveState(live);
-    const uint64_t hoverSnapTick = view.snapTick(30.0, false);
-    const uint64_t hoverSnapSpacing = view.gridState(hoverSnapTick, false).snapTicks;
+    const uint64_t hoverSnapTick = view.grid().snapTick(30.0, false);
+    const uint64_t hoverSnapSpacing = view.grid().snapTicksAt(hoverSnapTick);
     const double firstHoverTick = double(hoverSnapTick) + 0.1 * double(hoverSnapSpacing);
     const double secondHoverTick = double(hoverSnapTick) + 0.4 * double(hoverSnapSpacing);
     const double thirdHoverTick = double(hoverSnapTick) + 1.1 * double(hoverSnapSpacing);
-    check(view.snapTick(firstHoverTick, false) == hoverSnapTick &&
-              view.snapTick(secondHoverTick, false) == hoverSnapTick &&
-              view.snapTick(thirdHoverTick, false) != hoverSnapTick,
+    check(view.grid().snapTick(firstHoverTick, false) == hoverSnapTick &&
+              view.grid().snapTick(secondHoverTick, false) == hoverSnapTick &&
+              view.grid().snapTick(thirdHoverTick, false) != hoverSnapTick,
           QStringLiteral("automation hover fixture did not resolve its snap cells"));
     page.cancelInteraction();
     const auto waitForTimers = [](int milliseconds) {
@@ -732,7 +733,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                Qt::NoButton, Qt::NoModifier);
     const AutomationProjection sweepProjection(projectionGeometry, &page);
     const QRect sweepBody(0, panTop, automationViewportSize.width(), panHeight);
-    const uint64_t sweepTick = view.snapTick(sweepProjection.rawTickAt(clickPoint.x()), false);
+    const uint64_t sweepTick =
+        view.grid().snapTick(sweepProjection.rawTickAt(clickPoint.x()), false);
     const int sweepValue = qRound(
         AutomationProjection::valueAtY(sweepBody, projectionGeometry, 0, 127, clickPoint.y() + 1));
     DocLanePoint sweepPoint;
@@ -752,7 +754,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         return automationNodePoint(view, page, dpr, projectionGeometry, pan, tick, value);
     };
     resetDrawFixture();
-    const uint64_t normalNodeTick = view.snapTickDown(120.5);
+    const uint64_t normalNodeTick = view.grid().snapTickDown(120.5);
     constexpr int normalNodeValue = 64;
     document.addLanePoint(0, pan.controller, normalNodeTick, normalNodeValue);
     page.documentChanged();
@@ -909,7 +911,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     page.removeEmptyLane(0, 11);
     QCoreApplication::processEvents();
     if (popupMenus) {
-        const uint64_t popupNodeTick = view.snapTickDown(168.5);
+        const uint64_t popupNodeTick = view.grid().snapTickDown(168.5);
         constexpr int popupNodeValue = 70;
         document.addLanePoint(0, pan.controller, popupNodeTick, popupNodeValue);
         page.documentChanged();
@@ -1293,9 +1295,9 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         view.setEditorTimeZoom(live.timeZoom);
         live.horizontalScroll = 0.0;
         view.setEditorHorizontalScroll(live.horizontalScroll);
-        const uint64_t groupA = view.snapTick(48.0, false);
-        const uint64_t groupB = view.snapTick(72.0, false);
-        const uint64_t groupC = view.snapTick(120.0, false);
+        const uint64_t groupA = view.grid().snapTick(48.0, false);
+        const uint64_t groupB = view.grid().snapTick(72.0, false);
+        const uint64_t groupC = view.grid().snapTick(120.0, false);
         constexpr int groupAValue = 40;
         constexpr int groupBValue = 80;
         constexpr int groupCValue = 55;
@@ -1536,8 +1538,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         view.setEditorTimeZoom(live.timeZoom);
         live.horizontalScroll = 0.0;
         view.setEditorHorizontalScroll(live.horizontalScroll);
-        const uint64_t lockA = view.snapTick(48.0, false);
-        const uint64_t lockB = view.snapTick(72.0, false);
+        const uint64_t lockA = view.grid().snapTick(48.0, false);
+        const uint64_t lockB = view.grid().snapTick(72.0, false);
         constexpr int lockAValue = 36;
         constexpr int lockBValue = 60;
         document.writeLanePoints(0, pan.controller, 0, timeline->lengthTicks,

@@ -257,7 +257,8 @@ ScenarioContinuation runCameraScenarios(Harness &check)
                 fail("fractional projection camera did not apply exactly");
 
             const qreal visibleWidth = roll->bounds().width() - pianoKeyboardWidth;
-            uint64_t tick = view.snapTickUp(std::max(0.0, view.camera().tickAtContentX(0.0)));
+            uint64_t tick =
+                view.grid().snapTickUp(std::max(0.0, view.camera().tickAtContentX(0.0)));
             int visibleTicks = 0;
             bool mappingFailed = false;
             const double affineTick = view.camera().tickAtContentX(visibleWidth * 0.371) + 0.375;
@@ -277,14 +278,14 @@ ScenarioContinuation runCameraScenarios(Harness &check)
                             const qreal expected = std::round((origin + rawX) * dpr) / dpr;
                             if (std::abs(displayed - expected) > 1e-12)
                                 mappingFailed = true;
-                            const uint64_t roundTrip =
-                                view.snapTick(view.camera().tickAtContentX(displayed - origin));
+                            const uint64_t roundTrip = view.grid().snapTick(
+                                view.camera().tickAtContentX(displayed - origin));
                             if (roundTrip != tick)
                                 mappingFailed = true;
                         }
                     }
                 }
-                const uint64_t next = view.snapTickUp(double(tick) + 1.0);
+                const uint64_t next = view.grid().snapTickUp(double(tick) + 1.0);
                 if (next <= tick) {
                     mappingFailed = true;
                     break;
@@ -422,11 +423,11 @@ ScenarioContinuation runCameraScenarios(Harness &check)
         // Mid-viewport at the ceiling is all past the song end.
         const double probeX = pianoKeyboardWidth + (roll->width() - pianoKeyboardWidth) / 2.0;
         const uint64_t tick =
-            view.snapTickDown(view.camera().tickAtContentX(probeX - pianoKeyboardWidth));
+            view.grid().snapTickDown(view.camera().tickAtContentX(probeX - pianoKeyboardWidth));
         const int key = rows.keyAt(roll->height() / 2.0);
         const qreal x0 = pianoKeyboardWidth + view.camera().contentX(double(tick));
-        const qreal xs =
-            pianoKeyboardWidth + view.camera().contentX(double(tick + view.snapTicksAt(tick)));
+        const qreal xs = pianoKeyboardWidth +
+                         view.camera().contentX(double(tick + view.grid().snapTicksAt(tick)));
         drawNote(*roll, QPoint(int((x0 + xs) / 2.0), int(rows.centerY(key))));
 
         DocNote scratch;

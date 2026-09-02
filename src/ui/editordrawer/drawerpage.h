@@ -14,8 +14,7 @@ extern "C" {
 #include "voicegroup_loader.h"
 }
 
-// Populated by SongView::gridState(): both fields are >= 1 and safe as
-// divisors or loop strides.
+// Both fields are >= 1 and safe as divisors or loop strides.
 struct DrawerPageGridState {
     uint64_t gridTicks = 0;
     uint64_t snapTicks = 0;

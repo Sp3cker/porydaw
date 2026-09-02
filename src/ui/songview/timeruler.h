@@ -16,6 +16,7 @@ class SongView;
 
 namespace songview {
 
+class Grid;
 class TimelineQuickScene;
 class TimelineQuickView;
 class TimeCamera;
@@ -115,6 +116,7 @@ class TimeRuler final : public TimelineBandInteraction
     QFont m_boldRulerFont;
     SongView &m_owner;
     const songview::TimeCamera &m_camera;
+    const songview::Grid &m_grid;
     TimelineInputHost *m_inputHost = nullptr;
     Geometry m_geometry;
     int m_markerHeight = 0;

@@ -1435,7 +1435,7 @@ int runHostSeamsCheck()
     check(runtime.valid && runtime.scrollPx == 96.0 &&
               runtime.pxPerBeat == 1.75 * layout::fontPx(8.0 / 3.0),
           "SongView editor endpoints should update runtime camera state");
-    const auto grid = view.gridState(12, false);
+    const auto grid = DrawerPageGridState{view.grid().gridTicksAt(12), view.grid().snapTicksAt(12)};
     const auto voice = view.voiceContext(12);
     check(grid.gridTicks > 0 && grid.snapTicks > 0 && voice.voice == &voicegroup.voices[0] &&
               voice.voiceSlot == 0,

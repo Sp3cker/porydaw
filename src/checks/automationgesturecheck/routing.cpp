@@ -88,7 +88,7 @@ uint64_t voiceSnapTick(const AutomationGestureCheckRig &rig, qreal x, bool fine)
     const int plotOrigin = voiceGeometry(rig) ? voiceGeometry(rig)->timelineOrigin : 0;
     const double rawTick = std::max(
         0.0, rig.view().camera().tickAtContentX(std::max<qreal>(plotOrigin, x) - plotOrigin));
-    return rig.view().snapTick(rawTick, fine);
+    return rig.view().grid().snapTick(rawTick, fine);
 }
 
 int markerCountAt(const songview::TimelineQuickLayerData &layer, qreal x)
@@ -513,7 +513,7 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         const auto beforeHeights = laneHeights(rig);
         const uint64_t cursorBefore = rig.view().editCursorTick();
         const uint64_t expectedCursor =
-            rig.view().snapTick(rig.projection().rawTickAt(input.position.x()), false);
+            rig.view().grid().snapTick(rig.projection().rawTickAt(input.position.x()), false);
         const bool accepted = rig.dispatchMousePress(input.position);
         check(accepted && !rig.canvas().isPanning() && rig.view().userGestureActive() &&
                   !rig.canvas().bandPreviewContainsLane(panHandle) &&

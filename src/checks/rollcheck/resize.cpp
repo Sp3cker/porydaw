@@ -43,7 +43,7 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
         return std::nullopt;
     }
     // The absolute snap grid the edits land on: half a drawn cell.
-    const uint64_t snapCell = view.snapTicksAt(d.tick);
+    const uint64_t snapCell = view.grid().snapTicksAt(d.tick);
     const uint32_t offDur = uint32_t(d.dur + d.dur / 4);
     doc.addNote(track, d.tick, uint8_t(d.key), offDur, 100);
     const int rowY = rows.centerY(d.key);
@@ -225,7 +225,7 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
         doc.addNote(track, g.tick, uint8_t(g.key), uint32_t(g.dur), 100);
         doc.addNote(track, g.tick + g.dur, uint8_t(g.key), uint32_t(g.dur), 100);
         const qreal gDpr = roll->devicePixelRatio();
-        const uint64_t gSnap = view.snapTicksAt(g.tick);
+        const uint64_t gSnap = view.grid().snapTicksAt(g.tick);
         const qreal boundaryX =
             view.camera().displayX(double(g.tick + g.dur), pianoKeyboardWidth, gDpr);
         const int gRowY = rows.centerY(g.key);

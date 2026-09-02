@@ -194,12 +194,14 @@ Cell Harness::findFreeCell(int firstProbe, bool checkAllTracks)
             continue;
         for (int probe = firstProbe;
              probe < int(pianoRoll.bounds().width()) - m_pianoKeyboardWidth - 40; probe += 24) {
-            const uint64_t tick = songView.snapTickDown(songView.camera().tickAtContentX(probe));
-            const uint64_t dur = songView.gridTicksAt(tick);
+            const uint64_t tick =
+                songView.grid().snapTickDown(songView.camera().tickAtContentX(probe));
+            const uint64_t dur = songView.grid().gridTicksAt(tick);
             const int x0 = m_pianoKeyboardWidth + songView.camera().contentX(double(tick));
             const int x1 = m_pianoKeyboardWidth + songView.camera().contentX(double(tick + dur));
-            const int xs = m_pianoKeyboardWidth +
-                           songView.camera().contentX(double(tick + songView.snapTicksAt(tick)));
+            const int xs =
+                m_pianoKeyboardWidth +
+                songView.camera().contentX(double(tick + songView.grid().snapTicksAt(tick)));
             if (x0 < m_pianoKeyboardWidth || x1 - x0 < 12 || xs - x0 < 8 ||
                 x1 >= int(pianoRoll.bounds().width()))
                 continue;

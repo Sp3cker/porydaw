@@ -5,6 +5,7 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
+#include "ui/songview/grid.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/typography.h"
 
@@ -59,8 +60,8 @@ TimeRulerControls::TimeRulerControls(SongView &owner, QWidget *parent)
         m_owner.setGridMinDenom(m_divCombo->itemData(index).toInt());
     });
     QObject::connect(m_feelCombo, &QComboBox::activated, this, [this](int index) {
-        m_owner.setGridFeel(index == 1 ? SongView::GridFeel::Triplet
-                                       : SongView::GridFeel::Straight);
+        m_owner.setGridFeel(index == 1 ? songview::GridFeel::Triplet
+                                       : songview::GridFeel::Straight);
     });
 }
 
@@ -69,8 +70,8 @@ TimeRulerControls::TimeRulerControls(SongView &owner, QWidget *parent)
 // which only fires on user picks.
 void TimeRulerControls::syncFromView()
 {
-    m_divCombo->setCurrentIndex(std::max(0, m_divCombo->findData(m_owner.gridMinDenom())));
-    m_feelCombo->setCurrentIndex(m_owner.gridFeel() == SongView::GridFeel::Triplet ? 1 : 0);
+    m_divCombo->setCurrentIndex(std::max(0, m_divCombo->findData(m_owner.grid().minDenom())));
+    m_feelCombo->setCurrentIndex(m_owner.grid().feel() == songview::GridFeel::Triplet ? 1 : 0);
 }
 
 void TimeRulerControls::closePopups()
@@ -100,6 +101,7 @@ void TimeRuler::refreshGeometry()
 TimeRuler::TimeRuler(SongView &owner)
     : m_owner(owner)
     , m_camera(owner.camera())
+    , m_grid(owner.grid())
     , m_geometry(Geometry::resolve())
 {}
 

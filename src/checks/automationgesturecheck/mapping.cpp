@@ -63,13 +63,13 @@ void checkAutomationPencilMapping(AutomationGestureCheckRig &rig,
     const auto seed = rig.pointAt(rig.pan, 24, 72);
     const auto indicatorCell = projection.snapCellAt(seed.mapped.rawTick);
     const double indicatorTick =
-        double(indicatorCell.tickBegin) + 0.4 * double(rig.view().fineGridTicks());
+        double(indicatorCell.tickBegin) + 0.4 * double(rig.view().grid().fineGridTicks());
     const auto panInput = rig.pointAt(rig.pan, indicatorTick, 72);
     NodeLaneHoverState panIndicator;
     panIndicator.hover.lane = panHandle;
     panIndicator.hover.pos = panInput.position;
     const auto mappedCell = projection.snapCellAt(panInput.mapped.rawTick);
-    const double panCaretTick = double(rig.view().snapTick(panInput.mapped.rawTick, true));
+    const double panCaretTick = double(rig.view().grid().snapTick(panInput.mapped.rawTick, true));
     const QRect panBody = rig.bodyFor(panHandle);
     check(panInput.mapped.point.tick == mappedCell.tickBegin &&
               panInput.mapped.cell.tickEnd == mappedCell.tickEnd &&

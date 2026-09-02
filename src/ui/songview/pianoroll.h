@@ -261,6 +261,7 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     std::array<int, 128> m_keyboardHoverNameWidths{};
     SongView *const m_sv;
     const songview::TimeCamera &m_camera;
+    const songview::Grid &m_grid;
     TimelineInputHost *m_inputHost = nullptr;
     pianoroll_detail::PianoRollGeometry m_geometry;
     pianoroll_detail::MidiCursors m_cursors;

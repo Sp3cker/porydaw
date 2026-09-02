@@ -185,6 +185,7 @@ AutomationPage::AutomationPage(SongView &owner, QWidget *parent)
     : QWidget(parent)
     , m_geometry(Geometry::resolve())
     , m_owner(owner)
+    , m_grid(owner.grid())
 {
     auto *box = new QVBoxLayout(this);
     box->setContentsMargins(0, 0, 0, 0);
@@ -372,20 +373,20 @@ void AutomationPage::documentChanged()
 
 uint64_t AutomationPage::snapTick(double tick, bool fineMode) const noexcept
 {
-    return m_owner.snapTick(tick, fineMode);
+    return m_grid.snapTick(tick, fineMode);
 }
 uint64_t AutomationPage::snapTickDown(double tick, bool fineMode) const noexcept
 {
     tick = std::max(0.0, tick);
     if (!fineMode)
-        return m_owner.snapTickDown(tick);
+        return m_grid.snapTickDown(tick);
     const uint64_t spacing = gridState(uint64_t(tick), true).snapTicks;
     return uint64_t(tick / double(spacing)) * spacing;
 }
 
 DrawerPageGridState AutomationPage::gridState(uint64_t tick, bool fineMode) const noexcept
 {
-    return m_owner.gridState(tick, fineMode);
+    return {m_grid.gridTicksAt(tick), fineMode ? m_grid.fineGridTicks() : m_grid.snapTicksAt(tick)};
 }
 
 uint64_t AutomationPage::nextGridTick(uint64_t tick, bool fineMode, uint64_t limit) const noexcept

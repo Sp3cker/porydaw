@@ -14,8 +14,9 @@ class MidiTimeline;
 class SongView;
 
 namespace songview {
+class Grid;
 class TimeCamera;
-}
+} // namespace songview
 // A half-open visible grid cell. Snapped callers provide crossed cells in
 // pointer traversal order, including both endpoint cells.
 struct AutomationGridCell {
@@ -49,7 +50,8 @@ struct AutomationGeometry {
 };
 
 // AutomationProjection owns the current geometry for pixel <-> tick mapping.
-// It borrows only the page; construct one per event or paint pass. Value
+// It borrows the page — or, in SongView mode, the SongView's camera and
+// grid; construct one per event or paint pass. Value
 // mapping is lane-keyed through pointerMapping and the static valueY helpers.
 class AutomationProjection
 {
@@ -93,4 +95,5 @@ class AutomationProjection
     const AutomationPage *m_page = nullptr;
     const SongView *m_songView = nullptr;
     const songview::TimeCamera *m_camera = nullptr;
+    const songview::Grid *m_grid = nullptr;
 };

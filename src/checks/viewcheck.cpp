@@ -96,7 +96,7 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong,
         }
 
         const uint64_t tpb = std::max<uint32_t>(1, tl->ticksPerBeat);
-        if (!gridChecked && view.gridSegAt(0).beatTicks == tpb) {
+        if (!gridChecked && view.grid().segmentAt(0).beatTicks == tpb) {
             // Snap-grid semantics on the first song governed by a /4
             // signature at tick 0: the grid must follow the feel's
             // subdivision ladder — a cell earns its place at
@@ -109,12 +109,12 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong,
             SongView::ViewState zoom;
             zoom.valid = true;
             const auto expectGrid = [&](const char *what, uint64_t expected) {
-                if (view.gridTicksAt(0) != expected) {
+                if (view.grid().gridTicksAt(0) != expected) {
                     std::fprintf(stderr,
                                  "viewcheck: FAIL %s: %s grid = %llu ticks, "
                                  "expected %llu\n",
                                  qUtf8Printable(song.label), what,
-                                 (unsigned long long)view.gridTicksAt(0),
+                                 (unsigned long long)view.grid().gridTicksAt(0),
                                  (unsigned long long)expected);
                     failures++;
                 }
@@ -124,12 +124,12 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong,
             // subdivision floors the DRAWN grid only; snapping steps past
             // it too.
             const auto expectSnap = [&](const char *what, uint64_t expected) {
-                if (view.snapTicksAt(0) != expected) {
+                if (view.grid().snapTicksAt(0) != expected) {
                     std::fprintf(stderr,
                                  "viewcheck: FAIL %s: %s snap = %llu ticks, "
                                  "expected %llu\n",
                                  qUtf8Printable(song.label), what,
-                                 (unsigned long long)view.snapTicksAt(0),
+                                 (unsigned long long)view.grid().snapTicksAt(0),
                                  (unsigned long long)expected);
                     failures++;
                 }
@@ -144,7 +144,7 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong,
             expectSnap("straight auto at threshold", std::max<uint64_t>(1, tpb / 8));
             zoom.pxPerBeat = 6.0 * cellPx; // sixth-beat triplet cells at threshold
             view.applyViewState(zoom);
-            view.setGridFeel(SongView::GridFeel::Triplet);
+            view.setGridFeel(songview::GridFeel::Triplet);
             expectGrid("triplet auto", std::max<uint64_t>(1, tpb / 6));
             expectSnap("triplet auto", std::max<uint64_t>(1, tpb / 12));
             view.setGridMinDenom(8);
@@ -152,7 +152,7 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong,
             expectSnap("triplet 1/8 snaps past the display floor", std::max<uint64_t>(1, tpb / 6));
             zoom.pxPerBeat = 4.0 * cellPx;
             view.applyViewState(zoom);
-            view.setGridFeel(SongView::GridFeel::Straight);
+            view.setGridFeel(songview::GridFeel::Straight);
             view.setGridMinDenom(16);
             expectGrid("straight 1/16", std::max<uint64_t>(1, tpb / 4));
             expectSnap("straight 1/16 snaps past the display floor",
@@ -174,7 +174,7 @@ int runViewCheck(const QString &projectRoot, const QString &screenshotSong,
         int badSnaps = 0;
         uint64_t badTick = 0;
         view.forEachGridLine(0, tl->lengthTicks, [&](uint64_t t, bool, int, int) {
-            if (view.snapTick(double(t)) != t && badSnaps++ == 0)
+            if (view.grid().snapTick(double(t)) != t && badSnaps++ == 0)
                 badTick = t;
         });
         view.setGridMinDenom(0);

@@ -6,6 +6,7 @@
 #include "ui/keymap.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
+#include "ui/songview/grid.h"
 
 #include <QApplication>
 #include <QMenu>
@@ -25,7 +26,7 @@ bool TimeRuler::pointerPress(const TimelinePointerInput &input)
     if (!timeline || input.position.x() < plotOrigin)
         return false;
     const uint64_t clickTick =
-        m_owner.snapTick(m_camera.tickAtContentX(input.position.x() - plotOrigin));
+        m_grid.snapTick(m_camera.tickAtContentX(input.position.x() - plotOrigin));
 
     if (input.button == Qt::RightButton) {
         // Deferred until release so the loop/selection menu opens at the
@@ -74,7 +75,7 @@ bool TimeRuler::pointerMove(const TimelinePointerInput &input)
 {
     const qreal plotOrigin = m_owner.timelinePlotOrigin();
     const auto dragTick = [this, &input, plotOrigin] {
-        return m_owner.snapTick(
+        return m_grid.snapTick(
             m_camera.tickAtContentX(std::max(plotOrigin, input.position.x()) - plotOrigin));
     };
     if (m_rightPress)

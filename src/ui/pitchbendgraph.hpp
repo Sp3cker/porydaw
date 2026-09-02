@@ -21,6 +21,7 @@ class QPainter;
 class SongView;
 
 namespace songview {
+class Grid;
 
 class PitchBendGraph final : public QWidget
 {
@@ -127,6 +128,7 @@ class PitchBendGraph final : public QWidget
     QString formatRangeLimit(bool positive) const;
 
     ::SongView *m_songView = nullptr;
+    const songview::Grid *m_grid = nullptr;
     int m_engineTrack = -1;
     uint64_t m_startTick = 0;
     uint64_t m_endTick = 0;

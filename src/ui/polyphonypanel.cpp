@@ -51,9 +51,9 @@ QColor cellColor(int state)
 }
 
 // Bar:beat.tick position for an event, honoring time-signature changes the
-// way the ruler grid does (SongView::gridSegAt): a signature change restarts
-// the bar at its own tick, and a partial bar before it still counts as a bar.
-// 4/4 is assumed before the first (or without any) signature.
+// way the ruler grid does: a signature change restarts the bar at its own
+// tick, and a partial bar before it still counts as a bar. 4/4 is assumed
+// before the first (or without any) signature.
 QString formatBarBeat(const MidiTimeline *tl, uint32_t tick)
 {
     if (!tl)
