@@ -127,6 +127,19 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
                     .arg(QString::fromLatin1(name)));
         }
     };
+    const songview::TimelineBandLayout &bandLayout = probe.timelineBandLayout();
+    // The voice changes page renders in the Quick scene instead of a native
+    // widget: its clip check probes the canonical SongView-local band rect.
+    const auto checkVisibleBodyRect = [&](const QRect &bandRect, const char *name) {
+        const QImage image = fallbackImage();
+        const QRect bodyProbe{qRound(playheadX()) - layout::singlePixel(), bandRect.center().y(),
+                              2 * layout::singlePixel() + 1, layout::singlePixel()};
+        if (image.isNull() || !bandRect.isValid() ||
+            !checks::support::hasPlayheadPixel(image, bodyProbe, color)) {
+            failures.append(QStringLiteral("playhead body was not clipped into visible %1")
+                                .arg(QString::fromLatin1(name)));
+        }
+    };
     const auto checkRulerTriangle = [&](const QImage &image, bool pointsUp, const char *state) {
         const QRect rulerRect = checks::support::widgetRectIn(*ruler, probe);
         const int triangleTop =
@@ -198,7 +211,10 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
     probe.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
     probe.setDrawerActivePage(EditorDrawerPage::VoiceChanges);
     checks::support::pumpQuick();
-    checkVisibleBody(*voiceChanges, "voice-change");
+    checkVisibleBodyRect(bandLayout.geometry(songview::TimelineBand::VoiceChanges)
+                             .value_or(songview::TimelineBandGeometry{})
+                             .rect,
+                         "voice-change");
 
     probe.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
     probe.setDrawerActivePage(EditorDrawerPage::Automations);
@@ -236,14 +252,18 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
     if (checks::support::hasPlayheadPixel(hidden, hidden.rect(), color))
         failures.append("forced QWidget playhead remained painted after a hidden presentation");
 
-    const songview::TimelineBandLayout &bandLayout = probe.timelineBandLayout();
     const auto canonicalRectMatches = [&](songview::TimelineBand band, const QWidget &widget) {
         const std::optional<songview::TimelineBandGeometry> &geometry = bandLayout.geometry(band);
         return geometry && widget.isVisibleTo(&probe) &&
                geometry->rect == QRect(widget.mapTo(&probe, QPoint()), widget.size());
     };
+    const auto canonicalVoiceMatches = [&] {
+        const std::optional<songview::TimelineBandGeometry> &geometry =
+            bandLayout.geometry(songview::TimelineBand::VoiceChanges);
+        return geometry && geometry->timelineOrigin == voiceChanges->plotOrigin();
+    };
     if (!canonicalRectMatches(songview::TimelineBand::Velocity, *velocity) ||
-        !canonicalRectMatches(songview::TimelineBand::VoiceChanges, *voiceChanges) ||
+        !canonicalVoiceMatches() ||
         !canonicalRectMatches(songview::TimelineBand::Automation, *automation->scrollViewport()) ||
         drawer->bodyRect(EditorDrawerPage::Velocity) !=
             std::optional<QRect>(bandLayout.geometry(songview::TimelineBand::Velocity)

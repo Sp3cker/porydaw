@@ -207,13 +207,13 @@ bool SongView::bandWidgetsMatchCanonicalLayout() const
         return !canonical || !widget || widgetRect(*widget) == canonical->rect;
     };
     const AutomationPage *automation = m_editorDrawer ? m_editorDrawer->automationPage() : nullptr;
+    // VoiceChanges has no widget since its Quick conversion; its canonical
+    // rectangle comes straight from DrawerSections::bodyRect().
     return matches(TimelineBand::Ruler, m_ruler) && matches(TimelineBand::Roll, m_roll) &&
            matches(TimelineBand::OtherEvents, m_strip) &&
            matches(TimelineBand::Automation, automation ? automation->scrollViewport() : nullptr) &&
            matches(TimelineBand::Velocity,
-                   m_editorDrawer ? m_editorDrawer->velocityArea() : nullptr) &&
-           matches(TimelineBand::VoiceChanges,
-                   m_editorDrawer ? m_editorDrawer->voiceChangeArea() : nullptr);
+                   m_editorDrawer ? m_editorDrawer->velocityArea() : nullptr);
 }
 
 // The ruler and other-events widgets no longer occupy layout slots; they
@@ -308,6 +308,10 @@ SongView::SongView(QWidget *parent)
     m_quickView = new TimelineQuickView(
         *m_ruler, *m_roll, *m_strip, *m_editorDrawer->automationPage(),
         *m_editorDrawer->velocityArea(), *m_editorDrawer->voiceChangeArea(), *this);
+    // VoiceChangeArea is a SongView-owned interaction, not drawer chrome.
+    // Reparenting after the Quick host is attached makes QObject teardown
+    // destroy/detach the host before the interaction module.
+    m_editorDrawer->voiceChangeArea()->setParent(this);
     m_quickView->lower();
     m_playheadOverlay = new PlayheadOverlay(*this, timelineBandLayout());
     m_selectionModel.setObserver(
@@ -330,6 +334,7 @@ SongView::SongView(QWidget *parent)
     // until a song binds.
     m_scrollX = minHScroll();
 }
+
 bool SongView::advanceTrackActivity(const TrackActivityLevels &levels, float elapsedSeconds,
                                     bool playing)
 {
@@ -632,6 +637,16 @@ void SongView::focusActiveSurface()
         focusContent();
 }
 
+bool SongView::focusTimelineBand(songview::TimelineBand band, Qt::FocusReason reason)
+{
+    return m_quickView && m_quickView->focusBand(band, reason);
+}
+
+std::optional<songview::TimelineBand> SongView::focusedTimelineBand() const
+{
+    return m_quickView ? m_quickView->focusedBand() : std::nullopt;
+}
+
 void SongView::setFollowScrollPaused(bool paused)
 {
     m_followScrollPaused = paused;
@@ -764,10 +779,17 @@ void SongView::coordinateSelectionChange(
 
 bool SongView::event(QEvent *event)
 {
-    const bool lifecycleRepublish = event->type() == QEvent::Show ||
-                                    event->type() == QEvent::WinIdChange ||
-                                    event->type() == QEvent::DevicePixelRatioChange ||
-                                    event->type() == QEvent::ScreenChangeInternal;
+    bool screenOrDprChanged = event->type() == QEvent::ScreenChangeInternal;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+    screenOrDprChanged = screenOrDprChanged || event->type() == QEvent::DevicePixelRatioChange;
+#endif
+    const bool appearanceChanged =
+        event->type() == QEvent::FontChange || event->type() == QEvent::ApplicationFontChange ||
+        event->type() == QEvent::PaletteChange ||
+        event->type() == QEvent::ApplicationPaletteChange || event->type() == QEvent::StyleChange ||
+        event->type() == QEvent::ThemeChange || screenOrDprChanged;
+    const bool lifecycleRepublish =
+        event->type() == QEvent::Show || event->type() == QEvent::WinIdChange || screenOrDprChanged;
     if (event->type() == QEvent::Hide || event->type() == QEvent::WindowDeactivate ||
         event->type() == QEvent::UngrabMouse) {
         cancelActiveInteractions();
@@ -796,6 +818,8 @@ bool SongView::event(QEvent *event)
     }
     if (event->type() == QEvent::FontChange)
         refreshGeometry();
+    if (appearanceChanged)
+        syncTimelineQuickAppearance();
     return handled;
 }
 void SongView::copySelection()

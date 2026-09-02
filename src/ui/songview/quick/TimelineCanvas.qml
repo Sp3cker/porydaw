@@ -297,6 +297,11 @@ Item {
             textModel: timelineScene.voiceChangesHoverTextModel
             z: 7
         }
+        TimelineInputItem {
+            objectName: "timelineVoiceChangesInput"
+            anchors.fill: parent
+            Accessible.description: accessibilityDescription
+        }
     }
 
     TimelineSceneBand {

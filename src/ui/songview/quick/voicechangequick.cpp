@@ -66,7 +66,8 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
     scene.setVoiceChangesTextRecords(std::span<const TimelineQuickTextModel::Record>{});
     scene.setVoiceChangesHoverTextRecords(std::span<const TimelineQuickTextModel::Record>{});
 
-    const QRect bounds = rect();
+    const QRectF sceneBounds = bounds();
+    const QRect bounds = sceneBounds.toRect();
     if (bounds.isEmpty())
         return;
     const QRectF full(bounds);
@@ -123,7 +124,7 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
     }
 
     const int track = m_engineTrack;
-    const qreal dpr = devicePixelRatioF();
+    const qreal dpr = devicePixelRatio();
     const bool previewing = voiceDragActive();
     if (previewing) {
         m_previewEntries.clear();

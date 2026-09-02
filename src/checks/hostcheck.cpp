@@ -13,16 +13,20 @@
 #include "ui/songview.h"
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timelinebandlayout.h"
 #include "ui/songview/timeruler.h"
 
 #include <QApplication>
+#include <QColor>
 #include <QCoreApplication>
 #include <QEvent>
 #include <QFileInfo>
 #include <QImage>
 #include <QMenu>
+#include <QPalette>
+#include <QPointer>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QTemporaryDir>
@@ -104,19 +108,6 @@ void pumpZeroDelayTimers()
     QCoreApplication::processEvents();
 }
 
-template <std::size_t Size>
-std::optional<QRect> visibleBandUnion(QWidget &owner, const std::array<QWidget *, Size> &bands)
-{
-    std::optional<QRect> result;
-    for (QWidget *band : bands) {
-        if (!band || !band->isVisibleTo(&owner))
-            continue;
-        const QRect rect(band->mapTo(&owner, QPoint()), band->size());
-        result = result ? result->united(rect) : rect;
-    }
-    return result;
-}
-
 struct QmlBandPropertyNames {
     songview::TimelineBand band;
     const char *rectProperty;
@@ -147,6 +138,29 @@ bool publishedQmlRectsMatchCanonical(const QWidget &quick, QObject &quickRoot,
             return false;
     }
     return true;
+}
+
+// The converted VoiceChanges band owns no widget: its canonical rectangle,
+// the QML band rectangle, and the timelineVoiceChangesInput bounds must
+// describe the same parent-owned region, and the native-window mask must
+// expose that region while the band is visible.
+bool voiceInputMatchesCanonical(const SongView &view, const songview::TimelineQuickView &quick,
+                                QObject &quickRoot)
+{
+    const std::optional<songview::TimelineBandGeometry> &geometry =
+        view.timelineBandLayout().geometry(songview::TimelineBand::VoiceChanges);
+    const auto *voiceInput = quickRoot.findChild<songview::TimelineInputItem *>(
+        QStringLiteral("timelineVoiceChangesInput"));
+    if (!geometry || !voiceInput)
+        return false;
+    const QRect canonicalRect = geometry->rect.translated(-quick.geometry().topLeft());
+    const QRectF inputRect(voiceInput->mapToItem(quick.rootObject(), QPointF()),
+                           voiceInput->size());
+    return voiceInput->isVisible() &&
+           voiceInput->bounds() ==
+               QRectF(QPointF{}, QSizeF(geometry->rect.width(), geometry->rect.height())) &&
+           inputRect == QRectF(canonicalRect) &&
+           quick.quickWindow()->mask().contains(canonicalRect);
 }
 
 } // namespace
@@ -364,25 +378,23 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     auto *typedOtherStrip = findWidgetDescendant<songview::OtherStrip>(view);
     auto *automationViewport =
         drawer && drawer->automationPage() ? drawer->automationPage()->scrollViewport() : nullptr;
-    auto *voiceChangesBand = drawer ? drawer->voiceChangeArea() : nullptr;
     QObject *const quickRoot = quick->rootObject();
-    const std::array<QWidget *, 6> quickBands{
-        rulerBand, rollBand, typedOtherStrip, automationViewport, area, voiceChangesBand,
+    const std::array<QWidget *, 5> quickBands{
+        rulerBand, rollBand, typedOtherStrip, automationViewport, area,
     };
-    check(rulerBand && rollBand && typedOtherStrip && automationViewport && voiceChangesBand &&
-              quickRoot,
-          "host should expose all six retained Quick band hosts");
-    if (rulerBand && rollBand && typedOtherStrip && automationViewport && voiceChangesBand &&
-        quickRoot) {
+    check(rulerBand && rollBand && typedOtherStrip && automationViewport && quickRoot,
+          "host should expose the retained Quick band widgets and the Quick root");
+    if (rulerBand && rollBand && typedOtherStrip && automationViewport && quickRoot) {
         const songview::TimelineBandLayout &bandLayout = view.timelineBandLayout();
         const std::array<songview::TimelineBand, quickBands.size()> bandIds{
             songview::TimelineBand::Ruler,       songview::TimelineBand::Roll,
             songview::TimelineBand::OtherEvents, songview::TimelineBand::Automation,
-            songview::TimelineBand::Velocity,    songview::TimelineBand::VoiceChanges,
+            songview::TimelineBand::Velocity,
         };
-        // While Phase 1 keeps both sources alive, every visible widget band
-        // must exactly fill its canonical parent-owned rectangle, and every
-        // hidden band must leave a nullopt entry behind.
+        // While both sources survive, every visible retained widget band must
+        // exactly fill its canonical parent-owned rectangle, and every hidden
+        // band must leave a nullopt entry behind. The converted VoiceChanges
+        // band contributes through its canonical entry alone.
         const auto canonicalMatchesWidgets = [&] {
             for (std::size_t index = 0; index < bandIds.size(); ++index) {
                 const QWidget &band = *quickBands[index];
@@ -400,12 +412,10 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         };
         const auto canonicalVisibleUnion = [&] {
             std::optional<QRect> unionRect;
-            for (const songview::TimelineBand band : bandIds) {
-                const std::optional<songview::TimelineBandGeometry> &geometry =
-                    bandLayout.geometry(band);
-                if (!geometry)
+            for (const std::optional<songview::TimelineBandGeometry> &band : bandLayout.bands) {
+                if (!band)
                     continue;
-                unionRect = unionRect ? unionRect->united(geometry->rect) : geometry->rect;
+                unionRect = unionRect ? unionRect->united(band->rect) : band->rect;
             }
             return unionRect;
         };
@@ -439,22 +449,44 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               "hidden-band fixture should retain its extreme stale geometry");
         pumpZeroDelayTimers();
 
-        const std::optional<QRect> hiddenUnion = visibleBandUnion(view, quickBands);
+        const std::optional<QRect> hiddenUnion = canonicalVisibleUnion();
         check(hiddenUnion && quick->geometry() == *hiddenUnion && quick->isVisible() &&
                   !quick->geometry().intersects(staleGeometry),
               "Quick host geometry should exclude a hidden band's stale rectangle");
         check(!bandLayout.geometry(songview::TimelineBand::Velocity) && canonicalMatchesWidgets(),
               "hidden velocity band should leave a nullopt canonical entry without stale geometry");
-        check(quick->geometry() == canonicalVisibleUnion(),
-              "Quick host geometry should be the union of the canonical layout rectangles");
         check(!quickRoot->property("velocityBandVisible").toBool() &&
                   quickRoot->property("velocityBandRect").toRectF().isEmpty(),
               "hidden velocity band should publish no retained Quick rectangle");
+        auto *voiceInput = quickRoot->findChild<songview::TimelineInputItem *>(
+            QStringLiteral("timelineVoiceChangesInput"));
+        check(voiceInput && !voiceInput->isVisible() &&
+                  !bandLayout.geometry(songview::TimelineBand::VoiceChanges),
+              "hidden voice changes band should keep an invisible input item and no canonical "
+              "entry");
+        const QFont originalHostFont = view.font();
+        QFont distinctHostFont = originalHostFont;
+        distinctHostFont.setItalic(!originalHostFont.italic());
+        const QPalette originalHostPalette = view.palette();
+        QPalette distinctHostPalette = originalHostPalette;
+        distinctHostPalette.setColor(
+            QPalette::WindowText, originalHostPalette.color(QPalette::WindowText) == QColor(Qt::red)
+                                      ? Qt::blue
+                                      : Qt::red);
+        view.setFont(distinctHostFont);
+        view.setPalette(distinctHostPalette);
+        pumpZeroDelayTimers();
+        check(voiceInput && voiceInput->font() == distinctHostFont &&
+                  voiceInput->palette() == distinctHostPalette,
+              "Quick input host must publish the SongView font and palette");
+        view.setFont(originalHostFont);
+        view.setPalette(originalHostPalette);
+        pumpZeroDelayTimers();
 
         view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
         view.setDrawerActivePage(EditorDrawerPage::Velocity);
         pumpZeroDelayTimers();
-        const std::optional<QRect> shownUnion = visibleBandUnion(view, quickBands);
+        const std::optional<QRect> shownUnion = canonicalVisibleUnion();
         const QRect velocityInView(area->mapTo(&view, QPoint()), area->size());
         const QRectF expectedVelocityRect =
             QRectF(velocityInView.translated(-quick->geometry().topLeft()));
@@ -527,10 +559,10 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     view.setDrawerActivePage(EditorDrawerPage::Velocity);
     auto *automation = automationCanvas(view);
     auto *automationScroll = view.findChild<QScrollArea *>(QStringLiteral("automationScroll"));
-    auto *voiceChanges = drawer ? drawer->voiceChangeArea() : nullptr;
-    check(automation != nullptr && automationScroll != nullptr && voiceChanges != nullptr,
+    const songview::TimelineBandLayout &bandLayout = view.timelineBandLayout();
+    check(automation != nullptr && automationScroll != nullptr,
           "host should construct the Automation and Voice Changes timeline surfaces");
-    if (automation && automationScroll && voiceChanges) {
+    if (automation && automationScroll) {
         const int selectedTrack = view.selectionModel().primaryTrack();
         view.setTrackSolo(selectedTrack, false);
         checks::events::sendKey(*area, QEvent::KeyPress, Qt::Key_S, Qt::NoModifier, QString{},
@@ -578,15 +610,19 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
         view.setDrawerActivePage(EditorDrawerPage::VoiceChanges);
         QCoreApplication::processEvents();
-        check(voiceChanges->isVisible(),
-              "Voice Changes should be visible for voice-context checks");
+        const std::optional<songview::TimelineBandGeometry> &voiceGeometry =
+            bandLayout.geometry(songview::TimelineBand::VoiceChanges);
+        check(voiceGeometry && quickRoot->property("voiceChangesBandVisible").toBool() &&
+                  voiceInputMatchesCanonical(view, *quick, *quickRoot),
+              "Voice Changes should be visible with its input item matching the canonical band");
         const QImage editCursorVoiceContext =
-            checks::support::captureQuickBand(view, *voiceChanges);
+            checks::support::captureQuickBand(view, voiceGeometry->rect);
         const QImage editCursorAutomation =
             checks::support::captureQuickBand(view, *automationScroll->viewport());
         view.setPlayheadSample(timeline->sampleForTick(24), true);
         QCoreApplication::processEvents();
-        const QImage playbackVoiceContext = checks::support::captureQuickBand(view, *voiceChanges);
+        const QImage playbackVoiceContext =
+            checks::support::captureQuickBand(view, voiceGeometry->rect);
         const QImage playbackAutomation =
             checks::support::captureQuickBand(view, *automationScroll->viewport());
         check(!editCursorAutomation.isNull() && playbackVoiceContext != editCursorVoiceContext &&
@@ -594,30 +630,32 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               "visible Voice Changes should resolve playback voice without refreshing Automation");
         const QImage warmAutomation =
             checks::support::captureQuickBand(view, *automationScroll->viewport());
-        const QImage warmVoiceContext = checks::support::captureQuickBand(view, *voiceChanges);
+        const QImage warmVoiceContext =
+            checks::support::captureQuickBand(view, voiceGeometry->rect);
         for (int tick = 25; tick < 27; ++tick)
             view.setPlayheadSample(timeline->sampleForTick(uint64_t(tick)), true);
         QCoreApplication::processEvents();
-        check(checks::support::captureQuickBand(view, *voiceChanges) == warmVoiceContext &&
+        check(checks::support::captureQuickBand(view, voiceGeometry->rect) == warmVoiceContext &&
                   checks::support::captureQuickBand(view, *automationScroll->viewport()) ==
                       warmAutomation,
               "steady same-voice playback should keep Voice Changes and Automation stable");
 
         view.setPlayheadSample(timeline->sampleForTick(26), false);
         QCoreApplication::processEvents();
-        check(checks::support::captureQuickBand(view, *voiceChanges) == editCursorVoiceContext &&
+        check(checks::support::captureQuickBand(view, voiceGeometry->rect) ==
+                      editCursorVoiceContext &&
                   checks::support::captureQuickBand(view, *automationScroll->viewport()) ==
                       editCursorAutomation,
               "stopping should return Voice Changes to the edit-cursor voice only");
         view.setPlayheadSample(timeline->sampleForTick(12), true);
         QCoreApplication::processEvents();
         const QImage squarePlaybackVoiceContext =
-            checks::support::captureQuickBand(view, *voiceChanges);
+            checks::support::captureQuickBand(view, voiceGeometry->rect);
         const QImage automationBeforeCrossing =
             checks::support::captureQuickBand(view, *automationScroll->viewport());
         view.setPlayheadSample(timeline->sampleForTick(24), true);
         QCoreApplication::processEvents();
-        check(checks::support::captureQuickBand(view, *voiceChanges) !=
+        check(checks::support::captureQuickBand(view, voiceGeometry->rect) !=
                       squarePlaybackVoiceContext &&
                   checks::support::captureQuickBand(view, *automationScroll->viewport()) ==
                       automationBeforeCrossing,
@@ -1247,5 +1285,27 @@ int runHostSeamsCheck()
           "document refresh must preserve concrete drawer cosmetics");
     view.cancelActiveInteractions();
     view.hide();
+
+    bool quickHostDestroyed = false;
+    bool voiceInteractionAliveAtQuickDestruction = false;
+    auto destructionProbe = std::make_unique<SongView>();
+    auto *quickHost = destructionProbe->findChild<songview::TimelineQuickView *>(
+        QStringLiteral("timelineQuickCanvas"), Qt::FindDirectChildrenOnly);
+    QPointer<VoiceChangeArea> voiceInteraction =
+        destructionProbe->editorDrawer()->voiceChangeArea();
+    check(quickHost && voiceInteraction,
+          "destruction-order probe must construct the Quick host and voice interaction");
+    check(voiceInteraction && voiceInteraction->parent() == destructionProbe.get(),
+          "VoiceChangeArea must have SongView lifetime ownership");
+    if (quickHost) {
+        QObject::connect(quickHost, &QObject::destroyed, [&] {
+            quickHostDestroyed = true;
+            voiceInteractionAliveAtQuickDestruction = !voiceInteraction.isNull();
+        });
+    }
+    destructionProbe.reset();
+    check(quickHostDestroyed, "SongView destruction must destroy its Quick host");
+    check(voiceInteractionAliveAtQuickDestruction,
+          "Quick host must detach before VoiceChangeArea destruction");
     return failures == 0 ? 0 : 1;
 }

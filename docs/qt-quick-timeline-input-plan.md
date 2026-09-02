@@ -49,6 +49,15 @@ The six baseline QWidget input surfaces are:
 | Velocity | `VelocityArea` | `event`, application event filter, resize, press, move, release, leave, wheel, key press, focus out, context menu |
 | Voice changes | `VoiceChangeArea` | `event`, resize, press, move, release, double-click, leave, wheel, key press, focus out, context menu |
 
+### Phase 2 implementation record
+
+- Build checks: `deno task build:checks` passed.
+- Focused checks: `host-integration`, `rollwindowingcheck`, `rendering-playhead`, `editor-drawer`, `automation-popup-menus`, `velocity-page`, and `mainwindow-routing` pass.
+- Unconverted band state: `Ruler`, `PianoRoll`, `OtherEvents`, `Automation`, and `Velocity` continue to render but are deliberately noninteractive in Phase 2. Production event ownership switched to the Quick host without temporary synthetic forwarding to unconverted QWidgets.
+- Expected test failures: `rollcheck` fails four retained PianoRoll/pitch-bend input assertions, and `automation-gestures` fails its retained native AutomationCanvas hover/move assertions, because the native Quick timeline host now owns pointer delivery while those bands have no input item. Voice-change routing passes once retargeted.
+- Class declaration deviation: `TimelineInputItem` cannot be declared `final` because Qt 6.11's `qmlRegisterType` internally instantiates `QQmlElement<T>`, which derives from `T`. This is a toolchain-required C++ inheritance constraint, not a compatibility shim.
+- Focus seam plan correction: `focusBand()` returns `false` only when the target band's input item is absent in that phase; otherwise it issues the focus request and returns `true`. This avoids an asynchronous `QWindowContainer` / `QQuickWindow` fallback race without caching focus state, keeping `focusedBand()` as the sole live active-focus truth.
+
 ## Goal
 
 Make the existing Qt Quick timeline scene own raw pointer, wheel, hover, focus, and keyboard input
@@ -405,9 +414,9 @@ bool SongView::focusTimelineBand(TimelineBand band, Qt::FocusReason reason);
 std::optional<TimelineBand> SongView::focusedTimelineBand() const;
 ```
 
-`focusBand()` returns `false` when that phase has not added the band's input item yet. Otherwise it
-calls `TimelineInputHost::requestFocus()` on that item and returns whether the item obtained active
-focus. `focusedBand()` reads the six input items' active-focus state; it does not cache a second
+`focusBand()` returns `false` only when that phase has not added the band's input item yet;
+otherwise it issues the focus request to that item and returns `true`. `focusedBand()` reads the six
+input items' live active-focus state as the sole active-focus truth; it does not cache a second
 focus flag. `EditorDrawer::focusVisiblePage()` maps `EditorDrawerPage` to `TimelineBand` and calls
 the SongView method. `EditorDrawer::ownsFocus()` returns true when `focusedTimelineBand()` is
 Automation, Velocity, or VoiceChanges. Remove `m_drawerCanvasOwnsFocus`, the three canvas event

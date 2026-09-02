@@ -542,8 +542,10 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         // Band widgets are overlays, not canonical sources: moving them must
         // not drag the Quick host, whose geometry is the canonical union.
         const QRect widgetMoveHostBefore = quick->geometry();
-        const std::array<QWidget *, 6> guideBands = {
-            ruler, roll, otherEvents, automationViewport, velocity, voiceChanges,
+        // The voice changes page has no native widget to displace; the five
+        // retained widget bands still must not drag the Quick host.
+        const std::array<QWidget *, 5> guideBands = {
+            ruler, roll, otherEvents, automationViewport, velocity,
         };
         std::array<QRect, guideBands.size()> guideBandGeometries;
         const int hostShift = layout::space(layout::Space::One);
@@ -777,6 +779,25 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
                         .arg(QString::fromLatin1(name)));
             }
         };
+        // The voice changes page renders in the Quick scene instead of a
+        // native widget: its clip check probes the canonical SongView-local
+        // band rectangle directly.
+        const auto checkVisibleBandRect = [&](const QRect &bandRect, const char *name) {
+            if (!captureExpected)
+                return;
+            const QImage image = grabPlayhead(view, *overlay, failures).toImage();
+            const qreal bandNativeX = currentNativeX();
+            if (!bandRect.isValid() ||
+                !checks::support::hasPlayheadPixel(
+                    image,
+                    QRect(qRound(bandNativeX) - layout::singlePixel(), bandRect.center().y(),
+                          2 * layout::singlePixel() + 1, layout::singlePixel()),
+                    playheadColor)) {
+                failures.append(
+                    QStringLiteral("native playhead was not clipped into the visible %1 band")
+                        .arg(QString::fromLatin1(name)));
+            }
+        };
 
         view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
         view.setDrawerActivePage(EditorDrawerPage::Velocity);
@@ -785,7 +806,10 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
         view.setDrawerActivePage(EditorDrawerPage::VoiceChanges);
         checks::support::pumpQuick();
-        checkVisibleBand(*voiceChanges, "voice-change");
+        checkVisibleBandRect(bandLayout.geometry(songview::TimelineBand::VoiceChanges)
+                                 .value_or(songview::TimelineBandGeometry{})
+                                 .rect,
+                             "voice-change");
         view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
         view.setDrawerActivePage(EditorDrawerPage::Automations);
         checks::support::pumpQuick();

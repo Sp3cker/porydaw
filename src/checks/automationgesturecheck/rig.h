@@ -17,8 +17,9 @@
 #include "ui/editorviewstate.h"
 
 namespace songview {
+class TimelineInputItem;
 class TimelineQuickScene;
-}
+} // namespace songview
 
 extern "C" {
 #include "voicegroup_loader.h"
@@ -32,7 +33,6 @@ class MidiTimeline;
 class QObject;
 class QString;
 class SongView;
-class VoiceChangeArea;
 
 class AutomationGestureCheckRig final
 {
@@ -75,8 +75,8 @@ class AutomationGestureCheckRig final
     const AutomationPage &page() const noexcept;
     AutomationCanvas &canvas() noexcept;
     const AutomationCanvas &canvas() const noexcept;
-    VoiceChangeArea &voiceArea() noexcept;
-    const VoiceChangeArea &voiceArea() const noexcept;
+    songview::TimelineInputItem &voiceInput() noexcept;
+    const songview::TimelineInputItem &voiceInput() const noexcept;
     QAction *pencilModeAction() const noexcept;
 
     AutomationGeometry geometry() const;
@@ -164,6 +164,6 @@ class AutomationGestureCheckRig final
     std::unique_ptr<MidiTimeline> m_timeline;
     std::unique_ptr<SongView> m_view;
     AutomationPage *m_page = nullptr;
-    VoiceChangeArea *m_voiceArea = nullptr;
+    songview::TimelineInputItem *m_voiceInput = nullptr;
     songview::TimelineQuickScene *m_quickScene = nullptr;
 };

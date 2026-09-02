@@ -7,13 +7,7 @@
 
 #include <QAction>
 #include <QApplication>
-#include <QContextMenuEvent>
-#include <QEvent>
-#include <QFocusEvent>
-#include <QKeyEvent>
-#include <QMouseEvent>
-#include <QResizeEvent>
-#include <QWheelEvent>
+#include <QCursor>
 
 #include "core/miditimeline.h"
 #include "ui/contextmenu.h"
@@ -34,29 +28,41 @@ void VoiceChangeArea::Geometry::resolve()
 
 void VoiceChangeArea::rebuildFonts()
 {
-    m_titleFont = typography::bold(typography::caption(font()));
-    m_captionFont = typography::regular(typography::caption(font()));
+    m_titleFont = typography::bold(typography::caption(m_inputHost->font()));
+    m_captionFont = typography::regular(typography::caption(m_inputHost->font()));
 }
 
-VoiceChangeArea::VoiceChangeArea(SongView &owner, QWidget *parent) : QWidget(parent), m_owner(owner)
+VoiceChangeArea::VoiceChangeArea(SongView &owner, QObject *parent) : QObject(parent), m_owner(owner)
 {
     m_geometry.resolve();
-    rebuildFonts();
-    setAutoFillBackground(false);
-    setMouseTracking(true);
-    setFocusPolicy(Qt::ClickFocus);
 }
 
-bool VoiceChangeArea::event(QEvent *event)
+void VoiceChangeArea::attachInputHost(songview::TimelineInputHost &host)
 {
-    if (event->type() == QEvent::UngrabMouse || event->type() == QEvent::Hide) {
-        cancelInteraction();
-    } else if (event->type() == QEvent::FontChange) {
-        rebuildFonts();
-        m_geometry.resolve();
-        rebuildVisualState();
-    }
-    return QWidget::event(event);
+    Q_ASSERT(!m_inputHost || m_inputHost == &host);
+    m_inputHost = &host;
+    rebuildFonts();
+}
+
+void VoiceChangeArea::detachInputHost(songview::TimelineInputHost &host)
+{
+    Q_ASSERT(m_inputHost == &host);
+    if (m_inputHost != &host)
+        return;
+    cancelInteraction();
+    m_inputHost = nullptr;
+}
+
+void VoiceChangeArea::inputCancelled(songview::TimelineInputCancelReason)
+{
+    cancelInteraction();
+}
+
+void VoiceChangeArea::hostAppearanceChanged()
+{
+    rebuildFonts();
+    m_geometry.resolve();
+    rebuildVisualState();
 }
 
 void VoiceChangeArea::songChanged()
@@ -110,12 +116,12 @@ void VoiceChangeArea::cancelInteraction()
     const bool wasDragging = voiceDragActive();
     m_interaction = Interaction::None;
     m_previousPosition = QPointF();
-    m_suppressContextMenu = false;
     resetVoiceDrag();
     if (wasPanning || wasDragging)
         m_owner.setFollowScrollPaused(false);
     if (wasDragging) {
-        unsetCursor();
+        if (m_inputHost)
+            m_inputHost->clearCursor();
         requestQuickUpdate();
     }
     clearHover();
@@ -142,7 +148,7 @@ int VoiceChangeArea::plotOrigin() const
 
 int VoiceChangeArea::plotWidth() const
 {
-    return std::max(0, width() - plotOrigin());
+    return std::max(0, int(bounds().width()) - plotOrigin());
 }
 
 void VoiceChangeArea::presentPlayhead(double tick)
@@ -164,14 +170,14 @@ void VoiceChangeArea::requestQuickUpdate()
     m_owner.requestTimelineQuickUpdate(songview::TimelineQuickDirty::VoiceChanges);
 }
 
-void VoiceChangeArea::resizeEvent(QResizeEvent *event)
+QRectF VoiceChangeArea::bounds() const
 {
-    QWidget::resizeEvent(event);
-    if (m_hoverActive) {
-        updateHover(m_owner.displayX(double(m_hoverTick), plotOrigin(), devicePixelRatioF()));
-    } else {
-        requestQuickUpdate();
-    }
+    return m_inputHost ? m_inputHost->bounds() : QRectF();
+}
+
+qreal VoiceChangeArea::devicePixelRatio() const
+{
+    return m_inputHost ? m_inputHost->devicePixelRatio() : 1.0;
 }
 
 void VoiceChangeArea::rebuildVisualState()
@@ -209,11 +215,11 @@ void VoiceChangeArea::clearHover()
 void VoiceChangeArea::updateHover(qreal x)
 {
     const QRect plot = plotRect();
-    if (!ready() || rect().isEmpty() || x < qreal(plotOrigin())) {
+    if (!ready() || bounds().isEmpty() || x < qreal(plotOrigin())) {
         clearHover();
         return;
     }
-    const qreal dpr = devicePixelRatioF();
+    const qreal dpr = devicePixelRatio();
     const double tick = std::max(
         0.0, m_owner.tickAtContentX(std::max<qreal>(plotOrigin(), x) - qreal(plotOrigin())));
     const uint64_t snapped = m_owner.snapTick(tick, true);
@@ -247,7 +253,7 @@ void VoiceChangeArea::updateHover(qreal x)
 
 void VoiceChangeArea::ensureHoverLabelFontCache()
 {
-    m_hoverLabelFont = typography::noteName(font());
+    m_hoverLabelFont = typography::noteName(m_inputHost->font());
 }
 
 bool VoiceChangeArea::ready() const noexcept
@@ -309,14 +315,14 @@ int VoiceChangeArea::voiceSlotAt(uint64_t tick) const
 
 QRect VoiceChangeArea::plotRect() const
 {
-    return QRect(plotOrigin(), 0, plotWidth(), height());
+    return QRect(plotOrigin(), 0, plotWidth(), int(bounds().height()));
 }
 
 bool VoiceChangeArea::voiceMarkerAt(qreal x, DocLanePoint *out) const
 {
     if (m_engineTrack < 0 || !out)
         return false;
-    const qreal dpr = devicePixelRatioF();
+    const qreal dpr = devicePixelRatio();
     const DocLanePoint *marker = nullptr;
     qreal distance = qreal(m_geometry.markerHitRadius) + 1;
     for (const DocLanePoint &point : m_voicePoints) {
@@ -343,36 +349,31 @@ void VoiceChangeArea::resetVoiceDrag()
     m_voiceDrag.reset();
 }
 
-void VoiceChangeArea::mousePressEvent(QMouseEvent *event)
+bool VoiceChangeArea::pointerPress(const songview::TimelinePointerInput &input)
 {
     SongDocument *document = m_owner.document();
-    if (!document) {
-        event->ignore();
-        return;
-    }
-    const QPointF position = event->position();
+    if (!document)
+        return false;
+    const QPointF position = input.position;
     m_previousPosition = position;
     const bool inPlot = position.x() >= qreal(plotOrigin());
-    if (event->button() == Qt::MiddleButton && inPlot) {
-        setFocus(Qt::MouseFocusReason);
+    if (input.button == Qt::MiddleButton && inPlot) {
+        m_inputHost->requestFocus(Qt::MouseFocusReason);
         m_interaction = Interaction::Pan;
         clearHover();
         m_owner.setFollowScrollPaused(true);
-        event->accept();
-        return;
+        return true;
     }
-    if (event->button() == Qt::RightButton) {
-        m_suppressContextMenu = true;
+    if (input.button == Qt::RightButton) {
         if (inPlot) {
-            setFocus(Qt::MouseFocusReason);
-            showContextMenu(event->globalPosition().toPoint());
+            m_inputHost->requestFocus(Qt::MouseFocusReason);
+            showContextMenu(input.globalPosition.toPoint());
         }
-        event->accept();
-        return;
+        return true;
     }
-    if (event->button() == Qt::LeftButton) {
+    if (input.button == Qt::LeftButton) {
         if (inPlot) {
-            setFocus(Qt::MouseFocusReason);
+            m_inputHost->requestFocus(Qt::MouseFocusReason);
             DocLanePoint point;
             if (voiceMarkerAt(position.x(), &point)) {
                 m_voiceDrag = VoiceDragState{
@@ -385,47 +386,43 @@ void VoiceChangeArea::mousePressEvent(QMouseEvent *event)
                 };
             }
         }
-        event->accept();
-        return;
+        return true;
     }
-    event->ignore();
+    return false;
 }
 
-void VoiceChangeArea::mouseDoubleClickEvent(QMouseEvent *event)
+bool VoiceChangeArea::pointerDoubleClick(const songview::TimelinePointerInput &input)
 {
-    if (event->button() == Qt::LeftButton && event->position().x() >= qreal(plotOrigin()))
-        showPicker(event->globalPosition().toPoint());
-    event->accept();
+    if (input.button == Qt::LeftButton && input.position.x() >= qreal(plotOrigin()))
+        showPicker(input.globalPosition.toPoint());
+    return true;
 }
 
-void VoiceChangeArea::mouseMoveEvent(QMouseEvent *event)
+bool VoiceChangeArea::pointerMove(const songview::TimelinePointerInput &input)
 {
-    const QPointF position = event->position();
+    const QPointF position = input.position;
     if (m_voiceDrag) {
         if (m_voiceDrag->phase == VoiceDragState::Phase::Pending) {
             const qreal horizontalDistance =
                 std::abs(position.x() - m_voiceDrag->pressPosition.x());
-            if (horizontalDistance < QApplication::startDragDistance()) {
-                event->accept();
-                return;
-            }
+            if (horizontalDistance < QApplication::startDragDistance())
+                return true;
             m_voiceDrag->phase = VoiceDragState::Phase::Active;
             clearHover();
             m_owner.setFollowScrollPaused(true);
-            setCursor(Qt::SizeHorCursor);
+            m_inputHost->setCursor(Qt::SizeHorCursor);
             requestQuickUpdate();
         }
         const double rawTick =
             std::max(0.0, m_owner.tickAtContentX(std::max<qreal>(plotOrigin(), position.x()) -
                                                  qreal(plotOrigin())));
-        const uint64_t tick = m_owner.snapTick(rawTick, event->modifiers() & Qt::AltModifier);
+        const uint64_t tick = m_owner.snapTick(rawTick, input.modifiers & Qt::AltModifier);
         if (tick != m_voiceDrag->previewTick) {
             m_voiceDrag->previewTick = tick;
             requestQuickUpdate();
         }
         m_previousPosition = position;
-        event->accept();
-        return;
+        return true;
     }
     if (m_interaction == Interaction::Pan) {
         const auto requestedScroll =
@@ -437,24 +434,23 @@ void VoiceChangeArea::mouseMoveEvent(QMouseEvent *event)
         updateHover(position.x());
     }
     m_previousPosition = position;
-    event->accept();
+    return true;
 }
 
-void VoiceChangeArea::mouseReleaseEvent(QMouseEvent *event)
+bool VoiceChangeArea::pointerRelease(const songview::TimelinePointerInput &input)
 {
-    if (event->button() == Qt::MiddleButton && m_interaction == Interaction::Pan) {
+    if (input.button == Qt::MiddleButton && m_interaction == Interaction::Pan) {
         m_owner.setFollowScrollPaused(false);
         m_interaction = Interaction::None;
-        event->accept();
-        return;
+        return true;
     }
-    if (event->button() == Qt::LeftButton && m_voiceDrag) {
+    if (input.button == Qt::LeftButton && m_voiceDrag) {
         const VoiceDragState completed = *m_voiceDrag;
         const bool active = voiceDragActive();
         resetVoiceDrag();
         if (active) {
             m_owner.setFollowScrollPaused(false);
-            unsetCursor();
+            m_inputHost->clearCursor();
             requestQuickUpdate();
         }
         SongDocument *document = m_owner.document();
@@ -464,65 +460,36 @@ void VoiceChangeArea::mouseReleaseEvent(QMouseEvent *event)
                                        completed.previewTick, completed.point.value}});
             m_owner.refreshAllDrawerPages();
         }
-        event->accept();
-        return;
+        return true;
     }
-    event->ignore();
+    return false;
 }
 
-void VoiceChangeArea::leaveEvent(QEvent *event)
+void VoiceChangeArea::pointerLeave()
 {
     clearHover();
-    QWidget::leaveEvent(event);
 }
 
-void VoiceChangeArea::wheelEvent(QWheelEvent *event)
+bool VoiceChangeArea::wheel(const songview::TimelineWheelInput &input)
 {
-    const QPointF position = event->position();
-    const bool horizontal = event->modifiers().testFlag(Qt::ShiftModifier) ||
-                            event->angleDelta().x() != 0 || event->pixelDelta().x() != 0;
+    const bool horizontal = input.modifiers.testFlag(Qt::ShiftModifier) ||
+                            input.angleDelta.x() != 0 || input.pixelDelta.x() != 0;
     if (horizontal) {
-        const int delta =
-            event->pixelDelta().x() != 0 ? event->pixelDelta().x() : event->angleDelta().y();
+        const int delta = input.pixelDelta.x() != 0 ? input.pixelDelta.x() : input.angleDelta.y();
         m_owner.setEditorHorizontalScroll(m_live.horizontalScroll - double(delta));
-        event->accept();
-        return;
+        return true;
     }
-    m_owner.zoomTimelineAtWheel(event, position.x() - plotOrigin());
-    event->accept();
+    m_owner.zoomTimelineAtWheel(input, input.position.x() - plotOrigin());
+    return true;
 }
 
-void VoiceChangeArea::keyPressEvent(QKeyEvent *event)
+bool VoiceChangeArea::keyPress(const songview::TimelineKeyInput &input)
 {
-    if (event->key() == Qt::Key_Escape) {
+    if (input.key == Qt::Key_Escape) {
         cancelInteraction();
-        event->accept();
-        return;
+        return true;
     }
-    QWidget::keyPressEvent(event);
-}
-
-void VoiceChangeArea::focusOutEvent(QFocusEvent *event)
-{
-    cancelInteraction();
-    QWidget::focusOutEvent(event);
-}
-
-void VoiceChangeArea::contextMenuEvent(QContextMenuEvent *event)
-{
-    if (m_suppressContextMenu && event->reason() == QContextMenuEvent::Mouse) {
-        m_suppressContextMenu = false;
-        event->accept();
-        return;
-    }
-    m_suppressContextMenu = false;
-    if (m_owner.document() && event->pos().x() >= plotOrigin()) {
-        setFocus(Qt::MouseFocusReason);
-        showContextMenu(event->globalPos());
-        event->accept();
-        return;
-    }
-    event->ignore();
+    return false;
 }
 
 void VoiceChangeArea::showPicker(const QPoint &globalPosition)
@@ -531,7 +498,7 @@ void VoiceChangeArea::showPicker(const QPoint &globalPosition)
     if (!sourceDocument || m_engineTrack < 0)
         return;
     const int track = m_engineTrack;
-    const qreal x = mapFromGlobal(globalPosition).x();
+    const qreal x = m_inputHost->mapFromGlobal(QPointF(globalPosition)).x();
     DocLanePoint markerPoint;
     const DocLanePoint *marker = voiceMarkerAt(x, &markerPoint) ? &markerPoint : nullptr;
     const double rawTick = std::max(
@@ -565,10 +532,10 @@ void VoiceChangeArea::showContextMenu(const QPoint &globalPosition)
     if (!sourceDocument || m_engineTrack < 0)
         return;
     const int track = m_engineTrack;
-    const qreal x = mapFromGlobal(globalPosition).x();
+    const qreal x = m_inputHost->mapFromGlobal(QPointF(globalPosition)).x();
     DocLanePoint markerPoint;
     const bool hasMarker = voiceMarkerAt(x, &markerPoint);
-    ui::ContextMenu menu(this);
+    ui::ContextMenu menu(&m_owner);
     QAction *change = nullptr;
     QAction *insert = nullptr;
     QAction *remove = nullptr;

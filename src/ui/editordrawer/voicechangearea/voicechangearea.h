@@ -6,27 +6,21 @@
 #include <vector>
 
 #include <QFont>
+#include <QObject>
 #include <QPoint>
 #include <QPointF>
 #include <QRect>
 #include <QRectF>
 #include <QString>
-#include <QWidget>
 
 #include "core/songdocument.h"
 #include "ui/editordrawer/drawerpage.h"
+#include "ui/songview/quick/timelineinput.h"
 
 extern "C" {
 #include "voicegroup_loader.h"
 }
 
-class QContextMenuEvent;
-class QEvent;
-class QFocusEvent;
-class QKeyEvent;
-class QMouseEvent;
-class QWheelEvent;
-class QResizeEvent;
 class SongView;
 
 namespace songview {
@@ -34,15 +28,20 @@ class TimelineQuickScene;
 class TimelineQuickView;
 } // namespace songview
 
-// The Voice Changes drawer page: a standalone timeline surface owning held
-// program spans, change markers, hover, the voice picker, and DOC_CC_VOICE
-// commits for the current primary track. SongView owns the shared camera and
-// document; this surface captures the primary track and live camera state on
-// every refresh, so it never holds a persistent track identity.
-class VoiceChangeArea final : public QWidget
+// The Voice Changes drawer page: a SongView-owned interaction module owning
+// held program spans, change markers, hover, the voice picker, and
+// DOC_CC_VOICE commits for the current primary track. SongView owns the
+// shared camera and document; this module captures the primary track and
+// live camera state on every refresh, so it never holds a persistent track
+// identity. Input arrives normalized from the attached TimelineInputHost,
+// which also supplies bounds, fonts, DPR, focus, cursor, and coordinate
+// mapping; native picker and menu popups anchor to SongView.
+class VoiceChangeArea final : public QObject, public songview::TimelineBandInteraction
 {
+    Q_OBJECT
+
   public:
-    explicit VoiceChangeArea(SongView &owner, QWidget *parent = nullptr);
+    explicit VoiceChangeArea(SongView &owner, QObject *parent = nullptr);
     void songChanged();
     void refreshLiveState(const DrawerPageLiveState &liveState);
     void cancelInteraction();
@@ -52,18 +51,17 @@ class VoiceChangeArea final : public QWidget
     int plotWidth() const;
     void presentPlayhead(double tick);
 
-  protected:
-    bool event(QEvent *event) override;
-    void resizeEvent(QResizeEvent *event) override;
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseDoubleClickEvent(QMouseEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *event) override;
-    void mouseReleaseEvent(QMouseEvent *event) override;
-    void leaveEvent(QEvent *event) override;
-    void wheelEvent(QWheelEvent *event) override;
-    void keyPressEvent(QKeyEvent *event) override;
-    void focusOutEvent(QFocusEvent *event) override;
-    void contextMenuEvent(QContextMenuEvent *event) override;
+    void attachInputHost(songview::TimelineInputHost &host) override;
+    void detachInputHost(songview::TimelineInputHost &host) override;
+    bool pointerPress(const songview::TimelinePointerInput &input) override;
+    bool pointerDoubleClick(const songview::TimelinePointerInput &input) override;
+    bool pointerMove(const songview::TimelinePointerInput &input) override;
+    bool pointerRelease(const songview::TimelinePointerInput &input) override;
+    void pointerLeave() override;
+    bool wheel(const songview::TimelineWheelInput &input) override;
+    bool keyPress(const songview::TimelineKeyInput &input) override;
+    void inputCancelled(songview::TimelineInputCancelReason reason) override;
+    void hostAppearanceChanged() override;
 
   private:
     friend class songview::TimelineQuickView;
@@ -117,6 +115,8 @@ class VoiceChangeArea final : public QWidget
     void clearHover();
     void updateHover(qreal x);
     void ensureHoverLabelFontCache();
+    QRectF bounds() const;
+    qreal devicePixelRatio() const;
     bool ready() const noexcept;
     int primaryTrack() const noexcept;
     const VoicePaintText &paintTextFor(int program) const;
@@ -128,6 +128,7 @@ class VoiceChangeArea final : public QWidget
     void showPicker(const QPoint &globalPosition);
     void showContextMenu(const QPoint &globalPosition);
     SongView &m_owner;
+    songview::TimelineInputHost *m_inputHost = nullptr;
     DrawerPageLiveState m_live;
     Geometry m_geometry;
     int m_engineTrack = -1;
@@ -140,7 +141,6 @@ class VoiceChangeArea final : public QWidget
     std::optional<VoiceDragState> m_voiceDrag;
     std::vector<VoicePaintEntry> m_previewEntries;
     QPointF m_previousPosition;
-    bool m_suppressContextMenu = false;
     bool m_hoverActive = false;
     qreal m_hoverX = 0.0;
     uint64_t m_hoverTick = 0;

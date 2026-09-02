@@ -19,9 +19,11 @@
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
-#include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
+#include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/timelinebandlayout.h"
 
 namespace {
 constexpr double kCheckSampleRate = 48000.0;
@@ -89,14 +91,14 @@ const AutomationCanvas &AutomationGestureCheckRig::canvas() const noexcept
     return *m_page->canvas();
 }
 
-VoiceChangeArea &AutomationGestureCheckRig::voiceArea() noexcept
+songview::TimelineInputItem &AutomationGestureCheckRig::voiceInput() noexcept
 {
-    return *m_voiceArea;
+    return *m_voiceInput;
 }
 
-const VoiceChangeArea &AutomationGestureCheckRig::voiceArea() const noexcept
+const songview::TimelineInputItem &AutomationGestureCheckRig::voiceInput() const noexcept
 {
-    return *m_voiceArea;
+    return *m_voiceInput;
 }
 const songview::TimelineQuickScene &AutomationGestureCheckRig::quickScene() const noexcept
 {
@@ -294,7 +296,9 @@ QImage AutomationGestureCheckRig::renderAutomationContent(const QRect &contentRe
 
 QImage AutomationGestureCheckRig::renderVoiceChanges(QString *error)
 {
-    return checks::support::captureQuickBand(view(), voiceArea(), error);
+    const auto &geometry =
+        view().timelineBandLayout().geometry(songview::TimelineBand::VoiceChanges);
+    return checks::support::captureQuickBand(view(), geometry ? geometry->rect : QRect{}, error);
 }
 
 AutomationGestureCheckRig::Snapshot AutomationGestureCheckRig::snapshot(int track,
@@ -313,7 +317,6 @@ void AutomationGestureCheckRig::documentChanged()
     // presentation model on the fixture's original timeline.
     m_timeline = document().buildTimeline(kCheckSampleRate);
     m_view->updateSong(m_timeline.get());
-    m_voiceArea->documentChanged();
     refreshPage();
     pump();
 }
@@ -386,39 +389,38 @@ void AutomationGestureCheckRig::mouseDoubleClick(const QPointF &position,
 void AutomationGestureCheckRig::voiceMousePress(const QPointF &position,
                                                 Qt::KeyboardModifiers modifiers)
 {
-    checks::events::sendMouse(voiceArea(), QEvent::MouseButtonPress, position, Qt::LeftButton,
+    checks::events::sendMouse(*m_voiceInput, QEvent::MouseButtonPress, position, Qt::LeftButton,
                               Qt::LeftButton, modifiers);
 }
 
 bool AutomationGestureCheckRig::dispatchVoiceMousePress(const QPointF &position,
                                                         Qt::KeyboardModifiers modifiers)
 {
-    QMouseEvent event(QEvent::MouseButtonPress, position,
-                      QPointF(voiceArea().mapToGlobal(position.toPoint())), Qt::LeftButton,
-                      Qt::LeftButton, modifiers);
+    QMouseEvent event(QEvent::MouseButtonPress, position, m_voiceInput->mapToGlobal(position),
+                      Qt::LeftButton, Qt::LeftButton, modifiers);
     event.setAccepted(false);
-    QCoreApplication::sendEvent(&voiceArea(), &event);
+    QCoreApplication::sendEvent(m_voiceInput, &event);
     return event.isAccepted();
 }
 
 void AutomationGestureCheckRig::voiceMouseMove(const QPointF &position,
                                                Qt::KeyboardModifiers modifiers)
 {
-    checks::events::sendMouse(voiceArea(), QEvent::MouseMove, position, Qt::NoButton,
+    checks::events::sendMouse(*m_voiceInput, QEvent::MouseMove, position, Qt::NoButton,
                               Qt::LeftButton, modifiers);
 }
 
 void AutomationGestureCheckRig::voiceMouseRelease(const QPointF &position,
                                                   Qt::KeyboardModifiers modifiers)
 {
-    checks::events::sendMouse(voiceArea(), QEvent::MouseButtonRelease, position, Qt::LeftButton,
+    checks::events::sendMouse(*m_voiceInput, QEvent::MouseButtonRelease, position, Qt::LeftButton,
                               Qt::NoButton, modifiers);
 }
 
 void AutomationGestureCheckRig::keyToVoiceArea(QEvent::Type type, int key,
                                                Qt::KeyboardModifiers modifiers)
 {
-    checks::events::sendKey(voiceArea(), type, key, modifiers, QString{}, false, 1);
+    checks::events::sendKey(*m_voiceInput, type, key, modifiers, QString{}, false, 1);
 }
 
 void AutomationGestureCheckRig::keyToArea(QEvent::Type type, int key,
@@ -503,23 +505,26 @@ bool AutomationGestureCheckRig::initialize(QString &error)
     pump();
     auto *drawer = m_view->editorDrawer();
     m_page = drawer ? drawer->automationPage() : nullptr;
-    m_voiceArea = drawer ? drawer->voiceChangeArea() : nullptr;
     m_quickScene = m_view->findChild<songview::TimelineQuickScene *>();
-    if (!m_page || !m_voiceArea || !m_quickScene) {
-        error = QStringLiteral("concrete SongView did not expose drawer pages and Quick scene");
+    auto *quickCanvas =
+        m_view->findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    m_voiceInput = quickCanvas && quickCanvas->rootObject()
+                       ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(
+                             QStringLiteral("timelineVoiceChangesInput"))
+                       : nullptr;
+    if (!m_page || !m_voiceInput || !m_quickScene) {
+        error = QStringLiteral(
+            "concrete SongView did not expose drawer pages and the Quick voice input");
         return false;
     }
     m_page->resize(960, 360);
     m_page->songChanged();
-    m_voiceArea->resize(960, 180);
-    m_voiceArea->songChanged();
     m_live.documentRevision = songDocument.revision();
     m_live.timeZoom = 96.0;
     m_live.editCursorTick = 24;
     m_view->setEditorTimeZoom(m_live.timeZoom);
     m_live.horizontalScroll = m_view->viewState().scrollPx;
     m_page->refreshLiveState(m_live);
-    m_voiceArea->refreshLiveState(m_live);
     m_page->show();
     pump();
     return true;
@@ -529,5 +534,4 @@ void AutomationGestureCheckRig::refreshPage()
 {
     m_live.documentRevision = document().revision();
     m_page->refreshLiveState(m_live);
-    m_voiceArea->refreshLiveState(m_live);
 }

@@ -11,6 +11,7 @@
 class AutomationPage;
 class QFrame;
 class QToolButton;
+class SongView;
 class VelocityArea;
 class VoiceChangeArea;
 
@@ -27,8 +28,8 @@ class DrawerSections final : public QWidget
     Q_OBJECT
 
   public:
-    DrawerSections(QWidget *parent, AutomationPage *automation, VelocityArea *velocity,
-                   VoiceChangeArea *voiceChanges);
+    DrawerSections(SongView &owner, QWidget *parent, AutomationPage *automation,
+                   VelocityArea *velocity, VoiceChangeArea *voiceChanges);
 
     const DrawerMetrics &metrics() const;
     void updateHostContext(int hostHeight, int defaultAutomationHeight);
@@ -71,6 +72,7 @@ class DrawerSections final : public QWidget
     EditorDrawerPage resizePageForHandle(const QWidget *handle) const noexcept;
     void setPageVisible(EditorDrawerPage page, bool visible);
 
+    SongView &m_owner;
     AutomationPage *m_automation = nullptr;
     VelocityArea *m_velocity = nullptr;
     VoiceChangeArea *m_voiceChanges = nullptr;

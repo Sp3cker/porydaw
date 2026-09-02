@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ui/songview/quick/timelineinput.h"
 #include "ui/songview/quick/timelinequickchrome.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/timelinebandlayout.h"
@@ -28,6 +29,7 @@ namespace songview {
 
 class OtherStrip;
 class PianoRoll;
+class TimelineInputItem;
 enum class TimelineQuickHoverOwner : quint8 {
     None,
     Automation,
@@ -130,6 +132,14 @@ class TimelineQuickView final : public QWidget
     // (show, WinId, DPR); changes neither the canonical value nor dirty domains.
     void refreshBandLayout();
 
+    // Focus bridge over the converted bands' input items. focusBand() returns
+    // false only when a band's input item does not exist yet; otherwise it
+    // focuses the container, requests the item's focus, and returns true —
+    // the active-focus FocusIn may still be pending asynchronously.
+    // focusedBand() reads live QQuick active focus, never a cached flag.
+    bool focusBand(TimelineBand band, Qt::FocusReason reason);
+    std::optional<TimelineBand> focusedBand() const;
+
     void requestUpdate(PianoRollQuickDirtySet dirty);
     void requestTimelineUpdate(TimelineQuickDirtySet dirty);
 
@@ -172,6 +182,7 @@ class TimelineQuickView final : public QWidget
     QPointer<VelocityArea> m_velocity;
     QPointer<VoiceChangeArea> m_voiceChanges;
     QPointer<SongView> m_songView;
+    std::array<TimelineInputItem *, timelineBandIndex(TimelineBand::Count)> m_inputItems{};
     TimelineQuickScene *m_scene = nullptr;
     QQuickView *m_quickView = nullptr;
     QWidget *m_quickContainer = nullptr;

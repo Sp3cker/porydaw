@@ -18,6 +18,7 @@
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/layout.h"
+#include "ui/songview.h"
 #include "ui/theme/themeruntime.h"
 
 namespace {
@@ -76,9 +77,10 @@ using DrawerToggle = QToolButton;
 
 } // namespace
 
-DrawerSections::DrawerSections(QWidget *parent, AutomationPage *automation, VelocityArea *velocity,
-                               VoiceChangeArea *voiceChanges)
+DrawerSections::DrawerSections(SongView &owner, QWidget *parent, AutomationPage *automation,
+                               VelocityArea *velocity, VoiceChangeArea *voiceChanges)
     : QWidget(parent)
+    , m_owner(owner)
     , m_automation(automation)
     , m_velocity(velocity)
     , m_voiceChanges(voiceChanges)
@@ -88,7 +90,9 @@ DrawerSections::DrawerSections(QWidget *parent, AutomationPage *automation, Velo
 
     m_automation->setParent(this);
     m_velocity->setParent(this);
-    m_voiceChanges->setParent(this);
+    // VoiceChanges is no longer a child widget: DrawerSections only publishes
+    // its body rectangle; the band renders and takes input in the shared
+    // Quick scene.
     m_automation->show();
     const auto makeToggle = [this](const QString &text, EditorDrawerPage page) {
         auto *button = new DrawerToggle(this);
@@ -426,32 +430,33 @@ EditorDrawerPage DrawerSections::resizePageForHandle(const QWidget *handle) cons
 
 void DrawerSections::focusActivePage()
 {
-    const auto canvasFor = [this](EditorDrawerPage page) -> QWidget * {
-        switch (page) {
-        case EditorDrawerPage::VoiceChanges:
-            return m_voiceChanges;
-        case EditorDrawerPage::Velocity:
-            return m_velocity;
-        case EditorDrawerPage::Automations:
-            return m_automation->canvas();
+    const auto focusPage = [this](EditorDrawerPage page) {
+        // VoiceChanges has no QWidget to focus: its Quick input item takes
+        // focus through the SongView bridge. The two unconverted pages keep
+        // native QWidget focus until their conversion phases.
+        if (page == EditorDrawerPage::VoiceChanges) {
+            return voiceChangesVisible() &&
+                   m_owner.focusTimelineBand(songview::TimelineBand::VoiceChanges,
+                                             Qt::OtherFocusReason);
         }
-        Q_UNREACHABLE();
+        QWidget *canvas = nullptr;
+        if (page == EditorDrawerPage::Velocity)
+            canvas = m_velocity;
+        else
+            canvas = m_automation->canvas();
+        if (!canvas || !canvas->isVisible())
+            return false;
+        canvas->setFocus(Qt::OtherFocusReason);
+        return true;
     };
-    QWidget *target = canvasFor(m_activePage);
-    if (!target || !target->isVisible()) {
-        // Visual order: VoiceChanges above Velocity above Automations.
-        for (const EditorDrawerPage page :
-             {EditorDrawerPage::VoiceChanges, EditorDrawerPage::Velocity,
-              EditorDrawerPage::Automations}) {
-            QWidget *candidate = canvasFor(page);
-            if (candidate && candidate->isVisible()) {
-                target = candidate;
-                break;
-            }
-        }
+    if (focusPage(m_activePage))
+        return;
+    // Visual order: VoiceChanges above Velocity above Automations.
+    for (const EditorDrawerPage page : {EditorDrawerPage::VoiceChanges, EditorDrawerPage::Velocity,
+                                        EditorDrawerPage::Automations}) {
+        if (focusPage(page))
+            return;
     }
-    if (target && target->isVisible())
-        target->setFocus(Qt::OtherFocusReason);
 }
 
 void DrawerSections::cancelVisibleInteractions()
@@ -591,7 +596,6 @@ void DrawerSections::arrangeLocal()
     const int velocityLeftInset = std::max(0, m_chrome.plotOrigin - m_velocity->plotOrigin());
     const int velocityLeft = std::min(velocityLeftInset, width);
     const int velocityWidth = width - velocityLeft;
-    setVisibleIf(m_voiceChanges, showVoiceChanges);
     setVisibleIf(m_voiceChangesHandle, showVoiceChanges);
     setVisibleIf(m_voiceChangesToggle, true);
     setVisibleIf(m_velocity, showVelocity);
@@ -631,7 +635,6 @@ void DrawerSections::arrangeLocal()
     if (showVoiceChanges) {
         setGeometryIf(m_voiceChangesHandle,
                       QRect(0, voiceChangesBodyRect->top() - handleHeight, width, handleHeight));
-        applyBodyRect(m_voiceChanges, *voiceChangesBodyRect);
     }
     if (showVelocity) {
         setGeometryIf(m_velocityHandle, QRect(velocityLeft, velocityBodyRect->top() - handleHeight,
@@ -698,9 +701,8 @@ QRegion DrawerSections::occupiedRegion() const
     };
     addVisible(m_velocity);
     addVisible(m_velocityHandle);
-    addVisible(m_voiceChanges);
-    addVisible(m_voiceChangesHandle);
     addVisible(m_voiceChangesToggle);
+    addVisible(m_voiceChangesHandle);
     addVisible(m_detentToggle);
     addVisible(m_automation);
     addVisible(m_automationHandle);

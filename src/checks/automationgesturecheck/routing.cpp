@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <vector>
 
 #include <QApplication>
@@ -15,11 +16,13 @@
 
 #include "rig.h"
 #include "ui/editordrawer/automationcanvas.h"
-#include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/layout.h"
+#include "ui/songview/quick/timelineinput.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
 
 #include "ui/songview.h"
+#include "ui/songview/timelinebandlayout.h"
 
 namespace {
 
@@ -64,18 +67,27 @@ bool routeIdle(const AutomationGestureCheckRig &rig, LaneHandle lane)
     return rig.isIdle() && !rig.canvas().isPanning() && !rig.canvas().bandPreviewContainsLane(lane);
 }
 
+// Canonical parent-owned voice band geometry: the shared TimelineBandLayout
+// value drives the QML band, the Quick input item, and these probes alike.
+const std::optional<songview::TimelineBandGeometry> &
+voiceGeometry(const AutomationGestureCheckRig &rig)
+{
+    return rig.view().timelineBandLayout().geometry(songview::TimelineBand::VoiceChanges);
+}
+
 QPointF voicePoint(const AutomationGestureCheckRig &rig, uint64_t tick)
 {
-    const VoiceChangeArea &area = rig.voiceArea();
-    return {rig.view().displayX(double(tick), area.plotOrigin(), area.devicePixelRatioF()),
-            qreal(area.rect().center().y())};
+    const auto &geometry = voiceGeometry(rig);
+    return {rig.view().displayX(double(tick), geometry ? geometry->timelineOrigin : 0,
+                                rig.voiceInput().devicePixelRatio()),
+            qreal(geometry ? geometry->rect.center().y() : 0)};
 }
 
 uint64_t voiceSnapTick(const AutomationGestureCheckRig &rig, qreal x, bool fine)
 {
-    const VoiceChangeArea &area = rig.voiceArea();
-    const double rawTick = std::max(
-        0.0, rig.view().tickAtContentX(std::max<qreal>(area.plotOrigin(), x) - area.plotOrigin()));
+    const int plotOrigin = voiceGeometry(rig) ? voiceGeometry(rig)->timelineOrigin : 0;
+    const double rawTick =
+        std::max(0.0, rig.view().tickAtContentX(std::max<qreal>(plotOrigin, x) - plotOrigin));
     return rig.view().snapTick(rawTick, fine);
 }
 
@@ -140,7 +152,7 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         const QImage previewVoice = rig.renderVoiceChanges(&previewCaptureError);
         check(idleCaptureError.isEmpty() && previewCaptureError.isEmpty() &&
                   isUnchanged(before, snapshot(rig.document())) && rig.view().userGestureActive() &&
-                  rig.voiceArea().cursor().shape() == Qt::SizeHorCursor && !idleVoice.isNull() &&
+                  rig.voiceInput().cursor().shape() == Qt::SizeHorCursor && !idleVoice.isNull() &&
                   idleVoice.size() == previewVoice.size() && idleVoice != previewVoice,
               QStringLiteral("Voice crossing preview capture failed (%1; %2)")
                   .arg(idleCaptureError, previewCaptureError));
@@ -151,7 +163,7 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         check(destination != 24 && isOneEdit(before, after) && !hasVoice(rig, 24, 5) &&
                   hasVoice(rig, 48, 6) && hasVoice(rig, destination, 5) && points.size() == 2 &&
                   rig.document().undoStack()->undoText() == QStringLiteral("change voice") &&
-                  routeIdle(rig, panHandle) && rig.voiceArea().cursor().shape() == Qt::ArrowCursor,
+                  routeIdle(rig, panHandle) && rig.voiceInput().cursor().shape() == Qt::ArrowCursor,
               QStringLiteral("Voice crossing drag did not commit one change voice edit"));
         rig.document().undoStack()->undo();
         rig.documentChanged();
@@ -173,7 +185,7 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         rig.voiceMousePress(source);
         rig.voiceMouseMove(source + QPointF(0, verticalSlop));
         check(!rig.view().userGestureActive() &&
-                  rig.voiceArea().cursor().shape() == Qt::ArrowCursor,
+                  rig.voiceInput().cursor().shape() == Qt::ArrowCursor,
               QStringLiteral("vertical Voice jitter activated a horizontal gesture"));
         rig.voiceMouseRelease(source + QPointF(0, verticalSlop));
         rig.pump();
@@ -195,11 +207,13 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         uint64_t fineTick = 0;
         uint64_t normalTick = 0;
         const int slop = QApplication::startDragDistance();
-        for (int x = rig.voiceArea().plotOrigin(); x < rig.voiceArea().width(); ++x) {
+        const int plotStart = voiceGeometry(rig) ? voiceGeometry(rig)->timelineOrigin : 0;
+        const int plotEnd = voiceGeometry(rig) ? voiceGeometry(rig)->rect.width() : 0;
+        for (int x = plotStart; x < plotEnd; ++x) {
             const uint64_t fine = voiceSnapTick(rig, x, true);
             const uint64_t normal = voiceSnapTick(rig, x, false);
             if (fine != normal && fine != 48 && std::abs(qreal(x) - source.x()) >= slop) {
-                target = QPointF(x, rig.voiceArea().rect().center().y());
+                target = QPointF(x, voiceGeometry(rig)->rect.center().y());
                 fineTick = fine;
                 normalTick = normal;
                 break;
@@ -257,17 +271,20 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         rig.pump();
         check(isUnchanged(beforeEscape, snapshot(rig.document())) && routeIdle(rig, panHandle) &&
                   !rig.view().userGestureActive() &&
-                  rig.voiceArea().cursor().shape() == Qt::ArrowCursor,
+                  rig.voiceInput().cursor().shape() == Qt::ArrowCursor,
               QStringLiteral("Escape did not fully cancel the Voice gesture"));
 
         const auto beforeUngrab = snapshot(rig.document());
         activateVoiceDrag(rig, source, target);
-        QEvent ungrab(QEvent::UngrabMouse);
-        QCoreApplication::sendEvent(&rig.voiceArea(), &ungrab);
+        // A synthetic press cannot establish a delivery-agent grab, so drive
+        // the normalized lifecycle seam directly instead of pretending a
+        // platform ungrab occurred.
+        if (songview::TimelineBandInteraction *voiceInteraction = rig.voiceInput().interaction())
+            voiceInteraction->inputCancelled(songview::TimelineInputCancelReason::PointerUngrabbed);
         rig.pump();
         check(isUnchanged(beforeUngrab, snapshot(rig.document())) && routeIdle(rig, panHandle) &&
                   !rig.view().userGestureActive() &&
-                  rig.voiceArea().cursor().shape() == Qt::ArrowCursor,
+                  rig.voiceInput().cursor().shape() == Qt::ArrowCursor,
               QStringLiteral("UngrabMouse did not fully cancel the Voice gesture"));
     }
     {
@@ -301,7 +318,8 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         const auto previewMarkers =
             rig.quickScene().layer(songview::TimelineQuickLayer::VoiceChangesMarkers);
         const qreal destinationX = rig.view().displayX(
-            double(destination), rig.voiceArea().plotOrigin(), rig.voiceArea().devicePixelRatioF());
+            double(destination), voiceGeometry(rig) ? voiceGeometry(rig)->timelineOrigin : 0,
+            rig.voiceInput().devicePixelRatio());
         const int idleSourceCount = markerCountAt(idleMarkers, source.x());
         const int previewSourceCount = markerCountAt(previewMarkers, source.x());
         const int idleDestinationCount = markerCountAt(idleMarkers, destinationX);
@@ -359,9 +377,8 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
               QStringLiteral("middle-button pan did not end cleanly on release"));
     }
     {
-        const VoiceChangeArea &voice = rig.voiceArea();
-        const QPointF input(voice.plotOrigin() + rig.geometry().pointHitRadius,
-                            voice.rect().center().y());
+        const QPointF input(voiceGeometry(rig)->timelineOrigin + rig.geometry().pointHitRadius,
+                            voiceGeometry(rig)->rect.center().y());
         const auto before = snapshot(rig.document());
         const auto beforeHeights = laneHeights(rig);
         const QRect tempoBefore = rig.canvas().laneBody(AutomationGestureCheckRig::kTempoHandle);

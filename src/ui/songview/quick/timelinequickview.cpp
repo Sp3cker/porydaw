@@ -6,6 +6,7 @@
 #include "ui/songview.h"
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/timeruler.h"
 #include <QColor>
 #include <QPoint>
@@ -17,6 +18,7 @@
 #include <QUrl>
 #include <QVariant>
 #include <QtQml>
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <mutex>
@@ -68,11 +70,11 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     static std::once_flag registered;
     std::call_once(registered, [] {
         qmlRegisterType<TimelineChromeItem>("Porydaw.Ui", 1, 0, "TimelineChromeItem");
+        qmlRegisterType<TimelineInputItem>("Porydaw.Ui", 1, 0, "TimelineInputItem");
         qmlRegisterType<TimelineQuickItem>("Porydaw.Ui", 1, 0, "TimelineQuickItem");
     });
 
     setObjectName(QStringLiteral("timelineQuickCanvas"));
-    setAttribute(Qt::WA_TransparentForMouseEvents);
     setFocusPolicy(Qt::NoFocus);
 
     m_quickView = new QQuickView;
@@ -80,13 +82,10 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     surfaceFormat.setAlphaBufferSize(8);
     m_quickView->setFormat(surfaceFormat);
     m_quickView->setColor(Qt::transparent);
-    m_quickView->setFlag(Qt::WindowTransparentForInput);
-    m_quickView->setFlag(Qt::WindowDoesNotAcceptFocus);
     m_quickView->setResizeMode(QQuickView::SizeRootObjectToView);
     m_quickContainer = QWidget::createWindowContainer(m_quickView, this);
-    m_quickContainer->setAttribute(Qt::WA_TransparentForMouseEvents);
     m_quickContainer->setFocusPolicy(Qt::NoFocus);
-    m_quickContainer->installEventFilter(this);
+    m_quickView->installEventFilter(this);
     m_quickContainer->setGeometry(rect());
 
     m_scene = new TimelineQuickScene(this);
@@ -183,6 +182,15 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
             qFatal("Qt Quick timeline QML has no band property '%s'", properties.visible);
     }
 
+    // Phase 2 wires the first Quick input seam: the voice-changes band owns
+    // the only TimelineInputItem; later band phases add the other five.
+    TimelineInputItem *const voiceChangesInput =
+        root->findChild<TimelineInputItem *>(QStringLiteral("timelineVoiceChangesInput"));
+    if (!voiceChangesInput)
+        qFatal("Qt Quick timeline QML has no input item 'timelineVoiceChangesInput'");
+    voiceChangesInput->setInteraction(m_voiceChanges.data());
+    m_inputItems[timelineBandIndex(TimelineBand::VoiceChanges)] = voiceChangesInput;
+
     static constexpr std::array nativeChromeNames = {
         "velocityResizeHandle", "voiceChangesResizeHandle", "automationResizeHandle",
         "automationDrawerBar",  "velocityDetentToggle",
@@ -206,8 +214,10 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
 
 TimelineQuickView::~TimelineQuickView()
 {
-    if (m_quickContainer)
-        m_quickContainer->removeEventFilter(this);
+    for (TimelineInputItem *item : m_inputItems) {
+        if (item)
+            item->setInteraction(nullptr);
+    }
     m_quickView->setSource(QUrl{});
 }
 
@@ -301,10 +311,26 @@ void TimelineQuickView::setEditChrome(std::optional<qreal> songViewContentX)
 
 bool TimelineQuickView::eventFilter(QObject *watched, QEvent *event)
 {
-    if (watched == m_quickContainer && event->type() == QEvent::FocusIn) {
-        if (m_songView)
+    if (watched == m_quickView && event->type() == QEvent::FocusIn) {
+        // QWindowContainer's internal filter retargets this focus onto the
+        // container widget, stealing it from native content. Only let it
+        // through when a converted input item actually holds the Quick focus
+        // selection, i.e. a programmatic focusBand() activated this window.
+        const auto itemHasFocus = [](const TimelineInputItem *item) {
+            return item && item->hasFocus();
+        };
+        if (std::any_of(m_inputItems.begin(), m_inputItems.end(), itemHasFocus))
+            return QWidget::eventFilter(watched, event);
+        if (m_songView) {
             m_songView->focusActiveSurface();
-        return true;
+            return true;
+        }
+    }
+    if (watched == m_quickView && event->type() == QEvent::WindowDeactivate) {
+        for (TimelineInputItem *item : m_inputItems) {
+            if (item && item->interaction())
+                item->interaction()->inputCancelled(TimelineInputCancelReason::WindowDeactivated);
+        }
     }
     return QWidget::eventFilter(watched, event);
 }
@@ -366,6 +392,31 @@ void TimelineQuickView::refreshBandLayout()
     m_layoutTimer.start();
 }
 
+bool TimelineQuickView::focusBand(TimelineBand band, Qt::FocusReason reason)
+{
+    TimelineInputItem *const item = m_inputItems[timelineBandIndex(band)];
+    if (!item)
+        return false;
+    // The container is the QWidget focus bridge: focusing it lets
+    // QWindowContainer focus the embedded Quick window, after which the
+    // item's forced focus resolves into live active focus. That FocusIn can
+    // arrive asynchronously, so acceptance is not gated on hasActiveFocus();
+    // focusedBand() remains the live active-focus truth.
+    if (m_quickContainer)
+        m_quickContainer->setFocus(reason);
+    item->requestFocus(reason);
+    return true;
+}
+
+std::optional<TimelineBand> TimelineQuickView::focusedBand() const
+{
+    for (std::size_t index = 0; index < m_inputItems.size(); ++index) {
+        if (m_inputItems[index] && m_inputItems[index]->hasActiveFocus())
+            return static_cast<TimelineBand>(index);
+    }
+    return std::nullopt;
+}
+
 void TimelineQuickView::publishTimelineBandLayout()
 {
     QWidget *const songView = m_songView.data();
@@ -402,13 +453,22 @@ void TimelineQuickView::publishTimelineBandLayout()
         }
     }
 
-    QRegion quickMask(QRect(QPoint{}, publishedHostRect.size()));
+    // Quick now receives input, so the native-window mask admits only the
+    // visible canonical band rectangles; retained native chrome is subtracted
+    // so drawer controls keep receiving input through the holes.
+    QRegion quickMask;
+    for (const TimelineBandQmlProperties &properties : kTimelineBandQmlProperties) {
+        const std::optional<TimelineBandGeometry> &band = m_bandLayout.geometry(properties.band);
+        if (band)
+            quickMask += band->rect;
+    }
     for (QWidget *chrome : m_nativeChrome) {
         if (!chrome || !chrome->isVisibleTo(songView))
             continue;
         const QRect songViewRect(chrome->mapTo(songView, chrome->rect().topLeft()), chrome->size());
-        quickMask -= songViewRect.translated(-publishedHostRect.topLeft());
+        quickMask -= songViewRect;
     }
+    quickMask.translate(-publishedHostRect.topLeft());
     m_quickView->setMask(quickMask);
 
     if (hostXChanged) {
@@ -421,6 +481,14 @@ void TimelineQuickView::publishTimelineBandLayout()
 
 void TimelineQuickView::syncAppearance()
 {
+    for (TimelineInputItem *item : m_inputItems) {
+        if (!item)
+            continue;
+        if (m_songView)
+            item->setHostAppearance(m_songView->font(), m_songView->palette());
+        if (item->interaction())
+            item->notifyHostAppearanceChanged();
+    }
     for (TimelineChromeItem *item : m_chromeItems) {
         if (item)
             item->update();

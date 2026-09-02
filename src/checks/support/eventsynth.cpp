@@ -1,8 +1,10 @@
 #include "checks/support/eventsynth.h"
 
 #include <QCoreApplication>
+#include <QHoverEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QQuickItem>
 #include <QWheelEvent>
 #include <QWidget>
 
@@ -22,6 +24,30 @@ void sendWheel(QWidget &target, const QPointF &localPosition, const QPoint &pixe
 {
     QWheelEvent event(localPosition, QPointF(target.mapToGlobal(localPosition.toPoint())),
                       pixelDelta, angleDelta, buttons, modifiers, phase, inverted);
+    QCoreApplication::sendEvent(&target, &event);
+}
+
+void sendMouse(QQuickItem &target, QEvent::Type type, const QPointF &localPosition,
+               Qt::MouseButton button, Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers)
+{
+    if (type == QEvent::Leave) {
+        const QPointF scenePosition = target.mapToScene(localPosition);
+        QHoverEvent event(QEvent::HoverLeave, scenePosition, target.mapToGlobal(localPosition),
+                          scenePosition);
+        QCoreApplication::sendEvent(&target, &event);
+        return;
+    }
+    QMouseEvent event(type, localPosition, target.mapToGlobal(localPosition), button, buttons,
+                      modifiers);
+    QCoreApplication::sendEvent(&target, &event);
+}
+
+void sendWheel(QQuickItem &target, const QPointF &localPosition, const QPoint &pixelDelta,
+               const QPoint &angleDelta, Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers,
+               Qt::ScrollPhase phase, bool inverted)
+{
+    QWheelEvent event(localPosition, target.mapToGlobal(localPosition), pixelDelta, angleDelta,
+                      buttons, modifiers, phase, inverted);
     QCoreApplication::sendEvent(&target, &event);
 }
 

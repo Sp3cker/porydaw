@@ -29,10 +29,10 @@ EditorDrawer::EditorDrawer(SongView &owner, QWidget *parent, EditorViewState vie
     m_voiceChangeArea = new VoiceChangeArea(owner, this);
     m_automationPage->setFocusPolicy(Qt::NoFocus);
     m_velocityArea->installEventFilter(this);
-    m_voiceChangeArea->installEventFilter(this);
     if (m_automationPage->canvas())
         m_automationPage->canvas()->installEventFilter(this);
-    m_sections = new DrawerSections(this, m_automationPage, m_velocityArea, m_voiceChangeArea);
+    m_sections =
+        new DrawerSections(owner, this, m_automationPage, m_velocityArea, m_voiceChangeArea);
     connect(m_sections, &DrawerSections::geometryChanged, this, &EditorDrawer::arrange);
     connect(m_sections, &DrawerSections::statePublished, this, &EditorDrawer::publishViewState);
     m_automationAction = new QAction(tr("Automations"), this);
@@ -260,9 +260,10 @@ std::optional<QRect> EditorDrawer::bodyRect(EditorDrawerPage page) const noexcep
 
 bool EditorDrawer::eventFilter(QObject *watched, QEvent *event)
 {
+    // VoiceChanges focus is Quick-owned; only the two unconverted canvas
+    // widgets still report native focus events.
     if (watched == canvasFor(EditorDrawerPage::Automations) ||
-        watched == canvasFor(EditorDrawerPage::Velocity) ||
-        watched == canvasFor(EditorDrawerPage::VoiceChanges)) {
+        watched == canvasFor(EditorDrawerPage::Velocity)) {
         if (event->type() == QEvent::FocusIn)
             m_drawerCanvasOwnsFocus = true;
         else if (event->type() == QEvent::FocusOut)
@@ -347,11 +348,18 @@ void EditorDrawer::cancelPageInteraction(EditorDrawerPage page)
 
 bool EditorDrawer::ownsFocus() const
 {
+    // VoiceChanges focus lives in its Quick input item; the two unconverted
+    // pages still report native QWidget focus.
+    if (const std::optional<songview::TimelineBand> focused = m_owner.focusedTimelineBand();
+        focused && (*focused == songview::TimelineBand::Automation ||
+                    *focused == songview::TimelineBand::Velocity ||
+                    *focused == songview::TimelineBand::VoiceChanges))
+        return true;
     QWidget *focus = QApplication::focusWidget();
     if (m_drawerCanvasOwnsFocus || !focus)
         return m_drawerCanvasOwnsFocus;
-    for (const EditorDrawerPage page : {EditorDrawerPage::Automations, EditorDrawerPage::Velocity,
-                                        EditorDrawerPage::VoiceChanges}) {
+    for (const EditorDrawerPage page :
+         {EditorDrawerPage::Automations, EditorDrawerPage::Velocity}) {
         if (const QWidget *canvas = canvasFor(page);
             canvas && (focus == canvas || canvas->isAncestorOf(focus)))
             return true;
@@ -361,13 +369,15 @@ bool EditorDrawer::ownsFocus() const
 
 QWidget *EditorDrawer::canvasFor(EditorDrawerPage page) const
 {
+    // VoiceChanges no longer owns a QWidget canvas; only the two pages still
+    // awaiting conversion expose one.
     switch (page) {
-    case EditorDrawerPage::VoiceChanges:
-        return m_voiceChangeArea;
-    case EditorDrawerPage::Velocity:
-        return m_velocityArea;
     case EditorDrawerPage::Automations:
         return m_automationPage->canvas();
+    case EditorDrawerPage::Velocity:
+        return m_velocityArea;
+    case EditorDrawerPage::VoiceChanges:
+        break;
     }
     Q_UNREACHABLE();
 }

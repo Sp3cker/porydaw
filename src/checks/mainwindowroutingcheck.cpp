@@ -53,7 +53,6 @@
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
-#include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/playheadoverlay.h"
@@ -705,7 +704,8 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
 
     auto *automationSurface = descendant<AutomationCanvas>(tabBView);
     auto *velocitySurface = descendant<VelocityArea>(tabBView);
-    auto *voiceSurface = descendant<VoiceChangeArea>(tabBView);
+    EditorDrawer *const focusDrawer = tabBView.editorDrawer();
+    auto *voiceSurface = focusDrawer ? focusDrawer->voiceChangeArea() : nullptr;
     check(automationSurface && velocitySurface && voiceSurface,
           "drawer shortcut focus check could not find all three editor surfaces");
     if (automationSurface && velocitySurface && voiceSurface) {
@@ -713,16 +713,21 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
         tabBView.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
         tabBView.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
         tabBView.setDrawerActivePage(EditorDrawerPage::Velocity);
-        voiceSurface->setFocus(Qt::MouseFocusReason);
+        tabBView.focusTimelineBand(songview::TimelineBand::VoiceChanges, Qt::MouseFocusReason);
+        // Quick delivers activation asynchronously: let one event turn run
+        // before reading the live active-focus band.
         QCoreApplication::processEvents();
-        check(QApplication::focusWidget() == voiceSurface,
-              "voice surface did not accept focus for the drawer shortcut check");
+        check(tabBView.focusedTimelineBand() == songview::TimelineBand::VoiceChanges,
+              "voice changes input did not take drawer focus through the SongView bridge");
         // Hiding the focused first page walks the visual order to velocity.
-        sendKeyStroke(*voiceSurface, Qt::Key_P, Qt::NoModifier, false);
+        // The voice surface is no longer a widget, so sendEvent keystrokes
+        // cannot enter the widget shortcut map; fire the same QAction the
+        // window shortcut routes to.
+        m_voiceChangesDrawerAction->trigger();
         QCoreApplication::processEvents();
         check(!tabBView.drawerSectionVisible(EditorDrawerPage::VoiceChanges) &&
                   tabBView.drawerSectionVisible(EditorDrawerPage::Velocity) &&
-                  QApplication::focusWidget() == velocitySurface,
+                  QApplication::focusWidget() == velocitySurface && !tabBView.focusedTimelineBand(),
               "closing focused voice changes did not focus the velocity drawer");
         velocitySurface->setFocus(Qt::MouseFocusReason);
         QCoreApplication::processEvents();

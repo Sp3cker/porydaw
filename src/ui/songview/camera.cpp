@@ -3,6 +3,7 @@
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/timelineinput.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include <QScrollBar>
 #include <QSizePolicy>
@@ -17,6 +18,23 @@ using Space = lyt::Space;
 using namespace songview;
 using namespace songview::detail;
 
+namespace {
+
+// Wheel zoom weighting shared by the native QWheelEvent and normalized
+// TimelineWheelInput paths: momentum phases contribute nothing, pixel wheels
+// weigh 5 per pixel while rotary wheels weigh 1 per 1/8-degree unit, and the
+// delivered deltas alone carry direction (inverted() is deliberately
+// ignored). Only the y axis zooms.
+double timelineWheelZoomDelta(Qt::ScrollPhase phase, const QPoint &pixelDelta,
+                              const QPoint &angleDelta)
+{
+    if (phase == Qt::ScrollMomentum)
+        return 0.0;
+    const bool isPixel = !pixelDelta.isNull();
+    return double((isPixel ? pixelDelta : angleDelta).y()) * (isPixel ? 5.0 : 1.0);
+}
+
+} // namespace
 void SongView::setEditorHorizontalScroll(double px)
 {
     setHScroll(px);
@@ -42,7 +60,15 @@ qreal SongView::displayX(double tick, qreal origin, qreal dpr) const
 }
 void SongView::zoomTimelineAtWheel(const QWheelEvent *event, qreal anchorContentX)
 {
-    const double zoomDelta = wheelAngleUnits(event);
+    const double zoomDelta =
+        timelineWheelZoomDelta(event->phase(), event->pixelDelta(), event->angleDelta());
+    if (zoomDelta != 0.0)
+        zoomAroundContentX(std::pow(1.0015, zoomDelta), anchorContentX);
+}
+void SongView::zoomTimelineAtWheel(const songview::TimelineWheelInput &wheel, qreal anchorContentX)
+{
+    const double zoomDelta =
+        timelineWheelZoomDelta(wheel.phase, wheel.pixelDelta, wheel.angleDelta);
     if (zoomDelta != 0.0)
         zoomAroundContentX(std::pow(1.0015, zoomDelta), anchorContentX);
 }

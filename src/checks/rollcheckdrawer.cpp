@@ -6,6 +6,7 @@
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timelinebandlayout.h"
 
@@ -175,6 +176,26 @@ int runEditorDrawerCheck(const QString &screenshotPath)
     QCoreApplication::processEvents();
     check(view.drawerSectionVisible(EditorDrawerPage::Velocity) && velocityToggle->isVisible(),
           "visible velocity toggle did not reopen the velocity pane");
+    const songview::TimelineBandLayout &bandLayout = view.timelineBandLayout();
+    QQuickItem *const quickRoot = quick->rootObject();
+    // The converted voice body owns no widget: the canonical rectangle, the
+    // QML band rectangle, and the timelineVoiceChangesInput bounds must all
+    // carry the parent-owned voice section, exposed through the Quick window
+    // mask.
+    const auto voiceInputMatchesCanonical = [&] {
+        const std::optional<songview::TimelineBandGeometry> &geometry =
+            bandLayout.geometry(songview::TimelineBand::VoiceChanges);
+        auto *voiceInput = quickRoot ? quickRoot->findChild<songview::TimelineInputItem *>(
+                                           QStringLiteral("timelineVoiceChangesInput"))
+                                     : nullptr;
+        return geometry && voiceInput && voiceInput->isVisible() &&
+               voiceInput->bounds() ==
+                   QRectF(QPointF{}, QSizeF(geometry->rect.width(), geometry->rect.height())) &&
+               QRectF(voiceInput->mapToItem(quickRoot, QPointF()), voiceInput->size()) ==
+                   QRectF(geometry->rect.translated(-quick->geometry().topLeft())) &&
+               quick->quickWindow()->mask().contains(
+                   geometry->rect.translated(-quick->geometry().topLeft()));
+    };
     // The third page: the Voice Changes action toggles only its own section,
     // keeps the other two open, and announces through the same status surface.
     drawer->voiceChangesAction()->trigger();
@@ -184,13 +205,15 @@ int runEditorDrawerCheck(const QString &screenshotPath)
               view.drawerSectionVisible(EditorDrawerPage::Velocity) &&
               view.drawerSectionVisible(EditorDrawerPage::Automations) &&
               view.drawerActivePage() == EditorDrawerPage::VoiceChanges &&
-              voiceCanvas->height() > 0 && voiceCanvas->isVisible() && !publishedStates.empty() &&
+              bandLayout.geometry(songview::TimelineBand::VoiceChanges).has_value() &&
               publishedStates.back().voiceChanges.visible &&
               publishedStates.back().activePage == EditorDrawerPage::VoiceChanges &&
               !statuses.empty() && statuses.back() == QStringLiteral("Voice changes shown"),
           "voice changes action did not preserve the open automation and velocity sections");
     check(voiceHandle->isVisible() && velocityHandle->isVisible() && automationHandle->isVisible(),
           "all three section handles were not visible while voice changes was shown");
+    check(voiceInputMatchesCanonical(),
+          "voice changes input item did not fill its canonical band inside the Quick mask");
     QCoreApplication::processEvents();
     const auto quickMaskContains = [&view, quick](const QWidget &widget) {
         const QPoint rootPoint =
@@ -246,9 +269,10 @@ int runEditorDrawerCheck(const QString &screenshotPath)
         voiceToggleBounds.united(automationToggleBounds).united(velocityToggleBounds);
     const int pianoKeysCenter =
         velocityCanvas->mapTo(drawer, QPoint()).x() + velocityCanvas->plotOrigin() / 2;
-    check(voiceCanvas->mapTo(drawer, QPoint()).y() < velocityCanvas->mapTo(drawer, QPoint()).y() &&
-              velocityCanvas->mapTo(drawer, QPoint()).y() <
-                  automationCanvas->mapTo(drawer, QPoint()).y(),
+    check(bandLayout.geometry(songview::TimelineBand::VoiceChanges)->rect.y() <
+                  bandLayout.geometry(songview::TimelineBand::Velocity)->rect.y() &&
+              bandLayout.geometry(songview::TimelineBand::Velocity)->rect.y() <
+                  bandLayout.geometry(songview::TimelineBand::Automation)->rect.y(),
           "drawer stack did not order voice changes above velocity above automation");
     check(voiceHandle->mapTo(drawer, QPoint()).y() < velocityHandle->mapTo(drawer, QPoint()).y() &&
               velocityHandle->mapTo(drawer, QPoint()).y() <
@@ -265,7 +289,8 @@ int runEditorDrawerCheck(const QString &screenshotPath)
           "drawer toggle row was not centered voice changes, automations, velocity");
 
     const int voiceHeightBefore = view.drawerSectionHeight(EditorDrawerPage::VoiceChanges);
-    const int voiceCanvasHeightBefore = voiceCanvas->height();
+    const int voiceBodyHeightBefore =
+        bandLayout.geometry(songview::TimelineBand::VoiceChanges)->rect.height();
     const int velocityHeightAtVoice = view.drawerSectionHeight(EditorDrawerPage::Velocity);
     const int automationHeightAtVoice = view.drawerSectionHeight(EditorDrawerPage::Automations);
     const QPoint voiceHandleCenter = voiceHandle->rect().center();
@@ -285,8 +310,9 @@ int runEditorDrawerCheck(const QString &screenshotPath)
                               QPointF(voiceHandleCenter - QPoint(0, 40)), Qt::NoButton,
                               Qt::LeftButton, Qt::NoModifier);
     QCoreApplication::processEvents();
-    const int voiceCanvasHeightAfterMove = voiceCanvas->height();
-    check(voiceCanvasHeightAfterMove > voiceCanvasHeightBefore,
+    const int voiceBodyHeightAfterMove =
+        bandLayout.geometry(songview::TimelineBand::VoiceChanges)->rect.height();
+    check(voiceBodyHeightAfterMove > voiceBodyHeightBefore,
           "voice changes drag did not grow the live section");
     checks::events::sendMouse(*voiceHandle, QEvent::MouseButtonRelease,
                               QPointF(voiceHandleCenter - QPoint(0, 40)), Qt::LeftButton,
@@ -295,17 +321,17 @@ int runEditorDrawerCheck(const QString &screenshotPath)
     check(!voiceHandle->testAttribute(Qt::WA_SetCursor),
           "resize handle retained its resize cursor after an outside release");
     const int voiceHeightAfter = view.drawerSectionHeight(EditorDrawerPage::VoiceChanges);
-    check(voiceHeightAfter == voiceCanvasHeightAfterMove &&
+    check(voiceHeightAfter == voiceBodyHeightAfterMove &&
               voiceHeightAfter <= drawer->maximumSectionHeight() &&
               view.drawerSectionHeight(EditorDrawerPage::Velocity) == velocityHeightAtVoice &&
               view.drawerSectionHeight(EditorDrawerPage::Automations) == automationHeightAtVoice,
           "voice changes drag did not persist only its own section height");
-    check(voiceCanvas->mapTo(drawer, QPoint()).y() < velocityCanvas->mapTo(drawer, QPoint()).y() &&
-              voiceCanvas->height() > 0,
+    check(bandLayout.geometry(songview::TimelineBand::VoiceChanges)->rect.y() <
+                  bandLayout.geometry(songview::TimelineBand::Velocity)->rect.y() &&
+              bandLayout.geometry(songview::TimelineBand::VoiceChanges)->rect.height() > 0,
           "voice changes resize broke the drawer stack geometry");
     check(!detentToggle->isVisible(), "resizing voice changes exposed the velocity detent toggle");
     auto *automationViewport = automationPage ? automationPage->scrollViewport() : nullptr;
-    const songview::TimelineBandLayout &bandLayout = view.timelineBandLayout();
     const auto canonicalRectMatches = [&](songview::TimelineBand band, const QWidget &widget) {
         const std::optional<songview::TimelineBandGeometry> &geometry = bandLayout.geometry(band);
         return geometry && widget.isVisibleTo(&view) &&
@@ -328,9 +354,9 @@ int runEditorDrawerCheck(const QString &screenshotPath)
                                            ->translated(drawer->mapTo(&view, QPoint()))),
           "drawer body rectangle should map the section-local body into SongView coordinates");
     check(canonicalRectMatches(songview::TimelineBand::Roll, *roll) &&
-              canonicalRectMatches(songview::TimelineBand::VoiceChanges, *voiceCanvas) &&
               canonicalRectMatches(songview::TimelineBand::Velocity, *velocityCanvas) &&
-              canonicalRectMatches(songview::TimelineBand::Automation, *automationViewport),
+              canonicalRectMatches(songview::TimelineBand::Automation, *automationViewport) &&
+              voiceInputMatchesCanonical(),
           "canonical layout should track the resized drawer section rectangles");
     check(bandLayout.geometry(songview::TimelineBand::VoiceChanges) &&
               bandLayout.geometry(songview::TimelineBand::VoiceChanges)->timelineOrigin ==
@@ -494,13 +520,18 @@ int runEditorDrawerCheck(const QString &screenshotPath)
     view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
     view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
     QCoreApplication::processEvents();
-    voiceCanvas->setFocus(Qt::MouseFocusReason);
+    view.focusTimelineBand(songview::TimelineBand::VoiceChanges, Qt::MouseFocusReason);
+    // Quick delivers activation asynchronously: let one event turn run
+    // before reading the live active-focus band.
     QCoreApplication::processEvents();
+    check(view.focusedTimelineBand() == songview::TimelineBand::VoiceChanges,
+          "voice changes focus bridge did not focus the Quick input item");
     drawer->voiceChangesAction()->trigger();
     QCoreApplication::processEvents();
     QWidget *voiceFallback = QApplication::focusWidget();
     check(!view.drawerSectionVisible(EditorDrawerPage::VoiceChanges) && voiceFallback &&
-              (voiceFallback == velocityCanvas || velocityCanvas->isAncestorOf(voiceFallback)),
+              (voiceFallback == velocityCanvas || velocityCanvas->isAncestorOf(voiceFallback)) &&
+              !view.focusedTimelineBand(),
           "hiding the focused voice page did not focus the velocity page");
     velocityCanvas->setFocus(Qt::MouseFocusReason);
     QCoreApplication::processEvents();
@@ -515,8 +546,7 @@ int runEditorDrawerCheck(const QString &screenshotPath)
     QCoreApplication::processEvents();
     QWidget *contentFallback = QApplication::focusWidget();
     check(!view.hasVisibleDrawerSection() &&
-              (!contentFallback || !(voiceCanvas->isAncestorOf(contentFallback) ||
-                                     velocityCanvas->isAncestorOf(contentFallback) ||
+              (!contentFallback || !(velocityCanvas->isAncestorOf(contentFallback) ||
                                      automationCanvas->isAncestorOf(contentFallback))),
           "hiding the last drawer page did not return focus to content");
 
@@ -539,12 +569,12 @@ int runEditorDrawerCheck(const QString &screenshotPath)
                             drawer->minimumSectionHeight());
     drawer->setHostBounds(shortBounds);
     QCoreApplication::processEvents();
-    check(voiceCanvas->height() >= 0 && velocityCanvas->height() >= 0 &&
-              automationCanvas->height() >= 0 &&
-              voiceCanvas->mapTo(drawer, QPoint()).y() <=
-                  velocityCanvas->mapTo(drawer, QPoint()).y() &&
-              velocityCanvas->mapTo(drawer, QPoint()).y() <=
-                  automationCanvas->mapTo(drawer, QPoint()).y(),
+    const std::optional<QRect> voiceBody = drawer->bodyRect(EditorDrawerPage::VoiceChanges);
+    const std::optional<QRect> velocityBody = drawer->bodyRect(EditorDrawerPage::Velocity);
+    const std::optional<QRect> automationBody = drawer->bodyRect(EditorDrawerPage::Automations);
+    check(voiceBody && velocityBody && automationBody && voiceBody->height() >= 0 &&
+              velocityBody->height() >= 0 && automationBody->height() >= 0 &&
+              voiceBody->y() <= velocityBody->y() && velocityBody->y() <= automationBody->y(),
           "short host clamp produced negative or unordered drawer geometry");
     drawer->useParentBounds();
     QCoreApplication::processEvents();

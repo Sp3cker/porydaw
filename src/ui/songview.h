@@ -27,6 +27,7 @@
 #include "ui/pitchprojection.h"
 #include "ui/songview/clip.h"
 #include "ui/songview/editorselectionmodel.h"
+#include "ui/songview/quick/timelineinput.h"
 #include "ui/songview/scalecontroller.h"
 #include "ui/songview/timeaxis.h"
 #include "ui/songview/timelinebandlayout.h"
@@ -355,6 +356,13 @@ class SongView : public QWidget
     // drawer is hidden.
     void focusActiveSurface();
 
+    // Focus bridge to the shared Quick timeline input items. Only converted
+    // bands accept focus; focusTimelineBand reports false while the band's
+    // input item does not exist yet, and focusedTimelineBand reads the live
+    // active-focus band of those items.
+    bool focusTimelineBand(songview::TimelineBand band, Qt::FocusReason reason);
+    std::optional<songview::TimelineBand> focusedTimelineBand() const;
+
     // Bar/beat grid over [tickBegin, tickEnd): calls fn(tick, isBarStart,
     // barNumber, beatNumber) for every beat, honoring the song's time
     // signature changes.
@@ -521,6 +529,10 @@ class SongView : public QWidget
 
     // Interaction from children.
     void zoomTimelineAtWheel(const QWheelEvent *event, qreal anchorContentX);
+    // Normalized-input twin for Quick-delivered wheels: identical units to
+    // the QWheelEvent path (momentum ignored, pixel deltas weigh 5, angle
+    // deltas 1, y axis only).
+    void zoomTimelineAtWheel(const songview::TimelineWheelInput &wheel, qreal anchorContentX);
     void zoomAroundContentX(double factor, qreal anchorContentX);
     // Vertical roll zoom (key height) from Ctrl+wheel, pinning the key under
     // the cursor. The wheel event supplies continuous deltas.
