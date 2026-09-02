@@ -572,6 +572,12 @@ void runEditorChecks(Reporter &reporter, const RegisteredSampleProject &project,
         if (QFile::exists(libraryWavAbs))
             reporter.expect(QFile::copy(libraryWavAbs, nestedWavAbs),
                             "sample library copies a compatible nested wav");
+        const QString ignoredSf2Name = QStringLiteral("ignored_bank.sf2");
+        const QString ignoredTextName = QStringLiteral("ignored_notes.txt");
+        reporter.expect(writeFile(QDir(sampleDir).filePath(ignoredSf2Name), QByteArray("ignored")),
+                        "sample library writes an incompatible sf2 fixture");
+        reporter.expect(writeFile(QDir(sampleDir).filePath(ignoredTextName), QByteArray("ignored")),
+                        "sample library writes an incompatible text fixture");
 
         SampleEditorDialog dialog(hiRes, [](const QString &, QString *) { return true; });
         dialog.resize(900, 640);
@@ -593,7 +599,7 @@ void runEditorChecks(Reporter &reporter, const RegisteredSampleProject &project,
         reporter.expect(panel && libraryAdd && libraryRemove && folders && directories && files &&
                             status && nameEdit,
                         "library panel and controls found");
-        if (panel && folders && directories && files && status && nameEdit) {
+        if (panel && libraryRemove && folders && directories && files && status && nameEdit) {
             reporter.expect(folders->count() == 0 && directories->count() == 0 &&
                                 files->count() == 0,
                             "library lists start empty");
@@ -645,6 +651,9 @@ void runEditorChecks(Reporter &reporter, const RegisteredSampleProject &project,
                     reporter.expectError(rootWavItem->data(Qt::UserRole).toString(), libraryWavAbs,
                                          "root file item carries the absolute wav path");
                 }
+                reporter.expect(files->findItems(ignoredSf2Name, Qt::MatchExactly).isEmpty() &&
+                                    files->findItems(ignoredTextName, Qt::MatchExactly).isEmpty(),
+                                "library excludes incompatible files");
             }
 
             const int foldersAfterAdd = folders->count();
@@ -792,6 +801,43 @@ void runEditorChecks(Reporter &reporter, const RegisteredSampleProject &project,
                 reporter.expect(restoredNested != nullptr,
                                 "restored dialog exposes the nested directory");
             }
+        }
+        if (panel && libraryRemove && folders && directories && files && status) {
+            reporter.expect(libraryRemove->isEnabled(),
+                            "remove is enabled while the saved folder is selected");
+            libraryRemove->click();
+            QApplication::processEvents();
+            QSettings settings;
+            reporter.expect(folders->count() == 0 && directories->count() == 0 &&
+                                files->count() == 0 && status->text().isEmpty(),
+                            "removing a folder clears the library lists and status");
+            reporter.expect(!settings.value(QStringLiteral("sampleLibraryFolders"))
+                                 .toStringList()
+                                 .contains(absDir),
+                            "removing a folder updates persistent settings");
+
+            const QString missingDir =
+                QFileInfo(QDir(root).filePath(QStringLiteral("missing-sample-library")))
+                    .absoluteFilePath();
+            reporter.expect(!QDir(missingDir).exists(), "missing library fixture does not exist");
+            panel->addFolder(missingDir);
+            QApplication::processEvents();
+            reporter.expectError(status->text(),
+                                 QStringLiteral("Folder not found: %1").arg(missingDir),
+                                 "missing folder reports its absolute path");
+            reporter.expect(settings.value(QStringLiteral("sampleLibraryFolders"))
+                                .toStringList()
+                                .contains(missingDir),
+                            "missing folder remains persisted for a disconnected drive");
+            reporter.expect(libraryRemove->isEnabled(),
+                            "remove remains available for a missing folder");
+            libraryRemove->click();
+            QApplication::processEvents();
+            reporter.expect(
+                folders->count() == 0 && directories->count() == 0 && files->count() == 0 &&
+                    status->text().isEmpty() &&
+                    settings.value(QStringLiteral("sampleLibraryFolders")).toStringList().isEmpty(),
+                "removing the missing folder clears UI and persistence");
         }
         if (reporter.failureCount() == before)
             std::printf("samplecheck: sample library OK\n");
