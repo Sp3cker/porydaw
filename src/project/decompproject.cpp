@@ -12,6 +12,7 @@
 #include <array>
 #include <cstring>
 #include <utility>
+#include <vector>
 
 #include "project/songregistry.h"
 #include "project/songsmk.h"
@@ -372,9 +373,33 @@ bool DecompProject::rebuildVoicegroupProject(QString *error)
             *error = QStringLiteral("Could not refresh the project voicegroup loader.");
         return false;
     }
+    std::vector<std::pair<LoadedBankEntry *, VoicegroupLease>> refreshed;
+    refreshed.reserve(m_banks.size());
+    for (auto &[id, entry] : m_banks) {
+        LoadedVoiceGroup *raw = nullptr;
+        QString reloadError;
+        if (entry.source->dirty()) {
+            raw = loadPreviewedSource(m_root, entry.loadName, entry.source->renderPreview(),
+                                      &reloadError);
+        } else {
+            const QByteArray targetPath = entry.source->filePath().toLocal8Bit();
+            const QByteArray sectionLabel = entry.source->sectionLabel().toLocal8Bit();
+            const VoicegroupTarget target = {targetPath.constData(), sectionLabel.constData()};
+            raw = replacement->load(target);
+        }
+        if (!raw) {
+            if (error)
+                *error = reloadError.isEmpty() ? QStringLiteral("Could not reload voicegroup %1.")
+                                                     .arg(id.sourceRelativePath())
+                                               : std::move(reloadError);
+            return false;
+        }
+        refreshed.emplace_back(&entry, leaseWithMintedSynths(raw, *entry.source));
+    }
     m_voicegroupProject.swap(replacement);
     m_voicegroupArgMemo.clear();
-    m_banks.clear();
+    for (auto &[entry, lease] : refreshed)
+        entry->current = std::move(lease);
     return true;
 }
 

@@ -107,8 +107,21 @@ int runVgBankCheck(const QString &projectRoot, const QString &songLabel)
         first->slotViews[sq1Slot].kind != VgLineKind::Editable || !first->slotViews[dsSlot].voice ||
         !first->slotViews[sq1Slot].voice)
         return fail("initial view does not classify the edited slots as editable");
-    const VoicegroupId id = first->id;
-    const VgVoice original = first->slotViews[dsSlot].voice.value();
+    // ---- rebuilding project maps repins loaded bank identities ----
+    const VoicegroupLease preRebuildLease = first->bank;
+    error.clear();
+    if (!project.rebuildVoicegroupProject(&error) || !error.isEmpty())
+        return fail("voicegroup project rebuild failed");
+    const std::optional<LoadedBankView> rebuilt = project.loadBank(*song, &error);
+    if (!error.isEmpty() || !rebuilt || !rebuilt->bank)
+        return fail("rebuild dropped the loaded bank identity");
+    if (rebuilt->bank.get() == first->bank.get())
+        return fail("rebuild did not repin the bank to the replacement context");
+    if (!preRebuildLease || preRebuildLease->voices[dsSlot].key != 60)
+        return fail("published lease did not survive the context rebuild");
+
+    const VoicegroupId id = rebuilt->id;
+    const VgVoice original = rebuilt->slotViews[dsSlot].voice.value();
     VgVoice edited = original;
     edited.key = 61;
 

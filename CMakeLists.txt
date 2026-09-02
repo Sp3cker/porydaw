@@ -235,6 +235,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/newsongwizard.h
     src/ui/sampleeditordialog.cpp
     src/ui/sampleeditordialog.h
+    src/ui/samplelibrarypanel.cpp
+    src/ui/samplelibrarypanel.h
     src/ui/sf2zonepicker.cpp
     src/ui/sf2zonepicker.h
     src/ui/waveformview.cpp

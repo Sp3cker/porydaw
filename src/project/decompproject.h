@@ -130,7 +130,8 @@ class DecompProject
     bool reload(QString *error);
 
     // Replaces the project-wide poryaaaa maps only after a complete context
-    // opens. Existing self-contained bank leases stay published and valid.
+    // opens and every loaded bank has been repinned to it. Published leases
+    // stay valid, while worker-side bank identities remain editable.
     bool rebuildVoicegroupProject(QString *error);
 
     // ---- Worker-side voicegroup bank ownership (Project I/O worker) ----

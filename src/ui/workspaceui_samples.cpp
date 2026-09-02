@@ -26,6 +26,12 @@
 
 namespace {
 const QString kSampleSlotPrefix = QStringLiteral("DirectSoundWaveData_");
+
+QString normalizedAbsolutePath(const QString &path)
+{
+    return QDir::cleanPath(QFileInfo(path).absoluteFilePath());
+}
+
 } // namespace
 
 // ---- New song / MIDI import --------------------------------------------------
@@ -127,6 +133,60 @@ void WorkspaceUi::continueImportFlow(const SampleFormatProbe &probe)
         QMessageBox::warning(&m_host, tr("Import Sample"), probe.refusal);
         return;
     }
+
+    AuditionSlots::Adsr destAdsr;
+    bool hasDestAdsr = false;
+    SongTab *const requested = m_selectedTab;
+    if (slot && requested && requested->isReady()) {
+        const LoadedBankView *const view = bankViewFor(*requested);
+        const VgVoice *dest = nullptr;
+        if (view && *slot >= 0 && *slot < view->slotViews.size() && view->slotViews.at(*slot).voice)
+            dest = &*view->slotViews.at(*slot).voice;
+        if (dest && !vgMacroIsCgb(dest->macro)) {
+            destAdsr = {uint8_t(dest->attack), uint8_t(dest->decay), uint8_t(dest->sustain),
+                        uint8_t(dest->release)};
+            hasDestAdsr = true;
+        }
+    }
+
+    const auto commitDialog = [this, slot](SampleEditorDialog &dialog,
+                                           std::optional<SampleSidecar> fallbackSidecar) {
+        if (dialog.exec() != QDialog::Accepted)
+            return;
+        if (!m_state.snapshot.isOpen() || projectBusy() || m_dialogOps > 0)
+            return;
+        CommitSampleInput input;
+        input.name = dialog.sampleName();
+        input.wavBytes = dialog.wavBytes();
+        const QString &loadedSourceSha256 = dialog.loadedSourceSha256();
+        if (!loadedSourceSha256.isEmpty()) {
+            SampleSidecar sidecar;
+            sidecar.sourcePath = dialog.document()->source().sourcePath;
+            sidecar.sourceSha256 = loadedSourceSha256;
+            sidecar.leftOnly = false;
+            sidecar.sf2Zone = -1;
+            sidecar.params = dialog.document()->params();
+            input.sidecar = std::move(sidecar);
+        } else if (fallbackSidecar) {
+            fallbackSidecar->params = dialog.document()->params();
+            input.sidecar = std::move(*fallbackSidecar);
+        }
+        m_pendingImportSlot = slot; // for the committed assignment
+        m_dialogOps++;
+        updateOpenGate();
+        emit projectOperationRequested(ProjectOperation{std::move(input)});
+    };
+
+    if (slot) {
+        SampleEditorDialog dialog(
+            [this](const QString &name, QString *validationError) {
+                return validateNewSampleName(name, validationError);
+            },
+            m_sampleAuditionEngine, hasDestAdsr ? &destAdsr : nullptr, &m_host);
+        commitDialog(dialog, std::nullopt);
+        return;
+    }
+
     QSettings settings;
     const QString startDir =
         settings.value(QStringLiteral("lastSampleDir"), QDir::homePath()).toString();
@@ -190,45 +250,18 @@ void WorkspaceUi::continueImportFlow(const SampleFormatProbe &probe)
         }
     }
 
-    AuditionSlots::Adsr destAdsr;
-    bool hasDestAdsr = false;
-    SongTab *const requested = m_selectedTab;
-    if (slot && requested && requested->isReady()) {
-        const LoadedBankView *const view = bankViewFor(*requested);
-        const VgVoice *dest = nullptr;
-        if (view && *slot >= 0 && *slot < view->slotViews.size() && view->slotViews.at(*slot).voice)
-            dest = &*view->slotViews.at(*slot).voice;
-        if (dest && !vgMacroIsCgb(dest->macro)) {
-            destAdsr = {uint8_t(dest->attack), uint8_t(dest->decay), uint8_t(dest->sustain),
-                        uint8_t(dest->release)};
-            hasDestAdsr = true;
-        }
-    }
+    SampleSidecar sidecar;
+    sidecar.sourcePath = normalizedAbsolutePath(path);
+    sidecar.sourceSha256 = SampleRegistrar::sourceHashHex(sourceBytes);
+    sidecar.leftOnly = leftOnly;
+    sidecar.sf2Zone = sf2Zone;
     SampleEditorDialog dialog(
         std::move(sample),
         [this](const QString &name, QString *validationError) {
             return validateNewSampleName(name, validationError);
         },
         m_sampleAuditionEngine, hasDestAdsr ? &destAdsr : nullptr, &m_host);
-    if (dialog.exec() != QDialog::Accepted)
-        return;
-
-    if (!m_state.snapshot.isOpen() || projectBusy() || m_dialogOps > 0)
-        return;
-    CommitSampleInput input;
-    input.name = dialog.sampleName();
-    input.wavBytes = dialog.wavBytes();
-    SampleSidecar sidecar;
-    sidecar.sourcePath = QFileInfo(path).absoluteFilePath();
-    sidecar.sourceSha256 = SampleRegistrar::sourceHashHex(sourceBytes);
-    sidecar.leftOnly = leftOnly;
-    sidecar.sf2Zone = sf2Zone;
-    sidecar.params = dialog.document()->params();
-    input.sidecar = std::move(sidecar);
-    m_pendingImportSlot = slot; // for the committed assignment
-    m_dialogOps++;
-    updateOpenGate();
-    emit projectOperationRequested(ProjectOperation{std::move(input)});
+    commitDialog(dialog, std::move(sidecar));
 }
 
 bool WorkspaceUi::validateNewSampleName(const QString &name, QString *error) const
@@ -333,6 +366,7 @@ void WorkspaceUi::continueEditSampleFlow(const SampleRead &read)
                     uint8_t(voice->release)};
         hasDestAdsr = true;
     }
+    const QString openedSourcePath = normalizedAbsolutePath(sample.sourcePath);
     SampleEditorDialog dialog(
         std::move(sample),
         [name](const QString &candidate, QString *validationError) {
@@ -344,7 +378,9 @@ void WorkspaceUi::continueEditSampleFlow(const SampleRead &read)
             return false;
         },
         m_sampleAuditionEngine, hasDestAdsr ? &destAdsr : nullptr, &m_host);
-    dialog.setEditTarget(name);
+    dialog.setEditTarget(name, [this](const QString &candidate, QString *validationError) {
+        return validateNewSampleName(candidate, validationError);
+    });
     if (fromSource)
         dialog.applyParamsExternal(sidecar.params);
     if (dialog.exec() != QDialog::Accepted)
@@ -352,17 +388,33 @@ void WorkspaceUi::continueEditSampleFlow(const SampleRead &read)
 
     if (!m_state.snapshot.isOpen() || projectBusy() || m_dialogOps > 0)
         return;
+    const bool saveAsNew = dialog.saveAsNew();
     CommitSampleInput input;
-    input.name = name;
+    input.name = saveAsNew ? dialog.sampleName() : name;
     input.wavBytes = dialog.wavBytes();
-    if (fromSource) {
-        sidecar.params = dialog.document()->params();
-        input.sidecar = std::move(sidecar);
-    } else {
+    const SampleEditParams params = dialog.document()->params();
+    const QString &loadedSourceSha256 = dialog.loadedSourceSha256();
+    if (!loadedSourceSha256.isEmpty()) {
+        SampleSidecar currentSidecar;
+        currentSidecar.sourcePath = dialog.document()->source().sourcePath;
+        currentSidecar.sourceSha256 = loadedSourceSha256;
+        currentSidecar.leftOnly = false;
+        currentSidecar.sf2Zone = -1;
+        currentSidecar.params = params;
+        input.sidecar = std::move(currentSidecar);
+    } else if (normalizedAbsolutePath(dialog.document()->source().sourcePath) == openedSourcePath) {
+        if (fromSource) {
+            sidecar.params = params;
+            input.sidecar = std::move(sidecar);
+        } else if (!saveAsNew) {
+            input.removeSidecar = true;
+        }
+    } else if (!saveAsNew) {
         input.removeSidecar = true;
     }
-    input.update = true;
-    m_pendingEditSampleSlot = slot; // for the committed refresh
+    input.update = !saveAsNew;
+    if (!saveAsNew)
+        m_pendingEditSampleSlot = slot; // for the committed refresh
     m_dialogOps++;
     updateOpenGate();
     emit projectOperationRequested(ProjectOperation{std::move(input)});
@@ -386,9 +438,6 @@ void WorkspaceUi::handleSampleCommitted(const SampleCommitted &committed)
         showStatus(tr("Sample imported, but saving its edit history failed: %1")
                        .arg(committed.sidecarError),
                    8000);
-    m_dialogOps++;
-    updateOpenGate();
-    emit projectOperationRequested(ProjectOperation{RefreshCatalogInput{}});
 
     // A browser-initiated import points its slot's voice at the new sample
     // through the ordinary bank-edit path.
@@ -420,6 +469,10 @@ void WorkspaceUi::handleSampleCommitted(const SampleCommitted &committed)
         submitPickerEdit(*slot, voice);
         m_voicegroupBrowser->revealSlot(*slot);
     }
+    m_pendingSampleSetPreload = true;
+    m_dialogOps++;
+    updateOpenGate();
+    emit projectOperationRequested(ProjectOperation{RefreshCatalogInput{}});
     showStatus(
         editSlot >= 0
             ? tr("Saved %1 — the ROM's .bin recompiles on the next build").arg(committed.name)

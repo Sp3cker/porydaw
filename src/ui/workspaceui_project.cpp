@@ -111,6 +111,8 @@ void WorkspaceUi::applyProjectState(ProjectState state)
     const bool userSwitch = m_openRequested;
     const bool acceptedOpen = userSwitch || m_awaitingStartupOpen;
     m_openRequested = false;
+    if (userSwitch)
+        m_pendingSampleSetPreload = false;
     if (userSwitch && !m_awaitingStartupOpen) {
         // Accepted project replacement: destroy the tabs, clear the cache
         // and the transient state, and start with a clean slate. The song
@@ -146,6 +148,8 @@ void WorkspaceUi::applyProjectState(ProjectState state)
         // the new-voicegroup / refresh-catalog scan.
         consumeDialogOperation();
         reconcileSnapshot();
+        if (std::exchange(m_pendingSampleSetPreload, false))
+            ensureSampleSet();
     }
     if (acceptedOpen) {
         showStatus(tr("Opened %1 — %2 songs")
@@ -385,6 +389,7 @@ void WorkspaceUi::applyProjectEvent(ProjectEvent event)
                             consumeDialogOperation();
                             QMessageBox::warning(&m_host, tr("Sample"), failure.message);
                         } else if constexpr (std::is_same_v<F, CatalogMutationFailed>) {
+                            m_pendingSampleSetPreload = false;
                             consumeDialogOperation();
                             showStatus(failure.message, 8000);
                         } else {

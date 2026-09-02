@@ -376,6 +376,7 @@ class WorkspaceUi final : public QObject
 
     QHash<QString, VgSynthDesc> m_pendingSynths; // minted-but-unsaved synth definitions
     SampleSetLease m_sampleSet;
+    bool m_pendingSampleSetPreload = false;
     std::optional<LoadedBankView> m_bankView; // stable presentation copy the picker borrows
     QPointer<QMessageBox> m_registerConfirmation;
     QPointer<QMessageBox> m_deleteConfirmation;

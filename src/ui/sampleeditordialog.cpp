@@ -4,6 +4,8 @@
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
+#include <QFile>
+#include <QFileDevice>
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QGroupBox>
@@ -11,6 +13,7 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMargins>
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QScrollArea>
@@ -27,15 +30,28 @@
 #include <span>
 
 #include "audio/audioengine.h"
+#include "audio/sampleimport.h"
 #include "audio/samplewav.h"
 #include "enginesettingsdialog.h"
 #include "m4asemantics.h"
 #include "project/samplereg.h"
+#include "samplelibrarypanel.h"
 #include "waveformview.h"
 
 namespace {
 
 constexpr int kSampleParamsCommandId = 0x5350; // 'SP'
+
+ImportedSample placeholderSample()
+{
+    ImportedSample sample;
+    sample.buffer = {0.0f};
+    sample.sampleRate = kGbaDefaultRate;
+    sample.playLength = 1;
+    sample.sourceChannels = 1;
+    sample.sourceBits = 16;
+    return sample;
+}
 
 QString sourceLine(const ImportedSample &s)
 {
@@ -178,19 +194,7 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator vali
         m_destAdsr = *destAdsr;
     }
 
-    // Pitch detection (DSP.md §4) runs once at open for every source. It
-    // prefills the key/cents only when the container carried no pitch
-    // metadata — a real smpl/INST unity note always wins — and otherwise
-    // just powers the mismatch hint beside the base key (updatePitchHint).
-    ensurePitchDetected();
-    if (!m_doc.source().hasPitchMetadata && m_pitch.pitched) {
-        SampleEditParams p = m_doc.params();
-        const double exact = 69.0 + 12.0 * std::log2(m_pitch.f0 / 440.0);
-        p.baseKey = qBound(0, int(std::floor(exact)), 127);
-        p.fineTuneCents =
-            qBound(0.0, std::round((exact - std::floor(exact)) * 10000.0) / 100.0, 99.99);
-        m_doc.setParams(p);
-    }
+    prefillPitchFromDetection();
 
     const ImportedSample &src = m_doc.source();
     const SampleEditParams defaults = m_doc.params();
@@ -198,13 +202,33 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator vali
 
     auto *layout = new QVBoxLayout(this);
 
+    // ---- the persistent sample library, docked left of the editor in a
+    // horizontal splitter; the editor column keeps the stretch so the
+    // waveform stays dominant ----
+    auto *mainSplit = new QSplitter(Qt::Horizontal, this);
+    mainSplit->setObjectName(QStringLiteral("sampleMainSplit"));
+    layout->addWidget(mainSplit, 1);
+    m_library = new SampleLibraryPanel(this);
+    connect(m_library, &SampleLibraryPanel::previewRequested, this,
+            &SampleEditorDialog::previewLibrarySample);
+    connect(m_library, &SampleLibraryPanel::loadRequested, this,
+            &SampleEditorDialog::loadLibrarySample);
+    mainSplit->addWidget(m_library);
+
     // ---- the waveform, dominant on top; it shares the vertical space
     // with the control column through a splitter so its height is
     // user-resizable ----
-    auto *split = new QSplitter(Qt::Vertical, this);
+    m_editorPane = new QWidget(this);
+    m_editorPane->setObjectName(QStringLiteral("sampleEditorPane"));
+    auto *editorLayout = new QVBoxLayout(m_editorPane);
+    editorLayout->setContentsMargins(QMargins{});
+    auto *split = new QSplitter(Qt::Vertical, m_editorPane);
     split->setObjectName(QStringLiteral("sampleSplit"));
     split->setChildrenCollapsible(false);
-    layout->addWidget(split, 1);
+    editorLayout->addWidget(split);
+    mainSplit->addWidget(m_editorPane);
+    mainSplit->setStretchFactor(0, 0);
+    mainSplit->setStretchFactor(1, 1);
     m_waveform = new WaveformView(this);
     m_waveform->setSample(&m_doc.source());
     split->addWidget(m_waveform);
@@ -343,9 +367,10 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator vali
     // ---- the pipeline form (the beginner surface; expert rows live in
     // the Advanced section below) ----
     auto *form = new QFormLayout;
-    auto *sourceLabel = new QLabel(QFileInfo(src.sourcePath).fileName(), this);
-    sourceLabel->setToolTip(src.sourcePath);
-    form->addRow(tr("Source:"), sourceLabel);
+    m_sourceLabel = new QLabel(QFileInfo(src.sourcePath).fileName(), this);
+    m_sourceLabel->setObjectName(QStringLiteral("sampleSourceLabel"));
+    m_sourceLabel->setToolTip(src.sourcePath);
+    form->addRow(tr("Source:"), m_sourceLabel);
 
     m_baseKey = new MidiKeySpinBox(this);
     m_baseKey->setObjectName(QStringLiteral("sampleBaseKey"));
@@ -460,7 +485,9 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator vali
         m_advancedToggle->setArrowType(on ? Qt::DownArrow : Qt::RightArrow);
     });
 
-    advForm->addRow(tr("Format:"), new QLabel(sourceLine(src), m_advancedBody));
+    m_sourceFormatLabel = new QLabel(sourceLine(src), m_advancedBody);
+    m_sourceFormatLabel->setObjectName(QStringLiteral("sampleSourceFormatLabel"));
+    advForm->addRow(tr("Format:"), m_sourceFormatLabel);
 
     m_cropStart = makeSpin("sampleCropStart", 0, frames - 1, int(defaults.cropStart), 1);
     m_cropEnd = makeSpin("sampleCropEnd", 1, frames, int(defaults.cropEnd), 2);
@@ -510,10 +537,27 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator vali
     column->addStretch();
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Cancel, this);
+    m_saveAsNewButton = buttons->addButton(tr("Save as New Sample"), QDialogButtonBox::ActionRole);
+    m_saveAsNewButton->setObjectName(QStringLiteral("sampleSaveAsNewButton"));
+    m_saveAsNewButton->setVisible(false);
     m_addButton = buttons->addButton(tr("Add to Project"), QDialogButtonBox::AcceptRole);
     m_addButton->setObjectName(QStringLiteral("sampleAddButton"));
     m_addButton->setToolTip(tr("Exports the .wav into sound/direct_sound_samples/ and registers "
                                "it; the build's %.bin rule compiles it."));
+    connect(m_saveAsNewButton, &QPushButton::clicked, this, [this] {
+        const QString name = m_nameEdit->text();
+        m_validator = m_saveAsNewValidator;
+        m_saveAsNew = true;
+        m_nameEdit->setReadOnly(false);
+        m_nameEdit->setToolTip({});
+        m_nameEdit->setText(name + QStringLiteral("_copy"));
+        m_nameEdit->selectAll();
+        m_nameEdit->setFocus();
+        m_saveAsNewButton->hide();
+        m_addButton->setText(tr("Add to Project"));
+        setWindowTitle(tr("Save as New Sample — %1").arg(name));
+        validateName();
+    });
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     layout->addWidget(buttons);
@@ -541,6 +585,20 @@ SampleEditorDialog::SampleEditorDialog(ImportedSample sample, NameValidator vali
     }
 }
 
+SampleEditorDialog::SampleEditorDialog(NameValidator validator, AudioEngine *engine,
+                                       const AuditionSlots::Adsr *destAdsr, QWidget *parent)
+    : SampleEditorDialog(placeholderSample(), std::move(validator), engine, destAdsr, parent)
+{
+    m_hasSource = false;
+    m_nameEdit->clear();
+    m_sourceLabel->clear();
+    m_sourceLabel->setToolTip({});
+    m_sourceFormatLabel->clear();
+    m_waveform->setSample(nullptr);
+    m_editorPane->setEnabled(false);
+    validateName();
+}
+
 QString SampleEditorDialog::sampleName() const
 {
     return m_nameEdit->text();
@@ -551,15 +609,23 @@ QByteArray SampleEditorDialog::wavBytes()
     return writeSampleWav(m_doc.processed());
 }
 
-void SampleEditorDialog::setEditTarget(const QString &name)
+void SampleEditorDialog::setEditTarget(const QString &name, NameValidator saveAsNewValidator)
 {
+    m_saveAsNewValidator = std::move(saveAsNewValidator);
+    m_saveAsNew = false;
     m_nameEdit->setText(name);
     m_nameEdit->setReadOnly(true);
     m_nameEdit->setToolTip(tr("The sample keeps its registered name; renaming is not supported "
                               "here."));
+    m_saveAsNewButton->setVisible(bool(m_saveAsNewValidator));
     m_addButton->setText(tr("Save Sample"));
     setWindowTitle(tr("Edit Sample — %1").arg(name));
     validateName();
+}
+
+bool SampleEditorDialog::saveAsNew() const
+{
+    return m_saveAsNew;
 }
 
 void SampleEditorDialog::done(int result)
@@ -757,6 +823,11 @@ void SampleEditorDialog::refreshOutputs()
 
 void SampleEditorDialog::validateName()
 {
+    if (!m_hasSource) {
+        m_addButton->setEnabled(false);
+        m_nameStatus->setText(tr("Choose a sample from the library."));
+        return;
+    }
     QString error;
     const bool ok = m_validator && m_validator(m_nameEdit->text(), &error);
     m_addButton->setEnabled(ok);
@@ -765,6 +836,60 @@ void SampleEditorDialog::validateName()
                                     : tr("Registers as DirectSoundWaveData_%1"))
                                    .arg(m_nameEdit->text())
                              : error);
+}
+
+// Swap the document under edit for a freshly imported source (library
+// Load): stop the audition, replace the document, and reseed every
+// per-source state with constructor-equivalent semantics — detection
+// prefill, loop-suggestion caches, spin frame bounds, the rate combo's
+// "Keep source" item, the source/format labels, the waveform trace.
+// Dialog-level state (audition key, Advanced disclosure) survives.
+void SampleEditorDialog::resetSample(ImportedSample sample)
+{
+    stopAudition();
+    m_doc = SampleDocument(std::move(sample));
+    m_undo.clear();
+    m_pitchTried = false;
+    m_pitch = {};
+    prefillPitchFromDetection();
+
+    // Loop suggestions cache against the previous source's analysis grid;
+    // the seed values match the member initializers.
+    m_chips.clear();
+    m_chipIndex = -1;
+    m_chipsValid = false;
+    m_chipsCropStart = -1;
+    m_chipsCropEnd = -1;
+    m_chipsRate = -1.0;
+    m_suggestStatus->clear();
+    m_gestureBase = m_doc.params();
+
+    const ImportedSample &src = m_doc.source();
+    const int frames = int(qMin<qint64>(src.frameCount(), INT_MAX));
+
+    // Reseed the controls under the sync guard — range changes can clamp
+    // and fire valueChanged, and none of this is a user edit.
+    m_syncing = true;
+    m_cropStart->setRange(0, frames - 1);
+    m_cropEnd->setRange(1, frames);
+    m_loopStart->setRange(0, frames - 1);
+    m_loopEnd->setRange(0, frames - 1);
+    m_rateCombo->setItemText(
+        0, tr("Keep source (%1 Hz)")
+               .arg(src.sampleRate, 0, 'f', src.sampleRate == std::floor(src.sampleRate) ? 0 : 2));
+    syncUiFromParams();
+    m_sourceLabel->setText(QFileInfo(src.sourcePath).fileName());
+    m_sourceLabel->setToolTip(src.sourcePath);
+    m_sourceFormatLabel->setText(sourceLine(src));
+    m_waveform->setSample(&m_doc.source());
+    // Import mode and Save as New adopt the new source's suggested name;
+    // replacement editing keeps its registered name.
+    if (!m_nameEdit->isReadOnly())
+        m_nameEdit->setText(src.suggestedName);
+    m_syncing = false;
+    m_sourceCents = m_fineTune->value(); // spin-rounded source tuning
+    refreshOutputs();
+    validateName();
 }
 
 void SampleEditorDialog::ensurePitchDetected()
@@ -834,6 +959,23 @@ void SampleEditorDialog::applyDetectedPitch()
     p.fineTuneCents = qBound(0.0, std::round((exact - std::floor(exact)) * 10000.0) / 100.0, 99.99);
     p.exactPitchOverride = 0;
     commitParams(p, -1);
+}
+
+// Pitch detection (DSP.md §4) runs once at open for every source. It
+// prefills the key/cents only when the container carried no pitch
+// metadata — a real smpl/INST unity note always wins — and otherwise
+// just powers the mismatch hint beside the base key (updatePitchHint).
+void SampleEditorDialog::prefillPitchFromDetection()
+{
+    ensurePitchDetected();
+    if (!m_doc.source().hasPitchMetadata && m_pitch.pitched) {
+        SampleEditParams p = m_doc.params();
+        const double exact = 69.0 + 12.0 * std::log2(m_pitch.f0 / 440.0);
+        p.baseKey = qBound(0, int(std::floor(exact)), 127);
+        p.fineTuneCents =
+            qBound(0.0, std::round((exact - std::floor(exact)) * 10000.0) / 100.0, 99.99);
+        m_doc.setParams(p);
+    }
 }
 
 // The loop analysis render: the whole crop as a fade-free one-shot on the
@@ -1075,4 +1217,72 @@ void SampleEditorDialog::auditionTick()
         return;
     }
     m_waveform->setPlayhead(m_auditionCrop + qint64(std::llround(m_auditionPos / m_auditionRatio)));
+}
+
+// Library preview (the panel's Preview action): audition a freshly
+// decoded file through the audition slot without touching the document
+// under edit — one-shot, default envelope, at the audition strip's key.
+void SampleEditorDialog::previewLibrarySample(const QString &path)
+{
+    if (!m_engine) {
+        m_library->showMessage(tr("Audio is unavailable."));
+        return;
+    }
+    stopAudition();
+    ImportedSample sample;
+    QString error;
+    if (!importAudioFile(path, &sample, &error)) {
+        m_library->showMessage(error);
+        return;
+    }
+    SampleDocument doc(std::move(sample));
+    const ProcessedSample &out = doc.processed();
+    if (out.s8.isEmpty()) {
+        m_library->showMessage(tr("Nothing to play."));
+        return;
+    }
+    const AuditionSlots::Adsr adsr; // one-shot preview at the default envelope
+    const uint8_t key = uint8_t(m_auditionKey->value());
+    if (m_engine->auditionSample(out.s8, out.freq, 0, false, key, adsr)) {
+        m_library->showMessage(QString());
+        return;
+    }
+    // The slot can still be retiring the previous audition: release it
+    // and retry once before giving up.
+    m_engine->auditionSampleOff();
+    if (m_engine->auditionSample(out.s8, out.freq, 0, false, key, adsr))
+        m_library->showMessage(QString());
+    else
+        m_library->showMessage(tr("Audition is busy — try again."));
+}
+
+// Library load: read and decode one byte sequence before changing the
+// document. The hash stays coupled to those decoded bytes, rather than a
+// later reread which could observe a changed file.
+void SampleEditorDialog::loadLibrarySample(const QString &path)
+{
+    QFile sourceFile(path);
+    if (!sourceFile.open(QIODevice::ReadOnly)) {
+        m_library->showMessage(QStringLiteral("cannot read %1.").arg(path));
+        return;
+    }
+    const QByteArray sourceBytes = sourceFile.readAll();
+    if (sourceFile.error() != QFileDevice::NoError) {
+        m_library->showMessage(QStringLiteral("cannot read %1.").arg(path));
+        return;
+    }
+    const QString sourcePath = QFileInfo(path).absoluteFilePath();
+    ImportedSample sample;
+    QString error;
+    if (!importAudioBytes(sourceBytes, sourcePath, &sample, &error)) {
+        m_library->showMessage(error);
+        return;
+    }
+    const QString sourceSha256 = SampleRegistrar::sourceHashHex(sourceBytes);
+    resetSample(std::move(sample));
+    m_loadedSourceSha256 = sourceSha256;
+    m_hasSource = true;
+    m_editorPane->setEnabled(true);
+    validateName();
+    m_library->showMessage(QString());
 }

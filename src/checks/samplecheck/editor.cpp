@@ -4,17 +4,24 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDialog>
+#include <QDir>
 #include <QDoubleSpinBox>
+#include <QFile>
 #include <QFileInfo>
 #include <QImage>
 #include <QLabel>
 #include <QLineEdit>
+#include <QListWidget>
+#include <QObject>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QScrollBar>
+#include <QSettings>
 #include <QSpinBox>
 #include <QSplitter>
 #include <QUndoStack>
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -25,6 +32,7 @@
 #include "project/samplereg.h"
 #include "project/voicegroupsource.h"
 #include "ui/sampleeditordialog.h"
+#include "ui/samplelibrarypanel.h"
 #include "ui/waveformview.h"
 
 extern "C" {
@@ -39,6 +47,22 @@ void sendSpaceStroke(QObject &target, Qt::KeyboardModifiers modifiers, bool auto
                             autoRepeat, 1);
     checks::events::sendKey(target, QEvent::KeyRelease, Qt::Key_Space, modifiers,
                             QStringLiteral(" "), autoRepeat, 1);
+}
+
+// Click (or double-click) a list item at its visual center.
+void clickItem(QListWidget &list, const QListWidgetItem *item, bool doubleClick)
+{
+    QWidget *view = list.viewport();
+    const QPointF center(list.visualItemRect(item).center());
+    if (doubleClick) {
+        checks::events::sendMouse(*view, QEvent::MouseButtonDblClick, center, Qt::LeftButton,
+                                  Qt::LeftButton, Qt::NoModifier);
+    } else {
+        checks::events::sendMouse(*view, QEvent::MouseButtonPress, center, Qt::LeftButton,
+                                  Qt::LeftButton, Qt::NoModifier);
+    }
+    checks::events::sendMouse(*view, QEvent::MouseButtonRelease, center, Qt::LeftButton,
+                              Qt::NoButton, Qt::NoModifier);
 }
 
 } // namespace
@@ -161,6 +185,45 @@ void runPipelineDialogChecks(Reporter &reporter, const RegisteredSampleProject &
         if (reporter.failureCount() == before)
             std::printf("samplecheck: dialog validation OK\n");
     }
+
+    // ---- Editing an existing sample can become a separate registration
+    // without closing the dialog or reusing the original-name validator. ----
+    {
+        const int before = reporter.failureCount();
+        const QString copyName = registeredSampleName + QStringLiteral("_copy");
+        const auto originalValidator = [registeredSampleName](const QString &name, QString *) {
+            return name == registeredSampleName;
+        };
+        const auto copyValidator = [copyName](const QString &name, QString *) {
+            return name == copyName;
+        };
+        SampleEditorDialog dialog(hiRes, originalValidator);
+        dialog.setEditTarget(registeredSampleName, copyValidator);
+        dialog.show();
+        QApplication::processEvents();
+        auto *nameEdit = dialog.findChild<QLineEdit *>(QStringLiteral("sampleNameEdit"));
+        auto *saveAsNew = dialog.findChild<QPushButton *>(QStringLiteral("sampleSaveAsNewButton"));
+        auto *addButton = dialog.findChild<QPushButton *>(QStringLiteral("sampleAddButton"));
+        bool accepted = false;
+        QObject::connect(&dialog, &QDialog::accepted, &dialog, [&accepted] { accepted = true; });
+        reporter.expect(nameEdit && saveAsNew && addButton, "save-as-new controls found");
+        if (nameEdit && saveAsNew && addButton) {
+            reporter.expect(nameEdit->isReadOnly() && saveAsNew->isVisible(),
+                            "edit target locks its name and exposes Save as New Sample");
+            saveAsNew->click();
+            QApplication::processEvents();
+            reporter.expect(!accepted && dialog.saveAsNew(),
+                            "Save as New Sample stays open and enters new registration mode");
+            reporter.expect(!nameEdit->isReadOnly() && nameEdit->text() == copyName,
+                            "Save as New Sample unlocks and suggests a distinct name");
+            reporter.expect(!saveAsNew->isVisible(), "Save as New Sample hides after use");
+            reporter.expect(addButton->text() == QStringLiteral("Add to Project") &&
+                                addButton->isEnabled(),
+                            "new registration action is enabled for the suggested name");
+        }
+        if (reporter.failureCount() == before)
+            std::printf("samplecheck: save as new sample OK\n");
+    }
 }
 
 void runEditorChecks(Reporter &reporter, const RegisteredSampleProject &project,
@@ -169,6 +232,14 @@ void runEditorChecks(Reporter &reporter, const RegisteredSampleProject &project,
     const QString &root = project.root;
     const ImportedSample &hiRes = dspFixture.hiRes;
     const QString incPath = root + QStringLiteral("/sound/direct_sound_data.inc");
+    const QString sampleDir = root + QStringLiteral("/sound/direct_sound_samples/");
+    const QString absDir = QDir(sampleDir).absolutePath();
+    const QString libraryWavName = project.registeredSampleName + QStringLiteral(".wav");
+    const QString libraryWavAbs = QFileInfo(sampleDir + libraryWavName).absoluteFilePath();
+    const QString nestedDir = QDir(sampleDir).filePath(QStringLiteral("nested"));
+    const QString nestedWavName = QStringLiteral("nested_tone.wav");
+    const QString nestedWavAbs =
+        QFileInfo(QDir(nestedDir).filePath(nestedWavName)).absoluteFilePath();
     // ---- the editor, offscreen (phase 3): waveform drags, suggest chips,
     // pitch prefill, dialog-local undo, commit re-runs the §1 assertions ----
     {
@@ -487,6 +558,350 @@ void runEditorChecks(Reporter &reporter, const RegisteredSampleProject &project,
         }
         if (reporter.failureCount() == before)
             std::printf("samplecheck: space audition OK\n");
+    }
+
+    // ---- Sample library panel: discovery, add/dedupe, persistence,
+    // engine-less preview refusal, and the load reset. The dialog embeds
+    // the panel; everything below drives the public widgets only. ----
+    {
+        const int before = reporter.failureCount();
+        reporter.expect(QDir().mkpath(nestedDir), "sample library creates the nested directory");
+        reporter.expect(QFile::exists(libraryWavAbs), "registered sample exists for library setup");
+        if (QFile::exists(nestedWavAbs))
+            reporter.expect(QFile::remove(nestedWavAbs), "nested library sample resets safely");
+        if (QFile::exists(libraryWavAbs))
+            reporter.expect(QFile::copy(libraryWavAbs, nestedWavAbs),
+                            "sample library copies a compatible nested wav");
+
+        SampleEditorDialog dialog(hiRes, [](const QString &, QString *) { return true; });
+        dialog.resize(900, 640);
+        dialog.show();
+        QApplication::processEvents();
+        auto *panel = dialog.findChild<SampleLibraryPanel *>(QStringLiteral("sampleLibraryPanel"));
+        auto *libraryAdd =
+            dialog.findChild<QPushButton *>(QStringLiteral("sampleLibraryAddFolder"));
+        auto *libraryRemove =
+            dialog.findChild<QPushButton *>(QStringLiteral("sampleLibraryRemoveFolder"));
+        auto *folders = dialog.findChild<QListWidget *>(QStringLiteral("sampleLibraryFolders"));
+        auto *directories =
+            dialog.findChild<QListWidget *>(QStringLiteral("sampleLibraryDirectories"));
+        auto *files = dialog.findChild<QListWidget *>(QStringLiteral("sampleLibraryFiles"));
+        auto *status = dialog.findChild<QLabel *>(QStringLiteral("sampleLibraryStatus"));
+        auto *nameEdit = dialog.findChild<QLineEdit *>(QStringLiteral("sampleNameEdit"));
+        SampleDocument *doc = dialog.document();
+        QUndoStack *undo = dialog.undoStack();
+        reporter.expect(panel && libraryAdd && libraryRemove && folders && directories && files &&
+                            status && nameEdit,
+                        "library panel and controls found");
+        if (panel && folders && directories && files && status && nameEdit) {
+            reporter.expect(folders->count() == 0 && directories->count() == 0 &&
+                                files->count() == 0,
+                            "library lists start empty");
+            panel->addFolder(sampleDir);
+
+            {
+                auto *rootItem = directories->item(0);
+                reporter.expect(rootItem && rootItem->text() == QStringLiteral("This Folder"),
+                                "directory list starts with This Folder");
+                if (rootItem) {
+                    reporter.expectError(rootItem->data(Qt::UserRole).toString(), absDir,
+                                         "root directory carries the normalized absolute path");
+                }
+            }
+            {
+                auto *nestedItem =
+                    directories->findItems(QStringLiteral("nested"), Qt::MatchExactly).value(0);
+                reporter.expect(nestedItem != nullptr, "library lists the direct nested directory");
+                if (nestedItem) {
+                    reporter.expectError(nestedItem->data(Qt::UserRole).toString(),
+                                         QFileInfo(nestedDir).absoluteFilePath(),
+                                         "nested directory carries its absolute path");
+                    clickItem(*directories, nestedItem, false);
+                    QApplication::processEvents();
+                }
+            }
+            {
+                auto *nestedWavItem = files->findItems(nestedWavName, Qt::MatchExactly).value(0);
+                reporter.expect(nestedWavItem != nullptr,
+                                "selecting nested lists its compatible wav");
+                if (nestedWavItem) {
+                    reporter.expectError(nestedWavItem->data(Qt::UserRole).toString(), nestedWavAbs,
+                                         "nested file item carries the absolute wav path");
+                }
+            }
+            {
+                auto *rootItem = directories->item(0);
+                reporter.expect(rootItem != nullptr, "root directory remains selectable");
+                if (rootItem) {
+                    clickItem(*directories, rootItem, false);
+                    QApplication::processEvents();
+                }
+            }
+            {
+                auto *rootWavItem = files->findItems(libraryWavName, Qt::MatchExactly).value(0);
+                reporter.expect(rootWavItem != nullptr,
+                                "reselecting root restores the registered sample");
+                if (rootWavItem) {
+                    reporter.expectError(rootWavItem->data(Qt::UserRole).toString(), libraryWavAbs,
+                                         "root file item carries the absolute wav path");
+                }
+            }
+
+            const int foldersAfterAdd = folders->count();
+            const int directoriesAfterAdd = directories->count();
+            const int filesAfterAdd = files->count();
+            panel->addFolder(sampleDir);
+            const bool deduped = folders->count() == foldersAfterAdd &&
+                                 directories->count() == directoriesAfterAdd &&
+                                 files->count() == filesAfterAdd &&
+                                 files->findItems(libraryWavName, Qt::MatchExactly).size() == 1;
+            reporter.expect(deduped, "re-adding the folder does not duplicate entries");
+            QSettings settings;
+            reporter.expect(settings.value(QStringLiteral("sampleLibraryFolders"))
+                                .toStringList()
+                                .contains(absDir),
+                            "addFolder persists the normalized folder path");
+            settings.sync();
+
+            auto *wavItem = files->findItems(libraryWavName, Qt::MatchExactly).value(0);
+            if (wavItem) {
+                ImportedSample librarySource;
+                QString libraryError;
+                reporter.expect(importAudioFile(libraryWavAbs, &librarySource, &libraryError),
+                                "library source imports for load defaults");
+                const SampleEditParams libraryDefaults =
+                    SampleDocument::defaultParams(librarySource);
+                auto *cropStart = dialog.findChild<QSpinBox *>(QStringLiteral("sampleCropStart"));
+                auto *baseKey = dialog.findChild<QSpinBox *>(QStringLiteral("sampleBaseKey"));
+                auto *fineTune =
+                    dialog.findChild<QDoubleSpinBox *>(QStringLiteral("sampleFineTune"));
+                auto *normalize =
+                    dialog.findChild<QComboBox *>(QStringLiteral("sampleNormalizeMode"));
+                auto *loopOn = dialog.findChild<QCheckBox *>(QStringLiteral("sampleLoopOn"));
+                auto *crossfade = dialog.findChild<QCheckBox *>(QStringLiteral("sampleCrossfade"));
+                auto *rateCombo = dialog.findChild<QComboBox *>(QStringLiteral("sampleRateCombo"));
+                reporter.expect(cropStart && baseKey && fineTune && normalize && loopOn &&
+                                    crossfade && rateCombo,
+                                "library load reset controls found");
+                if (cropStart && baseKey && fineTune && normalize && loopOn && crossfade &&
+                    rateCombo) {
+                    // Set each retained control to a valid value distinct
+                    // from the incoming file's defaults. The post-load
+                    // checks below catch UI state that a later edit would
+                    // otherwise write back into the replacement document.
+                    const int libraryCropLimit = static_cast<int>(libraryDefaults.cropEnd - 1);
+                    const int cropStartBeforeLoad =
+                        libraryDefaults.cropStart == cropStart->minimum()
+                            ? std::min(cropStart->maximum(), libraryCropLimit)
+                            : cropStart->minimum();
+                    const int baseKeyBeforeLoad = libraryDefaults.baseKey == baseKey->minimum()
+                                                      ? baseKey->maximum()
+                                                      : baseKey->minimum();
+                    const double fineTuneBeforeLoad =
+                        libraryDefaults.fineTuneCents == fineTune->minimum() ? fineTune->maximum()
+                                                                             : fineTune->minimum();
+                    const int libraryNormalizeMode =
+                        static_cast<int>(libraryDefaults.normalizeMode);
+                    const int normalizeBeforeLoad = libraryNormalizeMode == 0 ? 1 : 0;
+                    reporter.expect(cropStartBeforeLoad >= cropStart->minimum() &&
+                                        cropStartBeforeLoad != libraryDefaults.cropStart &&
+                                        baseKeyBeforeLoad != libraryDefaults.baseKey &&
+                                        fineTuneBeforeLoad != libraryDefaults.fineTuneCents &&
+                                        normalizeBeforeLoad < normalize->count(),
+                                    "library pre-load values differ from its defaults");
+                    cropStart->setValue(cropStartBeforeLoad);
+                    baseKey->setValue(baseKeyBeforeLoad);
+                    fineTune->setValue(fineTuneBeforeLoad);
+                    normalize->setCurrentIndex(normalizeBeforeLoad);
+                    if (loopOn->isChecked())
+                        crossfade->setChecked(!libraryDefaults.crossfadeOn);
+                    loopOn->setChecked(!libraryDefaults.loopOn);
+                    if (rateCombo->count() > 1)
+                        rateCombo->setCurrentIndex(1);
+                    reporter.expect(
+                        cropStart->value() != libraryDefaults.cropStart &&
+                            baseKey->value() != libraryDefaults.baseKey &&
+                            std::abs(fineTune->value() - libraryDefaults.fineTuneCents) >= 1e-9 &&
+                            normalize->currentIndex() != libraryNormalizeMode &&
+                            loopOn->isChecked() != libraryDefaults.loopOn,
+                        "editor controls differ before library load");
+                    reporter.expect(undo->count() > 0,
+                                    "pre-load control edits populate the dialog-local undo");
+                    // A click previews: with no engine the dialog refuses
+                    // via the status label and the open document is
+                    // untouched.
+                    const QString sourceBefore = doc->source().sourcePath;
+                    clickItem(*files, wavItem, false);
+                    QApplication::processEvents();
+                    reporter.expectError(status->text(), QStringLiteral("Audio is unavailable."),
+                                         "engine-less preview status");
+                    reporter.expect(doc->source().sourcePath == sourceBefore,
+                                    "a refused preview does not touch the document");
+                    // A double-click loads: the document swaps to the
+                    // clicked file, the name prefills from its sanitized
+                    // basename, each exercised editor control adopts the
+                    // replacement params, and the dialog-local undo starts
+                    // empty.
+                    nameEdit->setText(QStringLiteral("library_edit"));
+                    clickItem(*files, wavItem, true);
+                    QApplication::processEvents();
+                    reporter.expectError(doc->source().sourcePath, libraryWavAbs,
+                                         "double-click loads the clicked file");
+                    reporter.expectError(
+                        dialog.loadedSourceSha256(),
+                        SampleRegistrar::sourceHashHex(readFileBytes(libraryWavAbs)),
+                        "library load captures the decoded file's source hash");
+                    reporter.expectError(nameEdit->text(), project.registeredSampleName,
+                                         "load prefills the sanitized basename");
+                    reporter.expect(undo->count() == 0, "loading resets the dialog-local undo");
+                    reporter.expect(cropStart->value() == doc->params().cropStart &&
+                                        baseKey->value() == doc->params().baseKey &&
+                                        std::abs(fineTune->value() - doc->params().fineTuneCents) <
+                                            1e-9 &&
+                                        normalize->currentIndex() == doc->params().normalizeMode &&
+                                        loopOn->isChecked() == doc->params().loopOn &&
+                                        crossfade->isChecked() == doc->params().crossfadeOn,
+                                    "loading resets retained editor controls to document params");
+                    if (rateCombo->count() > 1) {
+                        reporter.expect(rateCombo->currentIndex() == 0 &&
+                                            doc->params().targetRate == doc->source().sampleRate,
+                                        "loading resets the target-rate combo to keep source");
+                    }
+                }
+            }
+        }
+        // The saved folder list restores into a fresh dialog.
+        {
+            SampleEditorDialog restored(hiRes, [](const QString &, QString *) { return true; });
+            restored.show();
+            QApplication::processEvents();
+            auto *restoredFolders =
+                restored.findChild<QListWidget *>(QStringLiteral("sampleLibraryFolders"));
+            auto *restoredDirectories =
+                restored.findChild<QListWidget *>(QStringLiteral("sampleLibraryDirectories"));
+            reporter.expect(restoredFolders && restoredFolders->count() == 1 && restoredDirectories,
+                            "a second dialog restores the saved folder");
+            if (restoredFolders && restoredFolders->count() == 1) {
+                reporter.expectError(restoredFolders->item(0)->text(), absDir,
+                                     "restored folder is the saved absolute path");
+            }
+            if (restoredDirectories) {
+                auto *restoredNested =
+                    restoredDirectories->findItems(QStringLiteral("nested"), Qt::MatchExactly)
+                        .value(0);
+                reporter.expect(restoredNested != nullptr,
+                                "restored dialog exposes the nested directory");
+            }
+        }
+        if (reporter.failureCount() == before)
+            std::printf("samplecheck: sample library OK\n");
+    }
+
+    // ---- A source-less editor keeps the placeholder uncommittable until
+    // a library file is loaded, then adopts that file and its provenance. ----
+    {
+        const int before = reporter.failureCount();
+        const QString sourceLessDir = QDir(root).filePath(QStringLiteral("source-less-library"));
+        const QString sourceLessWavName = QStringLiteral("source_less_tone.wav");
+        const QString sourceLessWavAbs =
+            QFileInfo(QDir(sourceLessDir).filePath(sourceLessWavName)).absoluteFilePath();
+        const QByteArray sourceLessBytes = dspFixture.hiResWav;
+        reporter.expect(writeFile(sourceLessWavAbs, sourceLessBytes),
+                        "source-less library fixture writes");
+        const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
+        SampleEditorDialog dialog([&](const QString &name, QString *validationError) {
+            return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+        });
+        dialog.resize(900, 640);
+        dialog.show();
+        QApplication::processEvents();
+        auto *editorPane = dialog.findChild<QWidget *>(QStringLiteral("sampleEditorPane"));
+        auto *addButton = dialog.findChild<QPushButton *>(QStringLiteral("sampleAddButton"));
+        auto *panel = dialog.findChild<SampleLibraryPanel *>(QStringLiteral("sampleLibraryPanel"));
+        auto *directories =
+            dialog.findChild<QListWidget *>(QStringLiteral("sampleLibraryDirectories"));
+        auto *files = dialog.findChild<QListWidget *>(QStringLiteral("sampleLibraryFiles"));
+        auto *nameEdit = dialog.findChild<QLineEdit *>(QStringLiteral("sampleNameEdit"));
+        auto *status = dialog.findChild<QLabel *>(QStringLiteral("sampleNameStatus"));
+        SampleDocument *doc = dialog.document();
+        reporter.expect(editorPane && addButton && panel && directories && files && nameEdit &&
+                            status && doc,
+                        "source-less dialog controls found");
+        if (editorPane && addButton && panel && directories && files && nameEdit && status && doc) {
+            reporter.expect(!editorPane->isEnabled() && !addButton->isEnabled(),
+                            "placeholder editor cannot commit");
+            reporter.expect(
+                status->text().contains(QStringLiteral("choose"), Qt::CaseInsensitive) &&
+                    status->text().contains(QStringLiteral("library"), Qt::CaseInsensitive),
+                "source-less status asks to choose from the library");
+            panel->addFolder(sourceLessDir);
+            QApplication::processEvents();
+            auto *rootItem = directories->item(0);
+            reporter.expect(rootItem && rootItem->text() == QStringLiteral("This Folder"),
+                            "source-less library opens at This Folder");
+            if (rootItem) {
+                clickItem(*directories, rootItem, false);
+                QApplication::processEvents();
+            }
+            auto *wavItem = files->findItems(sourceLessWavName, Qt::MatchExactly).value(0);
+            reporter.expect(wavItem != nullptr, "source-less library lists the root wav");
+            if (wavItem) {
+                clickItem(*files, wavItem, false);
+                QApplication::processEvents();
+                clickItem(*files, wavItem, true);
+                QApplication::processEvents();
+                reporter.expect(editorPane->isEnabled() && addButton->isEnabled(),
+                                "library load activates the editor and commit");
+                reporter.expectError(nameEdit->text(), QStringLiteral("source_less_tone"),
+                                     "source-less load prefills the sample name");
+                reporter.expectError(doc->source().sourcePath, sourceLessWavAbs,
+                                     "source-less load swaps the document source");
+                reporter.expectError(dialog.loadedSourceSha256(),
+                                     SampleRegistrar::sourceHashHex(sourceLessBytes),
+                                     "source-less load captures decoded file bytes");
+            }
+        }
+        if (reporter.failureCount() == before)
+            std::printf("samplecheck: source-less editor OK\n");
+    }
+
+    // ---- Library preview with a live engine: a click auditions the file
+    // and clears the status; skipped cleanly without an audio device ----
+    {
+        const int before = reporter.failureCount();
+        AudioEngine engine;
+        QString audioError;
+        if (!engine.init(&audioError)) {
+            std::printf("samplecheck: SKIP library preview (no audio device: %s)\n",
+                        qUtf8Printable(audioError));
+        } else {
+            SampleEditorDialog dialog(
+                hiRes, [](const QString &, QString *) { return true; }, &engine);
+            dialog.resize(900, 640);
+            dialog.show();
+            QApplication::processEvents();
+            auto *panel =
+                dialog.findChild<SampleLibraryPanel *>(QStringLiteral("sampleLibraryPanel"));
+            auto *files = dialog.findChild<QListWidget *>(QStringLiteral("sampleLibraryFiles"));
+            auto *status = dialog.findChild<QLabel *>(QStringLiteral("sampleLibraryStatus"));
+            reporter.expect(panel && files && status, "library controls found with an engine");
+            if (panel && files && status) {
+                // The folder saved above restores itself; the idempotent
+                // add also covers runs where persistence was empty.
+                panel->addFolder(sampleDir);
+                QListWidgetItem *wavItem =
+                    files->findItems(libraryWavName, Qt::MatchExactly).value(0);
+                reporter.expect(wavItem != nullptr, "restored folder lists the registered sample");
+                if (wavItem) {
+                    clickItem(*files, wavItem, false);
+                    QApplication::processEvents();
+                    reporter.expect(status->text().isEmpty(),
+                                    "live preview clears the library status");
+                }
+            }
+        }
+        if (reporter.failureCount() == before)
+            std::printf("samplecheck: library preview OK\n");
     }
 }
 

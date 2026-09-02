@@ -23,7 +23,9 @@ class QLabel;
 class QLineEdit;
 class QPushButton;
 class QSpinBox;
+class QSplitter;
 class QToolButton;
+class SampleLibraryPanel;
 class WaveformView;
 
 // The Sample Editor dialog (docs/sample-editor/PLAN.md §5): the dominant
@@ -39,9 +41,14 @@ class WaveformView;
 // inputs are filtered so they can't swallow the key; nothing here
 // legitimately types a space). Expert rows live in a collapsed Advanced
 // disclosure; the whole control column
-// below the waveform rides a squeeze-then-scroll area. Pure view: the
-// dialog renders and hands out the export bytes; MainWindow does the
-// writes on accept. Parameter edits ride a dialog-local QUndoStack —
+// below the waveform rides a squeeze-then-scroll area. The persistent
+// sample library panel (SampleLibraryPanel) docks left of the editor in
+// a horizontal splitter: Preview auditions a decoded library file
+// through the audition slot without touching the document, and Load
+// swaps the document under edit for a fresh import — every per-source
+// state reseeds while a locked edit-target name survives. Pure view:
+// the dialog renders and hands out the export bytes; MainWindow does
+// the writes on accept. Parameter edits ride a dialog-local QUndoStack —
 // nothing project-visible exists until commit.
 class SampleEditorDialog : public QDialog
 {
@@ -59,12 +66,19 @@ class SampleEditorDialog : public QDialog
                        AudioEngine *engine = nullptr, const AuditionSlots::Adsr *destAdsr = nullptr,
                        QWidget *parent = nullptr);
 
+    // Opens from the library with no source selected; Load enables editing.
+    SampleEditorDialog(NameValidator validator, AudioEngine *engine = nullptr,
+                       const AuditionSlots::Adsr *destAdsr = nullptr, QWidget *parent = nullptr);
+
     // The validated registration name (valid whenever the dialog accepts).
     QString sampleName() const;
 
     // The current render, exported per FORMATS.md §1 — what "Add to
     // Project" commits.
     QByteArray wavBytes();
+
+    // SHA-256 of the exact bytes decoded by the most recent library Load.
+    const QString &loadedSourceSha256() const noexcept { return m_loadedSourceSha256; }
 
     // The pipeline document behind the controls (harness introspection).
     SampleDocument *document() { return &m_doc; }
@@ -74,10 +88,13 @@ class SampleEditorDialog : public QDialog
     // Undo/redo plumbing: apply a parameter set and re-sync every control.
     void applyParamsExternal(const SampleEditParams &params);
 
-    // "Edit sample…" reopen (PLAN.md §6 phase 6): the sample is already
-    // registered as <name>, so the name is fixed (renames would need .inc
-    // surgery — out of scope) and the commit button reads "Save Sample".
-    void setEditTarget(const QString &name);
+    // "Edit sample…" reopens the registered <name> for replacement. Its
+    // fixed name keeps "Save Sample"; an optional second validator exposes
+    // "Save as New Sample" to register a separately named copy.
+    void setEditTarget(const QString &name, NameValidator saveAsNewValidator = {});
+
+    // True when acceptance registers a copy rather than replacing the edit target.
+    bool saveAsNew() const;
 
   protected:
     void done(int result) override; // silence the audition on any close
@@ -90,9 +107,11 @@ class SampleEditorDialog : public QDialog
     void syncUiFromParams();
     void refreshOutputs();
     void validateName();
+    void resetSample(ImportedSample sample);
     void ensurePitchDetected();
     void updatePitchHint();
     void applyDetectedPitch();
+    void prefillPitchFromDetection();
     void computeChips();
     bool ensureChips();
     void autoPopulateLoop();
@@ -105,13 +124,19 @@ class SampleEditorDialog : public QDialog
     void stopAudition();
     void republishAudition();
     void auditionTick();
+    void previewLibrarySample(const QString &path);
+    void loadLibrarySample(const QString &path);
 
     SampleDocument m_doc;
     NameValidator m_validator;
+    NameValidator m_saveAsNewValidator;
+    bool m_saveAsNew = false;
     AudioEngine *m_engine = nullptr;
     bool m_hasDestAdsr = false;
     AuditionSlots::Adsr m_destAdsr;
     QUndoStack m_undo;
+    bool m_hasSource = true;
+    QString m_loadedSourceSha256;
     bool m_syncing = false;
     // The fine-tune spin's rendition of the source tuning (the spin rounds
     // to 2 decimals): the verbatim-agbp carry compares against this, not the
@@ -158,6 +183,8 @@ class SampleEditorDialog : public QDialog
     QTimer m_auditionTimer;
     QElapsedTimer m_auditionClock;
 
+    QWidget *m_editorPane = nullptr;
+    SampleLibraryPanel *m_library = nullptr;
     WaveformView *m_waveform = nullptr;
     // The loop controls: a plain checkbox, and a frame that exists only
     // while the sample loops.
@@ -171,6 +198,7 @@ class SampleEditorDialog : public QDialog
     QSpinBox *m_cropEnd = nullptr;
     QSpinBox *m_loopStart = nullptr;
     QSpinBox *m_loopEnd = nullptr;
+    QLabel *m_sourceLabel = nullptr;
     QSpinBox *m_baseKey = nullptr;
     QDoubleSpinBox *m_fineTune = nullptr;
     QPushButton *m_pitchApply = nullptr;
@@ -186,8 +214,10 @@ class SampleEditorDialog : public QDialog
     // fine-tune) plus the technical output readout, collapsed by default.
     QToolButton *m_advancedToggle = nullptr;
     QWidget *m_advancedBody = nullptr;
+    QLabel *m_sourceFormatLabel = nullptr;
     QLabel *m_techDetail = nullptr;
     QLineEdit *m_nameEdit = nullptr;
     QLabel *m_nameStatus = nullptr;
+    QPushButton *m_saveAsNewButton = nullptr;
     QPushButton *m_addButton = nullptr;
 };

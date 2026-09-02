@@ -1377,6 +1377,54 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         }
     }
 
+    // 9a. A successful sample commit refreshes the catalog, then loads the
+    // shared sample set from that refreshed state without an audition. Publish
+    // the worker's public completion rather than writing a fixture sample:
+    // this exercises the same ProjectWorkspace -> WorkspaceUi connection that
+    // a real commit uses, while keeping the project and undo history intact.
+    {
+        int refreshRequests = 0;
+        int sampleSetRequests = 0;
+        int auditions = 0;
+        bool sampleSetUsesRefreshedCatalog = false;
+        const QMetaObject::Connection operationConnection = connect(
+            m_workspace.get(), &WorkspaceUi::projectOperationRequested, this,
+            [this, &refreshRequests, &sampleSetRequests,
+             &sampleSetUsesRefreshedCatalog](const ProjectOperation &operation) {
+                if (std::holds_alternative<RefreshCatalogInput>(operation)) {
+                    refreshRequests++;
+                } else if (const auto *const input = std::get_if<LoadSampleSetInput>(&operation)) {
+                    sampleSetRequests++;
+                    const VoicegroupCatalog &catalog = m_workspace->projectState().catalog;
+                    sampleSetUsesRefreshedCatalog =
+                        refreshRequests == 1 && input->samples == catalog.directSound &&
+                        input->waves == catalog.progWave && input->keysplits == catalog.keysplits;
+                }
+            });
+        const QMetaObject::Connection auditionConnection =
+            connect(m_workspace.get(), &WorkspaceUi::sampleAuditionRequested, this,
+                    [&auditions](const QString &, VgAuditionKind, const AuditionSlots::Adsr &) {
+                        auditions++;
+                    });
+
+        check(m_workspace->sampleSet() == nullptr,
+              "the sample set was already loaded before the post-commit preload check");
+        m_projectWorkspace->projectEventPublished(
+            ProjectEvent{SampleCommitted{QStringLiteral("vgsavecheck_preload"), true, true, {}}});
+        const auto preloadWait = settled([&] {
+            return refreshRequests == 1 && sampleSetRequests == 1 &&
+                   m_workspace->sampleSet() != nullptr;
+        });
+        check(preloadWait == checks::async_wait::Result::Ready,
+              "a successful sample commit did not preload the shared sample set");
+        check(sampleSetUsesRefreshedCatalog,
+              "the post-commit sample-set load did not use the refreshed catalog");
+        check(auditions == 0, "the post-commit sample-set preload required an audition");
+
+        disconnect(operationConnection);
+        disconnect(auditionConnection);
+    }
+
     // 10. The sample picker (the Sample field for DirectSound voices):
     // replaces the giant combo, filters by typed text, auditions the
     // highlighted sample, marks looped samples, commits an undoable symbol
