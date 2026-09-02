@@ -2,6 +2,7 @@
 
 #include "ui/songview/quick/timelinequickchrome.h"
 #include "ui/songview/quick/timelinequickscene.h"
+#include "ui/songview/timelinebandlayout.h"
 
 #include <QEvent>
 #include <QFlags>
@@ -124,6 +125,10 @@ class TimelineQuickView final : public QWidget
     QQuickItem *rootObject() const;
     QQuickWindow *quickWindow() const;
     void syncAppearance();
+    void setBandLayout(TimelineBandLayout layout);
+    // Republishes the stored band layout after native-window lifecycle events
+    // (show, WinId, DPR); changes neither the canonical value nor dirty domains.
+    void refreshBandLayout();
 
     void requestUpdate(PianoRollQuickDirtySet dirty);
     void requestTimelineUpdate(TimelineQuickDirtySet dirty);
@@ -137,25 +142,13 @@ class TimelineQuickView final : public QWidget
     void resizeEvent(QResizeEvent *event) override;
 
   private:
-    enum class Band : std::size_t {
-        Ruler,
-        Roll,
-        OtherEvents,
-        Automation,
-        Velocity,
-        VoiceChanges,
-        Count,
-    };
-    using PublishedLayout = std::array<std::optional<QRect>, static_cast<std::size_t>(Band::Count)>;
-
     qreal quickRootXForSongViewX(qreal songViewX) const noexcept;
     std::optional<qreal>
     guideSongViewContentXAtOrAfterStart(std::optional<qreal> songViewContentX) const noexcept;
     void setHoverChrome(std::optional<qreal> songViewContentX);
     void setEditChrome(std::optional<qreal> songViewContentX);
 
-    void scheduleHostGeometryAndVisibilitySync();
-    void synchronizeHostGeometryAndVisibility();
+    void publishTimelineBandLayout();
     void flushUpdate();
     void synchronize(PianoRollQuickDirtySet dirty);
     void synchronizeTimeline(TimelineQuickDirtySet dirty);
@@ -176,7 +169,6 @@ class TimelineQuickView final : public QWidget
     QPointer<PianoRoll> m_roll;
     QPointer<OtherStrip> m_otherEvents;
     QPointer<AutomationPage> m_automation;
-    QPointer<QWidget> m_automationScrollViewport;
     QPointer<VelocityArea> m_velocity;
     QPointer<VoiceChangeArea> m_voiceChanges;
     QPointer<SongView> m_songView;
@@ -186,7 +178,7 @@ class TimelineQuickView final : public QWidget
     std::array<TimelineQuickItem *, static_cast<std::size_t>(TimelineQuickLayer::Count)> m_items{};
     std::array<TimelineChromeItem *, 12> m_chromeItems{};
     std::array<QPointer<QWidget>, 5> m_nativeChrome;
-    PublishedLayout m_publishedLayout;
+    TimelineBandLayout m_bandLayout;
     std::optional<qreal> m_hoverSongViewContentX;
     std::optional<qreal> m_editSongViewContentX;
     TimelineQuickHoverOwner m_hoverOwner = TimelineQuickHoverOwner::None;

@@ -1,14 +1,14 @@
 #pragma once
 
+#include "songview/timelinebandlayout.h"
+
 #include <QColor>
 #include <QPainterPath>
-#include <QPointer>
 #include <QRect>
 #include <QRegion>
 #include <QSize>
 #include <QWidget>
 #include <memory>
-#include <vector>
 #ifdef PORYDAW_USE_MACOS_PLAYHEAD_IMAGES
 #include <QImage>
 #endif
@@ -28,11 +28,6 @@ qreal playheadGlowLeftExtent(bool playing);
 qreal playheadGlowRightExtent(bool playing);
 qreal playheadPeakAlpha(bool playing);
 
-struct PlayheadBand {
-    QWidget &widget;
-    int timelineOrigin;
-};
-
 /// Whether the platform-native playhead renderer is enabled for this process.
 bool platformPlayheadRendererEnabled();
 
@@ -42,27 +37,22 @@ class PlayheadOverlay final : public QWidget
     Q_DISABLE_COPY_MOVE(PlayheadOverlay)
 
   public:
-    explicit PlayheadOverlay(QWidget &owner, PlayheadBand rulerBand, QWidget &rollBand,
-                             std::vector<PlayheadBand> clipBands);
-    ~PlayheadOverlay() override;
+    explicit PlayheadOverlay(QWidget &owner, const TimelineBandLayout &layout);
 
     void setPlayhead(qreal timelineX, bool visible, bool playing);
-    void updateBands(PlayheadBand rulerBand, QWidget &rollBand,
-                     std::vector<PlayheadBand> clipBands);
+    // layout is SongView's canonical snapshot; band rects are already
+    // owner-clipped (see songview::TimelineBandLayout) and stored verbatim.
+    void updateBands(const TimelineBandLayout &layout);
 
   protected:
     void paintEvent(QPaintEvent *event) override;
-    bool eventFilter(QObject *watched, QEvent *event) override;
     void changeEvent(QEvent *event) override;
 
   private:
     qreal finalX() const { return static_cast<qreal>(m_timelineOrigin) + m_timelineX; }
 
-    QRect visibleSurfaceRect(const QWidget *surface, QWidget *owner, int origin) const;
     QRegion fallbackPaintRegion() const;
     const QPainterPath &playheadTrianglePath();
-    void removeObservedSurfaceFilters();
-    void observeSurfaceGeometry();
     void synchronizeGeometry();
     void updateFallbackRegion();
     void exposeFallbackPixels(const QRegion &region);
@@ -82,9 +72,7 @@ class PlayheadOverlay final : public QWidget
 #endif
     void updatePlayhead();
 
-    PlayheadBand m_rulerBand;
-    QWidget &m_rollBand;
-    std::vector<PlayheadBand> m_clipBands;
+    TimelineBandLayout m_layout;
     QColor m_color;
     QPainterPath m_playheadTrianglePath;
     QSize m_playheadTrianglePathSize;
@@ -112,7 +100,6 @@ class PlayheadOverlay final : public QWidget
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD
     std::unique_ptr<Platform, PlatformDeleter> m_platform;
 #endif
-    std::vector<QPointer<QWidget>> m_observedSurfaceChain;
     QRegion m_visibleSurfaceRegion;
     QRect m_bodyGeometry;
     QRect m_triangleClip;

@@ -3,6 +3,8 @@
 #include <QRect>
 #include <QWidget>
 
+#include <optional>
+
 #include "ui/editorviewstate.h"
 
 class QAction;
@@ -34,6 +36,7 @@ class EditorDrawer final : public QWidget
     int defaultAutomationHeight() const noexcept;
     int plotOrigin() const noexcept;
     int plotWidth() const noexcept;
+    std::optional<QRect> bodyRect(EditorDrawerPage page) const noexcept;
     bool pageVisible(EditorDrawerPage page) const noexcept;
     QAction *automationAction() const noexcept { return m_automationAction; }
     QAction *velocityAction() const noexcept { return m_velocityAction; }

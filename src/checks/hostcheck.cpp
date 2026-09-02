@@ -14,6 +14,7 @@
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/timelinebandlayout.h"
 #include "ui/songview/timeruler.h"
 
 #include <QApplication>
@@ -114,6 +115,38 @@ std::optional<QRect> visibleBandUnion(QWidget &owner, const std::array<QWidget *
         result = result ? result->united(rect) : rect;
     }
     return result;
+}
+
+struct QmlBandPropertyNames {
+    songview::TimelineBand band;
+    const char *rectProperty;
+    const char *visibleProperty;
+};
+
+constexpr std::array<QmlBandPropertyNames, 6> qmlBandPropertyNames{{
+    {songview::TimelineBand::Ruler, "rulerBandRect", "rulerBandVisible"},
+    {songview::TimelineBand::Roll, "rollBandRect", "rollBandVisible"},
+    {songview::TimelineBand::OtherEvents, "otherEventsBandRect", "otherEventsBandVisible"},
+    {songview::TimelineBand::Automation, "automationBandRect", "automationBandVisible"},
+    {songview::TimelineBand::Velocity, "velocityBandRect", "velocityBandVisible"},
+    {songview::TimelineBand::VoiceChanges, "voiceChangesBandRect", "voiceChangesBandVisible"},
+}};
+
+// The retained QML properties must always republish the canonical layout's
+// entries translated into Quick-host coordinates, or an empty invisible
+// rectangle for a hidden band.
+bool publishedQmlRectsMatchCanonical(const QWidget &quick, QObject &quickRoot,
+                                     const songview::TimelineBandLayout &layout)
+{
+    for (const QmlBandPropertyNames &names : qmlBandPropertyNames) {
+        const std::optional<songview::TimelineBandGeometry> &geometry = layout.geometry(names.band);
+        const QRectF expectedRect =
+            geometry ? QRectF(geometry->rect.translated(-quick.geometry().topLeft())) : QRectF{};
+        if (quickRoot.property(names.rectProperty).toRectF() != expectedRect ||
+            quickRoot.property(names.visibleProperty).toBool() != geometry.has_value())
+            return false;
+    }
+    return true;
 }
 
 } // namespace
@@ -341,6 +374,62 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
           "host should expose all six retained Quick band hosts");
     if (rulerBand && rollBand && typedOtherStrip && automationViewport && voiceChangesBand &&
         quickRoot) {
+        const songview::TimelineBandLayout &bandLayout = view.timelineBandLayout();
+        const std::array<songview::TimelineBand, quickBands.size()> bandIds{
+            songview::TimelineBand::Ruler,       songview::TimelineBand::Roll,
+            songview::TimelineBand::OtherEvents, songview::TimelineBand::Automation,
+            songview::TimelineBand::Velocity,    songview::TimelineBand::VoiceChanges,
+        };
+        // While Phase 1 keeps both sources alive, every visible widget band
+        // must exactly fill its canonical parent-owned rectangle, and every
+        // hidden band must leave a nullopt entry behind.
+        const auto canonicalMatchesWidgets = [&] {
+            for (std::size_t index = 0; index < bandIds.size(); ++index) {
+                const QWidget &band = *quickBands[index];
+                const std::optional<songview::TimelineBandGeometry> &geometry =
+                    bandLayout.geometry(bandIds[index]);
+                if (!band.isVisibleTo(&view)) {
+                    if (geometry)
+                        return false;
+                    continue;
+                }
+                if (!geometry || geometry->rect != QRect(band.mapTo(&view, QPoint()), band.size()))
+                    return false;
+            }
+            return true;
+        };
+        const auto canonicalVisibleUnion = [&] {
+            std::optional<QRect> unionRect;
+            for (const songview::TimelineBand band : bandIds) {
+                const std::optional<songview::TimelineBandGeometry> &geometry =
+                    bandLayout.geometry(band);
+                if (!geometry)
+                    continue;
+                unionRect = unionRect ? unionRect->united(geometry->rect) : geometry->rect;
+            }
+            return unionRect;
+        };
+        check(canonicalMatchesWidgets(),
+              "canonical layout should equal every visible retained band widget rectangle");
+        check(bandLayout.geometry(songview::TimelineBand::Velocity) &&
+                  bandLayout.geometry(songview::TimelineBand::Velocity)->timelineOrigin ==
+                      area->plotOrigin() &&
+                  bandLayout.geometry(songview::TimelineBand::Ruler) &&
+                  bandLayout.geometry(songview::TimelineBand::Ruler)->timelineOrigin ==
+                      qRound(view.timelinePlotOrigin()) &&
+                  bandLayout.geometry(songview::TimelineBand::OtherEvents) &&
+                  bandLayout.geometry(songview::TimelineBand::OtherEvents)->timelineOrigin ==
+                      qRound(view.timelinePlotOrigin()),
+              "canonical ruler, other-events, and velocity entries should carry timeline origins");
+        const std::optional<QRect> canonicalVelocityBody =
+            drawer ? drawer->bodyRect(EditorDrawerPage::Velocity) : std::nullopt;
+        check(drawer && canonicalVelocityBody ==
+                            std::optional<QRect>(
+                                bandLayout.geometry(songview::TimelineBand::Velocity)->rect),
+              "drawer body rectangle should map onto the canonical velocity rectangle");
+        check(publishedQmlRectsMatchCanonical(*quick, *quickRoot, bandLayout),
+              "published Quick band properties should translate the canonical layout");
+
         view.setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
         pumpZeroDelayTimers();
         const QRect staleGeometry(view.width() * 20, view.height() * 20, view.width() * 9,
@@ -354,6 +443,10 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         check(hiddenUnion && quick->geometry() == *hiddenUnion && quick->isVisible() &&
                   !quick->geometry().intersects(staleGeometry),
               "Quick host geometry should exclude a hidden band's stale rectangle");
+        check(!bandLayout.geometry(songview::TimelineBand::Velocity) && canonicalMatchesWidgets(),
+              "hidden velocity band should leave a nullopt canonical entry without stale geometry");
+        check(quick->geometry() == canonicalVisibleUnion(),
+              "Quick host geometry should be the union of the canonical layout rectangles");
         check(!quickRoot->property("velocityBandVisible").toBool() &&
                   quickRoot->property("velocityBandRect").toRectF().isEmpty(),
               "hidden velocity band should publish no retained Quick rectangle");
@@ -371,6 +464,39 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         check(quickRoot->property("velocityBandVisible").toBool() &&
                   quickRoot->property("velocityBandRect").toRectF() == expectedVelocityRect,
               "shown velocity band should republish its current retained Quick rectangle");
+        check(canonicalMatchesWidgets() && quick->geometry() == canonicalVisibleUnion(),
+              "reshown velocity band should re-enter the canonical layout at its widget rectangle");
+        QString canonicalCropError;
+        const QImage canonicalVelocityCrop =
+            checks::support::captureQuickBand(view,
+                                              bandLayout.geometry(songview::TimelineBand::Velocity)
+                                                  .value_or(songview::TimelineBandGeometry{})
+                                                  .rect,
+                                              &canonicalCropError);
+        const QImage widgetVelocityCrop =
+            checks::support::captureQuickBand(view, *area, &canonicalCropError);
+        check(canonicalCropError.isEmpty() && !canonicalVelocityCrop.isNull() &&
+                  canonicalVelocityCrop == widgetVelocityCrop,
+              "canonical velocity rectangle should address the same Quick framebuffer region as "
+              "its widget");
+        check(publishedQmlRectsMatchCanonical(*quick, *quickRoot, bandLayout),
+              "republished Quick band properties should translate the canonical layout");
+        // Event-list toggle: the stack index swap must explicitly
+        // synchronize — the canonical roll entry clears while the list
+        // replaces the roll, and the Quick host plus QML band properties
+        // follow both ways without any resize.
+        const bool eventListWasVisible = view.eventListVisible();
+        view.setEventListVisible(true);
+        pumpZeroDelayTimers();
+        check(!bandLayout.geometry(songview::TimelineBand::Roll) && canonicalMatchesWidgets() &&
+                  quick->isVisible() && quick->geometry() == canonicalVisibleUnion() &&
+                  publishedQmlRectsMatchCanonical(*quick, *quickRoot, bandLayout),
+              "event-list view should clear the canonical roll entry and its Quick geometry");
+        view.setEventListVisible(eventListWasVisible);
+        pumpZeroDelayTimers();
+        check(canonicalMatchesWidgets() && quick->geometry() == canonicalVisibleUnion() &&
+                  publishedQmlRectsMatchCanonical(*quick, *quickRoot, bandLayout),
+              "restored roll view should republish the canonical roll entry and Quick geometry");
     }
     if (otherStrip) {
         QString stripCaptureError;

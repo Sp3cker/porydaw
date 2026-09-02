@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <memory>
+#include <optional>
 
 #include "core/miditimeline.h"
 #include "ui/editordrawer/automationpage.h"
@@ -28,6 +29,7 @@
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/timelinebandlayout.h"
 #include "ui/songview/timeruler.h"
 #include "ui/theme/themeruntime.h"
 
@@ -204,7 +206,24 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
     checkVisibleBody(*automation->scrollViewport(), "automation viewport");
     checkVisibleBody(*otherEvents, "other-events");
 
-    const auto beforeMoves = checks::support::timelineQuickLayerRevisions(*scene);
+    // The drawer setup above queues Quick dirty flushes and posted resize
+    // events for the newly shown bodies that outlive its pump; those land in
+    // later event-loop passes, not in playhead work. Settle at the observable
+    // boundary — revisions unchanged across one full pump — so the loop
+    // measures only revisions caused by the 128 playhead updates.
+    checks::support::TimelineQuickLayerRevisions beforeMoves =
+        checks::support::timelineQuickLayerRevisions(*scene);
+    bool revisionsSettled = false;
+    for (int settle = 0; settle < 8 && !revisionsSettled; ++settle) {
+        checks::support::pumpQuick();
+        const checks::support::TimelineQuickLayerRevisions settled =
+            checks::support::timelineQuickLayerRevisions(*scene);
+        revisionsSettled = settled == beforeMoves;
+        beforeMoves = settled;
+    }
+    if (!revisionsSettled)
+        failures.append("forced QWidget playhead fixture could not settle Quick layer "
+                        "revisions before the move loop");
     for (uint64_t move = 1; move <= 128; ++move)
         setPlayhead(tick + move, true);
     if (checks::support::timelineQuickLayerRevisions(*scene) != beforeMoves)
@@ -216,6 +235,44 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
     const QImage hidden = fallbackImage();
     if (checks::support::hasPlayheadPixel(hidden, hidden.rect(), color))
         failures.append("forced QWidget playhead remained painted after a hidden presentation");
+
+    const songview::TimelineBandLayout &bandLayout = probe.timelineBandLayout();
+    const auto canonicalRectMatches = [&](songview::TimelineBand band, const QWidget &widget) {
+        const std::optional<songview::TimelineBandGeometry> &geometry = bandLayout.geometry(band);
+        return geometry && widget.isVisibleTo(&probe) &&
+               geometry->rect == QRect(widget.mapTo(&probe, QPoint()), widget.size());
+    };
+    if (!canonicalRectMatches(songview::TimelineBand::Velocity, *velocity) ||
+        !canonicalRectMatches(songview::TimelineBand::VoiceChanges, *voiceChanges) ||
+        !canonicalRectMatches(songview::TimelineBand::Automation, *automation->scrollViewport()) ||
+        drawer->bodyRect(EditorDrawerPage::Velocity) !=
+            std::optional<QRect>(bandLayout.geometry(songview::TimelineBand::Velocity)
+                                     .value_or(songview::TimelineBandGeometry{})
+                                     .rect)) {
+        failures.append("forced QWidget playhead view diverged from the canonical band layout");
+    }
+
+    // Collapsing every drawer section must clear the canonical and drawer
+    // body entries; the remaining ruler, roll, and other-events clips keep
+    // covering the timeline column.
+    probe.setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
+    probe.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
+    probe.setDrawerSectionVisible(EditorDrawerPage::Automations, false);
+    checks::support::pumpQuick();
+    if (bandLayout.geometry(songview::TimelineBand::Velocity) ||
+        bandLayout.geometry(songview::TimelineBand::VoiceChanges) ||
+        bandLayout.geometry(songview::TimelineBand::Automation) ||
+        drawer->bodyRect(EditorDrawerPage::Velocity) ||
+        drawer->bodyRect(EditorDrawerPage::VoiceChanges) ||
+        drawer->bodyRect(EditorDrawerPage::Automations)) {
+        failures.append("collapsed drawer sections retained canonical or drawer rectangles");
+    }
+    probe.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
+    probe.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
+    probe.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
+    checks::support::pumpQuick();
+    if (!canonicalRectMatches(songview::TimelineBand::Velocity, *velocity))
+        failures.append("reopened velocity section did not republish its canonical rectangle");
 
     probe.hide();
     checks::support::pumpQuick();

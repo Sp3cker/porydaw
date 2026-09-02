@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QRect>
 #include <QRegion>
 #include <QWidget>
 
@@ -44,6 +45,7 @@ class DrawerSections final : public QWidget
     void focusActivePage();
     void cancelVisibleInteractions();
     void arrangeLocal();
+    std::optional<QRect> bodyRect(EditorDrawerPage page) const noexcept;
     QRegion occupiedRegion() const;
 
   signals:
@@ -80,6 +82,9 @@ class DrawerSections final : public QWidget
     std::optional<int> m_automationBodyHeight;
     std::optional<int> m_voiceChangesBodyHeight;
     std::optional<int> m_preferredAutomationBodyHeight;
+    std::optional<QRect> m_automationBodyRect;
+    std::optional<QRect> m_velocityBodyRect;
+    std::optional<QRect> m_voiceChangesBodyRect;
     qreal m_resizeStartGlobalY = 0.0;
     int m_resizeStartBodyHeight = 0;
     std::optional<int> m_resizeOriginalBodyHeight;

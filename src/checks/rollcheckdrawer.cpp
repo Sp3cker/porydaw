@@ -1,11 +1,13 @@
 #include "core/miditimeline.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/drawersections.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/timelinebandlayout.h"
 
 #include <QApplication>
 
@@ -21,6 +23,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <optional>
 #include <vector>
 
 #include "checks/rollcheckvoicechange.h"
@@ -301,6 +304,48 @@ int runEditorDrawerCheck(const QString &screenshotPath)
               voiceCanvas->height() > 0,
           "voice changes resize broke the drawer stack geometry");
     check(!detentToggle->isVisible(), "resizing voice changes exposed the velocity detent toggle");
+    auto *automationViewport = automationPage ? automationPage->scrollViewport() : nullptr;
+    const songview::TimelineBandLayout &bandLayout = view.timelineBandLayout();
+    const auto canonicalRectMatches = [&](songview::TimelineBand band, const QWidget &widget) {
+        const std::optional<songview::TimelineBandGeometry> &geometry = bandLayout.geometry(band);
+        return geometry && widget.isVisibleTo(&view) &&
+               geometry->rect == QRect(widget.mapTo(&view, QPoint()), widget.size());
+    };
+    const auto canonicalUnionRect = [&bandLayout] {
+        std::optional<QRect> unionRect;
+        for (const std::optional<songview::TimelineBandGeometry> &band : bandLayout.bands) {
+            if (!band)
+                continue;
+            unionRect = unionRect ? unionRect->united(band->rect) : band->rect;
+        }
+        return unionRect;
+    };
+    auto *sectionsObject = drawer->findChild<QWidget *>(QStringLiteral("drawerSections"));
+    auto *typedSections = sectionsObject ? dynamic_cast<DrawerSections *>(sectionsObject) : nullptr;
+    check(typedSections && typedSections->bodyRect(EditorDrawerPage::VoiceChanges).has_value() &&
+              drawer->bodyRect(EditorDrawerPage::VoiceChanges) ==
+                  std::optional<QRect>(typedSections->bodyRect(EditorDrawerPage::VoiceChanges)
+                                           ->translated(drawer->mapTo(&view, QPoint()))),
+          "drawer body rectangle should map the section-local body into SongView coordinates");
+    check(canonicalRectMatches(songview::TimelineBand::Roll, *roll) &&
+              canonicalRectMatches(songview::TimelineBand::VoiceChanges, *voiceCanvas) &&
+              canonicalRectMatches(songview::TimelineBand::Velocity, *velocityCanvas) &&
+              canonicalRectMatches(songview::TimelineBand::Automation, *automationViewport),
+          "canonical layout should track the resized drawer section rectangles");
+    check(bandLayout.geometry(songview::TimelineBand::VoiceChanges) &&
+              bandLayout.geometry(songview::TimelineBand::VoiceChanges)->timelineOrigin ==
+                  voiceCanvas->plotOrigin() &&
+              bandLayout.geometry(songview::TimelineBand::Velocity) &&
+              bandLayout.geometry(songview::TimelineBand::Velocity)->timelineOrigin ==
+                  velocityCanvas->plotOrigin(),
+          "canonical drawer entries should carry the drawer plot origins");
+    // The drawer body resync is synchronous through EditorDrawer: after a
+    // resize drag the Quick host still frames the canonical union and the
+    // window mask still exposes every native drawer chrome widget.
+    check(quick->geometry() == canonicalUnionRect() && !quick->quickWindow()->mask().isEmpty() &&
+              !quickMaskContains(*voiceHandle) && !quickMaskContains(*velocityHandle) &&
+              !quickMaskContains(*automationHandle) && !quickMaskContains(*automationBar),
+          "drawer resize did not keep the Quick host frame and mask on the canonical layout");
 
     drawer->voiceChangesAction()->trigger();
     QCoreApplication::processEvents();
@@ -392,6 +437,16 @@ int runEditorDrawerCheck(const QString &screenshotPath)
               view.drawerActivePage() == EditorDrawerPage::Automations && !statuses.empty() &&
               statuses.back() == QStringLiteral("Automation lanes hidden"),
           "automation action did not collapse its own section");
+    check(!bandLayout.geometry(songview::TimelineBand::Velocity) &&
+              !bandLayout.geometry(songview::TimelineBand::Automation) &&
+              !bandLayout.geometry(songview::TimelineBand::VoiceChanges) &&
+              !drawer->bodyRect(EditorDrawerPage::Velocity) &&
+              !drawer->bodyRect(EditorDrawerPage::Automations) &&
+              !drawer->bodyRect(EditorDrawerPage::VoiceChanges) &&
+              bandLayout.geometry(songview::TimelineBand::Ruler) &&
+              bandLayout.geometry(songview::TimelineBand::Roll) &&
+              bandLayout.geometry(songview::TimelineBand::OtherEvents),
+          "a fully collapsed drawer must clear every canonical drawer entry");
 
     drawer->velocityAction()->trigger();
     drawer->automationAction()->trigger();
@@ -402,6 +457,12 @@ int runEditorDrawerCheck(const QString &screenshotPath)
               !view.drawerSectionVisible(EditorDrawerPage::Automations) &&
               view.drawerActivePage() == EditorDrawerPage::Automations,
           "active page was coupled to section visibility");
+    check(canonicalRectMatches(songview::TimelineBand::Velocity, *velocityCanvas) &&
+              !bandLayout.geometry(songview::TimelineBand::Automation),
+          "reopening a drawer section must republish only its canonical rectangle");
+    check(quick->geometry() == canonicalUnionRect() && !quick->quickWindow()->mask().isEmpty() &&
+              !quickMaskContains(*velocityHandle),
+          "reopening a drawer section did not keep the Quick host frame and mask current");
 
     EditorViewState restoredClose = view.editorViewState();
     restoredClose.velocity.visible = false;

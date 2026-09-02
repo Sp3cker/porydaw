@@ -29,6 +29,7 @@
 #include "ui/songview/editorselectionmodel.h"
 #include "ui/songview/scalecontroller.h"
 #include "ui/songview/timeaxis.h"
+#include "ui/songview/timelinebandlayout.h"
 #include "ui/songviewmodel.h"
 #include "ui/velocitygesturemodel.h"
 
@@ -59,7 +60,6 @@ class EditorSelectionModel;
 class PianoRoll;
 class TimelineQuickView;
 class PlayheadOverlay;
-struct PlayheadBand;
 class OtherStrip;
 class TrackHeaderPanel;
 class TrackHeaderRow;
@@ -159,6 +159,13 @@ class SongView : public QWidget
     EditorDrawerPage drawerActivePage() const;
     bool hasVisibleDrawerSection() const;
     EditorDrawer *editorDrawer() const noexcept { return m_editorDrawer; }
+    // Canonical SongView-local timeline band geometry: one parent-owned
+    // value drives Quick/QML band placement and native playhead clipping.
+    // Hidden bands hold nullopt.
+    const songview::TimelineBandLayout &timelineBandLayout() const noexcept
+    {
+        return m_timelineBandLayout;
+    }
 
     // User-added automation lanes with no events yet (SPEC §6.1 "addable from
     // the m4a parameter list). They live in the application-wide editor
@@ -602,12 +609,25 @@ class SongView : public QWidget
         qreal timelineRevealViewportFraction;
         int timelineViewportMinimumWidth;
         int timelineContentTailWidth;
+        // Fixed heights of the SongView-owned ruler and other-events layout
+        // rows; the retained band widgets overlay these spacer rectangles.
+        int rulerHeight;
+        int otherEventsHeight;
 
         static Geometry resolve();
     };
 
     void refreshGeometry();
-    std::vector<songview::PlayheadBand> playheadClipBands() const;
+    // Canonical band layout: resolve from parent-owned rectangles, compare,
+    // store, then push synchronously to the Quick host and playhead overlay.
+    songview::TimelineBandLayout resolveTimelineBandLayout() const;
+    void synchronizeTimelineBandLayout();
+    // Keeps the retained band widgets over their fixed-height spacer rows.
+    void positionBandWidgets();
+    // Migration assertion for Q_ASSERT call sites: every published band equals
+    // the retained widget that visually owns it while both exist. Only valid
+    // after positionBandWidgets() and synchronizeTimelineBandLayout() settle.
+    bool bandWidgetsMatchCanonicalLayout() const;
     // Both exits floor at the clock base: the result is >= 1 for any
     // segment, so snap math may divide by it unchecked.
     uint64_t gridTicksIn(const GridSeg &seg, double pixelsPerTick, bool snap = false) const;
@@ -741,6 +761,7 @@ class SongView : public QWidget
     songview::PianoRoll *m_roll = nullptr;
     QPointer<songview::TimelineQuickView> m_quickView;
     songview::PlayheadOverlay *m_playheadOverlay = nullptr;
+    songview::TimelineBandLayout m_timelineBandLayout;
     QStackedWidget *m_rollStack = nullptr; // page 0: roll (+vbar), page 1: event list
     EventListView *m_events = nullptr;
     songview::OtherStrip *m_strip = nullptr;
@@ -748,5 +769,7 @@ class SongView : public QWidget
     QScrollArea *m_headerScroll = nullptr;
     QHBoxLayout *m_hbarRow = nullptr;
     QSpacerItem *m_hbarGutter = nullptr;
+    QSpacerItem *m_rulerSpacer = nullptr; // owns the ruler row height
+    QSpacerItem *m_stripSpacer = nullptr; // owns the other-events row height
     QScrollBar *m_vbar = nullptr;
 };

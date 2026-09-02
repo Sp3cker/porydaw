@@ -109,12 +109,9 @@ bool platformPlayheadRendererEnabled()
 #endif
 }
 
-PlayheadOverlay::PlayheadOverlay(QWidget &owner, PlayheadBand rulerBand, QWidget &rollBand,
-                                 std::vector<PlayheadBand> clipBands)
+PlayheadOverlay::PlayheadOverlay(QWidget &owner, const TimelineBandLayout &layout)
     : QWidget(&owner)
-    , m_rulerBand(rulerBand)
-    , m_rollBand(rollBand)
-    , m_clipBands(std::move(clipBands))
+    , m_layout(layout)
     , m_color(themes::color(themes::Role::song_view_playhead))
 {
     setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -123,13 +120,7 @@ PlayheadOverlay::PlayheadOverlay(QWidget &owner, PlayheadBand rulerBand, QWidget
     // This visual layer must never become the keyboard target.
     setFocusPolicy(Qt::NoFocus);
 
-    observeSurfaceGeometry();
     synchronizeGeometry();
-}
-
-PlayheadOverlay::~PlayheadOverlay()
-{
-    removeObservedSurfaceFilters();
 }
 
 void PlayheadOverlay::setPlayhead(qreal timelineX, bool visible, bool playing)
@@ -152,14 +143,9 @@ void PlayheadOverlay::setPlayhead(qreal timelineX, bool visible, bool playing)
     updatePlayhead();
 }
 
-void PlayheadOverlay::updateBands(PlayheadBand rulerBand, QWidget &rollBand,
-                                  std::vector<PlayheadBand> clipBands)
+void PlayheadOverlay::updateBands(const TimelineBandLayout &layout)
 {
-    Q_ASSERT(&m_rulerBand.widget == &rulerBand.widget);
-    Q_ASSERT(&m_rollBand == &rollBand);
-    m_rulerBand.timelineOrigin = rulerBand.timelineOrigin;
-    m_clipBands.swap(clipBands);
-    observeSurfaceGeometry();
+    m_layout = layout;
     synchronizeGeometry();
 }
 
@@ -227,14 +213,6 @@ QRegion PlayheadOverlay::fallbackPaintRegion() const
     return region;
 }
 
-void PlayheadOverlay::removeObservedSurfaceFilters()
-{
-    for (const QPointer<QWidget> &widget : m_observedSurfaceChain) {
-        if (widget)
-            widget->removeEventFilter(this);
-    }
-    m_observedSurfaceChain.clear();
-}
 void PlayheadOverlay::exposeFallbackPixels(const QRegion &region)
 {
     if (region.isEmpty())
@@ -268,66 +246,6 @@ void PlayheadOverlay::updateFallbackRegion()
     raise();
     exposeFallbackPixels(previousRegion);
     update(currentRegion);
-}
-
-void PlayheadOverlay::observeSurfaceGeometry()
-{
-    removeObservedSurfaceFilters();
-
-    QWidget *owner = parentWidget();
-    if (!owner)
-        return;
-    QWidget *const topLevel = owner->window();
-
-    const auto observe = [this, topLevel](QWidget *surface) {
-        for (QWidget *widget = surface; widget; widget = widget->parentWidget()) {
-            bool alreadyObserved = false;
-            for (const QPointer<QWidget> &observed : m_observedSurfaceChain) {
-                if (observed.data() == widget) {
-                    alreadyObserved = true;
-                    break;
-                }
-            }
-            if (!alreadyObserved) {
-                widget->installEventFilter(this);
-                m_observedSurfaceChain.push_back(widget);
-            }
-            if (widget == topLevel)
-                break;
-        }
-    };
-    observe(&m_rulerBand.widget);
-    observe(&m_rollBand);
-    for (const PlayheadBand &band : m_clipBands)
-        observe(&band.widget);
-}
-
-bool PlayheadOverlay::eventFilter(QObject *, QEvent *event)
-{
-    switch (event->type()) {
-    case QEvent::Show:
-    case QEvent::WinIdChange:
-        synchronizeGeometry();
-        break;
-    case QEvent::ParentChange:
-        observeSurfaceGeometry();
-        synchronizeGeometry();
-        break;
-    case QEvent::Hide:
-    case QEvent::Move:
-    case QEvent::Resize:
-    case QEvent::LayoutRequest:
-#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
-    case QEvent::DevicePixelRatioChange:
-#else
-    case QEvent::ScreenChangeInternal:
-#endif
-        synchronizeGeometry();
-        break;
-    default:
-        break;
-    }
-    return false;
 }
 
 void PlayheadOverlay::changeEvent(QEvent *event)
@@ -364,25 +282,6 @@ void PlayheadOverlay::changeEvent(QEvent *event)
     }
 }
 
-QRect PlayheadOverlay::visibleSurfaceRect(const QWidget *surface, QWidget *owner, int origin) const
-{
-    if (!surface->isVisibleTo(owner))
-        return {};
-    if (origin >= surface->width())
-        return {};
-    QPoint offset = surface->mapTo(owner, QPoint(0, 0));
-    QRect visible(offset + QPoint(origin, 0), QSize(surface->width() - origin, surface->height()));
-    for (const QWidget *widget = surface; widget; widget = widget->parentWidget()) {
-        if (!widget->isVisible())
-            return {};
-
-        visible &= QRect(widget->mapTo(owner, QPoint(0, 0)), widget->size());
-        if (widget == owner)
-            break;
-    }
-    return visible;
-}
-
 void PlayheadOverlay::synchronizeGeometry()
 {
     QWidget *ownerWidget = parentWidget();
@@ -390,33 +289,52 @@ void PlayheadOverlay::synchronizeGeometry()
         return;
     QWidget &owner = *ownerWidget;
 
-    const QRect rulerGeometry(m_rulerBand.widget.mapTo(&owner, QPoint(0, 0)),
-                              m_rulerBand.widget.size());
-    const int bodyTop = rulerGeometry.top();
-    const QRect bodyGeometry(0, bodyTop, owner.width(), std::max(0, owner.height() - bodyTop));
-    const QRect rulerVisible =
-        visibleSurfaceRect(&m_rulerBand.widget, &owner, m_rulerBand.timelineOrigin);
-    const int triangleTop =
-        rulerGeometry.bottom() - playheadTriangleHeight() + layout::singlePixel();
-    const QRect triangleClip = rulerVisible.intersected(
-        QRect(rulerVisible.left(), triangleTop, rulerVisible.width(), playheadTriangleHeight()));
+    const std::optional<TimelineBandGeometry> &rulerBand = m_layout.geometry(TimelineBand::Ruler);
+    if (!rulerBand) {
+        // Without a ruler row nothing can be clipped to a timeline column.
+        m_visibleSurfaceRegion = {};
+        m_bodyGeometry = {};
+        m_triangleClip = {};
+    } else {
+        const QRect &rulerRect = rulerBand->rect;
+        const int bodyTop = rulerRect.top();
+        m_bodyGeometry = QRect(0, bodyTop, owner.width(), std::max(0, owner.height() - bodyTop));
 
-    QRegion visibleSurfaces =
-        visibleSurfaceRect(&m_rulerBand.widget, &owner, m_rulerBand.timelineOrigin);
-    for (const PlayheadBand &band : m_clipBands)
-        visibleSurfaces += visibleSurfaceRect(&band.widget, &owner, band.timelineOrigin);
+        // Canonical entries are SongView-local and omit hidden bands; each clip
+        // rect starts at its band's timeline origin. Producer contract
+        // (timelinebandlayout.h): band rects are already clipped to what their
+        // layout owner shows, and this widget's parent is SongView, so one
+        // intersected(owner.rect()) bounds the surface — no ancestor walk.
+        const auto visibleBandRect = [&owner](const TimelineBandGeometry &band) {
+            if (band.timelineOrigin >= band.rect.width())
+                return QRect();
+            const QRect visible(band.rect.x() + band.timelineOrigin, band.rect.y(),
+                                band.rect.width() - band.timelineOrigin, band.rect.height());
+            Q_ASSERT(visible.isEmpty() || owner.rect().contains(visible));
+            return visible.intersected(owner.rect());
+        };
 
-    const int timelineOrigin =
-        m_rulerBand.widget.mapTo(&owner, QPoint(m_rulerBand.timelineOrigin, 0)).x();
+        const QRect rulerVisible = visibleBandRect(*rulerBand);
+        const int triangleTop =
+            rulerRect.bottom() - playheadTriangleHeight() + layout::singlePixel();
+        m_triangleClip = rulerVisible.intersected(QRect(
+            rulerVisible.left(), triangleTop, rulerVisible.width(), playheadTriangleHeight()));
+
+        m_visibleSurfaceRegion = rulerVisible;
+        for (std::size_t index = 0; index < m_layout.bands.size(); ++index) {
+            if (index == timelineBandIndex(TimelineBand::Ruler))
+                continue;
+            const std::optional<TimelineBandGeometry> &band = m_layout.bands[index];
+            if (band)
+                m_visibleSurfaceRegion += visibleBandRect(*band);
+        }
+        m_timelineOrigin = rulerRect.x() + rulerBand->timelineOrigin;
+    }
+    m_trianglePointsUp = !m_layout.geometry(TimelineBand::Roll).has_value();
 
     if (geometry() != owner.rect())
         setGeometry(owner.rect());
 
-    m_visibleSurfaceRegion = visibleSurfaces;
-    m_bodyGeometry = bodyGeometry;
-    m_triangleClip = triangleClip;
-    m_timelineOrigin = timelineOrigin;
-    m_trianglePointsUp = !m_rollBand.isVisibleTo(&owner);
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD
     m_devicePixelRatio = owner.devicePixelRatioF();
     bool platformCreated = false;

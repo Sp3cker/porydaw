@@ -580,6 +580,13 @@ void DrawerSections::arrangeLocal()
         if (widget->geometry() != geometry)
             widget->setGeometry(geometry);
     };
+    const auto applyBodyRect = [](QWidget *widget, const QRect &rect) {
+        if (widget->geometry() != rect)
+            widget->setGeometry(rect);
+        // Migration assertion: the retained widget fills the parent-owned
+        // rectangle exactly.
+        Q_ASSERT(widget->geometry() == rect);
+    };
 
     const int velocityLeftInset = std::max(0, m_chrome.plotOrigin - m_velocity->plotOrigin());
     const int velocityLeft = std::min(velocityLeftInset, width);
@@ -595,27 +602,46 @@ void DrawerSections::arrangeLocal()
     setVisibleIf(m_automationHandle, showAutomation);
     setVisibleIf(m_automationBar, true);
 
-    // Visual stack order, top to bottom: VoiceChanges, Velocity, Automations, bar.
+    // Canonical body rectangles are calculated before any widget placement;
+    // hidden pages hold no stale rectangle. EditorDrawer publishes these as
+    // parent-owned layout values, so placement reads them back.
     int y = 0;
-    if (showVoiceChanges) {
-        setGeometryIf(m_voiceChangesHandle, QRect(0, y, width, handleHeight));
-        y += handleHeight;
-        setGeometryIf(m_voiceChanges, QRect(0, y, width, voiceChangesHeight));
-        y += voiceChangesHeight;
-    }
     int velocityBottom = 0;
+    std::optional<QRect> voiceChangesBodyRect;
+    std::optional<QRect> velocityBodyRect;
+    std::optional<QRect> automationBodyRect;
+    if (showVoiceChanges) {
+        voiceChangesBodyRect = QRect(0, y + handleHeight, width, voiceChangesHeight);
+        y += handleHeight + voiceChangesHeight;
+    }
     if (showVelocity) {
-        setGeometryIf(m_velocityHandle, QRect(velocityLeft, y, velocityWidth, handleHeight));
-        y += handleHeight;
-        setGeometryIf(m_velocity, QRect(velocityLeft, y, velocityWidth, velocityHeight));
-        y += velocityHeight;
+        velocityBodyRect = QRect(velocityLeft, y + handleHeight, velocityWidth, velocityHeight);
+        y += handleHeight + velocityHeight;
         velocityBottom = y;
     }
     if (showAutomation) {
-        setGeometryIf(m_automationHandle, QRect(0, y, width, handleHeight));
-        y += handleHeight;
-        setGeometryIf(m_automation, QRect(0, y, width, automationHeight));
-        y += automationHeight;
+        automationBodyRect = QRect(0, y + handleHeight, width, automationHeight);
+        y += handleHeight + automationHeight;
+    }
+    m_voiceChangesBodyRect = voiceChangesBodyRect;
+    m_velocityBodyRect = velocityBodyRect;
+    m_automationBodyRect = automationBodyRect;
+
+    // Visual stack order, top to bottom: VoiceChanges, Velocity, Automations, bar.
+    if (showVoiceChanges) {
+        setGeometryIf(m_voiceChangesHandle,
+                      QRect(0, voiceChangesBodyRect->top() - handleHeight, width, handleHeight));
+        applyBodyRect(m_voiceChanges, *voiceChangesBodyRect);
+    }
+    if (showVelocity) {
+        setGeometryIf(m_velocityHandle, QRect(velocityLeft, velocityBodyRect->top() - handleHeight,
+                                              velocityWidth, handleHeight));
+        applyBodyRect(m_velocity, *velocityBodyRect);
+    }
+    if (showAutomation) {
+        setGeometryIf(m_automationHandle,
+                      QRect(0, automationBodyRect->top() - handleHeight, width, handleHeight));
+        applyBodyRect(m_automation, *automationBodyRect);
     }
     const int buttonInset = layout::space(layout::Space::One);
     const int buttonSize = std::max(layout::singlePixel(), chrome - 2 * buttonInset);
@@ -648,6 +674,19 @@ void DrawerSections::arrangeLocal()
         m_detentToggle->setIconSize(detentIconSize);
     const int detentY = std::max(0, velocityBottom - detentButtonSize);
     setGeometryIf(m_detentToggle, QRect(velocityLeft, detentY, detentButtonSize, detentButtonSize));
+}
+
+std::optional<QRect> DrawerSections::bodyRect(EditorDrawerPage page) const noexcept
+{
+    switch (page) {
+    case EditorDrawerPage::Automations:
+        return m_automationBodyRect;
+    case EditorDrawerPage::Velocity:
+        return m_velocityBodyRect;
+    case EditorDrawerPage::VoiceChanges:
+        return m_voiceChangesBodyRect;
+    }
+    Q_UNREACHABLE();
 }
 
 QRegion DrawerSections::occupiedRegion() const

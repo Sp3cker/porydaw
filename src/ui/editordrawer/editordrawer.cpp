@@ -249,6 +249,15 @@ int EditorDrawer::plotWidth() const noexcept
                     resolvedHostBounds().width() - plotOrigin());
 }
 
+std::optional<QRect> EditorDrawer::bodyRect(EditorDrawerPage page) const noexcept
+{
+    const std::optional<QRect> body = m_sections->bodyRect(page);
+    if (!body)
+        return std::nullopt;
+    // Drawer-local bodies publish as SongView-owned canonical layout values.
+    return QRect(m_sections->mapTo(&m_owner, body->topLeft()), body->size());
+}
+
 bool EditorDrawer::eventFilter(QObject *watched, QEvent *event)
 {
     if (watched == canvasFor(EditorDrawerPage::Automations) ||
@@ -314,6 +323,10 @@ void EditorDrawer::arrangeChildren()
     const QRegion occupied = m_sections->occupiedRegion();
     if (mask() != occupied)
         setMask(occupied);
+    // The canonical band layout must observe settled drawer geometry and
+    // masks; synchronize through the SongView friend seam, not a signal.
+    if (m_owner.m_editorDrawer == this)
+        m_owner.synchronizeTimelineBandLayout();
 }
 
 void EditorDrawer::cancelPageInteraction(EditorDrawerPage page)

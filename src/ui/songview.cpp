@@ -15,11 +15,13 @@
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timeruler.h"
 #include "ui/songview/trackheaderpanel.h"
+#include "ui/typography.h"
 #include <QAbstractButton>
 #include <QAbstractSlider>
 #include <QApplication>
 #include <QDialog>
 #include <QEvent>
+#include <QFontMetrics>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QKeyEvent>
@@ -35,7 +37,6 @@
 #include <algorithm>
 #include <cstdint>
 #include <span>
-#include <utility>
 #include <vector>
 
 namespace lyt = ::layout;
@@ -48,6 +49,30 @@ using namespace songview::detail;
 // ------------------------------------------------------------------ SongView
 
 using namespace songview;
+
+namespace {
+
+// Fixed ruler-row height: a bold mono marker row plus a mono tick row, each
+// padded one physical pixel — the same formula TimeRuler applies to itself.
+int resolveRulerRowHeight()
+{
+    QFont rulerFont = typography::bodyMono(typography::caption(QApplication::font()));
+    rulerFont.setPixelSize(
+        std::max(lyt::fontPx(1.0 / 12.0), rulerFont.pixelSize() - lyt::singlePixel()));
+    rulerFont.setLetterSpacing(QFont::AbsoluteSpacing, lyt::fontPxF(-1.0 / 24.0));
+    const QFontMetrics markerMetrics(typography::bold(rulerFont));
+    const QFontMetrics tickMetrics(rulerFont);
+    return markerMetrics.height() + lyt::singlePixel() + tickMetrics.height() + lyt::singlePixel();
+}
+
+// Fixed other-events-row height: one body line plus two spacing units — the
+// same formula OtherStrip applies to itself.
+int resolveOtherEventsRowHeight()
+{
+    return QFontMetrics(QApplication::font()).height() + lyt::space(Space::Two);
+}
+
+} // namespace
 
 SongView::Geometry SongView::Geometry::resolve()
 {
@@ -68,7 +93,9 @@ SongView::Geometry SongView::Geometry::resolve()
             lyt::fontPx(4.0 / 3.0),
             1.0 / 3.0,
             lyt::fontPx(25.0 / 6.0),
-            lyt::fontPx(25.0 / 3.0)};
+            lyt::fontPx(25.0 / 3.0),
+            resolveRulerRowHeight(),
+            resolveOtherEventsRowHeight()};
 }
 
 SongView::ViewState::ViewState()
@@ -90,28 +117,115 @@ void SongView::refreshGeometry()
                                  QSizePolicy::Minimum);
         m_hbarRow->invalidate();
     }
-    if (m_playheadOverlay) {
-        m_playheadOverlay->updateBands({*m_ruler, m_geometry.plotOrigin}, *m_roll,
-                                       playheadClipBands());
+    if (m_rulerSpacer) {
+        m_rulerSpacer->changeSize(m_geometry.plotOrigin, m_geometry.rulerHeight,
+                                  QSizePolicy::Minimum, QSizePolicy::Fixed);
+        m_stripSpacer->changeSize(m_geometry.plotOrigin, m_geometry.otherEventsHeight,
+                                  QSizePolicy::Minimum, QSizePolicy::Fixed);
+        if (layout())
+            layout()->invalidate();
     }
+    positionBandWidgets();
     updateScrollbars();
+    refreshDrawerPages();
+    // Publish only after drawer/page geometry settles; the Quick publication
+    // is still scheduled before the size-dependent dirty flush below.
+    synchronizeTimelineBandLayout();
     // Global geometry replacement: every roll domain may change.
     refreshTimelineViews(PianoRollQuickDirty::All);
-    refreshDrawerPages();
+    Q_ASSERT(bandWidgetsMatchCanonicalLayout());
 }
 
-std::vector<PlayheadBand> SongView::playheadClipBands() const
+// Canonical band geometry, resolved only from parent-owned layout values:
+// every published rect is the visible SongView-local band rectangle, so
+// consumers (PlayheadOverlay) intersect SongView's rect alone and no ancestor
+// widget walking is needed. Hidden bands stay nullopt; no Quick-host
+// translation happens here — TimelineQuickView maps into its own coordinates.
+TimelineBandLayout SongView::resolveTimelineBandLayout() const
 {
-    auto *automation = m_editorDrawer->automationPage();
-    auto *velocity = m_editorDrawer->velocityArea();
-    auto *voiceChanges = m_editorDrawer->voiceChangeArea();
-    return {
-        {*m_roll, m_geometry.pianoKeyboardWidth},
-        {*automation->scrollViewport(), automation->canvas()->plotOrigin()},
-        {*velocity, velocity->plotOrigin()},
-        {*voiceChanges, voiceChanges->plotOrigin()},
-        {*m_strip, m_geometry.plotOrigin},
+    TimelineBandLayout layout;
+    if (m_rulerSpacer && m_ruler)
+        layout.geometry(TimelineBand::Ruler) = {m_rulerSpacer->geometry(), m_geometry.plotOrigin};
+    // The roll band is the retained roll page minus the vertical scrollbar
+    // column — exactly where PianoRoll sits today because the page's
+    // zero-margin, zero-spacing layout gives the roll every pixel left of the
+    // scrollbar (asserted in bandWidgetsMatchCanonicalLayout()). Nullopt
+    // while the event list replaces the roll page.
+    if (!eventListVisible()) {
+        const QWidget *rollPage = m_rollStack->widget(0);
+        QRect rollRect(rollPage->mapTo(this, QPoint(0, 0)), rollPage->size());
+        rollRect.setWidth(rollRect.width() - m_vbar->width());
+        layout.geometry(TimelineBand::Roll) = {rollRect, m_geometry.pianoKeyboardWidth};
+    }
+    if (m_stripSpacer && m_strip)
+        layout.geometry(TimelineBand::OtherEvents) = {m_stripSpacer->geometry(),
+                                                      m_geometry.plotOrigin};
+    if (drawerSectionVisible(EditorDrawerPage::Automations)) {
+        const AutomationPage *automation = m_editorDrawer->automationPage();
+        const QWidget *viewport = automation->scrollViewport();
+        layout.geometry(TimelineBand::Automation) = {
+            QRect(viewport->mapTo(this, QPoint(0, 0)), viewport->size()),
+            automation->canvas()->plotOrigin()};
+    }
+    if (const std::optional<QRect> body = m_editorDrawer->bodyRect(EditorDrawerPage::Velocity))
+        layout.geometry(TimelineBand::Velocity) = {*body,
+                                                   m_editorDrawer->velocityArea()->plotOrigin()};
+    if (const std::optional<QRect> body = m_editorDrawer->bodyRect(EditorDrawerPage::VoiceChanges))
+        layout.geometry(TimelineBand::VoiceChanges) = {
+            *body, m_editorDrawer->voiceChangeArea()->plotOrigin()};
+    return layout;
+}
+
+// Fixed resolve → compare → store → push sequence for the canonical band
+// layout. A private, synchronous, SongView-owned handoff: no Qt signal, and
+// an unchanged value publishes nothing.
+void SongView::synchronizeTimelineBandLayout()
+{
+    const TimelineBandLayout layout = resolveTimelineBandLayout();
+    if (layout == m_timelineBandLayout)
+        return;
+    m_timelineBandLayout = layout;
+    if (m_quickView)
+        m_quickView->setBandLayout(m_timelineBandLayout);
+    if (m_playheadOverlay)
+        m_playheadOverlay->updateBands(m_timelineBandLayout);
+}
+
+// Migration assertion: every published band equals the retained widget that
+// visually owns it while both exist. Band rects derive from parent-owned
+// rectangles (spacer rows, the roll page minus its scrollbar column, drawer
+// bodies, the automation scroll viewport), so a drift between the two breaks
+// the playhead/Quick masks. Only valid at settled call sites — a synchronize
+// during layout activation can legitimately observe a not-yet-moved widget.
+bool SongView::bandWidgetsMatchCanonicalLayout() const
+{
+    const auto widgetRect = [this](const QWidget &widget) {
+        return QRect(widget.mapTo(this, QPoint(0, 0)), widget.size());
     };
+    const auto matches = [this, &widgetRect](TimelineBand band, const QWidget *widget) {
+        const std::optional<TimelineBandGeometry> &canonical = m_timelineBandLayout.geometry(band);
+        return !canonical || !widget || widgetRect(*widget) == canonical->rect;
+    };
+    const AutomationPage *automation = m_editorDrawer ? m_editorDrawer->automationPage() : nullptr;
+    return matches(TimelineBand::Ruler, m_ruler) && matches(TimelineBand::Roll, m_roll) &&
+           matches(TimelineBand::OtherEvents, m_strip) &&
+           matches(TimelineBand::Automation, automation ? automation->scrollViewport() : nullptr) &&
+           matches(TimelineBand::Velocity,
+                   m_editorDrawer ? m_editorDrawer->velocityArea() : nullptr) &&
+           matches(TimelineBand::VoiceChanges,
+                   m_editorDrawer ? m_editorDrawer->voiceChangeArea() : nullptr);
+}
+
+// The ruler and other-events widgets no longer occupy layout slots; they
+// overlay the fixed-height spacer rows the layout owns.
+void SongView::positionBandWidgets()
+{
+    if (layout())
+        layout()->activate();
+    if (m_ruler && m_rulerSpacer)
+        m_ruler->setGeometry(m_rulerSpacer->geometry());
+    if (m_strip && m_stripSpacer)
+        m_strip->setGeometry(m_stripSpacer->geometry());
 }
 
 SongView::SongView(QWidget *parent)
@@ -130,7 +244,11 @@ SongView::SongView(QWidget *parent)
     vbox->setSpacing(lyt::space(Space::Zero));
 
     m_ruler = new TimeRuler(this);
-    vbox->addWidget(m_ruler);
+    // Fixed-height spacer rows own the ruler and other-events rectangles;
+    // the widgets overlay them until their band conversions delete them.
+    m_rulerSpacer = new QSpacerItem(m_geometry.plotOrigin, m_geometry.rulerHeight,
+                                    QSizePolicy::Minimum, QSizePolicy::Fixed);
+    vbox->addSpacerItem(m_rulerSpacer);
 
     auto *rollPane = new QWidget(this);
     auto *mid = new QHBoxLayout(rollPane);
@@ -174,7 +292,9 @@ SongView::SongView(QWidget *parent)
     vbox->addWidget(rollPane, 1);
 
     m_strip = new OtherStrip(this);
-    vbox->addWidget(m_strip);
+    m_stripSpacer = new QSpacerItem(m_geometry.plotOrigin, m_geometry.otherEventsHeight,
+                                    QSizePolicy::Minimum, QSizePolicy::Fixed);
+    vbox->addSpacerItem(m_stripSpacer);
     m_hbar = new QScrollBar(Qt::Horizontal, this);
     m_hbar->setSingleStep(kScrollUnitsPerDip);
     m_hbarRow = new QHBoxLayout;
@@ -189,8 +309,7 @@ SongView::SongView(QWidget *parent)
         *m_ruler, *m_roll, *m_strip, *m_editorDrawer->automationPage(),
         *m_editorDrawer->velocityArea(), *m_editorDrawer->voiceChangeArea(), *this);
     m_quickView->lower();
-    m_playheadOverlay =
-        new PlayheadOverlay(*this, {*m_ruler, m_geometry.plotOrigin}, *m_roll, playheadClipBands());
+    m_playheadOverlay = new PlayheadOverlay(*this, timelineBandLayout());
     m_selectionModel.setObserver(
         [this](const songview::EditorSelectionModel::SelectionTransition &transition) {
             coordinateSelectionChange(transition);
@@ -200,6 +319,11 @@ SongView::SongView(QWidget *parent)
             [this](int value) { setHScroll(scrollDips(value)); });
     connect(m_vbar, &QScrollBar::valueChanged, this,
             [this](int value) { setVScroll(scrollDips(value)); });
+
+    positionBandWidgets();
+    // Both consumers exist: publish the first canonical layout handoff.
+    synchronizeTimelineBandLayout();
+    Q_ASSERT(bandWidgetsMatchCanonicalLayout());
 
     // The unbound axis's provisional camera rests at the pre-roll home;
     // updateScrollbars() keeps re-homing it as resize resolves the lead pad
@@ -478,6 +602,10 @@ void SongView::setEventListVisible(bool visible)
     if (eventListVisible() == visible)
         return;
     m_rollStack->setCurrentIndex(visible ? 1 : 0);
+    // The roll band exists only on the roll page; resync immediately so the
+    // index swap cannot leave a stale canonical Roll entry.
+    synchronizeTimelineBandLayout();
+    Q_ASSERT(bandWidgetsMatchCanonicalLayout());
     if (visible) {
         // The list skips refreshes while hidden; catch up when shown.
         m_events->refresh();
@@ -636,7 +764,10 @@ void SongView::coordinateSelectionChange(
 
 bool SongView::event(QEvent *event)
 {
-    const bool shown = event->type() == QEvent::Show;
+    const bool lifecycleRepublish = event->type() == QEvent::Show ||
+                                    event->type() == QEvent::WinIdChange ||
+                                    event->type() == QEvent::DevicePixelRatioChange ||
+                                    event->type() == QEvent::ScreenChangeInternal;
     if (event->type() == QEvent::Hide || event->type() == QEvent::WindowDeactivate ||
         event->type() == QEvent::UngrabMouse) {
         cancelActiveInteractions();
@@ -649,6 +780,20 @@ bool SongView::event(QEvent *event)
             return true;
     }
     const bool handled = QWidget::event(event);
+    // After Show/WinIdChange the playhead's native window exists and its
+    // native renderer can attach; DPR and screen changes re-map the Quick
+    // host into its new surface. The canonical refresh stays
+    // resolve/compare/store/push, then both consumers republish
+    // unconditionally so equal values still land after a surface swap.
+    if (lifecycleRepublish) {
+        positionBandWidgets();
+        synchronizeTimelineBandLayout();
+        if (m_quickView)
+            m_quickView->refreshBandLayout();
+        if (m_playheadOverlay)
+            m_playheadOverlay->updateBands(m_timelineBandLayout);
+        Q_ASSERT(bandWidgetsMatchCanonicalLayout());
+    }
     if (event->type() == QEvent::FontChange)
         refreshGeometry();
     return handled;
@@ -790,7 +935,10 @@ void SongView::refreshTimelineViews(PianoRollQuickDirtySet dirty)
 void SongView::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
+    positionBandWidgets();
     updateScrollbars();
     refreshDrawerPages();
     syncTimelineIndicators();
+    synchronizeTimelineBandLayout();
+    Q_ASSERT(bandWidgetsMatchCanonicalLayout());
 }

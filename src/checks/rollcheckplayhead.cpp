@@ -37,6 +37,7 @@
 #include "ui/songview/quick/timelinequickchrome.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/timelinebandlayout.h"
 #include "ui/songview/timeruler.h"
 #include "ui/theme/themeruntime.h"
 
@@ -109,6 +110,10 @@ void checkAutomationHover(SongView &view, QStringList &failures)
     auto *viewport = page ? page->scrollViewport() : nullptr;
     if (!canvas || !viewport)
         return;
+    if (!viewport->isVisibleTo(&view)) {
+        failures.append("automation hover fixture did not keep the automation page visible");
+        return;
+    }
     QString captureError;
     QEvent leave(QEvent::Leave);
     QCoreApplication::sendEvent(canvas, &leave);
@@ -208,6 +213,12 @@ void checkDevicePixelRectContract(QStringList &failures)
     dprTwo.setDevicePixelRatio(2.0);
     if (checks::support::devicePixelRect(dprTwo, logicalRect) != QRect{6, 4, 10, 8})
         failures.append("devicePixelRect did not map an exact DPR 2 rectangle");
+    QImage dprOnePointFive{QSize{12, 14}, QImage::Format_ARGB32_Premultiplied};
+    dprOnePointFive.setDevicePixelRatio(1.5);
+    if (checks::support::devicePixelRect(dprOnePointFive, logicalRect) != QRect{4, 3, 8, 6})
+        failures.append("devicePixelRect did not map an exact fractional DPR rectangle");
+    if (checks::support::devicePixelRect(dprOnePointFive, QRect{1, 1, 2, 2}) != QRect{1, 1, 4, 4})
+        failures.append("devicePixelRect did not round a fractional DPR rectangle outward");
 }
 
 void checkPositionOnlyQuickFrames(const MidiTimeline &timeline, QStringList &failures)
@@ -337,6 +348,20 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         view.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation, tick);
         checks::support::pumpQuick();
 
+        const songview::TimelineBandLayout &bandLayout = view.timelineBandLayout();
+        const QRect canonicalRulerRectBeforeFont =
+            bandLayout.geometry(songview::TimelineBand::Ruler)
+                .value_or(songview::TimelineBandGeometry{})
+                .rect;
+        const auto canonicalBandUnion = [&bandLayout] {
+            std::optional<QRect> unionRect;
+            for (const std::optional<songview::TimelineBandGeometry> &band : bandLayout.bands) {
+                if (!band)
+                    continue;
+                unionRect = unionRect ? unionRect->united(band->rect) : band->rect;
+            }
+            return unionRect;
+        };
         const QFont originalApplicationFont = QApplication::font();
         const QFont originalViewFont = view.font();
         QFont scaledFont = originalViewFont;
@@ -363,6 +388,17 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         if (!overlayLifetime || refreshedOverlay != originalOverlay)
             failures.append("SongView font refresh reconstructed its native playhead overlay");
         overlay = refreshedOverlay;
+        const std::optional<songview::TimelineBandGeometry> &refreshedRuler =
+            bandLayout.geometry(songview::TimelineBand::Ruler);
+        if (!refreshedRuler) {
+            failures.append("font refresh dropped the canonical ruler entry");
+        } else {
+            if (quick->geometry() != canonicalBandUnion().value_or(QRect{}))
+                failures.append("font refresh diverged the Quick host from the canonical union");
+            if (refreshedRuler->rect != QRect(ruler->mapTo(&view, QPoint()), ruler->size()))
+                failures.append(
+                    "canonical ruler rectangle diverged from the ruler widget after font refresh");
+        }
         overlay->setPlayhead(view.contentX(tick), true, false);
         checks::support::pumpQuick();
         if (overlay->geometry() != view.rect()) {
@@ -413,6 +449,10 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
             return failures;
         }
         overlay = restoredOverlay;
+        const std::optional<songview::TimelineBandGeometry> &restoredRuler =
+            bandLayout.geometry(songview::TimelineBand::Ruler);
+        if (!restoredRuler || restoredRuler->rect != canonicalRulerRectBeforeFont)
+            failures.append("restoring the font did not return the canonical ruler rectangle");
         overlay->setPlayhead(view.contentX(tick), true, false);
         view.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation, tick);
         checks::support::pumpQuick();
@@ -499,9 +539,9 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
                         .arg(copy.name));
             }
         }
-        // No guide is republished after these watched-band moves: host-layout
-        // synchronization must retranslate the stored SongView coordinates.
-        const int hostXBefore = quick->geometry().x();
+        // Band widgets are overlays, not canonical sources: moving them must
+        // not drag the Quick host, whose geometry is the canonical union.
+        const QRect widgetMoveHostBefore = quick->geometry();
         const std::array<QWidget *, 6> guideBands = {
             ruler, roll, otherEvents, automationViewport, velocity, voiceChanges,
         };
@@ -512,28 +552,54 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
             guideBands[index]->move(guideBandGeometries[index].topLeft() + QPoint(hostShift, 0));
         }
         checks::support::pumpQuick();
-        if (quick->geometry().x() == hostXBefore) {
-            failures.append("guide geometry fixture did not move the Quick host");
-        } else {
-            if (std::abs(quick->hoverRootContentX() - quickContentX(expectedHover)) > 0.2 ||
-                std::abs(quick->editRootContentX() - quickContentX(expectedEdit)) > 0.2) {
-                failures.append("Quick guide coordinates did not retranslate after a host move");
-            }
-            for (const ChromeCopies &copy : copies) {
-                if (!copy.hover || !copy.edit)
-                    continue;
-                if (std::abs(checks::support::quickRootX(*copy.hover, *root) -
-                             quickContentX(expectedHover)) > 0.2 ||
-                    std::abs(checks::support::quickRootX(*copy.edit, *root) -
-                             quickContentX(expectedEdit)) > 0.2) {
-                    failures.append(QStringLiteral("%1 guide did not retranslate after a host move")
-                                        .arg(copy.name));
-                }
-            }
+        if (quick->geometry() != widgetMoveHostBefore ||
+            quick->geometry() != canonicalBandUnion().value_or(QRect{})) {
+            failures.append("Quick host followed a widget-only move off the canonical union");
         }
         for (std::size_t index = 0; index < guideBands.size(); ++index)
             guideBands[index]->setGeometry(guideBandGeometries[index]);
         checks::support::pumpQuick();
+        // Only a parent-layout mutation may move the host: shrink the view so
+        // the canonical union changes, then require host parity while the
+        // retained guides retranslate into the moved host frame.
+        const QRect canonicalUnionBeforeResize = canonicalBandUnion().value_or(QRect{});
+        const QSize viewSizeBeforeResize = view.size();
+        view.resize(view.width(), view.height() - 4 * layout::space(layout::Space::One));
+        checks::support::pumpQuick();
+        const std::optional<QRect> resizedUnion = canonicalBandUnion();
+        if (!resizedUnion || *resizedUnion == canonicalUnionBeforeResize) {
+            failures.append("canonical fixture resize did not change the canonical union");
+        } else if (quick->geometry() != *resizedUnion) {
+            failures.append("Quick host did not move with the canonical union after resize");
+        }
+        const std::optional<songview::TimelineBandGeometry> &resizedRoll =
+            bandLayout.geometry(songview::TimelineBand::Roll);
+        if (!resizedRoll ||
+            resizedRoll->rect != QRect(roll->mapTo(&view, QPoint()), roll->size())) {
+            failures.append("canonical roll rectangle went stale after the canonical resize");
+        }
+        if (std::abs(quick->hoverRootContentX() - quickContentX(expectedHover)) > 0.2 ||
+            std::abs(quick->editRootContentX() - quickContentX(expectedEdit)) > 0.2) {
+            failures.append("Quick guide coordinates did not retranslate after a canonical move");
+        }
+        for (const ChromeCopies &copy : copies) {
+            if (!copy.hover || !copy.edit)
+                continue;
+            if (std::abs(checks::support::quickRootX(*copy.hover, *root) -
+                         quickContentX(expectedHover)) > 0.2 ||
+                std::abs(checks::support::quickRootX(*copy.edit, *root) -
+                         quickContentX(expectedEdit)) > 0.2) {
+                failures.append(
+                    QStringLiteral("%1 guide did not retranslate after a canonical move")
+                        .arg(copy.name));
+            }
+        }
+        view.resize(viewSizeBeforeResize);
+        checks::support::pumpQuick();
+        if (quick->geometry() != canonicalBandUnion().value_or(QRect{}) ||
+            quick->geometry() != widgetMoveHostBefore) {
+            failures.append("Quick host did not restore the canonical union after resize");
+        }
         const SongView::ViewState cameraState = view.viewState();
         const qreal oldEditX = quick->editRootContentX();
         view.setEditorHorizontalScroll(cameraState.scrollPx + view.pxPerBeat());
@@ -588,6 +654,14 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         const bool eventListWasVisible = view.eventListVisible();
         view.setEventListVisible(false);
         checks::support::pumpQuick();
+        const auto canonicalRollMatchesRoll = [&] {
+            const std::optional<songview::TimelineBandGeometry> &geometry =
+                bandLayout.geometry(songview::TimelineBand::Roll);
+            return geometry && roll->isVisibleTo(&view) &&
+                   geometry->rect == QRect(roll->mapTo(&view, QPoint()), roll->size());
+        };
+        if (!canonicalRollMatchesRoll())
+            failures.append("roll view canonical entry diverged from the piano-roll widget");
         const QColor playheadColor = themes::color(themes::Role::song_view_playhead);
         const qreal nativeX =
             ruler->mapTo(&view, QPoint(qRound(view.timelinePlotOrigin()), 0)).x() +
@@ -656,6 +730,8 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         const EditorViewState savedEditorState = view.editorViewState();
         view.setEventListVisible(true);
         checks::support::pumpQuick();
+        if (bandLayout.geometry(songview::TimelineBand::Roll))
+            failures.append("event-list view retained a canonical roll rectangle");
         const qreal eventListNativeX = currentNativeX();
         if (captureExpected) {
             const QImage eventListImage = grabPlayhead(view, *overlay, failures).toImage();
@@ -681,6 +757,8 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         }
         view.setEventListVisible(false);
         checks::support::pumpQuick();
+        if (!canonicalRollMatchesRoll())
+            failures.append("restored roll view did not republish its canonical rectangle");
 
         const auto checkVisibleBand = [&](QWidget &band, const char *name) {
             if (!captureExpected)
@@ -713,6 +791,51 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         checks::support::pumpQuick();
         checkVisibleBand(*automationViewport, "automation viewport");
         checkVisibleBand(*otherEvents, "other-events");
+        // Equal-layout lifecycle events (Show, WinIdChange, density, screen)
+        // republish the stored layout without touching the canonical value:
+        // the Quick host frame, window mask, QML band geometry, and playhead
+        // clipping must survive a hide/show cycle.
+        const songview::TimelineBandLayout canonicalBeforeLifecycle = bandLayout;
+        QEvent winIdChange(QEvent::WinIdChange);
+        QCoreApplication::sendEvent(&view, &winIdChange);
+        // QEvent::DevicePixelRatioChange exists only since Qt 6.6; earlier
+        // Qt 6 carries the density change on the screen-change notification.
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+        QEvent densityChange(QEvent::DevicePixelRatioChange);
+#else
+        QEvent densityChange(QEvent::ScreenChangeInternal);
+#endif
+        QCoreApplication::sendEvent(&view, &densityChange);
+        view.hide();
+        checks::support::pumpQuick();
+        view.show();
+        checks::support::pumpQuick();
+        const QRect lifecycleHost = quick->geometry();
+        const QRect lifecycleRoll = bandLayout.geometry(songview::TimelineBand::Roll)
+                                        .value_or(songview::TimelineBandGeometry{})
+                                        .rect;
+        const QRectF lifecycleRollLocal(lifecycleRoll.translated(-lifecycleHost.topLeft()));
+        if (bandLayout != canonicalBeforeLifecycle ||
+            lifecycleHost != canonicalBandUnion().value_or(QRect{}))
+            failures.append(
+                "a lifecycle event moved the canonical layout or dropped the Quick host frame");
+        auto *lifecycleHandle =
+            drawer->findChild<QWidget *>(QStringLiteral("velocityResizeHandle"));
+        const QRegion &lifecycleMask = quick->quickWindow()->mask();
+        if (!root->property("rollBandVisible").toBool() ||
+            root->property("rollBandRect").toRectF() != lifecycleRollLocal ||
+            !lifecycleMask.contains(lifecycleRollLocal.center().toPoint()) || !lifecycleHandle ||
+            lifecycleMask.contains(lifecycleHandle->mapTo(&view, lifecycleHandle->rect().center()) -
+                                   lifecycleHost.topLeft())) {
+            failures.append(
+                "lifecycle republish dropped the QML roll band geometry or window mask");
+        }
+        checkVisibleBand(*roll, "piano roll after lifecycle republish");
+        checkVisibleBand(*velocity, "velocity lane after lifecycle republish");
+        // Hover must be checked while the automation page is the explicitly
+        // shown, active surface — before the saved editor state restores the
+        // fixture defaults and hides the sibling sections again.
+        checkAutomationHover(view, failures);
         view.applyEditorViewState(savedEditorState);
         view.setEventListVisible(eventListWasVisible);
         checks::support::pumpQuick();
@@ -729,7 +852,6 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
 #ifdef __APPLE__
         checkMacPlayheadLifecycle(view, *overlay, failures);
 #endif
-        checkAutomationHover(view, failures);
     }
 
     failures += quickFallbackPlayheadCheckFailures(timeline);
