@@ -255,6 +255,7 @@ SongView::SongView(QWidget *parent)
     m_vbar = new QScrollBar(Qt::Vertical, rollPage);
     ::layout::configureListPositionIndicator(*m_vbar);
     m_vbar->setSingleStep(kScrollUnitsPerDip);
+    rollBox->addStretch(1);
     rollBox->addWidget(m_vbar);
     m_rollStack->addWidget(rollPage);
     m_events = new EventListView(this);

@@ -4,6 +4,8 @@
 #include <QEvent>
 #include <QImage>
 #include <QPoint>
+#include <QScrollBar>
+#include <QStackedWidget>
 #include <algorithm>
 #include <cmath>
 
@@ -25,6 +27,17 @@ ScenarioContinuation runCameraScenarios(Harness &check)
     const int plotOrigin = check.plotOrigin();
     const int undoBaseline = doc.undoStack()->index();
     auto fail = [&](const char *what) { check.fail(what); };
+    QScrollBar *rollVbar = nullptr;
+    for (QScrollBar *bar : view.findChildren<QScrollBar *>()) {
+        QWidget *page = bar->parentWidget();
+        if (bar->orientation() == Qt::Vertical && page &&
+            qobject_cast<QStackedWidget *>(page->parentWidget())) {
+            rollVbar = bar;
+            break;
+        }
+    }
+    if (!rollVbar || rollVbar->geometry().right() != rollVbar->parentWidget()->rect().right())
+        fail("roll scrollbar is not docked to the right edge");
     // The Y camera is continuous: partial wheel deltas are immediately
     // multiplicative, preserve the cursor's content row, and remain precise
     // through the integer-native scrollbar projection.
