@@ -4,6 +4,7 @@
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include <algorithm>
 #include <array>

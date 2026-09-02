@@ -318,6 +318,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/quick/automationquick.cpp
     src/ui/songview/quick/velocityquick.cpp
     src/ui/songview/quick/voicechangequick.cpp
+    src/ui/songview/quick/pianorollquick.h
     src/ui/songview/quick/timelineinput.h
     src/ui/songview/quick/timelineinputitem.cpp
     src/ui/songview/quick/timelineinputitem.h

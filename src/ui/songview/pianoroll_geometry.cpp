@@ -6,6 +6,7 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
+#include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include <QApplication>
 #include <QFontMetrics>

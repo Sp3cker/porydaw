@@ -4,6 +4,7 @@
 #include "ui/layout.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/pianorollquick.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
 

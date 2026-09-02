@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelineinput.h"
 #include "ui/songview/quick/timelinequickchrome.h"
 #include "ui/songview/quick/timelinequickscene.h"
@@ -37,37 +38,6 @@ enum class TimelineQuickHoverOwner : quint8 {
 };
 
 class TimeRuler;
-enum class PianoRollQuickDirty : quint32 {
-    None = 0,
-    Grid = 1u << 0,
-    NoteFills = 1u << 1,
-    DrawPreviewFill = 1u << 2,
-    NoteBordersAndSelection = 1u << 3,
-    Overlay = 1u << 4,
-    KeyboardKeys = 1u << 5,
-    KeyboardHighlights = 1u << 6,
-    NoteText = 1u << 7,
-    LoadingText = 1u << 8,
-    KeyboardText = 1u << 9,
-    HoverChip = 1u << 10,
-    All = (1u << 11) - 1,
-};
-Q_DECLARE_FLAGS(PianoRollQuickDirtySet, PianoRollQuickDirty)
-Q_DECLARE_OPERATORS_FOR_FLAGS(PianoRollQuickDirtySet)
-
-inline constexpr PianoRollQuickDirtySet cPlotDirty =
-    PianoRollQuickDirty::Grid | PianoRollQuickDirty::NoteFills |
-    PianoRollQuickDirty::DrawPreviewFill | PianoRollQuickDirty::NoteBordersAndSelection |
-    PianoRollQuickDirty::Overlay | PianoRollQuickDirty::NoteText;
-inline constexpr PianoRollQuickDirtySet cPlotAndLoadingDirty =
-    cPlotDirty | PianoRollQuickDirty::LoadingText;
-inline constexpr PianoRollQuickDirtySet cNoteMutationDirty =
-    PianoRollQuickDirty::NoteFills | PianoRollQuickDirty::NoteBordersAndSelection |
-    PianoRollQuickDirty::NoteText;
-inline constexpr PianoRollQuickDirtySet cVelocityMutationDirty =
-    PianoRollQuickDirty::NoteFills | PianoRollQuickDirty::NoteText;
-inline constexpr PianoRollQuickDirtySet cDrawCommitDirty =
-    cNoteMutationDirty | PianoRollQuickDirty::DrawPreviewFill | PianoRollQuickDirty::Overlay;
 
 enum class TimelineQuickDirty : quint16 {
     None = 0,
@@ -89,6 +59,21 @@ enum class TimelineQuickDirty : quint16 {
 };
 Q_DECLARE_FLAGS(TimelineQuickDirtySet, TimelineQuickDirty)
 Q_DECLARE_OPERATORS_FOR_FLAGS(TimelineQuickDirtySet)
+
+// Producers OR independent refresh levels; one flush repaints each requested
+// level's layers. Levels are not supersets of one another:
+//   Content   — grid, curves, nodes, selection, primary text
+//   Transient — drag-preview layer + transient text
+//   Hover     — hover layer + hover text
+enum class AutomationRefresh : quint8 {
+    None = 0,
+    Content = 1u << 0,
+    Transient = 1u << 1,
+    Hover = 1u << 2,
+    All = (1u << 3) - 1,
+};
+Q_DECLARE_FLAGS(AutomationRefreshSet, AutomationRefresh)
+Q_DECLARE_OPERATORS_FOR_FLAGS(AutomationRefreshSet)
 
 inline constexpr TimelineQuickDirtySet cAutomationMask =
     TimelineQuickDirty::AutomationGrid | TimelineQuickDirty::AutomationCurves |
@@ -148,6 +133,7 @@ class TimelineQuickView final : public QWidget
 
     void requestUpdate(PianoRollQuickDirtySet dirty);
     void requestTimelineUpdate(TimelineQuickDirtySet dirty);
+    void requestAutomationUpdate(AutomationRefreshSet dirty);
 
   signals:
     void hoverChromeChanged();
@@ -202,6 +188,7 @@ class TimelineQuickView final : public QWidget
     uint64_t m_hoverTick = 0;
     PianoRollQuickDirtySet m_pendingDirty = {PianoRollQuickDirty::None};
     TimelineQuickDirtySet m_pendingTimelineDirty = {TimelineQuickDirty::None};
+    AutomationRefreshSet m_pendingAutomationRefresh = {AutomationRefresh::None};
     QTimer m_layoutTimer;
     QTimer m_flushTimer;
     std::vector<TimelineQuickTextModel::Record> m_noteTextRecords;

@@ -6,6 +6,7 @@
 #include "ui/songview.h"
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/timeruler.h"
 #include <QColor>
@@ -550,6 +551,14 @@ void TimelineQuickView::requestTimelineUpdate(TimelineQuickDirtySet dirty)
     if (dirty == TimelineQuickDirty::None)
         return;
     m_pendingTimelineDirty |= dirty;
+    m_flushTimer.start();
+}
+
+void TimelineQuickView::requestAutomationUpdate(AutomationRefreshSet dirty)
+{
+    if (dirty == AutomationRefresh::None)
+        return;
+    m_pendingAutomationRefresh |= dirty;
     m_flushTimer.start();
 }
 

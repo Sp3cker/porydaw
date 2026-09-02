@@ -28,6 +28,7 @@
 #include "ui/pitchprojection.h"
 #include "ui/songview/clip.h"
 #include "ui/songview/editorselectionmodel.h"
+#include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelineinput.h"
 #include "ui/songview/scalecontroller.h"
 #include "ui/songview/timeaxis.h"

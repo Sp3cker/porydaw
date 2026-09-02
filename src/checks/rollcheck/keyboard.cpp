@@ -18,6 +18,7 @@
 #include "ui/songview.h"
 
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 namespace checks::rollcheck {

@@ -15,6 +15,7 @@
 #include "ui/contextmenu.h"
 #include "ui/pitchprojection.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelineinput.h"
 #include "ui/songviewmodel.h"
 
