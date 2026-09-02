@@ -542,9 +542,9 @@ void AutomationPage::requestRefresh() const
 {
     m_owner.refreshAllDrawerPages();
 }
-void AutomationPage::requestQuickUpdate(songview::TimelineQuickDirtySet dirty) const
+void AutomationPage::requestQuickUpdate(songview::AutomationRefreshSet dirty) const
 {
-    m_owner.requestTimelineQuickUpdate(dirty);
+    m_owner.requestAutomationQuickUpdate(dirty);
 }
 
 void AutomationPage::commitEditCursor(uint64_t tick) const

@@ -231,9 +231,9 @@ bool AutomationCanvas::hasMultipleSelectedNodes(
     return false;
 }
 
-void AutomationCanvas::requestQuickUpdate(songview::TimelineQuickDirtySet dirty) const
+void AutomationCanvas::requestQuickUpdate(songview::AutomationRefreshSet dirty) const
 {
-    if (dirty.testFlag(songview::TimelineQuickDirty::AutomationHover))
+    if (dirty.testFlag(songview::AutomationRefresh::Hover))
         syncTimelineQuickHover();
     m_page.requestQuickUpdate(dirty);
 }
@@ -251,62 +251,44 @@ void AutomationCanvas::syncTimelineQuickHover() const
 
 void AutomationCanvas::requestFullQuickUpdate() const
 {
-    requestQuickUpdate(songview::cAutomationMask);
+    requestQuickUpdate(songview::AutomationRefresh::All);
 }
 
 void AutomationCanvas::requestViewportQuickUpdate() const
 {
-    requestQuickUpdate(songview::TimelineQuickDirty::AutomationGrid |
-                       songview::TimelineQuickDirty::AutomationCurves |
-                       songview::TimelineQuickDirty::AutomationNodes |
-                       songview::TimelineQuickDirty::AutomationSelection |
-                       songview::TimelineQuickDirty::AutomationText);
+    requestQuickUpdate(songview::AutomationRefresh::Content);
 }
 
 void AutomationCanvas::requestSelectionQuickUpdate() const
 {
     invalidateSelectedNodeMultiplicity();
-    requestQuickUpdate(songview::TimelineQuickDirty::AutomationSelection |
-                       songview::TimelineQuickDirty::AutomationNodes);
+    requestQuickUpdate(songview::AutomationRefresh::Content);
 }
 
 void AutomationCanvas::requestHoverQuickUpdate() const
 {
-    requestQuickUpdate(songview::TimelineQuickDirty::AutomationHover |
-                       songview::TimelineQuickDirty::AutomationHoverText);
+    requestQuickUpdate(songview::AutomationRefresh::Hover);
 }
 
 void AutomationCanvas::requestGestureBeginQuickUpdate(bool band) const
 {
     if (band)
         invalidateSelectedNodeMultiplicity();
-    auto dirty = songview::TimelineQuickDirty::AutomationTransient |
-                 songview::TimelineQuickDirty::AutomationTransientText |
-                 songview::TimelineQuickDirty::AutomationNodes;
-    dirty |= band ? songview::TimelineQuickDirty::AutomationSelection
-                  : songview::TimelineQuickDirty::AutomationCurves;
-    requestQuickUpdate(dirty);
+    requestQuickUpdate(songview::AutomationRefresh::Content |
+                       songview::AutomationRefresh::Transient);
 }
 
 void AutomationCanvas::requestGestureMoveQuickUpdate() const
 {
     if (m_band.active)
         invalidateSelectedNodeMultiplicity();
-    requestQuickUpdate(songview::TimelineQuickDirty::AutomationTransient |
-                       songview::TimelineQuickDirty::AutomationTransientText);
+    requestQuickUpdate(songview::AutomationRefresh::Transient);
 }
 
 void AutomationCanvas::requestGestureEndQuickUpdate() const
 {
     invalidateSelectedNodeMultiplicity();
-    requestQuickUpdate(songview::TimelineQuickDirty::AutomationCurves |
-                       songview::TimelineQuickDirty::AutomationNodes |
-                       songview::TimelineQuickDirty::AutomationSelection |
-                       songview::TimelineQuickDirty::AutomationTransient |
-                       songview::TimelineQuickDirty::AutomationHover |
-                       songview::TimelineQuickDirty::AutomationText |
-                       songview::TimelineQuickDirty::AutomationHoverText |
-                       songview::TimelineQuickDirty::AutomationTransientText);
+    requestQuickUpdate(songview::AutomationRefresh::All);
 }
 
 bool AutomationCanvas::bandPreviewContainsLane(LaneHandle handle) const noexcept

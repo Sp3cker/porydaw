@@ -883,6 +883,12 @@ void SongView::requestTimelineQuickUpdate(TimelineQuickDirtySet dirty)
         m_quickView->requestTimelineUpdate(dirty);
 }
 
+void SongView::requestAutomationQuickUpdate(songview::AutomationRefreshSet refresh)
+{
+    if (refresh != AutomationRefresh::None && m_quickView)
+        m_quickView->requestAutomationUpdate(refresh);
+}
+
 void SongView::syncTimelineQuickAppearance()
 {
     if (m_quickView)
@@ -942,6 +948,7 @@ void SongView::goToStart()
 void SongView::refreshTimelineViews(PianoRollQuickDirtySet dirty)
 {
     requestTimelineQuickUpdate(TimelineQuickDirty::All);
+    requestAutomationQuickUpdate(songview::AutomationRefresh::All);
     m_roll->requestQuickUpdate(dirty);
     syncTimelineIndicators();
 }

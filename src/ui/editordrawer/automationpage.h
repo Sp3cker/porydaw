@@ -103,7 +103,7 @@ class AutomationPage final : public QWidget
     void showTimeSelectionMenu(const DrawerPageTimeSelectionMenuRequest &request) const;
     bool pickVoice(const QString &title, int initialVoice, int *outVoice) const;
     void requestRefresh() const;
-    void requestQuickUpdate(songview::TimelineQuickDirtySet dirty) const;
+    void requestQuickUpdate(songview::AutomationRefreshSet dirty) const;
     void commitEditCursor(uint64_t tick) const;
     void announce(const QString &message) const;
 

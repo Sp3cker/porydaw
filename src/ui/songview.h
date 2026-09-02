@@ -69,6 +69,8 @@ class TrackHeaderRow;
 enum class PianoRollQuickDirty : quint32;
 enum class TimelineQuickDirty : quint16;
 using TimelineQuickDirtySet = QFlags<TimelineQuickDirty>;
+enum class AutomationRefresh : quint8;
+using AutomationRefreshSet = QFlags<AutomationRefresh>;
 enum class TimelineQuickHoverOwner : quint8;
 using PianoRollQuickDirtySet = QFlags<PianoRollQuickDirty>;
 
@@ -205,6 +207,8 @@ class SongView : public QWidget
     void clearTimelineQuickHover(songview::TimelineQuickHoverOwner owner);
     // Widget-owned migrated bands route retained-scene invalidation through this seam.
     void requestTimelineQuickUpdate(songview::TimelineQuickDirtySet dirty);
+    // Retained automation scenes repaint through the dedicated refresh channel.
+    void requestAutomationQuickUpdate(songview::AutomationRefreshSet refresh);
 
     qreal contentX(double tick) const { return qreal(tick * pxPerTick() - m_scrollX); }
     double tickAtContentX(qreal x) const { return (double(x) + m_scrollX) / pxPerTick(); }

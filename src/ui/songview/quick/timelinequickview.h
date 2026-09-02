@@ -46,16 +46,7 @@ enum class TimelineQuickDirty : quint16 {
     Velocity = 1u << 2,
     VoiceChanges = 1u << 3,
     VoiceChangesHover = 1u << 4,
-    AutomationGrid = 1u << 5,
-    AutomationCurves = 1u << 6,
-    AutomationNodes = 1u << 7,
-    AutomationSelection = 1u << 8,
-    AutomationTransient = 1u << 9,
-    AutomationHover = 1u << 10,
-    AutomationText = 1u << 11,
-    AutomationHoverText = 1u << 12,
-    AutomationTransientText = 1u << 13,
-    All = (1u << 14) - 1,
+    All = (1u << 5) - 1,
 };
 Q_DECLARE_FLAGS(TimelineQuickDirtySet, TimelineQuickDirty)
 Q_DECLARE_OPERATORS_FOR_FLAGS(TimelineQuickDirtySet)
@@ -74,13 +65,6 @@ enum class AutomationRefresh : quint8 {
 };
 Q_DECLARE_FLAGS(AutomationRefreshSet, AutomationRefresh)
 Q_DECLARE_OPERATORS_FOR_FLAGS(AutomationRefreshSet)
-
-inline constexpr TimelineQuickDirtySet cAutomationMask =
-    TimelineQuickDirty::AutomationGrid | TimelineQuickDirty::AutomationCurves |
-    TimelineQuickDirty::AutomationNodes | TimelineQuickDirty::AutomationSelection |
-    TimelineQuickDirty::AutomationTransient | TimelineQuickDirty::AutomationHover |
-    TimelineQuickDirty::AutomationText | TimelineQuickDirty::AutomationHoverText |
-    TimelineQuickDirty::AutomationTransientText;
 
 static_assert(static_cast<quint32>(TimelineQuickDirty::All) <= std::numeric_limits<quint16>::max());
 
@@ -154,6 +138,7 @@ class TimelineQuickView final : public QWidget
     void flushUpdate();
     void synchronize(PianoRollQuickDirtySet dirty);
     void synchronizeTimeline(TimelineQuickDirtySet dirty);
+    void syncAutomation(AutomationRefreshSet refresh);
 
     void rebuildGrid();
     void rebuildNoteFills();
