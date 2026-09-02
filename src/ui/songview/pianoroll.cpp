@@ -122,6 +122,7 @@ void PianoRoll::detachInputHost(TimelineInputHost &host)
     if (m_inputHost != &host)
         return;
     cancelTransientInput();
+    m_curPosValid = false;
     host.clearCursor();
     m_inputHost = nullptr;
 }

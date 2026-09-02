@@ -912,6 +912,9 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         view.setEventListVisible(eventListWasVisible);
         checks::support::pumpQuick();
 
+        // Keep this a position-only probe; follow-scroll camera motion legitimately rebuilds
+        // the retained timeline layers.
+        view.setFollowPlayhead(false);
         view.setPlayheadSample(timeline.sampleForTick(tick), true);
         checks::support::pumpQuick();
         const auto beforeMoves = checks::support::timelineQuickLayerRevisions(*scene);
@@ -920,6 +923,7 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         checks::support::pumpQuick();
         if (checks::support::timelineQuickLayerRevisions(*scene) != beforeMoves)
             failures.append("128 position-only SongView moves rebuilt TimelineQuickLayer data");
+        view.setFollowPlayhead(true);
 
 #ifdef __APPLE__
         checkMacPlayheadLifecycle(view, *overlay, failures);
