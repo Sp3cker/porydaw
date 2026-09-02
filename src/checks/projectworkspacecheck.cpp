@@ -1,16 +1,21 @@
 #include <QDir>
 #include <QEventLoop>
+#include <QFile>
+#include <QFileInfo>
 #include <QSettings>
 #include <QTimer>
 
 #include <cstdio>
 #include <deque>
+#include <functional>
+#include <map>
 #include <optional>
 #include <utility>
 #include <variant>
 
 #include "project/projectidentity.h"
 #include "project/projectworkspace.h"
+#include "project/sidecar.h"
 #include "project/songregistry.h"
 #include "project/voicegroupsource.h"
 
@@ -31,6 +36,34 @@ namespace {
 
 // One publication in arrival order across the three public streams.
 using Entry = std::variant<ProjectState, ProjectEvent, SongUpdate>;
+
+// A byte snapshot of every file under the project's .porydaw directory.
+std::map<QString, QByteArray> porydawSnapshot(const QString &projectRoot)
+{
+    const auto fileBytes = [](const QString &path) {
+        QFile file(path);
+        return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray{};
+    };
+    std::map<QString, QByteArray> snapshot;
+    const std::function<void(const QString &, const QString &)> visit =
+        [&snapshot, &fileBytes, &visit](const QString &dir, const QString &prefix) {
+            const QDir entries(dir);
+            for (const QFileInfo &entry :
+                 entries.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot)) {
+                const QString relative = prefix.isEmpty()
+                                             ? entry.fileName()
+                                             : prefix + QLatin1Char('/') + entry.fileName();
+                if (entry.isDir())
+                    visit(entry.absoluteFilePath(), relative);
+                else
+                    snapshot.emplace(relative, fileBytes(entry.absoluteFilePath()));
+            }
+        };
+    const QString root = Sidecar::dirPath(projectRoot);
+    if (QDir(root).exists())
+        visit(root, QString());
+    return snapshot;
+}
 
 // Count the published states in the arrival log.
 int stateCount(const std::deque<Entry> &log)
@@ -259,6 +292,57 @@ struct StartupSession {
     std::deque<Entry> log;
     ProjectWorkspace restorer;
 };
+
+// ---- saved startup edges ----------------------------------------------------
+
+// The workspace does nothing with no saved project, reports a vanished saved
+// project, and opens a saved project without inventing a song load.
+void checkSavedStartupEdges(FlowFixture &fx)
+{
+    clearSavedProjectSettings();
+    {
+        std::deque<Entry> log;
+        ProjectWorkspace workspace;
+        fx.wire(workspace, log);
+        QTimer::singleShot(0, &fx.loop, &QEventLoop::quit);
+        fx.loop.exec();
+        fx.check(log.empty(), "startup without a saved project published a result");
+    }
+
+    clearSavedProjectSettings();
+    {
+        QSettings settings;
+        settings.setValue(QLatin1String("lastProjectDir"), fx.goneRoot);
+        settings.setValue(QLatin1String("lastSongLabel"), fx.route101->value());
+        settings.sync();
+        std::deque<Entry> log;
+        ProjectWorkspace workspace;
+        fx.wire(workspace, log);
+        fx.waitFor([&] { return lastStateIs(log, ProjectOpenState::Failed); },
+                   "the vanished saved project did not publish Failed");
+    }
+
+    clearSavedProjectSettings();
+    {
+        QSettings settings;
+        settings.setValue(QLatin1String("lastProjectDir"), fx.projectRoot);
+        settings.sync();
+        std::deque<Entry> log;
+        ProjectWorkspace workspace;
+        fx.wire(workspace, log);
+        fx.waitFor([&] { return indexOf(log, hasPublishedCatalog) >= 0; },
+                   "the saved project without songs did not publish its catalog");
+        fx.check(lastStateIs(log, ProjectOpenState::Ready),
+                 "the saved project without songs did not reach Ready");
+        fx.check(indexOf(log,
+                         [](const Entry &entry) {
+                             return std::holds_alternative<SongUpdate>(entry);
+                         }) < 0,
+                 "the saved project without songs published a song update");
+    }
+
+    clearSavedProjectSettings();
+}
 
 // ---- user-driven open: refusal, invariants, write ownership --------------
 //
@@ -598,11 +682,13 @@ void checkVoicegroupEdits(FlowFixture &fx, StartupSession &startup, const Loaded
 int checkWorkspaceFlows(const QString &projectRoot, int &failures)
 {
     FlowFixture fx{projectRoot, failures};
+    const auto sidecarBoundary = porydawSnapshot(projectRoot);
     fx.check(fx.route101 && fx.petalburg && fx.missing,
              "fixture song labels were rejected as identities");
     if (!(fx.route101 && fx.petalburg && fx.missing))
         return failures;
 
+    checkSavedStartupEdges(fx);
     checkOpenRefusalAndOwnership(fx);
 
     writeStartupSavedSettings(projectRoot);
@@ -623,6 +709,8 @@ int checkWorkspaceFlows(const QString &projectRoot, int &failures)
 
     fx.checkInvariants(fx.openLog);
     fx.checkInvariants(startup.log);
+    fx.check(porydawSnapshot(projectRoot) == sidecarBoundary,
+             "project workspace operations wrote into the .porydaw directory");
 
     clearSavedProjectSettings();
     return failures;
