@@ -472,6 +472,8 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/fixturecatalog.cpp
         src/checks/fixturecatalog.hpp
         src/checks/fwd.hpp
+        src/checks/support/editorrig.cpp
+        src/checks/support/editorrig.h
         src/checks/support/eventsynth.cpp
         src/checks/support/eventsynth.h
         src/checks/support/quickframebuffer.cpp
