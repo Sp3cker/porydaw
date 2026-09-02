@@ -170,6 +170,25 @@ The six baseline QWidget input surfaces are:
   handlers, Quick input-transparency flags, automation hover synthesizer, or band-owned outer
   geometry mutator. Independent thermo-nuclear and Qt 6 reviews found no mandatory defects.
 
+### Phase 9 implementation record
+
+- Interaction-rule checks use non-widget interactions through in-memory hosts or normalized Quick
+  input; integration checks deliver through `TimelineInputItem`/`QQuickWindow`; rendering checks
+  capture Quick output; playhead checks retain native and fallback presentation coverage.
+- The remaining Automation scroll-viewport-to-canonical migration comparator, its one-element
+  widget arrays, and all compatibility call sites are deleted from `host-adapter`. Canonical layout,
+  QML publication, Quick input bounds, native mask holes, hidden bands, event-list switching, and
+  native scrollbar checks remain.
+- The complete behavior-parity checklist maps to active checks with no uncovered acceptance gap.
+  The four static deletion gates and the converted-module QWidget event-handler audit have zero
+  target-path hits.
+- `deno task format --check`, `deno task build:app`, and `deno task build:checks` pass. Focused
+  `rollcheck`, `rollwindowingcheck`, `editor-drawer`, `automation-gestures`,
+  `automation-popup-menus`, `automation`, `velocity-page`, `rendering-playhead`, `host`, and
+  `mainwindow-routing` checks pass. `deno task verify` passes all 63 registered harnesses.
+- Independent thermo-nuclear and Qt 6 reviews found no mandatory defects in the final check
+  cleanup.
+
 ## Goal
 
 Make the existing Qt Quick timeline scene own raw pointer, wheel, hover, focus, and keyboard input

@@ -407,15 +407,11 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     auto *rulerControls =
         view.findChild<QWidget *>(QStringLiteral("timeRulerControls"), Qt::FindDirectChildrenOnly);
     auto *rollBand = view.findChild<songview::PianoRoll *>();
-    auto *automationViewport =
-        drawer && drawer->automationPage() ? drawer->automationPage()->scrollViewport() : nullptr;
     QObject *const quickRoot = quick->rootObject();
-    const std::array<QWidget *, 1> quickBands{
-        automationViewport,
-    };
-    check(rollBand && automationViewport && quickRoot && rulerControls,
-          "host should expose the retained Quick band widgets, ruler controls, and Quick root");
-    if (rollBand && automationViewport && quickRoot && rulerControls) {
+    check(rollBand && quickRoot && rulerControls,
+          "host should expose the non-widget PianoRoll interaction, ruler "
+          "controls, and Quick root");
+    if (rollBand && quickRoot && rulerControls) {
         {
             auto *rulerInput = quickRoot->findChild<songview::TimelineInputItem *>(
                 QStringLiteral("timelineRulerInput"));
@@ -439,27 +435,6 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
                   "all six Quick input items should own their matching non-widget interactions");
         }
         const songview::TimelineBandLayout &bandLayout = view.timelineBandLayout();
-        const std::array<songview::TimelineBand, quickBands.size()> bandIds{
-            songview::TimelineBand::Automation,
-        };
-        // Every visible retained widget band must exactly fill its canonical
-        // parent-owned rectangle, and every hidden band must leave a nullopt
-        // entry behind. Converted bands contribute through canonical entries.
-        const auto canonicalMatchesWidgets = [&] {
-            for (std::size_t index = 0; index < bandIds.size(); ++index) {
-                const QWidget &band = *quickBands[index];
-                const std::optional<songview::TimelineBandGeometry> &geometry =
-                    bandLayout.geometry(bandIds[index]);
-                if (!band.isVisibleTo(&view)) {
-                    if (geometry)
-                        return false;
-                    continue;
-                }
-                if (!geometry || geometry->rect != QRect(band.mapTo(&view, QPoint()), band.size()))
-                    return false;
-            }
-            return true;
-        };
         const auto canonicalVisibleUnion = [&] {
             std::optional<QRect> unionRect;
             for (const std::optional<songview::TimelineBandGeometry> &band : bandLayout.bands) {
@@ -469,8 +444,6 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
             }
             return unionRect;
         };
-        check(canonicalMatchesWidgets(),
-              "canonical layout should equal every visible retained band widget rectangle");
         check(inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::Roll,
                                     QStringLiteral("timelineRollInput")),
               "Roll input item should match its canonical band");
@@ -572,7 +545,7 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         const std::optional<QRect> hiddenUnion = canonicalVisibleUnion();
         check(hiddenUnion && quick->geometry() == *hiddenUnion && quick->isVisible(),
               "Quick host geometry should exclude a hidden band's rectangle");
-        check(!bandLayout.geometry(songview::TimelineBand::Velocity) && canonicalMatchesWidgets(),
+        check(!bandLayout.geometry(songview::TimelineBand::Velocity),
               "hidden velocity band should leave a nullopt canonical entry");
         check(!quickRoot->property("velocityBandVisible").toBool() &&
                   quickRoot->property("velocityBandRect").toRectF().isEmpty(),
@@ -627,7 +600,7 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
                                         QStringLiteral("timelineVelocityInput")),
               "shown velocity band should republish its current retained Quick rectangle and match "
               "its input item");
-        check(canonicalMatchesWidgets() && quick->geometry() == canonicalVisibleUnion(),
+        check(quick->geometry() == canonicalVisibleUnion(),
               "reshown velocity band should re-enter the canonical layout");
         view.focusTimelineBand(songview::TimelineBand::Velocity, Qt::MouseFocusReason);
         pumpZeroDelayTimers();
@@ -651,14 +624,14 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         pumpZeroDelayTimers();
         auto *eventListRollInput = quickRoot->findChild<songview::TimelineInputItem *>(
             QStringLiteral("timelineRollInput"));
-        check(!bandLayout.geometry(songview::TimelineBand::Roll) && canonicalMatchesWidgets() &&
-                  eventListRollInput && !eventListRollInput->isVisible() && quick->isVisible() &&
+        check(!bandLayout.geometry(songview::TimelineBand::Roll) && eventListRollInput &&
+                  !eventListRollInput->isVisible() && quick->isVisible() &&
                   quick->geometry() == canonicalVisibleUnion() &&
                   publishedQmlRectsMatchCanonical(*quick, *quickRoot, bandLayout),
               "event-list view should clear the canonical roll entry, input, and Quick geometry");
         view.setEventListVisible(eventListWasVisible);
         pumpZeroDelayTimers();
-        check(canonicalMatchesWidgets() && quick->geometry() == canonicalVisibleUnion() &&
+        check(quick->geometry() == canonicalVisibleUnion() &&
                   publishedQmlRectsMatchCanonical(*quick, *quickRoot, bandLayout),
               "restored roll view should republish the canonical roll entry and Quick geometry");
     }
