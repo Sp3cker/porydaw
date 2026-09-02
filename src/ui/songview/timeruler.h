@@ -18,6 +18,7 @@ namespace songview {
 
 class TimelineQuickScene;
 class TimelineQuickView;
+class TimeCamera;
 
 class TimeRulerControls final : public QWidget
 {
@@ -113,6 +114,7 @@ class TimeRuler final : public TimelineBandInteraction
     QFont m_beatFont;
     QFont m_boldRulerFont;
     SongView &m_owner;
+    const songview::TimeCamera &m_camera;
     TimelineInputHost *m_inputHost = nullptr;
     Geometry m_geometry;
     int m_markerHeight = 0;

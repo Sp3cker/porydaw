@@ -295,6 +295,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/grid.cpp
     src/ui/songview/timeaxis.cpp
     src/ui/songview/timeaxis.h
+    src/ui/songview/timecamera.cpp
+    src/ui/songview/timecamera.h
     src/ui/songview/rangeedit.cpp
     src/ui/songview/scalecontroller.cpp
     src/ui/songview/scalecontroller.h

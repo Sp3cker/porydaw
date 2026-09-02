@@ -226,7 +226,7 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
     page.documentChanged();
     QCoreApplication::processEvents();
     const QRect tempoBody = page.canvas()->laneBody(LaneHandle{0});
-    const QPointF tempoNode(view.displayX(96.0, projectionGeometry.plotOrigin, dpr),
+    const QPointF tempoNode(view.camera().displayX(96.0, projectionGeometry.plotOrigin, dpr),
                             AutomationProjection::valueY(tempoBody, projectionGeometry,
                                                          CoreTimeDefaults::kMinTempoBpm,
                                                          CoreTimeDefaults::kMaxTempoBpm, 120));
@@ -272,7 +272,7 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
 
         const QRect lfoBody = page.canvas()->laneBody(lfoHandle);
         const QPointF lfoNode(
-            view.displayX(96.0, projectionGeometry.plotOrigin, dpr),
+            view.camera().displayX(96.0, projectionGeometry.plotOrigin, dpr),
             AutomationProjection::valueY(lfoBody, projectionGeometry, 0, 127, 96));
         QStringList selectedCcActions;
         menuAction(lfoNode, {}, &selectedCcActions);

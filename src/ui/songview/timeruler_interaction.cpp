@@ -25,7 +25,7 @@ bool TimeRuler::pointerPress(const TimelinePointerInput &input)
     if (!timeline || input.position.x() < plotOrigin)
         return false;
     const uint64_t clickTick =
-        m_owner.snapTick(m_owner.tickAtContentX(input.position.x() - plotOrigin));
+        m_owner.snapTick(m_camera.tickAtContentX(input.position.x() - plotOrigin));
 
     if (input.button == Qt::RightButton) {
         // Deferred until release so the loop/selection menu opens at the
@@ -75,7 +75,7 @@ bool TimeRuler::pointerMove(const TimelinePointerInput &input)
     const qreal plotOrigin = m_owner.timelinePlotOrigin();
     const auto dragTick = [this, &input, plotOrigin] {
         return m_owner.snapTick(
-            m_owner.tickAtContentX(std::max(plotOrigin, input.position.x()) - plotOrigin));
+            m_camera.tickAtContentX(std::max(plotOrigin, input.position.x()) - plotOrigin));
     };
     if (m_rightPress)
         return true;

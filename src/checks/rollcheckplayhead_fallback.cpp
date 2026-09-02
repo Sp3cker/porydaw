@@ -101,7 +101,7 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
             "forced QWidget playhead fallback did not own the complete SongView surface");
 
     const uint64_t tick =
-        uint64_t(std::max(0.0, probe.tickAtContentX(std::max<qreal>(
+        uint64_t(std::max(0.0, probe.camera().tickAtContentX(std::max<qreal>(
                                    1.0, probe.width() / 2.0 - probe.timelinePlotOrigin()))));
     uint64_t playheadTick = tick;
     const auto setPlayhead = [&](uint64_t nextTick, bool playing) {
@@ -114,7 +114,8 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
             probe.timelineBandLayout().geometry(songview::TimelineBand::Ruler);
         return (rulerGeometry ? rulerGeometry->rect.x() + rulerGeometry->timelineOrigin
                               : qRound(probe.timelinePlotOrigin())) +
-               probe.contentX(timeline.tickForSample(timeline.sampleForTick(playheadTick)));
+               probe.camera().contentX(
+                   timeline.tickForSample(timeline.sampleForTick(playheadTick)));
     };
 
     setPlayhead(tick, false);

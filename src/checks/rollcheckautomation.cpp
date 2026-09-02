@@ -205,7 +205,7 @@ QPointF automationNodePoint(SongView &view, const AutomationPage &page, qreal dp
                             uint64_t tick, int value)
 {
     const QRect body = automationRowBody(page, id);
-    return {view.displayX(double(tick), geometry.plotOrigin, dpr),
+    return {view.camera().displayX(double(tick), geometry.plotOrigin, dpr),
             AutomationProjection::valueY(body, geometry,
                                          CoreTimeDefaults::laneValueMinimum(id.controller),
                                          CoreTimeDefaults::laneValueMaximum(id.controller), value)};
@@ -271,7 +271,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     live.documentRevision = document.revision();
     live.timeZoom = 96.0;
     view.setEditorTimeZoom(live.timeZoom);
-    live.horizontalScroll = view.viewState().scrollPx;
+    live.horizontalScroll = view.camera().scrollX();
     view.setEditCursorTick(24);
     page.refreshLiveState(live);
     page.show();
@@ -391,7 +391,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     const QPointF panFirstMove = panStart - QPointF(24, 0);
     const QPointF panSecondMove = panStart - QPointF(48, 0);
     constexpr uint64_t panProbeTick = 240;
-    const qreal panProbeBefore = view.displayX(double(panProbeTick), expected.plotOrigin, dpr);
+    const qreal panProbeBefore =
+        view.camera().displayX(double(panProbeTick), expected.plotOrigin, dpr);
     band.mouse(QEvent::MouseButtonPress, panStart, Qt::MiddleButton, Qt::MiddleButton,
                Qt::NoModifier);
     band.mouse(QEvent::MouseMove, panFirstMove, Qt::NoButton, Qt::MiddleButton, Qt::NoModifier);
@@ -399,7 +400,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     band.mouse(QEvent::MouseMove, panSecondMove, Qt::NoButton, Qt::MiddleButton, Qt::NoModifier);
     band.mouse(QEvent::MouseButtonRelease, panSecondMove, Qt::MiddleButton, Qt::NoButton,
                Qt::NoModifier);
-    const qreal panProbeAfter = view.displayX(double(panProbeTick), expected.plotOrigin, dpr);
+    const qreal panProbeAfter =
+        view.camera().displayX(double(panProbeTick), expected.plotOrigin, dpr);
     check(panRemainedActive && qAbs((panProbeBefore - panProbeAfter) - 48.0) < 0.5,
           QStringLiteral("middle-button automation pan stopped after its first scroll refresh"));
     view.setEditorHorizontalScroll(0.0);
@@ -678,7 +680,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     const int panHeight = heightFor(pan);
     const int panY = panTop + panHeight / 2;
     const uint64_t clickTick = 120;
-    const int clickX = qRound(view.displayX(double(clickTick), expected.plotOrigin, dpr));
+    const int clickX = qRound(view.camera().displayX(double(clickTick), expected.plotOrigin, dpr));
     const QPoint clickPoint(clickX, panY);
     const QByteArray clickMidi = document.smf().write();
     const uint64_t clickRevision = document.revision();
@@ -1161,14 +1163,14 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     const qreal zoomAnchorContentX = 200.0;
     const QPoint zoomAnchor(expected.plotOrigin + qRound(zoomAnchorContentX),
                             expected.defaultRowHeight / 2);
-    const double tickBeforeZoom = view.tickAtContentX(zoomAnchorContentX);
-    const double zoomBefore = view.pxPerBeat();
+    const double tickBeforeZoom = view.camera().tickAtContentX(zoomAnchorContentX);
+    const double zoomBefore = view.camera().pxPerBeat();
     band.wheel(zoomAnchor, QPoint(), QPoint(0, 120), Qt::NoButton, Qt::NoModifier,
                Qt::NoScrollPhase, false);
     QCoreApplication::processEvents();
-    check(view.pxPerBeat() > zoomBefore,
+    check(view.camera().pxPerBeat() > zoomBefore,
           QStringLiteral("plain wheel did not change automation time zoom"));
-    check(std::abs(view.tickAtContentX(zoomAnchorContentX) - tickBeforeZoom) < 0.001,
+    check(std::abs(view.camera().tickAtContentX(zoomAnchorContentX) - tickBeforeZoom) < 0.001,
           QStringLiteral("automation time zoom did not preserve the tick under the cursor"));
     view.setEditorTimeZoom(live.timeZoom);
     view.setEditorHorizontalScroll(live.horizontalScroll);
@@ -1308,7 +1310,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         const int groupPlotTop = groupPanBody.top() + expected.valuePlotPadding;
         const int groupPlotBottom = groupPanBody.bottom() + 1 - expected.valuePlotPadding;
         const auto groupPointAt = [&](uint64_t tick, int value) {
-            return QPoint(qRound(view.displayX(double(tick), expected.plotOrigin, dpr)),
+            return QPoint(qRound(view.camera().displayX(double(tick), expected.plotOrigin, dpr)),
                           groupPlotBottom - value * (groupPlotBottom - groupPlotTop) / 127);
         };
         const QPoint groupAPoint = groupPointAt(groupA, groupAValue);
@@ -1549,7 +1551,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         const int lockPlotTop = lockPanTop + expected.valuePlotPadding;
         const int lockPlotBottom = lockPanTop + lockPanHeight - expected.valuePlotPadding;
         const auto lockPointAt = [&](uint64_t tick, int value) {
-            return QPoint(qRound(view.displayX(double(tick), expected.plotOrigin, dpr)),
+            return QPoint(qRound(view.camera().displayX(double(tick), expected.plotOrigin, dpr)),
                           lockPlotBottom - value * (lockPlotBottom - lockPlotTop) / 127);
         };
         const QPoint lockAPoint = lockPointAt(lockA, lockAValue);

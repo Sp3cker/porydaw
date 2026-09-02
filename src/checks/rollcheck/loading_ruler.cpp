@@ -171,12 +171,13 @@ std::vector<BarSample> sampleBars(SongView &view, const RasterScan &raster, qrea
     const int tickRowTop = int(raster.height() * 0.55);
     const int tickRowBottom = raster.height() - 3;
     const int labelWidth = int(34 * raster.dpr);
-    const QRgb backdrop = raster.at(plotOrigin + view.leadPadPx() + 80.0, 2.0);
+    const QRgb backdrop = raster.at(plotOrigin + view.camera().leadPadPx() + 80.0, 2.0);
     std::vector<BarSample> samples;
     samples.reserve(size_t(bars));
     for (int bar = 1; bar <= bars; ++bar) {
         const uint64_t tick = uint64_t(bar - 1) * uint64_t(beatsPerBar) * ticksPerBeat;
-        const int expected = raster.deviceX(view.displayX(double(tick), plotOrigin, raster.dpr));
+        const int expected =
+            raster.deviceX(view.camera().displayX(double(tick), plotOrigin, raster.dpr));
         if (expected < 2 || expected >= raster.width() - labelWidth - 2)
             continue;
         BarSample sample;
@@ -246,12 +247,12 @@ void observeFallbackCamera(GeometryFixture &fx, Harness &check)
     for (const int width : {1280, 1000, 1500}) {
         fx.bare.resize(width, 800);
         QCoreApplication::processEvents();
-        const double pad = fx.bare.leadPadPx();
+        const double pad = fx.bare.camera().leadPadPx();
         if (pad <= 0.0)
             check.fail("fallback lead pad is not positive");
-        else if (std::abs(fx.bare.contentX(0.0) - pad) > 0.5)
+        else if (std::abs(fx.bare.camera().contentX(0.0) - pad) > 0.5)
             check.fail("fresh view camera is not at the pre-roll home");
-        if (!qFuzzyCompare(fx.bare.pxPerBeat(), fx.pxPerBeat))
+        if (!qFuzzyCompare(fx.bare.camera().pxPerBeat(), fx.pxPerBeat))
             check.fail("fresh view horizontal scale is not the canonical default");
     }
 }
@@ -353,7 +354,8 @@ void observeFallbackBarsAndBeats(GeometryFixture &fx, const RasterScan &raster, 
         check.fail("fresh ruler painted too few bar lines to be the ordinary ruler");
     for (int beat = 1; beat <= 3; ++beat) {
         const uint64_t tick = uint64_t(beat) * kFallbackTicksPerBeat;
-        const int expected = raster.deviceX(fx.bare.displayX(double(tick), plotOrigin, raster.dpr));
+        const int expected =
+            raster.deviceX(fx.bare.camera().displayX(double(tick), plotOrigin, raster.dpr));
         bool found = false;
         for (int x = expected - 1; x <= expected + 1 && !found; ++x)
             found = raster.differingInColumn(x, int(raster.height() * 0.72), raster.height() - 3,
@@ -376,8 +378,8 @@ bool runFallbackRasterScenarios(GeometryFixture &fx, Harness &check)
     }
 
     const qreal plotOrigin = check.plotOrigin();
-    const qreal x0 = plotOrigin + fx.bare.contentX(0.0); // tick 0 under the home camera
-    const QRgb chrome = raster.at(x0 + 80.0, 2.0);       // marker row right of the 4/4 chip
+    const qreal x0 = plotOrigin + fx.bare.camera().contentX(0.0); // tick 0 under the home camera
+    const QRgb chrome = raster.at(x0 + 80.0, 2.0); // marker row right of the 4/4 chip
     const QRgb placeholder = fx.bare.palette().color(QPalette::PlaceholderText).rgb();
 
     observeFallbackPreRollShade(raster, plotOrigin, x0, chrome, check);
@@ -392,13 +394,13 @@ bool runFallbackRasterScenarios(GeometryFixture &fx, Harness &check)
 void runDefaultBindScenarios(GeometryFixture &fx, Harness &check)
 {
     for (const BarSample &sample : fx.bars)
-        fx.barX.push_back(fx.bare.contentX(double(sample.tick)));
+        fx.barX.push_back(fx.bare.camera().contentX(double(sample.tick)));
     for (int beat = 1; beat <= 8; ++beat)
-        fx.beatX.push_back(fx.bare.contentX(double(beat) * kFallbackTicksPerBeat));
+        fx.beatX.push_back(fx.bare.camera().contentX(double(beat) * kFallbackTicksPerBeat));
 
     fx.bare.setSong(&fx.default44, nullptr);
     QCoreApplication::processEvents();
-    if (!qFuzzyCompare(fx.bare.pxPerBeat(), fx.pxPerBeat))
+    if (!qFuzzyCompare(fx.bare.camera().pxPerBeat(), fx.pxPerBeat))
         check.fail("default binding changed the canonical horizontal scale");
     const qreal plotOrigin = check.plotOrigin();
     const RasterScan bound = grabRulerRaster(fx.bare);
@@ -412,14 +414,14 @@ void runDefaultBindScenarios(GeometryFixture &fx, Harness &check)
         for (size_t i = 0; i < boundBars.size() && i < fx.bars.size(); ++i) {
             if (boundBars[i].column != fx.bars[i].column)
                 check.fail("default binding moved a sampled bar line");
-            const int expected =
-                bound.deviceX(fx.bare.displayX(double(boundBars[i].tick), plotOrigin, bound.dpr));
+            const int expected = bound.deviceX(
+                fx.bare.camera().displayX(double(boundBars[i].tick), plotOrigin, bound.dpr));
             if (std::abs(boundBars[i].column - expected) > 1)
                 check.fail("bound bar line drifted from the public geometry position");
         }
     }
     for (size_t i = 0; i < fx.barX.size(); ++i)
-        if (std::abs(fx.bare.contentX(double(fx.bars[i].tick)) - fx.barX[i]) > 1e-9)
+        if (std::abs(fx.bare.camera().contentX(double(fx.bars[i].tick)) - fx.barX[i]) > 1e-9)
             check.fail("default binding moved a bar position in the public geometry");
 }
 
@@ -439,10 +441,10 @@ void runTpbBindScenarios(GeometryFixture &fx, Harness &check)
     std::vector<int> t24BeatColumns;
     for (int beat = 1; beat <= 3; ++beat)
         t24BeatColumns.push_back(t24.deviceX(
-            fx.bare.displayX(double(beat * kFallbackTicksPerBeat), plotOrigin, t24.dpr)));
+            fx.bare.camera().displayX(double(beat * kFallbackTicksPerBeat), plotOrigin, t24.dpr)));
     fx.bare.setSong(&fx.t48, nullptr);
     QCoreApplication::processEvents();
-    if (!qFuzzyCompare(fx.bare.pxPerBeat(), fx.pxPerBeat))
+    if (!qFuzzyCompare(fx.bare.camera().pxPerBeat(), fx.pxPerBeat))
         check.fail("48-TPB binding changed the canonical horizontal scale");
     const RasterScan t48Raster = grabRulerRaster(fx.bare);
     if (!t48Raster.valid()) {
@@ -456,14 +458,15 @@ void runTpbBindScenarios(GeometryFixture &fx, Harness &check)
             if (t48Bars[i].column != t24Bars[i].column)
                 check.fail("48-TPB binding moved a bar line");
         for (int beat = 1; beat <= 3; ++beat) {
-            const int t48Column =
-                t48Raster.deviceX(fx.bare.displayX(double(beat * 48), plotOrigin, t48Raster.dpr));
+            const int t48Column = t48Raster.deviceX(
+                fx.bare.camera().displayX(double(beat * 48), plotOrigin, t48Raster.dpr));
             if (std::abs(t48Column - t24BeatColumns[size_t(beat - 1)]) > 1)
                 check.fail("48-TPB binding moved a beat line");
         }
     }
     for (int beat = 1; beat <= 8; ++beat)
-        if (std::abs(fx.bare.contentX(double(beat) * 48) - fx.beatX[size_t(beat - 1)]) > 1e-6)
+        if (std::abs(fx.bare.camera().contentX(double(beat) * 48) - fx.beatX[size_t(beat - 1)]) >
+            1e-6)
             check.fail("48-TPB binding moved a beat position in the public geometry");
 }
 
@@ -477,12 +480,12 @@ void observeSignaturePublicGeometry(GeometryFixture &fx, qreal rulerHeightBefore
     if (seg.start != 0 || seg.next != UINT64_MAX || seg.beatTicks != kFallbackTicksPerBeat ||
         seg.beatsPerBar != 3)
         check.fail("3/4 binding did not resolve its grid segment");
-    if (!qFuzzyCompare(fx.bare.pxPerBeat(), fx.pxPerBeat))
+    if (!qFuzzyCompare(fx.bare.camera().pxPerBeat(), fx.pxPerBeat))
         check.fail("3/4 binding changed the canonical horizontal scale");
-    if (fx.bare.leadPadPx() <= 0.0 || rulerBandHeight(fx.bare) != rulerHeightBefore)
+    if (fx.bare.camera().leadPadPx() <= 0.0 || rulerBandHeight(fx.bare) != rulerHeightBefore)
         check.fail("3/4 binding disturbed signature-independent geometry");
     for (int beat = 1; beat <= 8; ++beat)
-        if (std::abs(fx.bare.contentX(double(beat) * kFallbackTicksPerBeat) -
+        if (std::abs(fx.bare.camera().contentX(double(beat) * kFallbackTicksPerBeat) -
                      fx.beatX[size_t(beat - 1)]) > 1e-6)
             check.fail("3/4 binding moved a signature-independent beat position");
 }
@@ -501,8 +504,8 @@ void observeSignatureBarGrouping(GeometryFixture &fx, const RasterScan &t34Raste
             check.fail("3/4 ruler is missing an expected bar line");
             continue;
         }
-        const int expected =
-            t34Raster.deviceX(fx.bare.displayX(double(t34Bars[i].tick), plotOrigin, t34Raster.dpr));
+        const int expected = t34Raster.deviceX(
+            fx.bare.camera().displayX(double(t34Bars[i].tick), plotOrigin, t34Raster.dpr));
         if (std::abs(t34Bars[i].column - expected) > 1)
             check.fail("3/4 bar line drifted from its signature geometry");
         if (i < fx.bars.size() && t34Bars[i].column != fx.bars[i].column)
@@ -697,7 +700,7 @@ struct RulerScrubSample {
 std::optional<RulerScrubSample> scrubRuler(SongView &view, songview::TimelineInputItem &rulerInput,
                                            qreal plotOrigin)
 {
-    const qreal pad = view.leadPadPx();
+    const qreal pad = view.camera().leadPadPx();
     if (pad <= 0)
         return std::nullopt;
     const std::optional<songview::TimelineBandGeometry> rulerBand =
@@ -725,11 +728,11 @@ struct RollWheelSample {
 RollWheelSample wheelRoll(Harness &check, songview::TimelineInputItem &roll, SongView &view)
 {
     RollWheelSample sample;
-    sample.zoomBefore = view.pxPerBeat();
+    sample.zoomBefore = view.camera().pxPerBeat();
     checks::events::sendWheel(roll, QPointF(check.pianoKeyboardWidth() + 80.0, 100.0), QPoint(0, 0),
                               QPoint(0, 120), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase,
                               false);
-    sample.zoomAfter = view.pxPerBeat();
+    sample.zoomAfter = view.camera().pxPerBeat();
     return sample;
 }
 

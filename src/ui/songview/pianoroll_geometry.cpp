@@ -84,16 +84,17 @@ bool PianoRoll::insideTimeSelection(qreal x) const
                                                          usedTrackMask(m_sv->timeline())))
         return false;
     const qreal dpr = devicePixelRatio();
-    const qreal startX = m_sv->displayX(double(sel.startTick), m_geometry.pianoKeyboardWidth, dpr);
-    const qreal endX = m_sv->displayX(double(sel.endTick), m_geometry.pianoKeyboardWidth, dpr);
+    const qreal startX =
+        m_camera.displayX(double(sel.startTick), m_geometry.pianoKeyboardWidth, dpr);
+    const qreal endX = m_camera.displayX(double(sel.endTick), m_geometry.pianoKeyboardWidth, dpr);
     return x >= startX && x < endX;
 }
 
 const std::array<qreal, PitchProjection::cMaxRows + 1> &PianoRoll::rowEdges() const
 {
     const qreal dpr = devicePixelRatio();
-    const qreal keyHeight = m_sv->keyHeight();
-    const qreal scrollY = m_sv->scrollY();
+    const qreal keyHeight = m_camera.keyHeight();
+    const qreal scrollY = m_camera.scrollY();
     const PitchProjection &projection = m_sv->pitchProjection();
     if (!m_rowEdgesValid || m_rowEdgesDpr != dpr || m_rowEdgesKeyHeight != keyHeight ||
         m_rowEdgesScrollY != scrollY || m_rowEdgesProjectionRevision != projection.revision()) {
@@ -133,7 +134,7 @@ QRectF PianoRoll::keyRect(int key, qreal x, qreal width) const
 
 int PianoRoll::yToKey(qreal y) const
 {
-    return m_sv->pitchProjection().yToPitch(y, m_sv->keyHeight(), m_sv->scrollY(),
+    return m_sv->pitchProjection().yToPitch(y, m_camera.keyHeight(), m_camera.scrollY(),
                                             devicePixelRatio());
 }
 
@@ -141,7 +142,7 @@ int PianoRoll::foldDegreeDeltaForPointer(qreal y) const
 {
     const PitchProjection &projection = m_sv->pitchProjection();
     const int pointerRow =
-        projection.yToRow(y, m_sv->keyHeight(), m_sv->scrollY(), devicePixelRatio());
+        projection.yToRow(y, m_camera.keyHeight(), m_camera.scrollY(), devicePixelRatio());
     const int grabRow = projection.rowForPitch(m_pressKey);
     if (pointerRow == PitchProjection::cHiddenRow || grabRow == PitchProjection::cHiddenRow)
         return 0;
@@ -211,8 +212,8 @@ QRectF PianoRoll::noteRect(qreal x0, qreal x1, int key) const
 QRectF PianoRoll::noteRect(const ViewNote &note) const
 {
     const qreal dpr = devicePixelRatio();
-    return noteRect(m_sv->displayX(double(note.startTick), m_geometry.pianoKeyboardWidth, dpr),
-                    m_sv->displayX(double(note.endTick), m_geometry.pianoKeyboardWidth, dpr),
+    return noteRect(m_camera.displayX(double(note.startTick), m_geometry.pianoKeyboardWidth, dpr),
+                    m_camera.displayX(double(note.endTick), m_geometry.pianoKeyboardWidth, dpr),
                     note.key);
 }
 
@@ -224,7 +225,7 @@ QRectF PianoRoll::noteBox(const QRectF &rect) const
 
 int PianoRoll::velocityLabelHeight() const
 {
-    return int(std::floor(m_sv->keyHeight() - physicalPixel()));
+    return int(std::floor(m_camera.keyHeight() - physicalPixel()));
 }
 
 bool PianoRoll::noteNameFits(const QRectF &noteRect, int key, const QFontMetricsF &metrics) const
@@ -320,8 +321,8 @@ QRectF PianoRoll::displayedNoteRect(const ViewNote &note) const
     }
     const int key = displayedNoteKey(note);
     const qreal dpr = devicePixelRatio();
-    const qreal x0 = m_sv->displayX(double(tick), m_geometry.pianoKeyboardWidth, dpr);
-    const qreal x1 = m_sv->displayX(double(endTick), m_geometry.pianoKeyboardWidth, dpr);
+    const qreal x0 = m_camera.displayX(double(tick), m_geometry.pianoKeyboardWidth, dpr);
+    const qreal x1 = m_camera.displayX(double(endTick), m_geometry.pianoKeyboardWidth, dpr);
     return noteRect(x0, x1, key);
 }
 

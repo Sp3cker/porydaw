@@ -160,19 +160,19 @@ void SongView::rebuildProjectionWithAnchoring()
         return;
 
     const double centerY = rollViewportHeight() / 2.0;
-    const int centerPitch = m_projection.yToPitch(centerY, m_keyHeight, m_scrollY,
+    const int centerPitch = m_projection.yToPitch(centerY, keyHeight(), scrollY(),
                                                   m_quickView ? m_quickView->quickDevicePixelRatio()
                                                               : devicePixelRatioF());
     updateScaleProjection();
 
-    double newScrollY = m_scrollY;
+    double newScrollY = scrollY();
     if (centerPitch != PitchProjection::cHiddenRow) {
         const int anchorPitch = m_projection.nearestVisiblePitch(centerPitch);
         const int anchorRow = m_projection.rowForPitch(anchorPitch);
         if (anchorRow != PitchProjection::cHiddenRow)
-            newScrollY = anchorRow * m_keyHeight - centerY;
+            newScrollY = anchorRow * keyHeight() - centerY;
     }
-    m_scrollY = std::clamp(newScrollY, 0.0, maxRollScroll());
+    m_camera.setVScroll(std::clamp(newScrollY, 0.0, maxRollScroll()));
     updateScrollbars();
     m_roll->requestQuickUpdate(PianoRollQuickDirty::All);
 }

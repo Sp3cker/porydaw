@@ -16,6 +16,7 @@
 #include "ui/songview.h"
 #include "ui/songview/editorselectionmodel.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/timecamera.h"
 #include "ui/typography.h"
 
 void VoiceChangeArea::Geometry::resolve()
@@ -32,7 +33,10 @@ void VoiceChangeArea::rebuildFonts()
     m_captionFont = typography::regular(typography::caption(m_inputHost->font()));
 }
 
-VoiceChangeArea::VoiceChangeArea(SongView &owner, QObject *parent) : QObject(parent), m_owner(owner)
+VoiceChangeArea::VoiceChangeArea(SongView &owner, QObject *parent)
+    : QObject(parent)
+    , m_owner(owner)
+    , m_camera(owner.camera())
 {
     m_geometry.resolve();
 }
@@ -221,12 +225,12 @@ void VoiceChangeArea::updateHover(qreal x)
     }
     const qreal dpr = devicePixelRatio();
     const double tick = std::max(
-        0.0, m_owner.tickAtContentX(std::max<qreal>(plotOrigin(), x) - qreal(plotOrigin())));
+        0.0, m_camera.tickAtContentX(std::max<qreal>(plotOrigin(), x) - qreal(plotOrigin())));
     const uint64_t snapped = m_owner.snapTick(tick, true);
     DocLanePoint markerPoint;
     const bool atMarker = voiceMarkerAt(x, &markerPoint);
     const uint64_t hoverTick = atMarker ? markerPoint.tick : snapped;
-    const qreal lineX = m_owner.displayX(double(hoverTick), plotOrigin(), dpr);
+    const qreal lineX = m_camera.displayX(double(hoverTick), plotOrigin(), dpr);
     QString hoverLabel;
     if (!voiceMarkerAt(lineX, &markerPoint)) {
         const int slot = voiceSlotAt(hoverTick);
@@ -327,7 +331,7 @@ bool VoiceChangeArea::voiceMarkerAt(qreal x, DocLanePoint *out) const
     qreal distance = qreal(m_geometry.markerHitRadius) + 1;
     for (const DocLanePoint &point : m_voicePoints) {
         const qreal candidate =
-            std::abs(m_owner.displayX(double(point.tick), plotOrigin(), dpr) - x);
+            std::abs(m_camera.displayX(double(point.tick), plotOrigin(), dpr) - x);
         if (candidate <= qreal(m_geometry.markerHitRadius) && (!marker || candidate <= distance)) {
             marker = &point;
             distance = candidate;
@@ -414,8 +418,8 @@ bool VoiceChangeArea::pointerMove(const songview::TimelinePointerInput &input)
             requestQuickUpdate();
         }
         const double rawTick =
-            std::max(0.0, m_owner.tickAtContentX(std::max<qreal>(plotOrigin(), position.x()) -
-                                                 qreal(plotOrigin())));
+            std::max(0.0, m_camera.tickAtContentX(std::max<qreal>(plotOrigin(), position.x()) -
+                                                  qreal(plotOrigin())));
         const uint64_t tick = m_owner.snapTick(rawTick, input.modifiers & Qt::AltModifier);
         if (tick != m_voiceDrag->previewTick) {
             m_voiceDrag->previewTick = tick;
@@ -428,7 +432,7 @@ bool VoiceChangeArea::pointerMove(const songview::TimelinePointerInput &input)
         const auto requestedScroll =
             m_live.horizontalScroll - (position.x() - m_previousPosition.x());
         m_owner.setEditorHorizontalScroll(requestedScroll);
-        m_live.horizontalScroll = m_owner.viewState().scrollPx;
+        m_live.horizontalScroll = m_camera.scrollX();
         requestQuickUpdate();
     } else if (m_interaction == Interaction::None) {
         updateHover(position.x());
@@ -502,7 +506,7 @@ void VoiceChangeArea::showPicker(const QPoint &globalPosition)
     DocLanePoint markerPoint;
     const DocLanePoint *marker = voiceMarkerAt(x, &markerPoint) ? &markerPoint : nullptr;
     const double rawTick = std::max(
-        0.0, m_owner.tickAtContentX(std::max<qreal>(plotOrigin(), x) - qreal(plotOrigin())));
+        0.0, m_camera.tickAtContentX(std::max<qreal>(plotOrigin(), x) - qreal(plotOrigin())));
     const uint64_t tick = marker ? marker->tick : m_owner.snapTick(rawTick, false);
     const int current = marker ? marker->value : voiceSlotAt(tick);
     int selectedVoice = 0;

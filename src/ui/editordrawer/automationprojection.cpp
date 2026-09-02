@@ -7,6 +7,7 @@
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/timecamera.h"
 
 AutomationGeometry AutomationGeometry::resolve()
 {
@@ -35,6 +36,13 @@ AutomationGeometry AutomationGeometry::resolve()
     geometry.valuePlotPadding = qRound(std::max(nodeOuterRadius, selectedNodeOuterRadius));
     return geometry;
 }
+
+AutomationProjection::AutomationProjection(const AutomationGeometry &geometry,
+                                           const SongView *songView)
+    : m_geometry(geometry)
+    , m_songView(songView)
+    , m_camera(songView ? &songView->camera() : nullptr)
+{}
 
 const MidiTimeline *AutomationProjection::timeline() const
 {
@@ -107,14 +115,14 @@ double AutomationProjection::rawTickAt(qreal x) const
     const qreal contentX = std::max(qreal(m_geometry.plotOrigin), x) - m_geometry.plotOrigin;
     if (m_page)
         return std::max(0.0, m_page->tickAtContentX(contentX));
-    return m_songView ? std::max(0.0, m_songView->tickAtContentX(contentX)) : 0.0;
+    return m_camera ? std::max(0.0, m_camera->tickAtContentX(contentX)) : 0.0;
 }
 
 qreal AutomationProjection::displayX(uint64_t tick, qreal devicePixelRatio) const
 {
     if (m_page)
         return m_page->displayX(tick, m_geometry.plotOrigin, devicePixelRatio);
-    return m_songView ? m_songView->displayX(tick, m_geometry.plotOrigin, devicePixelRatio) : 0.0;
+    return m_camera ? m_camera->displayX(tick, m_geometry.plotOrigin, devicePixelRatio) : 0.0;
 }
 
 uint64_t AutomationProjection::snapTickAt(qreal x, bool fine) const
@@ -156,7 +164,7 @@ bool AutomationProjection::nodeMarkersVisible() const
 {
     if (m_page)
         return m_page->pxPerBeat() >= m_geometry.pointDetailThreshold;
-    return m_songView && m_songView->pxPerBeat() >= m_geometry.pointDetailThreshold;
+    return m_camera && m_camera->pxPerBeat() >= m_geometry.pointDetailThreshold;
 }
 
 AutomationGridCell AutomationProjection::snapCellAt(double rawTick) const

@@ -240,7 +240,7 @@ bool hasVoiceChangeMarkerAt(const songview::TimelineQuickScene &scene, qreal x)
 
 double xForTick(const AreaFixture &env, double tick)
 {
-    return env.view->displayX(tick, voicePlotOrigin(env), voiceDpr(env));
+    return env.view->camera().displayX(tick, voicePlotOrigin(env), voiceDpr(env));
 }
 
 // Schedules one pickerDialog acceptance: records the modal picker's title and
@@ -365,8 +365,8 @@ void checkAreaPaintLifecycle(AreaFixture &env, int &failures)
 
     // Reattaching resets the song-scoped camera and drawer state by contract;
     // restore those public settings before checking the marker output.
-    const double zoom = env.view->pxPerBeat();
-    const double scroll = env.view->viewState().scrollPx;
+    const double zoom = env.view->camera().pxPerBeat();
+    const double scroll = env.view->camera().scrollX();
     const quint64 markerRevisionBeforeReattach =
         scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers).revision;
     env.view->setSong(env.timeline.get(), &env.voicegroup);
@@ -500,7 +500,8 @@ void checkAreaHover(AreaFixture &env, int &failures)
     check(voiceChangesHoverTextModel->rowCount() == 0 &&
               voiceChangesTextModel->rowCount() == mainTextRowCount,
           QStringLiteral("marker hover did not keep the Quick text models isolated"));
-    const qreal expectedMarkerHoverX = env.view->timelinePlotOrigin() + env.view->contentX(48);
+    const qreal expectedMarkerHoverX =
+        env.view->timelinePlotOrigin() + env.view->camera().contentX(48);
     check(hasVoiceChangeMarkerAt(*scene, markerX) && voiceHoverChrome->isVisible() &&
               std::abs(voiceHoverChrome->mapToItem(quickRoot, QPointF{}).x() -
                        expectedMarkerHoverX) <= 0.2 &&
@@ -858,8 +859,8 @@ void checkAreaCamera(AreaFixture &env, int &failures)
     };
     const QRect bandRect = voiceRect(env);
     const QImage home = checks::support::captureQuickBand(*env.view, bandRect);
-    const double homeZoom = env.view->pxPerBeat();
-    const double homeScroll = env.view->viewState().scrollPx;
+    const double homeZoom = env.view->camera().pxPerBeat();
+    const double homeScroll = env.view->camera().scrollX();
 
     env.view->setEditorHorizontalScroll(64.0);
     pump();
@@ -868,20 +869,22 @@ void checkAreaCamera(AreaFixture &env, int &failures)
 
     const QPointF zoomAnchor(voicePlotOrigin(env) + voicePlotWidth(env) / 2.0,
                              bandRect.height() / 2.0);
-    const double tickBeforeZoom = env.view->tickAtContentX(zoomAnchor.x() - voicePlotOrigin(env));
-    const double zoomBefore = env.view->pxPerBeat();
+    const double tickBeforeZoom =
+        env.view->camera().tickAtContentX(zoomAnchor.x() - voicePlotOrigin(env));
+    const double zoomBefore = env.view->camera().pxPerBeat();
     checks::events::sendWheel(*env.voiceInput, zoomAnchor, QPoint(), QPoint(0, 120), Qt::NoButton,
                               Qt::NoModifier, Qt::NoScrollPhase, false);
     pump();
-    check(env.view->pxPerBeat() > zoomBefore,
+    check(env.view->camera().pxPerBeat() > zoomBefore,
           QStringLiteral("plain wheel did not zoom the shared timeline camera"));
-    const qreal anchoredX = env.view->displayX(tickBeforeZoom, voicePlotOrigin(env), voiceDpr(env));
+    const qreal anchoredX =
+        env.view->camera().displayX(tickBeforeZoom, voicePlotOrigin(env), voiceDpr(env));
     check(std::abs(anchoredX - zoomAnchor.x()) <= 1.0 / voiceDpr(env),
           QStringLiteral("wheel zoom did not preserve the tick under the cursor"));
 
     // The canonical camera's tick-zero home includes its documented lead pad.
     // Dragging farther left must clamp at that floor without changing paint.
-    const double minScroll = -env.view->leadPadPx();
+    const double minScroll = -env.view->camera().leadPadPx();
     env.view->setEditorTimeZoom(homeZoom);
     env.view->setEditorHorizontalScroll(minScroll);
     pump();
@@ -892,7 +895,7 @@ void checkAreaCamera(AreaFixture &env, int &failures)
     checks::events::sendMouse(*env.voiceInput, QEvent::MouseMove, panStart + QPointF(80, 0),
                               Qt::NoButton, Qt::MiddleButton, Qt::NoModifier);
     pump();
-    check(env.view->viewState().scrollPx == minScroll &&
+    check(env.view->camera().scrollX() == minScroll &&
               checks::support::captureQuickBand(*env.view, bandRect) == atZero,
           QStringLiteral("panning left at tick-zero home overscrolled the voice lane"));
     checks::events::sendMouse(*env.voiceInput, QEvent::MouseButtonRelease,
@@ -906,7 +909,7 @@ void checkAreaCamera(AreaFixture &env, int &failures)
     checks::events::sendMouse(*env.voiceInput, QEvent::MouseMove, panStart + QPointF(-48, 0),
                               Qt::NoButton, Qt::MiddleButton, Qt::NoModifier);
     pump();
-    const double scrolled = env.view->viewState().scrollPx;
+    const double scrolled = env.view->camera().scrollX();
     check(scrolled > minScroll, QStringLiteral("middle drag did not pan the voice lane"));
     checks::events::sendKey(*env.voiceInput, QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier,
                             QString{}, false, 1);
@@ -916,7 +919,7 @@ void checkAreaCamera(AreaFixture &env, int &failures)
                               panStart + QPointF(-96, 0), Qt::MiddleButton, Qt::NoButton,
                               Qt::NoModifier);
     pump();
-    check(env.view->viewState().scrollPx == scrolled,
+    check(env.view->camera().scrollX() == scrolled,
           QStringLiteral("Escape did not stop the voice-lane pan"));
     checks::events::sendMouse(*env.voiceInput, QEvent::Leave, QPointF{}, Qt::NoButton, Qt::NoButton,
                               Qt::NoModifier);

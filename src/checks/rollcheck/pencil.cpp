@@ -67,13 +67,13 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
             const qreal bottom = rows.bottom(key);
             if (top < 0.0 || bottom > roll->height())
                 continue;
-            uint64_t tick = view.snapTickUp(std::max(0.0, view.tickAtContentX(4.0)));
+            uint64_t tick = view.snapTickUp(std::max(0.0, view.camera().tickAtContentX(4.0)));
             for (int guard = 0; guard < 1000; ++guard) {
                 const uint64_t next = view.snapTickUp(double(tick) + 1.0);
                 if (next <= tick)
                     break;
-                const qreal leftX = view.displayX(double(tick), origin, dpr);
-                const qreal rightX = view.displayX(double(next), origin, dpr);
+                const qreal leftX = view.camera().displayX(double(tick), origin, dpr);
+                const qreal rightX = view.camera().displayX(double(next), origin, dpr);
                 if (leftX > rightLimit)
                     break;
                 const uint64_t dur = view.gridTicksAt(tick);
@@ -86,7 +86,8 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
                         continue;
                     }
                     const QPointF center(centerX, (top + bottom) / 2.0);
-                    if (view.snapTickDown(view.tickAtContentX(center.x() - origin)) == tick) {
+                    if (view.snapTickDown(view.camera().tickAtContentX(center.x() - origin)) ==
+                        tick) {
                         probe.tick = tick;
                         probe.previous = previous;
                         probe.next = next;
@@ -184,9 +185,10 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
     // underlying roll. Nothing may paint past the end tick's column.
     view.setEditCursorTick(overlayTick);
     const QImage rollAfterDrawing = check.captureQuickFramebuffer();
-    const qreal noteLeftX = view.displayX(double(noteA.tick), pianoKeyboardWidth, rasterDpr);
+    const qreal noteLeftX =
+        view.camera().displayX(double(noteA.tick), pianoKeyboardWidth, rasterDpr);
     const qreal noteRightX =
-        view.displayX(double(noteA.tick + noteA.duration), pianoKeyboardWidth, rasterDpr);
+        view.camera().displayX(double(noteA.tick + noteA.duration), pianoKeyboardWidth, rasterDpr);
     const QRectF noteFrame = rows.noteRect(noteLeftX, noteRightX, noteA.key);
     const QRectF paintedNoteBox = rows.noteBox(noteFrame);
     const int noteLeftPixel = toRasterPixel(noteFrame.left());
@@ -235,8 +237,8 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
     // across the pair — no reserved background column that reads as a rest
     // between them. (findFreeCell guaranteed the adjacent cell is empty.)
     doc.addNote(track, noteA.tick + noteA.duration, noteA.key, noteA.duration, 100);
-    const qreal abuttingRightX =
-        view.displayX(double(noteA.tick + 2 * noteA.duration), pianoKeyboardWidth, rasterDpr);
+    const qreal abuttingRightX = view.camera().displayX(double(noteA.tick + 2 * noteA.duration),
+                                                        pianoKeyboardWidth, rasterDpr);
     const QImage abuttingImage = check.captureQuickFramebuffer();
     const int abuttingMidY = toRasterPixel(rows.centerY(noteA.key));
     const int abuttingRightPixel = toRasterPixel(abuttingRightX);

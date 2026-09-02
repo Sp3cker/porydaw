@@ -93,8 +93,8 @@ QPointF nodePosition(const SongView &view, const VelocityArea &area, const MidiT
                      const DocNote &note)
 {
     const double x = double(area.plotOrigin()) +
-                     double(note.tick) * view.pxPerBeat() / double(timeline.ticksPerBeat) -
-                     view.viewState().scrollPx;
+                     double(note.tick) * view.camera().pxPerBeat() / double(timeline.ticksPerBeat) -
+                     view.camera().scrollX();
     return {x, area.axis().velocityToY(note.velocity)};
 }
 
@@ -502,8 +502,9 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         QPointF hoveredStripPosition;
         if (otherEventsInput) {
             for (const StripItem &item : view.model().strip) {
-                const qreal x = view.displayX(double(item.tick), qRound(view.timelinePlotOrigin()),
-                                              otherEventsInput->devicePixelRatio());
+                const qreal x =
+                    view.camera().displayX(double(item.tick), qRound(view.timelinePlotOrigin()),
+                                           otherEventsInput->devicePixelRatio());
                 if (x >= view.timelinePlotOrigin() && x < otherEventsInput->width()) {
                     hoveredStripItem = &item;
                     hoveredStripPosition = QPointF(x, otherEventsInput->height() / 2.0);
@@ -859,11 +860,11 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
                                   Qt::RightButton, Qt::NoButton, Qt::NoModifier);
         const auto &dragSelection = view.selectionModel().timeSelection();
         const qreal menuFirst =
-            view.displayX(double(dragSelection.startTick), automation->plotOrigin(),
-                          automationInput->devicePixelRatio());
+            view.camera().displayX(double(dragSelection.startTick), automation->plotOrigin(),
+                                   automationInput->devicePixelRatio());
         const qreal menuLast =
-            view.displayX(double(dragSelection.endTick), automation->plotOrigin(),
-                          automationInput->devicePixelRatio());
+            view.camera().displayX(double(dragSelection.endTick), automation->plotOrigin(),
+                                   automationInput->devicePixelRatio());
         const QPointF menuPoint((menuFirst + menuLast) / 2.0, menuStart.y());
         checks::events::sendMouse(*automationInput, QEvent::MouseButtonPress, menuPoint,
                                   Qt::RightButton, Qt::RightButton, Qt::NoModifier);

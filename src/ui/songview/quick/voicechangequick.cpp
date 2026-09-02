@@ -13,6 +13,7 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickscene.h"
+#include "ui/songview/timecamera.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/theme/trackidentitycolors.h"
 
@@ -25,12 +26,13 @@ constexpr quint64 kVoiceTitleTextKey = std::numeric_limits<quint64>::max();
 constexpr quint64 kVoiceSummaryTextKey = kVoiceTitleTextKey - 1;
 constexpr quint64 kVoiceReadoutTextKey = kVoiceTitleTextKey - 2;
 
-QRectF heldSpanRect(uint64_t beginTick, uint64_t endTick, const SongView &owner, const QRectF &plot)
+QRectF heldSpanRect(uint64_t beginTick, uint64_t endTick, const songview::TimeCamera &camera,
+                    const QRectF &plot)
 {
     const qreal left =
-        std::max<qreal>(plot.left(), owner.contentX(double(beginTick)) + plot.left());
+        std::max<qreal>(plot.left(), camera.contentX(double(beginTick)) + plot.left());
     const qreal right =
-        std::min<qreal>(plot.right(), owner.contentX(double(endTick)) + plot.left());
+        std::min<qreal>(plot.right(), camera.contentX(double(endTick)) + plot.left());
     if (right <= left)
         return {};
     return QRectF(left, plot.top(), right - left, plot.height());
@@ -161,7 +163,7 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
             const VoicePaintEntry entry = paintEntryAt(index);
             if (program >= 0 && entry.tick > spanStart) {
                 timeline_quick::addRect(scene, TimelineQuickLayer::VoiceChangesSpans,
-                                        heldSpanRect(spanStart, entry.tick, m_owner, plot),
+                                        heldSpanRect(spanStart, entry.tick, m_camera, plot),
                                         heldColor, plot);
             }
             program = entry.program;
@@ -169,7 +171,7 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
         }
         if (program >= 0 && timeline->lengthTicks > spanStart) {
             timeline_quick::addRect(scene, TimelineQuickLayer::VoiceChangesSpans,
-                                    heldSpanRect(spanStart, timeline->lengthTicks, m_owner, plot),
+                                    heldSpanRect(spanStart, timeline->lengthTicks, m_camera, plot),
                                     heldColor, plot);
         }
     }
@@ -203,7 +205,7 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
         labelLayout.elidedText.clear();
         const QString &sourceText = paintTextFor(entry.program).label;
         labelLayout.text = sourceText.isEmpty() ? &noVoiceText : &sourceText;
-        const qreal labelX = m_owner.displayX(double(entry.tick), origin, dpr) + pad;
+        const qreal labelX = m_camera.displayX(double(entry.tick), origin, dpr) + pad;
         const qreal maxWidth = std::max<qreal>(0, plot.right() - labelX);
         if (fontMetrics.horizontalAdvance(*labelLayout.text) > maxWidth && maxWidth > 0) {
             labelLayout.elidedText = fontMetrics.elidedText(*labelLayout.text, Qt::ElideRight,

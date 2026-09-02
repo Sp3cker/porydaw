@@ -24,6 +24,7 @@ extern "C" {
 class SongView;
 
 namespace songview {
+class TimeCamera;
 class TimelineQuickScene;
 class TimelineQuickView;
 } // namespace songview
@@ -128,6 +129,7 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
     void showPicker(const QPoint &globalPosition);
     void showContextMenu(const QPoint &globalPosition);
     SongView &m_owner;
+    const songview::TimeCamera &m_camera;
     songview::TimelineInputHost *m_inputHost = nullptr;
     DrawerPageLiveState m_live;
     Geometry m_geometry;

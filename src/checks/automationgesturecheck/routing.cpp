@@ -78,16 +78,16 @@ voiceGeometry(const AutomationGestureCheckRig &rig)
 QPointF voicePoint(const AutomationGestureCheckRig &rig, uint64_t tick)
 {
     const auto &geometry = voiceGeometry(rig);
-    return {rig.view().displayX(double(tick), geometry ? geometry->timelineOrigin : 0,
-                                rig.voiceInput().devicePixelRatio()),
+    return {rig.view().camera().displayX(double(tick), geometry ? geometry->timelineOrigin : 0,
+                                         rig.voiceInput().devicePixelRatio()),
             qreal(geometry ? geometry->rect.center().y() : 0)};
 }
 
 uint64_t voiceSnapTick(const AutomationGestureCheckRig &rig, qreal x, bool fine)
 {
     const int plotOrigin = voiceGeometry(rig) ? voiceGeometry(rig)->timelineOrigin : 0;
-    const double rawTick =
-        std::max(0.0, rig.view().tickAtContentX(std::max<qreal>(plotOrigin, x) - plotOrigin));
+    const double rawTick = std::max(
+        0.0, rig.view().camera().tickAtContentX(std::max<qreal>(plotOrigin, x) - plotOrigin));
     return rig.view().snapTick(rawTick, fine);
 }
 
@@ -317,7 +317,7 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         const QImage previewFramebuffer = rig.renderVoiceChanges(&previewCaptureError);
         const auto previewMarkers =
             rig.quickScene().layer(songview::TimelineQuickLayer::VoiceChangesMarkers);
-        const qreal destinationX = rig.view().displayX(
+        const qreal destinationX = rig.view().camera().displayX(
             double(destination), voiceGeometry(rig) ? voiceGeometry(rig)->timelineOrigin : 0,
             rig.voiceInput().devicePixelRatio());
         const int idleSourceCount = markerCountAt(idleMarkers, source.x());

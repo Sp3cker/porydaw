@@ -40,50 +40,52 @@ ScenarioContinuation runCameraScenarios(Harness &check)
         for (int i = 0; i < 4; ++i)
             checks::events::sendWheel(*roll, anchor, QPoint(0, 0), QPoint(0, 30), Qt::NoButton,
                                       Qt::ControlModifier, Qt::NoScrollPhase, false);
-        const double partialHeight = view.keyHeight();
-        const double partialScroll = view.scrollY();
+        const double partialHeight = view.camera().keyHeight();
+        const double partialScroll = view.camera().scrollY();
 
         view.applyViewState(zoom);
         checks::events::sendWheel(*roll, anchor, QPoint(0, 0), QPoint(0, 120), Qt::NoButton,
                                   Qt::ControlModifier, Qt::NoScrollPhase, false);
-        if (std::abs(view.keyHeight() - partialHeight) > 1e-12 ||
-            std::abs(view.scrollY() - partialScroll) > 1e-10)
+        if (std::abs(view.camera().keyHeight() - partialHeight) > 1e-12 ||
+            std::abs(view.camera().scrollY() - partialScroll) > 1e-10)
             fail("four partial Ctrl-wheel deltas differ from one full notch");
 
-        const double settledHeight = view.keyHeight();
-        const double settledScroll = view.scrollY();
+        const double settledHeight = view.camera().keyHeight();
+        const double settledScroll = view.camera().scrollY();
         checks::events::sendWheel(*roll, anchor, QPoint(0, 0), QPoint(0, 120), Qt::NoButton,
                                   Qt::ControlModifier, Qt::ScrollMomentum, false);
-        if (std::abs(view.keyHeight() - settledHeight) > 1e-12 ||
-            std::abs(view.scrollY() - settledScroll) > 1e-10)
+        if (std::abs(view.camera().keyHeight() - settledHeight) > 1e-12 ||
+            std::abs(view.camera().scrollY() - settledScroll) > 1e-10)
             fail("Ctrl-wheel momentum changed the settled key-height camera");
 
         view.applyViewState(zoom);
-        const double anchoredRow = (anchor.y() + view.scrollY()) / view.keyHeight();
+        const double anchoredRow =
+            (anchor.y() + view.camera().scrollY()) / view.camera().keyHeight();
         checks::events::sendWheel(*roll, anchor, QPoint(0, 0), QPoint(0, 30), Qt::NoButton,
                                   Qt::ControlModifier, Qt::NoScrollPhase, false);
-        if (std::abs((anchor.y() + view.scrollY()) / view.keyHeight() - anchoredRow) > 1e-12)
+        if (std::abs((anchor.y() + view.camera().scrollY()) / view.camera().keyHeight() -
+                     anchoredRow) > 1e-12)
             fail("Ctrl-wheel zoom moved the cursor's content row");
 
         view.applyViewState(zoom);
         for (int i = 0; i < 10; ++i)
             checks::events::sendWheel(*roll, anchor, QPoint(0, 0), QPoint(0, 120), Qt::NoButton,
                                       Qt::ControlModifier, Qt::NoScrollPhase, false);
-        if (std::abs(view.keyHeight() - 16.0) > 1e-12)
+        if (std::abs(view.camera().keyHeight() - 16.0) > 1e-12)
             fail("ten Ctrl-wheel notches did not double key height");
 
         view.applyViewState(zoom);
         checks::events::sendWheel(*roll, anchor, QPoint(0, 240), QPoint(0, 0), Qt::NoButton,
                                   Qt::ControlModifier, Qt::NoScrollPhase, false);
-        if (std::abs(view.keyHeight() - 16.0) > 1e-12)
+        if (std::abs(view.camera().keyHeight() - 16.0) > 1e-12)
             fail("240-pixel Ctrl-wheel zoom did not double key height");
 
         view.applyViewState(zoom);
-        const double keyboardScroll = view.scrollY();
+        const double keyboardScroll = view.camera().scrollY();
         checks::events::sendWheel(*roll, QPointF(pianoKeyboardWidth - 1.0, anchor.y()),
                                   QPoint(0, 1), QPoint(0, 0), Qt::NoButton, Qt::NoModifier,
                                   Qt::NoScrollPhase, false);
-        if (std::abs(view.scrollY() - (keyboardScroll - 0.5)) > 1e-12)
+        if (std::abs(view.camera().scrollY() - (keyboardScroll - 0.5)) > 1e-12)
             fail("pixel-only wheel over keyboard did not scroll note range");
         view.applyViewState(zoom);
         for (int i = 0; i < 4; ++i)
@@ -92,8 +94,8 @@ ScenarioContinuation runCameraScenarios(Harness &check)
         for (int i = 0; i < 4; ++i)
             checks::events::sendWheel(*roll, anchor, QPoint(0, 0), QPoint(0, -30), Qt::NoButton,
                                       Qt::ControlModifier, Qt::NoScrollPhase, false);
-        if (std::abs(view.keyHeight() - zoom.keyHeight) > 1e-12 ||
-            std::abs(view.scrollY() - zoom.scrollY) > 1e-10)
+        if (std::abs(view.camera().keyHeight() - zoom.keyHeight) > 1e-12 ||
+            std::abs(view.camera().scrollY() - zoom.scrollY) > 1e-10)
             fail("equal Ctrl-wheel zoom in/out did not restore the camera");
 
         zoom.keyHeight = 9.375;
@@ -107,7 +109,8 @@ ScenarioContinuation runCameraScenarios(Harness &check)
         const int boundaryRow = 40;
         const qreal dpr = roll->devicePixelRatio();
         const qreal boundary =
-            std::round((boundaryRow * view.keyHeight() - view.scrollY()) * dpr) / dpr;
+            std::round((boundaryRow * view.camera().keyHeight() - view.camera().scrollY()) * dpr) /
+            dpr;
         checks::events::sendMouse(*roll, QEvent::MouseMove,
                                   QPointF(pianoKeyboardWidth + 40.0, boundary - 0.25), Qt::NoButton,
                                   Qt::NoButton, Qt::NoModifier);
@@ -147,14 +150,14 @@ ScenarioContinuation runCameraScenarios(Harness &check)
         for (int i = 0; i < 4; ++i)
             checks::events::sendWheel(*roll, anchor, QPoint(0, 0), QPoint(0, 30), Qt::NoButton,
                                       Qt::NoModifier, Qt::NoScrollPhase, false);
-        const double partialScale = view.pxPerBeat();
-        const double partialScroll = view.viewState().scrollPx;
+        const double partialScale = view.camera().pxPerBeat();
+        const double partialScroll = view.camera().scrollX();
 
         view.applyViewState(zoom);
         checks::events::sendWheel(*roll, anchor, QPoint(0, 0), QPoint(0, 120), Qt::NoButton,
                                   Qt::NoModifier, Qt::NoScrollPhase, false);
-        const double fullScale = view.pxPerBeat();
-        const double fullScroll = view.viewState().scrollPx;
+        const double fullScale = view.camera().pxPerBeat();
+        const double fullScroll = view.camera().scrollX();
         const double expectedFullScale = zoom.pxPerBeat * std::pow(1.0015, 120.0);
         if (std::abs(fullScale - expectedFullScale) > 1e-10)
             fail("timeline-wheel notch changed horizontal zoom sensitivity");
@@ -165,23 +168,23 @@ ScenarioContinuation runCameraScenarios(Harness &check)
         view.applyViewState(zoom);
         checks::events::sendWheel(*roll, anchor, QPoint(0, 24), QPoint(0, 0), Qt::NoButton,
                                   Qt::NoModifier, Qt::NoScrollPhase, false);
-        if (std::abs(view.pxPerBeat() - fullScale) > 1e-12 ||
-            std::abs(view.viewState().scrollPx - fullScroll) > 1e-9)
+        if (std::abs(view.camera().pxPerBeat() - fullScale) > 1e-12 ||
+            std::abs(view.camera().scrollX() - fullScroll) > 1e-9)
             fail("timeline pixel-wheel delta was not consumed continuously");
 
         view.applyViewState(zoom);
-        const double horizontalScroll = view.viewState().scrollPx;
-        const double horizontalScale = view.pxPerBeat();
+        const double horizontalScroll = view.camera().scrollX();
+        const double horizontalScale = view.camera().pxPerBeat();
         checks::events::sendWheel(*roll, anchor, QPoint(8, 0), QPoint(0, 0), Qt::NoButton,
                                   Qt::NoModifier, Qt::NoScrollPhase, false);
-        if (std::abs(view.viewState().scrollPx - (horizontalScroll - 8.0)) > 1e-12 ||
-            std::abs(view.pxPerBeat() - horizontalScale) > 1e-12)
+        if (std::abs(view.camera().scrollX() - (horizontalScroll - 8.0)) > 1e-12 ||
+            std::abs(view.camera().pxPerBeat() - horizontalScale) > 1e-12)
             fail("pixel-only horizontal wheel did not scroll timeline");
         view.applyViewState(zoom);
-        const double anchoredTick = view.tickAtContentX(anchorContentX);
+        const double anchoredTick = view.camera().tickAtContentX(anchorContentX);
         checks::events::sendWheel(*roll, anchor, QPoint(0, 0), QPoint(0, 30), Qt::NoButton,
                                   Qt::NoModifier, Qt::NoScrollPhase, false);
-        if (std::abs(view.tickAtContentX(anchorContentX) - anchoredTick) > 1e-9)
+        if (std::abs(view.camera().tickAtContentX(anchorContentX) - anchoredTick) > 1e-9)
             fail("timeline-wheel zoom moved the cursor's fractional anchor tick");
 
         view.applyViewState(zoom);
@@ -191,8 +194,8 @@ ScenarioContinuation runCameraScenarios(Harness &check)
         for (int i = 0; i < 4; ++i)
             checks::events::sendWheel(*roll, anchor, QPoint(0, 0), QPoint(0, -30), Qt::NoButton,
                                       Qt::NoModifier, Qt::NoScrollPhase, false);
-        if (std::abs(view.pxPerBeat() - zoom.pxPerBeat) > 1e-10 ||
-            std::abs(view.viewState().scrollPx - zoom.scrollPx) > 1e-9)
+        if (std::abs(view.camera().pxPerBeat() - zoom.pxPerBeat) > 1e-10 ||
+            std::abs(view.camera().scrollX() - zoom.scrollPx) > 1e-9)
             fail("equal timeline-wheel zoom in/out did not restore the camera");
 
         zoom.pxPerBeat = 311.375;
@@ -254,26 +257,28 @@ ScenarioContinuation runCameraScenarios(Harness &check)
                 fail("fractional projection camera did not apply exactly");
 
             const qreal visibleWidth = roll->bounds().width() - pianoKeyboardWidth;
-            uint64_t tick = view.snapTickUp(std::max(0.0, view.tickAtContentX(0.0)));
+            uint64_t tick = view.snapTickUp(std::max(0.0, view.camera().tickAtContentX(0.0)));
             int visibleTicks = 0;
             bool mappingFailed = false;
-            const double affineTick = view.tickAtContentX(visibleWidth * 0.371) + 0.375;
-            if (std::abs(view.tickAtContentX(view.contentX(affineTick)) - affineTick) > 1e-9)
+            const double affineTick = view.camera().tickAtContentX(visibleWidth * 0.371) + 0.375;
+            if (std::abs(view.camera().tickAtContentX(view.camera().contentX(affineTick)) -
+                         affineTick) > 1e-9)
                 fail("raw horizontal projection lost fractional tick precision");
             for (int guard = 0; guard < 10000; ++guard) {
-                const qreal rawX = view.contentX(double(tick));
+                const qreal rawX = view.camera().contentX(double(tick));
                 if (rawX > visibleWidth)
                     break;
                 if (rawX >= 0.0) {
                     visibleTicks++;
                     for (qreal origin : origins) {
                         for (qreal dpr : dprs) {
-                            const qreal displayed = view.displayX(double(tick), origin, dpr);
+                            const qreal displayed =
+                                view.camera().displayX(double(tick), origin, dpr);
                             const qreal expected = std::round((origin + rawX) * dpr) / dpr;
                             if (std::abs(displayed - expected) > 1e-12)
                                 mappingFailed = true;
                             const uint64_t roundTrip =
-                                view.snapTick(view.tickAtContentX(displayed - origin));
+                                view.snapTick(view.camera().tickAtContentX(displayed - origin));
                             if (roundTrip != tick)
                                 mappingFailed = true;
                         }
@@ -308,14 +313,14 @@ ScenarioContinuation runCameraScenarios(Harness &check)
     // sidecar view state.
     {
         const SongView::ViewState original = view.viewState();
-        const double pad = view.leadPadPx();
+        const double pad = view.camera().leadPadPx();
         if (pad <= 0.0)
             fail("lead pad is not positive");
 
         SongView::ViewState state = original;
         state.scrollPx = -1.0e9;
         view.applyViewState(state);
-        if (std::abs(view.viewState().scrollPx + pad) > 1e-9)
+        if (std::abs(view.camera().scrollX() + pad) > 1e-9)
             fail("horizontal scroll floor is not the lead pad");
 
         // Zooming in anchored inside the pad clamps at the floor instead of
@@ -323,18 +328,18 @@ ScenarioContinuation runCameraScenarios(Harness &check)
         checks::events::sendWheel(*roll, QPointF(pianoKeyboardWidth + 2.0, 200.0), QPoint(0, 0),
                                   QPoint(0, 120), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase,
                                   false);
-        if (std::abs(view.viewState().scrollPx + pad) > 1e-9)
+        if (std::abs(view.camera().scrollX() + pad) > 1e-9)
             fail("zoom near the song start left the lead-pad floor");
         view.applyViewState(state);
 
         state.scrollPx = 1.0e9;
         view.applyViewState(state);
-        const double ceiling = double(check.timeline().lengthTicks) * view.pxPerTick();
-        if (std::abs(view.viewState().scrollPx - ceiling) > 1e-9)
+        const double ceiling = double(check.timeline().lengthTicks) * view.camera().pxPerTick();
+        if (std::abs(view.camera().scrollX() - ceiling) > 1e-9)
             fail("scroll ceiling is not a full viewport past the song end");
 
         view.goToStart();
-        if (std::abs(view.viewState().scrollPx + pad) > 1e-9 || view.editCursorTick() != 0)
+        if (std::abs(view.camera().scrollX() + pad) > 1e-9 || view.editCursorTick() != 0)
             fail("go-to-start did not home the camera to the lead pad");
 
         // A pixel wheel pans left into the pad from the classic origin.
@@ -343,7 +348,7 @@ ScenarioContinuation runCameraScenarios(Harness &check)
         checks::events::sendWheel(*roll, QPointF(pianoKeyboardWidth + 40.0, 200.0), QPoint(8, 0),
                                   QPoint(0, 0), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase,
                                   false);
-        if (std::abs(view.viewState().scrollPx + 8.0) > 1e-12)
+        if (std::abs(view.camera().scrollX() + 8.0) > 1e-12)
             fail("wheel pan could not enter the lead pad");
 
         state.scrollPx = -pad / 2.0;
@@ -416,10 +421,12 @@ ScenarioContinuation runCameraScenarios(Harness &check)
 
         // Mid-viewport at the ceiling is all past the song end.
         const double probeX = pianoKeyboardWidth + (roll->width() - pianoKeyboardWidth) / 2.0;
-        const uint64_t tick = view.snapTickDown(view.tickAtContentX(probeX - pianoKeyboardWidth));
+        const uint64_t tick =
+            view.snapTickDown(view.camera().tickAtContentX(probeX - pianoKeyboardWidth));
         const int key = rows.keyAt(roll->height() / 2.0);
-        const qreal x0 = pianoKeyboardWidth + view.contentX(double(tick));
-        const qreal xs = pianoKeyboardWidth + view.contentX(double(tick + view.snapTicksAt(tick)));
+        const qreal x0 = pianoKeyboardWidth + view.camera().contentX(double(tick));
+        const qreal xs =
+            pianoKeyboardWidth + view.camera().contentX(double(tick + view.snapTicksAt(tick)));
         drawNote(*roll, QPoint(int((x0 + xs) / 2.0), int(rows.centerY(key))));
 
         DocNote scratch;

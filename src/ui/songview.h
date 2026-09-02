@@ -32,6 +32,7 @@
 #include "ui/songview/quick/timelineinput.h"
 #include "ui/songview/scalecontroller.h"
 #include "ui/songview/timeaxis.h"
+#include "ui/songview/timecamera.h"
 #include "ui/songview/timelinebandlayout.h"
 #include "ui/songviewmodel.h"
 #include "ui/velocitygesturemodel.h"
@@ -210,20 +211,14 @@ class SongView : public QWidget
     // Retained automation scenes repaint through the dedicated refresh channel.
     void requestAutomationQuickUpdate(songview::AutomationRefreshSet refresh);
 
-    qreal contentX(double tick) const { return qreal(tick * pxPerTick() - m_scrollX); }
-    double tickAtContentX(qreal x) const { return (double(x) + m_scrollX) / pxPerTick(); }
-    // Camera dead space before tick 0: the horizontal scroll floor is
-    // -leadPadPx(), so the song start can rest inside the viewport instead
-    // of pinned to its left edge (zooming near the start clamps here, which
-    // keeps tick 0 on screen).
-    double leadPadPx() const;
-    qreal displayX(double tick, qreal origin, qreal dpr) const;
+    const songview::TimeCamera &camera() const noexcept { return m_camera; }
+
     // Derived from the canonical beat scale: a resolution change can only
     // move this quotient, never the beat positions it produces.
-    double pxPerTick() const noexcept { return m_pxPerBeat / double(m_timeAxis.ticksPerBeat()); }
-    double pxPerBeat() const { return m_pxPerBeat; }
-    double scrollY() const { return m_scrollY; }
-    double keyHeight() const { return m_keyHeight; }
+    double pxPerTick() const noexcept { return m_camera.pxPerTick(); }
+    double pxPerBeat() const { return m_camera.pxPerBeat(); }
+    double scrollY() const { return m_camera.scrollY(); }
+    double keyHeight() const { return m_camera.keyHeight(); }
     const songview::PitchProjection &pitchProjection() const { return m_projection; }
 
     // Fold projection updates wait for a pointer gesture to commit, so the
@@ -633,6 +628,9 @@ class SongView : public QWidget
     };
 
     void refreshGeometry();
+    // Feeds the camera the geometry-derived zoom clamp bounds; call after
+    // Geometry::resolve().
+    void pushCameraGeometryLimits();
     // Canonical band layout: resolve from parent-owned rectangles, compare,
     // store, then push synchronously to the Quick host and playhead overlay.
     songview::TimelineBandLayout resolveTimelineBandLayout() const;
@@ -671,10 +669,14 @@ class SongView : public QWidget
     int rollViewportHeight() const;
     void setHScroll(double px);
     void applyEditorViewStateToWidgets(bool drawerChanged);
-    double minHScroll() const;
-    double maxHScroll() const;
+    double minHScroll() const { return m_camera.minHScroll(); }
+    double maxHScroll() const { return m_camera.maxHScroll(); }
     void setVScroll(double y);
-    double maxRollScroll() const;
+    // Camera-tail fan-out (scrollbar sync + redraw) shared by the scroll
+    // wrappers and paths that mutate the camera directly.
+    void syncHorizontalCamera(bool cameraChanged);
+    void syncVerticalCamera(bool cameraChanged);
+    double maxRollScroll() const { return m_camera.maxRollScroll(); }
     double defaultVerticalScroll() const;
     void updateScrollbars();
     void rebuildAfterSongChange();
@@ -747,10 +749,7 @@ class SongView : public QWidget
     // Consumed by the next updateSong; installed by DocumentSwapHintScope.
     std::optional<songview::PianoRollQuickDirtySet> m_documentSwapHint;
 
-    double m_pxPerBeat = 0.0; // canonical horizontal scale; pxPerTick() derives the rest
-    double m_scrollX = 0.0;
-    double m_scrollY = 0.0;
-    double m_keyHeight = 0.0;
+    songview::TimeCamera m_camera; // zoom/scroll state over m_timeAxis + m_projection
     double m_playheadTick = 0.0;
     uint64_t m_editCursorTick = 0;
     bool m_playing = false;

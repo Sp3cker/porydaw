@@ -62,7 +62,8 @@ void forEachSubGridLine(const SongView *sv, double t0, double t1,
         const uint64_t segEnd = std::min(seg.next, end);
         const uint64_t g = sv->gridTicksAt(at);
         if (g > 0 && g < seg.beatTicks &&
-            sv->pxPerTick() * double(seg.beatTicks) >= timelineDetailMinimumPixelsPerBeat) {
+            sv->camera().pxPerTick() * double(seg.beatTicks) >=
+                timelineDetailMinimumPixelsPerBeat) {
             const uint64_t k = at > seg.start ? (at - seg.start + g - 1) / g : 0;
             for (uint64_t tick = seg.start + k * g; tick < segEnd; tick += g) {
                 if ((tick - seg.start) % seg.beatTicks == 0)

@@ -5,6 +5,7 @@
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/pianorollquick.h"
+#include "ui/songview/timecamera.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
 
@@ -230,7 +231,7 @@ void TimelineQuickView::rebuildGrid()
         }
     }
 
-    const qreal tickZero = roll.m_sv->displayX(0.0, keyboardWidth, dpr);
+    const qreal tickZero = roll.m_camera.displayX(0.0, keyboardWidth, dpr);
     if (tickZero > plot.left()) {
         addRect(scene, TimelineQuickLayer::PianoGrid,
                 QRectF(plot.left(), plot.top(), tickZero - plot.left(), plot.height()),
@@ -239,9 +240,9 @@ void TimelineQuickView::rebuildGrid()
 
     const qreal roundingMargin = pixel / 2.0;
     const double t0 =
-        (std::max)(0.0, roll.m_sv->tickAtContentX(plot.left() - keyboardWidth - roundingMargin));
+        (std::max)(0.0, roll.m_camera.tickAtContentX(plot.left() - keyboardWidth - roundingMargin));
     const double t1 =
-        roll.m_sv->tickAtContentX(plot.right() - pixel - keyboardWidth + roundingMargin) + 1.0;
+        roll.m_camera.tickAtContentX(plot.right() - pixel - keyboardWidth + roundingMargin) + 1.0;
     // During the first narrow resize pass the plot can end before the keyboard.
     // Keep its negative/reversed tick range from converting to UINT64_MAX below.
     if (!std::isfinite(t0) || !std::isfinite(t1) || t1 <= t0)
@@ -254,11 +255,11 @@ void TimelineQuickView::rebuildGrid()
     const qreal gridWidth = lyt::fontPx(1.0 / 6.0) * pixel;
     detail::forEachSubGridLine(
         roll.m_sv, t0, t1, detailMinimumPixelsPerBeat, [&](uint64_t tick, int level) {
-            const qreal x = roll.m_sv->displayX(double(tick), keyboardWidth, dpr);
+            const qreal x = roll.m_camera.displayX(double(tick), keyboardWidth, dpr);
             addVerticalLine(scene, TimelineQuickLayer::PianoGrid, x, plot.top(), plot.bottom(),
                             gridWidth, gridColors[std::size_t(level - 1)], plot);
         });
-    const bool drawBeats = roll.m_sv->pxPerBeat() >= detailMinimumPixelsPerBeat;
+    const bool drawBeats = roll.m_camera.pxPerBeat() >= detailMinimumPixelsPerBeat;
     roll.m_sv->forEachGridLine(
         uint64_t(t0), uint64_t(t1), [&](uint64_t tick, bool isBar, int, int) {
             if (!isBar && !drawBeats)
@@ -266,7 +267,7 @@ void TimelineQuickView::rebuildGrid()
             const bool finest =
                 roll.m_sv->document() && roll.m_sv->gridTicksAt(tick) == roll.m_sv->fineGridTicks();
             const auto colorIndex = isBar ? 5u : finest ? 4u : 3u;
-            const qreal x = roll.m_sv->displayX(double(tick), keyboardWidth, dpr);
+            const qreal x = roll.m_camera.displayX(double(tick), keyboardWidth, dpr);
             addVerticalLine(scene, TimelineQuickLayer::PianoGrid, x, plot.top(), plot.bottom(),
                             gridWidth, gridColors[colorIndex], plot);
         });
@@ -324,9 +325,9 @@ void TimelineQuickView::rebuildDrawPreviewFill()
     const QRectF plot(keyboardWidth, 0, std::max<qreal>(0, roll.bounds().width() - keyboardWidth),
                       roll.bounds().height());
     const int selectedTrack = roll.m_sv->selectionModel().primaryTrack();
-    const qreal x0 = roll.m_sv->displayX(double(roll.m_drawTick), keyboardWidth, dpr);
-    const qreal x1 =
-        roll.m_sv->displayX(double(roll.m_drawTick + uint64_t(roll.m_drawDur)), keyboardWidth, dpr);
+    const qreal x0 = roll.m_camera.displayX(double(roll.m_drawTick), keyboardWidth, dpr);
+    const qreal x1 = roll.m_camera.displayX(double(roll.m_drawTick + uint64_t(roll.m_drawDur)),
+                                            keyboardWidth, dpr);
     const QRectF previewRect = roll.noteRect(x0, x1, roll.m_drawKey);
     const QRectF box = roll.noteBox(previewRect);
     const QColor fill = roll.m_sv->noteFillColor(selectedTrack, roll.m_lastVelocity);
@@ -426,9 +427,9 @@ void TimelineQuickView::rebuildOverlay()
     const int selectedTrack = roll.m_sv->selectionModel().primaryTrack();
 
     if (roll.m_leftDrag == PianoRoll::LeftDrag::Draw) {
-        const qreal x0 = roll.m_sv->displayX(double(roll.m_drawTick), keyboardWidth, dpr);
-        const qreal x1 = roll.m_sv->displayX(double(roll.m_drawTick + uint64_t(roll.m_drawDur)),
-                                             keyboardWidth, dpr);
+        const qreal x0 = roll.m_camera.displayX(double(roll.m_drawTick), keyboardWidth, dpr);
+        const qreal x1 = roll.m_camera.displayX(double(roll.m_drawTick + uint64_t(roll.m_drawDur)),
+                                                keyboardWidth, dpr);
         const QRectF previewRect = roll.noteRect(x0, x1, roll.m_drawKey);
         const QRectF box = roll.noteBox(previewRect);
         addNoteBorder(scene, TimelineQuickLayer::PianoOverlay, box, false,
@@ -450,8 +451,9 @@ void TimelineQuickView::rebuildOverlay()
     }
 
     if (selection.timeSelectionCoversTrack(selectedTrack, usedTracks) && timeSelection.active()) {
-        const qreal x0 = roll.m_sv->displayX(double(timeSelection.startTick), keyboardWidth, dpr);
-        const qreal x1 = roll.m_sv->displayX(double(timeSelection.endTick), keyboardWidth, dpr);
+        const qreal x0 =
+            roll.m_camera.displayX(double(timeSelection.startTick), keyboardWidth, dpr);
+        const qreal x1 = roll.m_camera.displayX(double(timeSelection.endTick), keyboardWidth, dpr);
         QColor fill = themes::color(themes::Role::song_view_selection_fill);
         fill.setAlpha(30);
         addRect(scene, TimelineQuickLayer::PianoOverlay,
@@ -467,10 +469,10 @@ void TimelineQuickView::rebuildOverlay()
         const bool hasStart = timeline->loopStartTick != UINT64_MAX;
         const bool hasEnd = timeline->loopEndTick != UINT64_MAX;
         const qreal x0 =
-            hasStart ? roll.m_sv->displayX(double(timeline->loopStartTick), keyboardWidth, dpr)
+            hasStart ? roll.m_camera.displayX(double(timeline->loopStartTick), keyboardWidth, dpr)
                      : plot.left();
         const qreal x1 =
-            hasEnd ? roll.m_sv->displayX(double(timeline->loopEndTick), keyboardWidth, dpr)
+            hasEnd ? roll.m_camera.displayX(double(timeline->loopEndTick), keyboardWidth, dpr)
                    : plot.right();
         if (x1 > plot.left() && x0 < plot.right()) {
             const qreal glowWidth = std::min<qreal>(lyt::space(Space::Eight), x1 - x0);
@@ -633,9 +635,9 @@ void TimelineQuickView::synchronizeNoteText()
 
     if (roll.m_leftDrag == PianoRoll::LeftDrag::Draw && velocityShortcut &&
         roll.m_velocityLabelFont) {
-        const qreal x0 = roll.m_sv->displayX(double(roll.m_drawTick), keyboardWidth, dpr);
-        const qreal x1 = roll.m_sv->displayX(double(roll.m_drawTick + uint64_t(roll.m_drawDur)),
-                                             keyboardWidth, dpr);
+        const qreal x0 = roll.m_camera.displayX(double(roll.m_drawTick), keyboardWidth, dpr);
+        const qreal x1 = roll.m_camera.displayX(double(roll.m_drawTick + uint64_t(roll.m_drawDur)),
+                                                keyboardWidth, dpr);
         const QRectF previewRect = roll.noteRect(x0, x1, roll.m_drawKey);
         const QRectF box = roll.noteBox(previewRect);
         const QString text = QString::number(roll.m_lastVelocity);

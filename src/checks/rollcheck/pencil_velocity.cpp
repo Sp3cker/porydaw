@@ -301,9 +301,10 @@ void checkLifecycleCancellation(Harness &check, QQuickItem &rollInput, const Cel
         check.fail("lifecycle cancellation fixture lost its note");
         return;
     }
-    const QPointF pressPosition(check.pianoKeyboardWidth() +
-                                    view.contentX(double(note.tick) + double(note.dur) / 2),
-                                note.center.y());
+    const QPointF pressPosition(
+        check.pianoKeyboardWidth() +
+            view.camera().contentX(double(note.tick) + double(note.dur) / 2),
+        note.center.y());
     const uint64_t revisionBefore = doc.revision();
     const int undoIndexBefore = doc.undoStack()->index();
     const int undoCountBefore = doc.undoStack()->count();
@@ -401,7 +402,8 @@ ScenarioContinuation runQuickLifecycleScenarios(Harness &check)
     // Host cursor publication: hovering the note's leading edge swaps the
     // item cursor to the resize grip; hovering the keyboard column restores
     // the arrow. Leaving the roll clears the cursor entirely.
-    const qreal edgeX = check.pianoKeyboardWidth() + view.contentX(double(note.tick)) - 1.0;
+    const qreal edgeX =
+        check.pianoKeyboardWidth() + view.camera().contentX(double(note.tick)) - 1.0;
     events::sendMouse(rollInput, QEvent::MouseMove, QPointF(edgeX, cell.center.y()), Qt::NoButton,
                       Qt::NoButton, Qt::NoModifier);
     const bool edgeCursor = !rollInput.cursor().pixmap().isNull();

@@ -147,7 +147,7 @@ DrawerPageLiveState SongView::drawerPageLiveState() const
     return {
         m_document ? m_document->revision() : 0,
         pxPerBeat(),
-        m_scrollX,
+        m_camera.scrollX(),
         m_editCursorTick,
         trackColor(m_selectionModel.primaryTrack()),
         {m_playheadTick, m_playing},

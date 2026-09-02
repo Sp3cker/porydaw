@@ -30,6 +30,7 @@ namespace songview {
 
 class OtherStrip;
 class PianoRoll;
+class TimeCamera;
 class TimelineInputItem;
 enum class TimelineQuickHoverOwner : quint8 {
     None,
@@ -165,6 +166,7 @@ class TimelineQuickView final : public QWidget
     QPointer<VelocityArea> m_velocity;
     QPointer<VoiceChangeArea> m_voiceChanges;
     QPointer<SongView> m_songView;
+    const TimeCamera &m_camera;
     std::array<TimelineInputItem *, timelineBandIndex(TimelineBand::Count)> m_inputItems{};
     TimelineQuickScene *m_scene = nullptr;
     QQuickView *m_quickView = nullptr;

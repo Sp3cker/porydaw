@@ -394,7 +394,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     const qreal lineHalf =
         std::max(qreal(layout::singlePixel()), qreal(geometry.hoverPaintPadding + 1));
     const auto tickX = [&](uint64_t tick) {
-        return view.displayX(double(tick), geometry.plotOrigin, dpr);
+        return view.camera().displayX(double(tick), geometry.plotOrigin, dpr);
     };
     const auto paintUnchanged = [&](const char *label, const DocSnap &before) {
         check(unchanged(before, snapshot(document)),

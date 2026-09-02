@@ -17,7 +17,7 @@ namespace songview {
 
 void PianoRoll::updateMoveDrag(const TimelinePointerInput &input)
 {
-    const double tick = m_sv->tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth);
+    const double tick = m_camera.tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth);
     const int64_t grid = int64_t(m_sv->snapTicksAt(uint64_t(std::max(0.0, m_pressTick))));
     const int64_t snappedD = int64_t(std::llround((tick - m_pressTick) / double(grid))) * grid;
     const int dKey = m_sv->scaleFold() ? foldDegreeDeltaForPointer(input.position.y())
@@ -49,7 +49,7 @@ void PianoRoll::auditionMovedSelection()
 
 void PianoRoll::updateResizeDrag(const TimelinePointerInput &input)
 {
-    const double tick = m_sv->tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth);
+    const double tick = m_camera.tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth);
     const double desired = double(m_gripTick) + (tick - m_pressTick);
     const uint64_t snapped =
         m_leftDrag == LeftDrag::Resize
@@ -88,7 +88,7 @@ void PianoRoll::updateVelocityDrag(const TimelinePointerInput &input)
 
 void PianoRoll::updateDrawDrag(const TimelinePointerInput &input)
 {
-    const double tick = m_sv->tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth);
+    const double tick = m_camera.tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth);
     const uint64_t grid = m_sv->snapTicksAt(uint64_t(std::max(0.0, m_pressTick)));
     uint64_t start;
     int64_t dur;
@@ -129,7 +129,7 @@ void PianoRoll::drawSpanAt(double tick, uint64_t grid, uint64_t &start, int64_t 
 
 void PianoRoll::updateTimeSelDrag(const TimelinePointerInput &input)
 {
-    const double tick = m_sv->tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth);
+    const double tick = m_camera.tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth);
     const uint64_t t = m_sv->snapTick(tick);
     EditorSelectionModel::TimeSelection sel;
     sel.startTick = std::min(m_rightAnchorTick, t);

@@ -57,6 +57,7 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     , m_velocity(&velocity)
     , m_voiceChanges(&voiceChanges)
     , m_songView(&songView)
+    , m_camera(songView.camera())
 {
     m_layoutTimer.setSingleShot(true);
     m_layoutTimer.setInterval(std::chrono::milliseconds::zero());
@@ -287,7 +288,7 @@ void TimelineQuickView::synchronizeGuides(qreal songViewTimelineOriginX,
 {
     setEditChrome(editSongViewContentX);
     if (m_hoverOwner != TimelineQuickHoverOwner::None && m_songView)
-        setHoverChrome(songViewTimelineOriginX + m_songView->contentX(m_hoverTick));
+        setHoverChrome(songViewTimelineOriginX + m_camera.contentX(m_hoverTick));
 }
 
 void TimelineQuickView::publishHover(TimelineQuickHoverOwner owner, uint64_t tick,
@@ -328,7 +329,7 @@ std::optional<qreal> TimelineQuickView::guideSongViewContentXAtOrAfterStart(
 {
     if (!songViewContentX || !m_songView)
         return std::nullopt;
-    const qreal songStartX = m_songView->timelinePlotOrigin() + m_songView->contentX(0.0);
+    const qreal songStartX = m_songView->timelinePlotOrigin() + m_camera.contentX(0.0);
     return *songViewContentX >= songStartX ? songViewContentX : std::nullopt;
 }
 

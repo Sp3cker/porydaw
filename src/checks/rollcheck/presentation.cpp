@@ -87,21 +87,21 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
     // non-widget interactions; both run the same middle-drag pan probe
     // against their own input surface.
     const auto panFollowProbe = [&](auto &panned) {
-        const int home = view.contentX(0.0);
-        const uint64_t farTick = uint64_t(std::max(0.0, view.tickAtContentX(vw * 2)));
+        const int home = view.camera().contentX(0.0);
+        const uint64_t farTick = uint64_t(std::max(0.0, view.camera().tickAtContentX(vw * 2)));
         const QPointF mid(panned.width() / 2.0, panned.height() / 2.0);
         checks::events::sendMouse(panned, QEvent::MouseButtonPress, mid, Qt::MiddleButton,
                                   Qt::MiddleButton, Qt::NoModifier);
         view.setPlayheadSample(check.timeline().sampleForTick(farTick), true);
-        if (view.contentX(0.0) != home)
+        if (view.camera().contentX(0.0) != home)
             fail("playhead follow-scroll moved the view during a pan gesture");
         checks::events::sendMouse(panned, QEvent::MouseButtonRelease, mid, Qt::MiddleButton,
                                   Qt::NoButton, Qt::NoModifier);
         view.setPlayheadSample(check.timeline().sampleForTick(farTick), true);
-        if (view.contentX(0.0) == home)
+        if (view.camera().contentX(0.0) == home)
             fail("playhead follow-scroll did not resume after the pan ended");
         view.setPlayheadSample(0, false);
-        view.scrollByPx(view.contentX(0.0) - home); // back where it started
+        view.scrollByPx(view.camera().contentX(0.0) - home); // back where it started
     };
     panFollowProbe(*roll);
     if (lanes)
@@ -529,7 +529,7 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
     }
 
     const auto screenshotTick =
-        uint64_t(std::ceil(std::max(0.0, view.tickAtContentX(view.width() / 2))));
+        uint64_t(std::ceil(std::max(0.0, view.camera().tickAtContentX(view.width() / 2))));
     view.setPlayheadSample(check.timeline().sampleForTick(screenshotTick), false);
     // Park the cursor mid-roll so the shot shows the hover mark + name chip.
     checks::events::sendMouse(*roll, QEvent::MouseMove,

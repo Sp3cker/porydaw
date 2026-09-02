@@ -30,9 +30,13 @@ ScenarioContinuation runScaleEditingScenarios(Harness &check)
         if (row == songview::PitchProjection::cHiddenRow)
             return -1;
         const qreal dpr = roll->devicePixelRatio();
-        const qreal top = std::round((double(row) * view.keyHeight() - view.scrollY()) * dpr) / dpr;
+        const qreal top =
+            std::round((double(row) * view.camera().keyHeight() - view.camera().scrollY()) * dpr) /
+            dpr;
         const qreal bottom =
-            std::round((double(row + 1) * view.keyHeight() - view.scrollY()) * dpr) / dpr;
+            std::round((double(row + 1) * view.camera().keyHeight() - view.camera().scrollY()) *
+                       dpr) /
+            dpr;
         return int(std::floor((top + bottom) / 2.0));
     };
     const int undoBaseline = doc.undoStack()->index();
@@ -269,8 +273,8 @@ ScenarioContinuation runScaleEditingScenarios(Harness &check)
             QCoreApplication::processEvents();
             // Press the note center for a Move drag: horizontally the center
             // avoids the 3px edge-grip zones on this 5px-wide, 4-tick note.
-            const int x = int((view.contentX(double(tBase)) +
-                               view.contentX(double(tBase) + doc.ticksPerClock() * 4)) /
+            const int x = int((view.camera().contentX(double(tBase)) +
+                               view.camera().contentX(double(tBase) + doc.ticksPerClock() * 4)) /
                                   2.0 +
                               pianoKeyboardWidth);
             const QPoint press(x, foldCenterY(src));

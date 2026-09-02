@@ -350,7 +350,8 @@ void checkDirectHoverRoute(AutomationGestureCheckRig &rig, const PreparedLane &l
     rig.mouseMove(lane.insertionPos, Qt::NoButton);
     rig.pump();
     const qreal expectedRootX = rig.view().timelinePlotOrigin() +
-                                rig.view().contentX(lane.insertionTick) - quickHost->geometry().x();
+                                rig.view().camera().contentX(lane.insertionTick) -
+                                quickHost->geometry().x();
     QDeadlineTimer timeout{1000};
     auto hoverLayer = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
     while ((!quickHost->hoverVisible() ||

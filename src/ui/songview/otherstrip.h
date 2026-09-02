@@ -7,6 +7,7 @@ class SongView;
 
 namespace songview {
 
+class TimeCamera;
 class TimelineQuickScene;
 class TimelineQuickView;
 
@@ -39,6 +40,7 @@ class OtherStrip final : public QObject, public TimelineBandInteraction
     void rebuildQuickScene(TimelineQuickScene &scene);
     void requestQuickUpdate();
     SongView &m_owner;
+    const songview::TimeCamera &m_camera;
     TimelineInputHost *m_inputHost = nullptr;
     Geometry m_geometry;
 };

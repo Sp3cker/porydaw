@@ -29,6 +29,7 @@ void OtherStrip::refreshGeometry()
 OtherStrip::OtherStrip(SongView &owner, QObject *parent)
     : QObject(parent)
     , m_owner(owner)
+    , m_camera(owner.camera())
     , m_geometry(Geometry::resolve())
 {}
 
@@ -63,7 +64,7 @@ bool OtherStrip::pointerMove(const TimelinePointerInput &input)
     QStringList lines;
     for (const StripItem &item : m_owner.model().strip) {
         const qreal x =
-            m_owner.displayX(double(item.tick), plotOrigin, m_inputHost->devicePixelRatio());
+            m_camera.displayX(double(item.tick), plotOrigin, m_inputHost->devicePixelRatio());
         if (std::abs(x - input.position.x()) > m_geometry.otherEventHitSlop)
             continue;
         const double seconds = double(timeline->sampleForTick(item.tick)) / timeline->sampleRate;

@@ -171,12 +171,12 @@ ScenarioContinuation runScaleFoldScenarios(Harness &check)
             std::array<int, 128> rowsBefore = {};
             for (int pitch = 0; pitch < 128; pitch++)
                 rowsBefore[pitch] = proj.rowForPitch(pitch);
-            const double scrollBefore = view.scrollY();
+            const double scrollBefore = view.camera().scrollY();
             const uint64_t revisionBefore = proj.revision();
             view.setScaleRoot(11);
             if (proj.revision() != revisionBefore)
                 fail("Fold root change rebuilt occupied-pitch geometry");
-            if (std::abs(view.scrollY() - scrollBefore) > 1e-9)
+            if (std::abs(view.camera().scrollY() - scrollBefore) > 1e-9)
                 fail("Fold root change moved the camera");
             for (int pitch = 0; pitch < 128; pitch++) {
                 if (proj.rowForPitch(pitch) != rowsBefore[pitch]) {

@@ -85,7 +85,7 @@ void PianoRoll::beginPendingMenu(const TimelinePointerInput &input, const ViewNo
     m_rightDrag = RightDrag::PendingMenu;
     m_rightShift = input.modifiers & Qt::ShiftModifier;
     m_rightAnchorTick =
-        m_sv->snapTick(m_sv->tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth));
+        m_sv->snapTick(m_camera.tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth));
     m_rightHit = hit != nullptr;
     if (hit)
         m_rightHitId = hit->noteId;
@@ -94,7 +94,7 @@ void PianoRoll::beginPendingMenu(const TimelinePointerInput &input, const ViewNo
 void PianoRoll::beginLeftPress(const TimelinePointerInput &input)
 {
     m_pressPos = m_curPos = input.position;
-    m_pressTick = m_sv->tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth);
+    m_pressTick = m_camera.tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth);
     m_pressKey = yToKey(input.position.y());
     m_dTick = 0;
     m_dKey = 0;

@@ -159,19 +159,19 @@ void checkFollowScroll(SongView &view, const MidiTimeline &timeline, QStringList
     parked.scrollPx = 0.0;
     parked.pxPerBeat = 512.0;
     view.applyViewState(parked);
-    const uint64_t farTick = uint64_t(double(view.width()) * 4.0 / view.pxPerTick()) + 1;
+    const uint64_t farTick = uint64_t(double(view.width()) * 4.0 / view.camera().pxPerTick()) + 1;
     const uint64_t farSample = timeline.sampleForTick(farTick);
     view.setPlayheadSample(farSample, true);
-    if (view.viewState().scrollPx <= 0.0)
+    if (view.camera().scrollX() <= 0.0)
         failures.append("follow-on playback did not scroll to the playhead");
     view.applyViewState(parked);
     view.setFollowPlayhead(false);
     view.setPlayheadSample(farSample, true);
-    if (view.viewState().scrollPx != 0.0)
+    if (view.camera().scrollX() != 0.0)
         failures.append("follow-off playback still scrolled the view");
     view.setFollowPlayhead(true);
     view.setPlayheadSample(farSample, true);
-    if (view.viewState().scrollPx <= 0.0)
+    if (view.camera().scrollX() <= 0.0)
         failures.append("re-enabled follow did not scroll to the playhead");
     view.applyViewState(saved);
 }
@@ -260,7 +260,7 @@ void checkPositionOnlyQuickFrames(const MidiTimeline &timeline, QStringList &fai
     }
 
     const uint64_t tick =
-        uint64_t(std::max(0.0, probe.tickAtContentX(std::max<qreal>(
+        uint64_t(std::max(0.0, probe.camera().tickAtContentX(std::max<qreal>(
                                    1.0, probe.width() / 2.0 - probe.timelinePlotOrigin()))));
     probe.setPlayheadSample(timeline.sampleForTick(tick), false);
     for (int settle = 0; settle < 4; ++settle)
@@ -372,7 +372,7 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         }
 
         const uint64_t tick =
-            uint64_t(std::max(0.0, view.tickAtContentX(std::max<qreal>(
+            uint64_t(std::max(0.0, view.camera().tickAtContentX(std::max<qreal>(
                                        1.0, view.width() / 2.0 - view.timelinePlotOrigin()))));
         const uint64_t sample = timeline.sampleForTick(tick);
         view.setEditCursorTick(tick);
@@ -427,7 +427,7 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         } else if (quick->geometry() != canonicalBandUnion().value_or(QRect{})) {
             failures.append("font refresh diverged the Quick host from the canonical union");
         }
-        overlay->setPlayhead(view.contentX(tick), true, false);
+        overlay->setPlayhead(view.camera().contentX(tick), true, false);
         checks::support::pumpQuick();
         if (overlay->geometry() != view.rect()) {
             failures.append("font-refreshed native playhead overlay lost owner geometry");
@@ -439,7 +439,7 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
             const qreal expectedPlayheadX =
                 (refreshedRuler ? refreshedRuler->rect.x() + refreshedRuler->timelineOrigin
                                 : qRound(view.timelinePlotOrigin())) +
-                view.contentX(tick);
+                view.camera().contentX(tick);
             const qreal refreshedPlayheadX =
                 playheadCenterAt(refreshedPlayhead, rollBandCenterY(), playheadColor);
             const int triangleTop = refreshedRulerRect.bottom() -
@@ -482,7 +482,7 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
             bandLayout.geometry(songview::TimelineBand::Ruler);
         if (!restoredRuler || restoredRuler->rect != canonicalRulerRectBeforeFont)
             failures.append("restoring the font did not return the canonical ruler rectangle");
-        overlay->setPlayhead(view.contentX(tick), true, false);
+        overlay->setPlayhead(view.camera().contentX(tick), true, false);
         view.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation, tick);
         checks::support::pumpQuick();
 
@@ -491,7 +491,7 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
                 bandLayout.geometry(songview::TimelineBand::Ruler);
             return (rulerGeometry ? rulerGeometry->rect.x() + rulerGeometry->timelineOrigin
                                   : qRound(view.timelinePlotOrigin())) +
-                   view.contentX(chromeTick);
+                   view.camera().contentX(chromeTick);
         };
         const auto quickContentX = [quick, &view](qreal songViewX) {
             return songViewX - quick->mapTo(&view, QPoint{}).x();
@@ -637,12 +637,12 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         }
         const SongView::ViewState cameraState = view.viewState();
         const qreal oldEditX = quick->editRootContentX();
-        view.setEditorHorizontalScroll(cameraState.scrollPx + view.pxPerBeat());
-        if (view.viewState().scrollPx == cameraState.scrollPx)
-            view.setEditorHorizontalScroll(cameraState.scrollPx - view.pxPerBeat());
+        view.setEditorHorizontalScroll(cameraState.scrollPx + view.camera().pxPerBeat());
+        if (view.camera().scrollX() == cameraState.scrollPx)
+            view.setEditorHorizontalScroll(cameraState.scrollPx - view.camera().pxPerBeat());
         checks::support::pumpQuick();
         const qreal cameraEditX = expectedSongViewX(view.editCursorTick());
-        if (view.viewState().scrollPx == cameraState.scrollPx) {
+        if (view.camera().scrollX() == cameraState.scrollPx) {
             failures.append("camera-motion fixture could not move within the timeline range");
         } else {
             if (std::abs(quick->editRootContentX() - quickContentX(cameraEditX)) > 0.2 ||
@@ -701,7 +701,7 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
             bandLayout.geometry(songview::TimelineBand::Ruler);
         const qreal nativeX = (rulerBand ? rulerBand->rect.x() + rulerBand->timelineOrigin
                                          : qRound(view.timelinePlotOrigin())) +
-                              view.contentX(timeline.tickForSample(sample));
+                              view.camera().contentX(timeline.tickForSample(sample));
         qreal renderedNativeX = nativeX;
         const QRect rollRect = bandLayout.geometry(songview::TimelineBand::Roll)
                                    .value_or(songview::TimelineBandGeometry{})
@@ -765,7 +765,7 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
                 bandLayout.geometry(songview::TimelineBand::Ruler);
             return (rulerGeometry ? rulerGeometry->rect.x() + rulerGeometry->timelineOrigin
                                   : qRound(view.timelinePlotOrigin())) +
-                   view.contentX(timeline.tickForSample(sample));
+                   view.camera().contentX(timeline.tickForSample(sample));
         };
 
         const EditorViewState savedEditorState = view.editorViewState();

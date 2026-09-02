@@ -326,8 +326,9 @@ struct VelocityAreaRig {
     double paintGestureX(const DocNote &note) const
     {
         return double(env.area.plotOrigin()) +
-               double(note.tick) * env.view.pxPerBeat() / double(env.timeline->ticksPerBeat) -
-               env.view.viewState().scrollPx;
+               double(note.tick) * env.view.camera().pxPerBeat() /
+                   double(env.timeline->ticksPerBeat) -
+               env.view.camera().scrollX();
     }
 
     QPointF velocityNode(const DocNote &note) const
@@ -439,7 +440,7 @@ int checkGridContinuesPastSongEnd(VelocityAreaEnv &env)
     // QQuickView window. Match the renderer's snapped, camera-relative local x.
     const qreal dpr = env.host->devicePixelRatio();
     const auto gridX = [&env, dpr](uint64_t tick) {
-        return env.view.displayX(double(tick), env.area.plotOrigin(), dpr);
+        return env.view.camera().displayX(double(tick), env.area.plotOrigin(), dpr);
     };
     const qreal firstBarPastSongEndX = gridX(firstBarPastSongEnd);
     const std::array gridColors = {
@@ -467,8 +468,8 @@ int checkPanClampAtTickZero(VelocityAreaEnv &env)
     };
     env.live.editCursorTick = 0;
     env.view.goToStart();
-    env.live.timeZoom = env.view.pxPerBeat();
-    env.live.horizontalScroll = env.view.viewState().scrollPx;
+    env.live.timeZoom = env.view.camera().pxPerBeat();
+    env.live.horizontalScroll = env.view.camera().scrollX();
     env.area.refreshLiveState(env.live);
     QApplication::processEvents();
     const auto beforePanPastZero = captureVelocityBand(env.view);
@@ -480,7 +481,7 @@ int checkPanClampAtTickZero(VelocityAreaEnv &env)
     velocityRelease(env, panLeftPastZero, Qt::MiddleButton, Qt::NoModifier);
     QApplication::processEvents();
     const auto afterPanPastZero = captureVelocityBand(env.view);
-    check(env.view.viewState().scrollPx == env.live.horizontalScroll &&
+    check(env.view.camera().scrollX() == env.live.horizontalScroll &&
               samePixels(beforePanPastZero, afterPanPastZero),
           "panning left at tick zero must not visually overscroll the velocity lane");
     return failures;
@@ -713,7 +714,7 @@ int checkEditCursorRepaint(VelocityAreaEnv &env)
     };
     const uint64_t viewCursorBefore = env.view.editCursorTick();
     const auto quickCursorAt = [&env](uint64_t tick) {
-        return env.view.timelinePlotOrigin() + qreal(env.view.contentX(double(tick)));
+        return env.view.timelinePlotOrigin() + qreal(env.view.camera().contentX(double(tick)));
     };
     env.live.editCursorTick = 12;
     env.view.setEditCursorTick(env.live.editCursorTick);
@@ -1021,8 +1022,8 @@ int checkStackedNodeHitPriority(VelocityAreaRig &rig)
     rig.env.area.refreshLiveState(rig.env.live);
     QApplication::processEvents();
     const std::vector<DocNote> overlapFixtureNotes = rig.env.document.notesForTrack(0);
-    rig.env.live.timeZoom = rig.env.view.pxPerBeat();
-    rig.env.live.horizontalScroll = rig.env.view.viewState().scrollPx;
+    rig.env.live.timeZoom = rig.env.view.camera().pxPerBeat();
+    rig.env.live.horizontalScroll = rig.env.view.camera().scrollX();
     const auto overlapIt = std::find_if(overlapFixtureNotes.cbegin(), overlapFixtureNotes.cend(),
                                         [&currentFirst](const DocNote &note) {
                                             return note.tick == currentFirst.tick + 8 &&
@@ -1319,10 +1320,10 @@ int checkRollVelocityDrag(VelocityAreaRig &rig)
         const int dragDelta = QApplication::startDragDistance() + 16;
         const QPointF rollNoteCenter(
             double(rig.env.expected.pianoKeyboardWidth) +
-                double(rig.env.view.contentX(double(rig.graduatedFirst.tick) +
-                                             double(rig.graduatedFirst.duration) / 2.0)),
-            (127.5 - double(rig.graduatedFirst.key)) * rig.env.view.keyHeight() -
-                rig.env.view.scrollY());
+                double(rig.env.view.camera().contentX(double(rig.graduatedFirst.tick) +
+                                                      double(rig.graduatedFirst.duration) / 2.0)),
+            (127.5 - double(rig.graduatedFirst.key)) * rig.env.view.camera().keyHeight() -
+                rig.env.view.camera().scrollY());
         const QPointF rollDragPosition = rollNoteCenter - QPointF(0.0, double(dragDelta));
         const auto stageRollVelocityPreview = [&]() {
             checks::events::sendMouse(*roll, QEvent::MouseButtonPress, rollNoteCenter,
@@ -1388,7 +1389,7 @@ int checkRollVelocityDrag(VelocityAreaRig &rig)
         const QImage rollDragPreview = captureVelocityBand(rig.env.view);
         const QPointF previewNodeCenter(
             double(rig.env.area.plotOrigin()) +
-                double(rig.env.view.contentX(double(dragBeforeFirst.tick))),
+                double(rig.env.view.camera().contentX(double(dragBeforeFirst.tick))),
             previewLevel ? rig.env.area.axis().levelToY(int(*previewLevel))
                          : rig.env.area.axis().velocityToY(firstPreviewVelocity));
         check(rig.env.document.revision() == revisionBeforeRollDrag &&
@@ -1485,8 +1486,8 @@ int checkDetentUnlockGestures(VelocityAreaRig &rig)
     rig.env.view.setDrawerSectionHeight(EditorDrawerPage::Velocity, std::nullopt);
     rig.env.view.setDrawerSectionHeight(EditorDrawerPage::Velocity, velocitySectionHeight);
     QApplication::processEvents();
-    rig.env.live.timeZoom = rig.env.view.pxPerBeat();
-    rig.env.live.horizontalScroll = rig.env.view.viewState().scrollPx;
+    rig.env.live.timeZoom = rig.env.view.camera().pxPerBeat();
+    rig.env.live.horizontalScroll = rig.env.view.camera().scrollX();
     if (detentUnlockModifiers != Qt::NoModifier) {
         rig.env.voicegroup.voices[0] = rig.env.wave;
         rig.env.view.setVoicegroup(&rig.env.voicegroup);
@@ -1875,20 +1876,22 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     fixtureLive.documentRevision = fixtureDocument.revision();
     fixtureLive.timeZoom = 48.0;
     fixtureView.setEditorTimeZoom(fixtureLive.timeZoom);
-    fixtureLive.timeZoom = fixtureView.pxPerBeat();
-    fixtureLive.horizontalScroll = fixtureView.viewState().scrollPx;
+    fixtureLive.timeZoom = fixtureView.camera().pxPerBeat();
+    fixtureLive.horizontalScroll = fixtureView.camera().scrollX();
     fixtureArea->refreshLiveState(fixtureLive);
     QApplication::processEvents();
     const qreal zoomAnchorContentX = std::max(1, fixtureArea->plotWidth() / 2);
     const QPointF zoomAnchor(fixtureArea->plotOrigin() + qRound(zoomAnchorContentX),
                              velocityBandRect(fixtureView).height() / 2.0);
-    const double tickBeforeZoom = fixtureView.tickAtContentX(zoomAnchorContentX);
-    const double zoomBefore = fixtureView.pxPerBeat();
+    const double tickBeforeZoom = fixtureView.camera().tickAtContentX(zoomAnchorContentX);
+    const double zoomBefore = fixtureView.camera().pxPerBeat();
     fixtureArea->wheel({zoomAnchor, fixtureHost.mapToGlobal(zoomAnchor), QPoint(), QPoint(0, 120),
                         Qt::NoModifier, Qt::NoScrollPhase, false});
     QApplication::processEvents();
-    check(fixtureView.pxPerBeat() > zoomBefore, "plain wheel must change velocity-lane time zoom");
-    check(std::abs(fixtureView.tickAtContentX(zoomAnchorContentX) - tickBeforeZoom) < 0.001,
+    check(fixtureView.camera().pxPerBeat() > zoomBefore,
+          "plain wheel must change velocity-lane time zoom");
+    check(std::abs(fixtureView.camera().tickAtContentX(zoomAnchorContentX) - tickBeforeZoom) <
+              0.001,
           "velocity-lane time zoom must preserve the tick under the cursor");
     int fixtureTrack = -1;
     DocNote fixtureNote;
@@ -2026,8 +2029,8 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     live.trackColor = QColor(Qt::cyan);
     view.setEditorTimeZoom(live.timeZoom);
     view.setEditorHorizontalScroll(live.horizontalScroll);
-    live.timeZoom = view.pxPerBeat();
-    live.horizontalScroll = view.viewState().scrollPx;
+    live.timeZoom = view.camera().pxPerBeat();
+    live.horizontalScroll = view.camera().scrollX();
     area.refreshLiveState(live);
     QApplication::processEvents();
     failures += checkDrawerToggleGeometry(env);

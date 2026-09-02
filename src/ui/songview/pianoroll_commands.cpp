@@ -10,6 +10,7 @@
 #include "ui/songview/detail.h"
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/timecamera.h"
 #include <QCursor>
 #include <QInputDialog>
 #include <QMetaObject>
@@ -146,7 +147,7 @@ void PianoRoll::openPitchBendEditor()
         noteGlobal = QRect(noteTopGlobal.toPoint(), noteBottomGlobal.toPoint());
         if (noteLocalRect.contains(cursorLocal)) {
             noteFraction =
-                double(m_sv->tickAtContentX(cursorLocal.x() - m_geometry.pianoKeyboardWidth) -
+                double(m_camera.tickAtContentX(cursorLocal.x() - m_geometry.pianoKeyboardWidth) -
                        double(notes.front().tick)) /
                 double(popup->endTick() - notes.front().tick);
             noteFraction = std::clamp(noteFraction, 0.0, 1.0);

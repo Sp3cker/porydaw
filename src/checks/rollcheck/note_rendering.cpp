@@ -36,14 +36,15 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
     const DocNote &noteA = fixture.noteA;
     const int undoBaseline = doc.undoStack()->index();
     const qreal displayDpr = roll->devicePixelRatio();
-    const qreal noteLeftX = view.displayX(double(noteA.tick), pianoKeyboardWidth, displayDpr);
+    const qreal noteLeftX =
+        view.camera().displayX(double(noteA.tick), pianoKeyboardWidth, displayDpr);
     const qreal noteRightX =
-        view.displayX(double(noteA.tick + noteA.duration), pianoKeyboardWidth, displayDpr);
+        view.camera().displayX(double(noteA.tick + noteA.duration), pianoKeyboardWidth, displayDpr);
     const QRectF noteFrame = rows.noteRect(noteLeftX, noteRightX, noteA.key);
     const QRectF paintedNoteBox = rows.noteBox(noteFrame);
     const QColor expectedNoteColor = SongView::noteColor(track, 100);
-    const qreal abuttingRightX =
-        view.displayX(double(noteA.tick + 2 * noteA.duration), pianoKeyboardWidth, displayDpr);
+    const qreal abuttingRightX = view.camera().displayX(double(noteA.tick + 2 * noteA.duration),
+                                                        pianoKeyboardWidth, displayDpr);
     auto fail = [&](const char *what) { check.fail(what); };
     // Timeline overlays are composited above notes and can tint frame colors
     // by a few channel values.
@@ -280,7 +281,7 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
         // Per-note width probe: an abutting short pair followed by a distant
         // note wide enough for its name. The pair stays unlabeled while the
         // distant wide note keeps its label.
-        const qreal pxPerTick = view.contentX(1.0) - view.contentX(0.0);
+        const qreal pxPerTick = view.camera().contentX(1.0) - view.camera().contentX(0.0);
         const auto closeTicks = uint64_t(std::max(1.0, std::ceil(5.0 / pxPerTick)));
         const auto labelProbeWidth = 3 * layout::space(layout::Space::Eight);
         const auto labelTicks = uint64_t(std::ceil(labelProbeWidth / pxPerTick));
@@ -301,8 +302,8 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
         const int runRowTop = toNamesPixel(runRowBox.top());
         const int runRowBottom = toNamesPixel(runRowBox.bottom()) - 1;
         const auto labelStrip = [&](uint64_t tick, int width) {
-            const int left =
-                toNamesPixel(view.displayX(double(tick), pianoKeyboardWidth, namedRows.dpr()));
+            const int left = toNamesPixel(
+                view.camera().displayX(double(tick), pianoKeyboardWidth, namedRows.dpr()));
             return QRect(QPoint(left, runRowTop), QPoint(left + width - 1, runRowBottom));
         };
         if (runKey < 0 || closeTicks * pxPerTick > 12.0 ||
@@ -443,12 +444,13 @@ ScenarioContinuation runSelectionRasterScenarios(Harness &check,
                 if (shortRows.top(key) < 3.0 || shortRows.bottom(key) > roll->height() - 3.0)
                     continue;
                 for (int probe = 8; probe < roll->width() - pianoKeyboardWidth - 40; probe += 24) {
-                    const uint64_t tick = view.snapTickDown(view.tickAtContentX(probe));
+                    const uint64_t tick = view.snapTickDown(view.camera().tickAtContentX(probe));
                     const uint64_t dur = view.gridTicksAt(tick);
-                    const int x0 = pianoKeyboardWidth + view.contentX(double(tick));
-                    const int xs =
-                        pianoKeyboardWidth + view.contentX(double(tick + view.snapTicksAt(tick)));
-                    const int x2 = pianoKeyboardWidth + view.contentX(double(tick + 2 * dur));
+                    const int x0 = pianoKeyboardWidth + view.camera().contentX(double(tick));
+                    const int xs = pianoKeyboardWidth +
+                                   view.camera().contentX(double(tick + view.snapTicksAt(tick)));
+                    const int x2 =
+                        pianoKeyboardWidth + view.camera().contentX(double(tick + 2 * dur));
                     if (x0 < pianoKeyboardWidth || xs - x0 < 8 || x2 - x0 < 24 ||
                         x2 >= roll->width())
                         continue;
@@ -493,9 +495,9 @@ ScenarioContinuation runSelectionRasterScenarios(Harness &check,
                                       dragCell.center + QPoint(0, 12), Qt::LeftButton, Qt::NoButton,
                                       Qt::ControlModifier);
 
-            const int shortLeftX = pianoKeyboardWidth + view.contentX(double(cell.tick));
+            const int shortLeftX = pianoKeyboardWidth + view.camera().contentX(double(cell.tick));
             const int shortRightX =
-                pianoKeyboardWidth + view.contentX(double(cell.tick + 2 * cell.dur));
+                pianoKeyboardWidth + view.camera().contentX(double(cell.tick + 2 * cell.dur));
             const QRectF shortRect = shortRows.noteRect(shortLeftX, shortRightX, cell.key);
             const QRectF shortBox = shortRows.noteBox(shortRect);
 

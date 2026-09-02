@@ -64,7 +64,10 @@ namespace songview {
 using namespace songview::detail;
 using namespace songview::pianoroll_detail;
 
-PianoRoll::PianoRoll(SongView *sv) : m_sv(sv), m_geometry(PianoRollGeometry::resolve())
+PianoRoll::PianoRoll(SongView *sv)
+    : m_sv(sv)
+    , m_camera(sv->camera())
+    , m_geometry(PianoRollGeometry::resolve())
 {
     setObjectName(QStringLiteral("pianoRoll")); // findChild for tests
     const QPointer<PianoRoll> guardedThis(this);
@@ -165,14 +168,15 @@ void PianoRoll::refreshTextLayout()
     }
 
     const int noteTextHeight =
-        int(std::floor(m_sv->keyHeight() - physicalPixel() - 2.0 * lyt::space(Space::Half)));
-    if (m_sv->keyHeight() >= kNoteNameMinKeyH && m_fixedNoteNameOccupiedHeight <= noteTextHeight) {
+        int(std::floor(m_camera.keyHeight() - physicalPixel() - 2.0 * lyt::space(Space::Half)));
+    if (m_camera.keyHeight() >= kNoteNameMinKeyH &&
+        m_fixedNoteNameOccupiedHeight <= noteTextHeight) {
         m_noteNameFont = m_fixedNoteNameFont;
     } else {
         m_noteNameFont.reset();
     }
 
-    m_keyboardLabelFont = typography::fitted(font(), int(std::lround(m_sv->keyHeight())));
+    m_keyboardLabelFont = typography::fitted(font(), int(std::lround(m_camera.keyHeight())));
 }
 
 bool PianoRoll::gestureActive() const

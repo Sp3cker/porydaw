@@ -105,11 +105,20 @@ SongView::ViewState::ViewState()
     keyHeight = geometry.pianoRollDefaultKeyHeight;
 }
 
+void SongView::pushCameraGeometryLimits()
+{
+    m_camera.setLimits({double(m_geometry.timelineMinimumPixelsPerBeat),
+                        double(m_geometry.timelineMaximumPixelsPerBeat),
+                        double(m_geometry.pianoRollMinimumKeyHeight),
+                        double(m_geometry.pianoRollMaximumKeyHeight),
+                        m_geometry.timelineRevealViewportFraction});
+}
+
 void SongView::refreshGeometry()
 {
     m_geometry = Geometry::resolve();
-    m_keyHeight = std::clamp(m_keyHeight, double(m_geometry.pianoRollMinimumKeyHeight),
-                             double(m_geometry.pianoRollMaximumKeyHeight));
+    pushCameraGeometryLimits();
+    m_camera.setKeyHeight(m_camera.keyHeight()); // re-clamped to the new limits
     if (m_headerScroll)
         m_headerScroll->setFixedWidth(m_geometry.trackHeaderWidth);
     if (m_hbarGutter) {
@@ -203,9 +212,12 @@ void SongView::positionBandWidgets()
 SongView::SongView(QWidget *parent)
     : QWidget(parent)
     , m_geometry(Geometry::resolve())
-    , m_pxPerBeat(m_geometry.editorDefaultPixelsPerBeat)
-    , m_keyHeight(m_geometry.pianoRollDefaultKeyHeight)
+    , m_camera(m_timeAxis, m_projection)
 {
+    pushCameraGeometryLimits();
+    m_camera.setTimeZoom(m_geometry.editorDefaultPixelsPerBeat);
+    m_camera.setKeyHeight(m_geometry.pianoRollDefaultKeyHeight);
+
     // Prime the default C-major classification (the previous controller
     // constructor did this); touch no widgets.
     updateScaleProjection();
@@ -306,7 +318,7 @@ SongView::SongView(QWidget *parent)
     // The unbound axis's provisional camera rests at the pre-roll home;
     // updateScrollbars() keeps re-homing it as resize resolves the lead pad
     // until a song binds.
-    m_scrollX = minHScroll();
+    m_camera.setHScroll(m_camera.minHScroll());
 }
 
 SongView::~SongView()
@@ -388,7 +400,7 @@ double SongView::defaultVerticalScroll() const
     if (centerRow == songview::PitchProjection::cHiddenRow)
         return 0.0;
     return std::max(
-        0.0, centerRow * m_keyHeight -
+        0.0, centerRow * keyHeight() -
                  std::max(m_geometry.pianoRollInitialViewportHeight, rollViewportHeight()) / 2.0);
 }
 
@@ -643,10 +655,10 @@ SongView::ViewState SongView::viewState() const
     if (!m_timeline)
         return state;
     state.valid = true;
-    state.pxPerBeat = m_pxPerBeat;
-    state.keyHeight = m_keyHeight;
-    state.scrollPx = m_scrollX;
-    state.scrollY = m_scrollY;
+    state.pxPerBeat = m_camera.pxPerBeat();
+    state.keyHeight = m_camera.keyHeight();
+    state.scrollPx = m_camera.scrollX();
+    state.scrollY = m_camera.scrollY();
     state.selectedTrack = m_selectionModel.primaryTrack();
     state.editCursorTick = m_editCursorTick;
     state.gridMinDenom = m_gridMinDenom;
@@ -667,12 +679,11 @@ void SongView::applyViewState(const ViewState &state)
     const double pxPerBeat =
         std::clamp(state.pxPerBeat, double(m_geometry.timelineMinimumPixelsPerBeat),
                    double(m_geometry.timelineMaximumPixelsPerBeat));
-    if ((pxPerBeat != m_pxPerBeat || gridMinDenom != m_gridMinDenom || gridFeel != m_gridFeel) &&
-        m_editorDrawer)
+    const bool zoomChanged = m_camera.setTimeZoom(pxPerBeat);
+    const bool gridChanged = gridMinDenom != m_gridMinDenom || gridFeel != m_gridFeel;
+    if ((zoomChanged || gridChanged) && m_editorDrawer)
         m_editorDrawer->cancelVisiblePageInteraction();
-    m_pxPerBeat = pxPerBeat;
-    m_keyHeight = std::clamp(state.keyHeight, double(m_geometry.pianoRollMinimumKeyHeight),
-                             double(m_geometry.pianoRollMaximumKeyHeight));
+    (void)m_camera.setKeyHeight(state.keyHeight); // clamps internally
     m_roll->refreshTextLayout();
     setGridMinDenom(state.gridMinDenom); // setter validates the denominator
     setGridFeel(state.gridTriplet ? GridFeel::Triplet : GridFeel::Straight);
@@ -844,7 +855,7 @@ void SongView::setPlayheadSample(uint64_t samplePos, bool playing)
     // or selections, sweeping automation): yanking the view out from under a
     // held mouse button is disorienting.
     if (playing && m_followPlayhead && !m_followScrollPaused && !userGestureActive()) {
-        const qreal px = contentX(m_playheadTick);
+        const qreal px = m_camera.contentX(m_playheadTick);
         const qreal vw = viewportWidth();
         if (px < 0.0 || px > vw * 85.0 / 100.0)
             setHScroll(m_playheadTick * pxPerTick() - vw / 10.0);
@@ -898,7 +909,7 @@ void SongView::syncTimelineQuickAppearance()
 void SongView::publishTimelineQuickHover(songview::TimelineQuickHoverOwner owner, uint64_t tick)
 {
     if (m_quickView && m_timeline)
-        m_quickView->publishHover(owner, tick, timelinePlotOrigin() + contentX(tick));
+        m_quickView->publishHover(owner, tick, timelinePlotOrigin() + m_camera.contentX(tick));
 }
 
 void SongView::clearTimelineQuickHover(songview::TimelineQuickHoverOwner owner)
@@ -912,10 +923,11 @@ void SongView::syncTimelineIndicators()
     const qreal rootOriginX = timelinePlotOrigin();
     std::optional<qreal> editRootContentX;
     if (m_timeline)
-        editRootContentX = rootOriginX + contentX(m_editCursorTick);
+        editRootContentX = rootOriginX + m_camera.contentX(m_editCursorTick);
 
     if (m_playheadOverlay)
-        m_playheadOverlay->setPlayhead(contentX(m_playheadTick), m_timeline != nullptr, m_playing);
+        m_playheadOverlay->setPlayhead(m_camera.contentX(m_playheadTick), m_timeline != nullptr,
+                                       m_playing);
     if (m_quickView) {
         m_quickView->synchronizeGuides(rootOriginX, editRootContentX);
     }

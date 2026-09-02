@@ -90,8 +90,8 @@ QPointF velocityNodePosition(const SongView &view, const VelocityArea &area,
                              const MidiTimeline &timeline, const DocNote &note)
 {
     const double x = double(area.plotOrigin()) +
-                     double(note.tick) * view.pxPerBeat() / double(timeline.ticksPerBeat) -
-                     view.viewState().scrollPx;
+                     double(note.tick) * view.camera().pxPerBeat() / double(timeline.ticksPerBeat) -
+                     view.camera().scrollX();
     return {x, area.axis().velocityToY(note.velocity)};
 }
 

@@ -19,6 +19,7 @@
 class SongView;
 
 namespace songview {
+class TimeCamera;
 class TimelineQuickScene;
 class TimelineQuickView;
 } // namespace songview
@@ -165,6 +166,7 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
     bool hasDocument() const;
 
     SongView &m_owner;
+    const songview::TimeCamera &m_camera;
     songview::TimelineInputHost *m_inputHost = nullptr;
     DrawerPageLiveState m_live;
     VelocityAxis m_axis{VelocityMap::resolve(nullptr, std::nullopt), {}};

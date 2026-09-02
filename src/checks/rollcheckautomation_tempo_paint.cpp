@@ -541,7 +541,7 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
                   viewportLabelBounds(addLaneLabel).intersected(scrollableViewportBounds));
 
     TempoLane tempoLane(document);
-    const QPointF node(view.displayX(double(kNodeTick), geometry.plotOrigin, dpr),
+    const QPointF node(view.camera().displayX(double(kNodeTick), geometry.plotOrigin, dpr),
                        nodelane::valueY(tempoLane, body, geometry, 180));
     band.mouse(QEvent::MouseMove, node, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
     pump();
@@ -594,8 +594,9 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
             return resolved;
         }();
         const QRect systemBody = canvas->laneBody(LaneHandle{0});
-        const QPointF systemNode(view.displayX(double(kNodeTick), systemGeometry.plotOrigin, dpr),
-                                 nodelane::valueY(tempoLane, systemBody, systemGeometry, 180));
+        const QPointF systemNode(
+            view.camera().displayX(double(kNodeTick), systemGeometry.plotOrigin, dpr),
+            nodelane::valueY(tempoLane, systemBody, systemGeometry, 180));
         band.mouse(QEvent::MouseMove, systemNode, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
         pump();
         const QFont systemCaption = typography::caption(band.item.font());

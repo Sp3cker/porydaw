@@ -13,6 +13,9 @@ class AutomationPage;
 class MidiTimeline;
 class SongView;
 
+namespace songview {
+class TimeCamera;
+}
 // A half-open visible grid cell. Snapped callers provide crossed cells in
 // pointer traversal order, including both endpoint cells.
 struct AutomationGridCell {
@@ -61,10 +64,7 @@ class AutomationProjection
         : m_geometry(geometry)
         , m_page(page)
     {}
-    AutomationProjection(const AutomationGeometry &geometry, const SongView *songView)
-        : m_geometry(geometry)
-        , m_songView(songView)
-    {}
+    AutomationProjection(const AutomationGeometry &geometry, const SongView *songView);
 
     const AutomationGeometry &geometry() const noexcept { return m_geometry; }
     double rawTickAt(qreal x) const;
@@ -92,4 +92,5 @@ class AutomationProjection
     AutomationGeometry m_geometry;
     const AutomationPage *m_page = nullptr;
     const SongView *m_songView = nullptr;
+    const songview::TimeCamera *m_camera = nullptr;
 };

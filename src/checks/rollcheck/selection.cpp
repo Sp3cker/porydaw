@@ -60,8 +60,9 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
         // use the same selection ring as the velocity drawer's live preview.
         const qreal previewDpr = roll->devicePixelRatio();
         const QRectF previewNoteBox = rows.noteBox(rows.noteRect(
-            view.displayX(double(noteA.tick), pianoKeyboardWidth, previewDpr),
-            view.displayX(double(noteA.tick + noteA.duration), pianoKeyboardWidth, previewDpr),
+            view.camera().displayX(double(noteA.tick), pianoKeyboardWidth, previewDpr),
+            view.camera().displayX(double(noteA.tick + noteA.duration), pianoKeyboardWidth,
+                                   previewDpr),
             noteA.key));
         checks::events::sendMouse(*roll, QEvent::MouseButtonPress, sweepStart, Qt::RightButton,
                                   Qt::RightButton, Qt::NoModifier);
@@ -144,7 +145,7 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
         if (doc.undoStack()->count() != preCount)
             fail("a plain empty-space click edited the document");
         if (view.editCursorTick() !=
-            view.snapTick(view.tickAtContentX(e.center.x() - pianoKeyboardWidth)))
+            view.snapTick(view.camera().tickAtContentX(e.center.x() - pianoKeyboardWidth)))
             fail("the press audition broke the click's edit-cursor park");
         // Draw growth: press the still-free cell again and drag right past
         // the drag threshold; the press's preview must carry into the draw
@@ -421,10 +422,10 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
             return ScenarioContinuation::Stop;
         }
         const uint64_t snap = view.snapTicksAt(cell.tick);
-        const qreal cellPx =
-            view.contentX(double(cell.tick + snap)) - view.contentX(double(cell.tick));
+        const qreal cellPx = view.camera().contentX(double(cell.tick + snap)) -
+                             view.camera().contentX(double(cell.tick));
         uint64_t widthTicks = snap * 4;
-        while (pianoKeyboardWidth + view.contentX(double(cell.tick + widthTicks)) >
+        while (pianoKeyboardWidth + view.camera().contentX(double(cell.tick + widthTicks)) >
                    roll->width() - 4 &&
                widthTicks > snap * 2)
             widthTicks -= snap;
@@ -444,8 +445,8 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
         const NoteId moveId = probe.noteId;
         // Press the body center: whole snap cells of width keep the point
         // clear of the edge grips on both sides.
-        const int bodyX = qRound((view.contentX(double(cell.tick)) +
-                                  view.contentX(double(cell.tick + widthTicks))) /
+        const int bodyX = qRound((view.camera().contentX(double(cell.tick)) +
+                                  view.camera().contentX(double(cell.tick + widthTicks))) /
                                  2.0) +
                           pianoKeyboardWidth;
         const QPoint body(bodyX, rows.centerY(cell.key));

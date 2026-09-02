@@ -45,9 +45,13 @@ ScenarioContinuation runScaleProjectionScenarios(Harness &check)
         if (r == songview::PitchProjection::cHiddenRow)
             return -1;
         const qreal dpr = roll->devicePixelRatio();
-        const qreal top = std::round((double(r) * view.keyHeight() - view.scrollY()) * dpr) / dpr;
+        const qreal top =
+            std::round((double(r) * view.camera().keyHeight() - view.camera().scrollY()) * dpr) /
+            dpr;
         const qreal bot =
-            std::round((double(r + 1) * view.keyHeight() - view.scrollY()) * dpr) / dpr;
+            std::round((double(r + 1) * view.camera().keyHeight() - view.camera().scrollY()) *
+                       dpr) /
+            dpr;
         return int(std::floor((top + bot) / 2.0));
     };
 
@@ -175,10 +179,10 @@ ScenarioContinuation runScaleProjectionScenarios(Harness &check)
             big.valid = true;
             big.scrollY = 1.0e9;
             view.applyViewState(big);
-            double maxScroll = proj.totalHeight(view.keyHeight()) - double(roll->height());
+            double maxScroll = proj.totalHeight(view.camera().keyHeight()) - double(roll->height());
             if (maxScroll < 0.0)
                 maxScroll = 0.0;
-            if (view.scrollY() < -1e-9 || view.scrollY() > maxScroll + 1e-9)
+            if (view.camera().scrollY() < -1e-9 || view.camera().scrollY() > maxScroll + 1e-9)
                 fail("Fold scroll Y is not bounded by the folded content height");
         }
 
@@ -195,7 +199,8 @@ ScenarioContinuation runScaleProjectionScenarios(Harness &check)
             const qreal dpr = image.devicePixelRatio();
             return image.pixel(qRound(x * dpr), qRound(y * dpr));
         };
-        const int laneX = pianoKeyboardWidth + qRound(view.leadPadPx()) + 20; // off the gridlines
+        const int laneX =
+            pianoKeyboardWidth + qRound(view.camera().leadPadPx()) + 20; // off the gridlines
         const int kbdX = pianoKeyboardWidth - 10;
 
         view.setScaleHighlight(false);

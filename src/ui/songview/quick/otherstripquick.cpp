@@ -53,7 +53,7 @@ void OtherStrip::rebuildQuickScene(TimelineQuickScene &scene)
     if (!m_owner.timeline())
         return;
 
-    const qreal tickZero = m_owner.displayX(0.0, plotOrigin, dpr);
+    const qreal tickZero = m_camera.displayX(0.0, plotOrigin, dpr);
     if (tickZero > area.left()) {
         addRect(scene, chromeLayer,
                 QRectF(area.left(), area.top(), tickZero - area.left(), area.height()),
@@ -62,7 +62,7 @@ void OtherStrip::rebuildQuickScene(TimelineQuickScene &scene)
 
     const qreal markerY = height / 2.0;
     for (const StripItem &item : model.strip) {
-        const qreal x = m_owner.displayX(double(item.tick), plotOrigin, dpr);
+        const qreal x = m_camera.displayX(double(item.tick), plotOrigin, dpr);
         if (x < area.left() - m_geometry.otherEventHitSlop ||
             x > area.right() + m_geometry.otherEventHitSlop) {
             continue;

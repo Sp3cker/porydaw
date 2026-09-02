@@ -17,6 +17,7 @@
 #include "ui/songview.h"
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelineinput.h"
+#include "ui/songview/timecamera.h"
 #include "ui/songviewmodel.h"
 
 class QAction;
@@ -259,6 +260,7 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     int m_keyboardHoverChipHeight = 0;
     std::array<int, 128> m_keyboardHoverNameWidths{};
     SongView *const m_sv;
+    const songview::TimeCamera &m_camera;
     TimelineInputHost *m_inputHost = nullptr;
     pianoroll_detail::PianoRollGeometry m_geometry;
     pianoroll_detail::MidiCursors m_cursors;

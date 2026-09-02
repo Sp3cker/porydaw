@@ -392,7 +392,7 @@ AutomationGestureCheckRig::pointAt(LaneHandle handle, double tick, int value) co
     const auto geom = geometry();
     const auto range = valueRange(handle);
     const QRect body = bodyFor(handle);
-    const QPointF position(m_view->displayX(tick, geom.plotOrigin, automationDpr()),
+    const QPointF position(m_view->camera().displayX(tick, geom.plotOrigin, automationDpr()),
                            AutomationProjection::valueY(body, geom, range.min, range.max, value));
     return {position, mappingAt(handle, position)};
 }
@@ -512,17 +512,17 @@ void AutomationGestureCheckRig::documentChanged()
 
 void AutomationGestureCheckRig::setAutomationZoom(double zoom)
 {
-    m_live.timeZoom = zoom;
     m_view->setEditorTimeZoom(zoom);
-    m_live.horizontalScroll = m_view->viewState().scrollPx;
+    m_live.timeZoom = m_view->camera().pxPerBeat();
+    m_live.horizontalScroll = m_view->camera().scrollX();
     refreshPage();
     pump();
 }
 
 void AutomationGestureCheckRig::setAutomationScroll(double scroll)
 {
-    m_live.horizontalScroll = scroll;
     m_view->setEditorHorizontalScroll(scroll);
+    m_live.horizontalScroll = m_view->camera().scrollX();
     refreshPage();
     pump();
 }
@@ -716,10 +716,10 @@ bool AutomationGestureCheckRig::initialize(QString &error)
     m_page->resize(960, 360);
     m_page->songChanged();
     m_live.documentRevision = songDocument.revision();
-    m_live.timeZoom = 96.0;
     m_live.editCursorTick = 24;
-    m_view->setEditorTimeZoom(m_live.timeZoom);
-    m_live.horizontalScroll = m_view->viewState().scrollPx;
+    m_view->setEditorTimeZoom(96.0);
+    m_live.timeZoom = m_view->camera().pxPerBeat();
+    m_live.horizontalScroll = m_view->camera().scrollX();
     m_page->refreshLiveState(m_live);
     m_page->show();
     pump();

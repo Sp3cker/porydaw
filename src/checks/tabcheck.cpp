@@ -150,7 +150,7 @@ bool MainWindow::runTabCheck(const QString &projectRoot, const QString &songA, c
         const SongView::ViewState defaults;
         const auto vs = view.viewState();
         check(vs.valid && std::abs(vs.pxPerBeat - defaults.pxPerBeat) < 0.5 &&
-                  vs.keyHeight == defaults.keyHeight && vs.scrollPx == -view.leadPadPx() &&
+                  vs.keyHeight == defaults.keyHeight && vs.scrollPx == -view.camera().leadPadPx() &&
                   vs.scrollY == canonical.scrollY && vs.selectedTrack == canonical.selectedTrack &&
                   vs.editCursorTick == 0 && vs.gridMinDenom == 0 && !vs.gridTriplet &&
                   !vs.eventList && !view.eventListVisible(),

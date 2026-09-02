@@ -68,7 +68,10 @@ void VelocityArea::rebuildFonts()
     m_captionFontHeight = QFontMetrics(m_captionFont).height();
 }
 
-VelocityArea::VelocityArea(SongView &owner, QObject *parent) : QObject(parent), m_owner(owner)
+VelocityArea::VelocityArea(SongView &owner, QObject *parent)
+    : QObject(parent)
+    , m_owner(owner)
+    , m_camera(owner.camera())
 {
     m_geometry.resolve();
 }

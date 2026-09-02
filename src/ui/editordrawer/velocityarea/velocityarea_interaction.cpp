@@ -348,7 +348,7 @@ bool VelocityArea::pointerMove(const songview::TimelinePointerInput &input)
         const auto requestedScroll =
             m_live.horizontalScroll - (position.x() - m_previousPosition.x());
         m_owner.setEditorHorizontalScroll(requestedScroll);
-        m_live.horizontalScroll = m_owner.viewState().scrollPx;
+        m_live.horizontalScroll = m_camera.scrollX();
         requestQuickUpdate();
     }
     m_previousPosition = position;

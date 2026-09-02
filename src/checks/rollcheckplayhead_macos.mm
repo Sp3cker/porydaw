@@ -140,7 +140,7 @@ void checkMacPlayheadLifecycle(SongView &view, songview::PlayheadOverlay &overla
     CAShapeLayer *const resolvedBodyMask = (CAShapeLayer *)bodyClip.mask;
     CAShapeLayer *const resolvedTriangleMask = (CAShapeLayer *)triangleClip.mask;
 
-    const qreal baseX = view.contentX(view.playheadTick());
+    const qreal baseX = view.camera().contentX(view.playheadTick());
     overlay.setPlayhead(baseX, true, false);
     processLayers();
     RetainedObjectGuard pausedBodyContents{body.contents};
