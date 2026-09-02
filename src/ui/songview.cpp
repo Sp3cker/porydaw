@@ -208,20 +208,23 @@ bool SongView::bandWidgetsMatchCanonicalLayout() const
     const AutomationPage *automation = m_editorDrawer ? m_editorDrawer->automationPage() : nullptr;
     // Converted bands have no widget; their canonical rectangles come
     // directly from their parent-owned spacer/body geometry.
-    return matches(TimelineBand::Ruler, m_ruler) && matches(TimelineBand::Roll, m_roll) &&
+    return matches(TimelineBand::Roll, m_roll) &&
            matches(TimelineBand::Automation, automation ? automation->scrollViewport() : nullptr) &&
            matches(TimelineBand::Velocity,
                    m_editorDrawer ? m_editorDrawer->velocityArea() : nullptr);
 }
 
-// The ruler widget no longer occupies its layout slot; it overlays the
-// fixed-height spacer row the layout owns.
+// The native ruler controls overlay the gutter of the parent-owned ruler row.
 void SongView::positionBandWidgets()
 {
     if (layout())
         layout()->activate();
-    if (m_ruler && m_rulerSpacer)
-        m_ruler->setGeometry(m_rulerSpacer->geometry());
+    if (m_rulerControls && m_rulerSpacer) {
+        const QRect rulerRect = m_rulerSpacer->geometry();
+        m_rulerControls->setGeometry(rulerRect.x(), rulerRect.y(),
+                                     m_geometry.plotOrigin - lyt::space(Space::One),
+                                     rulerRect.height());
+    }
 }
 
 SongView::SongView(QWidget *parent)
@@ -239,9 +242,9 @@ SongView::SongView(QWidget *parent)
                              lyt::space(Space::Zero), lyt::space(Space::Zero));
     vbox->setSpacing(lyt::space(Space::Zero));
 
-    m_ruler = new TimeRuler(this);
-    // Fixed-height spacer rows own the ruler and other-events rectangles;
-    // the widgets overlay them until their band conversions delete them.
+    m_ruler = std::make_unique<TimeRuler>(*this);
+    m_rulerControls = new TimeRulerControls(*this, this);
+    // Fixed-height spacer rows own the ruler and other-events rectangles.
     m_rulerSpacer = new QSpacerItem(m_geometry.plotOrigin, m_geometry.rulerHeight,
                                     QSizePolicy::Minimum, QSizePolicy::Fixed);
     vbox->addSpacerItem(m_rulerSpacer);
@@ -332,6 +335,12 @@ SongView::SongView(QWidget *parent)
     m_scrollX = minHScroll();
 }
 
+SongView::~SongView()
+{
+    if (m_quickView)
+        m_quickView->detachInputInteraction(TimelineBand::Ruler);
+}
+
 bool SongView::advanceTrackActivity(const TrackActivityLevels &levels, float elapsedSeconds,
                                     bool playing)
 {
@@ -368,7 +377,7 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
     // global and are rebuilt above.
     m_gridFeel = GridFeel::Straight;
     m_gridMinDenom = 0;
-    m_ruler->syncGridControls();
+    m_rulerControls->syncFromView();
 
     int firstUsedTrack = 0;
     if (timeline) {
@@ -521,7 +530,9 @@ void SongView::cancelTransientInput()
     if (m_roll)
         m_roll->cancelTransientInput();
     if (m_ruler)
-        m_ruler->cancelTransientInput();
+        m_ruler->cancelInteraction();
+    if (m_rulerControls)
+        m_rulerControls->closePopups();
     cancelActiveInteractions();
     if (m_headers)
         m_headers->cancelTransientState();

@@ -71,6 +71,27 @@ The six baseline QWidget input surfaces are:
   and `automation-gestures` retains its native AutomationCanvas hover/move assertions. No
   OtherStrip assertion fails after its checks move to the canonical Quick band and input item.
 
+
+### Phase 4 implementation record
+
+- `deno task build:checks` passed.
+- Focused checks: `host-integration`, `rollwindowingcheck`, `rendering-playhead`,
+  `editor-drawer`, and `mainwindow-routing` pass. The ruler and loading scenarios within
+  `rollcheck` also pass through `timelineRulerInput`.
+- `host-integration` verifies the canonical ruler input rectangle, the native
+  `TimeRulerControls` gutter geometry, and the matching hole in the Quick input mask.
+- The loading input gate now watches the detached Quick root object tree as well as the QWidget
+  tree, so ruler input remains inert until both song-loading stages finish.
+- Unconverted band state: `PianoRoll`, `Automation`, and `Velocity` continue to render but remain
+  deliberately noninteractive in Phase 4.
+- Expected test failures: `rollcheck` reports only its four retained PianoRoll/pitch-bend input
+  assertions, and `automation-gestures` retains its native AutomationCanvas hover/move
+  assertions.
+- Independent thermo-nuclear and Qt 6 reviews both passed with no mandatory defects. The
+  thermo-nuclear review's optional extraction suggestions were not applied: the repeated native
+  wheel adapters disappear in the next band conversions, and the ruler font and mask-hole logic
+  each have deliberately separate ownership or a single use.
+
 ## Goal
 
 Make the existing Qt Quick timeline scene own raw pointer, wheel, hover, focus, and keyboard input

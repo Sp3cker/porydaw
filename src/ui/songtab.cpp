@@ -1,4 +1,5 @@
 #include "ui/songtab.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 #include <QChildEvent>
 #include <QEvent>
@@ -88,6 +89,9 @@ SongTab::SongTab(SongName name, QWidget *parent)
     pageLayout->addWidget(m_view);
     m_inputGate = new InputGate(this);
     m_inputGate->watch(m_view);
+    if (auto *quick = m_view->findChild<songview::TimelineQuickView *>();
+        quick && quick->rootObject())
+        m_inputGate->watch(quick->rootObject());
     connect(this, &SongTab::readinessChanged, m_inputGate, &InputGate::onReadinessChanged);
 
     // Keep the timeline projection and its audio publication ordered after

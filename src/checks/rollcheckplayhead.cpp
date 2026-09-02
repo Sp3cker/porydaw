@@ -37,7 +37,6 @@
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timelinebandlayout.h"
-#include "ui/songview/timeruler.h"
 #include "ui/theme/themeruntime.h"
 
 namespace {
@@ -234,10 +233,11 @@ void checkPositionOnlyQuickFrames(const MidiTimeline &timeline, QStringList &fai
     auto *quick =
         probe.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
     auto *scene = quick ? quick->findChild<songview::TimelineQuickScene *>() : nullptr;
-    auto *ruler = checks::support::findWidgetDescendant<songview::TimeRuler>(probe);
     auto *overlay = checks::support::findWidgetDescendant<songview::PlayheadOverlay>(probe);
     QQuickWindow *const quickWindow = quick ? quick->quickWindow() : nullptr;
-    if (!quick || !scene || !ruler || !overlay || !quickWindow) {
+    const songview::TimelineBandLayout &bandLayout = probe.timelineBandLayout();
+    if (!quick || !scene || !bandLayout.geometry(songview::TimelineBand::Ruler) || !overlay ||
+        !quickWindow) {
         failures.append("isolated SongView did not expose its Quick and native render surfaces");
         probe.hide();
         return;
@@ -251,9 +251,19 @@ void checkPositionOnlyQuickFrames(const MidiTimeline &timeline, QStringList &fai
         checks::support::pumpQuick();
 
     QString captureError;
-    const QImage quickPaused = checks::support::captureQuickBand(probe, *ruler, &captureError);
+    const QRect pausedRulerRect = probe.timelineBandLayout()
+                                      .geometry(songview::TimelineBand::Ruler)
+                                      .value_or(songview::TimelineBandGeometry{})
+                                      .rect;
+    const QImage quickPaused =
+        checks::support::captureQuickBand(probe, pausedRulerRect, &captureError);
     probe.setPlayheadSample(timeline.sampleForTick(tick), true);
-    const QImage quickPlaying = checks::support::captureQuickBand(probe, *ruler, &captureError);
+    const QRect playingRulerRect = probe.timelineBandLayout()
+                                       .geometry(songview::TimelineBand::Ruler)
+                                       .value_or(songview::TimelineBandGeometry{})
+                                       .rect;
+    const QImage quickPlaying =
+        checks::support::captureQuickBand(probe, playingRulerRect, &captureError);
     if (quickPaused.isNull() || quickPlaying.isNull()) {
         failures.append(
             QStringLiteral("isolated playhead-free Quick capture failed: %1").arg(captureError));
@@ -307,7 +317,6 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
     auto *root = quick ? qobject_cast<QQuickItem *>(quick->rootObject()) : nullptr;
     auto *scene = quick ? quick->findChild<songview::TimelineQuickScene *>() : nullptr;
-    auto *ruler = checks::support::findWidgetDescendant<songview::TimeRuler>(view);
     auto *roll = checks::support::findWidgetDescendant<songview::PianoRoll>(view);
     auto *overlay = checks::support::findWidgetDescendant<songview::PlayheadOverlay>(view);
     auto *drawer = view.editorDrawer();
@@ -315,8 +324,9 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
     auto *automationViewport = automationPage ? automationPage->scrollViewport() : nullptr;
     auto *velocity = drawer ? drawer->velocityArea() : nullptr;
     auto *voiceChanges = drawer ? drawer->voiceChangeArea() : nullptr;
-    if (!quick || !root || !scene || !ruler || !roll || !overlay || !automationViewport ||
-        !velocity || !voiceChanges) {
+    if (!quick || !root || !scene ||
+        !view.timelineBandLayout().geometry(songview::TimelineBand::Ruler) || !roll || !overlay ||
+        !automationViewport || !velocity || !voiceChanges) {
         failures.append("SongView did not expose its Quick chrome and native playhead bands");
     } else {
         if (overlay->parentWidget() != &view || overlay->geometry() != view.rect())
@@ -390,12 +400,8 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
             bandLayout.geometry(songview::TimelineBand::Ruler);
         if (!refreshedRuler) {
             failures.append("font refresh dropped the canonical ruler entry");
-        } else {
-            if (quick->geometry() != canonicalBandUnion().value_or(QRect{}))
-                failures.append("font refresh diverged the Quick host from the canonical union");
-            if (refreshedRuler->rect != QRect(ruler->mapTo(&view, QPoint()), ruler->size()))
-                failures.append(
-                    "canonical ruler rectangle diverged from the ruler widget after font refresh");
+        } else if (quick->geometry() != canonicalBandUnion().value_or(QRect{})) {
+            failures.append("font refresh diverged the Quick host from the canonical union");
         }
         overlay->setPlayhead(view.contentX(tick), true, false);
         checks::support::pumpQuick();
@@ -404,9 +410,11 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         } else if (expectsCapturablePlayhead()) {
             const QImage refreshedPlayhead = grabPlayhead(view, *overlay, failures).toImage();
             const QColor playheadColor = themes::color(themes::Role::song_view_playhead);
-            const QRect refreshedRulerRect = checks::support::widgetRectIn(*ruler, view);
+            const QRect refreshedRulerRect =
+                refreshedRuler.value_or(songview::TimelineBandGeometry{}).rect;
             const qreal expectedPlayheadX =
-                ruler->mapTo(&view, QPoint(qRound(view.timelinePlotOrigin()), 0)).x() +
+                (refreshedRuler ? refreshedRuler->rect.x() + refreshedRuler->timelineOrigin
+                                : qRound(view.timelinePlotOrigin())) +
                 view.contentX(tick);
             const qreal refreshedPlayheadX = playheadCenterAt(
                 refreshedPlayhead, checks::support::widgetRectIn(*roll, view).center().y(),
@@ -455,8 +463,11 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         view.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation, tick);
         checks::support::pumpQuick();
 
-        const auto expectedSongViewX = [&view, ruler](double chromeTick) {
-            return ruler->mapTo(&view, QPoint(qRound(view.timelinePlotOrigin()), 0)).x() +
+        const auto expectedSongViewX = [&view, &bandLayout](double chromeTick) {
+            const std::optional<songview::TimelineBandGeometry> &rulerGeometry =
+                bandLayout.geometry(songview::TimelineBand::Ruler);
+            return (rulerGeometry ? rulerGeometry->rect.x() + rulerGeometry->timelineOrigin
+                                  : qRound(view.timelinePlotOrigin())) +
                    view.contentX(chromeTick);
         };
         const auto quickContentX = [quick, &view](qreal songViewX) {
@@ -540,10 +551,9 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         // Band widgets are overlays, not canonical sources: moving them must
         // not drag the Quick host, whose geometry is the canonical union.
         const QRect widgetMoveHostBefore = quick->geometry();
-        // Two converted bands have no native widget to displace; the four
+        // Three converted bands have no native widget to displace; the three
         // retained widget bands still must not drag the Quick host.
-        const std::array<QWidget *, 4> guideBands = {
-            ruler,
+        const std::array<QWidget *, 3> guideBands = {
             roll,
             automationViewport,
             velocity,
@@ -666,12 +676,14 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         if (!canonicalRollMatchesRoll())
             failures.append("roll view canonical entry diverged from the piano-roll widget");
         const QColor playheadColor = themes::color(themes::Role::song_view_playhead);
-        const qreal nativeX =
-            ruler->mapTo(&view, QPoint(qRound(view.timelinePlotOrigin()), 0)).x() +
-            view.contentX(timeline.tickForSample(sample));
+        const std::optional<songview::TimelineBandGeometry> &rulerBand =
+            bandLayout.geometry(songview::TimelineBand::Ruler);
+        const qreal nativeX = (rulerBand ? rulerBand->rect.x() + rulerBand->timelineOrigin
+                                         : qRound(view.timelinePlotOrigin())) +
+                              view.contentX(timeline.tickForSample(sample));
         qreal renderedNativeX = nativeX;
         const QRect rollRect = checks::support::widgetRectIn(*roll, view);
-        const QRect rulerRect = checks::support::widgetRectIn(*ruler, view);
+        const QRect rulerRect = rulerBand.value_or(songview::TimelineBandGeometry{}).rect;
         const bool captureExpected = expectsCapturablePlayhead();
         QImage paused;
         QImage playing;
@@ -726,7 +738,10 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
             checks::support::pumpQuick();
         }
         const auto currentNativeX = [&] {
-            return ruler->mapTo(&view, QPoint(qRound(view.timelinePlotOrigin()), 0)).x() +
+            const std::optional<songview::TimelineBandGeometry> &rulerGeometry =
+                bandLayout.geometry(songview::TimelineBand::Ruler);
+            return (rulerGeometry ? rulerGeometry->rect.x() + rulerGeometry->timelineOrigin
+                                  : qRound(view.timelinePlotOrigin())) +
                    view.contentX(timeline.tickForSample(sample));
         };
 

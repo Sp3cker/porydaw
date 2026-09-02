@@ -18,22 +18,10 @@
 #include "ui/songview.h"
 
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
-#include "ui/songview/timeruler.h"
 namespace checks::rollcheck {
-namespace {
-
-template <typename T>
-T *findWidgetDescendant(QWidget &root)
-{
-    for (QWidget *widget : root.findChildren<QWidget *>()) {
-        if (auto *typed = dynamic_cast<T *>(widget))
-            return typed;
-    }
-    return nullptr;
-}
-
-} // namespace
+namespace {} // namespace
 
 ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const ResizeFixture &fixture)
 {
@@ -120,15 +108,23 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
     // command; mark a save point so the time-selection presses below get
     // their own commands (merges never cross the stack's clean index).
     doc.undoStack()->setClean();
-    if (auto *ruler = findWidgetDescendant<songview::TimeRuler>(view); ruler) {
-        const qreal rulerDpr = ruler->devicePixelRatioF();
+    auto *quick =
+        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    auto *rulerInput = quick && quick->rootObject()
+                           ? quick->rootObject()->findChild<songview::TimelineInputItem *>(
+                                 QStringLiteral("timelineRulerInput"))
+                           : nullptr;
+    const std::optional<songview::TimelineBandGeometry> rulerBand =
+        view.timelineBandLayout().geometry(songview::TimelineBand::Ruler);
+    if (rulerInput && rulerBand) {
+        const qreal rulerDpr = rulerInput->devicePixelRatio();
         const qreal rulerOrigin = view.timelinePlotOrigin();
         const uint64_t startTick = d.tick + snapCell;
         const uint64_t endTick = d.tick + 2 * snapCell;
-        const QPoint start(qRound(view.displayX(double(startTick), rulerOrigin, rulerDpr)),
-                           ruler->height() - 2);
-        const QPoint end(qRound(view.displayX(double(endTick), rulerOrigin, rulerDpr)),
-                         ruler->height() - 2);
+        const QPointF start(view.displayX(double(startTick), rulerOrigin, rulerDpr),
+                            rulerBand->rect.height() - 2.0);
+        const QPointF end(view.displayX(double(endTick), rulerOrigin, rulerDpr),
+                          rulerBand->rect.height() - 2.0);
 
         view.selectionModel().clearTimeSelection();
         view.selectionModel().applyTrackScopeAdjustment(
@@ -139,11 +135,11 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
                 priorSecondary, 0xffffu, songview::EditorSelectionModel::TrackScopeAction::Toggle);
         }
         // Modifier changes after the press do not change this plain sweep.
-        checks::events::sendMouse(*ruler, QEvent::MouseButtonPress, start, Qt::LeftButton,
+        checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, start, Qt::LeftButton,
                                   Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*ruler, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton,
+        checks::events::sendMouse(*rulerInput, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton,
                                   Qt::ControlModifier);
-        checks::events::sendMouse(*ruler, QEvent::MouseButtonRelease, end, Qt::LeftButton,
+        checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, end, Qt::LeftButton,
                                   Qt::NoButton, Qt::ControlModifier);
         if (!view.selectionModel().timeSelection().active() ||
             view.selectionModel().timeSelection().startTick != startTick ||
@@ -168,11 +164,11 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
                         : nullptr;
         const QImage plainHeader = secondaryHeader ? secondaryHeader->grab().toImage() : QImage{};
         // Ctrl is captured at press even though it is absent from move/release.
-        checks::events::sendMouse(*ruler, QEvent::MouseButtonPress, start, Qt::LeftButton,
+        checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, start, Qt::LeftButton,
                                   Qt::LeftButton, Qt::ControlModifier);
-        checks::events::sendMouse(*ruler, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton,
+        checks::events::sendMouse(*rulerInput, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton,
                                   Qt::NoModifier);
-        checks::events::sendMouse(*ruler, QEvent::MouseButtonRelease, end, Qt::LeftButton,
+        checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, end, Qt::LeftButton,
                                   Qt::NoButton, Qt::NoModifier);
         if (view.selectionModel().timeSelection().startTick != startTick ||
             view.selectionModel().timeSelection().endTick != endTick ||
@@ -279,21 +275,21 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
             if (plainHeader.isNull() || selectedHeader.isNull() || plainHeader == selectedHeader)
                 fail("time-scoped secondary header did not render its selection indicator");
         }
-        const QPoint outsideSelection(
-            qRound(view.displayX(double(endTick + snapCell), rulerOrigin, rulerDpr)),
-            ruler->height() - 2);
-        checks::events::sendMouse(*ruler, QEvent::MouseButtonPress, outsideSelection,
+        const QPointF outsideSelection(
+            view.displayX(double(endTick + snapCell), rulerOrigin, rulerDpr),
+            rulerBand->rect.height() - 2.0);
+        checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, outsideSelection,
                                   Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*ruler, QEvent::MouseButtonRelease, outsideSelection,
+        checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, outsideSelection,
                                   Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
         if (!view.selectionModel().timeSelection().active())
             fail("left-clicking the timeline ruler outside the time selection cleared it");
 
         view.selectionModel().clearTimeSelection();
-        checks::events::sendMouse(*ruler, QEvent::MouseButtonPress, start, Qt::RightButton,
+        checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, start, Qt::RightButton,
                                   Qt::RightButton, Qt::NoModifier);
-        checks::events::sendMouse(*ruler, QEvent::MouseMove, end, Qt::NoButton, Qt::RightButton,
-                                  Qt::NoModifier);
+        checks::events::sendMouse(*rulerInput, QEvent::MouseMove, end, Qt::NoButton,
+                                  Qt::RightButton, Qt::NoModifier);
         if (view.selectionModel().timeSelection().active())
             fail("right-dragging the timeline ruler still created a time selection");
         QTimer::singleShot(0, [] {
@@ -303,7 +299,7 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
                 menu->close();
             }
         });
-        checks::events::sendMouse(*ruler, QEvent::MouseButtonRelease, end, Qt::RightButton,
+        checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, end, Qt::RightButton,
                                   Qt::NoButton, Qt::NoModifier);
     } else
         fail("could not find the time ruler");

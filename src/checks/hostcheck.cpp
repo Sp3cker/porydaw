@@ -15,10 +15,10 @@
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timelinebandlayout.h"
-#include "ui/songview/timeruler.h"
 
 #include <QApplication>
 #include <QColor>
+#include <QComboBox>
 #include <QCoreApplication>
 #include <QEvent>
 #include <QFileInfo>
@@ -57,16 +57,6 @@ SmfEvent noteEvent(uint8_t status, uint64_t tick, uint8_t key, uint8_t velocity)
 uint64_t drawerContextTick(double tick)
 {
     return static_cast<uint64_t>(std::floor(std::max(0.0, tick) + 0.5));
-}
-
-template <typename T>
-T *findWidgetDescendant(QWidget &root)
-{
-    for (QWidget *widget : root.findChildren<QWidget *>()) {
-        if (auto *typed = dynamic_cast<T *>(widget))
-            return typed;
-    }
-    return nullptr;
 }
 
 EditorDrawer *editorDrawer(SongView &view)
@@ -143,9 +133,12 @@ bool publishedQmlRectsMatchCanonical(const QWidget &quick, QObject &quickRoot,
 // A converted band owns no widget: its canonical rectangle, QML band
 // rectangle, and TimelineInputItem bounds must describe the same parent-owned
 // region, and the native-window mask must expose that region while visible.
+// A band hosting retained native chrome (the ruler controls) instead expects
+// that chrome's rectangle punched out of the mask; the input item still fills
+// the whole canonical band around the hole.
 bool inputMatchesCanonical(const SongView &view, const songview::TimelineQuickView &quick,
                            QObject &quickRoot, songview::TimelineBand band,
-                           const QString &inputObjectName)
+                           const QString &inputObjectName, const QRect *maskHoleInBand = nullptr)
 {
     const std::optional<songview::TimelineBandGeometry> &geometry =
         view.timelineBandLayout().geometry(band);
@@ -154,11 +147,16 @@ bool inputMatchesCanonical(const SongView &view, const songview::TimelineQuickVi
         return false;
     const QRect canonicalRect = geometry->rect.translated(-quick.geometry().topLeft());
     const QRectF inputRect(input->mapToItem(quick.rootObject(), QPointF()), input->size());
-    return input->isVisible() &&
-           input->bounds() ==
-               QRectF(QPointF{}, QSizeF(geometry->rect.width(), geometry->rect.height())) &&
-           inputRect == QRectF(canonicalRect) &&
-           quick.quickWindow()->mask().contains(canonicalRect);
+    if (!input->isVisible() ||
+        input->bounds() !=
+            QRectF(QPointF{}, QSizeF(geometry->rect.width(), geometry->rect.height())) ||
+        inputRect != QRectF(canonicalRect))
+        return false;
+    const QRegion &mask = quick.quickWindow()->mask();
+    if (!maskHoleInBand)
+        return mask.contains(canonicalRect);
+    return !mask.intersects(*maskHoleInBand) &&
+           (QRegion(canonicalRect) - QRegion(*maskHoleInBand) - mask).isEmpty();
 }
 
 } // namespace
@@ -373,23 +371,22 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               "drawer section chrome should center its toggles beneath the piano keys");
     }
 
-    auto *rulerBand = findWidgetDescendant<songview::TimeRuler>(view);
+    auto *rulerControls =
+        view.findChild<QWidget *>(QStringLiteral("timeRulerControls"), Qt::FindDirectChildrenOnly);
     auto *rollBand = view.findChild<songview::PianoRoll *>();
     auto *automationViewport =
         drawer && drawer->automationPage() ? drawer->automationPage()->scrollViewport() : nullptr;
     QObject *const quickRoot = quick->rootObject();
-    const std::array<QWidget *, 4> quickBands{
-        rulerBand,
+    const std::array<QWidget *, 3> quickBands{
         rollBand,
         automationViewport,
         area,
     };
-    check(rulerBand && rollBand && automationViewport && quickRoot,
-          "host should expose the retained Quick band widgets and the Quick root");
-    if (rulerBand && rollBand && automationViewport && quickRoot) {
+    check(rollBand && automationViewport && quickRoot && rulerControls,
+          "host should expose the retained Quick band widgets, ruler controls, and Quick root");
+    if (rollBand && automationViewport && quickRoot && rulerControls) {
         const songview::TimelineBandLayout &bandLayout = view.timelineBandLayout();
         const std::array<songview::TimelineBand, quickBands.size()> bandIds{
-            songview::TimelineBand::Ruler,
             songview::TimelineBand::Roll,
             songview::TimelineBand::Automation,
             songview::TimelineBand::Velocity,
@@ -444,6 +441,31 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         check(inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::OtherEvents,
                                     QStringLiteral("timelineOtherEventsInput")),
               "Other Events input item should match its canonical band");
+        // The ruler band renders fully in Quick, but its gutter hosts the
+        // retained native controls: they must fill the gutter left of the
+        // canonical plot origin, punch a matching mask hole, and leave the
+        // plot column admitted while the input item still fills the band.
+        const std::optional<songview::TimelineBandGeometry> &rulerGeometry =
+            bandLayout.geometry(songview::TimelineBand::Ruler);
+        const QRect rulerControlsRect(rulerControls->mapTo(&view, QPoint()), rulerControls->size());
+        check(rulerControls->findChildren<QComboBox *>().size() == 2 && rulerGeometry &&
+                  rulerControlsRect.topLeft() == rulerGeometry->rect.topLeft() &&
+                  rulerControlsRect.height() == rulerGeometry->rect.height() &&
+                  rulerControlsRect.width() ==
+                      rulerGeometry->timelineOrigin - layout::space(layout::Space::One),
+              "ruler controls should own both combos and fill the canonical ruler gutter");
+        const QRect rulerControlsMaskHole =
+            rulerControlsRect.translated(-quick->geometry().topLeft());
+        const QRect rulerPlotMask(QRect(rulerControlsRect.right() + 1, rulerGeometry->rect.top(),
+                                        rulerGeometry->rect.right() - rulerControlsRect.right(),
+                                        rulerGeometry->rect.height())
+                                      .translated(-quick->geometry().topLeft()));
+        check(rulerGeometry && !quick->quickWindow()->mask().intersects(rulerControlsMaskHole) &&
+                  quick->quickWindow()->mask().contains(rulerPlotMask),
+              "Quick window mask should exclude the ruler controls but admit the ruler plot");
+        check(inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::Ruler,
+                                    QStringLiteral("timelineRulerInput"), &rulerControlsMaskHole),
+              "Ruler input item should match its canonical band around the controls hole");
         auto *otherEventsInput = quickRoot->findChild<songview::TimelineInputItem *>(
             QStringLiteral("timelineOtherEventsInput"));
         const StripItem *hoveredStripItem = nullptr;

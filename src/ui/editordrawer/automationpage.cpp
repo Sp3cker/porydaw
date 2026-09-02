@@ -353,7 +353,16 @@ void AutomationPage::requestHorizontalScroll(double value) const
 
 void AutomationPage::requestTimeZoom(const QWheelEvent *event, qreal anchorContentX) const
 {
-    m_owner.zoomTimelineAtWheel(event, anchorContentX);
+    const songview::TimelineWheelInput wheel{
+        .position = event->position(),
+        .globalPosition = event->globalPosition(),
+        .pixelDelta = event->pixelDelta(),
+        .angleDelta = event->angleDelta(),
+        .modifiers = event->modifiers(),
+        .phase = event->phase(),
+        .inverted = event->inverted(),
+    };
+    m_owner.zoomTimelineAtWheel(wheel, anchorContentX);
 }
 
 void AutomationPage::setFollowScrollPaused(bool paused) const

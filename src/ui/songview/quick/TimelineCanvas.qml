@@ -144,6 +144,12 @@ Item {
             textModel: timelineScene.rulerTextModel
             z: 2
         }
+
+        TimelineInputItem {
+            objectName: "timelineRulerInput"
+            anchors.fill: parent
+            Accessible.description: accessibilityDescription
+        }
     }
 
     TimelineSceneBand {

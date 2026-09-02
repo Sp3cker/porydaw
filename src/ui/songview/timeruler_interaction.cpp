@@ -9,7 +9,6 @@
 
 #include <QApplication>
 #include <QMenu>
-#include <QMouseEvent>
 
 #include <algorithm>
 #include <cstdint>
@@ -18,37 +17,38 @@
 namespace songview {
 using namespace songview::detail;
 
-void TimeRuler::mousePressEvent(QMouseEvent *event)
+bool TimeRuler::pointerPress(const TimelinePointerInput &input)
 {
-    SongDocument *doc = m_sv->document();
-    const MidiTimeline *tl = m_sv->timeline();
-    if (!tl || event->position().x() < m_geometry.plotOrigin)
-        return;
+    SongDocument *doc = m_owner.document();
+    const MidiTimeline *timeline = m_owner.timeline();
+    const qreal plotOrigin = m_owner.timelinePlotOrigin();
+    if (!timeline || input.position.x() < plotOrigin)
+        return false;
     const uint64_t clickTick =
-        m_sv->snapTick(m_sv->tickAtContentX(event->position().x() - m_geometry.plotOrigin));
+        m_owner.snapTick(m_owner.tickAtContentX(input.position.x() - plotOrigin));
 
-    if (event->button() == Qt::RightButton) {
+    if (input.button == Qt::RightButton) {
         // Deferred until release so the loop/selection menu opens at the
         // original click tick.
         if (!doc)
-            return;
+            return false;
         m_rightPress = true;
-        m_rightPressPos = event->position();
+        m_rightPressPos = input.position;
         m_selAnchor = clickTick;
-        return;
+        return true;
     }
-    if (event->button() != Qt::LeftButton)
-        return;
-    m_dragMarker = doc ? hitMarker(event->position()) : -1;
+    if (input.button != Qt::LeftButton)
+        return false;
+    m_dragMarker = doc ? hitMarker(input.position) : -1;
     if (m_dragMarker >= 0) {
         m_dragTick = clickTick;
         requestQuickUpdate();
-        return;
+        return true;
     }
     uint64_t sigTick;
     int sigNum, sigDen;
     bool sigImplicit;
-    if (doc && hitTimeSigChip(event->position(), &sigTick, &sigNum, &sigDen, &sigImplicit) &&
+    if (doc && hitTimeSigChip(input.position, &sigTick, &sigNum, &sigDen, &sigImplicit) &&
         !sigImplicit) {
         // Drag moves the signature; starting at its own tick keeps a
         // plain click (and the first half of a double-click) a no-op.
@@ -56,172 +56,208 @@ void TimeRuler::mousePressEvent(QMouseEvent *event)
         m_dragTimeSigFrom = sigTick;
         m_dragTick = sigTick;
         requestQuickUpdate();
-        return;
+        return true;
     }
-    m_dragSelEdge = doc ? hitSelEdge(event->position()) : -1;
+    m_dragSelEdge = doc ? hitSelEdge(input.position) : -1;
     if (m_dragSelEdge >= 0)
-        return;
+        return true;
     // Elsewhere on the ruler: defer until movement distinguishes a click
     // (place the edit cursor) from a drag (sweep a time selection).
     m_leftPress = true;
-    m_multiTrackSweep = event->modifiers() & Qt::ControlModifier;
-    m_leftPressPos = event->position();
+    m_multiTrackSweep = input.modifiers & Qt::ControlModifier;
+    m_leftPressPos = input.position;
     m_selAnchor = clickTick;
+    return true;
 }
 
-void TimeRuler::mouseMoveEvent(QMouseEvent *event)
+bool TimeRuler::pointerMove(const TimelinePointerInput &input)
 {
-    const auto dragTick = [this, event] {
-        return m_sv->snapTick(m_sv->tickAtContentX(
-            std::max(qreal(m_geometry.plotOrigin), event->position().x()) - m_geometry.plotOrigin));
+    const qreal plotOrigin = m_owner.timelinePlotOrigin();
+    const auto dragTick = [this, &input, plotOrigin] {
+        return m_owner.snapTick(
+            m_owner.tickAtContentX(std::max(plotOrigin, input.position.x()) - plotOrigin));
     };
     if (m_rightPress)
-        return;
+        return true;
     if (m_leftPress) {
         if (!m_selSweep &&
-            (event->position().toPoint() - m_leftPressPos.toPoint()).manhattanLength() >=
-                QApplication::startDragDistance())
+            (input.position.toPoint() - m_leftPressPos.toPoint()).manhattanLength() >=
+                QApplication::startDragDistance()) {
             m_selSweep = true;
+        }
         if (m_selSweep) {
             const uint64_t tick = dragTick();
-            EditorSelectionModel::TimeSelection sel;
-            sel.startTick = std::min(m_selAnchor, tick);
-            sel.endTick = std::max(m_selAnchor, tick);
-            TrackMask trackMask = 1u << m_sv->selectionModel().primaryTrack();
+            EditorSelectionModel::TimeSelection selection;
+            selection.startTick = std::min(m_selAnchor, tick);
+            selection.endTick = std::max(m_selAnchor, tick);
+            TrackMask trackMask = 1u << m_owner.selectionModel().primaryTrack();
             if (m_multiTrackSweep) {
-                for (const ViewNote &note : m_sv->model().notes) {
-                    if (note.startTick >= sel.endTick)
+                for (const ViewNote &note : m_owner.model().notes) {
+                    if (note.startTick >= selection.endTick)
                         break;
-                    if (note.track >= 0 && note.track < 16 && sel.startTick < note.endTick)
+                    if (note.track >= 0 && note.track < 16 && selection.startTick < note.endTick) {
                         trackMask |= 1u << note.track;
+                    }
                 }
             }
-            m_sv->selectionModel().setTimeSelectionAndTrackScope(std::move(sel), trackMask);
+            m_owner.selectionModel().setTimeSelectionAndTrackScope(std::move(selection), trackMask);
         }
-        return;
+        return true;
     }
     if (m_dragMarker >= 0 || m_dragTimeSig) {
         m_dragTick = dragTick();
         requestQuickUpdate();
-        return;
+        return true;
     }
     if (m_dragSelEdge >= 0) {
         // Selection edges move live (view state, unlike the loop
         // markers' commit-on-release document edit).
-        EditorSelectionModel::TimeSelection sel = m_sv->selectionModel().timeSelection();
+        EditorSelectionModel::TimeSelection selection = m_owner.selectionModel().timeSelection();
         const uint64_t tick = dragTick();
         if (m_dragSelEdge == 0)
-            sel.startTick = tick;
+            selection.startTick = tick;
         else
-            sel.endTick = tick;
-        if (sel.startTick > sel.endTick) {
-            std::swap(sel.startTick, sel.endTick);
+            selection.endTick = tick;
+        if (selection.startTick > selection.endTick) {
+            std::swap(selection.startTick, selection.endTick);
             m_dragSelEdge ^= 1;
         }
-        m_sv->selectionModel().setTimeSelection(sel);
-        return;
+        m_owner.selectionModel().setTimeSelection(selection);
+        return true;
     }
     uint64_t sigTick;
     int sigNum, sigDen;
     bool sigImplicit;
-    setCursor(m_sv->document() &&
-                      (hitMarker(event->position()) >= 0 || hitSelEdge(event->position()) >= 0 ||
-                       hitTimeSigChip(event->position(), &sigTick, &sigNum, &sigDen, &sigImplicit))
-                  ? Qt::SplitHCursor
-                  : Qt::ArrowCursor);
+    m_inputHost->setCursor(
+        m_owner.document() &&
+                (hitMarker(input.position) >= 0 || hitSelEdge(input.position) >= 0 ||
+                 hitTimeSigChip(input.position, &sigTick, &sigNum, &sigDen, &sigImplicit))
+            ? Qt::SplitHCursor
+            : Qt::ArrowCursor);
+    return true;
 }
 
-void TimeRuler::mouseReleaseEvent(QMouseEvent *event)
+bool TimeRuler::pointerRelease(const TimelinePointerInput &input)
 {
-    if (event->button() == Qt::RightButton && m_rightPress) {
+    if (input.button == Qt::RightButton && m_rightPress) {
         m_rightPress = false;
-        showRulerMenu(m_selAnchor, event->globalPosition().toPoint());
-        return;
+        showRulerMenu(m_selAnchor, input.globalPosition.toPoint());
+        return true;
     }
-    if (event->button() == Qt::LeftButton && m_leftPress) {
+    if (input.button == Qt::LeftButton && m_leftPress) {
         m_leftPress = false;
         m_multiTrackSweep = false;
         if (m_selSweep) {
             m_selSweep = false;
-            if (m_sv->selectionModel().timeSelection().active())
-                m_sv->announceTimeSelection();
+            if (m_owner.selectionModel().timeSelection().active())
+                m_owner.announceTimeSelection();
             else
-                m_sv->selectionModel().clearTimeSelection();
+                m_owner.selectionModel().clearTimeSelection();
         } else {
-            m_sv->setEditCursorTick(m_selAnchor);
-            m_sv->commitEditCursor(m_selAnchor);
+            m_owner.setEditCursorTick(m_selAnchor);
+            m_owner.commitEditCursor(m_selAnchor);
         }
-        return;
+        return true;
     }
-    if (event->button() != Qt::LeftButton)
-        return;
+    if (input.button != Qt::LeftButton)
+        return false;
     if (m_dragSelEdge >= 0) {
         m_dragSelEdge = -1;
-        if (m_sv->selectionModel().timeSelection().active())
-            m_sv->announceTimeSelection();
+        if (m_owner.selectionModel().timeSelection().active())
+            m_owner.announceTimeSelection();
         else
-            m_sv->selectionModel().clearTimeSelection(); // edges dragged together
-        return;
+            m_owner.selectionModel().clearTimeSelection(); // edges dragged together
+        return true;
     }
     if (m_dragTimeSig) {
         m_dragTimeSig = false;
-        if (SongDocument *doc = m_sv->document())
+        if (SongDocument *doc = m_owner.document())
             doc->moveTimeSig(m_dragTimeSigFrom, m_dragTick);
         requestQuickUpdate();
-        return;
+        return true;
     }
     if (m_dragMarker < 0)
-        return;
+        return false;
     const bool endMarker = m_dragMarker == 1;
     m_dragMarker = -1;
-    if (SongDocument *doc = m_sv->document())
+    if (SongDocument *doc = m_owner.document())
         doc->setLoopTick(endMarker, int64_t(m_dragTick));
     requestQuickUpdate();
+    return true;
 }
 
-void TimeRuler::mouseDoubleClickEvent(QMouseEvent *event)
+bool TimeRuler::pointerDoubleClick(const TimelinePointerInput &input)
 {
-    SongDocument *doc = m_sv->document();
+    SongDocument *doc = m_owner.document();
     uint64_t sigTick;
     int numerator, denomPow2;
     bool implicit;
-    if (event->button() != Qt::LeftButton || !doc ||
-        !hitTimeSigChip(event->position(), &sigTick, &numerator, &denomPow2, &implicit))
-        return;
+    if (input.button != Qt::LeftButton || !doc ||
+        !hitTimeSigChip(input.position, &sigTick, &numerator, &denomPow2, &implicit)) {
+        return false;
+    }
     // The first press of the double-click armed a chip drag; cancel it
     // before the modal editor swallows the release.
     m_dragTimeSig = false;
-    if (askTimeSignature(this, &numerator, &denomPow2))
+    if (askTimeSignature(&m_owner, &numerator, &denomPow2))
         doc->setTimeSig(sigTick, numerator, denomPow2);
     requestQuickUpdate();
+    return true;
+}
+
+void TimeRuler::pointerLeave()
+{
+    if (m_inputHost)
+        m_inputHost->clearCursor();
+}
+
+bool TimeRuler::wheel(const TimelineWheelInput &input)
+{
+    // Same bindings as the roll's notes area: plain wheel zooms the
+    // timeline; Shift (or a trackpad's horizontal delta) scrolls it.
+    const QPoint delta = input.pixelDelta.isNull() ? input.angleDelta : input.pixelDelta;
+    if (input.modifiers & Qt::ShiftModifier) {
+        m_owner.scrollByPx(-(delta.y() ? delta.y() : delta.x()));
+    } else if (delta.x() && !delta.y()) {
+        m_owner.scrollByPx(-delta.x());
+    } else {
+        m_owner.zoomTimelineAtWheel(input, input.position.x() - m_owner.timelinePlotOrigin());
+    }
+    return true;
+}
+
+void TimeRuler::inputCancelled(TimelineInputCancelReason)
+{
+    cancelInteraction();
 }
 
 void TimeRuler::showRulerMenu(uint64_t clickTick, const QPoint &globalPos)
 {
-    SongDocument *doc = m_sv->document();
-    const MidiTimeline *tl = m_sv->timeline();
-    if (!doc || !tl)
+    SongDocument *doc = m_owner.document();
+    const MidiTimeline *timeline = m_owner.timeline();
+    if (!doc || !timeline)
         return;
-    QMenu menu(this);
+    QMenu menu(&m_owner);
     QAction *setStart = menu.addAction(SongView::tr("Set loop start here"));
     QAction *setEnd = menu.addAction(SongView::tr("Set loop end here"));
     QAction *remove = menu.addAction(SongView::tr("Remove loop markers"));
-    remove->setEnabled(tl->loopStartTick != UINT64_MAX || tl->loopEndTick != UINT64_MAX);
-    QAction *loopFromSel = nullptr;
+    remove->setEnabled(timeline->loopStartTick != UINT64_MAX ||
+                       timeline->loopEndTick != UINT64_MAX);
+    QAction *loopFromSelection = nullptr;
     QAction *insertBlank = nullptr;
     QAction *duplicate = nullptr;
     QAction *removeContents = nullptr;
-    QAction *clearSel = nullptr;
-    const EditorSelectionModel::TimeSelection sel = m_sv->selectionModel().timeSelection();
-    if (sel.active()) {
+    QAction *clearSelection = nullptr;
+    const EditorSelectionModel::TimeSelection selection = m_owner.selectionModel().timeSelection();
+    if (selection.active()) {
         menu.addSeparator();
-        loopFromSel = menu.addAction(SongView::tr("Set loop to selection"));
+        loopFromSelection = menu.addAction(SongView::tr("Set loop to selection"));
         insertBlank = menu.addAction(SongView::tr("Insert blank time"));
         duplicate = menu.addAction(SongView::tr("Duplicate time"));
         duplicate->setShortcut(
             keymap::Registry::instance().bindings(QStringLiteral("roll.duplicate_time")).value(0));
         removeContents = menu.addAction(SongView::tr("Remove contents (shift left)"));
-        clearSel = menu.addAction(SongView::tr("Clear time selection"));
+        clearSelection = menu.addAction(SongView::tr("Clear time selection"));
     }
     menu.addSeparator();
     uint64_t sigTick = clickTick;
@@ -241,24 +277,24 @@ void TimeRuler::showRulerMenu(uint64_t clickTick, const QPoint &globalPos)
         doc->setLoopTick(true, int64_t(clickTick));
     } else if (chosen == remove) {
         // Two commands; undo restores them one at a time.
-        if (tl->loopStartTick != UINT64_MAX)
+        if (timeline->loopStartTick != UINT64_MAX)
             doc->setLoopTick(false, -1);
-        if (m_sv->timeline()->loopEndTick != UINT64_MAX)
+        if (m_owner.timeline()->loopEndTick != UINT64_MAX)
             doc->setLoopTick(true, -1);
-    } else if (chosen && chosen == loopFromSel) {
+    } else if (chosen && chosen == loopFromSelection) {
         // Same two-command shape as "Remove loop markers".
-        doc->setLoopTick(false, int64_t(sel.startTick));
-        doc->setLoopTick(true, int64_t(sel.endTick));
+        doc->setLoopTick(false, int64_t(selection.startTick));
+        doc->setLoopTick(true, int64_t(selection.endTick));
     } else if (chosen && chosen == insertBlank) {
-        m_sv->insertBlankTime();
+        m_owner.insertBlankTime();
     } else if (chosen && chosen == duplicate) {
-        m_sv->duplicateTimeSelection();
+        m_owner.duplicateTimeSelection();
     } else if (chosen && chosen == removeContents) {
-        m_sv->removeTimeSelectionContents();
-    } else if (chosen && chosen == clearSel) {
-        m_sv->selectionModel().clearTimeSelection();
+        m_owner.removeTimeSelectionContents();
+    } else if (chosen && chosen == clearSelection) {
+        m_owner.selectionModel().clearTimeSelection();
     } else if (chosen == editSig) {
-        if (askTimeSignature(this, &sigNum, &sigDen))
+        if (askTimeSignature(&m_owner, &sigNum, &sigDen))
             doc->setTimeSig(sigTick, sigNum, sigDen);
     } else if (chosen == removeSig) {
         doc->deleteTimeSig(sigTick);

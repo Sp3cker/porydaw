@@ -11,6 +11,7 @@
 #include <QWidget>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <span>
 #include <utility>
@@ -57,6 +58,7 @@ struct TrackRemap;
 
 namespace songview {
 class TimeRuler;
+class TimeRulerControls;
 class EditorSelectionModel;
 class PianoRoll;
 class TimelineQuickView;
@@ -103,6 +105,7 @@ class SongView : public QWidget
 
   public:
     explicit SongView(QWidget *parent = nullptr);
+    ~SongView() override;
 
     void setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voicegroup);
     // Timeline swap after a document edit: keeps zoom, scroll, track
@@ -528,10 +531,6 @@ class SongView : public QWidget
     void requestPlayPauseFrom(uint64_t tick) { emit playPauseFromRequested(tick); }
 
     // Interaction from children.
-    void zoomTimelineAtWheel(const QWheelEvent *event, qreal anchorContentX);
-    // Normalized-input twin for Quick-delivered wheels: identical units to
-    // the QWheelEvent path (momentum ignored, pixel deltas weigh 5, angle
-    // deltas 1, y axis only).
     void zoomTimelineAtWheel(const songview::TimelineWheelInput &wheel, qreal anchorContentX);
     void zoomAroundContentX(double factor, qreal anchorContentX);
     // Vertical roll zoom (key height) from Ctrl+wheel, pinning the key under
@@ -622,7 +621,7 @@ class SongView : public QWidget
         int timelineViewportMinimumWidth;
         int timelineContentTailWidth;
         // Fixed heights of the SongView-owned ruler and other-events layout
-        // rows; the retained band widgets overlay these spacer rectangles.
+        // rows.
         int rulerHeight;
         int otherEventsHeight;
 
@@ -634,7 +633,7 @@ class SongView : public QWidget
     // store, then push synchronously to the Quick host and playhead overlay.
     songview::TimelineBandLayout resolveTimelineBandLayout() const;
     void synchronizeTimelineBandLayout();
-    // Keeps the retained band widgets over their fixed-height spacer rows.
+    // Positions retained band chrome over parent-owned spacer rows.
     void positionBandWidgets();
     // Migration assertion for Q_ASSERT call sites: every published band equals
     // the retained widget that visually owns it while both exist. Only valid
@@ -768,7 +767,8 @@ class SongView : public QWidget
     EditorDrawer *m_editorDrawer = nullptr;
     bool m_followScrollPaused = false;
     VelocityGestureModel m_velocityGesture;
-    songview::TimeRuler *m_ruler = nullptr;
+    std::unique_ptr<songview::TimeRuler> m_ruler;
+    songview::TimeRulerControls *m_rulerControls = nullptr;
     songview::TrackHeaderPanel *m_headers = nullptr;
     songview::PianoRoll *m_roll = nullptr;
     QPointer<songview::TimelineQuickView> m_quickView;

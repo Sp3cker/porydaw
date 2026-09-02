@@ -47,29 +47,35 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
     resetLayer(scene, chromeLayer);
     resetLayer(scene, marksLayer);
 
-    const qreal dpr = devicePixelRatioF();
+    if (!m_inputHost) {
+        scene.setRulerTextRecords({});
+        return;
+    }
+    const qreal dpr = m_inputHost->devicePixelRatio();
     const qreal physicalPixel = detail::logicalPhysicalPixel(dpr);
-    const QRectF full(0, 0, width(), height());
+    const QRectF full = m_inputHost->bounds();
+    const qreal width = full.width();
+    const qreal height = full.height();
+    const qreal plotOrigin = m_owner.timelinePlotOrigin();
+    const QPalette palette = m_inputHost->palette();
     const QColor chrome = themes::color(themes::Role::song_view_timeline_chrome_background);
     addRect(scene, chromeLayer, full, chrome, full);
-    addHorizontalLine(scene, chromeLayer, 0, width(), height() - lyt::singlePixel() / 2.0,
+    addHorizontalLine(scene, chromeLayer, 0, width, height - lyt::singlePixel() / 2.0,
                       lyt::singlePixel(), themes::color(themes::Role::song_view_separator), full);
 
-    const QRectF area(m_geometry.plotOrigin, 0, std::max(0, width() - m_geometry.plotOrigin),
-                      height());
-    const qreal tickZero = m_sv->displayX(0.0, m_geometry.plotOrigin, dpr);
+    const QRectF area(plotOrigin, 0, std::max<qreal>(0.0, width - plotOrigin), height);
+    const qreal tickZero = m_owner.displayX(0.0, plotOrigin, dpr);
     if (tickZero > area.left()) {
         addRect(scene, chromeLayer,
                 QRectF(area.left(), area.top(), tickZero - area.left(), area.height()),
                 mixTowardOklab(chrome, detail::gridLineColor(), 0.15), area);
     }
 
-    if (const MidiTimeline *timeline = m_sv->timeline()) {
-        const auto &selection = m_sv->selectionModel().timeSelection();
+    if (const MidiTimeline *timeline = m_owner.timeline()) {
+        const auto &selection = m_owner.selectionModel().timeSelection();
         if (selection.active()) {
-            const qreal x0 =
-                m_sv->displayX(double(selection.startTick), m_geometry.plotOrigin, dpr);
-            const qreal x1 = m_sv->displayX(double(selection.endTick), m_geometry.plotOrigin, dpr);
+            const qreal x0 = m_owner.displayX(double(selection.startTick), plotOrigin, dpr);
+            const qreal x1 = m_owner.displayX(double(selection.endTick), plotOrigin, dpr);
             if (x1 > area.left() && x0 < area.right()) {
                 QColor fill = themes::color(themes::Role::song_view_selection_fill);
                 fill.setAlpha(30);
@@ -86,12 +92,12 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
         const bool hasLoopStart = timeline->loopStartTick != UINT64_MAX;
         const bool hasLoopEnd = timeline->loopEndTick != UINT64_MAX;
         if (hasLoopStart || hasLoopEnd) {
-            const qreal x0 = hasLoopStart ? m_sv->displayX(double(timeline->loopStartTick),
-                                                           m_geometry.plotOrigin, dpr)
-                                          : area.left();
-            const qreal x1 = hasLoopEnd ? m_sv->displayX(double(timeline->loopEndTick),
-                                                         m_geometry.plotOrigin, dpr)
-                                        : area.right();
+            const qreal x0 =
+                hasLoopStart ? m_owner.displayX(double(timeline->loopStartTick), plotOrigin, dpr)
+                             : area.left();
+            const qreal x1 = hasLoopEnd
+                                 ? m_owner.displayX(double(timeline->loopEndTick), plotOrigin, dpr)
+                                 : area.right();
             if (x1 > area.left() && x0 < area.right()) {
                 const qreal glowWidth = std::min<qreal>(lyt::space(Space::Eight), x1 - x0);
                 QColor strong = detail::loopEdge();
@@ -132,9 +138,9 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
 
     const qreal roundingMargin = physicalPixel / 2.0;
     const double t0 =
-        std::max(0.0, m_sv->tickAtContentX(area.left() - m_geometry.plotOrigin - roundingMargin));
-    const double t1 = m_sv->tickAtContentX(area.x() + area.width() - physicalPixel -
-                                           m_geometry.plotOrigin + roundingMargin) +
+        std::max(0.0, m_owner.tickAtContentX(area.left() - plotOrigin - roundingMargin));
+    const double t1 = m_owner.tickAtContentX(area.x() + area.width() - physicalPixel - plotOrigin +
+                                             roundingMargin) +
                       1;
     const QColor indicatorColor = detail::gridLineColor();
     const QColor secondary = themes::color(themes::Role::song_view_secondary_text);
@@ -153,31 +159,32 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
     const int indicatorRise = lyt::space(Space::Half);
     const int labelGap = lyt::singlePixel();
     const int beatDetailReserve = lyt::space(Space::Two);
-    const bool drawBeatTicks = m_sv->pxPerBeat() >= m_geometry.timelineDetailMinimumPixelsPerBeat;
+    const bool drawBeatTicks = m_owner.pxPerBeat() >= m_geometry.timelineDetailMinimumPixelsPerBeat;
 
     detail::forEachSubGridLine(
-        m_sv, t0, t1, m_geometry.timelineDetailMinimumPixelsPerBeat, [&](uint64_t tick, int level) {
-            const qreal x = m_sv->displayX(double(tick), m_geometry.plotOrigin, dpr);
+        &m_owner, t0, t1, m_geometry.timelineDetailMinimumPixelsPerBeat,
+        [&](uint64_t tick, int level) {
+            const qreal x = m_owner.displayX(double(tick), plotOrigin, dpr);
             const int tickHeight = level == 1 ? lyt::space(Space::Half) : lyt::singlePixel();
             addVerticalLine(scene, marksLayer, x, tickBottom - tickHeight + lyt::singlePixel(),
                             tickBottom, lyt::singlePixel(), indicatorColor, area);
         });
 
     int widestDetailWidth = 0;
-    m_sv->forEachGridLine(
+    m_owner.forEachGridLine(
         uint64_t(t0), uint64_t(t1), [&](uint64_t, bool, int barNumber, int beatNumber) {
             widestDetailWidth = std::max(
                 widestDetailWidth, beatMetrics.horizontalAdvance(
                                        QStringLiteral("%1.%2").arg(barNumber).arg(beatNumber)));
         });
-    const bool showBeatLabels = m_sv->pxPerBeat() >= m_geometry.timeRulerBeatLabelZoomFactor *
-                                                         (barCapWidth + 2 * labelGap +
-                                                          beatDetailReserve + widestDetailWidth);
+    const bool showBeatLabels = m_owner.pxPerBeat() >= m_geometry.timeRulerBeatLabelZoomFactor *
+                                                           (barCapWidth + 2 * labelGap +
+                                                            beatDetailReserve + widestDetailWidth);
     std::vector<TimelineQuickTextModel::Record> labels;
     qreal lastLabelRight = area.left() - labelGap;
-    m_sv->forEachGridLine(
+    m_owner.forEachGridLine(
         uint64_t(t0), uint64_t(t1), [&](uint64_t tick, bool isBar, int barNumber, int beatNumber) {
-            const qreal x = m_sv->displayX(double(tick), m_geometry.plotOrigin, dpr);
+            const qreal x = m_owner.displayX(double(tick), plotOrigin, dpr);
             const QString detailLabel = QStringLiteral("%1.%2").arg(barNumber).arg(beatNumber);
             if (!isBar && !showBeatLabels) {
                 if (drawBeatTicks) {
@@ -223,7 +230,7 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
         if (chip.x > area.right() || chip.labelX + chip.labelW < area.left())
             continue;
         const QColor color =
-            palette().color(chip.implicit ? QPalette::PlaceholderText : QPalette::WindowText);
+            palette.color(chip.implicit ? QPalette::PlaceholderText : QPalette::WindowText);
         addVerticalLine(scene, marksLayer, chip.x, markers.top(), markers.bottom(),
                         lyt::singlePixel(), color, area);
         if (chip.labelW > 0) {
@@ -235,13 +242,12 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
         }
     }
 
-    if (m_sv->timeline()) {
-        const TimeAxis &axis = m_sv->timeAxis();
+    if (m_owner.timeline()) {
+        const TimeAxis &axis = m_owner.timeAxis();
         if (axis.loopStartTick() != UINT64_MAX) {
             const QString label = QStringLiteral("[");
-            const qreal x =
-                m_sv->displayX(double(axis.loopStartTick()), m_geometry.plotOrigin, dpr) +
-                lyt::space(Space::Half);
+            const qreal x = m_owner.displayX(double(axis.loopStartTick()), plotOrigin, dpr) +
+                            lyt::space(Space::Half);
             appendTextRecord(labels, (quint64(3) << 62),
                              QRectF(x, markerBaseline - markerMetrics.ascent(),
                                     markerMetrics.horizontalAdvance(label), markerMetrics.height()),
@@ -249,7 +255,7 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
         }
         if (axis.loopEndTick() != UINT64_MAX) {
             const QString label = QStringLiteral("]");
-            const qreal x = m_sv->displayX(double(axis.loopEndTick()), m_geometry.plotOrigin, dpr) +
+            const qreal x = m_owner.displayX(double(axis.loopEndTick()), plotOrigin, dpr) +
                             lyt::space(Space::Half);
             appendTextRecord(labels, (quint64(3) << 62) | 1,
                              QRectF(x, markerBaseline - markerMetrics.ascent(),
@@ -258,18 +264,16 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
         }
         const int markerStroke = lyt::space(Space::Half);
         if (m_dragMarker >= 0 || m_dragTimeSig) {
-            const qreal x = m_sv->displayX(double(m_dragTick), m_geometry.plotOrigin, dpr);
-            addVerticalLine(scene, marksLayer, x, 0, height(), markerStroke,
-                            m_dragMarker >= 0 ? detail::loopEdge()
-                                              : palette().color(QPalette::WindowText),
-                            area);
+            const qreal x = m_owner.displayX(double(m_dragTick), plotOrigin, dpr);
+            addVerticalLine(
+                scene, marksLayer, x, 0, height, markerStroke,
+                m_dragMarker >= 0 ? detail::loopEdge() : palette.color(QPalette::WindowText), area);
         }
-        const auto &selection = m_sv->selectionModel().timeSelection();
+        const auto &selection = m_owner.selectionModel().timeSelection();
         if (selection.active()) {
             const QColor edge = themes::color(themes::Role::song_view_selection_edge);
-            const qreal x0 =
-                m_sv->displayX(double(selection.startTick), m_geometry.plotOrigin, dpr);
-            const qreal x1 = m_sv->displayX(double(selection.endTick), m_geometry.plotOrigin, dpr);
+            const qreal x0 = m_owner.displayX(double(selection.startTick), plotOrigin, dpr);
+            const qreal x1 = m_owner.displayX(double(selection.endTick), plotOrigin, dpr);
             addVerticalLine(scene, marksLayer, x0, markers.top(), markers.bottom(), markerStroke,
                             edge, area);
             addVerticalLine(scene, marksLayer, x1, markers.top(), markers.bottom(), markerStroke,

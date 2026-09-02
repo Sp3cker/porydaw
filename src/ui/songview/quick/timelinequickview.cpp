@@ -184,6 +184,12 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
 
     // Converted bands attach through their matching input items; unconverted
     // bands deliberately remain without an entry until their phase lands.
+    TimelineInputItem *const rulerInput =
+        root->findChild<TimelineInputItem *>(QStringLiteral("timelineRulerInput"));
+    if (!rulerInput)
+        qFatal("Qt Quick timeline QML has no input item 'timelineRulerInput'");
+    rulerInput->setInteraction(m_ruler);
+    m_inputItems[timelineBandIndex(TimelineBand::Ruler)] = rulerInput;
     TimelineInputItem *const voiceChangesInput =
         root->findChild<TimelineInputItem *>(QStringLiteral("timelineVoiceChangesInput"));
     if (!voiceChangesInput)
@@ -197,6 +203,12 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     otherEventsInput->setInteraction(m_otherEvents.data());
     m_inputItems[timelineBandIndex(TimelineBand::OtherEvents)] = otherEventsInput;
 
+    QWidget *const rulerControls = m_songView->findChild<QWidget *>(
+        QStringLiteral("timeRulerControls"), Qt::FindDirectChildrenOnly);
+    if (!rulerControls)
+        qFatal("Timeline Quick host cannot find native ruler controls");
+    m_nativeChrome[0] = rulerControls;
+
     static constexpr std::array nativeChromeNames = {
         "velocityResizeHandle", "voiceChangesResizeHandle", "automationResizeHandle",
         "automationDrawerBar",  "velocityDetentToggle",
@@ -209,7 +221,7 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
                                                : nullptr;
         if (!chrome)
             qFatal("Timeline Quick host cannot find drawer chrome '%s'", nativeChromeNames[index]);
-        m_nativeChrome[index] = chrome;
+        m_nativeChrome[index + 1] = chrome;
     }
 #ifdef Q_OS_MACOS
     if (AutomationCanvas *const canvas = automation.canvas())
@@ -225,6 +237,12 @@ TimelineQuickView::~TimelineQuickView()
             item->setInteraction(nullptr);
     }
     m_quickView->setSource(QUrl{});
+}
+
+void TimelineQuickView::detachInputInteraction(TimelineBand band)
+{
+    if (TimelineInputItem *const item = m_inputItems[timelineBandIndex(band)])
+        item->setInteraction(nullptr);
 }
 
 qreal TimelineQuickView::hoverRootContentX() const noexcept

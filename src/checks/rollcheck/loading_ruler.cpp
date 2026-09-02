@@ -44,7 +44,6 @@
 #include "ui/songtab.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
-#include "ui/songview/timeruler.h"
 #include "ui/songview/trackheaderpanel.h"
 
 namespace checks::rollcheck {
@@ -122,23 +121,32 @@ RasterScan grabRaster(QWidget &widget)
     widget.update();
     QCoreApplication::processEvents();
 
-    if (dynamic_cast<songview::TimeRuler *>(&widget)) {
-        SongView *songView = nullptr;
-        for (QWidget *ancestor = &widget; ancestor; ancestor = ancestor->parentWidget()) {
-            songView = qobject_cast<SongView *>(ancestor);
-            if (songView)
-                break;
-        }
-        if (!songView)
-            return {};
-        QImage image = checks::support::captureQuickBand(*songView, widget);
-        const qreal dpr = image.devicePixelRatio();
-        return {image, dpr > 0.0 ? dpr : 1.0};
-    }
-
     QImage image = widget.grab().toImage();
     const qreal dpr = widget.devicePixelRatioF();
     return {image, dpr > 0.0 ? dpr : 1.0};
+}
+
+// The canonical ruler band raster: the Quick canvas captured at the
+// SongView-local rect published by the view's own band layout. Empty when the
+// ruler band is not published.
+RasterScan grabRulerRaster(SongView &view)
+{
+    const std::optional<songview::TimelineBandGeometry> &band =
+        view.timelineBandLayout().geometry(songview::TimelineBand::Ruler);
+    if (!band)
+        return {};
+    QImage image = checks::support::captureQuickBand(view, band->rect);
+    const qreal dpr = image.devicePixelRatio();
+    return {image, dpr > 0.0 ? dpr : 1.0};
+}
+
+// The canonical ruler band height, from the published layout entry.
+int rulerBandHeight(const SongView &view)
+{
+    return view.timelineBandLayout()
+        .geometry(songview::TimelineBand::Ruler)
+        .value_or(songview::TimelineBandGeometry{})
+        .rect.height();
 }
 
 // --- Geometry scenarios ----------------------------------------------------
@@ -187,14 +195,14 @@ std::vector<BarSample> sampleBars(SongView &view, const RasterScan &raster, qrea
 }
 
 // The geometry fixture: the staged timelines must outlive the view that binds
-// them, so they are declared before the SongView; the ruler handle and the
-// pre-binding value snapshots follow.
+// them, so they are declared before the SongView; the canonical ruler band
+// comes from the view's published layout, and the pre-binding value snapshots
+// follow.
 struct GeometryFixture {
     MidiTimeline default44;
     MidiTimeline t48;
     MidiTimeline t34;
     SongView bare;
-    songview::TimeRuler *ruler = nullptr;
     double pxPerBeat = 0.0;      // canonical horizontal scale
     std::vector<BarSample> bars; // fallback bar samples from the bare raster
     std::vector<double> barX;    // pre-binding bar contentX positions
@@ -207,7 +215,6 @@ struct GeometryFixture {
         bare.ensurePolished();
         QCoreApplication::processEvents();
         (void)bare.grab(); // force layout so child geometry is real
-        ruler = descendant<songview::TimeRuler>(bare);
         pxPerBeat = SongView::ViewState{}.pxPerBeat;
 
         default44.ticksPerBeat = kFallbackTicksPerBeat;
@@ -362,7 +369,7 @@ void observeFallbackBarsAndBeats(GeometryFixture &fx, const RasterScan &raster, 
 // phases. Returns false when the ruler raster is unusable.
 bool runFallbackRasterScenarios(GeometryFixture &fx, Harness &check)
 {
-    const RasterScan raster = grabRaster(*fx.ruler);
+    const RasterScan raster = grabRulerRaster(fx.bare);
     if (!raster.valid()) {
         check.fail("fresh ruler raster could not be captured");
         return false;
@@ -371,7 +378,7 @@ bool runFallbackRasterScenarios(GeometryFixture &fx, Harness &check)
     const qreal plotOrigin = check.plotOrigin();
     const qreal x0 = plotOrigin + fx.bare.contentX(0.0); // tick 0 under the home camera
     const QRgb chrome = raster.at(x0 + 80.0, 2.0);       // marker row right of the 4/4 chip
-    const QRgb placeholder = fx.ruler->palette().color(QPalette::PlaceholderText).rgb();
+    const QRgb placeholder = fx.bare.palette().color(QPalette::PlaceholderText).rgb();
 
     observeFallbackPreRollShade(raster, plotOrigin, x0, chrome, check);
     observeFallbackSignatureAndCaption(raster, plotOrigin, x0, placeholder, check);
@@ -394,7 +401,7 @@ void runDefaultBindScenarios(GeometryFixture &fx, Harness &check)
     if (!qFuzzyCompare(fx.bare.pxPerBeat(), fx.pxPerBeat))
         check.fail("default binding changed the canonical horizontal scale");
     const qreal plotOrigin = check.plotOrigin();
-    const RasterScan bound = grabRaster(*fx.ruler);
+    const RasterScan bound = grabRulerRaster(fx.bare);
     if (!bound.valid()) {
         check.fail("bound ruler raster could not be captured");
     } else {
@@ -422,7 +429,7 @@ void runDefaultBindScenarios(GeometryFixture &fx, Harness &check)
 void runTpbBindScenarios(GeometryFixture &fx, Harness &check)
 {
     const qreal plotOrigin = check.plotOrigin();
-    const RasterScan t24 = grabRaster(*fx.ruler);
+    const RasterScan t24 = grabRulerRaster(fx.bare);
     const std::vector<BarSample> t24Bars = sampleBars(
         fx.bare, t24, plotOrigin, uint32_t(kFallbackTicksPerBeat), kFallbackBeatsPerBar, 6);
     // The beat columns are read while the 24-TPB axis still governs the
@@ -437,7 +444,7 @@ void runTpbBindScenarios(GeometryFixture &fx, Harness &check)
     QCoreApplication::processEvents();
     if (!qFuzzyCompare(fx.bare.pxPerBeat(), fx.pxPerBeat))
         check.fail("48-TPB binding changed the canonical horizontal scale");
-    const RasterScan t48Raster = grabRaster(*fx.ruler);
+    const RasterScan t48Raster = grabRulerRaster(fx.bare);
     if (!t48Raster.valid()) {
         check.fail("48-TPB ruler raster could not be captured");
     } else {
@@ -472,7 +479,7 @@ void observeSignaturePublicGeometry(GeometryFixture &fx, qreal rulerHeightBefore
         check.fail("3/4 binding did not resolve its grid segment");
     if (!qFuzzyCompare(fx.bare.pxPerBeat(), fx.pxPerBeat))
         check.fail("3/4 binding changed the canonical horizontal scale");
-    if (fx.bare.leadPadPx() <= 0.0 || fx.ruler->height() != rulerHeightBefore)
+    if (fx.bare.leadPadPx() <= 0.0 || rulerBandHeight(fx.bare) != rulerHeightBefore)
         check.fail("3/4 binding disturbed signature-independent geometry");
     for (int beat = 1; beat <= 8; ++beat)
         if (std::abs(fx.bare.contentX(double(beat) * kFallbackTicksPerBeat) -
@@ -511,11 +518,11 @@ void observeSignatureBarGrouping(GeometryFixture &fx, const RasterScan &t34Raste
 void runSignatureGroupingScenarios(GeometryFixture &fx, Harness &check)
 {
     const qreal plotOrigin = check.plotOrigin();
-    const qreal rulerHeightBefore = fx.ruler->height();
+    const qreal rulerHeightBefore = rulerBandHeight(fx.bare);
     fx.bare.setSong(&fx.t34, nullptr);
     QCoreApplication::processEvents();
     observeSignaturePublicGeometry(fx, rulerHeightBefore, check);
-    const RasterScan t34Raster = grabRaster(*fx.ruler);
+    const RasterScan t34Raster = grabRulerRaster(fx.bare);
     if (!t34Raster.valid()) {
         check.fail("3/4 ruler raster could not be captured");
         return;
@@ -531,8 +538,8 @@ void runGeometryScenarios(Harness &check)
     QCoreApplication::processEvents();
     observeFallbackGrid(fx, check);
     observeFallbackGridAtTickCeiling(fx, check);
-    if (!fx.ruler) {
-        check.fail("fresh view has no time ruler child");
+    if (!fx.bare.timelineBandLayout().geometry(songview::TimelineBand::Ruler)) {
+        check.fail("fresh view has no canonical ruler band");
         return;
     }
     if (!runFallbackRasterScenarios(fx, check))
@@ -558,15 +565,18 @@ struct GateFixture {
         QCoreApplication::processEvents();
 
         SongView &view = tab.view();
-        ruler = descendant<songview::TimeRuler>(view);
         roll = view.findChild<QWidget *>(QStringLiteral("pianoRoll"));
         headers = descendant<songview::TrackHeaderPanel>(view);
+        controls = view.findChild<QWidget *>(QStringLiteral("timeRulerControls"),
+                                             Qt::FindDirectChildrenOnly);
         auto *quick =
             view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
-        stripInput = quick && quick->rootObject()
-                         ? quick->rootObject()->findChild<songview::TimelineInputItem *>(
-                               QStringLiteral("timelineOtherEventsInput"))
-                         : nullptr;
+        if (quick && quick->rootObject()) {
+            stripInput = quick->rootObject()->findChild<songview::TimelineInputItem *>(
+                QStringLiteral("timelineOtherEventsInput"));
+            rulerInput = quick->rootObject()->findChild<songview::TimelineInputItem *>(
+                QStringLiteral("timelineRulerInput"));
+        }
         events = view.findChild<EventListView *>();
         drawer = view.editorDrawer();
         for (QScrollBar *scrollbar : view.findChildren<QScrollBar *>()) {
@@ -577,8 +587,8 @@ struct GateFixture {
             else
                 vbar = scrollbar;
         }
-        if (ruler)
-            for (QComboBox *combo : ruler->findChildren<QComboBox *>())
+        if (controls)
+            for (QComboBox *combo : controls->findChildren<QComboBox *>())
                 combos.append(combo);
     }
 
@@ -594,7 +604,7 @@ struct GateFixture {
     void checkSurfacesEnabled(Harness &check) const
     {
         const std::pair<const char *, QWidget *> surfaces[] = {
-            {"time ruler", ruler.data()},        {"piano roll", roll.data()},
+            {"ruler controls", controls.data()}, {"piano roll", roll.data()},
             {"track headers", headers.data()},   {"event list", events.data()},
             {"editor drawer", drawer.data()},    {"horizontal scrollbar", hbar.data()},
             {"vertical scrollbar", vbar.data()},
@@ -610,6 +620,10 @@ struct GateFixture {
             check.fail("loading view is missing its other-events Quick input");
         else if (!stripInput->isEnabled())
             check.fail("loading other-events Quick input was disabled instead of gated");
+        if (!rulerInput)
+            check.fail("loading view is missing its ruler Quick input");
+        else if (!rulerInput->isEnabled())
+            check.fail("loading ruler Quick input was disabled instead of gated");
     }
 
     // The ruler's grid controls must all stay enabled while loading.
@@ -650,9 +664,10 @@ struct GateFixture {
     }
 
     SongTab tab;
-    QPointer<songview::TimeRuler> ruler;
+    QPointer<QWidget> controls;
     QPointer<QWidget> roll;
     QPointer<songview::TrackHeaderPanel> headers;
+    QPointer<songview::TimelineInputItem> rulerInput;
     QPointer<songview::TimelineInputItem> stripInput;
     QPointer<EventListView> events;
     QPointer<QWidget> drawer;
@@ -675,18 +690,25 @@ struct RulerScrubSample {
 
 // One click at the covered ruler point. Empty when the view has no pre-roll
 // padding to anchor the point to.
-std::optional<RulerScrubSample> scrubRuler(SongView &view, songview::TimeRuler &ruler,
+std::optional<RulerScrubSample> scrubRuler(SongView &view, songview::TimelineInputItem &rulerInput,
                                            qreal plotOrigin)
 {
     const qreal pad = view.leadPadPx();
     if (pad <= 0)
         return std::nullopt;
-    const QPoint point(int(plotOrigin + pad + 140.0), ruler.height() * 3 / 4);
+    const std::optional<songview::TimelineBandGeometry> rulerBand =
+        view.timelineBandLayout().geometry(songview::TimelineBand::Ruler);
+    if (!rulerBand)
+        return std::nullopt;
+    const QPointF point(plotOrigin + pad + 140.0, rulerBand->rect.height() * 3.0 / 4.0);
     RulerScrubSample sample;
     sample.cursorBefore = view.editCursorTick();
-    click(ruler, point);
+    checks::events::sendMouse(rulerInput, QEvent::MouseButtonPress, point, Qt::LeftButton,
+                              Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(rulerInput, QEvent::MouseButtonRelease, point, Qt::LeftButton,
+                              Qt::NoButton, Qt::NoModifier);
     sample.cursorAfter = view.editCursorTick();
-    sample.gestureArmed = ruler.gestureActive();
+    sample.gestureArmed = view.userGestureActive();
     return sample;
 }
 
@@ -728,10 +750,10 @@ ScrollWheelSample wheelHorizontalScrollbar(QScrollBar &bar)
 // disarms the gesture afterwards.
 void checkGatedRulerScrub(Harness &check, GateFixture &probe, const char *scrubFailure)
 {
-    if (!probe.ruler)
+    if (!probe.rulerInput)
         return;
     const std::optional<RulerScrubSample> sample =
-        scrubRuler(probe.tab.view(), *probe.ruler, check.plotOrigin());
+        scrubRuler(probe.tab.view(), *probe.rulerInput, check.plotOrigin());
     if (!sample)
         return;
     if (sample->cursorAfter != sample->cursorBefore)
@@ -743,10 +765,10 @@ void checkGatedRulerScrub(Harness &check, GateFixture &probe, const char *scrubF
 // Once ready the same press scrubs again and still disarms the gesture.
 void checkReadyRulerScrub(Harness &check, GateFixture &probe)
 {
-    if (!probe.ruler)
+    if (!probe.rulerInput)
         return;
     const std::optional<RulerScrubSample> sample =
-        scrubRuler(probe.tab.view(), *probe.ruler, check.plotOrigin());
+        scrubRuler(probe.tab.view(), *probe.rulerInput, check.plotOrigin());
     if (!sample)
         return;
     if (sample->cursorAfter == sample->cursorBefore)

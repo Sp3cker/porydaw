@@ -251,7 +251,16 @@ void PianoRoll::wheelEvent(QWheelEvent *event)
     } else if (event->position().x() < m_geometry.pianoKeyboardWidth) {
         m_sv->scrollRollBy(-delta.y() / 2.0);
     } else {
-        m_sv->zoomTimelineAtWheel(event, event->position().x() - m_geometry.pianoKeyboardWidth);
+        const TimelineWheelInput wheel{
+            .position = event->position(),
+            .globalPosition = event->globalPosition(),
+            .pixelDelta = event->pixelDelta(),
+            .angleDelta = event->angleDelta(),
+            .modifiers = event->modifiers(),
+            .phase = event->phase(),
+            .inverted = event->inverted(),
+        };
+        m_sv->zoomTimelineAtWheel(wheel, event->position().x() - m_geometry.pianoKeyboardWidth);
     }
     event->accept();
 }

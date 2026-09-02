@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ui/songview/quick/timelineinput.h"
+
 #include <QFont>
 #include <QFontMetrics>
 #include <QPoint>
@@ -10,9 +12,6 @@
 #include <vector>
 
 class QComboBox;
-class QEvent;
-class QMouseEvent;
-class QWheelEvent;
 class SongView;
 
 namespace songview {
@@ -20,11 +19,23 @@ namespace songview {
 class TimelineQuickScene;
 class TimelineQuickView;
 
-class TimeRuler : public QWidget
+class TimeRulerControls final : public QWidget
+{
+  public:
+    explicit TimeRulerControls(SongView &owner, QWidget *parent);
+    void syncFromView();
+    void closePopups();
+
+  private:
+    SongView &m_owner;
+    QComboBox *m_divCombo = nullptr;
+    QComboBox *m_feelCombo = nullptr;
+};
+
+class TimeRuler final : public TimelineBandInteraction
 {
   private:
     struct Geometry {
-        int plotOrigin;
         int timelineDetailMinimumPixelsPerBeat;
         int timeRulerMinimumFontPixelSize;
         qreal timeRulerLetterSpacing;
@@ -36,18 +47,21 @@ class TimeRuler : public QWidget
     void refreshGeometry();
 
   public:
-    explicit TimeRuler(SongView *sv);
-    void syncGridControls();
-    void cancelTransientInput();
-    bool gestureActive() const;
+    explicit TimeRuler(SongView &owner);
 
-  protected:
-    bool event(QEvent *event) override;
-    void wheelEvent(QWheelEvent *event) override;
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *event) override;
-    void mouseReleaseEvent(QMouseEvent *event) override;
-    void mouseDoubleClickEvent(QMouseEvent *event) override;
+    bool gestureActive() const noexcept;
+    void cancelInteraction();
+
+    void attachInputHost(TimelineInputHost &host) override;
+    void detachInputHost(TimelineInputHost &host) override;
+    bool pointerPress(const TimelinePointerInput &input) override;
+    bool pointerDoubleClick(const TimelinePointerInput &input) override;
+    bool pointerMove(const TimelinePointerInput &input) override;
+    bool pointerRelease(const TimelinePointerInput &input) override;
+    void pointerLeave() override;
+    bool wheel(const TimelineWheelInput &input) override;
+    void inputCancelled(TimelineInputCancelReason reason) override;
+    void hostAppearanceChanged() override;
 
   private:
     friend class TimelineQuickView;
@@ -70,7 +84,7 @@ class TimeRuler : public QWidget
         int numerator;
         int denomPow2;
         bool implicit; // no 0x58 meta behind it (editing one creates the event)
-        qreal x;       // stem position (widget coords)
+        qreal x;       // stem position (band-local coords)
         qreal labelX;  // label left edge, nudged right past a loop bracket
         qreal labelW;  // 0: label hidden behind the next chip (stem only)
     };
@@ -98,7 +112,8 @@ class TimeRuler : public QWidget
     QFont m_rulerFont;
     QFont m_beatFont;
     QFont m_boldRulerFont;
-    SongView *m_sv;
+    SongView &m_owner;
+    TimelineInputHost *m_inputHost = nullptr;
     Geometry m_geometry;
     int m_markerHeight = 0;
     int m_dragMarker = -1;
@@ -111,11 +126,8 @@ class TimeRuler : public QWidget
     bool m_multiTrackSweep = false; // modifier intent captured when the sweep is armed
     QPointF m_leftPressPos;
     QPointF m_rightPressPos;
-    uint64_t m_selAnchor = 0;         // snapped tick of the pending press
-    int m_dragSelEdge = -1;           // selection edge being left-dragged (0/1)
-    QComboBox *m_divCombo = nullptr;  // minimum snap subdivision (gutter)
-    QComboBox *m_feelCombo = nullptr; // straight / triplet
-    QWidget *m_gridBox = nullptr;
+    uint64_t m_selAnchor = 0; // snapped tick of the pending press
+    int m_dragSelEdge = -1;   // selection edge being left-dragged (0/1)
 };
 
 } // namespace songview

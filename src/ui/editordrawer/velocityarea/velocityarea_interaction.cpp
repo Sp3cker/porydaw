@@ -455,7 +455,16 @@ void VelocityArea::wheelEvent(QWheelEvent *event)
         return;
     }
     if (!inRuler(position)) {
-        m_owner.zoomTimelineAtWheel(event, position.x() - plotOrigin());
+        const songview::TimelineWheelInput wheel{
+            .position = event->position(),
+            .globalPosition = event->globalPosition(),
+            .pixelDelta = event->pixelDelta(),
+            .angleDelta = event->angleDelta(),
+            .modifiers = event->modifiers(),
+            .phase = event->phase(),
+            .inverted = event->inverted(),
+        };
+        m_owner.zoomTimelineAtWheel(wheel, position.x() - plotOrigin());
         event->accept();
         return;
     }

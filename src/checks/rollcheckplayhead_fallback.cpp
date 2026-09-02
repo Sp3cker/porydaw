@@ -29,7 +29,6 @@
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timelinebandlayout.h"
-#include "ui/songview/timeruler.h"
 #include "ui/theme/themeruntime.h"
 
 namespace {
@@ -79,15 +78,15 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
         probe.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
     auto *scene = quick ? quick->findChild<songview::TimelineQuickScene *>() : nullptr;
     auto *overlay = checks::support::findWidgetDescendant<songview::PlayheadOverlay>(probe);
-    auto *ruler = checks::support::findWidgetDescendant<songview::TimeRuler>(probe);
     auto *roll = checks::support::findWidgetDescendant<songview::PianoRoll>(probe);
     auto *eventList = checks::support::findWidgetDescendant<EventListView>(probe);
     auto *drawer = probe.editorDrawer();
     auto *automation = drawer ? drawer->automationPage() : nullptr;
     auto *velocity = drawer ? drawer->velocityArea() : nullptr;
     auto *voiceChanges = drawer ? drawer->voiceChangeArea() : nullptr;
-    if (!quick || !scene || !overlay || !ruler || !roll || !eventList || !automation || !velocity ||
-        !voiceChanges) {
+    const songview::TimelineBandLayout &bandLayout = probe.timelineBandLayout();
+    if (!quick || !scene || !overlay || !bandLayout.geometry(songview::TimelineBand::Ruler) ||
+        !roll || !eventList || !automation || !velocity || !voiceChanges) {
         failures.append("forced QWidget playhead fallback did not expose its rendering surfaces");
         probe.hide();
         return failures;
@@ -106,7 +105,10 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
         checks::support::pumpQuick();
     };
     const auto playheadX = [&] {
-        return ruler->mapTo(&probe, QPoint(qRound(probe.timelinePlotOrigin()), 0)).x() +
+        const std::optional<songview::TimelineBandGeometry> &rulerGeometry =
+            probe.timelineBandLayout().geometry(songview::TimelineBand::Ruler);
+        return (rulerGeometry ? rulerGeometry->rect.x() + rulerGeometry->timelineOrigin
+                              : qRound(probe.timelinePlotOrigin())) +
                probe.contentX(timeline.tickForSample(timeline.sampleForTick(playheadTick)));
     };
 
@@ -125,7 +127,6 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
                     .arg(QString::fromLatin1(name)));
         }
     };
-    const songview::TimelineBandLayout &bandLayout = probe.timelineBandLayout();
     // Converted bands render in the Quick scene instead of native widgets;
     // their clip checks probe canonical SongView-local rectangles.
     const auto checkVisibleBodyRect = [&](const QRect &bandRect, const char *name) {
@@ -139,7 +140,10 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
         }
     };
     const auto checkRulerTriangle = [&](const QImage &image, bool pointsUp, const char *state) {
-        const QRect rulerRect = checks::support::widgetRectIn(*ruler, probe);
+        const QRect rulerRect = probe.timelineBandLayout()
+                                    .geometry(songview::TimelineBand::Ruler)
+                                    .value_or(songview::TimelineBandGeometry{})
+                                    .rect;
         const int triangleTop =
             rulerRect.bottom() - songview::playheadTriangleHeight() + layout::singlePixel();
         const int topWidth = checks::support::playheadWidthAt(
@@ -159,7 +163,10 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
         }
     };
 
-    checkVisibleBody(*ruler, "ruler");
+    checkVisibleBodyRect(bandLayout.geometry(songview::TimelineBand::Ruler)
+                             .value_or(songview::TimelineBandGeometry{})
+                             .rect,
+                         "ruler");
     checkVisibleBody(*roll, "piano roll");
     checkVisibleBodyRect(bandLayout.geometry(songview::TimelineBand::OtherEvents)
                              .value_or(songview::TimelineBandGeometry{})

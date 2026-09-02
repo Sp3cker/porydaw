@@ -139,6 +139,8 @@ class TimelineQuickView final : public QWidget
     // focusedBand() reads live QQuick active focus, never a cached flag.
     bool focusBand(TimelineBand band, Qt::FocusReason reason);
     std::optional<TimelineBand> focusedBand() const;
+    // SongView calls this before destroying its non-QObject ruler module.
+    void detachInputInteraction(TimelineBand band);
 
     void requestUpdate(PianoRollQuickDirtySet dirty);
     void requestTimelineUpdate(TimelineQuickDirtySet dirty);
@@ -175,7 +177,7 @@ class TimelineQuickView final : public QWidget
     void synchronizeKeyboardText();
     void synchronizeHoverChip();
 
-    QPointer<TimeRuler> m_ruler;
+    TimeRuler *m_ruler = nullptr;
     QPointer<PianoRoll> m_roll;
     QPointer<OtherStrip> m_otherEvents;
     QPointer<AutomationPage> m_automation;
@@ -188,7 +190,7 @@ class TimelineQuickView final : public QWidget
     QWidget *m_quickContainer = nullptr;
     std::array<TimelineQuickItem *, static_cast<std::size_t>(TimelineQuickLayer::Count)> m_items{};
     std::array<TimelineChromeItem *, 12> m_chromeItems{};
-    std::array<QPointer<QWidget>, 5> m_nativeChrome;
+    std::array<QPointer<QWidget>, 6> m_nativeChrome;
     TimelineBandLayout m_bandLayout;
     std::optional<qreal> m_hoverSongViewContentX;
     std::optional<qreal> m_editSongViewContentX;
