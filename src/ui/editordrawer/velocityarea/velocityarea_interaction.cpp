@@ -4,9 +4,6 @@
 #include <cmath>
 
 #include <QApplication>
-#include <QContextMenuEvent>
-#include <QFocusEvent>
-#include <QKeyEvent>
 
 #include "core/mid2agbtables.h"
 #include "ui/editordrawer/linearramp.h"
@@ -211,7 +208,6 @@ void VelocityArea::finishGesture(bool commit)
     pauseFollowScroll(false);
     m_interaction = Interaction::None;
     m_relativeActivated = false;
-    m_suppressContextMenu = false;
     clearPreview();
     if (hadVelocityGesture) {
         if (!commit) {
@@ -256,43 +252,37 @@ void VelocityArea::announcePreview()
     }
 }
 
-void VelocityArea::mousePressEvent(QMouseEvent *event)
+bool VelocityArea::pointerPress(const songview::TimelinePointerInput &input)
 {
-    if (!hasDocument()) {
-        event->ignore();
-        return;
-    }
-    setFocus(Qt::MouseFocusReason);
-    const QPointF position = event->position();
+    if (!hasDocument())
+        return false;
+    Q_ASSERT(m_inputHost);
+    m_inputHost->requestFocus(Qt::MouseFocusReason);
+    const QPointF position = input.position;
     m_pressPosition = position;
     m_previousPosition = position;
     m_selectionBeforePress = m_owner.selectionModel().noteSelection();
     m_pressedNote.reset();
-    if (event->button() == Qt::MiddleButton) {
+    if (input.button == Qt::MiddleButton) {
         m_interaction = Interaction::Pan;
         pauseFollowScroll(true);
-        event->accept();
-        return;
+        return true;
     }
-    if (event->button() == Qt::RightButton) {
+    if (input.button == Qt::RightButton) {
         if (const std::optional<DocNote> hit = notesAt(position, true))
             m_pressedNote = hit->noteId;
         m_interaction = Interaction::PendingBand;
-        m_controlPress = event->modifiers().testFlag(Qt::ControlModifier);
+        m_controlPress = input.modifiers.testFlag(Qt::ControlModifier);
         if (m_pressedNote && !m_controlPress && !contains(m_selectionBeforePress, *m_pressedNote))
             setSelection({*m_pressedNote});
-        m_suppressContextMenu = true;
         pauseFollowScroll(true);
-        event->accept();
-        return;
+        return true;
     }
-    if (event->button() != Qt::LeftButton) {
-        event->ignore();
-        return;
-    }
+    if (input.button != Qt::LeftButton)
+        return false;
     const bool inRulerPosition = inRuler(position);
     const bool detentUnlock = detentsUnlocked(
-        event->modifiers(), !inRulerPosition && event->modifiers().testFlag(Qt::ShiftModifier));
+        input.modifiers, !inRulerPosition && input.modifiers.testFlag(Qt::ShiftModifier));
     if (inRulerPosition) {
         const int velocity = detentUnlock ? exactVelocity(m_axis.yToVelocity(position.y()))
                                           : rulerVelocityAt(position);
@@ -307,24 +297,21 @@ void VelocityArea::mousePressEvent(QMouseEvent *event)
                 m_owner.updateVelocityGesture(updates);
             finishGesture(true);
         }
-        event->accept();
-        return;
+        return true;
     }
-    if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+    if (input.modifiers.testFlag(Qt::ShiftModifier)) {
         beginFrozenGesture(selectedNotes(), Interaction::Ramp, position, detentUnlock);
         updateRampPreview(position);
-        event->accept();
-        return;
+        return true;
     }
     const std::optional<DocNote> hit = notesAt(position, true);
     if (hit)
         m_pressedNote = hit->noteId;
-    m_controlPress = event->modifiers().testFlag(Qt::ControlModifier);
+    m_controlPress = input.modifiers.testFlag(Qt::ControlModifier);
     if (!hit) {
         beginVelocityPaint(position, detentUnlock);
         paintSelectedNodesBetween(position, position);
-        event->accept();
-        return;
+        return true;
     }
     if (m_controlPress) {
         std::vector<NoteId> selection = m_selectionBeforePress;
@@ -335,12 +322,12 @@ void VelocityArea::mousePressEvent(QMouseEvent *event)
         setSelection({hit->noteId});
     }
     beginFrozenGesture(selectedNotes(), Interaction::Relative, position, detentUnlock);
-    event->accept();
+    return true;
 }
 
-void VelocityArea::mouseMoveEvent(QMouseEvent *event)
+bool VelocityArea::pointerMove(const songview::TimelinePointerInput &input)
 {
-    const QPointF position = event->position();
+    const QPointF position = input.position;
     if (m_interaction == Interaction::None)
         updateHoveredNote(position);
     if (m_interaction == Interaction::Relative)
@@ -365,24 +352,22 @@ void VelocityArea::mouseMoveEvent(QMouseEvent *event)
         requestQuickUpdate();
     }
     m_previousPosition = position;
-    event->accept();
+    return true;
 }
 
-void VelocityArea::leaveEvent(QEvent *event)
+void VelocityArea::pointerLeave()
 {
     setHoveredNote(std::nullopt);
-    QWidget::leaveEvent(event);
 }
 
-void VelocityArea::mouseReleaseEvent(QMouseEvent *event)
+bool VelocityArea::pointerRelease(const songview::TimelinePointerInput &input)
 {
-    if (event->button() == Qt::MiddleButton && m_interaction == Interaction::Pan) {
+    if (input.button == Qt::MiddleButton && m_interaction == Interaction::Pan) {
         pauseFollowScroll(false);
         m_interaction = Interaction::None;
-        event->accept();
-        return;
+        return true;
     }
-    if (event->button() == Qt::RightButton &&
+    if (input.button == Qt::RightButton &&
         (m_interaction == Interaction::PendingBand || m_interaction == Interaction::Band)) {
         if (m_interaction == Interaction::Band) {
             std::vector<NoteId> selection =
@@ -404,93 +389,64 @@ void VelocityArea::mouseReleaseEvent(QMouseEvent *event)
             setSelection({});
         }
         finishGesture(false);
-        event->accept();
-        return;
+        return true;
     }
-    if (event->button() == Qt::LeftButton) {
-        if (m_interaction == Interaction::Paint) {
-            const bool commit = !m_frozen.empty();
-            if (!commit)
-                setSelection({});
-            finishGesture(commit);
-        } else if (m_interaction == Interaction::Ramp) {
-            finishGesture(m_pressPosition != m_previousPosition);
-        } else if (m_interaction == Interaction::Relative) {
-            if (!m_relativeActivated) {
-                if (m_controlPress) {
-                    std::vector<NoteId> selection = m_selectionBeforePress;
-                    if (m_pressedNote) {
-                        const auto it =
-                            std::find(selection.begin(), selection.end(), *m_pressedNote);
-                        if (it == selection.end())
-                            selection.push_back(*m_pressedNote);
-                        else
-                            selection.erase(it);
-                    }
-                    setSelection(selection);
-                } else if (m_pressedNote) {
-                    setSelection({*m_pressedNote});
-                } else {
-                    setSelection({});
+    if (input.button != Qt::LeftButton)
+        return false;
+    if (m_interaction == Interaction::Paint) {
+        const bool commit = !m_frozen.empty();
+        if (!commit)
+            setSelection({});
+        finishGesture(commit);
+    } else if (m_interaction == Interaction::Ramp) {
+        finishGesture(m_pressPosition != m_previousPosition);
+    } else if (m_interaction == Interaction::Relative) {
+        if (!m_relativeActivated) {
+            if (m_controlPress) {
+                std::vector<NoteId> selection = m_selectionBeforePress;
+                if (m_pressedNote) {
+                    const auto it = std::find(selection.begin(), selection.end(), *m_pressedNote);
+                    if (it == selection.end())
+                        selection.push_back(*m_pressedNote);
+                    else
+                        selection.erase(it);
                 }
+                setSelection(selection);
+            } else if (m_pressedNote) {
+                setSelection({*m_pressedNote});
+            } else {
+                setSelection({});
             }
-            finishGesture(m_relativeActivated);
         }
-        event->accept();
-        return;
+        finishGesture(m_relativeActivated);
     }
-    event->ignore();
+    return true;
 }
 
-void VelocityArea::wheelEvent(QWheelEvent *event)
+bool VelocityArea::wheel(const songview::TimelineWheelInput &input)
 {
-    const QPointF position = event->position();
-    const bool horizontal = event->modifiers().testFlag(Qt::ShiftModifier) ||
-                            event->angleDelta().x() != 0 || event->pixelDelta().x() != 0;
+    const bool horizontal = input.modifiers.testFlag(Qt::ShiftModifier) ||
+                            input.angleDelta.x() != 0 || input.pixelDelta.x() != 0;
     if (horizontal) {
-        const int delta =
-            event->pixelDelta().x() != 0 ? event->pixelDelta().x() : event->angleDelta().y();
+        const int delta = input.pixelDelta.x() != 0 ? input.pixelDelta.x() : input.angleDelta.y();
         m_owner.setEditorHorizontalScroll(m_live.horizontalScroll - double(delta));
-        event->accept();
-        return;
+        return true;
     }
-    if (!inRuler(position)) {
-        const songview::TimelineWheelInput wheel{
-            .position = event->position(),
-            .globalPosition = event->globalPosition(),
-            .pixelDelta = event->pixelDelta(),
-            .angleDelta = event->angleDelta(),
-            .modifiers = event->modifiers(),
-            .phase = event->phase(),
-            .inverted = event->inverted(),
-        };
-        m_owner.zoomTimelineAtWheel(wheel, position.x() - plotOrigin());
-        event->accept();
-        return;
-    }
-    event->ignore();
+    if (inRuler(input.position))
+        return false;
+    m_owner.zoomTimelineAtWheel(input, input.position.x() - plotOrigin());
+    return true;
 }
 
-void VelocityArea::keyPressEvent(QKeyEvent *event)
+bool VelocityArea::keyPress(const songview::TimelineKeyInput &input)
 {
-    if (event->key() == Qt::Key_Escape) {
-        cancelInteraction();
-        event->accept();
-        return;
-    }
-    QWidget::keyPressEvent(event);
+    if (input.key != Qt::Key_Escape)
+        return false;
+    cancelInteraction();
+    return true;
 }
 
-void VelocityArea::focusOutEvent(QFocusEvent *event)
+void VelocityArea::inputCancelled(songview::TimelineInputCancelReason)
 {
     cancelInteraction();
-    QWidget::focusOutEvent(event);
-}
-
-void VelocityArea::contextMenuEvent(QContextMenuEvent *event)
-{
-    if (m_suppressContextMenu)
-        event->accept();
-    else
-        event->ignore();
 }

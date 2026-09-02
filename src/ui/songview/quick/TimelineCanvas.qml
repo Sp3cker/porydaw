@@ -257,6 +257,11 @@ Item {
             textModel: timelineScene.velocityTextModel
             z: 7
         }
+        TimelineInputItem {
+            objectName: "timelineVelocityInput"
+            anchors.fill: parent
+            Accessible.description: accessibilityDescription
+        }
     }
 
     TimelineSceneBand {

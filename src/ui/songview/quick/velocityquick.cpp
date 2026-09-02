@@ -54,11 +54,12 @@ void VelocityArea::rebuildQuickChrome(songview::TimelineQuickScene &scene, const
     using namespace songview;
     constexpr TimelineQuickLayer chromeLayer = TimelineQuickLayer::VelocityChrome;
     const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
-    const QColor gutter = palette().alternateBase().color();
-    const QColor separator = palette().mid().color();
+    const QColor gutter = m_inputHost->palette().alternateBase().color();
+    const QColor separator = m_inputHost->palette().mid().color();
     addRect(scene, chromeLayer, full, background, full);
-    addRect(scene, chromeLayer, QRectF(0, 0, std::min(origin, width()), height()), gutter, full);
-    addVerticalLine(scene, chromeLayer, separatorX, 0, height(), lyt::singlePixel(), separator,
+    addRect(scene, chromeLayer, QRectF(0, 0, std::min<qreal>(origin, full.width()), full.height()),
+            gutter, full);
+    addVerticalLine(scene, chromeLayer, separatorX, 0, full.height(), lyt::singlePixel(), separator,
                     full);
 }
 
@@ -71,7 +72,7 @@ void VelocityArea::rebuildQuickAxis(songview::TimelineQuickScene &scene, const Q
     const qreal labelRight = std::max(labelLeft, qreal(separatorX - lyt::space(Space::Two)));
     const qreal labelWidth = labelRight - labelLeft;
     const qreal labelHeight = m_captionFontHeight;
-    const QColor selectedColor = palette().highlight().color();
+    const QColor selectedColor = m_inputHost->palette().highlight().color();
     const QColor labelColor = themes::color(themes::Role::song_view_primary_text);
     const bool hasHoveredNote = [this] {
         if (!m_hoveredNote)
@@ -183,10 +184,11 @@ void VelocityArea::rebuildQuickNotes(songview::TimelineQuickScene &scene, const 
     using namespace songview;
     constexpr TimelineQuickLayer stemsLayer = TimelineQuickLayer::VelocityStems;
     constexpr TimelineQuickLayer nodesLayer = TimelineQuickLayer::VelocityNodes;
-    const QColor trackColor =
-        m_live.trackColor.isValid() ? m_live.trackColor : palette().highlight().color();
+    const QColor trackColor = m_live.trackColor.isValid()
+                                  ? m_live.trackColor
+                                  : m_inputHost->palette().highlight().color();
     const QColor stemColor = mixTowardOklab(trackColor, Qt::black, 1.0 / 3.0);
-    const QColor selectedColor = palette().highlight().color();
+    const QColor selectedColor = m_inputHost->palette().highlight().color();
     const std::vector<NoteId> &selection = m_owner.selectionModel().noteSelection();
     const std::vector<DocNote> notes = primaryTrackNotes();
     const auto selected = [&selection, this](const DocNote &note) {
@@ -195,7 +197,8 @@ void VelocityArea::rebuildQuickNotes(songview::TimelineQuickScene &scene, const 
     };
     const auto selectedCount = std::count_if(notes.begin(), notes.end(), selected);
     const bool dimUnselectedNodes = selectedCount > 1;
-    const QColor unselectedNodeColor = dimUnselectedNodes ? palette().mid().color() : trackColor;
+    const QColor unselectedNodeColor =
+        dimUnselectedNodes ? m_inputHost->palette().mid().color() : trackColor;
     const qreal stemWidth = m_geometry.stemDipWidth / dpr;
     for (const DocNote &note : notes) {
         const bool isSelected = selected(note);
@@ -246,6 +249,8 @@ void VelocityArea::rebuildQuickTransient(songview::TimelineQuickScene &scene, co
 
 void VelocityArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
 {
+    if (!m_inputHost)
+        return;
     using namespace songview;
     constexpr std::array layers = {
         TimelineQuickLayer::VelocityChrome,    TimelineQuickLayer::VelocityAxis,
@@ -257,12 +262,12 @@ void VelocityArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
         resetLayer(scene, layer);
     scene.setVelocityTextRecords(std::span<const TimelineQuickTextModel::Record>{});
     ++m_diagnostics.contentBuildCount;
-    const QRectF full(0, 0, width(), height());
+    const QRectF full = m_inputHost->bounds();
     if (full.width() <= 0.0 || full.height() <= 0.0)
         return;
-    const qreal dpr = devicePixelRatioF();
+    const qreal dpr = m_inputHost->devicePixelRatio();
     const int origin = plotOrigin();
-    const QRectF plot(origin, 0, plotWidth(), height());
+    const QRectF plot(origin, 0, plotWidth(), full.height());
     const int separatorX = origin - lyt::singlePixel();
     rebuildQuickChrome(scene, full, origin, separatorX);
     rebuildQuickAxis(scene, full, separatorX);

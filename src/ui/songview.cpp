@@ -209,9 +209,7 @@ bool SongView::bandWidgetsMatchCanonicalLayout() const
     // Converted bands have no widget; their canonical rectangles come
     // directly from their parent-owned spacer/body geometry.
     return matches(TimelineBand::Roll, m_roll) &&
-           matches(TimelineBand::Automation, automation ? automation->scrollViewport() : nullptr) &&
-           matches(TimelineBand::Velocity,
-                   m_editorDrawer ? m_editorDrawer->velocityArea() : nullptr);
+           matches(TimelineBand::Automation, automation ? automation->scrollViewport() : nullptr);
 }
 
 // The native ruler controls overlay the gutter of the parent-owned ruler row.
@@ -309,7 +307,8 @@ SongView::SongView(QWidget *parent)
         *m_editorDrawer->velocityArea(), *m_editorDrawer->voiceChangeArea(), *this);
     // Converted drawer/strip interactions are SongView-owned, not native
     // chrome. Parenting them after the Quick host makes QObject teardown
-    // destroy and detach the host before either interaction module.
+    // destroy and detach the host before any interaction module.
+    m_editorDrawer->velocityArea()->setParent(this);
     m_editorDrawer->voiceChangeArea()->setParent(this);
     m_strip->setParent(this);
     m_quickView->lower();
@@ -337,8 +336,12 @@ SongView::SongView(QWidget *parent)
 
 SongView::~SongView()
 {
-    if (m_quickView)
-        m_quickView->detachInputInteraction(TimelineBand::Ruler);
+    if (!m_quickView)
+        return;
+    m_quickView->detachInputInteraction(TimelineBand::Ruler);
+    m_quickView->detachInputInteraction(TimelineBand::OtherEvents);
+    m_quickView->detachInputInteraction(TimelineBand::Velocity);
+    m_quickView->detachInputInteraction(TimelineBand::VoiceChanges);
 }
 
 bool SongView::advanceTrackActivity(const TrackActivityLevels &levels, float elapsedSeconds,

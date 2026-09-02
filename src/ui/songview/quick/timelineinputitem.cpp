@@ -268,6 +268,12 @@ void TimelineInputItem::mouseUngrabEvent()
     if (m_interaction)
         m_interaction->inputCancelled(TimelineInputCancelReason::PointerUngrabbed);
 }
+void TimelineInputItem::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry)
+{
+    QQuickItem::geometryChange(newGeometry, oldGeometry);
+    if (m_interaction && newGeometry.size() != oldGeometry.size())
+        m_interaction->hostAppearanceChanged();
+}
 
 void TimelineInputItem::itemChange(ItemChange change, const ItemChangeData &data)
 {

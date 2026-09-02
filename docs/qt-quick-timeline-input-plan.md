@@ -92,6 +92,23 @@ The six baseline QWidget input surfaces are:
   wheel adapters disappear in the next band conversions, and the ruler font and mask-hole logic
   each have deliberately separate ownership or a single use.
 
+### Phase 5 implementation record
+
+- `VelocityArea` is now a `QObject` interaction attached to `timelineVelocityInput`; the native
+  detent toggle and resize handle remain in `DrawerSections`.
+- `deno task build:checks` passed. Focused checks `host-adapter`, `host-integration`,
+  `velocity-page`, `editor-drawer`, `rendering-playhead`, `rollwindowingcheck`, and
+  `mainwindow-routing` pass.
+- `host-adapter` delivers a real press/move/release sequence through the `QQuickWindow` and proves
+  that `timelineVelocityInput` focus loss and pointer-ungrab cancel previews without changing the
+  document revision or undo history. It also verifies canonical input bounds, font, palette,
+  accessibility, and native-window masking.
+- Unconverted band state: `PianoRoll` and `Automation` continue to render but remain deliberately
+  noninteractive in Phase 5. `rollcheck` retains four PianoRoll/pitch-bend input failures, and
+  `automation-gestures` retains its native AutomationCanvas hover/move failures.
+- Independent thermo-nuclear and Qt 6 reviews passed after detached-host rebuild guards, explicit
+  converted-interaction teardown, and direct Quick focus/ungrab coverage were added.
+
 ## Goal
 
 Make the existing Qt Quick timeline scene own raw pointer, wheel, hover, focus, and keyboard input

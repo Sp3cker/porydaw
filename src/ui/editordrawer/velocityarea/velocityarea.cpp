@@ -7,11 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include <QEvent>
 #include <QFontMetrics>
-#include <QKeyEvent>
-#include <QObject>
-#include <QResizeEvent>
 
 #include "ui/editordrawer/velocityarea/detail.h"
 #include "ui/keymap.h"
@@ -66,45 +62,43 @@ void VelocityArea::Geometry::resolve()
 }
 void VelocityArea::rebuildFonts()
 {
-    m_captionFont = typography::noteName(font());
+    Q_ASSERT(m_inputHost);
+    m_captionFont = typography::noteName(m_inputHost->font());
     m_boldCaptionFont = typography::bold(m_captionFont);
     m_captionFontHeight = QFontMetrics(m_captionFont).height();
 }
 
-VelocityArea::VelocityArea(SongView &owner, QWidget *parent) : QWidget(parent), m_owner(owner)
+VelocityArea::VelocityArea(SongView &owner, QObject *parent) : QObject(parent), m_owner(owner)
 {
     m_geometry.resolve();
+}
+
+void VelocityArea::attachInputHost(songview::TimelineInputHost &host)
+{
+    Q_ASSERT(!m_inputHost);
+    m_inputHost = &host;
     rebuildFonts();
-    setAutoFillBackground(false);
-    setMouseTracking(true);
-    setFocusPolicy(Qt::ClickFocus);
+    m_geometry.resolve();
     rebuildAxis();
-    qApp->installEventFilter(this);
+    requestQuickUpdate();
 }
 
-bool VelocityArea::event(QEvent *event)
+void VelocityArea::detachInputHost(songview::TimelineInputHost &host)
 {
-    if (event->type() == QEvent::UngrabMouse) {
-        cancelInteraction();
-    } else if (event->type() == QEvent::FontChange) {
-        rebuildFonts();
-        m_geometry.resolve();
-        rebuildVisualState();
-    }
-    return QWidget::event(event);
+    Q_ASSERT(m_inputHost == &host);
+    if (m_inputHost != &host)
+        return;
+    cancelInteraction();
+    m_inputHost = nullptr;
 }
 
-bool VelocityArea::eventFilter(QObject *watched, QEvent *event)
+void VelocityArea::hostAppearanceChanged()
 {
-    if (m_axis.mode() == VelocityAxis::Mode::Intrinsic &&
-        (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease)) {
-        const int key = static_cast<QKeyEvent *>(event)->key();
-        if (key == Qt::Key_Control || key == Qt::Key_Shift || key == Qt::Key_Alt ||
-            key == Qt::Key_Meta) {
-            requestQuickUpdate();
-        }
-    }
-    return QWidget::eventFilter(watched, event);
+    if (!m_inputHost)
+        return;
+    rebuildFonts();
+    m_geometry.resolve();
+    rebuildVisualState();
 }
 
 void VelocityArea::songChanged()
@@ -161,11 +155,10 @@ void VelocityArea::cancelInteraction()
         hadVelocityGesture && document && m_live.documentRevision != document->revision();
     const std::vector<NoteId> selectionBeforePress = m_selectionBeforePress;
     pauseFollowScroll(false);
-    m_owner.selectionModel().setNoteSelection(selectionBeforePress);
     m_interaction = Interaction::None;
     m_relativeActivated = false;
-    m_suppressContextMenu = false;
     clearPreview();
+    m_owner.selectionModel().setNoteSelection(selectionBeforePress);
     if (hadVelocityGesture) {
         m_owner.cancelVelocityGesture();
         if (staleVelocityGesture)
@@ -214,7 +207,8 @@ int VelocityArea::plotOrigin() const
 
 int VelocityArea::plotWidth() const
 {
-    return std::max(0, width() - plotOrigin());
+    Q_ASSERT(m_inputHost);
+    return std::max(0, qRound(m_inputHost->bounds().width()) - plotOrigin());
 }
 
 void VelocityArea::clearTrackHeaderSelection()
@@ -242,13 +236,6 @@ void VelocityArea::requestQuickUpdate()
     m_owner.requestTimelineQuickUpdate(songview::TimelineQuickDirty::Velocity);
 }
 
-void VelocityArea::resizeEvent(QResizeEvent *event)
-{
-    QWidget::resizeEvent(event);
-    rebuildAxis();
-    requestQuickUpdate();
-}
-
 void VelocityArea::rebuildVisualState()
 {
     rebuildAxis();
@@ -257,6 +244,8 @@ void VelocityArea::rebuildVisualState()
 
 void VelocityArea::rebuildAxis()
 {
+    if (!m_inputHost)
+        return;
     std::vector<uint8_t> activeValues;
     VelocityMap context = currentContext();
     if (m_hoveredNote) {
@@ -273,7 +262,7 @@ void VelocityArea::rebuildAxis()
             activeValues.push_back(displayedVelocity(note));
     }
     const VelocityAxisGeometry geometry{
-        double(height()),
+        m_inputHost->bounds().height(),
         double(layout::space(layout::Space::Three)),
         double(std::max(0, plotOrigin() - layout::singlePixel())),
         double(layout::space(layout::Space::Two)),
@@ -318,8 +307,11 @@ bool VelocityArea::detentsUnlocked(Qt::KeyboardModifiers modifiers, bool allowSh
 
 void VelocityArea::publishAccessibleDescription()
 {
+    if (!m_inputHost)
+        return;
     const std::string_view description = m_axis.accessibleDescription();
-    setAccessibleDescription(QString::fromLatin1(description.data(), int(description.size())));
+    m_inputHost->setAccessibilityDescription(
+        QString::fromLatin1(description.data(), int(description.size())));
 }
 
 // One compatible PSG map lets users edit intrinsic levels. Unresolved, non-PSG,

@@ -190,6 +190,12 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
         qFatal("Qt Quick timeline QML has no input item 'timelineRulerInput'");
     rulerInput->setInteraction(m_ruler);
     m_inputItems[timelineBandIndex(TimelineBand::Ruler)] = rulerInput;
+    TimelineInputItem *const velocityInput =
+        root->findChild<TimelineInputItem *>(QStringLiteral("timelineVelocityInput"));
+    if (!velocityInput)
+        qFatal("Qt Quick timeline QML has no input item 'timelineVelocityInput'");
+    velocityInput->setInteraction(m_velocity.data());
+    m_inputItems[timelineBandIndex(TimelineBand::Velocity)] = velocityInput;
     TimelineInputItem *const voiceChangesInput =
         root->findChild<TimelineInputItem *>(QStringLiteral("timelineVoiceChangesInput"));
     if (!voiceChangesInput)
@@ -213,7 +219,8 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
         "velocityResizeHandle", "voiceChangesResizeHandle", "automationResizeHandle",
         "automationDrawerBar",  "velocityDetentToggle",
     };
-    QWidget *const drawerSections = m_velocity->parentWidget();
+    QWidget *const drawerSections =
+        m_songView->findChild<QWidget *>(QStringLiteral("drawerSections"));
     for (std::size_t index = 0; index < nativeChromeNames.size(); ++index) {
         QWidget *const chrome = drawerSections ? drawerSections->findChild<QWidget *>(
                                                      QString::fromLatin1(nativeChromeNames[index]),

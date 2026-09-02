@@ -551,12 +551,11 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         // Band widgets are overlays, not canonical sources: moving them must
         // not drag the Quick host, whose geometry is the canonical union.
         const QRect widgetMoveHostBefore = quick->geometry();
-        // Three converted bands have no native widget to displace; the three
+        // Four converted bands have no native widget to displace; the two
         // retained widget bands still must not drag the Quick host.
-        const std::array<QWidget *, 3> guideBands = {
+        const std::array<QWidget *, 2> guideBands = {
             roll,
             automationViewport,
-            velocity,
         };
         std::array<QRect, guideBands.size()> guideBandGeometries;
         const int hostShift = layout::space(layout::Space::One);
@@ -818,7 +817,10 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
         view.setDrawerActivePage(EditorDrawerPage::Velocity);
         checks::support::pumpQuick();
-        checkVisibleBand(*velocity, "velocity");
+        checkVisibleBandRect(bandLayout.geometry(songview::TimelineBand::Velocity)
+                                 .value_or(songview::TimelineBandGeometry{})
+                                 .rect,
+                             "velocity");
         view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
         view.setDrawerActivePage(EditorDrawerPage::VoiceChanges);
         checks::support::pumpQuick();
@@ -874,7 +876,10 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
                 "lifecycle republish dropped the QML roll band geometry or window mask");
         }
         checkVisibleBand(*roll, "piano roll after lifecycle republish");
-        checkVisibleBand(*velocity, "velocity lane after lifecycle republish");
+        checkVisibleBandRect(bandLayout.geometry(songview::TimelineBand::Velocity)
+                                 .value_or(songview::TimelineBandGeometry{})
+                                 .rect,
+                             "velocity lane after lifecycle republish");
         // Hover must be checked while the automation page is the explicitly
         // shown, active surface — before the saved editor state restores the
         // fixture defaults and hides the sibling sections again.

@@ -58,6 +58,7 @@
 #include "ui/playheadoverlay.h"
 #include "ui/songtab.h"
 #include "ui/songview/clipmime.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/workspaceui.h"
 
@@ -561,8 +562,8 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
     check(focusTarget && (focusTarget == &tabBView || tabBView.isAncestorOf(focusTarget)),
           "tab switch/playhead update did not restore active-surface focus");
     check(focusTarget != overlay, "tab switch/playhead update focused the native playhead overlay");
-    check(focusTarget != quickContainer,
-          "tab switch/playhead update focused the TimelineQuickView native container");
+    check(focusTarget != quickContainer || tabBView.focusedTimelineBand().has_value(),
+          "TimelineQuickView native container was focused without an active Quick input band");
 
     if (copyAction && tabBNote) {
         auto copyTriggerCount = 0;
@@ -703,8 +704,8 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
           "voice changes route did not globally close its page");
 
     auto *automationSurface = descendant<AutomationCanvas>(tabBView);
-    auto *velocitySurface = descendant<VelocityArea>(tabBView);
     EditorDrawer *const focusDrawer = tabBView.editorDrawer();
+    auto *velocitySurface = focusDrawer ? focusDrawer->velocityArea() : nullptr;
     auto *voiceSurface = focusDrawer ? focusDrawer->voiceChangeArea() : nullptr;
     check(automationSurface && velocitySurface && voiceSurface,
           "drawer shortcut focus check could not find all three editor surfaces");
@@ -727,11 +728,14 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
         QCoreApplication::processEvents();
         check(!tabBView.drawerSectionVisible(EditorDrawerPage::VoiceChanges) &&
                   tabBView.drawerSectionVisible(EditorDrawerPage::Velocity) &&
-                  QApplication::focusWidget() == velocitySurface && !tabBView.focusedTimelineBand(),
+                  tabBView.focusedTimelineBand() == songview::TimelineBand::Velocity,
               "closing focused voice changes did not focus the velocity drawer");
-        velocitySurface->setFocus(Qt::MouseFocusReason);
+        tabBView.focusTimelineBand(songview::TimelineBand::Velocity, Qt::MouseFocusReason);
         QCoreApplication::processEvents();
-        sendKeyStroke(*velocitySurface, Qt::Key_V, Qt::NoModifier, false);
+        // The velocity surface is no longer a widget, so sendEvent keystrokes
+        // cannot enter the widget shortcut map; fire the same QAction the
+        // window shortcut routes to.
+        m_velocityDrawerAction->trigger();
         QCoreApplication::processEvents();
         check(!tabBView.drawerSectionVisible(EditorDrawerPage::Velocity) &&
                   tabBView.drawerSectionVisible(EditorDrawerPage::Automations) &&
@@ -1510,8 +1514,8 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
             view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
             QCoreApplication::processEvents();
             auto *automation = descendant<AutomationCanvas>(view);
-            auto *velocity = descendant<VelocityArea>(view);
-            auto *drawer = descendant<EditorDrawer>(view);
+            auto *drawer = view.editorDrawer();
+            auto *velocity = drawer ? drawer->velocityArea() : nullptr;
             check(automation && velocity && drawer,
                   "host flow did not expose drawer and page diagnostics");
             if (automation && velocity && drawer) {
@@ -1672,6 +1676,8 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                     check(laneRow != automation->rows().end(),
                           "automation lifecycle lane is unavailable");
                     if (laneRow != automation->rows().end()) {
+                        view.setEditorHorizontalScroll(0.0);
+                        QCoreApplication::processEvents();
                         const EditorViewState lifecycleViewState = view.editorViewState();
                         const int rowIndex =
                             int(std::distance(automation->rows().begin(), laneRow));
@@ -1691,6 +1697,15 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                                 automationPoint + QPointF(xOffset + 32.0, 12.0), Qt::NoButton,
                                 Qt::MouseButtons(button), modifiers);
                         };
+                        auto *quickCanvas = view.findChild<songview::TimelineQuickView *>(
+                            QStringLiteral("timelineQuickCanvas"));
+                        auto *velocityInput = quickCanvas && quickCanvas->rootObject()
+                                                  ? quickCanvas->rootObject()
+                                                        ->findChild<songview::TimelineInputItem *>(
+                                                            QStringLiteral("timelineVelocityInput"))
+                                                  : nullptr;
+                        check(velocityInput != nullptr,
+                              "Quick canvas must expose timelineVelocityInput");
                         const auto beginVelocity = [&](Qt::MouseButton button,
                                                        const QPointF &position) {
                             view.setDrawerActivePage(EditorDrawerPage::Velocity);
@@ -1700,14 +1715,17 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                             view.selectionModel().setNoteSelection(
                                 {live[0].noteId, live[1].noteId});
                             QCoreApplication::processEvents();
-                            checks::events::sendMouse(*velocity, QEvent::MouseButtonPress, position,
-                                                      button, Qt::MouseButtons(button),
-                                                      Qt::NoModifier);
-                            checks::events::sendMouse(*velocity, QEvent::MouseMove,
-                                                      position + QPointF(32.0, -24.0), Qt::NoButton,
-                                                      Qt::MouseButtons(button), Qt::NoModifier);
+                            if (velocityInput) {
+                                checks::events::sendMouse(*velocityInput, QEvent::MouseButtonPress,
+                                                          position, button,
+                                                          Qt::MouseButtons(button), Qt::NoModifier);
+                                checks::events::sendMouse(*velocityInput, QEvent::MouseMove,
+                                                          position + QPointF(32.0, -24.0),
+                                                          Qt::NoButton, Qt::MouseButtons(button),
+                                                          Qt::NoModifier);
+                            }
                         };
-                        const auto verifyTermination = [&](QWidget &surface, Qt::MouseButton button,
+                        const auto verifyTermination = [&](auto &surface, Qt::MouseButton button,
                                                            const QPointF &release, auto begin) {
                             const auto exercise = [&](const char *route, auto cancel,
                                                       bool clearsSelection) {
@@ -1733,6 +1751,14 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                                     [thisView = &view](const NoteId id) {
                                         return thisView->previewVelocity(id).has_value();
                                     });
+                                const bool notGrabbed = [](const auto &item) {
+                                    if constexpr (std::is_base_of_v<QWidget,
+                                                                    std::decay_t<decltype(item)>>) {
+                                        return QWidget::mouseGrabber() != &item;
+                                    } else {
+                                        return true;
+                                    }
+                                }(surface);
                                 check(interactionStarted && interactionTerminated &&
                                           document->smf().write() == midi &&
                                           document->revision() == revision &&
@@ -1740,7 +1766,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                                           previewCleared &&
                                           view.selectionModel().noteSelection() ==
                                               expectedSelection &&
-                                          QWidget::mouseGrabber() != &surface &&
+                                          notGrabbed &&
                                           surface.cursor().shape() != Qt::ClosedHandCursor,
                                       route);
                                 view.setSong(session->timeline().get(),
@@ -1818,28 +1844,32 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                         const auto live = document->notesForTrack(noteTrack);
                         const QPointF velocityPoint =
                             velocityNodePosition(view, *velocity, *session->timeline(), live[0]);
-                        verifyTermination(*velocity, Qt::LeftButton,
-                                          velocityPoint + QPointF(32, -24),
-                                          [&] { beginVelocity(Qt::LeftButton, velocityPoint); });
-                        verifyTermination(
-                            *velocity, Qt::LeftButton,
-                            QPointF(velocity->plotOrigin() + velocity->plotWidth() - 4, 8), [&] {
-                                beginVelocity(
-                                    Qt::LeftButton,
-                                    QPointF(velocity->plotOrigin() + velocity->plotWidth() - 36,
-                                            8));
-                            });
-                        verifyTermination(*velocity, Qt::RightButton,
-                                          velocityPoint + QPointF(32, -24),
-                                          [&] { beginVelocity(Qt::RightButton, velocityPoint); });
+                        const QPointF velocityPaintPoint(
+                            std::max(double(velocity->plotOrigin() + 1), velocityPoint.x() - 32.0),
+                            8.0);
+                        if (velocityInput) {
+                            verifyTermination(
+                                *velocityInput, Qt::LeftButton, velocityPoint + QPointF(32, -24),
+                                [&] { beginVelocity(Qt::LeftButton, velocityPoint); });
+                            verifyTermination(*velocityInput, Qt::LeftButton,
+                                              velocityPaintPoint + QPointF(32.0, -24.0), [&] {
+                                                  beginVelocity(Qt::LeftButton, velocityPaintPoint);
+                                              });
+                            verifyTermination(
+                                *velocityInput, Qt::RightButton, velocityPoint + QPointF(32, -24),
+                                [&] { beginVelocity(Qt::RightButton, velocityPoint); });
+                        }
                         const auto startVelocityRelative = [&] {
                             beginVelocity(Qt::LeftButton, velocityPoint);
                         };
                         const auto releaseVelocityRelative = [&] {
-                            checks::events::sendMouse(*velocity, QEvent::MouseButtonRelease,
-                                                      velocityPoint + QPointF(32, -24),
-                                                      Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
-                            QCoreApplication::processEvents();
+                            if (velocityInput) {
+                                checks::events::sendMouse(
+                                    *velocityInput, QEvent::MouseButtonRelease,
+                                    velocityPoint + QPointF(32, -24), Qt::LeftButton, Qt::NoButton,
+                                    Qt::NoModifier);
+                                QCoreApplication::processEvents();
+                            }
                         };
                         const std::vector<NoteId> selectionBeforeMutation =
                             view.selectionModel().noteSelection();

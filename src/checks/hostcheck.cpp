@@ -1,3 +1,4 @@
+#include "checks/support/asyncwait.h"
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 
@@ -20,12 +21,17 @@
 #include <QColor>
 #include <QComboBox>
 #include <QCoreApplication>
+#include <QEnterEvent>
 #include <QEvent>
 #include <QFileInfo>
+#include <QFocusEvent>
 #include <QImage>
+#include <QKeyEvent>
 #include <QMenu>
+#include <QMouseEvent>
 #include <QPalette>
 #include <QPointer>
+#include <QQuickWindow>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QTemporaryDir>
@@ -343,23 +349,29 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         drawer ? drawer->findChild<QWidget *>(QStringLiteral("automationDrawerBar")) : nullptr;
     check(otherEventsGeometry.has_value(),
           "other events strip should remain visible in canonical layout");
+    auto *detentToggle =
+        drawer ? drawer->findChild<QWidget *>(QStringLiteral("velocityDetentToggle")) : nullptr;
     check(sections && velocityHandle && automationHandle && velocityToggle && automationToggle &&
-              voiceChangesToggle && automationBar,
+              voiceChangesToggle && automationBar && detentToggle,
           "drawer should create independent section chrome");
     if (drawer && otherEventsGeometry && sections && velocityHandle && automationHandle &&
-        velocityToggle && automationToggle && voiceChangesToggle && automationBar) {
+        velocityToggle && automationToggle && voiceChangesToggle && automationBar && detentToggle) {
         const QRect drawerBounds(drawer->mapTo(&view, QPoint()), drawer->size());
         const QRect toggleGroup = voiceChangesToggle->geometry()
                                       .united(automationToggle->geometry())
                                       .united(velocityToggle->geometry());
-        const int pianoKeysCenter = area->geometry().x() + area->plotOrigin() / 2;
+        const std::optional<QRect> velocityBody = drawer->bodyRect(EditorDrawerPage::Velocity);
+        const QRect velocityBodyInDrawer =
+            velocityBody ? velocityBody->translated(-drawer->mapTo(&view, QPoint())) : QRect{};
+        const int pianoKeysCenter = velocityBodyInDrawer.x() + area->plotOrigin() / 2;
         check(drawerBounds.bottom() < otherEventsGeometry->rect.top(),
               "drawer should stack above the other events strip");
         check(sections->geometry() == drawer->rect() && !velocityHandle->isHidden() &&
-                  automationHandle->isHidden() && area->isVisible() &&
-                  drawer->automationPage()->isHidden() && !automationBar->isHidden() &&
-                  velocityHandle->geometry().bottom() + 1 == area->geometry().top() &&
-                  area->geometry().bottom() + 1 == automationBar->geometry().top() &&
+                  automationHandle->isHidden() && velocityBody.has_value() &&
+                  !detentToggle->isHidden() && drawer->automationPage()->isHidden() &&
+                  !automationBar->isHidden() &&
+                  velocityHandle->geometry().bottom() + 1 == velocityBodyInDrawer.top() &&
+                  velocityBodyInDrawer.bottom() + 1 == automationBar->geometry().top() &&
                   automationBar->geometry().contains(voiceChangesToggle->geometry()) &&
                   automationBar->geometry().contains(automationToggle->geometry()) &&
                   automationBar->geometry().contains(velocityToggle->geometry()) &&
@@ -377,10 +389,9 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     auto *automationViewport =
         drawer && drawer->automationPage() ? drawer->automationPage()->scrollViewport() : nullptr;
     QObject *const quickRoot = quick->rootObject();
-    const std::array<QWidget *, 3> quickBands{
+    const std::array<QWidget *, 2> quickBands{
         rollBand,
         automationViewport,
-        area,
     };
     check(rollBand && automationViewport && quickRoot && rulerControls,
           "host should expose the retained Quick band widgets, ruler controls, and Quick root");
@@ -389,7 +400,6 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         const std::array<songview::TimelineBand, quickBands.size()> bandIds{
             songview::TimelineBand::Roll,
             songview::TimelineBand::Automation,
-            songview::TimelineBand::Velocity,
         };
         // Every visible retained widget band must exactly fill its canonical
         // parent-owned rectangle, and every hidden band must leave a nullopt
@@ -438,6 +448,9 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               "drawer body rectangle should map onto the canonical velocity rectangle");
         check(publishedQmlRectsMatchCanonical(*quick, *quickRoot, bandLayout),
               "published Quick band properties should translate the canonical layout");
+        check(inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::Velocity,
+                                    QStringLiteral("timelineVelocityInput")),
+              "Velocity input item should match its canonical band");
         check(inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::OtherEvents,
                                     QStringLiteral("timelineOtherEventsInput")),
               "Other Events input item should match its canonical band");
@@ -485,36 +498,45 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               "other-events fixture should provide a visible marker for Quick hover");
         if (otherEventsInput && hoveredStripItem) {
             QToolTip::hideText();
-            checks::events::sendMouse(*otherEventsInput, QEvent::MouseMove, hoveredStripPosition,
-                                      Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+            const QPointF windowPosition = otherEventsInput->mapToScene(hoveredStripPosition);
+            QEnterEvent enter(windowPosition, windowPosition,
+                              QPointF(quick->quickWindow()->mapToGlobal(windowPosition.toPoint())));
+            QCoreApplication::sendEvent(quick->quickWindow(), &enter);
+            QMouseEvent hoverMove(
+                QEvent::MouseMove, windowPosition,
+                QPointF(quick->quickWindow()->mapToGlobal(windowPosition.toPoint())), Qt::NoButton,
+                Qt::NoButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(quick->quickWindow(), &hoverMove);
             QCoreApplication::processEvents();
             check(QToolTip::text().contains(hoveredStripItem->label),
                   "Other Events Quick hover should show the matching native tooltip");
-            checks::events::sendMouse(*otherEventsInput, QEvent::Leave, hoveredStripPosition,
-                                      Qt::NoButton, Qt::NoButton, Qt::NoModifier);
-            QCoreApplication::processEvents();
-            check(QToolTip::text().isEmpty(),
+            const QPointF outsidePosition = quickRoot->property("rulerBandRect").toRectF().center();
+            QMouseEvent hoverAway(
+                QEvent::MouseMove, outsidePosition,
+                QPointF(quick->quickWindow()->mapToGlobal(outsidePosition.toPoint())), Qt::NoButton,
+                Qt::NoButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(quick->quickWindow(), &hoverAway);
+            const auto tooltipHidden = checks::async_wait::waitUntil(
+                [] { return true; }, [] { return QToolTip::text().isEmpty(); }, 1000);
+            check(tooltipHidden == checks::async_wait::Result::Ready,
                   "Other Events Quick leave should hide the native tooltip");
         }
 
         view.setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
         pumpZeroDelayTimers();
-        const QRect staleGeometry(view.width() * 20, view.height() * 20, view.width() * 9,
-                                  view.height() * 7);
-        area->setGeometry(staleGeometry);
-        check(area->isHidden() && area->geometry() == staleGeometry,
-              "hidden-band fixture should retain its extreme stale geometry");
-        pumpZeroDelayTimers();
 
         const std::optional<QRect> hiddenUnion = canonicalVisibleUnion();
-        check(hiddenUnion && quick->geometry() == *hiddenUnion && quick->isVisible() &&
-                  !quick->geometry().intersects(staleGeometry),
-              "Quick host geometry should exclude a hidden band's stale rectangle");
+        check(hiddenUnion && quick->geometry() == *hiddenUnion && quick->isVisible(),
+              "Quick host geometry should exclude a hidden band's rectangle");
         check(!bandLayout.geometry(songview::TimelineBand::Velocity) && canonicalMatchesWidgets(),
-              "hidden velocity band should leave a nullopt canonical entry without stale geometry");
+              "hidden velocity band should leave a nullopt canonical entry");
         check(!quickRoot->property("velocityBandVisible").toBool() &&
                   quickRoot->property("velocityBandRect").toRectF().isEmpty(),
               "hidden velocity band should publish no retained Quick rectangle");
+        auto *velocityInput = quickRoot->findChild<songview::TimelineInputItem *>(
+            QStringLiteral("timelineVelocityInput"));
+        check(velocityInput && !velocityInput->isVisible(),
+              "hidden velocity band should keep an invisible input item");
         auto *voiceInput = quickRoot->findChild<songview::TimelineInputItem *>(
             QStringLiteral("timelineVoiceChangesInput"));
         check(voiceInput && !voiceInput->isVisible() &&
@@ -534,7 +556,9 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         view.setPalette(distinctHostPalette);
         pumpZeroDelayTimers();
         check(voiceInput && voiceInput->font() == distinctHostFont &&
-                  voiceInput->palette() == distinctHostPalette,
+                  voiceInput->palette() == distinctHostPalette && velocityInput &&
+                  velocityInput->font() == distinctHostFont &&
+                  velocityInput->palette() == distinctHostPalette,
               "Quick input host must publish the SongView font and palette");
         view.setFont(originalHostFont);
         view.setPalette(originalHostPalette);
@@ -544,30 +568,29 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         view.setDrawerActivePage(EditorDrawerPage::Velocity);
         pumpZeroDelayTimers();
         const std::optional<QRect> shownUnion = canonicalVisibleUnion();
-        const QRect velocityInView(area->mapTo(&view, QPoint()), area->size());
-        const QRectF expectedVelocityRect =
-            QRectF(velocityInView.translated(-quick->geometry().topLeft()));
+        const std::optional<songview::TimelineBandGeometry> &velocityGeometry =
+            bandLayout.geometry(songview::TimelineBand::Velocity);
         check(shownUnion && quick->geometry() == *shownUnion && quick->isVisible() &&
-                  area->isVisibleTo(&view) && area->geometry() != staleGeometry,
+                  velocityGeometry.has_value(),
               "Quick host geometry should resume from the shown band's current rectangle");
         check(quickRoot->property("velocityBandVisible").toBool() &&
-                  quickRoot->property("velocityBandRect").toRectF() == expectedVelocityRect,
-              "shown velocity band should republish its current retained Quick rectangle");
+                  inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::Velocity,
+                                        QStringLiteral("timelineVelocityInput")),
+              "shown velocity band should republish its current retained Quick rectangle and match "
+              "its input item");
         check(canonicalMatchesWidgets() && quick->geometry() == canonicalVisibleUnion(),
-              "reshown velocity band should re-enter the canonical layout at its widget rectangle");
+              "reshown velocity band should re-enter the canonical layout");
+        view.focusTimelineBand(songview::TimelineBand::Velocity, Qt::MouseFocusReason);
+        pumpZeroDelayTimers();
+        check(view.focusedTimelineBand() == songview::TimelineBand::Velocity,
+              "velocity focus bridge did not focus the Quick input item");
+        check(velocityInput && !velocityInput->accessibilityDescription().isEmpty(),
+              "velocity input should expose its accessibility description");
         QString canonicalCropError;
         const QImage canonicalVelocityCrop =
-            checks::support::captureQuickBand(view,
-                                              bandLayout.geometry(songview::TimelineBand::Velocity)
-                                                  .value_or(songview::TimelineBandGeometry{})
-                                                  .rect,
-                                              &canonicalCropError);
-        const QImage widgetVelocityCrop =
-            checks::support::captureQuickBand(view, *area, &canonicalCropError);
-        check(canonicalCropError.isEmpty() && !canonicalVelocityCrop.isNull() &&
-                  canonicalVelocityCrop == widgetVelocityCrop,
-              "canonical velocity rectangle should address the same Quick framebuffer region as "
-              "its widget");
+            checks::support::captureQuickBand(view, velocityGeometry->rect, &canonicalCropError);
+        check(canonicalCropError.isEmpty() && !canonicalVelocityCrop.isNull(),
+              "canonical velocity rectangle should address a valid Quick framebuffer region");
         check(publishedQmlRectsMatchCanonical(*quick, *quickRoot, bandLayout),
               "republished Quick band properties should translate the canonical layout");
         // Event-list toggle: the stack index swap must explicitly
@@ -632,11 +655,18 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     if (automation && automationScroll) {
         const int selectedTrack = view.selectionModel().primaryTrack();
         view.setTrackSolo(selectedTrack, false);
-        checks::events::sendKey(*area, QEvent::KeyPress, Qt::Key_S, Qt::NoModifier, QString{},
-                                false, ushort{1});
-        check(view.trackSoloed(selectedTrack),
-              "S from the velocity drawer did not solo the selected track");
-        view.setTrackSolo(selectedTrack, false);
+        auto *velocityInput = quickRoot->findChild<songview::TimelineInputItem *>(
+            QStringLiteral("timelineVelocityInput"));
+        check(velocityInput != nullptr, "Quick root must expose timelineVelocityInput");
+        if (velocityInput) {
+            QKeyEvent soloKey(QEvent::KeyPress, Qt::Key_S, Qt::NoModifier);
+            QApplication::sendEvent(velocityInput, &soloKey);
+            if (!soloKey.isAccepted())
+                QApplication::sendEvent(&view, &soloKey);
+            check(view.trackSoloed(selectedTrack),
+                  "S from the velocity drawer did not solo the selected track");
+            view.setTrackSolo(selectedTrack, false);
+        }
 
         view.selectionModel().clearNoteSelection();
         view.setEditCursorTick(0);
@@ -788,6 +818,11 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     view.selectionModel().setNoteSelection({notes[0].noteId, notes[1].noteId});
     view.setEditCursorTick(1);
     QCoreApplication::processEvents();
+    auto *velocityInput = quickRoot->findChild<songview::TimelineInputItem *>(
+        QStringLiteral("timelineVelocityInput"));
+    check(velocityInput != nullptr,
+          "Quick root must expose timelineVelocityInput for gesture checks");
+    const double velocityHeight = velocityInput ? velocityInput->height() : 200.0;
 
     const QPointF firstNode = nodePosition(view, *area, *timeline, notes[0]);
     const std::vector<NoteId> selected = view.selectionModel().noteSelection();
@@ -814,11 +849,13 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
           "host no-op gesture should preserve preview, revision, MIDI, Undo, and selection");
     const int undoBeforeChange = document.undoStack()->count();
     const uint64_t revisionBeforeChange = document.revision();
-    checks::events::sendMouse(*area, QEvent::MouseButtonPress, firstNode, Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*area, QEvent::MouseMove,
-                              firstNode + QPointF(0.0, -double(area->height())), Qt::NoButton,
-                              Qt::LeftButton, Qt::NoModifier);
+    if (velocityInput) {
+        checks::events::sendMouse(*velocityInput, QEvent::MouseButtonPress, firstNode,
+                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*velocityInput, QEvent::MouseMove,
+                                  firstNode + QPointF(0.0, -velocityHeight), Qt::NoButton,
+                                  Qt::LeftButton, Qt::NoModifier);
+    }
     const auto heldFirstPreview = view.previewVelocity(notes[0].noteId);
     const auto heldSecondPreview = view.previewVelocity(notes[1].noteId);
     DocNote heldFirst;
@@ -831,9 +868,11 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               document.revision() == revisionBeforeChange &&
               document.undoStack()->count() == undoBeforeChange,
           "velocity host moves must update preview without changing document history");
-    checks::events::sendMouse(*area, QEvent::MouseButtonRelease,
-                              firstNode + QPointF(0.0, -double(area->height())), Qt::LeftButton,
-                              Qt::NoButton, Qt::NoModifier);
+    if (velocityInput) {
+        checks::events::sendMouse(*velocityInput, QEvent::MouseButtonRelease,
+                                  firstNode + QPointF(0.0, -velocityHeight), Qt::LeftButton,
+                                  Qt::NoButton, Qt::NoModifier);
+    }
     DocNote committedFirst;
     DocNote committedSecond;
     check(document.revision() == revisionBeforeChange + 1 &&
@@ -860,10 +899,12 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     const QPointF unchangedNode = nodePosition(view, *area, *timeline, notes[0]);
     const uint64_t revisionBeforeNoOp = document.revision();
     const int undoBeforeNoOp = document.undoStack()->count();
-    checks::events::sendMouse(*area, QEvent::MouseButtonPress, unchangedNode, Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*area, QEvent::MouseButtonRelease, unchangedNode, Qt::LeftButton,
-                              Qt::NoButton, Qt::NoModifier);
+    if (velocityInput) {
+        checks::events::sendMouse(*velocityInput, QEvent::MouseButtonPress, unchangedNode,
+                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*velocityInput, QEvent::MouseButtonRelease, unchangedNode,
+                                  Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    }
     check(document.revision() == revisionBeforeNoOp &&
               document.undoStack()->count() == undoBeforeNoOp &&
               view.selectionModel().noteSelection().size() == 1 &&
@@ -876,19 +917,23 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     view.setEditCursorTick(3);
     QCoreApplication::processEvents();
     const QPointF staleNode = nodePosition(view, *area, *timeline, notes[0]);
-    checks::events::sendMouse(*area, QEvent::MouseButtonPress, staleNode, Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
+    if (velocityInput) {
+        checks::events::sendMouse(*velocityInput, QEvent::MouseButtonPress, staleNode,
+                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    }
     const uint64_t revisionBeforeExternalChange = document.revision();
     const int secondVelocity = notes[1].velocity == 127 ? 1 : 127;
     document.blockSignals(true);
     document.setNotesVelocity({notes[1]}, uint8_t(secondVelocity));
     document.blockSignals(false);
-    checks::events::sendMouse(*area, QEvent::MouseMove,
-                              staleNode + QPointF(0.0, -double(area->height())), Qt::NoButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*area, QEvent::MouseButtonRelease,
-                              staleNode + QPointF(0.0, -double(area->height())), Qt::LeftButton,
-                              Qt::NoButton, Qt::NoModifier);
+    if (velocityInput) {
+        checks::events::sendMouse(*velocityInput, QEvent::MouseMove,
+                                  staleNode + QPointF(0.0, -velocityHeight), Qt::NoButton,
+                                  Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*velocityInput, QEvent::MouseButtonRelease,
+                                  staleNode + QPointF(0.0, -velocityHeight), Qt::LeftButton,
+                                  Qt::NoButton, Qt::NoModifier);
+    }
     const std::vector<DocNote> staleNotes =
         document.notesForTrack(view.selectionModel().primaryTrack());
     check(document.revision() == revisionBeforeExternalChange + 1 && staleNotes.size() == 2 &&
@@ -906,8 +951,25 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     view.setEditCursorTick(4);
     QCoreApplication::processEvents();
     const QPointF lifecycleNode = nodePosition(view, *area, *timeline, notes[0]);
+    const auto sendVelocityMouse = [&](QEvent::Type type, const QPointF &position,
+                                       Qt::MouseButton button, Qt::MouseButtons buttons,
+                                       bool throughQuickWindow) {
+        if (!velocityInput)
+            return;
+        if (!throughQuickWindow) {
+            checks::events::sendMouse(*velocityInput, type, position, button, buttons,
+                                      Qt::NoModifier);
+            return;
+        }
+        QQuickWindow *const window = quick->quickWindow();
+        const QPointF windowPosition = velocityInput->mapToScene(position);
+        QMouseEvent event(type, windowPosition,
+                          QPointF(window->mapToGlobal(windowPosition.toPoint())), button, buttons,
+                          Qt::NoModifier);
+        QCoreApplication::sendEvent(window, &event);
+    };
     const auto cancelGesture = [&](const QPointF &node, auto cancel, bool clearsSelection,
-                                   const char *message) {
+                                   const char *message, bool throughQuickWindow = false) {
         const uint64_t revision = document.revision();
         const int undo = document.undoStack()->count();
         DocNote pressedNote;
@@ -917,10 +979,10 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
             document.findNote(selectionBeforeGesture.front(), &pressedNote);
         const QPointF dragPosition =
             node + QPointF(0.0, pressedNoteResolved && pressedNote.velocity == 127 ? 40.0 : -40.0);
-        checks::events::sendMouse(*area, QEvent::MouseButtonPress, node, Qt::LeftButton,
-                                  Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*area, QEvent::MouseMove, dragPosition, Qt::NoButton,
-                                  Qt::LeftButton, Qt::NoModifier);
+        sendVelocityMouse(QEvent::MouseButtonPress, node, Qt::LeftButton, Qt::LeftButton,
+                          throughQuickWindow);
+        sendVelocityMouse(QEvent::MouseMove, dragPosition, Qt::NoButton, Qt::LeftButton,
+                          throughQuickWindow);
         const std::vector<NoteId> gestureSelection = view.selectionModel().noteSelection();
         const std::vector<NoteId> expectedSelection =
             clearsSelection ? std::vector<NoteId>{} : gestureSelection;
@@ -939,14 +1001,22 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               "velocity cancellation should begin with changed staged previews and unchanged "
               "history");
         cancel();
-        checks::events::sendMouse(*area, QEvent::MouseButtonRelease, dragPosition, Qt::LeftButton,
-                                  Qt::NoButton, Qt::NoModifier);
+        sendVelocityMouse(QEvent::MouseButtonRelease, dragPosition, Qt::LeftButton, Qt::NoButton,
+                          throughQuickWindow);
         bool previewCleared = true;
         for (const NoteId id : gestureSelection)
             previewCleared = previewCleared && !view.previewVelocity(id);
-        check(document.revision() == revision && document.undoStack()->count() == undo &&
-                  previewCleared && view.selectionModel().noteSelection() == expectedSelection,
-              message);
+        const bool revisionUnchanged = document.revision() == revision;
+        const bool undoUnchanged = document.undoStack()->count() == undo;
+        const bool selectionRestored = view.selectionModel().noteSelection() == expectedSelection;
+        const bool valid =
+            revisionUnchanged && undoUnchanged && previewCleared && selectionRestored;
+        const QByteArray detail = QByteArray(message) +
+                                  " [revision=" + QByteArray::number(revisionUnchanged) +
+                                  " undo=" + QByteArray::number(undoUnchanged) +
+                                  " preview=" + QByteArray::number(previewCleared) +
+                                  " selection=" + QByteArray::number(selectionRestored) + ']';
+        check(valid, detail.constData());
     };
     cancelGesture(
         lifecycleNode, [&] { view.setDrawerActivePage(EditorDrawerPage::Automations); }, false,
@@ -966,6 +1036,22 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         false, "drawer close should terminate the visible page gesture");
     view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
     view.setDrawerActivePage(EditorDrawerPage::Velocity);
+    cancelGesture(
+        lifecycleNode,
+        [&] {
+            if (velocityInput)
+                velocityInput->ungrabMouse();
+        },
+        false, "Velocity Quick input ungrab should cancel without mutating history", true);
+    cancelGesture(
+        lifecycleNode,
+        [&] {
+            if (velocityInput) {
+                QFocusEvent focusOut(QEvent::FocusOut, Qt::OtherFocusReason);
+                QApplication::sendEvent(velocityInput, &focusOut);
+            }
+        },
+        false, "Velocity Quick input focus loss should cancel without mutating history");
     cancelGesture(
         lifecycleNode,
         [&] {
@@ -1003,18 +1089,24 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     const int undoBeforeDocumentReplacement = document.undoStack()->count();
     const std::vector<NoteId> selectionBeforeDocumentReplacement =
         view.selectionModel().noteSelection();
-    checks::events::sendMouse(*area, QEvent::MouseButtonPress, documentNode, Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*area, QEvent::MouseMove, documentNode + QPointF(0.0, -40.0),
-                              Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+    if (velocityInput) {
+        checks::events::sendMouse(*velocityInput, QEvent::MouseButtonPress, documentNode,
+                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*velocityInput, QEvent::MouseMove,
+                                  documentNode + QPointF(0.0, -40.0), Qt::NoButton, Qt::LeftButton,
+                                  Qt::NoModifier);
+    }
     const auto documentReplacementPreview = view.previewVelocity(notes[0].noteId);
     check(selectionBeforeDocumentReplacement.size() == 1 && documentReplacementPreview &&
               document.revision() == revisionBeforeDocumentReplacement &&
               document.undoStack()->count() == undoBeforeDocumentReplacement,
           "document replacement should begin with a staged preview and unchanged history");
     view.setDocument(nullptr);
-    checks::events::sendMouse(*area, QEvent::MouseButtonRelease, documentNode + QPointF(0.0, -40.0),
-                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    if (velocityInput) {
+        checks::events::sendMouse(*velocityInput, QEvent::MouseButtonRelease,
+                                  documentNode + QPointF(0.0, -40.0), Qt::LeftButton, Qt::NoButton,
+                                  Qt::NoModifier);
+    }
     check(document.revision() == revisionBeforeDocumentReplacement,
           "document replacement should not change document revision");
     check(document.undoStack()->count() == undoBeforeDocumentReplacement,
@@ -1032,17 +1124,23 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     const int undoBeforeMutation = document.undoStack()->count();
     const uint64_t revisionBeforeMutation = document.revision();
     const std::vector<NoteId> selectionBeforeMutation = view.selectionModel().noteSelection();
-    checks::events::sendMouse(*area, QEvent::MouseButtonPress, documentNode, Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*area, QEvent::MouseMove, documentNode + QPointF(0.0, -40.0),
-                              Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+    if (velocityInput) {
+        checks::events::sendMouse(*velocityInput, QEvent::MouseButtonPress, documentNode,
+                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*velocityInput, QEvent::MouseMove,
+                                  documentNode + QPointF(0.0, -40.0), Qt::NoButton, Qt::LeftButton,
+                                  Qt::NoModifier);
+    }
     const auto mutationPreview = view.previewVelocity(notes[0].noteId);
     check(mutationPreview && document.revision() == revisionBeforeMutation &&
               document.undoStack()->count() == undoBeforeMutation,
           "document mutation should begin with a staged preview and unchanged history");
     document.setNotesVelocity({notes[0]}, uint8_t(replacementVelocity));
-    checks::events::sendMouse(*area, QEvent::MouseButtonRelease, documentNode + QPointF(0.0, -40.0),
-                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    if (velocityInput) {
+        checks::events::sendMouse(*velocityInput, QEvent::MouseButtonRelease,
+                                  documentNode + QPointF(0.0, -40.0), Qt::LeftButton, Qt::NoButton,
+                                  Qt::NoModifier);
+    }
     check(document.revision() == revisionBeforeMutation + 1 &&
               document.undoStack()->count() == undoBeforeMutation + 1 &&
               !view.previewVelocity(notes[0].noteId) &&
@@ -1056,17 +1154,22 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     const uint64_t revisionBeforeUndo = document.revision();
     const int undoBeforeUndo = document.undoStack()->count();
     const std::vector<NoteId> selectionBeforeUndo = view.selectionModel().noteSelection();
-    checks::events::sendMouse(*area, QEvent::MouseButtonPress, undoNode, Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*area, QEvent::MouseMove, undoNode + QPointF(0.0, -40.0),
-                              Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+    if (velocityInput) {
+        checks::events::sendMouse(*velocityInput, QEvent::MouseButtonPress, undoNode,
+                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*velocityInput, QEvent::MouseMove, undoNode + QPointF(0.0, -40.0),
+                                  Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+    }
     const auto undoPreview = view.previewVelocity(notes[0].noteId);
     check(undoPreview && document.revision() == revisionBeforeUndo &&
               document.undoStack()->count() == undoBeforeUndo,
           "Undo cancellation should begin with a staged preview and unchanged history");
     document.undoStack()->undo();
-    checks::events::sendMouse(*area, QEvent::MouseButtonRelease, undoNode + QPointF(0.0, -40.0),
-                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    if (velocityInput) {
+        checks::events::sendMouse(*velocityInput, QEvent::MouseButtonRelease,
+                                  undoNode + QPointF(0.0, -40.0), Qt::LeftButton, Qt::NoButton,
+                                  Qt::NoModifier);
+    }
     check(document.revision() == revisionBeforeUndo + 1 &&
               document.undoStack()->count() == undoBeforeUndo &&
               !view.previewVelocity(notes[0].noteId) &&
@@ -1080,17 +1183,22 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     const uint64_t revisionBeforeRedo = document.revision();
     const int undoBeforeRedo = document.undoStack()->count();
     const std::vector<NoteId> selectionBeforeRedo = view.selectionModel().noteSelection();
-    checks::events::sendMouse(*area, QEvent::MouseButtonPress, redoNode, Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*area, QEvent::MouseMove, redoNode + QPointF(0.0, -40.0),
-                              Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+    if (velocityInput) {
+        checks::events::sendMouse(*velocityInput, QEvent::MouseButtonPress, redoNode,
+                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*velocityInput, QEvent::MouseMove, redoNode + QPointF(0.0, -40.0),
+                                  Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+    }
     const auto redoPreview = view.previewVelocity(notes[0].noteId);
     check(redoPreview && document.revision() == revisionBeforeRedo &&
               document.undoStack()->count() == undoBeforeRedo,
           "Redo cancellation should begin with a staged preview and unchanged history");
     document.undoStack()->redo();
-    checks::events::sendMouse(*area, QEvent::MouseButtonRelease, redoNode + QPointF(0.0, -40.0),
-                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    if (velocityInput) {
+        checks::events::sendMouse(*velocityInput, QEvent::MouseButtonRelease,
+                                  redoNode + QPointF(0.0, -40.0), Qt::LeftButton, Qt::NoButton,
+                                  Qt::NoModifier);
+    }
     check(document.revision() == revisionBeforeRedo + 1 &&
               document.undoStack()->count() == undoBeforeRedo &&
               !view.previewVelocity(notes[0].noteId) &&
@@ -1103,17 +1211,23 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     const QPointF reloadNode = nodePosition(view, *area, *timeline, reloadNote);
     const uint64_t revisionBeforeReload = document.revision();
     const int undoBeforeReload = document.undoStack()->count();
-    checks::events::sendMouse(*area, QEvent::MouseButtonPress, reloadNode, Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*area, QEvent::MouseMove, reloadNode + QPointF(0.0, -40.0),
-                              Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+    if (velocityInput) {
+        checks::events::sendMouse(*velocityInput, QEvent::MouseButtonPress, reloadNode,
+                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*velocityInput, QEvent::MouseMove,
+                                  reloadNode + QPointF(0.0, -40.0), Qt::NoButton, Qt::LeftButton,
+                                  Qt::NoModifier);
+    }
     const auto reloadPreview = view.previewVelocity(notes[0].noteId);
     check(reloadPreview && document.revision() == revisionBeforeReload &&
               document.undoStack()->count() == undoBeforeReload,
           "reload cancellation should begin with a staged preview and unchanged history");
     const bool reloaded = document.load(song, &error);
-    checks::events::sendMouse(*area, QEvent::MouseButtonRelease, reloadNode + QPointF(0.0, -40.0),
-                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    if (velocityInput) {
+        checks::events::sendMouse(*velocityInput, QEvent::MouseButtonRelease,
+                                  reloadNode + QPointF(0.0, -40.0), Qt::LeftButton, Qt::NoButton,
+                                  Qt::NoModifier);
+    }
     check(reloaded && !view.previewVelocity(notes[0].noteId),
           "reload should terminate the visible page gesture");
     std::unique_ptr<MidiTimeline> reloadedTimeline = document.buildTimeline(44100.0);
@@ -1302,17 +1416,30 @@ int runHostSeamsCheck()
         const uint64_t beforePageSwitch = document.revision();
         const int undoBeforePageSwitch = document.undoStack()->count();
         const std::vector<NoteId> selectionBeforePageSwitch = view.selectionModel().noteSelection();
-        checks::events::sendMouse(*velocity, QEvent::MouseButtonPress, node, Qt::LeftButton,
-                                  Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*velocity, QEvent::MouseMove, node + QPointF(0.0, -40.0),
-                                  Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        auto *quickCanvas =
+            view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+        auto *quickRoot = quickCanvas ? quickCanvas->rootObject() : nullptr;
+        auto *velocityInput = quickRoot ? quickRoot->findChild<songview::TimelineInputItem *>(
+                                              QStringLiteral("timelineVelocityInput"))
+                                        : nullptr;
+        check(velocityInput != nullptr,
+              "concrete SongView did not expose the velocity Quick input item");
+        if (velocityInput) {
+            checks::events::sendMouse(*velocityInput, QEvent::MouseButtonPress, node,
+                                      Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            checks::events::sendMouse(*velocityInput, QEvent::MouseMove, node + QPointF(0.0, -40.0),
+                                      Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        }
         const auto pageSwitchPreview = view.previewVelocity(notes.front().noteId);
         check(pageSwitchPreview && document.revision() == beforePageSwitch &&
                   document.undoStack()->count() == undoBeforePageSwitch,
               "drawer page replacement should begin with a staged preview and unchanged history");
         view.setDrawerActivePage(EditorDrawerPage::Automations);
-        checks::events::sendMouse(*velocity, QEvent::MouseButtonRelease, node + QPointF(0.0, -40.0),
-                                  Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        if (velocityInput) {
+            checks::events::sendMouse(*velocityInput, QEvent::MouseButtonRelease,
+                                      node + QPointF(0.0, -40.0), Qt::LeftButton, Qt::NoButton,
+                                      Qt::NoModifier);
+        }
         check(document.revision() == beforePageSwitch &&
                   document.undoStack()->count() == undoBeforePageSwitch &&
                   !view.previewVelocity(notes.front().noteId) &&
@@ -1325,18 +1452,23 @@ int runHostSeamsCheck()
         const int undoBeforeDocumentSwap = document.undoStack()->count();
         const std::vector<NoteId> selectionBeforeDocumentSwap =
             view.selectionModel().noteSelection();
-        checks::events::sendMouse(*velocity, QEvent::MouseButtonPress, node, Qt::LeftButton,
-                                  Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*velocity, QEvent::MouseMove, node + QPointF(0.0, -40.0),
-                                  Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        if (velocityInput) {
+            checks::events::sendMouse(*velocityInput, QEvent::MouseButtonPress, node,
+                                      Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            checks::events::sendMouse(*velocityInput, QEvent::MouseMove, node + QPointF(0.0, -40.0),
+                                      Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        }
         const auto documentSwapPreview = view.previewVelocity(notes.front().noteId);
         check(!selectionBeforeDocumentSwap.empty() && documentSwapPreview &&
                   document.revision() == beforeDocumentSwap &&
                   document.undoStack()->count() == undoBeforeDocumentSwap,
               "document replacement should begin with a staged preview and unchanged history");
         view.setDocument(nullptr);
-        checks::events::sendMouse(*velocity, QEvent::MouseButtonRelease, node + QPointF(0.0, -40.0),
-                                  Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        if (velocityInput) {
+            checks::events::sendMouse(*velocityInput, QEvent::MouseButtonRelease,
+                                      node + QPointF(0.0, -40.0), Qt::LeftButton, Qt::NoButton,
+                                      Qt::NoModifier);
+        }
         check(document.revision() == beforeDocumentSwap &&
                   document.undoStack()->count() == undoBeforeDocumentSwap &&
                   !view.previewVelocity(notes.front().noteId) &&

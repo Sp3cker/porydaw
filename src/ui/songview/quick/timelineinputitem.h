@@ -74,6 +74,7 @@ class TimelineInputItem : public QQuickItem, public TimelineInputHost
     void keyReleaseEvent(QKeyEvent *event) override;
     void focusOutEvent(QFocusEvent *event) override;
     void mouseUngrabEvent() override;
+    void geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry) override;
     void itemChange(ItemChange change, const ItemChangeData &data) override;
 
   private:

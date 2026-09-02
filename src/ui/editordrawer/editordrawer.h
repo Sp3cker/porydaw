@@ -72,7 +72,6 @@ class EditorDrawer final : public QWidget
     void arrangeChildren();
     void cancelPageInteraction(EditorDrawerPage page);
     bool ownsFocus() const;
-    QWidget *canvasFor(EditorDrawerPage page) const;
     QRect resolvedHostBounds() const noexcept;
 
     SongView &m_owner;

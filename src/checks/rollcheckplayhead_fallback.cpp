@@ -214,7 +214,10 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
     probe.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
     probe.setDrawerActivePage(EditorDrawerPage::Velocity);
     checks::support::pumpQuick();
-    checkVisibleBody(*velocity, "velocity");
+    checkVisibleBodyRect(bandLayout.geometry(songview::TimelineBand::Velocity)
+                             .value_or(songview::TimelineBandGeometry{})
+                             .rect,
+                         "velocity");
 
     probe.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
     probe.setDrawerActivePage(EditorDrawerPage::VoiceChanges);
@@ -273,13 +276,14 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
             bandLayout.geometry(songview::TimelineBand::VoiceChanges);
         return geometry && geometry->timelineOrigin == voiceChanges->plotOrigin();
     };
-    if (!canonicalRectMatches(songview::TimelineBand::Velocity, *velocity) ||
-        !canonicalVoiceMatches() ||
-        !canonicalRectMatches(songview::TimelineBand::Automation, *automation->scrollViewport()) ||
-        drawer->bodyRect(EditorDrawerPage::Velocity) !=
-            std::optional<QRect>(bandLayout.geometry(songview::TimelineBand::Velocity)
-                                     .value_or(songview::TimelineBandGeometry{})
-                                     .rect)) {
+    const auto canonicalVelocityMatches = [&] {
+        const std::optional<songview::TimelineBandGeometry> &geometry =
+            bandLayout.geometry(songview::TimelineBand::Velocity);
+        return geometry &&
+               drawer->bodyRect(EditorDrawerPage::Velocity) == std::optional<QRect>(geometry->rect);
+    };
+    if (!canonicalVelocityMatches() || !canonicalVoiceMatches() ||
+        !canonicalRectMatches(songview::TimelineBand::Automation, *automation->scrollViewport())) {
         failures.append("forced QWidget playhead view diverged from the canonical band layout");
     }
 
@@ -302,7 +306,7 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
     probe.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
     probe.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
     checks::support::pumpQuick();
-    if (!canonicalRectMatches(songview::TimelineBand::Velocity, *velocity))
+    if (!canonicalVelocityMatches())
         failures.append("reopened velocity section did not republish its canonical rectangle");
 
     probe.hide();

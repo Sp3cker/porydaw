@@ -6,24 +6,17 @@
 #include <vector>
 
 #include <QFont>
+#include <QObject>
 #include <QPointF>
 #include <QRectF>
-#include <QWidget>
 
 #include "core/songdocument.h"
 #include "core/velocitymodel.h"
 #include "ui/editordrawer/drawerpage.h"
 #include "ui/editordrawer/velocityaxis.h"
+#include "ui/songview/quick/timelineinput.h"
 
 class SongView;
-class QContextMenuEvent;
-class QEvent;
-class QFocusEvent;
-class QKeyEvent;
-class QMouseEvent;
-class QWheelEvent;
-
-class QResizeEvent;
 
 namespace songview {
 class TimelineQuickScene;
@@ -41,10 +34,10 @@ struct VelocityAreaDiagnostics {
 // The velocity editor owns pointer geometry and gesture presentation while
 // SongView owns the deferred document-bound velocity preview.
 // Mouse movement never mutates the document; release commits or cancels it.
-class VelocityArea final : public QWidget
+class VelocityArea final : public QObject, public songview::TimelineBandInteraction
 {
   public:
-    explicit VelocityArea(SongView &owner, QWidget *parent = nullptr);
+    explicit VelocityArea(SongView &owner, QObject *parent = nullptr);
 
     void songChanged();
     void refreshLiveState(const DrawerPageLiveState &liveState);
@@ -64,18 +57,16 @@ class VelocityArea final : public QWidget
     void presentPlayhead(double tick);
     void velocityGestureChanged();
 
-  protected:
-    bool event(QEvent *event) override;
-    bool eventFilter(QObject *watched, QEvent *event) override;
-    void resizeEvent(QResizeEvent *event) override;
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *event) override;
-    void mouseReleaseEvent(QMouseEvent *event) override;
-    void leaveEvent(QEvent *event) override;
-    void wheelEvent(QWheelEvent *event) override;
-    void keyPressEvent(QKeyEvent *event) override;
-    void focusOutEvent(QFocusEvent *event) override;
-    void contextMenuEvent(QContextMenuEvent *event) override;
+    void attachInputHost(songview::TimelineInputHost &host) override;
+    void detachInputHost(songview::TimelineInputHost &host) override;
+    bool pointerPress(const songview::TimelinePointerInput &input) override;
+    bool pointerMove(const songview::TimelinePointerInput &input) override;
+    bool pointerRelease(const songview::TimelinePointerInput &input) override;
+    void pointerLeave() override;
+    bool wheel(const songview::TimelineWheelInput &input) override;
+    bool keyPress(const songview::TimelineKeyInput &input) override;
+    void inputCancelled(songview::TimelineInputCancelReason reason) override;
+    void hostAppearanceChanged() override;
 
   private:
     friend class songview::TimelineQuickView;
@@ -174,6 +165,7 @@ class VelocityArea final : public QWidget
     bool hasDocument() const;
 
     SongView &m_owner;
+    songview::TimelineInputHost *m_inputHost = nullptr;
     DrawerPageLiveState m_live;
     VelocityAxis m_axis{VelocityMap::resolve(nullptr, std::nullopt), {}};
     Geometry m_geometry;
@@ -195,7 +187,6 @@ class VelocityArea final : public QWidget
     QRectF m_bandRect;
     Interaction m_interaction = Interaction::None;
     bool m_relativeActivated = false;
-    bool m_suppressContextMenu = false;
     VelocityAreaDiagnostics m_diagnostics;
     std::optional<double> m_lastPresentedPlayheadTick;
     // One-note announcement invariant: regardless of how many notes a gesture

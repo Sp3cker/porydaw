@@ -89,10 +89,9 @@ DrawerSections::DrawerSections(SongView &owner, QWidget *parent, AutomationPage 
     setFocusPolicy(Qt::NoFocus);
 
     m_automation->setParent(this);
-    m_velocity->setParent(this);
-    // VoiceChanges is no longer a child widget: DrawerSections only publishes
-    // its body rectangle; the band renders and takes input in the shared
-    // Quick scene.
+    // Converted drawer bands are non-widget modules: DrawerSections publishes
+    // their body rectangles while the shared Quick scene renders and receives
+    // input.
     m_automation->show();
     const auto makeToggle = [this](const QString &text, EditorDrawerPage page) {
         auto *button = new DrawerToggle(this);
@@ -431,19 +430,15 @@ EditorDrawerPage DrawerSections::resizePageForHandle(const QWidget *handle) cons
 void DrawerSections::focusActivePage()
 {
     const auto focusPage = [this](EditorDrawerPage page) {
-        // VoiceChanges has no QWidget to focus: its Quick input item takes
-        // focus through the SongView bridge. The two unconverted pages keep
-        // native QWidget focus until their conversion phases.
-        if (page == EditorDrawerPage::VoiceChanges) {
-            return voiceChangesVisible() &&
-                   m_owner.focusTimelineBand(songview::TimelineBand::VoiceChanges,
-                                             Qt::OtherFocusReason);
+        if (page == EditorDrawerPage::VoiceChanges || page == EditorDrawerPage::Velocity) {
+            const bool visible =
+                page == EditorDrawerPage::VoiceChanges ? voiceChangesVisible() : velocityVisible();
+            const songview::TimelineBand band = page == EditorDrawerPage::VoiceChanges
+                                                    ? songview::TimelineBand::VoiceChanges
+                                                    : songview::TimelineBand::Velocity;
+            return visible && m_owner.focusTimelineBand(band, Qt::OtherFocusReason);
         }
-        QWidget *canvas = nullptr;
-        if (page == EditorDrawerPage::Velocity)
-            canvas = m_velocity;
-        else
-            canvas = m_automation->canvas();
+        QWidget *const canvas = m_automation->canvas();
         if (!canvas || !canvas->isVisible())
             return false;
         canvas->setFocus(Qt::OtherFocusReason);
@@ -598,7 +593,6 @@ void DrawerSections::arrangeLocal()
     const int velocityWidth = width - velocityLeft;
     setVisibleIf(m_voiceChangesHandle, showVoiceChanges);
     setVisibleIf(m_voiceChangesToggle, true);
-    setVisibleIf(m_velocity, showVelocity);
     setVisibleIf(m_velocityHandle, showVelocity);
     setVisibleIf(m_velocityToggle, true);
     setVisibleIf(m_detentToggle, showVelocity && m_velocity->isPsgContext());
@@ -610,7 +604,6 @@ void DrawerSections::arrangeLocal()
     // hidden pages hold no stale rectangle. EditorDrawer publishes these as
     // parent-owned layout values, so placement reads them back.
     int y = 0;
-    int velocityBottom = 0;
     std::optional<QRect> voiceChangesBodyRect;
     std::optional<QRect> velocityBodyRect;
     std::optional<QRect> automationBodyRect;
@@ -621,7 +614,6 @@ void DrawerSections::arrangeLocal()
     if (showVelocity) {
         velocityBodyRect = QRect(velocityLeft, y + handleHeight, velocityWidth, velocityHeight);
         y += handleHeight + velocityHeight;
-        velocityBottom = y;
     }
     if (showAutomation) {
         automationBodyRect = QRect(0, y + handleHeight, width, automationHeight);
@@ -639,7 +631,6 @@ void DrawerSections::arrangeLocal()
     if (showVelocity) {
         setGeometryIf(m_velocityHandle, QRect(velocityLeft, velocityBodyRect->top() - handleHeight,
                                               velocityWidth, handleHeight));
-        applyBodyRect(m_velocity, *velocityBodyRect);
     }
     if (showAutomation) {
         setGeometryIf(m_automationHandle,
@@ -675,8 +666,11 @@ void DrawerSections::arrangeLocal()
                                std::max(1, detentButtonSize - buttonInset));
     if (m_detentToggle->iconSize() != detentIconSize)
         m_detentToggle->setIconSize(detentIconSize);
-    const int detentY = std::max(0, velocityBottom - detentButtonSize);
-    setGeometryIf(m_detentToggle, QRect(velocityLeft, detentY, detentButtonSize, detentButtonSize));
+    if (velocityBodyRect) {
+        const int detentY = velocityBodyRect->bottom() + 1 - detentButtonSize;
+        setGeometryIf(m_detentToggle,
+                      QRect(velocityBodyRect->left(), detentY, detentButtonSize, detentButtonSize));
+    }
 }
 
 std::optional<QRect> DrawerSections::bodyRect(EditorDrawerPage page) const noexcept
@@ -699,7 +693,6 @@ QRegion DrawerSections::occupiedRegion() const
         if (!widget->isHidden() && !widget->geometry().isEmpty())
             occupied += widget->geometry();
     };
-    addVisible(m_velocity);
     addVisible(m_velocityHandle);
     addVisible(m_voiceChangesToggle);
     addVisible(m_voiceChangesHandle);
