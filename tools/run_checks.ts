@@ -513,12 +513,22 @@ if (exclusions.length > 0) {
 }
 reporter = createReporter(reporterMode, runnableChecks.length);
 try {
-  // Every row is an isolated process with per-process settings. Audio backends
-  // are multi-client, and selftest already fails if concurrent device opens
-  // are unsupported. Use --pool=1 for pathological local environments.
-  // LPT: heaviest walls first minimizes makespan.
-  runnableChecks.sort((a, b) => wallEstimate(b.name) - wallEstimate(a.name));
-  await runParallel(runnableChecks, unifiedPoolSize);
+  // Offscreen checks are isolated processes. Native-window checks also share
+  // the host window server's active window and pointer, so running two at once
+  // can cancel each other's focus- and drag-sensitive scenarios.
+  const offscreenChecks = runnableChecks.filter((check) =>
+    check.windowing === "offscreen"
+  );
+  const windowSystemChecks = runnableChecks.filter((check) =>
+    check.windowing === "window-system"
+  );
+  // LPT: heaviest walls first minimizes makespan within each scheduling class.
+  offscreenChecks.sort((a, b) => wallEstimate(b.name) - wallEstimate(a.name));
+  windowSystemChecks.sort((a, b) =>
+    wallEstimate(b.name) - wallEstimate(a.name)
+  );
+  await runParallel(offscreenChecks, unifiedPoolSize);
+  await runParallel(windowSystemChecks, 1);
 } finally {
   await Deno.remove(tempRoot, { recursive: true });
 }
