@@ -23,18 +23,12 @@ OtherStrip::Geometry OtherStrip::Geometry::resolve()
             lyt::fontPx(5.0 / 12.0)};
 }
 
-void OtherStrip::refreshGeometry()
-{
-    m_geometry = Geometry::resolve();
-    setFixedHeight(QFontMetrics(font()).height() + lyt::space(Space::Two));
-    requestQuickUpdate();
-}
-
 OtherStrip::OtherStrip(SongView *sv) : QWidget(sv), m_sv(sv), m_geometry(Geometry::resolve())
 {
     setObjectName(QStringLiteral("otherEventsStrip"));
     setAutoFillBackground(false);
-    refreshGeometry();
+    setFixedHeight(QFontMetrics(font()).height() + lyt::space(Space::Two));
+    requestQuickUpdate();
     setMouseTracking(true);
 }
 

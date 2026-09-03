@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <QFont>
+#include <QFontMetrics>
 #include <QPoint>
 #include <QPointF>
 #include <QRect>
@@ -15,6 +16,7 @@
 
 #include "core/songdocument.h"
 #include "ui/editordrawer/drawerpage.h"
+#include "ui/layout.h"
 
 extern "C" {
 #include "voicegroup_loader.h"
@@ -113,10 +115,8 @@ class VoiceChangeArea final : public QWidget
     void rebuildQuickScene(songview::TimelineQuickScene &scene);
     void rebuildQuickHover(songview::TimelineQuickScene &scene);
     void rebuildVisualState();
-    void rebuildFonts();
     void clearHover();
     void updateHover(qreal x);
-    void ensureHoverLabelFontCache();
     bool ready() const noexcept;
     int primaryTrack() const noexcept;
     const VoicePaintText &paintTextFor(int program) const;
@@ -148,7 +148,9 @@ class VoiceChangeArea final : public QWidget
     QRectF m_hoverLabelRect;
     QFont m_titleFont;
     QFont m_captionFont;
+    QFontMetricsF m_captionMetrics;
     QFont m_hoverLabelFont;
+    layout::TwoLineTextLayout m_textLayout;
     mutable std::array<VoicePaintText, VOICEGROUP_SIZE> m_paintTexts;
     mutable QString m_secondary;
     mutable int m_changeCount = -1;

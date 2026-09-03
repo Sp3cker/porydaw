@@ -23,8 +23,6 @@ class OtherStrip : public QWidget
         static Geometry resolve();
     };
 
-    void refreshGeometry();
-
   public:
     explicit OtherStrip(SongView *sv);
 

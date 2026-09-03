@@ -8,7 +8,6 @@
 #include "ui/typography.h"
 
 #include <QApplication>
-#include <QFontInfo>
 #include <QFontMetricsF>
 #include <cstdint>
 #include <optional>
@@ -167,18 +166,6 @@ TimelineQuickTextKey noteTextKey(TimelineQuickTextKeyKind kind, const ViewNote &
 
 constexpr TimelineQuickTextKey drawPreviewTextKey{TimelineQuickTextKeyKind::PianoDrawPreview};
 constexpr TimelineQuickTextKey loadingTextKey{TimelineQuickTextKeyKind::PianoLoading};
-
-QFont resolvedFont(const QFont &font)
-{
-    const QFontInfo info(font);
-    QFont resolved;
-    resolved.setFamily(info.family());
-    resolved.setStyleName(info.styleName());
-    resolved.setPixelSize(info.pixelSize());
-    resolved.setWeight(font.weight());
-    resolved.setItalic(font.italic());
-    return resolved;
-}
 
 void appendTextRecord(std::vector<TimelineQuickTextModel::Record> &records,
                       const TimelineQuickTextKey &key, const QRectF &rect, const QString &text,
@@ -581,16 +568,8 @@ void TimelineQuickView::synchronizeNoteText()
         !showVelocityValues && roll.m_sv->noteNameMode() && roll.m_noteNameFont.has_value();
     const bool velocityFontVisible = showVelocityValues && roll.m_velocityLabelFont.has_value();
 
-    std::optional<QFont> noteNameFont = std::nullopt;
-    std::optional<QFont> velocityFont = std::nullopt;
-    std::optional<QFontMetricsF> noteNameMetrics = std::nullopt;
     std::optional<QFontMetricsF> velocityMetrics = std::nullopt;
-    if (nameFontVisible) {
-        noteNameFont = resolvedFont(*roll.m_noteNameFont);
-        noteNameMetrics.emplace(*roll.m_noteNameFont);
-    }
     if (velocityFontVisible) {
-        velocityFont = resolvedFont(*roll.m_velocityLabelFont);
         velocityMetrics.emplace(*roll.m_velocityLabelFont);
     }
 
@@ -605,15 +584,14 @@ void TimelineQuickView::synchronizeNoteText()
         const QRectF box = roll.noteBox(noteRect);
         const int velocity = roll.m_sv->previewVelocity(note.noteId).value_or(note.velocity);
         const QColor fill = roll.m_sv->noteFillColor(note.track, velocity);
-        if (nameFontVisible &&
-            roll.noteNameFits(noteRect, roll.displayedNoteKey(note), *noteNameMetrics)) {
+        if (nameFontVisible && roll.noteNameFits(noteRect, roll.displayedNoteKey(note))) {
             const qreal inset = lyt::space(Space::Half);
             appendTextRecord(records,
                              noteTextKey(TimelineQuickTextKeyKind::PianoNoteName, note, noteIndex),
                              QRectF(box.left() + inset, box.top() + inset,
                                     std::max<qreal>(0, box.width() - 2.0 * inset),
                                     std::max<qreal>(0, box.height() - 2.0 * inset)),
-                             keyName(roll.displayedNoteKey(note)), *noteNameFont,
+                             keyName(roll.displayedNoteKey(note)), *roll.m_noteNameFont,
                              contrastingTextColor(fill), Qt::AlignLeft, Qt::AlignVCenter);
         }
         if (velocityFontVisible) {
@@ -623,7 +601,7 @@ void TimelineQuickView::synchronizeNoteText()
                 appendTextRecord(
                     records,
                     noteTextKey(TimelineQuickTextKeyKind::PianoNoteVelocity, note, noteIndex), box,
-                    text, *velocityFont, contrastingTextColor(fill), Qt::AlignHCenter,
+                    text, *roll.m_velocityLabelFont, contrastingTextColor(fill), Qt::AlignHCenter,
                     Qt::AlignVCenter);
             }
         }
@@ -640,7 +618,7 @@ void TimelineQuickView::synchronizeNoteText()
         const QColor fill = roll.m_sv->noteFillColor(selectedTrack, roll.m_lastVelocity);
         if (previewRect.width() >=
             velocityMetrics->horizontalAdvance(text) + roll.m_geometry.velocityLabelFitAllowance) {
-            appendTextRecord(records, drawPreviewTextKey, box, text, *velocityFont,
+            appendTextRecord(records, drawPreviewTextKey, box, text, *roll.m_velocityLabelFont,
                              contrastingTextColor(fill), Qt::AlignHCenter, Qt::AlignVCenter);
         }
     }
@@ -657,8 +635,8 @@ void TimelineQuickView::synchronizeLoadingText()
         const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
         const QRectF plot(keyboardWidth, 0, std::max<qreal>(0, roll.width() - keyboardWidth),
                           roll.height());
-        const QFont font = resolvedFont(typography::caption(roll.font()));
-        appendTextRecord(records, loadingTextKey, plot, SongView::tr("Loading..."), font,
+        appendTextRecord(records, loadingTextKey, plot, SongView::tr("Loading..."),
+                         typography::caption(roll.font()),
                          themes::color(themes::Role::song_view_secondary_text), Qt::AlignHCenter,
                          Qt::AlignVCenter);
     }
@@ -674,7 +652,6 @@ void TimelineQuickView::synchronizeKeyboardText()
     const qreal keyboardWidth = roll.m_geometry.pianoKeyboardWidth;
     const PitchProjection &projection = roll.m_sv->pitchProjection();
     if (roll.m_keyboardLabelFont) {
-        const QFont font = resolvedFont(*roll.m_keyboardLabelFont);
         const QColor color = themes::color(themes::Role::song_view_piano_keyboard_label);
         records.reserve(static_cast<std::size_t>(projection.visibleRowCount()));
         for (int row = 0; row < projection.visibleRowCount(); ++row) {
@@ -688,7 +665,7 @@ void TimelineQuickView::synchronizeKeyboardText()
                 QRectF(0, rowRect.top(),
                        keyboardWidth - roll.m_geometry.pianoKeyboardLabelRightInset,
                        rowRect.height()),
-                keyName(key), font, color, Qt::AlignRight, Qt::AlignVCenter);
+                keyName(key), *roll.m_keyboardLabelFont, color, Qt::AlignRight, Qt::AlignVCenter);
         }
     }
     m_scene->m_pianoKeyboardTextModel->setRecords(records);
@@ -703,7 +680,7 @@ void TimelineQuickView::synchronizeHoverChip()
         return;
     }
     m_scene->setHoverChip(true, hoverGeometry->chipRect, hoverGeometry->name,
-                          QColor(0x30, 0x30, 0x30, 230), resolvedFont(hoverGeometry->chipFont),
+                          QColor(0x30, 0x30, 0x30, 230), hoverGeometry->chipFont,
                           roll.m_geometry.keyboardHoverChipCornerRadius);
 }
 

@@ -31,6 +31,14 @@ qreal hoverRingRadius(const AutomationGeometry &geometry)
 
 } // namespace nodelane
 
+NodeLaneHoverState::NodeLaneHoverState(const QFont &sourceFont)
+{
+    m_valueLabelFontCache.font = typography::noteName(sourceFont);
+    const QFontMetrics metrics(m_valueLabelFontCache.font);
+    m_valueLabelFontCache.width = metrics.horizontalAdvance(QStringLiteral("0000"));
+    m_valueLabelFontCache.height = metrics.height();
+}
+
 void NodeLaneHoverState::invalidateCaches()
 {
     pointCache = {};
@@ -137,7 +145,7 @@ QRect NodeLaneHoverState::hoverValueRect(const NodeLaneHoverTarget &target, cons
                       ? qreal(plot.left())
                       : projection.displayX(hover.point.tick, target.devicePixelRatio);
     const int anchorY = qRound(nodelane::valueY(lane, body, geometry, mappedValue));
-    const auto &fontCache = valueLabelFontCache(target.font);
+    const auto &fontCache = m_valueLabelFontCache;
     const int textWidth = fontCache.width;
     const int textHeight = fontCache.height;
     const int gap = layout::space(layout::Space::One);
@@ -204,19 +212,6 @@ QRect NodeLaneHoverState::hoverPaintBounds(const NodeLaneHoverTarget &target, co
     return bounds.intersected(target.widgetBounds);
 }
 
-const NodeLaneHoverState::ValueLabelFontCache &
-NodeLaneHoverState::valueLabelFontCache(const QFont &font) const
-{
-    if (!m_valueLabelFontCache.valid) {
-        m_valueLabelFontCache.font = typography::noteName(font);
-        const QFontMetrics metrics(m_valueLabelFontCache.font);
-        m_valueLabelFontCache.width = metrics.horizontalAdvance(QStringLiteral("0000"));
-        m_valueLabelFontCache.height = metrics.height();
-        m_valueLabelFontCache.valid = true;
-    }
-    return m_valueLabelFontCache;
-}
-
 NodeLaneHoverState::ClampedValueLabel
 NodeLaneHoverState::clampedValueLabel(qreal x, int y, const QRect &plot,
                                       const ValueLabelFontCache &fontCache) const
@@ -268,7 +263,7 @@ QRegion NodeLaneHoverState::updateHoverValueLabel(const NodeLaneHoverTarget &tar
     auto &label = hoverValueLabel;
     label.lane = hover.lane;
     label.text = text;
-    const auto &fontCache = valueLabelFontCache(target.font);
+    const auto &fontCache = m_valueLabelFontCache;
     label.font = fontCache.font;
     const QRect plot = nodelane::plotRect(body, geometry);
     if (pencilMode) {
@@ -301,7 +296,7 @@ QRegion NodeLaneHoverState::updatePreviewValueLabel(const NodeLaneHoverTarget &t
         return QRegion(previousBounds);
     const int y = qRound(nodelane::valueY(*lane, body, geometry, value));
     const QRect plot = nodelane::plotRect(body, geometry);
-    const auto &fontCache = valueLabelFontCache(target.font);
+    const auto &fontCache = m_valueLabelFontCache;
     const auto clamped = clampedValueLabel(x, y, plot, fontCache);
     auto &label = previewValueLabel;
     label.lane = handle;

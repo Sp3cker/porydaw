@@ -64,17 +64,13 @@ void VelocityArea::Geometry::resolve()
     stemDipWidth = layout::fontPxF(1.0 / 6.0);
     selectedStemDipWidth = layout::fontPxF(1.0 / 4.0);
 }
-void VelocityArea::rebuildFonts()
-{
-    m_captionFont = typography::noteName(font());
-    m_boldCaptionFont = typography::bold(m_captionFont);
-    m_captionFontHeight = QFontMetrics(m_captionFont).height();
-}
 
 VelocityArea::VelocityArea(SongView &owner, QWidget *parent) : QWidget(parent), m_owner(owner)
 {
     m_geometry.resolve();
-    rebuildFonts();
+    m_captionFont = typography::noteName(font());
+    m_boldCaptionFont = typography::bold(m_captionFont);
+    m_captionFontHeight = QFontMetrics(m_captionFont).height();
     setAutoFillBackground(false);
     setMouseTracking(true);
     setFocusPolicy(Qt::ClickFocus);

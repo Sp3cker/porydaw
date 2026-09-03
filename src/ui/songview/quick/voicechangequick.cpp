@@ -74,10 +74,8 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
     const int gutterMargin = lyt::space(Space::One);
     const QRect textBounds(gutterMargin, bounds.top(), std::max(0, origin - 2 * gutterMargin),
                            bounds.height());
-    const lyt::TwoLineTextLayout textLayout =
-        lyt::twoLineText(m_titleFont, m_titleFont, m_captionFont, Space::Zero);
     const lyt::TwoLineTextBoxes textBoxes =
-        textLayout.align(textBounds, lyt::VerticalAlignment::Center);
+        m_textLayout.align(textBounds, lyt::VerticalAlignment::Center);
     const QColor primaryText = themes::color(themes::Role::song_view_primary_text);
     const QColor secondaryText = themes::color(themes::Role::song_view_secondary_text);
     constexpr TimelineQuickLayer chromeLayer = TimelineQuickLayer::VoiceChangesChrome;
@@ -187,7 +185,7 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
 
     const qreal pad = lyt::space(Space::One);
     const qreal gap = std::max<qreal>(m_geometry.hoverPaintPadding, lyt::space(Space::One));
-    const QFontMetricsF fontMetrics(m_captionFont);
+    const QFontMetricsF &fontMetrics = m_captionMetrics;
     const qreal labelHeight = fontMetrics.height();
     const qreal centerY = plot.center().y() - labelHeight / 2.0;
     const qreal stairStep =

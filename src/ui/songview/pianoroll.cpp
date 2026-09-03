@@ -75,25 +75,10 @@ PianoRoll::PianoRoll(SongView *sv)
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setMouseTracking(true);
     setFocusPolicy(Qt::ClickFocus);
-    rebuildFontCache();
-    m_noteMenu =
-        new NoteContextMenu(this, [this](QPointF globalPos) { return moveNoteMenu(globalPos); });
-    connect(m_noteMenu, &QMenu::triggered, this,
-            [this](QAction *action) { handleNoteMenuChoice(m_noteMenu->handleAction(action)); });
-}
-
-void PianoRoll::requestQuickUpdate(PianoRollQuickDirtySet dirty)
-{
-    if (dirty == PianoRollQuickDirty::None)
-        return;
-    m_sv->requestPianoRollQuickUpdate(dirty);
-}
-
-void PianoRoll::rebuildFontCache()
-{
     m_fixedNoteNameFont = typography::noteName(font());
     m_fixedNoteNameFont.setPixelSize(
         std::max(lyt::singlePixel(), m_fixedNoteNameFont.pixelSize() - 2 * lyt::singlePixel()));
+    m_fixedNoteNameMetrics = QFontMetricsF(m_fixedNoteNameFont);
     const QFontMetrics noteMetrics(m_fixedNoteNameFont);
     m_fixedNoteNameOccupiedHeight = noteMetrics.ascent() + noteMetrics.descent();
 
@@ -105,6 +90,17 @@ void PianoRoll::rebuildFontCache()
             hoverMetrics.horizontalAdvance(midiKeyName(key));
 
     refreshTextLayout();
+    m_noteMenu =
+        new NoteContextMenu(this, [this](QPointF globalPos) { return moveNoteMenu(globalPos); });
+    connect(m_noteMenu, &QMenu::triggered, this,
+            [this](QAction *action) { handleNoteMenuChoice(m_noteMenu->handleAction(action)); });
+}
+
+void PianoRoll::requestQuickUpdate(PianoRollQuickDirtySet dirty)
+{
+    if (dirty == PianoRollQuickDirty::None)
+        return;
+    m_sv->requestPianoRollQuickUpdate(dirty);
 }
 
 void PianoRoll::refreshTextLayout()

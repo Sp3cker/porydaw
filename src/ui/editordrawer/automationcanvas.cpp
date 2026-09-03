@@ -42,14 +42,6 @@ void AutomationCanvas::refreshGeometry()
     requestFullQuickUpdate();
 }
 
-void AutomationCanvas::rebuildFontCache()
-{
-    m_laneTitleFont = typography::bold(typography::caption(font()));
-    m_laneCaptionFont = typography::regular(typography::caption(font()));
-    m_laneTextLayout = layout::twoLineText(m_laneTitleFont, m_laneTitleFont, m_laneCaptionFont,
-                                           layout::Space::Zero);
-}
-
 const QString &AutomationCanvas::refreshCcSummaryText(CCLanes::RowTextCache &cache,
                                                       std::span<const NodePoint> points,
                                                       const NodeLane &lane)
@@ -78,17 +70,21 @@ const QString &AutomationCanvas::refreshCcSummaryText(CCLanes::RowTextCache &cac
 AutomationCanvas::AutomationCanvas(AutomationPage *page, QScrollArea *scroll)
     : QWidget(nullptr)
     , m_geometry(AutomationGeometry::resolve())
+    , m_laneTitleFont(typography::bold(typography::caption(font())))
+    , m_laneCaptionFont(typography::regular(typography::caption(font())))
+    , m_laneTextLayout(layout::twoLineText(m_laneTitleFont, m_laneTitleFont, m_laneCaptionFont,
+                                           layout::Space::Zero))
     , m_page(page)
     , m_scroll(scroll)
     , m_rowData(page)
     , m_tempoLane(page)
     , m_laneSelection(page->m_owner.selectionModel(), m_rowData.rows(), page->usedTrackMask())
+    , m_hoverState(font())
 {
     setObjectName(QStringLiteral("automationCanvas"));
     setAutoFillBackground(false);
     setMouseTracking(true);
     setFocusPolicy(Qt::ClickFocus);
-    rebuildFontCache();
     setMinimumHeight(m_tempoLane.totalHeight(m_geometry) + m_geometry.rowDefaultHeight);
     if (m_scroll && m_scroll->verticalScrollBar()) {
         const auto updatePinnedTempo = [this] {
@@ -115,7 +111,6 @@ NodeLaneHoverTarget AutomationCanvas::hoverTarget() const
 {
     NodeLaneHoverTarget target;
     target.widgetBounds = rect();
-    target.font = font();
     target.devicePixelRatio = devicePixelRatioF();
     target.documentRevision = m_page ? m_page->liveState().documentRevision : 0;
     target.ready = m_page && m_page->ready();

@@ -57,7 +57,6 @@ class EventTableModel : public QAbstractTableModel
     uint8_t fallbackChannel() const;
     void setReorderHandler(std::function<void(size_t, size_t)> handler);
     void setSelectionHandler(std::function<void(int, uint64_t)> handler);
-    void refreshFonts();
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;

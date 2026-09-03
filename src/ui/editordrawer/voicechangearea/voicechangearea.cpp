@@ -32,16 +32,17 @@ void VoiceChangeArea::Geometry::resolve()
     gridMinimumCellWidth = layout::fontPx(4.0 / 3.0);
 }
 
-void VoiceChangeArea::rebuildFonts()
-{
-    m_titleFont = typography::bold(typography::caption(font()));
-    m_captionFont = typography::regular(typography::caption(font()));
-}
-
-VoiceChangeArea::VoiceChangeArea(SongView &owner, QWidget *parent) : QWidget(parent), m_owner(owner)
+VoiceChangeArea::VoiceChangeArea(SongView &owner, QWidget *parent)
+    : QWidget(parent)
+    , m_owner(owner)
+    , m_titleFont(typography::bold(typography::caption(font())))
+    , m_captionFont(typography::regular(typography::caption(font())))
+    , m_captionMetrics(m_captionFont)
+    , m_hoverLabelFont(typography::noteName(font()))
+    , m_textLayout(
+          layout::twoLineText(m_titleFont, m_titleFont, m_captionFont, layout::Space::Zero))
 {
     m_geometry.resolve();
-    rebuildFonts();
     setAutoFillBackground(false);
     setMouseTracking(true);
     setFocusPolicy(Qt::ClickFocus);
@@ -225,7 +226,6 @@ void VoiceChangeArea::updateHover(qreal x)
     }
     QRectF labelRect;
     if (!hoverLabel.isEmpty()) {
-        ensureHoverLabelFontCache();
         labelRect = QRectF(lineX + layout::space(layout::Space::One), plot.top(),
                            std::max<qreal>(0, plot.right() - lineX), plot.height());
     }
@@ -239,11 +239,6 @@ void VoiceChangeArea::updateHover(qreal x)
     m_hoverLabelRect = labelRect;
     m_owner.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::VoiceChanges, m_hoverTick);
     m_owner.requestTimelineQuickUpdate(songview::TimelineQuickDirty::VoiceChangesHover);
-}
-
-void VoiceChangeArea::ensureHoverLabelFontCache()
-{
-    m_hoverLabelFont = typography::noteName(font());
 }
 
 bool VoiceChangeArea::ready() const noexcept

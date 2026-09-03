@@ -2,6 +2,7 @@
 
 #include <QCursor>
 #include <QFont>
+#include <QFontMetricsF>
 #include <QMouseEvent>
 #include <QRectF>
 #include <QString>
@@ -20,7 +21,6 @@
 
 class QAction;
 class QEvent;
-class QFontMetricsF;
 class QKeyEvent;
 class QPixmap;
 class QWheelEvent;
@@ -225,7 +225,7 @@ class PianoRoll : public QWidget
     void pasteAtEditCursor();
     void selectAllNotes();
 
-    bool noteNameFits(const QRectF &noteRect, int key, const QFontMetricsF &metrics) const;
+    bool noteNameFits(const QRectF &noteRect, int key) const;
     QRectF displayedNoteRect(const ViewNote &note) const;
     int displayedNoteKey(const ViewNote &note) const;
 
@@ -234,7 +234,6 @@ class PianoRoll : public QWidget
     bool moveNoteMenu(QPointF globalPos);
     void handleNoteMenuChoice(pianoroll_detail::NoteMenuChoice choice);
 
-    void rebuildFontCache();
     void auditionBandEntrants(const QRectF &band);
     void stopBandAuditions();
     void selectBand(const QRectF &band, bool additive);
@@ -243,6 +242,7 @@ class PianoRoll : public QWidget
     std::optional<QFont> m_noteNameFont;
     std::optional<QFont> m_keyboardLabelFont;
     QFont m_fixedNoteNameFont;
+    QFontMetricsF m_fixedNoteNameMetrics{QFont{}};
     int m_fixedNoteNameOccupiedHeight = 0;
     QFont m_keyboardHoverChipFont;
     int m_keyboardHoverChipHeight = 0;

@@ -31,9 +31,9 @@ TimeRuler::Geometry TimeRuler::Geometry::resolve()
             lyt::fontPxF(-1.0 / 24.0), 3.0};
 }
 
-void TimeRuler::refreshGeometry()
+TimeRuler::TimeRuler(SongView *sv) : QWidget(sv), m_sv(sv), m_geometry(Geometry::resolve())
 {
-    m_geometry = Geometry::resolve();
+    setAutoFillBackground(false);
     const auto markerRowPadding = lyt::singlePixel();
     const auto tickRowPadding = lyt::singlePixel();
     m_rulerFont = typography::bodyMono(typography::caption(font()));
@@ -45,22 +45,14 @@ void TimeRuler::refreshGeometry()
                                      m_beatFont.pixelSize() - lyt::singlePixel()));
     m_signatureFont = typography::bold(font());
     m_boldRulerFont = typography::bold(m_rulerFont);
-    const QFontMetrics markerMetrics(m_boldRulerFont);
-    const QFontMetrics tickMetrics(m_rulerFont);
-    m_markerHeight = markerMetrics.height() + markerRowPadding;
-    const auto rulerHeight = m_markerHeight + tickMetrics.height() + tickRowPadding;
+    m_rulerMetrics = QFontMetrics(m_rulerFont);
+    m_beatMetrics = QFontMetrics(m_beatFont);
+    m_boldRulerMetrics = QFontMetrics(m_boldRulerFont);
+    m_signatureMetrics = QFontMetrics(m_signatureFont);
+    m_markerHeight = m_boldRulerMetrics.height() + markerRowPadding;
+    const auto rulerHeight = m_markerHeight + m_rulerMetrics.height() + tickRowPadding;
     setFixedHeight(rulerHeight);
-    if (m_gridBox)
-        m_gridBox->setGeometry(lyt::space(Space::Zero), lyt::space(Space::Zero),
-                               m_geometry.plotOrigin - lyt::space(Space::One), rulerHeight);
     requestQuickUpdate();
-}
-
-TimeRuler::TimeRuler(SongView *sv) : QWidget(sv), m_sv(sv), m_geometry(Geometry::resolve())
-{
-    setAutoFillBackground(false);
-    refreshGeometry();
-    const auto rulerHeight = height();
     setMouseTracking(true);
 
     // Snap-grid controls in the gutter left of the timeline: minimum
@@ -194,7 +186,7 @@ std::vector<TimeRuler::SigChip> TimeRuler::sigChips() const
     std::vector<SigChip> chips;
     const TimeAxis &axis = m_sv->timeAxis();
     const qreal dpr = devicePixelRatioF();
-    const QFontMetrics fm(m_signatureFont);
+    const QFontMetrics &fm = m_signatureMetrics;
     const auto labelInset = lyt::space(Space::Half);
     const auto add = [&](const TimeAxis::ResolvedTimeSignature &sig) {
         const qreal x = m_sv->displayX(double(sig.tick), m_geometry.plotOrigin, dpr);

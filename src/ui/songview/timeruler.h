@@ -32,8 +32,6 @@ class TimeRuler : public QWidget
         static Geometry resolve();
     };
 
-    void refreshGeometry();
-
   public:
     explicit TimeRuler(SongView *sv);
     void syncGridControls();
@@ -96,6 +94,12 @@ class TimeRuler : public QWidget
     QFont m_rulerFont;
     QFont m_beatFont;
     QFont m_boldRulerFont;
+    // Metrics of the fixed fonts above, built once in the constructor;
+    // row heights, label widths, and baselines reuse them.
+    QFontMetrics m_rulerMetrics{QFont{}};
+    QFontMetrics m_beatMetrics{QFont{}};
+    QFontMetrics m_boldRulerMetrics{QFont{}};
+    QFontMetrics m_signatureMetrics{QFont{}};
     SongView *m_sv;
     Geometry m_geometry;
     int m_markerHeight = 0;

@@ -146,8 +146,8 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
                             recede(secondary.blue(), chrome.blue()));
     const QRect ticks = tickRow();
     const int tickBottom = ticks.bottom();
-    const QFontMetrics tickMetrics(m_rulerFont);
-    const QFontMetrics beatMetrics(m_beatFont);
+    const QFontMetrics &tickMetrics = m_rulerMetrics;
+    const QFontMetrics &beatMetrics = m_beatMetrics;
     const int tickBaseline = ticks.top() + tickMetrics.ascent();
     const int barCapWidth = lyt::space(Space::Half);
     const int indicatorRise = lyt::space(Space::Half);
@@ -207,7 +207,7 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
                 addVerticalLine(scene, marksLayer, x, ticks.center().y() - indicatorRise,
                                 tickBottom, lyt::singlePixel(), indicatorColor, area);
             }
-            const QFontMetrics metrics(font);
+            const QFontMetrics &metrics = isBar ? tickMetrics : beatMetrics;
             appendTextRecord(
                 labels, tick,
                 QRectF(labelX, tickBaseline - metrics.ascent(), labelWidth, metrics.height()),
@@ -217,7 +217,7 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
         });
 
     const QRect markers = markerRow();
-    const QFontMetrics markerMetrics(m_boldRulerFont);
+    const QFontMetrics &markerMetrics = m_boldRulerMetrics;
     const int markerBaseline = textBaseline(markers, markerMetrics);
     for (const SigChip &chip : sigChips()) {
         if (chip.x > area.right() || chip.labelX + chip.labelW < area.left())

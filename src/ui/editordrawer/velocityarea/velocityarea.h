@@ -135,7 +135,6 @@ class VelocityArea final : public QWidget
     void rebuildQuickNotes(songview::TimelineQuickScene &scene, const QRectF &plot, qreal dpr);
     void rebuildQuickTransient(songview::TimelineQuickScene &scene, const QRectF &plot);
     void rebuildVisualState();
-    void rebuildFonts();
     void rebuildAxis();
     void publishAccessibleDescription();
     bool detentsUnlocked(Qt::KeyboardModifiers modifiers, bool allowShift) const;

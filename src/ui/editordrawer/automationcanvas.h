@@ -117,7 +117,6 @@ class AutomationCanvas final : public QWidget
         std::vector<uint64_t> deleteTicks;
     };
     void refreshGeometry();
-    void rebuildFontCache();
     const QString &refreshCcSummaryText(CCLanes::RowTextCache &cache,
                                         std::span<const NodePoint> points, const NodeLane &lane);
 
@@ -193,7 +192,7 @@ class AutomationCanvas final : public QWidget
     AutomationGeometry m_geometry;
     QFont m_laneTitleFont;
     QFont m_laneCaptionFont;
-    std::optional<layout::TwoLineTextLayout> m_laneTextLayout;
+    layout::TwoLineTextLayout m_laneTextLayout;
     QRect m_labelGutter;
     AutomationPage *m_page = nullptr;
     QScrollArea *m_scroll = nullptr;
