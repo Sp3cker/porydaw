@@ -11,6 +11,8 @@
 #include <chrono>
 #include <cstdint>
 #include <functional>
+
+#include "ui/keymap.h"
 #include <map>
 #include <optional>
 #include <utility>
@@ -533,7 +535,18 @@ class SongView : public QWidget
     // copy/cut/delete while a time selection is active, paste of range
     // clips, and transpose/nudge of the selection (keymap commands).
     // Returns true when consumed.
-    bool handleEditKey(QKeyEvent *event);
+    // surface: the keymap context of the focused surface (the automation
+    // lanes share the roll's), so plugin commands only fire where their
+    // context says.
+    bool handleEditKey(QKeyEvent *event, keymap::Context surface);
+    // Plugin commands (scripting): consulted after every built-in editor
+    // command failed to match, with the surface and whether a time
+    // selection is active so range-context commands only fire inside one.
+    // Process-wide: plugin commands are not per-view. Returns true when
+    // consumed.
+    using PluginKeyHandler =
+        std::function<bool(QKeyEvent *event, keymap::Context surface, bool timeSelectionActive)>;
+    static void setPluginKeyHandler(PluginKeyHandler handler);
     // Automation-lane pencil mode (automation.pencil_mode, default B): a
     // left drag in the lanes always draws, and Shift locks the stroke to a
     // horizontal line. The key is Ableton-style momentary: releases route

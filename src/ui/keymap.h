@@ -7,7 +7,9 @@
 #include <QPointer>
 #include <QString>
 #include <array>
+#include <memory>
 #include <optional>
+#include <vector>
 
 class QAction;
 class QKeyEvent;
@@ -69,15 +71,37 @@ struct CommandInfo {
 // Persistence is delta-only: QSettings holds just the bindings that differ
 // from the defaults (an empty stored string means "explicitly unbound"), so
 // shipped defaults can evolve without fighting stale full dumps.
+// A command registered at runtime (by a plugin) rather than from the
+// shipped table. Only key-sequence commands: no modifier/wheel kinds.
+struct DynamicCommand {
+    QString id;       // "plugin.<pluginId>.<actionId>"
+    Context context;  // never Wheel
+    QString category; // group in the settings UI (the plugin's name)
+    QString name;
+    QString defaultKeys; // portable text alternates separated by ';', may be empty
+};
+
+struct DynamicEntry;
+
 class Registry : public QObject
 {
     Q_OBJECT
   public:
     static Registry &instance();
 
-    // All commands in stable table order (the settings UI's display order).
+    // All commands in stable table order (the settings UI's display order):
+    // the shipped table first, then dynamic commands in registration order.
     QList<CommandInfo> commands() const;
+    // Unknown ids (a dynamic command since unregistered) report an empty id.
     CommandInfo command(const QString &id) const;
+
+    // Runtime (plugin) commands. Registration fails on a duplicate id or a
+    // Wheel context. User overrides persist under the same keymap/<id> key
+    // as shipped commands, so rebinds survive unregister/re-register (a
+    // plugin reload). Both emit commandsChanged().
+    bool registerDynamic(const DynamicCommand &command);
+    void unregisterDynamic(const QString &id);
+    bool isDynamic(const QString &id) const;
 
     // Effective bindings: the user override if one is stored, else the
     // defaults. An overridden command has at most one sequence; defaults may
@@ -108,6 +132,10 @@ class Registry : public QObject
 
     // Commands other than excludeId whose effective bindings contain
     // sequence and whose context can be active at the same time as context.
+    // Same as conflicts() but against every command's shipped defaults
+    // rather than its effective bindings — what a Reset would bring back.
+    QStringList defaultConflicts(const QString &excludeId, Context context,
+                                 const QKeySequence &sequence) const;
     QStringList conflicts(const QString &excludeId, Context context,
                           const QKeySequence &sequence) const;
 
@@ -144,9 +172,16 @@ class Registry : public QObject
 
   signals:
     void bindingsChanged();
+    // The command set itself changed (a dynamic command came or went).
+    void commandsChanged();
 
   private:
     Registry();
+    ~Registry() override;
+    // Static-table or dynamic definition by id; nullptr when unknown.
+    const struct Def *findDef(const QString &id) const;
+    std::vector<const struct Def *> allDefs() const;
+    std::vector<std::unique_ptr<DynamicEntry>> m_dynamic;
     void applyToActions();
     // Every store mutation funnels through here: drops the wheel-chord
     // cache and notifies listeners.

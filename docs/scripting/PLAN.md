@@ -1,9 +1,31 @@
 # Scripting / Plugins — Scoping & Plan
 
-Status: **proposal, 2026-08-25**. Nothing here is implemented. Facts about the
+Status: **decided 2026-09-02, Phase 0 in progress**. Facts about the
 current codebase (file/line refs) were verified against `scripting` branch tip
-`52428aa`; everything else is a recommendation with the decision points marked
-**DECIDE**.
+`52428aa`; the **DECIDE** items below were resolved as follows:
+
+| Item | Decision |
+|---|---|
+| §2 runtime | **JavaScript via `QJSEngine`** (`Qt6::Qml`). |
+| §5 widget layer | **B first**: canvas + widget primitives in Phase 3, no `Qt6::Quick` link. Qt Quick docks (A) may be added in Phase 4 if demand appears; the dancing companion already shipped natively (`b428748`), so archetype 2 no longer needs plugin UI on day one. |
+| §3 per-project plugin dir | **No.** Plugins load from the user-global dir only. |
+| §4 raw SMF edits | **Not permission-gated**; available like every other undoable edit. The manifest keeps `permissions` only for `io.*`. |
+| §9 scheduling | Start now on branch `scripting`. |
+
+Environment facts found while deciding (they correct §2's "already installed"):
+
+- The Linux dev box has Qt **6.2.4** (Ubuntu 22.04) with only `qt6-base-dev`;
+  `Qt6::Qml` needs `qt6-declarative-dev` (also 6.2.4). CI installs 6.9 via
+  `install-qt-action`, whose default essentials include qtdeclarative.
+- The Windows static kit `/mnt/d/Qt6/Static/6.9.0` already ships
+  `Qt6Qml`, `Qt6Quick`, `Qt6QuickWidgets` and the `qml/` module plugins, so
+  the static-link risk in §9 is mostly retired before the spike; what
+  remains to measure is exe size (`libQt6Qml.a` is 31 MB, `libQt6Quick.a`
+  35 MB on disk).
+- Phase 0 therefore links only `Qt6::Qml` behind `PORYDAW_SCRIPTING`
+  (default ON) and proves: evaluate, `Q_INVOKABLE` bridge, error line
+  numbers, and `setInterrupted` from a watchdog thread. The Windows static
+  build must be done by hand (CI has no static Qt, `docs/RELEASING.md`).
 
 Goal: a plugin system powerful enough for, at minimum, these three archetypes —
 
@@ -247,7 +269,23 @@ caching (SPEC §7.1) so it's Phase 4.
 Each phase is independently landable, adds a `--scriptcheck` section, and
 lands a CHANGELOG entry + SPEC §3/§6 update.
 
-**Phase 0 — Spike (≈2–3 days).** Link `Qt6::Qml` (and `Qt6::Quick` +
+**Phase 0 — Spike.** Linux result 2026-09-02: `--scriptcheck` PASS on Qt
+6.2.4 (evaluate, ES6 arrows/array methods, `Q_INVOKABLE`/`Q_PROPERTY`
+bridge, `QJSValue` callback from C++, bridge survives `collectGarbage`,
+error `lineNumber` + URL-ified `fileName` + `stack`, engine usable after an
+exception, `setInterrupted` from a `QThread` returns `evaluate()` in ~150 ms,
+engine usable after clearing the flag). The watchdog assertion's 5 s cap is
+enforced by the watchdog thread itself (`_Exit(1)`), negative-tested by
+disabling the interrupt. Size delta on the Linux shared build: +25 KB
+(5,896,432 → 5,921,368 bytes; `libQt6Qml.so` is loaded dynamically).
+**Owed: the Windows static build** (`-DPORYDAW_SCRIPTING=ON` vs `OFF` exe
+sizes) — the static kit already ships `Qt6Qml`, so this is a size
+measurement, not a feasibility gate. Gotcha: after adding
+`src/scriptcheck.cpp` to an already-configured tree, automoc did not scan
+it (`scriptcheck.moc: No such file`) until `build/porydaw_autogen` and
+`CMakeFiles/porydaw_autogen.dir/ParseCache.txt` were deleted.
+
+Original scope (≈2–3 days). Link `Qt6::Qml` (and `Qt6::Quick` +
 `QuickWidgets`) behind `PORYDAW_SCRIPTING=ON`; hello-world `QJSEngine`; one
 `QQuickWidget` in a dock; **build and run on the Windows static Qt** and inside
 the macOS/Linux release pipelines (`release.yml` uses linuxdeploy-plugin-qt /
@@ -255,7 +293,34 @@ macdeployqt — both handle Qml, but the AppImage needs the qml dir). Measure
 binary size delta. Decides §2 fallback and §5 A/B. Exit criteria written down
 in this doc.
 
-**Phase 1 — Host + read-only API + actions (≈1–2 weeks).**
+**Phase 1 — Host + read-only API + actions.** LANDED 2026-09-02 on branch
+`scripting` (uncommitted): `src/scripting/{pluginmanifest,scripthost,
+scriptapi,scriptconsole,pluginspage}` + `prelude.js` (the JS side of the
+API, a Qt resource), keymap `registerDynamic/unregisterDynamic` +
+`commandsChanged`, `SongView::setPluginKeyHandler`, `--scriptcheck [root]
+[label]` (fixture plugins generated into a temp dir: discovery, states,
+actions in the keymap/window/key handler/Shortcuts page, console, disable,
+hot reload with rebind persistence, watchdog, and the song half). Deviations
+from the sketch below: plugins are ES modules (`export function activate
+(ctx)`), events use `porydaw.<ns>.on(event, fn)` returning an unsubscribe
+function, `song.activated`/`transport.state` events exist, `selection.
+setNotes/clear/selectTrack` and `cursor.set` shipped early (view state, no
+undo entry), and `ui.dock`/`io.*`/menus wait for Phase 3/4. Bundled example:
+`plugins/examples/select-same-pitch`. Reference: `docs/scripting/API.md`.
+Code-reviewed 2026-09-02, 8 fixes applied (Plugins-page checkbox
+use-after-free → queued rebuild; watchdog = stack of armed calls + wait
+condition so nested cross-plugin calls keep their own budgets; key handler
+takes the focused surface's context; `song.activated` fires after the
+engine swap; plugin defaults also checked against shipped *defaults*
+(`Registry::defaultConflicts`); folders that lose their `plugin.json` are
+dropped + reload timers freed; script ticks/ids clamped (`clampTick`,
+NaN → 0); module load errors reach the console). Open follow-ups: cache
+per-id bindings so `Registry::matches` stops hitting QSettings per key
+(shipped commands have the same cost); `SelectionApi::notes/setNotes` call
+`findNote` per id (rebuilds `notesForTrack` each time) — hoist
+`PianoRoll::resolveSelection` to a public SongView helper in Phase 2.
+
+Original scope (≈1–2 weeks).
 `PluginManager`, manifest, per-plugin engine, hot reload, watchdog, Script
 Console dock, Settings → Plugins page, `porydaw.log/app/project/song(read)/
 selection(read)/cursor(read)/transport(read+control)/actions.register/

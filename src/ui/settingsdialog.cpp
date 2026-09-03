@@ -30,6 +30,8 @@ QString pageId(SettingsDialog::Page page)
         return QStringLiteral("appearance");
     case SettingsDialog::Page::Shortcuts:
         return QStringLiteral("shortcuts");
+    case SettingsDialog::Page::Plugins:
+        return QStringLiteral("plugins");
     }
     return QStringLiteral("audio");
 }
@@ -39,7 +41,8 @@ constexpr int kPageRole = Qt::UserRole;
 } // namespace
 
 SettingsDialog::SettingsDialog(themes::ThemeController &themes, int outputLevel,
-                               const EngineSettings &engine, bool useSystemFont, QWidget *parent)
+                               const EngineSettings &engine, bool useSystemFont,
+                               QWidget *pluginsPage, QWidget *parent)
     : QDialog(parent)
 {
     setObjectName(QStringLiteral("settingsDialog"));
@@ -64,6 +67,11 @@ SettingsDialog::SettingsDialog(themes::ThemeController &themes, int outputLevel,
     addPage(Page::Audio, tr("Audio"), m_audio);
     addPage(Page::Appearance, tr("Appearance"), m_appearance);
     addPage(Page::Shortcuts, tr("Keyboard Shortcuts"), m_shortcuts);
+    if (pluginsPage) {
+        m_plugins = pluginsPage;
+        m_plugins->setObjectName(QStringLiteral("settingsPluginsPage"));
+        addPage(Page::Plugins, tr("Plugins"), m_plugins);
+    }
 
     // The list is as wide as its widest title and no wider: it is a
     // navigator, not a column.

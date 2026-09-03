@@ -18,6 +18,9 @@ class NoteId
     friend constexpr bool operator<(NoteId a, NoteId b) { return a.m_token < b.m_token; }
 
     constexpr bool isAssigned() const { return m_token != 0; }
+    // The raw token, for boundaries that must carry the identity as a
+    // number (the scripting API); never a MIDI datum.
+    constexpr uint64_t token() const { return m_token; }
 
   private:
     uint64_t m_token = 0;

@@ -34,6 +34,9 @@ class VoicegroupBrowser;
 namespace themes {
 class ThemeController;
 } // namespace themes
+namespace scripting {
+class ScriptHost;
+} // namespace scripting
 class SettingsDialog;
 
 class MainWindow : public QMainWindow
@@ -51,6 +54,21 @@ class MainWindow : public QMainWindow
     const AudioEngine &audio() const { return m_audio; }
     // The Settings window (built with the main window, shown on demand).
     SettingsDialog *settingsDialog() const { return m_settingsDialog.get(); }
+#ifdef PORYDAW_SCRIPTING
+    // The plugin host (docs/scripting/PLAN.md). Plugins are loaded by
+    // loadPlugins(), called on interactive launches only, so harnesses
+    // never run the user's plugins (they point the host at a fixture dir).
+    scripting::ScriptHost *scriptHost() const { return m_scriptHost.get(); }
+    void loadPlugins();
+    // Plugin host check (--scriptcheck; scriptcheck.cpp): fixture plugins
+    // in pluginsDir are loaded through the real host — actions reach the
+    // keymap and the window, errors/watchdog/hot reload/disable behave,
+    // the console evaluates — and, with a project, the read API sees the
+    // song. QSettings must be redirected. Empty projectRoot skips the
+    // song half.
+    bool runScriptHostCheck(const QString &pluginsDir, const QString &projectRoot,
+                            const QString &songLabel);
+#endif
 
     // Headless smoke test (--selftest <projectRoot> <songLabel>): opens the
     // project, loads the song, plays ~3 seconds through the real audio path,
@@ -393,4 +411,11 @@ class MainWindow : public QMainWindow
     };
     QString m_lastTimeText;
     std::optional<PolyStatusSnapshot> m_lastPolyStatus;
+#ifdef PORYDAW_SCRIPTING
+    // Declared after m_sessions on purpose: the host is destroyed first,
+    // while the session its facades still point at is alive for a
+    // plugin's deactivate().
+    std::unique_ptr<scripting::ScriptHost> m_scriptHost;
+    QDockWidget *m_consoleDock = nullptr;
+#endif
 };

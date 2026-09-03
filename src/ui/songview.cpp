@@ -2134,7 +2134,7 @@ class PianoRoll : public TimelineSurface
         // Time-selection range ops (and range-clip paste) win over the
         // note-selection shortcuts; the two selections are mutually
         // exclusive, so there is never a real conflict.
-        if (m_sv->handleEditKey(event))
+        if (m_sv->handleEditKey(event, keymap::Context::PianoRoll))
             return;
         const auto &keys = keymap::Registry::instance();
         SongDocument *doc = m_sv->document();
@@ -4160,7 +4160,7 @@ class AutomationArea : public TimelineSurface
 
     void keyPressEvent(QKeyEvent *event) override
     {
-        if (m_sv->handleEditKey(event))
+        if (m_sv->handleEditKey(event, keymap::Context::PianoRoll))
             return;
         if (event->key() == Qt::Key_Shift && m_gesture == Gesture::Point &&
             !event->isAutoRepeat()) {
@@ -6572,7 +6572,7 @@ class VelocityLane : public TimelineSurface
         }
         // Shared roll/lanes shortcuts (the V toggle included) reach the
         // focused surface first, exactly like the lanes area.
-        if (m_sv->handleEditKey(event))
+        if (m_sv->handleEditKey(event, keymap::Context::Velocity))
             return;
         if (event->key() == Qt::Key_Escape) {
             // Nothing live: Escape drops the selections, like the roll's.
@@ -9964,7 +9964,16 @@ int SongView::transposeStepFor(const QKeyEvent *event) const
     return 0;
 }
 
-bool SongView::handleEditKey(QKeyEvent *event)
+namespace {
+SongView::PluginKeyHandler g_pluginKeyHandler;
+} // namespace
+
+void SongView::setPluginKeyHandler(PluginKeyHandler handler)
+{
+    g_pluginKeyHandler = std::move(handler);
+}
+
+bool SongView::handleEditKey(QKeyEvent *event, keymap::Context surface)
 {
     if (!m_document)
         return false;
@@ -10042,6 +10051,13 @@ bool SongView::handleEditKey(QKeyEvent *event)
             m_pencilKeyPressedAt = std::chrono::steady_clock::now();
             setAutomationPencilMode(!m_pencilKeyPrior);
         }
+        event->accept();
+        return true;
+    }
+    // Last on purpose: a plugin never shadows a shipped command of the
+    // same context (their defaults can't conflict at registration, but a
+    // user rebind could).
+    if (g_pluginKeyHandler && g_pluginKeyHandler(event, surface, sel)) {
         event->accept();
         return true;
     }

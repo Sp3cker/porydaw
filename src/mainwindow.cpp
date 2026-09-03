@@ -81,6 +81,11 @@
 #include "ui/typography.h"
 #include "ui/viewsidecar.h"
 #include "ui/voicegroupbrowser.h"
+#ifdef PORYDAW_SCRIPTING
+#include "scripting/pluginspage.h"
+#include "scripting/scriptconsole.h"
+#include "scripting/scripthost.h"
+#endif
 
 #include <QUndoCommand>
 
@@ -235,6 +240,31 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     typography::setUseSystemFont(m_themeSettings->value(kSystemFontKey, false).toBool());
     m_themeController->restore();
     updateWindowFrameTheme();
+#ifdef PORYDAW_SCRIPTING
+    // Before buildUi: the Script Console dock and the Plugins page bind to
+    // the host. Nothing loads until loadPlugins().
+    m_scriptHost = std::make_unique<scripting::ScriptHost>(this);
+    {
+        scripting::HostBindings bindings;
+        bindings.play = [this] { startPlayback(); };
+        bindings.pause = [this] { pausePlayback(); };
+        bindings.stop = [this] { stopPlayback(); };
+        // The edit cursor is the seek target: moving it seeks while
+        // playing/paused (the editCursorMoved connect), and the next Play
+        // starts there while stopped.
+        bindings.seekTick = [this](uint64_t tick) {
+            if (m_active)
+                m_active->view->commitEditCursor(tick);
+        };
+        bindings.statusMessage = [this](const QString &text) {
+            statusBar()->showMessage(text, 6000);
+        };
+        bindings.addGlobalAction = [this](QAction *action) { addAction(action); };
+        bindings.audio = &m_audio;
+        bindings.project = &m_project;
+        m_scriptHost->setBindings(std::move(bindings));
+    }
+#endif
     buildUi();
     buildSettingsDialog();
 
@@ -800,6 +830,23 @@ void MainWindow::buildUi()
     polyDockAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+P")));
     viewMenu->addAction(polyDockAction);
 
+#ifdef PORYDAW_SCRIPTING
+    // Script Console dock (SPEC §6.1): plugin log/errors + a REPL. Hidden
+    // by default like the Polyphony dock; saved window state restores it.
+    m_consoleDock = new QDockWidget(tr("Script Console"), this);
+    m_consoleDock->setObjectName(QStringLiteral("scriptConsoleDock"));
+    m_consoleDock->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetClosable);
+    auto *console = new scripting::ScriptConsole(*m_scriptHost, m_consoleDock);
+    installDockTitle(m_consoleDock);
+    m_consoleDock->setWidget(console);
+    addDockWidget(Qt::BottomDockWidgetArea, m_consoleDock);
+    m_consoleDock->hide();
+    QAction *consoleDockAction = m_consoleDock->toggleViewAction();
+    consoleDockAction->setText(tr("Script &Console"));
+    keys.attach(QStringLiteral("view.script_console"), consoleDockAction);
+    viewMenu->addAction(consoleDockAction);
+#endif
+
     // App-wide view preferences, set off by a separator from the per-song
     // view state above: these persist in QSettings and apply to every open
     // tab at once. (The theme and typeface live in Edit → Settings.)
@@ -1200,6 +1247,11 @@ void MainWindow::activateSession(SongSession *session, bool force)
     if (!session) {
         if (m_audioOk)
             m_audio.unloadSong();
+#ifdef PORYDAW_SCRIPTING
+        // After the engine let go of the old song, so a song.activated
+        // handler that plays sees a consistent engine/session pair.
+        m_scriptHost->setSession(nullptr);
+#endif
         m_polyPanel->clearSession();
         m_vgBrowser->setVoicegroup(nullptr);
         updateVgDockTitle();
@@ -1222,6 +1274,9 @@ void MainWindow::activateSession(SongSession *session, bool force)
         maybeRefreshVoicegroup(*session);
     if (m_audioOk)
         attachEngine(*session);
+#ifdef PORYDAW_SCRIPTING
+    m_scriptHost->setSession(session); // engine now holds this session's song
+#endif
     synchronizePlayhead();
     updateVoicegroupBrowser();
     updatePolyPanelContext(session);
@@ -1393,6 +1448,13 @@ void MainWindow::openProject()
         return;
     openProjectDir(dir);
 }
+
+#ifdef PORYDAW_SCRIPTING
+void MainWindow::loadPlugins()
+{
+    m_scriptHost->loadAll();
+}
+#endif
 
 void MainWindow::restoreSession()
 {
@@ -1955,9 +2017,13 @@ void MainWindow::buildSettingsDialog()
                                  AudioSettingsPage::kOutputLevelMax);
     }
     m_audio.setOutputGain(float(outputLevel) / 100.0f);
+    QWidget *pluginsPage = nullptr;
+#ifdef PORYDAW_SCRIPTING
+    pluginsPage = new scripting::PluginsPage(*m_scriptHost);
+#endif
     m_settingsDialog = std::make_unique<SettingsDialog>(
         *m_themeController, outputLevel, m_engineSettings,
-        m_themeSettings->value(kSystemFontKey, false).toBool(), this);
+        m_themeSettings->value(kSystemFontKey, false).toBool(), pluginsPage, this);
     connect(m_settingsDialog.get(), &SettingsDialog::outputLevelChanged, this, [this](int percent) {
         m_audio.setOutputGain(float(percent) / 100.0f);
         if (m_persistSession)
@@ -3141,6 +3207,9 @@ void MainWindow::uiTick()
 {
     updateTimeLabel();
     updatePolyStatus();
+#ifdef PORYDAW_SCRIPTING
+    m_scriptHost->tick();
+#endif
 
     if (m_audioOk && m_active && m_audio.songLoaded() && m_polyDock->isVisible()) {
         AudioEngine::PolySnapshot snap;
@@ -3172,6 +3241,9 @@ void MainWindow::synchronizePlayhead()
     const uint64_t playhead = m_audio.playheadSamples();
     m_active->view->setPlayheadSample(playhead, playing);
     syncCompanion(playhead, playing);
+#ifdef PORYDAW_SCRIPTING
+    m_scriptHost->tick();
+#endif
     if (playing) {
         if (!m_playheadTimer->isActive())
             m_playheadTimer->start();

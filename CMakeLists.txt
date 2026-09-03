@@ -29,6 +29,15 @@ endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
+# Scripting/plugins (docs/scripting/PLAN.md): the JavaScript host lives in
+# Qt6::Qml (QJSEngine only; no Qt Quick). OFF drops the module and every
+# src/scripting/ source so the app still builds against a Widgets-only Qt
+# (Ubuntu's qt6-base-dev without qt6-declarative-dev).
+option(PORYDAW_SCRIPTING "Embed the JavaScript plugin host (needs Qt6::Qml)" ON)
+if(PORYDAW_SCRIPTING)
+    find_package(Qt6 REQUIRED COMPONENTS Qml)
+endif()
+
 # ---- poryaaaa engine core (MIT, statically linked) ----
 set(PORYAAAA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa)
 add_library(poryaaaa_engine STATIC
@@ -197,6 +206,27 @@ target_include_directories(porydaw_app PUBLIC
 target_compile_definitions(porydaw_app PUBLIC
     PORYDAW_VERSION="${PROJECT_VERSION}")
 target_link_libraries(porydaw_app PUBLIC Qt6::Widgets poryaaaa_engine)
+if(PORYDAW_SCRIPTING)
+    target_compile_definitions(porydaw_app PUBLIC PORYDAW_SCRIPTING)
+    target_link_libraries(porydaw_app PUBLIC Qt6::Qml)
+    target_sources(porydaw_app PRIVATE
+        src/scripting/pluginmanifest.cpp
+        src/scripting/pluginmanifest.h
+        src/scripting/scripthost.cpp
+        src/scripting/scripthost.h
+        src/scripting/scriptapi.cpp
+        src/scripting/scriptapi.h
+        src/scripting/scriptconsole.cpp
+        src/scripting/scriptconsole.h
+        src/scripting/pluginspage.cpp
+        src/scripting/pluginspage.h
+    )
+    qt_add_resources(porydaw_app "scripting_prelude"
+        PREFIX "/scripting"
+        BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/scripting"
+        FILES src/scripting/prelude.js
+    )
+endif()
 if(WIN32)
     target_sources(porydaw_app PRIVATE src/ui/playheadrenderer_dcomp.cpp)
     target_compile_definitions(porydaw_app PUBLIC PORYDAW_USE_DIRECT_PLAYHEAD)
@@ -238,6 +268,9 @@ qt_add_executable(porydaw
     src/velcheck.cpp
     resources/fonts.qrc
 )
+if(PORYDAW_SCRIPTING)
+    target_sources(porydaw PRIVATE src/scriptcheck.cpp)
+endif()
 if(APPLE)
     target_sources(porydaw PRIVATE
         src/rollcheckplayhead_macos.mm

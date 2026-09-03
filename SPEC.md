@@ -54,6 +54,11 @@ Four layers; dependencies point downward only.
 │  main window · track list · piano roll · automation     │
 │  lanes · instrument browser · transport · wizards       │
 ├─────────────────────────────────────────────────────────┤
+│  Script host (C++ · QJSEngine, src/scripting/)          │
+│  plugin discovery/manifests · per-plugin JS engine +    │
+│  watchdog · hot reload · `porydaw.*` facades · Script   │
+│  Console dock · Settings → Plugins (docs/scripting/)    │
+├─────────────────────────────────────────────────────────┤
 │  Document + Sequencer (C++)                             │
 │  SongDocument (in-memory SMF + m4a semantics) · undo/   │
 │  redo · mid2agb simulation (LUTs, CC map) · transport   │
@@ -72,7 +77,10 @@ Four layers; dependencies point downward only.
 
 ### Threading model
 
-- **UI thread:** all Qt widgets, document mutation, undo/redo.
+- **UI thread:** all Qt widgets, document mutation, undo/redo, and every
+  plugin script (each plugin owns one `QJSEngine`; a watchdog thread only
+  ever calls `setInterrupted` on a script that overruns its budget). The
+  audio callback never touches a script engine.
 - **Audio thread:** miniaudio (or RtAudio) callback owning the `M4AEngine` instance;
   runs the sequencer, calling `m4a_engine_note_on/off/cc/pitch_bend` and
   `m4a_engine_process(outL, outR, n)`.
@@ -233,6 +241,15 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   through the voice's own envelope, keysplit rows play whichever sub-voice
   middle C resolves to with that sub-voice's envelope; typed symbols the
   project scan didn't list still commit via an explicit fallback row.
+- **Bottom dock — Script Console** (View → Script Console, `Ctrl+Shift+J`,
+  hidden by default): every plugin's log/warning/error lines (errors with
+  file:line and stack) and a REPL line evaluated against a console engine
+  that has the full `porydaw` API. **Settings → Plugins** lists every folder
+  in the plugins directory that carries a `plugin.json`, with an enable
+  checkbox (applies at once, persisted), the load state or failure reason,
+  Reload / Reload All, and Open Plugins Folder. Plugin-registered commands
+  appear in Settings → Keyboard Shortcuts under the plugin's name and are
+  rebindable like shipped commands (docs/scripting/PLAN.md, API.md).
 - **Center — Arrangement + Piano roll:** track headers (≤ 16 tracks; name, instrument,
   mute/solo, volume/pan mini-controls) beside a shared-timeline piano roll. Selected
   track is editable; other tracks ghosted. `M`/`S` (rebindable) toggle mute/solo over

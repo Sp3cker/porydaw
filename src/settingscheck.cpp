@@ -72,7 +72,11 @@ int runSettingsCheck(const QString &shotPath)
         action->trigger();
         QApplication::processEvents();
         check(dialog->isVisible(), "Edit → Settings did not open the window");
+#ifdef PORYDAW_SCRIPTING
+        check(sections->count() == 4, "Settings window does not have four sections");
+#else
         check(sections->count() == 3, "Settings window does not have three sections");
+#endif
         check(dialog->currentPage() == SettingsDialog::Page::Audio &&
                   stack->currentWidget() == dialog->audioPage(),
               "Settings window did not open on Audio first");
@@ -101,6 +105,14 @@ int runSettingsCheck(const QString &shotPath)
                   dialog->shortcutsPage()->findChild<QTreeWidget *>() != nullptr,
               "selecting Keyboard Shortcuts did not show the shortcuts editor");
         shoot("shortcuts");
+#ifdef PORYDAW_SCRIPTING
+        sections->setCurrentRow(3);
+        check(dialog->currentPage() == SettingsDialog::Page::Plugins &&
+                  stack->currentWidget() == dialog->pluginsPage() &&
+                  dialog->pluginsPage()->findChild<QTreeWidget *>() != nullptr,
+              "selecting Plugins did not show the plugins page");
+        shoot("plugins");
+#endif
         sections->setCurrentRow(1);
         closeButton->click();
         QApplication::processEvents();

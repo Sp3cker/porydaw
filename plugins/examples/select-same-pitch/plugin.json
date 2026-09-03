@@ -1,0 +1,8 @@
+{
+  "id": "select-same-pitch",
+  "name": "Select Same Pitch",
+  "version": "1.0.0",
+  "api": 1,
+  "main": "main.js",
+  "description": "Ctrl+Shift+A in the piano roll extends the selection to every note on the track that shares a pitch with a selected note."
+}

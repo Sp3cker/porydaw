@@ -4,8 +4,10 @@
 #include <QKeyEvent>
 #include <QSettings>
 
+#include <algorithm>
+#include <string>
+
 namespace keymap {
-namespace {
 
 struct Def {
     const char *id;
@@ -25,6 +27,19 @@ struct Def {
     // modifier commands' NoModifier-means-unbound.
     bool wheel;
 };
+
+// Owned storage behind a dynamic command's Def: the Def's const char*
+// fields point into these, which never move (each entry is heap-allocated
+// and held by unique_ptr for its whole registration).
+struct DynamicEntry {
+    std::string id;
+    std::string category;
+    std::string name;
+    std::string keys;
+    Def def;
+};
+
+namespace {
 
 // Stable order: the settings UI lists commands exactly as they appear here.
 const Def kDefs[] = {
@@ -56,6 +71,8 @@ const Def kDefs[] = {
     // View
     {"view.event_list", Context::Global, QT_TR_NOOP("View"), QT_TR_NOOP("MIDI Event List"),
      QKeySequence::UnknownKey, "Ctrl+Shift+E"},
+    {"view.script_console", Context::Global, QT_TR_NOOP("View"), QT_TR_NOOP("Script Console"),
+     QKeySequence::UnknownKey, "Ctrl+Shift+J"},
     {"view.velocity_colors", Context::Global, QT_TR_NOOP("View"),
      QT_TR_NOOP("Color Notes by Velocity"), QKeySequence::UnknownKey, ""},
     {"view.note_names", Context::Global, QT_TR_NOOP("View"), QT_TR_NOOP("Show Note Names"),
@@ -182,15 +199,6 @@ const Def kDefs[] = {
      QKeySequence::UnknownKey, "Alt", false, true},
 };
 
-const Def *findDef(const QString &id)
-{
-    for (const Def &def : kDefs) {
-        if (id == QLatin1String(def.id))
-            return &def;
-    }
-    return nullptr;
-}
-
 QList<QKeySequence> defaultBindings(const Def &def)
 {
     if (def.modifier || def.wheel) // chords are not key sequences
@@ -273,6 +281,74 @@ constexpr const char *kWheelActionIds[kWheelActionCount] = {
 } // namespace
 
 Registry::Registry() = default;
+Registry::~Registry() = default;
+
+const Def *Registry::findDef(const QString &id) const
+{
+    for (const Def &def : kDefs) {
+        if (id == QLatin1String(def.id))
+            return &def;
+    }
+    for (const auto &entry : m_dynamic) {
+        if (id == QLatin1String(entry->def.id))
+            return &entry->def;
+    }
+    return nullptr;
+}
+
+std::vector<const Def *> Registry::allDefs() const
+{
+    std::vector<const Def *> out;
+    out.reserve(std::size(kDefs) + m_dynamic.size());
+    for (const Def &def : kDefs)
+        out.push_back(&def);
+    for (const auto &entry : m_dynamic)
+        out.push_back(&entry->def);
+    return out;
+}
+
+bool Registry::registerDynamic(const DynamicCommand &command)
+{
+    if (command.id.isEmpty() || command.context == Context::Wheel || findDef(command.id))
+        return false;
+    auto entry = std::make_unique<DynamicEntry>();
+    entry->id = command.id.toStdString();
+    entry->category = command.category.toStdString();
+    entry->name = command.name.toStdString();
+    entry->keys = command.defaultKeys.toStdString();
+    entry->def = Def{entry->id.c_str(),
+                     command.context,
+                     entry->category.c_str(),
+                     entry->name.c_str(),
+                     QKeySequence::UnknownKey,
+                     entry->keys.c_str(),
+                     false,
+                     false};
+    m_dynamic.push_back(std::move(entry));
+    applyToActions();
+    emit commandsChanged();
+    return true;
+}
+
+void Registry::unregisterDynamic(const QString &id)
+{
+    const auto it = std::find_if(m_dynamic.begin(), m_dynamic.end(), [&](const auto &entry) {
+        return id == QLatin1String(entry->def.id);
+    });
+    if (it == m_dynamic.end())
+        return;
+    // Actions attached to the command die with their plugin; drop the
+    // entries now so applyToActions never resolves a vanished id.
+    m_actions.removeIf([&](const Attached &a) { return a.id == id; });
+    m_dynamic.erase(it);
+    emit commandsChanged();
+}
+
+bool Registry::isDynamic(const QString &id) const
+{
+    return std::any_of(m_dynamic.begin(), m_dynamic.end(),
+                       [&](const auto &entry) { return id == QLatin1String(entry->def.id); });
+}
 
 Registry &Registry::instance()
 {
@@ -283,10 +359,16 @@ Registry &Registry::instance()
 QList<CommandInfo> Registry::commands() const
 {
     QList<CommandInfo> out;
-    out.reserve(int(std::size(kDefs)));
+    out.reserve(int(std::size(kDefs) + m_dynamic.size()));
     for (const Def &def : kDefs) {
         out.append({QLatin1String(def.id), def.context, tr(def.category), tr(def.name),
                     defaultBindings(def), def.modifier, def.wheel});
+    }
+    // Dynamic names/categories are plugin-provided text, already user-facing.
+    for (const auto &entry : m_dynamic) {
+        const Def &def = entry->def;
+        out.append({QLatin1String(def.id), def.context, QString::fromStdString(entry->category),
+                    QString::fromStdString(entry->name), defaultBindings(def), false, false});
     }
     return out;
 }
@@ -294,7 +376,6 @@ QList<CommandInfo> Registry::commands() const
 CommandInfo Registry::command(const QString &id) const
 {
     const Def *def = findDef(id);
-    Q_ASSERT(def);
     if (!def)
         return {};
     return {QLatin1String(def->id), def->context,  tr(def->category), tr(def->name),
@@ -476,7 +557,8 @@ void Registry::storeChanged()
 QStringList Registry::wheelConflicts(const QString &excludeId, Qt::KeyboardModifiers mods) const
 {
     QStringList out;
-    for (const Def &def : kDefs) {
+    for (const Def *defp : allDefs()) {
+        const Def &def = *defp;
         const QString id = QLatin1String(def.id);
         if (!def.wheel || id == excludeId)
             continue;
@@ -545,11 +627,29 @@ QStringList Registry::conflicts(const QString &excludeId, Context context,
     QStringList out;
     if (sequence.isEmpty())
         return out;
-    for (const Def &def : kDefs) {
+    for (const Def *defp : allDefs()) {
+        const Def &def = *defp;
         const QString id = QLatin1String(def.id);
         if (id == excludeId || !contextsOverlap(context, def.context))
             continue;
         if (bindings(id).contains(sequence))
+            out.append(id);
+    }
+    return out;
+}
+
+QStringList Registry::defaultConflicts(const QString &excludeId, Context context,
+                                       const QKeySequence &sequence) const
+{
+    QStringList out;
+    if (sequence.isEmpty())
+        return out;
+    for (const Def *defp : allDefs()) {
+        const Def &def = *defp;
+        const QString id = QLatin1String(def.id);
+        if (id == excludeId || !contextsOverlap(context, def.context))
+            continue;
+        if (defaultBindings(def).contains(sequence))
             out.append(id);
     }
     return out;
@@ -561,7 +661,8 @@ QStringList Registry::modifierConflicts(const QString &excludeId, Context contex
     QStringList out;
     if (mods == Qt::NoModifier)
         return out;
-    for (const Def &def : kDefs) {
+    for (const Def *defp : allDefs()) {
+        const Def &def = *defp;
         const QString id = QLatin1String(def.id);
         if (!def.modifier || id == excludeId || !contextsOverlap(context, def.context))
             continue;

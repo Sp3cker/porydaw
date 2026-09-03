@@ -82,6 +82,12 @@ int runIgnoreCheck(const QString &scratchDir);
 // persistence + offscreen shortcuts-page driving (self-contained, no
 // project needed; redirects QSettings itself).
 int runKeymapCheck();
+// scriptcheck.cpp; scripting check: the QJSEngine link (evaluate, bridge,
+// error line numbers, watchdog interrupt) and the plugin host through
+// MainWindow (fixture plugins written to a temp dir). The optional project
+// root + song label add the read API's song half; QSettings is redirected
+// inside.
+int runScriptCheck(const QString &projectRoot, const QString &songLabel);
 // settingscheck.cpp; Settings window check: sections, remembered page,
 // immediate apply + persistence of every page (self-contained, no project
 // needed; redirects QSettings itself).
@@ -192,6 +198,19 @@ int main(int argc, char *argv[])
         return runAudioCheck();
     if (args.contains(QStringLiteral("--keymapcheck")))
         return runKeymapCheck();
+    const int scriptCheck = args.indexOf(QStringLiteral("--scriptcheck"));
+    if (scriptCheck >= 0) {
+#ifdef PORYDAW_SCRIPTING
+        const auto optional = [&](int i) {
+            return i < args.size() && !args[i].startsWith(QStringLiteral("--")) ? args[i]
+                                                                                : QString();
+        };
+        return runScriptCheck(optional(scriptCheck + 1), optional(scriptCheck + 2));
+#else
+        std::fprintf(stderr, "scriptcheck: built with PORYDAW_SCRIPTING=OFF\n");
+        return 1;
+#endif
+    }
     const int settingsCheck = args.indexOf(QStringLiteral("--settingscheck"));
     if (settingsCheck >= 0) {
         const QString shot = settingsCheck + 1 < args.size() ? args[settingsCheck + 1] : QString();
@@ -237,5 +256,9 @@ int main(int argc, char *argv[])
 
     MainWindow window;
     ui::showCoveredWhileRestoring(window, [&window] { window.restoreSession(); });
+#ifdef PORYDAW_SCRIPTING
+    // Interactive launches only: harnesses never run the user's plugins.
+    window.loadPlugins();
+#endif
     return app.exec();
 }

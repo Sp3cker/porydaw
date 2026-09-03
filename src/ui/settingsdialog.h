@@ -24,10 +24,12 @@ class SettingsDialog : public QDialog
     Q_OBJECT
 
   public:
-    enum class Page { Audio, Appearance, Shortcuts };
+    enum class Page { Audio, Appearance, Shortcuts, Plugins };
 
+    // pluginsPage: the scripting host's Settings page, or nullptr when the
+    // build has no scripting (then there is no Plugins section).
     SettingsDialog(themes::ThemeController &themes, int outputLevel, const EngineSettings &engine,
-                   bool useSystemFont, QWidget *parent = nullptr);
+                   bool useSystemFont, QWidget *pluginsPage, QWidget *parent = nullptr);
 
     // Shows (or raises) the window on the remembered section.
     void present();
@@ -37,6 +39,7 @@ class SettingsDialog : public QDialog
     AudioSettingsPage *audioPage() const { return m_audio; }
     AppearanceSettingsPage *appearancePage() const { return m_appearance; }
     KeyboardShortcutsPage *shortcutsPage() const { return m_shortcuts; }
+    QWidget *pluginsPage() const { return m_plugins; }
 
     // Esc, the Close button and the title-bar X (QDialog::closeEvent routes
     // there too); public like QDialog's own.
@@ -57,6 +60,7 @@ class SettingsDialog : public QDialog
     AudioSettingsPage *m_audio = nullptr;
     AppearanceSettingsPage *m_appearance = nullptr;
     KeyboardShortcutsPage *m_shortcuts = nullptr;
+    QWidget *m_plugins = nullptr;
     // Off until construction has restored the remembered section, so
     // merely building the window never writes QSettings.
     bool m_remember = false;

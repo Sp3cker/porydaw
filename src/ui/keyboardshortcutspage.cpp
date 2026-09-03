@@ -9,6 +9,7 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QScrollBar>
+#include <QTimer>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
@@ -149,6 +150,18 @@ KeyboardShortcutsPage::KeyboardShortcutsPage(QWidget *parent) : QWidget(parent)
         if (!m_applying)
             rebuildTree();
     });
+    // Plugin commands come and go with plugin (re)loads, one signal per
+    // command; coalesce into a single rebuild (and column re-fit, since
+    // the new names can be wider) once the burst settles.
+    auto *commandsTimer = new QTimer(this);
+    commandsTimer->setSingleShot(true);
+    commandsTimer->setInterval(0);
+    connect(commandsTimer, &QTimer::timeout, this, [this] {
+        rebuildTree();
+        m_tree->resizeColumnToContents(0);
+    });
+    connect(&keymap::Registry::instance(), &keymap::Registry::commandsChanged, commandsTimer,
+            qOverload<>(&QTimer::start));
 
     rebuildTree();
     // Fit the command column to its widest row once, up front — the 100px
