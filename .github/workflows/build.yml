@@ -20,6 +20,8 @@ jobs:
 
       - name: Check formatting
         run: tools/format.sh --check
+      - name: Check generated docs
+        run: python3 tools/gen_scripting_docs.py --check
 
   build:
     strategy:

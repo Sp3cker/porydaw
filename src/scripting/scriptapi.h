@@ -109,6 +109,12 @@ class SongApi : public ApiObject
     int trackCount() const;
     int trackBudget() const;
     double endTick() const;
+    // The song's midi.cfg settings: {voicegroup, voicegroupName,
+    // masterVolume, reverb (null = flag absent), priority, exactGate,
+    // extendedClocks, noCompression, flags}.
+    Q_INVOKABLE QVariantMap settings() const;
+    // File → Save for the active song (and its voicegroup when edited).
+    Q_INVOKABLE bool save();
     // {start, end} in ticks, or null when the song has no loop markers.
     Q_INVOKABLE QVariant loop() const;
     // [{tick, numerator, denominator}] sorted by tick.
@@ -187,6 +193,13 @@ class EditApi : public ApiObject
     // [{tick, newTick?, newValue?}]; points that don't exist are skipped.
     Q_INVOKABLE int moveLanePoints(int track, int cc, const QVariantList &moves);
     Q_INVOKABLE int deleteLanePoints(int track, int cc, const QVariantList &ticks);
+
+    // Partial update of song.settings() (unknown keys are refused);
+    // `voicegroup` takes a -G arg or the display name.
+    Q_INVOKABLE void setSettings(const QVariantMap &spec);
+    // Partial update of one editable voice of the open voicegroup
+    // (porydaw.voicegroup.voice(slot)'s keys; `type` is the macro word).
+    Q_INVOKABLE void setVoice(int slot, const QVariantMap &spec);
 
     Q_INVOKABLE void setStartTempo(int bpm);
     // null/undefined removes the marker.
@@ -466,6 +479,69 @@ class ProjectApi : public ApiObject
     // Opens a song by label (in a new tab when asked); false when the
     // project has no playable song of that name.
     Q_INVOKABLE bool open(const QString &label, bool newTab);
+    // One songs() entry (plus its `settings`), or null.
+    Q_INVOKABLE QVariant song(const QString &label) const;
+    // The song's registration files: {complete, inSongTable, inSongsH,
+    // inLdScript, inCharmap, inDebugMenu, gaps}. Throws for an unknown
+    // label.
+    Q_INVOKABLE QVariantMap registration(const QString &label) const;
+    // Register Song without its dialogs: the song's table index, or -1
+    // after throwing. Empty constant/player use the song's own or the
+    // defaults. Reloads the project (song ids may shift).
+    Q_INVOKABLE int registerSong(const QString &label, const QString &constant,
+                                 const QString &player);
+    // The inverse: drops the song's registration lines; the .mid stays.
+    Q_INVOKABLE void unregisterSong(const QString &label);
+    // Re-reads the project's music data.
+    Q_INVOKABLE void reload();
+    // [{name, number, trackCount}] from song_table.inc.
+    Q_INVOKABLE QVariantList musicPlayers() const;
+    // [{arg, name}] for every voicegroup in the project (arg is the -G
+    // value; name the display form).
+    Q_INVOKABLE QVariantList voicegroups() const;
+    // Creates sound/voicegroups/<name>.inc (a copy of copyFromArg's
+    // voicegroup, or the dummy template) → its -G arg.
+    Q_INVOKABLE QString createVoicegroup(const QString &name, const QString &copyFromArg);
+
+  private:
+    // Registration-affecting calls share the dialog rules (not inside a
+    // transaction, a song.changed listener or a paint callback): they
+    // reload the project and may re-map the active song.
+    bool writeAllowed(const char *api);
+};
+
+// porydaw.voicegroup: the active song's voicegroup source (the file the
+// Voicegroup dock edits), read-only; edits go through edit.setVoice.
+class VoicegroupApi : public ApiObject
+{
+    Q_OBJECT
+    Q_PROPERTY(bool isOpen READ isOpen)
+    Q_PROPERTY(QString arg READ arg)
+    Q_PROPERTY(QString name READ name)
+    Q_PROPERTY(QString file READ file)
+    Q_PROPERTY(QString loadName READ loadName)
+    Q_PROPERTY(bool dirty READ dirty)
+    Q_PROPERTY(bool monolithic READ monolithic)
+  public:
+    using ApiObject::ApiObject;
+    bool isOpen() const;
+    QString arg() const;
+    QString name() const;
+    QString file() const;
+    QString loadName() const;
+    bool dirty() const;
+    bool monolithic() const;
+    // All 128 slots: {slot, kind} with kind "voice" (editable: + type, key,
+    // pan, symbol, keysplitTable, sweep, duty, period, attack, decay,
+    // sustain, release), "cry" (read-only), "broken", "empty" or "other".
+    Q_INVOKABLE QVariantList voices() const;
+    Q_INVOKABLE QVariant voice(int slot) const;
+    // The project's instrument symbols: {directSound, progWave, drumkits,
+    // synths, keysplits: [{voicegroup, table}]}.
+    Q_INVOKABLE QVariantMap symbols() const;
+    // The project-typical envelope for a voice type (+ symbol):
+    // {attack, decay, sustain, release}, in the type's own scale.
+    Q_INVOKABLE QVariantMap typicalAdsr(const QString &type, const QString &symbol) const;
 };
 
 // Builds the facades into plugin.facades, runs prelude.js against them, and

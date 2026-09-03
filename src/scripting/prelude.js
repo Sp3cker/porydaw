@@ -4,7 +4,7 @@
 // result's `porydaw` and `console` as globals. ES2017 at most: Qt 6.2's
 // QJSEngine is the floor.
 (function (host, song, selection, cursor, transport, actions, storage, project, edit, view,
-          audio, ui, io) {
+          audio, ui, io, voicegroup) {
     "use strict";
 
     var listeners = {};
@@ -138,6 +138,24 @@
             // open(label, {newTab?}) → whether the song opened.
             open: function (label, opts) {
                 return project.open(String(label), !!(opts && opts.newTab));
+            },
+            song: function (label) { return project.song(String(label)); },
+            registration: function (label) { return project.registration(String(label)); },
+            // registerSong(label, {constant?, player?}) → the song's table id.
+            registerSong: function (label, opts) {
+                opts = opts || {};
+                return project.registerSong(String(label),
+                                            opts.constant == null ? "" : String(opts.constant),
+                                            opts.player == null ? "" : String(opts.player));
+            },
+            unregisterSong: function (label) { project.unregisterSong(String(label)); },
+            reload: function () { project.reload(); },
+            musicPlayers: function () { return project.musicPlayers(); },
+            voicegroups: function () { return project.voicegroups(); },
+            // createVoicegroup(name, {copyFrom?}) → the new voicegroup's -G arg.
+            createVoicegroup: function (name, opts) {
+                return project.createVoicegroup(String(name),
+                                                opts && opts.copyFrom ? String(opts.copyFrom) : "");
             }
         },
 
@@ -161,6 +179,8 @@
             rawEvents: function (chunk, opts) {
                 return song.rawEvents(trackArg(chunk, "song.rawEvents"), opts || {});
             },
+            settings: function () { return song.settings(); },
+            save: function () { return song.save(); },
             loop: function () { return song.loop(); },
             timeSigs: function () { return song.timeSigs(); },
             tracks: function () { return song.tracks(); },
@@ -242,6 +262,16 @@
             deleteLanePoints: function (track, cc, ticks) {
                 return edit.deleteLanePoints(trackArg(track, "edit.deleteLanePoints"), cc,
                                              ticks || []);
+            },
+            setSettings: function (spec) {
+                if (!spec || typeof spec !== "object")
+                    throw new TypeError("edit.setSettings: expected a settings object");
+                edit.setSettings(spec);
+            },
+            setVoice: function (slot, spec) {
+                if (!spec || typeof spec !== "object")
+                    throw new TypeError("edit.setVoice: expected a voice object");
+                edit.setVoice(trackArg(slot, "edit.setVoice"), spec);
             },
             setStartTempo: function (bpm) { edit.setStartTempo(bpm); },
             setLoop: function (start, end) { edit.setLoop(start, end); },
@@ -438,6 +468,22 @@
             list: function (path) { return io.list(String(path)); },
             mkdir: function (path) { io.mkdir(String(path)); },
             remove: function (path) { io.remove(String(path)); }
+        },
+
+        voicegroup: {
+            get isOpen() { return voicegroup.isOpen; },
+            get arg() { return voicegroup.arg; },
+            get name() { return voicegroup.name; },
+            get file() { return voicegroup.file; },
+            get loadName() { return voicegroup.loadName; },
+            get dirty() { return voicegroup.dirty; },
+            get monolithic() { return voicegroup.monolithic; },
+            voices: function () { return voicegroup.voices(); },
+            voice: function (slot) { return voicegroup.voice(trackArg(slot, "voicegroup.voice")); },
+            symbols: function () { return voicegroup.symbols(); },
+            typicalAdsr: function (type, symbol) {
+                return voicegroup.typicalAdsr(String(type), symbol === undefined ? "" : String(symbol));
+            }
         },
 
         storage: {

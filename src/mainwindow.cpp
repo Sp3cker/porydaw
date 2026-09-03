@@ -57,6 +57,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <functional>
 
 #include "audio/sampleimport.h"
 #include "audio/sf2reader.h"
@@ -296,6 +297,51 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
         bindings.renderWav = [this](const QString &path, const WavExportOptions &opts,
                                     double *seconds, QString *error) {
             return renderActiveSongWav(path, opts, seconds, error);
+        };
+        bindings.registerSong = [this](const QString &label, const QString &constant,
+                                       const QString &player, int *songId, QString *error) {
+            return registerSongByLabel(label, constant, player, songId, error);
+        };
+        bindings.unregisterSong = [this](const QString &label, QString *error) {
+            return unregisterSongByLabel(label, error);
+        };
+        bindings.reloadProject = [this](QString *error) { return reloadProject(error); };
+        bindings.saveSong = [this](QString *error) {
+            if (!m_active) {
+                *error = tr("no song is open");
+                return false;
+            }
+            if (!saveSession(*m_active)) {
+                *error = tr("the song could not be saved");
+                return false;
+            }
+            return true;
+        };
+        bindings.createVoicegroup = [this](const QString &name, const QString &copyFromArg,
+                                           QString *error) {
+            return createVoicegroupNamed(name, copyFromArg, error);
+        };
+        bindings.voicegroupCatalog = [this]() {
+            scripting::VoicegroupCatalog out;
+            if (!m_project.isOpen())
+                return out;
+            const VgCatalog &c = vgCatalog();
+            out.groupArgs = c.groupArgs;
+            out.directSound = c.directSound;
+            out.progWave = c.progWave;
+            out.drumkits = c.drumkits;
+            out.keysplits = c.keysplits;
+            for (const auto &def : c.synths.defs)
+                out.synths.append(def.first);
+            return out;
+        };
+        bindings.typicalAdsr = [this](VgMacro macro, const QString &symbol, VgAdsr *out) {
+            *out = m_project.isOpen() ? vgDefaultAdsr(vgCatalog().typicalAdsr, macro, symbol)
+                                      : vgDefaultAdsr(VgAdsrDefaults(), macro, symbol);
+        };
+        bindings.editVoice = [this](SongSession &session, int slot, const VgVoice &voice,
+                                    QString *error) {
+            return pushVoiceEdit(session, slot, voice, error);
         };
         bindings.audio = &m_audio;
         bindings.project = &m_project;
@@ -1335,10 +1381,7 @@ void MainWindow::activateSession(SongSession *session, bool force)
     // mis-states) the song's line — not only for unregistered strays. A song
     // registered before porydaw wrote charmap.txt entries reads as registered
     // from the song table, but still needs a re-register to backfill.
-    bool complete = true;
-    if (session->songId >= 0 && session->songId < m_project.songs().size())
-        complete = m_project.songs().at(session->songId).registrationGaps.isEmpty();
-    m_registerAction->setEnabled(!complete);
+    refreshRegisterAction();
     m_songLabel->setText(QStringLiteral("  %1").arg(session->doc.label()));
     m_songList->setCurrentSong(session->songId);
     updateWindowTitle();
@@ -2593,23 +2636,165 @@ void MainWindow::registerSongById(int songId)
     const SongInfo song = m_project.songs().at(songId);
     const QString constant =
         song.constant.isEmpty() ? SongRegistry::constantForLabel(song.label) : song.constant;
-    const QString player = song.player.isEmpty() ? QStringLiteral("MUSIC_PLAYER_BGM") : song.player;
     QString error;
     int newId = -1;
-    if (!SongRegistry::registerSong(m_project.root(), song.label, constant, player, &error,
-                                    &newId)) {
+    if (!registerSongByLabel(song.label, QString(), QString(), &newId, &error)) {
         QMessageBox::warning(this, tr("Register Song"), error);
         return;
     }
-    SongRegistry::clearRegistrationMeta(m_project.root(), song.label);
     statusBar()->showMessage(
         tr("Registered %1 as %2 (song ID %3)").arg(song.label, constant).arg(newId), 8000);
+}
+
+void MainWindow::refreshRegisterAction()
+{
+    // Register Song stays available while ANY registration file lacks (or
+    // mis-states) the song's line — not only for unregistered strays. A song
+    // registered before porydaw wrote charmap.txt entries reads as registered
+    // from the song table, but still needs a re-register to backfill.
+    bool complete = true;
+    if (m_active && m_active->songId >= 0 && m_active->songId < m_project.songs().size())
+        complete = m_project.songs().at(m_active->songId).registrationGaps.isEmpty();
+    m_registerAction->setEnabled(m_active && !complete);
+}
+
+bool MainWindow::registerSongByLabel(const QString &label, const QString &constant,
+                                     const QString &player, int *songId, QString *error)
+{
+    const SongInfo *info = nullptr;
+    for (const SongInfo &song : m_project.songs()) {
+        if (song.label == label)
+            info = &song;
+    }
+    if (!info) {
+        *error = tr("no song named %1 in the project").arg(label);
+        return false;
+    }
+    const QString useConstant = !constant.isEmpty()        ? constant
+                                : info->constant.isEmpty() ? SongRegistry::constantForLabel(label)
+                                                           : info->constant;
+    static const QRegularExpression kIdentifier(QStringLiteral("^[A-Za-z_][A-Za-z0-9_]*$"));
+    if (!kIdentifier.match(useConstant).hasMatch()) {
+        *error = tr("%1 is not a valid song constant").arg(useConstant);
+        return false;
+    }
+    const QString usePlayer = !player.isEmpty()        ? player
+                              : info->player.isEmpty() ? QStringLiteral("MUSIC_PLAYER_BGM")
+                                                       : info->player;
+    // A player chosen here must be one the song table defines; the song's
+    // own (already tabled) player is trusted as it stands, so a re-register
+    // that backfills a gap never fails on an exotic player layout.
+    if (usePlayer != info->player) {
+        const QVector<MusicPlayer> &players = m_project.musicPlayers();
+        if (std::none_of(players.begin(), players.end(),
+                         [&](const MusicPlayer &p) { return p.name == usePlayer; })) {
+            *error = tr("%1 is not a music player of this project").arg(usePlayer);
+            return false;
+        }
+    }
+    int newId = -1;
+    if (!SongRegistry::registerSong(m_project.root(), label, useConstant, usePlayer, error, &newId))
+        return false;
+    SongRegistry::clearRegistrationMeta(m_project.root(), label);
+    if (songId)
+        *songId = newId;
     // The open tab keeps its document; only the registry-derived state
     // (badge, song ids) needs refreshing. Ids may shift in the reload, so
-    // the action refresh matches by label.
-    reloadProject();
-    if (m_active && m_active->doc.label() == song.label)
-        m_registerAction->setEnabled(false);
+    // the action refresh matches by label (refreshSessionSongIds). The
+    // files are written either way: a reload failure is reported on its
+    // own, not as a failed registration.
+    reloadProjectOrWarn();
+    refreshRegisterAction();
+    return true;
+}
+
+void MainWindow::reloadProjectOrWarn()
+{
+    QString error;
+    if (!reloadProject(&error))
+        statusBar()->showMessage(tr("Reloading the project failed: %1").arg(error), 10000);
+}
+
+bool MainWindow::unregisterSongByLabel(const QString &label, QString *error)
+{
+    const SongInfo *info = nullptr;
+    for (const SongInfo &song : m_project.songs()) {
+        if (song.label == label)
+            info = &song;
+    }
+    if (!info) {
+        *error = tr("no song named %1 in the project").arg(label);
+        return false;
+    }
+    const QString constant =
+        info->constant.isEmpty() ? SongRegistry::constantForLabel(label) : info->constant;
+    if (!SongRegistry::unregisterSong(m_project.root(), label, constant, error))
+        return false;
+    reloadProjectOrWarn();
+    refreshRegisterAction();
+    return true;
+}
+
+bool MainWindow::createVoicegroupNamed(const QString &name, const QString &copyFromArg,
+                                       QString *error)
+{
+    if (!m_project.isOpen()) {
+        *error = tr("no project is open");
+        return false;
+    }
+    if (!QDir(m_project.root() + QStringLiteral("/sound/voicegroups")).exists()) {
+        *error = tr("this project keeps all voicegroups in one file; per-file voicegroups can't "
+                    "be created for that layout");
+        return false;
+    }
+    static const QRegularExpression kName(QStringLiteral("^[A-Za-z][A-Za-z0-9_]*$"));
+    if (!kName.match(name).hasMatch()) {
+        *error = tr("%1 is not a valid voicegroup name").arg(name);
+        return false;
+    }
+    if (vgCatalog().groupArgs.contains(QStringLiteral("_") + name)) {
+        *error = tr("a voicegroup named %1 already exists").arg(name);
+        return false;
+    }
+    QString copyFrom;
+    QString sectionLabel;
+    if (!copyFromArg.isEmpty()) {
+        VoicegroupSource source;
+        if (!source.open(m_project.root(), copyFromArg, error))
+            return false;
+        copyFrom = source.filePath();
+        sectionLabel = source.sectionLabel();
+    }
+    if (!VoicegroupSource::createVoicegroup(m_project.root(), name, copyFrom, sectionLabel,
+                                            error) ||
+        !VoicegroupSource::appendIncludeLine(m_project.root(), name, error)) {
+        return false;
+    }
+    invalidateVgCatalog();
+    updateVoicegroupBrowser(); // the selector's choices now include it
+    return true;
+}
+
+bool MainWindow::pushVoiceEdit(SongSession &session, int slot, const VgVoice &voice, QString *error)
+{
+    if (!session.vgSource) {
+        *error = tr("the song's voicegroup source is not open for editing");
+        return false;
+    }
+    const VgVoice *before = session.vgSource->voiceAt(slot);
+    if (!before) {
+        *error = tr("voice slot %1 is not an editable voice").arg(slot);
+        return false;
+    }
+    if (*before == voice)
+        return true;
+    // pushCommand (not the stack directly): an open edit group — a script
+    // transaction — takes the edit into its macro, so it undoes and rolls
+    // back with the transaction's own edits.
+    session.doc.pushCommand(new VoiceEditCommand(this, &session, session.vgSource->loadName(), slot,
+                                                 *before, voice,
+                                                 vgVoiceStructuralChange(*before, voice)));
+    return true;
 }
 
 void MainWindow::deleteSongById(int songId)
@@ -2736,16 +2921,20 @@ bool MainWindow::performSongDeletion(const SongInfo &song, const QString &delete
     return true;
 }
 
-void MainWindow::reloadProject()
+bool MainWindow::reloadProject(QString *error)
 {
-    QString error;
-    if (!m_project.reload(&error)) {
-        QMessageBox::warning(this, tr("Reload Project"), error);
-        return;
+    QString err;
+    if (!m_project.reload(&err)) {
+        if (error)
+            *error = err;
+        else
+            QMessageBox::warning(this, tr("Reload Project"), err);
+        return false;
     }
     populateSongList();
     refreshSessionSongIds();
     invalidateVgCatalog();
+    return true;
 }
 
 void MainWindow::loadSongByLabel(const QString &label, bool newTab)
@@ -2938,9 +3127,9 @@ void MainWindow::onVoiceEditRequested(int slot, const VgVoice &voice, bool struc
     const VgVoice *before = session->vgSource->voiceAt(slot);
     if (!before || *before == voice)
         return;
-    // push() applies the edit (redo) via applyVoiceEdit.
-    session->doc.undoStack()->push(new VoiceEditCommand(
-        this, session, session->vgSource->loadName(), slot, *before, voice, structural));
+    // pushCommand applies the edit (redo) via applyVoiceEdit.
+    session->doc.pushCommand(new VoiceEditCommand(this, session, session->vgSource->loadName(),
+                                                  slot, *before, voice, structural));
 }
 
 void MainWindow::applyVoiceEdit(SongSession &session, const QString &loadName, int slot,
@@ -2965,15 +3154,25 @@ void MainWindow::replayVoiceEdits(SongSession &session)
     // target the just-reopened voicegroup back into it. Called from inside a
     // cfg command's undo()/redo(), where QUndoStack::index() still counts
     // that cfg command as applied — it isn't a voice edit, so it's skipped.
+    // A plugin transaction groups its voice edits under a macro: walk the
+    // children too (a macro's own id is -1).
     const QUndoStack *stack = session.doc.undoStack();
-    for (int i = 0; i < stack->index(); i++) {
-        const QUndoCommand *cmd = stack->command(i);
-        if (cmd->id() != kVoiceEditCommandId)
-            continue;
-        auto *edit = static_cast<const VoiceEditCommand *>(cmd);
-        if (edit->loadName() == session.vgSource->loadName())
-            session.vgSource->setVoice(edit->slot(), edit->after());
-    }
+    const std::function<void(const QUndoCommand *)> replay = [&](const QUndoCommand *cmd) {
+        if (cmd->id() == kVoiceEditCommandId) {
+            auto *edit = static_cast<const VoiceEditCommand *>(cmd);
+            if (edit->loadName() == session.vgSource->loadName())
+                session.vgSource->setVoice(edit->slot(), edit->after());
+            return;
+        }
+        for (int c = 0; c < cmd->childCount(); c++)
+            replay(cmd->child(c));
+    };
+    for (int i = 0; i < stack->index(); i++)
+        replay(stack->command(i));
+    // An open transaction macro is applied too but not counted by index()
+    // yet (a setVoice before a -G switch in the same transaction).
+    if (session.doc.editGroupMacroOpen() && stack->index() < stack->count())
+        replay(stack->command(stack->index()));
 }
 
 void MainWindow::onVoiceEdited(SongSession &session, int slot, bool structural)
@@ -3166,26 +3365,16 @@ void MainWindow::newVoicegroup()
     const QString name = nameEdit->text().trimmed();
     if (name.isEmpty())
         return;
-    if (vgCatalog().groupArgs.contains(QStringLiteral("_") + name)) {
-        QMessageBox::warning(this, tr("New Voicegroup"),
-                             tr("A voicegroup named %1 already exists.").arg(name));
-        return;
-    }
-
-    const QString copyFrom = sourceCombo->currentData().toString();
-    const QString sectionLabel =
-        (!copyFrom.isEmpty() && activeSource && copyFrom == activeSource->filePath())
-            ? activeSource->sectionLabel()
-            : QString();
+    // "Copy of" is the active song's own voicegroup, by its -G arg (the
+    // helper resolves the file and section; duplicates are refused there).
+    const QString copyFromArg = sourceCombo->currentData().toString().isEmpty() || !m_active
+                                    ? QString()
+                                    : m_active->doc.cfg().voicegroupArg;
     QString error;
-    if (!VoicegroupSource::createVoicegroup(m_project.root(), name, copyFrom, sectionLabel,
-                                            &error) ||
-        !VoicegroupSource::appendIncludeLine(m_project.root(), name, &error)) {
+    if (!createVoicegroupNamed(name, copyFromArg, &error)) {
         QMessageBox::warning(this, tr("New Voicegroup"), error);
         return;
     }
-    invalidateVgCatalog();
-    updateVoicegroupBrowser(); // the selector's choices now include it
     if (m_active) {
         // Assign it to the current song right away — the same undoable cfg
         // edit the selector makes; onDocumentChanged performs the swap.

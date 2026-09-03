@@ -172,6 +172,11 @@ QString deletableVoicegroup(const QString &projectRoot, const QVector<SongInfo> 
 RegistrationStatus checkRegistration(const QString &projectRoot, const QString &label,
                                      const QString &constant);
 
+// The registration files a status says still miss (or mis-state) the
+// song, in registration order and skipping inapplicable files:
+// SongInfo::registrationGaps and porydaw.project.registration().gaps.
+QStringList registrationGaps(const RegistrationStatus &status);
+
 // checkRegistration for every song at once, keyed by label: one read of
 // each registration file for the whole project (the song browser audits
 // hundreds of songs at open). A song with no parsed constant is checked

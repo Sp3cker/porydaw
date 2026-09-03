@@ -67,6 +67,7 @@ nav:
       - Plugins: manual/plugins.md
       - Files Porydaw Reads & Writes: manual/project-files.md
   - Reference:
+      - Scripting API: reference/scripting.md
       - FAQ & Troubleshooting: reference/faq.md
       - Related Projects: reference/related-projects.md
       - Changelog: https://github.com/huderlem/porydaw/blob/main/CHANGELOG.md

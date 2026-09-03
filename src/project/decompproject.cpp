@@ -35,17 +35,7 @@ bool DecompProject::open(const QString &rootDir, QString *error)
         SongRegistry::checkRegistrations(m_root, m_songs);
     for (SongInfo &song : m_songs) {
         const RegistrationStatus status = statuses.value(song.label);
-        song.registrationGaps.clear();
-        if (!status.inSongTable)
-            song.registrationGaps.append(QStringLiteral("song_table.inc"));
-        if (!status.inSongsH)
-            song.registrationGaps.append(QStringLiteral("songs.h"));
-        if (status.ldApplicable && !status.inLdScript)
-            song.registrationGaps.append(QStringLiteral("ld_script.ld"));
-        if (status.charmapApplicable && !status.inCharmap)
-            song.registrationGaps.append(QStringLiteral("charmap.txt"));
-        if (status.debugApplicable && !status.inDebugMenu)
-            song.registrationGaps.append(QStringLiteral("src/debug.c"));
+        song.registrationGaps = SongRegistry::registrationGaps(status);
     }
     if (!parseMidiCfg())
         parseSongsMk();

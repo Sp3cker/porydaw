@@ -39,6 +39,7 @@ them into your plugins folder to try them:
 | Song Report | **Plugins → Song Report**: a text summary of the song, and a WAV render |
 | Range Tools | right-click a time selection: duplicate it after itself, echo it with fading copies, reverse its notes |
 | Scale Guide | shades the piano-roll rows outside a scale you pick per song |
+| Project Tools | **Plugins → Project Tools**: registers every song whose registration files miss a line, and applies one envelope to all sample voices of the song's voicegroup |
 
 ## Shortcuts, menus and panels
 
@@ -60,8 +61,7 @@ a dialog it shows.
 
 ## Writing your own
 
-The scripting reference lives in the Porydaw repository:
-[`docs/scripting/API.md`](https://github.com/huderlem/porydaw/blob/main/docs/scripting/API.md),
-with type declarations in
+The [Scripting API reference](../reference/scripting.md) documents
+everything a plugin can do; type declarations in
 [`docs/scripting/porydaw.d.ts`](https://github.com/huderlem/porydaw/blob/main/docs/scripting/porydaw.d.ts)
-for editor completion. The bundled examples are the quickest way in.
+give editor completion. The bundled examples are the quickest way in.

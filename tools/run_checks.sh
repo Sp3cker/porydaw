@@ -96,6 +96,13 @@ run() { # name base|- harness-args... (SCRATCH placeholder = fresh copy of base)
     report "$name" $?
 }
 
+# The manual's Scripting API page is generated from docs/scripting/API.md;
+# a stale copy is a docs bug the harness sweep should catch too.
+if command -v python3 >/dev/null 2>&1; then
+    python3 "$(dirname "$0")/gen_scripting_docs.py" --check >"$LOG" 2>&1
+    report gen_scripting_docs $?
+fi
+
 run roundtrip        base --roundtrip SCRATCH ${mid2agb_args[@]+"${mid2agb_args[@]}"}
 run editcheck        base --editcheck SCRATCH
 run noteidcheck      base --noteidcheck SCRATCH

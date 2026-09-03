@@ -185,7 +185,28 @@ class MainWindow : public QMainWindow
     // every step runs; false collects what failed into *error.
     bool performSongDeletion(const SongInfo &song, const QString &deleteVoicegroupName,
                              QString *error);
-    void reloadProject();
+    // Re-reads the project's music data after a registration change.
+    // Without *error a failure shows a message box.
+    bool reloadProject(QString *error = nullptr);
+    // Project adapter writes shared with the plugin host (scripting::
+    // HostBindings): the window's actions minus their dialogs, false with
+    // *error on failure. Empty constant/player take the song's own (or the
+    // label-derived / BGM defaults), as Register Song does.
+    bool registerSongByLabel(const QString &label, const QString &constant, const QString &player,
+                             int *songId, QString *error);
+    bool unregisterSongByLabel(const QString &label, QString *error);
+    // sound/voicegroups/<name>.inc as a copy of the voicegroup copyFromArg
+    // names (dummy template when empty), hub line included.
+    bool createVoicegroupNamed(const QString &name, const QString &copyFromArg, QString *error);
+    // A voice edit on the session's open voicegroup source, through its
+    // document's undo stack (an open edit group takes it). A no-change
+    // edit is a success that pushes nothing.
+    bool pushVoiceEdit(SongSession &session, int slot, const VgVoice &voice, QString *error);
+    // reloadProject with a failure shown in the status bar (after a write
+    // that succeeded regardless).
+    void reloadProjectOrWarn();
+    // Register Song is enabled while the active song's registration has gaps.
+    void refreshRegisterAction();
 
     // --- tab/session plumbing ---
     SongSession *activeSession() const { return m_active; }

@@ -69,6 +69,8 @@ class DecompProject
     bool isOpen() const { return !m_root.isEmpty(); }
     const QString &root() const { return m_root; }
     const QVector<SongInfo> &songs() const { return m_songs; }
+    // The song table's music players (SongRegistry::musicPlayers, cached at open).
+    const QVector<MusicPlayer> &musicPlayers() const { return m_players; }
 
     // Engine tracks the song's music player allocates (its MusicPlayer::
     // trackCount, cached at open). Tracks at or beyond this never start

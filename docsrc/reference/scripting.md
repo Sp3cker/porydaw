@@ -1,4 +1,12 @@
-# porydaw scripting API — v1 (Phases 1–4)
+<!-- GENERATED FILE: do not edit. Source: docs/scripting/API.md;
+     regenerate with tools/gen_scripting_docs.py. -->
+
+# Scripting API
+
+!!! note
+    This page is the plugin authors' reference. For installing plugins and
+    the bundled examples, see [Plugins](../manual/plugins.md). Type
+    declarations for editors: [`porydaw.d.ts`](https://github.com/huderlem/porydaw/blob/main/docs/scripting/porydaw.d.ts).
 
 Plugins are JavaScript run by porydaw's embedded engine (Qt's `QJSEngine`,
 ES2017-level). Everything runs on the UI thread; a script call that runs

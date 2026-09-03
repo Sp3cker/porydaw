@@ -1348,6 +1348,22 @@ RegistrationStatus checkRegistration(const QString &projectRoot, const QString &
     return checkRegistrations(projectRoot, {song}).value(label);
 }
 
+QStringList registrationGaps(const RegistrationStatus &status)
+{
+    QStringList gaps;
+    if (!status.inSongTable)
+        gaps.append(QStringLiteral("song_table.inc"));
+    if (!status.inSongsH)
+        gaps.append(QStringLiteral("songs.h"));
+    if (status.ldApplicable && !status.inLdScript)
+        gaps.append(QStringLiteral("ld_script.ld"));
+    if (status.charmapApplicable && !status.inCharmap)
+        gaps.append(QStringLiteral("charmap.txt"));
+    if (status.debugApplicable && !status.inDebugMenu)
+        gaps.append(QStringLiteral("src/debug.c"));
+    return gaps;
+}
+
 QHash<QString, RegistrationStatus> checkRegistrations(const QString &projectRoot,
                                                       const QVector<SongInfo> &songs)
 {

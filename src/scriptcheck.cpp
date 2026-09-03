@@ -42,6 +42,8 @@
 #include "audio/wavexport.h"
 #include "core/songdocument.h"
 #include "mainwindow.h"
+#include "project/songregistry.h"
+#include "project/voicegroupsource.h"
 #include "scripting/scripthost.h"
 #include "scripting/scriptmenus.h"
 #include "scripting/scriptwidgets.h"
@@ -1987,6 +1989,458 @@ void runReachChecks(const Check &check, scripting::ScriptHost &host, MainWindow 
     run(QStringLiteral("porydaw.actions.unregister(AID)"));
 }
 
+// Phase 4, second slice: project adapter writes and the voicegroup API —
+// song settings (read + undoable edit, voicegroup switch by display name),
+// voice edits through the session's undo stack (transaction entry,
+// rollback, structural type change with envelope adoption, validation),
+// song.save() of an edited voicegroup, voicegroup creation, and song
+// registration/unregistration on a copied .mid. Writes into the project:
+// scratch copy only. Leaves the project as it found it (bar the .mid
+// write-back of song.save()).
+void runAdapterChecks(const Check &check, scripting::ScriptHost &host, SongSession &session,
+                      QList<Message> &messages, const QString &projectRoot,
+                      const QString &songLabel, bool audioOk)
+{
+    // The window swaps a session's voicegroup source on a -G change only
+    // with audio up (onDocumentChanged bails without it); the cfg edit
+    // itself is checked either way.
+    const bool swaps = audioOk;
+    SongDocument &doc = session.doc;
+    QUndoStack &undo = *doc.undoStack();
+    const auto run = [&](const QString &code) { return host.evalConsole(code); };
+    const auto runc = [&](const char *code) { return host.evalConsole(QLatin1String(code)); };
+    const auto errorLogged = [&](const char *fragment) {
+        return hasMessage(messages, QStringLiteral("console"), 2, QLatin1String(fragment));
+    };
+    const auto fileBytes = [](const QString &path) {
+        QFile f(path);
+        return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+    };
+    while (undo.canRedo())
+        undo.redo();
+    const int index0 = undo.index();
+    const SongCfg cfg0 = doc.cfg();
+
+    // --- settings (read) + project.song / registration / musicPlayers ---
+    check(runc("porydaw.song.settings().voicegroup") == cfg0.voicegroupArg &&
+              runc("porydaw.song.settings().masterVolume") == QString::number(cfg0.masterVolume) &&
+              runc("porydaw.song.settings().flags.length") == QString::number(cfg0.rawFlags.size()),
+          "song.settings() does not mirror the document's midi.cfg settings");
+    check(run(QStringLiteral("porydaw.project.song('%1').settings.voicegroup").arg(songLabel)) ==
+                  cfg0.voicegroupArg &&
+              runc("porydaw.project.song('nope_zzz_not_a_song')") == QStringLiteral("null"),
+          "project.song(label) does not return the entry with its settings (or null)");
+    check(runc("porydaw.project.musicPlayers().some(function (p) { return p.name === "
+               "'MUSIC_PLAYER_BGM' && p.trackCount > 0; })") == QStringLiteral("true"),
+          "project.musicPlayers() lacks MUSIC_PLAYER_BGM with a track count");
+    check(run(QStringLiteral("porydaw.project.registration('%1').complete").arg(songLabel)) ==
+              QStringLiteral("true"),
+          "project.registration() of a registered song is not complete");
+    check(runc("porydaw.project.registration('nope_zzz_not_a_song')").isNull() &&
+              errorLogged("no song named"),
+          "project.registration() of an unknown label did not throw");
+
+    // --- edit.setSettings ---
+    const int vol1 = cfg0.masterVolume == 99 ? 98 : 99;
+    check(run(QStringLiteral("porydaw.edit.transaction('Vol', function () { "
+                             "porydaw.edit.setSettings({masterVolume: %1}); })")
+                  .arg(vol1)) == QStringLiteral("undefined") &&
+              doc.cfg().masterVolume == vol1 && undo.index() == index0 + 1 &&
+              undo.text(index0) == QStringLiteral("Vol") &&
+              runc("porydaw.song.settings().masterVolume") == QString::number(vol1),
+          "edit.setSettings({masterVolume}) did not apply as one named undo entry");
+    undo.undo();
+    check(doc.cfg().masterVolume == cfg0.masterVolume && undo.index() == index0,
+          "undoing the settings transaction did not restore the master volume");
+    run(QStringLiteral("porydaw.edit.transaction('Rev', function () { "
+                       "porydaw.edit.setSettings({reverb: 33}); })"));
+    check(doc.cfg().reverb == 33 && runc("porydaw.song.settings().reverb") == QStringLiteral("33"),
+          "edit.setSettings({reverb}) did not set the -R flag");
+    run(QStringLiteral("porydaw.edit.transaction('NoRev', function () { "
+                       "porydaw.edit.setSettings({reverb: null}); })"));
+    check(doc.cfg().reverb == -1 &&
+              runc("porydaw.song.settings().reverb") == QStringLiteral("null"),
+          "edit.setSettings({reverb: null}) did not drop the -R flag");
+    check(runc("porydaw.edit.transaction('U', function () { porydaw.edit.setSettings({reverb: "
+               "undefined}); })")
+                  .isNull() &&
+              errorLogged("'reverb' must be a number") && doc.cfg().reverb == -1,
+          "edit.setSettings({reverb: undefined}) was taken for null");
+    while (undo.index() > index0)
+        undo.undo();
+    check(doc.cfg().reverb == cfg0.reverb, "undo did not restore the reverb flag");
+    check(
+        runc("porydaw.edit.transaction('Bad', function () { porydaw.edit.setSettings({bogus: 1}); "
+             "})")
+                .isNull() &&
+            errorLogged("unknown setting") && undo.index() == index0,
+        "edit.setSettings with an unknown key was not refused");
+    check(runc("porydaw.edit.transaction('BadVg', function () { porydaw.edit.setSettings({"
+               "voicegroup: 'no_such_voicegroup_zzz'}); })")
+                  .isNull() &&
+              errorLogged("unknown voicegroup") && undo.index() == index0 &&
+              doc.cfg().voicegroupArg == cfg0.voicegroupArg,
+          "edit.setSettings with an unknown voicegroup was not refused");
+    check(runc("porydaw.edit.setSettings({masterVolume: 5})").isNull() &&
+              errorLogged("inside porydaw.edit.transaction") &&
+              doc.cfg().masterVolume == cfg0.masterVolume,
+          "edit.setSettings outside a transaction was allowed");
+
+    // Switching the voicegroup by display name: the window swaps the
+    // session's source on the cfg change, and porydaw.voicegroup follows.
+    const QString otherArg = runc(
+        "var VGS = porydaw.project.voicegroups(); var o = VGS.filter(function (g) { return g.arg "
+        "!== porydaw.song.settings().voicegroup; })[0]; o ? o.arg : ''");
+    check(!otherArg.isEmpty() &&
+              run(QStringLiteral("VGS.some(function (g) { return g.arg === '%1' && g.name === "
+                                 "'%2'; })")
+                      .arg(cfg0.voicegroupArg, SongRegistry::voicegroupDisplayName(
+                                                   cfg0.voicegroupArg))) == QStringLiteral("true"),
+          "project.voicegroups() lacks the song's own voicegroup (with its display name) or a "
+          "second one");
+    if (!check(session.vgSource != nullptr, "the session has no voicegroup source to edit"))
+        return;
+    run(QStringLiteral("porydaw.edit.transaction('VG', function () { "
+                       "porydaw.edit.setSettings({voicegroup: '%1'}); })")
+            .arg(SongRegistry::voicegroupDisplayName(otherArg)));
+    check(doc.cfg().voicegroupArg == otherArg && runc("porydaw.voicegroup.arg") == otherArg &&
+              runc("porydaw.voicegroup.name") == SongRegistry::voicegroupDisplayName(otherArg) &&
+              (!swaps || (session.vgSource &&
+                          runc("porydaw.voicegroup.file") == session.vgSource->filePath() &&
+                          !session.vgSource->filePath().contains(
+                              SongRegistry::voicegroupDisplayName(cfg0.voicegroupArg)))),
+          "setSettings({voicegroup}) by display name did not switch the voicegroup (or "
+          "porydaw.voicegroup did not follow)");
+    undo.undo();
+    check(doc.cfg().voicegroupArg == cfg0.voicegroupArg &&
+              runc("porydaw.voicegroup.arg") == cfg0.voicegroupArg && session.vgSource,
+          "undoing the voicegroup switch did not reopen the original source");
+
+    // --- porydaw.voicegroup (read) ---
+    check(runc("porydaw.voicegroup.isOpen") == QStringLiteral("true") &&
+              runc("porydaw.voicegroup.voices().length") == QString::number(VOICEGROUP_SIZE) &&
+              runc("porydaw.voicegroup.loadName") == session.vgSource->loadName(),
+          "porydaw.voicegroup does not report the open source with 128 slots");
+    // A voice with an envelope of its own (keysplit/drumkit voices carry
+    // none — an `attack` on those is refused below).
+    int slot = -1;
+    int splitSlot = -1;
+    for (int s = 0; s < VOICEGROUP_SIZE; ++s) {
+        const VgVoice *v = session.vgSource->voiceAt(s);
+        if (!v)
+            continue;
+        if (vgAdsrFamily(v->macro) >= 0 && slot < 0)
+            slot = s;
+        if (vgAdsrFamily(v->macro) < 0 && splitSlot < 0)
+            splitSlot = s;
+    }
+    if (!check(slot >= 0, "the voicegroup has no editable voice with an envelope to test with"))
+        return;
+    const QString vgPath = session.vgSource->filePath();
+    if (splitSlot >= 0) {
+        check(run(QStringLiteral("porydaw.edit.transaction('B0', function () { "
+                                 "porydaw.edit.setVoice(%1, {attack: 1}); })")
+                      .arg(splitSlot))
+                      .isNull() &&
+                  errorLogged("does not apply to") && !session.vgSource->dirty() &&
+                  undo.index() == index0,
+              "setVoice accepted an envelope field on a keysplit/drumkit voice");
+    }
+    const VgVoice v0 = *session.vgSource->voiceAt(slot);
+    check(run(QStringLiteral("var V = porydaw.voicegroup.voice(%1); V.kind + '|' + V.type + '|' + "
+                             "V.key + '|' + V.symbol + '|' + V.attack + '|' + V.release")
+                  .arg(slot)) == QStringLiteral("voice|%1|%2|%3|%4|%5")
+                                     .arg(vgMacroName(v0.macro))
+                                     .arg(v0.key)
+                                     .arg(v0.symbol)
+                                     .arg(v0.attack)
+                                     .arg(v0.release),
+          "voicegroup.voice(slot) does not report the parsed macro arguments");
+    check(runc("porydaw.voicegroup.voice(999)") == QStringLiteral("null") &&
+              runc("porydaw.voicegroup.voices()[0].slot") == QStringLiteral("0"),
+          "voicegroup.voice(out of range) is not null / voices() slots not numbered");
+    check(runc("porydaw.voicegroup.symbols().directSound.length > 0 && "
+               "Array.isArray(porydaw.voicegroup.symbols().keysplits)") == QStringLiteral("true"),
+          "voicegroup.symbols() lacks the project's DirectSound symbols");
+    check(runc("var A = porydaw.voicegroup.typicalAdsr('voice_directsound'); typeof A.attack === "
+               "'number' && A.release > 0") == QStringLiteral("true") &&
+              runc("porydaw.voicegroup.typicalAdsr('voice_bogus')").isNull() &&
+              errorLogged("unknown voice type"),
+          "voicegroup.typicalAdsr() did not return an envelope (or accepted a bad type)");
+
+    // --- edit.setVoice ---
+    const bool cgb0 = vgMacroIsCgb(v0.macro);
+    const int attack1 = cgb0 ? (v0.attack == 3 ? 4 : 3) : (v0.attack == 200 ? 201 : 200);
+    check(run(QStringLiteral("porydaw.edit.transaction('Voice', function () { "
+                             "porydaw.edit.setVoice(%1, {attack: %2}); })")
+                  .arg(slot)
+                  .arg(attack1)) == QStringLiteral("undefined") &&
+              session.vgSource->voiceAt(slot)->attack == attack1 && session.vgSource->dirty() &&
+              undo.index() == index0 + 1 && undo.text(index0) == QStringLiteral("Voice") &&
+              runc("porydaw.voicegroup.dirty") == QStringLiteral("true") &&
+              run(QStringLiteral("porydaw.voicegroup.voice(%1).attack").arg(slot)) ==
+                  QString::number(attack1),
+          "edit.setVoice did not apply as one transaction entry on the song's undo stack");
+    undo.undo();
+    check(session.vgSource->voiceAt(slot)->attack == v0.attack && !session.vgSource->dirty() &&
+              undo.index() == index0,
+          "undoing the voice transaction did not restore the voice (or left the source dirty)");
+    check(run(QStringLiteral("porydaw.edit.transaction('Roll', function () { "
+                             "porydaw.edit.setVoice(%1, {attack: %2}); throw new Error('boom'); })")
+                  .arg(slot)
+                  .arg(attack1))
+                  .isNull() &&
+              errorLogged("boom") && session.vgSource->voiceAt(slot)->attack == v0.attack &&
+              !session.vgSource->dirty() && undo.index() == index0,
+          "a voice edit was not rolled back with its transaction");
+    // Structural: a type change into another family adopts a fitting
+    // envelope and undoes back to the original macro.
+    const QString type1 = run(
+        QStringLiteral("var SPEC = porydaw.voicegroup.voice(%1).type.indexOf('directsound') >= 0 ? "
+                       "{type: 'voice_square_1'} : {type: 'voice_directsound', symbol: "
+                       "porydaw.voicegroup.symbols().directSound[0]}; "
+                       "porydaw.edit.transaction('Type', function () { porydaw.edit.setVoice(%1, "
+                       "SPEC); }); porydaw.voicegroup.voice(%1).type")
+            .arg(slot));
+    {
+        const VgVoice *v1 = session.vgSource->voiceAt(slot);
+        const bool cgb1 = v1 && vgMacroIsCgb(v1->macro);
+        check(v1 && v1->macro != v0.macro && type1 == vgMacroName(v1->macro) &&
+                  v1->attack <= (cgb1 ? 7 : 255) && v1->sustain <= (cgb1 ? 15 : 255) &&
+                  v1->release <= (cgb1 ? 7 : 255) && undo.index() == index0 + 1,
+              "a structural setVoice (type change) did not apply with an envelope in range");
+    }
+    undo.undo();
+    check(session.vgSource->voiceAt(slot)->macro == v0.macro &&
+              *session.vgSource->voiceAt(slot) == v0 && !session.vgSource->dirty(),
+          "undoing a structural voice edit did not restore the original macro line");
+    // A crossing with a partial envelope: the given key lands, the others
+    // come from the typical envelope, never from the old family's digits.
+    {
+        const int a = cgb0 ? 200 : 2; // fits the target family only
+        run(QStringLiteral("var SPEC2 = Object.assign({attack: %2}, SPEC); "
+                           "porydaw.edit.transaction('Type2', function () { "
+                           "porydaw.edit.setVoice(%1, SPEC2); })")
+                .arg(slot)
+                .arg(a));
+        const VgVoice *v2 = session.vgSource->voiceAt(slot);
+        check(v2 && v2->macro != v0.macro && v2->attack == a &&
+                  v2->release <= (vgMacroIsCgb(v2->macro) ? 7 : 255) &&
+                  v2->sustain <= (vgMacroIsCgb(v2->macro) ? 15 : 255),
+              "a partial envelope on a family change did not land the given key on a fitting "
+              "envelope");
+        undo.undo();
+        check(*session.vgSource->voiceAt(slot) == v0 && !session.vgSource->dirty(),
+              "undo after the partial-envelope crossing did not restore the voice");
+    }
+    check(run(QStringLiteral("porydaw.edit.transaction('B1', function () { porydaw.edit.setVoice("
+                             "999, {attack: 1}); })"))
+                  .isNull() &&
+              errorLogged("not an editable voice"),
+          "setVoice on a slot outside the voicegroup was accepted");
+    check(run(QStringLiteral("porydaw.edit.transaction('B2', function () { porydaw.edit.setVoice("
+                             "%1, {type: 'voice_bogus'}); })")
+                  .arg(slot))
+                  .isNull() &&
+              errorLogged("unknown voice type"),
+          "setVoice with an unknown type was accepted");
+    check(run(QStringLiteral("porydaw.edit.transaction('B3', function () { porydaw.edit.setVoice("
+                             "%1, {bogus: 1}); })")
+                  .arg(slot))
+                  .isNull() &&
+              errorLogged("unknown voice field"),
+          "setVoice with an unknown field was accepted");
+    check(run(QStringLiteral("porydaw.edit.setVoice(%1, {attack: 1})").arg(slot)).isNull() &&
+              errorLogged("inside porydaw.edit.transaction"),
+          "setVoice outside a transaction was allowed");
+    check(*session.vgSource->voiceAt(slot) == v0 && !session.vgSource->dirty() &&
+              undo.index() == index0,
+          "a refused setVoice touched the voice or the undo stack");
+
+    // A transaction's voice edit survives a voicegroup switch and back:
+    // the reopened source replays the macro's children.
+    if (swaps) {
+        run(QStringLiteral("porydaw.edit.transaction('Voice4', function () { "
+                           "porydaw.edit.setVoice(%1, {attack: %2}); }); "
+                           "porydaw.edit.transaction('VG3', function () { "
+                           "porydaw.edit.setSettings({voicegroup: '%3'}); })")
+                .arg(slot)
+                .arg(attack1)
+                .arg(otherArg));
+        check(session.vgSource && session.vgSource->filePath() != vgPath &&
+                  undo.index() == index0 + 2,
+              "the voicegroup switch after a voice edit did not open the other source");
+        undo.undo();
+        check(session.vgSource && session.vgSource->filePath() == vgPath &&
+                  session.vgSource->voiceAt(slot)->attack == attack1 && session.vgSource->dirty(),
+              "a transaction's voice edit was not replayed after undoing a voicegroup switch");
+        undo.undo();
+        check(session.vgSource->voiceAt(slot)->attack == v0.attack && !session.vgSource->dirty() &&
+                  undo.index() == index0,
+              "undoing the replayed voice edit did not restore the voice");
+        // The same inside ONE transaction: the open macro isn't counted by
+        // index() yet, but its voice edit must survive the switch and back.
+        run(QStringLiteral("porydaw.edit.transaction('Voice5', function () { "
+                           "porydaw.edit.setVoice(%1, {attack: %2}); "
+                           "porydaw.edit.setSettings({voicegroup: '%3'}); "
+                           "porydaw.edit.setSettings({voicegroup: '%4'}); })")
+                .arg(slot)
+                .arg(attack1)
+                .arg(otherArg, cfg0.voicegroupArg));
+        check(session.vgSource && session.vgSource->filePath() == vgPath &&
+                  session.vgSource->voiceAt(slot)->attack == attack1 && session.vgSource->dirty() &&
+                  undo.index() == index0 + 1,
+              "a voice edit earlier in the same transaction was lost by a voicegroup switch "
+              "and back");
+        undo.undo();
+        check(session.vgSource->voiceAt(slot)->attack == v0.attack && !session.vgSource->dirty() &&
+                  undo.index() == index0,
+              "undoing the switch-and-back transaction did not restore the voice");
+    }
+
+    // --- song.save() writes the edited voicegroup ---
+    const QByteArray vgBytes0 = fileBytes(vgPath);
+    check(runc("porydaw.edit.transaction('S', function () { porydaw.song.save(); })").isNull() &&
+              errorLogged("inside a transaction"),
+          "song.save() inside a transaction was allowed");
+    run(QStringLiteral("porydaw.edit.transaction('Voice2', function () { "
+                       "porydaw.edit.setVoice(%1, {attack: %2}); })")
+            .arg(slot)
+            .arg(attack1));
+    check(runc("porydaw.song.save()") == QStringLiteral("true") && !session.vgSource->dirty() &&
+              undo.isClean() && fileBytes(vgPath) != vgBytes0 &&
+              runc("porydaw.voicegroup.dirty") == QStringLiteral("false"),
+          "song.save() did not write the edited voicegroup");
+    run(QStringLiteral("porydaw.edit.transaction('Voice3', function () { "
+                       "porydaw.edit.setVoice(%1, {attack: %2}); }); porydaw.song.save()")
+            .arg(slot)
+            .arg(v0.attack));
+    check(fileBytes(vgPath) == vgBytes0 && !session.vgSource->dirty(),
+          "editing the voice back and saving did not restore the voicegroup file byte for byte");
+    const int index1 = undo.index();
+
+    // --- project.createVoicegroup ---
+    const QString newVgFile = projectRoot + QStringLiteral("/sound/voicegroups/plugin_test.inc");
+    {
+        QString cleanupError;
+        VoicegroupSource::removeIncludeLine(projectRoot, QStringLiteral("plugin_test"),
+                                            &cleanupError);
+        VoicegroupSource::deleteVoicegroup(projectRoot, QStringLiteral("plugin_test"),
+                                           &cleanupError);
+        runc("porydaw.project.reload()");
+    }
+    check(runc("porydaw.project.createVoicegroup('plugin_test', {copyFrom: "
+               "porydaw.voicegroup.arg})") == QStringLiteral("_plugin_test") &&
+              QFile::exists(newVgFile) &&
+              runc("porydaw.project.voicegroups().some(function (g) { return g.arg === "
+                   "'_plugin_test' && g.name === 'plugin_test'; })") == QStringLiteral("true"),
+          "project.createVoicegroup did not create the file and list it");
+    check(runc("porydaw.project.createVoicegroup('plugin_test')").isNull() &&
+              errorLogged("already exists") &&
+              runc("porydaw.project.createVoicegroup('9bad')").isNull() &&
+              errorLogged("not a valid voicegroup name"),
+          "createVoicegroup accepted a duplicate or an invalid name");
+    run(QStringLiteral("porydaw.edit.transaction('VG2', function () { "
+                       "porydaw.edit.setSettings({voicegroup: '_plugin_test'}); })"));
+    check(doc.cfg().voicegroupArg == QStringLiteral("_plugin_test") &&
+              (!swaps ||
+               (session.vgSource && session.vgSource->filePath() == newVgFile &&
+                runc("porydaw.voicegroup.file") == newVgFile &&
+                run(QStringLiteral("porydaw.voicegroup.voice(%1).symbol").arg(slot)) == v0.symbol)),
+          "switching to the created copy did not open it with the copied voices");
+    undo.undo();
+    check(undo.index() == index1 && doc.cfg().voicegroupArg == cfg0.voicegroupArg,
+          "undo did not leave the created voicegroup behind");
+    {
+        QString cleanupError;
+        check(VoicegroupSource::removeIncludeLine(projectRoot, QStringLiteral("plugin_test"),
+                                                  &cleanupError) &&
+                  VoicegroupSource::deleteVoicegroup(projectRoot, QStringLiteral("plugin_test"),
+                                                     &cleanupError),
+              "could not delete the created voicegroup again");
+    }
+    check(runc("porydaw.project.reload(); porydaw.project.voicegroups().some(function (g) { "
+               "return g.arg === '_plugin_test'; })") == QStringLiteral("false"),
+          "project.reload() did not drop the deleted voicegroup from the catalog");
+
+    // --- registration on a copied .mid ---
+    const QString regLabel = QStringLiteral("mus_plugin_reg");
+    const QString midiDir = projectRoot + QStringLiteral("/sound/songs/midi");
+    const QString regMid = midiDir + QStringLiteral("/") + regLabel + QStringLiteral(".mid");
+    {
+        // A previous run on this scratch may have left the song behind.
+        QString cleanupError;
+        if (run(QStringLiteral("porydaw.project.song('%1') !== null").arg(regLabel)) ==
+            QStringLiteral("true")) {
+            run(QStringLiteral("porydaw.project.unregisterSong('%1')").arg(regLabel));
+        }
+        QFile::remove(regMid);
+        SongRegistry::removeSongFlags(midiDir, regLabel, &cleanupError);
+        runc("porydaw.project.reload()");
+    }
+    check(QFile::copy(doc.midPath(), regMid), "could not copy the song's .mid for registration");
+    check(run(QStringLiteral("porydaw.project.reload(); var R = porydaw.project.song('%1'); R && "
+                             "R.hasMid && !R.registered")
+                  .arg(regLabel)) == QStringLiteral("true") &&
+              run(QStringLiteral("porydaw.project.registration('%1').inSongTable").arg(regLabel)) ==
+                  QStringLiteral("false"),
+          "a new .mid did not appear as an unregistered song after project.reload()");
+    check(run(QStringLiteral("porydaw.project.registerSong('%1', {player: 'MUSIC_PLAYER_ZZZ'})")
+                  .arg(regLabel))
+                  .isNull() &&
+              errorLogged("not a music player"),
+          "registerSong accepted an unknown music player");
+    check(runc("porydaw.project.registerSong('nope_zzz_not_a_song')").isNull() &&
+              errorLogged("no song named"),
+          "registerSong of an unknown label did not throw");
+    check(run(QStringLiteral("porydaw.project.registerSong('%1', {constant: 'bad constant'})")
+                  .arg(regLabel))
+                  .isNull() &&
+              errorLogged("not a valid song constant"),
+          "registerSong accepted a constant that is not an identifier");
+    check(run(QStringLiteral("porydaw.edit.transaction('R', function () { "
+                             "porydaw.project.registerSong('%1'); })")
+                  .arg(regLabel))
+                  .isNull() &&
+              errorLogged("inside a transaction"),
+          "registerSong inside a transaction was allowed");
+    // null options mean the defaults, like undefined.
+    const QString newId =
+        run(QStringLiteral("porydaw.project.registerSong('%1', {constant: null, player: null})")
+                .arg(regLabel));
+    check(newId.toInt() > 0 &&
+              run(QStringLiteral("porydaw.project.song('%1').registered && "
+                                 "porydaw.project.song('%1').constant === 'MUS_PLUGIN_REG' && "
+                                 "porydaw.project.registration('%1').complete")
+                      .arg(regLabel)) == QStringLiteral("true"),
+          "project.registerSong did not register the song (id, constant, complete status)");
+    {
+        const DecompProject *project = host.bindings().project;
+        check(project && session.songId >= 0 && session.songId < project->songs().size() &&
+                  project->songs().at(session.songId).label == songLabel &&
+                  runc("porydaw.song.label") == songLabel,
+              "the active session lost its song id across the registration reload");
+    }
+    run(QStringLiteral("porydaw.project.unregisterSong('%1')").arg(regLabel));
+    check(run(QStringLiteral("!porydaw.project.song('%1').registered && "
+                             "!porydaw.project.registration('%1').inSongTable")
+                  .arg(regLabel)) == QStringLiteral("true"),
+          "project.unregisterSong did not drop the registration");
+    check(run(QStringLiteral("porydaw.project.unregisterSong('%1'); 'ok'").arg(regLabel)) ==
+              QStringLiteral("ok"),
+          "unregistering an unregistered song is not a no-op success");
+    {
+        QString cleanupError;
+        QFile::remove(regMid);
+        SongRegistry::removeSongFlags(midiDir, regLabel, &cleanupError);
+    }
+    check(
+        run(QStringLiteral("porydaw.project.reload(); porydaw.project.song('%1')").arg(regLabel)) ==
+            QStringLiteral("null"),
+        "project.reload() did not drop the removed .mid");
+    undo.setClean();
+}
+
 int runTapCheck()
 {
     int failures = 0;
@@ -2153,6 +2607,7 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
         expectedIds.append(QStringLiteral("song-report"));
         expectedIds.append(QStringLiteral("range-tools"));
         expectedIds.append(QStringLiteral("scale-guide"));
+        expectedIds.append(QStringLiteral("project-tools"));
         expectedIds.sort();
         // The Phase 3 examples each open a dock in activate().
         for (const char *id : {"vu-meter", "spectrum", "dancer"}) {
@@ -2473,6 +2928,7 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
         }
         runRealtimeChecks(check, host, *this, messages, m_audioOk);
         runReachChecks(check, host, *this, *m_active, messages, pluginsDir, projectRoot, songLabel);
+        runAdapterChecks(check, host, *m_active, messages, projectRoot, songLabel, m_audioOk);
         // Switching to no song drops the API's view.
         activateSession(nullptr);
         check(host.evalConsole(QStringLiteral("porydaw.song.loaded")) == QStringLiteral("false"),

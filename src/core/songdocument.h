@@ -422,8 +422,19 @@ class SongDocument : public QObject
     void beginEditGroup(const QString &text);
     bool endEditGroup(bool discard = false);
     int editGroupDepth() const { return m_editGroupDepth; }
+    // The open edit group has pushed at least once: the QUndoStack macro
+    // is open, sitting at undoStack()->command(index()) — applied but not
+    // yet counted by index().
+    bool editGroupMacroOpen() const { return m_editGroupMacroOpen; }
 
     void setCfg(const SongCfg &cfg);
+
+    // Pushes a foreign command (a voicegroup voice edit, which lives on
+    // this document's stack so song and voicegroup share one undo/save
+    // pipeline) onto the undo stack. Every push goes through here so an
+    // open edit group can start its macro on the first command — a script
+    // transaction then groups and rolls back voice edits like its own.
+    void pushCommand(QUndoCommand *command);
 
     // Playable projection for the audio engine (MidiTimeline::build).
     std::unique_ptr<MidiTimeline> buildTimeline(double sampleRate) const;
@@ -601,9 +612,6 @@ class SongDocument : public QObject
     bool m_editGroupDiscard = false;
     bool m_editGroupMacroOpen = false;
     QString m_editGroupText;
-    // Every push goes through here so an open edit group can start its
-    // macro on the first command.
-    void pushCommand(QUndoCommand *command);
     // Monotonic across loads (never reset), so a stale NoteId from before a
     // reload can never alias a freshly minted one.
     uint64_t m_nextNoteId = 1;

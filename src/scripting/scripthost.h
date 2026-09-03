@@ -4,8 +4,10 @@
 #include <QHash>
 #include <QImage>
 #include <QJSValue>
+#include <QList>
 #include <QMutex>
 #include <QObject>
+#include <QPair>
 #include <QPointer>
 #include <QString>
 #include <QStringList>
@@ -36,12 +38,26 @@ class SongDocument;
 class SongView;
 struct SongSession;
 struct RollOverlayGeometry;
+struct VgAdsr;
+enum class VgMacro;
+struct VgVoice;
 struct WavExportOptions;
 
 namespace scripting {
 
 class MenuHandle;
 class OverlayHandle;
+
+// The project's instrument catalog as porydaw.project.voicegroups() and
+// porydaw.voicegroup.symbols() report it (MainWindow::VgCatalog's lists).
+struct VoicegroupCatalog {
+    QStringList groupArgs; // -G args, sorted
+    QStringList directSound;
+    QStringList progWave;
+    QStringList drumkits;
+    QStringList synths;
+    QList<QPair<QString, QString>> keysplits; // sub-voicegroup, keysplit table
+};
 
 // What the host borrows from the main window (docs/scripting/PLAN.md §3).
 // Callbacks rather than a MainWindow pointer keep src/scripting/ free of
@@ -71,6 +87,35 @@ struct HostBindings {
     std::function<bool(const QString &path, const WavExportOptions &opts, double *seconds,
                        QString *error)>
         renderWav;
+    // Project adapter writes (porydaw.project / porydaw.edit.setVoice).
+    // Each is the window's own action minus its dialogs: false with
+    // *error set on failure. Absent: the call is refused.
+    // Registers a project song (SongRegistry::registerSong + the project
+    // reload the window does after it); *songId receives the table index.
+    std::function<bool(const QString &label, const QString &constant, const QString &player,
+                       int *songId, QString *error)>
+        registerSong;
+    // Removes a song's registration lines (the .mid stays).
+    std::function<bool(const QString &label, QString *error)> unregisterSong;
+    // Re-reads the project's music data (song ids may shift).
+    std::function<bool(QString *error)> reloadProject;
+    // Saves the active song (and its voicegroup when edited) — File → Save.
+    std::function<bool(QString *error)> saveSong;
+    // Creates sound/voicegroups/<name>.inc (+ the hub .include line) as a
+    // copy of the voicegroup `copyFromArg` names, or the dummy template
+    // when empty, and refreshes the catalog.
+    std::function<bool(const QString &name, const QString &copyFromArg, QString *error)>
+        createVoicegroup;
+    // The window's cached voicegroup catalog (one scan per project).
+    std::function<VoicegroupCatalog()> voicegroupCatalog;
+    // The project-typical envelope for a voice type and instrument symbol
+    // (vgDefaultAdsr over the cached catalog).
+    std::function<void(VgMacro macro, const QString &symbol, VgAdsr *out)> typicalAdsr;
+    // Pushes a voice edit for the session's open voicegroup source onto
+    // the session's undo stack (through SongDocument::pushCommand, so an
+    // open edit group takes it), applying it to audio and the dock.
+    std::function<bool(SongSession &session, int slot, const VgVoice &voice, QString *error)>
+        editVoice;
     const AudioEngine *audio = nullptr;
     const DecompProject *project = nullptr;
 };

@@ -17,6 +17,22 @@ declare namespace porydaw {
     type Unsubscribe = () => void;
 
     // ---- project ----
+    /** A song's midi.cfg settings (song.settings(), SongInfo.settings). */
+    interface SongSettings {
+        /** The -G arg, e.g. "_abandoned_ship". */
+        voicegroup: string;
+        /** Display form of the voicegroup, e.g. "abandoned_ship". */
+        voicegroupName: string;
+        masterVolume: number;
+        /** null while the -R flag is absent (the build then uses 50). */
+        reverb: number | null;
+        priority: number;
+        exactGate: boolean;
+        extendedClocks: boolean;
+        noCompression: boolean;
+        /** The flags as written in midi.cfg. */
+        flags: string[];
+    }
     interface SongInfo {
         id: number;
         label: string;
@@ -25,13 +41,39 @@ declare namespace porydaw {
         midPath: string;
         hasMid: boolean;
         registered: boolean;
+        /** Registration files still missing the song ("songs.h", ...). */
+        registrationGaps: string[];
+        settings: SongSettings;
+    }
+    interface RegistrationStatus {
+        complete: boolean;
+        inSongTable: boolean;
+        inSongsH: boolean;
+        inLdScript: boolean;
+        inCharmap: boolean;
+        inDebugMenu: boolean;
+        gaps: string[];
     }
     namespace project {
         const isOpen: boolean;
         const root: string;
         function songs(): SongInfo[];
+        function song(label: string): SongInfo | null;
         /** Opens a song by label; false when the project has no playable song of that name. */
         function open(label: string, opts?: { newTab?: boolean }): boolean;
+        /** Read fresh from the registration files; throws for an unknown label. */
+        function registration(label: string): RegistrationStatus;
+        /** File → Register Song without its dialogs; returns the song's table id. Reloads the project. */
+        function registerSong(label: string, opts?: { constant?: string; player?: string }): number;
+        /** Drops the song's registration lines; the .mid stays. */
+        function unregisterSong(label: string): void;
+        /** Re-reads the project's music data (song ids may shift). */
+        function reload(): void;
+        function musicPlayers(): { name: string; number: number; trackCount: number }[];
+        /** Every voicegroup: its -G arg and display name. */
+        function voicegroups(): { arg: string; name: string }[];
+        /** Creates sound/voicegroups/<name>.inc (a copy of `copyFrom`'s voicegroup by arg, or the dummy template); returns the new -G arg. */
+        function createVoicegroup(name: string, opts?: { copyFrom?: string }): string;
     }
 
     // ---- song (read-only) ----
@@ -116,6 +158,9 @@ declare namespace porydaw {
         function chunkTrack(chunk: number): number;
         function chunkEndTick(chunk: number): number;
         function rawEvents(chunk: number, opts?: TickRange): RawEvent[];
+        function settings(): SongSettings;
+        /** File → Save (the .mid, its midi.cfg line and the edited voicegroup); refused inside a transaction. */
+        function save(): boolean;
         function loop(): { start: number; end: number } | null;
         function timeSigs(): TimeSig[];
         function tracks(): Track[];
@@ -193,6 +238,10 @@ declare namespace porydaw {
         function deleteLanePoints(track: number, cc: number, ticks: number[]): number;
         function setStartTempo(bpm: number): void;
         function setLoop(start: number | null, end: number | null): void;
+        /** Partial update of song.settings(); `voicegroup` accepts the -G arg or the display name. */
+        function setSettings(spec: Partial<Omit<SongSettings, "voicegroupName" | "flags">>): void;
+        /** Partial update of one editable voice of porydaw.voicegroup (`type` is the macro word). */
+        function setVoice(slot: number, spec: Partial<Omit<Voice, "slot" | "kind">>): void;
         function setTimeSig(tick: number, numerator: number, denominator: number): void;
         function deleteTimeSig(tick: number): void;
         function removeTimeRange(start: number, end: number, scope: Scope): boolean;
@@ -463,6 +512,66 @@ declare namespace porydaw {
             function saveFile(opts?: { title?: string; dir?: string; filter?: string; name?: string }): string | null;
             function chooseDir(opts?: { title?: string; dir?: string }): string | null;
         }
+    }
+
+    // ---- voicegroup (read-only; edits via edit.setVoice) ----
+    type VoiceType =
+        | "voice_directsound" | "voice_directsound_no_resample" | "voice_directsound_alt"
+        | "voice_square_1" | "voice_square_1_alt" | "voice_square_2" | "voice_square_2_alt"
+        | "voice_programmable_wave" | "voice_programmable_wave_alt"
+        | "voice_noise" | "voice_noise_alt" | "voice_keysplit" | "voice_keysplit_all";
+    /** One of the 128 slots of the song's voicegroup file. */
+    interface VoiceSlot {
+        slot: number;
+        /** "voice" = editable (a Voice); "cry" = read-only; "broken" = unparseable; "empty" = past the last voice; "other". */
+        kind: "voice" | "cry" | "broken" | "empty" | "other";
+    }
+    /** An editable voice: the macro's arguments as written in the .inc file. */
+    interface Voice extends VoiceSlot {
+        kind: "voice";
+        type: VoiceType;
+        key: number;
+        pan: number;
+        /** Sample / wave symbol, or the keysplit / drumkit sub-voicegroup. */
+        symbol: string;
+        /** voice_keysplit only. */
+        keysplitTable: string;
+        /** voice_square_1 only. */
+        sweep: number;
+        /** square voices only (0–3). */
+        duty: number;
+        /** noise only (0–1). */
+        period: number;
+        /** CGB: A/D/R 0–7, S 0–15; DirectSound: 0–255. */
+        attack: number;
+        decay: number;
+        sustain: number;
+        release: number;
+    }
+    interface Adsr { attack: number; decay: number; sustain: number; release: number }
+    namespace voicegroup {
+        /** False when no song is open or the layout can't be edited. */
+        const isOpen: boolean;
+        /** The -G arg and its display name (from the song's settings). */
+        const arg: string;
+        const name: string;
+        const file: string;
+        /** The name the engine loads the voicegroup by. */
+        const loadName: string;
+        /** Unsaved voice edits exist (song.save() writes them). */
+        const dirty: boolean;
+        const monolithic: boolean;
+        function voices(): (VoiceSlot | Voice)[];
+        function voice(slot: number): VoiceSlot | Voice | null;
+        function symbols(): {
+            directSound: string[];
+            progWave: string[];
+            drumkits: string[];
+            synths: string[];
+            keysplits: { voicegroup: string; table: string }[];
+        };
+        /** The envelope the dock proposes for a voice type (and sample symbol). */
+        function typicalAdsr(type: VoiceType | string, symbol?: string): Adsr;
     }
 
     // ---- io (sandboxed) ----

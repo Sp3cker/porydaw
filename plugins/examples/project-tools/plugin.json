@@ -1,0 +1,8 @@
+{
+  "id": "project-tools",
+  "name": "Project Tools",
+  "version": "1.0.0",
+  "api": 1,
+  "main": "main.js",
+  "description": "Plugins menu entries built on the project adapter API: a registration audit that registers what is missing, and an envelope tool that edits every sample voice of the song's voicegroup in one undo entry."
+}

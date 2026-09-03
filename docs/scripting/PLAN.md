@@ -474,11 +474,60 @@ inherits the note-name font; overlay `clear()` blends inside the grid
 transform), menu `remove()`/`clear()` defer deletes (safe from the entry's
 own run()), and the note menu's per-open separator leak is closed.
 
-Still open in this phase: project adapter writes (batch registration,
-voicegroup edits via `SongRegistry`/`VoicegroupSource`), a generated
-`docsrc/reference/scripting.md` (the hand-written `porydaw.d.ts` and
-`docsrc/manual/plugins.md` install guide shipped with this slice), MIDI
-input.
+Second slice LANDED 2026-09-03 (adapter writes + voicegroup API):
+`porydaw.project.{song, registration, registerSong, unregisterSong,
+reload, musicPlayers, voicegroups, createVoicegroup}` and `songs()[].
+{registrationGaps, settings}` — the Register Song / New Voicegroup steps
+minus their dialogs, through new `HostBindings` (`registerSong`,
+`unregisterSong`, `reloadProject`, `saveSong`, `createVoicegroup`,
+`voicegroupCatalog`, `typicalAdsr`, `editVoice`) backed by
+`MainWindow::{registerSongByLabel, unregisterSongByLabel,
+createVoicegroupNamed, pushVoiceEdit}` (the interactive actions now call
+the same helpers; `reloadProject` gained an error out-param);
+`song.settings()` / `song.save()`; `edit.setSettings` (partial cfg merge
+→ `SongDocument::setCfg`, voicegroup by arg or display name, validated
+against the catalog) and `edit.setVoice` (partial `VgVoice` merge, fields
+the macro doesn't write refused — a `voice_keysplit_all` slot silently
+dropped an `attack` before that rule — family change adopts the typical
+envelope, values clamped; pushed through `SongDocument::pushCommand`,
+now public, so the transaction macro takes the `VoiceEditCommand` and
+rollback/undo cover it; `replayVoiceEdits` now recurses into macro
+children, or a transaction's voice edit vanished after a -G switch and
+back); new facade `VoicegroupApi` (`porydaw.voicegroup`: source
+properties, `voices()`/`voice(slot)` from the session's
+`VoicegroupSource`, `symbols()`, `typicalAdsr()`). Example
+`project-tools` (registration audit, apply envelope to sample voices).
+Harness `runAdapterChecks` (settings round trips, voicegroup switch by
+display name with the source following — gated on audio, since
+`onDocumentChanged` bails without it — voice edit as one transaction
+entry, rollback, structural type change in range, replay across a
+switch, validation negatives, `song.save()` writing the voicegroup byte-
+identically after the edit back, `createVoicegroup` + switch to the copy,
+register/unregister of a copied `.mid` with the active session keeping
+its id). Negative-tested: voice push bypassing `pushCommand`, replay
+without recursion, settings accepting unknown voicegroups, registerSong
+without the reload. `docsrc/reference/scripting.md` is generated from
+`API.md` by `tools/gen_scripting_docs.py` (`--check` in
+`tools/run_checks.sh` and CI).
+
+Code-reviewed 2026-09-03 (8 findings, all fixed): `replayVoiceEdits` also
+walks the OPEN transaction macro (`SongDocument::editGroupMacroOpen()`;
+`QUndoStack::index()` doesn't count it, so a `setVoice` before a `-G`
+switch and back in the same transaction was lost — negative-tested),
+`reverb: undefined` throws instead of dropping `-R` (an invalid QVariant
+is not JS `null`; negative-tested), `registerSong({constant: null})`
+means the default and the constant must be an identifier, a family
+crossing with a partial envelope starts from the typical one and overlays
+the given keys, the player check only applies to a player other than the
+song's own tabled one (a re-register on an exotic layout never fails on
+it) and reads `DecompProject::musicPlayers()` (cached), a reload failure
+after a successful registration write is a status-bar message rather than
+a failed registration (`reloadProjectOrWarn`), `newVoicegroup` calls
+`createVoicegroupNamed`, and `SongRegistry::registrationGaps(status)`
+feeds both `SongInfo::registrationGaps` and `project.registration().gaps`.
+
+Still open: MIDI input (`porydaw.midi` reserved; porydaw has no MIDI input
+at all yet).
 
 ## 7. Other plugin categories the API should not preclude
 

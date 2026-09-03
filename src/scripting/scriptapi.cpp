@@ -38,6 +38,8 @@
 #include "core/songdocument.h"
 #include "project/decompproject.h"
 #include "project/sidecar.h"
+#include "project/songregistry.h"
+#include "project/voicegroupsource.h"
 #include "scripthost.h"
 #include "scriptmenus.h"
 #include "scriptwidgets.h"
@@ -1127,6 +1129,40 @@ double SongApi::endTick() const
     return double(end);
 }
 
+namespace {
+QVariantMap cfgToVariant(const SongCfg &cfg); // with the voicegroup helpers below
+}
+
+QVariantMap SongApi::settings() const
+{
+    const SongDocument *d = doc();
+    return d ? cfgToVariant(d->cfg()) : QVariantMap();
+}
+
+bool SongApi::save()
+{
+    QString error;
+    if (!m_host.dialogsAllowed(m_plugin, &error)) {
+        throwError(QStringLiteral("song.save: ") + error);
+        return false;
+    }
+    if (!doc()) {
+        throwError(QStringLiteral("song.save: no song is open"));
+        return false;
+    }
+    if (!m_host.bindings().saveSong) {
+        throwError(QStringLiteral("song.save: not available"));
+        return false;
+    }
+    // A failed save reports through a message box: that wait is the user's.
+    WatchdogPause pause(m_host);
+    if (!m_host.bindings().saveSong(&error)) {
+        throwError(QStringLiteral("song.save: ") + error);
+        return false;
+    }
+    return true;
+}
+
 QVariant SongApi::loop() const
 {
     const SongDocument *d = doc();
@@ -1707,6 +1743,296 @@ QStringList StorageApi::songKeys() const
     return store.keys();
 }
 
+// ---- settings / voicegroup value helpers ----
+
+namespace {
+
+const VgMacro kVgMacros[] = {
+    VgMacro::DirectSound,    VgMacro::DirectSoundNoResample,
+    VgMacro::DirectSoundAlt, VgMacro::Square1,
+    VgMacro::Square1Alt,     VgMacro::Square2,
+    VgMacro::Square2Alt,     VgMacro::ProgWave,
+    VgMacro::ProgWaveAlt,    VgMacro::Noise,
+    VgMacro::NoiseAlt,       VgMacro::Keysplit,
+    VgMacro::KeysplitAll,
+};
+
+// "voice_directsound" or "directsound" → the macro.
+bool parseVgMacro(const QString &text, VgMacro *out)
+{
+    QString word = text.trimmed().toLower();
+    if (!word.startsWith(QLatin1String("voice_")))
+        word.prepend(QLatin1String("voice_"));
+    for (VgMacro macro : kVgMacros) {
+        if (vgMacroName(macro) == word) {
+            *out = macro;
+            return true;
+        }
+    }
+    return false;
+}
+
+QString vgLineKindName(VgLineKind kind)
+{
+    switch (kind) {
+    case VgLineKind::Editable:
+        return QStringLiteral("voice");
+    case VgLineKind::ReadOnlyVoice:
+        return QStringLiteral("cry");
+    case VgLineKind::Broken:
+        return QStringLiteral("broken");
+    case VgLineKind::None:
+        return QStringLiteral("empty");
+    case VgLineKind::Other:
+    case VgLineKind::Header:
+        break;
+    }
+    return QStringLiteral("other");
+}
+
+QVariantMap voiceToVariant(int slot, const VgVoice &v)
+{
+    return QVariantMap{{QStringLiteral("slot"), slot},
+                       {QStringLiteral("kind"), QStringLiteral("voice")},
+                       {QStringLiteral("type"), vgMacroName(v.macro)},
+                       {QStringLiteral("key"), v.key},
+                       {QStringLiteral("pan"), v.pan},
+                       {QStringLiteral("symbol"), v.symbol},
+                       {QStringLiteral("keysplitTable"), v.keysplitTable},
+                       {QStringLiteral("sweep"), v.sweep},
+                       {QStringLiteral("duty"), v.duty},
+                       {QStringLiteral("period"), v.period},
+                       {QStringLiteral("attack"), v.attack},
+                       {QStringLiteral("decay"), v.decay},
+                       {QStringLiteral("sustain"), v.sustain},
+                       {QStringLiteral("release"), v.release}};
+}
+
+QVariantMap slotToVariant(const VoicegroupSource &source, int slot)
+{
+    if (const VgVoice *v = source.voiceAt(slot))
+        return voiceToVariant(slot, *v);
+    return QVariantMap{{QStringLiteral("slot"), slot},
+                       {QStringLiteral("kind"), vgLineKindName(source.kindAt(slot))}};
+}
+
+QVariantMap adsrToVariant(const VgAdsr &a)
+{
+    return QVariantMap{{QStringLiteral("attack"), a.attack},
+                       {QStringLiteral("decay"), a.decay},
+                       {QStringLiteral("sustain"), a.sustain},
+                       {QStringLiteral("release"), a.release}};
+}
+
+// Applies a partial voice spec over `voice`; false with *error on a bad
+// key or value. Numbers are clamped to the macro's own ranges.
+bool applyVoiceSpec(const QVariantMap &spec, VgVoice *voice, QString *error)
+{
+    static const QStringList kKeys{
+        QStringLiteral("type"),   QStringLiteral("key"),           QStringLiteral("pan"),
+        QStringLiteral("symbol"), QStringLiteral("keysplitTable"), QStringLiteral("sweep"),
+        QStringLiteral("duty"),   QStringLiteral("period"),        QStringLiteral("attack"),
+        QStringLiteral("decay"),  QStringLiteral("sustain"),       QStringLiteral("release"),
+        QStringLiteral("slot"),   QStringLiteral("kind")};
+    for (auto it = spec.cbegin(); it != spec.cend(); ++it) {
+        if (!kKeys.contains(it.key())) {
+            *error = QStringLiteral("unknown voice field '%1'").arg(it.key());
+            return false;
+        }
+    }
+    const auto number = [&](const char *key, int lo, int hi, int *out) {
+        const auto it = spec.constFind(QLatin1String(key));
+        if (it == spec.cend())
+            return true;
+        bool ok = false;
+        const double v = it->toDouble(&ok);
+        if (!ok || !std::isfinite(v)) {
+            *error = QStringLiteral("'%1' must be a number").arg(QLatin1String(key));
+            return false;
+        }
+        *out = std::clamp(int(std::lround(v)), lo, hi);
+        return true;
+    };
+    const auto text = [&](const char *key, QString *out) {
+        const auto it = spec.constFind(QLatin1String(key));
+        if (it == spec.cend())
+            return true;
+        if (it->type() != QVariant::String) {
+            *error = QStringLiteral("'%1' must be a string").arg(QLatin1String(key));
+            return false;
+        }
+        *out = it->toString().trimmed();
+        return true;
+    };
+    QString typeName;
+    if (!text("type", &typeName))
+        return false;
+    if (spec.contains(QStringLiteral("type")) && !parseVgMacro(typeName, &voice->macro)) {
+        *error = QStringLiteral("unknown voice type '%1'").arg(typeName);
+        return false;
+    }
+    const bool cgb = vgMacroIsCgb(voice->macro);
+    if (!number("key", 0, 127, &voice->key) || !number("pan", -128, 127, &voice->pan) ||
+        !text("symbol", &voice->symbol) || !text("keysplitTable", &voice->keysplitTable) ||
+        !number("sweep", 0, 255, &voice->sweep) || !number("duty", 0, 3, &voice->duty) ||
+        !number("period", 0, 1, &voice->period) ||
+        !number("attack", 0, cgb ? 7 : 255, &voice->attack) ||
+        !number("decay", 0, cgb ? 7 : 255, &voice->decay) ||
+        !number("sustain", 0, cgb ? 15 : 255, &voice->sustain) ||
+        !number("release", 0, cgb ? 7 : 255, &voice->release)) {
+        return false;
+    }
+    // Fields the resulting macro doesn't write would vanish silently
+    // (renderLine only emits the macro's own arguments): refuse them.
+    const VgMacro m = voice->macro;
+    const bool split = m == VgMacro::Keysplit || m == VgMacro::KeysplitAll;
+    const bool square1 = m == VgMacro::Square1 || m == VgMacro::Square1Alt;
+    const bool square = square1 || m == VgMacro::Square2 || m == VgMacro::Square2Alt;
+    const bool noise = m == VgMacro::Noise || m == VgMacro::NoiseAlt;
+    const auto applies = [&](const QString &key) {
+        if (key == QLatin1String("keysplitTable"))
+            return m == VgMacro::Keysplit;
+        if (key == QLatin1String("symbol"))
+            return split || vgMacroHasSymbol(m);
+        if (key == QLatin1String("sweep"))
+            return square1;
+        if (key == QLatin1String("duty"))
+            return square;
+        if (key == QLatin1String("period"))
+            return noise;
+        if (key == QLatin1String("key") || key == QLatin1String("pan") ||
+            key == QLatin1String("attack") || key == QLatin1String("decay") ||
+            key == QLatin1String("sustain") || key == QLatin1String("release"))
+            return !split;
+        return true; // type / slot / kind
+    };
+    for (auto it = spec.cbegin(); it != spec.cend(); ++it) {
+        if (!applies(it.key())) {
+            *error = QStringLiteral("'%1' does not apply to %2").arg(it.key(), vgMacroName(m));
+            return false;
+        }
+    }
+    const bool wantsSymbol = vgMacroHasSymbol(voice->macro) || split;
+    if (wantsSymbol && voice->symbol.isEmpty()) {
+        *error = QStringLiteral("%1 needs a symbol").arg(vgMacroName(voice->macro));
+        return false;
+    }
+    if (voice->macro == VgMacro::Keysplit && voice->keysplitTable.isEmpty()) {
+        *error = QStringLiteral("voice_keysplit needs a keysplitTable");
+        return false;
+    }
+    return true;
+}
+
+QVariantMap cfgToVariant(const SongCfg &cfg)
+{
+    return QVariantMap{
+        {QStringLiteral("voicegroup"), cfg.voicegroupArg},
+        {QStringLiteral("voicegroupName"), SongRegistry::voicegroupDisplayName(cfg.voicegroupArg)},
+        {QStringLiteral("masterVolume"), cfg.masterVolume},
+        {QStringLiteral("reverb"), cfg.reverb < 0 ? jsNull() : QVariant(cfg.reverb)},
+        {QStringLiteral("priority"), cfg.priority},
+        {QStringLiteral("exactGate"), cfg.exactGate},
+        {QStringLiteral("extendedClocks"), cfg.extendedClocks},
+        {QStringLiteral("noCompression"), cfg.noCompression},
+        {QStringLiteral("flags"), cfg.rawFlags}};
+}
+
+// Applies a partial settings spec over `cfg`; knownArgs (the project's
+// voicegroups) resolves a display name and refuses unknown voicegroups.
+bool applySettingsSpec(const QVariantMap &spec, const QStringList &knownArgs, SongCfg *cfg,
+                       QString *error)
+{
+    for (auto it = spec.cbegin(); it != spec.cend(); ++it) {
+        const QString key = it.key();
+        const QVariant &v = it.value();
+        const auto intValue = [&](int lo, int hi, int *out) {
+            bool ok = false;
+            const double d = v.toDouble(&ok);
+            if (!ok || !std::isfinite(d)) {
+                *error = QStringLiteral("'%1' must be a number").arg(key);
+                return false;
+            }
+            *out = std::clamp(int(std::lround(d)), lo, hi);
+            return true;
+        };
+        const auto boolValue = [&](bool *out) {
+            if (v.type() != QVariant::Bool) {
+                *error = QStringLiteral("'%1' must be a boolean").arg(key);
+                return false;
+            }
+            *out = v.toBool();
+            return true;
+        };
+        if (key == QLatin1String("voicegroup")) {
+            if (v.type() != QVariant::String) {
+                *error = QStringLiteral("'voicegroup' must be a string");
+                return false;
+            }
+            const QString arg =
+                SongRegistry::voicegroupArgFromDisplay(v.toString().trimmed(), knownArgs);
+            if (arg.isEmpty() || (!knownArgs.isEmpty() && !knownArgs.contains(arg))) {
+                *error = QStringLiteral("unknown voicegroup '%1'").arg(v.toString());
+                return false;
+            }
+            cfg->voicegroupArg = arg;
+        } else if (key == QLatin1String("masterVolume")) {
+            if (!intValue(0, 127, &cfg->masterVolume))
+                return false;
+        } else if (key == QLatin1String("reverb")) {
+            // JS null drops the flag; undefined (an invalid QVariant) is a
+            // mistake like any other non-number.
+            if (v.isValid() && v.isNull()) {
+                cfg->reverb = -1;
+            } else if (!intValue(0, 127, &cfg->reverb)) {
+                return false;
+            }
+        } else if (key == QLatin1String("priority")) {
+            if (!intValue(0, 255, &cfg->priority))
+                return false;
+        } else if (key == QLatin1String("exactGate")) {
+            if (!boolValue(&cfg->exactGate))
+                return false;
+        } else if (key == QLatin1String("extendedClocks")) {
+            if (!boolValue(&cfg->extendedClocks))
+                return false;
+        } else if (key == QLatin1String("noCompression")) {
+            if (!boolValue(&cfg->noCompression))
+                return false;
+        } else {
+            *error = QStringLiteral("unknown setting '%1'").arg(key);
+            return false;
+        }
+    }
+    return true;
+}
+
+QVariantMap songInfoToVariant(const SongInfo &song)
+{
+    return QVariantMap{{QStringLiteral("id"), song.id},
+                       {QStringLiteral("label"), song.label},
+                       {QStringLiteral("constant"), song.constant},
+                       {QStringLiteral("player"), song.player},
+                       {QStringLiteral("midPath"), song.midPath},
+                       {QStringLiteral("hasMid"), song.hasMid},
+                       {QStringLiteral("registered"), song.registered},
+                       {QStringLiteral("registrationGaps"), song.registrationGaps},
+                       {QStringLiteral("settings"), cfgToVariant(song.cfg)}};
+}
+
+const SongInfo *findProjectSong(const DecompProject *p, const QString &label)
+{
+    if (!p || !p->isOpen())
+        return nullptr;
+    for (const SongInfo &song : p->songs()) {
+        if (song.label == label)
+            return &song;
+    }
+    return nullptr;
+}
+
+} // namespace
+
 // ---- ProjectApi ----
 
 bool ProjectApi::isOpen() const
@@ -1727,16 +2053,242 @@ QVariantList ProjectApi::songs() const
     const DecompProject *p = m_host.bindings().project;
     if (!p || !p->isOpen())
         return out;
-    for (const SongInfo &song : p->songs()) {
-        out.append(QVariantMap{{QStringLiteral("id"), song.id},
-                               {QStringLiteral("label"), song.label},
-                               {QStringLiteral("constant"), song.constant},
-                               {QStringLiteral("player"), song.player},
-                               {QStringLiteral("midPath"), song.midPath},
-                               {QStringLiteral("hasMid"), song.hasMid},
-                               {QStringLiteral("registered"), song.registered}});
+    for (const SongInfo &song : p->songs())
+        out.append(songInfoToVariant(song));
+    return out;
+}
+
+QVariant ProjectApi::song(const QString &label) const
+{
+    const SongInfo *info = findProjectSong(m_host.bindings().project, label);
+    return info ? QVariant(songInfoToVariant(*info)) : jsNull();
+}
+
+QVariantMap ProjectApi::registration(const QString &label) const
+{
+    const DecompProject *p = m_host.bindings().project;
+    const SongInfo *info = findProjectSong(p, label);
+    if (!info) {
+        throwError(QStringLiteral("project.registration: no song named '%1'").arg(label));
+        return {};
+    }
+    const QString constant =
+        info->constant.isEmpty() ? SongRegistry::constantForLabel(label) : info->constant;
+    const RegistrationStatus st = SongRegistry::checkRegistration(p->root(), label, constant);
+    return QVariantMap{{QStringLiteral("complete"), st.complete()},
+                       {QStringLiteral("inSongTable"), st.inSongTable},
+                       {QStringLiteral("inSongsH"), st.inSongsH},
+                       {QStringLiteral("inLdScript"), st.inLdScript},
+                       {QStringLiteral("inCharmap"), st.inCharmap},
+                       {QStringLiteral("inDebugMenu"), st.inDebugMenu},
+                       {QStringLiteral("gaps"), SongRegistry::registrationGaps(st)}};
+}
+
+bool ProjectApi::writeAllowed(const char *api)
+{
+    QString error;
+    if (!m_host.dialogsAllowed(m_plugin, &error)) {
+        throwError(QStringLiteral("project.%1: %2").arg(QLatin1String(api), error));
+        return false;
+    }
+    const DecompProject *p = m_host.bindings().project;
+    if (!p || !p->isOpen()) {
+        throwError(QStringLiteral("project.%1: no project is open").arg(QLatin1String(api)));
+        return false;
+    }
+    return true;
+}
+
+int ProjectApi::registerSong(const QString &label, const QString &constant, const QString &player)
+{
+    if (!writeAllowed("registerSong"))
+        return -1;
+    if (!m_host.bindings().registerSong) {
+        throwError(QStringLiteral("project.registerSong: not available"));
+        return -1;
+    }
+    int songId = -1;
+    QString error;
+    WatchdogPause pause(m_host);
+    if (!m_host.bindings().registerSong(label, constant, player, &songId, &error)) {
+        throwError(QStringLiteral("project.registerSong: ") + error);
+        return -1;
+    }
+    return songId;
+}
+
+void ProjectApi::unregisterSong(const QString &label)
+{
+    if (!writeAllowed("unregisterSong"))
+        return;
+    if (!m_host.bindings().unregisterSong) {
+        throwError(QStringLiteral("project.unregisterSong: not available"));
+        return;
+    }
+    QString error;
+    WatchdogPause pause(m_host);
+    if (!m_host.bindings().unregisterSong(label, &error))
+        throwError(QStringLiteral("project.unregisterSong: ") + error);
+}
+
+void ProjectApi::reload()
+{
+    if (!writeAllowed("reload"))
+        return;
+    if (!m_host.bindings().reloadProject) {
+        throwError(QStringLiteral("project.reload: not available"));
+        return;
+    }
+    QString error;
+    WatchdogPause pause(m_host);
+    if (!m_host.bindings().reloadProject(&error))
+        throwError(QStringLiteral("project.reload: ") + error);
+}
+
+QVariantList ProjectApi::musicPlayers() const
+{
+    QVariantList out;
+    const DecompProject *p = m_host.bindings().project;
+    if (!p || !p->isOpen())
+        return out;
+    for (const MusicPlayer &player : SongRegistry::musicPlayers(p->root())) {
+        out.append(QVariantMap{{QStringLiteral("name"), player.name},
+                               {QStringLiteral("number"), player.number},
+                               {QStringLiteral("trackCount"), player.trackCount}});
     }
     return out;
+}
+
+QVariantList ProjectApi::voicegroups() const
+{
+    QVariantList out;
+    if (!m_host.bindings().voicegroupCatalog)
+        return out;
+    for (const QString &arg : m_host.bindings().voicegroupCatalog().groupArgs) {
+        out.append(QVariantMap{{QStringLiteral("arg"), arg},
+                               {QStringLiteral("name"), SongRegistry::voicegroupDisplayName(arg)}});
+    }
+    return out;
+}
+
+QString ProjectApi::createVoicegroup(const QString &name, const QString &copyFromArg)
+{
+    if (!writeAllowed("createVoicegroup"))
+        return {};
+    if (!m_host.bindings().createVoicegroup) {
+        throwError(QStringLiteral("project.createVoicegroup: not available"));
+        return {};
+    }
+    QString error;
+    WatchdogPause pause(m_host);
+    if (!m_host.bindings().createVoicegroup(name, copyFromArg, &error)) {
+        throwError(QStringLiteral("project.createVoicegroup: ") + error);
+        return {};
+    }
+    return QStringLiteral("_") + name;
+}
+
+// ---- VoicegroupApi ----
+
+namespace {
+const VoicegroupSource *sessionVoicegroup(const SongSession *s)
+{
+    return s ? s->vgSource.get() : nullptr;
+}
+} // namespace
+
+bool VoicegroupApi::isOpen() const
+{
+    return sessionVoicegroup(session()) != nullptr;
+}
+
+QString VoicegroupApi::arg() const
+{
+    const SongDocument *d = doc();
+    return d ? d->cfg().voicegroupArg : QString();
+}
+
+QString VoicegroupApi::name() const
+{
+    const SongDocument *d = doc();
+    return d ? SongRegistry::voicegroupDisplayName(d->cfg().voicegroupArg) : QString();
+}
+
+QString VoicegroupApi::file() const
+{
+    const VoicegroupSource *vg = sessionVoicegroup(session());
+    return vg ? vg->filePath() : QString();
+}
+
+QString VoicegroupApi::loadName() const
+{
+    const VoicegroupSource *vg = sessionVoicegroup(session());
+    return vg ? vg->loadName() : QString();
+}
+
+bool VoicegroupApi::dirty() const
+{
+    const VoicegroupSource *vg = sessionVoicegroup(session());
+    return vg && vg->dirty();
+}
+
+bool VoicegroupApi::monolithic() const
+{
+    const VoicegroupSource *vg = sessionVoicegroup(session());
+    return vg && vg->monolithic();
+}
+
+QVariantList VoicegroupApi::voices() const
+{
+    QVariantList out;
+    const VoicegroupSource *vg = sessionVoicegroup(session());
+    if (!vg)
+        return out;
+    for (int slot = 0; slot < VOICEGROUP_SIZE; ++slot)
+        out.append(slotToVariant(*vg, slot));
+    return out;
+}
+
+QVariant VoicegroupApi::voice(int slot) const
+{
+    const VoicegroupSource *vg = sessionVoicegroup(session());
+    if (!vg || slot < 0 || slot >= VOICEGROUP_SIZE)
+        return jsNull();
+    return slotToVariant(*vg, slot);
+}
+
+QVariantMap VoicegroupApi::symbols() const
+{
+    QVariantMap out;
+    if (!m_host.bindings().voicegroupCatalog)
+        return out;
+    const VoicegroupCatalog c = m_host.bindings().voicegroupCatalog();
+    QVariantList keysplits;
+    for (const auto &pair : c.keysplits) {
+        keysplits.append(QVariantMap{{QStringLiteral("voicegroup"), pair.first},
+                                     {QStringLiteral("table"), pair.second}});
+    }
+    out.insert(QStringLiteral("directSound"), c.directSound);
+    out.insert(QStringLiteral("progWave"), c.progWave);
+    out.insert(QStringLiteral("drumkits"), c.drumkits);
+    out.insert(QStringLiteral("synths"), c.synths);
+    out.insert(QStringLiteral("keysplits"), keysplits);
+    return out;
+}
+
+QVariantMap VoicegroupApi::typicalAdsr(const QString &type, const QString &symbol) const
+{
+    VgMacro macro = VgMacro::DirectSound;
+    if (!parseVgMacro(type, &macro)) {
+        throwError(QStringLiteral("voicegroup.typicalAdsr: unknown voice type '%1'").arg(type));
+        return {};
+    }
+    VgAdsr adsr;
+    if (m_host.bindings().typicalAdsr)
+        m_host.bindings().typicalAdsr(macro, symbol, &adsr);
+    else
+        adsr = vgDefaultAdsr(VgAdsrDefaults(), macro, symbol);
+    return adsrToVariant(adsr);
 }
 
 bool ProjectApi::open(const QString &label, bool newTab)
@@ -2058,6 +2610,72 @@ int EditApi::deleteLanePoints(int track, int cc, const QVariantList &ticks)
     }
     done();
     return int(points.size());
+}
+
+void EditApi::setSettings(const QVariantMap &spec)
+{
+    SongDocument *d = begin();
+    if (!d)
+        return;
+    SongCfg cfg = d->cfg();
+    QStringList knownArgs;
+    if (m_host.bindings().voicegroupCatalog)
+        knownArgs = m_host.bindings().voicegroupCatalog().groupArgs;
+    QString error;
+    if (!applySettingsSpec(spec, knownArgs, &cfg, &error))
+        throwError(QStringLiteral("edit.setSettings: ") + error);
+    else
+        d->setCfg(cfg); // no-op when nothing changed semantically
+    done();
+}
+
+void EditApi::setVoice(int slot, const QVariantMap &spec)
+{
+    SongDocument *d = begin();
+    if (!d)
+        return;
+    SongSession *s = session();
+    const VoicegroupSource *vg = s ? s->vgSource.get() : nullptr;
+    QString error;
+    if (!vg) {
+        throwError(QStringLiteral("edit.setVoice: the song's voicegroup is not open for editing"));
+    } else if (slot < 0 || slot >= VOICEGROUP_SIZE || !vg->isEditable(slot)) {
+        throwError(QStringLiteral("edit.setVoice: slot %1 is not an editable voice").arg(slot));
+    } else if (!m_host.bindings().editVoice) {
+        throwError(QStringLiteral("edit.setVoice: not available"));
+    } else {
+        const VgVoice before = *vg->voiceAt(slot);
+        VgVoice voice = before;
+        if (!applyVoiceSpec(spec, &voice, &error)) {
+            throwError(QStringLiteral("edit.setVoice: ") + error);
+        } else {
+            // A type change into another envelope family starts from the
+            // project-typical envelope, as the dock does (the old family's
+            // digits would be a nonsense envelope on the new scale); the
+            // spec's own envelope keys then overlay it. Whatever the
+            // source, the values must fit the new family's scale.
+            const int family = vgAdsrFamily(voice.macro);
+            if (family >= 0 && family != vgAdsrFamily(before.macro) &&
+                m_host.bindings().typicalAdsr) {
+                VgAdsr adsr;
+                m_host.bindings().typicalAdsr(voice.macro, voice.symbol, &adsr);
+                voice = before;
+                voice.attack = adsr.attack;
+                voice.decay = adsr.decay;
+                voice.sustain = adsr.sustain;
+                voice.release = adsr.release;
+                applyVoiceSpec(spec, &voice, &error); // validated above
+            }
+            const bool cgb = vgMacroIsCgb(voice.macro);
+            voice.attack = std::clamp(voice.attack, 0, cgb ? 7 : 255);
+            voice.decay = std::clamp(voice.decay, 0, cgb ? 7 : 255);
+            voice.sustain = std::clamp(voice.sustain, 0, cgb ? 15 : 255);
+            voice.release = std::clamp(voice.release, 0, cgb ? 7 : 255);
+            if (!m_host.bindings().editVoice(*s, slot, voice, &error))
+                throwError(QStringLiteral("edit.setVoice: ") + error);
+        }
+    }
+    done();
 }
 
 void EditApi::setStartTempo(int bpm)
@@ -2606,6 +3224,7 @@ bool installApi(ScriptHost &host, Plugin &plugin, QString *error)
     add(new AudioApi(host, plugin));
     add(new UiApi(host, plugin));
     add(new IoApi(host, plugin));
+    add(new VoicegroupApi(host, plugin));
 
     const QJSValue result = factory.call(facades);
     if (result.isError() || !result.isObject()) {
