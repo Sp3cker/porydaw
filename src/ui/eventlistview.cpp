@@ -392,7 +392,7 @@ void EventListView::applyRowIndexFont()
 void EventListView::changeEvent(QEvent *event)
 {
     QWidget::changeEvent(event);
-    if (event->type() == QEvent::ApplicationFontChange || event->type() == QEvent::StyleChange) {
+    if (event->type() == QEvent::StyleChange) {
         m_model->refreshFonts();
         applyRowIndexFont();
     }

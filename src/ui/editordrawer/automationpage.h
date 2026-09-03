@@ -64,7 +64,6 @@ class AutomationPage final : public QWidget
         static Geometry resolve();
     };
 
-    void refreshGeometry();
     int scrollGutter() const noexcept;
     int laneHeightFor(const EditorAutomationRowId &row) const noexcept;
     bool scaleSharedHeight(int wheelSteps, const AutomationGeometry &geometry);

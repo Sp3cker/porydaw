@@ -78,28 +78,6 @@ SongView::ViewState::ViewState()
     keyHeight = geometry.pianoRollDefaultKeyHeight;
 }
 
-void SongView::refreshGeometry()
-{
-    m_geometry = Geometry::resolve();
-    m_keyHeight = std::clamp(m_keyHeight, double(m_geometry.pianoRollMinimumKeyHeight),
-                             double(m_geometry.pianoRollMaximumKeyHeight));
-    if (m_headerScroll)
-        m_headerScroll->setFixedWidth(m_geometry.trackHeaderWidth);
-    if (m_hbarGutter) {
-        m_hbarGutter->changeSize(m_geometry.plotOrigin, lyt::space(Space::Zero), QSizePolicy::Fixed,
-                                 QSizePolicy::Minimum);
-        m_hbarRow->invalidate();
-    }
-    if (m_playheadOverlay) {
-        m_playheadOverlay->updateBands({*m_ruler, m_geometry.plotOrigin}, *m_roll,
-                                       playheadClipBands());
-    }
-    updateScrollbars();
-    // Global geometry replacement: every roll domain may change.
-    refreshTimelineViews(PianoRollQuickDirty::All);
-    refreshDrawerPages();
-}
-
 std::vector<PlayheadBand> SongView::playheadClipBands() const
 {
     auto *automation = m_editorDrawer->automationPage();
@@ -648,10 +626,7 @@ bool SongView::event(QEvent *event)
         if (handleEditKey(keyEvent))
             return true;
     }
-    const bool handled = QWidget::event(event);
-    if (event->type() == QEvent::FontChange)
-        refreshGeometry();
-    return handled;
+    return QWidget::event(event);
 }
 void SongView::copySelection()
 {

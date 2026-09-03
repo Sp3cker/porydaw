@@ -123,22 +123,6 @@ void TrackHeaderRow::rebuildFontCache()
     m_selectedTitleOffset = {};
 }
 
-void TrackHeaderRow::refreshGeometry()
-{
-    m_geometry = Geometry::resolve();
-    rebuildFontCache();
-    setFixedHeight(m_geometry.trackHeaderRowHeight);
-    if (m_mute)
-        m_mute->setFixedSize(m_geometry.trackHeaderButtonExtent,
-                             m_geometry.trackHeaderButtonExtent);
-    if (m_solo)
-        m_solo->setFixedSize(m_geometry.trackHeaderButtonExtent,
-                             m_geometry.trackHeaderButtonExtent);
-    if (m_editor)
-        m_editor->setGeometry(editorRect());
-    update();
-}
-
 TrackHeaderRow::TrackHeaderRow(SongView *sv, int track, QWidget *parent)
     : QWidget(parent)
     , m_sv(sv)
@@ -488,14 +472,6 @@ bool TrackHeaderRow::eventFilter(QObject *watched, QEvent *event)
         }
     }
     return QWidget::eventFilter(watched, event);
-}
-
-bool TrackHeaderRow::event(QEvent *event)
-{
-    const bool handled = QWidget::event(event);
-    if (event->type() == QEvent::FontChange)
-        refreshGeometry();
-    return handled;
 }
 
 void TrackHeaderRow::resizeEvent(QResizeEvent *)

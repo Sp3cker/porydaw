@@ -193,24 +193,6 @@ void SamplePickerButton::openPopup()
     m_search->setFocus();
 }
 
-void SamplePickerButton::refreshItemFonts()
-{
-    if (!m_list)
-        return;
-    const auto headingFont = typography::bold(font());
-    for (int i = 0; i < m_list->topLevelItemCount(); ++i) {
-        auto *item = m_list->topLevelItem(i);
-        item->setFont(0, item == m_typedRow ? typography::italic(font()) : headingFont);
-    }
-}
-
-void SamplePickerButton::changeEvent(QEvent *event)
-{
-    QPushButton::changeEvent(event);
-    if (event->type() == QEvent::FontChange)
-        refreshItemFonts();
-}
-
 QTreeWidgetItem *SamplePickerButton::addSection(const QString &title)
 {
     auto *item = new QTreeWidgetItem(m_list, {title});

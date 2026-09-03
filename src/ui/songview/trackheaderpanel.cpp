@@ -9,7 +9,6 @@
 #include "ui/songview/trackheaderrow.h"
 
 #include <QApplication>
-#include <QEvent>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <cstddef>
@@ -23,19 +22,6 @@ TrackHeaderPanel::Geometry TrackHeaderPanel::Geometry::resolve()
 {
     // The row height comes from the single formula in TrackHeaderRow.
     return {lyt::fontPx(0.25), TrackHeaderRow::resolvedHeight()};
-}
-
-void TrackHeaderPanel::refreshGeometry()
-{
-    m_geometry = Geometry::resolve();
-    m_indicator->setFixedHeight(m_geometry.trackHeaderReorderIndicatorHeight);
-    if (m_indicator->isVisible())
-        m_indicator->resize(width(), m_geometry.trackHeaderReorderIndicatorHeight);
-    // Rows settle their own FontChange around this event, but the stride is
-    // already final: rows and panel both consume TrackHeaderRow::resolvedHeight.
-    // The presentation re-applies its cached activity synchronously.
-    synchronizeTrackDefinitions();
-    update();
 }
 
 TrackHeaderPanel::TrackHeaderPanel(SongView *sv)
@@ -273,14 +259,6 @@ void TrackHeaderPanel::endRowDrag(bool commit)
     // Queued: the move rebuilds this panel from inside the release
     // handler.
     m_sv->queueHeaderMutation([sv = m_sv, from, target = *target] { sv->moveTrack(from, target); });
-}
-
-bool TrackHeaderPanel::event(QEvent *event)
-{
-    const bool handled = QWidget::event(event);
-    if (event->type() == QEvent::FontChange)
-        refreshGeometry();
-    return handled;
 }
 
 } // namespace songview

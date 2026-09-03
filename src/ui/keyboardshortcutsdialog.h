@@ -2,7 +2,6 @@
 
 #include <QWidget>
 
-class QEvent;
 class QComboBox;
 class QKeySequenceEdit;
 class QLabel;
@@ -20,9 +19,6 @@ class KeyboardShortcutsWidget : public QWidget
 
   public:
     explicit KeyboardShortcutsWidget(QWidget *parent = nullptr);
-
-  protected:
-    void changeEvent(QEvent *event) override;
 
   private:
     void rebuildTree();

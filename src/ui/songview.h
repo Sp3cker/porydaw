@@ -606,7 +606,6 @@ class SongView : public QWidget
         static Geometry resolve();
     };
 
-    void refreshGeometry();
     std::vector<songview::PlayheadBand> playheadClipBands() const;
     // Both exits floor at the clock base: the result is >= 1 for any
     // segment, so snap math may divide by it unchecked.

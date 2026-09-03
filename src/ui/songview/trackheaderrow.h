@@ -52,7 +52,6 @@ class TrackHeaderRow : public QWidget
         static Geometry resolve();
     };
 
-    void refreshGeometry();
     void rebuildFontCache();
 
   public:
@@ -75,7 +74,6 @@ class TrackHeaderRow : public QWidget
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void contextMenuEvent(QContextMenuEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
-    bool event(QEvent *event) override;
     void resizeEvent(QResizeEvent *) override;
 
   private:

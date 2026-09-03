@@ -9,7 +9,6 @@
 
 #include "ui/activity/trackactivity.h"
 
-class QEvent;
 class QPushButton;
 class QVBoxLayout;
 class SongView;
@@ -29,8 +28,6 @@ class TrackHeaderPanel : public QWidget
         static Geometry resolve();
     };
 
-    void refreshGeometry();
-
   public:
     explicit TrackHeaderPanel(SongView *sv);
     ~TrackHeaderPanel() override;
@@ -44,9 +41,6 @@ class TrackHeaderPanel : public QWidget
     bool beginRowDrag(int track);
     void dragRowTo(QPoint pos);
     void endRowDrag(bool commit);
-
-  protected:
-    bool event(QEvent *event) override;
 
   private:
     TrackHeaderRow *reconcileRow(int track, std::map<int, TrackHeaderRow *> &previous);

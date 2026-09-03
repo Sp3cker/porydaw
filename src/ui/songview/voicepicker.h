@@ -22,8 +22,6 @@ class VoicePickerDialog : public QDialog
         static Geometry resolve();
     };
 
-    void refreshGeometry();
-
   public:
     VoicePickerDialog(SongView *sv, const QString &title, int initialVoice,
                       std::function<void(int, int)> audition);
@@ -32,7 +30,6 @@ class VoicePickerDialog : public QDialog
     int selectedVoice() const;
 
   protected:
-    bool event(QEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
 
   private:

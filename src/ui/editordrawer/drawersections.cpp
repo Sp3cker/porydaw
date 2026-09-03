@@ -681,7 +681,6 @@ void DrawerSections::changeEvent(QEvent *event)
         refreshDetentIcon();
     }
     switch (event->type()) {
-    case QEvent::FontChange:
     case QEvent::StyleChange:
     case QEvent::ThemeChange:
         m_chromeDirty = true;
