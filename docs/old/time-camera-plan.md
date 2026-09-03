@@ -1,5 +1,9 @@
 # TimeCamera extraction plan
 
+## Status
+
+Implemented. Retained as the extraction and behavior contract.
+
 Branch: `feature/time-camera` from `fork-main` @ f45336c
 ("Phase C: flatten timeline dispatcher into per-band sync methods").
 Validated GO-WITH-CHANGES by the Plan agent against this worktree

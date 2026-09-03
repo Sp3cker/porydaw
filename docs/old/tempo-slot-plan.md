@@ -7,8 +7,7 @@ Voice Change is now an independent editor-drawer page owned by
 `VoiceChangeArea`, not an `AutomationCanvas` strip, and `AutomationCanvas`
 keeps only the Tempo and CC lanes. Historical decision context remains in
 [`tempo-slot-minutes.md`](tempo-slot-minutes.md); the abandoned
-standalone-strip plan is tombstoned in
-[`tempo-strip-plan.md`](tempo-strip-plan.md).
+standalone-strip plan is not retained separately.
 
 ## Goal
 

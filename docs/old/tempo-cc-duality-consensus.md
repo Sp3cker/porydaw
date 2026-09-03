@@ -1,7 +1,7 @@
 # Kill the tempo-vs-CC duality — consensus plan (v2)
 
 - **Worktree:** `/Users/spencer/dev/cProjects/porydaw-fork-tempo-cc` · **Branch:** `fix/tempo-cc-duality` (base `fork-main` @ `73b36e3`)
-- **Status:** SYNTHESIZED consensus — intersection of three viewpoints (main-agent plan v1 at `docs/tempo-cc-duality-plan.md`, `reviewer` agent, `evidence-plan-architect` agent). Only moves endorsed by all three are in scope; contested items are resolved or explicitly excluded below.
+- **Status:** SYNTHESIZED consensus — intersection of three viewpoints (the now-removed superseded v1 plan, `reviewer` agent, `evidence-plan-architect` agent). Only moves endorsed by all three are in scope; contested items are resolved or explicitly excluded below.
 
 ## 1. Verdict matrix
 

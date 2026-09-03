@@ -4,7 +4,7 @@
 
 Standing implementation plan for one retained Qt Quick timeline scene with a permanently native playhead.
 
-This supersedes the rendering direction in `docs/native-overlay-cursor-plan.md`. Its useful policies remain: camera-space content-x, independent hover/edit/playhead state, source-owned hover clearing, and hover-under-edit-under-playhead precedence. Hover and edit chrome belong to Quick. The existing playhead remains in its proven CALayer/DComp renderer with QWidget fallback;
+This supersedes the earlier native-overlay cursor draft. Its useful policies remain: camera-space content-x, independent hover/edit/playhead state, source-owned hover clearing, and hover-under-edit-under-playhead precedence. Hover and edit chrome belong to Quick. The existing playhead remains in its proven CALayer/DComp renderer with QWidget fallback;
 hover /
         edit do not expand into that platform layer
             .

@@ -2,7 +2,9 @@
 
 ## Status
 
-Planned. This document changes no production behavior by itself.
+Implemented. Porydaw now uses bundled fonts for the process lifetime; the
+runtime system-font option and widget-wide font-reset path are gone. Retained
+as a decision record.
 
 ## Goal
 

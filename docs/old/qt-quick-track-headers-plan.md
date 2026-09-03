@@ -2,7 +2,9 @@
 
 ## Status
 
-Design complete; not implemented.
+Implemented. Track headers now render and receive input through
+`TrackHeaderModel` and `TrackHeaderBand` in the existing timeline Quick host.
+Retained as the design record.
 
 Open product or architecture decisions: none. Implementers fill function bodies and local test
 helpers; they do not choose a second host, state owner, geometry source, role name, QML object name,

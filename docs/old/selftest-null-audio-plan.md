@@ -1,7 +1,8 @@
 # Parallel Self-Test Audio Plan
 
 **Date:** 2026-08-28  
-**Status:** Proposed for review  
+**Status:** Implemented. Focused self-test processes use miniaudio's forced
+null backend and retain the real callback-thread behavior.
 **Scope:** `AudioEngine` backend selection, the large `selftest` harness, its check-catalog entries, and focused verification of real versus null audio backends.
 
 ## 1. Goal

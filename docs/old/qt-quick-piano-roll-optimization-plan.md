@@ -2,8 +2,8 @@
 
 ## Status
 
-Implementation plan for the unstaged Qt Quick piano-roll prototype in
-`.worktrees/qt-quick-piano-roll`.
+Implemented. Qt Quick is the only piano-roll renderer; `PianoRoll` remains
+the C++ and Qt input and edit owner. Retained as the renderer-cutover record.
 
 This plan makes Qt Quick the only piano-roll renderer, removes the environment-variable
 selector and QWidget/QPainter fallback, and removes the confirmed avoidable CPU mechanisms in
