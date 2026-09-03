@@ -1,6 +1,8 @@
 #pragma once
 
 #include <QDeadlineTimer>
+#include <QHash>
+#include <QImage>
 #include <QJSValue>
 #include <QMutex>
 #include <QObject>
@@ -12,15 +14,18 @@
 
 #include <atomic>
 #include <functional>
+#include <map>
 #include <memory>
 #include <vector>
 
+#include "audio/audiotap.h"
 #include "pluginmanifest.h"
 #include "ui/keymap.h"
 
 class AudioEngine;
 class DecompProject;
 class QAction;
+class QDockWidget;
 class QFileSystemWatcher;
 class QJSEngine;
 class QKeyEvent;
@@ -42,6 +47,10 @@ struct HostBindings {
     // Owns a plugin's global-context QAction's shortcut scope: the main
     // window adds it so the binding fires window-wide.
     std::function<void(QAction *action)> addGlobalAction;
+    // Adds a plugin's dock (objectName already set) to the main window in
+    // `area`, restoring its saved placement from windowState when there is
+    // one, and lists it under View. Absent: the dock stays parentless.
+    std::function<void(QDockWidget *dock, Qt::DockWidgetArea area)> addDock;
     const AudioEngine *audio = nullptr;
     const DecompProject *project = nullptr;
 };
@@ -78,6 +87,16 @@ struct Plugin {
     bool builtin = false; // the console's own engine: no manifest, no reload
     QTimer *reloadTimer = nullptr;
     QStringList watchedPaths;
+    // Live listener counts per event name (the prelude reports them), so
+    // the host only pumps frames/beats to plugins that want them and only
+    // runs the frame timer while somebody listens.
+    QHash<QString, int> listeners;
+    // Docks from porydaw.ui.dock (scriptwidgets.h); deleted on teardown
+    // before the engine, since their handles hold QJSValue callbacks.
+    std::vector<QPointer<QDockWidget>> docks;
+    // porydaw.ui.loadImage: decoded images by handle id.
+    std::map<int, QImage> images;
+    int nextImageId = 1;
 };
 
 // A script edit transaction (`porydaw.edit.transaction`, API.md): one
@@ -173,6 +192,14 @@ class ScriptHost : public QObject
     SongSession *session() const { return m_session; }
     // Called at the UI cadence: detects transport-state changes to report.
     void tick();
+    // One realtime frame (PLAN §4): polls the audio tap and emits
+    // audio.frame, transport.tick and transport.beat to the plugins that
+    // listen. The host's own ~60 Hz timer calls this while any plugin
+    // listens; harnesses call it directly.
+    void pumpFrame();
+    bool frameTimerActive() const;
+    // The analysis the last pumpFrame produced (porydaw.audio reads it).
+    AudioAnalyzer &analyzer() { return m_analyzer; }
 
     // Script Console REPL: evaluates in the console's own engine (which has
     // the full porydaw API). Returns the result's text; errors go to log().
@@ -195,6 +222,15 @@ class ScriptHost : public QObject
     void emitEventAll(const QString &event, const QVariant &payload);
     // "Name: message (file:line)" plus the stack, for the console.
     QString formatError(const QJSValue &error) const;
+    // Calls a plugin's JS function (a widget callback) under the watchdog;
+    // errors are logged. Returns an undefined value when the plugin can't
+    // run (faulted, interrupted, unloading).
+    QJSValue invoke(Plugin &plugin, const QJSValue &fn, const QJSValueList &args);
+    // The prelude reports listener counts here (see Plugin::listeners).
+    void setListenerCount(Plugin &plugin, const QString &event, int count);
+    // Hands a freshly built dock to the main window (HostBindings::addDock)
+    // and tracks it for teardown.
+    void registerDock(Plugin &plugin, QDockWidget *dock, Qt::DockWidgetArea area);
 
     // Edit transactions (EditTransaction above). begin/commit return false
     // with *error set; the prelude turns that into a thrown Error.
@@ -237,6 +273,11 @@ class ScriptHost : public QObject
     void onPathChanged(const QString &path);
     void runPluginAction(Plugin &plugin, const QString &fullId);
     static bool enabledSetting(const QString &id);
+    bool anyListener(const QString &event) const;
+    void updateFrameTimer();
+    // Emits to every plugin with a listener for `event` (payload converted
+    // per engine, so the conversion is skipped for the rest).
+    void emitEventListening(const QString &event, const QVariant &payload);
 
     HostBindings m_bindings;
     QString m_pluginsDir;
@@ -249,6 +290,10 @@ class ScriptHost : public QObject
     SongSession *m_session = nullptr;
     QMetaObject::Connection m_docConnection;
     int m_lastTransport = -1;
+    QTimer *m_frameTimer = nullptr;
+    AudioAnalyzer m_analyzer;
+    int64_t m_lastBeat = -1; // global beat index of the last transport.beat
+    bool m_inFrame = false;  // pumpFrame re-entrancy (a listener that pumps)
     EditTransaction m_transaction;
     uint64_t m_transactionSerial = 0;
     // Inside the song.changed fan-out: a transaction begun there would push

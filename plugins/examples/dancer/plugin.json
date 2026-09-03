@@ -1,0 +1,8 @@
+{
+  "id": "dancer",
+  "name": "Dancer",
+  "version": "1.0.0",
+  "api": 1,
+  "main": "main.js",
+  "description": "A panel where the porydaw logo bounces on every beat (porydaw.transport beat events) and sways while playback is stopped."
+}

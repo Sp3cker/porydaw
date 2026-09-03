@@ -3,6 +3,7 @@
 #include <QAction>
 #include <QCoreApplication>
 #include <QDir>
+#include <QDockWidget>
 #include <QFile>
 #include <QFileInfo>
 #include <QFileSystemWatcher>
@@ -15,6 +16,7 @@
 #include <algorithm>
 
 #include "audio/audioengine.h"
+#include "core/miditimeline.h"
 #include "core/songdocument.h"
 #include "scriptapi.h"
 #include "songsession.h"
@@ -26,6 +28,8 @@ namespace {
 
 constexpr int kReloadDebounceMs = 250;
 constexpr int kRescanDebounceMs = 300;
+// 60 Hz is 16.6 ms; the main window's playhead timer uses the same figure.
+constexpr int kFrameIntervalMs = 17;
 const QString kConsoleId = QStringLiteral("console");
 
 QString enabledKey(const QString &id)
@@ -110,6 +114,10 @@ ScriptHost::ScriptHost(QObject *parent) : QObject(parent), m_pluginsDir(defaultP
     SongView::setPluginKeyHandler([this](QKeyEvent *event, keymap::Context surface, bool timeSel) {
         return handleKey(event, surface, timeSel);
     });
+    m_frameTimer = new QTimer(this);
+    m_frameTimer->setTimerType(Qt::PreciseTimer);
+    m_frameTimer->setInterval(kFrameIntervalMs);
+    connect(m_frameTimer, &QTimer::timeout, this, &ScriptHost::pumpFrame);
 }
 
 ScriptHost::~ScriptHost()
@@ -410,6 +418,15 @@ void ScriptHost::teardown(Plugin &plugin, bool callDeactivate)
         guarded(plugin, [&] { return plugin.deactivate.call(); }); // errors logged inside
     }
     // Everything the plugin registered goes with it (PLAN §3 Disposables).
+    // Docks first: their widget handles hold QJSValue callbacks into the
+    // engine, and a canvas mid-paint must never outlive it.
+    for (const QPointer<QDockWidget> &dock : plugin.docks) {
+        if (dock)
+            delete dock.data();
+    }
+    plugin.docks.clear();
+    plugin.images.clear();
+    plugin.listeners.clear();
     auto &keys = keymap::Registry::instance();
     for (PluginAction &action : plugin.actions) {
         delete action.action.data();
@@ -423,6 +440,7 @@ void ScriptHost::teardown(Plugin &plugin, bool callDeactivate)
     plugin.facades.clear();
     plugin.engine.reset();
     plugin.state = PluginState::Disabled;
+    updateFrameTimer();
 }
 
 QJSValue ScriptHost::guarded(Plugin &plugin, const std::function<QJSValue()> &fn)
@@ -657,6 +675,7 @@ void ScriptHost::setSession(SongSession *session)
         return;
     disconnect(m_docConnection);
     m_session = session;
+    m_lastBeat = -1; // the new song's first beat should fire
     if (session) {
         m_docConnection = connect(&session->doc, &SongDocument::documentChanged, this, [this] {
             if (!m_session)
@@ -690,6 +709,147 @@ void ScriptHost::tick()
     emitEventAll(
         QStringLiteral("transport.state"),
         QVariantMap{{QStringLiteral("state"), QLatin1String(names[std::clamp(state, 0, 2)])}});
+}
+
+void ScriptHost::setListenerCount(Plugin &plugin, const QString &event, int count)
+{
+    if (count <= 0)
+        plugin.listeners.remove(event);
+    else
+        plugin.listeners.insert(event, count);
+    updateFrameTimer();
+}
+
+bool ScriptHost::anyListener(const QString &event) const
+{
+    for (const auto &plugin : m_plugins) {
+        if (plugin->state == PluginState::Loaded && plugin->listeners.value(event) > 0)
+            return true;
+    }
+    return m_console && m_console->state == PluginState::Loaded &&
+           m_console->listeners.value(event) > 0;
+}
+
+void ScriptHost::updateFrameTimer()
+{
+    const bool wanted = anyListener(QStringLiteral("audio.frame")) ||
+                        anyListener(QStringLiteral("transport.tick")) ||
+                        anyListener(QStringLiteral("transport.beat"));
+    if (wanted && !m_frameTimer->isActive())
+        m_frameTimer->start();
+    else if (!wanted && m_frameTimer->isActive())
+        m_frameTimer->stop();
+}
+
+bool ScriptHost::frameTimerActive() const
+{
+    return m_frameTimer->isActive();
+}
+
+void ScriptHost::emitEventListening(const QString &event, const QVariant &payload)
+{
+    const auto send = [&](Plugin &plugin) {
+        if (plugin.state != PluginState::Loaded || !plugin.engine ||
+            plugin.listeners.value(event) <= 0)
+            return;
+        emitEvent(plugin, event, plugin.engine->toScriptValue(payload));
+    };
+    for (auto &plugin : m_plugins)
+        send(*plugin);
+    if (m_console)
+        send(*m_console);
+}
+
+void ScriptHost::pumpFrame()
+{
+    if (m_inFrame)
+        return;
+    m_inFrame = true;
+    const AudioEngine *audio = m_bindings.audio;
+    const bool loaded = audio && audio->songLoaded();
+    const Transport transport = loaded ? audio->transport() : Transport::Stopped;
+    const bool playing = transport == Transport::Playing;
+    double tick = 0.0;
+    if (loaded && audio->timeline())
+        tick = audio->timeline()->tickForSample(audio->playheadSamples());
+
+    // audio.frame: one analysis per frame, shared by every subscriber.
+    if (anyListener(QStringLiteral("audio.frame"))) {
+        uint32_t fresh = 0;
+        if (audio)
+            fresh = m_analyzer.poll(audio->tap());
+        emitEventListening(
+            QStringLiteral("audio.frame"),
+            QVariantMap{{QStringLiteral("peak"),
+                         QVariantList{double(m_analyzer.peak(0)), double(m_analyzer.peak(1))}},
+                        {QStringLiteral("rms"),
+                         QVariantList{double(m_analyzer.rms(0)), double(m_analyzer.rms(1))}},
+                        {QStringLiteral("frames"), double(fresh)},
+                        {QStringLiteral("sampleRate"), audio ? audio->sampleRate() : 0.0},
+                        {QStringLiteral("playing"), playing}});
+    }
+
+    static const char *const names[] = {"stopped", "paused", "playing"};
+    const QString stateName = QLatin1String(names[std::clamp(int(transport), 0, 2)]);
+    if (anyListener(QStringLiteral("transport.tick"))) {
+        emitEventListening(QStringLiteral("transport.tick"),
+                           QVariantMap{{QStringLiteral("state"), stateName},
+                                       {QStringLiteral("tick"), tick},
+                                       {QStringLiteral("playing"), playing}});
+    }
+
+    // transport.beat: fires when the playhead enters a new beat of the
+    // meter in force there (a bar of 3/4 has three), including the beat
+    // playback starts on, and again after a loop wrap or a seek.
+    if (!playing || !audio->timeline()) {
+        m_lastBeat = -1;
+    } else if (anyListener(QStringLiteral("transport.beat"))) {
+        const MidiTimeline *tl = audio->timeline();
+        const MidiTimeline::BarPosition pos = tl->barPositionForTick(tick);
+        const int beatsPerBar = std::max(pos.beatsPerBar, 1);
+        const double barFloor = std::floor(pos.bar);
+        int beat = int((pos.bar - barFloor) * beatsPerBar);
+        beat = std::clamp(beat, 0, beatsPerBar - 1);
+        const int64_t index = int64_t(barFloor) * beatsPerBar + beat;
+        if (index != m_lastBeat) {
+            m_lastBeat = index;
+            double bpm = SongDocument::kTempoDefault;
+            for (const TempoPoint &p : tl->tempoMap) {
+                if (double(p.tick) > tick)
+                    break;
+                bpm = p.bpm;
+            }
+            emitEventListening(QStringLiteral("transport.beat"),
+                               QVariantMap{{QStringLiteral("bar"), double(barFloor)},
+                                           {QStringLiteral("beat"), beat},
+                                           {QStringLiteral("beatsPerBar"), beatsPerBar},
+                                           {QStringLiteral("beatTicks"), double(pos.beatTicks)},
+                                           {QStringLiteral("tick"), tick},
+                                           {QStringLiteral("bpm"), bpm}});
+        }
+    }
+    m_inFrame = false;
+}
+
+QJSValue ScriptHost::invoke(Plugin &plugin, const QJSValue &fn, const QJSValueList &args)
+{
+    if (plugin.state != PluginState::Loaded || !plugin.engine || !fn.isCallable())
+        return QJSValue();
+    if (plugin.engine->isInterrupted())
+        return QJSValue();
+    QJSValue callable = fn;
+    return guarded(plugin, [&] { return callable.call(args); });
+}
+
+void ScriptHost::registerDock(Plugin &plugin, QDockWidget *dock, Qt::DockWidgetArea area)
+{
+    plugin.docks.emplace_back(dock);
+    // Prune docks a script closed (deleteLater) so the list stays small.
+    plugin.docks.erase(std::remove_if(plugin.docks.begin(), plugin.docks.end(),
+                                      [](const QPointer<QDockWidget> &d) { return d.isNull(); }),
+                       plugin.docks.end());
+    if (m_bindings.addDock)
+        m_bindings.addDock(dock, area);
 }
 
 void ScriptHost::emitEvent(Plugin &plugin, const QString &event, const QJSValue &payload)

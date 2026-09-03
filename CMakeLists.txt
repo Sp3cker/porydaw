@@ -84,6 +84,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/theme/themepage.h
 
     src/audio/audioengine.cpp
+    src/audio/audiotap.cpp
+    src/audio/audiotap.h
     src/audio/audioengine.h
     src/audio/auditionslots.cpp
     src/audio/auditionslots.h
@@ -220,6 +222,8 @@ if(PORYDAW_SCRIPTING)
         src/scripting/scriptconsole.h
         src/scripting/pluginspage.cpp
         src/scripting/pluginspage.h
+        src/scripting/scriptwidgets.cpp
+        src/scripting/scriptwidgets.h
     )
     qt_add_resources(porydaw_app "scripting_prelude"
         PREFIX "/scripting"

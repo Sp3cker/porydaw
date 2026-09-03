@@ -1,37 +1,52 @@
 #include <QAction>
 #include <QApplication>
+#include <QCheckBox>
+#include <QComboBox>
 #include <QCoreApplication>
 #include <QDeadlineTimer>
 #include <QDir>
+#include <QDockWidget>
 #include <QElapsedTimer>
 #include <QFile>
 #include <QFileInfo>
+#include <QImage>
 #include <QJSEngine>
 #include <QJSValue>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QKeyEvent>
+#include <QLabel>
+#include <QMenu>
+#include <QMouseEvent>
 #include <QObject>
+#include <QPushButton>
 #include <QSettings>
+#include <QSlider>
 #include <QString>
 #include <QStringList>
 #include <QTemporaryDir>
 #include <QThread>
 #include <QTreeWidget>
 #include <QUndoStack>
+#include <QWheelEvent>
 #include <functional>
 
+#include "audio/audiotap.h"
 #include "core/songdocument.h"
 #include "mainwindow.h"
 #include "scripting/scripthost.h"
+#include "scripting/scriptwidgets.h"
 #include "songsession.h"
 #include "ui/keyboardshortcutspage.h"
 #include "ui/keymap.h"
 #include "ui/settingsdialog.h"
 #include "ui/songview.h"
+#include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <vector>
 
 // --scriptcheck: scripting host check (self-contained, no project needed).
 // Phase 0 of docs/scripting/PLAN.md: proves that the linked QJSEngine does
@@ -268,6 +283,31 @@ const char *kBrokenMain =
 const char *kBadManifest = R"({ "id": "badmanifest", "name": "Future", "api": 99 })";
 const char *kSyntaxManifest = R"({ "id": "syntax", "name": "Syntax", "api": 1 })";
 const char *kSyntaxMain = "export function activate() {\n  return (;\n}\n";
+// Phase 3: a dock built from every widget primitive, plus an image.
+const char *kPanelManifest = R"({ "id": "panel", "name": "Panel", "version": "1.0.0", "api": 1 })";
+const char *kPanelMain = R"(
+var dock = null, img = 0;
+function count(key) { porydaw.storage.set(key, porydaw.storage.get(key, 0) + 1); }
+export function activate() {
+    img = porydaw.ui.loadImage("pic.png");
+    porydaw.storage.set("imgw", porydaw.ui.imageSize(img).width);
+    dock = porydaw.ui.dock({ id: "main", title: "Panel", area: "left", build: function (root) {
+        var row = root.addRow();
+        row.addLabel("hello");
+        row.addButton("Go", function () { count("clicks"); });
+        root.addCheckbox("On", false, function (on) { porydaw.storage.set("checked", on ? 1 : 0); });
+        root.addSlider(0, 100, 50, function (v) { porydaw.storage.set("slider", v); }, {});
+        root.addCombo(["a", "b", "c"], 1, function (i) { porydaw.storage.set("combo", i); });
+        root.addCanvas({ minHeight: 40 }, function (g) {
+            g.clear("#000000");
+            g.image(img, 0, 0, -1, -1, 0, 0, 0, 0);
+            count("panelpaints");
+        }, null);
+        root.addStretch();
+    }});
+}
+export function deactivate() { dock.close(); porydaw.ui.freeImage(img); }
+)";
 const char *kRunawayManifest = R"({ "id": "runaway", "name": "Runaway", "api": 1 })";
 const char *kRunawayMain = R"(
 export function activate() {
@@ -682,6 +722,473 @@ void runEditChecks(const Check &check, scripting::ScriptHost &host, SongSession 
 
 } // namespace
 
+namespace {
+
+// ---- Phase 3: docks, canvas, images ----
+
+int countMessages(const QList<Message> &messages, const QString &plugin, const QString &fragment)
+{
+    int n = 0;
+    for (const Message &m : messages) {
+        if (m.plugin == plugin && m.text.contains(fragment))
+            n++;
+    }
+    return n;
+}
+
+void clickCanvas(QWidget *canvas, const QPoint &pos)
+{
+    QMouseEvent press(QEvent::MouseButtonPress, QPointF(pos), QPointF(canvas->mapToGlobal(pos)),
+                      Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QCoreApplication::sendEvent(canvas, &press);
+    QMouseEvent release(QEvent::MouseButtonRelease, QPointF(pos), QPointF(canvas->mapToGlobal(pos)),
+                        Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    QCoreApplication::sendEvent(canvas, &release);
+}
+
+void runPanelChecks(const Check &check, scripting::ScriptHost &host, MainWindow &window,
+                    QList<Message> &messages, QMenu *panelsMenu)
+{
+    const scripting::Plugin *panel = host.plugin(QStringLiteral("panel"));
+    if (!check(panel && panel->state == scripting::PluginState::Loaded,
+               "panel fixture plugin did not load"))
+        return;
+    const QString dockName = QStringLiteral("plugin.panel.main");
+    QPointer<QDockWidget> dock = window.findChild<QDockWidget *>(dockName);
+    if (!check(dock && panel->docks.size() == 1 && panel->docks.front() == dock,
+               "ui.dock did not create the panel's dock on the window"))
+        return;
+    check(window.dockWidgetArea(dock) == Qt::LeftDockWidgetArea && !dock->isHidden(),
+          "panel dock did not land in the requested area, shown");
+    check(dock->windowTitle() == QStringLiteral("Panel") && dock->titleBarWidget() &&
+              dock->titleBarWidget()->inherits("QLabel"),
+          "panel dock did not get its title strip");
+    check(panelsMenu && panelsMenu->menuAction()->isVisible() &&
+              panelsMenu->actions().contains(dock->toggleViewAction()),
+          "View → Plugin Panels did not list the dock");
+    check(storedCounter(QStringLiteral("panel"), QStringLiteral("imgw")) == 16,
+          "ui.loadImage/imageSize did not decode the plugin's image");
+
+    // Every widget primitive is a real QWidget under the dock, and its
+    // callback reaches the script.
+    // (Searched under the body: the title strip is a QLabel too.)
+    QWidget *body = dock->widget();
+    auto *label = body->findChild<QLabel *>();
+    auto *button = body->findChild<QPushButton *>();
+    auto *box = body->findChild<QCheckBox *>();
+    auto *slider = body->findChild<QSlider *>();
+    auto *combo = body->findChild<QComboBox *>();
+    auto *canvas = body->findChild<scripting::CanvasWidget *>();
+    if (!check(label && button && box && slider && combo && canvas,
+               "build(root) did not create every widget primitive"))
+        return;
+    check(label->text() == QStringLiteral("hello") && button->text() == QStringLiteral("Go") &&
+              combo->count() == 3 && combo->currentIndex() == 1 && slider->value() == 50,
+          "widget primitives did not take their initial arguments");
+    check(button->focusPolicy() == Qt::NoFocus && canvas->focusPolicy() == Qt::NoFocus,
+          "plugin widgets may take keyboard focus away from the roll");
+    button->click();
+    check(storedCounter(QStringLiteral("panel"), QStringLiteral("clicks")) == 1,
+          "button onClick did not reach the script");
+    box->setChecked(true);
+    check(storedCounter(QStringLiteral("panel"), QStringLiteral("checked")) == 1,
+          "checkbox onChange did not reach the script");
+    slider->setValue(70);
+    check(storedCounter(QStringLiteral("panel"), QStringLiteral("slider")) == 70,
+          "slider onChange did not reach the script");
+    combo->setCurrentIndex(2);
+    check(storedCounter(QStringLiteral("panel"), QStringLiteral("combo")) == 2,
+          "combo onChange did not reach the script");
+    // The canvas painted the plugin's image at its natural size.
+    canvas->resize(64, 48);
+    const QImage shot = canvas->grab().toImage();
+    check(storedCounter(QStringLiteral("panel"), QStringLiteral("panelpaints")) >= 1 &&
+              canvas->paintCount() >= 1 && canvas->errorCount() == 0,
+          "canvas paint(g) did not run");
+    check(shot.pixelColor(2, 2) == QColor(255, 0, 0) && shot.pixelColor(40, 20) == QColor(0, 0, 0),
+          "g.image/g.clear did not paint what the script asked");
+
+    // Dock placement survives a reload through the window state: move
+    // it, save, unload (dock gone), restore, reload — it comes back on
+    // the right.
+    window.addDockWidget(Qt::RightDockWidgetArea, dock);
+    const QByteArray state = window.saveState();
+    const int menuEntries = panelsMenu->actions().size();
+    host.setEnabled(QStringLiteral("panel"), false);
+    QApplication::processEvents();
+    check(dock.isNull() && !window.findChild<QDockWidget *>(dockName),
+          "unloading the plugin did not delete its dock");
+    check(panelsMenu->actions().size() == menuEntries - 1,
+          "View → Plugin Panels kept the unloaded plugin's entry");
+    window.restoreState(state);
+    host.setEnabled(QStringLiteral("panel"), true);
+    dock = window.findChild<QDockWidget *>(dockName);
+    check(dock && window.dockWidgetArea(dock) == Qt::RightDockWidgetArea && !dock->isHidden(),
+          "a reloaded plugin's dock did not restore its saved placement, shown");
+    // A dock the user closed stays closed across a reload (and, through
+    // the same setting, across restarts); reopening it is remembered too.
+    // (trigger() is the user's click; setChecked() would be programmatic.)
+    dock->toggleViewAction()->trigger();
+    check(dock->isHidden(), "the toggle action did not close the dock");
+    host.reload(QStringLiteral("panel"));
+    dock = window.findChild<QDockWidget *>(dockName);
+    check(dock && dock->isHidden(), "a closed plugin dock reopened on reload");
+    dock->toggleViewAction()->trigger();
+    host.reload(QStringLiteral("panel"));
+    dock = window.findChild<QDockWidget *>(dockName);
+    check(dock && !dock->isHidden(), "a reopened plugin dock did not stay open on reload");
+    // The dock's own close button counts too; a script's hide() does not.
+    dock->close();
+    host.reload(QStringLiteral("panel"));
+    dock = window.findChild<QDockWidget *>(dockName);
+    check(dock && dock->isHidden(), "the dock's close button was not remembered");
+    dock->toggleViewAction()->trigger();
+    check(!dock->isHidden(), "reopening from the menu did not show the dock");
+    dock->hide();
+    host.reload(QStringLiteral("panel"));
+    dock = window.findChild<QDockWidget *>(dockName);
+    check(dock && !dock->isHidden(), "a programmatic hide was mistaken for a user close");
+    check(!hasMessage(messages, QStringLiteral("panel"), 2, QStringLiteral("")),
+          "the panel fixture logged an error");
+}
+
+void runDockChecks(const Check &check, scripting::ScriptHost &host, MainWindow &window,
+                   QList<Message> &messages)
+{
+    // Console-built dock: pixel probe, `g` outside paint, mouse, closing.
+    host.evalConsole(QStringLiteral("var G = null;"));
+    check(!host.evalConsole(QStringLiteral(
+                                "var meter = porydaw.ui.dock({id: 'meter', title: 'Meter', "
+                                "area: 'left', minWidth: 40, minHeight: 40, paint: function (g) "
+                                "{ porydaw.storage.set('paints', porydaw.storage.get('paints', 0) "
+                                "+ 1); g.clear('#000000'); g.fillRect(0, 0, 10, 10, 'red'); "
+                                "g.text(2, 30, 'hi', 'white', {}); G = g; }, mouse: function (ev) "
+                                "{ porydaw.storage.set('mouse', ev.type + ':' + ev.x + ':' + "
+                                "ev.button); }}); meter.id"))
+               .isNull(),
+          "ui.dock with a paint callback threw");
+    QPointer<QDockWidget> dock =
+        window.findChild<QDockWidget *>(QStringLiteral("plugin.console.meter"));
+    if (!check(dock && window.dockWidgetArea(dock) == Qt::LeftDockWidgetArea,
+               "console dock was not created on the left"))
+        return;
+    auto *canvas = dock->findChild<scripting::CanvasWidget *>();
+    if (!check(canvas, "single-paint dock has no canvas"))
+        return;
+    canvas->resize(48, 48);
+    const QImage shot = canvas->grab().toImage();
+    check(storedCounter(QStringLiteral("console"), QStringLiteral("paints")) >= 1,
+          "console dock paint did not run");
+    check(shot.pixelColor(5, 5) == QColor(255, 0, 0) && shot.pixelColor(30, 5) == QColor(0, 0, 0),
+          "fillRect/clear pixels are wrong");
+    check(host.evalConsole(QStringLiteral("G.fillRect(0, 0, 1, 1, 'red')")).isNull() &&
+              hasMessage(messages, QStringLiteral("console"), 2,
+                         QStringLiteral("only usable inside paint")),
+          "painter used outside paint() was not refused");
+    check(host.evalConsole(QStringLiteral("G.width")).toInt() == canvas->width() &&
+              canvas->width() >= 16,
+          "painter width did not match the canvas");
+    clickCanvas(canvas, QPoint(3, 4));
+    check(QSettings()
+              .value(QStringLiteral("plugins/console/data/mouse"))
+              .toByteArray()
+              .contains("release:3:left"),
+          "mouse events did not reach the script");
+    {
+        QWheelEvent wheel(QPointF(3, 4), QPointF(canvas->mapToGlobal(QPoint(3, 4))), QPoint(),
+                          QPoint(0, -120), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QCoreApplication::sendEvent(canvas, &wheel);
+        check(QSettings()
+                  .value(QStringLiteral("plugins/console/data/mouse"))
+                  .toByteArray()
+                  .contains("wheel:3"),
+              "wheel events did not reach the script");
+    }
+    check(host.evalConsole(QStringLiteral("meter.visible")) == QStringLiteral("true"),
+          "dock.visible did not read true");
+    host.evalConsole(QStringLiteral("meter.hide()"));
+    check(dock->isHidden() &&
+              host.evalConsole(QStringLiteral("meter.visible")) == QStringLiteral("false"),
+          "dock.hide() did not hide the dock");
+    host.evalConsole(QStringLiteral("meter.title = 'Renamed'"));
+    check(dock->windowTitle() == QStringLiteral("Renamed"), "dock.title setter did not apply");
+    // Theme colors.
+    check(host.evalConsole(QStringLiteral("porydaw.ui.theme('window_text')"))
+                  .startsWith(QLatin1Char('#')) &&
+              host.evalConsole(QStringLiteral("Object.keys(porydaw.ui.theme()).length > 10")) ==
+                  QStringLiteral("true"),
+          "ui.theme did not return colors");
+    check(host.evalConsole(QStringLiteral("porydaw.ui.theme('scrollbar_handle')")).isNull(),
+          "ui.theme accepted an unexposed role");
+    // Refusals.
+    check(host.evalConsole(QStringLiteral("porydaw.ui.dock({id: 'meter', paint: function () {}})"))
+              .isNull(),
+          "a duplicate dock id was accepted");
+    check(host.evalConsole(QStringLiteral("porydaw.ui.dock({id: 'bad id', paint: function () {}})"))
+              .isNull(),
+          "a bad dock id was accepted");
+    check(host.evalConsole(QStringLiteral("porydaw.ui.dock({id: 'nothing'})")).isNull(),
+          "a dock without paint or build was accepted");
+    check(host.evalConsole(QStringLiteral(
+                               "porydaw.ui.dock({id: 'x', area: 'middle', paint: function () {}})"))
+              .isNull(),
+          "a bad dock area was accepted");
+    check(host.evalConsole(QStringLiteral("porydaw.ui.loadImage('nope.png')")).isNull(),
+          "loadImage in the folder-less console did not throw");
+    host.evalConsole(QStringLiteral("meter.close()"));
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    check(dock.isNull() &&
+              host.evalConsole(QStringLiteral("meter.open")) == QStringLiteral("false"),
+          "dock.close() did not dispose the dock");
+
+    // A paint that throws is logged once, then held back for a moment.
+    host.evalConsole(QStringLiteral(
+        "var thrower = porydaw.ui.dock({id: 'thrower', paint: function (g) { throw new "
+        "Error('paint boom'); }})"));
+    QDockWidget *throwerDock =
+        window.findChild<QDockWidget *>(QStringLiteral("plugin.console.thrower"));
+    auto *throwerCanvas =
+        throwerDock ? throwerDock->findChild<scripting::CanvasWidget *>() : nullptr;
+    if (check(throwerCanvas, "thrower dock missing")) {
+        throwerCanvas->grab();
+        throwerCanvas->grab();
+        check(countMessages(messages, QStringLiteral("console"), QStringLiteral("paint boom")) ==
+                      1 &&
+                  throwerCanvas->errorCount() == 1,
+              "a throwing paint was not logged exactly once per hold");
+        host.evalConsole(QStringLiteral("thrower.close()"));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
+    // The watchdog reaches into paint too: a hung paint faults the plugin
+    // and its docks go with it.
+    host.setWatchdogMs(200);
+    host.evalConsole(QStringLiteral(
+        "var hang = porydaw.ui.dock({id: 'hang', paint: function (g) { while (true) {} }})"));
+    QDockWidget *hangDock = window.findChild<QDockWidget *>(QStringLiteral("plugin.console.hang"));
+    auto *hangCanvas = hangDock ? hangDock->findChild<scripting::CanvasWidget *>() : nullptr;
+    if (check(hangCanvas, "hang dock missing")) {
+        QElapsedTimer clock;
+        clock.start();
+        hangCanvas->grab();
+        const scripting::Plugin *console = host.plugin(QStringLiteral("console"));
+        check(clock.elapsed() < 5000 && console && console->state == scripting::PluginState::Error,
+              "a hung paint was not interrupted");
+        check(waitFor(
+                  [&] {
+                      return !window.findChild<QDockWidget *>(
+                          QStringLiteral("plugin.console.hang"));
+                  },
+                  2000),
+              "a faulted plugin's dock was not torn down");
+    }
+    host.setWatchdogMs(5000);
+    check(host.evalConsole(QStringLiteral("1 + 1")) == QStringLiteral("2"),
+          "the console did not revive after a paint fault");
+}
+
+// ---- Phase 3: audio frames + transport beats ----
+
+void runRealtimeChecks(const Check &check, scripting::ScriptHost &host, MainWindow &window,
+                       QList<Message> &messages, bool audioOk)
+{
+    runDockChecks(check, host, window, messages);
+    if (!audioOk)
+        return;
+    // Let the bundled examples run against real playback first, and keep
+    // a picture of each panel when asked (PORYDAW_SCRIPTCHECK_SHOTS=<dir>)
+    // — the only way to eyeball a plugin's painting headlessly.
+    const QString shotsDir = qEnvironmentVariable("PORYDAW_SCRIPTCHECK_SHOTS");
+    if (host.plugin(QStringLiteral("vu-meter"))) {
+        host.evalConsole(QStringLiteral("porydaw.transport.play()"));
+        waitFor([] { return false; }, 1500);
+        for (const char *id : {"vu-meter", "spectrum", "dancer"}) {
+            const scripting::Plugin *p = host.plugin(QLatin1String(id));
+            if (!p || p->docks.empty() || !p->docks.front())
+                continue;
+            auto *canvas = p->docks.front()->findChild<scripting::CanvasWidget *>();
+            if (!check(canvas && canvas->paintCount() > 0 && canvas->errorCount() == 0,
+                       "an example panel did not paint cleanly during playback"))
+                continue;
+            if (!shotsDir.isEmpty()) {
+                canvas->resize(240, 160);
+                canvas->grab().save(shotsDir + QLatin1Char('/') + QLatin1String(id) +
+                                    QStringLiteral(".png"));
+            }
+        }
+        host.evalConsole(QStringLiteral("porydaw.transport.stop()"));
+    }
+    // The bundled examples listen for frames; park them so the timer
+    // gating below sees only the console's listeners (and unloading them
+    // must drop their listener counts).
+    QStringList parked;
+    for (const char *id : {"vu-meter", "spectrum", "dancer"}) {
+        const scripting::Plugin *p = host.plugin(QLatin1String(id));
+        if (p && p->state == scripting::PluginState::Loaded) {
+            parked.append(QLatin1String(id));
+            host.setEnabled(QLatin1String(id), false);
+        }
+    }
+    check(!host.frameTimerActive(), "the frame timer runs with nobody listening");
+    // With the examples parked and the console's docks gone, the menu
+    // lists only the panel fixture; parking that too empties and hides it.
+    if (auto *panels = window.findChild<QMenu *>(QStringLiteral("viewPluginPanelsMenu"))) {
+        check(panels->actions().size() == 1 && panels->menuAction()->isVisible(),
+              "View → Plugin Panels did not list exactly the one open plugin dock");
+        host.setEnabled(QStringLiteral("panel"), false);
+        check(panels->actions().isEmpty() && !panels->menuAction()->isVisible(),
+              "View → Plugin Panels stayed visible after the last plugin dock closed");
+        host.setEnabled(QStringLiteral("panel"), true);
+    }
+    check(!host
+               .evalConsole(QStringLiteral(
+                   "var offFrame = porydaw.audio.on('frame', function (f) { "
+                   "var v = Math.round(Math.max(f.rms[0], f.rms[1]) * 100000); "
+                   "if (v > porydaw.storage.get('rms', 0)) porydaw.storage.set('rms', v); "
+                   "porydaw.storage.set('frames', porydaw.storage.get('frames', 0) + 1); "
+                   "if (f.frames > 0) porydaw.storage.set('fresh', 1); });"))
+               .isNull(),
+          "audio.on('frame') threw");
+    check(host.frameTimerActive(), "an audio.frame listener did not start the frame timer");
+    host.evalConsole(
+        QStringLiteral("var offTick = porydaw.transport.on('tick', function (t) { "
+                       "porydaw.storage.set('ticks', porydaw.storage.get('ticks', 0) + 1); "
+                       "if (t.playing) porydaw.storage.set('tickplaying', 1); });"
+                       "var offBeat = porydaw.transport.on('beat', function (b) { "
+                       "porydaw.storage.set('beats', porydaw.storage.get('beats', 0) + 1); "
+                       "porydaw.storage.set('bpb', b.beatsPerBar); "
+                       "porydaw.storage.set('beatidx', b.bar * b.beatsPerBar + b.beat); "
+                       "if (b.bpm > 0 && b.beatTicks > 0) porydaw.storage.set('beatok', 1); });"));
+    host.evalConsole(QStringLiteral("porydaw.transport.play()"));
+    const auto counter = [](const char *key) {
+        return storedCounter(QStringLiteral("console"), QLatin1String(key));
+    };
+    // The null device advances in real time; a couple of seconds of the
+    // fixture song yield audible RMS and at least two beats.
+    check(waitFor([&] { return counter("rms") > 0 && counter("beats") >= 2; }, 6000),
+          "no non-zero RMS / second beat arrived while the song played");
+    check(counter("frames") > 0 && counter("fresh") == 1, "audio frames carried no new samples");
+    check(counter("ticks") > 0 && counter("tickplaying") == 1,
+          "transport.tick did not fire while playing");
+    check(counter("bpb") > 0 && counter("beatok") == 1 && counter("beatidx") >= 1,
+          "transport.beat payload is malformed");
+    check(host.evalConsole(QStringLiteral("porydaw.audio.pcm() instanceof Float32Array && "
+                                          "porydaw.audio.pcm().length === "
+                                          "porydaw.audio.windowFrames * 2")) ==
+              QStringLiteral("true"),
+          "audio.pcm() is not a Float32Array of the window");
+    check(host.evalConsole(QStringLiteral("porydaw.audio.spectrum(32).length")) ==
+              QStringLiteral("32"),
+          "audio.spectrum(32) did not return 32 bands");
+    check(host.evalConsole(QStringLiteral("porydaw.audio.spectrum(32).some(function (v) { "
+                                          "return v > 0; })")) == QStringLiteral("true"),
+          "audio.spectrum is silent while the song plays");
+    check(host.evalConsole(QStringLiteral("porydaw.audio.channels().pcm.length > 0")) ==
+              QStringLiteral("true"),
+          "audio.channels() has no pcm pool");
+    check(host.evalConsole(QStringLiteral("porydaw.audio.peak.length === 2 && "
+                                          "porydaw.audio.rms.length === 2")) ==
+              QStringLiteral("true"),
+          "audio.peak/rms are not stereo pairs");
+    host.evalConsole(QStringLiteral("porydaw.transport.stop()"));
+    // A stop then play restarts the beat sequence (the first beat fires
+    // again).
+    const int beatsBefore = counter("beats");
+    host.evalConsole(QStringLiteral("porydaw.transport.play()"));
+    check(waitFor([&] { return counter("beats") > beatsBefore; }, 2000),
+          "restarting playback did not re-fire the starting beat");
+    host.evalConsole(QStringLiteral("porydaw.transport.stop()"));
+    host.evalConsole(QStringLiteral("offFrame(); offTick(); offBeat();"));
+    check(!host.frameTimerActive(), "removing every listener did not stop the frame timer");
+    for (const QString &id : parked)
+        host.setEnabled(id, true);
+    if (!parked.isEmpty())
+        check(host.frameTimerActive(), "re-enabled examples did not restart the frame timer");
+    // The examples' listeners ran during the song half; none may have thrown.
+    for (const QString &id : parked)
+        check(!hasMessage(messages, id, 2, QStringLiteral("")),
+              "an example plugin logged an error");
+}
+
+// ---- Phase 3: the tap ring and analyzer, no engine ----
+
+int runTapCheck()
+{
+    int failures = 0;
+    const auto check = [&failures](bool ok, const char *what) {
+        if (!ok) {
+            std::fprintf(stderr, "scriptcheck: FAIL: %s\n", what);
+            failures++;
+        }
+    };
+    AudioTap tap(1000); // rounds up to 1024
+    check(tap.capacity() == 1024, "tap capacity did not round up to a power of two");
+    std::vector<float> out(4096);
+    check(tap.readLatest(out.data(), 8) == 0 && out[0] == 0.0f && out[15] == 0.0f,
+          "reading an empty tap did not yield silence");
+    std::vector<float> in;
+    for (int i = 0; i < 10; i++) {
+        in.push_back(float(i));
+        in.push_back(float(-i));
+    }
+    tap.write(in.data(), 10);
+    check(tap.framesWritten() == 10, "framesWritten did not count the write");
+    check(tap.readLatest(out.data(), 4) == 4 && out[0] == 6.0f && out[1] == -6.0f && out[6] == 9.0f,
+          "readLatest did not return the newest frames oldest-first");
+    check(tap.readLatest(out.data(), 16) == 10 && out[0] == 0.0f && out[11] == 0.0f &&
+              out[12] == 0.0f && out[13] == 0.0f && out[30] == 9.0f,
+          "readLatest did not pad pre-history with silence");
+    in.clear();
+    for (int i = 0; i < 2000; i++) {
+        in.push_back(float(i));
+        in.push_back(float(-i));
+    }
+    tap.write(in.data(), 2000); // wraps and overruns the capacity
+    check(tap.framesWritten() == 2010 && tap.readLatest(out.data(), 1024) == 1024 &&
+              out[0] == 976.0f && out[2046] == 1999.0f && out[2047] == -1999.0f,
+          "an oversized write did not keep exactly the newest capacity");
+
+    // FFT: DC only lands in bin 0.
+    std::vector<float> reim(16, 0.0f);
+    for (int i = 0; i < 8; i++)
+        reim[i * 2] = 1.0f;
+    AudioAnalyzer::fft(reim.data(), 8);
+    check(std::fabs(reim[0] - 8.0f) < 1e-4f && std::fabs(reim[2]) < 1e-4f &&
+              std::fabs(reim[14]) < 1e-4f,
+          "fft of DC is wrong");
+
+    // Analyzer: a half-scale sine at bin 8 of a 256 window.
+    AudioTap tap2(4096);
+    AudioAnalyzer an(256);
+    check(an.windowFrames() == 256, "analyzer window did not round");
+    in.clear();
+    for (int i = 0; i < 1024; i++) {
+        const float v = 0.5f * std::sin(2.0f * float(M_PI) * 8.0f * float(i) / 256.0f);
+        in.push_back(v);
+        in.push_back(v);
+    }
+    tap2.write(in.data(), 1024);
+    check(an.poll(tap2) == 1024 && an.newFrames() == 1024, "poll did not count the new frames");
+    check(std::fabs(an.peak(0) - 0.5f) < 0.01f && std::fabs(an.rms(1) - 0.3536f) < 0.02f,
+          "peak/rms of a half-scale sine are wrong");
+    const std::vector<float> &spec = an.spectrum(128);
+    const auto argmax = [](const std::vector<float> &v) {
+        return int(std::max_element(v.begin(), v.end()) - v.begin());
+    };
+    check(spec.size() == 128 && argmax(spec) == 8 && spec[8] > 0.4f && spec[8] < 0.6f &&
+              spec[40] < 0.01f,
+          "spectrum did not place a bin-8 sine at bin 8 with ~0.5 magnitude");
+    const std::vector<float> &bands = an.spectrum(16);
+    check(bands.size() == 16 && argmax(bands) == 1, "spectrum banding did not fold bins");
+    check(an.spectrum(0).size() == 1 && an.spectrum(100000).size() == 128,
+          "spectrum bins were not clamped");
+    check(an.poll(tap2) == 0 && an.peak(0) == 0.0f && an.rms(0) == 0.0f,
+          "a poll with nothing new did not read silence");
+    return failures;
+}
+
+} // namespace
+
 bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &projectRoot,
                                     const QString &songLabel)
 {
@@ -719,8 +1226,17 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
                       QLatin1String(kSyntaxManifest)) &&
             writeFile(pluginsDir + QStringLiteral("/syntax/main.js"), QLatin1String(kSyntaxMain)) &&
             writeFile(pluginsDir + QStringLiteral("/notaplugin/readme.txt"),
-                      QStringLiteral("no manifest")),
+                      QStringLiteral("no manifest")) &&
+            writeFile(pluginsDir + QStringLiteral("/panel/plugin.json"),
+                      QLatin1String(kPanelManifest)) &&
+            writeFile(pluginsDir + QStringLiteral("/panel/main.js"), QLatin1String(kPanelMain)),
         "could not write fixture plugins");
+    {
+        QImage pic(16, 9, QImage::Format_ARGB32);
+        pic.fill(QColor(255, 0, 0));
+        check(pic.save(pluginsDir + QStringLiteral("/panel/pic.png")),
+              "could not write the panel fixture image");
+    }
 
     // The bundled examples double as API smoke tests (PLAN §8): copied in
     // from the source tree when the binary runs out of its build dir.
@@ -731,12 +1247,10 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
         for (const QString &name :
              examples.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name)) {
             const QDir src(examples.filePath(name));
-            for (const QString &file : src.entryList(QDir::Files)) {
-                QFile in(src.filePath(file));
-                if (in.open(QIODevice::ReadOnly))
-                    writeFile(pluginsDir + QLatin1Char('/') + name + QLatin1Char('/') + file,
-                              QString::fromUtf8(in.readAll()));
-            }
+            const QString dst = pluginsDir + QLatin1Char('/') + name;
+            QDir().mkpath(dst);
+            for (const QString &file : src.entryList(QDir::Files))
+                QFile::copy(src.filePath(file), dst + QLatin1Char('/') + file);
             haveExamples = true;
         }
     }
@@ -752,13 +1266,23 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
 
     // --- discovery + states ---
     QStringList expectedIds{QStringLiteral("badmanifest"), QStringLiteral("broken"),
-                            QStringLiteral("fixture"), QStringLiteral("runaway"),
-                            QStringLiteral("syntax")};
+                            QStringLiteral("fixture"),     QStringLiteral("panel"),
+                            QStringLiteral("runaway"),     QStringLiteral("syntax")};
     int exampleCommands = 0;
     if (haveExamples) {
         expectedIds.append(QStringLiteral("select-same-pitch"));
         expectedIds.append(QStringLiteral("note-tools"));
+        expectedIds.append(QStringLiteral("vu-meter"));
+        expectedIds.append(QStringLiteral("spectrum"));
+        expectedIds.append(QStringLiteral("dancer"));
         expectedIds.sort();
+        // The Phase 3 examples each open a dock in activate().
+        for (const char *id : {"vu-meter", "spectrum", "dancer"}) {
+            const scripting::Plugin *p = host.plugin(QLatin1String(id));
+            check(p && p->state == scripting::PluginState::Loaded && p->docks.size() == 1 &&
+                      p->docks.front() && findChild<QDockWidget *>(p->docks.front()->objectName()),
+                  "a Phase 3 example plugin did not load with its dock");
+        }
         const scripting::Plugin *example = host.plugin(QStringLiteral("select-same-pitch"));
         check(example && example->state == scripting::PluginState::Loaded,
               "bundled example plugin select-same-pitch did not load");
@@ -956,6 +1480,8 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
           "other engines were disturbed by the watchdog");
     host.setWatchdogMs(5000);
 
+    runPanelChecks(check, host, *this, messages, m_pluginPanelsMenu);
+
     // --- song half ---
     if (!projectRoot.isEmpty()) {
         if (!check(openProjectDir(projectRoot, /*interactive=*/false),
@@ -1046,6 +1572,7 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
                       QStringLiteral("stopped"),
                   "transport.stop() did not stop playback");
         }
+        runRealtimeChecks(check, host, *this, messages, m_audioOk);
         // Switching to no song drops the API's view.
         activateSession(nullptr);
         check(host.evalConsole(QStringLiteral("porydaw.song.loaded")) == QStringLiteral("false"),
@@ -1060,7 +1587,7 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
 
 int runScriptCheck(const QString &projectRoot, const QString &songLabel)
 {
-    int failures = runEngineCheck();
+    int failures = runEngineCheck() + runTapCheck();
 
     QTemporaryDir settingsDir;
     QTemporaryDir pluginsDir;

@@ -66,6 +66,9 @@ class HostApi : public ApiObject
     Q_INVOKABLE void log(int level, const QString &text);
     Q_INVOKABLE void reportError(const QJSValue &error);
     Q_INVOKABLE void statusMessage(const QString &text);
+    // The prelude reports how many listeners an event has (frame pumping
+    // is gated on it).
+    Q_INVOKABLE void subscribed(const QString &event, int count);
 };
 
 class SongApi : public ApiObject
@@ -267,6 +270,51 @@ class TransportApi : public ApiObject
     Q_INVOKABLE void pause();
     Q_INVOKABLE void stop();
     Q_INVOKABLE void seek(double tick);
+};
+
+// porydaw.audio: the last pumped frame's analysis (ScriptHost::pumpFrame)
+// plus the engine's channel activity. The frame event carries peak/RMS;
+// waveform and spectrum are pulled on demand because the FFT costs more
+// than every listener wants to pay.
+class AudioApi : public ApiObject
+{
+    Q_OBJECT
+    Q_PROPERTY(double sampleRate READ sampleRate)
+    Q_PROPERTY(int windowFrames READ windowFrames)
+  public:
+    using ApiObject::ApiObject;
+    double sampleRate() const;
+    int windowFrames() const;
+    Q_INVOKABLE QVariantList peak() const;
+    Q_INVOKABLE QVariantList rms() const;
+    // The newest windowFrames stereo frames, interleaved, as an
+    // ArrayBuffer of float32 (the prelude wraps it in a Float32Array).
+    Q_INVOKABLE QByteArray pcm() const;
+    // `bins` bands of 0..1 magnitudes, linear in frequency.
+    Q_INVOKABLE QByteArray spectrum(int bins) const;
+    // {pcm: [{on, releasing, track, key}], cgb: [...], maxPcm, activePcm, activeCgb}.
+    Q_INVOKABLE QVariant channels() const;
+};
+
+// porydaw.ui beyond statusMessage: docks (scriptwidgets.h), theme colors
+// and images.
+class UiApi : public ApiObject
+{
+    Q_OBJECT
+  public:
+    using ApiObject::ApiObject;
+    // spec: {id, title?, area?, minWidth?, minHeight?}; one of paint/build
+    // callable. → DockHandle, or throws.
+    Q_INVOKABLE QObject *dock(const QVariantMap &spec, const QJSValue &build, const QJSValue &paint,
+                              const QJSValue &mouse);
+    // A theme color by role name ("#rrggbb"/"#rrggbbaa"), or an object of
+    // every exposed role when name is empty. Unknown names throw.
+    Q_INVOKABLE QVariant theme(const QString &name) const;
+    // Decodes an image file inside the plugin's folder → id (throws when
+    // missing or outside the folder).
+    Q_INVOKABLE int loadImage(const QString &relativePath);
+    Q_INVOKABLE QVariant imageSize(int id) const;
+    Q_INVOKABLE void freeImage(int id);
 };
 
 class ActionsApi : public ApiObject

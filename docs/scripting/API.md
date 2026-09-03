@@ -1,4 +1,4 @@
-# porydaw scripting API — v1 (Phases 1–2)
+# porydaw scripting API — v1 (Phases 1–3)
 
 Plugins are JavaScript run by porydaw's embedded engine (Qt's `QJSEngine`,
 ES2017-level). Everything runs on the UI thread; a script call that runs
@@ -172,6 +172,120 @@ Humanize, Strum, Quantize) shows the pattern.
 `loopEnabled`, `play()`, `pause()`, `stop()`, `seek(tick)`,
 `on("state", fn({state}))`.
 
+Realtime events (each `on` returns an unsubscribe function; the host's ~60 Hz
+frame clock runs only while some plugin listens to one of these or to
+`audio.frame`):
+
+| Event | Payload | When |
+|---|---|---|
+| `tick` | `{state, tick, playing}` | every frame, whatever the transport is doing |
+| `beat` | `{bar, beat, beatsPerBar, beatTicks, tick, bpm}` | the playhead enters a new beat of the meter in force (`bar` 0-based, `beat` 0-based within the bar); also the beat playback starts on, and again after a loop wrap or seek. Nothing while stopped/paused. |
+
+### `porydaw.audio`
+
+The final stereo mix as the device hears it (song playback, auditions and
+reverb tails alike, after the Output level), analysed once per frame in C++
+and shared by every subscriber. `on("frame", fn(frame))` fires every frame
+with `frame = {peak: [l, r], rms: [l, r], frames, sampleRate, playing}` —
+`peak`/`rms` cover the samples written since the previous frame (0..1,
+linear; `frames` is how many there were, 0 when the device is idle). On
+demand, and no more expensive than what you ask for:
+
+| Member | Meaning |
+|---|---|
+| `sampleRate`, `windowFrames` | device rate; the analysis window (2048 frames) |
+| `peak`, `rms` | the last frame's `[l, r]` |
+| `pcm()` | `Float32Array` of the newest `windowFrames` frames, interleaved L/R, oldest first |
+| `spectrum(bins = 64)` | `Float32Array` of `bins` bands, linear in frequency from 0 to `sampleRate / 2`, each 0..1 (1 = a full-scale sine there); a Hann-windowed FFT of the window's mono mix, computed at most once per frame |
+| `channels()` | `{pcm: [{on, releasing, track, key}], cgb: [...], maxPcm, activePcm, activeCgb}` — the engine's channel pools — or `null` without a song |
+
+Bundled examples: `plugins/examples/vu-meter`, `plugins/examples/spectrum`,
+`plugins/examples/dancer` (beats).
+
+### `porydaw.ui`
+
+`statusMessage(text)`; `theme(role?)` → a color string (`"#rrggbb"` or
+`"#rrggbbaa"`) for one of the exposed theme roles (`window_background`,
+`window_text`, `secondary_text`, `disabled_text`, `selection_background`,
+`selection_text`, `link_text`, `palette_outline`, `item_background`,
+`item_text`, `item_alternate_background`, `header_background`, `header_text`,
+`button_background`, `button_text`, `tooltip_background`, `tooltip_text`, the
+`polyphony_cell_*`/`polyphony_flash_background` cells, and the roll's
+`song_view_piano_roll_background`, `song_view_grid`, `song_view_separator`,
+`song_view_primary_text`, `song_view_secondary_text`,
+`song_view_selection_fill`, `song_view_selection_edge`, `song_view_playhead`,
+`song_view_edit_cursor`, `song_view_loop_marker`,
+`song_view_automation_default_curve`, `song_view_automation_tempo_curve`,
+`sample_waveform_ink`), or an object of all of them with no argument. Read
+it at paint time: theme changes repaint your canvases.
+
+`loadImage(path)` decodes an image file inside the plugin's folder (PNG, JPEG,
+…) → an image id for `g.image`; `imageSize(id)` → `{width, height}` or
+`null`; `freeImage(id)`.
+
+#### `porydaw.ui.dock(spec)` → dock
+
+A panel next to Songs / Voicegroup / Polyphony. `spec`:
+
+| Field | Meaning |
+|---|---|
+| `id` | required; letters, digits, `_`, `-`. The window remembers the dock's placement per `plugin.<pluginId>.<id>`, and whether the user closed it. |
+| `title` | dock title (default: the plugin name) |
+| `area` | `"right"` (default), `"left"`, `"top"`, `"bottom"` — the first-ever placement |
+| `minWidth`, `minHeight` | minimum body size (defaults 120 × 60) |
+| `paint(g)` | shorthand: the dock is one canvas painted by this function (see below); `mouse(ev)` optional |
+| `build(root)` | otherwise: lay out widgets on `root`, a column container |
+
+The dock handle: `id`, `title` (read/write), `visible` (read/write),
+`open` (false after `close()`), `show()`, `hide()`, `raise()`, `close()`,
+`root` (the column), `canvas` (the shorthand canvas, else `null`). Docks are
+closed automatically on unload/reload; call `close()` from `deactivate()`
+anyway so a plugin that stays loaded can tidy up.
+
+Containers (`root`, `addRow()`, `addColumn()`) build children in order:
+
+| Call | Widget / handle |
+|---|---|
+| `addLabel(text)` | label; `text` |
+| `addButton(text, onClick())` | button; `text`, `enabled` |
+| `addCheckbox(text, checked, onChange(on))` | checkbox; `checked` |
+| `addSlider(min, max, value, onChange(v), {vertical?})` | integer slider; `value` |
+| `addCombo(items, index, onChange(i))` | drop-down; `index`, `text`, `setItems(items)` |
+| `addCanvas({minWidth?, minHeight?}, paint(g), mouse(ev)?)` | canvas; `repaint()`, `width`, `height` |
+| `addRow()`, `addColumn()` | nested containers |
+| `addStretch()`, `addSpacing(px)` | layout filler |
+
+Every handle also has `kind`, `visible`, `enabled`, `setMinimumSize(w, h)`,
+`setToolTip(text)`. Callbacks (`onChange` etc.) don't fire for changes the
+script makes itself. Plugin widgets never take keyboard focus, so the roll's
+shortcuts keep working with a panel open.
+
+#### Canvas painting
+
+`paint(g)` runs on the UI thread whenever the canvas repaints — after
+`repaint()`, on resize, on theme change. It is under the watchdog like any
+call; a paint that throws is logged and paints are held back for a second.
+`g` is valid only inside `paint`. Coordinates are device-independent pixels
+from the canvas's top-left; `g.width`, `g.height`, `g.dpr`. Colors are CSS
+strings (`"#f80"`, `"#ff8800"`, `"#ff880080"`, `"rgb(255,136,0)"`,
+`"rgba(255,136,0,0.5)"`, names) or `[r, g, b, a?]` arrays.
+
+| `g.` | |
+|---|---|
+| `clear(color)` | fill everything (ignores transforms) |
+| `fillRect(x, y, w, h, color)`, `strokeRect(x, y, w, h, color, lineWidth)`, `fillRoundRect(x, y, w, h, radius, color)` | |
+| `line(x1, y1, x2, y2, color, lineWidth)` | |
+| `fillCircle(cx, cy, r, color)`, `strokeCircle(cx, cy, r, color, lineWidth)`, `fillEllipse(x, y, w, h, color)` | |
+| `fillPolygon(points, color)`, `strokePolyline(points, color, lineWidth, close)` | `points`: `[x0, y0, x1, y1, …]` or `[{x, y}, …]` |
+| `text(x, y, str, color, {size?, bold?, align?, baseline?})` | `size` multiplies the UI font (1 = as is); `align` `"left"|"center"|"right"`; `baseline` `"alphabetic"` (default, y is the baseline) `|"top"|"middle"|"bottom"` |
+| `measureText(str, opts)` | `{width, height, ascent, descent}` |
+| `image(id, dx, dy, dw, dh, sx, sy, sw, sh)` | an `ui.loadImage` image; `dw`/`dh` ≤ 0 keep the source size; `sx, sy, sw, sh` select a source rectangle (sprite sheets), `sw`/`sh` ≤ 0 meaning "to the edge" |
+| `save()`, `restore()`, `translate(dx, dy)`, `rotate(degrees)`, `scale(sx, sy)`, `opacity(0..1)`, `clip(x, y, w, h)`, `antialias(on)` | painter state; unbalanced saves are restored for you |
+
+`mouse(ev)` receives `{type, x, y, button, left, right, middle}` with `type`
+one of `press`, `move`, `release`, `doubleclick`, `leave`, or `wheel`
+(`deltaX`, `deltaY` in notches, positive = down).
+
 ### `porydaw.actions`
 
 `register({id, name, context, default?, run})` → the full keymap id
@@ -200,5 +314,5 @@ unaffected.
 
 ## Roadmap
 
-Audio/beat frames, docks with a canvas, menus and dialogs, file IO and raw
-SMF event edits follow in later phases (docs/scripting/PLAN.md §6).
+Menus and dialogs, file IO, raw SMF event edits and piano-roll overlays
+follow in later phases (docs/scripting/PLAN.md §6).

@@ -10,6 +10,7 @@
 #include <QDir>
 #include <QDockWidget>
 #include <QElapsedTimer>
+#include <QEvent>
 #include <QEventLoop>
 #include <QFile>
 #include <QFileDialog>
@@ -99,6 +100,25 @@ const QString kLastSongLabelKey = QStringLiteral("lastSongLabel");
 const QString kVelocityColorsKey = QStringLiteral("velocityNoteColors");
 const QString kNoteNamesKey = QStringLiteral("noteNames");
 const QString kVelocityLaneKey = QStringLiteral("velocityLane");
+// Records a plugin dock's close button (see MainWindow::addPluginDock).
+class PluginDockCloseRecorder : public QObject
+{
+  public:
+    PluginDockCloseRecorder(QString key, QObject *parent) : QObject(parent), m_key(std::move(key))
+    {}
+    bool eventFilter(QObject *watched, QEvent *event) override
+    {
+        if (event->type() == QEvent::Close) {
+            QSettings settings;
+            settings.setValue(m_key, true);
+        }
+        return QObject::eventFilter(watched, event);
+    }
+
+  private:
+    QString m_key;
+};
+
 const QString kCompanionKey = QStringLiteral("showCompanion");
 const QString kCompanionPlaceKey = QStringLiteral("companionPlacement");
 const QString kCompanionScaleKey = QStringLiteral("companionScale");
@@ -260,6 +280,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
             statusBar()->showMessage(text, 6000);
         };
         bindings.addGlobalAction = [this](QAction *action) { addAction(action); };
+        bindings.addDock = [this](QDockWidget *dock, Qt::DockWidgetArea area) {
+            addPluginDock(dock, area);
+        };
         bindings.audio = &m_audio;
         bindings.project = &m_project;
         m_scriptHost->setBindings(std::move(bindings));
@@ -845,6 +868,9 @@ void MainWindow::buildUi()
     consoleDockAction->setText(tr("Script &Console"));
     keys.attach(QStringLiteral("view.script_console"), consoleDockAction);
     viewMenu->addAction(consoleDockAction);
+    m_pluginPanelsMenu = viewMenu->addMenu(tr("Plugin &Panels"));
+    m_pluginPanelsMenu->setObjectName(QStringLiteral("viewPluginPanelsMenu"));
+    m_pluginPanelsMenu->menuAction()->setVisible(false);
 #endif
 
     // App-wide view preferences, set off by a separator from the per-song
@@ -1453,6 +1479,56 @@ void MainWindow::openProject()
 void MainWindow::loadPlugins()
 {
     m_scriptHost->loadAll();
+}
+
+void MainWindow::addPluginDock(QDockWidget *dock, Qt::DockWidgetArea area)
+{
+    dock->setParent(this);
+    // The same flat title strip the built-in docks wear.
+    auto *title = new QLabel(dock->windowTitle(), dock);
+    title->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    title->setContentsMargins(::layout::space(::layout::Space::Two), 0,
+                              ::layout::space(::layout::Space::Two), 0);
+    title->setFixedHeight(
+        layout::chromeRowHeight(font(), style()->pixelMetric(QStyle::PM_SmallIconSize)));
+    title->setAttribute(Qt::WA_TransparentForMouseEvents);
+    connect(dock, &QDockWidget::windowTitleChanged, title, &QLabel::setText);
+    dock->setTitleBarWidget(title);
+    // A dock the user placed last session comes back in the same spot:
+    // restoreDockWidget matches the saved windowState on objectName, and
+    // must run before addDockWidget (a dock already in the layout is left
+    // where it is). Visibility is remembered separately — Qt leaves a
+    // restored dock hidden — so a plugin dock the user closed stays
+    // closed across restarts and reloads, and any other one shows.
+    if (!restoreDockWidget(dock))
+        addDockWidget(area, dock);
+    const QString closedKey =
+        QStringLiteral("plugins/docks/") + dock->objectName() + QStringLiteral("/closed");
+    {
+        QSettings settings;
+        dock->setVisible(!settings.value(closedKey, false).toBool());
+    }
+    QAction *toggle = dock->toggleViewAction();
+    // Only the user's own closes/reopens are remembered: the menu action's
+    // triggered (never emitted by setChecked) and the dock's close button
+    // (a Close event). A script's hide()/close(), or the plugin unloading,
+    // must not count as "the user closed it".
+    connect(toggle, &QAction::triggered, dock, [closedKey](bool on) {
+        QSettings settings;
+        settings.setValue(closedKey, !on);
+    });
+    auto *closeRecorder = new PluginDockCloseRecorder(closedKey, dock);
+    dock->installEventFilter(closeRecorder);
+    m_pluginPanelsMenu->addAction(toggle);
+    m_pluginPanelsMenu->menuAction()->setVisible(true);
+    // On the action's destroyed, not the dock's: a dying dock emits
+    // destroyed before its children go, so the action would still be in
+    // the menu at that point.
+    connect(toggle, &QObject::destroyed, this, [this] {
+        if (m_pluginPanelsMenu && m_pluginPanelsMenu->actions().isEmpty())
+            m_pluginPanelsMenu->menuAction()->setVisible(false);
+    });
+    updateDockTabFonts();
 }
 #endif
 

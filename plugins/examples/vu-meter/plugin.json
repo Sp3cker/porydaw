@@ -1,0 +1,8 @@
+{
+  "id": "vu-meter",
+  "name": "VU Meter",
+  "version": "1.0.0",
+  "api": 1,
+  "main": "main.js",
+  "description": "A stereo level meter panel fed by porydaw.audio frames: RMS bars with peak-hold caps and a dB scale."
+}

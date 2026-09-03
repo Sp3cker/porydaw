@@ -60,6 +60,9 @@ class MainWindow : public QMainWindow
     // never run the user's plugins (they point the host at a fixture dir).
     scripting::ScriptHost *scriptHost() const { return m_scriptHost.get(); }
     void loadPlugins();
+    // HostBindings::addDock: a plugin dock joins the window in `area` (or
+    // wherever windowState last saw it) and View → Plugin Panels.
+    void addPluginDock(QDockWidget *dock, Qt::DockWidgetArea area);
     // Plugin host check (--scriptcheck; scriptcheck.cpp): fixture plugins
     // in pluginsDir are loaded through the real host — actions reach the
     // keymap and the window, errors/watchdog/hot reload/disable behave,
@@ -417,5 +420,7 @@ class MainWindow : public QMainWindow
     // plugin's deactivate().
     std::unique_ptr<scripting::ScriptHost> m_scriptHost;
     QDockWidget *m_consoleDock = nullptr;
+    // View → Plugin Panels: one toggle per plugin dock (hidden while empty).
+    QMenu *m_pluginPanelsMenu = nullptr;
 #endif
 };

@@ -378,14 +378,42 @@ fixture song, produces exactly one undo entry, undo restores byte-identical
 SMF (`--smfcheck` style), exception mid-transaction leaves the document
 unchanged.
 
-**Phase 3 — Realtime + widgets (≈2 weeks).** Audio tap + analysis, `audio.on
-('frame')`, `transport.on('beat'|'tick')`, `ui.dock` (A or B per §5),
-`canvas`. Bundled examples: *VU meter*, *Spectrum*, *Dancer* (sprite-sheet
-avatar bobbing on beats, with a sample sprite sheet — needs an asset we own).
-Harness: tap ring never blocks the callback (ASAN + `--audiocheck`
-extension), frame subscriber gets non-zero RMS while a fixture song plays
-through the null backend, dock restores from `windowState`. ← **archetypes 2
-and 3 ship here.**
+**Phase 3 — Realtime + widgets.** LANDED 2026-09-03 on branch `scripting`:
+`AudioTap` (src/audio/audiotap.h, always compiled) — a lock-free SPSC ring
+of the final stereo mix written at the end of `AudioEngine::process` after
+the output gain, plus `AudioAnalyzer` (UI side: peak/RMS over the frames
+since the last poll, a 2048-frame window, in-house radix-2 FFT folded into
+N bands on demand and cached per poll). `ScriptHost::pumpFrame` runs on the
+host's own 17 ms timer only while some plugin listens (the prelude reports
+listener counts per event through `host.subscribed`) and emits
+`audio.frame` `{peak, rms, frames, sampleRate, playing}`, `transport.tick`
+and `transport.beat` (beat index from `MidiTimeline::barPositionForTick`;
+re-fires on play start, loop wrap, seek). `porydaw.audio` (`AudioApi`):
+`pcm()`/`spectrum(bins)` as `Float32Array` over a `QByteArray`→ArrayBuffer
+bridge, `channels()` from `polySnapshot`. `porydaw.ui.dock` (design B,
+`scriptwidgets.{h,cpp}`): `DockHandle` + `WidgetHandle` (label/button/
+checkbox/slider/combo/row/column/canvas over real QWidgets, no keyboard
+focus) + `CanvasWidget` whose `paint(g)` runs through `ScriptHost::invoke`
+(watchdog, error logged then held back 1 s) with a `Painter` facade
+(rects/lines/circles/polygons/text/images/transforms, CSS colors),
+`ui.theme(role)` (curated role table), `ui.loadImage` scoped to the plugin
+folder. Docks join the window through `HostBindings::addDock`
+(`MainWindow::addPluginDock`: `restoreDockWidget` *before* `addDockWidget`,
+title strip, View → Plugin Panels; a user's close is remembered under
+`plugins/docks/<objectName>/closed` since Qt restores docks hidden and
+reports success even with nothing saved). Examples: `vu-meter`,
+`spectrum` (build(root) with a slider), `dancer` (the app logo bouncing on
+beats; `dancer.png` is `resources/porydaw-128.png`). Harness: `runTapCheck`
+(ring wrap/overrun/padding, FFT of DC, half-scale sine → bin 8 / ~0.5),
+`runPanelChecks` (every widget primitive + callbacks, image pixel probe,
+placement restore through saveState/restoreState across an unload,
+close-button/menu/programmatic-hide persistence), `runDockChecks` (console
+dock pixel probe, `g` refused outside paint, mouse + wheel delivery, theme,
+five refusals, throwing paint logged once, hung paint → watchdog fault →
+docks torn down → console revives), `runRealtimeChecks` (timer gating,
+non-zero RMS + ≥2 beats while the fixture song plays through the null
+device, typed-array shapes, beat restart on play, examples parked and
+re-enabled). ← **archetypes 2 and 3 ship here.**
 
 **Phase 4 — Reach (ongoing).** Menus/context menus, dialogs/forms, `io.*`,
 per-song plugin storage, roll overlays, `song.rawEvents`/raw edits, project

@@ -735,6 +735,7 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
         }
         done += n;
     }
+    m_tap.write(interleavedOut, frameCount);
 
     m_playhead.store(m_player.position());
 

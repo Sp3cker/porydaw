@@ -3,7 +3,8 @@
 // the host calls the returned function with the facades and installs the
 // result's `porydaw` and `console` as globals. ES2017 at most: Qt 6.2's
 // QJSEngine is the floor.
-(function (host, song, selection, cursor, transport, actions, storage, project, edit, view) {
+(function (host, song, selection, cursor, transport, actions, storage, project, edit, view,
+          audio, ui) {
     "use strict";
 
     var listeners = {};
@@ -23,7 +24,9 @@
     function on(event, fn) {
         if (typeof fn !== "function")
             throw new TypeError("listener for '" + event + "' must be a function");
-        (listeners[event] || (listeners[event] = [])).push(fn);
+        var l = listeners[event] || (listeners[event] = []);
+        l.push(fn);
+        host.subscribed(event, l.length);
         return function () { off(event, fn); };
     }
     function off(event, fn) {
@@ -31,6 +34,7 @@
         if (!l) return;
         var i = l.indexOf(fn);
         if (i >= 0) l.splice(i, 1);
+        host.subscribed(event, l.length);
     }
     // Every listener runs even when one throws; a throwing listener is
     // reported against the plugin, not silently dropped.
@@ -259,6 +263,16 @@
             seek: function (tick) { transport.seek(tick); }
         }, events("transport")),
 
+        audio: mix({
+            get sampleRate() { return audio.sampleRate; },
+            get windowFrames() { return audio.windowFrames; },
+            get peak() { return audio.peak(); },
+            get rms() { return audio.rms(); },
+            pcm: function () { return new Float32Array(audio.pcm()); },
+            spectrum: function (bins) { return new Float32Array(audio.spectrum(bins || 64)); },
+            channels: function () { return audio.channels(); }
+        }, events("audio")),
+
         actions: {
             // {id, name, context?, default?, run} → full keymap id.
             register: function (spec) {
@@ -281,7 +295,24 @@
         },
 
         ui: {
-            statusMessage: function (text) { host.statusMessage(String(text)); }
+            statusMessage: function (text) { host.statusMessage(String(text)); },
+            // {id, title?, area?, minWidth?, minHeight?, paint?(g), mouse?(ev),
+            //  build?(root)} → dock handle. paint makes the dock one canvas;
+            // build lays out widgets on root (a column).
+            dock: function (spec) {
+                if (!spec || typeof spec !== "object")
+                    throw new TypeError("ui.dock: expected a spec object");
+                var opts = {};
+                ["id", "title", "area", "minWidth", "minHeight"].forEach(function (k) {
+                    if (spec[k] !== undefined) opts[k] = spec[k];
+                });
+                if (opts.id !== undefined) opts.id = String(opts.id);
+                return ui.dock(opts, spec.build, spec.paint, spec.mouse);
+            },
+            theme: function (name) { return ui.theme(name === undefined ? "" : String(name)); },
+            loadImage: function (path) { return ui.loadImage(String(path)); },
+            imageSize: function (id) { return ui.imageSize(id); },
+            freeImage: function (id) { ui.freeImage(id); }
         },
 
         storage: {

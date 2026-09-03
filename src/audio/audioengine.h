@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <memory>
 
+#include "audio/audiotap.h"
 #include "audio/auditionslots.h"
 #include "core/miditimeline.h"
 #include "core/timelineplayer.h"
@@ -162,6 +163,11 @@ class AudioEngine
     // from the next note on (applied at the next callback boundary).
     void refreshVoices() { m_refreshVoicesCmd.fetch_add(1); }
 
+    // The final stereo mix as the device hears it (post output gain),
+    // for UI-side meters and plugin audio frames. Written every callback
+    // whether or not a song plays, so auditions and ring-outs show too.
+    const AudioTap &tap() const { return m_tap; }
+
     bool songLoaded() const { return m_timeline != nullptr; }
     const MidiTimeline *timeline() const { return m_timeline; }
     const LoadedVoiceGroup *voicegroup() const { return m_voicegroup; }
@@ -279,6 +285,7 @@ class AudioEngine
     // instance's track 1 (previewVoice owns track 0).
     static constexpr int kAuditionTrack = 1;
     AuditionSlots m_audition;
+    AudioTap m_tap;
 
     // Hot control state (UI writes, audio thread reads)
     std::atomic<int> m_transport{static_cast<int>(Transport::Stopped)};

@@ -1,7 +1,10 @@
 #include "scriptapi.h"
 
 #include <QAction>
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
+#include <QImageReader>
 #include <QJSEngine>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -15,8 +18,10 @@
 #include "core/songdocument.h"
 #include "project/decompproject.h"
 #include "scripthost.h"
+#include "scriptwidgets.h"
 #include "songsession.h"
 #include "ui/songview.h"
+#include "ui/theme/themeruntime.h"
 
 namespace scripting {
 
@@ -205,6 +210,201 @@ void HostApi::statusMessage(const QString &text)
 {
     if (m_host.bindings().statusMessage)
         m_host.bindings().statusMessage(text);
+}
+
+void HostApi::subscribed(const QString &event, int count)
+{
+    m_host.setListenerCount(m_plugin, event, count);
+}
+
+// ---- AudioApi ----
+
+double AudioApi::sampleRate() const
+{
+    const AudioEngine *audio = m_host.bindings().audio;
+    return audio ? audio->sampleRate() : 0.0;
+}
+
+int AudioApi::windowFrames() const
+{
+    return int(m_host.analyzer().windowFrames());
+}
+
+QVariantList AudioApi::peak() const
+{
+    const AudioAnalyzer &a = m_host.analyzer();
+    return {double(a.peak(0)), double(a.peak(1))};
+}
+
+QVariantList AudioApi::rms() const
+{
+    const AudioAnalyzer &a = m_host.analyzer();
+    return {double(a.rms(0)), double(a.rms(1))};
+}
+
+QByteArray AudioApi::pcm() const
+{
+    const std::vector<float> &w = m_host.analyzer().window();
+    return QByteArray(reinterpret_cast<const char *>(w.data()),
+                      qsizetype(w.size() * sizeof(float)));
+}
+
+QByteArray AudioApi::spectrum(int bins) const
+{
+    const std::vector<float> &s = m_host.analyzer().spectrum(uint32_t(std::max(bins, 1)));
+    return QByteArray(reinterpret_cast<const char *>(s.data()),
+                      qsizetype(s.size() * sizeof(float)));
+}
+
+QVariant AudioApi::channels() const
+{
+    const AudioEngine *audio = m_host.bindings().audio;
+    if (!audio || !audio->songLoaded())
+        return jsNull();
+    AudioEngine::PolySnapshot snap;
+    audio->polySnapshot(&snap);
+    const auto channel = [](const AudioEngine::PolyChannel &c) {
+        return QVariant(QVariantMap{{QStringLiteral("on"), c.on},
+                                    {QStringLiteral("releasing"), c.releasing},
+                                    {QStringLiteral("track"), int(c.track)},
+                                    {QStringLiteral("key"), int(c.midiKey)}});
+    };
+    QVariantList pcm, cgb;
+    // The first half of each array is the live pool; the shadow pool
+    // (sounds lost to the polyphony limit) is the Polyphony dock's business.
+    for (int i = 0; i < std::min<int>(snap.maxPcmChannels, TOTAL_PCM_CHANNELS / 2); i++)
+        pcm.append(channel(snap.pcm[i]));
+    for (int i = 0; i < TOTAL_CGB_CHANNELS / 2; i++)
+        cgb.append(channel(snap.cgb[i]));
+    return QVariantMap{{QStringLiteral("pcm"), pcm},
+                       {QStringLiteral("cgb"), cgb},
+                       {QStringLiteral("maxPcm"), int(snap.maxPcmChannels)},
+                       {QStringLiteral("activePcm"), audio->activePcmChannels()},
+                       {QStringLiteral("activeCgb"), audio->activeCgbChannels()}};
+}
+
+// ---- UiApi ----
+
+QObject *UiApi::dock(const QVariantMap &spec, const QJSValue &build, const QJSValue &paint,
+                     const QJSValue &mouse)
+{
+    QString error;
+    DockHandle *handle = createDock(m_host, m_plugin, spec, build, paint, mouse, &error);
+    if (!handle) {
+        throwError(error);
+        return nullptr;
+    }
+    return handle;
+}
+
+namespace {
+
+// The theme roles plugins may read: the general UI palette plus the roll's
+// accents, by their theme_roles.h names. Widget-chrome roles stay
+// internal (a plugin painting a scrollbar is a plugin painting it wrong).
+struct ThemeRoleName {
+    const char *name;
+    themes::Role role;
+};
+const ThemeRoleName kThemeRoles[] = {
+    {"window_background", themes::Role::window_background},
+    {"window_text", themes::Role::window_text},
+    {"secondary_text", themes::Role::secondary_text},
+    {"disabled_text", themes::Role::disabled_text},
+    {"selection_background", themes::Role::selection_background},
+    {"selection_text", themes::Role::selection_text},
+    {"link_text", themes::Role::link_text},
+    {"palette_outline", themes::Role::palette_outline},
+    {"item_background", themes::Role::item_background},
+    {"item_text", themes::Role::item_text},
+    {"item_alternate_background", themes::Role::item_alternate_background},
+    {"header_background", themes::Role::header_background},
+    {"header_text", themes::Role::header_text},
+    {"button_background", themes::Role::button_background},
+    {"button_text", themes::Role::button_text},
+    {"tooltip_background", themes::Role::tooltip_background},
+    {"tooltip_text", themes::Role::tooltip_text},
+    {"polyphony_cell_active_background", themes::Role::polyphony_cell_active_background},
+    {"polyphony_cell_releasing_background", themes::Role::polyphony_cell_releasing_background},
+    {"polyphony_cell_free_background", themes::Role::polyphony_cell_free_background},
+    {"polyphony_cell_shadow_background", themes::Role::polyphony_cell_shadow_background},
+    {"polyphony_flash_background", themes::Role::polyphony_flash_background},
+    {"song_view_piano_roll_background", themes::Role::song_view_piano_roll_background},
+    {"song_view_grid", themes::Role::song_view_grid},
+    {"song_view_separator", themes::Role::song_view_separator},
+    {"song_view_primary_text", themes::Role::song_view_primary_text},
+    {"song_view_secondary_text", themes::Role::song_view_secondary_text},
+    {"song_view_selection_fill", themes::Role::song_view_selection_fill},
+    {"song_view_selection_edge", themes::Role::song_view_selection_edge},
+    {"song_view_playhead", themes::Role::song_view_playhead},
+    {"song_view_edit_cursor", themes::Role::song_view_edit_cursor},
+    {"song_view_loop_marker", themes::Role::song_view_loop_marker},
+    {"song_view_automation_default_curve", themes::Role::song_view_automation_default_curve},
+    {"song_view_automation_tempo_curve", themes::Role::song_view_automation_tempo_curve},
+    {"sample_waveform_ink", themes::Role::sample_waveform_ink},
+};
+
+} // namespace
+
+QVariant UiApi::theme(const QString &name) const
+{
+    if (name.isEmpty()) {
+        QVariantMap all;
+        for (const ThemeRoleName &r : kThemeRoles)
+            all.insert(QLatin1String(r.name), colorToCss(themes::color(r.role)));
+        return all;
+    }
+    for (const ThemeRoleName &r : kThemeRoles) {
+        if (name == QLatin1String(r.name))
+            return colorToCss(themes::color(r.role));
+    }
+    throwError(QStringLiteral("ui.theme: unknown role '%1'").arg(name));
+    return QVariant();
+}
+
+int UiApi::loadImage(const QString &relativePath)
+{
+    if (m_plugin.dir.isEmpty()) {
+        throwError(QStringLiteral("ui.loadImage: this plugin has no folder"));
+        return 0;
+    }
+    const QDir dir(m_plugin.dir);
+    const QString base = dir.canonicalPath();
+    const QString path = QFileInfo(dir.filePath(relativePath)).canonicalFilePath();
+    if (base.isEmpty() || path.isEmpty() ||
+        !(path == base || path.startsWith(base + QLatin1Char('/')))) {
+        throwError(QStringLiteral("ui.loadImage: '%1' is not a file inside the plugin folder")
+                       .arg(relativePath));
+        return 0;
+    }
+    QImageReader reader(path);
+    const QImage image = reader.read();
+    if (image.isNull()) {
+        throwError(QStringLiteral("ui.loadImage: could not decode '%1': %2")
+                       .arg(relativePath, reader.errorString()));
+        return 0;
+    }
+    if (m_plugin.images.size() >= 256) {
+        throwError(QStringLiteral("ui.loadImage: too many images loaded (free some)"));
+        return 0;
+    }
+    const int id = m_plugin.nextImageId++;
+    m_plugin.images.emplace(id, image.convertToFormat(QImage::Format_ARGB32_Premultiplied));
+    return id;
+}
+
+QVariant UiApi::imageSize(int id) const
+{
+    const auto it = m_plugin.images.find(id);
+    if (it == m_plugin.images.end())
+        return jsNull();
+    return QVariantMap{{QStringLiteral("width"), it->second.width()},
+                       {QStringLiteral("height"), it->second.height()}};
+}
+
+void UiApi::freeImage(int id)
+{
+    m_plugin.images.erase(id);
 }
 
 // ---- SongApi ----
@@ -1380,6 +1580,8 @@ bool installApi(ScriptHost &host, Plugin &plugin, QString *error)
     add(new ProjectApi(host, plugin));
     add(new EditApi(host, plugin));
     add(new ViewApi(host, plugin));
+    add(new AudioApi(host, plugin));
+    add(new UiApi(host, plugin));
 
     const QJSValue result = factory.call(facades);
     if (result.isError() || !result.isObject()) {

@@ -1,0 +1,8 @@
+{
+  "id": "spectrum",
+  "name": "Spectrum",
+  "version": "1.0.0",
+  "api": 1,
+  "main": "main.js",
+  "description": "A spectrum analyser panel: porydaw.audio.spectrum() bands with smoothing and falling peaks, plus a band-count slider."
+}
