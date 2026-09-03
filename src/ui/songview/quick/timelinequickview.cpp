@@ -10,6 +10,7 @@
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/pianorollquick.h"
+#include "ui/songview/quick/playheadquick.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/timeruler.h"
 #include "ui/songview/trackheadermodel.h"
@@ -136,6 +137,7 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     std::call_once(registered, [] {
         qmlRegisterType<TimelineChromeItem>("Porydaw.Ui", 1, 0, "TimelineChromeItem");
         qmlRegisterType<TimelineInputItem>("Porydaw.Ui", 1, 0, "TimelineInputItem");
+        qmlRegisterType<TimelinePlayheadItem>("Porydaw.Ui", 1, 0, "TimelinePlayheadItem");
         qmlRegisterType<TimelineQuickItem>("Porydaw.Ui", 1, 0, "TimelineQuickItem");
     });
 
@@ -415,14 +417,19 @@ int TimelineQuickView::playheadTriangleHeightPx() const noexcept
 void TimelineQuickView::setPlayhead(qreal songViewX, bool visible, bool playing,
                                     bool trianglePointsUp)
 {
-    if (m_playheadSongViewX == songViewX && m_playheadVisible == visible &&
-        m_playheadPlaying == playing && m_playheadTrianglePointsUp == trianglePointsUp)
+    const bool xChanged = m_playheadSongViewX != songViewX;
+    const bool appearanceChanged = m_playheadVisible != visible || m_playheadPlaying != playing ||
+                                   m_playheadTrianglePointsUp != trianglePointsUp;
+    if (!xChanged && !appearanceChanged)
         return;
     m_playheadSongViewX = songViewX;
     m_playheadVisible = visible;
     m_playheadPlaying = playing;
     m_playheadTrianglePointsUp = trianglePointsUp;
-    emit playheadChanged();
+    if (xChanged)
+        emit playheadXChanged();
+    if (appearanceChanged)
+        emit playheadChanged();
 }
 
 void TimelineQuickView::setPlayheadColor(const QColor &color)
@@ -715,8 +722,8 @@ void TimelineQuickView::publishTimelineBandLayout()
     if (hostOriginChanged) {
         // playheadRootX() reads geometry().x(); a host origin shift moves the
         // published playhead X even when setPlayhead() saw no new state, so
-        // QML bindings must re-read it.
-        emit playheadChanged();
+        // QML bindings must re-read it. Appearance fields are untouched.
+        emit playheadXChanged();
         if (m_hoverSongViewContentX)
             emit hoverChromeChanged();
         if (m_editSongViewContentX)

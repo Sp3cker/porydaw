@@ -99,46 +99,12 @@ Item {
 
     }
 
-    // One half of the Quick playhead bloom: 9 quadratic alpha stops matching
-    // setQuadStops in playheadoverlay.cpp, fading between the 1px core bar
-    // (alpha = peak) and the outer edge (alpha = 0). brightAtStart tells
-    // which side of the bar this half covers.
-    component TimelinePlayheadGlow: Rectangle {
-        id: playheadGlow
-
-        required property bool brightAtStart
-
-        function stopColor(position: real) : color {
-            const t = brightAtStart ? 1.0 - position : position
-            const c = timelineQuickView.playheadColor
-            return Qt.rgba(c.r, c.g, c.b, timelineQuickView.playheadPeakAlpha * t * t)
-        }
-
-        x: brightAtStart ? timelineQuickView.playheadGlowLeft : 0
-        width: brightAtStart ? timelineQuickView.playheadGlowRight : timelineQuickView.playheadGlowLeft
-        height: parent.height
-        visible: width > 0
-        gradient: Gradient {
-            orientation: Gradient.Horizontal
-            GradientStop { position: 0.0; color: playheadGlow.stopColor(0.0) }
-            GradientStop { position: 0.125; color: playheadGlow.stopColor(0.125) }
-            GradientStop { position: 0.25; color: playheadGlow.stopColor(0.25) }
-            GradientStop { position: 0.375; color: playheadGlow.stopColor(0.375) }
-            GradientStop { position: 0.5; color: playheadGlow.stopColor(0.5) }
-            GradientStop { position: 0.625; color: playheadGlow.stopColor(0.625) }
-            GradientStop { position: 0.75; color: playheadGlow.stopColor(0.75) }
-            GradientStop { position: 0.875; color: playheadGlow.stopColor(0.875) }
-            GradientStop { position: 1.0; color: playheadGlow.stopColor(1.0) }
-        }
-    }
-
     component TimelineSceneBand: Item {
         id: sceneBand
 
         required property rect bandRect
         required property bool bandVisible
         required property string bandName
-        required property real timelineOrigin
 
         x: bandRect.x
         y: bandRect.y
@@ -152,56 +118,6 @@ Item {
             bandRect: sceneBand.bandRect
             bandVisible: sceneBand.bandVisible
             bandName: sceneBand.bandName
-        }
-
-        // Playhead-only plot clip: the gutter left of timelineOrigin carries
-        // keyboard / track-header chrome that must keep the full band, so the
-        // wrapper — not the band — owns the z: 50 playhead stacking slot.
-        Item {
-            id: playheadClip
-
-            x: Math.max(0, sceneBand.timelineOrigin)
-            y: 0
-            width: Math.max(0, parent.width - x)
-            height: parent.height
-            clip: true
-            z: 50
-            // Match native WA_TransparentForMouseEvents: this wrapper covers
-            // the whole plot so glow can clip, but must never steal input.
-            enabled: false
-            visible: timelineQuickView.playheadVisible && sceneBand.bandVisible
-
-            Item {
-                id: playheadBody
-
-                // Quick counterpart of PlayheadOverlay's vector playhead: a
-                // quadratic bloom (alpha = peak * t^2, matching setQuadStops
-                // in playheadoverlay.cpp) around a 1px core bar.
-
-                objectName: sceneBand.bandName + "Playhead"
-                x: timelineQuickView.playheadRootX - sceneBand.bandRect.x
-                   - timelineQuickView.playheadGlowLeft - playheadClip.x
-                width: Math.max(timelineQuickView.playheadGlowLeft + timelineQuickView.playheadGlowRight,
-                                timelineQuickView.playheadLineWidthPx)
-                height: parent.height
-                visible: timelineQuickView.playheadVisible && sceneBand.bandVisible
-
-                TimelinePlayheadGlow {
-                    brightAtStart: false
-                }
-
-                TimelinePlayheadGlow {
-                    brightAtStart: true
-                }
-
-                Rectangle {
-                    antialiasing: false
-                    x: timelineQuickView.playheadGlowLeft
-                    width: Math.max(1, timelineQuickView.playheadLineWidthPx)
-                    height: parent.height
-                    color: timelineQuickView.playheadColor
-                }
-            }
         }
     }
 
@@ -229,7 +145,6 @@ Item {
         bandRect: root.rulerBandRect
         bandVisible: root.rulerBandVisible
         bandName: "timelineQuickRuler"
-        timelineOrigin: root.rulerBandTimelineOrigin
 
         TimelineSceneLayer {
             objectName: "timelineQuickRulerChrome"
@@ -255,66 +170,6 @@ Item {
             z: 3
         }
 
-        // Same plot-only clip as the body: the ruler triangle never paints
-        // in the controls gutter.
-        Item {
-            id: rulerPlayheadClip
-
-            x: Math.max(0, rulerBand.timelineOrigin)
-            y: 0
-            width: Math.max(0, parent.width - x)
-            height: parent.height
-            clip: true
-            z: 50
-            enabled: false
-            visible: timelineQuickView.playheadVisible && rulerBand.bandVisible
-
-            Canvas {
-                id: timelineQuickPlayheadTriangle
-
-                readonly property color triangleColor: timelineQuickView.playheadColor
-                readonly property bool trianglePointsUp: timelineQuickView.playheadTrianglePointsUp
-                readonly property int triangleHalfWidthPx: timelineQuickView.playheadTriangleHalfWidthPx
-                readonly property int triangleHeightPx: timelineQuickView.playheadTriangleHeightPx
-
-                // Native-parity ruler marker: apex on the playhead, pointing
-                // up at the top when the roll band is absent, down at the
-                // bottom otherwise.
-                objectName: "timelineQuickPlayheadTriangle"
-                x: timelineQuickView.playheadRootX - rulerBand.bandRect.x - triangleHalfWidthPx
-                   - parent.x
-                y: trianglePointsUp ? 0 : parent.height - triangleHeightPx
-                width: 2 * triangleHalfWidthPx
-                height: triangleHeightPx
-                visible: timelineQuickView.playheadVisible && rulerBand.bandVisible
-
-                onPaint: {
-                    const ctx = getContext("2d")
-                    ctx.clearRect(0, 0, width, height)
-                    ctx.fillStyle = triangleColor
-                    ctx.beginPath()
-                    if (trianglePointsUp) {
-                        ctx.moveTo(0, height)
-                        ctx.lineTo(width, height)
-                        ctx.lineTo(width / 2, 0)
-                    } else {
-                        ctx.moveTo(0, 0)
-                        ctx.lineTo(width, 0)
-                        ctx.lineTo(width / 2, height)
-                    }
-                    ctx.closePath()
-                    ctx.fill()
-                }
-
-                // Contents depend only on color/geometry/orientation; moving
-                // the item re-uses the painted texture.
-                onTriangleColorChanged: requestPaint()
-                onTrianglePointsUpChanged: requestPaint()
-                onTriangleHalfWidthPxChanged: requestPaint()
-                onTriangleHeightPxChanged: requestPaint()
-            }
-        }
-
         TimelineInputItem {
             objectName: "timelineRulerInput"
             anchors.fill: parent
@@ -326,7 +181,6 @@ Item {
         bandRect: root.rollBandRect
         bandVisible: root.rollBandVisible
         bandName: "timelineQuickRoll"
-        timelineOrigin: root.rollBandTimelineOrigin
 
         PianoRollCanvas {
             anchors.fill: parent
@@ -343,7 +197,6 @@ Item {
         bandRect: root.automationBandRect
         bandVisible: root.automationBandVisible
         bandName: "timelineQuickAutomation"
-        timelineOrigin: root.automationBandTimelineOrigin
         z: 1
 
         TimelineSceneLayer {
@@ -399,7 +252,6 @@ Item {
         bandRect: root.velocityBandRect
         bandVisible: root.velocityBandVisible
         bandName: "timelineQuickVelocity"
-        timelineOrigin: root.velocityBandTimelineOrigin
         z: 1
 
         TimelineSceneLayer {
@@ -452,7 +304,6 @@ Item {
         bandRect: root.voiceChangesBandRect
         bandVisible: root.voiceChangesBandVisible
         bandName: "timelineQuickVoiceChanges"
-        timelineOrigin: root.voiceChangesBandTimelineOrigin
         z: 2
 
         TimelineSceneLayer {
@@ -504,7 +355,6 @@ Item {
         bandRect: root.otherEventsBandRect
         bandVisible: root.otherEventsBandVisible
         bandName: "timelineQuickOtherEvents"
-        timelineOrigin: root.otherEventsBandTimelineOrigin
 
         TimelineSceneLayer {
             objectName: "timelineQuickOtherEventsChrome"
@@ -526,6 +376,75 @@ Item {
             anchors.fill: parent
             Accessible.description: accessibilityDescription
         }
+    }
+
+    // Single Quick playhead: one TimelinePlayheadItem paints the bloom, core
+    // bar and ruler triangle once instead of one Gradient copy per band. It
+    // spans the union of the visible scene bands and clips to their plot
+    // strips, so gutters and splitters get no playhead pixels. Motion rides
+    // on a Translate; clip scissors remap, bloom vertices stay put.
+    TimelinePlayheadItem {
+        id: timelinePlayhead
+
+        objectName: "timelineQuickRollPlayhead"
+        z: 50
+        enabled: false
+        visible: timelineQuickView.playheadVisible
+
+        // Bands the playhead may paint in, with their timeline origins —
+        // never the track headers.
+        readonly property var sceneBands: [
+            { visible: root.rulerBandVisible, rect: root.rulerBandRect, origin: root.rulerBandTimelineOrigin },
+            { visible: root.rollBandVisible, rect: root.rollBandRect, origin: root.rollBandTimelineOrigin },
+            { visible: root.automationBandVisible, rect: root.automationBandRect, origin: root.automationBandTimelineOrigin },
+            { visible: root.velocityBandVisible, rect: root.velocityBandRect, origin: root.velocityBandTimelineOrigin },
+            { visible: root.voiceChangesBandVisible, rect: root.voiceChangesBandRect, origin: root.voiceChangesBandTimelineOrigin },
+            { visible: root.otherEventsBandVisible, rect: root.otherEventsBandRect, origin: root.otherEventsBandTimelineOrigin }
+        ]
+
+        readonly property var visibleBandRects: sceneBands.filter(band => band.visible)
+                                                             .map(band => band.rect)
+
+        // Vertical span of the union of the visible band rects.
+        y: visibleBandRects.length === 0
+           ? 0
+           : visibleBandRects.reduce((top, rect) => Math.min(top, rect.y), Infinity)
+        height: visibleBandRects.length === 0
+                ? 0
+                : visibleBandRects.reduce((bottom, rect) => Math.max(bottom, rect.y + rect.height),
+                                          -Infinity) - y
+
+        // Plot strip per visible band; the gutter left of the band's timeline
+        // origin must stay playhead-free.
+        plotRects: {
+            const strips = []
+            for (const band of sceneBands) {
+                if (band.visible && band.origin < band.rect.width) {
+                    strips.push(Qt.rect(band.rect.x + band.origin, band.rect.y,
+                                        Math.max(0, band.rect.width - band.origin),
+                                        band.rect.height))
+                }
+            }
+            return strips
+        }
+
+        // Appearance (playheadChanged): color and shape.
+        color: timelineQuickView.playheadColor
+        glowLeft: timelineQuickView.playheadGlowLeft
+        glowRight: timelineQuickView.playheadGlowRight
+        peakAlpha: timelineQuickView.playheadPeakAlpha
+        lineWidthPx: timelineQuickView.playheadLineWidthPx
+        trianglePointsUp: timelineQuickView.playheadTrianglePointsUp
+        triangleHalfWidthPx: timelineQuickView.playheadTriangleHalfWidthPx
+        triangleHeightPx: timelineQuickView.playheadTriangleHeightPx
+        triangleBandRect: root.rulerBandRect
+
+        // Motion (playheadXChanged): Translate moves the item. coreRootX
+        // remaps plot-strip clip rects only; bloom vertices stay put.
+        coreRootX: timelineQuickView.playheadRootX
+        x: 0
+        width: Math.max(glowLeft + glowRight, lineWidthPx)
+        transform: Translate { x: timelineQuickView.playheadRootX - timelinePlayhead.glowLeft }
     }
 
     TrackHeaderBand {

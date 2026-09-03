@@ -85,7 +85,7 @@ class TimelineQuickView final : public QWidget
     Q_PROPERTY(qreal hostY READ hostY NOTIFY hostGeometryChanged FINAL)
     Q_PROPERTY(qreal rulerPlotOrigin READ rulerPlotOrigin NOTIFY hostGeometryChanged FINAL)
     Q_PROPERTY(qreal rulerControlsWidth READ rulerControlsWidth NOTIFY hostGeometryChanged FINAL)
-    Q_PROPERTY(qreal playheadRootX READ playheadRootX NOTIFY playheadChanged FINAL)
+    Q_PROPERTY(qreal playheadRootX READ playheadRootX NOTIFY playheadXChanged FINAL)
     Q_PROPERTY(bool playheadVisible READ playheadVisible NOTIFY playheadChanged FINAL)
     Q_PROPERTY(bool playheadPlaying READ playheadPlaying NOTIFY playheadChanged FINAL)
     Q_PROPERTY(QColor playheadColor READ playheadColor NOTIFY playheadChanged FINAL)
@@ -175,6 +175,7 @@ class TimelineQuickView final : public QWidget
     void editChromeChanged();
     void hostGeometryChanged();
     void playheadChanged();
+    void playheadXChanged();
 
   protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
