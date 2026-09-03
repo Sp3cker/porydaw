@@ -1069,7 +1069,7 @@ void SongDocument::moveNotes(const std::vector<DocNote> &notes, int64_t dTick, i
     });
     if (!changes)
         return;
-    m_undoStack.push(new MoveNotesCommand(this, notes, dTick, dKey, mergeable));
+    pushCommand(new MoveNotesCommand(this, notes, dTick, dKey, mergeable));
     // The command's push-time redo deferred publication (a merge can still
     // replace that provisional state, and an inverse merge just removed the
     // command while restoring live state). The stack has settled: publish
@@ -2593,7 +2593,7 @@ void SongDocument::setCfg(const SongCfg &cfg)
 {
     if (cfgSemanticEqual(cfg, m_cfg))
         return;
-    m_undoStack.push(new SongCfgCommand(this, cfg));
+    pushCommand(new SongCfgCommand(this, cfg));
 }
 
 std::unique_ptr<MidiTimeline> SongDocument::buildTimeline(double sampleRate) const
@@ -2772,9 +2772,71 @@ void SongDocument::revertOps(std::vector<EditOp> &ops)
     }
 }
 
+namespace {
+
+// Pushed to drop everything above the stack index: QUndoStack::push clears
+// the redo list first and then, since this command is obsolete right
+// after its redo(), deletes it without adding it. Net effect: the redo
+// entries are gone and the stack is otherwise as it was.
+class DiscardRedoCommand : public QUndoCommand
+{
+  public:
+    void redo() override { setObsolete(true); }
+    void undo() override {}
+};
+
+} // namespace
+
+void SongDocument::pushCommand(QUndoCommand *command)
+{
+    if (m_editGroupDepth > 0 && !m_editGroupMacroOpen) {
+        m_editGroupMacroOpen = true;
+        m_undoStack.beginMacro(m_editGroupText);
+    }
+    m_undoStack.push(command);
+}
+
+void SongDocument::beginEditGroup(const QString &text)
+{
+    if (m_editGroupDepth++ == 0) {
+        m_editGroupDiscard = false;
+        m_editGroupMacroOpen = false;
+        m_editGroupText = text;
+    }
+}
+
+bool SongDocument::endEditGroup(bool discard)
+{
+    if (m_editGroupDepth == 0)
+        return false;
+    if (discard)
+        m_editGroupDiscard = true;
+    if (--m_editGroupDepth > 0)
+        return false;
+    if (!m_editGroupMacroOpen)
+        return false; // nothing was pushed: the stack was never touched
+    m_editGroupMacroOpen = false;
+    m_undoStack.endMacro();
+    const int index = m_undoStack.index();
+    const QUndoCommand *macro = index > 0 ? m_undoStack.command(index - 1) : nullptr;
+    if (!macro)
+        return false;
+    // A macro can still be empty when every command it received was
+    // obsolete (a merged move that returned to its start).
+    const bool empty = macro->childCount() == 0;
+    if (!m_editGroupDiscard && !empty)
+        return true;
+    // Revert (each child publishes its own documentChanged, like any undo;
+    // an empty macro just steps the index back), then drop the macro from
+    // the redo side so it can't come back.
+    m_undoStack.undo();
+    m_undoStack.push(new DiscardRedoCommand);
+    return false;
+}
+
 void SongDocument::pushEdit(const QString &text, std::vector<EditOp> ops)
 {
     if (ops.empty())
         return;
-    m_undoStack.push(new SongEditCommand(this, text, std::move(ops)));
+    pushCommand(new SongEditCommand(this, text, std::move(ops)));
 }

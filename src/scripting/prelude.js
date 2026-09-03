@@ -3,7 +3,7 @@
 // the host calls the returned function with the facades and installs the
 // result's `porydaw` and `console` as globals. ES2017 at most: Qt 6.2's
 // QJSEngine is the floor.
-(function (host, song, selection, cursor, transport, actions, storage, project) {
+(function (host, song, selection, cursor, transport, actions, storage, project, edit, view) {
     "use strict";
 
     var listeners = {};
@@ -52,6 +52,32 @@
         Object.keys(source).forEach(function (k) { target[k] = source[k]; });
         return target;
     }
+    // Note arguments: one note or id, or an array of either.
+    function toIds(x) {
+        if (x === undefined || x === null) return [];
+        if (!Array.isArray(x)) x = [x];
+        return x.map(function (n) {
+            return typeof n === "object" && n !== null ? n.id : n;
+        });
+    }
+    // Track arguments must be real integers: the C++ side would coerce
+    // undefined/NaN to track 0.
+    function trackArg(t, api) {
+        if (typeof t !== "number" || !isFinite(t) || Math.floor(t) !== t)
+            throw new TypeError(api + ": track must be an integer");
+        return t;
+    }
+    function toNotes(x) {
+        if (x === undefined || x === null) return [];
+        if (!Array.isArray(x)) x = [x];
+        var out = [];
+        x.forEach(function (n) {
+            if (typeof n === "object" && n !== null) { out.push(n); return; }
+            var note = song.note(n);
+            if (note) out.push(note);
+        });
+        return out;
+    }
 
     var api = {
         version: host.appVersion,
@@ -95,15 +121,125 @@
             get trackMask() { return selection.trackMask; },
             notes: function () { return selection.notes(); },
             time: function () { return selection.time(); },
-            setNotes: function (ids) {
-                ids = Array.prototype.map.call(ids || [], function (n) {
-                    return typeof n === "object" && n !== null ? n.id : n;
-                });
-                selection.setNotes(ids);
-            },
+            setNotes: function (notes) { selection.setNotes(toIds(notes)); },
             clear: function () { selection.clear(); },
-            selectTrack: function (track) { selection.selectTrack(track); }
+            selectTrack: function (track) {
+                selection.selectTrack(trackArg(track, "selection.selectTrack"));
+            },
+            setTime: function (spec) { selection.setTime(spec || {}); },
+            clearTime: function () { selection.clearTime(); }
         }, events("selection")),
+
+        edit: {
+            get active() { return edit.active; },
+            // Runs fn inside one undo entry named `name`; returns fn's
+            // result. An exception (fn's own or a refused edit) rolls the
+            // whole transaction back and propagates. Nested transactions
+            // join the outermost one.
+            transaction: function (name, fn) {
+                if (typeof name !== "string" || !name)
+                    throw new TypeError("edit.transaction: expected a name");
+                if (typeof fn !== "function")
+                    throw new TypeError("edit.transaction: expected a function");
+                edit.begin(name);
+                var result;
+                try {
+                    result = fn();
+                } catch (e) {
+                    edit.rollback();
+                    throw e;
+                }
+                edit.commit();
+                return result;
+            },
+            addNotes: function (track, notes) {
+                return edit.addNotes(trackArg(track, "edit.addNotes"),
+                                     Array.isArray(notes) ? notes : [notes]);
+            },
+            deleteNotes: function (notes) { return edit.deleteNotes(toIds(notes)); },
+            moveNotes: function (notes, dTick, dKey) {
+                return edit.moveNotes(toIds(notes), dTick || 0, dKey || 0);
+            },
+            resizeNotes: function (notes, dLen, opts) {
+                return edit.resizeNotes(toIds(notes), dLen || 0, !!(opts && opts.fromLeft));
+            },
+            // setVelocity(notes, vel) or setVelocity(notes, function (note) { return vel; })
+            setVelocity: function (notes, vel) {
+                var pairs;
+                if (typeof vel === "function") {
+                    pairs = toNotes(notes).map(function (n) { return { id: n.id, vel: vel(n) }; });
+                } else {
+                    pairs = toIds(notes).map(function (id) { return { id: id, vel: vel }; });
+                }
+                return edit.setVelocities(pairs);
+            },
+            nudgeVelocity: function (notes, delta) {
+                return edit.nudgeVelocity(toIds(notes), delta || 0);
+            },
+            addLanePoint: function (track, cc, tick, value) {
+                edit.addLanePoint(trackArg(track, "edit.addLanePoint"), cc, tick, value);
+            },
+            writeLanePoints: function (track, cc, from, to, points) {
+                edit.writeLanePoints(trackArg(track, "edit.writeLanePoints"), cc, from, to,
+                                     points || []);
+            },
+            moveLanePoints: function (track, cc, moves) {
+                return edit.moveLanePoints(trackArg(track, "edit.moveLanePoints"), cc, moves || []);
+            },
+            deleteLanePoints: function (track, cc, ticks) {
+                return edit.deleteLanePoints(trackArg(track, "edit.deleteLanePoints"), cc,
+                                             ticks || []);
+            },
+            setStartTempo: function (bpm) { edit.setStartTempo(bpm); },
+            setLoop: function (start, end) { edit.setLoop(start, end); },
+            setTimeSig: function (tick, numerator, denominator) {
+                edit.setTimeSig(tick, numerator, denominator);
+            },
+            deleteTimeSig: function (tick) { edit.deleteTimeSig(tick); },
+            removeTimeRange: function (start, end, scope) {
+                return edit.removeTimeRange(start, end, scope || {});
+            },
+            insertTimeRange: function (at, span, scope) {
+                return edit.insertTimeRange(at, span, scope || {});
+            },
+            addTrack: function (voice) { return edit.addTrack(voice || 0); },
+            duplicateTrack: function (track) {
+                return edit.duplicateTrack(trackArg(track, "edit.duplicateTrack"));
+            },
+            deleteTrack: function (track) { edit.deleteTrack(trackArg(track, "edit.deleteTrack")); },
+            moveTrack: function (track, target) {
+                return edit.moveTrack(trackArg(track, "edit.moveTrack"),
+                                      trackArg(target, "edit.moveTrack"));
+            },
+            renameTrack: function (track, name) {
+                edit.renameTrack(trackArg(track, "edit.renameTrack"), String(name));
+            },
+            transposeSelection: function (dKey) { return edit.transposeSelection(dKey || 0); },
+            // direction: "left" | "right"
+            nudgeSelection: function (direction) {
+                if (direction !== "left" && direction !== "right")
+                    throw new TypeError("edit.nudgeSelection: direction must be 'left' or 'right'");
+                return edit.nudgeSelection(direction === "right");
+            }
+        },
+
+        view: {
+            visibleTicks: function () { return view.visibleTicks(); },
+            revealTick: function (tick) { view.revealTick(tick); },
+            revealRange: function (from, to) { view.revealRange(from, to); },
+            revealNote: function (note) { return view.revealNote(toIds(note)[0]); },
+            revealKey: function (key) { view.revealKey(key); },
+            get velocityLane() { return view.velocityLane; },
+            set velocityLane(on) { view.velocityLane = !!on; },
+            get automationLanes() { return view.automationLanes; },
+            set automationLanes(on) { view.automationLanes = !!on; },
+            get tempoLane() { return view.tempoLane; },
+            set tempoLane(on) { view.tempoLane = !!on; },
+            get eventList() { return view.eventList; },
+            set eventList(on) { view.eventList = !!on; },
+            get pxPerBeat() { return view.pxPerBeat; },
+            get keyHeight() { return view.keyHeight; }
+        },
 
         cursor: {
             get tick() { return cursor.tick; },
@@ -160,7 +296,7 @@
         var fn = runners[fullId];
         if (!fn) return false;
         fn({ song: api.song, selection: api.selection, cursor: api.cursor,
-             transport: api.transport });
+             transport: api.transport, edit: api.edit, view: api.view });
         return true;
     }
 

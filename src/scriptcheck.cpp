@@ -226,22 +226,41 @@ export function activate(ctx) {
         default: "Ctrl+Alt+Shift+F8", run: function () { bump("vel"); } });
     porydaw.actions.register({ id: "save", name: "Steals Save Default", context: "global",
         default: "Ctrl+S", run: function () {} });
+    porydaw.actions.register({ id: "esc", name: "Steals Escape", context: "roll",
+        default: "Escape", run: function () {} });
     porydaw.song.on("changed", function (e) { porydaw.storage.set("rev", e.revision); });
     porydaw.log("activated v1 " + ctx.id + " " + porydaw.plugin.version);
 }
 export function deactivate() { porydaw.log("deactivated"); }
 )";
 
-// v2 (hot reload): keeps "hello", adds "hello2", drops the rest.
+// v2 (hot reload): keeps "hello", adds "hello2", drops the rest. Its
+// song.changed listener tries to open a transaction from inside the
+// notification (refused: the stack may be mid-undo) and records the error.
 const char *kFixtureMainV2 = R"(
 export function activate(ctx) {
     porydaw.actions.register({ id: "hello", name: "Hello", context: "global",
         default: "Ctrl+Alt+Shift+F9", run: function () {} });
     porydaw.actions.register({ id: "hello2", name: "Hello Two", context: "global",
         run: function () {} });
+    porydaw.song.on("changed", function () {
+        try { porydaw.edit.transaction("Steal", function () {}); }
+        catch (e) { porydaw.storage.set("stealErr", String(e.message)); }
+    });
     porydaw.log("activated v2");
 }
 )";
+
+// Injected into the Script Console engine as `harness`: an edit made by
+// C++ while a script transaction is open (what a user-driven nested event
+// loop would do), to trip the revision guard.
+class HarnessBridge : public QObject
+{
+    Q_OBJECT
+  public:
+    SongDocument *doc = nullptr;
+    Q_INVOKABLE void externalEdit() { doc->setStartTempo(doc->startTempo() + 1); }
+};
 
 const char *kBrokenManifest = R"({ "id": "broken", "name": "Broken", "api": 1 })";
 const char *kBrokenMain =
@@ -291,6 +310,374 @@ int storedCounter(const QString &plugin, const QString &key)
     const QByteArray raw =
         QSettings().value(QStringLiteral("plugins/%1/data/%2").arg(plugin, key)).toByteArray();
     return QJsonDocument::fromJson(raw).object().value(QLatin1String("v")).toInt(-1);
+}
+
+// ---- Phase 2: edit transactions ----
+
+using Check = std::function<bool(bool, const char *)>;
+
+void runEditChecks(const Check &check, scripting::ScriptHost &host, SongSession &session,
+                   QList<Message> &messages, bool haveExamples)
+{
+    SongDocument &doc = session.doc;
+    SongView &view = *session.view;
+    QUndoStack &undo = *doc.undoStack();
+    const auto run = [&](const char *code) { return host.evalConsole(QLatin1String(code)); };
+    // The caller left a redo entry (tempo edit + undo); park the stack at
+    // its top so "no entry" means count == index.
+    while (undo.canRedo())
+        undo.redo();
+    const QByteArray base = doc.smf().write();
+    const int index0 = undo.index();
+    // Snapshot of the stack (count, index) that "untouched" compares to:
+    // taken at the start and after every oneEntryThenUndo, whose undo
+    // legitimately leaves a redo entry behind.
+    int snapCount = undo.count();
+    int snapIndex = undo.index();
+    const auto mark = [&] {
+        snapCount = undo.count();
+        snapIndex = undo.index();
+    };
+    // One undo entry sits on top of index0, named `name`, and undoing it
+    // restores the file byte for byte (leaving the stack at index0).
+    const auto oneEntryThenUndo = [&](const char *name, const char *what) {
+        bool ok = undo.count() == index0 + 1 && undo.index() == index0 + 1 &&
+                  undo.text(index0) == QLatin1String(name);
+        check(ok, what);
+        undo.undo();
+        ok = doc.smf().write() == base && undo.index() == index0;
+        check(ok, "undo of a script transaction did not restore the SMF byte for byte");
+        mark();
+        return ok;
+    };
+    // The stack is exactly as before: no entry, no redo, same bytes.
+    const auto untouched = [&](const char *what) {
+        check(undo.count() == snapCount && undo.index() == snapIndex && doc.smf().write() == base,
+              what);
+    };
+    // A transaction that pushed edits and was then rolled back: bytes as
+    // before, no entry of its own and no redo (its pushes cleared any
+    // earlier redo entry, like every edit does).
+    const auto rolledBack = [&](const char *what) {
+        check(undo.count() == index0 && undo.index() == index0 && doc.smf().write() == base, what);
+        mark();
+    };
+
+    // Outside a transaction every edit is refused.
+    check(run("porydaw.edit.addNotes(0, [{tick: 0, key: 60, len: 24, vel: 100}])").isNull() &&
+              hasMessage(messages, QStringLiteral("console"), 2,
+                         QStringLiteral("inside porydaw.edit.transaction")),
+          "edit.addNotes outside a transaction was not refused");
+    untouched("a refused edit touched the document");
+    check(run("porydaw.edit.active") == QStringLiteral("false"), "edit.active true at rest");
+
+    // Several edits, one entry; ids come back and re-resolve; the
+    // transaction returns fn's value.
+    check(run("var ids = porydaw.edit.transaction('T1', function () {"
+              "  if (!porydaw.edit.active) throw new Error('not active');"
+              "  var ids = porydaw.edit.addNotes(0, [{tick: 0, key: 60, len: 24, vel: 100},"
+              "                                      {tick: 48, key: 62, len: 24, vel: 90}]);"
+              "  porydaw.edit.moveNotes(ids, 24, 1);"
+              "  porydaw.edit.setVelocity(ids[1], 77);"
+              "  porydaw.edit.resizeNotes(ids, 12);"
+              "  return ids; });"
+              "var a = porydaw.song.note(ids[0]), b = porydaw.song.note(ids[1]);"
+              "ids.length === 2 && a.tick === 24 && a.key === 61 && a.len === 36 && a.vel === 100"
+              " && b.tick === 72 && b.key === 63 && b.vel === 77 && b.len === 36") ==
+              QStringLiteral("true"),
+          "edit.addNotes/moveNotes/setVelocity/resizeNotes did not land as expected");
+    oneEntryThenUndo("T1", "a transaction with four edits is not exactly one undo entry");
+
+    // A transaction that edits nothing leaves nothing — the redo list
+    // included: with an entry undone, a no-op or failed transaction must
+    // not clear it (the macro opens lazily, on the first push).
+    run("porydaw.edit.transaction('Nothing', function () {})");
+    untouched("an empty transaction left an undo entry");
+    run("porydaw.edit.transaction('Redo bait', function () {"
+        "  porydaw.edit.addNotes(0, [{tick: 0, key: 61, len: 24, vel: 100}]); })");
+    undo.undo();
+    check(undo.canRedo(), "undo left nothing to redo");
+    run("porydaw.edit.transaction('Nothing', function () {})");
+    check(run("porydaw.edit.transaction('Fails', function () { throw new Error('x'); })").isNull(),
+          "a throwing no-op transaction did not propagate");
+    check(undo.canRedo() && undo.count() == index0 + 1 && undo.index() == index0,
+          "a no-op / failed transaction discarded the user's redo entry");
+    // A transaction that does push clears the redo entry like any edit.
+    check(run("porydaw.edit.transaction('Fresh', function () {"
+              "  porydaw.edit.addNotes(0, [{tick: 0, key: 61, len: 24, vel: 100}]); }); 'ok'") ==
+              QStringLiteral("ok"),
+          "transaction after a redo entry failed");
+    oneEntryThenUndo("Fresh", "a transaction pushed over a redo entry is not one entry");
+
+    // An exception mid-transaction rolls everything back — no entry, no redo.
+    check(run("porydaw.edit.transaction('Boom', function () {"
+              "  porydaw.edit.addNotes(0, [{tick: 0, key: 61, len: 24, vel: 100}]);"
+              "  throw new Error('boom2'); })")
+                  .isNull() &&
+              hasMessage(messages, QStringLiteral("console"), 2, QStringLiteral("boom2")),
+          "exception inside a transaction did not propagate");
+    rolledBack("an exception mid-transaction did not roll the document back");
+    check(run("porydaw.edit.active") == QStringLiteral("false"),
+          "edit.active stayed true after a rollback");
+
+    // Nested transactions flatten into the outer entry.
+    run("porydaw.edit.transaction('Outer', function () {"
+        "  porydaw.edit.addNotes(0, [{tick: 0, key: 61, len: 24, vel: 100}]);"
+        "  porydaw.edit.transaction('Inner', function () {"
+        "    porydaw.edit.addNotes(0, [{tick: 0, key: 62, len: 24, vel: 100}]); }); })");
+    oneEntryThenUndo("Outer", "nested transactions did not flatten into one entry");
+
+    // A refused inner edit that the script swallows still aborts the whole
+    // transaction at commit.
+    check(run("porydaw.edit.transaction('Swallow', function () {"
+              "  porydaw.edit.addNotes(0, [{tick: 0, key: 61, len: 24, vel: 100}]);"
+              "  try { porydaw.edit.transaction('In', function () { throw new Error('x'); }); }"
+              "  catch (e) {} })")
+                  .isNull() &&
+              hasMessage(messages, QStringLiteral("console"), 2, QStringLiteral("rolled back")),
+          "a swallowed inner failure did not abort the outer transaction");
+    rolledBack("a swallowed inner failure left edits behind");
+
+    // Revision guard: a foreign edit while the transaction is open.
+    HarnessBridge bridge;
+    bridge.doc = &doc;
+    const scripting::Plugin *console = host.plugin(QStringLiteral("console"));
+    if (check(console && console->engine, "console plugin not reachable for the bridge")) {
+        QJSEngine::setObjectOwnership(&bridge, QJSEngine::CppOwnership);
+        console->engine->globalObject().setProperty(QStringLiteral("harness"),
+                                                    console->engine->newQObject(&bridge));
+        check(run("porydaw.edit.transaction('Guard', function () {"
+                  "  porydaw.edit.addNotes(0, [{tick: 0, key: 61, len: 24, vel: 100}]);"
+                  "  harness.externalEdit();"
+                  "  porydaw.edit.addNotes(0, [{tick: 0, key: 62, len: 24, vel: 100}]); })")
+                      .isNull() &&
+                  hasMessage(messages, QStringLiteral("console"), 2,
+                             QStringLiteral("changed outside the transaction")),
+              "a foreign edit during a transaction did not trip the revision guard");
+        rolledBack("the revision-guard rollback did not restore the document");
+        // ...and one that lands after the last script edit trips it at commit.
+        check(run("porydaw.edit.transaction('Guard2', function () {"
+                  "  porydaw.edit.addNotes(0, [{tick: 0, key: 61, len: 24, vel: 100}]);"
+                  "  harness.externalEdit(); })")
+                  .isNull(),
+              "a foreign edit after the last script edit did not fail the commit");
+        rolledBack("the commit-time guard rollback did not restore the document");
+        console->engine->globalObject().deleteProperty(QStringLiteral("harness"));
+    }
+
+    // Re-entrancy: a song.changed listener editing back during the edit
+    // that woke it is refused (the transaction itself is fine), and one
+    // opening its own transaction from the notification is refused too.
+    run("var offRe = porydaw.song.on('changed', function () {"
+        "  porydaw.edit.addNotes(0, [{tick: 0, key: 70, len: 1, vel: 1}]); })");
+    QSettings().remove(QStringLiteral("plugins/fixture/data/stealErr"));
+    run("porydaw.edit.transaction('Reenter', function () {"
+        "  porydaw.edit.addNotes(0, [{tick: 0, key: 61, len: 24, vel: 100}]); })");
+    check(hasMessage(messages, QStringLiteral("console"), 2, QStringLiteral("re-entered")),
+          "a listener editing during an edit was not refused");
+    check(QSettings()
+              .value(QStringLiteral("plugins/fixture/data/stealErr"))
+              .toByteArray()
+              .contains("song.changed listener"),
+          "another plugin opening a transaction from song.changed was not refused");
+    check(run("porydaw.song.notes({track: 0, from: 0, to: 1}).some(function (n) { "
+              "return n.key === 70 && n.len === 1 && n.vel === 1; })") == QStringLiteral("false"),
+          "the refused listener edit landed anyway");
+    oneEntryThenUndo("Reenter", "the listener's refused edit disturbed the transaction");
+    run("offRe()");
+
+    // Selection ops through the transaction; view/time-selection state.
+    check(run("var sel = porydaw.song.notes({track: 0}).slice(0, 2);"
+              "porydaw.selection.setNotes(sel);"
+              "porydaw.edit.transaction('Up', function () {"
+              "  if (!porydaw.edit.transposeSelection(2)) throw new Error('no move'); });"
+              "porydaw.selection.notes().every(function (n, i) { return n.key === sel[i].key + 2 "
+              "&& n.id === sel[i].id; })") == QStringLiteral("true"),
+          "edit.transposeSelection did not move the selected notes (ids kept)");
+    oneEntryThenUndo("Up", "edit.transposeSelection is not one undo entry");
+    check(run("porydaw.selection.setTime({start: 0, end: 96}); porydaw.selection.time().end") ==
+                  QStringLiteral("96") &&
+              view.timeSelection().active() && view.timeSelection().endTick == 96,
+          "selection.setTime did not reach the view");
+    run("porydaw.selection.clearTime()");
+    check(!view.timeSelection().active(), "selection.clearTime left the selection");
+    check(run("porydaw.selection.setTime({start: 10, end: 5})").isNull(),
+          "selection.setTime accepted an empty span");
+    check(run("porydaw.view.velocityLane = true; porydaw.view.velocityLane") ==
+                  QStringLiteral("true") &&
+              view.velocityLaneVisible(),
+          "view.velocityLane setter did not reach the view");
+    check(run("var vt = porydaw.view.visibleTicks(); vt.to > vt.from") == QStringLiteral("true"),
+          "view.visibleTicks is not a span");
+    check(run("var mid = Math.floor(porydaw.song.endTick / 2); porydaw.view.revealTick(mid);"
+              "var vt2 = porydaw.view.visibleTicks(); vt2.from <= mid && mid <= vt2.to") ==
+              QStringLiteral("true"),
+          "view.revealTick did not scroll the tick into view");
+    run("porydaw.view.revealTick(0)");
+
+    // The rest of the surface in one transaction; undo restores the bytes.
+    check(run("porydaw.edit.transaction('Sink', function () {"
+              "  var e = porydaw.edit, CC = porydaw.song.CC;"
+              "  e.addLanePoint(0, 7, 96, 100);"
+              "  e.writeLanePoints(0, 10, 0, 192, [{tick: 0, value: 10}, {tick: 192, value: 120}]);"
+              "  e.moveLanePoints(0, 10, [{tick: 192, newTick: 144, newValue: 64}]);"
+              "  if (e.deleteLanePoints(0, 7, [96]) !== 1) throw new Error('del');"
+              "  e.addLanePoint(-1, CC.TEMPO, 480, 150);"
+              "  e.setStartTempo(99);"
+              "  e.setLoop(96, 960);"
+              "  e.setTimeSig(384, 3, 4);"
+              "  var t = e.addTrack(5); if (t < 0) throw new Error('addTrack');"
+              "  e.renameTrack(t, 'Scripted');"
+              "  if (!e.insertTimeRange(0, 96, {tracks: [0]})) throw new Error('insert');"
+              "  if (!e.removeTimeRange(0, 96, {tracks: [0]})) throw new Error('remove');"
+              "  e.deleteTrack(t); }); 'ok'") == QStringLiteral("ok"),
+          "the kitchen-sink transaction threw");
+    check(run("var p10 = porydaw.song.lanePoints(0, 10, {from: 0, to: 193}); p10.length === 2 && "
+              "p10[0].tick === 0 && p10[0].value === 10 && p10[1].tick === 144 && "
+              "p10[1].value === 64") == QStringLiteral("true"),
+          "writeLanePoints/moveLanePoints did not land as expected");
+    check(run("porydaw.song.lanePoints(0, 7, {from: 96, to: 97}).length") == QStringLiteral("0"),
+          "addLanePoint + deleteLanePoints did not cancel out");
+    check(run("porydaw.song.startTempo === 99 && porydaw.song.lanePoints(-1, "
+              "porydaw.song.CC.TEMPO).some(function (p) { return p.tick === 480 && "
+              "p.value === 150; })") == QStringLiteral("true"),
+          "setStartTempo / tempo addLanePoint did not land");
+    check(run("porydaw.song.loop().start === 96 && porydaw.song.loop().end === 960") ==
+              QStringLiteral("true"),
+          "setLoop did not land");
+    check(run("porydaw.song.timeSigs().some(function (s) { return s.tick === 384 && "
+              "s.numerator === 3 && s.denominator === 4; })") == QStringLiteral("true"),
+          "setTimeSig did not land");
+    oneEntryThenUndo("Sink", "the kitchen-sink transaction is not one undo entry");
+    check(run("porydaw.edit.transaction('Bad', function () { porydaw.edit.addNotes(99, []); })")
+                  .isNull() &&
+              hasMessage(messages, QStringLiteral("console"), 2, QStringLiteral("no such track")),
+          "edit.addNotes with a bad track was not refused");
+    untouched("a refused structural edit left an entry");
+    // Argument hygiene: a missing track or a non-object note must throw,
+    // not coerce to track 0 / an empty note.
+    check(run("porydaw.edit.transaction('Undef', function () { porydaw.edit.deleteTrack(); })")
+                  .isNull() &&
+              hasMessage(messages, QStringLiteral("console"), 2,
+                         QStringLiteral("track must be an integer")),
+          "edit.deleteTrack() with no track was not refused");
+    check(
+        run("porydaw.edit.transaction('Undef2', function () { porydaw.edit.addNotes(0); })")
+                .isNull() &&
+            hasMessage(messages, QStringLiteral("console"), 2, QStringLiteral("must be an object")),
+        "edit.addNotes with a non-object note was not refused");
+    check(run("porydaw.edit.transaction('Undef3', function () { "
+              "porydaw.edit.removeTimeRange(0, 96, {tracks: [undefined]}); })")
+              .isNull(),
+          "scope.tracks with undefined was not refused");
+    untouched("refused argument-hygiene edits left an entry");
+    // Two batch entries on one (tick, key): the later wins, the earlier
+    // reports id 0.
+    check(run("var dup = porydaw.edit.transaction('Dup', function () { return "
+              "porydaw.edit.addNotes(0, [{tick: 0, key: 61, len: 24, vel: 100}, "
+              "{tick: 0, key: 61, len: 48, vel: 100}]); }); "
+              "dup[0] === 0 && dup[1] > 0 && porydaw.song.note(dup[1]).len === 48") ==
+              QStringLiteral("true"),
+          "duplicate (tick, key) entries in addNotes did not resolve last-wins");
+    oneEntryThenUndo("Dup", "the duplicate addNotes transaction is not one entry");
+    // selection.setNotes takes one note as well as a list.
+    check(run("var one = porydaw.song.notes({track: 0})[0]; porydaw.selection.setNotes(one); "
+              "porydaw.selection.notes().length === 1 && porydaw.selection.notes()[0].id === "
+              "one.id") == QStringLiteral("true"),
+          "selection.setNotes with a single note cleared the selection");
+
+    // Watchdog inside a transaction: the interrupt can't run the script's
+    // catch, so the host rolls the open transaction back itself.
+    host.setWatchdogMs(200);
+    messages.clear();
+    run("porydaw.edit.transaction('Runaway', function () {"
+        "  porydaw.edit.addNotes(0, [{tick: 0, key: 61, len: 24, vel: 100}]);"
+        "  while (true) {} })");
+    check(hasMessage(messages, QStringLiteral("console"), 2, QStringLiteral("stopped")) &&
+              !host.transaction().open(),
+          "an interrupted transaction was not closed");
+    check(!hasMessage(messages, QStringLiteral("console"), 2, QStringLiteral("Interrupted")),
+          "the rollback fanned song.changed into the interrupted engine");
+    rolledBack("an interrupted transaction left its edits or an undo entry");
+    check(waitFor([&] { return !console || !console->engine; }, 2000),
+          "faulted console engine was not torn down");
+    host.setWatchdogMs(5000);
+    check(run("porydaw.song.loaded") == QStringLiteral("true") && console &&
+              console->state == scripting::PluginState::Loaded,
+          "console did not come back after the fault");
+
+    // Bundled Note Tools: each command is one undo entry that undoes clean.
+    // A setup transaction adds a track with four notes to work on (the
+    // fourth off the grid), so the checks don't depend on the song.
+    if (haveExamples) {
+        const auto tool = [&](const char *id) {
+            return host.runCommand(QStringLiteral("plugin.note-tools.") + QLatin1String(id));
+        };
+        check(
+            run("var st = porydaw.edit.transaction('Setup', function () {"
+                "  var t = porydaw.edit.addTrack(0); if (t < 0) throw new Error('no track');"
+                "  return {track: t, ids: porydaw.edit.addNotes(t, ["
+                "    {tick: 0, key: 60, len: 12, vel: 100}, {tick: 48, key: 62, len: 12, vel: 100},"
+                "    {tick: 96, key: 64, len: 12, vel: 100}, {tick: 145, key: 65, len: 12, vel: "
+                "100}"
+                "  ])}; }); st.ids.length") == QStringLiteral("4") &&
+                undo.count() == index0 + 1,
+            "note-tools setup transaction failed");
+        const int setup = index0 + 1;
+        const auto toolEntryThenUndo = [&](const char *id, const char *name, const char *what) {
+            run("porydaw.selection.setNotes(st.ids)");
+            check(tool(id) && undo.count() == setup + 1 && undo.index() == setup + 1 &&
+                      undo.text(setup) == QLatin1String(name),
+                  what);
+            const bool ok = check(
+                hasMessage(messages, QStringLiteral("note-tools"), 2, QStringLiteral("")) == false,
+                "a note-tools command logged an error");
+            undo.undo();
+            check(undo.index() == setup, "undo after a note-tools command did not step back");
+            return ok;
+        };
+        messages.clear();
+        run("porydaw.selection.setNotes(st.ids)");
+        check(tool("legato") && undo.count() == setup + 1 &&
+                  undo.text(setup) == QLatin1String("Legato") &&
+                  run("porydaw.song.note(st.ids[0]).len === 48 && "
+                      "porydaw.song.note(st.ids[2]).len === 49 && "
+                      "porydaw.song.note(st.ids[3]).len === 12") == QStringLiteral("true"),
+              "legato did not stretch each note to the next start as one undo entry");
+        undo.undo();
+        toolEntryThenUndo("humanize", "Humanize velocities", "humanize is not one undo entry");
+        run("porydaw.selection.setNotes(st.ids)");
+        check(tool("quantize") && undo.count() == setup + 1 &&
+                  undo.text(setup) == QLatin1String("Quantize to grid") &&
+                  run("porydaw.song.note(st.ids[3]).tick") == QStringLiteral("144"),
+              "quantize did not snap the off-grid note as one undo entry");
+        undo.undo();
+        // Insert a chord at the cursor, then strum it.
+        run("porydaw.selection.selectTrack(st.track); porydaw.selection.clear(); "
+            "porydaw.cursor.set(192)");
+        check(tool("chord") && undo.count() == setup + 1 &&
+                  undo.text(setup) == QLatin1String("Insert chord") &&
+                  run("var ch = porydaw.selection.notes(); ch.length === 3 && "
+                      "ch.every(function (n) { return n.tick === 192; }) && "
+                      "ch.map(function (n) { return n.key; }).sort().join() === '60,64,67'") ==
+                      QStringLiteral("true"),
+              "insert chord did not add a selected triad as one undo entry");
+        check(tool("strum") && undo.count() == setup + 2 &&
+                  undo.text(setup + 1) == QLatin1String("Strum") &&
+                  run("var c = porydaw.selection.notes(); c.length === 3 && "
+                      "c.every(function (n) { return n.key === 60 ? n.tick === 192 : "
+                      "n.tick > 192 && n.tick + n.len === 192 + ch[0].len; })") ==
+                      QStringLiteral("true"),
+              "strum did not stagger the chord (ends kept) as one undo entry");
+        check(!hasMessage(messages, QStringLiteral("note-tools"), 2, QStringLiteral("")),
+              "a note-tools command logged an error");
+        undo.undo();
+        undo.undo();
+        undo.undo();
+        check(doc.smf().write() == base && undo.index() == index0,
+              "undoing the note-tools runs + setup did not restore the SMF");
+    }
+    run("porydaw.selection.clear()");
 }
 
 } // namespace
@@ -370,6 +757,7 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
     int exampleCommands = 0;
     if (haveExamples) {
         expectedIds.append(QStringLiteral("select-same-pitch"));
+        expectedIds.append(QStringLiteral("note-tools"));
         expectedIds.sort();
         const scripting::Plugin *example = host.plugin(QStringLiteral("select-same-pitch"));
         check(example && example->state == scripting::PluginState::Loaded,
@@ -378,6 +766,12 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
                   keymap::Context::PianoRoll,
               "bundled example did not register its roll command");
         exampleCommands = example ? int(example->actions.size()) : 0;
+        const scripting::Plugin *tools = host.plugin(QStringLiteral("note-tools"));
+        check(tools && tools->state == scripting::PluginState::Loaded && tools->actions.size() == 5,
+              "bundled example plugin note-tools did not load its 5 commands");
+        check(!hasMessage(messages, QStringLiteral("note-tools"), 1, QStringLiteral("already")),
+              "a note-tools default shortcut collides with a shipped binding");
+        exampleCommands += tools ? int(tools->actions.size()) : 0;
     }
     check(host.pluginIds() == expectedIds,
           "plugin discovery did not list exactly the manifest-bearing folders, sorted");
@@ -417,14 +811,17 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
     check(keys.bindings(hello) ==
               QList<QKeySequence>{QKeySequence(QStringLiteral("Ctrl+Alt+Shift+F9"))},
           "action default binding not applied");
-    check(keys.commands().size() == shippedCommands + 7 + exampleCommands,
-          "dynamic commands not appended to the registry (expected 6 fixture + 1 runaway)");
+    check(keys.commands().size() == shippedCommands + 8 + exampleCommands,
+          "dynamic commands not appended to the registry (expected 7 fixture + 1 runaway)");
     check(keys.bindings(QStringLiteral("plugin.fixture.conflict")).isEmpty() &&
               hasMessage(messages, QStringLiteral("fixture"), 1, QStringLiteral("already used by")),
           "a default that collides with a shipped roll binding was not dropped with a warning");
     check(keys.bindings(QStringLiteral("plugin.fixture.save")).isEmpty() &&
               hasMessage(messages, QStringLiteral("fixture"), 1, QStringLiteral("file.save_song")),
           "a default that collides with a shipped DEFAULT (currently rebound) was not dropped");
+    check(keys.bindings(QStringLiteral("plugin.fixture.esc")).isEmpty() &&
+              hasMessage(messages, QStringLiteral("fixture"), 1, QStringLiteral("Escape")),
+          "an Escape default was not refused");
     check(keys.command(QStringLiteral("plugin.fixture.nope")).id.isEmpty(),
           "unknown command id did not report empty");
     check(host.runCommand(hello) &&
@@ -629,6 +1026,7 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
         check(storedCounter(QStringLiteral("console"), QStringLiteral("rev")) ==
                   int(doc.revision()),
               "song.changed listener did not fire on undo");
+        runEditChecks(check, host, *m_active, messages, haveExamples);
         // Transport through the bindings.
         if (m_audioOk) {
             host.evalConsole(QStringLiteral("porydaw.transport.on('state', function (e) { "

@@ -260,6 +260,8 @@ const Plugin *ScriptHost::plugin(const QString &id) const
         if (plugin->manifest.id == id)
             return plugin.get();
     }
+    if (m_console && id == kConsoleId)
+        return m_console.get();
     return nullptr;
 }
 
@@ -401,6 +403,8 @@ void ScriptHost::teardown(Plugin &plugin, bool callDeactivate)
 {
     if (!plugin.engine)
         return;
+    if (m_transaction.open() && m_transaction.owner == &plugin)
+        forceRollback(tr("the plugin was unloaded"));
     if (callDeactivate && plugin.deactivate.isCallable()) {
         plugin.state = PluginState::Loaded;
         guarded(plugin, [&] { return plugin.deactivate.call(); }); // errors logged inside
@@ -425,9 +429,19 @@ QJSValue ScriptHost::guarded(Plugin &plugin, const std::function<QJSValue()> &fn
 {
     if (!plugin.engine)
         return QJSValue();
+    const bool txOpenBefore = m_transaction.open();
+    const uint64_t txSerialBefore = m_transaction.serial;
     m_watchdog.arm(plugin.engine.get(), m_watchdogMs);
     QJSValue result = fn();
     const bool fired = m_watchdog.disarm();
+    // A transaction begun inside this call and still open on the way out
+    // was never committed or rolled back: the interrupt cut the script
+    // off before the prelude's try/catch could. Close it here.
+    if (m_transaction.open() && m_transaction.owner == &plugin &&
+        (!txOpenBefore || m_transaction.serial != txSerialBefore)) {
+        forceRollback(fired ? tr("the script was interrupted")
+                            : tr("the script returned without finishing it"));
+    }
     if (fired) {
         plugin.engine->setInterrupted(false);
         if (plugin.engine->hasError())
@@ -461,6 +475,148 @@ void ScriptHost::fault(Plugin &plugin, const QString &why)
         p->state = PluginState::Error;
         emit pluginsChanged();
     });
+}
+
+bool ScriptHost::beginTransaction(Plugin &plugin, const QString &name, QString *error)
+{
+    EditTransaction &tx = m_transaction;
+    if (m_inDocumentNotify) {
+        *error = tr("a transaction can't start inside a song.changed listener");
+        return false;
+    }
+    if (tx.open()) {
+        if (tx.owner != &plugin) {
+            *error = tr("another plugin's transaction ('%1') is in progress").arg(tx.name);
+            return false;
+        }
+        if (tx.inCall) {
+            *error = tr("porydaw.edit re-entered from a listener: a song.changed listener "
+                        "can't edit during the edit that woke it");
+            return false;
+        }
+        if (tx.aborted) {
+            *error = tr("transaction '%1' was aborted: %2").arg(tx.name, tx.abortReason);
+            return false;
+        }
+        tx.depth++;
+        return true;
+    }
+    SongDocument *doc = m_session ? &m_session->doc : nullptr;
+    if (!doc) {
+        *error = tr("no song is loaded");
+        return false;
+    }
+    tx = EditTransaction();
+    tx.owner = &plugin;
+    tx.doc = doc;
+    tx.name = name;
+    tx.depth = 1;
+    tx.revision = doc->revision();
+    tx.serial = ++m_transactionSerial;
+    doc->beginEditGroup(name);
+    return true;
+}
+
+bool ScriptHost::commitTransaction(Plugin &plugin, QString *error)
+{
+    EditTransaction &tx = m_transaction;
+    if (!tx.open() || tx.owner != &plugin) {
+        *error = tr("no transaction to commit");
+        return false;
+    }
+    if (tx.depth > 1) {
+        tx.depth--;
+        if (tx.aborted) {
+            *error = tr("transaction '%1' was aborted: %2").arg(tx.name, tx.abortReason);
+            return false;
+        }
+        return true;
+    }
+    if (!tx.aborted && tx.doc && tx.doc->revision() != tx.revision)
+        abortTransaction(tr("the document changed outside the transaction"));
+    if (!tx.aborted && !tx.doc)
+        abortTransaction(tr("the song was closed"));
+    const QString name = tx.name;
+    const QString reason = tx.abortReason;
+    const bool aborted = tx.aborted;
+    if (tx.doc)
+        tx.doc->endEditGroup(/*discard=*/aborted);
+    tx = EditTransaction();
+    if (aborted) {
+        *error = tr("transaction '%1' was rolled back: %2").arg(name, reason);
+        return false;
+    }
+    return true;
+}
+
+void ScriptHost::rollbackTransaction(Plugin &plugin)
+{
+    EditTransaction &tx = m_transaction;
+    if (!tx.open() || tx.owner != &plugin)
+        return;
+    if (!tx.aborted)
+        abortTransaction(tr("rolled back by the script"));
+    if (--tx.depth > 0)
+        return;
+    if (tx.doc)
+        tx.doc->endEditGroup(/*discard=*/true);
+    tx = EditTransaction();
+}
+
+SongDocument *ScriptHost::transactionDocument(Plugin &plugin, QString *error)
+{
+    EditTransaction &tx = m_transaction;
+    if (!tx.open() || tx.owner != &plugin) {
+        *error = tr("must be called inside porydaw.edit.transaction()");
+        return nullptr;
+    }
+    if (tx.inCall) {
+        *error = tr("porydaw.edit re-entered from a listener: a song.changed listener can't "
+                    "edit during the edit that woke it");
+        return nullptr;
+    }
+    if (!tx.aborted && !tx.doc)
+        abortTransaction(tr("the song was closed"));
+    if (!tx.aborted && (!m_session || &m_session->doc != tx.doc.data()))
+        abortTransaction(tr("the active song changed"));
+    if (!tx.aborted && tx.doc->revision() != tx.revision)
+        abortTransaction(tr("the document changed outside the transaction"));
+    if (tx.aborted) {
+        *error = tr("transaction '%1' was aborted: %2").arg(tx.name, tx.abortReason);
+        return nullptr;
+    }
+    tx.inCall = true;
+    return tx.doc.data();
+}
+
+void ScriptHost::transactionEdited()
+{
+    EditTransaction &tx = m_transaction;
+    tx.inCall = false;
+    if (tx.doc)
+        tx.revision = tx.doc->revision();
+}
+
+void ScriptHost::abortTransaction(const QString &reason)
+{
+    if (m_transaction.aborted)
+        return;
+    m_transaction.aborted = true;
+    m_transaction.abortReason = reason;
+}
+
+void ScriptHost::forceRollback(const QString &why)
+{
+    EditTransaction &tx = m_transaction;
+    if (!tx.open())
+        return;
+    if (tx.owner) {
+        log(*tx.owner, LogLevel::Error,
+            tr("transaction '%1' was left open and has been rolled back: %2").arg(tx.name, why));
+    }
+    if (tx.doc)
+        tx.doc->endEditGroup(/*discard=*/true);
+    tx = EditTransaction();
 }
 
 void ScriptHost::watch(Plugin &plugin)
@@ -505,9 +661,12 @@ void ScriptHost::setSession(SongSession *session)
         m_docConnection = connect(&session->doc, &SongDocument::documentChanged, this, [this] {
             if (!m_session)
                 return;
+            const bool outer = m_inDocumentNotify;
+            m_inDocumentNotify = true;
             emitEventAll(
                 QStringLiteral("song.changed"),
                 QVariantMap{{QStringLiteral("revision"), double(m_session->doc.revision())}});
+            m_inDocumentNotify = outer;
         });
     }
     emitEventAll(QStringLiteral("song.activated"),
@@ -537,6 +696,11 @@ void ScriptHost::emitEvent(Plugin &plugin, const QString &event, const QJSValue 
 {
     if (plugin.state != PluginState::Loaded || !plugin.dispatch.isCallable())
         return;
+    // An engine the watchdog has just interrupted can't run listeners —
+    // every call would fail with "Interrupted" — and the rollback of its
+    // open transaction fans song.changed right back at it.
+    if (plugin.engine->isInterrupted())
+        return;
     guarded(plugin, [&] { return plugin.dispatch.call({QJSValue(event), payload}); });
 }
 
@@ -565,7 +729,9 @@ QString ScriptHost::evalConsole(const QString &code)
     }
     Plugin &console = *m_console;
     if (!console.engine) {
+        // A faulted console (watchdog) comes back with a fresh engine.
         console.error.clear();
+        console.state = PluginState::Disabled;
         buildEngine(console);
         if (console.state == PluginState::Error)
             return QString();
@@ -611,6 +777,10 @@ bool ScriptHost::runCommand(const QString &fullId)
 
 bool ScriptHost::handleKey(QKeyEvent *event, keymap::Context surface, bool timeSelectionActive)
 {
+    // Escape cancels drags and clears selections on every surface; a
+    // rebind can't take it (registerAction refuses it as a default).
+    if (event->key() == Qt::Key_Escape)
+        return false;
     const auto &keys = keymap::Registry::instance();
     const auto tryPlugin = [&](Plugin &plugin) {
         if (plugin.state != PluginState::Loaded)
@@ -685,6 +855,15 @@ QString ScriptHost::registerAction(Plugin &plugin, const QString &actionId, cons
                 tr("action \"%1\": default shortcut \"%2\" is not a valid key sequence; "
                    "registered without one")
                     .arg(actionId, part));
+            keysText.clear();
+            break;
+        }
+        // Escape is every surface's cancel key and deliberately not a
+        // keymap command, so the conflict scan below can't protect it.
+        if (seq == QKeySequence(Qt::Key_Escape)) {
+            log(plugin, LogLevel::Warning,
+                tr("action \"%1\": Escape can't be a plugin shortcut; registered without one")
+                    .arg(actionId));
             keysText.clear();
             break;
         }

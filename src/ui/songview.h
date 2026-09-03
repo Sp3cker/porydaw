@@ -523,6 +523,25 @@ class SongView : public QWidget
     // now framing the empty space.
     void insertTimeSelectionSpace();
     void pasteRangeAtEditCursor();
+    // The roll's note selection resolved to document notes (keys that no
+    // longer match a note are skipped). Results go stale on any mutation.
+    std::vector<DocNote> resolveSelection() const;
+    // Ctrl+Up/Down (Shift: octave) on the note selection. Transposes keep
+    // intervals: if any selected note would clamp at the key range, the
+    // whole move is a no-op. The selection follows the notes and the row
+    // the move headed toward scrolls into view just enough. mergeable
+    // marks a keyboard press (SongDocument::moveNotes). Returns whether
+    // anything moved.
+    bool transposeSelection(int dKey, bool mergeable = true);
+    // Ctrl+Left/Right on the note selection: the earliest selected note's
+    // start moves to the previous/next ruler grid line — absolute
+    // positions, like a draw or edge resize, so an off-grid selection
+    // lands on the grid first — and the rest keep their offsets from it.
+    // Selection and view follow. Returns whether anything moved.
+    bool nudgeSelection(bool right, bool mergeable = true);
+    // The tick span the roll viewport currently shows (from is clamped to
+    // 0: the lead pad before the song start is not a tick).
+    void visibleTickRange(uint64_t *from, uint64_t *to) const;
     // Ctrl+Up/Down on the selection: transpose every covered note (all
     // scoped tracks at once). Same all-or-nothing rule as the roll's note
     // selection — if any note would clamp at the key range, nothing moves.

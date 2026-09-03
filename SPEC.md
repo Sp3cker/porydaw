@@ -56,8 +56,9 @@ Four layers; dependencies point downward only.
 ├─────────────────────────────────────────────────────────┤
 │  Script host (C++ · QJSEngine, src/scripting/)          │
 │  plugin discovery/manifests · per-plugin JS engine +    │
-│  watchdog · hot reload · `porydaw.*` facades · Script   │
-│  Console dock · Settings → Plugins (docs/scripting/)    │
+│  watchdog · hot reload · `porydaw.*` facades · edit     │
+│  transactions (one undo entry each) · Script Console    │
+│  dock · Settings → Plugins (docs/scripting/)            │
 ├─────────────────────────────────────────────────────────┤
 │  Document + Sequencer (C++)                             │
 │  SongDocument (in-memory SMF + m4a semantics) · undo/   │
@@ -250,6 +251,11 @@ It never touches `song_table.inc`, `include/constants/songs.h`, `ld_script.ld`,
   Reload / Reload All, and Open Plugins Folder. Plugin-registered commands
   appear in Settings → Keyboard Shortcuts under the plugin's name and are
   rebindable like shipped commands (docs/scripting/PLAN.md, API.md).
+  Plugin edits go through `porydaw.edit.transaction`, which wraps any
+  number of document calls in one `QUndoStack` macro named after the
+  transaction (`SongDocument::beginEditGroup/endEditGroup`); a script
+  error, a foreign edit while it is open, or a watchdog interrupt rolls
+  the whole transaction back and leaves neither an undo nor a redo entry.
 - **Center — Arrangement + Piano roll:** track headers (≤ 16 tracks; name, instrument,
   mute/solo, volume/pan mini-controls) beside a shared-timeline piano roll. Selected
   track is editable; other tracks ghosted. `M`/`S` (rebindable) toggle mute/solo over

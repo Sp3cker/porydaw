@@ -1,6 +1,6 @@
 # Scripting / Plugins — Scoping & Plan
 
-Status: **decided 2026-09-02, Phase 0 in progress**. Facts about the
+Status: **decided 2026-09-02; Phases 0–2 landed (2026-09-03)**. Facts about the
 current codebase (file/line refs) were verified against `scripting` branch tip
 `52428aa`; the **DECIDE** items below were resolved as follows:
 
@@ -278,9 +278,9 @@ engine usable after clearing the flag). The watchdog assertion's 5 s cap is
 enforced by the watchdog thread itself (`_Exit(1)`), negative-tested by
 disabling the interrupt. Size delta on the Linux shared build: +25 KB
 (5,896,432 → 5,921,368 bytes; `libQt6Qml.so` is loaded dynamically).
-**Owed: the Windows static build** (`-DPORYDAW_SCRIPTING=ON` vs `OFF` exe
-sizes) — the static kit already ships `Qt6Qml`, so this is a size
-measurement, not a feasibility gate. Gotcha: after adding
+Windows static build measured by the user (2026-09-03): the exe is
+about 85 MB with `PORYDAW_SCRIPTING=ON`, a ~20 MB increase over OFF —
+judged very reasonable, so the §2 Lua fallback is retired for good. Gotcha: after adding
 `src/scriptcheck.cpp` to an already-configured tree, automoc did not scan
 it (`scriptcheck.moc: No such file`) until `build/porydaw_autogen` and
 `CMakeFiles/porydaw_autogen.dir/ParseCache.txt` were deleted.
@@ -330,14 +330,53 @@ fixture plugin, action appears in `Registry`, dispatches through
 `handleEditKey`, watchdog interrupts an infinite loop, error surfaces in
 console.
 
-**Phase 2 — Editing API (≈1–2 weeks).** `edit.transaction` + all mutation
+**Phase 2 — Editing API.** LANDED 2026-09-03 on branch `scripting`:
+`porydaw.edit.*` (`EditApi`), `porydaw.view.*` (`ViewApi`),
+`selection.setTime/clearTime`, the transaction machinery
+(`ScriptHost::{begin,commit,rollback}Transaction`, `EditTransaction`)
+over a new `SongDocument::beginEditGroup/endEditGroup` (one `QUndoStack`
+macro; a discarded or empty group is undone and dropped from the redo
+side via an obsolete no-op push, so the stack looks untouched), and
+`PianoRoll::transposeSelection/nudgeSelection/resolveSelection` hoisted
+to public `SongView` methods (the roll keeps its audition/repaint
+wrapper). Guards: optimistic revision check per call and at commit,
+re-entrancy from `song.changed` listeners refused, transactions from
+inside the `song.changed` fan-out refused (without this a plugin
+starting one during an undo corrupts the stack — the harness negative
+segfaults), one open transaction at a time, forced rollback when the
+watchdog interrupts an open one or the owner unloads. Bundled example
+`plugins/examples/note-tools` (Legato, Insert chord, Humanize, Strum,
+Quantize; Ctrl+Shift+L/K/H/U/G). Harness section `runEditChecks` in
+`--scriptcheck`: refusal outside a transaction, one entry per
+transaction with byte-identical SMF after undo, empty/nested/swallowed
+cases, revision guard (a `harness` bridge injected into the console
+engine makes a C++ edit mid-transaction), listener re-entrancy, the
+watchdog inside a transaction, the kitchen-sink of every call, and each
+Note Tools command; four assertions negative-tested. Found and fixed a
+Phase 1 bug: a faulted Script Console never got a fresh engine
+(`evalConsole` saw the stale Error state). Code-reviewed 2026-09-03, all
+8 findings fixed: the edit-group macro now opens lazily on the first
+push (an eager `beginMacro` deleted the user's redo list on a no-op or
+failed transaction), Escape refused as a plugin default and ignored by
+the plugin key handler, track arguments validated as real integers in
+the prelude (`trackArg`) and in C++ scope/lane parsing (`variantTrack`),
+`addNotes` rejects non-object entries and resolves same-(tick, key)
+batch entries last-wins, `selection.setNotes` accepts a single note,
+events skip an interrupted engine (a rollback's `song.changed` fan-out
+logged one bogus "Interrupted" per undone child), and `resolveNotes`
+does one sweep instead of `findNote` per id. Five more harness
+assertions cover these, negative-tested for the lazy macro. Deferred: `moveRange/
+duplicateRange` (need SongView's private range gathering), raw SMF
+edits, `song.rawEvents` (Phase 4). ← **archetype 1 ships here.**
+
+Original scope (≈1–2 weeks). `edit.transaction` + all mutation
 calls, `selection.set*`, `cursor.set`, `view.*`, revision guard, hoist
 `PianoRoll::transposeSelection/nudgeSelection` to SongView. Bundled
 examples: *Legato*, *Insert chord at cursor*, *Humanize velocities*,
 *Strum selection*, *Quantize to grid*. Harness: each example runs against a
 fixture song, produces exactly one undo entry, undo restores byte-identical
 SMF (`--smfcheck` style), exception mid-transaction leaves the document
-unchanged. ← **archetype 1 ships here.**
+unchanged.
 
 **Phase 3 — Realtime + widgets (≈2 weeks).** Audio tap + analysis, `audio.on
 ('frame')`, `transport.on('beat'|'tick')`, `ui.dock` (A or B per §5),

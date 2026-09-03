@@ -408,6 +408,21 @@ class SongDocument : public QObject
     QString trackName(int engineTrack) const;
     void renameTrack(int engineTrack, const QString &name);
 
+    // Undo grouping for callers that issue several edits as one user-level
+    // action (a script transaction): every edit pushed between
+    // beginEditGroup and the matching endEditGroup lands in one undo entry
+    // named text. Groups nest by flattening into the outermost. The macro
+    // opens lazily on the group's first push, so a group that pushes
+    // nothing leaves the stack untouched — redo list and clean state
+    // included. endEditGroup with discard reverts the group's edits; a
+    // discarded group leaves no entry and no redo of its own. Returns
+    // whether an entry remains (always false for a nested end). Only the
+    // outermost group's discard flag matters; a nested discard is
+    // remembered until the outermost end.
+    void beginEditGroup(const QString &text);
+    bool endEditGroup(bool discard = false);
+    int editGroupDepth() const { return m_editGroupDepth; }
+
     void setCfg(const SongCfg &cfg);
 
     // Playable projection for the audio engine (MidiTimeline::build).
@@ -582,6 +597,13 @@ class SongDocument : public QObject
     bool m_hadCfgLine = false;
     QUndoStack m_undoStack;
     uint64_t m_revision = 0;
+    int m_editGroupDepth = 0;
+    bool m_editGroupDiscard = false;
+    bool m_editGroupMacroOpen = false;
+    QString m_editGroupText;
+    // Every push goes through here so an open edit group can start its
+    // macro on the first command.
+    void pushCommand(QUndoCommand *command);
     // Monotonic across loads (never reset), so a stale NoteId from before a
     // reload can never alias a freshly minted one.
     uint64_t m_nextNoteId = 1;

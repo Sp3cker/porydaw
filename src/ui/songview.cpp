@@ -2483,87 +2483,28 @@ class PianoRoll : public TimelineSurface
     }
 
     // Resolves the current selection to document notes (skips stale ids).
-    std::vector<DocNote> resolveSelection() const
-    {
-        std::vector<DocNote> notes;
-        SongDocument *doc = m_sv->document();
-        if (!doc)
-            return notes;
-        for (const SongView::NoteKey &id : m_sv->selection()) {
-            DocNote note;
-            if (doc->findNote(m_sv->selectedTrack(), id.tick, id.key, &note))
-                notes.push_back(note);
-        }
-        return notes;
-    }
+    std::vector<DocNote> resolveSelection() const { return m_sv->resolveSelection(); }
 
-    // Ctrl+Up/Down (Shift: octave). Transposes keep intervals: if any
-    // selected note would clamp at the key range, the whole move is a
-    // no-op. The first note sounds at its new pitch, like a vertical
-    // drag; the key release ends it (keyReleaseEvent).
+    // Ctrl+Up/Down (Shift: octave): SongView::transposeSelection, plus the
+    // roll's own feedback — the first note sounds at its new pitch, like a
+    // vertical drag; the key release ends it (keyReleaseEvent).
     void transposeSelection(int dKey)
     {
-        SongDocument *doc = m_sv->document();
-        const std::vector<DocNote> notes = resolveSelection();
-        if (!doc || notes.empty())
+        if (!m_sv->transposeSelection(dKey))
             return;
-        for (const DocNote &note : notes) {
-            const int key = int(note.key) + dKey;
-            if (key < 0 || key > 127)
-                return;
+        const std::vector<DocNote> notes = resolveSelection();
+        if (!notes.empty()) {
+            auditionKey(notes.front().key, notes.front().velocity, notes.front().tick);
+            m_auditioned = true;
         }
-        doc->moveNotes(notes, 0, dKey, /*mergeable=*/true);
-        // Follow the notes with the selection.
-        std::vector<SongView::NoteKey> ids;
-        for (const DocNote &note : notes)
-            ids.push_back({uint32_t(note.tick), uint8_t(int(note.key) + dKey)});
-        m_sv->setSelection(std::move(ids));
-        // Keep the moved notes in sight: the row the move headed toward
-        // scrolls into view just enough (no re-centering).
-        int edge = int(notes.front().key) + dKey;
-        for (const DocNote &note : notes) {
-            const int key = int(note.key) + dKey;
-            edge = dKey > 0 ? std::max(edge, key) : std::min(edge, key);
-        }
-        m_sv->ensureKeyVisible(edge);
-        auditionKey(int(notes.front().key) + dKey, notes.front().velocity, notes.front().tick);
-        m_auditioned = true;
         invalidateContent();
     }
 
-    // Ctrl+Left/Right. The earliest selected note's start moves to the
-    // previous/next ruler grid line — absolute positions, like a draw or
-    // edge resize, so an off-grid selection lands on the grid first —
-    // and the rest keep their offsets from it.
+    // Ctrl+Left/Right: SongView::nudgeSelection.
     void nudgeSelection(bool right)
     {
-        SongDocument *doc = m_sv->document();
-        const std::vector<DocNote> notes = resolveSelection();
-        if (!doc || notes.empty())
-            return;
-        uint64_t anchor = UINT64_MAX;
-        for (const DocNote &note : notes)
-            anchor = std::min(anchor, note.tick);
-        const uint64_t snapped = right ? m_sv->snapTickUp(double(anchor) + 1.0)
-                                       : m_sv->snapTickDown(double(anchor) - 1.0);
-        const int64_t dTick = int64_t(snapped) - int64_t(anchor);
-        if (dTick == 0)
-            return;
-        doc->moveNotes(notes, dTick, 0, /*mergeable=*/true);
-        // Follow the notes with the selection.
-        std::vector<SongView::NoteKey> ids;
-        for (const DocNote &note : notes)
-            ids.push_back({uint32_t(int64_t(note.tick) + dTick), note.key});
-        m_sv->setSelection(std::move(ids));
-        // Keep the moved notes in sight, scrolling just enough.
-        uint64_t lo = UINT64_MAX, hi = 0;
-        for (const DocNote &note : notes) {
-            const uint64_t tick = uint64_t(int64_t(note.tick) + dTick);
-            lo = std::min(lo, tick);
-            hi = std::max(hi, tick + note.duration);
-        }
-        m_sv->ensureRangeVisible(lo, hi, right);
-        invalidateContent();
+        if (m_sv->nudgeSelection(right))
+            invalidateContent();
     }
 
     // Fills the clipboard with the notes as a plain note clip (span 0,
@@ -9439,6 +9380,84 @@ void SongView::deleteTimeSelection()
     const int points = int(edit.removePoints.size());
     m_document->applyRangeEdit(tr("delete range"), edit);
     announce(tr("Deleted range: %1 note(s), %2 automation point(s)").arg(notes).arg(points));
+}
+
+std::vector<DocNote> SongView::resolveSelection() const
+{
+    std::vector<DocNote> notes;
+    if (!m_document)
+        return notes;
+    for (const NoteKey &id : m_selection) {
+        DocNote note;
+        if (m_document->findNote(m_selectedTrack, id.tick, id.key, &note))
+            notes.push_back(note);
+    }
+    return notes;
+}
+
+bool SongView::transposeSelection(int dKey, bool mergeable)
+{
+    const std::vector<DocNote> notes = resolveSelection();
+    if (!m_document || notes.empty() || dKey == 0)
+        return false;
+    for (const DocNote &note : notes) {
+        const int key = int(note.key) + dKey;
+        if (key < 0 || key > 127)
+            return false;
+    }
+    m_document->moveNotes(notes, 0, dKey, mergeable);
+    // Follow the notes with the selection.
+    std::vector<NoteKey> ids;
+    for (const DocNote &note : notes)
+        ids.push_back({uint32_t(note.tick), uint8_t(int(note.key) + dKey)});
+    setSelection(std::move(ids));
+    // Keep the moved notes in sight: the row the move headed toward
+    // scrolls into view just enough (no re-centering).
+    int edge = int(notes.front().key) + dKey;
+    for (const DocNote &note : notes) {
+        const int key = int(note.key) + dKey;
+        edge = dKey > 0 ? std::max(edge, key) : std::min(edge, key);
+    }
+    ensureKeyVisible(edge);
+    return true;
+}
+
+bool SongView::nudgeSelection(bool right, bool mergeable)
+{
+    const std::vector<DocNote> notes = resolveSelection();
+    if (!m_document || notes.empty())
+        return false;
+    uint64_t anchor = UINT64_MAX;
+    for (const DocNote &note : notes)
+        anchor = std::min(anchor, note.tick);
+    const uint64_t snapped =
+        right ? snapTickUp(double(anchor) + 1.0) : snapTickDown(double(anchor) - 1.0);
+    const int64_t dTick = int64_t(snapped) - int64_t(anchor);
+    if (dTick == 0)
+        return false;
+    m_document->moveNotes(notes, dTick, 0, mergeable);
+    // Follow the notes with the selection.
+    std::vector<NoteKey> ids;
+    for (const DocNote &note : notes)
+        ids.push_back({uint32_t(int64_t(note.tick) + dTick), note.key});
+    setSelection(std::move(ids));
+    // Keep the moved notes in sight, scrolling just enough.
+    uint64_t lo = UINT64_MAX, hi = 0;
+    for (const DocNote &note : notes) {
+        const uint64_t tick = uint64_t(int64_t(note.tick) + dTick);
+        lo = std::min(lo, tick);
+        hi = std::max(hi, tick + note.duration);
+    }
+    ensureRangeVisible(lo, hi, right);
+    return true;
+}
+
+void SongView::visibleTickRange(uint64_t *from, uint64_t *to) const
+{
+    const double first = tickAtContentX(0);
+    const double last = tickAtContentX(viewportWidth());
+    *from = first > 0.0 ? uint64_t(first) : 0;
+    *to = last > 0.0 ? uint64_t(std::ceil(last)) : 0;
 }
 
 void SongView::transposeTimeSelection(int dKey)

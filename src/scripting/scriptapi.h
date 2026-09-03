@@ -128,6 +128,111 @@ class SelectionApi : public ApiObject
     Q_INVOKABLE void setNotes(const QVariantList &ids);
     Q_INVOKABLE void clear();
     Q_INVOKABLE void selectTrack(int track);
+    // {start, end, scope?: 'tracks'|'lanes', lanes?: [{track, cc}]}: a
+    // time selection. Track scope covers the header-selected tracks
+    // (trackMask); lanes scope needs at least one lane.
+    Q_INVOKABLE void setTime(const QVariantMap &spec);
+    Q_INVOKABLE void clearTime();
+};
+
+// porydaw.edit: every document mutation, allowed only inside a transaction
+// (ScriptHost::beginTransaction) so a script action is one undo entry.
+// Note arguments are id lists; ids that no longer resolve are skipped and
+// the count of notes actually edited is returned. Ticks/keys/velocities/
+// values are clamped to their ranges. Structural arguments (a bad track,
+// cc, or scope) throw.
+class EditApi : public ApiObject
+{
+    Q_OBJECT
+    Q_PROPERTY(bool active READ active)
+  public:
+    using ApiObject::ApiObject;
+    bool active() const;
+    Q_INVOKABLE void begin(const QString &name);
+    Q_INVOKABLE void commit();
+    Q_INVOKABLE void rollback();
+
+    // [{tick, key, len, vel}] → the new notes' ids (same order; 0 where a
+    // later note in the batch replaced it).
+    Q_INVOKABLE QVariantList addNotes(int track, const QVariantList &notes);
+    Q_INVOKABLE int deleteNotes(const QVariantList &ids);
+    Q_INVOKABLE int moveNotes(const QVariantList &ids, double dTick, int dKey);
+    // dLen: change in length. fromLeft moves the note-on instead of the
+    // note-off (the end stays put).
+    Q_INVOKABLE int resizeNotes(const QVariantList &ids, double dLen, bool fromLeft);
+    // [{id, vel}]
+    Q_INVOKABLE int setVelocities(const QVariantList &pairs);
+    Q_INVOKABLE int nudgeVelocity(const QVariantList &ids, int delta);
+
+    Q_INVOKABLE void addLanePoint(int track, int cc, double tick, int value);
+    // Replaces the lane's points in [from, to] with [{tick, value}].
+    Q_INVOKABLE void writeLanePoints(int track, int cc, double from, double to,
+                                     const QVariantList &points);
+    // [{tick, newTick?, newValue?}]; points that don't exist are skipped.
+    Q_INVOKABLE int moveLanePoints(int track, int cc, const QVariantList &moves);
+    Q_INVOKABLE int deleteLanePoints(int track, int cc, const QVariantList &ticks);
+
+    Q_INVOKABLE void setStartTempo(int bpm);
+    // null/undefined removes the marker.
+    Q_INVOKABLE void setLoop(const QJSValue &start, const QJSValue &end);
+    Q_INVOKABLE void setTimeSig(double tick, int numerator, int denominator);
+    Q_INVOKABLE void deleteTimeSig(double tick);
+
+    // scope: {tracks?: [i], lanes?: [{track, cc}], wholeSong?: bool}.
+    Q_INVOKABLE bool removeTimeRange(double start, double end, const QVariantMap &scope);
+    Q_INVOKABLE bool insertTimeRange(double at, double span, const QVariantMap &scope);
+
+    Q_INVOKABLE int addTrack(int voice);
+    Q_INVOKABLE int duplicateTrack(int track);
+    Q_INVOKABLE void deleteTrack(int track);
+    Q_INVOKABLE bool moveTrack(int track, int target);
+    Q_INVOKABLE void renameTrack(int track, const QString &name);
+
+    // The roll's keyboard transpose/nudge on the current note selection.
+    Q_INVOKABLE bool transposeSelection(int dKey);
+    Q_INVOKABLE bool nudgeSelection(bool right);
+
+  private:
+    // Begins an edit call: the transaction's document, or nullptr after
+    // throwing. Pair with done().
+    SongDocument *begin();
+    void done();
+    std::vector<DocNote> resolveNotes(const SongDocument *d, const QVariantList &ids) const;
+    bool checkTrack(const SongDocument *d, int track, const char *api);
+    // Validates a lane address; returns the document's engine track for it
+    // (-1 for the tempo lane) or -2 after throwing.
+    int laneTrack(const SongDocument *d, int track, int cc, const char *api);
+};
+
+// porydaw.view: the roll's camera and lane visibility (view state, no
+// undo entries).
+class ViewApi : public ApiObject
+{
+    Q_OBJECT
+    Q_PROPERTY(bool velocityLane READ velocityLane WRITE setVelocityLane)
+    Q_PROPERTY(bool automationLanes READ automationLanes WRITE setAutomationLanes)
+    Q_PROPERTY(bool tempoLane READ tempoLane WRITE setTempoLane)
+    Q_PROPERTY(bool eventList READ eventList WRITE setEventList)
+    Q_PROPERTY(double pxPerBeat READ pxPerBeat)
+    Q_PROPERTY(double keyHeight READ keyHeight)
+  public:
+    using ApiObject::ApiObject;
+    bool velocityLane() const;
+    void setVelocityLane(bool on);
+    bool automationLanes() const;
+    void setAutomationLanes(bool on);
+    bool tempoLane() const;
+    void setTempoLane(bool on);
+    bool eventList() const;
+    void setEventList(bool on);
+    double pxPerBeat() const;
+    double keyHeight() const;
+    // {from, to} ticks the roll viewport shows, or null without a song.
+    Q_INVOKABLE QVariant visibleTicks() const;
+    Q_INVOKABLE void revealTick(double tick);
+    Q_INVOKABLE void revealRange(double from, double to);
+    Q_INVOKABLE bool revealNote(double id);
+    Q_INVOKABLE void revealKey(int key);
 };
 
 class CursorApi : public ApiObject

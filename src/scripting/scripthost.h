@@ -25,6 +25,7 @@ class QFileSystemWatcher;
 class QJSEngine;
 class QKeyEvent;
 class QTimer;
+class SongDocument;
 struct SongSession;
 
 namespace scripting {
@@ -77,6 +78,30 @@ struct Plugin {
     bool builtin = false; // the console's own engine: no manifest, no reload
     QTimer *reloadTimer = nullptr;
     QStringList watchedPaths;
+};
+
+// A script edit transaction (`porydaw.edit.transaction`, API.md): one
+// SongDocument edit group — one undo entry — owned by one plugin. Nested
+// transactions of the owner flatten (depth); another plugin can't open
+// one while it runs (its edits would land in the owner's undo entry).
+// Optimistic concurrency: the transaction expects the document's revision
+// to be exactly what its own last edit produced; a foreign mutation in
+// between (an undo from a nested event loop, say) aborts it, and an
+// aborted transaction refuses every further edit and rolls back on
+// commit. inCall is the re-entrancy guard: an edit fires song.changed
+// synchronously, so a listener that edits back would see a half-updated
+// revision — it is refused instead.
+struct EditTransaction {
+    Plugin *owner = nullptr;
+    QPointer<SongDocument> doc;
+    QString name;
+    int depth = 0;
+    uint64_t revision = 0;
+    uint64_t serial = 0; // distinguishes transactions begun inside a guarded call
+    bool aborted = false;
+    QString abortReason;
+    bool inCall = false;
+    bool open() const { return depth > 0; }
 };
 
 // Interrupts a plugin engine whose single call into script overruns its
@@ -136,6 +161,8 @@ class ScriptHost : public QObject
     void unloadAll();
 
     QStringList pluginIds() const;
+    // Also answers "console" with the Script Console's own plugin (once
+    // the REPL has run).
     const Plugin *plugin(const QString &id) const;
     // Persisted under plugins/<id>/enabled; loads or unloads immediately.
     void setEnabled(const QString &id, bool enabled);
@@ -166,6 +193,22 @@ class ScriptHost : public QObject
     // Emits an event to one plugin / every loaded plugin (prelude dispatch).
     void emitEvent(Plugin &plugin, const QString &event, const QJSValue &payload);
     void emitEventAll(const QString &event, const QVariant &payload);
+    // "Name: message (file:line)" plus the stack, for the console.
+    QString formatError(const QJSValue &error) const;
+
+    // Edit transactions (EditTransaction above). begin/commit return false
+    // with *error set; the prelude turns that into a thrown Error.
+    bool beginTransaction(Plugin &plugin, const QString &name, QString *error);
+    bool commitTransaction(Plugin &plugin, QString *error);
+    void rollbackTransaction(Plugin &plugin);
+    // Every edit call starts here: the document to edit, or nullptr with
+    // *error (no transaction, another plugin's, re-entered from a
+    // listener, aborted, or the revision guard tripped — the last two
+    // abort the transaction). A non-null result must be followed by
+    // transactionEdited() once the edit is done.
+    SongDocument *transactionDocument(Plugin &plugin, QString *error);
+    void transactionEdited();
+    const EditTransaction &transaction() const { return m_transaction; }
 
   signals:
     // Plugin list or a plugin's state changed.
@@ -184,12 +227,15 @@ class ScriptHost : public QObject
     // Runs `fn` (a call into the engine) under the watchdog; on interrupt
     // the plugin is faulted (disabled until reload) and an error returned.
     QJSValue guarded(Plugin &plugin, const std::function<QJSValue()> &fn);
+    void abortTransaction(const QString &reason);
+    // Closes a transaction its owner can no longer finish (interrupted by
+    // the watchdog, torn down): reverts and logs.
+    void forceRollback(const QString &why);
     void fault(Plugin &plugin, const QString &why);
     void watch(Plugin &plugin);
     void unwatch(Plugin &plugin);
     void onPathChanged(const QString &path);
     void runPluginAction(Plugin &plugin, const QString &fullId);
-    QString formatError(const QJSValue &error) const;
     static bool enabledSetting(const QString &id);
 
     HostBindings m_bindings;
@@ -203,6 +249,12 @@ class ScriptHost : public QObject
     SongSession *m_session = nullptr;
     QMetaObject::Connection m_docConnection;
     int m_lastTransport = -1;
+    EditTransaction m_transaction;
+    uint64_t m_transactionSerial = 0;
+    // Inside the song.changed fan-out: a transaction begun there would push
+    // onto the undo stack while it is mid-undo/redo (the notification comes
+    // from inside QUndoStack::undo), so beginTransaction refuses.
+    bool m_inDocumentNotify = false;
 };
 
 } // namespace scripting
