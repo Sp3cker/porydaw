@@ -20,15 +20,6 @@ std::optional<int> baseFontPx();
 /// callers can reassert it against desktop components that reset the
 /// application font behind Qt's back.
 std::optional<QFont> bodyFont();
-/// Swaps the semantic font scale between the bundled typeface and the
-/// platform font captured before installation. Callers must reapply the
-/// theme afterwards so already-polished widgets pick up the change.
-void setUseSystemFont(bool preferred);
-/// Resolved family of the platform font captured before the bundled install.
-QString systemFontFamily();
-/// Family of the platform's fixed-pitch font, used for Body Mono when the
-/// system font is preferred.
-QString systemMonoFamily();
 QFont bodyMono(const QFont &body);
 /// Fixed-pitch tabular font for compact numeric table cells.
 QFont tableMono(const QFont &body);

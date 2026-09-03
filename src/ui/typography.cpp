@@ -16,11 +16,6 @@ constexpr auto bodyScale = 1.125;
 
 std::optional<int> capturedBaseFontPx;
 std::optional<QFont> installedBodyFont;
-// The pre-install platform font and fixed family back the user-facing
-// system-font preference: the semantic scale swaps onto them wholesale.
-std::optional<QFont> capturedPlatformFont;
-QString capturedFixedFamily;
-bool systemFontPreferred = false;
 constexpr QFont::Tag tabularNumbersTag{"tnum"};
 
 void enableTabularNumbers(QFont &font)
@@ -37,24 +32,6 @@ void setFace(QFont &font, QFont::Weight weight)
     font.setHintingPreference(QFont::PreferNoHinting);
     font.setStyleStrategy(QFont::StyleStrategy(font.styleStrategy() | QFont::PreferAntialias));
     enableTabularNumbers(font);
-}
-
-QFont bundledBody()
-{
-    auto font = *capturedPlatformFont;
-    setFace(font, QFont::Normal);
-    font.setPixelSize(qMax(1, qRound(*capturedBaseFontPx * bodyScale)));
-    return font;
-}
-
-// The platform face at its native size: what every other Qt application on
-// the machine shows for body text.
-QFont systemBody()
-{
-    auto font = *capturedPlatformFont;
-    font.setPixelSize(*capturedBaseFontPx);
-    enableTabularNumbers(font);
-    return font;
 }
 
 int resolvedPixelSize(const QFont &font)
@@ -85,10 +62,6 @@ bool installBundledFonts(QApplication &application)
     const auto baseFontPx = QFontInfo(application.font()).pixelSize();
     if (baseFontPx <= 0)
         return false;
-    if (!capturedPlatformFont) {
-        capturedPlatformFont = application.font();
-        capturedFixedFamily = QFontDatabase::systemFont(QFontDatabase::FixedFont).family();
-    }
     const auto regular = QFontDatabase::addApplicationFont(
         QStringLiteral(":/fonts/AtkinsonHyperlegibleNext-Regular.ttf"));
     const auto semibold = QFontDatabase::addApplicationFont(
@@ -107,7 +80,7 @@ bool installBundledFonts(QApplication &application)
     const auto installed = resolved.family() == QString::fromLatin1(proportionalFamily) &&
                            resolved.pixelSize() == qMax(1, qRound(*capturedBaseFontPx * bodyScale));
     if (installed)
-        installedBodyFont = systemFontPreferred ? systemBody() : font;
+        installedBodyFont = font;
     return installed;
 }
 
@@ -120,35 +93,9 @@ std::optional<QFont> bodyFont()
 {
     return installedBodyFont;
 }
-
-void setUseSystemFont(bool preferred)
-{
-    systemFontPreferred = preferred;
-    if (installedBodyFont)
-        installedBodyFont = preferred ? systemBody() : bundledBody();
-}
-
-QString systemFontFamily()
-{
-    return capturedPlatformFont ? QFontInfo(*capturedPlatformFont).family() : QString();
-}
-
-QString systemMonoFamily()
-{
-    return capturedFixedFamily;
-}
 QFont bodyMono(const QFont &body)
 {
     auto font = body;
-    if (systemFontPreferred && !capturedFixedFamily.isEmpty()) {
-        font.setFamily(capturedFixedFamily);
-        font.setStyleName({});
-        font.setWeight(QFont::Normal);
-        font.setStyle(QFont::StyleNormal);
-        font.setPixelSize(resolvedPixelSize(body));
-        enableTabularNumbers(font);
-        return font;
-    }
     font.setFamily(QString::fromLatin1(monoFamily));
     font.setStyleName(QStringLiteral("Regular"));
     font.setWeight(QFont::Normal);
@@ -168,12 +115,6 @@ QFont tableMono(const QFont &body)
 
 QFont caption(const QFont &source)
 {
-    if (systemFontPreferred && capturedPlatformFont && capturedBaseFontPx) {
-        auto font = *capturedPlatformFont;
-        font.setPixelSize(qMax(1, qRound(*capturedBaseFontPx / 1.25)));
-        enableTabularNumbers(font);
-        return font;
-    }
     auto font = source;
     setFace(font, QFont::Normal);
     font.setPixelSize(capturedBaseFontPx.value_or(resolvedPixelSize(source)));

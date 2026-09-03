@@ -55,23 +55,9 @@ constexpr int kPlaybackUiIntervalMs = 100;
 
 const QString kVelocityColorsKey = QStringLiteral("velocityNoteColors");
 const QString kNoteNamesKey = QStringLiteral("noteNames");
-const QString kSystemFontKey = QStringLiteral("systemFont");
 const QString kFollowPlayheadKey = QStringLiteral("followPlayhead");
 const QString kOutputVolumeKey = QStringLiteral("outputVolume");
 const QString kResonanceSuppressionKey = QStringLiteral("dsp/resonanceSuppression");
-
-void resetInheritedWidgetFonts()
-{
-    QList<QPointer<QWidget>> widgets;
-    widgets.reserve(QApplication::allWidgets().size());
-    for (auto *widget : QApplication::allWidgets())
-        widgets.append(widget);
-
-    for (const auto &widget : widgets) {
-        if (widget && widget->font().resolveMask() == 0)
-            widget->setFont(QFont());
-    }
-}
 
 // SongSettings carries no equality; exact equality of applied inputs is the
 // intent (every field is re-derived from the same sources).
@@ -111,9 +97,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     m_engineSettings = EngineSettings::load();
     m_themeSettings = std::make_unique<QSettings>();
     m_themeController = std::make_unique<themes::ThemeController>(*qApp, *m_themeSettings);
-    // Before restore(): the theme apply installs the Body font, so the
-    // system-font preference must already be in force for the first paint.
-    typography::setUseSystemFont(m_themeSettings->value(kSystemFontKey, false).toBool());
     m_themeController->restore();
     const EditorViewState initialEditorViewState = loadEditorViewState(*m_themeSettings);
     updateWindowFrameTheme();
@@ -602,9 +585,9 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     viewMenu->addAction(polyDockAction);
 
     // App-wide appearance preferences, set off a separator from the
-    // per-song view state above: the theme, the typeface, and the
-    // velocity-hue note fills all persist in QSettings and apply to every
-    // open tab at once.
+    // per-song view state above: the theme and the velocity-hue note
+    // fills all persist in QSettings and apply to every open tab at
+    // once.
     viewMenu->addSeparator();
     QAction *themeAction = viewMenu->addAction(tr("&Theme..."), this, [this] {
         m_themeDialog->show();
@@ -612,31 +595,6 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
         m_themeDialog->activateWindow();
     });
     keys.attach(QStringLiteral("view.theme"), themeAction);
-
-    // The typeface: the bundled Atkinson Hyperlegible scale, or the platform
-    // font other Qt applications use.
-    QAction *systemFontAction = viewMenu->addAction(tr("Use System &Font"));
-    systemFontAction->setCheckable(true);
-    keys.attach(QStringLiteral("view.system_font"), systemFontAction);
-    {
-        QSettings settings;
-        systemFontAction->setChecked(settings.value(kSystemFontKey, false).toBool());
-    }
-    connect(systemFontAction, &QAction::toggled, this, [this](bool on) {
-        QSettings settings;
-        settings.setValue(kSystemFontKey, on);
-        typography::setUseSystemFont(on);
-        if (const auto body = typography::bodyFont()) {
-            QApplication::setFont(*body);
-            // QStyleSheetStyle caches the resolved application font on
-            // already-polished widgets, even when their font resolve mask is
-            // empty. Reassert inheritance before reapplying the theme
-            // stylesheet so derived fonts resolve from the new Body.
-            resetInheritedWidgetFonts();
-        }
-        // Reapply the committed theme to repolish stylesheet-derived fonts.
-        m_themeController->discardPreview();
-    });
 
     m_velocityColorsAction = viewMenu->addAction(tr("Color Notes by &Velocity"));
     m_velocityColorsAction->setCheckable(true);
