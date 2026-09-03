@@ -46,7 +46,6 @@ class EventListView;
 class QKeyEvent;
 class QEvent;
 class QHBoxLayout;
-class QScrollArea;
 class QScrollBar;
 class QSpacerItem;
 class QStackedWidget;
@@ -60,14 +59,12 @@ struct TrackRemap;
 
 namespace songview {
 class TimeRuler;
-class TimeRulerControls;
+class TrackHeaderModel;
 class EditorSelectionModel;
 class PianoRoll;
 class TimelineQuickView;
 class PlayheadOverlay;
 class OtherStrip;
-class TrackHeaderPanel;
-class TrackHeaderRow;
 enum class PianoRollQuickDirty : quint32;
 enum class TimelineQuickDirty : quint16;
 using TimelineQuickDirtySet = QFlags<TimelineQuickDirty>;
@@ -323,7 +320,7 @@ class SongView : public QWidget
     // main window raises it and selects the slot via revealVoiceRequested).
     // revealTrackVoice resolves the track's program at the display position
     // (what currentProgram shows in the header) first. Entry points: the
-    // header row's voice line and context menu, and the event list's
+    // Quick header's voice line and context menu, and the event list's
     // program-change rows.
     void revealVoice(int program);
     void revealTrackVoice(int track);
@@ -345,11 +342,11 @@ class SongView : public QWidget
     void duplicateTrack(int track);
     void deleteTrack(int track);
     void moveTrack(int from, int to);
-    // Inline rename: opens a line editor on the track's header row
-    // (double-click and the context menu land here). commitTrackRename
-    // applies the typed name — queued, since the edit rebuilds the header
-    // panel out from under the editor's own signal — and refuses names
-    // mid2agb would read as loop/label markers, with a status message.
+    // Inline rename: opens the Quick header's edit field (double-click and
+    // the context menu land here). commitTrackRename applies the typed name
+    // queued, since the edit rebuilds the header model while its input is
+    // still active — and refuses names mid2agb would read as loop/label
+    // markers, with a status message.
     void renameTrack(int track);
     void commitTrackRename(int track, const QString &name);
     // Focus the current editing surface (roll or event list), e.g. after an
@@ -552,8 +549,7 @@ class SongView : public QWidget
   private:
     friend class EditorDrawer;
     friend class songview::PianoRoll;
-    friend class songview::TrackHeaderPanel;
-    friend class songview::TrackHeaderRow;
+    friend class songview::TrackHeaderModel;
     struct Geometry {
         int trackHeaderWidth;
         int pianoKeyboardWidth;
@@ -717,8 +713,7 @@ class SongView : public QWidget
     bool m_followScrollPaused = false;
     VelocityGestureModel m_velocityGesture;
     std::unique_ptr<songview::TimeRuler> m_ruler;
-    songview::TimeRulerControls *m_rulerControls = nullptr;
-    songview::TrackHeaderPanel *m_headers = nullptr;
+    songview::TrackHeaderModel *m_headers = nullptr;
     songview::PianoRoll *m_roll = nullptr;
     QPointer<songview::TimelineQuickView> m_quickView;
     songview::PlayheadOverlay *m_playheadOverlay = nullptr;
@@ -727,10 +722,10 @@ class SongView : public QWidget
     EventListView *m_events = nullptr;
     songview::OtherStrip *m_strip = nullptr;
     QScrollBar *m_hbar = nullptr;
-    QScrollArea *m_headerScroll = nullptr;
     QHBoxLayout *m_hbarRow = nullptr;
     QSpacerItem *m_hbarGutter = nullptr;
-    QSpacerItem *m_rulerSpacer = nullptr; // owns the ruler row height
-    QSpacerItem *m_stripSpacer = nullptr; // owns the other-events row height
+    QSpacerItem *m_rulerSpacer = nullptr;  // owns the ruler row height
+    QSpacerItem *m_headerSpacer = nullptr; // reserves the Quick header column
+    QSpacerItem *m_stripSpacer = nullptr;  // owns the other-events row height
     QScrollBar *m_vbar = nullptr;
 };

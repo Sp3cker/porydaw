@@ -215,10 +215,28 @@ Keep `docs/qt-quick-track-headers-plan.md` aligned before starting its implement
 
 Do not alter the rest of the reviewed track-header ownership, geometry, input, or cutover design.
 
+## Active editor-drawer plan correction
+
+Keep `docs/qt-quick-editor-drawer-plan.md` aligned before starting its implementation:
+
+- `DrawerChromeInteraction` implements `hostEnvironmentChanged()`, not
+  `hostAppearanceChanged()`. The override is a no-op.
+- `EditorDrawer::refreshAppearance` takes `const QPalette &` only. It retints icons and
+  snapshot colors. It does not take a font, store a font, dirty chrome metrics, or
+  `arrange()`.
+- Chrome metrics stay `layout::fontPx` and
+  `layout::chromeRowHeight(*typography::bodyFont(), ...)`.
+- SongView wires `refreshAppearance(palette())` from palette/theme/style/DPR, never from
+  `FontChange` or `refreshGeometry`. `arrange()` stays on `refreshGeometry`.
+- Do not add a runtime font-mutation case to drawer checks.
+
+Do not alter the rest of the reviewed drawer ownership, geometry, input, or cutover design.
+
+
 ## Implementation phases
 
-Before Phase 0, commit this plan and the fixed-font corrections to the active track-header plan as
-a docs-only planning commit. Do not include unrelated dirty paths.
+Before Phase 0, commit this plan and the fixed-font corrections to the active track-header
+and editor-drawer plans as a docs-only planning commit. Do not include unrelated dirty paths.
 
 For each implementation phase after Phase 0, use this sequence once at the phase boundary:
 
@@ -281,9 +299,11 @@ Verification:
 
 ### Phase 4: Align the pending track-header plan and finish
 
-Apply only the fixed-font corrections listed above to the pending track-header plan. Run formatting
-on changed C++ files, `git diff --check`, the focused checks, and then the full serial
+Apply only the fixed-font corrections listed above to the pending track-header plan.
+The editor-drawer plan already uses that contract. Run formatting on changed C++
+files, `git diff --check`, the focused checks, and then the full serial
 `deno task verify` suite.
+
 
 The known right-drag piano-selection pixel assertion remains outside this plan. Report it as an
 existing failure if it is still red; do not weaken or delete it here.
@@ -359,3 +379,4 @@ Checks and plan alignment:
 - `src/checks/rollcheckautomation_tempo_paint.cpp`
 - `src/checks/rollcheckplayhead.cpp`
 - `docs/qt-quick-track-headers-plan.md`
+- `docs/qt-quick-editor-drawer-plan.md`

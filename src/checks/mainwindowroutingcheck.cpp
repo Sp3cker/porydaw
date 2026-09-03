@@ -21,8 +21,6 @@
 #include <QMouseEvent>
 #include <QPixmap>
 #include <QPointer>
-#include <QScrollArea>
-#include <QScrollBar>
 #include <QSettings>
 #include <QStatusBar>
 #include <QTabBar>
@@ -60,6 +58,7 @@
 #include "ui/songview/clipmime.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/timelinebandlayout.h"
 #include "ui/workspaceui.h"
 
 namespace {
@@ -1557,16 +1556,16 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                 if (foundSteadySamples) {
                     view.setPlayheadSample(session->timeline()->sampleForTick(firstTick), true);
                     QCoreApplication::processEvents();
-                    AutomationPage *const automationPage = drawer->automationPage();
-                    QWidget *const automationViewport =
-                        automationPage ? automationPage->scrollViewport() : nullptr;
+                    const std::optional<songview::TimelineBandGeometry> automationCaptureGeometry =
+                        view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
                     QString automationCaptureError;
                     const QImage automationBefore =
-                        automationViewport ? checks::support::captureQuickBand(
-                                                 view, *automationViewport, &automationCaptureError)
-                                           : QImage{};
+                        automationCaptureGeometry
+                            ? checks::support::captureQuickBand(
+                                  view, automationCaptureGeometry->rect, &automationCaptureError)
+                            : QImage{};
                     check(!automationBefore.isNull(),
-                          qPrintable(QStringLiteral("automation Quick viewport capture failed: %1")
+                          qPrintable(QStringLiteral("automation Quick band capture failed: %1")
                                          .arg(automationCaptureError)));
                     const auto velocityBefore = velocity->diagnostics();
                     for (uint64_t tick = firstTick + 1; tick <= finalTick; ++tick)
@@ -1579,11 +1578,12 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                           "velocity page did not receive all distinct playhead samples");
                     QString automationAfterError;
                     const QImage automationAfter =
-                        automationViewport ? checks::support::captureQuickBand(
-                                                 view, *automationViewport, &automationAfterError)
-                                           : QImage{};
+                        automationCaptureGeometry
+                            ? checks::support::captureQuickBand(
+                                  view, automationCaptureGeometry->rect, &automationAfterError)
+                            : QImage{};
                     check(!automationAfter.isNull(),
-                          qPrintable(QStringLiteral("automation Quick viewport capture failed: %1")
+                          qPrintable(QStringLiteral("automation Quick band capture failed: %1")
                                          .arg(automationAfterError)));
                     check(automationAfter == automationBefore &&
                               velocity->diagnostics().contentBuildCount ==
@@ -1644,14 +1644,14 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                       "zoom did not invalidate affected velocity content");
                 view.setDrawerActivePage(EditorDrawerPage::Automations);
                 QCoreApplication::processEvents();
-                AutomationPage *const automationThemePage = drawer->automationPage();
-                QWidget *const automationThemeViewport =
-                    automationThemePage ? automationThemePage->scrollViewport() : nullptr;
+                const std::optional<songview::TimelineBandGeometry> automationThemeGeometry =
+                    view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
                 QString themeBeforeError;
                 const QImage automationThemeBefore =
-                    automationThemeViewport ? checks::support::captureQuickBand(
-                                                  view, *automationThemeViewport, &themeBeforeError)
-                                            : QImage{};
+                    automationThemeGeometry
+                        ? checks::support::captureQuickBand(view, automationThemeGeometry->rect,
+                                                            &themeBeforeError)
+                        : QImage{};
                 auto *themeQuickCanvas = view.findChild<songview::TimelineQuickView *>(
                     QStringLiteral("timelineQuickCanvas"));
                 auto *automationThemeInput =
@@ -1666,14 +1666,15 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                 QCoreApplication::processEvents();
                 QString themeAfterError;
                 const QImage automationThemeAfter =
-                    automationThemeViewport ? checks::support::captureQuickBand(
-                                                  view, *automationThemeViewport, &themeAfterError)
-                                            : QImage{};
+                    automationThemeGeometry
+                        ? checks::support::captureQuickBand(view, automationThemeGeometry->rect,
+                                                            &themeAfterError)
+                        : QImage{};
                 check(themeBeforeError.isEmpty() && !automationThemeBefore.isNull() &&
                           themeAfterError.isEmpty() && !automationThemeAfter.isNull() &&
                           automationThemeAfter == automationThemeBefore,
                       qPrintable(QStringLiteral("theme change did not preserve the automation "
-                                                "Quick viewport: before=%1 after=%2")
+                                                "Quick band: before=%1 after=%2")
                                      .arg(themeBeforeError, themeAfterError)));
                 view.setDrawerActivePage(EditorDrawerPage::Velocity);
 
@@ -1719,21 +1720,13 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                               "Quick canvas must expose timelineAutomationInput");
                         check(velocityInput != nullptr,
                               "Quick canvas must expose timelineVelocityInput");
-                        QScrollArea *const automationLifecycleScroll =
-                            automationPage ? automationPage->findChild<QScrollArea *>(
-                                                 QStringLiteral("automationScroll"))
-                                           : nullptr;
-                        QScrollBar *const automationScrollbar =
-                            automationLifecycleScroll
-                                ? automationLifecycleScroll->verticalScrollBar()
-                                : nullptr;
                         // Automation input positions are viewport coordinates; convert
-                        // content positions through the live scrollbar offset.
+                        // content positions through the live page scroll offset.
                         const auto automationViewportPoint = [&](const QPointF &contentPoint) {
                             return QPointF(
                                 contentPoint.x(),
                                 contentPoint.y() -
-                                    qreal(automationScrollbar ? automationScrollbar->value() : 0));
+                                    qreal(automationPage ? automationPage->verticalScroll() : 0));
                         };
                         const auto identityPoint = [](const QPointF &point) { return point; };
                         const auto beginAutomation = [&](Qt::MouseButton button,
@@ -1741,10 +1734,13 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                                                          qreal xOffset) {
                             view.setDrawerActivePage(EditorDrawerPage::Automations);
                             view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
-                            if (automationScrollbar) {
-                                automationScrollbar->setValue(
-                                    qBound(0, int(rowY) - automationScrollbar->pageStep() / 2,
-                                           automationScrollbar->maximum()));
+                            if (automationPage) {
+                                const int automationViewportHeight =
+                                    automationPage->automationViewportSize().height();
+                                automationPage->setVerticalScroll(
+                                    qBound(0, int(rowY) - automationViewportHeight / 2,
+                                           qMax(0, automationPage->automationContentHeight() -
+                                                       automationViewportHeight)));
                             }
                             if (automationInput) {
                                 checks::events::sendMouse(

@@ -21,6 +21,7 @@
 #include <vector>
 
 class AutomationPage;
+class DrawerChrome;
 class QQuickView;
 class SongView;
 class VelocityArea;
@@ -39,6 +40,7 @@ enum class TimelineQuickHoverOwner : quint8 {
 };
 
 class TimeRuler;
+class TrackHeaderModel;
 
 enum class TimelineQuickDirty : quint16 {
     None = 0,
@@ -78,11 +80,16 @@ class TimelineQuickView final : public QWidget
     Q_PROPERTY(bool hoverVisible READ hoverVisible NOTIFY hoverChromeChanged FINAL)
     Q_PROPERTY(qreal editRootContentX READ editRootContentX NOTIFY editChromeChanged FINAL)
     Q_PROPERTY(bool editVisible READ editVisible NOTIFY editChromeChanged FINAL)
+    Q_PROPERTY(qreal hostX READ hostX NOTIFY hostGeometryChanged FINAL)
+    Q_PROPERTY(qreal hostY READ hostY NOTIFY hostGeometryChanged FINAL)
+    Q_PROPERTY(qreal rulerPlotOrigin READ rulerPlotOrigin NOTIFY hostGeometryChanged FINAL)
+    Q_PROPERTY(qreal rulerControlsWidth READ rulerControlsWidth NOTIFY hostGeometryChanged FINAL)
 
   public:
     TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStrip &otherEvents,
                       AutomationPage &automation, VelocityArea &velocity,
-                      VoiceChangeArea &voiceChanges, SongView &songView);
+                      VoiceChangeArea &voiceChanges, DrawerChrome &drawerChrome,
+                      TrackHeaderModel &trackHeaders, SongView &songView);
     ~TimelineQuickView() override;
 
     // Quick-root coordinates; guide publication arrives in SongView coordinates.
@@ -90,6 +97,15 @@ class TimelineQuickView final : public QWidget
     bool hoverVisible() const noexcept;
     qreal editRootContentX() const noexcept;
     bool editVisible() const noexcept;
+    // SongView-local Quick-window envelope origin; QML chrome items subtract
+    // these from SongView-local chrome rects.
+    qreal hostX() const noexcept;
+    qreal hostY() const noexcept;
+    // Root-local ruler plot origin. Ruler gutter controls end before this
+    // coordinate, while ruler marks start at it.
+    qreal rulerPlotOrigin() const noexcept;
+    // Root-local ruler gutter width reserved for the grid controls.
+    qreal rulerControlsWidth() const noexcept;
     void synchronizeGuides(qreal songViewTimelineOriginX,
                            std::optional<qreal> editSongViewContentX);
     void publishHover(TimelineQuickHoverOwner owner, uint64_t tick, qreal songViewContentX);
@@ -98,7 +114,7 @@ class TimelineQuickView final : public QWidget
     QQuickWindow *quickWindow() const;
     void syncAppearance();
     void setBandLayout(TimelineBandLayout layout);
-    // Republishes the stored band layout after native-window lifecycle events
+    // Republishes the stored band layout after Quick-window lifecycle events
     // (show, WinId, DPR); changes neither the canonical value nor dirty domains.
     void refreshBandLayout();
     // Live Quick-window device pixel ratio for camera and projection math;
@@ -113,7 +129,7 @@ class TimelineQuickView final : public QWidget
     // focusedBand() reads live QQuick active focus, never a cached flag.
     bool focusBand(TimelineBand band, Qt::FocusReason reason);
     std::optional<TimelineBand> focusedBand() const;
-    // SongView calls this before destroying its non-QObject ruler module.
+    // SongView calls this before destroying a direct-owned band interaction.
     void detachInputInteraction(TimelineBand band);
 
     void requestUpdate(PianoRollQuickDirtySet dirty);
@@ -123,6 +139,7 @@ class TimelineQuickView final : public QWidget
   signals:
     void hoverChromeChanged();
     void editChromeChanged();
+    void hostGeometryChanged();
 
   protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
@@ -135,6 +152,7 @@ class TimelineQuickView final : public QWidget
     void setHoverChrome(std::optional<qreal> songViewContentX);
     void setEditChrome(std::optional<qreal> songViewContentX);
 
+    void scheduleTimelineBandLayoutPublication();
     void publishTimelineBandLayout();
     void flushUpdate();
     // One sync entry point per band; flushUpdate dispatches one call per
@@ -160,21 +178,28 @@ class TimelineQuickView final : public QWidget
     void synchronizeHoverChip();
 
     TimeRuler *m_ruler = nullptr;
+    QPointer<TrackHeaderModel> m_trackHeaders;
     QPointer<PianoRoll> m_roll;
     QPointer<OtherStrip> m_otherEvents;
     QPointer<AutomationPage> m_automation;
     QPointer<VelocityArea> m_velocity;
     QPointer<VoiceChangeArea> m_voiceChanges;
+    QPointer<DrawerChrome> m_drawerChrome;
     QPointer<SongView> m_songView;
     const TimeCamera &m_camera;
     std::array<TimelineInputItem *, timelineBandIndex(TimelineBand::Count)> m_inputItems{};
+    std::array<TimelineInputItem *, 5> m_drawerChromeInputs{};
     TimelineQuickScene *m_scene = nullptr;
     QQuickView *m_quickView = nullptr;
     QWidget *m_quickContainer = nullptr;
     std::array<TimelineQuickItem *, static_cast<std::size_t>(TimelineQuickLayer::Count)> m_items{};
     std::array<TimelineChromeItem *, 12> m_chromeItems{};
-    std::array<QPointer<QWidget>, 6> m_nativeChrome;
     TimelineBandLayout m_bandLayout;
+    // SongView-local Quick-window envelope: visible band rects united with
+    // Quick-rendered drawer chrome; origin published to QML as hostX/hostY.
+    QRect m_publishedHostRect;
+    qreal m_publishedRulerPlotOrigin = 0.0;
+    qreal m_publishedRulerControlsWidth = 0.0;
     std::optional<qreal> m_hoverSongViewContentX;
     std::optional<qreal> m_editSongViewContentX;
     TimelineQuickHoverOwner m_hoverOwner = TimelineQuickHoverOwner::None;

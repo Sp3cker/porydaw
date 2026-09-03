@@ -8,7 +8,6 @@
 #include <QImage>
 #include <QPixmap>
 #include <QPoint>
-#include <QWidget>
 #include <QtGlobal>
 
 #include <algorithm>
@@ -121,18 +120,6 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
     setPlayhead(tick, false);
     const QColor color = themes::color(themes::Role::song_view_playhead);
     const auto fallbackImage = [&] { return overlay->grab().toImage(); };
-    const auto checkVisibleBody = [&](QWidget &band, const char *name) {
-        const QImage image = fallbackImage();
-        const QRect bandRect = checks::support::widgetRectIn(band, probe);
-        const QRect bodyProbe{qRound(playheadX()) - layout::singlePixel(), bandRect.center().y(),
-                              2 * layout::singlePixel() + 1, layout::singlePixel()};
-        if (image.isNull() || !band.isVisibleTo(&probe) ||
-            !checks::support::hasPlayheadPixel(image, bodyProbe, color)) {
-            failures.append(
-                QStringLiteral("forced QWidget playhead body was not clipped into visible %1")
-                    .arg(QString::fromLatin1(name)));
-        }
-    };
     // Converted bands render in the Quick scene instead of native widgets;
     // their clip checks probe canonical SongView-local rectangles.
     const auto checkVisibleBodyRect = [&](const QRect &bandRect, const char *name) {
@@ -236,7 +223,10 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
     probe.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
     probe.setDrawerActivePage(EditorDrawerPage::Automations);
     checks::support::pumpQuick();
-    checkVisibleBody(*automation->scrollViewport(), "automation viewport");
+    checkVisibleBodyRect(bandLayout.geometry(songview::TimelineBand::Automation)
+                             .value_or(songview::TimelineBandGeometry{})
+                             .rect,
+                         "automation");
     checkVisibleBodyRect(bandLayout.geometry(songview::TimelineBand::OtherEvents)
                              .value_or(songview::TimelineBandGeometry{})
                              .rect,
@@ -264,7 +254,10 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
         setPlayhead(tick + move, true);
     if (checks::support::timelineQuickLayerRevisions(*scene) != beforeMoves)
         failures.append("128 forced QWidget playhead moves rebuilt TimelineQuickLayer data");
-    checkVisibleBody(*automation->scrollViewport(), "automation viewport after position move");
+    checkVisibleBodyRect(bandLayout.geometry(songview::TimelineBand::Automation)
+                             .value_or(songview::TimelineBandGeometry{})
+                             .rect,
+                         "automation after position move");
 
     overlay->setPlayhead(0.0, false, false);
     checks::support::pumpQuick();
@@ -272,10 +265,14 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
     if (checks::support::hasPlayheadPixel(hidden, hidden.rect(), color))
         failures.append("forced QWidget playhead remained painted after a hidden presentation");
 
-    const auto canonicalRectMatches = [&](songview::TimelineBand band, const QWidget &widget) {
-        const std::optional<songview::TimelineBandGeometry> &geometry = bandLayout.geometry(band);
-        return geometry && widget.isVisibleTo(&probe) &&
-               geometry->rect == QRect(widget.mapTo(&probe, QPoint()), widget.size());
+    const auto canonicalAutomationMatches = [&] {
+        const std::optional<songview::TimelineBandGeometry> &geometry =
+            bandLayout.geometry(songview::TimelineBand::Automation);
+        const std::optional<QRect> body = drawer->bodyRect(EditorDrawerPage::Automations);
+        const int scrollbarWidth = layout::space(layout::Space::Two);
+        return geometry && body &&
+               geometry->rect == QRect{body->x() + scrollbarWidth, body->y(),
+                                       std::max(0, body->width() - scrollbarWidth), body->height()};
     };
     const auto canonicalVoiceMatches = [&] {
         const std::optional<songview::TimelineBandGeometry> &geometry =
@@ -288,8 +285,7 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
         return geometry &&
                drawer->bodyRect(EditorDrawerPage::Velocity) == std::optional<QRect>(geometry->rect);
     };
-    if (!canonicalVelocityMatches() || !canonicalVoiceMatches() ||
-        !canonicalRectMatches(songview::TimelineBand::Automation, *automation->scrollViewport())) {
+    if (!canonicalVelocityMatches() || !canonicalVoiceMatches() || !canonicalAutomationMatches()) {
         failures.append("forced QWidget playhead view diverged from the canonical band layout");
     }
 

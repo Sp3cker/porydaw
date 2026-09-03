@@ -5,7 +5,7 @@
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
-#include "ui/songview/trackheaderpanel.h"
+#include "ui/songview/trackheadermodel.h"
 #include "ui/songview/voicepicker.h"
 #include "ui/theme/color_math.h"
 #include "ui/theme/themeruntime.h"
@@ -321,8 +321,8 @@ void SongView::commitTrackRename(int track, const QString &name)
                      .arg(trimmed));
         return;
     }
-    // Queued: the commit arrives from the header row's editor signal, and
-    // the edit rebuilds the header panel — deleting that editor mid-signal.
+    // Queued: the commit originates in the Quick rename field, and the edit
+    // rebuilds its model while the input handler is still active.
     queueHeaderMutation([this, track, trimmed] {
         if (m_document)
             m_document->renameTrack(track, trimmed);

@@ -1,5 +1,6 @@
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/drawerchrome.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
@@ -156,8 +157,10 @@ DrawerPageLiveState SongView::drawerPageLiveState() const
 
 void SongView::cancelActiveInteractions()
 {
-    if (m_editorDrawer && hasVisibleDrawerSection())
+    if (m_editorDrawer) {
         m_editorDrawer->cancelVisiblePageInteraction();
+        m_editorDrawer->chrome().cancelInteraction();
+    }
     if (m_roll)
         m_roll->cancelVelocityInteraction();
     if (m_velocityGesture.active())

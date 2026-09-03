@@ -3,6 +3,7 @@
 #include "checks/support/songfixture.h"
 
 #include "core/velocitymodel.h"
+#include "ui/editordrawer/drawerchrome.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/velocityaxis.h"
@@ -21,7 +22,6 @@
 #include <QFontMetricsF>
 #include <QImage>
 #include <QTemporaryDir>
-#include <QToolButton>
 
 #include "core/miditimeline.h"
 #include "core/noteid.h"
@@ -197,12 +197,9 @@ struct VelocityAreaEnv {
     SongView &view;
     VelocityArea &area;
     VelocityInputHost *host = nullptr;
-    QWidget *drawer = nullptr;
-    QWidget *drawerSections = nullptr;
-    QToolButton *velToggle = nullptr;
-    QWidget *automationBar = nullptr;
-    QToolButton *automationToggle = nullptr;
-    QToolButton *detentToggle = nullptr;
+    DrawerChrome &chrome;
+    songview::TimelineInputItem *barInput = nullptr;
+    songview::TimelineInputItem *detentInput = nullptr;
     songview::TimelineQuickScene *quickScene = nullptr;
     songview::TimelineQuickView *quickView = nullptr;
     DrawerPageLiveState &live;
@@ -352,46 +349,80 @@ int checkDrawerToggleGeometry(VelocityAreaEnv &env)
     const auto check = [&failures](bool condition, const char *message) {
         velocityFail(failures, condition, message);
     };
-    auto *voiceToggle = env.drawerSections ? env.drawerSections->findChild<QToolButton *>(
-                                                 QStringLiteral("voiceChangesDrawerToggle"))
-                                           : nullptr;
-    const auto toggleRect = [&env](QWidget *widget) {
-        return QRect(widget->mapTo(&env.view, QPoint()), widget->size());
-    };
-    const QRect toggleGroup = voiceToggle && env.automationToggle && env.velToggle
-                                  ? toggleRect(voiceToggle)
-                                        .united(toggleRect(env.automationToggle))
-                                        .united(toggleRect(env.velToggle))
-                                  : QRect{};
+    const QRectF voiceToggle = env.chrome.voiceChangesToggleRect();
+    const QRectF automationToggle = env.chrome.automationToggleRect();
+    const QRectF velocityToggle = env.chrome.velocityToggleRect();
+    const QRectF toggleGroup = voiceToggle.united(automationToggle).united(velocityToggle);
     const int pianoKeysCenter = velocityBandRect(env.view).x() + env.area.plotOrigin() / 2;
-    check(voiceToggle && env.velToggle && env.automationBar && env.automationToggle &&
-              env.automationBar->geometry().contains(voiceToggle->geometry()) &&
-              env.automationBar->geometry().contains(env.velToggle->geometry()) &&
-              env.automationToggle->x() ==
-                  voiceToggle->x() + voiceToggle->width() + layout::space(layout::Space::One) &&
-              env.velToggle->x() == env.automationToggle->x() + env.automationToggle->width() +
+    check(env.barInput &&
+              env.barInput->interaction() == &env.chrome.interaction(DrawerChromeTarget::Bar) &&
+              env.barInput->isVisible() &&
+              env.barInput->bounds() == QRectF(QPointF{}, env.chrome.barRect().size()) &&
+              !env.chrome.barRect().isEmpty() && !voiceToggle.isEmpty() &&
+              !automationToggle.isEmpty() && !velocityToggle.isEmpty() &&
+              env.chrome.barRect().contains(voiceToggle) &&
+              env.chrome.barRect().contains(automationToggle) &&
+              env.chrome.barRect().contains(velocityToggle) &&
+              automationToggle.x() ==
+                  voiceToggle.x() + voiceToggle.width() + layout::space(layout::Space::One) &&
+              velocityToggle.x() == automationToggle.x() + automationToggle.width() +
                                         layout::space(layout::Space::One) &&
-              voiceToggle->y() == env.automationToggle->y() &&
-              env.velToggle->y() == env.automationToggle->y() &&
+              voiceToggle.y() == automationToggle.y() &&
+              velocityToggle.y() == automationToggle.y() &&
               std::abs(toggleGroup.center().x() - pianoKeysCenter) <= 1,
-          "drawer toggles must sit together beneath the piano keys");
+          "drawer chrome toggles must sit together beneath the piano keys");
+    return failures;
+}
+
+int checkDrawerToggleInput(VelocityAreaEnv &env)
+{
+    int failures = 0;
+    const auto check = [&failures](bool condition, const char *message) {
+        velocityFail(failures, condition, message);
+    };
+    const bool velocityWasVisible = env.view.drawerSectionVisible(EditorDrawerPage::Velocity);
+    const int heightBefore = env.view.drawerSectionHeight(EditorDrawerPage::Velocity);
+    check(velocityWasVisible && env.barInput && !env.chrome.velocityToggleRect().isEmpty(),
+          "velocity chrome toggle fixture was not visible");
+    if (!velocityWasVisible || !env.barInput || env.chrome.velocityToggleRect().isEmpty())
+        return failures;
+
+    const auto clickVelocityToggle = [&env] {
+        const QPointF localCenter =
+            env.chrome.velocityToggleRect().center() - env.chrome.barRect().topLeft();
+        checks::events::sendMouse(*env.barInput, QEvent::MouseButtonPress, localCenter,
+                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        checks::events::sendMouse(*env.barInput, QEvent::MouseButtonRelease, localCenter,
+                                  Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    };
+    clickVelocityToggle();
+    QApplication::processEvents();
+    check(!env.view.drawerSectionVisible(EditorDrawerPage::Velocity) &&
+              !env.chrome.velocityChecked() && !env.view.editorViewState().velocity.visible &&
+              env.view.drawerSectionHeight(EditorDrawerPage::Velocity) == heightBefore,
+          "drawerBarInput did not hide velocity without losing its retained height");
+    clickVelocityToggle();
+    QApplication::processEvents();
+    check(env.view.drawerSectionVisible(EditorDrawerPage::Velocity) &&
+              env.chrome.velocityChecked() && env.view.editorViewState().velocity.visible &&
+              env.view.drawerSectionHeight(EditorDrawerPage::Velocity) == heightBefore,
+          "drawerBarInput did not reopen velocity with its retained height");
     return failures;
 }
 
 int checkDirectSoundChromeAndFocus(VelocityAreaEnv &env)
 {
-    auto *detentToggle = env.detentToggle =
-        env.drawer->findChild<QToolButton *>(QStringLiteral("velocityDetentToggle"));
     int failures = 0;
     const auto check = [&failures](bool condition, const char *message) {
         velocityFail(failures, condition, message);
     };
-    check(env.detentToggle && env.detentToggle->parentWidget() &&
-              env.detentToggle->parentWidget()->objectName() == QStringLiteral("drawerSections") &&
-              env.detentToggle->isCheckable() && !env.detentToggle->isChecked() &&
-              !env.detentToggle->isEnabled() && !env.detentToggle->isVisible() &&
-              env.detentToggle->focusPolicy() == Qt::NoFocus,
-          "drawer-owned velocity detent toggle must hide for DirectSound");
+    check(env.detentInput &&
+              env.detentInput->interaction() ==
+                  &env.chrome.interaction(DrawerChromeTarget::Detent) &&
+              !env.detentInput->isVisible() && !env.chrome.detentVisible() &&
+              !env.chrome.detentEnabled() && !env.chrome.detentChecked() &&
+              env.chrome.detentRect().isEmpty(),
+          "DrawerChrome detent must hide for DirectSound");
     check(env.area.axis().mode() == VelocityAxis::Mode::Continuous &&
               env.host->accessibilityDescription() == QStringLiteral("Velocity"),
           "DirectSound with no selection should publish the continuous accessible axis");
@@ -1481,7 +1512,7 @@ int checkDetentUnlockGestures(VelocityAreaRig &rig)
               detentUnlockModifiers,
           "velocity detent unlock shortcut must retain its Ctrl default");
     // Earlier density checks resize the canvas directly. Restore container-owned
-    // geometry before asserting sibling rig.env.drawer chrome.
+    // geometry before asserting the sibling Quick drawer chrome.
     const int velocitySectionHeight = rig.env.view.drawerSectionHeight(EditorDrawerPage::Velocity);
     rig.env.view.setDrawerSectionHeight(EditorDrawerPage::Velocity, std::nullopt);
     rig.env.view.setDrawerSectionHeight(EditorDrawerPage::Velocity, velocitySectionHeight);
@@ -1495,6 +1526,7 @@ int checkDetentUnlockGestures(VelocityAreaRig &rig)
         rig.env.live.documentRevision = rig.env.document.revision();
         ++rig.env.live.editCursorTick;
         rig.env.area.refreshLiveState(rig.env.live);
+        QApplication::processEvents();
         const VelocityMap unlockedMap = VelocityMap::resolve(&rig.env.wave, rig.env.notes[0].key);
         const auto isOffDetent = [&unlockedMap](int velocity) {
             return unlockedMap.canonicalize(velocity) != velocity;
@@ -1520,32 +1552,37 @@ int checkDetentUnlockGestures(VelocityAreaRig &rig)
                                      labelHeight),
                               Qt::AlignRight | Qt::AlignVCenter, QStringLiteral("Vol 1"));
         const QPoint areaOrigin = velocityBandRect(rig.env.view).topLeft();
-        const QRect detentBounds = rig.env.detentToggle
-                                       ? QRect(rig.env.detentToggle->mapTo(&rig.env.view, QPoint()),
-                                               rig.env.detentToggle->size())
-                                       : QRect();
+        const QRect detentBounds = rig.env.chrome.detentRect().toAlignedRect();
         const QRectF vol1LabelBoundsInDrawer =
             vol1LabelBounds.translated(areaOrigin.x(), areaOrigin.y());
         const QRect trackHeaderBounds(0, 0, areaOrigin.x(), rig.env.view.height());
-        check(rig.env.detentToggle && rig.env.detentToggle->isVisible() &&
-                  rig.env.detentToggle->isEnabled() && rig.env.detentToggle->isChecked() &&
+        check(rig.env.detentInput &&
+                  rig.env.detentInput->interaction() ==
+                      &rig.env.chrome.interaction(DrawerChromeTarget::Detent) &&
+                  rig.env.detentInput->isVisible() &&
+                  rig.env.detentInput->bounds() ==
+                      QRectF(QPointF{}, rig.env.chrome.detentRect().size()) &&
+                  rig.env.chrome.detentVisible() && rig.env.chrome.detentEnabled() &&
+                  rig.env.chrome.detentChecked() && !detentBounds.isEmpty() &&
                   detentBounds.left() == areaOrigin.x() &&
                   detentBounds.right() < areaOrigin.x() + rig.env.area.plotOrigin(),
-              "velocity detent toggle must stay inside the PSG label gutter");
+              "DrawerChrome detent must stay inside the PSG label gutter");
         check(detentBounds.bottom() == velocityBandRect(rig.env.view).bottom(),
-              "velocity detent toggle must stay flush with the PSG label gutter bottom");
+              "DrawerChrome detent must stay flush with the PSG label gutter bottom");
         check(!detentBounds.intersects(trackHeaderBounds),
-              "velocity detent toggle must not cover the track headers");
+              "DrawerChrome detent must not cover the track headers");
         check(rig.env.area.axis().graduationCount() > 0 && vol1.labelVisible &&
-                  rig.env.detentToggle && !QRectF(detentBounds).intersects(vol1LabelBoundsInDrawer),
-              "PSG detent toggle must not overlap the Vol 1 label");
-        if (rig.env.detentToggle) {
+                  !QRectF(detentBounds).intersects(vol1LabelBoundsInDrawer),
+              "PSG detent must not overlap the Vol 1 label");
+        if (rig.env.detentInput) {
             rig.env.voicegroup.voices[0] = rig.env.directSound;
             rig.env.view.selectionModel().setNoteSelection(
                 {rig.env.notes[0].noteId, rig.env.notes[2].noteId});
-            check(!rig.env.detentToggle->isVisible() && !rig.env.detentToggle->isEnabled() &&
-                      !rig.env.detentToggle->isChecked(),
-                  "velocity detent toggle must hide and turn off for a DirectSound selection");
+            QApplication::processEvents();
+            check(!rig.env.detentInput->isVisible() && !rig.env.chrome.detentVisible() &&
+                      !rig.env.chrome.detentEnabled() && !rig.env.chrome.detentChecked() &&
+                      rig.env.chrome.detentRect().isEmpty(),
+                  "DrawerChrome detent must hide and turn off for a DirectSound selection");
             check(setVelocity(rig.env.notes[0].noteId, 1) &&
                       setVelocity(rig.env.notes[2].noteId, 127),
                   "detent toggle fixture must reset its ruler values");
@@ -1557,10 +1594,16 @@ int checkDetentUnlockGestures(VelocityAreaRig &rig)
                 layerRevision(rig.env, songview::TimelineQuickLayer::VelocityAxis);
             rig.env.voicegroup.voices[0] = rig.env.wave;
             rig.env.area.songChanged();
-            check(rig.env.detentToggle->isVisible() && rig.env.detentToggle->isEnabled(),
-                  "velocity detent toggle must reappear immediately for a PSG selection");
-            rig.env.detentToggle->click();
             QApplication::processEvents();
+            check(rig.env.detentInput->isVisible() && rig.env.chrome.detentVisible() &&
+                      rig.env.chrome.detentEnabled() && rig.env.chrome.detentChecked(),
+                  "DrawerChrome detent must reappear immediately for a PSG selection");
+            const int checkedDetentIconRevision = rig.env.chrome.iconRevision();
+            rig.env.chrome.setDetentChecked(false);
+            QApplication::processEvents();
+            check(!rig.env.chrome.detentChecked() && !rig.env.area.useDetents() &&
+                      rig.env.chrome.iconRevision() > checkedDetentIconRevision,
+                  "DrawerChrome detent API did not disable and redraw snapped PSG editing");
             const QImage unlockedPsgRuler = captureVelocityBand(rig.env.view);
             const qreal rulerScale = unlockedPsgRuler.devicePixelRatio();
             const int rulerHeight =
@@ -1582,7 +1625,7 @@ int checkDetentUnlockGestures(VelocityAreaRig &rig)
             velocityRelease(rig.env, toggleUnlockedRuler, Qt::LeftButton, Qt::NoModifier);
             DocNote toggleUnlockedFirst;
             DocNote toggleUnlockedThird;
-            check(!rig.env.detentToggle->isChecked() &&
+            check(!rig.env.chrome.detentChecked() &&
                       rig.env.document.findNote(rig.env.notes[0].noteId, &toggleUnlockedFirst) &&
                       rig.env.document.findNote(rig.env.notes[2].noteId, &toggleUnlockedThird) &&
                       toggleUnlockedFirst.velocity == toggleUnlockedVelocity &&
@@ -1596,9 +1639,16 @@ int checkDetentUnlockGestures(VelocityAreaRig &rig)
             check(!unlockedNodeImage.isNull() &&
                       velocityNodeHasColor(rig.env, unlockedNodeCenter, Qt::black),
                   "disabled velocity detents must keep idle nodes at exact velocity positions");
-            rig.env.detentToggle->click();
-            check(rig.env.detentToggle->isChecked(),
-                  "velocity detent toggle must restore snapped PSG editing");
+            const int uncheckedDetentIconRevision = rig.env.chrome.iconRevision();
+            const QPointF detentCenter = rig.env.detentInput->bounds().center();
+            checks::events::sendMouse(*rig.env.detentInput, QEvent::MouseButtonPress, detentCenter,
+                                      Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            checks::events::sendMouse(*rig.env.detentInput, QEvent::MouseButtonRelease,
+                                      detentCenter, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::processEvents();
+            check(rig.env.chrome.detentChecked() && rig.env.area.useDetents() &&
+                      rig.env.chrome.iconRevision() > uncheckedDetentIconRevision,
+                  "drawerDetentInput did not restore and redraw snapped PSG editing");
         }
 
         rig.env.view.selectionModel().setNoteSelection(
@@ -1989,37 +2039,31 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     auto *areaPtr = drawer ? drawer->velocityArea() : nullptr;
     check(drawer != nullptr && areaPtr != nullptr,
           "concrete SongView should expose its owned velocity area");
-    if (!areaPtr)
+    if (!drawer || !areaPtr)
         return 1;
-    auto *drawerSections = drawer->findChild<QWidget *>(QStringLiteral("drawerSections"));
-    auto *velToggle =
-        drawerSections
-            ? drawerSections->findChild<QToolButton *>(QStringLiteral("velocityDrawerToggle"))
-            : nullptr;
-    auto *automationBar =
-        drawerSections ? drawerSections->findChild<QWidget *>(QStringLiteral("automationDrawerBar"))
-                       : nullptr;
-    auto *automationToggle =
-        drawerSections
-            ? drawerSections->findChild<QToolButton *>(QStringLiteral("automationDrawerToggle"))
-            : nullptr;
+    DrawerChrome &chrome = drawer->chrome();
     auto *quickView =
         view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
     auto *quickScene = view.findChild<songview::TimelineQuickScene *>();
-    check(quickView && quickScene,
-          "concrete SongView should expose its retained Quick velocity renderer");
-    if (!quickView || !quickScene)
+    auto *quickRoot = quickView ? quickView->rootObject() : nullptr;
+    auto *barInput =
+        quickRoot
+            ? quickRoot->findChild<songview::TimelineInputItem *>(QStringLiteral("drawerBarInput"))
+            : nullptr;
+    auto *detentInput = quickRoot ? quickRoot->findChild<songview::TimelineInputItem *>(
+                                        QStringLiteral("drawerDetentInput"))
+                                  : nullptr;
+    check(quickView && quickScene && quickRoot && barInput && detentInput,
+          "concrete SongView should expose its retained Quick velocity and drawer chrome inputs");
+    if (!quickView || !quickScene || !quickRoot || !barInput || !detentInput)
         return 1;
     auto &area = *areaPtr;
     VelocityInputHost host{view, area};
     host.attach();
     DrawerPageLiveState live;
-    VelocityAreaEnv env{document,       timeline,   voicegroup,    directSound,
-                        square,         wave,       noise,         notes,
-                        view,           area,       &host,         drawer,
-                        drawerSections, velToggle,  automationBar, automationToggle,
-                        nullptr,        quickScene, quickView,     live,
-                        expected};
+    VelocityAreaEnv env{document, timeline,    voicegroup, directSound, square, wave,
+                        noise,    notes,       view,       area,        &host,  chrome,
+                        barInput, detentInput, quickScene, quickView,   live,   expected};
     VelocityAreaRig rig{env, VelocityMap::resolve(&noise, notes[0].key)};
     view.setDrawerSectionHeight(EditorDrawerPage::Velocity,
                                 expected.densityThresholdD4 + layout::space(layout::Space::Six));
@@ -2034,6 +2078,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     area.refreshLiveState(live);
     QApplication::processEvents();
     failures += checkDrawerToggleGeometry(env);
+    failures += checkDrawerToggleInput(env);
     failures += checkDirectSoundChromeAndFocus(env);
     failures += checkGridContinuesPastSongEnd(env);
     failures += checkPanClampAtTickZero(env);

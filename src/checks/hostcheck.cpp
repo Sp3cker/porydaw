@@ -1,12 +1,14 @@
 #include "checks/support/asyncwait.h"
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
+#include "checks/support/timelinequickcheck.h"
 
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
 #include "project/decompproject.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/drawerchrome.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
@@ -18,10 +20,10 @@
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timelinebandlayout.h"
 #include "ui/songview/timeruler.h"
+#include "ui/songview/trackheadermodel.h"
 
 #include <QApplication>
 #include <QColor>
-#include <QComboBox>
 #include <QCoreApplication>
 #include <QEnterEvent>
 #include <QEvent>
@@ -33,9 +35,12 @@
 #include <QMouseEvent>
 #include <QPalette>
 #include <QPointer>
+#include <QQuickItem>
 #include <QQuickWindow>
-#include <QScrollArea>
-#include <QScrollBar>
+#include <QSize>
+#include <QSizeF>
+#include <QString>
+#include <QStringList>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QToolTip>
@@ -69,11 +74,7 @@ uint64_t drawerContextTick(double tick)
 
 EditorDrawer *editorDrawer(SongView &view)
 {
-    for (QWidget *widget : view.findChildren<QWidget *>()) {
-        if (auto *drawer = dynamic_cast<EditorDrawer *>(widget))
-            return drawer;
-    }
-    return nullptr;
+    return view.editorDrawer();
 }
 
 VelocityArea *velocityArea(SongView &view)
@@ -112,14 +113,186 @@ struct QmlBandPropertyNames {
     const char *visibleProperty;
 };
 
-constexpr std::array<QmlBandPropertyNames, 6> qmlBandPropertyNames{{
+constexpr std::array<QmlBandPropertyNames, 7> qmlBandPropertyNames{{
     {songview::TimelineBand::Ruler, "rulerBandRect", "rulerBandVisible"},
     {songview::TimelineBand::Roll, "rollBandRect", "rollBandVisible"},
     {songview::TimelineBand::OtherEvents, "otherEventsBandRect", "otherEventsBandVisible"},
     {songview::TimelineBand::Automation, "automationBandRect", "automationBandVisible"},
     {songview::TimelineBand::Velocity, "velocityBandRect", "velocityBandVisible"},
     {songview::TimelineBand::VoiceChanges, "voiceChangesBandRect", "voiceChangesBandVisible"},
+    {songview::TimelineBand::TrackHeaders, "trackHeadersBandRect", "trackHeadersBandVisible"},
 }};
+
+QString describeRect(const QRect &rect)
+{
+    return QStringLiteral("[%1,%2 %3x%4]")
+        .arg(rect.x())
+        .arg(rect.y())
+        .arg(rect.width())
+        .arg(rect.height());
+}
+
+QString describeRect(const QRectF &rect)
+{
+    return QStringLiteral("[%1,%2 %3x%4]")
+        .arg(rect.x(), 0, 'f', 2)
+        .arg(rect.y(), 0, 'f', 2)
+        .arg(rect.width(), 0, 'f', 2)
+        .arg(rect.height(), 0, 'f', 2);
+}
+
+QString describeSize(const QSize &size)
+{
+    return QStringLiteral("%1x%2").arg(size.width()).arg(size.height());
+}
+
+QString describeSize(const QSizeF &size)
+{
+    return QStringLiteral("%1x%2").arg(size.width(), 0, 'f', 2).arg(size.height(), 0, 'f', 2);
+}
+
+QString quickHostGeometryDetails(const songview::TimelineQuickView &quick)
+{
+    const QQuickWindow *const window = quick.quickWindow();
+    const QQuickItem *const root = quick.rootObject();
+    const QString missing = QStringLiteral("<missing>");
+    return QStringLiteral("Quick-host=%1 Quick-window-size=%2 Quick-root-size=%3")
+        .arg(describeRect(quick.geometry()))
+        .arg(window ? describeSize(window->size()) : missing)
+        .arg(root ? describeSize(root->size()) : missing);
+}
+
+QString describeRectDelta(const QRectF &expected, const QRectF &actual)
+{
+    return QStringLiteral("[dx=%1 dy=%2 dw=%3 dh=%4]")
+        .arg(actual.x() - expected.x(), 0, 'f', 2)
+        .arg(actual.y() - expected.y(), 0, 'f', 2)
+        .arg(actual.width() - expected.width(), 0, 'f', 2)
+        .arg(actual.height() - expected.height(), 0, 'f', 2);
+}
+
+QString canonicalInputFailureDetails(const SongView &view, const songview::TimelineQuickView &quick,
+                                     QObject &quickRoot, songview::TimelineBand band,
+                                     const QString &inputObjectName)
+{
+    const std::optional<songview::TimelineBandGeometry> &geometry =
+        view.timelineBandLayout().geometry(band);
+    const QmlBandPropertyNames *propertyNames = nullptr;
+    for (const QmlBandPropertyNames &names : qmlBandPropertyNames) {
+        if (names.band == band) {
+            propertyNames = &names;
+            break;
+        }
+    }
+
+    const QQuickItem *const root = quick.rootObject();
+    const auto *input = quickRoot.findChild<songview::TimelineInputItem *>(inputObjectName);
+    const QPoint quickGeometryOrigin = quick.geometry().topLeft();
+    const QRect expectedHostRect =
+        geometry ? geometry->rect.translated(-quickGeometryOrigin) : QRect{};
+    const QRectF expectedBounds =
+        geometry ? QRectF(QPointF{}, QSizeF(geometry->rect.width(), geometry->rect.height()))
+                 : QRectF{};
+    const QVariant qmlBandRect =
+        propertyNames ? quickRoot.property(propertyNames->rectProperty) : QVariant{};
+    const QVariant qmlBandVisible =
+        propertyNames ? quickRoot.property(propertyNames->visibleProperty) : QVariant{};
+    const QRectF actualQmlBandRect = qmlBandRect.toRectF();
+    const QRectF actualInputRect =
+        input && root ? QRectF(input->mapToItem(root, QPointF{}), input->size()) : QRectF{};
+    const QString missing = QStringLiteral("<missing>");
+    return QStringLiteral(
+               "input-object=%1 canonical-SongView=%2 Quick-host-rect=%3 expected-host-local=%4 "
+               "expected-bounds=%5 QML-band-rect=%6 QML-band-visible=%7 "
+               "QML-band-rect-delta=%8 actual-QML-item-host-local=%9 "
+               "actual-QML-item-host-local-delta=%10 actual-QML-item-bounds=%11 "
+               "actual-QML-item-bounds-delta=%12 actual-QML-item-visible=%13 "
+               "Quick-window-unmasked=%14 %15")
+        .arg(inputObjectName)
+        .arg(geometry ? describeRect(geometry->rect) : missing)
+        .arg(describeRect(quick.geometry()))
+        .arg(geometry ? describeRect(expectedHostRect) : missing)
+        .arg(geometry ? describeRect(expectedBounds) : missing)
+        .arg(qmlBandRect.isValid() ? describeRect(actualQmlBandRect) : missing)
+        .arg(qmlBandVisible.isValid()
+                 ? (qmlBandVisible.toBool() ? QStringLiteral("true") : QStringLiteral("false"))
+                 : missing)
+        .arg(geometry && qmlBandRect.isValid()
+                 ? describeRectDelta(QRectF(expectedHostRect), actualQmlBandRect)
+                 : missing)
+        .arg(input && root ? describeRect(actualInputRect) : missing)
+        .arg(input && root && geometry
+                 ? describeRectDelta(QRectF(expectedHostRect), actualInputRect)
+                 : missing)
+        .arg(input ? describeRect(input->bounds()) : missing)
+        .arg(input && geometry ? describeRectDelta(expectedBounds, input->bounds()) : missing)
+        .arg(input ? (input->isVisible() ? QStringLiteral("true") : QStringLiteral("false"))
+                   : missing)
+        .arg(checks::support::quickWindowIsUnmasked(quick) ? QStringLiteral("true")
+                                                           : QStringLiteral("false"))
+        .arg(quickHostGeometryDetails(quick));
+}
+
+QString
+otherEventsHoverCandidateDetails(const SongView &view, const songview::TimelineQuickView &quick,
+                                 const songview::TimelineInputItem *input,
+                                 const std::optional<songview::TimelineBandGeometry> &geometry)
+{
+    if (!geometry) {
+        return QStringLiteral("other-events hover candidates: canonical-SongView=<missing> %1")
+            .arg(quickHostGeometryDetails(quick));
+    }
+
+    const QString canonicalRect = describeRect(geometry->rect);
+    const QString plotRange =
+        QStringLiteral("[%1,%2]").arg(geometry->timelineOrigin).arg(geometry->rect.right());
+    if (!input) {
+        return QStringLiteral("other-events hover candidates: canonical-SongView=%1 plot-x=%2 "
+                              "input=<missing> %3")
+            .arg(canonicalRect)
+            .arg(plotRange)
+            .arg(quickHostGeometryDetails(quick));
+    }
+
+    const QQuickItem *const root = quick.rootObject();
+    const QString inputHostRect =
+        root ? describeRect(QRectF(input->mapToItem(root, QPointF{}), input->size()))
+             : QStringLiteral("<missing>");
+    const QPoint quickOriginInSongView = quick.mapTo(&view, QPoint{});
+    QStringList candidates;
+    for (const StripItem &item : view.model().strip) {
+        const qreal markerX = view.camera().displayX(
+            double(item.tick), qRound(view.timelinePlotOrigin()), input->devicePixelRatio());
+        const QPointF markerPositionInSongView(markerX, geometry->rect.center().y());
+        const QPointF markerPositionInQuickHost =
+            markerPositionInSongView -
+            QPointF(quickOriginInSongView.x(), quickOriginInSongView.y());
+        const QPointF inputPosition = input->mapFromScene(markerPositionInQuickHost);
+        candidates.append(QStringLiteral("{tick=%1 marker-x=%2 input-x=%3 contains=%4}")
+                              .arg(static_cast<qulonglong>(item.tick))
+                              .arg(markerX, 0, 'f', 2)
+                              .arg(inputPosition.x(), 0, 'f', 2)
+                              .arg(input->contains(inputPosition) ? QStringLiteral("true")
+                                                                  : QStringLiteral("false")));
+    }
+    return QStringLiteral("other-events hover candidates: canonical-SongView=%1 plot-x=%2 "
+                          "input-host-local=%3 input-bounds=%4 input-dpr=%5 candidates=[%6] %7")
+        .arg(canonicalRect)
+        .arg(plotRange)
+        .arg(inputHostRect)
+        .arg(describeRect(input->bounds()))
+        .arg(input->devicePixelRatio(), 0, 'f', 2)
+        .arg(candidates.join(QStringLiteral(", ")))
+        .arg(quickHostGeometryDetails(quick));
+}
+
+QString imageDetails(const QImage &image)
+{
+    return QStringLiteral("{null=%1 size=%2 dpr=%3}")
+        .arg(image.isNull() ? QStringLiteral("true") : QStringLiteral("false"))
+        .arg(describeSize(image.size()))
+        .arg(image.devicePixelRatio(), 0, 'f', 2);
+}
 
 // The retained QML properties must always republish the canonical layout's
 // entries translated into Quick-host coordinates, or an empty invisible
@@ -139,14 +312,11 @@ bool publishedQmlRectsMatchCanonical(const QWidget &quick, QObject &quickRoot,
 }
 
 // A converted band owns no widget: its canonical rectangle, QML band
-// rectangle, and TimelineInputItem bounds must describe the same parent-owned
-// region, and the native-window mask must expose that region while visible.
-// A band hosting retained native chrome (the ruler controls) instead expects
-// that chrome's rectangle punched out of the mask; the input item still fills
-// the whole canonical band around the hole.
+// rectangle, and TimelineInputItem bounds describe the same parent-owned
+// region.
 bool inputMatchesCanonical(const SongView &view, const songview::TimelineQuickView &quick,
                            QObject &quickRoot, songview::TimelineBand band,
-                           const QString &inputObjectName, const QRect *maskHoleInBand = nullptr)
+                           const QString &inputObjectName)
 {
     const std::optional<songview::TimelineBandGeometry> &geometry =
         view.timelineBandLayout().geometry(band);
@@ -154,33 +324,46 @@ bool inputMatchesCanonical(const SongView &view, const songview::TimelineQuickVi
     if (!geometry || !input)
         return false;
     const QRect canonicalRect = geometry->rect.translated(-quick.geometry().topLeft());
-    const QRectF inputRect(input->mapToItem(quick.rootObject(), QPointF()), input->size());
-    if (!input->isVisible() ||
-        input->bounds() !=
-            QRectF(QPointF{}, QSizeF(geometry->rect.width(), geometry->rect.height())) ||
-        inputRect != QRectF(canonicalRect))
-        return false;
-    const QRegion &mask = quick.quickWindow()->mask();
-    if (!maskHoleInBand)
-        return mask.contains(canonicalRect);
-    return !mask.intersects(*maskHoleInBand) &&
-           (QRegion(canonicalRect) - QRegion(*maskHoleInBand) - mask).isEmpty();
+    return input->isVisible() &&
+           input->bounds() ==
+               QRectF(QPointF{}, QSizeF(geometry->rect.width(), geometry->rect.height())) &&
+           QRectF(input->mapToItem(quick.rootObject(), QPointF()), input->size()) ==
+               QRectF(canonicalRect);
 }
 
-template <std::size_t N>
-bool visibleNativeChromeExcluded(const SongView &view, const songview::TimelineQuickView &quick,
-                                 const std::array<QWidget *, N> &widgets)
+bool trackHeadersInputMatchesCanonical(const SongView &view,
+                                       const songview::TimelineQuickView &quick, QObject &quickRoot,
+                                       const songview::TrackHeaderModel &headers)
 {
-    const QRegion &mask = quick.quickWindow()->mask();
-    for (const QWidget *widget : widgets) {
-        if (!widget || !widget->isVisibleTo(&view))
-            continue;
-        const QRect quickRect(QRect(widget->mapTo(&view, widget->rect().topLeft()), widget->size())
-                                  .translated(-quick.geometry().topLeft()));
-        if (mask.intersects(quickRect))
-            return false;
-    }
-    return true;
+    const std::optional<songview::TimelineBandGeometry> &geometry =
+        view.timelineBandLayout().geometry(songview::TimelineBand::TrackHeaders);
+    const auto *input = quickRoot.findChild<songview::TimelineInputItem *>(
+        QStringLiteral("timelineTrackHeadersInput"));
+    if (!geometry || !input)
+        return false;
+    const int rowAreaWidth = std::max(0, geometry->rect.width() - headers.scrollbarWidth());
+    const QRect expectedRect(geometry->rect.topLeft() - quick.geometry().topLeft(),
+                             QSize(rowAreaWidth, geometry->rect.height()));
+    return input->isVisible() && input->interaction() == &headers &&
+           input->bounds() == QRectF(QPointF{}, expectedRect.size()) &&
+           QRectF(input->mapToItem(quick.rootObject(), QPointF()), input->size()) ==
+               QRectF(expectedRect);
+}
+
+// Drawer chrome is owned by the one Quick host. Its input item must translate
+// the SongView-local snapshot rectangle into that host and bind the matching
+// interaction rather than a retained native widget.
+bool inputMatchesDrawerChrome(const songview::TimelineQuickView &quick, QQuickItem &quickRoot,
+                              const songview::TimelineInputItem *input, const QRectF &songViewRect,
+                              bool visible, const songview::TimelineBandInteraction &interaction)
+{
+    if (!input || input->interaction() != &interaction || input->isVisible() != visible)
+        return false;
+    if (!visible)
+        return songViewRect.isEmpty();
+    const QRectF expectedRect = songViewRect.translated(-quick.geometry().topLeft());
+    return input->bounds() == QRectF(QPointF{}, songViewRect.size()) &&
+           QRectF(input->mapToItem(&quickRoot, QPointF{}), input->size()) == expectedRect;
 }
 
 } // namespace
@@ -260,7 +443,7 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         auto *fixtureArea = velocityArea(fixtureView);
         check(fixtureDocument.label() == songLabel &&
                   fixtureView.timeline() == fixtureTimeline.get() && fixtureDrawer &&
-                  fixtureDrawer->isVisible() && fixtureArea &&
+                  fixtureView.hasVisibleDrawerSection() && fixtureArea &&
                   fixtureView.selectionModel().primaryTrack() == fixtureNote->engineTrack &&
                   fixtureView.selectionModel().noteSelection() == fixtureSelection &&
                   fixtureArea->axis().markerCount() == 1 &&
@@ -348,101 +531,175 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
           "drawer tick should use the neutral shared conversion");
 
     auto *drawer = editorDrawer(view);
-    check(drawer && drawer->isVisible(), "drawer should remain visible above other events");
+    check(drawer && view.hasVisibleDrawerSection(),
+          "drawer should remain visible above other events");
     const std::optional<songview::TimelineBandGeometry> otherEventsGeometry =
         view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents);
-    auto *sections =
-        drawer ? drawer->findChild<QWidget *>(QStringLiteral("drawerSections")) : nullptr;
-    auto *velocityHandle =
-        drawer ? drawer->findChild<QWidget *>(QStringLiteral("velocityResizeHandle")) : nullptr;
-    auto *automationHandle =
-        drawer ? drawer->findChild<QWidget *>(QStringLiteral("automationResizeHandle")) : nullptr;
-    auto *voiceChangesHandle =
-        drawer ? drawer->findChild<QWidget *>(QStringLiteral("voiceChangesResizeHandle")) : nullptr;
-    auto *velocityToggle =
-        drawer ? drawer->findChild<QWidget *>(QStringLiteral("velocityDrawerToggle")) : nullptr;
-    auto *automationToggle =
-        drawer ? drawer->findChild<QWidget *>(QStringLiteral("automationDrawerToggle")) : nullptr;
-    auto *voiceChangesToggle =
-        drawer ? drawer->findChild<QWidget *>(QStringLiteral("voiceChangesDrawerToggle")) : nullptr;
-    auto *automationBar =
-        drawer ? drawer->findChild<QWidget *>(QStringLiteral("automationDrawerBar")) : nullptr;
     check(otherEventsGeometry.has_value(),
           "other events strip should remain visible in canonical layout");
-    auto *detentToggle =
-        drawer ? drawer->findChild<QWidget *>(QStringLiteral("velocityDetentToggle")) : nullptr;
-    check(sections && velocityHandle && voiceChangesHandle && automationHandle && velocityToggle &&
-              automationToggle && voiceChangesToggle && automationBar && detentToggle,
-          "drawer should create independent section chrome");
-    if (drawer && otherEventsGeometry && sections && velocityHandle && voiceChangesHandle &&
-        automationHandle && velocityToggle && automationToggle && voiceChangesToggle &&
-        automationBar && detentToggle) {
-        const QRect drawerBounds(drawer->mapTo(&view, QPoint()), drawer->size());
-        const QRect toggleGroup = voiceChangesToggle->geometry()
-                                      .united(automationToggle->geometry())
-                                      .united(velocityToggle->geometry());
+    if (drawer && otherEventsGeometry) {
+        const DrawerChrome &chrome = drawer->chrome();
+        const QRectF toggleGroup = chrome.voiceChangesToggleRect()
+                                       .united(chrome.automationToggleRect())
+                                       .united(chrome.velocityToggleRect());
         const std::optional<QRect> velocityBody = drawer->bodyRect(EditorDrawerPage::Velocity);
-        const QRect velocityBodyInDrawer =
-            velocityBody ? velocityBody->translated(-drawer->mapTo(&view, QPoint())) : QRect{};
-        const int pianoKeysCenter = velocityBodyInDrawer.x() + area->plotOrigin() / 2;
-        check(drawerBounds.bottom() < otherEventsGeometry->rect.top(),
+        const int pianoKeysCenter = velocityBody ? velocityBody->x() + area->plotOrigin() / 2 : 0;
+        const bool automationBandHidden =
+            !view.timelineBandLayout().geometry(songview::TimelineBand::Automation).has_value();
+        check(drawer->overlayRect().bottom() < otherEventsGeometry->rect.top(),
               "drawer should stack above the other events strip");
-        check(sections->geometry() == drawer->rect() && !velocityHandle->isHidden() &&
-                  automationHandle->isHidden() && velocityBody.has_value() &&
-                  !detentToggle->isHidden() && drawer->automationPage()->isHidden() &&
-                  !automationBar->isHidden() &&
-                  velocityHandle->geometry().bottom() + 1 == velocityBodyInDrawer.top() &&
-                  velocityBodyInDrawer.bottom() + 1 == automationBar->geometry().top() &&
-                  automationBar->geometry().contains(voiceChangesToggle->geometry()) &&
-                  automationBar->geometry().contains(automationToggle->geometry()) &&
-                  automationBar->geometry().contains(velocityToggle->geometry()) &&
-                  automationToggle->x() == voiceChangesToggle->x() + voiceChangesToggle->width() +
-                                               layout::space(layout::Space::One) &&
-                  velocityToggle->x() == automationToggle->x() + automationToggle->width() +
-                                             layout::space(layout::Space::One) &&
+        check(chrome.velocityHandleVisible() && !chrome.voiceChangesHandleVisible() &&
+                  !chrome.automationHandleVisible() && velocityBody.has_value() &&
+                  chrome.detentVisible() && automationBandHidden && !chrome.barRect().isEmpty() &&
+                  chrome.voiceChangesHandleRect().isEmpty() &&
+                  chrome.automationHandleRect().isEmpty() &&
+                  chrome.velocityHandleRect().bottom() == velocityBody->top() &&
+                  velocityBody->bottom() + 1 == qRound(chrome.barRect().top()) &&
+                  chrome.barRect().contains(chrome.voiceChangesToggleRect()) &&
+                  chrome.barRect().contains(chrome.automationToggleRect()) &&
+                  chrome.barRect().contains(chrome.velocityToggleRect()) &&
+                  chrome.automationToggleRect().x() == chrome.voiceChangesToggleRect().x() +
+                                                           chrome.voiceChangesToggleRect().width() +
+                                                           layout::space(layout::Space::One) &&
+                  chrome.velocityToggleRect().x() == chrome.automationToggleRect().x() +
+                                                         chrome.automationToggleRect().width() +
+                                                         layout::space(layout::Space::One) &&
                   std::abs(toggleGroup.center().x() - pianoKeysCenter) <= 1,
-              "drawer section chrome should center its toggles beneath the piano keys");
+              "DrawerChrome should center its Quick toggles beneath the piano keys");
     }
 
-    auto *rulerControls =
-        view.findChild<QWidget *>(QStringLiteral("timeRulerControls"), Qt::FindDirectChildrenOnly);
     auto *rollBand = view.findChild<songview::PianoRoll *>();
-    QObject *const quickRoot = quick->rootObject();
-    check(rollBand && quickRoot && rulerControls,
-          "host should expose the non-widget PianoRoll interaction, ruler "
-          "controls, and Quick root");
-    if (rollBand && quickRoot && rulerControls) {
-        {
-            auto *rulerInput = quickRoot->findChild<songview::TimelineInputItem *>(
-                QStringLiteral("timelineRulerInput"));
-            auto *rollInput = quickRoot->findChild<songview::TimelineInputItem *>(
-                QStringLiteral("timelineRollInput"));
-            auto *otherInput = quickRoot->findChild<songview::TimelineInputItem *>(
-                QStringLiteral("timelineOtherEventsInput"));
-            auto *automationInput = quickRoot->findChild<songview::TimelineInputItem *>(
-                QStringLiteral("timelineAutomationInput"));
-            auto *velocityInput = quickRoot->findChild<songview::TimelineInputItem *>(
-                QStringLiteral("timelineVelocityInput"));
-            auto *voiceInput = quickRoot->findChild<songview::TimelineInputItem *>(
-                QStringLiteral("timelineVoiceChangesInput"));
-            check(rulerInput &&
-                      dynamic_cast<songview::TimeRuler *>(rulerInput->interaction()) != nullptr &&
-                      rollInput && rollInput->interaction() == rollBand && otherInput &&
-                      dynamic_cast<songview::OtherStrip *>(otherInput->interaction()) != nullptr &&
-                      automationInput && automationInput->interaction() == automationCanvas(view) &&
-                      velocityInput && velocityInput->interaction() == area && voiceInput &&
-                      voiceInput->interaction() == drawer->voiceChangeArea(),
-                  "all six Quick input items should own their matching non-widget interactions");
+    QQuickItem *const quickRoot = quick->rootObject();
+    auto *headers = view.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"),
+                                                                 Qt::FindDirectChildrenOnly);
+    auto *rulerControls =
+        quickRoot ? quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineRulerControls"))
+                  : nullptr;
+    auto *divisionControl =
+        quickRoot
+            ? quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineRulerDivisionControl"))
+            : nullptr;
+    auto *feelControl =
+        quickRoot ? quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineRulerFeelControl"))
+                  : nullptr;
+    auto *trackHeaderBand =
+        quickRoot ? quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineQuickTrackHeaders"))
+                  : nullptr;
+    auto *trackHeaderInput = quickRoot ? quickRoot->findChild<songview::TimelineInputItem *>(
+                                             QStringLiteral("timelineTrackHeadersInput"))
+                                       : nullptr;
+    QObject *const trackHeaderRows =
+        quickRoot ? quickRoot->findChild<QObject *>(QStringLiteral("timelineTrackHeaderRows"))
+                  : nullptr;
+    auto *trackHeaderScrollbar =
+        quickRoot
+            ? quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineTrackHeaderScrollBar"))
+            : nullptr;
+    auto *trackHeaderThumb =
+        quickRoot
+            ? quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineTrackHeaderScrollThumb"))
+            : nullptr;
+    check(rollBand && quickRoot && quick->quickWindow() && headers && rulerControls &&
+              divisionControl && feelControl && trackHeaderBand && trackHeaderInput &&
+              trackHeaderRows && trackHeaderScrollbar && trackHeaderThumb,
+          "host should expose the timeline Quick controls, header model, and header input");
+    check(view.findChild<QWidget *>(QStringLiteral("timeRulerControls"),
+                                    Qt::FindDirectChildrenOnly) == nullptr,
+          "ruler controls must not retain a native widget");
+    if (rollBand && quickRoot && quick->quickWindow() && headers && rulerControls &&
+        divisionControl && feelControl && trackHeaderBand && trackHeaderInput && trackHeaderRows &&
+        trackHeaderScrollbar && trackHeaderThumb) {
+        auto *rulerInput = quickRoot->findChild<songview::TimelineInputItem *>(
+            QStringLiteral("timelineRulerInput"));
+        auto *rollInput = quickRoot->findChild<songview::TimelineInputItem *>(
+            QStringLiteral("timelineRollInput"));
+        auto *otherInput = quickRoot->findChild<songview::TimelineInputItem *>(
+            QStringLiteral("timelineOtherEventsInput"));
+        auto *initialAutomationInput = quickRoot->findChild<songview::TimelineInputItem *>(
+            QStringLiteral("timelineAutomationInput"));
+        auto *initialVelocityInput = quickRoot->findChild<songview::TimelineInputItem *>(
+            QStringLiteral("timelineVelocityInput"));
+        auto *initialVoiceInput = quickRoot->findChild<songview::TimelineInputItem *>(
+            QStringLiteral("timelineVoiceChangesInput"));
+        auto *timeRuler =
+            rulerInput ? dynamic_cast<songview::TimeRuler *>(rulerInput->interaction()) : nullptr;
+        if (drawer) {
+            DrawerChrome &chrome = drawer->chrome();
+            const auto chromeInputMatches = [&](const char *objectName, const QRectF &rect,
+                                                bool visible, DrawerChromeTarget target) {
+                return inputMatchesDrawerChrome(*quick, *quickRoot,
+                                                quickRoot->findChild<songview::TimelineInputItem *>(
+                                                    QString::fromLatin1(objectName)),
+                                                rect, visible, chrome.interaction(target));
+            };
+            const bool quickChromeInputs =
+                chromeInputMatches("drawerVoiceChangesHandleInput", chrome.voiceChangesHandleRect(),
+                                   chrome.voiceChangesHandleVisible(),
+                                   DrawerChromeTarget::VoiceChangesHandle) &&
+                chromeInputMatches("drawerVelocityHandleInput", chrome.velocityHandleRect(),
+                                   chrome.velocityHandleVisible(),
+                                   DrawerChromeTarget::VelocityHandle) &&
+                chromeInputMatches("drawerAutomationHandleInput", chrome.automationHandleRect(),
+                                   chrome.automationHandleVisible(),
+                                   DrawerChromeTarget::AutomationHandle) &&
+                chromeInputMatches("drawerBarInput", chrome.barRect(), !chrome.barRect().isEmpty(),
+                                   DrawerChromeTarget::Bar) &&
+                chromeInputMatches("drawerDetentInput", chrome.detentRect(), chrome.detentVisible(),
+                                   DrawerChromeTarget::Detent);
+            check(quickChromeInputs,
+                  "Quick drawer chrome inputs should match snapshot geometry and interactions");
         }
+
+        check(rulerInput && timeRuler && rollInput && rollInput->interaction() == rollBand &&
+                  otherInput &&
+                  dynamic_cast<songview::OtherStrip *>(otherInput->interaction()) != nullptr &&
+                  initialAutomationInput &&
+                  initialAutomationInput->interaction() == automationCanvas(view) &&
+                  initialVelocityInput && initialVelocityInput->interaction() == area &&
+                  initialVoiceInput && drawer &&
+                  initialVoiceInput->interaction() == drawer->voiceChangeArea() &&
+                  trackHeaderInput->interaction() == headers,
+              "all seven Quick input items should own their matching non-widget interactions");
+        check(checks::support::quickWindowIsUnmasked(*quick),
+              "the shared Quick window must remain unmasked while it hosts every timeline band");
+
         const songview::TimelineBandLayout &bandLayout = view.timelineBandLayout();
+        const std::optional<songview::TimelineBandGeometry> &rulerGeometry =
+            bandLayout.geometry(songview::TimelineBand::Ruler);
+        const QRectF rulerBandRect = quickRoot->property("rulerBandRect").toRectF();
+        const bool rulerControlsMatchState =
+            rulerGeometry && timeRuler && rulerControls->isVisible() &&
+            QRectF(rulerControls->mapToItem(quickRoot, QPointF()), rulerControls->size()) ==
+                QRectF(rulerBandRect.topLeft(),
+                       QSizeF(quick->rulerControlsWidth(), rulerBandRect.height())) &&
+            divisionControl->isEnabled() == timeRuler->gridControlsEnabled() &&
+            feelControl->isEnabled() == timeRuler->gridControlsEnabled() &&
+            divisionControl->property("controlText").toString() == timeRuler->divisionText() &&
+            feelControl->property("controlText").toString() == timeRuler->feelText();
+        check(rulerControlsMatchState,
+              "Quick ruler controls should match TimeRuler state and the canonical ruler gutter");
+
+        const std::optional<songview::TimelineBandGeometry> &trackHeadersGeometry =
+            bandLayout.geometry(songview::TimelineBand::TrackHeaders);
+        const QRectF expectedTrackHeadersRect =
+            trackHeadersGeometry
+                ? QRectF(trackHeadersGeometry->rect.translated(-quick->geometry().topLeft()))
+                : QRectF{};
+        const bool trackHeadersQuickGeometry =
+            trackHeadersGeometry && trackHeaderBand->isVisible() &&
+            QRectF(trackHeaderBand->mapToItem(quickRoot, QPointF()), trackHeaderBand->size()) ==
+                expectedTrackHeadersRect &&
+            trackHeadersInputMatchesCanonical(view, *quick, *quickRoot, *headers) &&
+            trackHeaderRows->property("count").toInt() == headers->rowCount() &&
+            trackHeaderScrollbar->width() == headers->scrollbarWidth() &&
+            trackHeaderScrollbar->isVisible() == (headers->maximumScrollY() > 0.0) &&
+            trackHeaderThumb->isVisible() == (headers->maximumScrollY() > 0.0);
+        check(trackHeadersQuickGeometry,
+              "TrackHeaders should publish model-backed Quick rows, input, and scrollbar geometry");
+
         const auto canonicalVisibleUnion = [&] {
-            std::optional<QRect> unionRect;
-            for (const std::optional<songview::TimelineBandGeometry> &band : bandLayout.bands) {
-                if (!band)
-                    continue;
-                unionRect = unionRect ? unionRect->united(band->rect) : band->rect;
-            }
-            return unionRect;
+            return checks::support::canonicalVisibleQuickHostRect(
+                bandLayout, drawer ? &drawer->chrome() : nullptr);
         };
         check(inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::Roll,
                                     QStringLiteral("timelineRollInput")),
@@ -468,52 +725,57 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         check(inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::Velocity,
                                     QStringLiteral("timelineVelocityInput")),
               "Velocity input item should match its canonical band");
-        check(inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::OtherEvents,
-                                    QStringLiteral("timelineOtherEventsInput")),
-              "Other Events input item should match its canonical band");
-        // The ruler band renders fully in Quick, but its gutter hosts the
-        // retained native controls: they must fill the gutter left of the
-        // canonical plot origin, punch a matching mask hole, and leave the
-        // plot column admitted while the input item still fills the band.
-        const std::optional<songview::TimelineBandGeometry> &rulerGeometry =
-            bandLayout.geometry(songview::TimelineBand::Ruler);
-        const QRect rulerControlsRect(rulerControls->mapTo(&view, QPoint()), rulerControls->size());
-        check(rulerControls->findChildren<QComboBox *>().size() == 2 && rulerGeometry &&
-                  rulerControlsRect.topLeft() == rulerGeometry->rect.topLeft() &&
-                  rulerControlsRect.height() == rulerGeometry->rect.height() &&
-                  rulerControlsRect.width() ==
-                      rulerGeometry->timelineOrigin - layout::space(layout::Space::One),
-              "ruler controls should own both combos and fill the canonical ruler gutter");
-        const QRect rulerControlsMaskHole =
-            rulerControlsRect.translated(-quick->geometry().topLeft());
-        const QRect rulerPlotMask(QRect(rulerControlsRect.right() + 1, rulerGeometry->rect.top(),
-                                        rulerGeometry->rect.right() - rulerControlsRect.right(),
-                                        rulerGeometry->rect.height())
-                                      .translated(-quick->geometry().topLeft()));
-        check(rulerGeometry && !quick->quickWindow()->mask().intersects(rulerControlsMaskHole) &&
-                  quick->quickWindow()->mask().contains(rulerPlotMask),
-              "Quick window mask should exclude the ruler controls but admit the ruler plot");
+        const bool otherEventsInputMatchesCanonical =
+            inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::OtherEvents,
+                                  QStringLiteral("timelineOtherEventsInput"));
+        if (otherEventsInputMatchesCanonical) {
+            check(otherEventsInputMatchesCanonical,
+                  "Other Events input item should match its canonical band");
+        } else {
+            const QString failureMessage =
+                QStringLiteral("Other Events input item should match its canonical band; %1")
+                    .arg(canonicalInputFailureDetails(view, *quick, *quickRoot,
+                                                      songview::TimelineBand::OtherEvents,
+                                                      QStringLiteral("timelineOtherEventsInput")));
+            check(otherEventsInputMatchesCanonical, qUtf8Printable(failureMessage));
+        }
         check(inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::Ruler,
-                                    QStringLiteral("timelineRulerInput"), &rulerControlsMaskHole),
-              "Ruler input item should match its canonical band around the controls hole");
+                                    QStringLiteral("timelineRulerInput")),
+              "Ruler input item should match its canonical band beneath Quick controls");
         auto *otherEventsInput = quickRoot->findChild<songview::TimelineInputItem *>(
             QStringLiteral("timelineOtherEventsInput"));
         const StripItem *hoveredStripItem = nullptr;
         QPointF hoveredStripPosition;
-        if (otherEventsInput) {
+        if (otherEventsInput && otherEventsGeometry) {
+            const QPoint quickOriginInSongView = quick->mapTo(&view, QPoint{});
             for (const StripItem &item : view.model().strip) {
                 const qreal x =
                     view.camera().displayX(double(item.tick), qRound(view.timelinePlotOrigin()),
                                            otherEventsInput->devicePixelRatio());
-                if (x >= view.timelinePlotOrigin() && x < otherEventsInput->width()) {
+                const QPointF markerPositionInSongView(x, otherEventsGeometry->rect.center().y());
+                const QPointF markerPositionInQuickHost =
+                    markerPositionInSongView -
+                    QPointF(quickOriginInSongView.x(), quickOriginInSongView.y());
+                const QPointF itemPosition =
+                    otherEventsInput->mapFromScene(markerPositionInQuickHost);
+                if (otherEventsInput->contains(itemPosition)) {
                     hoveredStripItem = &item;
-                    hoveredStripPosition = QPointF(x, otherEventsInput->height() / 2.0);
+                    hoveredStripPosition = itemPosition;
                     break;
                 }
             }
         }
-        check(hoveredStripItem,
-              "other-events fixture should provide a visible marker for Quick hover");
+        if (hoveredStripItem) {
+            check(hoveredStripItem,
+                  "other-events fixture should provide a visible marker for Quick hover");
+        } else {
+            const QString failureMessage =
+                QStringLiteral(
+                    "other-events fixture should provide a visible marker for Quick hover; %1")
+                    .arg(otherEventsHoverCandidateDetails(view, *quick, otherEventsInput,
+                                                          otherEventsGeometry));
+            check(hoveredStripItem, qUtf8Printable(failureMessage));
+        }
         if (otherEventsInput && hoveredStripItem) {
             QToolTip::hideText();
             const QPointF windowPosition = otherEventsInput->mapToScene(hoveredStripPosition);
@@ -543,8 +805,8 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         view.setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
         pumpZeroDelayTimers();
 
-        const std::optional<QRect> hiddenUnion = canonicalVisibleUnion();
-        check(hiddenUnion && quick->geometry() == *hiddenUnion && quick->isVisible(),
+        const QRect hiddenUnion = canonicalVisibleUnion();
+        check(!hiddenUnion.isEmpty() && quick->geometry() == hiddenUnion && quick->isVisible(),
               "Quick host geometry should exclude a hidden band's rectangle");
         check(!bandLayout.geometry(songview::TimelineBand::Velocity),
               "hidden velocity band should leave a nullopt canonical entry");
@@ -590,17 +852,30 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
         view.setDrawerActivePage(EditorDrawerPage::Velocity);
         pumpZeroDelayTimers();
-        const std::optional<QRect> shownUnion = canonicalVisibleUnion();
+        const QRect shownUnion = canonicalVisibleUnion();
         const std::optional<songview::TimelineBandGeometry> &velocityGeometry =
             bandLayout.geometry(songview::TimelineBand::Velocity);
-        check(shownUnion && quick->geometry() == *shownUnion && quick->isVisible() &&
+        check(!shownUnion.isEmpty() && quick->geometry() == shownUnion && quick->isVisible() &&
                   velocityGeometry.has_value(),
               "Quick host geometry should resume from the shown band's current rectangle");
-        check(quickRoot->property("velocityBandVisible").toBool() &&
-                  inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::Velocity,
-                                        QStringLiteral("timelineVelocityInput")),
-              "shown velocity band should republish its current retained Quick rectangle and match "
-              "its input item");
+        const bool shownVelocityInputMatchesCanonical =
+            quickRoot->property("velocityBandVisible").toBool() &&
+            inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::Velocity,
+                                  QStringLiteral("timelineVelocityInput"));
+        if (shownVelocityInputMatchesCanonical) {
+            check(shownVelocityInputMatchesCanonical,
+                  "shown velocity band should republish its current retained Quick rectangle and "
+                  "match its input item");
+        } else {
+            const QString failureMessage =
+                QStringLiteral(
+                    "shown velocity band should republish its current retained Quick rectangle and "
+                    "match its input item; %1")
+                    .arg(canonicalInputFailureDetails(view, *quick, *quickRoot,
+                                                      songview::TimelineBand::Velocity,
+                                                      QStringLiteral("timelineVelocityInput")));
+            check(shownVelocityInputMatchesCanonical, qUtf8Printable(failureMessage));
+        }
         check(quick->geometry() == canonicalVisibleUnion(),
               "reshown velocity band should re-enter the canonical layout");
         view.focusTimelineBand(songview::TimelineBand::Velocity, Qt::MouseFocusReason);
@@ -644,8 +919,20 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         QString stripCaptureError;
         const QImage stripWithoutLoopMarkers = checks::support::captureQuickBand(
             view, captureOtherEventsGeometry->rect, &stripCaptureError);
-        check(stripCaptureError.isEmpty() && !stripWithoutLoopMarkers.isNull(),
-              "Other Events strip Quick capture should succeed");
+        const bool stripCaptureSucceeded =
+            stripCaptureError.isEmpty() && !stripWithoutLoopMarkers.isNull();
+        if (stripCaptureSucceeded) {
+            check(stripCaptureSucceeded, "Other Events strip Quick capture should succeed");
+        } else {
+            const QString failureMessage =
+                QStringLiteral("Other Events strip Quick capture should succeed; error=%1 "
+                               "requested-SongView=%2 captured=%3 %4")
+                    .arg(stripCaptureError.isEmpty() ? QStringLiteral("<none>") : stripCaptureError)
+                    .arg(describeRect(captureOtherEventsGeometry->rect))
+                    .arg(imageDetails(stripWithoutLoopMarkers))
+                    .arg(quickHostGeometryDetails(*quick));
+            check(stripCaptureSucceeded, qUtf8Printable(failureMessage));
+        }
         document.setLoopTick(false, 6);
         document.setLoopTick(true, 18);
         std::unique_ptr<MidiTimeline> loopTimeline = document.buildTimeline(44100.0);
@@ -663,10 +950,30 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
                     ? checks::support::captureQuickBand(view, loopOtherEventsGeometry->rect,
                                                         &loopCaptureError)
                     : QImage{};
-            check(loopOtherEventsGeometry && loopCaptureError.isEmpty() &&
-                      !stripWithLoopMarkers.isNull() &&
-                      stripWithLoopMarkers == stripWithoutLoopMarkers,
-                  "loop markers should not appear in the Other Events strip");
+            const bool loopMarkersRemainOutsideStrip =
+                loopOtherEventsGeometry && loopCaptureError.isEmpty() &&
+                !stripWithLoopMarkers.isNull() && stripWithLoopMarkers == stripWithoutLoopMarkers;
+            if (loopMarkersRemainOutsideStrip) {
+                check(loopMarkersRemainOutsideStrip,
+                      "loop markers should not appear in the Other Events strip");
+            } else {
+                const QString failureMessage =
+                    QStringLiteral(
+                        "loop markers should not appear in the Other Events strip; "
+                        "baseline-canonical-SongView=%1 baseline-captured=%2 baseline-error=%3 "
+                        "loop-canonical-SongView=%4 loop-captured=%5 loop-error=%6 %7")
+                        .arg(describeRect(captureOtherEventsGeometry->rect))
+                        .arg(imageDetails(stripWithoutLoopMarkers))
+                        .arg(stripCaptureError.isEmpty() ? QStringLiteral("<none>")
+                                                         : stripCaptureError)
+                        .arg(loopOtherEventsGeometry ? describeRect(loopOtherEventsGeometry->rect)
+                                                     : QStringLiteral("<missing>"))
+                        .arg(imageDetails(stripWithLoopMarkers))
+                        .arg(loopCaptureError.isEmpty() ? QStringLiteral("<none>")
+                                                        : loopCaptureError)
+                        .arg(quickHostGeometryDetails(*quick));
+                check(loopMarkersRemainOutsideStrip, qUtf8Printable(failureMessage));
+            }
         }
     }
     view.setDrawerActivePage(EditorDrawerPage::Automations);
@@ -674,25 +981,58 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
     QCoreApplication::processEvents();
     view.setDrawerActivePage(EditorDrawerPage::Velocity);
     auto *automation = automationCanvas(view);
-    auto *automationScroll = view.findChild<QScrollArea *>(QStringLiteral("automationScroll"));
+    auto *automationPage = drawer ? drawer->automationPage() : nullptr;
     const songview::TimelineBandLayout &bandLayout = view.timelineBandLayout();
-    check(automation != nullptr && automationScroll != nullptr,
+    check(automation != nullptr && automationPage != nullptr,
           "host should construct the Automation and Voice Changes timeline surfaces");
-    if (automation && automationScroll) {
+    check(qobject_cast<QWidget *>(drawer) == nullptr &&
+              qobject_cast<QWidget *>(automationPage) == nullptr,
+          "drawer and automation scroll state must be QObjects without QWidget shells");
+    if (automation && automationPage) {
         auto *automationInput = quickRoot->findChild<songview::TimelineInputItem *>(
             QStringLiteral("timelineAutomationInput"));
         check(automationInput && automationInput->isVisible() &&
                   automationInput->interaction() == automation,
               "Automation input item should host the page canvas inside its canonical band");
-        check(inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::Automation,
-                                    QStringLiteral("timelineAutomationInput")),
-              "Automation input item should match its canonical band");
-        auto *automationScrollbar = automationScroll->verticalScrollBar();
-        check(automationScrollbar && !quick->quickWindow()->mask().intersects(
-                                         QRect(automationScrollbar->mapTo(&view, QPoint()),
-                                               automationScrollbar->size())
-                                             .translated(-quick->geometry().topLeft())),
-              "Quick window mask should leave the native automation scrollbar to native clicks");
+        const bool automationInputMatchesCanonical =
+            inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::Automation,
+                                  QStringLiteral("timelineAutomationInput"));
+        if (automationInputMatchesCanonical) {
+            check(automationInputMatchesCanonical,
+                  "Automation input item should match its canonical band");
+        } else {
+            const QString failureMessage =
+                QStringLiteral("Automation input item should match its canonical band; %1")
+                    .arg(canonicalInputFailureDetails(view, *quick, *quickRoot,
+                                                      songview::TimelineBand::Automation,
+                                                      QStringLiteral("timelineAutomationInput")));
+            check(automationInputMatchesCanonical, qUtf8Printable(failureMessage));
+        }
+        const std::optional<songview::TimelineBandGeometry> &automationGeometry =
+            bandLayout.geometry(songview::TimelineBand::Automation);
+        const DrawerChrome &chrome = drawer->chrome();
+        const QRectF automationScrollbarRect = chrome.automationScrollbarRect();
+        check(automationGeometry.has_value() && !automationScrollbarRect.isEmpty() &&
+                  chrome.scrollbarWidth() == layout::space(layout::Space::Two) &&
+                  automationScrollbarRect.width() == layout::space(layout::Space::Two) &&
+                  automationScrollbarRect.right() == automationGeometry->rect.x(),
+              "DrawerChrome should publish the Quick automation scrollbar as the band's left "
+              "column");
+        check(checks::support::quickWindowIsUnmasked(*quick),
+              "the shared Quick window must stay unmasked around the automation scrollbar");
+        const std::optional<songview::TimelineBandGeometry> &trackHeadersGeometry =
+            bandLayout.geometry(songview::TimelineBand::TrackHeaders);
+        const QRect automationHeaderGutter =
+            automationGeometry && trackHeadersGeometry
+                ? automationGeometry->rect.intersected(trackHeadersGeometry->rect)
+                : QRect{};
+        const QPoint automationHeaderGutterProbe = automationHeaderGutter.center();
+        const bool automationHeaderGutterVisible =
+            !automationHeaderGutter.isEmpty() && trackHeaderBand && trackHeaderBand->isVisible() &&
+            trackHeaderBand->contains(trackHeaderBand->mapFromItem(
+                quickRoot, QPointF(automationHeaderGutterProbe - quick->geometry().topLeft())));
+        check(automationHeaderGutterVisible,
+              "the visible Quick TrackHeaders band should retain the automation label gutter");
         if (automationInput) {
             const uint64_t panRevision = document.revision();
             const int panUndo = document.undoStack()->count();
@@ -789,41 +1129,50 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
         view.setDrawerActivePage(EditorDrawerPage::VoiceChanges);
         QCoreApplication::processEvents();
-        const std::array<QWidget *, 6> nativeChrome{
-            rulerControls,    velocityHandle, voiceChangesHandle,
-            automationHandle, automationBar,  detentToggle,
-        };
-        check(visibleNativeChromeExcluded(view, *quick, nativeChrome),
-              "Quick window mask should exclude every visible retained native control");
+        check(checks::support::quickWindowIsUnmasked(*quick),
+              "the shared Quick window must remain unmasked after opening Voice Changes");
         const std::optional<songview::TimelineBandGeometry> &voiceGeometry =
             bandLayout.geometry(songview::TimelineBand::VoiceChanges);
-        check(voiceGeometry && quickRoot->property("voiceChangesBandVisible").toBool() &&
-                  inputMatchesCanonical(view, *quick, *quickRoot,
-                                        songview::TimelineBand::VoiceChanges,
-                                        QStringLiteral("timelineVoiceChangesInput")),
-              "Voice Changes should be visible with its input item matching the canonical band");
+        const bool voiceInputMatchesCanonical =
+            voiceGeometry && quickRoot->property("voiceChangesBandVisible").toBool() &&
+            inputMatchesCanonical(view, *quick, *quickRoot, songview::TimelineBand::VoiceChanges,
+                                  QStringLiteral("timelineVoiceChangesInput"));
+        if (voiceInputMatchesCanonical) {
+            check(
+                voiceInputMatchesCanonical,
+                "Voice Changes should be visible with its input item matching the canonical band");
+        } else {
+            const QString failureMessage =
+                QStringLiteral(
+                    "Voice Changes should be visible with its input item matching the canonical "
+                    "band; %1")
+                    .arg(canonicalInputFailureDetails(view, *quick, *quickRoot,
+                                                      songview::TimelineBand::VoiceChanges,
+                                                      QStringLiteral("timelineVoiceChangesInput")));
+            check(voiceInputMatchesCanonical, qUtf8Printable(failureMessage));
+        }
         const QImage editCursorVoiceContext =
             checks::support::captureQuickBand(view, voiceGeometry->rect);
         const QImage editCursorAutomation =
-            checks::support::captureQuickBand(view, *automationScroll->viewport());
+            checks::support::captureQuickBand(view, automationGeometry->rect);
         view.setPlayheadSample(timeline->sampleForTick(24), true);
         QCoreApplication::processEvents();
         const QImage playbackVoiceContext =
             checks::support::captureQuickBand(view, voiceGeometry->rect);
         const QImage playbackAutomation =
-            checks::support::captureQuickBand(view, *automationScroll->viewport());
+            checks::support::captureQuickBand(view, automationGeometry->rect);
         check(!editCursorAutomation.isNull() && playbackVoiceContext != editCursorVoiceContext &&
                   playbackAutomation == editCursorAutomation,
               "visible Voice Changes should resolve playback voice without refreshing Automation");
         const QImage warmAutomation =
-            checks::support::captureQuickBand(view, *automationScroll->viewport());
+            checks::support::captureQuickBand(view, automationGeometry->rect);
         const QImage warmVoiceContext =
             checks::support::captureQuickBand(view, voiceGeometry->rect);
         for (int tick = 25; tick < 27; ++tick)
             view.setPlayheadSample(timeline->sampleForTick(uint64_t(tick)), true);
         QCoreApplication::processEvents();
         check(checks::support::captureQuickBand(view, voiceGeometry->rect) == warmVoiceContext &&
-                  checks::support::captureQuickBand(view, *automationScroll->viewport()) ==
+                  checks::support::captureQuickBand(view, automationGeometry->rect) ==
                       warmAutomation,
               "steady same-voice playback should keep Voice Changes and Automation stable");
 
@@ -831,7 +1180,7 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         QCoreApplication::processEvents();
         check(checks::support::captureQuickBand(view, voiceGeometry->rect) ==
                       editCursorVoiceContext &&
-                  checks::support::captureQuickBand(view, *automationScroll->viewport()) ==
+                  checks::support::captureQuickBand(view, automationGeometry->rect) ==
                       editCursorAutomation,
               "stopping should return Voice Changes to the edit-cursor voice only");
         view.setPlayheadSample(timeline->sampleForTick(12), true);
@@ -839,17 +1188,17 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         const QImage squarePlaybackVoiceContext =
             checks::support::captureQuickBand(view, voiceGeometry->rect);
         const QImage automationBeforeCrossing =
-            checks::support::captureQuickBand(view, *automationScroll->viewport());
+            checks::support::captureQuickBand(view, automationGeometry->rect);
         view.setPlayheadSample(timeline->sampleForTick(24), true);
         QCoreApplication::processEvents();
         check(checks::support::captureQuickBand(view, voiceGeometry->rect) !=
                       squarePlaybackVoiceContext &&
-                  checks::support::captureQuickBand(view, *automationScroll->viewport()) ==
+                  checks::support::captureQuickBand(view, automationGeometry->rect) ==
                       automationBeforeCrossing,
               "Voice Changes should refresh across a program change without refreshing Automation");
         view.setPlayheadSample(timeline->sampleForTick(24), false);
         QCoreApplication::processEvents();
-        const qreal pinnedTempoHeaderY = qreal(automationScroll->viewport()->height()) - 1.0;
+        const qreal pinnedTempoHeaderY = qreal(automationGeometry->rect.height()) - 1.0;
         const QPointF menuStart(layout::fontPx(17.5 + 13.0 / 3.0) + 4.0, pinnedTempoHeaderY);
         const QPointF menuEnd = menuStart + QPointF(48.0, 0.0);
         checks::events::sendMouse(*automationInput, QEvent::MouseButtonPress, menuStart,
@@ -1398,17 +1747,9 @@ int runHostSeamsCheck()
           "SongView must own all three concrete drawer pages");
     if (!drawer || !automation || !velocity || !voiceChanges)
         return 1;
-    auto *automationScroll =
-        automation->findChild<QScrollArea *>(QStringLiteral("automationScroll"));
-    check(
-        automationScroll && automationScroll->viewport() &&
-            !automationScroll->autoFillBackground() &&
-            !automationScroll->viewport()->autoFillBackground() &&
-            automationScroll->styleSheet().contains(
-                QStringLiteral("background-color: transparent")) &&
-            automationScroll->viewport()->styleSheet().contains(
-                QStringLiteral("background-color: transparent")),
-        "Automation scroll host and viewport must remain transparent over the shared Quick scene");
+    check(qobject_cast<QWidget *>(drawer) == nullptr &&
+              qobject_cast<QWidget *>(automation) == nullptr,
+          "EditorDrawer and AutomationPage must be QObjects without QWidget scroll shells");
 
     view.applyEditorViewState(changedState);
     check(view.editorViewState() == changedState &&
@@ -1422,6 +1763,17 @@ int runHostSeamsCheck()
     view.show();
     QCoreApplication::processEvents();
 
+    const int automationMaximumScroll = qMax(0, automation->automationContentHeight() -
+                                                    automation->automationViewportSize().height());
+    automation->setVerticalScroll(automationMaximumScroll + 97);
+    check(automation->verticalScroll() == automationMaximumScroll,
+          "AutomationPage must be the only automation scroll store, clamping setVerticalScroll "
+          "into its synchronized range");
+    automation->setVerticalScroll(0);
+    check(automation->verticalScroll() == 0,
+          "AutomationPage scroll store must accept in-range offsets without a scrollbar proxy");
+    check(drawer->chrome().scrollbarWidth() == layout::space(layout::Space::Two),
+          "DrawerChrome must size the Quick automation scrollbar with layout::space(Space::Two)");
     view.setEditorHorizontalScroll(96.0);
     view.setEditorTimeZoom(1.75 * layout::fontPx(8.0 / 3.0));
     view.setFollowScrollPaused(true);

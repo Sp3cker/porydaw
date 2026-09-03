@@ -10,12 +10,18 @@ Item {
     property rect voiceChangesBandRect: Qt.rect(0, 0, 0, 0)
     property rect otherEventsBandRect: Qt.rect(0, 0, 0, 0)
     property rect automationBandRect: Qt.rect(0, 0, 0, 0)
+    property rect trackHeadersBandRect: Qt.rect(0, 0, 0, 0)
     property bool rulerBandVisible: false
     property bool rollBandVisible: false
     property bool velocityBandVisible: false
     property bool voiceChangesBandVisible: false
     property bool otherEventsBandVisible: false
     property bool automationBandVisible: false
+    property bool trackHeadersBandVisible: false
+    property font fallbackRulerFont
+    readonly property var rulerAppearance: timeRuler ? timeRuler.gridControlAppearance : null
+    readonly property font rulerFont: rulerAppearance ? rulerAppearance.font : fallbackRulerFont
+
 
     Component {
         id: bandTextDelegate
@@ -125,7 +131,10 @@ Item {
         }
     }
 
+
+
     TimelineSceneBand {
+        id: rulerBand
         bandRect: root.rulerBandRect
         bandVisible: root.rulerBandVisible
         bandName: "timelineQuickRuler"
@@ -143,6 +152,15 @@ Item {
         TimelineTextLayer {
             textModel: timelineScene.rulerTextModel
             z: 2
+        }
+
+        RulerControls {
+            objectName: "timelineRulerControls"
+            width: timelineQuickView.rulerControlsWidth
+            height: parent.height
+            rulerBand: rulerBand
+            ruler: timeRuler
+            z: 3
         }
 
         TimelineInputItem {
@@ -353,4 +371,38 @@ Item {
         }
     }
 
+    TrackHeaderBand {
+        anchors.fill: parent
+        bandRect: root.trackHeadersBandRect
+        bandVisible: root.trackHeadersBandVisible
+        model: trackHeaderModel
+        controlFont: root.rulerFont
+    }
+
+    TimelineChromeBand {
+        x: root.trackHeadersBandRect.x
+        y: root.trackHeadersBandRect.y
+        width: root.trackHeadersBandRect.width
+        height: root.trackHeadersBandRect.height
+        bandRect: root.trackHeadersBandRect
+        bandVisible: root.trackHeadersBandVisible
+        bandName: "timelineQuickTrackHeaders"
+    }
+    TrackHeaderToolTip {
+        bandRect: root.trackHeadersBandRect
+        bandVisible: root.trackHeadersBandVisible
+        overlayRoot: root
+        model: trackHeaderModel
+        controlFont: root.rulerFont
+        z: 30
+    }
+
+
+
+    DrawerChromeLayer {
+        anchors.fill: parent
+        chrome: drawerChrome
+        quickView: timelineQuickView
+        z: 20
+    }
 }

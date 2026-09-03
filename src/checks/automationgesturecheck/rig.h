@@ -151,8 +151,8 @@ class AutomationGestureCheckRig final
     qreal automationDpr() const noexcept;
     int automationContentHeight() const noexcept;
     QSize automationViewportSize() const noexcept;
-    // Resizes the native scroll viewport through the production path, so the
-    // page filter relayouts the canvas mid-gesture.
+    // Resizes the automation viewport through the production path, so the
+    // canvas rebuilds its geometry stack mid-gesture.
     void resizeAutomationViewport(const QSize &size);
     void canvasHostAppearanceChanged();
 

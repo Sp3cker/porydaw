@@ -16,6 +16,7 @@ enum class TimelineBand : uint8_t {
     Automation,
     Velocity,
     VoiceChanges,
+    TrackHeaders,
     Count,
 };
 

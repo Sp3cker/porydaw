@@ -5,8 +5,6 @@
 #include <QCoreApplication>
 #include <QEvent>
 #include <QImage>
-#include <QScrollArea>
-#include <QScrollBar>
 
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
@@ -23,6 +21,11 @@ void pump()
 {
     QCoreApplication::sendPostedEvents();
     QCoreApplication::processEvents();
+}
+
+int automationMaximumScrollY(const AutomationPage &page)
+{
+    return std::max(0, page.automationContentHeight() - page.automationViewportSize().height());
 }
 
 bool tempoPinnedToViewport(const AutomationPage &page)
@@ -69,8 +72,10 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
                                   const std::vector<AutomationRow> &rows, const QString &songLabel,
                                   int &failures)
 {
-    auto *scroll = page.findChild<QScrollArea *>(QStringLiteral("automationScroll"));
-    if (!scroll || !scroll->verticalScrollBar() || !scroll->viewport())
+    songview::TimelineInputItem *const input = automationInputItem(view);
+    const auto &automationBand =
+        view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
+    if (!input || !automationBand)
         return;
 
     const auto check = [&](bool condition, const QString &message) {
@@ -80,17 +85,17 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
                      qUtf8Printable(message));
         ++failures;
     };
-    const AutomationBandInput band{page, *automationInputItem(view)};
-    // Content y in page coordinates: the retained native viewport plus the
-    // inverse of the page's vertical scroll.
-    const auto contentPageY = [&](int contentY) {
-        QWidget *const viewport = page.scrollViewport();
-        return viewport ? viewport->mapTo(&page, QPoint(0, contentY - page.verticalScroll())).y()
-                        : -1;
+    const AutomationBandInput band{page, *input};
+    // Content y in viewport coordinates: content minus the page's vertical scroll.
+    const auto contentPageY = [&](int contentY) { return contentY - page.verticalScroll(); };
+    const auto automationBandRect = [&]() -> QRect {
+        const auto &bandGeometry =
+            view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
+        return bandGeometry ? bandGeometry->rect : QRect{};
     };
     const auto captureAutomationViewport = [&] {
         QString error;
-        const QImage image = checks::support::captureQuickBand(view, *scroll->viewport(), &error);
+        const QImage image = checks::support::captureQuickBand(view, automationBandRect(), &error);
         check(!image.isNull(),
               QStringLiteral("automation viewport framebuffer capture failed: %1").arg(error));
         return image;
@@ -106,11 +111,12 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
     view.applyEditorViewState(configuredViewState);
     pump();
 
-    const int originalPageHeight = page.height();
-    page.resize(page.width(), 2 * geometry.rowDefaultHeight);
+    const int originalSectionHeight = view.drawerSectionHeight(EditorDrawerPage::Automations);
+    const int sectionOverhead = std::max(0, originalSectionHeight - automationBandRect().height());
+    view.setDrawerSectionHeight(EditorDrawerPage::Automations,
+                                2 * geometry.rowDefaultHeight + sectionOverhead);
     pump();
-    QScrollBar *vertical = scroll->verticalScrollBar();
-    vertical->setValue(vertical->minimum());
+    page.setVerticalScroll(0);
     pump();
 
     const int collapsedHeight = geometry.addLaneStripHeight;
@@ -133,14 +139,14 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
               expandedMinimumHeight > collapsedMinimumHeight,
           QStringLiteral("expanded Tempo must use its configured pinned row height"));
 
-    const int scrollBefore = vertical->value();
+    const int scrollBefore = page.verticalScroll();
     const QRect bodyBeforeScroll = page.canvas()->laneBody(LaneHandle{0});
     const QPoint pageBeforeScroll = QPoint(0, contentPageY(bodyBeforeScroll.top()));
     const QImage viewportBeforeScroll = captureAutomationViewport();
-    vertical->setValue(vertical->maximum());
+    page.setVerticalScroll(automationMaximumScrollY(page));
     pump();
     const QImage viewportAfterScroll = captureAutomationViewport();
-    const int scrollAfter = vertical->value();
+    const int scrollAfter = page.verticalScroll();
     const QRect bodyAfterScroll = page.canvas()->laneBody(LaneHandle{0});
     const QPoint pageAfterScroll = QPoint(0, contentPageY(bodyAfterScroll.top()));
     const QRect finalCcBody = page.canvas()->laneBody(LaneHandle{int(rows.size())});
@@ -158,34 +164,32 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
     check(!viewportBeforeScroll.isNull() && viewportAfterScroll != viewportBeforeScroll,
           QStringLiteral("vertical scroll did not update the automation Quick viewport"));
 
-    const int viewportHeightBeforeResize = scroll->viewport()->height();
-    const int scrollBeforeViewportResize = vertical->value();
+    const int viewportHeightBeforeResize = page.automationViewportSize().height();
+    const int scrollBeforeViewportResize = page.verticalScroll();
     const QRect bodyBeforeViewportResize = page.canvas()->laneBody(LaneHandle{0});
-    const QPoint tempoPageBottomBeforeResize =
-        QPoint(0, contentPageY(bodyBeforeViewportResize.bottom() + 1));
-    const QPoint viewportPageBottomBeforeResize =
-        scroll->viewport()->mapTo(&page, QPoint(0, viewportHeightBeforeResize));
-    page.resize(page.width(), geometry.rowDefaultHeight);
+    const int tempoPageBottomBeforeResize = contentPageY(bodyBeforeViewportResize.bottom() + 1);
+    const int viewportPageBottomBeforeResize = viewportHeightBeforeResize;
+    view.setDrawerSectionHeight(EditorDrawerPage::Automations,
+                                geometry.rowDefaultHeight + sectionOverhead);
     pump();
-    const int viewportHeightAfterResize = scroll->viewport()->height();
-    const int scrollAfterViewportResize = vertical->value();
+    const int viewportHeightAfterResize = page.automationViewportSize().height();
+    const int scrollAfterViewportResize = page.verticalScroll();
     const QRect bodyAfterViewportResize = page.canvas()->laneBody(LaneHandle{0});
-    const QPoint tempoPageBottomAfterResize =
-        QPoint(0, contentPageY(bodyAfterViewportResize.bottom() + 1));
-    const QPoint viewportPageBottomAfterResize =
-        scroll->viewport()->mapTo(&page, QPoint(0, viewportHeightAfterResize));
-    check(vertical->maximum() > 0 && scrollAfterViewportResize == scrollBeforeViewportResize &&
+    const int tempoPageBottomAfterResize = contentPageY(bodyAfterViewportResize.bottom() + 1);
+    const int viewportPageBottomAfterResize = viewportHeightAfterResize;
+    check(automationMaximumScrollY(page) > 0 &&
+              scrollAfterViewportResize == scrollBeforeViewportResize &&
               viewportHeightAfterResize < viewportHeightBeforeResize &&
               bodyAfterViewportResize.height() == bodyBeforeViewportResize.height() &&
               bodyAfterViewportResize.top() - bodyBeforeViewportResize.top() ==
                   viewportHeightAfterResize - viewportHeightBeforeResize &&
               bodyAfterViewportResize == page.canvas()->pinnedTempoRect() &&
               tempoPinnedToViewport(page) &&
-              tempoPageBottomBeforeResize.y() == viewportPageBottomBeforeResize.y() &&
-              tempoPageBottomAfterResize.y() == viewportPageBottomAfterResize.y(),
+              tempoPageBottomBeforeResize == viewportPageBottomBeforeResize &&
+              tempoPageBottomAfterResize == viewportPageBottomAfterResize,
           QStringLiteral("Tempo pin must follow a viewport resize without a scroll gesture"));
 
-    vertical->setValue(vertical->minimum());
+    page.setVerticalScroll(0);
     pump();
     const QPoint expandedHeader = tempoHeaderPoint(page);
     band.mouse(QEvent::MouseButtonPress, expandedHeader, Qt::LeftButton, Qt::LeftButton,
@@ -223,7 +227,7 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
               page.canvas()->minimumContentHeight() == collapsedMinimumHeight,
           QStringLiteral("temporary Tempo expansion must be reset for later checks"));
 
-    page.resize(page.width(), originalPageHeight);
+    view.setDrawerSectionHeight(EditorDrawerPage::Automations, originalSectionHeight);
     view.applyEditorViewState(originalViewState);
     pump();
 }

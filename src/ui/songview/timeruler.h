@@ -4,14 +4,17 @@
 
 #include <QFont>
 #include <QFontMetrics>
+#include <QObject>
 #include <QPoint>
 #include <QPointF>
+#include <QPointer>
 #include <QRect>
-#include <QWidget>
+#include <QString>
+#include <QVariantMap>
 #include <cstdint>
 #include <vector>
 
-class QComboBox;
+class QMenu;
 
 class SongView;
 
@@ -22,21 +25,18 @@ class TimelineQuickScene;
 class TimelineQuickView;
 class TimeCamera;
 
-class TimeRulerControls final : public QWidget
+class TimeRuler final : public QObject, public TimelineBandInteraction
 {
-  public:
-    explicit TimeRulerControls(SongView &owner, QWidget *parent);
-    void syncFromView();
-    void closePopups();
+    Q_OBJECT
+    Q_DISABLE_COPY_MOVE(TimeRuler)
+    Q_PROPERTY(QString divisionText READ divisionText NOTIFY gridControlsChanged FINAL)
+    Q_PROPERTY(QString feelText READ feelText NOTIFY gridControlsChanged FINAL)
+    Q_PROPERTY(QString divisionToolTip READ divisionToolTip NOTIFY gridControlsChanged FINAL)
+    Q_PROPERTY(QString feelToolTip READ feelToolTip NOTIFY gridControlsChanged FINAL)
+    Q_PROPERTY(bool gridControlsEnabled READ gridControlsEnabled NOTIFY gridControlsChanged FINAL)
+    Q_PROPERTY(QVariantMap gridControlAppearance READ gridControlAppearance NOTIFY
+                   gridControlAppearanceChanged FINAL)
 
-  private:
-    SongView &m_owner;
-    QComboBox *m_divCombo = nullptr;
-    QComboBox *m_feelCombo = nullptr;
-};
-
-class TimeRuler final : public TimelineBandInteraction
-{
   private:
     struct Geometry {
         int timelineDetailMinimumPixelsPerBeat;
@@ -49,6 +49,19 @@ class TimeRuler final : public TimelineBandInteraction
 
   public:
     explicit TimeRuler(SongView &owner);
+    // Canonical ruler row height shared with SongView's spacer geometry.
+    static int rowHeight();
+
+    QString divisionText() const;
+    QString feelText() const;
+    QString divisionToolTip() const;
+    QString feelToolTip() const;
+    bool gridControlsEnabled() const noexcept;
+    QVariantMap gridControlAppearance() const;
+    void syncGridControls();
+    void closePopups();
+    Q_INVOKABLE void openDivisionMenu(QPointF position);
+    Q_INVOKABLE void openFeelMenu(QPointF position);
 
     bool gestureActive() const noexcept;
     void cancelInteraction();
@@ -64,10 +77,18 @@ class TimeRuler final : public TimelineBandInteraction
     void inputCancelled(TimelineInputCancelReason reason) override;
     void hostAppearanceChanged() override;
 
+  signals:
+    void gridControlsChanged();
+    void gridControlAppearanceChanged();
+
   private:
     friend class TimelineQuickView;
     void rebuildQuickScene(TimelineQuickScene &scene);
     void requestQuickUpdate();
+    static QFont resolveRulerFont(const Geometry &geometry);
+    static int markerRowHeight(const QFontMetrics &metrics);
+    void syncGridControlAppearance();
+    void openGridMenu(QPointF position, bool division);
     QRect markerRow() const;
     QRect tickRow() const;
     int textBaseline(const QRect &row, const QFontMetrics &metrics) const;
@@ -90,10 +111,10 @@ class TimeRuler final : public TimelineBandInteraction
         qreal labelW;  // 0: label hidden behind the next chip (stem only)
     };
 
-    // Chip layout shared by the Quick scene builder and hit-testing: shadowed
-    // same-tick duplicates dropped, labels nudged past a loop bracket glyph
-    // sitting on the same spot, and a label hidden (stem only) when it would
-    // run into the next chip — zooming in separates them again.
+    // Chip layout shared by paint and hit-testing: shadowed same-tick
+    // duplicates dropped, labels nudged past a loop bracket glyph sitting on
+    // the same spot, and a label hidden (stem only) when it would run into
+    // the next chip — zooming in separates them again.
     std::vector<SigChip> sigChips() const;
 
     // Chip hit-test in the ruler's top half, including the placeholder 4/4
@@ -124,6 +145,11 @@ class TimeRuler final : public TimelineBandInteraction
     const songview::Grid &m_grid;
     TimelineInputHost *m_inputHost = nullptr;
     Geometry m_geometry;
+    QString m_divisionText;
+    QString m_feelText;
+    bool m_gridControlsEnabled = false;
+    QVariantMap m_gridControlAppearance;
+    QPointer<QMenu> m_openMenu; // Grid-control or ruler context menu during exec().
     int m_markerHeight = 0;
     int m_dragMarker = -1;
     uint64_t m_dragTick = 0;

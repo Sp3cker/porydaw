@@ -1,16 +1,16 @@
 #pragma once
 
+#include <QObject>
 #include <QRect>
-#include <QRegion>
-#include <QWidget>
+#include <QSize>
 
 #include <optional>
 
+#include "ui/editordrawer/drawerchrome.h"
 #include "ui/editorviewstate.h"
 
 class AutomationPage;
-class QFrame;
-class QToolButton;
+class EditorDrawer;
 class SongView;
 class VelocityArea;
 class VoiceChangeArea;
@@ -23,12 +23,13 @@ struct DrawerMetrics {
     int plotOrigin = 0;
 };
 
-class DrawerSections final : public QWidget
+class DrawerSections final : public QObject
 {
     Q_OBJECT
+    Q_DISABLE_COPY_MOVE(DrawerSections)
 
   public:
-    DrawerSections(SongView &owner, QWidget *parent, AutomationPage *automation,
+    DrawerSections(SongView &owner, QObject *parent, AutomationPage *automation,
                    VelocityArea *velocity, VoiceChangeArea *voiceChanges);
 
     const DrawerMetrics &metrics() const;
@@ -45,32 +46,30 @@ class DrawerSections final : public QWidget
                     DrawerSectionState voiceChanges, EditorDrawerPage activePage);
     void focusActivePage();
     void cancelVisibleInteractions();
-    void arrangeLocal();
+    void arrangeLocal(const QSize &overlaySize);
     std::optional<QRect> bodyRect(EditorDrawerPage page) const noexcept;
-    QRegion occupiedRegion() const;
+    const DrawerChromeSnapshot &chromeSnapshot() const noexcept { return m_chromeSnapshot; }
 
   signals:
     void geometryChanged();
     void statePublished(bool geometryAlreadyArranged);
 
-  protected:
-    bool eventFilter(QObject *watched, QEvent *event) override;
-    void changeEvent(QEvent *event) override;
-
   private:
+    friend class EditorDrawer;
+
     void ensureChrome() const;
-    void refreshDetentIcon();
-    void syncDetentToggle();
+    void syncDetentState();
     int velocityBodyHeight(int hostHeight) const;
     int effectiveAutomationBodyHeight() const;
     int effectiveVoiceChangesBodyHeight() const;
-    QToolButton *pageToggle(EditorDrawerPage page) const noexcept;
     bool pageVisible(EditorDrawerPage page) const noexcept;
     int pageBodyHeight(EditorDrawerPage page) const;
     std::optional<int> &pageStoredHeight(EditorDrawerPage page) noexcept;
-    QWidget *pageResizeHandle(EditorDrawerPage page) const noexcept;
-    EditorDrawerPage resizePageForHandle(const QWidget *handle) const noexcept;
-    void setPageVisible(EditorDrawerPage page, bool visible);
+    const std::optional<int> &pageStoredHeight(EditorDrawerPage page) const noexcept;
+    int resizeBodyHeight(EditorDrawerPage page) const;
+    int maximumResizeBodyHeight(EditorDrawerPage page) const;
+    void setResizeBodyHeight(EditorDrawerPage page, std::optional<int> height);
+    void publishResizeState();
 
     SongView &m_owner;
     AutomationPage *m_automation = nullptr;
@@ -87,16 +86,9 @@ class DrawerSections final : public QWidget
     std::optional<QRect> m_automationBodyRect;
     std::optional<QRect> m_velocityBodyRect;
     std::optional<QRect> m_voiceChangesBodyRect;
-    qreal m_resizeStartGlobalY = 0.0;
-    int m_resizeStartBodyHeight = 0;
-    std::optional<int> m_resizeOriginalBodyHeight;
-    QWidget *m_resizeTarget = nullptr;
-    QToolButton *m_velocityToggle = nullptr;
-    QToolButton *m_automationToggle = nullptr;
-    QToolButton *m_voiceChangesToggle = nullptr;
-    QToolButton *m_detentToggle = nullptr;
-    QFrame *m_automationBar = nullptr;
-    QFrame *m_velocityHandle = nullptr;
-    QFrame *m_automationHandle = nullptr;
-    QFrame *m_voiceChangesHandle = nullptr;
+    DrawerChromeSnapshot m_chromeSnapshot;
+    bool m_velocityVisible = true;
+    bool m_automationVisible = true;
+    bool m_voiceChangesVisible = true;
+    bool m_detentEnabled = false;
 };

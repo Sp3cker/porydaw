@@ -1,20 +1,22 @@
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/drawerchrome.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
+#include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/timeruler.h"
+#include "ui/songview/trackheadermodel.h"
 #include <QColor>
-#include <QPoint>
 #include <QQmlContext>
 #include <QQmlError>
+#include <QQuickImageProvider>
 #include <QQuickView>
-#include <QRegion>
 #include <QSurfaceFormat>
 #include <QUrl>
 #include <QVariant>
@@ -43,19 +45,70 @@ constexpr std::array kTimelineBandQmlProperties{
     TimelineBandQmlProperties{TimelineBand::Velocity, "velocityBandRect", "velocityBandVisible"},
     TimelineBandQmlProperties{TimelineBand::VoiceChanges, "voiceChangesBandRect",
                               "voiceChangesBandVisible"},
+    TimelineBandQmlProperties{TimelineBand::TrackHeaders, "trackHeadersBandRect",
+                              "trackHeadersBandVisible"},
 };
 static_assert(kTimelineBandQmlProperties.size() == timelineBandIndex(TimelineBand::Count));
 
+namespace {
+
+struct DrawerChromeInputQmlProperties {
+    DrawerChromeTarget target;
+    const char *objectName;
+};
+
+constexpr std::array kDrawerChromeInputQmlProperties{
+    DrawerChromeInputQmlProperties{DrawerChromeTarget::VoiceChangesHandle,
+                                   "drawerVoiceChangesHandleInput"},
+    DrawerChromeInputQmlProperties{DrawerChromeTarget::VelocityHandle, "drawerVelocityHandleInput"},
+    DrawerChromeInputQmlProperties{DrawerChromeTarget::AutomationHandle,
+                                   "drawerAutomationHandleInput"},
+    DrawerChromeInputQmlProperties{DrawerChromeTarget::Bar, "drawerBarInput"},
+    DrawerChromeInputQmlProperties{DrawerChromeTarget::Detent, "drawerDetentInput"},
+};
+static_assert(kDrawerChromeInputQmlProperties.size() == 5);
+
+struct DrawerChromeRect {
+    QRectF rect;
+    bool visible = false;
+};
+
+std::array<DrawerChromeRect, 9> visibleDrawerChromeRects(const DrawerChrome *chrome)
+{
+    if (!chrome)
+        return {};
+
+    // Enumerate every visible QML chrome surface so the host envelope is
+    // exactly the Quick-visible area, including the automation scrollbar only
+    // while the automation body owns it.
+    return {{
+        {chrome->voiceChangesHandleRect(), chrome->voiceChangesHandleVisible()},
+        {chrome->velocityHandleRect(), chrome->velocityHandleVisible()},
+        {chrome->automationHandleRect(), chrome->automationHandleVisible()},
+        {chrome->barRect(), chrome->barVisible()},
+        {chrome->voiceChangesToggleRect(), chrome->voiceChangesToggleVisible()},
+        {chrome->automationToggleRect(), chrome->automationToggleVisible()},
+        {chrome->velocityToggleRect(), chrome->velocityToggleVisible()},
+        {chrome->detentRect(), chrome->detentVisible()},
+        {chrome->automationScrollbarRect(), chrome->automationScrollbarVisible()},
+    }};
+}
+
+} // namespace
+
 TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStrip &otherEvents,
                                      AutomationPage &automation, VelocityArea &velocity,
-                                     VoiceChangeArea &voiceChanges, SongView &songView)
+                                     VoiceChangeArea &voiceChanges, DrawerChrome &drawerChrome,
+                                     TrackHeaderModel &trackHeaders, SongView &songView)
     : QWidget(&songView)
     , m_ruler(&ruler)
+    , m_trackHeaders(&trackHeaders)
     , m_roll(&roll)
     , m_otherEvents(&otherEvents)
     , m_automation(&automation)
     , m_velocity(&velocity)
     , m_voiceChanges(&voiceChanges)
+    , m_drawerChrome(&drawerChrome)
     , m_songView(&songView)
     , m_camera(songView.camera())
 {
@@ -65,6 +118,12 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     m_flushTimer.setSingleShot(true);
     m_flushTimer.setInterval(std::chrono::milliseconds::zero());
     connect(&m_flushTimer, &QTimer::timeout, this, &TimelineQuickView::flushUpdate);
+    // Chrome snapshot changes re-envelope the Quick host; scroll changes only
+    // repaint the automation layers.
+    connect(m_drawerChrome, &DrawerChrome::chromeChanged, this,
+            [this] { scheduleTimelineBandLayoutPublication(); });
+    connect(m_drawerChrome, &DrawerChrome::scrollChanged, this,
+            [this] { requestAutomationUpdate(AutomationRefresh::All); });
 
     static std::once_flag registered;
     std::call_once(registered, [] {
@@ -90,6 +149,12 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     m_scene = new TimelineQuickScene(this);
     m_quickView->rootContext()->setContextProperty(QStringLiteral("timelineQuickView"), this);
     m_quickView->rootContext()->setContextProperty(QStringLiteral("timelineScene"), m_scene);
+    m_quickView->rootContext()->setContextProperty(QStringLiteral("drawerChrome"), &drawerChrome);
+    m_quickView->rootContext()->setContextProperty(QStringLiteral("trackHeaderModel"),
+                                                   &trackHeaders);
+    m_quickView->rootContext()->setContextProperty(QStringLiteral("timeRuler"), &ruler);
+    m_quickView->engine()->addImageProvider(QStringLiteral("drawerchrome"),
+                                            drawerChrome.releaseIconProvider());
     m_quickView->setSource(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml")));
     if (m_quickView->status() != QQuickView::Ready) {
         for (const QQmlError &error : m_quickView->errors())
@@ -181,7 +246,7 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
             qFatal("Qt Quick timeline QML has no band property '%s'", properties.visible);
     }
 
-    // All six bands attach through their matching input items.
+    // All seven bands attach through their matching input items.
     TimelineInputItem *const rulerInput =
         root->findChild<TimelineInputItem *>(QStringLiteral("timelineRulerInput"));
     if (!rulerInput)
@@ -218,33 +283,33 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
         qFatal("Qt Quick timeline QML has no input item 'timelineAutomationInput'");
     automationInput->setInteraction(m_automation->canvas());
     m_inputItems[timelineBandIndex(TimelineBand::Automation)] = automationInput;
+    TimelineInputItem *const trackHeadersInput =
+        root->findChild<TimelineInputItem *>(QStringLiteral("timelineTrackHeadersInput"));
+    if (!trackHeadersInput)
+        qFatal("Qt Quick timeline QML has no input item 'timelineTrackHeadersInput'");
+    trackHeadersInput->setInteraction(m_trackHeaders.data());
+    m_inputItems[timelineBandIndex(TimelineBand::TrackHeaders)] = trackHeadersInput;
 
-    QWidget *const rulerControls = m_songView->findChild<QWidget *>(
-        QStringLiteral("timeRulerControls"), Qt::FindDirectChildrenOnly);
-    if (!rulerControls)
-        qFatal("Timeline Quick host cannot find native ruler controls");
-    m_nativeChrome[0] = rulerControls;
-
-    static constexpr std::array nativeChromeNames = {
-        "velocityResizeHandle", "voiceChangesResizeHandle", "automationResizeHandle",
-        "automationDrawerBar",  "velocityDetentToggle",
-    };
-    QWidget *const drawerSections =
-        m_songView->findChild<QWidget *>(QStringLiteral("drawerSections"));
-    for (std::size_t index = 0; index < nativeChromeNames.size(); ++index) {
-        QWidget *const chrome = drawerSections ? drawerSections->findChild<QWidget *>(
-                                                     QString::fromLatin1(nativeChromeNames[index]),
-                                                     Qt::FindDirectChildrenOnly)
-                                               : nullptr;
-        if (!chrome)
-            qFatal("Timeline Quick host cannot find drawer chrome '%s'", nativeChromeNames[index]);
-        m_nativeChrome[index + 1] = chrome;
+    for (std::size_t index = 0; index < kDrawerChromeInputQmlProperties.size(); ++index) {
+        const DrawerChromeInputQmlProperties &properties = kDrawerChromeInputQmlProperties[index];
+        TimelineInputItem *const input =
+            root->findChild<TimelineInputItem *>(QString::fromLatin1(properties.objectName));
+        if (!input) {
+            qFatal("Qt Quick timeline QML has no drawer chrome input '%s'", properties.objectName);
+        }
+        input->setInteraction(&drawerChrome.interaction(properties.target));
+        m_drawerChromeInputs[index] = input;
     }
+
     syncAppearance();
 }
 
 TimelineQuickView::~TimelineQuickView()
 {
+    for (TimelineInputItem *item : m_drawerChromeInputs) {
+        if (item)
+            item->setInteraction(nullptr);
+    }
     for (TimelineInputItem *item : m_inputItems) {
         if (item)
             item->setInteraction(nullptr);
@@ -281,6 +346,29 @@ qreal TimelineQuickView::editRootContentX() const noexcept
 bool TimelineQuickView::editVisible() const noexcept
 {
     return m_editSongViewContentX.has_value();
+}
+
+qreal TimelineQuickView::hostX() const noexcept
+{
+    return m_publishedHostRect.x();
+}
+
+qreal TimelineQuickView::hostY() const noexcept
+{
+    return m_publishedHostRect.y();
+}
+qreal TimelineQuickView::rulerPlotOrigin() const noexcept
+{
+    return m_songView ? quickRootXForSongViewX(m_songView->timelinePlotOrigin()) : 0.0;
+}
+
+qreal TimelineQuickView::rulerControlsWidth() const noexcept
+{
+    const std::optional<TimelineBandGeometry> &ruler = m_bandLayout.geometry(TimelineBand::Ruler);
+    if (!m_songView || !ruler)
+        return 0.0;
+    return std::max(0.0, rulerPlotOrigin() - quickRootXForSongViewX(ruler->rect.x()) -
+                             static_cast<qreal>(layout::space(layout::Space::One)));
 }
 
 void TimelineQuickView::synchronizeGuides(qreal songViewTimelineOriginX,
@@ -353,6 +441,9 @@ void TimelineQuickView::setEditChrome(std::optional<qreal> songViewContentX)
 
 bool TimelineQuickView::eventFilter(QObject *watched, QEvent *event)
 {
+    if (watched == m_quickView && event->type() == QEvent::Resize)
+        scheduleTimelineBandLayoutPublication();
+
     if (watched == m_quickView && event->type() == QEvent::FocusIn) {
         // QWindowContainer's internal filter retargets this focus onto the
         // container widget, stealing it from native content. Only let it
@@ -369,6 +460,10 @@ bool TimelineQuickView::eventFilter(QObject *watched, QEvent *event)
         }
     }
     if (watched == m_quickView && event->type() == QEvent::WindowDeactivate) {
+        for (TimelineInputItem *item : m_drawerChromeInputs) {
+            if (item && item->interaction())
+                item->interaction()->inputCancelled(TimelineInputCancelReason::WindowDeactivated);
+        }
         for (TimelineInputItem *item : m_inputItems) {
             if (item && item->interaction())
                 item->interaction()->inputCancelled(TimelineInputCancelReason::WindowDeactivated);
@@ -380,7 +475,14 @@ bool TimelineQuickView::eventFilter(QObject *watched, QEvent *event)
 void TimelineQuickView::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
-    m_quickContainer->setGeometry(rect());
+    if (m_quickContainer)
+        m_quickContainer->setGeometry(rect());
+    scheduleTimelineBandLayoutPublication();
+}
+
+void TimelineQuickView::scheduleTimelineBandLayoutPublication()
+{
+    m_layoutTimer.start();
 }
 
 void TimelineQuickView::setBandLayout(TimelineBandLayout layout)
@@ -422,7 +524,7 @@ void TimelineQuickView::setBandLayout(TimelineBandLayout layout)
         timelineDirty |= TimelineQuickDirty::VoiceChanges;
 
     m_bandLayout = std::move(layout);
-    m_layoutTimer.start();
+    scheduleTimelineBandLayoutPublication();
     requestUpdate(pianoDirty);
     requestTimelineUpdate(timelineDirty);
     requestAutomationUpdate(automationRefresh);
@@ -430,10 +532,10 @@ void TimelineQuickView::setBandLayout(TimelineBandLayout layout)
 
 void TimelineQuickView::refreshBandLayout()
 {
-    // Native-window lifecycle events (show, WinId, DPR) can drop the published
-    // QML geometry and window mask; republish the stored layout as-is, without
-    // changing the canonical value or queueing dirty domains.
-    m_layoutTimer.start();
+    // Quick-window lifecycle events (show, WinId, DPR) can drop published
+    // QML geometry; republish the stored layout as-is, without changing the
+    // canonical value or queueing dirty domains.
+    scheduleTimelineBandLayoutPublication();
 }
 
 bool TimelineQuickView::focusBand(TimelineBand band, Qt::FocusReason reason)
@@ -463,21 +565,35 @@ std::optional<TimelineBand> TimelineQuickView::focusedBand() const
 
 void TimelineQuickView::publishTimelineBandLayout()
 {
-    QWidget *const songView = m_songView.data();
-    if (!songView)
+    if (!m_songView)
         return;
 
     // Band rects arrive already visible and SongView-local; consumers such as
     // PlayheadOverlay intersect only their owner's rect. Here they are
-    // translated to this host's local origin for the QML scene and window mask.
+    // translated to this host's local origin for the QML scene.
     std::optional<QRect> hostRect;
     for (const std::optional<TimelineBandGeometry> &band : m_bandLayout.bands) {
         if (!band)
             continue;
         hostRect = hostRect ? hostRect->united(band->rect) : band->rect;
     }
+    const auto drawerChromeRects = visibleDrawerChromeRects(m_drawerChrome.data());
+    for (const DrawerChromeRect &chrome : drawerChromeRects) {
+        if (!chrome.visible || chrome.rect.isEmpty())
+            continue;
+        const QRect chromeRect = chrome.rect.toAlignedRect();
+        hostRect = hostRect ? hostRect->united(chromeRect) : chromeRect;
+    }
     const QRect publishedHostRect = hostRect.value_or(QRect{});
-    const bool hostXChanged = geometry().x() != publishedHostRect.x();
+    const qreal publishedRulerPlotOrigin = m_songView->timelinePlotOrigin() - publishedHostRect.x();
+    const std::optional<TimelineBandGeometry> &rulerBand =
+        m_bandLayout.geometry(TimelineBand::Ruler);
+    const qreal publishedRulerControlsWidth =
+        rulerBand ? std::max(0.0, static_cast<qreal>(m_songView->timelinePlotOrigin() -
+                                                     rulerBand->rect.x() -
+                                                     layout::space(layout::Space::One)))
+                  : 0.0;
+    const bool hostOriginChanged = m_publishedHostRect.topLeft() != publishedHostRect.topLeft();
     if (geometry() != publishedHostRect)
         setGeometry(publishedHostRect);
     if (isVisible() != hostRect.has_value())
@@ -497,25 +613,16 @@ void TimelineQuickView::publishTimelineBandLayout()
         }
     }
 
-    // Quick now receives input, so the native-window mask admits only the
-    // visible canonical band rectangles; retained native chrome is subtracted
-    // so drawer controls keep receiving input through the holes.
-    QRegion quickMask;
-    for (const TimelineBandQmlProperties &properties : kTimelineBandQmlProperties) {
-        const std::optional<TimelineBandGeometry> &band = m_bandLayout.geometry(properties.band);
-        if (band)
-            quickMask += band->rect;
-    }
-    for (QWidget *chrome : m_nativeChrome) {
-        if (!chrome || !chrome->isVisibleTo(songView))
-            continue;
-        const QRect songViewRect(chrome->mapTo(songView, chrome->rect().topLeft()), chrome->size());
-        quickMask -= songViewRect;
-    }
-    quickMask.translate(-publishedHostRect.topLeft());
-    m_quickView->setMask(quickMask);
+    const bool publishedGeometryChanged =
+        std::exchange(m_publishedHostRect, publishedHostRect) != publishedHostRect ||
+        std::exchange(m_publishedRulerPlotOrigin, publishedRulerPlotOrigin) !=
+            publishedRulerPlotOrigin ||
+        std::exchange(m_publishedRulerControlsWidth, publishedRulerControlsWidth) !=
+            publishedRulerControlsWidth;
+    if (publishedGeometryChanged)
+        emit hostGeometryChanged();
 
-    if (hostXChanged) {
+    if (hostOriginChanged) {
         if (m_hoverSongViewContentX)
             emit hoverChromeChanged();
         if (m_editSongViewContentX)

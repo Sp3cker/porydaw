@@ -132,10 +132,7 @@ enum class Role {
     track_solo_checked_background,
     track_solo_checked_text,
 
-    // SongView track-header panel and polyphony readouts.
-    track_header_panel_background,
-    track_header_panel_text,
-    track_header_panel_outline,
+    // Polyphony readouts.
     polyphony_value_background,
     polyphony_value_text,
 

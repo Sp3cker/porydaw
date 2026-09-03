@@ -1,8 +1,8 @@
+#include "checks/rollcheck/headerchecksupport.h"
 #include "checks/rollcheck/rollcheck.h"
 
 #include <QObject>
 #include <QTemporaryDir>
-#include <QWidget>
 #include <algorithm>
 #include <utility>
 #include <vector>
@@ -41,23 +41,16 @@ ScenarioContinuation runRemapScenarios(Harness &check, const SongInfo &song)
                 remapTimeline = std::move(rebuilt);
                 order.push_back(QStringLiteral("document"));
             });
-            const auto headersMatchTimeline = [&] {
-                for (int track = 0; track < 16; ++track) {
-                    const bool hasHeader =
-                        remapView.findChild<QWidget *>(
-                            QStringLiteral("trackHeaderRow%1").arg(track)) != nullptr;
-                    if (hasHeader != remapTimeline->tracks[track].used)
-                        return false;
-                }
-                return true;
-            };
             const auto expectRemapBeforeDocument = [&](const char *what) {
                 if (order.size() != 2 || order[0] != QStringLiteral("remap") ||
                     order[1] != QStringLiteral("document")) {
                     fail(what);
                 }
-                if (!headersMatchTimeline())
+                auto *headers = headercheck::model(remapView);
+                if (!headers || !headercheck::recordsMatchTimeline(*headers, *remapTimeline,
+                                                                   remapDoc.canAddTrack())) {
                     fail("track header list did not follow the rebuilt timeline");
+                }
                 order.clear();
             };
             const auto hasEmptyLane = [](const EditorViewState &state, int owner, uint8_t cc) {

@@ -245,6 +245,16 @@ const std::vector<CheckDefinition> &catalog()
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = route101Files,
              .windowing = Windowing::WindowSystem},
+            {.name = "trackheaderquickcheck",
+             .argv = strings({"--trackheaderquickcheck", "{scratch}", "mus_route101"}),
+             .handler =
+                 [](QApplication &, const QStringList &args) {
+                     return runTrackHeaderQuickCheck(args[1], args[2]);
+                 },
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = route101Files,
+             .windowing = Windowing::WindowSystem},
             {.name = "rollwindowingcheck",
              .argv = strings({"--rollwindowingcheck", "{scratch}", "mus_route101"}),
              .handler =

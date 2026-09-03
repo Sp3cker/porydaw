@@ -66,7 +66,7 @@ void checkAutomationPencilMapping(AutomationGestureCheckRig &rig,
     const double indicatorTick =
         double(indicatorCell.tickBegin) + 0.4 * double(rig.view().grid().fineGridTicks());
     const auto panInput = rig.pointAt(rig.pan, indicatorTick, 72);
-    NodeLaneHoverState panIndicator(rig.page().font());
+    NodeLaneHoverState panIndicator(rig.view().font());
     panIndicator.hover.lane = panHandle;
     panIndicator.hover.pos = panInput.position;
     const auto mappedCell = projection.snapCellAt(panInput.mapped.rawTick);

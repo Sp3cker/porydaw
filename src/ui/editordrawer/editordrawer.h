@@ -1,27 +1,42 @@
 #pragma once
 
+#include <QObject>
+#include <QPoint>
 #include <QRect>
-#include <QWidget>
 
 #include <optional>
 
+#include "ui/editordrawer/drawerchrome.h"
 #include "ui/editorviewstate.h"
 
 class QAction;
+class QPalette;
 class AutomationPage;
-class QEvent;
 class SongView;
 class VelocityArea;
 class VoiceChangeArea;
 class DrawerSections;
 
-class EditorDrawer final : public QWidget
+class EditorDrawer final : public QObject
 {
-  public:
-    EditorDrawer(SongView &owner, QWidget *parent, EditorViewState viewState = {});
+    Q_OBJECT
+    Q_DISABLE_COPY_MOVE(EditorDrawer)
 
-    void setHostBounds(const QRect &bounds);
+  public:
+    EditorDrawer(SongView &owner, EditorViewState viewState = {});
+
+    SongView &owner() noexcept { return m_owner; }
+    DrawerChrome &chrome() noexcept { return *m_chrome; }
+    const DrawerChrome &chrome() const noexcept { return *m_chrome; }
+
+    void setHostBounds(const QRect &songViewLocalRollPane);
     void useParentBounds();
+    void refreshAppearance(const QPalette &palette);
+    void arrange();
+
+    int overlayHeight() const noexcept;
+    QRect overlayRect() const noexcept;
+
     void setViewState(const EditorViewState &viewState);
     void cancelVisiblePageInteraction();
 
@@ -48,10 +63,9 @@ class EditorDrawer final : public QWidget
     VoiceChangeArea *voiceChangeArea() noexcept { return m_voiceChangeArea; }
     const VoiceChangeArea *voiceChangeArea() const noexcept { return m_voiceChangeArea; }
 
-  protected:
-    bool eventFilter(QObject *watched, QEvent *event) override;
-
   private:
+    friend class DrawerChrome;
+
     struct DrawerDiff {
         bool visibilityChanged = false;
         bool activePageChanged = false;
@@ -68,11 +82,21 @@ class EditorDrawer final : public QWidget
                                           const EditorViewState &next);
     void finishViewStateTransition(const DrawerDiff &diff, bool drawerOwnedFocus);
     void publishViewState(bool geometryAlreadyArranged);
-    void arrange();
     void arrangeChildren();
+    void publishChromeSnapshot(const DrawerChromeSnapshot &localSnapshot,
+                               const QPoint &overlayOrigin);
+    void refreshChromeIcons();
+    void syncDetentChrome();
     void cancelPageInteraction(EditorDrawerPage page);
     bool ownsFocus() const;
     QRect resolvedHostBounds() const noexcept;
+
+    int resizeMinimumBodyHeight() const;
+    int resizeBodyHeight(EditorDrawerPage page) const;
+    std::optional<int> resizeStoredBodyHeight(EditorDrawerPage page) const;
+    int maximumResizeBodyHeight(EditorDrawerPage page) const;
+    void setResizeBodyHeight(EditorDrawerPage page, std::optional<int> height);
+    void publishResizeState();
 
     SongView &m_owner;
     QRect m_hostBounds;
@@ -80,6 +104,8 @@ class EditorDrawer final : public QWidget
     AutomationPage *m_automationPage = nullptr;
     VelocityArea *m_velocityArea = nullptr;
     VoiceChangeArea *m_voiceChangeArea = nullptr;
+    DrawerChrome *m_chrome = nullptr;
+    DrawerChromeSnapshot m_chromeSnapshot;
     DrawerSections *m_sections = nullptr;
     QAction *m_automationAction = nullptr;
     QAction *m_velocityAction = nullptr;

@@ -191,8 +191,31 @@ QImage captureQuickBand(SongView &view, const QRect &rectInSongView, QString *er
     const int bottom = qRound((cropOrigin.y() + rectInSongView.height()) * devicePixelRatio);
     const QRect crop{left, top, right - left, bottom - top};
     if (crop.width() <= 0 || crop.height() <= 0 || !framebuffer.rect().contains(crop)) {
-        if (error)
-            *error = QStringLiteral("requested crop falls outside the Qt Quick framebuffer");
+        if (error) {
+            const QRect quickHostGeometry = quickCanvas->geometry();
+            *error =
+                QStringLiteral("requested crop falls outside the Qt Quick framebuffer "
+                               "(framebuffer=%1x%2 crop=[%3,%4 %5x%6] requested-SongView=[%7,%8 "
+                               "%9x%10] Quick-host=[%11,%12 %13x%14] Quick-window-size=%15x%16 "
+                               "dpr=%17)")
+                    .arg(framebuffer.width())
+                    .arg(framebuffer.height())
+                    .arg(crop.x())
+                    .arg(crop.y())
+                    .arg(crop.width())
+                    .arg(crop.height())
+                    .arg(rectInSongView.x())
+                    .arg(rectInSongView.y())
+                    .arg(rectInSongView.width())
+                    .arg(rectInSongView.height())
+                    .arg(quickHostGeometry.x())
+                    .arg(quickHostGeometry.y())
+                    .arg(quickHostGeometry.width())
+                    .arg(quickHostGeometry.height())
+                    .arg(quickWindow->width())
+                    .arg(quickWindow->height())
+                    .arg(devicePixelRatio, 0, 'f', 2);
+        }
         return {};
     }
 
@@ -204,11 +227,6 @@ QImage captureQuickBand(SongView &view, const QRect &rectInSongView, QString *er
     }
     bandFramebuffer.setDevicePixelRatio(devicePixelRatio);
     return bandFramebuffer;
-}
-
-QImage captureQuickBand(SongView &view, QWidget &band, QString *error)
-{
-    return captureQuickBand(view, widgetRectIn(band, view), error);
 }
 
 } // namespace checks::support

@@ -67,15 +67,16 @@ bool routeIdle(const AutomationGestureCheckRig &rig, LaneHandle lane)
     return rig.isIdle() && !rig.canvas().isPanning() && !rig.canvas().bandPreviewContainsLane(lane);
 }
 
-// Canonical parent-owned voice band geometry: the shared TimelineBandLayout
-// value drives the QML band, the Quick input item, and these probes alike.
+// TimelineBandGeometry describes the parent Quick scene, whereas
+// VoiceChangeArea receives TimelineInputItem-local positions. Keep scene-space
+// marker probes and input positions distinct so the host inset is exercised.
 const std::optional<songview::TimelineBandGeometry> &
 voiceGeometry(const AutomationGestureCheckRig &rig)
 {
     return rig.view().timelineBandLayout().geometry(songview::TimelineBand::VoiceChanges);
 }
 
-QPointF voicePoint(const AutomationGestureCheckRig &rig, uint64_t tick)
+QPointF voiceScenePoint(const AutomationGestureCheckRig &rig, uint64_t tick)
 {
     const auto &geometry = voiceGeometry(rig);
     return {rig.view().camera().displayX(double(tick), geometry ? geometry->timelineOrigin : 0,
@@ -83,11 +84,27 @@ QPointF voicePoint(const AutomationGestureCheckRig &rig, uint64_t tick)
             qreal(geometry ? geometry->rect.center().y() : 0)};
 }
 
+QPointF voicePoint(const AutomationGestureCheckRig &rig, uint64_t tick)
+{
+    return rig.voiceInput().mapFromScene(voiceScenePoint(rig, tick));
+}
+
+qreal voicePlotOrigin(const AutomationGestureCheckRig &rig)
+{
+    const auto &geometry = voiceGeometry(rig);
+    return rig.voiceInput()
+        .mapFromScene(QPointF(geometry ? geometry->timelineOrigin : 0,
+                              geometry ? geometry->rect.center().y() : 0))
+        .x();
+}
+
 uint64_t voiceSnapTick(const AutomationGestureCheckRig &rig, qreal x, bool fine)
 {
     const int plotOrigin = voiceGeometry(rig) ? voiceGeometry(rig)->timelineOrigin : 0;
+    const qreal sceneX =
+        rig.voiceInput().mapToScene(QPointF(x, rig.voiceInput().bounds().center().y())).x();
     const double rawTick = std::max(
-        0.0, rig.view().camera().tickAtContentX(std::max<qreal>(plotOrigin, x) - plotOrigin));
+        0.0, rig.view().camera().tickAtContentX(std::max<qreal>(plotOrigin, sceneX) - plotOrigin));
     return rig.view().grid().snapTick(rawTick, fine);
 }
 
@@ -207,13 +224,13 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         uint64_t fineTick = 0;
         uint64_t normalTick = 0;
         const int slop = QApplication::startDragDistance();
-        const int plotStart = voiceGeometry(rig) ? voiceGeometry(rig)->timelineOrigin : 0;
-        const int plotEnd = voiceGeometry(rig) ? voiceGeometry(rig)->rect.width() : 0;
+        const int plotStart = int(std::ceil(voicePlotOrigin(rig)));
+        const int plotEnd = int(rig.voiceInput().bounds().width());
         for (int x = plotStart; x < plotEnd; ++x) {
             const uint64_t fine = voiceSnapTick(rig, x, true);
             const uint64_t normal = voiceSnapTick(rig, x, false);
             if (fine != normal && fine != 48 && std::abs(qreal(x) - source.x()) >= slop) {
-                target = QPointF(x, voiceGeometry(rig)->rect.center().y());
+                target = QPointF(x, rig.voiceInput().bounds().center().y());
                 fineTick = fine;
                 normalTick = normal;
                 break;
@@ -317,11 +334,9 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         const QImage previewFramebuffer = rig.renderVoiceChanges(&previewCaptureError);
         const auto previewMarkers =
             rig.quickScene().layer(songview::TimelineQuickLayer::VoiceChangesMarkers);
-        const qreal destinationX = rig.view().camera().displayX(
-            double(destination), voiceGeometry(rig) ? voiceGeometry(rig)->timelineOrigin : 0,
-            rig.voiceInput().devicePixelRatio());
-        const int idleSourceCount = markerCountAt(idleMarkers, source.x());
-        const int previewSourceCount = markerCountAt(previewMarkers, source.x());
+        const qreal destinationX = voiceScenePoint(rig, destination).x();
+        const int idleSourceCount = markerCountAt(idleMarkers, voiceScenePoint(rig, 48).x());
+        const int previewSourceCount = markerCountAt(previewMarkers, voiceScenePoint(rig, 48).x());
         const int idleDestinationCount = markerCountAt(idleMarkers, destinationX);
         const int previewDestinationCount = markerCountAt(previewMarkers, destinationX);
         check(idleCaptureError.isEmpty() && previewCaptureError.isEmpty() &&
@@ -390,7 +405,7 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
                   rig.canvas().laneBody(AutomationGestureCheckRig::kTempoHandle) == tempoBefore &&
                   rig.view().editCursorTick() == cursorBefore,
               QStringLiteral("Voice Change press did not stop at its accepted route"));
-        rig.voiceMouseRelease(input);
+        rig.voiceMouseRelease(rig.voiceInput().mapFromScene(input));
     }
     {
         const QPointF input = rig.tempoHeaderPoint();

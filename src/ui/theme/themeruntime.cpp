@@ -73,16 +73,11 @@ QString windowStyleSheet(const Theme &theme)
         .arg(colorName(theme, Role::secondary_text));
 }
 
-QString trackHeaderStyleSheet(const Theme &theme)
+QString polyphonyStyleSheet(const Theme &theme)
 {
-    return QStringLiteral("QWidget#trackHeaderPanel{background-color:%1;color:%2;"
-                          "border-color:%3;}"
-                          "QLabel#polyphonyPcmValue,QLabel#polyphonyCgbValue,"
+    return QStringLiteral("QLabel#polyphonyPcmValue,QLabel#polyphonyCgbValue,"
                           "QLabel#polyphonyLostValue{"
-                          "background-color:%4;color:%5;font-family:\"%6\";}")
-        .arg(colorName(theme, Role::track_header_panel_background))
-        .arg(colorName(theme, Role::track_header_panel_text))
-        .arg(colorName(theme, Role::track_header_panel_outline))
+                          "background-color:%1;color:%2;font-family:\"%3\";}")
         .arg(colorName(theme, Role::polyphony_value_background))
         .arg(colorName(theme, Role::polyphony_value_text))
         .arg(typography::bodyMono(QFont()).family());
@@ -570,7 +565,7 @@ QString splitterStyleSheet(const Theme &theme)
 // Theme colors are role-driven; stylesheet fragments stay grouped by widget.
 QString colorStyleSheet(const Theme &theme)
 {
-    return windowStyleSheet(theme) + trackHeaderStyleSheet(theme) + toolbarStyleSheet(theme) +
+    return windowStyleSheet(theme) + polyphonyStyleSheet(theme) + toolbarStyleSheet(theme) +
            tabStyleSheet(theme) + buttonStyleSheet(theme) + trackControlStyleSheet(theme) +
            inputStyleSheet(theme) + spinBoxStyleSheet(theme) + comboStyleSheet(theme) +
            pickerPopupStyleSheet(theme) + indicatorStyleSheet(theme) + menuBarStyleSheet(theme) +

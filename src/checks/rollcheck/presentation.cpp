@@ -1,53 +1,68 @@
 #include "checks/rollcheck/rollcheck.h"
 
+#include <QAbstractItemModel>
+#include <QColor>
 #include <QCoreApplication>
 #include <QEvent>
 #include <QImage>
-#include <QLineEdit>
 #include <QMetaObject>
 #include <QObject>
-#include <QPaintEvent>
-#include <QPoint>
-#include <QRegion>
-#include <QToolButton>
-#include <QWidget>
+#include <QPointF>
+#include <QTimer>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <optional>
 #include <vector>
 
+#include "checks/rollcheck/headerchecksupport.h"
 #include "checks/rollcheckplayhead.h"
 #include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
-#include "ui/activity/trackactivityview.h"
-#include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
-
-namespace checks::rollcheck {
+#include "ui/songview/trackheadermodel.h"
+#include "ui/songview/voicepicker.h"
 
 namespace {
 
-class PaintRegionProbe final : public QObject
+class VoicePickerAccepter final : public QObject
 {
   public:
-    void clear() { m_region = {}; }
-    const QRegion &region() const { return m_region; }
+    bool opened = false;
 
   protected:
-    bool eventFilter(QObject *, QEvent *event) override
+    bool eventFilter(QObject *watched, QEvent *event) override
     {
-        if (event->type() == QEvent::Paint)
-            m_region |= static_cast<QPaintEvent *>(event)->region();
+        if (event->type() != QEvent::Show)
+            return false;
+        auto *dialog = dynamic_cast<songview::VoicePickerDialog *>(watched);
+        if (!dialog)
+            return false;
+        opened = true;
+        QTimer::singleShot(0, dialog, [dialog] { dialog->accept(); });
         return false;
     }
-
-  private:
-    QRegion m_region;
 };
 
 } // namespace
+
+namespace checks::rollcheck {
+
+using headercheck::addTrackRow;
+using headercheck::captureBand;
+using headercheck::click;
+using headercheck::includesRole;
+using headercheck::input;
+using headercheck::model;
+using headercheck::ModelChange;
+using headercheck::recordsMatchTimeline;
+using headercheck::renameInput;
+using headercheck::rowForTrack;
+using headercheck::rowPoint;
+using headercheck::titlePoint;
+using headercheck::voicePoint;
 
 ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
                                                        const PencilVelocityFixture &fixture,
@@ -63,14 +78,14 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
     const qreal vw = std::max<qreal>(50, roll->width() - pianoKeyboardWidth);
     const int undoBaseline = doc.undoStack()->index();
     auto fail = [&](const char *what) { check.fail(what); };
-    // The suite-wide click() helper targets the roll's Quick input item, so
-    // the widget-based header rows press/release through the synth directly.
-    const auto clickWidget = [](QWidget &widget, QPoint position) {
-        checks::events::sendMouse(widget, QEvent::MouseButtonPress, position, Qt::LeftButton,
-                                  Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(widget, QEvent::MouseButtonRelease, position, Qt::LeftButton,
-                                  Qt::NoButton, Qt::NoModifier);
-    };
+    auto *headers = model(view);
+    auto *headerInputItem = input(view);
+    if (!headers || !headerInputItem) {
+        fail("Quick track-header model or input was not found");
+        return ScenarioContinuation::Continue;
+    }
+    if (!recordsMatchTimeline(*headers, check.timeline(), doc.canAddTrack()))
+        fail("Quick header records did not match the current timeline");
     // Playhead follow-scroll pauses while a mouse gesture is live: with a
     // middle-button pan held in the roll (or the automation lanes), a playing
     // playhead far past the right edge must not move the view; releasing the
@@ -112,43 +127,62 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
     for (const QString &error : timelineChromeCheckFailures(view, check.timeline()))
         fail(qUtf8Printable(error));
 
-    // Inline track rename: renameTrack opens a line editor on the header
-    // row; Return commits (queued past the panel rebuild), Escape discards,
-    // and loop-marker names are refused. isHidden (not isVisible) because
-    // the view is never shown offscreen.
+    // Inline rename is model-owned and rendered by the named Quick text
+    // input. Commit and cancellation must traverse that focused input's
+    // Return/Escape handlers, including the loop-marker name guard.
     {
+        const auto renameIsOpen = [&] {
+            QCoreApplication::processEvents();
+            QObject *const field = renameInput(view);
+            return headers->renamingTrack() == track && field &&
+                   field->property("visible").toBool() && field->property("activeFocus").toBool();
+        };
+        const auto typeDraft = [&](QObject &field, const QString &draft) {
+            headers->setRenameDraft(draft);
+            QCoreApplication::processEvents();
+            if (field.property("text").toString() != draft)
+                fail("Quick rename input did not receive the model draft");
+        };
+
         view.renameTrack(track);
-        auto *editor = view.findChild<QLineEdit *>(QStringLiteral("trackRenameEditor"));
-        if (!editor || editor->isHidden()) {
-            fail("rename editor did not open");
+        if (!renameIsOpen()) {
+            fail("Quick rename input did not open");
         } else {
-            editor->setText(QStringLiteral("Rolled"));
-            sendKeyStroke(*editor, Qt::Key_Return, Qt::NoModifier, false);
+            QObject *const field = renameInput(view);
+            typeDraft(*field, QStringLiteral("Rolled"));
+            sendKeyStroke(*field, Qt::Key_Return, Qt::NoModifier, false);
             QCoreApplication::processEvents(); // the queued document commit
             if (doc.trackName(track) != QStringLiteral("Rolled"))
-                fail("inline rename did not apply on Return");
+                fail("Quick Return did not commit the inline rename");
         }
-        view.renameTrack(track); // the rebuilt panel carries a fresh editor
-        editor = view.findChild<QLineEdit *>(QStringLiteral("trackRenameEditor"));
-        if (!editor || editor->isHidden()) {
-            fail("rename editor did not reopen after the rebuild");
-        } else {
-            editor->setText(QStringLiteral("Discarded"));
-            sendKeyStroke(*editor, Qt::Key_Escape, Qt::NoModifier, false);
-            QCoreApplication::processEvents();
-            if (doc.trackName(track) != QStringLiteral("Rolled"))
-                fail("Escape did not discard the rename");
-        }
+
         view.renameTrack(track);
-        editor = view.findChild<QLineEdit *>(QStringLiteral("trackRenameEditor"));
-        if (editor && !editor->isHidden()) {
-            const int commands = doc.undoStack()->count();
-            editor->setText(QStringLiteral("["));
-            sendKeyStroke(*editor, Qt::Key_Return, Qt::NoModifier, false);
+        if (!renameIsOpen()) {
+            fail("Quick rename input did not reopen");
+        } else {
+            QObject *const field = renameInput(view);
+            typeDraft(*field, QStringLiteral("Discarded"));
+            sendKeyStroke(*field, Qt::Key_Escape, Qt::NoModifier, false);
             QCoreApplication::processEvents();
             if (doc.trackName(track) != QStringLiteral("Rolled") ||
-                doc.undoStack()->count() != commands)
+                headers->renamingTrack() != -1) {
+                fail("Quick Escape did not discard the inline rename draft");
+            }
+        }
+
+        view.renameTrack(track);
+        if (!renameIsOpen()) {
+            fail("Quick rename input did not reopen for the loop-marker guard");
+        } else {
+            const int commands = doc.undoStack()->count();
+            QObject *const field = renameInput(view);
+            typeDraft(*field, QStringLiteral("["));
+            sendKeyStroke(*field, Qt::Key_Return, Qt::NoModifier, false);
+            QCoreApplication::processEvents();
+            if (doc.trackName(track) != QStringLiteral("Rolled") ||
+                doc.undoStack()->count() != commands) {
                 fail("loop-marker name was not refused");
+            }
         }
     }
     bool seededHeaderProgram = false;
@@ -183,212 +217,285 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
         if (view.currentProgram(track) != atStart)
             fail("voice label did not return to the edit cursor after stop");
 
-        // Retained rows paint an opaque base. Program-only changes invalidate
-        // both text lines as one region, leaving buttons and the separator
-        // untouched. Selection styling invalidates the full visible row; the
-        // panel-owned opaque activity column clips its covered gutter.
-        (void)view.grab();
-        auto *row = view.findChild<QWidget *>(QStringLiteral("trackHeaderRow%1").arg(track));
-        if (!row) {
-            fail("track header row for repaint coverage not found");
-        } else {
-            if (!row->testAttribute(Qt::WA_OpaquePaintEvent))
-                fail("track header row did not report opaque painting");
+        // Header presentation is now a model-to-Quick contract. A program
+        // transition changes the subtitle role for just this record and the
+        // retained header framebuffer, while selection changes its resolved
+        // presentation roles and pixels through the Quick input surface.
+        if (const std::optional<int> headerRow = rowForTrack(*headers, track)) {
+            std::vector<ModelChange> changes;
+            const QMetaObject::Connection changeConnection = QObject::connect(
+                headers, &QAbstractItemModel::dataChanged, &view,
+                [&changes](const QModelIndex &topLeft, const QModelIndex &bottomRight,
+                           const QList<int> &roles) {
+                    changes.push_back({topLeft.row(), bottomRight.row(), roles});
+                });
 
-            const int gutter = layout::space(layout::Space::One);
-            const int singlePixel = layout::singlePixel();
-            const int textWidth = row->width() - layout::fontPx(1.5) - 2 * gutter;
-            const QRect textColumn(gutter, 0, textWidth, row->height() - singlePixel);
-            PaintRegionProbe paintProbe;
-            row->installEventFilter(&paintProbe);
-
-            view.show();
-            QCoreApplication::sendPostedEvents();
-            QCoreApplication::processEvents();
-            const QImage beforeProgram = row->grab().toImage();
-            QCoreApplication::sendPostedEvents();
-            QCoreApplication::processEvents();
-            paintProbe.clear();
-
+            const QString beforeSubtitle =
+                headers
+                    ->data(headers->index(*headerRow, 0), songview::TrackHeaderModel::SubtitleRole)
+                    .toString();
+            const QImage beforeProgram = captureBand(check, view);
+            changes.clear();
             view.setEditCursorTick(vcTick);
-            QCoreApplication::sendPostedEvents();
             QCoreApplication::processEvents();
-            const QRegion programPaint = paintProbe.region();
-            if (programPaint.isEmpty())
-                fail("program change did not repaint the track header row");
-            else if (!programPaint.subtracted(QRegion(textColumn)).isEmpty())
-                fail("program change repainted outside the combined text column");
-            const QImage afterProgram = row->grab().toImage();
-
-            if (beforeProgram.isNull() || afterProgram.isNull()) {
-                fail("program change did not produce track header rasters");
-            } else if (beforeProgram.size() != afterProgram.size()) {
-                fail("program change altered the track header raster size");
-            } else {
-                const qreal dpr = beforeProgram.devicePixelRatio();
-                bool changedOutsideText = false;
-                for (int y = 0; y < beforeProgram.height() && !changedOutsideText; ++y) {
-                    for (int x = 0; x < beforeProgram.width(); ++x) {
-                        const QPoint logical(int(x / dpr), int(y / dpr));
-                        if (!textColumn.contains(logical) &&
-                            beforeProgram.pixel(x, y) != afterProgram.pixel(x, y)) {
-                            changedOutsideText = true;
-                            break;
-                        }
-                    }
-                }
-                if (changedOutsideText)
-                    fail("program change altered pixels outside the combined text column");
+            const QString afterSubtitle =
+                headers
+                    ->data(headers->index(*headerRow, 0), songview::TrackHeaderModel::SubtitleRole)
+                    .toString();
+            const QImage afterProgram = captureBand(check, view);
+            if (!includesRole(changes, *headerRow, songview::TrackHeaderModel::SubtitleRole) ||
+                beforeSubtitle == afterSubtitle) {
+                fail("program change did not publish a changed header subtitle role");
+            }
+            if (beforeProgram.isNull() || afterProgram.isNull() ||
+                beforeProgram.size() != afterProgram.size() || beforeProgram == afterProgram) {
+                fail("program change did not alter the retained Quick header rendering");
             }
 
             view.setEditCursorTick(0);
             const int previousPrimary = view.selectionModel().primaryTrack();
-            view.selectTrack(track == 15 ? 14 : track + 1);
-            QCoreApplication::sendPostedEvents();
-            QCoreApplication::processEvents();
-            paintProbe.clear();
-            clickWidget(*row, QPoint(textColumn.center().x(), singlePixel));
-            QCoreApplication::sendPostedEvents();
-            QCoreApplication::processEvents();
-            const int obscuredGutter = view.findChild<TrackActivityView *>() ? gutter : 0;
-            const QRect visibleRow = row->rect().adjusted(obscuredGutter, 0, 0, 0);
-            if (paintProbe.region().boundingRect() != visibleRow)
-                fail("track selection change did not repaint the full visible header row");
+            std::optional<int> otherTrack;
+            for (int row = 0; row < headers->rowCount(); ++row) {
+                const QModelIndex index = headers->index(row, 0);
+                if (!headers->data(index, songview::TrackHeaderModel::IsAddTrackRole).toBool() &&
+                    headers->data(index, songview::TrackHeaderModel::TrackRole).toInt() != track) {
+                    otherTrack =
+                        headers->data(index, songview::TrackHeaderModel::TrackRole).toInt();
+                    break;
+                }
+            }
+            if (!otherTrack) {
+                fail("selection rendering fixture lacks a second header record");
+            } else {
+                view.selectTrack(*otherTrack);
+                QCoreApplication::processEvents();
+                const QColor unselectedBase = headers
+                                                  ->data(headers->index(*headerRow, 0),
+                                                         songview::TrackHeaderModel::BaseColorRole)
+                                                  .value<QColor>();
+                const QImage beforeSelection = captureBand(check, view);
+                click(*headerInputItem, titlePoint(*headers, *headerInputItem, *headerRow));
+                QCoreApplication::processEvents();
+                const QColor selectedBase = headers
+                                                ->data(headers->index(*headerRow, 0),
+                                                       songview::TrackHeaderModel::BaseColorRole)
+                                                .value<QColor>();
+                const QImage afterSelection = captureBand(check, view);
+                if (view.selectionModel().primaryTrack() != track ||
+                    selectedBase == unselectedBase) {
+                    fail("Quick header input did not publish selected record presentation");
+                }
+                if (beforeSelection.isNull() || afterSelection.isNull() ||
+                    beforeSelection == afterSelection) {
+                    fail("track selection did not alter the retained Quick header rendering");
+                }
+            }
             view.selectTrack(previousPrimary);
-            QCoreApplication::sendPostedEvents();
             QCoreApplication::processEvents();
-            view.hide();
+            QObject::disconnect(changeConnection);
+        } else {
+            fail("track header model record for presentation coverage was not found");
         }
     }
 
-    // Jump-from-context: a completed plain click on a header row's voice
-    // line emits revealVoiceRequested with the track's current program (the
-    // main window raises the voicegroup dock and selects the slot). A click
-    // on the name line stays silent, as does a press there that turns into
-    // a reorder drag — and none of it is an edit, so the undo stack must
-    // not move.
+    // Jump-from-context is delivered through the one header Quick input.
+    // The model owns hit testing for the voice line, title line, rename, and
+    // drag suppression; no delegate has a separate pointer path.
     {
-        (void)view.grab(); // layout pass: rows need real geometry
-        auto *row = view.findChild<QWidget *>(QStringLiteral("trackHeaderRow%1").arg(track));
-        if (!row) {
-            fail("track header row for the edited track not found");
-        } else {
-            int revealed = -1, reveals = 0;
-            const QMetaObject::Connection conn =
+        if (const std::optional<int> headerRow = rowForTrack(*headers, track)) {
+            int revealed = -1;
+            int reveals = 0;
+            const QMetaObject::Connection connection =
                 QObject::connect(&view, &SongView::revealVoiceRequested, [&](int program) {
                     revealed = program;
-                    reveals++;
+                    ++reveals;
                 });
             const int preCount = doc.undoStack()->count();
-            const QPoint voicePos(row->width() / 2, 30); // the painted voice line
-            clickWidget(*row, voicePos);
+            const QPointF voice = voicePoint(*headers, *headerInputItem, *headerRow);
+            click(*headerInputItem, voice);
             if (reveals != 1 || revealed != view.currentProgram(track))
-                fail("voice-line click did not request the track's program");
-            clickWidget(*row, QPoint(row->width() / 2, 10)); // the name line
+                fail("voice-line Quick input did not request the track's program");
+            click(*headerInputItem, titlePoint(*headers, *headerInputItem, *headerRow));
             if (reveals != 1)
-                fail("a name-line click requested a voice reveal");
-            // A press on the voice line that becomes a reorder drag must
-            // not reveal on release (adjacent drop slot: no move commits).
-            checks::events::sendMouse(*row, QEvent::MouseButtonPress, voicePos, Qt::LeftButton,
-                                      Qt::LeftButton, Qt::NoModifier);
-            checks::events::sendMouse(*row, QEvent::MouseMove, voicePos + QPoint(0, 25),
+                fail("a title-line click requested a voice reveal");
+
+            // A drag beginning on the voice line becomes an adjacent no-op
+            // reorder and must not reveal a voice on release.
+            const QPointF adjacentDrop =
+                rowPoint(*headers, *headerInputItem, *headerRow,
+                         {headers->voiceLineRect().center().x(), headers->rowHeight() * 1.2});
+            checks::events::sendMouse(*headerInputItem, QEvent::MouseButtonPress, voice,
+                                      Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            checks::events::sendMouse(*headerInputItem, QEvent::MouseMove, adjacentDrop,
                                       Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
-            checks::events::sendMouse(*row, QEvent::MouseButtonRelease, voicePos + QPoint(0, 25),
+            checks::events::sendMouse(*headerInputItem, QEvent::MouseButtonRelease, adjacentDrop,
+                                      Qt::RightButton, Qt::LeftButton, Qt::NoModifier);
+            checks::events::sendMouse(*headerInputItem, QEvent::MouseButtonRelease, adjacentDrop,
                                       Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
             QCoreApplication::processEvents();
-            if (reveals != 1)
-                fail("a reorder drag from the voice line requested a reveal");
-            const QPoint namePos(row->width() / 2, 10);
-            checks::events::sendMouse(*row, QEvent::MouseButtonDblClick, namePos, Qt::LeftButton,
-                                      Qt::LeftButton, Qt::NoModifier);
-            checks::events::sendMouse(*row, QEvent::MouseButtonRelease, namePos, Qt::LeftButton,
-                                      Qt::NoButton, Qt::NoModifier);
-            auto *renameEditor = view.findChild<QLineEdit *>(QStringLiteral("trackRenameEditor"));
-            if (!renameEditor || renameEditor->isHidden())
-                fail("name-line double-click no longer opens the rename editor");
-            else
-                sendKeyStroke(*renameEditor, Qt::Key_Escape, Qt::NoModifier, false);
+            if (reveals != 1 || headers->reorderIndicatorVisible())
+                fail("voice-line reorder drag leaked a reveal or reorder state");
+
+            // Voice-line double-click opens the picker end-to-end in
+            // rollcheckwindowing.cpp; this body double-click owns rename here.
+            const QPointF title = titlePoint(*headers, *headerInputItem, *headerRow);
+            checks::events::sendMouse(*headerInputItem, QEvent::MouseButtonDblClick, title,
+                                      Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            checks::events::sendMouse(*headerInputItem, QEvent::MouseButtonRelease, title,
+                                      Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QCoreApplication::processEvents();
+            QObject *const renameField = renameInput(view);
+            if (headers->renamingTrack() != track || !renameField ||
+                !renameField->property("visible").toBool()) {
+                fail("title-line double-click did not open the Quick rename input");
+            } else {
+                sendKeyStroke(*renameField, Qt::Key_Escape, Qt::NoModifier, false);
+                QCoreApplication::processEvents();
+            }
             if (doc.undoStack()->count() != preCount)
                 fail("voice navigation touched the undo stack");
-            QObject::disconnect(conn);
+            QObject::disconnect(connection);
+        } else {
+            fail("track header model record for voice navigation was not found");
         }
     }
 
-    // Header-row drag reorder (format 1 with two or more tracks): press the
-    // first row, drag past the second row's center, release — the first two
-    // tracks swap slots, the notes and the mute flag following, as ONE undo
-    // command (committed queued, so the event loop must spin). A non-left
-    // release mid-drag cancels instead of dropping, a rename editor still
-    // open at the drop gets its text committed rather than destroyed, and
-    // undo/redo re-permute the mute flag along with the tracks.
+    // Exercise every header control through the real Quick input geometry,
+    // rather than invoking a model action directly.
+    {
+        const std::optional<int> trackRow = rowForTrack(*headers, track);
+        const std::optional<int> addRow = addTrackRow(*headers);
+        if (!trackRow || !addRow || !doc.canAddTrack()) {
+            fail("Quick header control records were unavailable");
+        } else {
+            const auto roleChecked = [&](int row, int role) {
+                return headers->data(headers->index(row, 0), role).toBool();
+            };
+            const QPointF mute =
+                rowPoint(*headers, *headerInputItem, *trackRow, headers->muteButtonRect().center());
+            view.setTrackMute(track, false);
+            click(*headerInputItem, mute);
+            if (!view.trackMuted(track) ||
+                !roleChecked(*trackRow, songview::TrackHeaderModel::MuteCheckedRole)) {
+                fail("Quick mute-button pointer input did not toggle the track");
+            }
+            click(*headerInputItem, mute);
+            if (view.trackMuted(track) ||
+                roleChecked(*trackRow, songview::TrackHeaderModel::MuteCheckedRole)) {
+                fail("second Quick mute-button pointer input did not clear the track");
+            }
+
+            const QPointF solo =
+                rowPoint(*headers, *headerInputItem, *trackRow, headers->soloButtonRect().center());
+            view.setTrackSolo(track, false);
+            click(*headerInputItem, solo);
+            if (!view.trackSoloed(track) ||
+                !roleChecked(*trackRow, songview::TrackHeaderModel::SoloCheckedRole)) {
+                fail("Quick solo-button pointer input did not toggle the track");
+            }
+            click(*headerInputItem, solo);
+            if (view.trackSoloed(track) ||
+                roleChecked(*trackRow, songview::TrackHeaderModel::SoloCheckedRole)) {
+                fail("second Quick solo-button pointer input did not clear the track");
+            }
+
+            const int tracksBefore = doc.engineTrackCount();
+            const int undoBefore = doc.undoStack()->index();
+            // Complete the actual modal picker without looking up widget internals,
+            // so the pointer route reaches the queued document mutation.
+            VoicePickerAccepter pickerAccepter;
+            QCoreApplication::instance()->installEventFilter(&pickerAccepter);
+            click(*headerInputItem, titlePoint(*headers, *headerInputItem, *addRow));
+            QCoreApplication::processEvents();
+            QCoreApplication::processEvents();
+            QCoreApplication::instance()->removeEventFilter(&pickerAccepter);
+            if (!pickerAccepter.opened || doc.engineTrackCount() != tracksBefore + 1 ||
+                doc.undoStack()->index() != undoBefore + 1 ||
+                !recordsMatchTimeline(*headers, check.timeline(), doc.canAddTrack())) {
+                fail("Quick add-track pointer input did not create a header track");
+            }
+            if (doc.undoStack()->index() != undoBefore)
+                doc.undoStack()->setIndex(undoBefore);
+            QCoreApplication::processEvents();
+            if (doc.engineTrackCount() != tracksBefore || doc.undoStack()->index() != undoBefore ||
+                !recordsMatchTimeline(*headers, check.timeline(), doc.canAddTrack())) {
+                fail("undoing the Quick add-track pointer input did not restore the header");
+            }
+            view.selectTrack(track);
+            QCoreApplication::processEvents();
+        }
+    }
+
+    // Header drag reorder goes through the shared Quick input and must carry
+    // notes, masks, and an open model-owned rename across the queued move.
     bool reordered = false;
     bool dragRenamed = false;
     if (doc.engineTrackCount() >= 2) {
-        // The panel was rebuilt by the edits above; force a layout pass so
-        // the rows have real positions for the drop-slot hit test.
-        (void)view.grab();
-        auto *row0 = view.findChild<QWidget *>(QStringLiteral("trackHeaderRow0"));
-        auto *row1 = view.findChild<QWidget *>(QStringLiteral("trackHeaderRow1"));
-        if (!row0 || !row1) {
-            fail("track header rows not found");
+        headers->setScrollY(0.0);
+        const std::optional<int> sourceRow = rowForTrack(*headers, 0);
+        const std::optional<int> targetRow = rowForTrack(*headers, 1);
+        if (!sourceRow || !targetRow) {
+            fail("track header model records for reorder were not found");
         } else {
             const auto firstNotes = doc.notesForTrack(0);
             view.setTrackMute(0, true);
-            // Press low in the row, clear of the rename editor overlaying
-            // the name line.
-            const QPoint start(row0->width() / 2, row0->height() * 3 / 4);
-            // Past row 1's center in row-0 coordinates: rows are contiguous
-            // and equal-height, so 1.6 row heights lands between row 1's
-            // center (1.5) and its bottom.
-            const QPoint drop(row0->width() / 2, row0->height() * 8 / 5);
+            const QPointF start = titlePoint(*headers, *headerInputItem, *sourceRow);
+            const QPointF drop =
+                rowPoint(*headers, *headerInputItem, *targetRow,
+                         {headers->voiceLineRect().center().x(), headers->rowHeight() * 3.0 / 4.0});
 
-            // A right-button release mid-drag cancels; the left release
-            // that follows must not commit either.
+            // A non-left release cancels a live drag and clears the
+            // Quick reorder marker without queuing a document change.
             const int preDragCount = doc.undoStack()->count();
-            checks::events::sendMouse(*row0, QEvent::MouseButtonPress, start, Qt::LeftButton,
+            checks::events::sendMouse(*headerInputItem, QEvent::MouseButtonPress, start,
+                                      Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            checks::events::sendMouse(*headerInputItem, QEvent::MouseMove, drop, Qt::NoButton,
                                       Qt::LeftButton, Qt::NoModifier);
-            checks::events::sendMouse(*row0, QEvent::MouseMove, drop, Qt::NoButton, Qt::LeftButton,
-                                      Qt::NoModifier);
-            checks::events::sendMouse(*row0, QEvent::MouseButtonRelease, drop, Qt::RightButton,
-                                      Qt::LeftButton, Qt::NoModifier);
-            checks::events::sendMouse(*row0, QEvent::MouseButtonRelease, drop, Qt::LeftButton,
-                                      Qt::NoButton, Qt::NoModifier);
+            const QImage markerFrame = captureBand(check, view);
+            if (!headers->reorderIndicatorVisible() || markerFrame.isNull())
+                fail("Quick header drag did not expose a reorder marker");
+            checks::events::sendMouse(*headerInputItem, QEvent::MouseButtonRelease, drop,
+                                      Qt::RightButton, Qt::LeftButton, Qt::NoModifier);
+            checks::events::sendMouse(*headerInputItem, QEvent::MouseButtonRelease, drop,
+                                      Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
             QCoreApplication::processEvents();
-            if (doc.undoStack()->count() != preDragCount)
-                fail("right-button release mid-drag committed the reorder");
+            if (doc.undoStack()->count() != preDragCount || headers->reorderIndicatorVisible())
+                fail("non-left release during a Quick header drag committed or leaked state");
 
-            // An open rename editor rides along: the drop commits its text
-            // Reaper-style (before the move, so it names the right track)
-            // instead of silently discarding it with the rebuilt panel.
+            // Reorder commits an open draft before queueing the move.
             view.renameTrack(0);
-            auto *editor = view.findChild<QLineEdit *>(QStringLiteral("trackRenameEditor"));
-            if (editor && !editor->isHidden()) {
-                editor->setText(QStringLiteral("Dragged"));
+            QCoreApplication::processEvents();
+            QObject *const renameField = renameInput(view);
+            if (headers->renamingTrack() != 0 || !renameField ||
+                !renameField->property("visible").toBool()) {
+                fail("Quick rename input did not open before header reorder");
+            } else {
+                headers->setRenameDraft(QStringLiteral("Dragged"));
                 dragRenamed = true;
             }
 
-            checks::events::sendMouse(*row0, QEvent::MouseButtonPress, start, Qt::LeftButton,
+            checks::events::sendMouse(*headerInputItem, QEvent::MouseButtonPress, start,
+                                      Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            checks::events::sendMouse(*headerInputItem, QEvent::MouseMove, drop, Qt::NoButton,
                                       Qt::LeftButton, Qt::NoModifier);
-            checks::events::sendMouse(*row0, QEvent::MouseMove, drop, Qt::NoButton, Qt::LeftButton,
-                                      Qt::NoModifier);
-            checks::events::sendMouse(*row0, QEvent::MouseButtonRelease, drop, Qt::LeftButton,
-                                      Qt::NoButton, Qt::NoModifier);
+            checks::events::sendMouse(*headerInputItem, QEvent::MouseButtonRelease, drop,
+                                      Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
             // The queued rename commit, then the queued moveTrack commit.
             QCoreApplication::processEvents();
             const auto movedNotes = doc.notesForTrack(1);
             bool same = movedNotes.size() == firstNotes.size();
-            for (size_t i = 0; same && i < movedNotes.size(); i++) {
+            for (size_t i = 0; same && i < movedNotes.size(); ++i) {
                 same = movedNotes[i].tick == firstNotes[i].tick &&
                        movedNotes[i].key == firstNotes[i].key;
             }
             if (!same) {
-                fail("header drag did not move the track's notes to slot 1");
+                fail("Quick header drag did not move the track's notes to slot 1");
             } else if (!view.trackMuted(1) || view.trackMuted(0)) {
-                fail("header drag did not move the mute flag with the track");
+                fail("Quick header drag did not move the mute flag with the track");
             } else {
                 reordered = true;
                 if (dragRenamed && doc.trackName(1) != QStringLiteral("Dragged"))
-                    fail("the open rename editor's text was lost in the drop");
+                    fail("the open rename draft was lost in the reorder");
                 // The complete TrackRemap re-addresses view state on undo
                 // and redo too — the mute bit follows.
                 doc.undoStack()->undo();
@@ -437,26 +544,25 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
                    doc.channelFor(fixtureTracks[2]) == trackIdentities[third];
         };
         auto dragToSlot = [&](int fromTrack, int slot) {
-            (void)view.grab();
-            auto *source =
-                view.findChild<QWidget *>(QStringLiteral("trackHeaderRow%1").arg(fromTrack));
-            const int targetRow = slot < 3 ? slot : 2;
-            auto *target = view.findChild<QWidget *>(
-                QStringLiteral("trackHeaderRow%1").arg(fixtureTracks[targetRow]));
-            if (!source || !target) {
-                fail("three-track header rows not found");
+            headers->setScrollY(0.0);
+            const std::optional<int> sourceRow = rowForTrack(*headers, fromTrack);
+            const int targetTrack = fixtureTracks[slot < 3 ? slot : 2];
+            const std::optional<int> targetRow = rowForTrack(*headers, targetTrack);
+            if (!sourceRow || !targetRow) {
+                fail("track header model records for insertion-slot drag were not found");
                 return false;
             }
-            const QPoint start(source->width() / 2, source->height() * 3 / 4);
-            const QPoint targetPoint(target->width() / 2,
-                                     target->height() * (slot < 3 ? 1 : 3) / 4);
-            const QPoint drop = source->mapFromGlobal(target->mapToGlobal(targetPoint));
-            checks::events::sendMouse(*source, QEvent::MouseButtonPress, start, Qt::LeftButton,
+            const QPointF start = titlePoint(*headers, *headerInputItem, *sourceRow);
+            const QPointF drop =
+                rowPoint(*headers, *headerInputItem, *targetRow,
+                         {headers->voiceLineRect().center().x(),
+                          headers->rowHeight() * (slot < 3 ? 1.0 / 4.0 : 3.0 / 4.0)});
+            checks::events::sendMouse(*headerInputItem, QEvent::MouseButtonPress, start,
+                                      Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            checks::events::sendMouse(*headerInputItem, QEvent::MouseMove, drop, Qt::NoButton,
                                       Qt::LeftButton, Qt::NoModifier);
-            checks::events::sendMouse(*source, QEvent::MouseMove, drop, Qt::NoButton,
-                                      Qt::LeftButton, Qt::NoModifier);
-            checks::events::sendMouse(*source, QEvent::MouseButtonRelease, drop, Qt::LeftButton,
-                                      Qt::NoButton, Qt::NoModifier);
+            checks::events::sendMouse(*headerInputItem, QEvent::MouseButtonRelease, drop,
+                                      Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
             QCoreApplication::processEvents();
             return true;
         };
@@ -581,53 +687,67 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
         }
     }
 
-    // Keyboard mute/solo: bare M and S toggle the header buttons over the
-    // multi-track scope — the selected track alone, or every Ctrl-scoped
-    // row — with a mixed scope resolving toward on. View state only: the
-    // undo stack must not move, and the header buttons follow the masks
-    // without a panel rebuild.
+    // Keyboard mute/solo changes view masks and the matching model roles
+    // without resetting the retained Quick header structure.
     {
         const int preCount = doc.undoStack()->count();
-        const int track = view.selectionModel().primaryTrack();
+        int headerResets = 0;
+        const QMetaObject::Connection resetConnection = QObject::connect(
+            headers, &QAbstractItemModel::modelReset, &view, [&headerResets] { ++headerResets; });
+        const auto roleChecked = [&](int track, int role) {
+            const std::optional<int> row = rowForTrack(*headers, track);
+            return row && headers->data(headers->index(*row, 0), role).toBool();
+        };
+
+        const int selectedTrack = view.selectionModel().primaryTrack();
         if (view.muteMask() != 0 || view.soloMask() != 0)
             fail("mute/solo masks not clean before the keyboard toggles");
         sendKeyStroke(*roll, Qt::Key_M, Qt::NoModifier, false);
-        if (!view.trackMuted(track))
+        if (!view.trackMuted(selectedTrack))
             fail("M did not mute the selected track");
-        auto *row = view.findChild<QWidget *>(QStringLiteral("trackHeaderRow%1").arg(track));
-        auto *muteButton =
-            row ? row->findChild<QToolButton *>(QStringLiteral("trackMuteButton")) : nullptr;
-        if (!muteButton || !muteButton->isChecked())
-            fail("keyboard mute did not check the header button");
+        if (!roleChecked(selectedTrack, songview::TrackHeaderModel::MuteCheckedRole))
+            fail("keyboard mute did not publish the checked Quick header role");
         sendKeyStroke(*roll, Qt::Key_M, Qt::NoModifier, false);
         if (view.muteMask() != 0)
             fail("second M did not unmute the selected track");
-        if (muteButton && muteButton->isChecked())
-            fail("keyboard unmute did not uncheck the header button");
+        if (roleChecked(selectedTrack, songview::TrackHeaderModel::MuteCheckedRole))
+            fail("keyboard unmute did not clear the checked Quick header role");
         sendKeyStroke(*roll, Qt::Key_S, Qt::NoModifier, false);
-        if (!view.trackSoloed(track))
-            fail("S did not solo the selected track");
+        if (!view.trackSoloed(selectedTrack) ||
+            !roleChecked(selectedTrack, songview::TrackHeaderModel::SoloCheckedRole)) {
+            fail("S did not publish the selected track's solo role");
+        }
         sendKeyStroke(*roll, Qt::Key_S, Qt::NoModifier, false);
-        if (view.soloMask() != 0)
-            fail("second S did not unsolo the selected track");
+        if (view.soloMask() != 0 ||
+            roleChecked(selectedTrack, songview::TrackHeaderModel::SoloCheckedRole)) {
+            fail("second S did not clear the selected track's solo role");
+        }
 
         // Multi-track scope + mixed state: with another track Ctrl-scoped
         // in and already muted, M mutes the rest (on wins), and the next M
         // clears the whole scope.
-        const int other = track == 0 ? 1 : 0;
-        if (view.findChild<QWidget *>(QStringLiteral("trackHeaderRow%1").arg(other))) {
+        const int other = selectedTrack == 0 ? 1 : 0;
+        if (!rowForTrack(*headers, other)) {
+            fail("Quick header record was missing for the scoped keyboard probe");
+        } else {
             view.trackHeaderClicked(other, Qt::ControlModifier);
             view.setTrackMute(other, true);
             sendKeyStroke(*roll, Qt::Key_M, Qt::NoModifier, false);
-            if (!view.trackMuted(track) || !view.trackMuted(other))
+            if (!view.trackMuted(selectedTrack) || !view.trackMuted(other) ||
+                !roleChecked(selectedTrack, songview::TrackHeaderModel::MuteCheckedRole) ||
+                !roleChecked(other, songview::TrackHeaderModel::MuteCheckedRole)) {
                 fail("M over a mixed scope did not mute every scoped track");
+            }
             sendKeyStroke(*roll, Qt::Key_M, Qt::NoModifier, false);
             if (view.muteMask() != 0)
                 fail("second M did not unmute the whole scope");
-            view.trackHeaderClicked(track, Qt::NoModifier); // collapse scope
+            view.trackHeaderClicked(selectedTrack, Qt::NoModifier); // collapse scope
         }
+        if (headerResets != 0)
+            fail("keyboard mute/solo reset the TrackHeaderModel");
         if (doc.undoStack()->count() != preCount)
             fail("keyboard mute/solo touched the undo stack");
+        QObject::disconnect(resetConnection);
     }
 
     if (doc.undoStack()->index() !=

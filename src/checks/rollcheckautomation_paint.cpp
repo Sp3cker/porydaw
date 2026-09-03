@@ -13,7 +13,6 @@
 #include <QEvent>
 #include <QImage>
 #include <QUndoStack>
-#include <QWidget>
 
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
@@ -263,7 +262,7 @@ int panRowIndex(const AutomationPage &page)
 
 QAction *pencilModeAction(AutomationPage &page)
 {
-    for (QAction *action : page.actions()) {
+    for (QAction *action : page.findChildren<QAction *>()) {
         if (action->text() == QStringLiteral("Pencil Mode"))
             return action;
     }
@@ -381,14 +380,17 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     const AutomationBandInput band{page, *automationInputItem(view)};
     const qreal dpr = band.item.devicePixelRatio();
     const QPoint captureOrigin = automationContentToViewport(page);
+    const auto automationBandRect = [&]() -> QRect {
+        const auto &bandGeometry =
+            view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
+        return bandGeometry ? bandGeometry->rect : QRect{};
+    };
     const auto captureAutomationViewport = [&] {
-        QWidget *const viewport = page.scrollViewport();
         QString error;
-        const QImage framebuffer =
-            viewport ? checks::support::captureQuickBand(view, *viewport, &error) : QImage{};
-        report("framebuffer", !framebuffer.isNull(),
+        const QImage image = checks::support::captureQuickBand(view, automationBandRect(), &error);
+        report("framebuffer", !image.isNull(),
                QStringLiteral("automation viewport framebuffer capture failed: %1").arg(error));
-        return framebuffer;
+        return image;
     };
     const qreal radius = nodelane::hoverRingRadius(geometry);
     const qreal lineHalf =

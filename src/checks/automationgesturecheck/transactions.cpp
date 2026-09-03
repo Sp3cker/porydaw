@@ -380,14 +380,14 @@ void runCancellations(TransactionContext &ctx)
     AutomationGestureCheckRig &rig = ctx.rig;
     checkCancellation(ctx, QStringLiteral("Escape"),
                       [&rig] { rig.keyToArea(QEvent::KeyPress, Qt::Key_Escape); });
-    checkCancellation(ctx, QStringLiteral("page-hide"), [&rig] {
-        rig.page().hide();
+    checkCancellation(ctx, QStringLiteral("song-view-hide"), [&rig] {
+        rig.view().hide();
         rig.pump();
-        rig.page().show();
+        rig.view().show();
     });
-    checkCancellation(ctx, QStringLiteral("window-deactivation"), [&rig] {
+    checkCancellation(ctx, QStringLiteral("song-view-window-deactivation"), [&rig] {
         QEvent event(QEvent::WindowDeactivate);
-        QCoreApplication::sendEvent(&rig.page(), &event);
+        QCoreApplication::sendEvent(&rig.view(), &event);
     });
     checkCancellation(ctx, QStringLiteral("document-refresh"), [&rig] { rig.documentChanged(); });
     rig.setPersistentPencil(false);

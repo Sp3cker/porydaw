@@ -7,11 +7,7 @@
 #include <QApplication>
 #include <QEvent>
 #include <QKeyEvent>
-#include <QScrollArea>
-#include <QScrollBar>
-#include <QSignalBlocker>
-#include <QStyle>
-#include <QVBoxLayout>
+#include <QWidget>
 #include <QWindow>
 
 #include "core/songdocument.h"
@@ -21,7 +17,6 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinput.h"
-#include "ui/theme/themeruntime.h"
 namespace {
 
 Qt::KeyboardModifiers shortcutModifiers(Qt::KeyboardModifiers modifiers)
@@ -39,106 +34,64 @@ bool sameLiveState(const DrawerPageLiveState &a, const DrawerPageLiveState &b)
 }
 
 } // namespace
-class AutomationPage::ScrollArea final : public QScrollArea
-{
-  public:
-    using QScrollArea::QScrollArea;
-
-    int gutter() const
-    {
-        const QWidget *scrollViewport = viewport();
-        auto left = scrollViewport ? scrollViewport->geometry().left() : 0;
-        if (left == 0 && layoutDirection() == Qt::RightToLeft)
-            left = style()->pixelMetric(QStyle::PM_ScrollBarExtent, nullptr, verticalScrollBar());
-        return left;
-    }
-
-    void updateScrollbarGutter(bool) { setViewportMargins(0, 0, 0, 0); }
-
-    void syncBackground()
-    {
-        const QColor bg = themes::color(themes::Role::song_view_piano_roll_background);
-        QPalette pal = palette();
-        pal.setColor(QPalette::Window, bg);
-        setPalette(pal);
-        setAutoFillBackground(false);
-        if (QWidget *vp = viewport()) {
-            QPalette vpPal = vp->palette();
-            vpPal.setColor(QPalette::Window, bg);
-            vp->setPalette(vpPal);
-            vp->setAutoFillBackground(false);
-        }
-    }
-};
-
 AutomationPage::Geometry AutomationPage::Geometry::resolve()
 {
     return {layout::fontPx(4.0), layout::fontPx(5.0 / 3.0), layout::fontPx(8.0 / 3.0)};
 }
 
-int AutomationPage::scrollGutter() const noexcept
-{
-    return m_scroll ? m_scroll->gutter() : 0;
-}
-QWidget *AutomationPage::scrollViewport() const noexcept
-{
-    return m_scroll ? m_scroll->viewport() : nullptr;
-}
-
 QSize AutomationPage::automationViewportSize() const noexcept
 {
-    const QWidget *const viewport = scrollViewport();
-    return viewport ? viewport->size() : QSize{};
+    return m_viewportSize;
 }
 
 int AutomationPage::automationContentHeight() const noexcept
 {
-    return m_automationContentHeight;
+    return m_contentHeight;
 }
 
 int AutomationPage::verticalScroll() const noexcept
 {
-    const QScrollBar *const bar = m_scroll ? m_scroll->verticalScrollBar() : nullptr;
-    return bar ? bar->value() : 0;
+    return m_scrollY;
 }
 
-void AutomationPage::synchronizeAutomationViewport()
+void AutomationPage::synchronizeAutomationViewport(QSize viewportSize)
 {
-    if (!m_scroll || !m_canvas)
-        return;
-    QScrollBar *const verticalBar = m_scroll->verticalScrollBar();
-    if (!verticalBar)
-        return;
-    const int viewportHeight = automationViewportSize().height();
-    m_automationContentHeight = std::max(viewportHeight, m_canvas->minimumContentHeight());
-    {
-        const QSignalBlocker blocked(verticalBar);
-        verticalBar->setPageStep(viewportHeight);
-        verticalBar->setRange(0, std::max(0, m_automationContentHeight - viewportHeight));
+    const QSize oldViewportSize = m_viewportSize;
+    const int oldContentHeight = m_contentHeight;
+    const int oldMaximum = std::max(0, oldContentHeight - oldViewportSize.height());
+    const int oldScrollY = m_scrollY;
+    m_viewportSize = viewportSize;
+    m_contentHeight = std::max(m_viewportSize.height(), m_canvas->minimumContentHeight());
+    const int maximum = std::max(0, m_contentHeight - m_viewportSize.height());
+    m_scrollY = std::clamp(m_scrollY, 0, maximum);
+    if (m_viewportSize != oldViewportSize || m_contentHeight != oldContentHeight ||
+        m_scrollY != oldScrollY || maximum != oldMaximum) {
+        emit scrollStateChanged();
     }
     m_canvas->scrollStateChanged();
+    m_canvas->viewportResized();
 }
 
 void AutomationPage::setVerticalScroll(int value)
 {
-    if (m_scroll)
-        m_scroll->verticalScrollBar()->setValue(value);
+    const int maximum = std::max(0, m_contentHeight - m_viewportSize.height());
+    const int scrollY = std::clamp(value, 0, maximum);
+    if (m_scrollY == scrollY)
+        return;
+    m_scrollY = scrollY;
+    m_canvas->scrollStateChanged();
+    emit scrollStateChanged();
 }
 
 bool AutomationPage::scrollVertically(const songview::TimelineWheelInput &input)
 {
-    if (!m_scroll)
-        return false;
-    QScrollBar *const verticalBar = m_scroll->verticalScrollBar();
-    if (!verticalBar)
-        return false;
     const QPoint delta = input.pixelDelta.isNull() ? input.angleDelta : input.pixelDelta;
     if ((!input.angleDelta.isNull() &&
          std::abs(input.angleDelta.x()) > std::abs(input.angleDelta.y())) ||
         std::abs(delta.x()) > std::abs(delta.y()) || delta.y() == 0) {
         return false;
     }
-    const int singleStep = std::max(1, verticalBar->singleStep());
+    constexpr int singleStep = 1;
     const qreal wheelSteps = input.pixelDelta.isNull() ? qreal(delta.y()) / qreal(120)
                                                        : qreal(delta.y()) / qreal(singleStep);
     const qreal scrollSteps = input.inverted ? wheelSteps : -wheelSteps;
@@ -149,12 +102,12 @@ bool AutomationPage::scrollVertically(const songview::TimelineWheelInput &input)
     if (wholeSteps == 0)
         return true;
     m_verticalWheelRemainder -= qreal(wholeSteps);
-    const int pageStep = std::max(1, verticalBar->pageStep());
+    const int pageStep = std::max(1, m_viewportSize.height());
     const int scrollDelta = std::clamp(wholeSteps * singleStep, -pageStep, pageStep);
-    const int current = verticalBar->value();
-    const int requested = current + scrollDelta;
-    const int target = std::clamp(requested, verticalBar->minimum(), verticalBar->maximum());
-    if (target == current) {
+    const int requested = m_scrollY + scrollDelta;
+    const int maximum = std::max(0, m_contentHeight - m_viewportSize.height());
+    const int target = std::clamp(requested, 0, maximum);
+    if (target == m_scrollY) {
         m_verticalWheelRemainder = 0.0;
         return true;
     }
@@ -163,6 +116,7 @@ bool AutomationPage::scrollVertically(const songview::TimelineWheelInput &input)
         m_verticalWheelRemainder = 0.0;
     return true;
 }
+
 int AutomationPage::laneHeightFor(const EditorAutomationRowId &row) const noexcept
 {
     const int shared =
@@ -171,40 +125,20 @@ int AutomationPage::laneHeightFor(const EditorAutomationRowId &row) const noexce
     return it == m_viewState.laneHeights.cend() ? shared : it->second;
 }
 
-AutomationPage::AutomationPage(SongView &owner, QWidget *parent)
-    : QWidget(parent)
+AutomationPage::AutomationPage(SongView &owner, QObject *parent)
+    : QObject(parent)
     , m_geometry(Geometry::resolve())
     , m_owner(owner)
     , m_grid(owner.grid())
 {
-    auto *box = new QVBoxLayout(this);
-    box->setContentsMargins(0, 0, 0, 0);
-    box->setSpacing(0);
-    m_scroll = new ScrollArea(this);
-    m_scroll->setObjectName(QStringLiteral("automationScroll"));
-    m_scroll->setStyleSheet(
-        QStringLiteral("QScrollArea#automationScroll { background-color: transparent; }"));
-    m_scroll->setFrameShape(QFrame::NoFrame);
-    m_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    m_scroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-    m_scroll->setFocusPolicy(Qt::NoFocus);
-    m_scroll->setLayoutDirection(Qt::RightToLeft);
-    m_scroll->setMinimumHeight(m_geometry.rowDefaultHeight + m_geometry.addLaneStripHeight);
     m_canvas = new AutomationCanvas(*this);
-    connect(m_scroll->verticalScrollBar(), &QScrollBar::valueChanged, m_canvas,
-            [this](int) { m_canvas->scrollStateChanged(); });
-    m_scroll->updateScrollbarGutter(false);
-    m_scroll->viewport()->setStyleSheet(QStringLiteral("background-color: transparent;"));
-    m_scroll->syncBackground();
     m_pencilModeAction = new QAction(tr("Pencil Mode"), this);
     m_pencilModeAction->setCheckable(true);
     m_pencilModeAction->setShortcutContext(Qt::WindowShortcut);
     keymap::Registry::instance().attach(QStringLiteral("automation.pencil_mode"),
                                         m_pencilModeAction);
-    addAction(m_pencilModeAction);
+    m_owner.addAction(m_pencilModeAction);
     connect(m_pencilModeAction, &QAction::toggled, m_canvas, &AutomationCanvas::setPencilMode);
-    box->addWidget(m_scroll);
-    synchronizeAutomationViewport();
     qApp->installEventFilter(this);
 }
 
@@ -213,41 +147,22 @@ AutomationPage::~AutomationPage()
     qApp->removeEventFilter(this);
 }
 
-bool AutomationPage::event(QEvent *event)
-{
-    const QEvent::Type type = event->type();
-    if (type == QEvent::StyleChange || type == QEvent::ThemeChange ||
-        type == QEvent::PaletteChange || type == QEvent::ApplicationPaletteChange) {
-        if (m_scroll)
-            m_scroll->syncBackground();
-        if (m_canvas)
-            m_canvas->requestFullQuickUpdate();
-    }
-    if (type == QEvent::Hide || type == QEvent::WindowDeactivate) {
-        cancelInteraction();
-    }
-    return QWidget::event(event);
-}
-
 bool AutomationPage::eventFilter(QObject *watched, QEvent *event)
 {
     const QEvent::Type type = event->type();
-    if (watched == scrollViewport() && type == QEvent::Resize) {
-        m_canvas->viewportResized();
-        synchronizeAutomationViewport();
-    }
     if (type != QEvent::ShortcutOverride && type != QEvent::KeyPress)
-        return QWidget::eventFilter(watched, event);
-    if (!belongsToPageWindow(watched) || !isVisible() || !m_pencilModeAction ||
+        return QObject::eventFilter(watched, event);
+    if (!belongsToPageWindow(watched) ||
+        !m_owner.drawerSectionVisible(EditorDrawerPage::Automations) || !m_pencilModeAction ||
         !m_pencilModeAction->isEnabled()) {
-        return QWidget::eventFilter(watched, event);
+        return QObject::eventFilter(watched, event);
     }
     const auto *keyEvent = static_cast<QKeyEvent *>(event);
     if (!matchesPencilShortcut(keyEvent->key(), keyEvent->modifiers()))
-        return QWidget::eventFilter(watched, event);
+        return QObject::eventFilter(watched, event);
     const QWidget *focus = QApplication::focusWidget();
     if (focus && focus->testAttribute(Qt::WA_InputMethodEnabled))
-        return QWidget::eventFilter(watched, event);
+        return QObject::eventFilter(watched, event);
     if (type == QEvent::ShortcutOverride) {
         event->accept();
         return true;
@@ -272,12 +187,13 @@ bool AutomationPage::matchesPencilShortcut(int key, Qt::KeyboardModifiers modifi
 
 bool AutomationPage::belongsToPageWindow(const QObject *target) const noexcept
 {
+    const QWidget *const pageWindow = m_owner.window();
     if (const auto *widget = qobject_cast<const QWidget *>(target))
-        return widget->window() == window();
-    const QWindow *const pageWindow = window()->windowHandle();
+        return widget->window() == pageWindow;
+    const QWindow *const pageWindowHandle = pageWindow->windowHandle();
     for (const auto *targetWindow = qobject_cast<const QWindow *>(target); targetWindow;
          targetWindow = qobject_cast<const QWindow *>(targetWindow->parent())) {
-        if (targetWindow == pageWindow)
+        if (targetWindow == pageWindowHandle)
             return true;
     }
     return false;

@@ -14,7 +14,7 @@
 
 #include <QPointF>
 #include <QQuickItem>
-#include <QWidget>
+#include <QSize>
 
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
@@ -108,9 +108,8 @@ HoverObservation observeHover(AutomationGestureCheckRig &rig)
     observation.framebuffer = rig.renderAutomationViewport(&captureError);
     observation.framebufferReady = captureError.isEmpty() && !observation.framebuffer.isNull();
     observation.layer = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
-    const QWidget *const viewport = rig.page().scrollViewport();
-    const QRectF viewportRect(0.0, 0.0, viewport ? viewport->width() : 0.0,
-                              viewport ? viewport->height() : 0.0);
+    const QSize viewportSize = rig.automationViewportSize();
+    const QRectF viewportRect(0.0, 0.0, qreal(viewportSize.width()), qreal(viewportSize.height()));
     const QAbstractItemModel *const model = rig.quickScene().automationHoverTextModel();
     observation.textRows = model->rowCount();
     for (int row = 0; row < observation.textRows; ++row) {
@@ -311,7 +310,7 @@ PreparedLane prepareLane(AutomationGestureCheckRig &rig, const Case &row)
                          valueY(lane.body, geometry, minimum, maximum, cursor)};
     lane.heldY = valueY(lane.body, geometry, minimum, maximum, held);
     lane.nodeY = valueY(lane.body, geometry, minimum, maximum, node);
-    NodeLaneHoverState insertionProbe(rig.page().font());
+    NodeLaneHoverState insertionProbe(rig.view().font());
     insertionProbe.hover.lane = lane.handle;
     insertionProbe.hover.pos = lane.insertionPos;
     lane.insertionTick = uint64_t(std::max(0.0, insertionProbe.insertionTick(projection, false)));

@@ -52,6 +52,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void updateTempoLayout();
     void cancelInteraction();
     void setPencilMode(bool enabled);
+    bool pencilMode() const noexcept { return m_pencilMode; }
     bool isPanning() const noexcept;
     bool bandPreviewContainsLane(LaneHandle handle) const noexcept;
     QRect labelGutter() const noexcept { return m_labelGutter; }

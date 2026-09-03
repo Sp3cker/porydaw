@@ -11,19 +11,17 @@
 // unready, MidiStage-bound/unready, and VoicegroupBound/ready all run on one
 // tab. Raster and public-geometry assertions only; nothing here reads
 // production source text.
-#include <QComboBox>
 #include <QCoreApplication>
 #include <QImage>
-#include <QList>
 #include <QPalette>
-#include <QPoint>
 #include <QPointer>
-#include <QScrollArea>
+#include <QQuickItem>
 #include <QScrollBar>
 #include <QWidget>
 #include <QtGlobal>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <optional>
@@ -44,7 +42,8 @@
 #include "ui/songtab.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
-#include "ui/songview/trackheaderpanel.h"
+#include "ui/songview/timeruler.h"
+#include "ui/songview/trackheadermodel.h"
 
 namespace checks::rollcheck {
 namespace {
@@ -60,17 +59,6 @@ int maxChannelDelta(QRgb a, QRgb b)
 bool sameColor(QRgb a, QRgb b, int tolerance)
 {
     return maxChannelDelta(a, b) <= tolerance;
-}
-
-// findChild<T *>() needs Q_OBJECT metadata, which these widgets do not declare.
-template <class T>
-T *descendant(QWidget &owner)
-{
-    for (QWidget *widget : owner.findChildren<QWidget *>()) {
-        if (auto *typed = dynamic_cast<T *>(widget))
-            return typed;
-    }
-    return nullptr;
 }
 
 // Device-pixel sampler over one grabbed widget raster. Every coordinate is
@@ -559,6 +547,17 @@ void runGeometryScenarios(Harness &check)
 // handles can never dangle even if a child dies early. Handles are
 // dereferenced only behind validity checks.
 struct GateFixture {
+    struct GridControlsState {
+        QString divisionText;
+        QString feelText;
+        QString divisionToolTip;
+        QString feelToolTip;
+        QVariantMap appearance;
+        bool controlsEnabled = false;
+        bool divisionEnabled = false;
+        bool feelEnabled = false;
+    };
+
     explicit GateFixture(SongName probeName) : tab(std::move(probeName))
     {
         tab.setSampleRate(48000.0);
@@ -568,32 +567,49 @@ struct GateFixture {
         QCoreApplication::processEvents();
 
         SongView &view = tab.view();
-        headers = descendant<songview::TrackHeaderPanel>(view);
-        controls = view.findChild<QWidget *>(QStringLiteral("timeRulerControls"),
-                                             Qt::FindDirectChildrenOnly);
+        headers = view.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"),
+                                                               Qt::FindDirectChildrenOnly);
         auto *quick =
             view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
-        if (quick && quick->rootObject()) {
-            rollInput = quick->rootObject()->findChild<songview::TimelineInputItem *>(
+        auto *const quickRoot = quick ? quick->rootObject() : nullptr;
+        if (quickRoot) {
+            rollInput = quickRoot->findChild<songview::TimelineInputItem *>(
                 QStringLiteral("timelineRollInput"));
-            stripInput = quick->rootObject()->findChild<songview::TimelineInputItem *>(
+            stripInput = quickRoot->findChild<songview::TimelineInputItem *>(
                 QStringLiteral("timelineOtherEventsInput"));
-            rulerInput = quick->rootObject()->findChild<songview::TimelineInputItem *>(
+            rulerInput = quickRoot->findChild<songview::TimelineInputItem *>(
                 QStringLiteral("timelineRulerInput"));
+            headersInput = quickRoot->findChild<songview::TimelineInputItem *>(
+                QStringLiteral("timelineTrackHeadersInput"));
+            controls = quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineRulerControls"));
+            divisionControl =
+                quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineRulerDivisionControl"));
+            feelControl =
+                quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineRulerFeelControl"));
+        }
+        ruler =
+            rulerInput ? dynamic_cast<songview::TimeRuler *>(rulerInput->interaction()) : nullptr;
+        const std::array<QString, 5> drawerChromeInputNames{
+            QStringLiteral("drawerVoiceChangesHandleInput"),
+            QStringLiteral("drawerVelocityHandleInput"),
+            QStringLiteral("drawerAutomationHandleInput"), QStringLiteral("drawerBarInput"),
+            QStringLiteral("drawerDetentInput")};
+        for (int i = 0; i < int(drawerInputs.size()); ++i) {
+            drawerInputs[i] =
+                quickRoot
+                    ? quickRoot->findChild<songview::TimelineInputItem *>(drawerChromeInputNames[i])
+                    : nullptr;
         }
         events = view.findChild<EventListView *>();
         drawer = view.editorDrawer();
         for (QScrollBar *scrollbar : view.findChildren<QScrollBar *>()) {
-            if (qobject_cast<QScrollArea *>(scrollbar->parentWidget()))
-                continue; // the header scroll area's own bars, not the camera bars
+            if (!scrollbar->isVisibleTo(&view))
+                continue;
             if (scrollbar->orientation() == Qt::Horizontal)
                 hbar = scrollbar;
             else
                 vbar = scrollbar;
         }
-        if (controls)
-            for (QComboBox *combo : controls->findChildren<QComboBox *>())
-                combos.append(combo);
     }
 
     // Window teardown settles while every child is still alive.
@@ -607,18 +623,31 @@ struct GateFixture {
     // the gate must not reuse the disabled-styling presentation.
     void checkSurfacesEnabled(Harness &check) const
     {
-        const std::pair<const char *, QWidget *> surfaces[] = {
-            {"ruler controls", controls.data()},   {"track headers", headers.data()},
-            {"event list", events.data()},         {"editor drawer", drawer.data()},
-            {"horizontal scrollbar", hbar.data()}, {"vertical scrollbar", vbar.data()},
+        const std::pair<const char *, QWidget *> widgetSurfaces[] = {
+            {"event list", events.data()},
+            {"horizontal scrollbar", hbar.data()},
+            {"vertical scrollbar", vbar.data()},
         };
-        for (const auto &[name, widget] : surfaces) {
+        for (const auto &[name, widget] : widgetSurfaces) {
             if (!widget)
                 check.fail(qUtf8Printable(QObject::tr("loading view is missing its %1").arg(name)));
             else if (!widget->isEnabled())
                 check.fail(qUtf8Printable(
                     QObject::tr("loading %1 was disabled instead of gated").arg(name)));
         }
+        if (!drawer)
+            check.fail("loading view is missing its editor drawer");
+        if (!headers)
+            check.fail("loading view is missing its TrackHeaderModel");
+        else if (!headersInput || headersInput->interaction() != headers.data())
+            check.fail("loading view is missing its TrackHeaders Quick input");
+        else if (!headersInput->isEnabled())
+            check.fail("loading TrackHeaders Quick input was disabled instead of gated");
+        if (!controls || !divisionControl || !feelControl)
+            check.fail("loading view is missing its Quick ruler controls");
+        else if (!controls->isEnabled() || !divisionControl->isEnabled() ||
+                 !feelControl->isEnabled())
+            check.fail("loading Quick ruler controls were disabled instead of gated");
         if (!rollInput)
             check.fail("loading view is missing its roll Quick input");
         else if (!rollInput->isEnabled())
@@ -627,61 +656,96 @@ struct GateFixture {
             check.fail("loading view is missing its other-events Quick input");
         else if (!stripInput->isEnabled())
             check.fail("loading other-events Quick input was disabled instead of gated");
-        if (!rulerInput)
-            check.fail("loading view is missing its ruler Quick input");
+        if (!rulerInput || !ruler)
+            check.fail("loading view is missing its TimeRuler Quick input");
         else if (!rulerInput->isEnabled())
             check.fail("loading ruler Quick input was disabled instead of gated");
+        for (const QPointer<songview::TimelineInputItem> &input : drawerInputs) {
+            if (!input)
+                check.fail("loading view is missing a drawer chrome Quick input");
+            else if (!input->isEnabled())
+                check.fail("loading drawer chrome Quick input was disabled instead of gated");
+        }
     }
 
-    // The ruler's grid controls must all stay enabled while loading.
+    // The TimeRuler state and the QML controls must all stay enabled while loading.
     void checkGridControlsEnabled(Harness &check) const
     {
-        if (combos.empty())
-            check.fail("time ruler has no grid controls");
-        for (const QPointer<QComboBox> &combo : combos) {
-            if (combo.isNull())
-                check.fail("a ruler grid combo was destroyed while the gate was under test");
-            else if (!combo->isEnabled())
-                check.fail("grid controls were disabled while loading");
+        if (!ruler || !controls || !divisionControl || !feelControl) {
+            check.fail("time ruler has no Quick grid controls");
+            return;
+        }
+        if (!ruler->gridControlsEnabled() || !controls->isEnabled() ||
+            !divisionControl->isEnabled() || !feelControl->isEnabled()) {
+            check.fail("Quick grid controls were disabled while loading");
+            return;
+        }
+        if (divisionControl->property("controlText").toString() != ruler->divisionText() ||
+            feelControl->property("controlText").toString() != ruler->feelText() ||
+            divisionControl->property("controlToolTip").toString() != ruler->divisionToolTip() ||
+            feelControl->property("controlToolTip").toString() != ruler->feelToolTip()) {
+            check.fail("Quick grid controls did not reflect TimeRuler state while loading");
         }
     }
 
-    // Freeze every grid control's raster so the readiness transition can be
-    // compared against them.
     void snapshotGridControls()
     {
-        for (const QPointer<QComboBox> &combo : combos)
-            if (combo)
-                gatedComboRasters.push_back(grabRaster(*combo).image);
+        if (!ruler || !controls || !divisionControl || !feelControl)
+            return;
+        gatedGridControls = GridControlsState{
+            ruler->divisionText(),          ruler->feelText(),
+            ruler->divisionToolTip(),       ruler->feelToolTip(),
+            ruler->gridControlAppearance(), controls->isEnabled(),
+            divisionControl->isEnabled(),   feelControl->isEnabled(),
+        };
     }
 
-    // The readiness transition must not restyle any grid control: identical
-    // combo rasters before and after.
+    // The readiness transition must not alter the TimeRuler state or the
+    // properties that render its existing Quick controls.
     void checkGridControlsUnchanged(Harness &check) const
     {
-        if (combos.size() != qsizetype(gatedComboRasters.size()))
-            check.fail("grid combo rasters were not snapshotted for every ruler combo");
-        const qsizetype paired = (std::min)(combos.size(), qsizetype(gatedComboRasters.size()));
-        for (qsizetype i = 0; i < paired; ++i) {
-            if (combos[i].isNull())
-                check.fail("a ruler grid combo was destroyed across the readiness transition");
-            else if (grabRaster(*combos[i]).image != gatedComboRasters[i])
-                check.fail("grid controls changed styling across the readiness transition");
+        if (!gatedGridControls) {
+            check.fail("Quick grid control state was not snapshotted before readiness");
+            return;
         }
+        if (!ruler || !controls || !divisionControl || !feelControl) {
+            check.fail("a Quick grid control was destroyed across the readiness transition");
+            return;
+        }
+        const GridControlsState &before = *gatedGridControls;
+        const bool unchanged =
+            ruler->divisionText() == before.divisionText && ruler->feelText() == before.feelText &&
+            ruler->divisionToolTip() == before.divisionToolTip &&
+            ruler->feelToolTip() == before.feelToolTip &&
+            ruler->gridControlAppearance() == before.appearance &&
+            controls->isEnabled() == before.controlsEnabled &&
+            divisionControl->isEnabled() == before.divisionEnabled &&
+            feelControl->isEnabled() == before.feelEnabled &&
+            divisionControl->property("controlText").toString() == before.divisionText &&
+            feelControl->property("controlText").toString() == before.feelText &&
+            divisionControl->property("controlToolTip").toString() == before.divisionToolTip &&
+            feelControl->property("controlToolTip").toString() == before.feelToolTip;
+        if (!unchanged)
+            check.fail(
+                "Quick grid controls changed state or styling across the readiness transition");
     }
 
     SongTab tab;
-    QPointer<QWidget> controls;
+    QPointer<songview::TrackHeaderModel> headers;
+    QPointer<songview::TimelineInputItem> headersInput;
+    QPointer<QQuickItem> controls;
+    QPointer<QQuickItem> divisionControl;
+    QPointer<QQuickItem> feelControl;
+    QPointer<songview::TimeRuler> ruler;
     QPointer<songview::TimelineInputItem> rollInput;
-    QPointer<songview::TrackHeaderPanel> headers;
     QPointer<songview::TimelineInputItem> rulerInput;
     QPointer<songview::TimelineInputItem> stripInput;
+    std::array<QPointer<songview::TimelineInputItem>, 5> drawerInputs;
     QPointer<EventListView> events;
-    QPointer<QWidget> drawer;
+    QPointer<EditorDrawer> drawer;
     QPointer<QScrollBar> hbar;
     QPointer<QScrollBar> vbar;
-    QList<QPointer<QComboBox>> combos;
-    std::vector<QImage> gatedComboRasters;
+    std::optional<GridControlsState> gatedGridControls;
 };
 
 // --- Repeated-gesture observers -------------------------------------------

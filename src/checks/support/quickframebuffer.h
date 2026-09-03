@@ -40,6 +40,5 @@ using TimelineQuickLayerRevisions =
 TimelineQuickLayerRevisions timelineQuickLayerRevisions(const songview::TimelineQuickScene &scene);
 
 QImage captureQuickBand(SongView &view, const QRect &rectInSongView, QString *error = nullptr);
-QImage captureQuickBand(SongView &view, QWidget &band, QString *error = nullptr);
 
 } // namespace checks::support

@@ -1,7 +1,7 @@
 #include "rollcheckplayhead.h"
 
-#include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
+#include "checks/support/timelinequickcheck.h"
 
 #include <QColor>
 #include <QCoreApplication>
@@ -15,14 +15,21 @@
 #include <QQuickWindow>
 #include <QRectF>
 
+#include <QScopeGuard>
+#include <QVariant>
+#include <QtGlobal>
+
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 
 #include "core/miditimeline.h"
+#include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/drawerchrome.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
@@ -45,15 +52,16 @@ struct ChromeCopies {
     songview::TimelineChromeItem *edit = nullptr;
 };
 
-std::array<ChromeCopies, 6> chromeCopies(QQuickItem &root)
+std::array<ChromeCopies, 7> chromeCopies(QQuickItem &root)
 {
-    std::array<ChromeCopies, 6> copies{{
+    std::array<ChromeCopies, 7> copies{{
         {"Ruler"},
         {"Roll"},
         {"Automation"},
         {"Velocity"},
         {"VoiceChanges"},
         {"OtherEvents"},
+        {"TrackHeaders"},
     }};
     for (ChromeCopies &copy : copies) {
         const QString prefix = QStringLiteral("timelineQuick") + QString::fromLatin1(copy.name);
@@ -103,50 +111,240 @@ void checkAutomationHover(SongView &view, QStringList &failures)
 {
     auto *page = view.editorDrawer() ? view.editorDrawer()->automationPage() : nullptr;
     auto *canvas = page ? page->canvas() : nullptr;
-    auto *viewport = page ? page->scrollViewport() : nullptr;
-    if (!canvas || !viewport)
+    if (!page || !canvas)
         return;
-    if (!viewport->isVisibleTo(&view)) {
-        failures.append("automation hover fixture did not keep the automation page visible");
+
+    const int selectedTrack = view.selectionModel().primaryTrack();
+    if (selectedTrack < 0 || selectedTrack > 15) {
+        failures.append("automation hover fixture did not have a selected track");
         return;
     }
+    const EditorViewState savedEditorState = view.editorViewState();
+    const int savedScroll = page->verticalScroll();
+    const bool savedPencilMode = canvas->pencilMode();
     auto *quickCanvas =
         view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
-    auto *automationInput =
-        quickCanvas && quickCanvas->rootObject()
-            ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(
-                  QStringLiteral("timelineAutomationInput"))
-            : nullptr;
+    songview::TimelineInputItem *automationInput = nullptr;
+    const auto clearQuickHover = [&] {
+        if (!automationInput || !automationInput->interaction())
+            return;
+        automationInput->interaction()->pointerLeave();
+        checks::support::pumpQuick();
+    };
+    const auto restoreState = qScopeGuard([&] {
+        clearQuickHover();
+        if (canvas->pencilMode() != savedPencilMode)
+            canvas->setPencilMode(savedPencilMode);
+        if (view.editorViewState() != savedEditorState) {
+            view.applyEditorViewState(savedEditorState);
+            checks::support::pumpQuick();
+        }
+        if (page->verticalScroll() != savedScroll)
+            page->setVerticalScroll(savedScroll);
+        checks::support::pumpQuick();
+    });
+
+    const EditorAutomationRowId fixtureLane{EditorAutomationRowKind::ControlChange,
+                                            static_cast<uint8_t>(selectedTrack),
+                                            CoreTimeDefaults::kCcModulation};
+    const auto findFixtureHandle = [&] {
+        const auto &rows = canvas->rows();
+        for (int index = 0; index < int(rows.size()); ++index) {
+            if (rows[std::size_t(index)].id == fixtureLane)
+                return LaneHandle{index + 1};
+        }
+        return LaneHandle{};
+    };
+    LaneHandle fixtureHandle = findFixtureHandle();
+    if (!fixtureHandle.valid()) {
+        EditorViewState fixtureState = view.editorViewState();
+        fixtureState.emptyLanes.insert(fixtureLane);
+        fixtureState.unhideLane(fixtureLane);
+        view.applyEditorViewState(fixtureState);
+        checks::support::pumpQuick();
+        fixtureHandle = findFixtureHandle();
+    }
+    if (!fixtureHandle.valid()) {
+        failures.append("automation hover fixture did not expose its CC lane");
+        return;
+    }
+    const QRect body = canvas->laneBody(fixtureHandle);
+    if (body.isEmpty()) {
+        failures.append("automation hover fixture did not expose a live CC body");
+        return;
+    }
+
+    const std::optional<songview::TimelineBandGeometry> &automationBand =
+        view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
+    if (!automationBand)
+        return;
+    const QRect automationRect = automationBand->rect;
+    if (!automationRect.isValid()) {
+        failures.append("automation hover fixture did not publish a valid canonical band");
+        return;
+    }
+    automationInput = quickCanvas && quickCanvas->rootObject()
+                          ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(
+                                QStringLiteral("timelineAutomationInput"))
+                          : nullptr;
     if (!automationInput) {
         failures.append("automation hover fixture did not expose the Quick automation input");
         return;
     }
-    QString captureError;
-    checks::events::sendMouse(*automationInput, QEvent::Leave, QPointF{}, Qt::NoButton,
-                              Qt::NoButton, Qt::NoModifier);
+    if (!automationInput->interaction() || !automationInput->window()) {
+        failures.append("automation hover fixture did not bind the Quick automation input");
+        return;
+    }
+
+    const QSize automationBandSize = automationRect.size();
+    const int inputWidth = qFloor(automationInput->width());
+    const int inputHeight = qFloor(automationInput->height());
+    if (inputWidth <= 0 || inputHeight <= 0) {
+        failures.append("automation hover fixture Quick input had no visible bounds");
+        return;
+    }
+
+    page->setVerticalScroll(
+        std::clamp(body.center().y() - inputHeight / 2, 0, page->automationContentHeight()));
     checks::support::pumpQuick();
-    const QImage baseline = checks::support::captureQuickBand(view, *viewport, &captureError);
+
+    const int scroll = page->verticalScroll();
+    const QRect liveCcBody = canvas->laneBody(fixtureHandle);
+    const int plotLeft = (std::max)(liveCcBody.left(), canvas->plotOrigin() + 1);
+    const int plotRight =
+        (std::min)({liveCcBody.right(), automationBandSize.width() - 1, inputWidth - 1});
+    if (liveCcBody.isEmpty() || plotLeft > plotRight) {
+        failures.append("automation hover fixture CC body did not contain the visible plot");
+        return;
+    }
+
+    const QRect inputBounds(QPoint{}, QSize(inputWidth, inputHeight));
+    const int inputX = std::clamp(automationBandSize.width() * 2 / 3, plotLeft, plotRight);
+    const QRect visibleCcRect = liveCcBody.translated(0, -scroll).intersected(inputBounds);
+    const QRect pinnedTempoRect =
+        canvas->pinnedTempoRect().translated(0, -scroll).intersected(inputBounds);
+    const QRect ccInterior =
+        liveCcBody.adjusted(0, layout::singlePixel() + 1, 0, -layout::singlePixel())
+            .translated(0, -scroll);
+    const QRect eligibleCcRect = visibleCcRect.intersected(ccInterior);
+    QRect unobscuredCcColumn(inputX, eligibleCcRect.top(), 1, eligibleCcRect.height());
+    if (!unobscuredCcColumn.isEmpty() && pinnedTempoRect.intersects(unobscuredCcColumn)) {
+        QRect aboveTempo = unobscuredCcColumn;
+        aboveTempo.setBottom(pinnedTempoRect.top() - 1);
+        QRect belowTempo = unobscuredCcColumn;
+        belowTempo.setTop(pinnedTempoRect.bottom() + 1);
+        if (aboveTempo.isEmpty() ||
+            (!belowTempo.isEmpty() && belowTempo.height() > aboveTempo.height()))
+            unobscuredCcColumn = belowTempo;
+        else
+            unobscuredCcColumn = aboveTempo;
+    }
+    const auto rectSummary = [](const QRect &rect) {
+        return QStringLiteral("(%1,%2 %3x%4)")
+            .arg(rect.x())
+            .arg(rect.y())
+            .arg(rect.width())
+            .arg(rect.height());
+    };
+    const auto geometrySummary = [&] {
+        return QStringLiteral("scroll=%1, pinned-tempo-local=%2, visible-CC-local=%3, "
+                              "eligible-CC-local=%4, probe-CC-local=%5")
+            .arg(scroll)
+            .arg(rectSummary(pinnedTempoRect))
+            .arg(rectSummary(visibleCcRect))
+            .arg(rectSummary(eligibleCcRect))
+            .arg(rectSummary(unobscuredCcColumn));
+    };
+    if (visibleCcRect.isEmpty() || eligibleCcRect.isEmpty() || unobscuredCcColumn.isEmpty()) {
+        failures.append(QStringLiteral("automation hover fixture had no unobscured CC plot (%1)")
+                            .arg(geometrySummary()));
+        return;
+    }
+
+    // Automation input positions are viewport-local; body assertions use the
+    // live content-space CC body after restoring the vertical scroll offset.
+    const QPoint position(inputX, unobscuredCcColumn.center().y());
+    const QPoint contentPosition(position.x(), position.y() + scroll);
+    const int safeBodyTop = liveCcBody.top() + layout::singlePixel() + 1;
+    const int safeBodyBottom = liveCcBody.bottom() - layout::singlePixel();
+    if (!inputBounds.contains(position) || !visibleCcRect.contains(position) ||
+        !unobscuredCcColumn.contains(position) || !liveCcBody.contains(contentPosition) ||
+        pinnedTempoRect.contains(position) || contentPosition.y() < safeBodyTop ||
+        contentPosition.y() > safeBodyBottom) {
+        failures.append(
+            QStringLiteral("automation hover fixture CC probe was outside the unobscured live "
+                           "body (%1)")
+                .arg(geometrySummary()));
+        return;
+    }
+    canvas->cancelInteraction();
+    if (!canvas->pencilMode())
+        canvas->setPencilMode(true);
+    checks::support::pumpQuick();
+
+    QString captureError;
+    clearQuickHover();
+    const QImage baseline = checks::support::captureQuickBand(view, automationRect, &captureError);
     if (baseline.isNull()) {
         failures.append(
             QStringLiteral("automation Quick framebuffer capture failed: %1").arg(captureError));
         return;
     }
-    // Automation input positions are viewport coordinates; the plot probe
-    // rides two-thirds across the visible band at the viewport mid-height.
-    const QSize viewportSize = page->automationViewportSize();
-    const QPoint position(std::max(canvas->plotOrigin() + 1, viewportSize.width() * 2 / 3),
-                          viewportSize.height() / 2);
-    checks::events::sendMouse(*automationInput, QEvent::MouseMove, position, Qt::NoButton,
-                              Qt::NoButton, Qt::NoModifier);
+    const QPointF inputPosition(position);
+    const QPointF globalPosition = automationInput->mapToGlobal(inputPosition);
+    const auto positionSummary = [&] {
+        return QStringLiteral("lane=CC(track=%1, controller=%2, handle=%3), body=(%4,%5 %6x%7), "
+                              "local=(%8,%9), %10")
+            .arg(selectedTrack)
+            .arg(static_cast<int>(CoreTimeDefaults::kCcModulation))
+            .arg(fixtureHandle.index)
+            .arg(liveCcBody.x())
+            .arg(liveCcBody.y())
+            .arg(liveCcBody.width())
+            .arg(liveCcBody.height())
+            .arg(inputPosition.x(), 0, 'f', 2)
+            .arg(inputPosition.y(), 0, 'f', 2)
+            .arg(geometrySummary());
+    };
+    const bool hoverHandled =
+        automationInput->interaction()->pointerMove(songview::TimelinePointerInput{
+            .position = inputPosition,
+            .globalPosition = globalPosition,
+            .button = Qt::NoButton,
+            .buttons = Qt::NoButton,
+            .modifiers = Qt::NoModifier,
+        });
+    if (!hoverHandled) {
+        failures.append(
+            QStringLiteral("automation hover interaction did not handle the local pointer move "
+                           "(%1)")
+                .arg(positionSummary()));
+    }
     checks::support::pumpQuick();
-    const QImage hovered = checks::support::captureQuickBand(view, *viewport, &captureError);
-    if (hovered == baseline)
-        failures.append("automation hover did not retain its local Quick decoration");
-    checks::events::sendMouse(*automationInput, QEvent::Leave, QPointF{}, Qt::NoButton,
-                              Qt::NoButton, Qt::NoModifier);
-    checks::support::pumpQuick();
-    if (checks::support::captureQuickBand(view, *viewport, &captureError) != baseline)
-        failures.append("automation hover did not clear its local Quick decoration");
+    const QImage hovered = checks::support::captureQuickBand(view, automationRect, &captureError);
+    if (hovered.isNull()) {
+        failures.append(
+            QStringLiteral("automation Quick framebuffer capture after hover failed: %1 (%2)")
+                .arg(captureError)
+                .arg(positionSummary()));
+    } else if (hovered == baseline) {
+        failures.append(QStringLiteral("automation hover did not render its local Quick decoration "
+                                       "(%1)")
+                            .arg(positionSummary()));
+    }
+    clearQuickHover();
+    const QImage cleared = checks::support::captureQuickBand(view, automationRect, &captureError);
+    if (cleared.isNull()) {
+        failures.append(
+            QStringLiteral("automation Quick framebuffer capture after hover leave failed: %1 "
+                           "(%2)")
+                .arg(captureError)
+                .arg(positionSummary()));
+    } else if (cleared != baseline) {
+        failures.append(QStringLiteral("automation hover did not clear its local Quick decoration "
+                                       "(%1)")
+                            .arg(positionSummary()));
+    }
 }
 
 void checkFollowScroll(SongView &view, const MidiTimeline &timeline, QStringList &failures)
@@ -341,21 +539,20 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
     };
     auto *drawer = view.editorDrawer();
     auto *automationPage = drawer ? drawer->automationPage() : nullptr;
-    auto *automationViewport = automationPage ? automationPage->scrollViewport() : nullptr;
     auto *velocity = drawer ? drawer->velocityArea() : nullptr;
     auto *voiceChanges = drawer ? drawer->voiceChangeArea() : nullptr;
     auto *overlay = checks::support::findWidgetDescendant<songview::PlayheadOverlay>(view);
     if (!quick || !root || !scene ||
         !view.timelineBandLayout().geometry(songview::TimelineBand::Ruler) || !roll || !overlay ||
-        !automationViewport || !velocity || !voiceChanges) {
+        !automationPage || !velocity || !voiceChanges) {
         failures.append("SongView did not expose its Quick chrome and native playhead bands");
     } else {
         if (overlay->parentWidget() != &view || overlay->geometry() != view.rect())
             failures.append("SongView playhead overlay is not one full-size direct child");
 
         const auto copies = chromeCopies(*root);
-        if (root->findChildren<songview::TimelineChromeItem *>().size() != 12)
-            failures.append("Quick timeline did not retain 12 hover/edit guides");
+        if (root->findChildren<songview::TimelineChromeItem *>().size() != 14)
+            failures.append("Quick timeline did not retain 14 hover/edit guides");
         for (const ChromeCopies &copy : copies) {
             if (!copy.hover || !copy.edit) {
                 failures.append(QStringLiteral("Quick timeline is missing %1 hover/edit chrome")
@@ -374,19 +571,15 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         const uint64_t sample = timeline.sampleForTick(tick);
         view.setEditCursorTick(tick);
         view.setPlayheadSample(sample, false);
-        view.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation, tick);
         checks::support::pumpQuick();
 
         const songview::TimelineBandLayout &bandLayout = view.timelineBandLayout();
-        const auto canonicalBandUnion = [&bandLayout] {
-            std::optional<QRect> unionRect;
-            for (const std::optional<songview::TimelineBandGeometry> &band : bandLayout.bands) {
-                if (!band)
-                    continue;
-                unionRect = unionRect ? unionRect->united(band->rect) : band->rect;
-            }
-            return unionRect;
+        const auto canonicalHostRect = [&bandLayout, drawer] {
+            const QRect rect =
+                checks::support::canonicalVisibleQuickHostRect(bandLayout, &drawer->chrome());
+            return rect.isEmpty() ? std::optional<QRect>{} : std::optional<QRect>{rect};
         };
+
         const auto expectedSongViewX = [&view, &bandLayout](double chromeTick) {
             const std::optional<songview::TimelineBandGeometry> &rulerGeometry =
                 bandLayout.geometry(songview::TimelineBand::Ruler);
@@ -472,40 +665,23 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
                         .arg(copy.name));
             }
         }
-        // Band widgets are overlays, not canonical sources: moving them must
-        // not drag the Quick host, whose geometry is the canonical union.
-        const QRect widgetMoveHostBefore = quick->geometry();
-        // Five converted bands have no native widget to displace; the one
-        // retained widget band still must not drag the Quick host.
-        const std::array<QWidget *, 1> guideBands = {
-            automationViewport,
-        };
-        std::array<QRect, guideBands.size()> guideBandGeometries;
-        const int hostShift = layout::space(layout::Space::One);
-        for (std::size_t index = 0; index < guideBands.size(); ++index) {
-            guideBandGeometries[index] = guideBands[index]->geometry();
-            guideBands[index]->move(guideBandGeometries[index].topLeft() + QPoint(hostShift, 0));
-        }
-        checks::support::pumpQuick();
-        if (quick->geometry() != widgetMoveHostBefore ||
-            quick->geometry() != canonicalBandUnion().value_or(QRect{})) {
-            failures.append("Quick host followed a widget-only move off the canonical union");
-        }
-        for (std::size_t index = 0; index < guideBands.size(); ++index)
-            guideBands[index]->setGeometry(guideBandGeometries[index]);
-        checks::support::pumpQuick();
-        // Only a parent-layout mutation may move the host: shrink the view so
-        // the canonical union changes, then require host parity while the
-        // retained guides retranslate into the moved host frame.
-        const QRect canonicalUnionBeforeResize = canonicalBandUnion().value_or(QRect{});
+        const QRect hostBeforeResize = quick->geometry();
+        const QRect canonicalHostBeforeResize = canonicalHostRect().value_or(QRect{});
         const QSize viewSizeBeforeResize = view.size();
+        view.clearTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation);
+        checks::support::pumpQuick();
+        if (quick->hoverVisible() || !quick->editVisible() ||
+            !chromeVisibilityMatches(false, true)) {
+            failures.append(
+                "clearing the synthetic Automation hover did not restore the edit guide");
+        }
         view.resize(view.width(), view.height() - 4 * layout::space(layout::Space::One));
         checks::support::pumpQuick();
-        const std::optional<QRect> resizedUnion = canonicalBandUnion();
-        if (!resizedUnion || *resizedUnion == canonicalUnionBeforeResize) {
-            failures.append("canonical fixture resize did not change the canonical union");
-        } else if (quick->geometry() != *resizedUnion) {
-            failures.append("Quick host did not move with the canonical union after resize");
+        const std::optional<QRect> resizedHost = canonicalHostRect();
+        if (!resizedHost || *resizedHost == canonicalHostBeforeResize) {
+            failures.append("canonical fixture resize did not change the canonical host envelope");
+        } else if (quick->geometry() != *resizedHost) {
+            failures.append("Quick host did not move with the canonical envelope after resize");
         }
         const std::optional<songview::TimelineBandGeometry> &resizedRoll =
             bandLayout.geometry(songview::TimelineBand::Roll);
@@ -514,27 +690,31 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
                 QRectF(resizedRoll->rect.translated(-quick->geometry().topLeft()))) {
             failures.append("canonical roll rectangle went stale after the canonical resize");
         }
-        if (std::abs(quick->hoverRootContentX() - quickContentX(expectedHover)) > 0.2 ||
-            std::abs(quick->editRootContentX() - quickContentX(expectedEdit)) > 0.2) {
-            failures.append("Quick guide coordinates did not retranslate after a canonical move");
+        const qreal expectedEditRootX = quickContentX(expectedEdit);
+        if (std::abs(quick->editRootContentX() - expectedEditRootX) > 0.2) {
+            failures.append("Quick edit guide did not retranslate after a canonical resize");
         }
         for (const ChromeCopies &copy : copies) {
-            if (!copy.hover || !copy.edit)
+            if (!copy.edit)
                 continue;
-            if (std::abs(checks::support::quickRootX(*copy.hover, *root) -
-                         quickContentX(expectedHover)) > 0.2 ||
-                std::abs(checks::support::quickRootX(*copy.edit, *root) -
-                         quickContentX(expectedEdit)) > 0.2) {
+            if (std::abs(checks::support::quickRootX(*copy.edit, *root) - expectedEditRootX) >
+                    0.2 ||
+                std::abs(chromeSongViewX(*copy.edit) - expectedEdit) > 0.2) {
                 failures.append(
-                    QStringLiteral("%1 guide did not retranslate after a canonical move")
+                    QStringLiteral("%1 edit guide did not retranslate after a canonical resize")
                         .arg(copy.name));
             }
         }
+        if (quick->hoverVisible() || !quick->editVisible() ||
+            !chromeVisibilityMatches(false, true)) {
+            failures.append("canonical resize did not retain the edit guide after clearing the "
+                            "synthetic Automation hover");
+        }
         view.resize(viewSizeBeforeResize);
         checks::support::pumpQuick();
-        if (quick->geometry() != canonicalBandUnion().value_or(QRect{}) ||
-            quick->geometry() != widgetMoveHostBefore) {
-            failures.append("Quick host did not restore the canonical union after resize");
+        if (quick->geometry() != canonicalHostRect().value_or(QRect{}) ||
+            quick->geometry() != hostBeforeResize) {
+            failures.append("Quick host did not restore the canonical envelope after resize");
         }
         const SongView::ViewState cameraState = view.viewState();
         const qreal oldEditX = quick->editRootContentX();
@@ -585,7 +765,6 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
                         .arg(copy.name));
             }
         }
-        view.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation, tick);
 
         const bool eventListWasVisible = view.eventListVisible();
         const auto canonicalRollMatchesRoll = [&] {
@@ -702,26 +881,8 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         if (!canonicalRollMatchesRoll())
             failures.append("restored roll view did not republish its canonical rectangle");
 
-        const auto checkVisibleBand = [&](QWidget &band, const char *name) {
-            if (!captureExpected)
-                return;
-            const QImage image = grabPlayhead(view, *overlay, failures).toImage();
-            const qreal bandNativeX = currentNativeX();
-            const QRect bandRect = checks::support::widgetRectIn(band, view);
-            if (!band.isVisibleTo(&view) ||
-                !checks::support::hasPlayheadPixel(
-                    image,
-                    QRect(qRound(bandNativeX) - layout::singlePixel(), bandRect.center().y(),
-                          2 * layout::singlePixel() + 1, layout::singlePixel()),
-                    playheadColor)) {
-                failures.append(
-                    QStringLiteral("native playhead was not clipped into the visible %1 band")
-                        .arg(QString::fromLatin1(name)));
-            }
-        };
-        // The voice changes page renders in the Quick scene instead of a
-        // native widget: its clip check probes the canonical SongView-local
-        // band rectangle directly.
+        // Quick-rendered bands use canonical SongView-local rectangles for
+        // their native-playhead clip checks.
         const auto checkVisibleBandRect = [&](const QRect &bandRect, const char *name) {
             if (!captureExpected)
                 return;
@@ -756,7 +917,10 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
         view.setDrawerActivePage(EditorDrawerPage::Automations);
         checks::support::pumpQuick();
-        checkVisibleBand(*automationViewport, "automation viewport");
+        checkVisibleBandRect(bandLayout.geometry(songview::TimelineBand::Automation)
+                                 .value_or(songview::TimelineBandGeometry{})
+                                 .rect,
+                             "automation");
         checkVisibleBandRect(bandLayout.geometry(songview::TimelineBand::OtherEvents)
                                  .value_or(songview::TimelineBandGeometry{})
                                  .rect,
@@ -786,19 +950,17 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
                                         .rect;
         const QRectF lifecycleRollLocal(lifecycleRoll.translated(-lifecycleHost.topLeft()));
         if (bandLayout != canonicalBeforeLifecycle ||
-            lifecycleHost != canonicalBandUnion().value_or(QRect{}))
+            lifecycleHost != canonicalHostRect().value_or(QRect{}))
             failures.append(
                 "a lifecycle event moved the canonical layout or dropped the Quick host frame");
-        auto *lifecycleHandle =
-            drawer->findChild<QWidget *>(QStringLiteral("velocityResizeHandle"));
-        const QRegion &lifecycleMask = quick->quickWindow()->mask();
+        const DrawerChrome &lifecycleChrome = drawer->chrome();
         if (!root->property("rollBandVisible").toBool() ||
             root->property("rollBandRect").toRectF() != lifecycleRollLocal ||
-            !lifecycleMask.contains(lifecycleRollLocal.center().toPoint()) || !lifecycleHandle ||
-            lifecycleMask.contains(lifecycleHandle->mapTo(&view, lifecycleHandle->rect().center()) -
-                                   lifecycleHost.topLeft())) {
-            failures.append(
-                "lifecycle republish dropped the QML roll band geometry or window mask");
+            !checks::support::quickWindowIsUnmasked(*quick) ||
+            lifecycleHost !=
+                checks::support::canonicalVisibleQuickHostRect(bandLayout, &lifecycleChrome)) {
+            failures.append("lifecycle republish dropped QML roll geometry or the unmasked Quick "
+                            "host envelope");
         }
         checkVisibleBandRect(lifecycleRoll, "piano roll after lifecycle republish");
         checkVisibleBandRect(bandLayout.geometry(songview::TimelineBand::Velocity)

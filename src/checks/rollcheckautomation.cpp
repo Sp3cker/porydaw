@@ -18,11 +18,13 @@
 #include <QImage>
 #include <QInputDialog>
 #include <QMenu>
+#include <QPoint>
+#include <QQuickItem>
+#include <QQuickWindow>
 #include <QRectF>
-#include <QScrollArea>
-#include <QScrollBar>
 #include <QStringList>
 #include <QTimer>
+#include <QVariant>
 
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
@@ -31,6 +33,7 @@
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/cclanes.h"
+#include "ui/editordrawer/drawerchrome.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/nodelane/gesture.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
@@ -174,6 +177,13 @@ songview::TimelineInputItem *automationInputItem(SongView &view)
                : nullptr;
 }
 
+QQuickItem *quickScrollbarItem(songview::TimelineQuickView &quick)
+{
+    QQuickItem *root = quick.rootObject();
+    return root ? root->findChild<QQuickItem *>(QStringLiteral("drawerAutomationScrollBar"))
+                : nullptr;
+}
+
 // Band input delivery: the Quick input item normalizes raw events in
 // viewport coordinates, so content-coordinate probes shift by the page
 // scroll before each send.
@@ -274,7 +284,6 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     live.horizontalScroll = view.camera().scrollX();
     view.setEditCursorTick(24);
     page.refreshLiveState(live);
-    page.show();
     pumpQuickEvents();
     expected.plotOrigin = page.canvas()->plotOrigin();
     auto projectionGeometry = AutomationGeometry::resolve();
@@ -295,8 +304,19 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         if (popupMenus && !condition)
             recordFailure(message);
     };
-    QWidget *const automationViewport = page.scrollViewport();
-    check(automationViewport, QStringLiteral("automation page did not expose its scroll viewport"));
+    const auto checkPopupParent = [&](const QWidget *popup) {
+        const bool parentedToSongView = popup && popup->parentWidget() == &view;
+        check(parentedToSongView, QStringLiteral("automation popup was not parented to SongView"));
+        popupCheck(parentedToSongView,
+                   QStringLiteral("automation popup was not parented to SongView"));
+    };
+    const auto automationBandRect = [&]() -> QRect {
+        const auto &bandGeometry =
+            view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
+        return bandGeometry ? bandGeometry->rect : QRect{};
+    };
+    check(!automationBandRect().isNull(),
+          QStringLiteral("automation page did not publish its canonical band"));
     songview::TimelineInputItem *const automationInput = automationInputItem(view);
     check(automationInput != nullptr,
           QStringLiteral("automation page did not expose its Quick input item"));
@@ -312,27 +332,25 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     const auto captureAutomationViewport = [&] {
         pumpQuickEvents();
         QString captureError;
-        const QImage image =
-            automationViewport
-                ? checks::support::captureQuickBand(view, *automationViewport, &captureError)
-                : QImage{};
+        const QRect bandRect = automationBandRect();
+        const QImage image = bandRect.isNull()
+                                 ? QImage{}
+                                 : checks::support::captureQuickBand(view, bandRect, &captureError);
         check(
             !image.isNull(),
             QStringLiteral("automation viewport framebuffer capture failed: %1").arg(captureError));
         return image;
     };
     const auto contentToViewport = [&](const QRect &content) {
-        return automationViewport
-                   ? QRect{viewportPosition(content.topLeft()).toPoint(), content.size()}
-                   : QRect{};
+        return QRect{viewportPosition(content.topLeft()).toPoint(), content.size()};
     };
     const auto captureAutomationContent = [&](const QRect &content) {
         const QRect viewportRect = contentToViewport(content);
-        check(automationViewport && automationViewport->rect().contains(viewportRect),
-              QStringLiteral("automation content crop is outside the scroll viewport"));
+        const QRect bandBounds(QPoint(0, 0), automationBandRect().size());
+        check(bandBounds.contains(viewportRect),
+              QStringLiteral("automation content crop is outside the automation band"));
         const QImage image = captureAutomationViewport();
-        if (image.isNull() || !automationViewport ||
-            !automationViewport->rect().contains(viewportRect))
+        if (image.isNull() || !bandBounds.contains(viewportRect))
             return QImage{};
         const qreal imageDpr = image.devicePixelRatio();
         const int left = qRound(viewportRect.left() * imageDpr);
@@ -346,22 +364,89 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         result.setDevicePixelRatio(imageDpr);
         return result;
     };
-    auto *automationScroll = page.findChild<QScrollArea *>(QStringLiteral("automationScroll"));
-    check(automationScroll, QStringLiteral("automation page did not expose its scroll area"));
-    const bool automationScrollbarAlwaysVisible =
-        automationScroll && automationScroll->verticalScrollBarPolicy() == Qt::ScrollBarAlwaysOn &&
-        automationScroll->verticalScrollBar()->isVisible();
-    check(automationScrollbarAlwaysVisible,
-          QStringLiteral("automation scrollbar must remain permanently visible"));
-    const bool automationScrollbarOnLeft =
-        automationScroll && automationScroll->verticalScrollBar()->isVisible() &&
-        automationViewport &&
-        automationScroll->verticalScrollBar()->mapTo(&view, QPoint(0, 0)).x() <
-            automationViewport->mapTo(&view, QPoint(0, 0)).x();
-    check(automationScrollbarOnLeft,
-          QStringLiteral("automation scrollbar must remain on the left side of the lanes"));
+    auto *quickHost =
+        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    DrawerChrome &chrome = drawer->chrome();
+    const QRectF scrollbarRect = chrome.automationScrollbarRect();
+    check(scrollbarRect.isValid() && !scrollbarRect.isEmpty() &&
+              scrollbarRect.width() == layout::space(layout::Space::Two),
+          QStringLiteral("automation scrollbar must publish a valid Space::Two-wide chrome rect"));
+    const auto &automationBandGeometry =
+        view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
+    check(
+        quickHost && quickHost->quickWindow() && scrollbarRect.isValid() &&
+            !scrollbarRect.isEmpty() &&
+            quickHost->geometry().contains(scrollbarRect.toAlignedRect()) &&
+            quickHost->quickWindow()->mask().isEmpty(),
+        QStringLiteral("unmasked Quick host geometry must contain the full automation scrollbar"));
+    QQuickItem *scrollbarItem = quickHost ? quickScrollbarItem(*quickHost) : nullptr;
+    check(scrollbarItem && scrollbarItem->isVisible(),
+          QStringLiteral("automation scrollbar must be visible in the Quick scene"));
+    // The bar is always on: fit the whole automation content into the drawer,
+    // then resize the zero-range viewport and verify its bound QML thumb follows.
+    const int scrollbarSectionHeight = view.drawerSectionHeight(EditorDrawerPage::Automations);
+    const int scrollbarSectionOverhead =
+        std::max(0, scrollbarSectionHeight -
+                        (automationBandGeometry ? automationBandGeometry->rect.height() : 0));
+    const int fittingSectionHeight =
+        std::min(drawer->maximumSectionHeight(),
+                 page.canvas()->minimumContentHeight() + scrollbarSectionOverhead);
+    view.setDrawerSectionHeight(EditorDrawerPage::Automations, fittingSectionHeight);
+    pumpQuickEvents();
+    const QRectF fitScrollbarRect = chrome.automationScrollbarRect();
+    QQuickItem *fitScrollbarItem = quickHost ? quickScrollbarItem(*quickHost) : nullptr;
+    const int fitViewportHeight = chrome.automationViewportHeight();
+    const int fitContentHeight = chrome.automationContentHeight();
+    const int fitTrackHeight = fitScrollbarItem ? qRound(fitScrollbarItem->height()) : -1;
+    const int fitThumbHeight =
+        fitScrollbarItem ? fitScrollbarItem->property("thumbHeight").toInt() : -1;
+    check(chrome.automationMaximumScrollY() == 0 && fitScrollbarRect.isValid() &&
+              !fitScrollbarRect.isEmpty() && fitScrollbarItem && fitScrollbarItem->isVisible() &&
+              fitViewportHeight == fitContentHeight && fitViewportHeight == fitTrackHeight &&
+              fitThumbHeight == fitTrackHeight,
+          QStringLiteral("automation scrollbar must stay visible and fill its track when "
+                         "maximumScrollY is zero"));
+
+    view.setDrawerSectionHeight(EditorDrawerPage::Automations, drawer->maximumSectionHeight());
+    pumpQuickEvents();
+    const QRectF resizedScrollbarRect = chrome.automationScrollbarRect();
+    QQuickItem *resizedScrollbarItem = quickHost ? quickScrollbarItem(*quickHost) : nullptr;
+    const int resizedViewportHeight = chrome.automationViewportHeight();
+    const int resizedContentHeight = chrome.automationContentHeight();
+    const int resizedTrackHeight =
+        resizedScrollbarItem ? qRound(resizedScrollbarItem->height()) : -1;
+    const int resizedThumbHeight =
+        resizedScrollbarItem ? resizedScrollbarItem->property("thumbHeight").toInt() : -1;
+    const int resizedQmlContentHeight =
+        resizedScrollbarItem ? resizedScrollbarItem->property("contentHeight").toInt() : -1;
+    const int resizedQmlViewportHeight =
+        resizedScrollbarItem ? resizedScrollbarItem->property("viewportHeight").toInt() : -1;
+    check(chrome.automationMaximumScrollY() == 0 && resizedScrollbarRect.isValid() &&
+              !resizedScrollbarRect.isEmpty() && resizedScrollbarItem &&
+              resizedScrollbarItem->isVisible() && resizedViewportHeight > fitViewportHeight &&
+              resizedContentHeight > fitContentHeight &&
+              resizedContentHeight == resizedViewportHeight &&
+              resizedQmlContentHeight == resizedContentHeight &&
+              resizedQmlViewportHeight == resizedViewportHeight &&
+              resizedViewportHeight == resizedTrackHeight &&
+              resizedThumbHeight == resizedTrackHeight,
+          QStringLiteral("resizing a zero-range automation viewport did not update DrawerChrome "
+                         "dimensions and fill the resized TimelineScrollbar track"));
+    view.setDrawerSectionHeight(EditorDrawerPage::Automations, scrollbarSectionHeight);
+    pumpQuickEvents();
     const int automationPlotStart = page.canvas()->plotOrigin();
     const QRect labelGutter = page.canvas()->labelGutter();
+    const QRect automationLabelGutterInHost =
+        automationBandGeometry ? QRect(labelGutter.x(), labelGutter.y(), labelGutter.width(),
+                                       automationBandGeometry->rect.height())
+                                     .translated(automationBandGeometry->rect.topLeft())
+                               : QRect{};
+    check(quickHost && quickHost->quickWindow() && automationBandGeometry &&
+              !automationLabelGutterInHost.isEmpty() &&
+              quickHost->geometry().contains(automationLabelGutterInHost) &&
+              quickHost->quickWindow()->mask().isEmpty(),
+          QStringLiteral(
+              "unmasked Quick host must fully contain the automation label-gutter column"));
     // The painted header includes the label gutter's symmetric horizontal margins.
     const QRect headerRect(0, 0, labelGutter.width() + 2 * labelGutter.x(),
                            automationViewportSize.height());
@@ -374,13 +459,15 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     const int pianoGridStartOnView =
         rollBandGeometry ? rollBandGeometry->rect.x() + rollBandGeometry->timelineOrigin : -1;
     const int automationPlotStartOnView =
-        automationViewport ? automationViewport->mapTo(&view, QPoint(automationPlotStart, 0)).x()
-                           : -1;
-    check(rollBandGeometry && automationPlotStartOnView == pianoGridStartOnView,
+        automationBandGeometry
+            ? automationBandGeometry->rect.x() + automationBandGeometry->timelineOrigin
+            : -1;
+    check(automationBandGeometry && automationBandGeometry->timelineOrigin == automationPlotStart &&
+              rollBandGeometry && automationPlotStartOnView == pianoGridStartOnView,
           QStringLiteral("editable automation lanes must start vertically inline with the piano "
                          "grid (automation %1 = %2 + %3, piano %4)")
               .arg(automationPlotStartOnView)
-              .arg(automationViewport ? automationViewport->mapTo(&view, QPoint(0, 0)).x() : -1)
+              .arg(automationBandGeometry ? automationBandGeometry->rect.x() : -1)
               .arg(automationPlotStart)
               .arg(pianoGridStartOnView));
     check(headerEndsAtPlotOrigin && labelGutter.left() >= headerRect.left() &&
@@ -793,6 +880,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                     dialog->reject();
                 return;
             }
+            checkPopupParent(menu);
             QAction *setValueAction = nullptr;
             QAction *deleteAction = nullptr;
             for (QAction *action : menu->actions()) {
@@ -810,9 +898,11 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                 if (auto *dialog =
                         qobject_cast<QInputDialog *>(QApplication::activeModalWidget())) {
                     normalNodeValueDialog = true;
+                    checkPopupParent(dialog);
                     dialog->reject();
                 } else if (auto *dialog =
                                qobject_cast<QDialog *>(QApplication::activeModalWidget())) {
+                    checkPopupParent(dialog);
                     dialog->reject();
                 }
             });
@@ -835,6 +925,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     QTimer::singleShot(0, [&] {
         if (auto *dialog = qobject_cast<QInputDialog *>(QApplication::activeModalWidget())) {
             normalClickDeleteDialog = true;
+            checkPopupParent(dialog);
             dialog->reject();
         }
     });
@@ -862,6 +953,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     QTimer::singleShot(0, [&] {
         if (auto *dialog = qobject_cast<QInputDialog *>(QApplication::activeModalWidget())) {
             normalDoubleClickDialog = true;
+            checkPopupParent(dialog);
             dialog->reject();
         }
     });
@@ -876,7 +968,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     // must not advertise an insertion in either adjacent row.
     band.leave();
     QCoreApplication::processEvents();
-    const QPoint boundaryPoint(expected.plotOrigin + 48, lfoTop + lfoHeight);
+    const QRect lfoBody = automationRowBody(page, lfo);
+    const QPoint boundaryPoint(page.canvas()->plotOrigin() + 48, lfoBody.top() + lfoBody.height());
     const QImage boundaryBaseline = captureAutomationViewport();
     band.mouse(QEvent::MouseMove, boundaryPoint, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
     QCoreApplication::processEvents();
@@ -923,6 +1016,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
             if (!menu)
                 return;
+            checkPopupParent(menu);
             QAction *deleteAction = nullptr;
             for (QAction *action : menu->actions())
                 if (action->text() == QStringLiteral("Delete"))
@@ -983,6 +1077,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
             if (!menu)
                 return;
+            checkPopupParent(menu);
             QAction *setValueAction = nullptr;
             QAction *deleteAction = nullptr;
             for (QAction *action : menu->actions()) {
@@ -1000,10 +1095,12 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                 if (auto *dialog =
                         qobject_cast<QInputDialog *>(QApplication::activeModalWidget())) {
                     pointValueInputOpened = true;
+                    checkPopupParent(dialog);
                     dialog->setIntValue(64);
                     dialog->accept();
                 } else if (auto *dialog =
                                qobject_cast<QDialog *>(QApplication::activeModalWidget())) {
+                    checkPopupParent(dialog);
                     dialog->reject();
                 }
             });
@@ -1067,6 +1164,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                     popup->close();
                 return;
             }
+            checkPopupParent(menu);
             retargetMenuOpened = true;
             QAction *deleteAction = nullptr;
             for (QAction *action : menu->actions()) {
@@ -1212,6 +1310,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
             if (!menu)
                 return;
+            checkPopupParent(menu);
             for (QAction *action : menu->actions())
                 selectionActions.push_back(action->text());
             menu->close();
@@ -1236,9 +1335,11 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                Qt::NoModifier);
     check(!view.selectionModel().timeSelection().active(),
           QStringLiteral("right click outside a time selection did not clear it"));
-    QTimer::singleShot(0, [] {
-        if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget()))
+    QTimer::singleShot(0, [&] {
+        if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget())) {
+            checkPopupParent(menu);
             menu->close();
+        }
     });
     band.mouse(QEvent::MouseButtonRelease, selectionOutside, Qt::RightButton, Qt::NoButton,
                Qt::NoModifier);
@@ -1660,8 +1761,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                           QStringLiteral("Escape"));
     checkCancelledGesture(
         [&] {
-            page.hide();
-            page.show();
+            drawer->cancelVisiblePageInteraction();
             QCoreApplication::processEvents();
         },
         QStringLiteral("page hide"));
@@ -1698,10 +1798,18 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
           QStringLiteral("document refresh did not retain surviving typed row state"));
     const char *checkName = popupMenus ? "automation-popup-check" : "automation-check";
     if (!screenshotPath.isEmpty()) {
-        page.grab().toImage().save(screenshotPath);
-        std::printf("%s: wrote %s\n", checkName, qUtf8Printable(screenshotPath));
+        QString captureError;
+        const QImage screenshot =
+            checks::support::captureQuickBand(view, automationBandRect(), &captureError);
+        if (screenshot.isNull())
+            std::fprintf(stderr, "%s: could not capture %s: %s\n", checkName,
+                         qUtf8Printable(screenshotPath), qUtf8Printable(captureError));
+        else if (screenshot.save(screenshotPath))
+            std::printf("%s: wrote %s\n", checkName, qUtf8Printable(screenshotPath));
+        else
+            std::fprintf(stderr, "%s: could not write %s\n", checkName,
+                         qUtf8Printable(screenshotPath));
     }
-    page.hide();
     if (failures == 0)
         std::printf("%s: PASS %s\n", checkName, qUtf8Printable(songLabel));
     return failures == 0 ? 0 : 1;

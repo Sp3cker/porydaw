@@ -1,64 +1,74 @@
 #include "checks/rollcheck/rollcheck.h"
 
+#include <QAbstractItemModel>
 #include <QApplication>
 #include <QCoreApplication>
 #include <QEvent>
-#include <QLineEdit>
 #include <QMenu>
-#include <QPointer>
-#include <QPushButton>
 #include <QTimer>
-#include <QToolButton>
-#include <QWidget>
-#include <vector>
+#include <algorithm>
+#include <optional>
 
+#include "checks/rollcheck/headerchecksupport.h"
 #include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
 
 namespace checks::rollcheck {
+using headercheck::addTrackRow;
+using headercheck::model;
+using headercheck::ModelChanges;
+using headercheck::recordsMatchTimeline;
+using headercheck::rowForTrack;
+using headercheck::titlePoint;
 
 ScenarioContinuation runHeaderReconciliationScenarios(Harness &check, const SongInfo &song)
 {
     auto fail = [&](const char *what) { check.fail(what); };
-    const int originalTrack = check.view().selectionModel().primaryTrack();
-    QWidget *menuHeader = nullptr;
-    int menuTrack = -1;
-    for (QWidget *candidate : check.view().findChildren<QWidget *>()) {
-        const QString name = candidate->objectName();
-        if (!name.startsWith(QStringLiteral("trackHeaderRow")))
-            continue;
-        bool ok = false;
-        const int track = name.mid(14).toInt(&ok);
-        if (ok && track != originalTrack) {
-            menuHeader = candidate;
-            menuTrack = track;
-            break;
+    SongView &view = check.view();
+    auto *headers = model(view);
+    auto *input = headercheck::input(view);
+    const int originalTrack = view.selectionModel().primaryTrack();
+    if (!headers || !input) {
+        fail("Quick track-header model or input was not found");
+    } else {
+        int menuTrack = -1;
+        int menuRow = -1;
+        for (int row = 0; row < headers->rowCount(); ++row) {
+            const QModelIndex index = headers->index(row, 0);
+            if (headers->data(index, songview::TrackHeaderModel::IsAddTrackRole).toBool())
+                continue;
+            const int track = headers->data(index, songview::TrackHeaderModel::TrackRole).toInt();
+            if (track != originalTrack) {
+                menuTrack = track;
+                menuRow = row;
+                break;
+            }
+        }
+        if (menuRow < 0) {
+            fail("context-menu fixture lacks a secondary track header");
+        } else {
+            bool menuOpened = false;
+            QTimer::singleShot(0, [&menuOpened] {
+                if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget())) {
+                    menuOpened = menu->actions().size() == 5;
+                    menu->close();
+                }
+            });
+            const QPointF position = titlePoint(*headers, *input, menuRow);
+            checks::events::sendMouse(*input, QEvent::MouseButtonPress, position, Qt::RightButton,
+                                      Qt::RightButton, Qt::NoModifier);
+            checks::events::sendMouse(*input, QEvent::MouseButtonRelease, position, Qt::RightButton,
+                                      Qt::NoButton, Qt::NoModifier);
+            if (!menuOpened || view.selectionModel().primaryTrack() != menuTrack)
+                fail("right press did not select its track and open the context menu");
+            view.selectTrack(originalTrack);
         }
     }
-    if (!menuHeader) {
-        fail("context-menu fixture lacks a secondary track header");
-    } else {
-        bool menuOpened = false;
-        QTimer::singleShot(0, [&menuOpened] {
-            if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget())) {
-                menuOpened = menu->actions().size() == 5;
-                menu->close();
-            }
-        });
-        const QPointF position(menuHeader->width() / 3.0, menuHeader->height() / 2.0);
-        checks::events::sendMouse(*menuHeader, QEvent::MouseButtonPress, position, Qt::RightButton,
-                                  Qt::RightButton, Qt::NoModifier);
-        checks::events::sendMouse(*menuHeader, QEvent::MouseButtonRelease, position,
-                                  Qt::RightButton, Qt::NoButton, Qt::NoModifier);
-        if (!menuOpened || check.view().selectionModel().primaryTrack() != menuTrack)
-            fail("right press did not select its track and open the context menu");
-        check.view().selectTrack(originalTrack);
-    }
-    // Header rows reconcile by engine index: a slot used on both sides of
-    // a rebuild keeps its row QObject, only added slots allocate, only
-    // dropped slots are retired, and the Add Track button survives every
-    // eligible rebuild.
+
+    // Header records reconcile by engine index. Unchanged and non-structural
+    // updates retain the model structure; track insertion/removal is the one
+    // reset boundary. The optional add record remains last.
     {
         SongDocument reconcileDoc;
         QString reconcileError;
@@ -70,124 +80,120 @@ ScenarioContinuation runHeaderReconciliationScenarios(Harness &check, const Song
             reconcileView.resize(800, 480);
             reconcileView.setSong(current.get(), nullptr);
             reconcileView.setDocument(&reconcileDoc);
-            (void)reconcileView.grab(); // layout pass: rows need real geometry
-            const auto rowAt = [&reconcileView](int track) -> QPointer<QWidget> {
-                return reconcileView.findChild<QWidget *>(
-                    QStringLiteral("trackHeaderRow%1").arg(track));
-            };
-            const auto addButton = [&reconcileView]() -> QPointer<QPushButton> {
-                for (QPushButton *button : reconcileView.findChildren<QPushButton *>()) {
-                    if (button->text() == SongView::tr("+ Add track"))
-                        return button;
-                }
-                return {};
-            };
-            std::vector<QPointer<QWidget>> before;
-            for (int track = 0; track < 16; ++track)
-                before.push_back(rowAt(track));
-            int firstUsed = -1;
-            int lastUsed = -1;
-            for (int track = 0; track < 16; ++track) {
-                if (!current->tracks[track].used)
-                    continue;
-                if (firstUsed < 0)
-                    firstUsed = track;
-                lastUsed = track;
-            }
-            const QPointer<QPushButton> addBefore = addButton();
-            if (firstUsed < 0 || firstUsed == lastUsed || !before[firstUsed] || !before[lastUsed] ||
-                addBefore.isNull()) {
-                fail("header reconciliation fixture lacks two rows and an Add Track button");
+            (void)reconcileView.grab(); // realizes the attached Quick input
+
+            auto *reconcileHeaders = model(reconcileView);
+            if (!reconcileHeaders) {
+                fail("header reconciliation fixture lacks TrackHeaderModel");
             } else {
-                // Same content again: every same-index row keeps identity.
-                reconcileView.setSong(current.get(), nullptr);
+                ModelChanges changes;
+                QObject::connect(reconcileHeaders, &QAbstractItemModel::modelReset, &reconcileView,
+                                 [&changes] { ++changes.resets; });
+                QObject::connect(
+                    reconcileHeaders, &QAbstractItemModel::dataChanged, &reconcileView,
+                    [&changes](const QModelIndex &topLeft, const QModelIndex &bottomRight,
+                               const QList<int> &roles) {
+                        changes.data.push_back({topLeft.row(), bottomRight.row(), roles});
+                    });
+
+                int firstUsed = -1;
+                int lastUsed = -1;
                 for (int track = 0; track < 16; ++track) {
-                    if (current->tracks[track].used && before[track] != rowAt(track)) {
-                        fail("same-index header row lost identity across a rebuild");
-                        break;
-                    }
+                    if (!current->tracks[track].used)
+                        continue;
+                    if (firstUsed < 0)
+                        firstUsed = track;
+                    lastUsed = track;
                 }
-                if (addButton() != addBefore)
-                    fail("Add Track button did not survive an eligible rebuild");
-                // Song replacement dropping the last used slot: the kept
-                // slot's row survives, the dropped slot's row is
-                // anonymized, hidden, and collected.
-                const QPointer<QWidget> retained = before[firstUsed];
-                const QPointer<QWidget> dropped = before[lastUsed];
-                reconcileDoc.deleteTrack(lastUsed);
-                auto replacement = reconcileDoc.buildTimeline(48000.0);
-                if (replacement->tracks[lastUsed].used || !replacement->tracks[firstUsed].used) {
-                    fail("replacement fixture did not drop exactly the last used slot");
+                const std::optional<int> addBefore = addTrackRow(*reconcileHeaders);
+                if (firstUsed < 0 || firstUsed == lastUsed ||
+                    !rowForTrack(*reconcileHeaders, firstUsed) ||
+                    !rowForTrack(*reconcileHeaders, lastUsed) || !addBefore ||
+                    *addBefore != reconcileHeaders->rowCount() - 1) {
+                    fail("header reconciliation fixture lacks ordered records and a last add "
+                         "record");
                 } else {
-                    reconcileView.setSong(replacement.get(), nullptr);
-                    if (retained != rowAt(firstUsed))
-                        fail("used header row lost identity across song replacement");
-                    if (!dropped->isHidden() || !dropped->objectName().isEmpty())
-                        fail("dropped header row kept its live identity");
-                    if (!rowAt(lastUsed).isNull())
-                        fail("dropped slot still resolves a header row");
-                    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
-                    if (!dropped.isNull())
-                        fail("dropped header row was not collected");
-                    // Undo restores the slot: its row is newly allocated.
-                    reconcileDoc.undoStack()->undo();
-                    current = reconcileDoc.buildTimeline(48000.0);
+                    // Identical content retains the model structure and its ordered domain records.
+                    changes.clear();
                     reconcileView.setSong(current.get(), nullptr);
-                    (void)reconcileView.grab();
-                    const QPointer<QWidget> fresh = rowAt(lastUsed);
-                    if (fresh.isNull() || fresh->isHidden() ||
-                        fresh->objectName() != QStringLiteral("trackHeaderRow%1").arg(lastUsed)) {
-                        fail("re-added track did not get a live named header row");
+                    if (changes.resets != 0 ||
+                        !recordsMatchTimeline(*reconcileHeaders, *current,
+                                              reconcileDoc.canAddTrack()) ||
+                        addTrackRow(*reconcileHeaders) != addBefore) {
+                        fail("unchanged song reset or reordered TrackHeaderModel records");
                     }
-                    if (retained != rowAt(firstUsed))
-                        fail("retained header row lost identity across the re-add");
-                    if (addButton() != addBefore)
-                        fail("Add Track button did not survive the replacement cycle");
-                    int previousY = -1;
-                    for (int track = 0; track < 16; ++track) {
-                        if (!current->tracks[track].used)
-                            continue;
-                        const QPointer<QWidget> row = rowAt(track);
-                        if (row.isNull() || row->y() <= previousY) {
-                            fail("header rows lost ascending layout order");
-                            break;
-                        }
-                        previousY = row->y();
-                    }
-                    if (addBefore->y() <= previousY)
-                        fail("Add Track button is not the last header widget");
-                    // A replacement under an open rename editor cancels it
-                    // without committing, and a retained row keeps exactly
-                    // one live connection per signal.
-                    reconcileView.renameTrack(firstUsed);
-                    auto *editor =
-                        retained->findChild<QLineEdit *>(QStringLiteral("trackRenameEditor"));
-                    const bool editorOpen = editor != nullptr;
-                    if (!editorOpen)
-                        fail("rename editor did not open on a retained row");
-                    if (editorOpen)
-                        editor->setText(QStringLiteral("zzz"));
-                    reconcileView.setSong(replacement.get(), nullptr);
-                    QCoreApplication::processEvents();
-                    if (retained->findChild<QLineEdit *>(QStringLiteral("trackRenameEditor")))
-                        fail("rename editor leaked across song replacement");
-                    if (editorOpen && reconcileDoc.trackName(firstUsed) == QStringLiteral("zzz")) {
-                        fail("cancelled rename committed across song replacement");
-                    }
-                    auto *muteButton =
-                        retained->findChild<QToolButton *>(QStringLiteral("trackMuteButton"));
-                    int toggles = 0;
-                    const QMetaObject::Connection count =
-                        QObject::connect(muteButton, &QToolButton::toggled, &reconcileView,
-                                         [&toggles](bool) { toggles++; });
-                    reconcileView.setSong(current.get(), nullptr);
-                    if (toggles != 0)
-                        fail("rebuild re-emitted mute state on a retained row");
+
+                    // A mask-only update changes a bounded row, publishes its mute role, and
+                    // never resets the model. Notification batching is deliberately flexible.
+                    reconcileView.setTrackMute(firstUsed, false);
+                    changes.clear();
                     reconcileView.setTrackMute(firstUsed, true);
-                    QObject::disconnect(count);
-                    if (toggles != 1 || !muteButton->isChecked() ||
-                        !reconcileView.trackMuted(firstUsed)) {
-                        fail("retained row's mute connection did not fire exactly once");
+                    const std::optional<int> mutedRow = rowForTrack(*reconcileHeaders, firstUsed);
+                    const bool boundedMuteChange =
+                        changes.resets == 0 && mutedRow && !changes.data.empty() &&
+                        std::all_of(changes.data.cbegin(), changes.data.cend(),
+                                    [mutedRow](const headercheck::ModelChange &change) {
+                                        return change.firstRow == *mutedRow &&
+                                               change.lastRow == *mutedRow;
+                                    }) &&
+                        headercheck::includesRole(changes.data, *mutedRow,
+                                                  songview::TrackHeaderModel::MuteCheckedRole) &&
+                        reconcileHeaders
+                            ->data(reconcileHeaders->index(*mutedRow, 0),
+                                   songview::TrackHeaderModel::MuteCheckedRole)
+                            .toBool();
+                    if (!boundedMuteChange)
+                        fail("mask-only header update was not bounded mute-role coverage");
+
+                    // Contract lock: identity replacement uses one model reset, rather than
+                    // insert/remove notifications, so QML discards stale record identity.
+                    reconcileDoc.deleteTrack(lastUsed);
+                    auto replacement = reconcileDoc.buildTimeline(48000.0);
+                    if (replacement->tracks[lastUsed].used ||
+                        !replacement->tracks[firstUsed].used) {
+                        fail("replacement fixture did not drop exactly the last used slot");
+                    } else {
+                        changes.clear();
+                        reconcileView.setSong(replacement.get(), nullptr);
+                        if (changes.resets != 1 ||
+                            !recordsMatchTimeline(*reconcileHeaders, *replacement,
+                                                  reconcileDoc.canAddTrack()) ||
+                            rowForTrack(*reconcileHeaders, lastUsed)) {
+                            fail("structural header replacement did not reset to the replacement "
+                                 "records");
+                        }
+
+                        reconcileDoc.undoStack()->undo();
+                        current = reconcileDoc.buildTimeline(48000.0);
+                        changes.clear();
+                        reconcileView.setSong(current.get(), nullptr);
+                        const std::optional<int> restoredAdd = addTrackRow(*reconcileHeaders);
+                        if (changes.resets != 1 ||
+                            !recordsMatchTimeline(*reconcileHeaders, *current,
+                                                  reconcileDoc.canAddTrack()) ||
+                            !rowForTrack(*reconcileHeaders, lastUsed) || !restoredAdd ||
+                            *restoredAdd != reconcileHeaders->rowCount() - 1) {
+                            fail("re-added track did not restore ordered model records and last "
+                                 "add row");
+                        }
+
+                        // A replacement while rename is open cancels the transient model state
+                        // without committing the draft.
+                        reconcileView.renameTrack(firstUsed);
+                        if (reconcileHeaders->renamingTrack() != firstUsed) {
+                            fail("rename state did not open on a live TrackHeaderModel record");
+                        } else {
+                            reconcileHeaders->setRenameDraft(QStringLiteral("zzz"));
+                            changes.clear();
+                            reconcileView.setSong(replacement.get(), nullptr);
+                            QCoreApplication::processEvents();
+                            if (changes.resets != 1 || reconcileHeaders->renamingTrack() != -1) {
+                                fail(
+                                    "song replacement did not cancel the open header rename state");
+                            }
+                            if (reconcileDoc.trackName(firstUsed) == QStringLiteral("zzz"))
+                                fail("cancelled rename committed across song replacement");
+                        }
                     }
                 }
             }

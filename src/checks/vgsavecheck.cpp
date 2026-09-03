@@ -33,6 +33,9 @@
 #include "ui/dragspinbox.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/trackheadermodel.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/workspaceui.h"
 
@@ -68,6 +71,25 @@ QByteArray readFileBytes(const QString &path)
     if (!f.open(QIODevice::ReadOnly))
         return QByteArray();
     return f.readAll();
+}
+
+int modelRowForTrack(const songview::TrackHeaderModel &model, int track)
+{
+    for (int row = 0; row < model.rowCount(); ++row) {
+        if (model.data(model.index(row, 0), songview::TrackHeaderModel::TrackRole).toInt() == track)
+            return row;
+    }
+    return -1;
+}
+
+QPointF trackHeaderPressPosition(songview::TrackHeaderModel &model,
+                                 songview::TimelineInputItem &input, int row)
+{
+    const qreal centeredScroll =
+        row * model.rowHeight() - (input.height() - model.rowHeight()) / 2.0;
+    model.setScrollY(std::clamp(centeredScroll, qreal(0.0), model.maximumScrollY()));
+    return QPointF(model.activityWidth() / 2.0,
+                   row * model.rowHeight() - model.scrollY() + model.rowHeight() / 2.0);
 }
 
 } // namespace
@@ -1293,16 +1315,9 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         }
     }
 
-    // 9. A structural commit fired from inside a track header's own mouse
-    // press must not free that header row mid-event: with a changed arg
-    // typed into the voicegroup selector's line edit, clicking a header
-    // focuses the roll (selectTrack), which fires editingFinished — an
-    // undoable -G switch whose voicegroup swap rebuilds the header panel
-    // while the clicked row's mousePressEvent is still on the stack. The
-    // row has to survive its own press (deferred deletion), or this is a
-    // use-after-free crash. (The sample symbol box that originally hit this
-    // is now the picker, which commits from its popup instead of on focus
-    // loss — the selector keeps the scenario alive.)
+    // 9. A focus transfer from the Quick track-header input must tolerate the
+    // queued structural -G commit it triggers. The retained model must stay
+    // alive through that input press and accept the next one after rebuilding.
     if (otherArg.isEmpty()) {
         std::printf("vgsavecheck: note: no second voicegroup found, "
                     "mid-press structural rebuild skipped\n");
@@ -1311,68 +1326,126 @@ bool MainWindow::runVgSaveCheck(const QString &projectRoot, const QString &songL
         activateWindow();
         QCoreApplication::processEvents();
         const QString argBefore = tab->document().cfg().voicegroupArg;
-        QComboBox *vgCombo = voicegroupDriver.voicegroupSelector();
+        QComboBox *const vgCombo = voicegroupDriver.voicegroupSelector();
+        auto *const quick =
+            view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+        auto *const headers =
+            view.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"));
+        QQuickItem *const quickRoot = quick ? quick->rootObject() : nullptr;
+        auto *const headerInput = quickRoot ? quickRoot->findChild<songview::TimelineInputItem *>(
+                                                  QStringLiteral("timelineTrackHeadersInput"))
+                                            : nullptr;
         int otherTrack = -1;
-        const MidiTimeline *tl = view.timeline();
-        for (int t = 0; t < 16 && otherTrack < 0 && tl; t++) {
+        const MidiTimeline *const tl = view.timeline();
+        for (int t = 0; t < 16 && otherTrack < 0 && tl; ++t) {
             if (t != view.selectionModel().primaryTrack() && tl->tracks[t].used)
                 otherTrack = t;
         }
-        if (check(vgCombo && otherTrack >= 0,
-                  "no vg selector or second track for the mid-press commit")) {
-            QLineEdit *edit = vgCombo->lineEdit();
-            edit->setFocus();
-            QCoreApplication::processEvents();
-            if (check(edit->hasFocus(), "vg selector did not take focus")) {
-                edit->setText(otherArg);
-                QPointer<QWidget> row =
-                    view.findChild<QWidget *>(QStringLiteral("trackHeaderRow%1").arg(otherTrack));
-                if (check(row != nullptr, "no header row for the other track")) {
-                    const QPoint pos(5, 5);
-                    checks::events::sendMouse(*row, QEvent::MouseButtonPress, QPointF(pos),
-                                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-                    check(!row.isNull(), "header rebuild freed the row inside its own press");
-                    check(view.selectionModel().primaryTrack() == otherTrack,
-                          "the header click did not select its track");
-                    check(tab->document().cfg().voicegroupArg == otherArg,
-                          "the mid-press -G edit did not commit");
-                    if (!row.isNull()) {
-                        checks::events::sendMouse(*row, QEvent::MouseButtonRelease, QPointF(pos),
-                                                  Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        if (check(vgCombo && vgCombo->lineEdit() && quick && headers && headerInput &&
+                      headerInput->width() > 0.0 && headerInput->height() > 0.0 &&
+                      headerInput->interaction() == headers && otherTrack >= 0,
+                  "no selector, live Quick header input, model, or second track for "
+                  "the mid-press commit")) {
+            const int otherRow = modelRowForTrack(*headers, otherTrack);
+            if (check(otherRow >= 0, "TrackHeaderModel has no row for the other track")) {
+                QLineEdit *const edit = vgCombo->lineEdit();
+                edit->setFocus();
+                QCoreApplication::processEvents();
+                if (check(edit->hasFocus(), "vg selector did not take focus")) {
+                    edit->setText(otherArg);
+                    edit->setModified(true);
+                    const QPointF pressPosition =
+                        trackHeaderPressPosition(*headers, *headerInput, otherRow);
+                    if (check(pressPosition.x() >= 0.0 &&
+                                  pressPosition.x() < headerInput->width() &&
+                                  pressPosition.y() >= 0.0 &&
+                                  pressPosition.y() < headerInput->height(),
+                              "the Quick track-header press position is outside its input")) {
+                        QPointer<songview::TrackHeaderModel> retainedModel(headers);
+                        QPointer<songview::TimelineInputItem> retainedInput(headerInput);
+                        QPointer<songview::TimelineQuickView> retainedQuick(quick);
+                        checks::events::sendMouse(*headerInput, QEvent::MouseButtonPress,
+                                                  pressPosition, Qt::LeftButton, Qt::LeftButton,
+                                                  Qt::NoModifier);
+                        const bool inputSurvivedPress = !retainedInput.isNull();
+                        check(inputSurvivedPress,
+                              "the queued structural commit freed the Quick header input inside "
+                              "its press");
+                        check(
+                            !retainedModel.isNull(),
+                            "the queued structural commit freed TrackHeaderModel inside its press");
+                        check(view.selectionModel().primaryTrack() == otherTrack,
+                              "the Quick track-header press did not select its track");
+                        const bool committed = tab->document().cfg().voicegroupArg == otherArg;
+                        check(committed, "the Quick header press did not commit the -G edit");
+                        if (inputSurvivedPress) {
+                            checks::events::sendMouse(*retainedInput, QEvent::MouseButtonRelease,
+                                                      pressPosition, Qt::LeftButton, Qt::NoButton,
+                                                      Qt::NoModifier);
+                        }
+                        if (committed) {
+                            const auto midPressSwitchWait = settled([&] {
+                                return tab->document().cfg().voicegroupArg == otherArg &&
+                                       tab->voicegroupId() && *tab->voicegroupId() != homeId;
+                            });
+                            check(midPressSwitchWait == checks::async_wait::Result::Ready,
+                                  "Quick-header mid-press voicegroup load did not complete");
+                            check(!retainedQuick.isNull(),
+                                  "voicegroup rebuild freed TimelineQuickView");
+                            check(!retainedModel.isNull() && retainedModel.data() == headers,
+                                  "voicegroup rebuild did not retain TrackHeaderModel");
+
+                            QQuickItem *const rebuiltRoot =
+                                retainedQuick ? retainedQuick->rootObject() : nullptr;
+                            auto *const rebuiltInput =
+                                rebuiltRoot ? rebuiltRoot->findChild<songview::TimelineInputItem *>(
+                                                  QStringLiteral("timelineTrackHeadersInput"))
+                                            : nullptr;
+                            const int rebuiltTrackRow =
+                                retainedModel ? modelRowForTrack(*retainedModel.data(), track) : -1;
+                            if (check(rebuiltInput && retainedModel &&
+                                          rebuiltInput->width() > 0.0 &&
+                                          rebuiltInput->height() > 0.0 &&
+                                          rebuiltInput->interaction() == retainedModel.data() &&
+                                          rebuiltTrackRow >= 0,
+                                      "rebuilt Quick track-header input is not attached to "
+                                      "TrackHeaderModel") &&
+                                track != otherTrack) {
+                                const QPointF nextPress = trackHeaderPressPosition(
+                                    *retainedModel.data(), *rebuiltInput, rebuiltTrackRow);
+                                const bool nextPressInside =
+                                    nextPress.x() >= 0.0 && nextPress.x() < rebuiltInput->width() &&
+                                    nextPress.y() >= 0.0 && nextPress.y() < rebuiltInput->height();
+                                check(nextPressInside,
+                                      "the rebuilt Quick track-header press position is outside "
+                                      "its input");
+                                if (nextPressInside) {
+                                    checks::events::sendMouse(
+                                        *rebuiltInput, QEvent::MouseButtonPress, nextPress,
+                                        Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                                    checks::events::sendMouse(
+                                        *rebuiltInput, QEvent::MouseButtonRelease, nextPress,
+                                        Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+                                    QCoreApplication::processEvents();
+                                    check(view.selectionModel().primaryTrack() == track,
+                                          "the rebuilt TrackHeaderModel did not accept its next "
+                                          "Quick press");
+                                }
+                            }
+                            historyStep(true, "undoing the Quick-header -G switch did not settle");
+                            const auto midPressUndoWait =
+                                settled([this, tab, &voicegroupDriver, homeId, &argBefore] {
+                                    return tab->document().cfg().voicegroupArg == argBefore &&
+                                           tab->voicegroupId() && *tab->voicegroupId() == homeId;
+                                });
+                            check(midPressUndoWait == checks::async_wait::Result::Ready,
+                                  "undoing the Quick-header voicegroup load did not complete");
+                            check(tab->document().cfg().voicegroupArg == argBefore &&
+                                      tab->voicegroupId() && *tab->voicegroupId() == homeId,
+                                  "undo did not restore the Quick-header -G switch");
+                        }
                     }
                 }
-                QCoreApplication::processEvents(); // deferred row deletion
-                const auto midPressSwitchWait = settled([&] {
-                    return tab->document().cfg().voicegroupArg == otherArg && tab->voicegroupId() &&
-                           *tab->voicegroupId() != homeId;
-                });
-                check(midPressSwitchWait == checks::async_wait::Result::Ready,
-                      "mid-press voicegroup load did not complete");
-                // The rebuilt panel is functional: its fresh rows select.
-                QWidget *fresh =
-                    view.findChild<QWidget *>(QStringLiteral("trackHeaderRow%1").arg(track));
-                if (check(fresh != nullptr, "no rebuilt header row") && track != otherTrack) {
-                    checks::events::sendMouse(*fresh, QEvent::MouseButtonPress,
-                                              QPointF(QPoint(5, 5)), Qt::LeftButton, Qt::LeftButton,
-                                              Qt::NoModifier);
-                    checks::events::sendMouse(*fresh, QEvent::MouseButtonRelease,
-                                              QPointF(QPoint(5, 5)), Qt::LeftButton, Qt::NoButton,
-                                              Qt::NoModifier);
-                    QCoreApplication::processEvents();
-                    check(view.selectionModel().primaryTrack() == track,
-                          "a rebuilt header row did not select its track");
-                }
-                historyStep(true, "undoing the mid-press -G switch did not settle");
-                const auto midPressUndoWait =
-                    settled([this, tab, &voicegroupDriver, homeId, &argBefore] {
-                        return tab->document().cfg().voicegroupArg == argBefore &&
-                               tab->voicegroupId() && *tab->voicegroupId() == homeId;
-                    });
-                check(midPressUndoWait == checks::async_wait::Result::Ready,
-                      "undoing the mid-press voicegroup load did not complete");
-                check(tab->document().cfg().voicegroupArg == argBefore && tab->voicegroupId() &&
-                          *tab->voicegroupId() == homeId,
-                      "undo did not restore the mid-press -G switch");
             }
         }
     }

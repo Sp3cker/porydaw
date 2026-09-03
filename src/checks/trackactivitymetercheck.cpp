@@ -1,64 +1,36 @@
 #include <QAbstractItemModel>
 #include <QByteArray>
-#include <QCoreApplication>
+#include <QColor>
 #include <QElapsedTimer>
-#include <QEvent>
 #include <QImage>
 #include <QList>
-#include <QQmlContext>
+#include <QPoint>
+#include <QQuickItem>
+#include <QRect>
+#include <QString>
 #include <QThread>
-#include <QVariant>
-#include <QWidget>
 #include <QtGlobal>
 
 #include "audio/trackactivitylevel.h"
-#include "ui/activity/trackactivitypresentation.h"
+#include "checks/support/quickframebuffer.h"
+#include "core/miditimeline.h"
 #include "ui/activity/trackactivityrender.h"
-#include "ui/activity/trackactivityview.h"
-#include "ui/layout.h"
+#include "ui/songview.h"
+#include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/trackheadermodel.h"
 
-#include <array>
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <initializer_list>
 #include <utility>
 
-#ifdef Q_OS_MACOS
-int runMacTrackActivityPresentationCheck();
-#endif
 namespace {
 
-constexpr int kMeterHeight = 32;
 constexpr auto kConvergedSeconds = 60.0f;
-
-class PaintCounter final : public QObject
-{
-  public:
-    int paints = 0;
-
-  protected:
-    bool eventFilter(QObject *, QEvent *event) override
-    {
-        if (event->type() == QEvent::Paint)
-            ++paints;
-        return false;
-    }
-};
-
-void drainPaintEvents()
-{
-    QCoreApplication::sendPostedEvents();
-    QCoreApplication::processEvents();
-    QCoreApplication::sendPostedEvents();
-    QCoreApplication::processEvents();
-}
-
-void reset(PaintCounter &counter)
-{
-    drainPaintEvents();
-    counter.paints = 0;
-}
 
 bool isOpaque(const QImage &image)
 {
@@ -88,71 +60,93 @@ int paintedRowsAt(const QImage &image, int x)
     return rows;
 }
 
-QImage captureFramebuffer(TrackActivityView &view)
+bool waitForQuickTrackHeaders(SongView &view, songview::TimelineQuickView &quick)
 {
-    const QSize expected(qRound(view.width() * view.devicePixelRatioF()),
-                         qRound(view.height() * view.devicePixelRatioF()));
     QElapsedTimer timeout;
     timeout.start();
     do {
-        drainPaintEvents();
-        QImage frame = view.grabFramebuffer();
-        if (!frame.isNull() && frame.size() == expected) {
-            view.update();
-            drainPaintEvents();
-            frame = view.grabFramebuffer();
-            frame.setDevicePixelRatio(view.devicePixelRatioF());
-            return frame;
+        checks::support::pumpQuick();
+        QQuickItem *const root = quick.rootObject();
+        auto *const input = root ? root->findChild<songview::TimelineInputItem *>(
+                                       QStringLiteral("timelineTrackHeadersInput"))
+                                 : nullptr;
+        const auto &band = view.timelineBandLayout().geometry(songview::TimelineBand::TrackHeaders);
+        if (band && !band->rect.isEmpty() && input && input->width() > 0.0 &&
+            input->height() > 0.0) {
+            return true;
         }
         QThread::msleep(10);
     } while (timeout.elapsed() < 1000);
-    return {};
+    return false;
 }
 
-// A converged advance copies each target level into the activity intensity
-// bit-exactly, so exact levels reach the view through the real smoothing
-// state machine.
-TrackActivity activityWithLevels(std::initializer_list<std::pair<int, TrackActivityLevel>> levels)
+QImage captureActivityRow(SongView &view, const songview::TrackHeaderModel &model, int row,
+                          QString *error)
 {
-    TrackActivity activity;
-    activity.reset();
+    const auto &band = view.timelineBandLayout().geometry(songview::TimelineBand::TrackHeaders);
+    const int meterHeight = std::max(0, model.rowHeight() - model.separatorWidth());
+    if (!band || band->rect.isEmpty() || row < 0 || model.activityWidth() <= 0 ||
+        meterHeight <= 0) {
+        if (error)
+            *error = QStringLiteral("track-header activity geometry is unavailable");
+        return {};
+    }
+
+    const int y = band->rect.y() + qRound(row * model.rowHeight() - model.scrollY());
+    return checks::support::captureQuickBand(
+        view, QRect{band->rect.x(), y, model.activityWidth(), meterHeight}, error);
+}
+
+TrackActivityLevels levelsWith(std::initializer_list<std::pair<int, TrackActivityLevel>> levels)
+{
     TrackActivityLevels targets{};
     for (const auto &[track, level] : levels)
         targets[static_cast<std::size_t>(track)] = level;
-    activity.advance(targets, kConvergedSeconds, true);
-    return activity;
+    return targets;
 }
 
-// Physical pixel height one channel level renders at, per the render policy
-// the view applies.
-int channelPixelHeight(uint8_t level, qreal devicePixelRatio)
+int channelPixelHeight(uint8_t level, int meterHeight, qreal devicePixelRatio)
 {
     const track_activity_render::State state{levelToIntensity({level, level}), true};
-    return track_activity_render::physicalHeight(state, state.intensity.left, kMeterHeight,
+    return track_activity_render::physicalHeight(state, state.intensity.left, meterHeight,
                                                  devicePixelRatio);
 }
 
-// The lowest level whose one-level step stays inside the same physical pixel;
-// 255 when the raster density admits no such step.
-uint8_t levelWithinPixel(uint8_t base, qreal devicePixelRatio)
+int devicePixelSpan(int origin, int length, qreal devicePixelRatio)
+{
+    return qRound((origin + length) * devicePixelRatio) - qRound(origin * devicePixelRatio);
+}
+
+uint8_t levelWithinPixel(uint8_t base, int meterHeight, qreal devicePixelRatio)
 {
     for (int level = base; level < 255; ++level) {
-        if (channelPixelHeight(static_cast<uint8_t>(level), devicePixelRatio) ==
-            channelPixelHeight(static_cast<uint8_t>(level + 1), devicePixelRatio))
+        if (channelPixelHeight(static_cast<uint8_t>(level), meterHeight, devicePixelRatio) ==
+            channelPixelHeight(static_cast<uint8_t>(level + 1), meterHeight, devicePixelRatio)) {
             return static_cast<uint8_t>(level);
+        }
     }
     return 255;
 }
 
-// The lowest level rendering strictly taller than base.
-uint8_t levelAcrossPixel(uint8_t base, qreal devicePixelRatio)
+uint8_t levelAcrossPixel(uint8_t base, int meterHeight, qreal devicePixelRatio)
 {
-    const int baseRows = channelPixelHeight(base, devicePixelRatio);
+    const int baseRows = channelPixelHeight(base, meterHeight, devicePixelRatio);
     for (int level = base + 1; level <= 255; ++level) {
-        if (channelPixelHeight(static_cast<uint8_t>(level), devicePixelRatio) > baseRows)
+        if (channelPixelHeight(static_cast<uint8_t>(level), meterHeight, devicePixelRatio) >
+            baseRows) {
             return static_cast<uint8_t>(level);
+        }
     }
     return 255;
+}
+
+int rowForTrack(const songview::TrackHeaderModel &model, int track)
+{
+    for (int row = 0; row < model.rowCount(); ++row) {
+        if (model.data(model.index(row, 0), songview::TrackHeaderModel::TrackRole).toInt() == track)
+            return row;
+    }
+    return -1;
 }
 
 struct DataChangeReport {
@@ -174,209 +168,240 @@ int runTrackActivityMeterCheck()
         }
     };
 
-#ifdef Q_OS_MACOS
-    failures += runMacTrackActivityPresentationCheck();
-#endif
-
-    QWidget parent;
-    parent.resize(80, 48);
-    TrackActivityView view(&parent);
     constexpr int track = 3;
-    const std::array definitions{TrackActivityView::TrackDefinition{track, QColor(Qt::red)}};
-    view.setTracks(definitions, {kMeterHeight, kMeterHeight});
-    view.move(12, 6);
-    parent.show();
-    drainPaintEvents();
+    constexpr int secondTrack = 7;
+    MidiTimeline singleTrackTimeline;
+    singleTrackTimeline.tracks[track].used = true;
+    singleTrackTimeline.usedTrackCount = 1;
 
-    check(view.parentWidget() == &parent, "activity view must remain a direct panel child");
-    check(view.objectName() == QStringLiteral("trackActivityView"),
-          "activity view must retain its object name");
-    check(view.testAttribute(Qt::WA_OpaquePaintEvent),
-          "activity view must paint an opaque surface");
-    check(view.testAttribute(Qt::WA_TransparentForMouseEvents),
-          "activity view must not handle track-row mouse events");
-    check(view.focusPolicy() == Qt::NoFocus, "activity view must not enter the focus chain");
-    check(view.width() == layout::space(layout::Space::One),
-          "activity view must retain the fixed strip width");
-    check(view.geometry() == QRect(12, 6, layout::space(layout::Space::One), kMeterHeight),
-          "activity view must retain its assigned strip geometry");
-    check(view.isVisible(), "activity view must be visible with its parent panel");
+    SongView view;
+    view.resize(720, 520);
+    view.setSong(&singleTrackTimeline, nullptr);
+    view.show();
+    checks::support::pumpQuick();
 
-    const qreal devicePixelRatio = view.devicePixelRatioF();
+    auto *const quick =
+        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    auto *const model =
+        view.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"));
+    check(quick != nullptr, "SongView must expose the retained TimelineQuickView");
+    check(model != nullptr, "SongView must expose TrackHeaderModel");
+    if (!quick || !model)
+        return 1;
+
+    const bool headerInputReady = waitForQuickTrackHeaders(view, *quick);
+    check(headerInputReady, "TimelineQuickView did not attach the track-header Quick input");
+    if (!headerInputReady)
+        return 1;
+    const int trackRow = rowForTrack(*model, track);
+    const int meterHeight = std::max(0, model->rowHeight() - model->separatorWidth());
+    const bool initialRows = model->rowCount() == 1 && trackRow == 0;
+    check(initialRows, "the initial TrackHeaderModel must contain the used track only");
+    const bool usableGeometry = meterHeight > 0 && model->activityWidth() > 0;
+    check(usableGeometry, "the track-header activity geometry must be non-empty");
+    if (!initialRows || !usableGeometry)
+        return 1;
+
+    const auto captureRow = [&view, model, &check](int row) {
+        QString error;
+        QImage frame = captureActivityRow(view, *model, row, &error);
+        check(!frame.isNull(),
+              qUtf8Printable(
+                  QStringLiteral("TimelineQuickView activity framebuffer is unavailable: %1")
+                      .arg(error)));
+        return frame;
+    };
+
+    // First capture establishes a live Quick window, so subsequent activity
+    // synchronization uses the window's actual DPR rather than a provisional host value.
+    const QImage warmFrame = captureRow(trackRow);
+    if (warmFrame.isNull())
+        return 1;
+    const qreal devicePixelRatio = warmFrame.devicePixelRatio();
+    check(devicePixelRatio > 0.0, "TimelineQuickView framebuffer must report a device pixel ratio");
+    check(std::abs(devicePixelRatio - quick->quickDevicePixelRatio()) < 0.001,
+          "activity framebuffer and TimelineQuickView must use the same device pixel ratio");
     if (const char *requestedScale = std::getenv("QT_SCALE_FACTOR")) {
         char *end = nullptr;
         const double scale = std::strtod(requestedScale, &end);
         if (requestedScale[0] != '\0' && end && *end == '\0' && scale > 0.0) {
             check(std::abs(devicePixelRatio - scale) < 0.001,
-                  "the requested Qt scale must reach the activity view");
+                  "the requested Qt scale must reach the TimelineQuickView activity frame");
         }
     }
+    checks::support::pumpQuick();
 
-    PaintCounter parentPaints;
-    parent.installEventFilter(&parentPaints);
-    reset(parentPaints);
-
-    // Observe the model the QML delegates bind to: the batch contract is at
-    // most one coalesced notification per presented tick.
     DataChangeReport dataChanges;
-    int leftHeightRole = 0;
-    int rightHeightRole = 0;
-    const QVariant modelProperty =
-        view.rootContext()->contextProperty(QStringLiteral("trackActivityModel"));
-    auto *const activityModel =
-        qobject_cast<QAbstractItemModel *>(modelProperty.value<QObject *>());
-    check(activityModel, "the activity view must expose its row model to QML");
-    if (activityModel) {
-        const auto roleNames = activityModel->roleNames();
-        leftHeightRole = roleNames.key(QByteArrayLiteral("leftHeight"), 0);
-        rightHeightRole = roleNames.key(QByteArrayLiteral("rightHeight"), 0);
-        check(leftHeightRole != 0 && rightHeightRole != 0,
-              "row height roles must stay exposed to QML by name");
-        QObject::connect(activityModel, &QAbstractItemModel::dataChanged, &view,
-                         [&dataChanges](const QModelIndex &topLeft, const QModelIndex &bottomRight,
-                                        const QList<int> &roles) {
-                             ++dataChanges.count;
-                             dataChanges.firstRow = topLeft.row();
-                             dataChanges.lastRow = bottomRight.row();
-                             dataChanges.roles = roles;
-                         });
-    }
+    const auto roleNames = model->roleNames();
+    const int leftHeightRole = roleNames.key(QByteArrayLiteral("activityLeftHeight"), 0);
+    const int rightHeightRole = roleNames.key(QByteArrayLiteral("activityRightHeight"), 0);
+    check(leftHeightRole != 0 && rightHeightRole != 0,
+          "TrackHeaderModel must expose activity height roles to QML by name");
+    QObject::connect(model, &QAbstractItemModel::dataChanged, &view,
+                     [&dataChanges](const QModelIndex &topLeft, const QModelIndex &bottomRight,
+                                    const QList<int> &roles) {
+                         ++dataChanges.count;
+                         dataChanges.firstRow = topLeft.row();
+                         dataChanges.lastRow = bottomRight.row();
+                         dataChanges.roles = roles;
+                     });
+
+    const auto present = [&view](std::initializer_list<std::pair<int, TrackActivityLevel>> levels,
+                                 bool playing) {
+        view.advanceTrackActivity(levelsWith(levels), kConvergedSeconds, playing);
+    };
 
     constexpr uint8_t kMidLevel = 128;
     dataChanges = {};
-    view.present(activityWithLevels({{track, {kMidLevel, kMidLevel}}}), true);
-    const QImage activeImage = captureFramebuffer(view);
-    check(!activeImage.isNull(), "a presented activity tick must render the Quick activity frame");
-    check(parentPaints.paints == 0, "a presented activity tick must not repaint the parent panel");
-    check(dataChanges.count == 1, "a presented activity tick must notify the model exactly once");
+    present({{track, {kMidLevel, kMidLevel}}}, true);
+    const QImage activeImage = captureRow(trackRow);
+    check(!activeImage.isNull(), "a presented activity tick must render the Quick header frame");
+    check(dataChanges.count == 1 && dataChanges.firstRow == trackRow &&
+              dataChanges.lastRow == trackRow,
+          "the initial activity update must notify its bounded track-header row");
+    if (activeImage.isNull())
+        return 1;
+    if (leftHeightRole && rightHeightRole) {
+        check(dataChanges.roles == QList<int>{leftHeightRole, rightHeightRole},
+              "activity updates must carry exactly the two height roles");
+    }
 
-    // One level step that stays inside the same physical pixel must leave the
-    // frame, the model, and the panel untouched.
-    const uint8_t sharedLevel = levelWithinPixel(kMidLevel, devicePixelRatio);
-    check(sharedLevel != 255, "the raster must admit a sub-pixel level step");
-    const uint8_t withinLevel =
-        sharedLevel != 255 ? static_cast<uint8_t>(sharedLevel + 1) : static_cast<uint8_t>(255);
+    const uint8_t sharedLevel = levelWithinPixel(kMidLevel, meterHeight, devicePixelRatio);
+    check(sharedLevel != 255, "the activity raster must admit a sub-pixel level step");
+    if (sharedLevel != 255) {
+        dataChanges = {};
+        present({{track, {sharedLevel, sharedLevel}}}, true);
+        const QImage sharedPixelImage = captureRow(trackRow);
+        const uint8_t withinLevel = static_cast<uint8_t>(sharedLevel + 1);
+
+        dataChanges = {};
+        present({{track, {withinLevel, withinLevel}}}, true);
+        const QImage withinPixelImage = captureRow(trackRow);
+        check(withinPixelImage == sharedPixelImage,
+              "a level change within one physical pixel must leave the Quick frame unchanged");
+        check(dataChanges.count == 0,
+              "unchanged physical activity heights must emit no model notification");
+
+        const uint8_t acrossLevel = levelAcrossPixel(withinLevel, meterHeight, devicePixelRatio);
+        dataChanges = {};
+        present({{track, {acrossLevel, acrossLevel}}}, true);
+        const QImage acrossPixelImage = captureRow(trackRow);
+        check(acrossPixelImage != sharedPixelImage,
+              "a level change across a physical-pixel boundary must change the Quick frame");
+        check(dataChanges.count == 1 && dataChanges.firstRow == trackRow &&
+                  dataChanges.lastRow == trackRow,
+              "a changed activity height must emit one bounded model span");
+        if (leftHeightRole && rightHeightRole) {
+            check(dataChanges.roles == QList<int>{leftHeightRole, rightHeightRole},
+                  "a changed activity height span must carry exactly the height roles");
+        }
+    }
+
     dataChanges = {};
-    view.present(activityWithLevels({{track, {withinLevel, withinLevel}}}), true);
-    const QImage withinPixelImage = captureFramebuffer(view);
-    check(withinPixelImage == activeImage,
-          "a level change within one physical pixel must leave the frame unchanged");
-    check(dataChanges.count == 0, "a sub-pixel level change must not notify the model");
-    check(parentPaints.paints == 0, "a sub-pixel level change must not repaint the parent panel");
-
-    const uint8_t acrossLevel = levelAcrossPixel(withinLevel, devicePixelRatio);
-    dataChanges = {};
-    view.present(activityWithLevels({{track, {acrossLevel, acrossLevel}}}), true);
-    const QImage acrossPixelImage = captureFramebuffer(view);
-    check(acrossPixelImage != activeImage,
-          "a level change across a physical-pixel boundary must change the frame");
-    check(dataChanges.count == 1, "a presented level change must notify the model exactly once");
-    check(parentPaints.paints == 0,
-          "a physical-pixel level change must not repaint the parent panel");
-
-    reset(parentPaints);
-    dataChanges = {};
-    view.present(activityWithLevels({{track, {acrossLevel, acrossLevel}}}), false);
-    (void)captureFramebuffer(view);
-    check(dataChanges.count == 1, "a playing mode change must notify the model exactly once");
-    check(parentPaints.paints == 0, "a mode change must not repaint the parent panel");
-
-    // Paused fill drives every level to full: the frame must cover the strip
-    // at the raster's physical dimensions.
-    TrackActivity pausedFill;
-    pausedFill.resetPaused();
-    view.present(pausedFill, false);
-    const QImage pausedImage = captureFramebuffer(view);
-    check(!pausedImage.isNull(), "activity view must produce a framebuffer");
-    check(pausedImage.width() == qRound(view.width() * devicePixelRatio) &&
-              pausedImage.height() == qRound(view.height() * devicePixelRatio),
-          "framebuffer dimensions must be physical-device-pixel dimensions");
+    present({}, false);
+    const QImage pausedImage = captureRow(trackRow);
+    check(dataChanges.count == 1 && dataChanges.firstRow == trackRow &&
+              dataChanges.lastRow == trackRow,
+          "a playing-to-paused activity transition must emit one bounded model span");
+    if (leftHeightRole && rightHeightRole) {
+        check(dataChanges.roles == QList<int>{leftHeightRole, rightHeightRole},
+              "a playing-to-paused span must carry exactly the height roles");
+    }
+    check(!pausedImage.isNull(), "paused activity must render a TimelineQuickView framebuffer");
+    if (pausedImage.isNull())
+        return 1;
+    const auto &headerBand =
+        view.timelineBandLayout().geometry(songview::TimelineBand::TrackHeaders);
+    const int activityY =
+        headerBand ? headerBand->rect.y() + qRound(trackRow * model->rowHeight() - model->scrollY())
+                   : 0;
+    const QPoint cropOrigin =
+        headerBand ? quick->mapFrom(&view, QPoint{headerBand->rect.x(), activityY}) : QPoint{};
+    check(headerBand &&
+              pausedImage.width() ==
+                  devicePixelSpan(cropOrigin.x(), model->activityWidth(), devicePixelRatio) &&
+              pausedImage.height() ==
+                  devicePixelSpan(cropOrigin.y(), meterHeight, devicePixelRatio),
+          "activity framebuffer dimensions must be physical-device-pixel dimensions");
     check(std::abs(pausedImage.devicePixelRatio() - devicePixelRatio) < 0.001,
-          "framebuffer must preserve the activity view device-pixel ratio");
-    check(isOpaque(pausedImage), "opaque Quick rendering must cover the entire strip");
+          "activity framebuffer must preserve the Quick window device-pixel ratio");
+    check(isOpaque(pausedImage), "the Quick track-header activity surface must remain opaque");
     check(paintedRowsAt(pausedImage, pausedImage.width() / 4) == pausedImage.height(),
-          "paused fill must cover the strip to the top");
+          "paused activity fill must cover the meter to the top");
     check(activeImage.pixelColor(activeImage.width() / 4, activeImage.height() / 4) !=
               pausedImage.pixelColor(pausedImage.width() / 4, pausedImage.height() / 4),
-          "a partial playing bar must leave a dimmed background above it");
+          "a partial playing meter must leave a dimmed background above it");
+    // The cap is a snapped rendering-policy contract; keep its exact oracle at
+    // physicalHeight rather than weakening it to a raster color observation.
 
-    // The playing cap stays a render-policy property exercised at its own
-    // seam: playing heights clamp at maximumIntensity, paused heights do not.
     const track_activity_render::State capped{{1.0f, 1.0f}, true, 0.15f};
     const int cappedRows = track_activity_render::physicalHeight(capped, capped.intensity.left,
-                                                                 kMeterHeight, devicePixelRatio);
-    check(cappedRows == qRound(0.15 * kMeterHeight * devicePixelRatio),
-          "playing activity must be capped at maximumIntensity in physical pixels");
+                                                                 meterHeight, devicePixelRatio);
+    check(cappedRows == qRound(0.15 * meterHeight * devicePixelRatio),
+          "playing activity must retain its physical-pixel intensity cap");
     const track_activity_render::State uncapped{{1.0f, 1.0f}, false, 0.15f};
-    check(track_activity_render::physicalHeight(uncapped, uncapped.intensity.left, kMeterHeight,
+    check(track_activity_render::physicalHeight(uncapped, uncapped.intensity.left, meterHeight,
                                                 devicePixelRatio) > cappedRows,
-          "paused activity must ignore the playing cap");
+          "paused activity must ignore the playing intensity cap");
 
     constexpr TrackActivityLevel kStereoLevel{255, 64};
-    view.present(activityWithLevels({{track, kStereoLevel}}), true);
-    const QImage stereoImage = captureFramebuffer(view);
-    const int stereoLeftX = stereoImage.width() / 4;
-    const int stereoRightX = stereoImage.width() * 3 / 4;
-    const int topY = stereoImage.height() / 4;
-    const int bottomY = stereoImage.height() - 1;
-    check(stereoImage.pixelColor(stereoLeftX, topY) != stereoImage.pixelColor(stereoRightX, topY),
-          "left and right stereo levels must render independently");
-    check(stereoImage.pixelColor(stereoLeftX, bottomY) ==
-              stereoImage.pixelColor(stereoRightX, bottomY),
-          "both stereo levels must rise from the bottom origin");
-
-    parent.resize(80, 2 * kMeterHeight + 12);
-    const std::array twoTracks{
-        TrackActivityView::TrackDefinition{track, QColor(Qt::red)},
-        TrackActivityView::TrackDefinition{7, QColor(Qt::blue)},
-    };
-    view.setTracks(twoTracks, {kMeterHeight, kMeterHeight});
-    dataChanges = {};
-    view.present(activityWithLevels({{track, {255, 255}}, {7, {96, 96}}}), true);
-    const QImage twoTrackImage = captureFramebuffer(view);
-    check(twoTrackImage.height() == qRound(2 * kMeterHeight * devicePixelRatio),
-          "one retained activity view must stack every track row");
-    check(isOpaque(twoTrackImage), "the shared two-track activity column must remain opaque");
-    check(twoTrackImage.pixelColor(twoTrackImage.width() / 4, twoTrackImage.height() / 4) !=
-              twoTrackImage.pixelColor(twoTrackImage.width() / 4, twoTrackImage.height() * 3 / 4),
-          "shared activity rows must retain independent identity colors");
-    check(dataChanges.count == 1, "one presented tick must coalesce into a single notification");
-    check(dataChanges.firstRow == 0 && dataChanges.lastRow == 1,
-          "the coalesced notification must span the changed rows");
-    if (activityModel) {
-        check(dataChanges.roles == QList<int>{leftHeightRole, rightHeightRole},
-              "the coalesced notification must carry exactly the affected height roles");
+    present({{track, kStereoLevel}}, true);
+    const QImage stereoImage = captureRow(trackRow);
+    check(!stereoImage.isNull(), "stereo activity must render a TimelineQuickView framebuffer");
+    if (!stereoImage.isNull()) {
+        const int stereoLeftX = stereoImage.width() / 4;
+        const int stereoRightX = stereoImage.width() * 3 / 4;
+        const int topY = stereoImage.height() / 8;
+        const int bottomY = stereoImage.height() - 1;
+        check(stereoImage.pixelColor(stereoLeftX, topY) !=
+                  stereoImage.pixelColor(stereoRightX, topY),
+              "left and right activity levels must render independently in TrackHeaderBand");
+        check(stereoImage.pixelColor(stereoLeftX, bottomY) ==
+                  stereoImage.pixelColor(stereoRightX, bottomY),
+              "both stereo activity levels must rise from the meter bottom");
     }
 
-    dataChanges = {};
-    view.present(activityWithLevels({{track, {255, 255}}, {7, {96, 96}}}), true);
-    drainPaintEvents();
-    check(dataChanges.count == 0, "an identical repeated tick must not notify the model");
+    MidiTimeline twoTrackTimeline;
+    twoTrackTimeline.tracks[track].used = true;
+    twoTrackTimeline.tracks[secondTrack].used = true;
+    twoTrackTimeline.usedTrackCount = 2;
+    view.setSong(&twoTrackTimeline, nullptr);
+    checks::support::pumpQuick();
 
-    constexpr auto forceQuickVariable = "PORYDAW_FORCE_QUICK_TRACK_ACTIVITY";
-    const bool forceQuickWasSet = qEnvironmentVariableIsSet(forceQuickVariable);
-    const QByteArray previousForceQuick = qgetenv(forceQuickVariable);
-    qputenv(forceQuickVariable, QByteArrayLiteral("1"));
-    {
-        QWidget presentationParent;
-        TrackActivityPresentation presentation(presentationParent);
-        TrackActivity pausedActivity;
-        pausedActivity.resetPaused();
-        const std::array presentationTracks{
-            TrackActivityPresentation::TrackDefinition{track, QColor(Qt::red)}};
-        presentation.setTracks(presentationTracks, {kMeterHeight, kMeterHeight});
-        presentation.present(pausedActivity, false);
-        presentationParent.show();
-        drainPaintEvents();
-        auto *quickFallback =
-            presentationParent.findChild<TrackActivityView *>(QStringLiteral("trackActivityView"));
-        check(quickFallback && quickFallback->parentWidget() == &presentationParent,
-              "Quick activity adapter was not retained behind the presentation facade");
+    const int rebuiltTrackRow = rowForTrack(*model, track);
+    const int rebuiltSecondRow = rowForTrack(*model, secondTrack);
+    check(model->rowCount() == 2 && rebuiltTrackRow >= 0 && rebuiltSecondRow >= 0,
+          "TrackHeaderModel rebuild must retain every used track");
+    if (rebuiltTrackRow >= 0 && rebuiltSecondRow >= 0) {
+        dataChanges = {};
+        present({{track, {255, 255}}, {secondTrack, {96, 96}}}, true);
+        const QImage firstTrackImage = captureRow(rebuiltTrackRow);
+        const QImage secondTrackImage = captureRow(rebuiltSecondRow);
+        const bool rebuiltFrames = !firstTrackImage.isNull() && !secondTrackImage.isNull() &&
+                                   isOpaque(firstTrackImage) && isOpaque(secondTrackImage);
+        check(rebuiltFrames, "a rebuilt TrackHeaderModel must render every activity row opaquely");
+        if (rebuiltFrames) {
+            check(firstTrackImage.pixelColor(firstTrackImage.width() / 4,
+                                             firstTrackImage.height() - 1) !=
+                      secondTrackImage.pixelColor(secondTrackImage.width() / 4,
+                                                  secondTrackImage.height() - 1),
+                  "rebuilt activity rows must retain independent track identity colors");
+        }
+        check(dataChanges.count == 1 &&
+                  dataChanges.firstRow == std::min(rebuiltTrackRow, rebuiltSecondRow) &&
+                  dataChanges.lastRow == std::max(rebuiltTrackRow, rebuiltSecondRow),
+              "one multi-track activity tick must emit one bounded model span");
+        if (leftHeightRole && rightHeightRole) {
+            check(dataChanges.roles == QList<int>{leftHeightRole, rightHeightRole},
+                  "the rebuilt multi-track span must carry exactly the activity height roles");
+        }
+
+        dataChanges = {};
+        present({{track, {255, 255}}, {secondTrack, {96, 96}}}, true);
+        checks::support::pumpQuick();
+        check(dataChanges.count == 0,
+              "an identical repeated activity tick must not notify TrackHeaderModel");
     }
-    if (forceQuickWasSet)
-        qputenv(forceQuickVariable, previousForceQuick);
-    else
-        qunsetenv(forceQuickVariable);
 
     if (failures == 0)
         std::printf("trackactivitymetercheck: PASS\n");

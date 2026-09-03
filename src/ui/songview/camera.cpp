@@ -152,7 +152,7 @@ int SongView::viewportWidth() const
 }
 int SongView::rollViewportHeight() const
 {
-    const int drawerHeight = m_editorDrawer ? m_editorDrawer->height() : 0;
+    const int drawerHeight = m_editorDrawer ? m_editorDrawer->overlayHeight() : 0;
     const std::optional<songview::TimelineBandGeometry> &roll =
         m_timelineBandLayout.geometry(songview::TimelineBand::Roll);
     const int height = roll ? roll->rect.height() : 0;

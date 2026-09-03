@@ -306,16 +306,20 @@ bool AutomationCanvas::pointerMove(const songview::TimelinePointerInput &input)
     if (!m_activeGesture) {
         const PointerLaneHit pointer = pointerLaneAt(position.toPoint());
         if (pointer.tempoHeader) {
+            const bool hoverWasActive = m_hoverState.hover.lane.valid();
             m_hoverState.clearHover();
-            requestHoverQuickUpdate();
+            if (hoverWasActive && !m_hoverState.hover.lane.valid())
+                requestHoverQuickUpdate();
             m_inputHost->clearCursor();
             return true;
         }
         const auto *pointerSlot = resolveSlot(pointer.lane);
         const bool inTempo = pointerSlot && pointerSlot->isTempo();
         if (!inTempo && ccRowBoundaryAt(position.toPoint().y()) >= 0) {
+            const bool hoverWasActive = m_hoverState.hover.lane.valid();
             m_hoverState.clearHover();
-            requestHoverQuickUpdate();
+            if (hoverWasActive && !m_hoverState.hover.lane.valid())
+                requestHoverQuickUpdate();
             m_inputHost->setCursor(QCursor(Qt::SplitVCursor));
             return true;
         }
@@ -324,12 +328,18 @@ bool AutomationCanvas::pointerMove(const songview::TimelinePointerInput &input)
         const LaneHandle handle =
             x >= m_geometry.plotOrigin - m_geometry.pointHitRadius ? pointer.lane : LaneHandle{};
         const auto *slot = resolveSlot(handle);
-        if (!slot)
-            m_hoverState.clearHover();
-        else
+        const LaneHandle previousHoverLane = m_hoverState.hover.lane;
+        const QPointF previousHoverPosition = m_hoverState.hover.pos;
+        if (slot) {
             m_hoverState.updateHover(hoverTarget(), m_geometry, *slot->lane, slot->body, handle,
                                      proj, x, y, m_pencilMode);
-        requestHoverQuickUpdate();
+        } else {
+            m_hoverState.clearHover();
+        }
+        const bool hoverPublicationChanged = !(previousHoverLane == m_hoverState.hover.lane) ||
+                                             previousHoverPosition != m_hoverState.hover.pos;
+        if (hoverPublicationChanged)
+            requestHoverQuickUpdate();
         if (m_hoverState.hover.originPhantom)
             m_inputHost->clearCursor();
         else if (m_pencilMode && isEditablePencilHit(position))
@@ -453,7 +463,7 @@ bool AutomationCanvas::pointerDoubleClick(const songview::TimelinePointerInput &
     const uint64_t tick =
         m_page.snapTick(proj.rawTickAt(position.x()), input.modifiers & Qt::AltModifier);
     int value = mappedForLane(pointer.lane, position, false, false, proj).value;
-    const bool accepted = lane->promptValue(&m_page, value, &value);
+    const bool accepted = lane->promptValue(&m_page.m_owner, value, &value);
     if (m_inputHost)
         m_inputHost->requestFocus(Qt::PopupFocusReason);
     if (!accepted)
@@ -517,10 +527,12 @@ bool AutomationCanvas::keyPress(const songview::TimelineKeyInput &input)
 
 void AutomationCanvas::pointerLeave()
 {
+    const bool hoverWasActive = m_hoverState.hover.lane.valid();
     m_hoverState.clearHover();
     if (m_inputHost)
         m_inputHost->clearCursor();
-    requestHoverQuickUpdate();
+    if (hoverWasActive && !m_hoverState.hover.lane.valid())
+        requestHoverQuickUpdate();
 }
 
 void AutomationCanvas::inputCancelled(songview::TimelineInputCancelReason reason)

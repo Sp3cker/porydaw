@@ -7,17 +7,18 @@
 #include "ui/songview/detail.h"
 #include "ui/songview/grid.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
 
-#include <QComboBox>
+#include <QAction>
 #include <QFontMetrics>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QObject>
+#include <QMenu>
+#include <QVariant>
 
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <utility>
 
 namespace lyt = ::layout;
 using Space = lyt::Space;
@@ -30,83 +31,191 @@ TimeRuler::Geometry TimeRuler::Geometry::resolve()
     return {lyt::fontPx(5.0 / 6.0), lyt::fontPx(1.0 / 12.0), lyt::fontPxF(-1.0 / 24.0), 3.0};
 }
 
-TimeRulerControls::TimeRulerControls(SongView &owner, QWidget *parent)
-    : QWidget(parent)
-    , m_owner(owner)
+QFont TimeRuler::resolveRulerFont(const Geometry &geometry)
 {
-    setObjectName(QStringLiteral("timeRulerControls"));
-    auto *row = new QHBoxLayout(this);
-    row->setContentsMargins(lyt::space(Space::Two), lyt::space(Space::Zero),
-                            lyt::space(Space::Zero), lyt::space(Space::Zero));
-    row->setSpacing(lyt::space(Space::One));
-    row->addWidget(new QLabel(SongView::tr("Grid"), this));
-    m_divCombo = new QComboBox(this);
-    m_divCombo->addItem(SongView::tr("Auto"), 0);
-    for (int denom : {4, 8, 16, 32})
-        m_divCombo->addItem(QStringLiteral("1/%1").arg(denom), denom);
-    m_divCombo->setToolTip(SongView::tr("Finest drawn subdivision. Auto follows the zoom down to "
-                                        "the mid2agb clock grid; edits snap one step finer than "
-                                        "the drawn grid."));
-    m_feelCombo = new QComboBox(this);
-    m_feelCombo->addItem(SongView::tr("Straight"));
-    m_feelCombo->addItem(SongView::tr("Triplet"));
-    m_feelCombo->setToolTip(SongView::tr("Straight or triplet beat subdivisions."));
-    for (QComboBox *combo : {m_divCombo, m_feelCombo}) {
-        combo->setFocusPolicy(Qt::NoFocus);
-        row->addWidget(combo);
+    QFont rulerFont = typography::bodyMono(typography::caption(*typography::bodyFont()));
+    rulerFont.setPixelSize(std::max(geometry.timeRulerMinimumFontPixelSize,
+                                    rulerFont.pixelSize() - lyt::singlePixel()));
+    rulerFont.setLetterSpacing(QFont::AbsoluteSpacing, geometry.timeRulerLetterSpacing);
+    return rulerFont;
+}
+
+int TimeRuler::markerRowHeight(const QFontMetrics &metrics)
+{
+    return metrics.height() + lyt::singlePixel();
+}
+
+int TimeRuler::rowHeight()
+{
+    const Geometry geometry = Geometry::resolve();
+    const QFont rulerFont = resolveRulerFont(geometry);
+    const QFontMetrics markerMetrics(typography::bold(rulerFont));
+    const QFontMetrics tickMetrics(rulerFont);
+    return markerRowHeight(markerMetrics) + tickMetrics.height() + lyt::singlePixel();
+}
+
+namespace {
+
+QString gridDivisionText(int minDenom)
+{
+    return minDenom == 0 ? SongView::tr("Auto") : QStringLiteral("1/%1").arg(minDenom);
+}
+
+} // namespace
+
+QString TimeRuler::divisionText() const
+{
+    return m_divisionText;
+}
+
+QString TimeRuler::feelText() const
+{
+    return m_feelText;
+}
+
+QString TimeRuler::divisionToolTip() const
+{
+    return SongView::tr("Finest drawn subdivision. Auto follows the zoom down to "
+                        "the mid2agb clock grid; edits snap one step finer than "
+                        "the drawn grid.");
+}
+
+QString TimeRuler::feelToolTip() const
+{
+    return SongView::tr("Straight or triplet beat subdivisions.");
+}
+
+bool TimeRuler::gridControlsEnabled() const noexcept
+{
+    return m_gridControlsEnabled;
+}
+
+QVariantMap TimeRuler::gridControlAppearance() const
+{
+    return m_gridControlAppearance;
+}
+
+void TimeRuler::syncGridControls()
+{
+    const QString division = gridDivisionText(m_grid.minDenom());
+    const QString feel =
+        m_grid.feel() == GridFeel::Triplet ? SongView::tr("Triplet") : SongView::tr("Straight");
+    const bool enabled = m_inputHost != nullptr;
+    if (m_divisionText == division && m_feelText == feel && m_gridControlsEnabled == enabled)
+        return;
+
+    m_divisionText = division;
+    m_feelText = feel;
+    m_gridControlsEnabled = enabled;
+    emit gridControlsChanged();
+}
+
+void TimeRuler::syncGridControlAppearance()
+{
+    QVariantMap appearance;
+    appearance.insert(QStringLiteral("primaryText"),
+                      QVariant::fromValue(themes::color(themes::Role::song_view_primary_text)));
+    appearance.insert(QStringLiteral("buttonBackground"),
+                      QVariant::fromValue(themes::color(themes::Role::combo_background)));
+    appearance.insert(QStringLiteral("buttonText"),
+                      QVariant::fromValue(themes::color(themes::Role::combo_text)));
+    appearance.insert(QStringLiteral("buttonOutline"),
+                      QVariant::fromValue(themes::color(themes::Role::combo_outline)));
+    appearance.insert(
+        QStringLiteral("buttonHoverBackground"),
+        QVariant::fromValue(themes::color(themes::Role::combo_drop_down_hover_background)));
+    appearance.insert(
+        QStringLiteral("buttonPressedBackground"),
+        QVariant::fromValue(themes::color(themes::Role::combo_drop_down_pressed_background)));
+    appearance.insert(QStringLiteral("font"),
+                      QVariant::fromValue(m_inputHost ? m_inputHost->font() : m_owner.font()));
+    if (m_gridControlAppearance == appearance)
+        return;
+
+    m_gridControlAppearance = std::move(appearance);
+    emit gridControlAppearanceChanged();
+}
+
+void TimeRuler::openDivisionMenu(QPointF position)
+{
+    openGridMenu(position, true);
+}
+
+void TimeRuler::openFeelMenu(QPointF position)
+{
+    openGridMenu(position, false);
+}
+
+void TimeRuler::openGridMenu(QPointF position, bool division)
+{
+    if (!m_inputHost || !m_gridControlsEnabled)
+        return;
+
+    QMenu menu(&m_owner);
+    if (division) {
+        for (const int denom : {0, 4, 8, 16, 32}) {
+            QAction *const action = menu.addAction(gridDivisionText(denom));
+            action->setData(denom);
+            action->setCheckable(true);
+            action->setChecked(m_grid.minDenom() == denom);
+        }
+    } else {
+        for (const GridFeel feel : {GridFeel::Straight, GridFeel::Triplet}) {
+            QAction *const action = menu.addAction(
+                feel == GridFeel::Triplet ? SongView::tr("Triplet") : SongView::tr("Straight"));
+            action->setData(static_cast<int>(feel));
+            action->setCheckable(true);
+            action->setChecked(m_grid.feel() == feel);
+        }
     }
-    row->addStretch(1);
-    QObject::connect(m_divCombo, &QComboBox::activated, this, [this](int index) {
-        m_owner.setGridMinDenom(m_divCombo->itemData(index).toInt());
-    });
-    QObject::connect(m_feelCombo, &QComboBox::activated, this, [this](int index) {
-        m_owner.setGridFeel(index == 1 ? songview::GridFeel::Triplet
-                                       : songview::GridFeel::Straight);
-    });
+
+    m_openMenu = &menu;
+    QAction *const action = menu.exec(m_inputHost->mapToGlobal(position).toPoint());
+    if (m_openMenu.data() == &menu)
+        m_openMenu.clear();
+    if (!action)
+        return;
+
+    if (division)
+        m_owner.setGridMinDenom(action->data().toInt());
+    else
+        m_owner.setGridFeel(static_cast<GridFeel>(action->data().toInt()));
 }
 
-// Combo state from the view (setters, setSong reset, sidecar apply);
-// setCurrentIndex is safe because the handlers hang off activated(),
-// which only fires on user picks.
-void TimeRulerControls::syncFromView()
+void TimeRuler::closePopups()
 {
-    m_divCombo->setCurrentIndex(std::max(0, m_divCombo->findData(m_owner.grid().minDenom())));
-    m_feelCombo->setCurrentIndex(m_owner.grid().feel() == songview::GridFeel::Triplet ? 1 : 0);
-}
-
-void TimeRulerControls::closePopups()
-{
-    m_divCombo->hidePopup();
-    m_feelCombo->hidePopup();
+    if (m_openMenu)
+        m_openMenu->close();
 }
 
 TimeRuler::TimeRuler(SongView &owner)
-    : m_owner(owner)
+    : QObject()
+    , m_owner(owner)
     , m_camera(owner.camera())
     , m_grid(owner.grid())
     , m_geometry(Geometry::resolve())
 {
-    const auto markerRowPadding = lyt::singlePixel();
-    m_rulerFont = typography::bodyMono(typography::caption(owner.font()));
-    m_rulerFont.setPixelSize(std::max(m_geometry.timeRulerMinimumFontPixelSize,
-                                      m_rulerFont.pixelSize() - lyt::singlePixel()));
-    m_rulerFont.setLetterSpacing(QFont::AbsoluteSpacing, m_geometry.timeRulerLetterSpacing);
+    m_rulerFont = resolveRulerFont(m_geometry);
     m_beatFont = m_rulerFont;
     m_beatFont.setPixelSize(std::max(m_geometry.timeRulerMinimumFontPixelSize,
                                      m_beatFont.pixelSize() - lyt::singlePixel()));
-    m_signatureFont = typography::bold(owner.font());
+    m_signatureFont = typography::bold(*typography::bodyFont());
     m_boldRulerFont = typography::bold(m_rulerFont);
     m_rulerMetrics = QFontMetrics(m_rulerFont);
     m_beatMetrics = QFontMetrics(m_beatFont);
     m_boldRulerMetrics = QFontMetrics(m_boldRulerFont);
     m_signatureMetrics = QFontMetrics(m_signatureFont);
-    m_markerHeight = m_boldRulerMetrics.height() + markerRowPadding;
+    m_markerHeight = markerRowHeight(m_boldRulerMetrics);
+    syncGridControls();
+    syncGridControlAppearance();
 }
 
 void TimeRuler::attachInputHost(TimelineInputHost &host)
 {
     Q_ASSERT(!m_inputHost);
     m_inputHost = &host;
+    syncGridControls();
+    syncGridControlAppearance();
     requestQuickUpdate();
 }
 
@@ -115,8 +224,11 @@ void TimeRuler::detachInputHost(TimelineInputHost &host)
     Q_ASSERT(m_inputHost == &host);
     if (m_inputHost != &host)
         return;
+    closePopups();
     cancelInteraction();
     m_inputHost = nullptr;
+    syncGridControls();
+    syncGridControlAppearance();
 }
 
 void TimeRuler::requestQuickUpdate()
@@ -148,6 +260,7 @@ void TimeRuler::cancelInteraction()
 
 void TimeRuler::hostAppearanceChanged()
 {
+    syncGridControlAppearance();
     requestQuickUpdate();
 }
 

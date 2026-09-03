@@ -1,16 +1,17 @@
+#include "checks/rollcheck/headerchecksupport.h"
 #include "checks/rollcheck/rollcheck.h"
 
 #include <QApplication>
 #include <QColor>
 #include <QEvent>
 #include <QImage>
-#include <QPixmap>
+#include <QMenu>
 #include <QPoint>
 #include <QRectF>
 #include <QTimer>
-#include <QWidget>
 #include <algorithm>
 #include <cmath>
+#include <optional>
 #include <vector>
 
 #include "checks/support/eventsynth.h"
@@ -21,8 +22,14 @@
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/trackheadermodel.h"
+
 namespace checks::rollcheck {
-namespace {} // namespace
+
+using headercheck::captureBand;
+using headercheck::model;
+using headercheck::recordsMatchTimeline;
+using headercheck::rowForTrack;
 
 ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const ResizeFixture &fixture)
 {
@@ -118,6 +125,12 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
                            : nullptr;
     const std::optional<songview::TimelineBandGeometry> rulerBand =
         view.timelineBandLayout().geometry(songview::TimelineBand::Ruler);
+    auto *headers = model(view);
+    if (!headers) {
+        fail("could not find the Quick track-header model");
+    } else if (!recordsMatchTimeline(*headers, check.timeline(), doc.canAddTrack())) {
+        fail("Quick header records did not match the current timeline");
+    }
     if (rulerInput && rulerBand) {
         const qreal rulerDpr = rulerInput->devicePixelRatio();
         const qreal rulerOrigin = view.timelinePlotOrigin();
@@ -160,11 +173,15 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
                     scopedGhost = &note;
             }
         }
-        QWidget *secondaryHeader =
-            scopedGhost ? view.findChild<QWidget *>(
-                              QStringLiteral("trackHeaderRow%1").arg(scopedGhost->track))
-                        : nullptr;
-        const QImage plainHeader = secondaryHeader ? secondaryHeader->grab().toImage() : QImage{};
+        const std::optional<int> secondaryRecord =
+            scopedGhost && headers ? rowForTrack(*headers, scopedGhost->track) : std::nullopt;
+        const QColor plainOverlay = secondaryRecord
+                                        ? headers
+                                              ->data(headers->index(*secondaryRecord, 0),
+                                                     songview::TrackHeaderModel::OverlayColorRole)
+                                              .value<QColor>()
+                                        : QColor{};
+        const QImage plainHeaderFrame = secondaryRecord ? captureBand(check, view) : QImage{};
         // Ctrl is captured at press even though it is absent from move/release.
         checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, start, Qt::LeftButton,
                                   Qt::LeftButton, Qt::ControlModifier);
@@ -276,10 +293,30 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
             view.selectionModel().setTimeSelection(
                 {startTick, endTick, songview::EditorSelectionModel::TimeSelection::Tracks});
             QCoreApplication::processEvents();
-            const QImage selectedHeader =
-                secondaryHeader ? secondaryHeader->grab().toImage() : QImage{};
-            if (plainHeader.isNull() || selectedHeader.isNull() || plainHeader == selectedHeader)
-                fail("time-scoped secondary header did not render its selection indicator");
+            if (!headers || !secondaryRecord) {
+                fail("time-scoped secondary track has no TrackHeaderModel record");
+            } else {
+                const QColor selectedOverlay =
+                    headers
+                        ->data(headers->index(*secondaryRecord, 0),
+                               songview::TrackHeaderModel::OverlayColorRole)
+                        .value<QColor>();
+                if (plainOverlay == selectedOverlay)
+                    fail("time-scoped secondary header did not publish its selection role");
+
+                const QImage selectedHeaderFrame = captureBand(check, view);
+                if (plainHeaderFrame.isNull() || selectedHeaderFrame.isNull()) {
+                    fail("could not capture the time-scoped secondary header");
+                } else if (plainHeaderFrame == selectedHeaderFrame) {
+                    QCoreApplication::processEvents();
+                    const QImage repaintedHeaderFrame = captureBand(check, view);
+                    if (repaintedHeaderFrame.isNull()) {
+                        fail("could not recapture the time-scoped secondary header");
+                    } else if (plainHeaderFrame == repaintedHeaderFrame) {
+                        fail("time-scoped secondary header did not render its selection indicator");
+                    }
+                }
+            }
         }
         const QPointF outsideSelection(
             view.camera().displayX(double(endTick + snapCell), rulerOrigin, rulerDpr),
@@ -299,11 +336,10 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
         if (view.selectionModel().timeSelection().active())
             fail("right-dragging the timeline ruler still created a time selection");
         QTimer::singleShot(0, [] {
-            if (QWidget *menu = QApplication::activePopupWidget()) {
+            if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget()))
                 menu->close();
-            } else if (QWidget *menu = QApplication::activeModalWidget()) {
+            else if (auto *menu = qobject_cast<QMenu *>(QApplication::activeModalWidget()))
                 menu->close();
-            }
         });
         checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, end, Qt::RightButton,
                                   Qt::NoButton, Qt::NoModifier);

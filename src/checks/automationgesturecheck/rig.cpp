@@ -3,9 +3,12 @@
 #include <QAction>
 #include <QCoreApplication>
 #include <QEventLoop>
+#include <QGuiApplication>
 #include <QImage>
 #include <QMouseEvent>
+#include <QQuickWindow>
 #include <QTimer>
+#include <QWidget>
 #include <QWindow>
 #include <algorithm>
 #include <cstring>
@@ -28,6 +31,11 @@
 namespace {
 constexpr double kCheckSampleRate = 48000.0;
 
+const QWidget *automationHostWidget(const AutomationPage &page)
+{
+    return qobject_cast<const SongView *>(page.parent());
+}
+
 // Rig helpers speak content coordinates; normalized TimelinePointerInput
 // values speak viewport coordinates, so convert once here and map globals
 // through the recorded host.
@@ -44,7 +52,7 @@ songview::TimelinePointerInput pointerInput(const AutomationGestureCheckRig &rig
 
 AutomationInputHost::AutomationInputHost(const AutomationPage &page)
     : m_page(page)
-    , m_dpr(page.devicePixelRatioF())
+    , m_dpr(qGuiApp->devicePixelRatio())
 {}
 
 QCursor AutomationInputHost::cursor() const noexcept
@@ -120,12 +128,16 @@ qreal AutomationInputHost::devicePixelRatio() const
 
 QFont AutomationInputHost::font() const
 {
-    return m_page.font();
+    if (const QWidget *view = automationHostWidget(m_page))
+        return view->font();
+    return qGuiApp->font();
 }
 
 QPalette AutomationInputHost::palette() const
 {
-    return m_page.palette();
+    if (const QWidget *view = automationHostWidget(m_page))
+        return view->palette();
+    return qGuiApp->palette();
 }
 
 QPointF AutomationInputHost::mapFromGlobal(QPointF position) const
@@ -273,8 +285,7 @@ QSize AutomationGestureCheckRig::automationViewportSize() const noexcept
 
 void AutomationGestureCheckRig::resizeAutomationViewport(const QSize &size)
 {
-    if (QWidget *viewport = page().scrollViewport())
-        viewport->resize(size);
+    page().synchronizeAutomationViewport(size);
 }
 
 void AutomationGestureCheckRig::canvasHostAppearanceChanged()
@@ -299,7 +310,9 @@ const songview::TimelineQuickScene &AutomationGestureCheckRig::quickScene() cons
 
 QAction *AutomationGestureCheckRig::pencilModeAction() const noexcept
 {
-    for (QAction *action : m_page->actions()) {
+    if (!m_view)
+        return nullptr;
+    for (QAction *action : m_view->actions()) {
         if (action->text() == QStringLiteral("Pencil Mode"))
             return action;
     }
@@ -446,22 +459,16 @@ QRect AutomationGestureCheckRig::automationViewportInContent() const
 
 QImage AutomationGestureCheckRig::renderAutomationViewport(QString *error)
 {
-    QWidget *const viewport = page().scrollViewport();
-    if (!viewport) {
-        if (error)
-            *error = QStringLiteral("Automation scroll viewport is unavailable");
-        return {};
-    }
-    return checks::support::captureQuickBand(view(), *viewport, error);
+    const auto &geometry = view().timelineBandLayout().geometry(songview::TimelineBand::Automation);
+    return checks::support::captureQuickBand(view(), geometry ? geometry->rect : QRect{}, error);
 }
 
 QImage AutomationGestureCheckRig::renderAutomationContent(const QRect &contentRect, QString *error)
 {
     const QRect viewportRect = automationContentToViewport(contentRect);
-    QWidget *const viewport = page().scrollViewport();
-    if (!viewport || !viewport->rect().contains(viewportRect)) {
+    if (!QRect{QPoint(0, 0), page().automationViewportSize()}.contains(viewportRect)) {
         if (error)
-            *error = QStringLiteral("Automation content crop is outside the scroll viewport");
+            *error = QStringLiteral("Automation content crop is outside the automation viewport");
         return {};
     }
     const QImage viewportImage = renderAutomationViewport(error);
@@ -708,12 +715,16 @@ bool AutomationGestureCheckRig::initialize(QString &error)
                             ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(
                                   QStringLiteral("timelineAutomationInput"))
                             : nullptr;
+    if (m_productionInput) {
+        m_inputHost->setGlobalOffset(m_productionInput->mapToGlobal(QPointF{}));
+        if (const QQuickWindow *window = m_productionInput->window())
+            m_inputHost->setDevicePixelRatio(window->devicePixelRatio());
+    }
     m_productionInteraction = m_productionInput ? m_productionInput->interaction() : nullptr;
     if (m_productionInput && m_productionInteraction)
         m_productionInput->setInteraction(nullptr);
     m_page->canvas()->attachInputHost(*m_inputHost);
     m_page->canvas()->hostAppearanceChanged();
-    m_page->resize(960, 360);
     m_page->songChanged();
     m_live.documentRevision = songDocument.revision();
     m_live.editCursorTick = 24;
@@ -721,7 +732,6 @@ bool AutomationGestureCheckRig::initialize(QString &error)
     m_live.timeZoom = m_view->camera().pxPerBeat();
     m_live.horizontalScroll = m_view->camera().scrollX();
     m_page->refreshLiveState(m_live);
-    m_page->show();
     pump();
     return true;
 }

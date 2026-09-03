@@ -2,8 +2,8 @@
 
 #include <cstdint>
 
+#include <QObject>
 #include <QSize>
-#include <QWidget>
 
 #include "ui/editordrawer/drawerpage.h"
 #include "ui/editorviewstate.h"
@@ -12,7 +12,6 @@
 
 class QAction;
 class QEvent;
-class QObject;
 class AutomationCanvas;
 class TempoLane;
 class CCLanes;
@@ -27,21 +26,25 @@ class Grid;
 struct TimelineWheelInput;
 } // namespace songview
 
-// The concrete automation page owns its scroll surface and keeps a stable
+// The concrete automation page owns its scroll state and keeps a stable
 // SongView owner for shared song data and editor routing.
-class AutomationPage final : public QWidget
+class AutomationPage final : public QObject
 {
+    Q_OBJECT
+    Q_DISABLE_COPY_MOVE(AutomationPage)
+
   public:
-    explicit AutomationPage(SongView &owner, QWidget *parent = nullptr);
+    explicit AutomationPage(SongView &owner, QObject *parent);
     ~AutomationPage() override;
 
     AutomationCanvas *canvas() noexcept { return m_canvas; }
     const AutomationCanvas *canvas() const noexcept { return m_canvas; }
-    QWidget *scrollViewport() const noexcept;
     QSize automationViewportSize() const noexcept;
     int automationContentHeight() const noexcept;
     int verticalScroll() const noexcept;
-    bool event(QEvent *event) override;
+    void setVerticalScroll(int value);
+    bool scrollVertically(const songview::TimelineWheelInput &input);
+    void synchronizeAutomationViewport(QSize viewportSize);
     bool eventFilter(QObject *watched, QEvent *event) override;
     const EditorViewState &automationViewState() const noexcept { return m_viewState; }
     const SongViewModel &model() const noexcept;
@@ -53,6 +56,9 @@ class AutomationPage final : public QWidget
     void addEmptyLane(int track, uint8_t controller);
     void removeEmptyLane(int track, uint8_t controller);
     void setLaneRange(const EditorAutomationRowId &row, uint8_t range);
+
+  signals:
+    void scrollStateChanged();
 
   private:
     friend class AutomationCanvas;
@@ -71,13 +77,8 @@ class AutomationPage final : public QWidget
         static Geometry resolve();
     };
 
-    void synchronizeAutomationViewport();
-    void setVerticalScroll(int value);
-    bool scrollVertically(const songview::TimelineWheelInput &input);
-    int scrollGutter() const noexcept;
     int laneHeightFor(const EditorAutomationRowId &row) const noexcept;
     bool scaleSharedHeight(int wheelSteps, const AutomationGeometry &geometry);
-    class ScrollArea;
     bool ready() const noexcept;
     const DrawerPageLiveState &liveState() const noexcept { return m_liveState; }
     const MidiTimeline *timeline() const noexcept;
@@ -116,8 +117,9 @@ class AutomationPage final : public QWidget
     QAction *m_pencilModeAction = nullptr;
     DrawerPageLiveState m_liveState;
     EditorViewState m_viewState;
-    ScrollArea *m_scroll = nullptr;
     AutomationCanvas *m_canvas = nullptr;
-    int m_automationContentHeight = 0;
+    int m_scrollY = 0;
+    int m_contentHeight = 0;
+    QSize m_viewportSize;
     qreal m_verticalWheelRemainder = 0.0;
 };

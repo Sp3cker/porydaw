@@ -51,7 +51,7 @@ void AutomationCanvas::showTimeSelectionMenuFor(LaneHandle contextLane,
             m_inputHost->requestFocus(Qt::PopupFocusReason);
         return;
     }
-    QMenu menu(&m_page);
+    QMenu menu(&m_page.m_owner);
     QAction *clear = menu.addAction(tr("Clear time selection"));
     const QAction *chosen = menu.exec(globalPosition);
     if (m_inputHost)
@@ -92,7 +92,7 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPoint &globalPo
                 std::nullopt,
                 true};
         });
-    QMenu menu(&m_page);
+    QMenu menu(&m_page.m_owner);
     QAction *copy = menu.addAction(kind.copyLabel);
     copy->setEnabled(!points.empty());
     QAction *paste = menu.addAction(kind.pasteLabel);
@@ -163,7 +163,7 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPoint &globalPo
         const uint8_t controller = rowId.controller;
         if (!points.empty()) {
             const auto answer = QMessageBox::question(
-                &m_page, tr("Delete CC lane"),
+                &m_page.m_owner, tr("Delete CC lane"),
                 tr("Delete the %1 CC lane and its %2 events?").arg(laneTitle).arg(points.size()));
             if (m_inputHost)
                 m_inputHost->requestFocus(Qt::PopupFocusReason);
@@ -199,7 +199,7 @@ void AutomationCanvas::showAddLaneMenu(const QPoint &globalPosition)
     for (const xcmd::Descriptor &descriptor : xcmd::laneDescriptors())
         candidates.push_back(descriptor.laneController);
     candidates.push_back(CCLanes::bendController());
-    QMenu menu(&m_page);
+    QMenu menu(&m_page.m_owner);
     std::vector<EditorAutomationRowId> hidden;
     for (const uint8_t controller : candidates) {
         const auto row = laneRow(track, controller);

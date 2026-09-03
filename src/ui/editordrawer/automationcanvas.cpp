@@ -19,10 +19,9 @@
 
 void AutomationCanvas::refreshGeometry()
 {
-    const int leftScrollbarGutter =
-        m_page.scrollViewport()->layoutDirection() == Qt::RightToLeft ? m_page.scrollGutter() : 0;
-    m_geometry.plotOrigin =
-        std::max(layout::space(layout::Space::Zero), m_geometry.plotOrigin - leftScrollbarGutter);
+    m_geometry = AutomationGeometry::resolve();
+    m_geometry.plotOrigin = std::max(layout::space(layout::Space::Zero),
+                                     m_geometry.plotOrigin - layout::space(layout::Space::Two));
     const int gutterMargin = layout::space(layout::Space::One);
     m_labelGutter = QRect(
         gutterMargin, layout::space(layout::Space::Zero),
@@ -58,15 +57,15 @@ const QString &AutomationCanvas::refreshCcSummaryText(CCLanes::RowTextCache &cac
 AutomationCanvas::AutomationCanvas(AutomationPage &page)
     : QObject(&page)
     , m_geometry(AutomationGeometry::resolve())
-    , m_laneTitleFont(typography::bold(typography::caption(page.font())))
-    , m_laneCaptionFont(typography::regular(typography::caption(page.font())))
+    , m_laneTitleFont(typography::bold(typography::caption(page.m_owner.font())))
+    , m_laneCaptionFont(typography::regular(typography::caption(page.m_owner.font())))
     , m_laneTextLayout(layout::twoLineText(m_laneTitleFont, m_laneTitleFont, m_laneCaptionFont,
                                            layout::Space::Zero))
     , m_page(page)
     , m_rowData(&page)
     , m_tempoLane(&page)
     , m_laneSelection(page.m_owner.selectionModel(), m_rowData.rows(), page.usedTrackMask())
-    , m_hoverState(page.font())
+    , m_hoverState(page.m_owner.font())
 {
     refreshGeometry();
 }
@@ -118,7 +117,7 @@ void AutomationCanvas::relayoutContent()
 void AutomationCanvas::contentGeometryChanged()
 {
     relayoutContent();
-    m_page.synchronizeAutomationViewport();
+    m_page.synchronizeAutomationViewport(m_page.automationViewportSize());
     syncHoverValueLabel();
     syncPreviewValueLabel();
     requestFullQuickUpdate();
@@ -607,7 +606,7 @@ bool AutomationCanvas::showPointMenuNear(LaneHandle handle, const QPoint &positi
         return false;
     LaneHandle target = handle;
     NodePoint targetPoint = point;
-    ui::ContextMenu menu(&m_page);
+    ui::ContextMenu menu(&m_page.m_owner);
     QAction *setValue = menu.addAction(tr("Set Value"));
     QAction *deletePoint = menu.addAction(tr("Delete"));
     menu.setOutsideRightClickHandler([this, &menu, &target, &targetPoint](QPointF globalPos) {
@@ -631,7 +630,7 @@ bool AutomationCanvas::showPointMenuNear(LaneHandle handle, const QPoint &positi
     if (chosen == setValue) {
         int stored = targetPoint.value;
         const NodeLane *lane = mutableLane(target);
-        const bool accepted = lane->promptValue(&m_page, stored, &stored);
+        const bool accepted = lane->promptValue(&m_page.m_owner, stored, &stored);
         if (accepted && stored != targetPoint.value) {
             const NodeDrag drag{target,
                                 targetPoint,

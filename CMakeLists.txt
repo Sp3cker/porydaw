@@ -172,13 +172,8 @@ qt_add_library(porydaw_app STATIC
     src/audio/sf2reader.h
     src/ui/activity/trackactivity.cpp
     src/ui/activity/trackactivity.h
-    src/ui/activity/trackactivitypresentation.cpp
-    src/ui/activity/trackactivitypresentation.h
-    src/ui/activity/trackactivitypresentation_p.h
     src/ui/activity/trackactivityrender.cpp
     src/ui/activity/trackactivityrender.h
-    src/ui/activity/trackactivityview.cpp
-    src/ui/activity/trackactivityview.h
     src/core/mid2agbtables.cpp
     src/core/mid2agbtables.h
     src/core/miditimeline.cpp
@@ -283,10 +278,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/otherstrip.h
     src/ui/songview/voicepicker.cpp
     src/ui/songview/voicepicker.h
-    src/ui/songview/trackheaderrow.cpp
-    src/ui/songview/trackheaderrow.h
-    src/ui/songview/trackheaderpanel.cpp
-    src/ui/songview/trackheaderpanel.h
+    src/ui/songview/trackheadermodel.cpp
+    src/ui/songview/trackheadermodel.h
     src/ui/songview/editorselectionmodel.cpp
     src/ui/songview/editorselectionmodel.h
     src/ui/songview/detail.cpp
@@ -357,6 +350,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/editordrawer.h
     src/ui/editordrawer/drawersections.cpp
     src/ui/editordrawer/drawersections.h
+    src/ui/editordrawer/drawerchrome.cpp
+    src/ui/editordrawer/drawerchrome.h
     src/ui/editordrawer/automationcanvas.cpp
     src/ui/editordrawer/automationcanvas_gesture.cpp
     src/ui/editordrawer/automationcanvas_input.cpp
@@ -396,7 +391,6 @@ if(APPLE)
     target_sources(porydaw_app PRIVATE
         src/ui/nativelayerutils_macos_p.h
         src/ui/playheadrenderer_macos.mm
-        src/ui/activity/trackactivityrenderer_macos.mm
     )
     find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
     find_library(QUARTZCORE_FRAMEWORK QuartzCore REQUIRED)
@@ -438,8 +432,28 @@ set_source_files_properties(
     PROPERTIES QT_RESOURCE_ALIAS PianoRollCanvas.qml
 )
 set_source_files_properties(
-    src/ui/activity/TrackActivityView.qml
-    PROPERTIES QT_RESOURCE_ALIAS TrackActivityView.qml
+    src/ui/songview/quick/TimelineScrollbar.qml
+    PROPERTIES QT_RESOURCE_ALIAS TimelineScrollbar.qml
+)
+set_source_files_properties(
+    src/ui/songview/quick/RulerControls.qml
+    PROPERTIES QT_RESOURCE_ALIAS RulerControls.qml
+)
+set_source_files_properties(
+    src/ui/songview/quick/RulerToolTip.qml
+    PROPERTIES QT_RESOURCE_ALIAS RulerToolTip.qml
+)
+set_source_files_properties(
+    src/ui/songview/quick/TrackHeaderBand.qml
+    PROPERTIES QT_RESOURCE_ALIAS TrackHeaderBand.qml
+)
+set_source_files_properties(
+    src/ui/songview/quick/TrackHeaderToolTip.qml
+    PROPERTIES QT_RESOURCE_ALIAS TrackHeaderToolTip.qml
+)
+set_source_files_properties(
+    src/ui/songview/quick/DrawerChromeLayer.qml
+    PROPERTIES QT_RESOURCE_ALIAS DrawerChromeLayer.qml
 )
 qt_add_qml_module(porydaw_app
     URI Porydaw.Ui
@@ -449,7 +463,12 @@ qt_add_qml_module(porydaw_app
     QML_FILES
         src/ui/songview/quick/TimelineCanvas.qml
         src/ui/songview/quick/PianoRollCanvas.qml
-        src/ui/activity/TrackActivityView.qml
+        src/ui/songview/quick/TimelineScrollbar.qml
+        src/ui/songview/quick/RulerControls.qml
+        src/ui/songview/quick/RulerToolTip.qml
+        src/ui/songview/quick/TrackHeaderBand.qml
+        src/ui/songview/quick/TrackHeaderToolTip.qml
+        src/ui/songview/quick/DrawerChromeLayer.qml
 )
 target_precompile_headers(porydaw_app PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
@@ -567,6 +586,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/transportcheck.cpp
         src/checks/trackactivitycheck.cpp
         src/checks/trackactivitymetercheck.cpp
+        src/checks/trackheaderquickcheck.cpp
         src/checks/audiocheck.cpp
         src/checks/resonancecheck.cpp
         src/checks/mkcheck.cpp
@@ -622,7 +642,6 @@ if(PORYDAW_BUILD_CHECKS)
     )
     if(APPLE)
         target_sources(porydaw_checks PRIVATE
-            src/checks/trackactivitymetercheck_macos.mm
             src/checks/rollcheckplayhead_macos.mm
         )
     endif()

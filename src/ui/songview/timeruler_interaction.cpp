@@ -229,6 +229,7 @@ bool TimeRuler::wheel(const TimelineWheelInput &input)
 
 void TimeRuler::inputCancelled(TimelineInputCancelReason)
 {
+    closePopups();
     cancelInteraction();
 }
 
@@ -271,7 +272,10 @@ void TimeRuler::showRulerMenu(uint64_t clickTick, const QPoint &globalPos)
                                              : SongView::tr("Set time signature here…"));
     QAction *removeSig = menu.addAction(SongView::tr("Remove time signature"));
     removeSig->setEnabled(onChip && !sigImplicit);
+    m_openMenu = &menu;
     QAction *chosen = menu.exec(globalPos);
+    if (m_openMenu.data() == &menu)
+        m_openMenu.clear();
     if (chosen == setStart) {
         doc->setLoopTick(false, int64_t(clickTick));
     } else if (chosen == setEnd) {

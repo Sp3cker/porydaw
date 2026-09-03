@@ -76,9 +76,9 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
     const std::vector<DocLanePoint> originalLfo = document.lanePoints(0, 21);
     const AutomationBandInput band{page, *automationInputItem(view)};
     const qreal dpr = band.item.devicePixelRatio();
-    const auto assertPageParent = [&](const QMenu *menu) {
-        popupCheck(menu->parentWidget() == &page,
-                   QStringLiteral("automation context menu was not parented to AutomationPage"));
+    const auto assertSongViewParent = [&](const QMenu *menu) {
+        popupCheck(menu->parentWidget() == &view,
+                   QStringLiteral("automation context menu was not parented to SongView"));
     };
 
     const auto menuAction = [&](const QPointF &position, const QString &trigger,
@@ -88,7 +88,7 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
             auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
             if (!menu)
                 return;
-            assertPageParent(menu);
+            assertSongViewParent(menu);
             QAction *selected = nullptr;
             for (QAction *action : menu->actions()) {
                 if (actions)
@@ -135,7 +135,7 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
     bool leftGutterMenuOpened = false;
     QTimer::singleShot(0, [&] {
         if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget())) {
-            assertPageParent(menu);
+            assertSongViewParent(menu);
             leftGutterMenuOpened = true;
             menu->close();
         }
@@ -154,7 +154,7 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
         auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
         if (!menu)
             return;
-        assertPageParent(menu);
+        assertSongViewParent(menu);
         for (QAction *action : menu->actions())
             addLaneActions.push_back(action->text());
         menu->close();
@@ -177,7 +177,7 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
         auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
         if (!menu)
             return;
-        assertPageParent(menu);
+        assertSongViewParent(menu);
         for (QAction *action : menu->actions())
             ccLaneActions.push_back(action->text());
         menu->close();
@@ -206,7 +206,7 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
         auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
         if (!menu)
             return;
-        assertPageParent(menu);
+        assertSongViewParent(menu);
         for (QAction *action : menu->actions())
             tempoHeaderActions.push_back(action->text());
         menu->close();
@@ -235,7 +235,7 @@ void checkAutomationLanePopupMenus(SongView &view, AutomationPage &page, SongDoc
         auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
         if (!menu)
             return;
-        assertPageParent(menu);
+        assertSongViewParent(menu);
         for (QAction *action : menu->actions())
             tempoNodeActions.push_back(action->text());
         menu->close();

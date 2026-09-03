@@ -10,10 +10,7 @@
 #include <QEvent>
 #include <QPoint>
 #include <QRegion>
-#include <QScrollArea>
-#include <QScrollBar>
 #include <QUndoStack>
-#include <QWidget>
 
 #include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
@@ -173,22 +170,24 @@ std::optional<CcCoverageLane> ccCoveredBy(const AutomationPage &page, const QRec
     return std::nullopt;
 }
 
-std::optional<CcCoverageLane> scrollToCollapsedCcOverlap(AutomationPage &page, QScrollArea &scroll,
-                                                         int headerHeight)
+int automationMaximumScrollY(const AutomationPage &page)
 {
-    QScrollBar *bar = scroll.verticalScrollBar();
-    if (!bar || !scroll.viewport())
-        return std::nullopt;
-    const int viewportHeight = scroll.viewport()->height();
+    return std::max(0, page.automationContentHeight() - page.automationViewportSize().height());
+}
+
+std::optional<CcCoverageLane> scrollToCollapsedCcOverlap(AutomationPage &page, int headerHeight)
+{
+    const int viewportHeight = page.automationViewportSize().height();
+    const int maximumScrollY = automationMaximumScrollY(page);
     const auto &rows = page.canvas()->rows();
     for (int index = 0; index < int(rows.size()); ++index) {
         const QRect body = page.canvas()->laneBody(LaneHandle{index + 1});
         if (body.isEmpty())
             continue;
         const int value = body.center().y() - viewportHeight + headerHeight;
-        if (value < bar->minimum() || value > bar->maximum())
+        if (value < 0 || value > maximumScrollY)
             continue;
-        bar->setValue(value);
+        page.setVerticalScroll(value);
         pump();
         if (auto cc = ccCoveredBy(page, page.canvas()->pinnedTempoRect()))
             return cc;
@@ -214,25 +213,25 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
         return;
     const AutomationGeometry geometry = AutomationGeometry::resolve();
 
-    const int originalPageHeight = page.height();
     const int originalSectionHeight = view.drawerSectionHeight(EditorDrawerPage::Automations);
-    const int sectionChromeHeight = std::max(0, originalSectionHeight - originalPageHeight);
-    QScrollArea *scroll = page.findChild<QScrollArea *>(QStringLiteral("automationScroll"));
-    const int originalScroll =
-        scroll && scroll->verticalScrollBar() ? scroll->verticalScrollBar()->value() : 0;
+    const auto automationBandRect = [&]() -> QRect {
+        const auto &bandGeometry =
+            view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
+        return bandGeometry ? bandGeometry->rect : QRect{};
+    };
+    const int sectionOverhead = std::max(0, originalSectionHeight - automationBandRect().height());
+    const int originalScroll = page.verticalScroll();
     const auto originalSelection = view.selectionModel().timeSelection();
     view.setDrawerSectionHeight(EditorDrawerPage::Automations,
-                                2 * geometry.rowDefaultHeight + sectionChromeHeight);
+                                2 * geometry.rowDefaultHeight + sectionOverhead);
     pump();
     refresh(page, document, live);
-    if (scroll && scroll->verticalScrollBar()) {
-        scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->minimum());
-        pump();
-    }
+    page.setVerticalScroll(0);
+    pump();
 
     QRect expandedTempo = page.canvas()->laneBody(LaneHandle{0});
-    if (scroll && !expandedTempo.isEmpty()) {
-        scrollToCollapsedCcOverlap(page, *scroll, expandedTempo.height());
+    if (!expandedTempo.isEmpty()) {
+        scrollToCollapsedCcOverlap(page, expandedTempo.height());
         expandedTempo = page.canvas()->laneBody(LaneHandle{0});
     }
     const auto expandedCc = ccCoveredBy(page, expandedTempo);
@@ -303,17 +302,15 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
 
     const bool tempoCollapsed = toggleTempoExpanded(view, page, false, failures);
     std::optional<CcCoverageLane> collapsedCc;
-    QScrollBar *const bar = scroll ? scroll->verticalScrollBar() : nullptr;
-    if (tempoCollapsed && bar && bar->maximum() > bar->minimum()) {
-        const int midpoint = bar->minimum() + (bar->maximum() - bar->minimum()) / 2;
-        bar->setValue(midpoint);
+    if (tempoCollapsed && automationMaximumScrollY(page) > 0) {
+        page.setVerticalScroll(automationMaximumScrollY(page) / 2);
         pump();
         collapsedCc = ccCoveredBy(page, page.canvas()->pinnedTempoRect());
     }
     report(collapsedCc.has_value(),
            QStringLiteral("mid-scroll collapsed Tempo header did not overlap a visible CC lane"));
-    if (!collapsedCc && tempoCollapsed && scroll)
-        collapsedCc = scrollToCollapsedCcOverlap(page, *scroll, geometry.addLaneStripHeight);
+    if (!collapsedCc && tempoCollapsed)
+        collapsedCc = scrollToCollapsedCcOverlap(page, geometry.addLaneStripHeight);
     report(collapsedCc.has_value(),
            QStringLiteral("collapsed Tempo header did not overlap a visible CC lane"));
     if (collapsedCc) {
@@ -357,11 +354,8 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
 
     view.setDrawerSectionHeight(EditorDrawerPage::Automations, originalSectionHeight);
     pump();
-    if (scroll && scroll->verticalScrollBar()) {
-        QScrollBar *bar = scroll->verticalScrollBar();
-        bar->setValue(std::clamp(originalScroll, bar->minimum(), bar->maximum()));
-        pump();
-    }
+    page.setVerticalScroll(originalScroll);
+    pump();
     view.selectionModel().setTimeSelection(originalSelection);
     refresh(page, document, live);
 }
@@ -427,13 +421,12 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
     for (int index = 0; index < int(canvas->rows().size()); ++index)
         laneStackBottom =
             std::max(laneStackBottom, canvas->laneBody(LaneHandle{index + 1}).bottom() + 1);
-    QWidget *const viewport = page.scrollViewport();
+    const int viewportHeight = page.automationViewportSize().height();
     const int neededViewportHeight = laneStackBottom + sizingGeometry.addLaneStripHeight +
                                      canvas->laneBody(LaneHandle{0}).height();
-    if (viewport && neededViewportHeight > viewport->height()) {
-        view.setDrawerSectionHeight(EditorDrawerPage::Automations, originalSectionHeight +
-                                                                       neededViewportHeight -
-                                                                       viewport->height());
+    if (neededViewportHeight > viewportHeight) {
+        view.setDrawerSectionHeight(EditorDrawerPage::Automations,
+                                    originalSectionHeight + neededViewportHeight - viewportHeight);
         pump();
         refresh(page, document, live);
     }
@@ -467,7 +460,7 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
            QStringLiteral("retained Quick automation text model was empty"));
     const QRect title = laneLabel(body, geometry, false);
     const QRect summary = laneLabel(body, geometry, true);
-    const QSize viewportSize = viewport ? viewport->size() : QSize{};
+    const QSize viewportSize = page.automationViewportSize();
     const QRectF viewportBounds(QPointF{}, QSizeF(viewportSize));
     const auto viewportLabelBounds = [&](const QRect &contentBounds) {
         return QRectF(contentBounds.translated(captureOrigin)).intersected(viewportBounds);

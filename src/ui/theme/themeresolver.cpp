@@ -409,8 +409,8 @@ Theme derive(const QColor &primary, const QColor &accent)
     theme.color(Role::tooltip_background) = recessedBackground;
     theme.color(Role::tooltip_text) = windowText;
 
-    // Lists, track headers, and polyphony values share the item surface; their
-    // separate roles keep that relationship explicit and easy to change locally.
+    // Lists and polyphony values share the item surface; their separate roles keep
+    // that relationship explicit and easy to change locally.
     const auto itemAlternateBackground = windowBackground;
     theme.color(Role::item_alternate_background) = itemAlternateBackground;
     theme.color(Role::indicator_disabled_background) = itemAlternateBackground;
@@ -420,7 +420,6 @@ Theme derive(const QColor &primary, const QColor &accent)
     const auto itemBackground =
         oklabLightness(primary) < 0.55 ? shiftOklabLightness(primary, 0.12) : primary;
     theme.color(Role::item_background) = itemBackground;
-    theme.color(Role::track_header_panel_background) = itemBackground;
     theme.color(Role::polyphony_value_background) = itemBackground;
     const auto viewHoverBackground = viewRamp.hover;
     theme.color(Role::item_hover_background) = viewHoverBackground;
@@ -432,7 +431,6 @@ Theme derive(const QColor &primary, const QColor &accent)
     // A later border change can therefore affect one widget family only.
     const auto outline = surface(0.16);
     theme.color(Role::palette_outline) = outline;
-    theme.color(Role::track_header_panel_outline) = outline;
     theme.color(Role::toolbar_outline) = outline;
     theme.color(Role::tab_outline) = outline;
     theme.color(Role::button_outline) = outline;
@@ -510,13 +508,12 @@ Theme derive(const QColor &primary, const QColor &accent)
     theme.color(Role::menu_item_pressed_text) = buttonActiveText;
     theme.color(Role::header_checked_text) = buttonActiveText;
 
-    // Item text is resolved separately from control text because lists and track
-    // headers use a different set of backgrounds.
+    // Item text is resolved separately from control text because lists use a different
+    // set of backgrounds.
     const auto itemText = stateTextColor(windowText, accent, {itemBackground}, {itemBackground});
     theme.color(Role::item_text) = itemText;
     theme.color(Role::menu_background) = itemBackground;
     theme.color(Role::menu_text) = itemText;
-    theme.color(Role::track_header_panel_text) = itemText;
     theme.color(Role::polyphony_value_text) = itemText;
     const auto viewHoverText =
         stateTextColor(windowText, accent, {viewHoverBackground},

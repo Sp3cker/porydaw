@@ -57,9 +57,12 @@ void VoiceChangeArea::detachInputHost(songview::TimelineInputHost &host)
     m_inputHost = nullptr;
 }
 
-void VoiceChangeArea::inputCancelled(songview::TimelineInputCancelReason)
+void VoiceChangeArea::inputCancelled(songview::TimelineInputCancelReason reason)
 {
-    cancelInteraction();
+    // A Quick focus transition does not end its pointer delivery. Keep an
+    // active Voice drag alive until its release or an actual pointer cancel.
+    if (reason != songview::TimelineInputCancelReason::FocusLost)
+        cancelInteraction();
 }
 
 void VoiceChangeArea::hostAppearanceChanged()

@@ -15,18 +15,19 @@
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timeruler.h"
-#include "ui/songview/trackheaderpanel.h"
+#include "ui/songview/trackheadermodel.h"
+#include "ui/typography.h"
 #include <QAbstractButton>
 #include <QAbstractSlider>
 #include <QApplication>
 #include <QDialog>
 #include <QEvent>
-#include <QFrame>
+#include <QFontMetrics>
 #include <QHBoxLayout>
 #include <QKeyEvent>
+#include <QLayout>
 #include <QPointer>
 #include <QResizeEvent>
-#include <QScrollArea>
 #include <QScrollBar>
 #include <QSizePolicy>
 #include <QSpacerItem>
@@ -49,6 +50,16 @@ using namespace songview::detail;
 
 using namespace songview;
 
+namespace {
+
+int resolveOtherEventsRowHeight()
+{
+    const QFont body = *typography::bodyFont();
+    return QFontMetrics(body).height() + lyt::space(Space::Two);
+}
+
+} // namespace
+
 SongView::Geometry SongView::Geometry::resolve()
 {
     const int trackHeaderWidth = lyt::fontPx(17.5);
@@ -68,7 +79,9 @@ SongView::Geometry SongView::Geometry::resolve()
             lyt::fontPx(4.0 / 3.0),
             1.0 / 3.0,
             lyt::fontPx(25.0 / 6.0),
-            lyt::fontPx(25.0 / 3.0)};
+            lyt::fontPx(25.0 / 3.0),
+            TimeRuler::rowHeight(),
+            resolveOtherEventsRowHeight()};
 }
 
 SongView::ViewState::ViewState()
@@ -101,32 +114,45 @@ void SongView::pushGridGeometryThresholds()
 TimelineBandLayout SongView::resolveTimelineBandLayout() const
 {
     TimelineBandLayout layout;
+    const auto publishBand = [&layout](TimelineBand band, const QRect &rect, int timelineOrigin) {
+        if (!rect.isEmpty())
+            layout.geometry(band) = {rect, timelineOrigin};
+    };
     if (m_rulerSpacer && m_ruler)
-        layout.geometry(TimelineBand::Ruler) = {m_rulerSpacer->geometry(), m_geometry.plotOrigin};
+        publishBand(TimelineBand::Ruler, m_rulerSpacer->geometry(), m_geometry.plotOrigin);
+    if (m_headerSpacer && m_rollStack) {
+        const QWidget *const rollPane = m_rollStack->parentWidget();
+        if (rollPane) {
+            QRect headerRect = m_headerSpacer->geometry();
+            headerRect.moveTopLeft(rollPane->mapTo(this, headerRect.topLeft()));
+            publishBand(TimelineBand::TrackHeaders, headerRect, 0);
+        }
+    }
     // The roll band is the retained roll page minus the vertical scrollbar
     // column. Nullopt while the event list replaces the roll page.
     if (!eventListVisible()) {
         const QWidget *rollPage = m_rollStack->widget(0);
         QRect rollRect(rollPage->mapTo(this, QPoint(0, 0)), rollPage->size());
-        rollRect.setWidth(rollRect.width() - m_vbar->width());
-        layout.geometry(TimelineBand::Roll) = {rollRect, m_geometry.pianoKeyboardWidth};
+        rollRect.setWidth(std::max(0, rollRect.width() - m_vbar->width()));
+        publishBand(TimelineBand::Roll, rollRect, m_geometry.pianoKeyboardWidth);
     }
     if (m_stripSpacer && m_strip)
-        layout.geometry(TimelineBand::OtherEvents) = {m_stripSpacer->geometry(),
-                                                      m_geometry.plotOrigin};
-    if (drawerSectionVisible(EditorDrawerPage::Automations)) {
-        const AutomationPage *automation = m_editorDrawer->automationPage();
-        const QWidget *viewport = automation->scrollViewport();
-        layout.geometry(TimelineBand::Automation) = {
-            QRect(viewport->mapTo(this, QPoint(0, 0)), viewport->size()),
-            automation->canvas()->plotOrigin()};
+        publishBand(TimelineBand::OtherEvents, m_stripSpacer->geometry(), m_geometry.plotOrigin);
+    if (const std::optional<QRect> body = m_editorDrawer->bodyRect(EditorDrawerPage::Automations)) {
+        // The band is the lane viewport: the drawer body minus the left
+        // scrollbar column; the canvas plot origin drops the same column, so
+        // the Quick plot stays aligned with the piano grid.
+        const int scrollbarWidth = lyt::space(Space::Two);
+        const int bandWidth = std::max(0, body->width() - scrollbarWidth);
+        const QRect band(body->x() + scrollbarWidth, body->y(), bandWidth, body->height());
+        publishBand(TimelineBand::Automation, band,
+                    m_editorDrawer->automationPage()->canvas()->plotOrigin());
     }
     if (const std::optional<QRect> body = m_editorDrawer->bodyRect(EditorDrawerPage::Velocity))
-        layout.geometry(TimelineBand::Velocity) = {*body,
-                                                   m_editorDrawer->velocityArea()->plotOrigin()};
+        publishBand(TimelineBand::Velocity, *body, m_editorDrawer->velocityArea()->plotOrigin());
     if (const std::optional<QRect> body = m_editorDrawer->bodyRect(EditorDrawerPage::VoiceChanges))
-        layout.geometry(TimelineBand::VoiceChanges) = {
-            *body, m_editorDrawer->voiceChangeArea()->plotOrigin()};
+        publishBand(TimelineBand::VoiceChanges, *body,
+                    m_editorDrawer->voiceChangeArea()->plotOrigin());
     return layout;
 }
 
@@ -145,17 +171,23 @@ void SongView::synchronizeTimelineBandLayout()
         m_playheadOverlay->updateBands(m_timelineBandLayout);
 }
 
-// The native ruler controls overlay the gutter of the parent-owned ruler row.
+// Refreshes the parent-owned spacer rows before their geometry reaches Quick.
 void SongView::positionBandWidgets()
 {
     if (layout())
         layout()->activate();
-    if (m_rulerControls && m_rulerSpacer) {
-        const QRect rulerRect = m_rulerSpacer->geometry();
-        m_rulerControls->setGeometry(rulerRect.x(), rulerRect.y(),
-                                     m_geometry.plotOrigin - lyt::space(Space::One),
-                                     rulerRect.height());
+    if (m_headerSpacer && m_rollStack &&
+        m_headerSpacer->sizeHint().width() != m_geometry.trackHeaderWidth) {
+        m_headerSpacer->changeSize(m_geometry.trackHeaderWidth, 0, QSizePolicy::Fixed,
+                                   QSizePolicy::Expanding);
+        QWidget *const rollPane = m_rollStack->parentWidget();
+        if (QLayout *const rollLayout = rollPane ? rollPane->layout() : nullptr) {
+            rollLayout->invalidate();
+            rollLayout->activate();
+        }
     }
+    if (m_editorDrawer)
+        m_editorDrawer->arrange();
 }
 
 SongView::SongView(QWidget *parent)
@@ -179,7 +211,7 @@ SongView::SongView(QWidget *parent)
     vbox->setSpacing(lyt::space(Space::Zero));
 
     m_ruler = std::make_unique<TimeRuler>(*this);
-    m_rulerControls = new TimeRulerControls(*this, this);
+    m_headers = new TrackHeaderModel(*this, this);
     // Fixed-height spacer rows own the ruler and other-events rectangles.
     m_rulerSpacer = new QSpacerItem(m_geometry.plotOrigin, m_geometry.rulerHeight,
                                     QSizePolicy::Minimum, QSizePolicy::Fixed);
@@ -190,18 +222,9 @@ SongView::SongView(QWidget *parent)
     mid->setContentsMargins(lyt::space(Space::Zero), lyt::space(Space::Zero),
                             lyt::space(Space::Zero), lyt::space(Space::Zero));
     mid->setSpacing(lyt::space(Space::Zero));
-    m_headerScroll = new QScrollArea(rollPane);
-    m_headerScroll->setFixedWidth(m_geometry.trackHeaderWidth);
-    m_headerScroll->setFrameShape(QFrame::NoFrame);
-    m_headerScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    // Keep retained row widths stable with the thin list scrollbar.
-    m_headerScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-    ::layout::configureListPositionIndicator(*m_headerScroll->verticalScrollBar());
-    m_headerScroll->setWidgetResizable(true);
-    m_headerScroll->setFocusPolicy(Qt::NoFocus);
-    m_headers = new TrackHeaderPanel(this);
-    m_headerScroll->setWidget(m_headers);
-    mid->addWidget(m_headerScroll);
+    m_headerSpacer =
+        new QSpacerItem(m_geometry.trackHeaderWidth, 0, QSizePolicy::Fixed, QSizePolicy::Expanding);
+    mid->addSpacerItem(m_headerSpacer);
 
     m_rollStack = new QStackedWidget(rollPane);
     // The global theme stylesheet makes QStackedWidget opaque; this stack's
@@ -239,16 +262,19 @@ SongView::SongView(QWidget *parent)
     m_hbarRow->addWidget(m_hbar);
     vbox->addLayout(m_hbarRow);
 
-    m_editorDrawer = new EditorDrawer(*this, rollPane, m_editorViewState);
-    m_quickView = new TimelineQuickView(
-        *m_ruler, *m_roll, *m_strip, *m_editorDrawer->automationPage(),
-        *m_editorDrawer->velocityArea(), *m_editorDrawer->voiceChangeArea(), *this);
-    // Converted drawer/strip interactions are SongView-owned, not native
-    // chrome. Parenting them after the Quick host makes QObject teardown
-    // destroy and detach the host before any interaction module. The roll
-    // interaction joins them: a plain QObject, attached to timelineRollInput.
+    m_editorDrawer = new EditorDrawer(*this, m_editorViewState);
+    m_quickView =
+        new TimelineQuickView(*m_ruler, *m_roll, *m_strip, *m_editorDrawer->automationPage(),
+                              *m_editorDrawer->velocityArea(), *m_editorDrawer->voiceChangeArea(),
+                              m_editorDrawer->chrome(), *m_headers, *this);
+    // Reparenting converted interactions after the Quick host keeps them
+    // alive while its destructor detaches their input items. The roll
+    // interaction joins the same tail as a plain QObject attached to
+    // timelineRollInput; the automation page is its only scroll store.
+    m_editorDrawer->automationPage()->setParent(this);
     m_editorDrawer->velocityArea()->setParent(this);
     m_editorDrawer->voiceChangeArea()->setParent(this);
+    m_editorDrawer->chrome().setParent(this);
     m_strip->setParent(this);
     m_roll->setParent(this);
     m_quickView->lower();
@@ -278,6 +304,7 @@ SongView::~SongView()
     if (!m_quickView)
         return;
     m_quickView->detachInputInteraction(TimelineBand::Ruler);
+    m_quickView->detachInputInteraction(TimelineBand::TrackHeaders);
     m_quickView->detachInputInteraction(TimelineBand::Roll);
     m_quickView->detachInputInteraction(TimelineBand::OtherEvents);
     m_quickView->detachInputInteraction(TimelineBand::Automation);
@@ -321,7 +348,7 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
     m_grid.setTicksPerClock(m_document ? m_document->ticksPerClock() : 0);
     m_grid.setFeel(GridFeel::Straight);
     m_grid.setMinDenom(0);
-    m_rulerControls->syncFromView();
+    m_ruler->syncGridControls();
 
     int firstUsedTrack = 0;
     if (timeline) {
@@ -474,10 +501,10 @@ void SongView::cancelTransientInput()
     ++m_transientInputGeneration;
     if (m_roll)
         m_roll->cancelTransientInput();
-    if (m_ruler)
+    if (m_ruler) {
         m_ruler->cancelInteraction();
-    if (m_rulerControls)
-        m_rulerControls->closePopups();
+        m_ruler->closePopups();
+    }
     cancelActiveInteractions();
     if (m_headers)
         m_headers->cancelTransientState();
@@ -768,6 +795,8 @@ bool SongView::event(QEvent *event)
         if (m_playheadOverlay)
             m_playheadOverlay->updateBands(m_timelineBandLayout);
     }
+    if (appearanceChanged && m_editorDrawer)
+        m_editorDrawer->refreshAppearance(palette());
     if (appearanceChanged)
         syncTimelineQuickAppearance();
     return handled;

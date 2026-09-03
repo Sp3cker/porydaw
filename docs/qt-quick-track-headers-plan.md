@@ -157,6 +157,8 @@ class TrackHeaderModel final : public QAbstractListModel, public TimelineBandInt
         SoloPressedRole,
         AddHoveredRole,
         AddPressedRole,
+        VoiceHoveredRole,
+        VoicePressedRole,
         ActivityDimColorRole,
         ActivityActiveColorRole,
         ActivityLeftHeightRole,
@@ -313,6 +315,8 @@ The role names are fixed; do not invent shorter aliases in QML:
 | `SoloPressedRole` | `soloPressed` |
 | `AddHoveredRole` | `addHovered` |
 | `AddPressedRole` | `addPressed` |
+| `VoiceHoveredRole` | `voiceHovered` |
+| `VoicePressedRole` | `voicePressed` |
 | `ActivityDimColorRole` | `activityDimColor` |
 | `ActivityActiveColorRole` | `activityActiveColor` |
 | `ActivityLeftHeightRole` | `activityLeftHeight` |
@@ -364,6 +368,10 @@ struct PointerState {
     bool dragging = false;
 };
 ```
+`VoiceHoveredRole` is true only for a non-add track row whose current hover target is
+`HitTarget::Voice`; `VoicePressedRole` additionally requires its current pressed target to be
+`HitTarget::Voice`. They do not add a second per-record interaction cache.
+
 
 `Geometry::resolve()` carries the fixed row and replacement-control geometry without recomputing it
 in QML:
@@ -375,10 +383,6 @@ struct Geometry {
     int buttonExtent;
     int buttonColumnWidth;
     int textLeft;
-    int voiceLineLeft;
-    int voiceLineTop;
-    int voiceLineRight;
-    int voiceLineHeight;
     int renameEditorLeft;
     int renameEditorTop;
     int renameEditorRight;
@@ -400,6 +404,13 @@ TimelineInputHost *m_inputHost = nullptr;
 std::vector<TrackHeaderRecord> m_rows;
 Geometry m_geometry;
 PointerState m_pointer;
+QFont m_normalTitleFont;
+QFont m_boldTitleFont;
+QFont m_subtitleFont;
+QFontMetrics m_normalTitleMetrics{QFont{}};
+QFontMetrics m_boldTitleMetrics{QFont{}};
+QFontMetrics m_subtitleMetrics{QFont{}};
+std::optional<layout::TwoLineTextLayout> m_textLayout;
 QString m_renameDraft;
 QString m_renamePlaceholder;
 int m_renamingTrack = -1;
@@ -418,8 +429,9 @@ document pointer, or activity model. Derive those values from the input host, ro
 
 `trackheadermodel.h` includes the list-model, timeline-input, activity-render, and value-type headers
 needed by this declaration. It does not include `QWidget`, `QPainter`, `QToolButton`, `QLineEdit`, or
-`QScrollArea`. Define the three private nested structs and the out-of-line destructor in
-`trackheadermodel.cpp`, after their types are complete.
+`QScrollArea`. Define `TrackHeaderRecord`, `PointerState`, and `Geometry` in the header: `m_rows`,
+`m_geometry`, and `m_pointer` own those types by value and therefore require complete definitions.
+Keep the destructor out of line in `trackheadermodel.cpp`.
 
 `Geometry::resolve()` uses these fixed sources:
 
@@ -429,10 +441,6 @@ activityWidth              = layout::space(Space::One)
 buttonExtent               = layout::fontPx(1.5)
 buttonColumnWidth          = layout::fontPx(2.0)
 textLeft                   = layout::fontPx(5.0 / 6.0)
-voiceLineLeft              = layout::fontPx(5.0 / 6.0)
-voiceLineTop               = layout::fontPx(11.0 / 6.0)
-voiceLineRight             = layout::fontPx(3.0)
-voiceLineHeight            = layout::fontPx(4.0 / 3.0)
 renameEditorLeft           = layout::fontPx(0.5)
 renameEditorTop            = layout::fontPx(1.0 / 6.0)
 renameEditorRight          = layout::fontPx(8.0 / 3.0)
@@ -443,35 +451,37 @@ scrollbarWidth             = layout::space(Space::Two)
 scrollbarMinimumThumbHeight = layout::space(Space::Eight)
 ```
 
-The twelve row fields from `buttonExtent` through `renameEditorHeight` are the existing
-`TrackHeaderRow::Geometry` values. `rowHeight` is the existing `resolvedHeight()` value.
+The button, text, and rename fields are the existing `TrackHeaderRow::Geometry` values.
+`voiceLineRect` deliberately derives from the completed subtitle layout below, rather than retaining
+a second approximate voice-line geometry. `rowHeight` is the existing `resolvedHeight()` value.
 `reorderIndicatorHeight` comes from `TrackHeaderPanel::Geometry`, `activityWidth` comes from the
 current `TrackActivityView::setFixedWidth(space(One))`, and `separatorWidth` is the current painted
 bottom line. `scrollbarWidth` and `scrollbarMinimumThumbHeight` are new fixed Quick-scrollbar
 choices, using the same `Space::Two` width and `Space::Eight` minimum length that currently style
 `QScrollBar#listPositionIndicator`; do not describe them as fields of the old row geometry.
 
-The row width is the input-host width. Resolve the four hit/paint rectangles in C++ with this exact
-math, where `buttonGap = max(0, rowHeight - separatorWidth - 2 * buttonExtent)`, `topGap =
+The row width is the input-host width. Resolve the three fixed hit/paint rectangles in C++ with this
+exact math, where `buttonGap = max(0, rowHeight - separatorWidth - 2 * buttonExtent)`, `topGap =
 buttonGap / 3`, `middleGap = buttonGap / 3`, and any integer remainder stays in the unused bottom
 gap:
 
 ```text
-buttonX         = rowWidth - space(Space::One) - buttonExtent
-muteButtonRect  = {buttonX, topGap, buttonExtent, buttonExtent}
-soloButtonRect  = {buttonX, topGap + buttonExtent + middleGap, buttonExtent, buttonExtent}
-voiceLineRect   = {voiceLineLeft, voiceLineTop,
-                   rowWidth - voiceLineRight, voiceLineHeight}
+buttonX          = rowWidth - space(Space::One) - buttonExtent
+muteButtonRect   = {buttonX, topGap, buttonExtent, buttonExtent}
+soloButtonRect   = {buttonX, topGap + buttonExtent + middleGap, buttonExtent, buttonExtent}
 renameEditorRect = {renameEditorLeft, renameEditorTop,
                     rowWidth - renameEditorRight, renameEditorHeight}
 ```
 
 This is the deterministic Quick replacement for the current three equal layout stretches and
 one-pixel outer bottom margin; an implementer does not ask Qt to recreate the deleted widget
-layout. The `*Right` values in the last two formulas are width deductions, not right-edge
-coordinates. Compute title and subtitle rectangles with the current
-`layout::twoLineText(..., Space::Half)` helper and the width
-`rowWidth - buttonColumnWidth - textLeft - space(Space::One)`. Compute selected-title centering with
+layout. The `*Right` value in the rename formula is a width deduction, not a right-edge coordinate.
+Compute title and subtitle rectangles with the current `layout::twoLineText(..., Space::Half)` helper
+and the width `rowWidth - buttonColumnWidth - textLeft - space(Space::One)`. `voiceLineRect` is the
+same completed secondary/subtitle rectangle used by `SubtitleRectRole`: it is the visible
+current-instrument line and the sole voice hit target. `VoiceHoveredRole` and `VoicePressedRole`
+expose its pointer state so QML gives the target visible feedback; they do not change the existing
+select, reveal, or picker routing. Compute selected-title centering with
 `typography::glyphCenteringOffset()` exactly as today. QML receives the finished rectangles, fonts,
 and offsets; it does not repeat any font or layout formula.
 
@@ -716,7 +726,7 @@ Everything else updates retained rows:
 | DPR | replay activity render keys and physical heights | one bounded height-role `dataChanged` or none |
 | Activity tick | compare physical render keys | one bounded height-role `dataChanged` or none |
 | Viewport height/content height | clamp the one `scrollY` value | `geometryChanged`, then `scrollChanged` if clamped |
-| Pointer hover/press | compare old and new row targets | six pointer-state roles over affected rows only |
+| Pointer hover/press | compare old and new row targets | eight pointer-state roles over affected rows only |
 
 Connect `SongView::muteMaskChanged`, `SongView::soloMaskChanged`, and
 `keymap::Registry::bindingsChanged` once in the model constructor. Existing `SongView` call sites
@@ -751,6 +761,9 @@ pixel wheels and `angleDelta.y() / 120.0 * rowHeight()` for rotary wheels; add t
 `inverted` and subtract it otherwise; then pass the result to `setScrollY()`. Momentum pixel events
 use the same path. A wheel event with a usable vertical delta returns true even when already at the
 limit. Extract no new generic scrolling layer.
+Every path that re-clamps scroll also clears a visible header tooltip, even when the value was already
+in range.
+
 
 The row under a pointer is:
 
@@ -767,7 +780,8 @@ coordinates.
 
 For a press in the row input area, use this order:
 
-1. If the target is the add-track row and the button is left, arm that button and stop.
+1. If the target is the add-track row, arm it only for a left press; consume every other button
+   without selecting track `-1`, opening a menu, or starting a drag.
 2. If the target is a mute button and the button is left, arm that button and stop.
 3. If the target is a solo button and the button is left, arm that button and stop.
 4. If the button is right and `input.buttons` also contains the left button, stop without opening a
@@ -797,9 +811,9 @@ logical drop slot when clipped.
 `pointerRelease()` commits only a left-button reorder. Any other release, pointer ungrab, focus
 loss, view hide, window deactivation, song rebuild, or model reset calls `finishReorder(false)` and
 clears every field in `PointerState`. Hover movement compares the old and new row and hit target,
-then emits the six hover/pressed roles only for the affected row span. `pointerLeave()` clears hover
-and tooltip state unless a pointer grab keeps an active reorder alive; it never leaves a control in
-a pressed visual state after the grab ends.
+then emits the eight hover/pressed roles only for the affected row span. `pointerLeave()` clears
+hover and tooltip state unless a pointer grab keeps an active reorder alive; it never leaves a
+control in a pressed visual state after the grab ends.
 
 ### Rename sequence
 
