@@ -6,6 +6,7 @@
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/timelinebandlayout.h"
 
+#include <QColor>
 #include <QEvent>
 #include <QFlags>
 #include <QPointer>
@@ -84,6 +85,20 @@ class TimelineQuickView final : public QWidget
     Q_PROPERTY(qreal hostY READ hostY NOTIFY hostGeometryChanged FINAL)
     Q_PROPERTY(qreal rulerPlotOrigin READ rulerPlotOrigin NOTIFY hostGeometryChanged FINAL)
     Q_PROPERTY(qreal rulerControlsWidth READ rulerControlsWidth NOTIFY hostGeometryChanged FINAL)
+    Q_PROPERTY(qreal playheadRootX READ playheadRootX NOTIFY playheadXChanged FINAL)
+    Q_PROPERTY(bool playheadVisible READ playheadVisible NOTIFY playheadChanged FINAL)
+    Q_PROPERTY(bool playheadPlaying READ playheadPlaying NOTIFY playheadChanged FINAL)
+    Q_PROPERTY(QColor playheadColor READ playheadColor NOTIFY playheadChanged FINAL)
+    Q_PROPERTY(
+        bool playheadTrianglePointsUp READ playheadTrianglePointsUp NOTIFY playheadChanged FINAL)
+    Q_PROPERTY(qreal playheadGlowLeft READ playheadGlowLeft NOTIFY playheadChanged FINAL)
+    Q_PROPERTY(qreal playheadGlowRight READ playheadGlowRight NOTIFY playheadChanged FINAL)
+    Q_PROPERTY(qreal playheadPeakAlpha READ playheadPeakAlpha NOTIFY playheadChanged FINAL)
+    Q_PROPERTY(qreal playheadLineWidthPx READ playheadLineWidthPx NOTIFY playheadChanged FINAL)
+    Q_PROPERTY(int playheadTriangleHalfWidthPx READ playheadTriangleHalfWidthPx NOTIFY
+                   playheadChanged FINAL)
+    Q_PROPERTY(
+        int playheadTriangleHeightPx READ playheadTriangleHeightPx NOTIFY playheadChanged FINAL)
 
   public:
     TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStrip &otherEvents,
@@ -106,6 +121,25 @@ class TimelineQuickView final : public QWidget
     qreal rulerPlotOrigin() const noexcept;
     // Root-local ruler gutter width reserved for the grid controls.
     qreal rulerControlsWidth() const noexcept;
+    // Playhead state pushed by PlayheadOverlay's opt-in Quick renderer; the
+    // stored X is SongView-local and converted to Quick-root coordinates at
+    // read time. Visible defaults to false, so the default native/fallback
+    // path never shows a Quick playhead.
+    qreal playheadRootX() const noexcept;
+    bool playheadVisible() const noexcept;
+    bool playheadPlaying() const noexcept;
+    QColor playheadColor() const;
+    bool playheadTrianglePointsUp() const noexcept;
+    // Shared metrics from ui/playheadoverlay.h; glow extents and peak alpha
+    // vary with the playing flag, the rest are static per theme.
+    qreal playheadGlowLeft() const noexcept;
+    qreal playheadGlowRight() const noexcept;
+    qreal playheadPeakAlpha() const noexcept;
+    qreal playheadLineWidthPx() const noexcept;
+    int playheadTriangleHalfWidthPx() const noexcept;
+    int playheadTriangleHeightPx() const noexcept;
+    void setPlayhead(qreal songViewX, bool visible, bool playing, bool trianglePointsUp);
+    void setPlayheadColor(const QColor &color);
     void synchronizeGuides(qreal songViewTimelineOriginX,
                            std::optional<qreal> editSongViewContentX);
     void publishHover(TimelineQuickHoverOwner owner, uint64_t tick, qreal songViewContentX);
@@ -140,6 +174,8 @@ class TimelineQuickView final : public QWidget
     void hoverChromeChanged();
     void editChromeChanged();
     void hostGeometryChanged();
+    void playheadChanged();
+    void playheadXChanged();
 
   protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
@@ -202,6 +238,11 @@ class TimelineQuickView final : public QWidget
     qreal m_publishedRulerControlsWidth = 0.0;
     std::optional<qreal> m_hoverSongViewContentX;
     std::optional<qreal> m_editSongViewContentX;
+    qreal m_playheadSongViewX = 0.0;
+    bool m_playheadVisible = false;
+    bool m_playheadPlaying = false;
+    bool m_playheadTrianglePointsUp = false;
+    QColor m_playheadColor;
     TimelineQuickHoverOwner m_hoverOwner = TimelineQuickHoverOwner::None;
     uint64_t m_hoverTick = 0;
     PianoRollQuickDirtySet m_pendingDirty = {PianoRollQuickDirty::None};

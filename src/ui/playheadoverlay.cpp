@@ -1,13 +1,16 @@
 #include "playheadoverlay.h"
 #include "layout.h"
+#include "songview.h"
 #include "theme/themeruntime.h"
+#include "ui/songview/quick/timelinequickview.h"
 
-#include <QEvent>
 #include <QLinearGradient>
 #include <QPaintEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPen>
+#include <QSize>
+#include <QWidget>
 #include <QtGlobal>
 #include <algorithm>
 #include <utility>
@@ -100,24 +103,192 @@ void paintPlayheadBody(QPainter &painter, qreal x, int top, int height, bool pla
 bool platformPlayheadRendererEnabled()
 {
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD
-    return !qEnvironmentVariableIsSet("PORYDAW_FORCE_WIDGET_PLAYHEAD");
+    return !qEnvironmentVariableIsSet("PORYDAW_FORCE_WIDGET_PLAYHEAD") &&
+           !qEnvironmentVariableIsSet("PORYDAW_FORCE_QUICK_PLAYHEAD");
 #else
     return false;
 #endif
 }
 
-PlayheadOverlay::PlayheadOverlay(QWidget &owner, const TimelineBandLayout &layout)
-    : QWidget(&owner)
+bool quickPlayheadRendererEnabled()
+{
+    return qEnvironmentVariableIsSet("PORYDAW_FORCE_QUICK_PLAYHEAD");
+}
+
+// Software-painting stand-in for the native compositor layers: a transparent
+// child of SongView hosting the vector glow + triangle that used to be painted
+// by the overlay widget itself. PlayheadOverlay creates it lazily only while
+// the native platform renderer is not applied and a paint region exists.
+class PlayheadOverlay::FallbackWidget final : public QWidget
+{
+  public:
+    explicit FallbackWidget(PlayheadOverlay &overlay)
+        : QWidget(&overlay.m_owner)
+        , m_overlay(overlay)
+    {
+        setAttribute(Qt::WA_TransparentForMouseEvents);
+        setAttribute(Qt::WA_NoSystemBackground);
+
+        // This visual layer must never become the keyboard target.
+        setFocusPolicy(Qt::NoFocus);
+
+        setGeometry(m_overlay.m_owner.rect());
+    }
+
+    // Releases the painted pixels before PlayheadOverlay destroys this
+    // widget because the native platform renderer took over.
+    void retire()
+    {
+        if (!isHidden())
+            hide();
+        if (!mask().isEmpty())
+            clearMask();
+        exposeFallbackPixels(m_paintRegion);
+    }
+
+    const QRegion &paintRegion() const { return m_paintRegion; }
+
+    // Where the playhead will paint for the overlay's current state; empty
+    // while the playhead is invisible. Static so PlayheadOverlay can decide
+    // whether a fallback widget is worth creating.
+    static QRegion fallbackPaintRegion(const PlayheadOverlay &overlay)
+    {
+        if (!overlay.m_visible)
+            return {};
+
+        const qreal padding = layout::singlePixel();
+        const qreal coreHalfWidth = playheadLineWidth() / 2.0;
+        const qreal leftExtent = std::max(playheadGlowLeftExtent(overlay.m_playing), coreHalfWidth);
+        const qreal rightExtent =
+            std::max(playheadGlowRightExtent(overlay.m_playing), coreHalfWidth);
+        const QRect bodyBounds = QRectF(overlay.finalX() - leftExtent, overlay.m_bodyGeometry.top(),
+                                        leftExtent + rightExtent, overlay.m_bodyGeometry.height())
+                                     .adjusted(-padding, -padding, padding, padding)
+                                     .toAlignedRect();
+        const QRect triangleBounds =
+            QRectF(overlay.finalX() - playheadTriangleHalfWidth(), overlay.m_triangleClip.top(),
+                   2 * playheadTriangleHalfWidth(), playheadTriangleHeight())
+                .adjusted(-padding, -padding, padding, padding)
+                .toAlignedRect();
+
+        QRegion region = overlay.m_visibleSurfaceRegion.intersected(bodyBounds);
+        region += overlay.m_triangleClip.intersected(triangleBounds);
+        return region;
+    }
+
+    void updateFallbackRegion()
+    {
+        const QRegion previousRegion = m_paintRegion;
+        const QRegion currentRegion = fallbackPaintRegion(m_overlay);
+        const bool shouldShow = !currentRegion.isEmpty();
+        if (previousRegion == currentRegion && isHidden() == !shouldShow)
+            return;
+
+        m_paintRegion = currentRegion;
+        if (!shouldShow) {
+            if (!isHidden())
+                hide();
+            if (!mask().isEmpty())
+                clearMask();
+            exposeFallbackPixels(previousRegion);
+            return;
+        }
+
+        const QRect ownerRect = m_overlay.m_owner.rect();
+        if (geometry() != ownerRect)
+            setGeometry(ownerRect);
+        if (mask() != currentRegion)
+            setMask(currentRegion);
+        if (isHidden())
+            show();
+        raise();
+        exposeFallbackPixels(previousRegion);
+        update(currentRegion);
+    }
+
+  protected:
+    void paintEvent(QPaintEvent *event) override
+    {
+        const PlayheadOverlay &overlay = m_overlay;
+        if (!overlay.m_visible || m_paintRegion.isEmpty())
+            return;
+
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setClipRegion(event->region().intersected(m_paintRegion));
+
+        painter.save();
+        painter.setClipRegion(overlay.m_visibleSurfaceRegion, Qt::IntersectClip);
+        paintPlayheadBody(painter, overlay.finalX(), overlay.m_bodyGeometry.top(),
+                          overlay.m_bodyGeometry.height(), overlay.m_playing, overlay.m_color);
+        painter.restore();
+
+        painter.save();
+        painter.setClipRect(overlay.m_triangleClip, Qt::IntersectClip);
+        painter.translate(overlay.finalX(), overlay.m_triangleClip.top());
+        if (overlay.m_trianglePointsUp) {
+            painter.translate(0.0, playheadTriangleHeight());
+            painter.scale(1.0, -1.0);
+        }
+        painter.fillPath(playheadTrianglePath(), overlay.m_color);
+        painter.restore();
+    }
+
+  private:
+    void exposeFallbackPixels(const QRegion &region)
+    {
+        if (region.isEmpty())
+            return;
+        m_overlay.m_owner.update(region);
+    }
+
+    const QPainterPath &playheadTrianglePath()
+    {
+        const QSize currentSize(playheadTriangleHalfWidth(), playheadTriangleHeight());
+        if (m_playheadTrianglePathSize == currentSize)
+            return m_playheadTrianglePath;
+
+        QPainterPath path;
+        path.moveTo(-currentSize.width(), 0);
+        path.lineTo(currentSize.width(), 0);
+        path.lineTo(0, currentSize.height());
+        path.closeSubpath();
+        m_playheadTrianglePath = std::move(path);
+        m_playheadTrianglePathSize = currentSize;
+        return m_playheadTrianglePath;
+    }
+
+    PlayheadOverlay &m_overlay;
+    QPainterPath m_playheadTrianglePath;
+    QSize m_playheadTrianglePathSize;
+    QRegion m_paintRegion;
+};
+
+PlayheadOverlay::PlayheadOverlay(SongView &owner, const TimelineBandLayout &layout)
+    : QObject(&owner)
+    , m_owner(owner)
     , m_layout(layout)
     , m_color(themes::color(themes::Role::song_view_playhead))
 {
-    setAttribute(Qt::WA_TransparentForMouseEvents);
-    setAttribute(Qt::WA_NoSystemBackground);
-
-    // This visual layer must never become the keyboard target.
-    setFocusPolicy(Qt::NoFocus);
-
     synchronizeGeometry();
+}
+
+// SongView destroys its QWidget children (including FallbackWidget) before
+// its QObject children, so during SongView teardown the fallback has usually
+// already died and QPointer cleared itself. When this overlay dies first
+// while SongView still lives, retire the painted pixels and delete the
+// leftover child.
+PlayheadOverlay::~PlayheadOverlay()
+{
+    if (m_fallback) {
+        m_fallback->retire();
+        delete m_fallback.data();
+    }
+}
+
+QWidget *PlayheadOverlay::fallbackWidget() const noexcept
+{
+    return m_fallback;
 }
 
 void PlayheadOverlay::setPlayhead(qreal timelineX, bool visible, bool playing)
@@ -138,136 +309,49 @@ void PlayheadOverlay::updateBands(const TimelineBandLayout &layout)
     synchronizeGeometry();
 }
 
-const QPainterPath &PlayheadOverlay::playheadTrianglePath()
+void PlayheadOverlay::syncAppearance()
 {
-    const QSize currentSize(playheadTriangleHalfWidth(), playheadTriangleHeight());
-    if (m_playheadTrianglePathSize == currentSize)
-        return m_playheadTrianglePath;
-
-    QPainterPath path;
-    path.moveTo(-currentSize.width(), 0);
-    path.lineTo(currentSize.width(), 0);
-    path.lineTo(0, currentSize.height());
-    path.closeSubpath();
-    m_playheadTrianglePath = std::move(path);
-    m_playheadTrianglePathSize = currentSize;
-    return m_playheadTrianglePath;
-}
-void PlayheadOverlay::paintEvent(QPaintEvent *event)
-{
-    if (m_platformApplied || !m_visible || m_fallbackPaintRegion.isEmpty())
+    const QColor newColor = themes::color(themes::Role::song_view_playhead);
+    if (m_color == newColor)
         return;
-
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.setClipRegion(event->region().intersected(m_fallbackPaintRegion));
-
-    painter.save();
-    painter.setClipRegion(m_visibleSurfaceRegion, Qt::IntersectClip);
-    paintPlayheadBody(painter, finalX(), m_bodyGeometry.top(), m_bodyGeometry.height(), m_playing,
-                      m_color);
-    painter.restore();
-
-    painter.save();
-    painter.setClipRect(m_triangleClip, Qt::IntersectClip);
-    painter.translate(finalX(), m_triangleClip.top());
-    if (m_trianglePointsUp) {
-        painter.translate(0.0, playheadTriangleHeight());
-        painter.scale(1.0, -1.0);
+    m_color = newColor;
+#ifdef PORYDAW_USE_DIRECT_PLAYHEAD
+    if (m_platform)
+        setPlatformImages();
+#endif
+    if (quickPlayheadRendererEnabled()) {
+        if (auto *quickView =
+                m_owner.findChild<TimelineQuickView *>(QStringLiteral("timelineQuickCanvas")))
+            quickView->setPlayheadColor(m_color);
     }
-    painter.fillPath(playheadTrianglePath(), m_color);
-    painter.restore();
-}
-QRegion PlayheadOverlay::fallbackPaintRegion() const
-{
-    if (!m_visible)
-        return {};
-
-    const qreal padding = layout::singlePixel();
-    const qreal coreHalfWidth = playheadLineWidth() / 2.0;
-    const qreal leftExtent = std::max(playheadGlowLeftExtent(m_playing), coreHalfWidth);
-    const qreal rightExtent = std::max(playheadGlowRightExtent(m_playing), coreHalfWidth);
-    const QRect bodyBounds = QRectF(finalX() - leftExtent, m_bodyGeometry.top(),
-                                    leftExtent + rightExtent, m_bodyGeometry.height())
-                                 .adjusted(-padding, -padding, padding, padding)
-                                 .toAlignedRect();
-    const QRect triangleBounds =
-        QRectF(finalX() - playheadTriangleHalfWidth(), m_triangleClip.top(),
-               2 * playheadTriangleHalfWidth(), playheadTriangleHeight())
-            .adjusted(-padding, -padding, padding, padding)
-            .toAlignedRect();
-
-    QRegion region = m_visibleSurfaceRegion.intersected(bodyBounds);
-    region += m_triangleClip.intersected(triangleBounds);
-    return region;
-}
-
-void PlayheadOverlay::exposeFallbackPixels(const QRegion &region)
-{
-    if (region.isEmpty())
-        return;
-    if (QWidget *owner = parentWidget())
-        owner->update(region);
+    updatePlayhead();
+    if (m_fallback) {
+        const QRegion &region = m_fallback->paintRegion();
+        if (!region.isEmpty())
+            m_fallback->update(region);
+    }
 }
 
 void PlayheadOverlay::updateFallbackRegion()
 {
-    const QRegion previousRegion = m_fallbackPaintRegion;
-    const QRegion currentRegion = m_platformApplied ? QRegion{} : fallbackPaintRegion();
-    const bool shouldShow = !currentRegion.isEmpty();
-    if (previousRegion == currentRegion && isHidden() == !shouldShow)
-        return;
-
-    m_fallbackPaintRegion = currentRegion;
-    if (!shouldShow) {
-        if (!isHidden())
-            hide();
-        if (!mask().isEmpty())
-            clearMask();
-        exposeFallbackPixels(previousRegion);
-        return;
-    }
-
-    if (mask() != currentRegion)
-        setMask(currentRegion);
-    if (isHidden())
-        show();
-    raise();
-    exposeFallbackPixels(previousRegion);
-    update(currentRegion);
-}
-
-void PlayheadOverlay::changeEvent(QEvent *event)
-{
-    QWidget::changeEvent(event);
-    switch (event->type()) {
-    case QEvent::ApplicationPaletteChange:
-    case QEvent::PaletteChange:
-    case QEvent::StyleChange: {
-        const QColor newColor = themes::color(themes::Role::song_view_playhead);
-        if (m_color != newColor) {
-            m_color = newColor;
-#ifdef PORYDAW_USE_DIRECT_PLAYHEAD
-            if (m_platform)
-                setPlatformImages();
-#endif
-            updatePlayhead();
-            if (!m_platformApplied && !m_fallbackPaintRegion.isEmpty())
-                update(m_fallbackPaintRegion);
+    if (m_platformApplied || quickPlayheadRendererEnabled()) {
+        if (m_fallback) {
+            m_fallback->retire();
+            delete m_fallback.data();
         }
-        break;
+        return;
     }
-    default:
-        break;
+    if (!m_fallback) {
+        if (FallbackWidget::fallbackPaintRegion(*this).isEmpty())
+            return;
+        m_fallback = new FallbackWidget(*this);
     }
+    m_fallback->updateFallbackRegion();
 }
 
 void PlayheadOverlay::synchronizeGeometry()
 {
-    QWidget *ownerWidget = parentWidget();
-    if (!ownerWidget)
-        return;
-    QWidget &owner = *ownerWidget;
+    SongView &owner = m_owner;
 
     const std::optional<TimelineBandGeometry> &rulerBand = m_layout.geometry(TimelineBand::Ruler);
     if (!rulerBand) {
@@ -283,7 +367,7 @@ void PlayheadOverlay::synchronizeGeometry()
         // Canonical entries are SongView-local and omit hidden bands; each clip
         // rect starts at its band's timeline origin. Producer contract
         // (timelinebandlayout.h): band rects are already clipped to what their
-        // layout owner shows, and this widget's parent is SongView, so one
+        // layout owner shows, and this overlay's owner is SongView, so one
         // intersected(owner.rect()) bounds the surface — no ancestor walk.
         const auto visibleBandRect = [&owner](const TimelineBandGeometry &band) {
             if (band.timelineOrigin >= band.rect.width())
@@ -312,9 +396,6 @@ void PlayheadOverlay::synchronizeGeometry()
     }
     m_trianglePointsUp = !m_layout.geometry(TimelineBand::Roll).has_value();
 
-    if (geometry() != owner.rect())
-        setGeometry(owner.rect());
-
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD
     m_devicePixelRatio = owner.devicePixelRatioF();
     bool platformCreated = false;
@@ -335,6 +416,13 @@ void PlayheadOverlay::synchronizeGeometry()
 
 void PlayheadOverlay::updatePlayhead()
 {
+    if (quickPlayheadRendererEnabled()) {
+        if (auto *quickView =
+                m_owner.findChild<TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"))) {
+            quickView->setPlayhead(finalX(), m_visible, m_playing, m_trianglePointsUp);
+            quickView->setPlayheadColor(m_color);
+        }
+    }
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD
     m_platformApplied = m_platform && setPlatformPosition();
 #else
