@@ -1,7 +1,6 @@
 #include "keyboardshortcutsdialog.h"
 
 #include <QComboBox>
-#include <QEvent>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QKeySequenceEdit>
@@ -145,13 +144,6 @@ QString KeyboardShortcutsWidget::currentCommandId() const
 {
     QTreeWidgetItem *item = m_tree->currentItem();
     return item ? item->data(0, kIdRole).toString() : QString();
-}
-
-void KeyboardShortcutsWidget::changeEvent(QEvent *event)
-{
-    QWidget::changeEvent(event);
-    if (event->type() == QEvent::FontChange && m_tree)
-        rebuildTree();
 }
 
 void KeyboardShortcutsWidget::rebuildTree()

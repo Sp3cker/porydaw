@@ -27,17 +27,17 @@ void VoiceChangeArea::Geometry::resolve()
     gridMinimumCellWidth = layout::fontPx(4.0 / 3.0);
 }
 
-void VoiceChangeArea::rebuildFonts()
-{
-    m_titleFont = typography::bold(typography::caption(m_inputHost->font()));
-    m_captionFont = typography::regular(typography::caption(m_inputHost->font()));
-}
-
 VoiceChangeArea::VoiceChangeArea(SongView &owner, QObject *parent)
     : QObject(parent)
     , m_owner(owner)
     , m_camera(owner.camera())
     , m_grid(owner.grid())
+    , m_titleFont(typography::bold(typography::caption(owner.font())))
+    , m_captionFont(typography::regular(typography::caption(owner.font())))
+    , m_captionMetrics(m_captionFont)
+    , m_hoverLabelFont(typography::noteName(owner.font()))
+    , m_textLayout(
+          layout::twoLineText(m_titleFont, m_titleFont, m_captionFont, layout::Space::Zero))
 {
     m_geometry.resolve();
 }
@@ -46,7 +46,6 @@ void VoiceChangeArea::attachInputHost(songview::TimelineInputHost &host)
 {
     Q_ASSERT(!m_inputHost || m_inputHost == &host);
     m_inputHost = &host;
-    rebuildFonts();
 }
 
 void VoiceChangeArea::detachInputHost(songview::TimelineInputHost &host)
@@ -65,8 +64,6 @@ void VoiceChangeArea::inputCancelled(songview::TimelineInputCancelReason)
 
 void VoiceChangeArea::hostAppearanceChanged()
 {
-    rebuildFonts();
-    m_geometry.resolve();
     rebuildVisualState();
 }
 
@@ -240,7 +237,6 @@ void VoiceChangeArea::updateHover(qreal x)
     }
     QRectF labelRect;
     if (!hoverLabel.isEmpty()) {
-        ensureHoverLabelFontCache();
         labelRect = QRectF(lineX + layout::space(layout::Space::One), plot.top(),
                            std::max<qreal>(0, plot.right() - lineX), plot.height());
     }
@@ -254,11 +250,6 @@ void VoiceChangeArea::updateHover(qreal x)
     m_hoverLabelRect = labelRect;
     m_owner.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::VoiceChanges, m_hoverTick);
     m_owner.requestTimelineQuickUpdate(songview::TimelineQuickDirty::VoiceChangesHover);
-}
-
-void VoiceChangeArea::ensureHoverLabelFontCache()
-{
-    m_hoverLabelFont = typography::noteName(m_inputHost->font());
 }
 
 bool VoiceChangeArea::ready() const noexcept

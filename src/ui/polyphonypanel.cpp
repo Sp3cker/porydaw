@@ -123,13 +123,6 @@ class PolyChannelGrid : public QWidget
     QSize minimumSizeHint() const override { return QSize(kCellW + kGap, kCellH); }
 
   protected:
-    void changeEvent(QEvent *event) override
-    {
-        QWidget::changeEvent(event);
-        if (event->type() == QEvent::FontChange)
-            m_cellFont = typography::caption(font());
-    }
-
     void resizeEvent(QResizeEvent *event) override
     {
         QWidget::resizeEvent(event);
@@ -538,20 +531,9 @@ void PolyphonyPanel::applyLogItemInk(QListWidgetItem *item)
 
 // Log rows are inked once when they are appended; a theme change would
 // otherwise leave them in the old theme's severity colors.
-void PolyphonyPanel::refreshHeadingFonts()
-{
-    const auto headingFont = typography::bold(font());
-    for (QLabel *label : {m_usageLabel, m_tableLabel, m_logLabel}) {
-        if (label)
-            label->setFont(headingFont);
-    }
-}
-
 void PolyphonyPanel::changeEvent(QEvent *event)
 {
     QWidget::changeEvent(event);
-    if (event->type() == QEvent::FontChange)
-        refreshHeadingFonts();
     if (event->type() == QEvent::PaletteChange) {
         for (int i = 0; i < m_log->count(); i++)
             applyLogItemInk(m_log->item(i));

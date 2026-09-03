@@ -52,9 +52,6 @@ class TrackHeaderRow : public QWidget
         static Geometry resolve();
     };
 
-    void refreshGeometry();
-    void rebuildFontCache();
-
   public:
     TrackHeaderRow(SongView *sv, int track, QWidget *parent);
     // Sole row-height formula; the panel's activity overlay consumes it too.
@@ -75,7 +72,6 @@ class TrackHeaderRow : public QWidget
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void contextMenuEvent(QContextMenuEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
-    bool event(QEvent *event) override;
     void resizeEvent(QResizeEvent *) override;
 
   private:
@@ -93,10 +89,10 @@ class TrackHeaderRow : public QWidget
     QFont m_normalTitleFont;
     QFont m_boldTitleFont;
     QFont m_subtitleFont;
-    QFontMetrics m_normalTitleMetrics{QFont{}};
-    QFontMetrics m_boldTitleMetrics{QFont{}};
-    QFontMetrics m_subtitleMetrics{QFont{}};
-    std::optional<layout::TwoLineTextLayout> m_textLayout;
+    QFontMetrics m_normalTitleMetrics;
+    QFontMetrics m_boldTitleMetrics;
+    QFontMetrics m_subtitleMetrics;
+    layout::TwoLineTextLayout m_textLayout;
     QString m_centeredTitle;
     QPointF m_selectedTitleOffset;
     SongView *m_sv;

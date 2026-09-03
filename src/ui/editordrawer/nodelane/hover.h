@@ -23,13 +23,13 @@ qreal hoverRingRadius(const AutomationGeometry &geometry);
 
 struct NodeLaneHoverTarget {
     QRect widgetBounds;
-    QFont font;
     qreal devicePixelRatio = 1.0;
     uint64_t documentRevision = 0;
     bool ready = false;
 };
 
 struct NodeLaneHoverState {
+    explicit NodeLaneHoverState(const QFont &sourceFont);
     struct HoverState {
         LaneHandle lane;
         QPointF pos;
@@ -74,9 +74,8 @@ struct NodeLaneHoverState {
         QFont font;
         int width = 0;
         int height = 0;
-        bool valid = false;
     };
-    mutable ValueLabelFontCache m_valueLabelFontCache;
+    ValueLabelFontCache m_valueLabelFontCache;
     ValueLabelCache hoverValueLabel;
     ValueLabelCache previewValueLabel;
     QRect hoverDirtyBounds;
@@ -112,8 +111,6 @@ struct NodeLaneHoverState {
                                      bool pencilMode);
     QRegion clearHover();
     void invalidateCaches();
-    void invalidateFontCache();
-    const ValueLabelFontCache &valueLabelFontCache(const QFont &font) const;
 
     struct ClampedValueLabel {
         QRect bounds;

@@ -71,6 +71,20 @@ PianoRoll::PianoRoll(SongView *sv)
     , m_geometry(PianoRollGeometry::resolve())
 {
     setObjectName(QStringLiteral("pianoRoll")); // findChild for tests
+    m_fixedNoteNameFont = typography::noteName(sv->font());
+    m_fixedNoteNameFont.setPixelSize(
+        std::max(lyt::singlePixel(), m_fixedNoteNameFont.pixelSize() - 2 * lyt::singlePixel()));
+    m_fixedNoteNameMetrics = QFontMetricsF(m_fixedNoteNameFont);
+    const QFontMetrics noteMetrics(m_fixedNoteNameFont);
+    m_fixedNoteNameOccupiedHeight = noteMetrics.ascent() + noteMetrics.descent();
+
+    m_keyboardHoverChipFont = typography::caption(sv->font());
+    const QFontMetrics hoverMetrics(m_keyboardHoverChipFont);
+    m_keyboardHoverChipHeight = hoverMetrics.height() + m_geometry.keyboardHoverChipVerticalPadding;
+    for (int key = 0; key < int(m_keyboardHoverNameWidths.size()); ++key)
+        m_keyboardHoverNameWidths[std::size_t(key)] =
+            hoverMetrics.horizontalAdvance(midiKeyName(key));
+
     const QPointer<PianoRoll> guardedThis(this);
     m_noteMenu = new NoteContextMenu(sv, [guardedThis](QPointF globalPos) {
         return guardedThis && guardedThis->moveNoteMenu(globalPos);
@@ -115,7 +129,7 @@ void PianoRoll::attachInputHost(TimelineInputHost &host)
     Q_ASSERT(!m_inputHost);
     m_inputHost = &host;
     m_cursors = loadMidiCursors(host.devicePixelRatio(), m_geometry.midiCursorExtent);
-    rebuildFontCache();
+    refreshTextLayout();
     m_rowEdgesValid = false;
     requestQuickUpdate(PianoRollQuickDirty::All);
 }
@@ -135,30 +149,10 @@ void PianoRoll::hostAppearanceChanged()
 {
     if (!m_inputHost)
         return;
-    m_geometry = PianoRollGeometry::resolve();
     m_cursors = loadMidiCursors(m_inputHost->devicePixelRatio(), m_geometry.midiCursorExtent);
     m_rowEdgesValid = false;
-    rebuildFontCache();
-    requestQuickUpdate(PianoRollQuickDirty::All);
-}
-
-void PianoRoll::rebuildFontCache()
-{
-    const QFont hostFont = font();
-    m_fixedNoteNameFont = typography::noteName(hostFont);
-    m_fixedNoteNameFont.setPixelSize(
-        std::max(lyt::singlePixel(), m_fixedNoteNameFont.pixelSize() - 2 * lyt::singlePixel()));
-    const QFontMetrics noteMetrics(m_fixedNoteNameFont);
-    m_fixedNoteNameOccupiedHeight = noteMetrics.ascent() + noteMetrics.descent();
-
-    m_keyboardHoverChipFont = typography::caption(hostFont);
-    const QFontMetrics hoverMetrics(m_keyboardHoverChipFont);
-    m_keyboardHoverChipHeight = hoverMetrics.height() + m_geometry.keyboardHoverChipVerticalPadding;
-    for (int key = 0; key < int(m_keyboardHoverNameWidths.size()); ++key)
-        m_keyboardHoverNameWidths[std::size_t(key)] =
-            hoverMetrics.horizontalAdvance(midiKeyName(key));
-
     refreshTextLayout();
+    requestQuickUpdate(PianoRollQuickDirty::All);
 }
 
 void PianoRoll::refreshTextLayout()

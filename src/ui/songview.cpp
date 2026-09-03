@@ -16,13 +16,11 @@
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timeruler.h"
 #include "ui/songview/trackheaderpanel.h"
-#include "ui/typography.h"
 #include <QAbstractButton>
 #include <QAbstractSlider>
 #include <QApplication>
 #include <QDialog>
 #include <QEvent>
-#include <QFontMetrics>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QKeyEvent>
@@ -51,29 +49,6 @@ using namespace songview::detail;
 
 using namespace songview;
 
-namespace {
-
-// Fixed ruler-row height: a bold mono marker row plus a mono tick row, each
-// padded one physical pixel — the same formula TimeRuler applies to itself.
-int resolveRulerRowHeight()
-{
-    QFont rulerFont = typography::bodyMono(typography::caption(QApplication::font()));
-    rulerFont.setPixelSize(
-        std::max(lyt::fontPx(1.0 / 12.0), rulerFont.pixelSize() - lyt::singlePixel()));
-    rulerFont.setLetterSpacing(QFont::AbsoluteSpacing, lyt::fontPxF(-1.0 / 24.0));
-    const QFontMetrics markerMetrics(typography::bold(rulerFont));
-    const QFontMetrics tickMetrics(rulerFont);
-    return markerMetrics.height() + lyt::singlePixel() + tickMetrics.height() + lyt::singlePixel();
-}
-
-// Parent-owned other-events-row height: one body line plus two spacing units.
-int resolveOtherEventsRowHeight()
-{
-    return QFontMetrics(QApplication::font()).height() + lyt::space(Space::Two);
-}
-
-} // namespace
-
 SongView::Geometry SongView::Geometry::resolve()
 {
     const int trackHeaderWidth = lyt::fontPx(17.5);
@@ -93,9 +68,7 @@ SongView::Geometry SongView::Geometry::resolve()
             lyt::fontPx(4.0 / 3.0),
             1.0 / 3.0,
             lyt::fontPx(25.0 / 6.0),
-            lyt::fontPx(25.0 / 3.0),
-            resolveRulerRowHeight(),
-            resolveOtherEventsRowHeight()};
+            lyt::fontPx(25.0 / 3.0)};
 }
 
 SongView::ViewState::ViewState()
@@ -118,37 +91,6 @@ void SongView::pushGridGeometryThresholds()
 {
     m_grid.setThresholds(m_geometry.timelineDetailMinimumPixelsPerBeat,
                          m_geometry.automationGridMinimumCellWidth);
-}
-
-void SongView::refreshGeometry()
-{
-    m_geometry = Geometry::resolve();
-    pushCameraGeometryLimits();
-    pushGridGeometryThresholds();
-    m_camera.setKeyHeight(m_camera.keyHeight()); // re-clamped to the new limits
-    if (m_headerScroll)
-        m_headerScroll->setFixedWidth(m_geometry.trackHeaderWidth);
-    if (m_hbarGutter) {
-        m_hbarGutter->changeSize(m_geometry.plotOrigin, lyt::space(Space::Zero), QSizePolicy::Fixed,
-                                 QSizePolicy::Minimum);
-        m_hbarRow->invalidate();
-    }
-    if (m_rulerSpacer) {
-        m_rulerSpacer->changeSize(m_geometry.plotOrigin, m_geometry.rulerHeight,
-                                  QSizePolicy::Minimum, QSizePolicy::Fixed);
-        m_stripSpacer->changeSize(m_geometry.plotOrigin, m_geometry.otherEventsHeight,
-                                  QSizePolicy::Minimum, QSizePolicy::Fixed);
-        if (layout())
-            layout()->invalidate();
-    }
-    positionBandWidgets();
-    updateScrollbars();
-    refreshDrawerPages();
-    // Publish only after drawer/page geometry settles; the Quick publication
-    // is still scheduled before the size-dependent dirty flush below.
-    synchronizeTimelineBandLayout();
-    // Global geometry replacement: every roll domain may change.
-    refreshTimelineViews(PianoRollQuickDirty::All);
 }
 
 // Canonical band geometry, resolved only from parent-owned layout values:
@@ -789,11 +731,10 @@ bool SongView::event(QEvent *event)
 #if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
     screenOrDprChanged = screenOrDprChanged || event->type() == QEvent::DevicePixelRatioChange;
 #endif
-    const bool appearanceChanged =
-        event->type() == QEvent::FontChange || event->type() == QEvent::ApplicationFontChange ||
-        event->type() == QEvent::PaletteChange ||
-        event->type() == QEvent::ApplicationPaletteChange || event->type() == QEvent::StyleChange ||
-        event->type() == QEvent::ThemeChange || screenOrDprChanged;
+    const bool appearanceChanged = event->type() == QEvent::PaletteChange ||
+                                   event->type() == QEvent::ApplicationPaletteChange ||
+                                   event->type() == QEvent::StyleChange ||
+                                   event->type() == QEvent::ThemeChange || screenOrDprChanged;
     const bool lifecycleRepublish =
         event->type() == QEvent::Show || event->type() == QEvent::WinIdChange || screenOrDprChanged;
     if (event->type() == QEvent::Hide || event->type() == QEvent::WindowDeactivate ||
@@ -827,8 +768,6 @@ bool SongView::event(QEvent *event)
         if (m_playheadOverlay)
             m_playheadOverlay->updateBands(m_timelineBandLayout);
     }
-    if (event->type() == QEvent::FontChange)
-        refreshGeometry();
     if (appearanceChanged)
         syncTimelineQuickAppearance();
     return handled;

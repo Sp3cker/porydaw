@@ -109,44 +109,21 @@ TrackHeaderRow::Geometry TrackHeaderRow::Geometry::resolve()
             lyt::fontPx(1.0 / 6.0), lyt::fontPx(8.0 / 3.0),  lyt::fontPx(5.0 / 3.0)};
 }
 
-void TrackHeaderRow::rebuildFontCache()
-{
-    m_normalTitleFont = font();
-    m_boldTitleFont = typography::bold(m_normalTitleFont);
-    m_subtitleFont = typography::caption(m_normalTitleFont);
-    m_normalTitleMetrics = QFontMetrics(m_normalTitleFont);
-    m_boldTitleMetrics = QFontMetrics(m_boldTitleFont);
-    m_subtitleMetrics = QFontMetrics(m_subtitleFont);
-    m_textLayout.emplace(::layout::twoLineText(m_normalTitleFont, m_boldTitleFont, m_subtitleFont,
-                                               ::layout::Space::Half));
-    m_centeredTitle.clear();
-    m_selectedTitleOffset = {};
-}
-
-void TrackHeaderRow::refreshGeometry()
-{
-    m_geometry = Geometry::resolve();
-    rebuildFontCache();
-    setFixedHeight(m_geometry.trackHeaderRowHeight);
-    if (m_mute)
-        m_mute->setFixedSize(m_geometry.trackHeaderButtonExtent,
-                             m_geometry.trackHeaderButtonExtent);
-    if (m_solo)
-        m_solo->setFixedSize(m_geometry.trackHeaderButtonExtent,
-                             m_geometry.trackHeaderButtonExtent);
-    if (m_editor)
-        m_editor->setGeometry(editorRect());
-    update();
-}
-
 TrackHeaderRow::TrackHeaderRow(SongView *sv, int track, QWidget *parent)
     : QWidget(parent)
+    , m_normalTitleFont(font())
+    , m_boldTitleFont(typography::bold(m_normalTitleFont))
+    , m_subtitleFont(typography::caption(m_normalTitleFont))
+    , m_normalTitleMetrics(m_normalTitleFont)
+    , m_boldTitleMetrics(m_boldTitleFont)
+    , m_subtitleMetrics(m_subtitleFont)
+    , m_textLayout(::layout::twoLineText(m_normalTitleFont, m_boldTitleFont, m_subtitleFont,
+                                         ::layout::Space::Half))
     , m_sv(sv)
     , m_track(track)
     , m_geometry(Geometry::resolve())
 {
     setAttribute(Qt::WA_OpaquePaintEvent);
-    rebuildFontCache();
     const auto buttonExtent = m_geometry.trackHeaderButtonExtent;
     setFixedHeight(m_geometry.trackHeaderRowHeight);
     auto *layout = new QHBoxLayout(this);
@@ -274,7 +251,7 @@ void TrackHeaderRow::paintEvent(QPaintEvent *event)
                            height() - lyt::singlePixel());
     const auto title = QStringLiteral("%1 · %2").arg(m_track + 1).arg(name);
     const auto visibleTitle = style.titleMetrics->elidedText(title, Qt::ElideRight, textW);
-    const auto textBoxes = m_textLayout->align(textBounds, ::layout::VerticalAlignment::Center);
+    const auto textBoxes = m_textLayout.align(textBounds, ::layout::VerticalAlignment::Center);
     updateVisibleTitleCenteringCache(visibleTitle);
     const QPointF titleOffset = style.useSelectedTitleOffset ? m_selectedTitleOffset : QPointF{};
     const auto titleBox = QRectF(textBoxes.primary).translated(titleOffset);
@@ -500,14 +477,6 @@ bool TrackHeaderRow::eventFilter(QObject *watched, QEvent *event)
         }
     }
     return QWidget::eventFilter(watched, event);
-}
-
-bool TrackHeaderRow::event(QEvent *event)
-{
-    const bool handled = QWidget::event(event);
-    if (event->type() == QEvent::FontChange)
-        refreshGeometry();
-    return handled;
 }
 
 void TrackHeaderRow::resizeEvent(QResizeEvent *)

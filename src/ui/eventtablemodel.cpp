@@ -43,21 +43,14 @@ QList<std::pair<QString, int>> EventTableModel::typeChoices(bool includeTempo)
     return choices;
 }
 
-void EventTableModel::refreshFonts()
+EventTableModel::EventTableModel(SongView *sv, QObject *parent)
+    : QAbstractTableModel(parent)
+    , m_sv(sv)
 {
     m_bodyFont = QApplication::font();
     m_bodyItalicFont = typography::italic(m_bodyFont);
     m_numericFont = typography::tableMono(m_bodyFont);
     m_numericItalicFont = typography::italic(m_numericFont);
-    if (rowCount() > 0)
-        emit dataChanged(index(0, 0), index(rowCount() - 1, ColCount - 1), {Qt::FontRole});
-}
-
-EventTableModel::EventTableModel(SongView *sv, QObject *parent)
-    : QAbstractTableModel(parent)
-    , m_sv(sv)
-{
-    refreshFonts();
 }
 
 void EventTableModel::setSource(SongDocument *doc, int chunk)

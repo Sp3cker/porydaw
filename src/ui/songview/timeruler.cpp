@@ -80,36 +80,34 @@ void TimeRulerControls::closePopups()
     m_feelCombo->hidePopup();
 }
 
-void TimeRuler::refreshGeometry()
+TimeRuler::TimeRuler(SongView &owner)
+    : m_owner(owner)
+    , m_camera(owner.camera())
+    , m_grid(owner.grid())
+    , m_geometry(Geometry::resolve())
 {
-    Q_ASSERT(m_inputHost);
-    m_geometry = Geometry::resolve();
-    m_rulerFont = typography::bodyMono(typography::caption(m_inputHost->font()));
+    const auto markerRowPadding = lyt::singlePixel();
+    m_rulerFont = typography::bodyMono(typography::caption(owner.font()));
     m_rulerFont.setPixelSize(std::max(m_geometry.timeRulerMinimumFontPixelSize,
                                       m_rulerFont.pixelSize() - lyt::singlePixel()));
     m_rulerFont.setLetterSpacing(QFont::AbsoluteSpacing, m_geometry.timeRulerLetterSpacing);
     m_beatFont = m_rulerFont;
     m_beatFont.setPixelSize(std::max(m_geometry.timeRulerMinimumFontPixelSize,
                                      m_beatFont.pixelSize() - lyt::singlePixel()));
-    m_signatureFont = typography::bold(m_inputHost->font());
+    m_signatureFont = typography::bold(owner.font());
     m_boldRulerFont = typography::bold(m_rulerFont);
-    const QFontMetrics markerMetrics(m_boldRulerFont);
-    m_markerHeight = markerMetrics.height() + lyt::singlePixel();
-    requestQuickUpdate();
+    m_rulerMetrics = QFontMetrics(m_rulerFont);
+    m_beatMetrics = QFontMetrics(m_beatFont);
+    m_boldRulerMetrics = QFontMetrics(m_boldRulerFont);
+    m_signatureMetrics = QFontMetrics(m_signatureFont);
+    m_markerHeight = m_boldRulerMetrics.height() + markerRowPadding;
 }
-
-TimeRuler::TimeRuler(SongView &owner)
-    : m_owner(owner)
-    , m_camera(owner.camera())
-    , m_grid(owner.grid())
-    , m_geometry(Geometry::resolve())
-{}
 
 void TimeRuler::attachInputHost(TimelineInputHost &host)
 {
     Q_ASSERT(!m_inputHost);
     m_inputHost = &host;
-    refreshGeometry();
+    requestQuickUpdate();
 }
 
 void TimeRuler::detachInputHost(TimelineInputHost &host)
@@ -150,7 +148,7 @@ void TimeRuler::cancelInteraction()
 
 void TimeRuler::hostAppearanceChanged()
 {
-    refreshGeometry();
+    requestQuickUpdate();
 }
 
 QRect TimeRuler::markerRow() const
@@ -202,7 +200,7 @@ std::vector<TimeRuler::SigChip> TimeRuler::sigChips() const
     const TimeAxis &axis = m_owner.timeAxis();
     const qreal dpr = m_inputHost->devicePixelRatio();
     const qreal plotOrigin = m_owner.timelinePlotOrigin();
-    const QFontMetrics fm(m_signatureFont);
+    const QFontMetrics &fm = m_signatureMetrics;
     const auto labelInset = lyt::space(Space::Half);
     const auto add = [&](const TimeAxis::ResolvedTimeSignature &sig) {
         const qreal x = m_camera.displayX(double(sig.tick), plotOrigin, dpr);

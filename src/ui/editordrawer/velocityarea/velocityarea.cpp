@@ -60,18 +60,15 @@ void VelocityArea::Geometry::resolve()
     stemDipWidth = layout::fontPxF(1.0 / 6.0);
     selectedStemDipWidth = layout::fontPxF(1.0 / 4.0);
 }
-void VelocityArea::rebuildFonts()
-{
-    Q_ASSERT(m_inputHost);
-    m_captionFont = typography::noteName(m_inputHost->font());
-    m_boldCaptionFont = typography::bold(m_captionFont);
-    m_captionFontHeight = QFontMetrics(m_captionFont).height();
-}
 
 VelocityArea::VelocityArea(SongView &owner, QObject *parent)
     : QObject(parent)
     , m_owner(owner)
     , m_camera(owner.camera())
+    , m_geometry()
+    , m_captionFont(typography::noteName(owner.font()))
+    , m_boldCaptionFont(typography::bold(m_captionFont))
+    , m_captionFontHeight(QFontMetrics(m_captionFont).height())
 {
     m_geometry.resolve();
 }
@@ -80,8 +77,6 @@ void VelocityArea::attachInputHost(songview::TimelineInputHost &host)
 {
     Q_ASSERT(!m_inputHost);
     m_inputHost = &host;
-    rebuildFonts();
-    m_geometry.resolve();
     rebuildAxis();
     requestQuickUpdate();
 }
@@ -99,8 +94,6 @@ void VelocityArea::hostAppearanceChanged()
 {
     if (!m_inputHost)
         return;
-    rebuildFonts();
-    m_geometry.resolve();
     rebuildVisualState();
 }
 

@@ -3,17 +3,14 @@
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 
-#include <QApplication>
 #include <QColor>
 #include <QCoreApplication>
 #include <QDeadlineTimer>
 #include <QEvent>
 #include <QEventLoop>
-#include <QFontInfo>
 #include <QImage>
 #include <QObject>
 #include <QPixmap>
-#include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QRectF>
@@ -381,10 +378,6 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         checks::support::pumpQuick();
 
         const songview::TimelineBandLayout &bandLayout = view.timelineBandLayout();
-        const QRect canonicalRulerRectBeforeFont =
-            bandLayout.geometry(songview::TimelineBand::Ruler)
-                .value_or(songview::TimelineBandGeometry{})
-                .rect;
         const auto canonicalBandUnion = [&bandLayout] {
             std::optional<QRect> unionRect;
             for (const std::optional<songview::TimelineBandGeometry> &band : bandLayout.bands) {
@@ -394,98 +387,6 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
             }
             return unionRect;
         };
-        const QFont originalApplicationFont = QApplication::font();
-        const QFont originalViewFont = view.font();
-        QFont scaledFont = originalViewFont;
-        const int currentFontPx = QFontInfo(originalViewFont).pixelSize();
-        scaledFont.setPixelSize(std::max(layout::fontPx(2.0), currentFontPx + layout::fontPx(1.0)));
-        songview::PlayheadOverlay *const originalOverlay = overlay;
-        const QPointer<QWidget> overlayLifetime{overlay};
-        QApplication::setFont(scaledFont);
-        view.setFont(scaledFont);
-        QEvent fontChange(QEvent::FontChange);
-        QCoreApplication::sendEvent(&view, &fontChange);
-        checks::support::pumpQuick();
-        auto *const refreshedOverlay =
-            checks::support::findWidgetDescendant<songview::PlayheadOverlay>(view);
-        if (!refreshedOverlay) {
-            failures.append("SongView font refresh removed its native playhead overlay");
-            view.clearTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation);
-            view.setPlayheadSample(0, false);
-            if (!viewWasVisible)
-                view.hide();
-            view.setAttribute(Qt::WA_DontShowOnScreen, hadDontShowOnScreen);
-            return failures;
-        }
-        if (!overlayLifetime || refreshedOverlay != originalOverlay)
-            failures.append("SongView font refresh reconstructed its native playhead overlay");
-        overlay = refreshedOverlay;
-        const std::optional<songview::TimelineBandGeometry> &refreshedRuler =
-            bandLayout.geometry(songview::TimelineBand::Ruler);
-        if (!refreshedRuler) {
-            failures.append("font refresh dropped the canonical ruler entry");
-        } else if (quick->geometry() != canonicalBandUnion().value_or(QRect{})) {
-            failures.append("font refresh diverged the Quick host from the canonical union");
-        }
-        overlay->setPlayhead(view.camera().contentX(tick), true, false);
-        checks::support::pumpQuick();
-        if (overlay->geometry() != view.rect()) {
-            failures.append("font-refreshed native playhead overlay lost owner geometry");
-        } else if (expectsCapturablePlayhead()) {
-            const QImage refreshedPlayhead = grabPlayhead(view, *overlay, failures).toImage();
-            const QColor playheadColor = themes::color(themes::Role::song_view_playhead);
-            const QRect refreshedRulerRect =
-                refreshedRuler.value_or(songview::TimelineBandGeometry{}).rect;
-            const qreal expectedPlayheadX =
-                (refreshedRuler ? refreshedRuler->rect.x() + refreshedRuler->timelineOrigin
-                                : qRound(view.timelinePlotOrigin())) +
-                view.camera().contentX(tick);
-            const qreal refreshedPlayheadX =
-                playheadCenterAt(refreshedPlayhead, rollBandCenterY(), playheadColor);
-            const int triangleTop = refreshedRulerRect.bottom() -
-                                    songview::playheadTriangleHeight() + layout::singlePixel();
-            const int triangleTopWidth = checks::support::playheadWidthAt(
-                refreshedPlayhead, triangleTop + layout::singlePixel(), expectedPlayheadX,
-                playheadColor);
-            const int triangleBottomWidth = checks::support::playheadWidthAt(
-                refreshedPlayhead,
-                triangleTop + songview::playheadTriangleHeight() - layout::singlePixel(),
-                expectedPlayheadX, playheadColor);
-            if (refreshedPlayheadX < 0.0 ||
-                std::abs(refreshedPlayheadX - expectedPlayheadX) > layout::singlePixel() + 0.75) {
-                failures.append("font-refreshed playhead bands retained unusable geometry");
-            }
-            if (triangleTopWidth <= triangleBottomWidth || triangleBottomWidth == 0) {
-                failures.append(
-                    "font-scaled playhead triangle image did not use refreshed dimensions");
-            }
-        }
-        QApplication::setFont(originalApplicationFont);
-        view.setFont(originalViewFont);
-        QEvent restoreFontChange(QEvent::FontChange);
-        QCoreApplication::sendEvent(&view, &restoreFontChange);
-        checks::support::pumpQuick();
-        auto *const restoredOverlay =
-            checks::support::findWidgetDescendant<songview::PlayheadOverlay>(view);
-        if (!overlayLifetime || !restoredOverlay || restoredOverlay != originalOverlay)
-            failures.append("restoring the font reconstructed the native playhead overlay");
-        if (!restoredOverlay) {
-            view.clearTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation);
-            view.setPlayheadSample(0, false);
-            if (!viewWasVisible)
-                view.hide();
-            view.setAttribute(Qt::WA_DontShowOnScreen, hadDontShowOnScreen);
-            return failures;
-        }
-        overlay = restoredOverlay;
-        const std::optional<songview::TimelineBandGeometry> &restoredRuler =
-            bandLayout.geometry(songview::TimelineBand::Ruler);
-        if (!restoredRuler || restoredRuler->rect != canonicalRulerRectBeforeFont)
-            failures.append("restoring the font did not return the canonical ruler rectangle");
-        overlay->setPlayhead(view.camera().contentX(tick), true, false);
-        view.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation, tick);
-        checks::support::pumpQuick();
-
         const auto expectedSongViewX = [&view, &bandLayout](double chromeTick) {
             const std::optional<songview::TimelineBandGeometry> &rulerGeometry =
                 bandLayout.geometry(songview::TimelineBand::Ruler);

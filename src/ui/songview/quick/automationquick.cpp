@@ -266,12 +266,12 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
             addHeaderChrome(scene, rectF(lane.band), rectF(lane.band), std::nullopt, true, true,
                             lane.clip);
         }
-        if (!lane.tempo && content && lane.slot->text && m_laneTextLayout) {
+        if (!lane.tempo && content && lane.slot->text) {
             CCLanes::RowTextCache &rowText = *lane.slot->text;
             const QRect textBounds(m_labelGutter.x(), lane.body.top(), m_labelGutter.width(),
                                    lane.body.height());
             const auto textBoxes =
-                m_laneTextLayout->align(textBounds, layout::VerticalAlignment::Center);
+                m_laneTextLayout.align(textBounds, layout::VerticalAlignment::Center);
             const QString &summary = refreshCcSummaryText(rowText, lane.points, *lane.slot->lane);
             appendText(mainText, TimelineQuickTextKeyKind::AutomationHeader,
                        quint64(2 * lane.handle.index), textBoxes.primary, rowText.title,

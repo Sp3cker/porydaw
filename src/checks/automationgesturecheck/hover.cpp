@@ -311,7 +311,7 @@ PreparedLane prepareLane(AutomationGestureCheckRig &rig, const Case &row)
                          valueY(lane.body, geometry, minimum, maximum, cursor)};
     lane.heldY = valueY(lane.body, geometry, minimum, maximum, held);
     lane.nodeY = valueY(lane.body, geometry, minimum, maximum, node);
-    NodeLaneHoverState insertionProbe;
+    NodeLaneHoverState insertionProbe(rig.page().font());
     insertionProbe.hover.lane = lane.handle;
     insertionProbe.hover.pos = lane.insertionPos;
     lane.insertionTick = uint64_t(std::max(0.0, insertionProbe.insertionTick(projection, false)));

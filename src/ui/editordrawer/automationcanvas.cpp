@@ -19,7 +19,6 @@
 
 void AutomationCanvas::refreshGeometry()
 {
-    m_geometry = AutomationGeometry::resolve();
     const int leftScrollbarGutter =
         m_page.scrollViewport()->layoutDirection() == Qt::RightToLeft ? m_page.scrollGutter() : 0;
     m_geometry.plotOrigin =
@@ -29,15 +28,6 @@ void AutomationCanvas::refreshGeometry()
         gutterMargin, layout::space(layout::Space::Zero),
         std::max(layout::space(layout::Space::Zero), m_geometry.plotOrigin - 2 * gutterMargin),
         layout::space(layout::Space::Zero));
-}
-
-void AutomationCanvas::rebuildFontCache()
-{
-    Q_ASSERT(m_inputHost);
-    m_laneTitleFont = typography::bold(typography::caption(m_inputHost->font()));
-    m_laneCaptionFont = typography::regular(typography::caption(m_inputHost->font()));
-    m_laneTextLayout = layout::twoLineText(m_laneTitleFont, m_laneTitleFont, m_laneCaptionFont,
-                                           layout::Space::Zero);
 }
 
 const QString &AutomationCanvas::refreshCcSummaryText(CCLanes::RowTextCache &cache,
@@ -68,10 +58,15 @@ const QString &AutomationCanvas::refreshCcSummaryText(CCLanes::RowTextCache &cac
 AutomationCanvas::AutomationCanvas(AutomationPage &page)
     : QObject(&page)
     , m_geometry(AutomationGeometry::resolve())
+    , m_laneTitleFont(typography::bold(typography::caption(page.font())))
+    , m_laneCaptionFont(typography::regular(typography::caption(page.font())))
+    , m_laneTextLayout(layout::twoLineText(m_laneTitleFont, m_laneTitleFont, m_laneCaptionFont,
+                                           layout::Space::Zero))
     , m_page(page)
     , m_rowData(&page)
     , m_tempoLane(&page)
     , m_laneSelection(page.m_owner.selectionModel(), m_rowData.rows(), page.usedTrackMask())
+    , m_hoverState(page.font())
 {
     refreshGeometry();
 }
@@ -98,22 +93,8 @@ void AutomationCanvas::hostAppearanceChanged()
 {
     if (!m_inputHost)
         return;
-    const QFont hostFont = m_inputHost->font();
-    const QPalette hostPalette = m_inputHost->palette();
-    const qreal hostDpr = m_inputHost->devicePixelRatio();
-    if (m_hostFont == hostFont && m_hostPalette == hostPalette && m_hostDpr == hostDpr)
-        return;
-    m_hostFont = hostFont;
-    m_hostPalette = hostPalette;
-    m_hostDpr = hostDpr;
-    refreshGeometry();
-    rebuildFontCache();
     m_pencilCursorDpr = 0.0;
-    m_hoverState.invalidateFontCache();
-    m_hoverState.invalidateCaches();
-    m_hoverState.hoverValueLabel = {};
-    m_hoverState.previewValueLabel = {};
-    contentGeometryChanged();
+    requestFullQuickUpdate();
 }
 
 void AutomationCanvas::viewportResized()
@@ -186,7 +167,6 @@ NodeLaneHoverTarget AutomationCanvas::hoverTarget() const
 {
     NodeLaneHoverTarget target;
     target.widgetBounds = contentBounds();
-    target.font = m_inputHost ? m_inputHost->font() : QFont{};
     target.devicePixelRatio = m_inputHost ? m_inputHost->devicePixelRatio() : 1.0;
     target.documentRevision = m_page.liveState().documentRevision;
     target.ready = m_page.ready();
@@ -328,6 +308,7 @@ const QCursor &AutomationCanvas::pencilCursor()
     }
     return m_pencilCursor;
 }
+
 void AutomationCanvas::rebuildRows()
 {
     cancelInteraction();

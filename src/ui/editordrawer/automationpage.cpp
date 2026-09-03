@@ -76,16 +76,6 @@ AutomationPage::Geometry AutomationPage::Geometry::resolve()
     return {layout::fontPx(4.0), layout::fontPx(5.0 / 3.0), layout::fontPx(8.0 / 3.0)};
 }
 
-void AutomationPage::refreshGeometry()
-{
-    m_geometry = Geometry::resolve();
-    if (m_scroll) {
-        m_scroll->setMinimumHeight(m_geometry.rowDefaultHeight + m_geometry.addLaneStripHeight);
-        m_scroll->updateGeometry();
-    }
-    updateGeometry();
-}
-
 int AutomationPage::scrollGutter() const noexcept
 {
     return m_scroll ? m_scroll->gutter() : 0;
@@ -226,18 +216,16 @@ AutomationPage::~AutomationPage()
 bool AutomationPage::event(QEvent *event)
 {
     const QEvent::Type type = event->type();
-    if (type == QEvent::FontChange) {
-        refreshGeometry();
-        if (m_scroll)
-            m_scroll->syncBackground();
-    }
     if (type == QEvent::StyleChange || type == QEvent::ThemeChange ||
         type == QEvent::PaletteChange || type == QEvent::ApplicationPaletteChange) {
         if (m_scroll)
             m_scroll->syncBackground();
+        if (m_canvas)
+            m_canvas->requestFullQuickUpdate();
     }
-    if (type == QEvent::Hide || type == QEvent::WindowDeactivate)
+    if (type == QEvent::Hide || type == QEvent::WindowDeactivate) {
         cancelInteraction();
+    }
     return QWidget::event(event);
 }
 

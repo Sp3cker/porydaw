@@ -71,7 +71,6 @@ class AutomationPage final : public QWidget
         static Geometry resolve();
     };
 
-    void refreshGeometry();
     void synchronizeAutomationViewport();
     void setVerticalScroll(int value);
     bool scrollVertically(const songview::TimelineWheelInput &input);

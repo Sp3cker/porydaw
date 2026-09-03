@@ -191,7 +191,8 @@ EventListView::EventListView(SongView *sv, QWidget *parent) : QWidget(parent), m
     m_table->setAlternatingRowColors(true);
     m_table->setFrameShape(QFrame::NoFrame);
     m_table->verticalHeader()->setDefaultSectionSize(m_table->fontMetrics().height() + 6);
-    applyRowIndexFont();
+    const auto rowIndexFont = typography::caption(typography::bodyMono(m_table->font()));
+    m_table->verticalHeader()->setFont(rowIndexFont);
     m_table->horizontalHeader()->setHighlightSections(false);
     m_table->horizontalHeader()->setStretchLastSection(true);
     m_table->setColumnWidth(EventTableModel::ColTick, 70);
@@ -381,21 +382,6 @@ void EventListView::jumpCursorToRow(int row)
         m_sv->ensureTickVisible(tick);
     }
     updatePlayRow();
-}
-
-void EventListView::applyRowIndexFont()
-{
-    const auto rowIndexFont = typography::caption(typography::bodyMono(m_table->font()));
-    m_table->verticalHeader()->setFont(rowIndexFont);
-}
-
-void EventListView::changeEvent(QEvent *event)
-{
-    QWidget::changeEvent(event);
-    if (event->type() == QEvent::ApplicationFontChange || event->type() == QEvent::StyleChange) {
-        m_model->refreshFonts();
-        applyRowIndexFont();
-    }
 }
 
 void EventListView::rebuildChunkCombo()

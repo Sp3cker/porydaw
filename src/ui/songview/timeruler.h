@@ -12,6 +12,7 @@
 #include <vector>
 
 class QComboBox;
+
 class SongView;
 
 namespace songview {
@@ -45,8 +46,6 @@ class TimeRuler final : public TimelineBandInteraction
 
         static Geometry resolve();
     };
-
-    void refreshGeometry();
 
   public:
     explicit TimeRuler(SongView &owner);
@@ -114,6 +113,12 @@ class TimeRuler final : public TimelineBandInteraction
     QFont m_rulerFont;
     QFont m_beatFont;
     QFont m_boldRulerFont;
+    // Metrics of the fixed fonts above, built once in the constructor;
+    // row heights, label widths, and baselines reuse them.
+    QFontMetrics m_rulerMetrics{QFont{}};
+    QFontMetrics m_beatMetrics{QFont{}};
+    QFontMetrics m_boldRulerMetrics{QFont{}};
+    QFontMetrics m_signatureMetrics{QFont{}};
     SongView &m_owner;
     const songview::TimeCamera &m_camera;
     const songview::Grid &m_grid;

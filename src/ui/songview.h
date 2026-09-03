@@ -579,7 +579,6 @@ class SongView : public QWidget
         static Geometry resolve();
     };
 
-    void refreshGeometry();
     // Feeds the camera the geometry-derived zoom clamp bounds; call after
     // Geometry::resolve().
     void pushCameraGeometryLimits();

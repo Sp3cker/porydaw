@@ -23,8 +23,6 @@ class OtherStrip final : public QObject, public TimelineBandInteraction
         static Geometry resolve();
     };
 
-    void refreshGeometry();
-
   public:
     explicit OtherStrip(SongView &owner, QObject *parent = nullptr);
 
@@ -33,7 +31,6 @@ class OtherStrip final : public QObject, public TimelineBandInteraction
     bool pointerMove(const TimelinePointerInput &input) override;
     void pointerLeave() override;
     void inputCancelled(TimelineInputCancelReason reason) override;
-    void hostAppearanceChanged() override;
 
   private:
     friend class TimelineQuickView;

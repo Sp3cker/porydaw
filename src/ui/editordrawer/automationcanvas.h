@@ -10,7 +10,6 @@
 #include <QCursor>
 #include <QFont>
 #include <QObject>
-#include <QPalette>
 #include <QPointF>
 #include <QRect>
 #include <QSize>
@@ -127,7 +126,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     QRect viewportRect(QRect contentRect) const noexcept;
     QRect contentBounds() const noexcept;
     void refreshGeometry();
-    void rebuildFontCache();
     const QString &refreshCcSummaryText(CCLanes::RowTextCache &cache,
                                         std::span<const NodePoint> points, const NodeLane &lane);
 
@@ -202,13 +200,10 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     AutomationGeometry m_geometry;
     QFont m_laneTitleFont;
     QFont m_laneCaptionFont;
-    std::optional<layout::TwoLineTextLayout> m_laneTextLayout;
+    layout::TwoLineTextLayout m_laneTextLayout;
     QRect m_labelGutter;
     AutomationPage &m_page;
     songview::TimelineInputHost *m_inputHost = nullptr;
-    QFont m_hostFont;
-    QPalette m_hostPalette;
-    qreal m_hostDpr = 0.0;
     CCLanes m_rowData;
     TempoLane m_tempoLane;
     std::vector<CCLaneAdapter> m_ccAdapters;

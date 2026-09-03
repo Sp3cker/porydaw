@@ -241,9 +241,6 @@ void PlayheadOverlay::changeEvent(QEvent *event)
 {
     QWidget::changeEvent(event);
     switch (event->type()) {
-    case QEvent::FontChange:
-        synchronizeGeometry();
-        break;
     case QEvent::ApplicationPaletteChange:
     case QEvent::PaletteChange:
     case QEvent::StyleChange: {

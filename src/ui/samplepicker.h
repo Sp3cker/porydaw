@@ -63,12 +63,10 @@ class SamplePickerButton : public QPushButton
 
   protected:
     void resizeEvent(QResizeEvent *event) override;
-    void changeEvent(QEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
 
   private:
     void rebuildList();
-    void refreshItemFonts();
     void applyFilter();
     void updateDetail();
     void commitItem(QTreeWidgetItem *item);

@@ -5,6 +5,7 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickview.h"
+
 #include <QStringList>
 #include <QToolTip>
 
@@ -18,12 +19,6 @@ namespace songview {
 OtherStrip::Geometry OtherStrip::Geometry::resolve()
 {
     return {lyt::fontPx(1.0 / 3.0), lyt::fontPx(1.0 / 3.0), lyt::fontPx(5.0 / 12.0)};
-}
-
-void OtherStrip::refreshGeometry()
-{
-    m_geometry = Geometry::resolve();
-    requestQuickUpdate();
 }
 
 OtherStrip::OtherStrip(SongView &owner, QObject *parent)
@@ -95,11 +90,6 @@ void OtherStrip::pointerLeave()
 void OtherStrip::inputCancelled(TimelineInputCancelReason)
 {
     QToolTip::hideText();
-}
-
-void OtherStrip::hostAppearanceChanged()
-{
-    refreshGeometry();
 }
 
 } // namespace songview

@@ -69,7 +69,6 @@ class PolyphonyPanel : public QWidget
 
   private:
     void appendEvent(const M4APolyEvent &ev);
-    void refreshHeadingFonts();
     void applyLogItemInk(QListWidgetItem *item);
     void refreshTable(const AudioEngine::PolySnapshot &snap);
     void clearRuntimeState();

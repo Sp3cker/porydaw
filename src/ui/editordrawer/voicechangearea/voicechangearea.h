@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <QFont>
+#include <QFontMetrics>
 #include <QObject>
 #include <QPoint>
 #include <QPointF>
@@ -15,6 +16,7 @@
 
 #include "core/songdocument.h"
 #include "ui/editordrawer/drawerpage.h"
+#include "ui/layout.h"
 #include "ui/songview/quick/timelineinput.h"
 
 extern "C" {
@@ -113,10 +115,8 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
     void rebuildQuickScene(songview::TimelineQuickScene &scene);
     void rebuildQuickHover(songview::TimelineQuickScene &scene);
     void rebuildVisualState();
-    void rebuildFonts();
     void clearHover();
     void updateHover(qreal x);
-    void ensureHoverLabelFontCache();
     QRectF bounds() const;
     qreal devicePixelRatio() const;
     bool ready() const noexcept;
@@ -152,7 +152,9 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
     QRectF m_hoverLabelRect;
     QFont m_titleFont;
     QFont m_captionFont;
+    QFontMetricsF m_captionMetrics;
     QFont m_hoverLabelFont;
+    layout::TwoLineTextLayout m_textLayout;
     mutable std::array<VoicePaintText, VOICEGROUP_SIZE> m_paintTexts;
     mutable QString m_secondary;
     mutable int m_changeCount = -1;

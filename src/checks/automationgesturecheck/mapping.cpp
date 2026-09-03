@@ -5,6 +5,7 @@
 #include "core/timedefaults.h"
 #include "rig.h"
 #include "ui/editordrawer/automationcanvas.h"
+#include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/nodelane/hover.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
@@ -65,7 +66,7 @@ void checkAutomationPencilMapping(AutomationGestureCheckRig &rig,
     const double indicatorTick =
         double(indicatorCell.tickBegin) + 0.4 * double(rig.view().grid().fineGridTicks());
     const auto panInput = rig.pointAt(rig.pan, indicatorTick, 72);
-    NodeLaneHoverState panIndicator;
+    NodeLaneHoverState panIndicator(rig.page().font());
     panIndicator.hover.lane = panHandle;
     panIndicator.hover.pos = panInput.position;
     const auto mappedCell = projection.snapCellAt(panInput.mapped.rawTick);

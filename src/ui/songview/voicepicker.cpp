@@ -33,12 +33,6 @@ VoicePickerDialog::Geometry VoicePickerDialog::Geometry::resolve()
     return {lyt::fontPx(30.0), lyt::fontPx(110.0 / 3.0)};
 }
 
-void VoicePickerDialog::refreshGeometry()
-{
-    m_geometry = Geometry::resolve();
-    resize(m_geometry.width, m_geometry.height);
-}
-
 VoicePickerDialog::VoicePickerDialog(SongView *sv, const QString &title, int initialVoice,
                                      std::function<void(int, int)> audition)
     : QDialog(sv)
@@ -102,14 +96,6 @@ VoicePickerDialog::~VoicePickerDialog()
 int VoicePickerDialog::selectedVoice() const
 {
     return std::max(0, m_list->currentRow());
-}
-
-bool VoicePickerDialog::event(QEvent *event)
-{
-    const bool handled = QDialog::event(event);
-    if (event->type() == QEvent::FontChange)
-        refreshGeometry();
-    return handled;
 }
 
 bool VoicePickerDialog::eventFilter(QObject *watched, QEvent *event)

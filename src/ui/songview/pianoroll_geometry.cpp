@@ -228,11 +228,12 @@ int PianoRoll::velocityLabelHeight() const
     return int(std::floor(m_camera.keyHeight() - physicalPixel()));
 }
 
-bool PianoRoll::noteNameFits(const QRectF &noteRect, int key, const QFontMetricsF &metrics) const
+bool PianoRoll::noteNameFits(const QRectF &noteRect, int key) const
 {
     const auto textInset = lyt::space(Space::Half);
     const QString name = keyName(key);
-    return noteRect.width() >= textInset + metrics.horizontalAdvance(name) + lyt::space(Space::Two);
+    return noteRect.width() >=
+           textInset + m_fixedNoteNameMetrics.horizontalAdvance(name) + lyt::space(Space::Two);
 }
 
 const ViewNote *PianoRoll::hitNote(QPointF pos) const
