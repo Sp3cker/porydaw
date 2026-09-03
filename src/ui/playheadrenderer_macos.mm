@@ -4,6 +4,7 @@
 #import <QuartzCore/QuartzCore.h>
 
 #include "nativelayerutils_macos_p.h"
+#include "songview.h"
 
 #include <QColor>
 #include <QGuiApplication>
@@ -306,7 +307,7 @@ class PlayheadOverlay::Platform final
     bool m_hasLayout = false;
 };
 
-void PlayheadOverlay::initializePlatform(QWidget &owner)
+void PlayheadOverlay::initializePlatform(SongView &owner)
 {
     if (QGuiApplication::platformName() != QLatin1String("cocoa"))
         return;
@@ -317,7 +318,7 @@ void PlayheadOverlay::initializePlatform(QWidget &owner)
 void PlayheadOverlay::setPlatformLayout()
 {
     Q_ASSERT(m_platform);
-    m_platform->setLayout(size(), m_visibleSurfaceRegion, m_triangleClip, m_bodyGeometry,
+    m_platform->setLayout(m_owner.size(), m_visibleSurfaceRegion, m_triangleClip, m_bodyGeometry,
                           m_devicePixelRatio, m_playing, m_trianglePointsUp);
 }
 

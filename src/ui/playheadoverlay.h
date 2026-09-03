@@ -3,15 +3,13 @@
 #include "songview/timelinebandlayout.h"
 
 #include <QColor>
-#include <QPainterPath>
+#include <QObject>
 #include <QRect>
 #include <QRegion>
-#include <QSize>
-#include <QWidget>
 #include <memory>
 
-class QEvent;
-class QPaintEvent;
+class SongView;
+class QWidget;
 
 namespace songview {
 
@@ -28,48 +26,50 @@ qreal playheadPeakAlpha(bool playing);
 /// Whether the platform-native playhead renderer is enabled for this process.
 bool platformPlayheadRendererEnabled();
 
-class PlayheadOverlay final : public QWidget
+class PlayheadOverlay final : public QObject
 {
     Q_OBJECT
     Q_DISABLE_COPY_MOVE(PlayheadOverlay)
 
   public:
-    explicit PlayheadOverlay(QWidget &owner, const TimelineBandLayout &layout);
+    explicit PlayheadOverlay(SongView &owner, const TimelineBandLayout &layout);
 
     void setPlayhead(qreal timelineX, bool visible, bool playing);
     // layout is SongView's canonical snapshot; band rects are already
     // owner-clipped (see songview::TimelineBandLayout) and stored verbatim.
     void updateBands(const TimelineBandLayout &layout);
 
-  protected:
-    void paintEvent(QPaintEvent *event) override;
-    void changeEvent(QEvent *event) override;
+    // Re-reads the themed playhead color and pushes it to the platform
+    // renderer and/or the fallback widget.
+    void syncAppearance();
+    QWidget *fallbackWidget() const noexcept; // nullptr when native platform applied
 
   private:
+    class FallbackWidget;
+
     qreal finalX() const { return static_cast<qreal>(m_timelineOrigin) + m_timelineX; }
 
-    QRegion fallbackPaintRegion() const;
-    const QPainterPath &playheadTrianglePath();
     void synchronizeGeometry();
     void updateFallbackRegion();
-    void exposeFallbackPixels(const QRegion &region);
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD
     class Platform;
     struct PlatformDeleter {
         void operator()(Platform *platform) const;
     };
 
-    void initializePlatform(QWidget &owner);
+    void initializePlatform(SongView &owner);
     void setPlatformLayout();
     void setPlatformImages();
     bool setPlatformPosition();
 #endif
     void updatePlayhead();
 
+    SongView &m_owner;
     TimelineBandLayout m_layout;
     QColor m_color;
-    QPainterPath m_playheadTrianglePath;
-    QSize m_playheadTrianglePathSize;
+    // Lazily created software-painting child of SongView; only alive while
+    // the native platform renderer is not applied.
+    FallbackWidget *m_fallback = nullptr;
 
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD
     std::unique_ptr<Platform, PlatformDeleter> m_platform;
@@ -85,7 +85,6 @@ class PlayheadOverlay final : public QWidget
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD
     qreal m_devicePixelRatio = 1.0;
 #endif
-    QRegion m_fallbackPaintRegion;
     bool m_platformApplied = false;
 #ifdef PORYDAW_USE_DIRECT_PLAYHEAD
     bool m_platformAttempted = false;
