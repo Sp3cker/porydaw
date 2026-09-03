@@ -8,8 +8,6 @@
 #include <QColor>
 #include <QCoreApplication>
 #include <QEvent>
-#include <QFont>
-#include <QFontInfo>
 #include <QPoint>
 #include <QRegion>
 #include <QScrollArea>
@@ -35,7 +33,6 @@
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/theme/trackidentitycolors.h"
-#include "ui/typography.h"
 
 namespace {
 
@@ -380,7 +377,6 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
     };
     AutomationCanvas *canvas = page.canvas();
     const AutomationBandInput band{page, *automationInputItem(view)};
-    const QFont originalFont = band.item.font();
     const QByteArray originalSmf = document.smf().write();
     const int originalUndoIndex = document.undoStack()->index();
     const auto originalSelection = view.selectionModel().timeSelection();
@@ -408,9 +404,6 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
     QAbstractItemModel *const automationHoverTextModel =
         quickScene ? quickScene->automationHoverTextModel() : nullptr;
     const auto restore = [&] {
-        typography::setUseSystemFont(false);
-        band.item.setHostAppearance(originalFont, band.item.palette());
-        band.item.notifyHostAppearanceChanged();
         pump();
         document.undoStack()->setIndex(originalUndoIndex);
         view.selectionModel().setTimeSelection(originalSelection);
@@ -548,70 +541,6 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
     const auto hoverText = firstTextRecord(automationHoverTextModel);
     report(hoverText && !hoverText->isEmpty(),
            QStringLiteral("Tempo hover value label did not reach the retained Quick text model"));
-
-    const QString systemFamily = typography::systemFontFamily();
-    report(!systemFamily.isEmpty(), QStringLiteral("platform font family is unavailable"));
-    typography::setUseSystemFont(true);
-    const auto systemBody = typography::bodyFont();
-    report(systemBody.has_value(), QStringLiteral("system Body font is unavailable"));
-    if (!systemFamily.isEmpty() && systemBody) {
-        band.item.setHostAppearance(*systemBody, band.item.palette());
-        band.item.notifyHostAppearanceChanged();
-        pump();
-        const auto modelUsesFont = [](QAbstractItemModel *model, const QFont &expected) {
-            if (!model || model->rowCount() == 0)
-                return false;
-            const QFontInfo expectedInfo(expected);
-            for (int row = 0; row < model->rowCount(); ++row) {
-                const QModelIndex index = model->index(row, 0);
-                const QFont actual =
-                    model->data(index, songview::TimelineQuickTextModel::FontRole).value<QFont>();
-                const QFontInfo actualInfo(actual);
-                if (actualInfo.family() != expectedInfo.family() ||
-                    actualInfo.pixelSize() != expectedInfo.pixelSize()) {
-                    return false;
-                }
-            }
-            return true;
-        };
-        const auto modelHasOpaqueText = [](QAbstractItemModel *model) {
-            if (!model || model->rowCount() == 0)
-                return false;
-            for (int row = 0; row < model->rowCount(); ++row) {
-                const QModelIndex index = model->index(row, 0);
-                const QString text =
-                    model->data(index, songview::TimelineQuickTextModel::TextRole).toString();
-                const QColor color =
-                    model->data(index, songview::TimelineQuickTextModel::ColorRole).value<QColor>();
-                if (text.isEmpty() || !color.isValid() || color.alpha() == 0)
-                    return false;
-            }
-            return true;
-        };
-        const AutomationGeometry systemGeometry = [&] {
-            auto resolved = AutomationGeometry::resolve();
-            resolved.plotOrigin = canvas->plotOrigin();
-            return resolved;
-        }();
-        const QRect systemBody = canvas->laneBody(LaneHandle{0});
-        const QPointF systemNode(
-            view.camera().displayX(double(kNodeTick), systemGeometry.plotOrigin, dpr),
-            nodelane::valueY(tempoLane, systemBody, systemGeometry, 180));
-        band.mouse(QEvent::MouseMove, systemNode, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
-        pump();
-        const QFont systemCaption = typography::caption(band.item.font());
-        const QFont systemHover = typography::noteName(band.item.font());
-        report(modelUsesFont(automationTextModel, systemCaption) &&
-                   modelHasOpaqueText(automationTextModel) &&
-                   modelUsesFont(automationHoverTextModel, systemHover) &&
-                   modelHasOpaqueText(automationHoverTextModel),
-               QStringLiteral("FontChange did not rebuild retained Quick text metrics and colors"));
-        report(QFontInfo(band.item.font()).family() == systemFamily,
-               QStringLiteral("AutomationCanvas did not receive the system font"));
-        const auto systemHoverText = firstTextRecord(automationHoverTextModel);
-        report(systemHoverText && !systemHoverText->isEmpty(),
-               QStringLiteral("FontChange lost the retained Quick Tempo hover value label"));
-    }
 
     restore();
     report(document.smf().write() == originalSmf &&

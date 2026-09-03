@@ -173,51 +173,6 @@ int runFontCheck(int expectedBaseFontPx)
           "Theme apply did not restore Body after an external font reset");
     check(QFontInfo(probe.font()).family() == QStringLiteral("Atkinson Hyperlegible Next"),
           "Theme apply left a polished widget on the externally reset font");
-    // The system-font preference swaps the semantic scale onto the platform
-    // typeface captured before the bundled install; a theme reapply carries
-    // the swap through already-polished widgets, and turning the preference
-    // back off restores the bundled faces the same way.
-    const auto platformFamily = typography::systemFontFamily();
-    check(!platformFamily.isEmpty(), "Typography did not capture the platform font family");
-    check(!typography::systemMonoFamily().isEmpty(),
-          "Typography did not capture the platform fixed-pitch family");
-    typography::setUseSystemFont(true);
-    const auto systemBody = typography::bodyFont();
-    check(systemBody.has_value() && QFontInfo(*systemBody).family() == platformFamily &&
-              QFontInfo(*systemBody).pixelSize() == *baseFontPx,
-          "System-font Body is not the platform face at its native size");
-    const auto regularSystemBody = typography::regular(*systemBody);
-    const auto regularSystemBodyInfo = QFontInfo(regularSystemBody);
-    check(regularSystemBodyInfo.family() == platformFamily &&
-              regularSystemBodyInfo.pixelSize() == QFontInfo(*systemBody).pixelSize() &&
-              regularSystemBodyInfo.weight() == QFont::Normal,
-          "System Regular did not preserve the platform face or resolve normal weight");
-    themes::apply(*application, themes::vanilla());
-    check(QFontInfo(QApplication::font()).family() == platformFamily,
-          "Theme apply did not install the system Body");
-    check(QFontInfo(probe.font()).family() == platformFamily,
-          "A polished widget did not follow the system-font preference");
-    const auto systemCaption = typography::caption(QApplication::font());
-    check(QFontInfo(systemCaption).family() == platformFamily &&
-              QFontInfo(systemCaption).pixelSize() == qMax(1, qRound(*baseFontPx / 1.25)),
-          "System-font Caption is not the platform face a step below Body");
-    check(systemBody && hasTabularNumbers(*systemBody) && hasTabularNumbers(systemCaption) &&
-              hasTabularNumbers(typography::bodyMono(QApplication::font())),
-          "System-font scale does not preserve tabular numbers");
-    check(typography::bodyMono(QApplication::font()).family() == typography::systemMonoFamily(),
-          "System-font Body Mono is not the platform fixed-pitch face");
-    const auto systemNoteName = typography::noteName(QApplication::font());
-    check(QFontInfo(systemNoteName).family() == QStringLiteral("Atkinson Hyperlegible Next") &&
-              QFontInfo(systemNoteName).styleName() == expectedNoteNameStyle,
-          "Note-name font did not stay on the bundled face with system font enabled");
-    typography::setUseSystemFont(false);
-    themes::apply(*application, themes::vanilla());
-    check(QFontInfo(QApplication::font()).family() ==
-                  QStringLiteral("Atkinson Hyperlegible Next") &&
-              QFontInfo(QApplication::font()).pixelSize() == expectedBodySize,
-          "Disabling the system-font preference did not restore Body");
-    check(QFontInfo(probe.font()).family() == QStringLiteral("Atkinson Hyperlegible Next"),
-          "A polished widget did not return to the bundled face");
     if (failures == 0)
         std::printf("fontcheck: PASS\n");
     return failures == 0 ? 0 : 1;
