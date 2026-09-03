@@ -39,6 +39,8 @@ struct DrawerChromeSnapshot {
     QRectF velocityToggleRect;
     QRectF detentRect;
     QRectF automationScrollbarRect;
+    qreal toggleIconInset = 0;
+    qreal detentIconInset = 0;
     bool voiceChangesHandleVisible = false;
     bool velocityHandleVisible = false;
     bool automationHandleVisible = false;
@@ -123,6 +125,8 @@ class DrawerChrome final : public QObject
     Q_PROPERTY(int scrollbarWidth READ scrollbarWidth NOTIFY chromeChanged FINAL)
     Q_PROPERTY(
         int scrollbarMinimumThumbHeight READ scrollbarMinimumThumbHeight NOTIFY chromeChanged FINAL)
+    Q_PROPERTY(qreal toggleIconInset READ toggleIconInset NOTIFY chromeChanged FINAL)
+    Q_PROPERTY(qreal detentIconInset READ detentIconInset NOTIFY chromeChanged FINAL)
     Q_PROPERTY(int barBorderWidth READ barBorderWidth NOTIFY chromeChanged FINAL)
     Q_PROPERTY(int iconRevision READ iconRevision NOTIFY chromeChanged FINAL)
     Q_PROPERTY(QColor toggleBackground READ toggleBackground NOTIFY chromeChanged FINAL)
@@ -196,6 +200,8 @@ class DrawerChrome final : public QObject
     int scrollbarWidth() const noexcept;
     int scrollbarMinimumThumbHeight() const noexcept;
     int barBorderWidth() const noexcept { return m_snapshot.barBorderWidth; }
+    qreal toggleIconInset() const noexcept { return m_snapshot.toggleIconInset; }
+    qreal detentIconInset() const noexcept { return m_snapshot.detentIconInset; }
     int iconRevision() const noexcept { return m_snapshot.iconRevision; }
     QColor toggleBackground() const { return m_snapshot.toggleBackground; }
     QColor toggleCheckedBackground() const { return m_snapshot.toggleCheckedBackground; }

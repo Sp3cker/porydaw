@@ -406,6 +406,8 @@ void EditorDrawer::publishChromeSnapshot(const DrawerChromeSnapshot &localSnapsh
     m_chromeSnapshot.velocityToggleRect = translate(localSnapshot.velocityToggleRect);
     m_chromeSnapshot.detentRect = translate(localSnapshot.detentRect);
     m_chromeSnapshot.automationScrollbarRect = translate(localSnapshot.automationScrollbarRect);
+    m_chromeSnapshot.toggleIconInset = localSnapshot.toggleIconInset;
+    m_chromeSnapshot.detentIconInset = localSnapshot.detentIconInset;
     m_chromeSnapshot.voiceChangesHandleVisible = localSnapshot.voiceChangesHandleVisible;
     m_chromeSnapshot.velocityHandleVisible = localSnapshot.velocityHandleVisible;
     m_chromeSnapshot.automationHandleVisible = localSnapshot.automationHandleVisible;

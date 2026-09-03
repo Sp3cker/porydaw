@@ -151,6 +151,7 @@ Item {
 
         Image {
             anchors.fill: parent
+            anchors.margins: controlChrome.toggleIconInset
             fillMode: Image.PreserveAspectFit
             sourceSize.width: width
             sourceSize.height: height
@@ -209,10 +210,10 @@ Item {
         id: drawerDetent
         objectName: "drawerDetent"
 
-        x: layer.chrome.detentRect.x - layer.quickView.hostX
-        y: layer.chrome.detentRect.y - layer.quickView.hostY
-        width: layer.chrome.detentRect.width
-        height: layer.chrome.detentRect.height
+        x: layer.chrome.detentRect.x - layer.quickView.hostX + layer.chrome.detentIconInset
+        y: layer.chrome.detentRect.y - layer.quickView.hostY + layer.chrome.detentIconInset
+        width: layer.chrome.detentRect.width - 2 * layer.chrome.detentIconInset
+        height: layer.chrome.detentRect.height - 2 * layer.chrome.detentIconInset
         visible: layer.chrome.detentVisible
         fillMode: Image.PreserveAspectFit
         sourceSize.width: width
@@ -242,10 +243,15 @@ Item {
         Accessible.focusable: layer.chrome.detentEnabled
         Accessible.onPressAction: drawerDetent.activate()
 
-        TimelineInputItem {
-            objectName: "drawerDetentInput"
-            anchors.fill: parent
-        }
+    }
+
+    TimelineInputItem {
+        objectName: "drawerDetentInput"
+        x: layer.chrome.detentRect.x - layer.quickView.hostX
+        y: layer.chrome.detentRect.y - layer.quickView.hostY
+        width: layer.chrome.detentRect.width
+        height: layer.chrome.detentRect.height
+        visible: layer.chrome.detentVisible
     }
 
     TimelineScrollbar {

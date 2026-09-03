@@ -358,6 +358,8 @@ void DrawerSections::arrangeLocal(const QSize &overlaySize)
     snapshot.barRect = QRectF(0, y, width, chrome);
     const int buttonInset = layout::space(layout::Space::One);
     const int buttonSize = std::max(layout::singlePixel(), chrome - 2 * buttonInset);
+    snapshot.toggleIconInset = buttonInset;
+    snapshot.detentIconInset = buttonInset / 2.0;
     const int toggleGroupWidth = 3 * buttonSize + 2 * buttonInset;
     const int pianoKeysWidth =
         std::min(m_velocity->plotOrigin(), std::max(0, width - velocityLeft));
