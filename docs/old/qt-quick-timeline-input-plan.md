@@ -2,8 +2,12 @@
 
 ## Status
 
-Implementation plan for removing the six full-area QWidget input surfaces that remain under the
-Qt Quick timeline scene.
+Complete. All six full-area QWidget input surfaces were removed from under the Qt Quick timeline
+scene, their input moved to Qt Quick, and the final compatibility cleanup landed.
+
+Known follow-up: `rollcheck` can fail its fixed-pixel transient selection-ring assertion even
+though right-drag note selection works. That check remains unchanged and does not leave this
+migration open.
 
 This plan supersedes only the input-retention parts of
 `docs/qt-quick-timeline-column-plan.md`:
