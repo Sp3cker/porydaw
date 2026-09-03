@@ -1,4 +1,5 @@
 #include "playheadoverlay.h"
+#include "songview.h"
 
 #define WIN32_LEAN_AND_MEAN
 #ifndef NOMINMAX
@@ -12,6 +13,7 @@
 #include <windows.h>
 
 #include <QDebug>
+#include <QWidget>
 #include <QtMath>
 #include <algorithm>
 #include <array>
@@ -748,7 +750,7 @@ class PlayheadOverlay::Platform final
     bool m_initialized = false;
 };
 
-void PlayheadOverlay::initializePlatform(QWidget &owner)
+void PlayheadOverlay::initializePlatform(SongView &owner)
 {
     m_platform.reset(new Platform(owner));
 }
@@ -756,8 +758,8 @@ void PlayheadOverlay::initializePlatform(QWidget &owner)
 void PlayheadOverlay::setPlatformLayout()
 {
     Q_ASSERT(m_platform);
-    if (!m_platform->setLayout(size(), m_visibleSurfaceRegion, m_triangleClip, m_bodyGeometry,
-                               m_devicePixelRatio, finalX(), m_visible, m_playing,
+    if (!m_platform->setLayout(m_owner.size(), m_visibleSurfaceRegion, m_triangleClip,
+                               m_bodyGeometry, m_devicePixelRatio, finalX(), m_visible, m_playing,
                                m_trianglePointsUp) &&
         m_platform->failed()) {
         qWarning().noquote() << "Native playhead failed; using QWidget fallback:"

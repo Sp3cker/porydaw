@@ -47,16 +47,6 @@ bool waitForNativeWindowExposure(QWidget &widget)
     return false;
 }
 
-template <typename T>
-T *findDirectWidgetChild(QWidget &owner)
-{
-    for (QWidget *child : owner.findChildren<QWidget *>(QString{}, Qt::FindDirectChildrenOnly)) {
-        if (auto *typed = dynamic_cast<T *>(child))
-            return typed;
-    }
-    return nullptr;
-}
-
 } // namespace
 
 int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel)
@@ -90,15 +80,19 @@ int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel)
 
     auto *quick = view.findChild<songview::TimelineQuickView *>(
         QStringLiteral("timelineQuickCanvas"), Qt::FindDirectChildrenOnly);
-    auto *overlay = findDirectWidgetChild<songview::PlayheadOverlay>(view);
+    auto *overlay =
+        view.findChild<songview::PlayheadOverlay *>(QString{}, Qt::FindDirectChildrenOnly);
     if (!quick || !overlay) {
         fail("SongView did not create direct Quick and native playhead children");
-    } else {
-        const QObjectList stackingOrder = view.children();
-        if (overlay->parentWidget() != &view || overlay->geometry() != view.rect())
-            fail("playhead overlay was reparented away from the SongView");
-        if (stackingOrder.indexOf(quick) >= stackingOrder.indexOf(overlay))
-            fail("native playhead overlay is stacked below the retained Quick host");
+    } else if (QWidget *const fallback = overlay->fallbackWidget()) {
+        if (fallback->parentWidget() != &view || fallback->geometry() != view.rect())
+            fail("playhead fallback widget was reparented away from the SongView");
+        const QList<QWidget *> widgetStacking =
+            view.findChildren<QWidget *>(QString{}, Qt::FindDirectChildrenOnly);
+        if (widgetStacking.indexOf(fallback) <= widgetStacking.indexOf(quick))
+            fail("playhead fallback widget is stacked below the retained Quick host");
+    } else if (quick->playheadVisible()) {
+        fail("default windowing published a Quick playhead without a native fallback widget");
     }
 
     if (!quick) {

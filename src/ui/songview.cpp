@@ -799,6 +799,8 @@ bool SongView::event(QEvent *event)
         m_editorDrawer->refreshAppearance(palette());
     if (appearanceChanged)
         syncTimelineQuickAppearance();
+    if (appearanceChanged && m_playheadOverlay)
+        m_playheadOverlay->syncAppearance();
     return handled;
 }
 void SongView::copySelection()

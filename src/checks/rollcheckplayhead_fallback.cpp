@@ -8,6 +8,7 @@
 #include <QImage>
 #include <QPixmap>
 #include <QPoint>
+#include <QQuickItem>
 #include <QtGlobal>
 
 #include <algorithm>
@@ -76,7 +77,8 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
     auto *quick =
         probe.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
     auto *scene = quick ? quick->findChild<songview::TimelineQuickScene *>() : nullptr;
-    auto *overlay = checks::support::findWidgetDescendant<songview::PlayheadOverlay>(probe);
+    auto *overlay = probe.findChild<songview::PlayheadOverlay *>();
+    QWidget *const fallback = overlay ? overlay->fallbackWidget() : nullptr;
     auto *roll = probe.findChild<songview::PianoRoll *>();
     const auto rollBandRect = [&probe] {
         const std::optional<songview::TimelineBandGeometry> &band =
@@ -89,13 +91,14 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
     auto *velocity = drawer ? drawer->velocityArea() : nullptr;
     auto *voiceChanges = drawer ? drawer->voiceChangeArea() : nullptr;
     const songview::TimelineBandLayout &bandLayout = probe.timelineBandLayout();
-    if (!quick || !scene || !overlay || !bandLayout.geometry(songview::TimelineBand::Ruler) ||
-        !roll || !eventList || !automation || !velocity || !voiceChanges) {
+    if (!quick || !scene || !overlay || !fallback ||
+        !bandLayout.geometry(songview::TimelineBand::Ruler) || !roll || !eventList || !automation ||
+        !velocity || !voiceChanges) {
         failures.append("forced QWidget playhead fallback did not expose its rendering surfaces");
         probe.hide();
         return failures;
     }
-    if (overlay->parentWidget() != &probe || overlay->geometry() != probe.rect())
+    if (fallback->parentWidget() != &probe || fallback->geometry() != probe.rect())
         failures.append(
             "forced QWidget playhead fallback did not own the complete SongView surface");
 
@@ -119,7 +122,7 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
 
     setPlayhead(tick, false);
     const QColor color = themes::color(themes::Role::song_view_playhead);
-    const auto fallbackImage = [&] { return overlay->grab().toImage(); };
+    const auto fallbackImage = [&] { return fallback->grab().toImage(); };
     // Converted bands render in the Quick scene instead of native widgets;
     // their clip checks probe canonical SongView-local rectangles.
     const auto checkVisibleBodyRect = [&](const QRect &bandRect, const char *name) {
@@ -195,7 +198,7 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
                                2 * layout::singlePixel() + 1, layout::singlePixel()};
     if (!eventList->isVisibleTo(&probe) || !eventListRect.contains(eventListProbe)) {
         failures.append("forced QWidget event-list clip fixture did not become visible");
-    } else if (overlay->mask().intersects(eventListProbe)) {
+    } else if (fallback->mask().intersects(eventListProbe)) {
         failures.append("forced QWidget playhead mask included the event-list band");
     } else if (checks::support::hasPlayheadPixel(eventListImage, eventListProbe, color)) {
         failures.append("forced QWidget masked grab retained pixels in the event-list band");
@@ -310,6 +313,131 @@ QStringList quickFallbackPlayheadCheckFailures(const MidiTimeline &timeline)
     checks::support::pumpQuick();
     if (!canonicalVelocityMatches())
         failures.append("reopened velocity section did not republish its canonical rectangle");
+
+    probe.hide();
+    checks::support::pumpQuick();
+    return failures;
+}
+
+QStringList quickScenePlayheadCheckFailures(const MidiTimeline &timeline)
+{
+    QStringList failures;
+    EnvironmentGuard forceQuickPlayhead{"PORYDAW_FORCE_QUICK_PLAYHEAD"};
+    qputenv("PORYDAW_FORCE_QUICK_PLAYHEAD", "1");
+
+    SongView probe;
+    const int unit = layout::space(layout::Space::One);
+    probe.resize(90 * unit, 65 * unit);
+    probe.setSong(&timeline, nullptr);
+    probe.setFollowPlayhead(false);
+    probe.show();
+    checks::support::pumpQuick();
+
+    auto *overlay = probe.findChild<songview::PlayheadOverlay *>();
+    auto *quick =
+        probe.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    const songview::TimelineBandLayout &bandLayout = probe.timelineBandLayout();
+    const auto rollBandRect = [&bandLayout] {
+        const std::optional<songview::TimelineBandGeometry> &band =
+            bandLayout.geometry(songview::TimelineBand::Roll);
+        return band ? band->rect : QRect{};
+    };
+    const auto rollTimelineOrigin = [&bandLayout] {
+        const std::optional<songview::TimelineBandGeometry> &band =
+            bandLayout.geometry(songview::TimelineBand::Roll);
+        return band ? band->timelineOrigin : 0;
+    };
+    if (!overlay || !quick || !bandLayout.geometry(songview::TimelineBand::Ruler) ||
+        !rollBandRect().isValid()) {
+        failures.append("forced Quick playhead scene did not expose its rendering surfaces");
+        probe.hide();
+        checks::support::pumpQuick();
+        return failures;
+    }
+    if (!songview::quickPlayheadRendererEnabled())
+        failures.append("PORYDAW_FORCE_QUICK_PLAYHEAD did not enable the Quick playhead renderer");
+    if (songview::platformPlayheadRendererEnabled())
+        failures.append("PORYDAW_FORCE_QUICK_PLAYHEAD left the native playhead renderer enabled");
+    if (overlay->fallbackWidget())
+        failures.append("Quick playhead scene allocated the QWidget fallback renderer");
+
+    const uint64_t tick =
+        uint64_t(std::max(0.0, probe.camera().tickAtContentX(std::max<qreal>(
+                                   1.0, probe.width() / 2.0 - probe.timelinePlotOrigin()))));
+    const QColor color = themes::color(themes::Role::song_view_playhead);
+    const QRect rollRect = rollBandRect();
+    // captureQuickBand crops are band-local logical coordinates; scan the full
+    // band so the pixel proof never depends on camera-X vs QML-X agreement.
+    const QRect bandLocalRect{0, 0, rollRect.width(), rollRect.height()};
+
+    probe.setPlayheadSample(timeline.sampleForTick(tick), false);
+    checks::support::pumpQuick();
+    QQuickItem *body =
+        quick->rootObject()->findChild<QQuickItem *>(QStringLiteral("timelineQuickRollPlayhead"));
+    if (!body)
+        failures.append("Quick playhead scene did not expose the timelineQuickRollPlayhead item");
+    else if (!body->isVisible() || body->width() < 1 || body->height() < 1)
+        failures.append(
+            QStringLiteral("timelineQuickRollPlayhead item was hidden or undersized "
+                           "(visible=%1 width=%2 height=%3)")
+                .arg(body->isVisible() ? QStringLiteral("true") : QStringLiteral("false"))
+                .arg(body->width())
+                .arg(body->height()));
+    QString captureError;
+    const QImage rollFrame = checks::support::captureQuickBand(probe, rollRect, &captureError);
+    if (!quick->playheadVisible())
+        failures.append("SongView playhead sample did not publish visibility to the Quick canvas");
+    if (rollFrame.isNull()) {
+        failures.append(
+            QStringLiteral("Quick playhead roll-band capture failed: %1").arg(captureError));
+    } else if (!checks::support::hasPlayheadPixel(rollFrame, bandLocalRect, color)) {
+        failures.append("Quick playhead body was not rendered into the piano roll band");
+        if (body) {
+            const QPointF bodyCenterInCanvas = body->mapToItem(
+                quick->rootObject(), QPointF{body->width() / 2, body->height() / 2});
+            failures.append(QStringLiteral("timelineQuickRollPlayhead item geometry: "
+                                           "x=%1 y=%2 width=%3 height=%4 canvas-center=%5,%6")
+                                .arg(body->x())
+                                .arg(body->y())
+                                .arg(body->width())
+                                .arg(body->height())
+                                .arg(bodyCenterInCanvas.x())
+                                .arg(bodyCenterInCanvas.y()));
+        }
+    }
+
+    // Park the playhead just inside the plot: timeline X is relative to the plot
+    // origin, so 1.0 puts the core ~1px past it and the bloom would cross into
+    // the gutter unless the Quick renderer clips to the plot strip.
+    overlay->setPlayhead(1.0, true, true);
+    checks::support::pumpQuick();
+    const QImage gutterFrame = checks::support::captureQuickBand(probe, rollRect, &captureError);
+    const int timelineOrigin = rollTimelineOrigin();
+    if (gutterFrame.isNull()) {
+        failures.append(
+            QStringLiteral("Quick playhead gutter roll-band capture failed: %1").arg(captureError));
+    } else {
+        if (timelineOrigin > 0) {
+            const QRect gutterRect{0, 0, timelineOrigin, rollRect.height()};
+            if (checks::support::hasPlayheadPixel(gutterFrame, gutterRect, color))
+                failures.append("Quick playhead painted into the timelineOrigin gutter");
+        }
+        const QRect plotStripRect{timelineOrigin, 0, rollRect.width() - timelineOrigin,
+                                  rollRect.height()};
+        if (!checks::support::hasPlayheadPixel(gutterFrame, plotStripRect, color))
+            failures.append("Quick playhead gutter proof left no pixel in the roll plot strip");
+    }
+    overlay->setPlayhead(0, false, false);
+    checks::support::pumpQuick();
+    if (quick->playheadVisible())
+        failures.append("hidden Quick playhead still reported visibility to the Quick canvas");
+    const QImage hiddenFrame = checks::support::captureQuickBand(probe, rollRect, &captureError);
+    if (hiddenFrame.isNull()) {
+        failures.append(
+            QStringLiteral("hidden Quick playhead roll-band capture failed: %1").arg(captureError));
+    } else if (checks::support::hasPlayheadPixel(hiddenFrame, bandLocalRect, color)) {
+        failures.append("hidden Quick playhead retained pixels in the piano roll band");
+    }
 
     probe.hide();
     checks::support::pumpQuick();

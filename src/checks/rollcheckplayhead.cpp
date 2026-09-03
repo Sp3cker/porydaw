@@ -95,7 +95,8 @@ QPixmap grabPlayhead(SongView &view, songview::PlayheadOverlay &overlay, QString
     (void)view;
     (void)failures;
 #endif
-    return overlay.grab();
+    QWidget *const fallback = overlay.fallbackWidget();
+    return fallback ? fallback->grab() : QPixmap{};
 }
 
 bool expectsCapturablePlayhead()
@@ -444,7 +445,7 @@ void checkPositionOnlyQuickFrames(const MidiTimeline &timeline, QStringList &fai
     auto *quick =
         probe.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
     auto *scene = quick ? quick->findChild<songview::TimelineQuickScene *>() : nullptr;
-    auto *overlay = checks::support::findWidgetDescendant<songview::PlayheadOverlay>(probe);
+    auto *overlay = probe.findChild<songview::PlayheadOverlay *>();
     QQuickWindow *const quickWindow = quick ? quick->quickWindow() : nullptr;
     const songview::TimelineBandLayout &bandLayout = probe.timelineBandLayout();
     if (!quick || !scene || !bandLayout.geometry(songview::TimelineBand::Ruler) || !overlay ||
@@ -541,15 +542,15 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
     auto *automationPage = drawer ? drawer->automationPage() : nullptr;
     auto *velocity = drawer ? drawer->velocityArea() : nullptr;
     auto *voiceChanges = drawer ? drawer->voiceChangeArea() : nullptr;
-    auto *overlay = checks::support::findWidgetDescendant<songview::PlayheadOverlay>(view);
+    auto *overlay = view.findChild<songview::PlayheadOverlay *>();
     if (!quick || !root || !scene ||
         !view.timelineBandLayout().geometry(songview::TimelineBand::Ruler) || !roll || !overlay ||
         !automationPage || !velocity || !voiceChanges) {
         failures.append("SongView did not expose its Quick chrome and native playhead bands");
     } else {
-        if (overlay->parentWidget() != &view || overlay->geometry() != view.rect())
-            failures.append("SongView playhead overlay is not one full-size direct child");
-
+        if (!overlay->fallbackWidget() && quick->playheadVisible())
+            failures.append(
+                "default chrome published a Quick playhead without a native fallback widget");
         const auto copies = chromeCopies(*root);
         if (root->findChildren<songview::TimelineChromeItem *>().size() != 14)
             failures.append("Quick timeline did not retain 14 hover/edit guides");
@@ -994,6 +995,7 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
     }
 
     failures += quickFallbackPlayheadCheckFailures(timeline);
+    failures += quickScenePlayheadCheckFailures(timeline);
     checkPositionOnlyQuickFrames(timeline, failures);
 
     checkFollowScroll(view, timeline, failures);

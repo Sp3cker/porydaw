@@ -5,6 +5,7 @@
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/layout.h"
+#include "ui/playheadoverlay.h"
 #include "ui/songview.h"
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
@@ -12,6 +13,7 @@
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/timeruler.h"
 #include "ui/songview/trackheadermodel.h"
+#include "ui/theme/themeruntime.h"
 #include <QColor>
 #include <QQmlContext>
 #include <QQmlError>
@@ -33,20 +35,24 @@ struct TimelineBandQmlProperties {
     TimelineBand band;
     const char *rect;
     const char *visible;
+    const char *timelineOrigin;
 };
 
 constexpr std::array kTimelineBandQmlProperties{
-    TimelineBandQmlProperties{TimelineBand::Ruler, "rulerBandRect", "rulerBandVisible"},
-    TimelineBandQmlProperties{TimelineBand::Roll, "rollBandRect", "rollBandVisible"},
+    TimelineBandQmlProperties{TimelineBand::Ruler, "rulerBandRect", "rulerBandVisible",
+                              "rulerBandTimelineOrigin"},
+    TimelineBandQmlProperties{TimelineBand::Roll, "rollBandRect", "rollBandVisible",
+                              "rollBandTimelineOrigin"},
     TimelineBandQmlProperties{TimelineBand::OtherEvents, "otherEventsBandRect",
-                              "otherEventsBandVisible"},
+                              "otherEventsBandVisible", "otherEventsBandTimelineOrigin"},
     TimelineBandQmlProperties{TimelineBand::Automation, "automationBandRect",
-                              "automationBandVisible"},
-    TimelineBandQmlProperties{TimelineBand::Velocity, "velocityBandRect", "velocityBandVisible"},
+                              "automationBandVisible", "automationBandTimelineOrigin"},
+    TimelineBandQmlProperties{TimelineBand::Velocity, "velocityBandRect", "velocityBandVisible",
+                              "velocityBandTimelineOrigin"},
     TimelineBandQmlProperties{TimelineBand::VoiceChanges, "voiceChangesBandRect",
-                              "voiceChangesBandVisible"},
+                              "voiceChangesBandVisible", "voiceChangesBandTimelineOrigin"},
     TimelineBandQmlProperties{TimelineBand::TrackHeaders, "trackHeadersBandRect",
-                              "trackHeadersBandVisible"},
+                              "trackHeadersBandVisible", "trackHeadersBandTimelineOrigin"},
 };
 static_assert(kTimelineBandQmlProperties.size() == timelineBandIndex(TimelineBand::Count));
 
@@ -111,6 +117,7 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     , m_drawerChrome(&drawerChrome)
     , m_songView(&songView)
     , m_camera(songView.camera())
+    , m_playheadColor(themes::color(themes::Role::song_view_playhead))
 {
     m_layoutTimer.setSingleShot(true);
     m_layoutTimer.setInterval(std::chrono::milliseconds::zero());
@@ -244,6 +251,8 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
             qFatal("Qt Quick timeline QML has no band property '%s'", properties.rect);
         if (!root->property(properties.visible).isValid())
             qFatal("Qt Quick timeline QML has no band property '%s'", properties.visible);
+        if (!root->property(properties.timelineOrigin).isValid())
+            qFatal("Qt Quick timeline QML has no band property '%s'", properties.timelineOrigin);
     }
 
     // All seven bands attach through their matching input items.
@@ -346,6 +355,82 @@ qreal TimelineQuickView::editRootContentX() const noexcept
 bool TimelineQuickView::editVisible() const noexcept
 {
     return m_editSongViewContentX.has_value();
+}
+
+qreal TimelineQuickView::playheadRootX() const noexcept
+{
+    return quickRootXForSongViewX(m_playheadSongViewX);
+}
+
+bool TimelineQuickView::playheadVisible() const noexcept
+{
+    return m_playheadVisible;
+}
+
+bool TimelineQuickView::playheadPlaying() const noexcept
+{
+    return m_playheadPlaying;
+}
+
+QColor TimelineQuickView::playheadColor() const
+{
+    return m_playheadColor;
+}
+
+bool TimelineQuickView::playheadTrianglePointsUp() const noexcept
+{
+    return m_playheadTrianglePointsUp;
+}
+
+qreal TimelineQuickView::playheadGlowLeft() const noexcept
+{
+    return songview::playheadGlowLeftExtent(m_playheadPlaying);
+}
+
+qreal TimelineQuickView::playheadGlowRight() const noexcept
+{
+    return songview::playheadGlowRightExtent(m_playheadPlaying);
+}
+
+qreal TimelineQuickView::playheadPeakAlpha() const noexcept
+{
+    return songview::playheadPeakAlpha(m_playheadPlaying);
+}
+
+qreal TimelineQuickView::playheadLineWidthPx() const noexcept
+{
+    return songview::playheadLineWidth();
+}
+
+int TimelineQuickView::playheadTriangleHalfWidthPx() const noexcept
+{
+    return songview::playheadTriangleHalfWidth();
+}
+
+int TimelineQuickView::playheadTriangleHeightPx() const noexcept
+{
+    return songview::playheadTriangleHeight();
+}
+
+void TimelineQuickView::setPlayhead(qreal songViewX, bool visible, bool playing,
+                                    bool trianglePointsUp)
+{
+    if (m_playheadSongViewX == songViewX && m_playheadVisible == visible &&
+        m_playheadPlaying == playing && m_playheadTrianglePointsUp == trianglePointsUp)
+        return;
+    m_playheadSongViewX = songViewX;
+    m_playheadVisible = visible;
+    m_playheadPlaying = playing;
+    m_playheadTrianglePointsUp = trianglePointsUp;
+    emit playheadChanged();
+}
+
+void TimelineQuickView::setPlayheadColor(const QColor &color)
+{
+    if (m_playheadColor == color)
+        return;
+    m_playheadColor = color;
+    emit playheadChanged();
 }
 
 qreal TimelineQuickView::hostX() const noexcept
@@ -607,8 +692,13 @@ void TimelineQuickView::publishTimelineBandLayout()
         const std::optional<TimelineBandGeometry> &band = m_bandLayout.geometry(properties.band);
         const QRectF localBandRect =
             band ? QRectF{band->rect.translated(-publishedHostRect.topLeft())} : QRectF{};
+        // timelineOrigin is band-local inside rect; it survives host
+        // translation and clears when the band disappears.
+        const qreal localBandTimelineOrigin = band ? static_cast<qreal>(band->timelineOrigin) : 0.0;
         if (!root->setProperty(properties.rect, QVariant::fromValue(localBandRect)) ||
-            !root->setProperty(properties.visible, QVariant::fromValue(band.has_value()))) {
+            !root->setProperty(properties.visible, QVariant::fromValue(band.has_value())) ||
+            !root->setProperty(properties.timelineOrigin,
+                               QVariant::fromValue(localBandTimelineOrigin))) {
             qFatal("Qt Quick timeline QML has incomplete band properties");
         }
     }
@@ -623,6 +713,10 @@ void TimelineQuickView::publishTimelineBandLayout()
         emit hostGeometryChanged();
 
     if (hostOriginChanged) {
+        // playheadRootX() reads geometry().x(); a host origin shift moves the
+        // published playhead X even when setPlayhead() saw no new state, so
+        // QML bindings must re-read it.
+        emit playheadChanged();
         if (m_hoverSongViewContentX)
             emit hoverChromeChanged();
         if (m_editSongViewContentX)
