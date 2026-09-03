@@ -1,0 +1,8 @@
+{
+  "id": "song-report",
+  "name": "Song Report",
+  "version": "1.0.0",
+  "api": 1,
+  "main": "main.js",
+  "description": "Plugins menu entries that write a text summary of the song and render it to WAV, through dialogs and porydaw.io."
+}

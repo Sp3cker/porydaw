@@ -30,6 +30,7 @@ extern "C" {
 
 class EventListView;
 class QKeyEvent;
+class QMenu;
 class QScrollArea;
 class QScrollBar;
 class QSplitter;
@@ -113,6 +114,19 @@ inline int selectionRingPixels(qreal dpr)
 // velocity/delete in the roll, point editing in the lanes, loop-marker
 // dragging in the ruler. The MidiTimeline and LoadedVoiceGroup must outlive
 // the view or be cleared with setSong(nullptr, nullptr) first.
+// What a plugin overlay painter gets from the piano roll: the note area
+// and the roll's own tick/key ↔ pixel mappings (device-pixel snapped, so an
+// overlay lines up with the notes it decorates).
+struct RollOverlayGeometry {
+    QRect grid; // the note area in roll widget coordinates (keyboard excluded)
+    qreal dpr = 1.0;
+    std::function<qreal(double tick)> xForTick;
+    std::function<double(qreal x)> tickForX;
+    std::function<qreal(int key)> keyTop;
+    std::function<qreal(int key)> keyBottom;
+    std::function<int(qreal y)> keyAtY;
+};
+
 class SongView : public QWidget
 {
     Q_OBJECT
@@ -566,6 +580,18 @@ class SongView : public QWidget
     using PluginKeyHandler =
         std::function<bool(QKeyEvent *event, keymap::Context surface, bool timeSelectionActive)>;
     static void setPluginKeyHandler(PluginKeyHandler handler);
+    // Plugin context-menu items (scripting): called as the roll's note menu
+    // ("notes") or the time-selection menu ("range") opens, to append
+    // entries. Process-wide like the key handler.
+    using PluginMenuProvider = std::function<void(QMenu &menu, const QString &surface)>;
+    static void setPluginMenuProvider(PluginMenuProvider provider);
+    // Plugin roll overlays (scripting): painted over the notes, inside the
+    // note area's clip, every time the roll's content repaints.
+    using PluginOverlayPainter =
+        std::function<void(QPainter &painter, SongView &view, const RollOverlayGeometry &geometry)>;
+    static void setPluginOverlayPainter(PluginOverlayPainter painter);
+    // Repaints the roll's cached content (a plugin overlay changed).
+    void invalidateRoll();
     // Automation-lane pencil mode (automation.pencil_mode, default B): a
     // left drag in the lanes always draws, and Shift locks the stroke to a
     // horizontal line. The key is Ableton-style momentary: releases route

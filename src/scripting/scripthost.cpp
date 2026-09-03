@@ -9,6 +9,8 @@
 #include <QFileSystemWatcher>
 #include <QJSEngine>
 #include <QKeyEvent>
+#include <QMenu>
+#include <QPainter>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QTimer>
@@ -19,6 +21,7 @@
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
 #include "scriptapi.h"
+#include "scriptmenus.h"
 #include "songsession.h"
 #include "ui/songview.h"
 
@@ -54,9 +57,27 @@ Watchdog::~Watchdog()
 void Watchdog::arm(QJSEngine *engine, int budgetMs)
 {
     QMutexLocker lock(&m_mutex);
-    m_stack.push_back({engine, QDeadlineTimer(budgetMs), false});
+    m_stack.push_back({engine, QDeadlineTimer(budgetMs), false, false});
     if (!isRunning())
         start();
+    m_wake.wakeAll();
+}
+
+void Watchdog::pause()
+{
+    QMutexLocker lock(&m_mutex);
+    if (!m_stack.empty())
+        m_stack.back().paused = true;
+}
+
+void Watchdog::resume(int budgetMs)
+{
+    QMutexLocker lock(&m_mutex);
+    if (m_stack.empty())
+        return;
+    Armed &top = m_stack.back();
+    top.paused = false;
+    top.deadline = QDeadlineTimer(budgetMs);
     m_wake.wakeAll();
 }
 
@@ -86,7 +107,7 @@ void Watchdog::run()
         // an entry before its engine can be destroyed, so the interrupt
         // never touches a dead engine.
         Armed &top = m_stack.back();
-        if (!top.fired && top.deadline.hasExpired()) {
+        if (!top.paused && !top.fired && top.deadline.hasExpired()) {
             top.engine->setInterrupted(true);
             top.fired = true;
         }
@@ -114,6 +135,12 @@ ScriptHost::ScriptHost(QObject *parent) : QObject(parent), m_pluginsDir(defaultP
     SongView::setPluginKeyHandler([this](QKeyEvent *event, keymap::Context surface, bool timeSel) {
         return handleKey(event, surface, timeSel);
     });
+    SongView::setPluginMenuProvider(
+        [this](QMenu &menu, const QString &surface) { appendContextMenu(menu, surface); });
+    SongView::setPluginOverlayPainter(
+        [this](QPainter &painter, SongView &view, const RollOverlayGeometry &geometry) {
+            paintOverlays(painter, view, geometry);
+        });
     m_frameTimer = new QTimer(this);
     m_frameTimer->setTimerType(Qt::PreciseTimer);
     m_frameTimer->setInterval(kFrameIntervalMs);
@@ -123,6 +150,8 @@ ScriptHost::ScriptHost(QObject *parent) : QObject(parent), m_pluginsDir(defaultP
 ScriptHost::~ScriptHost()
 {
     SongView::setPluginKeyHandler(nullptr);
+    SongView::setPluginMenuProvider(nullptr);
+    SongView::setPluginOverlayPainter(nullptr);
     unloadAll();
     if (m_console)
         teardown(*m_console);
@@ -325,6 +354,11 @@ void ScriptHost::reload(const QString &id)
 void ScriptHost::load(Plugin &plugin)
 {
     teardown(plugin);
+    if (plugin.teardownPending) {
+        // Mid-call (a dialog is up): the reload happens when it unwinds.
+        plugin.reloadPending = true;
+        return;
+    }
     if (!plugin.enabled) {
         plugin.state = PluginState::Disabled;
         return;
@@ -392,6 +426,7 @@ void ScriptHost::load(Plugin &plugin)
 void ScriptHost::buildEngine(Plugin &plugin)
 {
     plugin.engine = std::make_unique<QJSEngine>();
+    plugin.uiRoot = std::make_unique<QObject>();
     QString error;
     if (!installApi(*this, plugin, &error)) {
         plugin.error = error;
@@ -411,6 +446,13 @@ void ScriptHost::teardown(Plugin &plugin, bool callDeactivate)
 {
     if (!plugin.engine)
         return;
+    if (plugin.callDepth > 0) {
+        // The engine has frames on the stack (a script call is inside a
+        // nested event loop): guarded() finishes this when they unwind.
+        plugin.teardownPending = true;
+        plugin.pendingDeactivate = plugin.pendingDeactivate || callDeactivate;
+        return;
+    }
     if (m_transaction.open() && m_transaction.owner == &plugin)
         forceRollback(tr("the plugin was unloaded"));
     if (callDeactivate && plugin.deactivate.isCallable()) {
@@ -425,6 +467,12 @@ void ScriptHost::teardown(Plugin &plugin, bool callDeactivate)
             delete dock.data();
     }
     plugin.docks.clear();
+    // Menus, context items and overlays next, for the same reason.
+    plugin.contextItems.clear();
+    plugin.overlays.clear();
+    plugin.menu = nullptr;
+    plugin.uiRoot.reset();
+    invalidateOverlays();
     plugin.images.clear();
     plugin.listeners.clear();
     auto &keys = keymap::Registry::instance();
@@ -449,9 +497,30 @@ QJSValue ScriptHost::guarded(Plugin &plugin, const std::function<QJSValue()> &fn
         return QJSValue();
     const bool txOpenBefore = m_transaction.open();
     const uint64_t txSerialBefore = m_transaction.serial;
+    plugin.callDepth++;
     m_watchdog.arm(plugin.engine.get(), m_watchdogMs);
     QJSValue result = fn();
     const bool fired = m_watchdog.disarm();
+    plugin.callDepth--;
+    if (plugin.callDepth == 0 && plugin.teardownPending) {
+        // A teardown (reload, disable, fault) that arrived while this call
+        // had the engine on the stack. The result belongs to the engine
+        // that is about to go, so nothing of it is returned.
+        result = QJSValue();
+        plugin.teardownPending = false;
+        const bool deactivate = plugin.pendingDeactivate;
+        plugin.pendingDeactivate = false;
+        const PluginState stateBefore = plugin.state;
+        teardown(plugin, deactivate && stateBefore == PluginState::Loaded);
+        if (stateBefore == PluginState::Error)
+            plugin.state = PluginState::Error;
+        if (plugin.reloadPending) {
+            plugin.reloadPending = false;
+            load(plugin);
+        }
+        emit pluginsChanged();
+        return QJSValue();
+    }
     // A transaction begun inside this call and still open on the way out
     // was never committed or rolled back: the interrupt cut the script
     // off before the prelude's try/catch could. Close it here.
@@ -671,10 +740,13 @@ void ScriptHost::onPathChanged(const QString &path)
 
 void ScriptHost::setSession(SongSession *session)
 {
-    if (session == m_session)
+    // The same session can be handed a different song in place (opening a
+    // song into the active tab): that is a new song to the API too.
+    if (session == m_session && (!session || session->doc.label() == m_sessionLabel))
         return;
     disconnect(m_docConnection);
     m_session = session;
+    m_sessionLabel = session ? session->doc.label() : QString();
     m_lastBeat = -1; // the new song's first beat should fire
     if (session) {
         m_docConnection = connect(&session->doc, &SongDocument::documentChanged, this, [this] {
@@ -850,6 +922,124 @@ void ScriptHost::registerDock(Plugin &plugin, QDockWidget *dock, Qt::DockWidgetA
                        plugin.docks.end());
     if (m_bindings.addDock)
         m_bindings.addDock(dock, area);
+}
+
+MenuHandle *ScriptHost::pluginMenu(Plugin &plugin)
+{
+    if (plugin.menu)
+        return plugin.menu;
+    if (!m_bindings.pluginsMenu || !plugin.uiRoot)
+        return nullptr;
+    QMenu *parent = m_bindings.pluginsMenu();
+    if (!parent)
+        return nullptr;
+    const QString name = plugin.manifest.name.isEmpty() ? plugin.manifest.id : plugin.manifest.name;
+    // A widget child of the Plugins menu, so it lives in the window's
+    // object tree (findChild, styling); the handle still owns its life.
+    auto *menu = new QMenu(name, parent);
+    menu->setObjectName(QStringLiteral("plugin.") + plugin.manifest.id + QStringLiteral(".menu"));
+    // The window shows Plugins while some plugin has a submenu in it;
+    // deleting the submenu (teardown) removes its entry by itself.
+    parent->addMenu(menu);
+    parent->menuAction()->setVisible(true);
+    connect(menu, &QObject::destroyed, parent, [parent] {
+        // destroyed fires before the submenu's own action leaves the
+        // parent, so the count waits a turn.
+        QTimer::singleShot(0, parent, [parent] {
+            for (QAction *action : parent->actions()) {
+                if (action->menu())
+                    return;
+            }
+            parent->menuAction()->setVisible(false);
+        });
+    });
+    plugin.menu = new MenuHandle(*this, plugin, menu, plugin.uiRoot.get());
+    return plugin.menu;
+}
+
+void ScriptHost::appendContextMenu(QMenu &menu, const QString &surface)
+{
+    bool separated = false;
+    const auto append = [&](Plugin &plugin) {
+        if (plugin.state != PluginState::Loaded)
+            return;
+        for (const Plugin::ContextItem &item : plugin.contextItems) {
+            if (item.surface != surface || !item.action || !item.action->isVisible())
+                continue;
+            if (!separated) {
+                menu.addSeparator();
+                separated = true;
+            }
+            menu.addAction(item.action);
+        }
+    };
+    for (auto &plugin : m_plugins)
+        append(*plugin);
+    if (m_console)
+        append(*m_console);
+}
+
+void ScriptHost::paintOverlays(QPainter &painter, SongView &view,
+                               const RollOverlayGeometry &geometry)
+{
+    // porydaw.song reflects the active session: overlays paint only on its
+    // view, so a script never reads one song while drawing over another.
+    if (!m_session || m_session->view != &view)
+        return;
+    const auto paint = [&](Plugin &plugin) {
+        if (plugin.state != PluginState::Loaded)
+            return;
+        // A copy: a paint callback may remove its overlay or add another,
+        // both of which edit plugin.overlays.
+        const std::vector<QPointer<OverlayHandle>> overlays = plugin.overlays;
+        for (const QPointer<OverlayHandle> &overlay : overlays) {
+            if (overlay && overlay->visible())
+                overlay->paint(painter, view, geometry);
+        }
+    };
+    for (auto &plugin : m_plugins)
+        paint(*plugin);
+    if (m_console)
+        paint(*m_console);
+}
+
+void ScriptHost::invalidateOverlays()
+{
+    // From inside a paint (an overlay removing itself, adding another) the
+    // roll's cache is about to be marked clean: ask again next turn.
+    if (m_paintDepth > 0) {
+        QTimer::singleShot(0, this, [this] { invalidateOverlays(); });
+        return;
+    }
+    if (m_session && m_session->view)
+        m_session->view->invalidateRoll();
+}
+
+void ScriptHost::pauseWatchdog()
+{
+    m_watchdog.pause();
+}
+
+void ScriptHost::resumeWatchdog()
+{
+    m_watchdog.resume(m_watchdogMs);
+}
+
+bool ScriptHost::dialogsAllowed(const Plugin &plugin, QString *error) const
+{
+    if (m_paintDepth > 0) {
+        *error = tr("not from a paint callback");
+        return false;
+    }
+    if (m_transaction.open() && m_transaction.owner == &plugin) {
+        *error = tr("a dialog can't open inside a transaction (finish the edit first)");
+        return false;
+    }
+    if (m_inDocumentNotify) {
+        *error = tr("a dialog can't open from a song.changed listener");
+        return false;
+    }
+    return true;
 }
 
 void ScriptHost::emitEvent(Plugin &plugin, const QString &event, const QJSValue &payload)

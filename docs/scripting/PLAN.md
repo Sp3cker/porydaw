@@ -415,12 +415,70 @@ non-zero RMS + ≥2 beats while the fixture song plays through the null
 device, typed-array shapes, beat restart on play, examples parked and
 re-enabled). ← **archetypes 2 and 3 ship here.**
 
-**Phase 4 — Reach (ongoing).** Menus/context menus, dialogs/forms, `io.*`,
-per-song plugin storage, roll overlays, `song.rawEvents`/raw edits, project
-adapter writes (batch registration, voicegroup edits — via the existing
-`SongRegistry`/`VoicegroupSource` APIs), WAV/render hooks (`wavexport` reuse
-for "render all songs"), `porydaw.d.ts` + generated `docsrc/reference/
-scripting.md`, and a `docsrc/manual/plugins.md` install guide.
+**Phase 4 — Reach.** First slice LANDED 2026-09-03 on branch `scripting`:
+menus (`ui.menu()` → the plugin's submenu of a new menu-bar **Plugins**
+menu, hidden while empty; items link to registered commands and show the
+binding as a `\t` display hint since a real shortcut on a menu-bar action
+would fire window-wide), context menus (`ui.contextMenu("notes"|"range")`:
+`SongView::setPluginMenuProvider` appends every plugin's items behind a
+separator when the note menu or the time-selection menu opens; the
+long-lived note menu drops the previous open's plugin actions first),
+dialogs (`ui.dialog.alert/confirm/prompt/form/openFile/saveFile/chooseDir`,
+refused inside a transaction and from `song.changed`; `Watchdog::pause/
+resume` suspends the innermost armed call's deadline while a modal
+dialog or a render runs), `porydaw.io` (sandboxed to the plugin folder,
+the project, and dialog-picked paths — `Plugin::grantedPaths`),
+`storage.song` (the song sidecar's `plugins`/<id> object, merged with the
+view state and registration keys), `song.rawEvents`/`chunkCount`/
+`chunkTrack`/`chunkEndTick` + `edit.insertRawEvent/modifyRawEvent/
+deleteRawEvents/moveRawEvent/setChunkEndTick` (ungated, per the 2026-09-02
+decision), `edit.moveRange/duplicateRange` (the facade gathers notes and
+every lane of the scoped tracks itself, so SongView's private gathering
+stays private), `project.open(label, {newTab})`, `audio.render(path, opts)`
+(the Export WAV path without its dialogs, `MainWindow::renderActiveSongWav`),
+and piano-roll overlays (`ui.overlay({id, paint(g, v)})`: `SongView::
+setPluginOverlayPainter` is called from `PianoRoll::paintContent` after the
+built-in overlays with a `RollOverlayGeometry` of the roll's own snapped
+mappings; `OverlayHandle` reuses the canvas `Painter`, now fed its dpr
+explicitly). New module `src/scripting/scriptmenus.{h,cpp}`; every handle
+is parented under `Plugin::uiRoot`, deleted before the engine on teardown.
+Examples: `song-report` (menu + form + saveFile + io + render),
+`range-tools` (range context menu, one entry linked to a rebindable
+command), `scale-guide` (overlay + per-song storage + note context menu).
+Harness `runReachChecks`: drives the Plugins menu, both context menus
+(a synthesized right-click on a note opens the real note menu; the
+exec()'d range menu is caught by a 0 ms timer — offscreen it dismisses
+itself within ~20 ms), every dialog kind (modal driver from a timer; the
+watchdog budget is shortened to prove the pause), file pickers (typed
+into `fileNameEdit` + `accept()` — `selectFile` leaves a focused field
+alone and `done()` reports the directory), the io sandbox (system file,
+`..` escape, console-relative), sidecar round trip through a view-state
+save, raw inserts/modify/move/delete with byte-identical undo, range
+moves on a fresh track, overlay pixel probes and geometry, a real render
+sized against `wavExportTotals`, and `project.open` both ways. Negative-
+tested: watchdog pause removed, sandbox disabled, overlays never painted.
+Full normal + ASAN sweeps PASS; OFF build compiles. Code-reviewed
+2026-09-03 (8 findings, all fixed): teardown during a plugin's own nested
+event loop deferred via `Plugin::callDepth` (guarded() finishes the
+pending teardown/reload when the call unwinds — negative-tested: without
+it ASAN SEGVs inside QML on the disable-during-dialog check),
+`paintOverlays` iterates a copy (a paint may remove/add overlays;
+in-paint invalidations are re-issued next turn since the cache commits
+after paintContent), dialogs/render/open refused from paint callbacks
+(`m_paintDepth`), `setSession` re-activates on an in-place song swap
+(label compare) and `project.open` of the current song is a no-op,
+`moveRange/duplicateRange` floor the delta at `-start` and gather only
+the lanes a chunk actually has (one scan), `Painter` sizes text from a
+fixed base font and restores the painter font (overlay text no longer
+inherits the note-name font; overlay `clear()` blends inside the grid
+transform), menu `remove()`/`clear()` defer deletes (safe from the entry's
+own run()), and the note menu's per-open separator leak is closed.
+
+Still open in this phase: project adapter writes (batch registration,
+voicegroup edits via `SongRegistry`/`VoicegroupSource`), a generated
+`docsrc/reference/scripting.md` (the hand-written `porydaw.d.ts` and
+`docsrc/manual/plugins.md` install guide shipped with this slice), MIDI
+input.
 
 ## 7. Other plugin categories the API should not preclude
 

@@ -29,11 +29,19 @@ class QDockWidget;
 class QFileSystemWatcher;
 class QJSEngine;
 class QKeyEvent;
+class QMenu;
+class QPainter;
 class QTimer;
 class SongDocument;
+class SongView;
 struct SongSession;
+struct RollOverlayGeometry;
+struct WavExportOptions;
 
 namespace scripting {
+
+class MenuHandle;
+class OverlayHandle;
 
 // What the host borrows from the main window (docs/scripting/PLAN.md §3).
 // Callbacks rather than a MainWindow pointer keep src/scripting/ free of
@@ -51,6 +59,18 @@ struct HostBindings {
     // `area`, restoring its saved placement from windowState when there is
     // one, and lists it under View. Absent: the dock stays parentless.
     std::function<void(QDockWidget *dock, Qt::DockWidgetArea area)> addDock;
+    // The menu-bar "Plugins" menu every plugin's own submenu hangs off
+    // (porydaw.ui.menu); the window shows it while it has entries. Absent:
+    // plugin menus are built but never shown.
+    std::function<QMenu *()> pluginsMenu;
+    // Opens a project song by label in the active tab (or a new one);
+    // false when the project has no such song.
+    std::function<bool(const QString &label, bool newTab)> openSong;
+    // Renders the active song to a WAV file (porydaw.audio.render):
+    // false with *error set on failure; *seconds receives the length.
+    std::function<bool(const QString &path, const WavExportOptions &opts, double *seconds,
+                       QString *error)>
+        renderWav;
     const AudioEngine *audio = nullptr;
     const DecompProject *project = nullptr;
 };
@@ -97,6 +117,30 @@ struct Plugin {
     // porydaw.ui.loadImage: decoded images by handle id.
     std::map<int, QImage> images;
     int nextImageId = 1;
+    // Owner of the plugin's menu-bar submenu, context-menu items and roll
+    // overlays (scriptmenus.h): their handles hold QJSValue callbacks, so
+    // teardown deletes this before the engine goes.
+    std::unique_ptr<QObject> uiRoot;
+    QPointer<MenuHandle> menu; // porydaw.ui.menu(), built on first use
+    // porydaw.ui.contextMenu(surface) items, appended to the roll's note
+    // menu ("notes") or the time-selection menu ("range") when they open.
+    struct ContextItem {
+        QString surface;
+        QPointer<QAction> action;
+    };
+    std::vector<ContextItem> contextItems;
+    std::vector<QPointer<OverlayHandle>> overlays;
+    // porydaw.io: files the user picked through a dialog are readable and
+    // writable even outside the plugin folder and the project.
+    QStringList grantedPaths;
+    // Calls into the engine currently on the C++ stack (guarded()). A
+    // script call can spin a nested event loop (a dialog, a render), and a
+    // teardown arriving then — hot reload, disable, a fault — must wait
+    // for the call to unwind: its frames still use the engine.
+    int callDepth = 0;
+    bool teardownPending = false;
+    bool pendingDeactivate = false;
+    bool reloadPending = false;
 };
 
 // A script edit transaction (`porydaw.edit.transaction`, API.md): one
@@ -137,6 +181,12 @@ class Watchdog : public QThread
     void arm(QJSEngine *engine, int budgetMs);
     // Pops the innermost call; returns whether its interrupt fired.
     bool disarm();
+    // Suspends the innermost call's deadline — a modal dialog's nested
+    // event loop is the user's time, not the script's — and resume()
+    // restarts it with a fresh budget. Calls armed inside the pause (an
+    // event reaching another plugin) are watched as usual.
+    void pause();
+    void resume(int budgetMs);
 
   protected:
     void run() override;
@@ -146,6 +196,7 @@ class Watchdog : public QThread
         QJSEngine *engine;
         QDeadlineTimer deadline;
         bool fired;
+        bool paused;
     };
     QMutex m_mutex;
     QWaitCondition m_wake;
@@ -231,6 +282,28 @@ class ScriptHost : public QObject
     // Hands a freshly built dock to the main window (HostBindings::addDock)
     // and tracks it for teardown.
     void registerDock(Plugin &plugin, QDockWidget *dock, Qt::DockWidgetArea area);
+    // The plugin's submenu of the window's Plugins menu (created on first
+    // use, parented to plugin.uiRoot); nullptr when the window offers none.
+    MenuHandle *pluginMenu(Plugin &plugin);
+    // Appends every plugin's items for `surface` to a context menu that is
+    // opening (SongView's PluginMenuProvider).
+    void appendContextMenu(QMenu &menu, const QString &surface);
+    // Paints every plugin's roll overlays (SongView's PluginOverlayPainter);
+    // only the active session's view gets them.
+    void paintOverlays(QPainter &painter, SongView &view, const RollOverlayGeometry &geometry);
+    // A plugin overlay changed: repaint the active roll.
+    void invalidateOverlays();
+    // Pauses the watchdog around a modal dialog (pauseWatchdog) or any
+    // other nested event loop the script is not responsible for. Pairs.
+    void pauseWatchdog();
+    void resumeWatchdog();
+    // A dialog can't open inside a transaction (its nested event loop
+    // could edit the document under the transaction's revision guard),
+    // nor from a paint callback (a nested loop inside paintEvent).
+    bool dialogsAllowed(const Plugin &plugin, QString *error) const;
+    // Brackets a script paint callback (canvas or overlay).
+    void beginPaint() { m_paintDepth++; }
+    void endPaint() { m_paintDepth--; }
 
     // Edit transactions (EditTransaction above). begin/commit return false
     // with *error set; the prelude turns that into a thrown Error.
@@ -288,7 +361,9 @@ class ScriptHost : public QObject
     QFileSystemWatcher *m_watcher = nullptr;
     QTimer *m_rescanTimer = nullptr;
     SongSession *m_session = nullptr;
+    QString m_sessionLabel; // the song the session held when set (in-place swaps re-activate)
     QMetaObject::Connection m_docConnection;
+    int m_paintDepth = 0;
     int m_lastTransport = -1;
     QTimer *m_frameTimer = nullptr;
     AudioAnalyzer m_analyzer;

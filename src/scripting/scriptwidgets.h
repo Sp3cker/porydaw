@@ -2,10 +2,12 @@
 
 #include <QColor>
 #include <QDeadlineTimer>
+#include <QFont>
 #include <QJSValue>
 #include <QObject>
 #include <QPointer>
 #include <QString>
+#include <QTransform>
 #include <QVariant>
 #include <QVariantList>
 #include <QVariantMap>
@@ -45,13 +47,16 @@ class Painter : public QObject
     Q_PROPERTY(double height READ height)
     Q_PROPERTY(double dpr READ dpr)
   public:
-    Painter(ScriptHost &host, Plugin &plugin, CanvasWidget *canvas);
-    // The paint window: set by the canvas around the callback.
-    void begin(QPainter *painter, double width, double height);
+    Painter(ScriptHost &host, Plugin &plugin, QObject *parent);
+    // Overlay painters draw over existing content: clear() blends instead
+    // of replacing, inside the surface's own transform.
+    void setOverlay(bool on) { m_overlay = on; }
+    // The paint window: set by the surface around the callback.
+    void begin(QPainter *painter, double width, double height, double dpr);
     void end();
     double width() const { return m_width; }
     double height() const { return m_height; }
-    double dpr() const;
+    double dpr() const { return m_dpr; }
 
     Q_INVOKABLE void clear(const QVariant &color);
     Q_INVOKABLE void fillRect(double x, double y, double w, double h, const QVariant &color);
@@ -95,11 +100,14 @@ class Painter : public QObject
 
     ScriptHost &m_host;
     Plugin &m_plugin;
-    CanvasWidget *m_canvas;
     QPainter *m_painter = nullptr;
     double m_width = 0.0;
     double m_height = 0.0;
+    double m_dpr = 1.0;
     int m_saveDepth = 0;
+    bool m_overlay = false;
+    QTransform m_baseTransform; // the surface's transform at begin()
+    QFont m_baseFont;           // text() sizes are relative to this, never to the last text()
 };
 
 // A script-painted surface. paintEvent clears to the window background

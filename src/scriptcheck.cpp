@@ -6,41 +6,51 @@
 #include <QDeadlineTimer>
 #include <QDir>
 #include <QDockWidget>
+#include <QDoubleSpinBox>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QImage>
+#include <QInputDialog>
 #include <QJSEngine>
 #include <QJSValue>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMenu>
+#include <QMessageBox>
 #include <QMouseEvent>
 #include <QObject>
 #include <QPushButton>
 #include <QSettings>
 #include <QSlider>
+#include <QSpinBox>
 #include <QString>
 #include <QStringList>
 #include <QTemporaryDir>
 #include <QThread>
+#include <QTimer>
 #include <QTreeWidget>
 #include <QUndoStack>
 #include <QWheelEvent>
 #include <functional>
 
 #include "audio/audiotap.h"
+#include "audio/wavexport.h"
 #include "core/songdocument.h"
 #include "mainwindow.h"
 #include "scripting/scripthost.h"
+#include "scripting/scriptmenus.h"
 #include "scripting/scriptwidgets.h"
 #include "songsession.h"
 #include "ui/keyboardshortcutspage.h"
 #include "ui/keymap.h"
 #include "ui/settingsdialog.h"
 #include "ui/songview.h"
+#include "ui/viewsidecar.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -262,6 +272,13 @@ export function activate(ctx) {
         try { porydaw.edit.transaction("Steal", function () {}); }
         catch (e) { porydaw.storage.set("stealErr", String(e.message)); }
     });
+    // Phase 4: a dialog from an action — the harness disables the plugin
+    // while it is up, which must wait for the call to unwind.
+    porydaw.actions.register({ id: "ask", name: "Ask", context: "global",
+        run: function () {
+            var ok = porydaw.ui.dialog.confirm("Really?");
+            porydaw.storage.set("asked", ok ? 1 : 2);
+        } });
     porydaw.log("activated v2");
 }
 )";
@@ -1112,6 +1129,864 @@ void runRealtimeChecks(const Check &check, scripting::ScriptHost &host, MainWind
 
 // ---- Phase 3: the tap ring and analyzer, no engine ----
 
+// ---- Phase 4: menus, context menus, dialogs, io, song storage, raw
+// events, range moves, overlays, render, project.open ----
+
+// Runs `drive` on the next modal dialog (a script's ui.dialog.* call
+// blocks in exec(), so the driver has to come from the event loop).
+void driveNextModal(const std::function<void(QWidget *)> &drive, QDeadlineTimer deadline)
+{
+    QTimer::singleShot(20, [drive, deadline] {
+        if (QWidget *w = QApplication::activeModalWidget()) {
+            drive(w);
+            return;
+        }
+        if (!deadline.hasExpired())
+            driveNextModal(drive, deadline);
+    });
+}
+
+void driveNextModal(const std::function<void(QWidget *)> &drive)
+{
+    driveNextModal(drive, QDeadlineTimer(3000));
+}
+
+// The open popup menu, if any (a top-level scan: activePopupWidget is
+// not reliable offscreen).
+QMenu *openMenu()
+{
+    for (QWidget *w : QApplication::topLevelWidgets()) {
+        if (auto *menu = qobject_cast<QMenu *>(w)) {
+            if (menu->isVisible())
+                return menu;
+        }
+    }
+    return nullptr;
+}
+
+// Same for a popup menu (QMenu::exec / popup).
+void driveNextPopup(const std::function<void(QMenu *)> &drive, QDeadlineTimer deadline)
+{
+    // A 0 ms poll: offscreen, an exec()'d menu can dismiss itself within
+    // a few ms, so the first event-loop turn inside exec() is the moment.
+    QTimer::singleShot(0, [drive, deadline] {
+        if (QMenu *menu = openMenu()) {
+            drive(menu);
+            return;
+        }
+        if (!deadline.hasExpired())
+            driveNextPopup(drive, deadline);
+    });
+}
+
+QAction *actionNamed(const QList<QAction *> &actions, const QString &prefix)
+{
+    for (QAction *a : actions) {
+        if (a->text() == prefix || a->text().startsWith(prefix + QLatin1Char('\t')))
+            return a;
+    }
+    return nullptr;
+}
+
+QJsonObject readJson(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+        return QJsonObject();
+    return QJsonDocument::fromJson(file.readAll()).object();
+}
+
+bool isRed(const QColor &c)
+{
+    return c.red() > 200 && c.green() < 60 && c.blue() < 60;
+}
+
+void runReachChecks(const Check &check, scripting::ScriptHost &host, MainWindow &window,
+                    SongSession &session, QList<Message> &messages, const QString &pluginsDir,
+                    const QString &projectRoot, const QString &songLabel)
+{
+    SongDocument &doc = session.doc;
+    SongView &view = *session.view;
+    QUndoStack &undo = *doc.undoStack();
+    auto &keys = keymap::Registry::instance();
+    const auto run = [&](const QString &code) { return host.evalConsole(code); };
+    const auto runc = [&](const char *code) { return host.evalConsole(QLatin1String(code)); };
+    const auto errorLogged = [&](const char *fragment) {
+        return hasMessage(messages, QStringLiteral("console"), 2, QLatin1String(fragment));
+    };
+    while (undo.canRedo())
+        undo.redo();
+    const QByteArray base = doc.smf().write();
+    const int index0 = undo.index();
+    // One entry named `name` on top of index0; undoing it restores the
+    // file byte for byte.
+    const auto oneEntryThenUndo = [&](const char *name, const char *what) {
+        check(undo.count() == index0 + 1 && undo.index() == index0 + 1 &&
+                  undo.text(index0) == QLatin1String(name),
+              what);
+        undo.undo();
+        check(doc.smf().write() == base && undo.index() == index0,
+              "undo of a Phase 4 transaction did not restore the SMF byte for byte");
+    };
+    const auto untouched = [&](const char *what) {
+        check(undo.index() == index0 && doc.smf().write() == base, what);
+    };
+    const int watchdogBefore = host.watchdogMs();
+
+    // --- Plugins menu ---
+    auto *pluginsMenu = window.findChild<QMenu *>(QStringLiteral("pluginsMenu"));
+    if (!check(pluginsMenu, "the window has no Plugins menu"))
+        return;
+    check(run(QStringLiteral(
+              "var M = porydaw.ui.menu(); var MI = M.addItem({label: 'Hi there', tooltip: "
+              "'tip', run: function (api) { porydaw.storage.set('menuran', "
+              "porydaw.storage.get('menuran', 0) + 1 + (api.song.loaded ? 0 : 100)); }}); "
+              "MI.label")) == QStringLiteral("Hi there"),
+          "ui.menu().addItem did not return a handle with the label");
+    QPointer<QMenu> consoleMenu = window.findChild<QMenu *>(QStringLiteral("plugin.console.menu"));
+    if (!check(consoleMenu && consoleMenu->title() == QStringLiteral("Script Console") &&
+                   pluginsMenu->actions().contains(consoleMenu->menuAction()) &&
+                   pluginsMenu->menuAction()->isVisible(),
+               "the plugin's submenu did not appear under a visible Plugins menu"))
+        return;
+    QAction *hi = actionNamed(consoleMenu->actions(), QStringLiteral("Hi there"));
+    check(hi && hi->toolTip() == QStringLiteral("tip"), "menu item action missing or no tooltip");
+    if (hi)
+        hi->trigger();
+    check(storedCounter(QStringLiteral("console"), QStringLiteral("menuran")) == 1,
+          "triggering a menu item did not run its callback with the action context");
+    // Linked to a registered command: shows the binding, follows rebinds,
+    // runs the command.
+    check(run(QStringLiteral("var AID = porydaw.actions.register({id: 'mi', name: 'Menu Item "
+                             "Cmd', context: 'roll', default: 'Ctrl+Alt+Shift+F6', run: function "
+                             "() { porydaw.storage.set('micmd', porydaw.storage.get('micmd', 0) + "
+                             "1); }}); var LI = M.addItem({label: 'Linked', action: AID}); "
+                             "LI.label")) == QStringLiteral("Linked"),
+          "menu item linked to an action was refused");
+    QAction *linked = actionNamed(consoleMenu->actions(), QStringLiteral("Linked"));
+    check(linked && linked->text() == QStringLiteral("Linked\tCtrl+Alt+Shift+F6") &&
+              linked->shortcut().isEmpty(),
+          "linked item does not show the binding as a display-only hint");
+    keys.setBinding(QStringLiteral("plugin.console.mi"),
+                    QKeySequence(QStringLiteral("Ctrl+Alt+Shift+F5")));
+    check(linked && linked->text() == QStringLiteral("Linked\tCtrl+Alt+Shift+F5"),
+          "linked item did not follow a rebind");
+    keys.resetBinding(QStringLiteral("plugin.console.mi"));
+    if (linked)
+        linked->trigger();
+    check(storedCounter(QStringLiteral("console"), QStringLiteral("micmd")) == 1,
+          "triggering a linked item did not run the command");
+    // Checkable items, submenus, separators, remove, enabled, clear.
+    check(run(QStringLiteral("var CI = M.addItem({label: 'Check', checkable: true, checked: "
+                             "true, run: function (api, on) { porydaw.storage.set('checkon', on ? "
+                             "1 : 0); }}); var SUB = M.addMenu('Sub'); SUB.addItem({label: 'Deep', "
+                             "run: function () { porydaw.storage.set('deep', 1); }}); "
+                             "M.addSeparator(); CI.checked")) == QStringLiteral("true"),
+          "checkable item / submenu / separator setup failed");
+    QAction *checkA = actionNamed(consoleMenu->actions(), QStringLiteral("Check"));
+    check(checkA && checkA->isCheckable() && checkA->isChecked(), "checkable item not checkable");
+    if (checkA)
+        checkA->trigger();
+    check(storedCounter(QStringLiteral("console"), QStringLiteral("checkon")) == 0 &&
+              run(QStringLiteral("CI.checked")) == QStringLiteral("false"),
+          "toggling a checkable item did not pass the new state");
+    run(QStringLiteral("CI.checked = true"));
+    check(checkA && checkA->isChecked() &&
+              storedCounter(QStringLiteral("console"), QStringLiteral("checkon")) == 0,
+          "setting checked from the script fired the callback or did not apply");
+    QMenu *sub = nullptr;
+    for (QAction *a : consoleMenu->actions()) {
+        if (a->menu() && a->menu()->title() == QStringLiteral("Sub"))
+            sub = a->menu();
+    }
+    check(sub, "addMenu did not add a submenu");
+    if (QAction *deep = sub ? actionNamed(sub->actions(), QStringLiteral("Deep")) : nullptr)
+        deep->trigger();
+    check(storedCounter(QStringLiteral("console"), QStringLiteral("deep")) == 1,
+          "submenu item did not run");
+    check(run(QStringLiteral("MI.remove(); MI.label")) == QStringLiteral("Hi there") &&
+              !actionNamed(consoleMenu->actions(), QStringLiteral("Hi there")),
+          "item.remove() did not take the entry out (or killed the handle)");
+    // An item that removes itself (and one that clears its menu) from its
+    // own run(): the action must outlive the triggered handler.
+    check(run(QStringLiteral("var RM = M.addItem({label: 'RmMe', run: function () { RM.remove(); "
+                             "porydaw.storage.set('rmme', 1); }}); var SM = M.addMenu('Gone'); "
+                             "SM.addItem({label: 'ClearMe', run: function () { M.clear(); "
+                             "porydaw.storage.set('clearme', 1); }}); 'ok'")) ==
+              QStringLiteral("ok"),
+          "self-removing items could not be added");
+    if (QAction *rm = actionNamed(consoleMenu->actions(), QStringLiteral("RmMe")))
+        rm->trigger();
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    check(storedCounter(QStringLiteral("console"), QStringLiteral("rmme")) == 1 &&
+              !actionNamed(consoleMenu->actions(), QStringLiteral("RmMe")),
+          "an item removing itself from run() did not run or stayed listed");
+    {
+        QMenu *gone = nullptr;
+        for (QAction *a : consoleMenu->actions()) {
+            if (a->menu() && a->menu()->title() == QStringLiteral("Gone"))
+                gone = a->menu();
+        }
+        if (QAction *cm = gone ? actionNamed(gone->actions(), QStringLiteral("ClearMe")) : nullptr)
+            cm->trigger();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        check(storedCounter(QStringLiteral("console"), QStringLiteral("clearme")) == 1 &&
+                  consoleMenu->actions().isEmpty(),
+              "clear() from a submenu item's run() did not run or left entries");
+    }
+    // The menu is rebuilt for the checks below.
+    run(QStringLiteral("var CI = M.addItem({label: 'Check', checkable: true, checked: true, run: "
+                       "function (api, on) { porydaw.storage.set('checkon', on ? 1 : 0); }}); "
+                       "var SUB = M.addMenu('Sub'); SUB.addItem({label: 'Deep', run: function () { "
+                       "porydaw.storage.set('deep', 1); }}); M.addSeparator();"));
+    QAction *checkA2 = actionNamed(consoleMenu->actions(), QStringLiteral("Check"));
+    checkA = checkA2;
+    check(run(QStringLiteral("CI.enabled = false; CI.enabled")) == QStringLiteral("false") &&
+              checkA && !checkA->isEnabled(),
+          "item.enabled did not reach the action");
+    check(run(QStringLiteral("M.addItem({run: function () {}})")).isNull() &&
+              errorLogged("needs a label"),
+          "an item without a label was accepted");
+    check(run(QStringLiteral("M.addItem({label: 'x', action: 'plugin.nope.x'})")).isNull() &&
+              errorLogged("no command"),
+          "an item linked to an unknown command was accepted");
+    check(run(QStringLiteral("M.addItem({label: 'x'})")).isNull() &&
+              errorLogged("needs run() or an action"),
+          "an item with neither run nor action was accepted");
+    check(run(QStringLiteral("porydaw.ui.contextMenu('bogus')")).isNull() &&
+              errorLogged("surface must be"),
+          "a bogus context-menu surface was accepted");
+    run(QStringLiteral("M.clear()"));
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    check(consoleMenu->actions().isEmpty(), "menu.clear() left entries behind");
+    check(run(QStringLiteral("SUB.addItem({label: 'late', run: function () {}})")).isNull() &&
+              errorLogged("menu was removed"),
+          "adding to a cleared submenu was not refused");
+
+    // --- context menus ---
+    check(run(QStringLiteral(
+              "var RC = porydaw.ui.contextMenu('range'); RC.addItem({label: 'Range plug', run: "
+              "function (api) { porydaw.storage.set('ctxrange', api.selection.time().end); "
+              "}}); var NC = porydaw.ui.contextMenu('notes'); NC.addItem({label: 'Note plug', "
+              "run: function (api) { porydaw.storage.set('ctxnote', "
+              "api.selection.notes()[0].key); }}); 'ok'")) == QStringLiteral("ok"),
+          "contextMenu items could not be added");
+    view.selectTrack(0);
+    run(QStringLiteral("porydaw.selection.setTime({start: 0, end: 96})"));
+    bool sawSeparator = false;
+    driveNextPopup(
+        [&](QMenu *menu) {
+            QAction *plug = actionNamed(menu->actions(), QStringLiteral("Range plug"));
+            QAction *clear = actionNamed(menu->actions(), QStringLiteral("Clear selection"));
+            // Plugin entries (every plugin's, the examples' included) sit
+            // in one block after the built-ins, behind a separator.
+            const int at = plug ? menu->actions().indexOf(plug) : -1;
+            const int clearAt = clear ? menu->actions().indexOf(clear) : -1;
+            for (int i = clearAt + 1; clearAt >= 0 && i < at; ++i)
+                sawSeparator = sawSeparator || menu->actions().at(i)->isSeparator();
+            if (plug)
+                plug->trigger();
+            menu->close();
+        },
+        QDeadlineTimer(3000));
+    view.showTimeSelectionMenu(view.mapToGlobal(QPoint(200, 100)));
+    check(storedCounter(QStringLiteral("console"), QStringLiteral("ctxrange")) == 96 &&
+              sawSeparator,
+          "the range menu did not show the plugin entry (after a separator) or run it");
+    run(QStringLiteral("porydaw.selection.clearTime()"));
+    // The note menu: draw a note, select it, right-click it on the roll.
+    check(run(QStringLiteral("var NID = porydaw.edit.transaction('Note for menu', function () { "
+                             "return porydaw.edit.addNotes(0, [{tick: 48, key: 60, len: 48, vel: "
+                             "100}])[0]; }); porydaw.selection.setNotes(NID); "
+                             "porydaw.view.revealRange(0, 192); "
+                             "porydaw.view.revealNote(NID)")) == QStringLiteral("true"),
+          "could not place the note for the context-menu test");
+    QWidget &roll = view.timelineSurfaces().roll.widget;
+    const auto rightClickNote = [&](double tick, int key) {
+        const QPointF pos(songview::kKeyboardW + view.contentX(tick),
+                          (127 - key) * view.keyHeight() - view.scrollY() + view.keyHeight() / 2);
+        QMouseEvent press(QEvent::MouseButtonPress, pos, roll.mapToGlobal(pos.toPoint()),
+                          Qt::RightButton, Qt::RightButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(&roll, &press);
+        QMouseEvent release(QEvent::MouseButtonRelease, pos, roll.mapToGlobal(pos.toPoint()),
+                            Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(&roll, &release);
+        return openMenu();
+    };
+    QMenu *noteMenu = rightClickNote(72, 60);
+    QAction *notePlug =
+        noteMenu ? actionNamed(noteMenu->actions(), QStringLiteral("Note plug")) : nullptr;
+    check(notePlug, "right-clicking a note did not open a menu with the plugin entry");
+    if (notePlug)
+        notePlug->trigger();
+    if (noteMenu)
+        noteMenu->close();
+    check(storedCounter(QStringLiteral("console"), QStringLiteral("ctxnote")) == 60,
+          "the note menu's plugin entry did not run with the selection");
+    noteMenu = rightClickNote(72, 60);
+    int plugCount = 0;
+    if (noteMenu) {
+        for (QAction *a : noteMenu->actions())
+            plugCount += a->text() == QStringLiteral("Note plug");
+        noteMenu->close();
+    }
+    check(plugCount == 1, "reopening the note menu duplicated the plugin entries");
+    oneEntryThenUndo("Note for menu", "the note transaction is not one entry");
+
+    // --- dialogs ---
+    check(run(QStringLiteral("porydaw.edit.transaction('D', function () { "
+                             "porydaw.ui.dialog.alert('no'); })"))
+                  .isNull() &&
+              errorLogged("inside a transaction"),
+          "a dialog inside a transaction was not refused");
+    untouched("the refused dialog's transaction touched the document");
+    // A dialog held longer than the budget must not trip the watchdog.
+    host.setWatchdogMs(200);
+    QString alertText;
+    driveNextModal([&](QWidget *w) {
+        QTimer::singleShot(500, w, [w, &alertText] {
+            auto *box = qobject_cast<QMessageBox *>(w);
+            if (!box)
+                return;
+            alertText = box->text();
+            box->buttons().first()->click();
+        });
+    });
+    check(run(QStringLiteral("porydaw.ui.dialog.alert('Hello', {title: 'T'}); 'alive'")) ==
+                  QStringLiteral("alive") &&
+              alertText == QStringLiteral("Hello") && !errorLogged("interrupted"),
+          "alert did not show, or the watchdog fired during the dialog");
+    host.setWatchdogMs(watchdogBefore);
+    const auto clickButton = [](const QString &text) {
+        return [text](QWidget *w) {
+            auto *box = qobject_cast<QMessageBox *>(w);
+            if (!box)
+                return;
+            for (QAbstractButton *b : box->buttons()) {
+                if (b->text() == text)
+                    b->click();
+            }
+        };
+    };
+    driveNextModal(clickButton(QStringLiteral("Sure")));
+    check(run(QStringLiteral("porydaw.ui.dialog.confirm('Q?', {ok: 'Sure', cancel: 'Nah'})")) ==
+              QStringLiteral("true"),
+          "confirm did not report the ok button");
+    driveNextModal(clickButton(QStringLiteral("Nah")));
+    check(run(QStringLiteral("porydaw.ui.dialog.confirm('Q?', {ok: 'Sure', cancel: 'Nah'})")) ==
+              QStringLiteral("false"),
+          "confirm did not report the cancel button");
+    driveNextModal([](QWidget *w) {
+        if (auto *dlg = qobject_cast<QInputDialog *>(w)) {
+            dlg->setTextValue(QStringLiteral("typed"));
+            dlg->accept();
+        }
+    });
+    check(run(QStringLiteral("porydaw.ui.dialog.prompt('Name?', {value: 'def'})")) ==
+              QStringLiteral("typed"),
+          "prompt did not return the typed text");
+    driveNextModal([](QWidget *w) {
+        if (auto *dlg = qobject_cast<QDialog *>(w))
+            dlg->reject();
+    });
+    check(run(QStringLiteral("porydaw.ui.dialog.prompt('Name?')")) == QStringLiteral("null"),
+          "a cancelled prompt did not return null");
+    driveNextModal([](QWidget *w) {
+        auto *dlg = qobject_cast<QDialog *>(w);
+        if (!dlg)
+            return;
+        dlg->findChild<QLineEdit *>(QStringLiteral("field.name"))->setText(QStringLiteral("Bob"));
+        dlg->findChild<QSpinBox *>(QStringLiteral("field.n"))->setValue(7);
+        dlg->findChild<QDoubleSpinBox *>(QStringLiteral("field.f"))->setValue(1.5);
+        dlg->findChild<QCheckBox *>(QStringLiteral("field.c"))->setChecked(true);
+        dlg->findChild<QComboBox *>(QStringLiteral("field.k"))->setCurrentIndex(2);
+        dlg->accept();
+    });
+    check(run(QStringLiteral(
+              "var F = porydaw.ui.dialog.form({title: 'F', text: 'fill', fields: [{key: "
+              "'name', label: 'Name', type: 'text', value: 'x'}, {key: 'n', type: 'number', "
+              "value: 1, min: 0, max: 10}, {key: 'f', type: 'number', value: 0.5, decimals: "
+              "1}, {key: 'c', type: 'checkbox'}, {key: 'k', type: 'combo', items: ['a', 'b', "
+              "'c'], value: 'b'}]}); F.name === 'Bob' && F.n === 7 && F.f === 1.5 && F.c === "
+              "true && F.k === 2")) == QStringLiteral("true"),
+          "form did not return the edited field values");
+    driveNextModal([](QWidget *w) {
+        if (auto *dlg = qobject_cast<QDialog *>(w))
+            dlg->reject();
+    });
+    check(run(QStringLiteral("porydaw.ui.dialog.form({fields: [{key: 'a'}]})")) ==
+              QStringLiteral("null"),
+          "a cancelled form did not return null");
+    check(run(QStringLiteral("porydaw.ui.dialog.form({fields: []})")).isNull() &&
+              errorLogged("at least one field"),
+          "a form without fields was accepted");
+    check(run(QStringLiteral("porydaw.ui.dialog.form({fields: [{key: 'a', type: 'color'}]})"))
+                  .isNull() &&
+              errorLogged("unknown type"),
+          "a form field of unknown type was accepted");
+    // Disabling a plugin while its dialog is up (a hot reload or a fault
+    // would do the same) must wait for the call to unwind.
+    {
+        const scripting::Plugin *fixture = host.plugin(QStringLiteral("fixture"));
+        bool wasLoadedDuringDialog = false;
+        driveNextModal([&](QWidget *w) {
+            host.setEnabled(QStringLiteral("fixture"), false);
+            wasLoadedDuringDialog = fixture && fixture->engine != nullptr;
+            if (auto *box = qobject_cast<QMessageBox *>(w))
+                box->buttons().first()->click();
+        });
+        check(host.runCommand(QStringLiteral("plugin.fixture.ask")) && wasLoadedDuringDialog &&
+                  fixture && fixture->state == scripting::PluginState::Disabled &&
+                  !fixture->engine &&
+                  storedCounter(QStringLiteral("fixture"), QStringLiteral("asked")) == 1,
+              "disabling a plugin inside its own dialog did not defer the teardown");
+        host.setEnabled(QStringLiteral("fixture"), true);
+        check(fixture && fixture->state == scripting::PluginState::Loaded,
+              "the fixture did not come back after the deferred teardown");
+    }
+    // File pickers grant the chosen path to porydaw.io.
+    const QString outside = pluginsDir + QStringLiteral("/picked.txt");
+    check(writeFile(outside, QStringLiteral("picked")), "could not write the pick fixture");
+    check(run(QStringLiteral("porydaw.io.readText('%1')").arg(outside)).isNull() &&
+              errorLogged("outside the plugin folder"),
+          "io.readText outside the sandbox was allowed before a dialog granted it");
+    const auto pickFile = [](const QString &path) {
+        return [path](QWidget *w) {
+            auto *dlg = qobject_cast<QFileDialog *>(w);
+            if (!dlg)
+                return;
+            // Through accept(): it resolves the typed name the way a
+            // user's Enter would (done() would skip that and report the
+            // directory instead). A folder pick enters the folder, whose
+            // empty selection accept() reports as the folder itself.
+            if (dlg->fileMode() == QFileDialog::Directory) {
+                dlg->setDirectory(path);
+            } else if (auto *edit = dlg->findChild<QLineEdit *>(QStringLiteral("fileNameEdit"))) {
+                // selectFile() leaves a focused name field alone; type it.
+                edit->setText(path);
+            }
+            static_cast<QDialog *>(dlg)->accept();
+            // Never wedge the harness in a dialog accept() refused.
+            QTimer::singleShot(1500, dlg, [dlg] {
+                if (dlg->isVisible()) {
+                    std::fprintf(stderr,
+                                 "scriptcheck: a file dialog refused accept(); rejecting\n");
+                    dlg->reject();
+                }
+            });
+        };
+    };
+    driveNextModal(pickFile(outside));
+    check(run(QStringLiteral("var P = porydaw.ui.dialog.openFile({title: 'Pick'}); P")) == outside,
+          "openFile did not return the picked path");
+    check(run(QStringLiteral("porydaw.io.readText(P)")) == QStringLiteral("picked"),
+          "a picked file was not readable through porydaw.io");
+    const QString saveTarget = pluginsDir + QStringLiteral("/saved.txt");
+    driveNextModal(pickFile(saveTarget));
+    check(run(QStringLiteral("var S = porydaw.ui.dialog.saveFile({name: 'saved.txt'}); "
+                             "porydaw.io.writeText(S, 'saved!'); S")) == saveTarget &&
+              QFile::exists(saveTarget),
+          "saveFile did not return a writable path");
+    driveNextModal([](QWidget *w) {
+        if (auto *dlg = qobject_cast<QDialog *>(w))
+            dlg->reject();
+    });
+    check(run(QStringLiteral("porydaw.ui.dialog.openFile()")) == QStringLiteral("null"),
+          "a cancelled file dialog did not return null");
+    driveNextModal(pickFile(pluginsDir));
+    check(run(QStringLiteral("var DD = porydaw.ui.dialog.chooseDir(); porydaw.io.writeText(DD + "
+                             "'/indir.txt', 'x'); porydaw.io.exists(DD + '/indir.txt') && DD")) ==
+              pluginsDir,
+          "chooseDir did not return and grant the picked folder");
+
+    // --- io ---
+    const QString ioDir = projectRoot + QStringLiteral("/.porydaw/reach");
+    QDir(ioDir).removeRecursively(); // a rerun against the same scratch copy
+    check(run(QStringLiteral("porydaw.io.projectRoot")) == projectRoot, "io.projectRoot is wrong");
+    check(run(QStringLiteral("porydaw.io.writeText('%1/a.txt', 'héllo'); "
+                             "porydaw.io.readText('%1/a.txt')")
+                  .arg(ioDir)) == QStringLiteral("héllo"),
+          "io.writeText/readText round trip failed (folders created on demand)");
+    check(run(QStringLiteral("var L = porydaw.io.list('%1'); L.length === 1 && L[0].name === "
+                             "'a.txt' && !L[0].dir && L[0].size === 6")
+                  .arg(ioDir)) == QStringLiteral("true"),
+          "io.list did not describe the folder");
+    check(
+        run(QStringLiteral("porydaw.io.mkdir('%1/sub'); porydaw.io.isDir('%1/sub')").arg(ioDir)) ==
+            QStringLiteral("true"),
+        "io.mkdir/isDir failed");
+    check(run(QStringLiteral("porydaw.io.writeBytes('%1/b.bin', new Uint8Array([1, 2, 255])); "
+                             "var B = porydaw.io.readBytes('%1/b.bin'); B.length === 3 && B[2] === "
+                             "255")
+                  .arg(ioDir)) == QStringLiteral("true"),
+          "io.writeBytes/readBytes round trip failed");
+    check(run(QStringLiteral("porydaw.io.remove('%1/a.txt'); porydaw.io.exists('%1/a.txt')")
+                  .arg(ioDir)) == QStringLiteral("false"),
+          "io.remove did not delete the file");
+    check(run(QStringLiteral("porydaw.io.remove('%1/sub')").arg(ioDir)).isNull() &&
+              errorLogged("is a folder"),
+          "io.remove accepted a folder");
+    check(run(QStringLiteral("porydaw.io.readText('/etc/hostname')")).isNull() &&
+              errorLogged("outside the plugin folder"),
+          "io.readText of a system file was allowed");
+    check(run(QStringLiteral("porydaw.io.writeText('%1/../escape.txt', 'x')").arg(projectRoot))
+                  .isNull() &&
+              errorLogged("outside the plugin folder") &&
+              !QFile::exists(QFileInfo(projectRoot).path() + QStringLiteral("/escape.txt")),
+          "a '..' path escaped the project");
+    check(run(QStringLiteral("porydaw.io.readText('relative.txt')")).isNull() &&
+              errorLogged("has no folder"),
+          "a relative path from the console was not refused");
+    check(run(QStringLiteral("porydaw.io.readText('%1/missing.txt')").arg(ioDir)).isNull() &&
+              errorLogged("could not open"),
+          "reading a missing file did not throw");
+
+    // --- per-song storage ---
+    const QString sidecar = ViewSidecar::pathFor(projectRoot, songLabel);
+    check(run(QStringLiteral("porydaw.storage.song.set('k', {a: 1, b: [1, 2]}); "
+                             "porydaw.storage.song.set('n', 5); "
+                             "JSON.stringify(porydaw.storage.song.get('k')) + "
+                             "porydaw.storage.song.keys().length")) ==
+              QStringLiteral("{\"a\":1,\"b\":[1,2]}2"),
+          "storage.song set/get/keys failed");
+    check(readJson(sidecar)
+                  .value(QLatin1String("plugins"))
+                  .toObject()
+                  .value(QLatin1String("console"))
+                  .toObject()
+                  .value(QLatin1String("k"))
+                  .toObject()
+                  .value(QLatin1String("a"))
+                  .toInt() == 1,
+          "storage.song did not land under plugins/<id> in the song sidecar");
+    check(ViewSidecar::save(projectRoot, songLabel, view.viewState()) &&
+              readJson(sidecar)
+                  .value(QLatin1String("plugins"))
+                  .toObject()
+                  .contains(QLatin1String("console")) &&
+              readJson(sidecar).contains(QLatin1String("view")),
+          "a view-state save dropped the plugin data (or vice versa)");
+    check(run(QStringLiteral("porydaw.storage.song.get('zzz', 3)")) == QStringLiteral("3"),
+          "storage.song.get fallback failed");
+    check(run(QStringLiteral("porydaw.storage.song.remove('k'); porydaw.storage.song.remove('n'); "
+                             "porydaw.storage.song.get('k', 'gone')")) == QStringLiteral("gone") &&
+              !readJson(sidecar).contains(QLatin1String("plugins")),
+          "storage.song.remove did not clean the sidecar");
+
+    // --- raw events ---
+    check(run(QStringLiteral("porydaw.song.chunkCount > 0 && porydaw.song.tracks()[0].chunk >= 0 "
+                             "&& porydaw.song.chunkTrack(porydaw.song.tracks()[0].chunk) === 0")) ==
+              QStringLiteral("true"),
+          "chunk addressing is inconsistent");
+    check(run(QStringLiteral("porydaw.song.rawEvents(99)")).isNull() &&
+              errorLogged("no such chunk"),
+          "rawEvents of a bad chunk did not throw");
+    check(run(QStringLiteral(
+              "var C = porydaw.song.tracks()[0].chunk, CH = porydaw.song.tracks()[0].channel; "
+              "var before = porydaw.song.rawEvents(C).length; "
+              "porydaw.edit.transaction('Raw', function () { "
+              "  porydaw.edit.insertRawEvent(C, {tick: 30, type: 'cc', channel: CH, data0: 7, "
+              "data1: 99}); "
+              "  porydaw.edit.insertRawEvent(C, {tick: 30, status: 0xFF, metaType: 1, text: "
+              "'hey'}); "
+              "  porydaw.edit.insertRawEvent(C, {tick: 31, type: 'sysex', blob: [1, 2, 3]}); "
+              "}); "
+              "var evs = porydaw.song.rawEvents(C, {from: 30, to: 32}); "
+              "var cc = evs.filter(function (e) { return e.type === 'cc'; })[0]; "
+              "var meta = evs.filter(function (e) { return e.type === 'meta'; })[0]; "
+              "var sx = evs.filter(function (e) { return e.type === 'sysex'; })[0]; "
+              "porydaw.song.rawEvents(C).length === before + 3 && cc.data0 === 7 && cc.data1 "
+              "=== 99 && cc.channel === CH && cc.status === (0xB0 | CH) && meta.text === 'hey' "
+              "&& meta.metaType === 1 && meta.blob.length === 3 && sx.blob[2] === 3 && "
+              "typeof cc.index === 'number'")) == QStringLiteral("true"),
+          "insertRawEvent / rawEvents did not round-trip cc, meta text and sysex blob");
+    oneEntryThenUndo("Raw", "raw inserts are not one undo entry");
+    check(run(QStringLiteral(
+              "porydaw.edit.transaction('Raw2', function () { "
+              "  porydaw.edit.insertRawEvent(C, {tick: 30, type: 'cc', channel: CH, data0: 7, "
+              "data1: 99}); "
+              "  var e = porydaw.song.rawEvents(C, {from: 30, to: 31}).filter(function (x) { "
+              "return x.type === 'cc' && x.data0 === 7; })[0]; "
+              "  porydaw.edit.modifyRawEvent(C, e.index, {tick: 40, type: 'cc', channel: CH, "
+              "data0: 7, data1: 50}); "
+              "}); "
+              "var at40 = porydaw.song.rawEvents(C, {from: 40, to: 41}).filter(function (x) { "
+              "return x.type === 'cc' && x.data0 === 7; }); "
+              "at40.length === 1 && at40[0].data1 === 50 && porydaw.song.rawEvents(C, {from: "
+              "30, to: 31}).filter(function (x) { return x.type === 'cc' && x.data0 === 7 && "
+              "x.data1 === 99; }).length === 0")) == QStringLiteral("true"),
+          "modifyRawEvent did not move/change the event");
+    oneEntryThenUndo("Raw2", "raw modify is not one undo entry");
+    check(run(QStringLiteral(
+              "var moved = false, same = true; "
+              "porydaw.edit.transaction('Raw3', function () { "
+              "  porydaw.edit.insertRawEvent(C, {tick: 30, type: 'cc', channel: CH, data0: 7, "
+              "data1: 1}); "
+              "  porydaw.edit.insertRawEvent(C, {tick: 30, type: 'cc', channel: CH, data0: 10, "
+              "data1: 2}); "
+              "  var pair = porydaw.song.rawEvents(C, {from: 30, to: 31}).filter(function (x) "
+              "{ return x.type === 'cc' && (x.data0 === 7 || x.data0 === 10); }); "
+              "  moved = porydaw.edit.moveRawEvent(C, pair[1].index, pair[0].index); "
+              "  same = porydaw.edit.moveRawEvent(C, pair[0].index, pair[0].index); "
+              "  var after = porydaw.song.rawEvents(C, {from: 30, to: 31}).filter(function (x) "
+              "{ return x.type === 'cc' && (x.data0 === 7 || x.data0 === 10); }); "
+              "  porydaw.storage.set('rawmove', after[0].data0 === 10 && after[1].data0 === 7 "
+              "? 1 : 0); "
+              "  var n = porydaw.edit.deleteRawEvents(C, [after[0].index, after[1].index, "
+              "after[1].index, 1e9]); "
+              "  porydaw.storage.set('rawdel', n); "
+              "}); "
+              "moved && !same && porydaw.song.rawEvents(C).length === before")) ==
+                  QStringLiteral("true") &&
+              storedCounter(QStringLiteral("console"), QStringLiteral("rawmove")) == 1 &&
+              storedCounter(QStringLiteral("console"), QStringLiteral("rawdel")) == 2,
+          "moveRawEvent / deleteRawEvents misbehaved");
+    oneEntryThenUndo("Raw3", "raw move+delete are not one undo entry");
+    check(run(QStringLiteral("var E0 = porydaw.song.chunkEndTick(C); porydaw.edit.transaction("
+                             "'End', function () { porydaw.edit.setChunkEndTick(C, E0 + 96); }); "
+                             "porydaw.song.chunkEndTick(C) === E0 + 96")) == QStringLiteral("true"),
+          "setChunkEndTick did not move the end of track");
+    oneEntryThenUndo("End", "setChunkEndTick is not one undo entry");
+    const auto rawRefused = [&](const char *spec, const char *fragment, const char *what) {
+        messages.clear();
+        check(run(QStringLiteral("porydaw.edit.transaction('Bad', function () { "
+                                 "porydaw.edit.insertRawEvent(C, %1); })")
+                      .arg(QLatin1String(spec)))
+                      .isNull() &&
+                  errorLogged(fragment),
+              what);
+        untouched("a refused raw insert left the document changed");
+    };
+    rawRefused("{tick: 0}", "status byte or a type", "an event with no status/type was accepted");
+    rawRefused("{tick: 0, status: 0x50}", "status must be", "a data byte as status was accepted");
+    rawRefused("{tick: 0, type: 'meta'}", "needs metaType", "a meta without metaType was accepted");
+    check(run(QStringLiteral("porydaw.edit.transaction('Bad', function () { "
+                             "porydaw.edit.modifyRawEvent(C, 1e9, {tick: 0, type: 'cc'}); })"))
+                  .isNull() &&
+              errorLogged("no such event"),
+          "modifyRawEvent of a bad index was accepted");
+    untouched("a refused raw modify left the document changed");
+    check(run(QStringLiteral("porydaw.edit.transaction('Bad', function () { "
+                             "porydaw.edit.insertRawEvent(99, {tick: 0, type: 'cc'}); })"))
+                  .isNull() &&
+              errorLogged("no such chunk"),
+          "insertRawEvent on a bad chunk was accepted");
+
+    // --- moveRange / duplicateRange ---
+    check(run(QStringLiteral(
+              "var T = -1; "
+              "porydaw.edit.transaction('Range', function () { "
+              "  T = porydaw.edit.addTrack(0); "
+              "  porydaw.edit.addNotes(T, [{tick: 480, key: 60, len: 24, vel: 100}, {tick: "
+              "528, key: 62, len: 24, vel: 100}]); "
+              "  porydaw.edit.addLanePoint(T, 7, 500, 80); "
+              "  porydaw.storage.set('rangemoved', porydaw.edit.moveRange(480, 576, {tracks: "
+              "[T]}, 192)); "
+              "}); "
+              "var moved = porydaw.song.notes({track: T, from: 672, to: 768}); "
+              "moved.length === 2 && moved[0].key === 60 && moved[1].tick === 720 && "
+              "porydaw.song.lanePoints(T, 7, {from: 692, to: 693}).length === 1 && "
+              "porydaw.song.notes({track: T, from: 480, to: 576}).length === 0")) ==
+                  QStringLiteral("true") &&
+              storedCounter(QStringLiteral("console"), QStringLiteral("rangemoved")) >= 3,
+          "moveRange did not move the notes and lane point");
+    oneEntryThenUndo("Range", "moveRange's transaction is not one entry");
+    check(run(QStringLiteral(
+              "porydaw.edit.transaction('Dup', function () { "
+              "  T = porydaw.edit.addTrack(0); "
+              "  porydaw.edit.addNotes(T, [{tick: 480, key: 60, len: 24, vel: 100}]); "
+              "  porydaw.edit.addLanePoint(T, 7, 500, 80); "
+              "  porydaw.storage.set('dupn', porydaw.edit.duplicateRange(480, 576, {lanes: "
+              "[{track: T, cc: 7}]}, 96)); "
+              "  porydaw.edit.duplicateRange(480, 576, {tracks: [T]}, 192); "
+              "}); "
+              "porydaw.song.notes({track: T, from: 480, to: 481}).length === 1 && "
+              "porydaw.song.notes({track: T, from: 576, to: 577}).length === 0 && "
+              "porydaw.song.notes({track: T, from: 672, to: 673}).length === 1 && "
+              "porydaw.song.lanePoints(T, 7, {from: 596, to: 597}).length === 1")) ==
+                  QStringLiteral("true") &&
+              storedCounter(QStringLiteral("console"), QStringLiteral("dupn")) == 1,
+          "duplicateRange (lanes scope, then tracks scope) did not copy as expected");
+    oneEntryThenUndo("Dup", "duplicateRange's transaction is not one entry");
+    check(run(QStringLiteral("porydaw.edit.transaction('Zero', function () { return "
+                             "porydaw.edit.moveRange(0, 96, {tracks: [0]}, 0); })")) ==
+              QStringLiteral("0"),
+          "moveRange with dTick 0 did not report 0");
+    // A delta past the range start is floored there, so spacing survives.
+    check(run(QStringLiteral(
+              "porydaw.edit.transaction('Floor', function () { "
+              "  T = porydaw.edit.addTrack(0); "
+              "  porydaw.edit.addNotes(T, [{tick: 480, key: 60, len: 24, vel: 100}, {tick: "
+              "528, key: 62, len: 24, vel: 100}]); "
+              "  porydaw.edit.moveRange(480, 576, {tracks: [T]}, -5000); "
+              "}); "
+              "var fl = porydaw.song.notes({track: T}); fl.length === 2 && fl[0].tick === 0 "
+              "&& fl[1].tick === 48")) == QStringLiteral("true"),
+          "moveRange past tick 0 smeared the range");
+    oneEntryThenUndo("Floor", "the floored moveRange is not one entry");
+    untouched("a zero moveRange left an entry");
+    check(run(QStringLiteral("porydaw.edit.transaction('BadScope', function () { "
+                             "porydaw.edit.moveRange(0, 96, {}, 10); })"))
+                  .isNull() &&
+              errorLogged("scope needs"),
+          "moveRange with an empty scope was accepted");
+    check(run(QStringLiteral("porydaw.edit.transaction('BadRange', function () { "
+                             "porydaw.edit.duplicateRange(96, 96, {tracks: [0]}, 10); })"))
+                  .isNull() &&
+              errorLogged("end must be after start"),
+          "duplicateRange with an empty range was accepted");
+    untouched("refused range calls left the document changed");
+
+    // --- roll overlays ---
+    check(run(QStringLiteral(
+              "var OV = porydaw.ui.overlay({id: 'ov', paint: function (g, v) { "
+              "porydaw.storage.set('ovpaints', porydaw.storage.get('ovpaints', 0) + 1); "
+              "g.fillRect(0, 0, v.width, v.height, '#ff0000'); "
+              "porydaw.storage.set('ovinfo', JSON.stringify({w: v.width, k: "
+              "v.key(v.keyTop(60) + 1), t: v.tick(v.x(96)), tr: v.track, from: v.from})); }}); "
+              "OV.id")) == QStringLiteral("ov"),
+          "ui.overlay was refused");
+    QImage rollShot = roll.grab().toImage();
+    const QPoint inGrid(songview::kKeyboardW + 20, 10);
+    check(isRed(rollShot.pixelColor(inGrid)) && !isRed(rollShot.pixelColor(QPoint(5, 10))),
+          "overlay did not paint over the note area (and only there)");
+    check(storedCounter(QStringLiteral("console"), QStringLiteral("ovpaints")) >= 1,
+          "overlay paint did not run");
+    {
+        const QJsonObject info =
+            QJsonDocument::fromJson(
+                QJsonDocument::fromJson(
+                    QSettings().value(QStringLiteral("plugins/console/data/ovinfo")).toByteArray())
+                    .object()
+                    .value(QLatin1String("v"))
+                    .toString()
+                    .toUtf8())
+                .object();
+        check(info.value(QLatin1String("w")).toDouble() == roll.width() - songview::kKeyboardW &&
+                  info.value(QLatin1String("k")).toInt() == 60 &&
+                  std::abs(info.value(QLatin1String("t")).toDouble() - 96.0) < 1.0 &&
+                  info.value(QLatin1String("tr")).toInt() == view.selectedTrack(),
+              "overlay view geometry (width, key/keyTop, tick/x, track) is inconsistent");
+    }
+    run(QStringLiteral("OV.visible = false"));
+    rollShot = roll.grab().toImage();
+    check(!isRed(rollShot.pixelColor(inGrid)), "a hidden overlay still painted");
+    run(QStringLiteral("OV.visible = true"));
+    rollShot = roll.grab().toImage();
+    check(isRed(rollShot.pixelColor(inGrid)), "re-showing the overlay did not repaint");
+    check(run(QStringLiteral("porydaw.ui.overlay({id: 'ov', paint: function () {}})")).isNull() &&
+              errorLogged("exists"),
+          "a duplicate overlay id was accepted");
+    check(run(QStringLiteral("porydaw.ui.overlay({id: 'x', paint: 3})")).isNull() &&
+              errorLogged("paint(g, v)"),
+          "an overlay without a paint function was accepted");
+    // A paint that removes its own overlay, adds another, measures text
+    // consistently, and tries to open a dialog.
+    messages.clear();
+    check(run(QStringLiteral(
+              "var SELF = porydaw.ui.overlay({id: 'self', paint: function (g, v) { "
+              "  SELF.remove(); "
+              "  porydaw.ui.overlay({id: 'born', paint: function (g) { "
+              "    var w1 = g.measureText('abc', {size: 2}).width; "
+              "    g.text(0, 10, 'abc', 'red', {size: 2}); g.text(0, 20, 'abc', 'red', {bold: "
+              "true}); "
+              "    var w2 = g.measureText('abc', {size: 2}).width; "
+              "    porydaw.storage.set('fontstable', w1 === w2 && w1 > g.measureText('abc', "
+              "{}).width ? 1 : 0); "
+              "    try { porydaw.ui.dialog.alert('no'); } catch (e) { "
+              "porydaw.storage.set('paintdlg', String(e.message)); } "
+              "  }}); "
+              "}}); SELF.id")) == QStringLiteral("self"),
+          "self-removing overlay could not be created");
+    roll.grab();
+    QCoreApplication::processEvents(); // the deferred invalidation for 'born'
+    roll.grab();
+    check(run(QStringLiteral("SELF.active")) == QStringLiteral("false") &&
+              storedCounter(QStringLiteral("console"), QStringLiteral("fontstable")) == 1 &&
+              QSettings()
+                  .value(QStringLiteral("plugins/console/data/paintdlg"))
+                  .toByteArray()
+                  .contains("paint callback"),
+          "overlay self-removal / text sizing / dialog-from-paint refusal misbehaved");
+    run(QStringLiteral("porydaw.storage.remove('fontstable')"));
+    messages.clear();
+    run(QStringLiteral("var BAD = porydaw.ui.overlay({id: 'bad', paint: function () { throw new "
+                       "Error('ovboom'); }})"));
+    roll.grab();
+    roll.grab();
+    check(countMessages(messages, QStringLiteral("console"), QStringLiteral("ovboom")) == 1,
+          "a throwing overlay was not logged exactly once (held back afterwards)");
+    check(run(QStringLiteral("OV.remove(); BAD.remove(); OV.active")) == QStringLiteral("false"),
+          "overlay.remove() did not deactivate the handle");
+    rollShot = roll.grab().toImage();
+    check(!isRed(rollShot.pixelColor(inGrid)), "a removed overlay still painted");
+    check(run(QStringLiteral("porydaw.ui.overlay({id: 'ov', paint: function () {}}).id")) ==
+              QStringLiteral("ov"),
+          "an overlay id could not be reused after remove()");
+
+    // --- render ---
+    const QString wav = projectRoot + QStringLiteral("/.porydaw/reach.wav");
+    const QString rendered =
+        run(QStringLiteral("var R = porydaw.audio.render('%1', {sampleRate: 32000, loopCount: 1, "
+                           "fadeout: 0.5, tail: 0.5}); R.path + '|' + R.seconds")
+                .arg(wav));
+    {
+        WavExportOptions opts;
+        opts.sampleRate = 32000;
+        opts.loopCount = 1;
+        opts.fadeoutSeconds = 0.5;
+        opts.tailSeconds = 0.5;
+        auto timeline = doc.buildTimeline(32000.0);
+        const uint64_t total = wavExportTotals(*timeline, opts).totalSamples;
+        const QStringList parts = rendered.split(QLatin1Char('|'));
+        check(parts.size() == 2 && parts[0] == wav &&
+                  std::abs(parts[1].toDouble() - double(total) / 32000.0) < 0.01 &&
+                  QFileInfo(wav).size() == qint64(44 + total * 4),
+              "audio.render did not write the WAV the Export path would");
+    }
+    check(run(QStringLiteral("porydaw.audio.render('/etc/reach.wav', {})")).isNull() &&
+              errorLogged("outside the plugin folder"),
+          "audio.render outside the sandbox was allowed");
+
+    // --- project.open (last: it replaces the active session) ---
+    const QString other =
+        run(QStringLiteral("var other = porydaw.project.songs().filter(function (s) { return "
+                           "s.hasMid && s.label !== '%1'; })[0]; other ? other.label : ''")
+                .arg(songLabel));
+    check(!other.isEmpty(), "project has no second playable song for project.open");
+    check(run(QStringLiteral("porydaw.project.open('nope_zzz_not_a_song')")) ==
+              QStringLiteral("false"),
+          "project.open of an unknown label did not return false");
+    check(run(QStringLiteral("porydaw.edit.transaction('O', function () { "
+                             "porydaw.project.open('%1'); })")
+                  .arg(other))
+                  .isNull() &&
+              errorLogged("inside a transaction"),
+          "project.open inside a transaction was allowed");
+    undo.setClean();
+    check(run(QStringLiteral("porydaw.project.open('%1')").arg(songLabel)) ==
+              QStringLiteral("true"),
+          "project.open of the current song did not report true");
+    run(QStringLiteral("porydaw.storage.set('acts', 0); porydaw.song.on('activated', function (e) "
+                       "{ porydaw.storage.set('acts', porydaw.storage.get('acts', 0) + 1); "
+                       "porydaw.storage.set('actlabel', e ? e.label : ''); })"));
+    check(run(QStringLiteral("porydaw.project.open('%1') && porydaw.song.label").arg(other)) ==
+                  other &&
+              host.session() && host.session()->doc.label() == other,
+          "project.open did not switch the active song");
+    check(storedCounter(QStringLiteral("console"), QStringLiteral("acts")) == 1 &&
+              QSettings()
+                  .value(QStringLiteral("plugins/console/data/actlabel"))
+                  .toByteArray()
+                  .contains(other.toUtf8()),
+          "an in-place song swap did not fire song.activated with the new label");
+    check(run(QStringLiteral("porydaw.project.open('%1') && porydaw.song.label").arg(songLabel)) ==
+              songLabel,
+          "project.open could not switch back");
+    // The console is not unloaded by unloadAll: release its test command.
+    run(QStringLiteral("porydaw.actions.unregister(AID)"));
+}
+
 int runTapCheck()
 {
     int failures = 0;
@@ -1275,6 +2150,9 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
         expectedIds.append(QStringLiteral("vu-meter"));
         expectedIds.append(QStringLiteral("spectrum"));
         expectedIds.append(QStringLiteral("dancer"));
+        expectedIds.append(QStringLiteral("song-report"));
+        expectedIds.append(QStringLiteral("range-tools"));
+        expectedIds.append(QStringLiteral("scale-guide"));
         expectedIds.sort();
         // The Phase 3 examples each open a dock in activate().
         for (const char *id : {"vu-meter", "spectrum", "dancer"}) {
@@ -1296,6 +2174,27 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
         check(!hasMessage(messages, QStringLiteral("note-tools"), 1, QStringLiteral("already")),
               "a note-tools default shortcut collides with a shipped binding");
         exampleCommands += tools ? int(tools->actions.size()) : 0;
+        // The Phase 4 examples: menus, context items, an overlay.
+        {
+            const scripting::Plugin *report = host.plugin(QStringLiteral("song-report"));
+            QMenu *reportMenu = findChild<QMenu *>(QStringLiteral("plugin.song-report.menu"));
+            check(report && report->state == scripting::PluginState::Loaded && reportMenu &&
+                      reportMenu->actions().size() == 2,
+                  "song-report did not load with two Plugins-menu entries");
+            const scripting::Plugin *range = host.plugin(QStringLiteral("range-tools"));
+            check(range && range->state == scripting::PluginState::Loaded &&
+                      range->contextItems.size() == 3 && range->actions.size() == 1,
+                  "range-tools did not load with three range-menu items and one command");
+            exampleCommands += range ? int(range->actions.size()) : 0;
+            const scripting::Plugin *scale = host.plugin(QStringLiteral("scale-guide"));
+            check(scale && scale->state == scripting::PluginState::Loaded &&
+                      scale->overlays.size() == 1 && scale->contextItems.size() == 1 &&
+                      findChild<QMenu *>(QStringLiteral("plugin.scale-guide.menu")),
+                  "scale-guide did not load with its overlay, note-menu item and menu");
+            QMenu *pluginsMenu = findChild<QMenu *>(QStringLiteral("pluginsMenu"));
+            check(pluginsMenu && pluginsMenu->menuAction()->isVisible(),
+                  "the Plugins menu is hidden although plugins filled it");
+        }
     }
     check(host.pluginIds() == expectedIds,
           "plugin discovery did not list exactly the manifest-bearing folders, sorted");
@@ -1573,6 +2472,7 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
                   "transport.stop() did not stop playback");
         }
         runRealtimeChecks(check, host, *this, messages, m_audioOk);
+        runReachChecks(check, host, *this, *m_active, messages, pluginsDir, projectRoot, songLabel);
         // Switching to no song drops the API's view.
         activateSession(nullptr);
         check(host.evalConsole(QStringLiteral("porydaw.song.loaded")) == QStringLiteral("false"),

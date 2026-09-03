@@ -1,4 +1,4 @@
-# porydaw scripting API — v1 (Phases 1–3)
+# porydaw scripting API — v1 (Phases 1–4)
 
 Plugins are JavaScript run by porydaw's embedded engine (Qt's `QJSEngine`,
 ES2017-level). Everything runs on the UI thread; a script call that runs
@@ -58,7 +58,12 @@ export function deactivate() {}
 
 ### `porydaw.project`
 
-`isOpen`, `root`, `songs()` → `[{id, label, constant, player, midPath, hasMid, registered}]`.
+`isOpen`, `root`, `songs()` → `[{id, label, constant, player, midPath, hasMid, registered}]`,
+`open(label, {newTab?})` → whether the song opened (in the active tab unless
+`newTab`; the song already active reports `true` and is left alone). Opening
+swaps the song under `porydaw.song` — `song.activated` fires with the new
+label even when the tab is reused — so it is refused inside a transaction,
+from a `song.changed` listener, and from a paint callback.
 
 ### `porydaw.song` — the active tab, read-only
 
@@ -71,12 +76,14 @@ opaque numbers valid for the life of the document.
 | `ticksPerBeat`, `ticksPerClock`, `startTempo`, `trackCount`, `trackBudget`, `endTick` | |
 | `loop()` | `{start, end}` or `null` |
 | `timeSigs()` | `[{tick, numerator, denominator}]` |
-| `tracks()` | `[{index, name, channel, muted, soloed, voice}]` |
+| `tracks()` | `[{index, name, chunk, channel, muted, soloed, voice}]`; `chunk` is the track's SMF chunk (raw events below) |
 | `notes({track?, from?, to?, selectedOnly?})` | `[{id, track, tick, key, len, vel}]`; `from`/`to` bound the start tick, half-open |
 | `note(id)` | one note or `null` |
 | `lanePoints(track, cc, {from?, to?})` | `[{tick, value}]`; `cc` is 0–127 or `song.CC.BEND` / `.TEMPO` / `.VOICE` |
 | `on("changed", fn({revision}))` | after every edit, undo, redo |
 | `on("activated", fn({label} \| null))` | the active tab changed |
+| `chunkCount`, `chunkTrack(chunk)`, `chunkEndTick(chunk)` | the file's MTrk chunks: the engine track a chunk is (-1 for the seq/tempo chunk and other trackless chunks) and its end-of-track tick |
+| `rawEvents(chunk, {from?, to?})` | the chunk's MIDI events as they are in the file: `[{index, tick, status, type, channel, data0, data1, metaType, blob, text}]`. `type` is `noteOn`, `noteOff` (a note-on with velocity 0 too), `cc`, `program`, `bend`, `aftertouch`, `pressure`, `meta` or `sysex`; `blob` (bytes) and `text` (text metas 1–7) only for metas/sysex. `index` is the position in the chunk right now — it shifts with every edit |
 
 Every `on()` returns a function that unsubscribes; `off(event, fn)` also works.
 
@@ -162,6 +169,8 @@ Note arguments accept an id, a note object, or an array of either.
 | `removeTimeRange(start, end, scope)`, `insertTimeRange(at, span, scope)` | ripple delete/insert; `scope` is `{tracks: [i], lanes: [{track, cc}]}` or `{wholeSong: true}`; → whether anything changed |
 | `addTrack(voice)` → index or -1, `duplicateTrack(i)`, `deleteTrack(i)`, `moveTrack(i, target)`, `renameTrack(i, name)` | |
 | `transposeSelection(dKey)`, `nudgeSelection("left"\|"right")` | the roll's own keyboard moves on the note selection (all-or-nothing transpose, grid-line nudge); → whether anything moved |
+| `moveRange(start, end, scope, dTick)`, `duplicateRange(start, end, scope, dTick)` | the time selection's own move/duplicate: every note and automation point of `scope` (as in `removeTimeRange`; a track scope takes all of the track's lanes, hidden ones and voice changes included, `wholeSong` adds the tempo lane) starting in `[start, end)` shifts, or is copied, by `dTick` ticks (floored at `-start`, so the range never smears against tick 0). Copies landing on existing notes trim them like a draw; `dTick` 0 does nothing; → the number of notes plus points moved |
+| `insertRawEvent(chunk, event)`, `modifyRawEvent(chunk, index, event)`, `deleteRawEvents(chunk, [indices])`, `moveRawEvent(chunk, index, destIndex)`, `setChunkEndTick(chunk, tick)` | raw SMF edits in `song.rawEvents`' address space. `event` is `{tick, status}` or `{tick, type, channel?}` plus `data0`/`data1` (channel events), `metaType` and `blob` or `text` (metas), `blob` (sysex). Bytes are clamped, nothing is validated semantically — an orphan note-on is yours to make. Inserts land at the tick's canonical position; a modify that changes the tick re-inserts, so re-read indices afterwards. `moveRawEvent` reorders within one tick (clamped to what the file's ordering rules allow; → whether it moved). Every call is undoable like any other |
 
 The bundled `plugins/examples/note-tools` plugin (Legato, Insert chord,
 Humanize, Strum, Quantize) shows the pattern.
@@ -199,8 +208,14 @@ demand, and no more expensive than what you ask for:
 | `spectrum(bins = 64)` | `Float32Array` of `bins` bands, linear in frequency from 0 to `sampleRate / 2`, each 0..1 (1 = a full-scale sine there); a Hann-windowed FFT of the window's mono mix, computed at most once per frame |
 | `channels()` | `{pcm: [{on, releasing, track, key}], cgb: [...], maxPcm, activePcm, activeCgb}` — the engine's channel pools — or `null` without a song |
 
+`render(path, {sampleRate?, loopCount?, fadeout?, tail?})` → `{path, seconds}`
+renders the active song to a WAV file the way File → Export WAV does
+(defaults 48000 Hz, 2 loops, 5 s fadeout, 3 s tail); the path follows
+`porydaw.io`'s rules, playback stops first, and the call blocks (the watchdog
+is paused). Refused inside a transaction.
+
 Bundled examples: `plugins/examples/vu-meter`, `plugins/examples/spectrum`,
-`plugins/examples/dancer` (beats).
+`plugins/examples/dancer` (beats), `plugins/examples/song-report` (render).
 
 ### `porydaw.ui`
 
@@ -286,6 +301,76 @@ strings (`"#f80"`, `"#ff8800"`, `"#ff880080"`, `"rgb(255,136,0)"`,
 one of `press`, `move`, `release`, `doubleclick`, `leave`, or `wheel`
 (`deltaX`, `deltaY` in notches, positive = down).
 
+#### Menus
+
+`porydaw.ui.menu()` → the plugin's own submenu of the menu bar's **Plugins**
+menu (created on first use, named after the plugin; the Plugins menu shows
+while some plugin fills it). `porydaw.ui.contextMenu("notes" | "range")` → a
+menu whose items are appended, behind a separator, to the piano roll's
+note context menu or the time-selection context menu every time one opens.
+Both give a menu handle:
+
+| Call | |
+|---|---|
+| `addItem({label, run(api, checked), action?, checkable?, checked?, enabled?, tooltip?})` | → item handle. `run` gets the same `api` object an action's `run` does. `action` links the item to a command from `actions.register` (its id): the item shows the command's current binding as a hint and, without `run`, triggers it |
+| `addSeparator()`, `addMenu(label)` → nested menu | menu-bar menus only |
+| `clear()` | removes every entry; handles stay alive but dead |
+| `label`, `enabled`, `visible` | read/write |
+
+Item handles: `label`, `enabled`, `visible`, `checked` (read/write; setting
+it never fires `run`), `remove()`. Everything is released on unload/reload.
+
+#### Roll overlays
+
+`porydaw.ui.overlay({id, paint(g, v)})` → overlay handle (`id`, `visible`,
+`active`, `repaint()`, `remove()`). `paint` runs over the piano roll's notes
+of the **active** song whenever the roll repaints (scroll, zoom, edits,
+`repaint()`), with the canvas painter `g` (as above; `g.width`/`g.height` are
+the note area's) and the roll geometry `v`:
+
+| `v.` | |
+|---|---|
+| `width`, `height` | the note area (the keyboard column excluded); (0, 0) is its top-left |
+| `from`, `to` | the visible tick span |
+| `x(tick)`, `tick(x)` | tick ↔ x, snapped the way the notes are |
+| `keyTop(key)`, `keyBottom(key)`, `key(y)` | key row ↔ y |
+| `keyHeight`, `pxPerBeat`, `track` | zoom and the selected track |
+
+Keep paints cheap: they run at scroll rate. A throwing paint is logged and
+held back for a second, like a canvas. `g.clear(color)` on an overlay tints
+the note area (it blends rather than replaces). Removing or adding overlays
+from inside a paint is fine; the roll repaints once more afterwards. Example: `plugins/examples/scale-guide`.
+
+#### Dialogs
+
+All modal, all refused inside a transaction, from `song.changed` listeners
+and from paint callbacks (their nested event loop could edit the document
+under you, or repaint the surface being painted); the watchdog is paused
+while one is open, and a reload or disable that arrives meanwhile waits for
+the dialog to close. `opts.title` defaults to the plugin
+name.
+
+| Call | |
+|---|---|
+| `dialog.alert(text, {title?, detail?, ok?})` | |
+| `dialog.confirm(text, {title?, detail?, ok?, cancel?})` | → `true` for the ok button |
+| `dialog.prompt(text, {title?, value?, ok?, cancel?})` | → the string, or `null` when cancelled |
+| `dialog.form({title?, text?, ok?, cancel?, fields})` | `fields: [{key, label?, type: "text"\|"number"\|"checkbox"\|"combo", value?, min?, max?, step?, decimals?, items?, placeholder?}]` → `{key: value}` (`combo` gives the index) or `null` when cancelled |
+| `dialog.openFile({title?, dir?, filter?})`, `dialog.saveFile({title?, dir?, filter?, name?})`, `dialog.chooseDir({title?, dir?})` | → the chosen path or `null`. A picked path (or folder) becomes readable and writable through `porydaw.io` for the rest of the plugin's life |
+
+Examples: `plugins/examples/song-report`, `plugins/examples/range-tools`.
+
+### `porydaw.io`
+
+Files, sandboxed: a path must be inside the plugin's folder (relative paths
+count from there), the open project, or something the user picked through
+`ui.dialog.openFile/saveFile/chooseDir`. Anything else throws. `pluginDir`,
+`projectRoot`; `resolve(path)` → the absolute path (or throws);
+`exists(path)`, `isDir(path)`, `readText(path)` / `writeText(path, text)`
+(UTF-8; parent folders are created), `readBytes(path)` → `Uint8Array` /
+`writeBytes(path, bytes)`, `list(dir)` → `[{name, dir, size}]`, `mkdir(path)`,
+`remove(path)` (files only).
+
 ### `porydaw.actions`
 
 `register({id, name, context, default?, run})` → the full keymap id
@@ -303,6 +388,12 @@ Per-plugin key/value store of JSON-serializable values, persisted in
 porydaw's settings: `get(key, fallback)`, `set(key, value)`, `remove(key)`,
 `keys()`.
 
+`porydaw.storage.song` has the same four calls for values that belong to the
+**song**: they live in the song's sidecar (`<project>/.porydaw/<song>.json`,
+under `plugins` → the plugin id), next to the view state, and are written
+immediately. Throws without a song open in a project. Example:
+`plugins/examples/scale-guide` remembers each song's scale there.
+
 ## Errors and the watchdog
 
 Exceptions thrown from `activate`, an action's `run`, or a listener are
@@ -312,7 +403,13 @@ throw don't stop the others. A call that exceeds the watchdog budget is
 interrupted, the plugin is disabled until Reload, and other plugins are
 unaffected.
 
+## Types
+
+`docs/scripting/porydaw.d.ts` declares the whole API for editors that read
+TypeScript declarations (add `/// <reference path="…/porydaw.d.ts" />` or
+point `jsconfig.json` at it).
+
 ## Roadmap
 
-Menus and dialogs, file IO, raw SMF event edits and piano-roll overlays
-follow in later phases (docs/scripting/PLAN.md §6).
+Project adapter writes (batch registration, voicegroup edits) and MIDI input
+are the open items (docs/scripting/PLAN.md §6).

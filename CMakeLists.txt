@@ -224,6 +224,8 @@ if(PORYDAW_SCRIPTING)
         src/scripting/pluginspage.h
         src/scripting/scriptwidgets.cpp
         src/scripting/scriptwidgets.h
+        src/scripting/scriptmenus.cpp
+        src/scripting/scriptmenus.h
     )
     qt_add_resources(porydaw_app "scripting_prelude"
         PREFIX "/scripting"

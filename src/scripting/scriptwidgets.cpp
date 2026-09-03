@@ -1,5 +1,6 @@
 #include "scriptwidgets.h"
 
+#include <QApplication>
 #include <QBoxLayout>
 #include <QCheckBox>
 #include <QComboBox>
@@ -147,19 +148,21 @@ QString colorToCss(const QColor &color)
 
 // ---- Painter ----
 
-Painter::Painter(ScriptHost &host, Plugin &plugin, CanvasWidget *canvas)
-    : QObject(canvas)
+Painter::Painter(ScriptHost &host, Plugin &plugin, QObject *parent)
+    : QObject(parent)
     , m_host(host)
     , m_plugin(plugin)
-    , m_canvas(canvas)
 {}
 
-void Painter::begin(QPainter *painter, double width, double height)
+void Painter::begin(QPainter *painter, double width, double height, double dpr)
 {
     m_painter = painter;
     m_width = width;
     m_height = height;
+    m_dpr = dpr;
     m_saveDepth = 0;
+    m_baseTransform = painter->transform();
+    m_baseFont = QApplication::font();
 }
 
 void Painter::end()
@@ -171,11 +174,6 @@ void Painter::end()
         m_saveDepth--;
     }
     m_painter = nullptr;
-}
-
-double Painter::dpr() const
-{
-    return m_canvas ? m_canvas->devicePixelRatioF() : 1.0;
 }
 
 bool Painter::active(const char *api) const
@@ -202,7 +200,7 @@ bool Painter::color(const QVariant &value, const char *api, QColor *out) const
 
 QFont Painter::fontFor(const QVariantMap &opts) const
 {
-    QFont f = m_canvas ? m_canvas->font() : QFont();
+    QFont f = m_baseFont;
     const double size = finite(opts.value(QStringLiteral("size"), 1.0).toDouble(), 1.0);
     if (size > 0.0 && size != 1.0) {
         const double pt = f.pointSizeF() > 0 ? f.pointSizeF() : 10.0;
@@ -221,8 +219,11 @@ void Painter::clear(const QVariant &color)
     if (!this->color(color, "clear", &c))
         return;
     m_painter->save();
-    m_painter->resetTransform();
-    m_painter->setCompositionMode(QPainter::CompositionMode_Source);
+    // The whole surface, whatever the script transformed; an overlay
+    // tints what is already there instead of replacing it.
+    m_painter->setTransform(m_baseTransform);
+    m_painter->setCompositionMode(m_overlay ? QPainter::CompositionMode_SourceOver
+                                            : QPainter::CompositionMode_Source);
     m_painter->fillRect(QRectF(0, 0, m_width, m_height), c);
     m_painter->restore();
 }
@@ -387,9 +388,11 @@ void Painter::text(double x, double y, const QString &text, const QVariant &colo
         py += fm.ascent() / 2.0 - fm.descent() / 2.0;
     else if (baseline == QLatin1String("bottom"))
         py -= fm.descent();
+    const QFont before = m_painter->font();
     m_painter->setFont(f);
     m_painter->setPen(c);
     m_painter->drawText(QPointF(px, py), text);
+    m_painter->setFont(before);
 }
 
 QVariantMap Painter::measureText(const QString &text, const QVariantMap &opts)
@@ -530,8 +533,10 @@ void CanvasWidget::paintEvent(QPaintEvent *)
         m_gValue = m_plugin.engine->newQObject(m_g);
     }
     m_painting = true;
-    m_g->begin(&p, width(), height());
+    m_g->begin(&p, width(), height(), devicePixelRatioF());
+    m_host.beginPaint();
     const QJSValue result = m_host.invoke(m_plugin, m_paint, {m_gValue});
+    m_host.endPaint();
     m_g->end();
     m_painting = false;
     m_paintCount++;

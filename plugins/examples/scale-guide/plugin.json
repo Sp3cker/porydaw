@@ -1,0 +1,8 @@
+{
+  "id": "scale-guide",
+  "name": "Scale Guide",
+  "version": "1.0.0",
+  "api": 1,
+  "main": "main.js",
+  "description": "Shades the piano-roll rows outside a chosen scale; the scale is remembered per song."
+}

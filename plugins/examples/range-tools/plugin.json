@@ -1,0 +1,8 @@
+{
+  "id": "range-tools",
+  "name": "Range Tools",
+  "version": "1.0.0",
+  "api": 1,
+  "main": "main.js",
+  "description": "Time-selection context-menu entries: duplicate the range after itself, echo it with fading copies, or reverse its notes."
+}

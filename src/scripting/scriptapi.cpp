@@ -1,27 +1,50 @@
 #include "scriptapi.h"
 
 #include <QAction>
+#include <QApplication>
+#include <QCheckBox>
+#include <QComboBox>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QDir>
+#include <QDoubleSpinBox>
 #include <QFile>
+#include <QFileDialog>
 #include <QFileInfo>
+#include <QFormLayout>
 #include <QImageReader>
+#include <QInputDialog>
 #include <QJSEngine>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLabel>
+#include <QLineEdit>
+#include <QMessageBox>
+#include <QPushButton>
+#include <QRegularExpression>
+#include <QSaveFile>
 #include <QSettings>
+#include <QSpinBox>
 
 #include <algorithm>
 #include <cmath>
 #include <map>
+#include <set>
 
 #include "audio/audioengine.h"
+#include "audio/wavexport.h"
+#include "core/smf.h"
 #include "core/songdocument.h"
 #include "project/decompproject.h"
+#include "project/sidecar.h"
 #include "scripthost.h"
+#include "scriptmenus.h"
 #include "scriptwidgets.h"
 #include "songsession.h"
 #include "ui/songview.h"
 #include "ui/theme/themeruntime.h"
+#include "ui/viewsidecar.h"
 
 namespace scripting {
 
@@ -107,6 +130,167 @@ bool tickRange(const QVariantMap &opts, uint64_t *from, uint64_t *to)
     if (opts.contains(QStringLiteral("to")))
         *to = clampTick(opts.value(QStringLiteral("to")).toDouble());
     return *from < *to;
+}
+
+// Pauses the watchdog for the scope: a modal dialog's nested event loop
+// (or a long render) is not the script's CPU time.
+struct WatchdogPause {
+    explicit WatchdogPause(ScriptHost &host) : host(host) { host.pauseWatchdog(); }
+    ~WatchdogPause() { host.resumeWatchdog(); }
+    ScriptHost &host;
+};
+
+// porydaw.io's sandbox: the absolute path when `input` (relative paths
+// against the plugin folder) is inside the plugin folder, the open
+// project, or a path the user picked through a dialog; empty with *error
+// otherwise. Paths are cleaned first, so ".." can't walk out.
+QString sandboxPath(const Plugin &plugin, const ScriptHost &host, const QString &input,
+                    QString *error)
+{
+    if (input.trimmed().isEmpty()) {
+        *error = QStringLiteral("expected a path");
+        return QString();
+    }
+    if (!QFileInfo(input).isAbsolute() && plugin.dir.isEmpty()) {
+        // The Script Console has no folder of its own.
+        *error = QStringLiteral("'%1' is relative and this plugin has no folder; use an "
+                                "absolute path")
+                     .arg(input);
+        return QString();
+    }
+    const QString abs = QFileInfo(input).isAbsolute()
+                            ? QDir::cleanPath(input)
+                            : QDir::cleanPath(plugin.dir + QLatin1Char('/') + input);
+    const auto under = [&abs](const QString &root) {
+        if (root.isEmpty())
+            return false;
+        const QString r = QDir::cleanPath(root);
+        return abs == r || abs.startsWith(r + QLatin1Char('/'));
+    };
+    if (under(plugin.dir))
+        return abs;
+    const DecompProject *p = host.bindings().project;
+    if (p && p->isOpen() && under(p->root()))
+        return abs;
+    for (const QString &granted : plugin.grantedPaths) {
+        if (under(granted))
+            return abs;
+    }
+    *error = QStringLiteral("'%1' is outside the plugin folder, the project and the files the "
+                            "user picked")
+                 .arg(input);
+    return QString();
+}
+
+// ---- raw SMF events ↔ JS ----
+
+QString rawTypeName(const SmfEvent &ev)
+{
+    if (ev.isMeta())
+        return QStringLiteral("meta");
+    if (ev.isSysEx())
+        return QStringLiteral("sysex");
+    switch (ev.typeNibble()) {
+    case 0x8:
+        return QStringLiteral("noteOff");
+    case 0x9:
+        return ev.data1 ? QStringLiteral("noteOn") : QStringLiteral("noteOff");
+    case 0xA:
+        return QStringLiteral("aftertouch");
+    case 0xB:
+        return QStringLiteral("cc");
+    case 0xC:
+        return QStringLiteral("program");
+    case 0xD:
+        return QStringLiteral("pressure");
+    case 0xE:
+        return QStringLiteral("bend");
+    default:
+        return QStringLiteral("unknown");
+    }
+}
+
+QVariantMap rawEventToVariant(size_t index, const SmfEvent &ev)
+{
+    QVariantMap m{{QStringLiteral("index"), double(index)},
+                  {QStringLiteral("tick"), double(ev.tick)},
+                  {QStringLiteral("status"), int(ev.status)},
+                  {QStringLiteral("type"), rawTypeName(ev)}};
+    if (ev.isChannel()) {
+        m.insert(QStringLiteral("channel"), int(ev.channel()));
+        m.insert(QStringLiteral("data0"), int(ev.data0));
+        m.insert(QStringLiteral("data1"), int(ev.data1));
+    }
+    if (ev.isMeta())
+        m.insert(QStringLiteral("metaType"), int(ev.metaType));
+    if (ev.isMeta() || ev.isSysEx()) {
+        QVariantList blob;
+        for (char b : ev.blob)
+            blob.append(int(uint8_t(b)));
+        m.insert(QStringLiteral("blob"), blob);
+        if (ev.isMeta() && ev.metaType >= 1 && ev.metaType <= 7)
+            m.insert(QStringLiteral("text"), QString::fromLatin1(ev.blob));
+    }
+    return m;
+}
+
+// {tick, status | type (+ channel), data0, data1, metaType, blob | text}.
+bool rawEventFromVariant(const QVariantMap &spec, SmfEvent *out, QString *error)
+{
+    SmfEvent ev;
+    ev.tick = clampTick(spec.value(QStringLiteral("tick")).toDouble());
+    int status = -1;
+    if (spec.contains(QStringLiteral("status"))) {
+        status = clampInt(spec.value(QStringLiteral("status")), 0, 255);
+    } else {
+        const QString type = spec.value(QStringLiteral("type")).toString();
+        const int channel = clampInt(spec.value(QStringLiteral("channel"), 0), 0, 15);
+        static const std::map<QString, int> nibbles = {
+            {QStringLiteral("noteOff"), 0x8},    {QStringLiteral("noteOn"), 0x9},
+            {QStringLiteral("aftertouch"), 0xA}, {QStringLiteral("cc"), 0xB},
+            {QStringLiteral("program"), 0xC},    {QStringLiteral("pressure"), 0xD},
+            {QStringLiteral("bend"), 0xE}};
+        if (type == QLatin1String("meta")) {
+            status = 0xFF;
+        } else if (type == QLatin1String("sysex")) {
+            status = 0xF0;
+        } else {
+            const auto it = nibbles.find(type);
+            if (it == nibbles.end()) {
+                *error = QStringLiteral("an event needs a status byte or a type (noteOn, noteOff, "
+                                        "cc, program, bend, aftertouch, pressure, meta, sysex)");
+                return false;
+            }
+            status = (it->second << 4) | channel;
+        }
+    }
+    if (!((status >= 0x80 && status < 0xF0) || status == 0xF0 || status == 0xF7 ||
+          status == 0xFF)) {
+        *error = QStringLiteral("status must be 0x80-0xEF, 0xF0, 0xF7 or 0xFF");
+        return false;
+    }
+    ev.status = uint8_t(status);
+    if (ev.isChannel()) {
+        ev.data0 = uint8_t(clampInt(spec.value(QStringLiteral("data0")), 0, 127));
+        ev.data1 = uint8_t(clampInt(spec.value(QStringLiteral("data1")), 0, 127));
+    }
+    if (ev.isMeta()) {
+        if (!spec.contains(QStringLiteral("metaType"))) {
+            *error = QStringLiteral("a meta event needs metaType");
+            return false;
+        }
+        ev.metaType = uint8_t(clampInt(spec.value(QStringLiteral("metaType")), 0, 127));
+    }
+    if (ev.isMeta() || ev.isSysEx()) {
+        if (spec.contains(QStringLiteral("blob"))) {
+            for (const QVariant &b : spec.value(QStringLiteral("blob")).toList())
+                ev.blob.append(char(clampInt(b, 0, 255)));
+        } else if (spec.contains(QStringLiteral("text"))) {
+            ev.blob = spec.value(QStringLiteral("text")).toString().toLatin1();
+        }
+    }
+    *out = ev;
+    return true;
 }
 
 } // namespace
@@ -283,6 +467,42 @@ QVariant AudioApi::channels() const
                        {QStringLiteral("activeCgb"), audio->activeCgbChannels()}};
 }
 
+QVariant AudioApi::render(const QString &path, const QVariantMap &opts)
+{
+    QString error;
+    if (!m_host.dialogsAllowed(m_plugin, &error)) {
+        throwError(QStringLiteral("audio.render: ") + error);
+        return jsNull();
+    }
+    const QString target = sandboxPath(m_plugin, m_host, path, &error);
+    if (target.isEmpty()) {
+        throwError(QStringLiteral("audio.render: ") + error);
+        return jsNull();
+    }
+    if (!m_host.bindings().renderWav) {
+        throwError(QStringLiteral("audio.render: rendering is not available"));
+        return jsNull();
+    }
+    WavExportOptions options;
+    options.sampleRate = clampInt(opts.value(QStringLiteral("sampleRate"), 48000), 8000, 96000);
+    options.loopCount = clampInt(opts.value(QStringLiteral("loopCount"), 2), 1, 99);
+    options.fadeoutSeconds =
+        std::clamp(opts.value(QStringLiteral("fadeout"), 5.0).toDouble(), 0.0, 60.0);
+    options.tailSeconds = std::clamp(opts.value(QStringLiteral("tail"), 3.0).toDouble(), 0.0, 60.0);
+    if (!std::isfinite(options.fadeoutSeconds))
+        options.fadeoutSeconds = 5.0;
+    if (!std::isfinite(options.tailSeconds))
+        options.tailSeconds = 3.0;
+    QDir().mkpath(QFileInfo(target).absolutePath());
+    double seconds = 0.0;
+    WatchdogPause pause(m_host);
+    if (!m_host.bindings().renderWav(target, options, &seconds, &error)) {
+        throwError(QStringLiteral("audio.render: ") + error);
+        return jsNull();
+    }
+    return QVariantMap{{QStringLiteral("path"), target}, {QStringLiteral("seconds"), seconds}};
+}
+
 // ---- UiApi ----
 
 QObject *UiApi::dock(const QVariantMap &spec, const QJSValue &build, const QJSValue &paint,
@@ -407,6 +627,440 @@ void UiApi::freeImage(int id)
     m_plugin.images.erase(id);
 }
 
+QObject *UiApi::menu()
+{
+    MenuHandle *menu = m_host.pluginMenu(m_plugin);
+    if (!menu) {
+        throwError(QStringLiteral("ui.menu: no menu bar is available"));
+        return nullptr;
+    }
+    QJSEngine::setObjectOwnership(menu, QJSEngine::CppOwnership);
+    return menu;
+}
+
+QObject *UiApi::contextMenu(const QString &surface)
+{
+    if (surface != QLatin1String("notes") && surface != QLatin1String("range")) {
+        throwError(QStringLiteral("ui.contextMenu: surface must be 'notes' or 'range'"));
+        return nullptr;
+    }
+    if (!m_plugin.uiRoot)
+        return nullptr;
+    auto *menu = new MenuHandle(m_host, m_plugin, surface, m_plugin.uiRoot.get());
+    QJSEngine::setObjectOwnership(menu, QJSEngine::CppOwnership);
+    return menu;
+}
+
+QObject *UiApi::overlay(const QVariantMap &spec, const QJSValue &paint)
+{
+    const QString id = spec.value(QStringLiteral("id")).toString();
+    static const QRegularExpression idRe(QStringLiteral("^[A-Za-z0-9_-]{1,64}$"));
+    if (!idRe.match(id).hasMatch()) {
+        throwError(QStringLiteral("ui.overlay: id must be 1-64 letters, digits, '_' or '-'"));
+        return nullptr;
+    }
+    if (!paint.isCallable()) {
+        throwError(QStringLiteral("ui.overlay: expected a paint(g, v) function"));
+        return nullptr;
+    }
+    for (const QPointer<OverlayHandle> &existing : m_plugin.overlays) {
+        if (existing && existing->active() && existing->id() == id) {
+            throwError(QStringLiteral("ui.overlay: an overlay with id '%1' exists").arg(id));
+            return nullptr;
+        }
+    }
+    if (!m_plugin.uiRoot)
+        return nullptr;
+    auto *overlay = new OverlayHandle(m_host, m_plugin, id, paint, m_plugin.uiRoot.get());
+    QJSEngine::setObjectOwnership(overlay, QJSEngine::CppOwnership);
+    m_plugin.overlays.emplace_back(overlay);
+    m_host.invalidateOverlays();
+    return overlay;
+}
+
+bool UiApi::dialogsAllowed(const char *api)
+{
+    QString error;
+    if (m_host.dialogsAllowed(m_plugin, &error))
+        return true;
+    throwError(QStringLiteral("ui.dialog.%1: %2").arg(QLatin1String(api), error));
+    return false;
+}
+
+QWidget *UiApi::dialogParent() const
+{
+    return QApplication::activeWindow();
+}
+
+namespace {
+
+QString dialogTitle(const Plugin &plugin, const QVariantMap &opts)
+{
+    const QString title = opts.value(QStringLiteral("title")).toString();
+    if (!title.isEmpty())
+        return title;
+    return plugin.manifest.name.isEmpty() ? QStringLiteral("porydaw") : plugin.manifest.name;
+}
+
+} // namespace
+
+void UiApi::alert(const QString &text, const QVariantMap &opts)
+{
+    if (!dialogsAllowed("alert"))
+        return;
+    WatchdogPause pause(m_host);
+    QMessageBox box(dialogParent());
+    box.setObjectName(QStringLiteral("pluginDialog"));
+    box.setWindowTitle(dialogTitle(m_plugin, opts));
+    box.setIcon(QMessageBox::Information);
+    box.setText(text);
+    box.setInformativeText(opts.value(QStringLiteral("detail")).toString());
+    box.addButton(opts.value(QStringLiteral("ok"), QStringLiteral("OK")).toString(),
+                  QMessageBox::AcceptRole);
+    box.exec();
+}
+
+bool UiApi::confirm(const QString &text, const QVariantMap &opts)
+{
+    if (!dialogsAllowed("confirm"))
+        return false;
+    WatchdogPause pause(m_host);
+    QMessageBox box(dialogParent());
+    box.setObjectName(QStringLiteral("pluginDialog"));
+    box.setWindowTitle(dialogTitle(m_plugin, opts));
+    box.setIcon(QMessageBox::Question);
+    box.setText(text);
+    box.setInformativeText(opts.value(QStringLiteral("detail")).toString());
+    QPushButton *ok = box.addButton(
+        opts.value(QStringLiteral("ok"), QStringLiteral("OK")).toString(), QMessageBox::AcceptRole);
+    QPushButton *cancel =
+        box.addButton(opts.value(QStringLiteral("cancel"), QStringLiteral("Cancel")).toString(),
+                      QMessageBox::RejectRole);
+    box.setDefaultButton(ok);
+    box.setEscapeButton(cancel);
+    box.exec();
+    return box.clickedButton() == ok;
+}
+
+QVariant UiApi::prompt(const QString &text, const QVariantMap &opts)
+{
+    if (!dialogsAllowed("prompt"))
+        return jsNull();
+    WatchdogPause pause(m_host);
+    QInputDialog dialog(dialogParent());
+    dialog.setObjectName(QStringLiteral("pluginDialog"));
+    dialog.setWindowTitle(dialogTitle(m_plugin, opts));
+    dialog.setInputMode(QInputDialog::TextInput);
+    dialog.setLabelText(text);
+    dialog.setTextValue(opts.value(QStringLiteral("value")).toString());
+    dialog.setOkButtonText(opts.value(QStringLiteral("ok"), QStringLiteral("OK")).toString());
+    dialog.setCancelButtonText(
+        opts.value(QStringLiteral("cancel"), QStringLiteral("Cancel")).toString());
+    if (dialog.exec() != QDialog::Accepted)
+        return jsNull();
+    return dialog.textValue();
+}
+
+QVariant UiApi::form(const QVariantMap &spec)
+{
+    if (!dialogsAllowed("form"))
+        return jsNull();
+    const QVariantList fields = spec.value(QStringLiteral("fields")).toList();
+    if (fields.isEmpty()) {
+        throwError(QStringLiteral("ui.dialog.form: spec.fields needs at least one field"));
+        return jsNull();
+    }
+    WatchdogPause pause(m_host);
+    QDialog dialog(dialogParent());
+    dialog.setObjectName(QStringLiteral("pluginDialog"));
+    dialog.setWindowTitle(dialogTitle(m_plugin, spec));
+    auto *layout = new QFormLayout(&dialog);
+    const QString text = spec.value(QStringLiteral("text")).toString();
+    if (!text.isEmpty()) {
+        auto *label = new QLabel(text, &dialog);
+        label->setWordWrap(true);
+        layout->addRow(label);
+    }
+    struct Field {
+        QString key;
+        QString type;
+        QWidget *widget;
+    };
+    std::vector<Field> built;
+    for (const QVariant &entry : fields) {
+        const QVariantMap f = entry.toMap();
+        const QString key = f.value(QStringLiteral("key")).toString();
+        if (key.isEmpty()) {
+            throwError(QStringLiteral("ui.dialog.form: every field needs a key"));
+            return jsNull();
+        }
+        const QString type = f.value(QStringLiteral("type"), QStringLiteral("text")).toString();
+        QString label = f.value(QStringLiteral("label")).toString();
+        if (label.isEmpty())
+            label = key;
+        QWidget *widget = nullptr;
+        if (type == QLatin1String("text")) {
+            auto *edit = new QLineEdit(f.value(QStringLiteral("value")).toString(), &dialog);
+            edit->setPlaceholderText(f.value(QStringLiteral("placeholder")).toString());
+            widget = edit;
+        } else if (type == QLatin1String("number")) {
+            const double step = f.value(QStringLiteral("step"), 1.0).toDouble();
+            const int decimals = f.value(QStringLiteral("decimals"), 0).toInt();
+            const double lo = f.value(QStringLiteral("min"), -1e9).toDouble();
+            const double hi = f.value(QStringLiteral("max"), 1e9).toDouble();
+            if (decimals > 0 || step != std::floor(step)) {
+                auto *box = new QDoubleSpinBox(&dialog);
+                box->setDecimals(std::clamp(decimals > 0 ? decimals : 2, 1, 6));
+                box->setRange(lo, hi);
+                box->setSingleStep(step > 0 ? step : 1.0);
+                box->setValue(f.value(QStringLiteral("value"), 0.0).toDouble());
+                widget = box;
+            } else {
+                auto *box = new QSpinBox(&dialog);
+                box->setRange(int(std::clamp(lo, -2e9, 2e9)), int(std::clamp(hi, -2e9, 2e9)));
+                box->setSingleStep(std::max(1, int(step)));
+                box->setValue(f.value(QStringLiteral("value"), 0).toInt());
+                widget = box;
+            }
+        } else if (type == QLatin1String("checkbox")) {
+            auto *box = new QCheckBox(&dialog);
+            box->setChecked(f.value(QStringLiteral("value")).toBool());
+            widget = box;
+        } else if (type == QLatin1String("combo")) {
+            auto *box = new QComboBox(&dialog);
+            for (const QVariant &item : f.value(QStringLiteral("items")).toList())
+                box->addItem(item.toString());
+            const QVariant value = f.value(QStringLiteral("value"));
+            if (value.userType() == QMetaType::QString)
+                box->setCurrentText(value.toString());
+            else
+                box->setCurrentIndex(clampInt(value, 0, std::max(0, box->count() - 1)));
+            widget = box;
+        } else {
+            throwError(
+                QStringLiteral("ui.dialog.form: field '%1' has unknown type '%2'").arg(key, type));
+            return jsNull();
+        }
+        widget->setObjectName(QStringLiteral("field.") + key);
+        layout->addRow(label, widget);
+        built.push_back({key, type, widget});
+    }
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    buttons->button(QDialogButtonBox::Ok)
+        ->setText(spec.value(QStringLiteral("ok"), QStringLiteral("OK")).toString());
+    buttons->button(QDialogButtonBox::Cancel)
+        ->setText(spec.value(QStringLiteral("cancel"), QStringLiteral("Cancel")).toString());
+    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    layout->addRow(buttons);
+    if (dialog.exec() != QDialog::Accepted)
+        return jsNull();
+    QVariantMap result;
+    for (const Field &field : built) {
+        if (auto *edit = qobject_cast<QLineEdit *>(field.widget))
+            result.insert(field.key, edit->text());
+        else if (auto *ibox = qobject_cast<QSpinBox *>(field.widget))
+            result.insert(field.key, ibox->value());
+        else if (auto *dbox = qobject_cast<QDoubleSpinBox *>(field.widget))
+            result.insert(field.key, dbox->value());
+        else if (auto *check = qobject_cast<QCheckBox *>(field.widget))
+            result.insert(field.key, check->isChecked());
+        else if (auto *combo = qobject_cast<QComboBox *>(field.widget))
+            result.insert(field.key, combo->currentIndex());
+    }
+    return result;
+}
+
+namespace {
+
+QString startDir(const ScriptHost &host, const Plugin &plugin, const QVariantMap &opts)
+{
+    const QString dir = opts.value(QStringLiteral("dir")).toString();
+    if (!dir.isEmpty())
+        return dir;
+    const DecompProject *p = host.bindings().project;
+    if (p && p->isOpen())
+        return p->root();
+    return plugin.dir;
+}
+
+} // namespace
+
+QVariant UiApi::openFile(const QVariantMap &opts)
+{
+    if (!dialogsAllowed("openFile"))
+        return jsNull();
+    WatchdogPause pause(m_host);
+    QFileDialog dialog(dialogParent(), dialogTitle(m_plugin, opts),
+                       startDir(m_host, m_plugin, opts),
+                       opts.value(QStringLiteral("filter")).toString());
+    dialog.setObjectName(QStringLiteral("pluginFileDialog"));
+    dialog.setFileMode(QFileDialog::ExistingFile);
+    dialog.setAcceptMode(QFileDialog::AcceptOpen);
+    if (dialog.exec() != QDialog::Accepted || dialog.selectedFiles().isEmpty())
+        return jsNull();
+    const QString path = QDir::cleanPath(dialog.selectedFiles().first());
+    m_plugin.grantedPaths.append(path);
+    return path;
+}
+
+QVariant UiApi::saveFile(const QVariantMap &opts)
+{
+    if (!dialogsAllowed("saveFile"))
+        return jsNull();
+    WatchdogPause pause(m_host);
+    QFileDialog dialog(dialogParent(), dialogTitle(m_plugin, opts),
+                       startDir(m_host, m_plugin, opts),
+                       opts.value(QStringLiteral("filter")).toString());
+    dialog.setObjectName(QStringLiteral("pluginFileDialog"));
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+    const QString name = opts.value(QStringLiteral("name")).toString();
+    if (!name.isEmpty())
+        dialog.selectFile(name);
+    if (dialog.exec() != QDialog::Accepted || dialog.selectedFiles().isEmpty())
+        return jsNull();
+    const QString path = QDir::cleanPath(dialog.selectedFiles().first());
+    m_plugin.grantedPaths.append(path);
+    return path;
+}
+
+QVariant UiApi::chooseDir(const QVariantMap &opts)
+{
+    if (!dialogsAllowed("chooseDir"))
+        return jsNull();
+    WatchdogPause pause(m_host);
+    QFileDialog dialog(dialogParent(), dialogTitle(m_plugin, opts),
+                       startDir(m_host, m_plugin, opts));
+    dialog.setObjectName(QStringLiteral("pluginFileDialog"));
+    dialog.setFileMode(QFileDialog::Directory);
+    dialog.setOption(QFileDialog::ShowDirsOnly, true);
+    if (dialog.exec() != QDialog::Accepted || dialog.selectedFiles().isEmpty())
+        return jsNull();
+    const QString path = QDir::cleanPath(dialog.selectedFiles().first());
+    m_plugin.grantedPaths.append(path);
+    return path;
+}
+
+// ---- IoApi ----
+
+QString IoApi::pluginDir() const
+{
+    return m_plugin.dir;
+}
+
+QString IoApi::projectRoot() const
+{
+    const DecompProject *p = m_host.bindings().project;
+    return p && p->isOpen() ? p->root() : QString();
+}
+
+QString IoApi::allowed(const QString &path, const char *api)
+{
+    QString error;
+    const QString abs = sandboxPath(m_plugin, m_host, path, &error);
+    if (abs.isEmpty())
+        throwError(QStringLiteral("io.%1: %2").arg(QLatin1String(api), error));
+    return abs;
+}
+
+QString IoApi::resolve(const QString &path)
+{
+    return allowed(path, "resolve");
+}
+
+bool IoApi::exists(const QString &path)
+{
+    const QString abs = allowed(path, "exists");
+    return !abs.isEmpty() && QFileInfo::exists(abs);
+}
+
+bool IoApi::isDir(const QString &path)
+{
+    const QString abs = allowed(path, "isDir");
+    return !abs.isEmpty() && QFileInfo(abs).isDir();
+}
+
+QString IoApi::readText(const QString &path)
+{
+    return QString::fromUtf8(readBytes(path));
+}
+
+void IoApi::writeText(const QString &path, const QString &text)
+{
+    writeBytes(path, text.toUtf8());
+}
+
+QByteArray IoApi::readBytes(const QString &path)
+{
+    const QString abs = allowed(path, "read");
+    if (abs.isEmpty())
+        return QByteArray();
+    QFile file(abs);
+    if (!file.open(QIODevice::ReadOnly)) {
+        throwError(QStringLiteral("io.read: could not open %1: %2").arg(abs, file.errorString()));
+        return QByteArray();
+    }
+    return file.readAll();
+}
+
+void IoApi::writeBytes(const QString &path, const QByteArray &bytes)
+{
+    const QString abs = allowed(path, "write");
+    if (abs.isEmpty())
+        return;
+    QDir().mkpath(QFileInfo(abs).absolutePath());
+    QSaveFile file(abs);
+    if (!file.open(QIODevice::WriteOnly)) {
+        throwError(QStringLiteral("io.write: could not open %1: %2").arg(abs, file.errorString()));
+        return;
+    }
+    file.write(bytes);
+    if (!file.commit())
+        throwError(QStringLiteral("io.write: could not write %1: %2").arg(abs, file.errorString()));
+}
+
+QVariantList IoApi::list(const QString &path)
+{
+    QVariantList out;
+    const QString abs = allowed(path, "list");
+    if (abs.isEmpty())
+        return out;
+    const QDir dir(abs);
+    if (!dir.exists()) {
+        throwError(QStringLiteral("io.list: no such folder: %1").arg(abs));
+        return out;
+    }
+    for (const QFileInfo &info :
+         dir.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name)) {
+        out.append(QVariantMap{{QStringLiteral("name"), info.fileName()},
+                               {QStringLiteral("dir"), info.isDir()},
+                               {QStringLiteral("size"), double(info.size())}});
+    }
+    return out;
+}
+
+void IoApi::mkdir(const QString &path)
+{
+    const QString abs = allowed(path, "mkdir");
+    if (!abs.isEmpty() && !QDir().mkpath(abs))
+        throwError(QStringLiteral("io.mkdir: could not create %1").arg(abs));
+}
+
+void IoApi::remove(const QString &path)
+{
+    const QString abs = allowed(path, "remove");
+    if (abs.isEmpty())
+        return;
+    const QFileInfo info(abs);
+    if (info.isDir()) {
+        throwError(QStringLiteral("io.remove: %1 is a folder").arg(abs));
+        return;
+    }
+    if (info.exists() && !QFile::remove(abs))
+        throwError(QStringLiteral("io.remove: could not remove %1").arg(abs));
+}
+
 // ---- SongApi ----
 
 bool SongApi::loaded() const
@@ -510,10 +1164,58 @@ QVariantList SongApi::tracks() const
     for (int t = 0; t < d->engineTrackCount(); ++t) {
         out.append(QVariantMap{{QStringLiteral("index"), t},
                                {QStringLiteral("name"), d->trackName(t)},
+                               {QStringLiteral("chunk"), d->smfTrackFor(t)},
                                {QStringLiteral("channel"), int(d->channelFor(t))},
                                {QStringLiteral("muted"), v && v->trackMuted(t)},
                                {QStringLiteral("soloed"), v && v->trackSoloed(t)},
                                {QStringLiteral("voice"), v ? v->currentProgram(t) : -1}});
+    }
+    return out;
+}
+
+int SongApi::chunkCount() const
+{
+    const SongDocument *d = doc();
+    return d ? int(d->smf().tracks.size()) : 0;
+}
+
+int SongApi::chunkTrack(int chunk) const
+{
+    const SongDocument *d = doc();
+    if (!d || chunk < 0 || chunk >= int(d->smf().tracks.size()))
+        return -1;
+    for (int t = 0; t < d->engineTrackCount(); ++t) {
+        if (d->smfTrackFor(t) == chunk)
+            return t;
+    }
+    return -1;
+}
+
+double SongApi::chunkEndTick(int chunk) const
+{
+    const SongDocument *d = doc();
+    if (!d || chunk < 0 || chunk >= int(d->smf().tracks.size())) {
+        throwError(QStringLiteral("song.chunkEndTick: no such chunk"));
+        return 0.0;
+    }
+    return double(d->smf().tracks[size_t(chunk)].endTick);
+}
+
+QVariantList SongApi::rawEvents(int chunk, const QVariantMap &opts) const
+{
+    QVariantList out;
+    const SongDocument *d = doc();
+    if (!d || chunk < 0 || chunk >= int(d->smf().tracks.size())) {
+        throwError(QStringLiteral("song.rawEvents: no such chunk"));
+        return out;
+    }
+    uint64_t from, to;
+    if (!tickRange(opts, &from, &to))
+        return out;
+    const std::vector<SmfEvent> &events = d->smf().tracks[size_t(chunk)].events;
+    for (size_t i = 0; i < events.size(); ++i) {
+        if (events[i].tick >= from && events[i].tick < to)
+            out.append(rawEventToVariant(i, events[i]));
     }
     return out;
 }
@@ -910,6 +1612,101 @@ QStringList StorageApi::keys() const
     return settings.childKeys();
 }
 
+bool StorageApi::songStore(QJsonObject *store, QString *path, const char *api) const
+{
+    const DecompProject *p = m_host.bindings().project;
+    const SongDocument *d = doc();
+    if (!p || !p->isOpen() || !d || d->label().isEmpty()) {
+        throwError(QStringLiteral("storage.song.%1: no song is open in a project")
+                       .arg(QLatin1String(api)));
+        return false;
+    }
+    *path = ViewSidecar::pathFor(p->root(), d->label());
+    QJsonObject root;
+    QFile file(*path);
+    if (file.open(QIODevice::ReadOnly))
+        root = QJsonDocument::fromJson(file.readAll()).object();
+    *store = root.value(QLatin1String("plugins")).toObject().value(m_plugin.manifest.id).toObject();
+    return true;
+}
+
+void StorageApi::writeSongStore(const QString &path, const QJsonObject &store)
+{
+    // Merge: the sidecar also carries the view state and registration
+    // metadata, and every writer re-reads before writing.
+    QJsonObject root;
+    {
+        QFile in(path);
+        if (in.open(QIODevice::ReadOnly))
+            root = QJsonDocument::fromJson(in.readAll()).object();
+    }
+    QJsonObject plugins = root.value(QLatin1String("plugins")).toObject();
+    if (store.isEmpty())
+        plugins.remove(m_plugin.manifest.id);
+    else
+        plugins.insert(m_plugin.manifest.id, store);
+    if (plugins.isEmpty())
+        root.remove(QLatin1String("plugins"));
+    else
+        root.insert(QLatin1String("plugins"), plugins);
+    const DecompProject *p = m_host.bindings().project;
+    if (!p || !Sidecar::ensureDir(p->root())) {
+        throwError(QStringLiteral("storage.song: could not create the .porydaw folder"));
+        return;
+    }
+    QSaveFile file(path);
+    if (!file.open(QIODevice::WriteOnly)) {
+        throwError(QStringLiteral("storage.song: could not write %1").arg(path));
+        return;
+    }
+    file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+    if (!file.commit())
+        throwError(QStringLiteral("storage.song: could not write %1").arg(path));
+}
+
+QJSValue StorageApi::songGet(const QString &key, const QJSValue &fallback) const
+{
+    QJsonObject store;
+    QString path;
+    if (!songStore(&store, &path, "get") || !store.contains(key))
+        return fallback;
+    QJSEngine *e = engine();
+    return e ? e->toScriptValue(store.value(key).toVariant()) : fallback;
+}
+
+void StorageApi::songSet(const QString &key, const QJSValue &value)
+{
+    if (value.isUndefined()) {
+        songRemove(key);
+        return;
+    }
+    QJsonObject store;
+    QString path;
+    if (!songStore(&store, &path, "set"))
+        return;
+    store.insert(key, QJsonValue::fromVariant(value.toVariant()));
+    writeSongStore(path, store);
+}
+
+void StorageApi::songRemove(const QString &key)
+{
+    QJsonObject store;
+    QString path;
+    if (!songStore(&store, &path, "remove") || !store.contains(key))
+        return;
+    store.remove(key);
+    writeSongStore(path, store);
+}
+
+QStringList StorageApi::songKeys() const
+{
+    QJsonObject store;
+    QString path;
+    if (!songStore(&store, &path, "keys"))
+        return {};
+    return store.keys();
+}
+
 // ---- ProjectApi ----
 
 bool ProjectApi::isOpen() const
@@ -940,6 +1737,26 @@ QVariantList ProjectApi::songs() const
                                {QStringLiteral("registered"), song.registered}});
     }
     return out;
+}
+
+bool ProjectApi::open(const QString &label, bool newTab)
+{
+    QString error;
+    if (!m_host.dialogsAllowed(m_plugin, &error)) {
+        // Swapping the session under an open transaction (or mid-undo)
+        // would pull its document away.
+        throwError(QStringLiteral("project.open: ") + error);
+        return false;
+    }
+    if (!m_host.bindings().openSong)
+        return false;
+    // Already the active song: nothing to do (loadSong would reload it
+    // from disk, asking about unsaved edits).
+    if (!newTab && doc() && doc()->label() == label)
+        return true;
+    // Replacing a dirty tab asks the user first: that wait is theirs.
+    WatchdogPause pause(m_host);
+    return m_host.bindings().openSong(label, newTab);
 }
 
 // ---- EditApi ----
@@ -1432,6 +2249,212 @@ bool EditApi::transposeSelection(int dKey)
     return moved;
 }
 
+bool EditApi::checkChunk(const SongDocument *d, int chunk, const char *api)
+{
+    if (chunk >= 0 && chunk < int(d->smf().tracks.size()))
+        return true;
+    throwError(QStringLiteral("edit.%1: no such chunk").arg(QLatin1String(api)));
+    return false;
+}
+
+bool EditApi::gatherRange(const SongDocument *d, double start, double end,
+                          const QVariantMap &scopeSpec, const char *api,
+                          std::vector<DocNote> *notes, std::vector<DocLanePoint> *points)
+{
+    RippleScope scope;
+    QString error;
+    if (!parseScope(d, scopeSpec, &scope, &error)) {
+        throwError(QStringLiteral("edit.%1: %2").arg(QLatin1String(api), error));
+        return false;
+    }
+    const uint64_t s = clampTick(start);
+    const uint64_t e = clampTick(end);
+    if (e <= s) {
+        throwError(QStringLiteral("edit.%1: end must be after start").arg(QLatin1String(api)));
+        return false;
+    }
+    std::vector<int> tracks = scope.tracks;
+    if (scope.wholeSong) {
+        tracks.clear();
+        for (int t = 0; t < d->engineTrackCount(); ++t)
+            tracks.push_back(t);
+    }
+    const auto gatherLane = [&](int track, uint8_t cc) {
+        for (const DocLanePoint &pt : d->lanePoints(track < 0 ? 0 : track, cc)) {
+            if (pt.tick >= s && pt.tick < e)
+                points->push_back(pt);
+        }
+    };
+    // Every lane of a scoped track, hidden ones and the voice changes
+    // included — what the time selection's own move takes. One pass over
+    // the chunk finds which lanes exist; only those are gathered.
+    for (int t : tracks) {
+        for (const DocNote &note : d->notesForTrack(t)) {
+            if (note.tick >= s && note.tick < e)
+                notes->push_back(note);
+        }
+        const int chunk = d->smfTrackFor(t);
+        if (chunk < 0 || chunk >= int(d->smf().tracks.size()))
+            continue;
+        std::set<uint8_t> ccs;
+        for (const SmfEvent &ev : d->smf().tracks[size_t(chunk)].events) {
+            if (!ev.isChannel())
+                continue;
+            if (ev.typeNibble() == 0xB)
+                ccs.insert(ev.data0);
+            else if (ev.typeNibble() == 0xE)
+                ccs.insert(DOC_CC_BEND);
+            else if (ev.typeNibble() == 0xC)
+                ccs.insert(DOC_CC_VOICE);
+        }
+        for (uint8_t cc : ccs)
+            gatherLane(t, cc);
+    }
+    if (scope.wholeSong)
+        gatherLane(-1, DOC_CC_TEMPO);
+    for (const std::pair<int, uint8_t> &lane : scope.lanes)
+        gatherLane(lane.first, lane.second);
+    // A lane named twice (tracks + lanes) must not move twice.
+    std::sort(points->begin(), points->end(), [](const DocLanePoint &a, const DocLanePoint &b) {
+        return std::tie(a.smfTrack, a.index) < std::tie(b.smfTrack, b.index);
+    });
+    points->erase(std::unique(points->begin(), points->end(),
+                              [](const DocLanePoint &a, const DocLanePoint &b) {
+                                  return a.smfTrack == b.smfTrack && a.index == b.index;
+                              }),
+                  points->end());
+    return true;
+}
+
+int EditApi::moveRange(double start, double end, const QVariantMap &scope, double dTick)
+{
+    SongDocument *d = begin();
+    if (!d)
+        return 0;
+    std::vector<DocNote> notes;
+    std::vector<DocLanePoint> points;
+    int count = 0;
+    if (gatherRange(d, start, end, scope, "moveRange", &notes, &points)) {
+        // Floored at the range start, like the time selection's own move:
+        // the document clamps events one by one, which would smear the
+        // range's internal spacing against tick 0.
+        const int64_t delta = std::max(clampDelta(dTick), -int64_t(clampTick(start)));
+        if (delta != 0 && (!notes.empty() || !points.empty())) {
+            d->moveRange(notes, points, delta);
+            count = int(notes.size() + points.size());
+        }
+    }
+    done();
+    return count;
+}
+
+int EditApi::duplicateRange(double start, double end, const QVariantMap &scope, double dTick)
+{
+    SongDocument *d = begin();
+    if (!d)
+        return 0;
+    std::vector<DocNote> notes;
+    std::vector<DocLanePoint> points;
+    int count = 0;
+    if (gatherRange(d, start, end, scope, "duplicateRange", &notes, &points)) {
+        const int64_t delta = std::max(clampDelta(dTick), -int64_t(clampTick(start)));
+        if (delta != 0 && (!notes.empty() || !points.empty())) {
+            d->duplicateRange(notes, points, delta);
+            count = int(notes.size() + points.size());
+        }
+    }
+    done();
+    return count;
+}
+
+void EditApi::insertRawEvent(int chunk, const QVariantMap &spec)
+{
+    SongDocument *d = begin();
+    if (!d)
+        return;
+    SmfEvent ev;
+    QString error;
+    if (!checkChunk(d, chunk, "insertRawEvent")) {
+    } else if (!rawEventFromVariant(spec, &ev, &error)) {
+        throwError(QStringLiteral("edit.insertRawEvent: ") + error);
+    } else {
+        d->insertRawEvent(chunk, ev);
+    }
+    done();
+}
+
+void EditApi::modifyRawEvent(int chunk, int index, const QVariantMap &spec)
+{
+    SongDocument *d = begin();
+    if (!d)
+        return;
+    SmfEvent ev;
+    QString error;
+    if (!checkChunk(d, chunk, "modifyRawEvent")) {
+    } else if (index < 0 || index >= int(d->smf().tracks[size_t(chunk)].events.size())) {
+        throwError(QStringLiteral("edit.modifyRawEvent: no such event"));
+    } else if (!rawEventFromVariant(spec, &ev, &error)) {
+        throwError(QStringLiteral("edit.modifyRawEvent: ") + error);
+    } else {
+        d->modifyRawEvent(chunk, size_t(index), ev);
+    }
+    done();
+}
+
+int EditApi::deleteRawEvents(int chunk, const QVariantList &indices)
+{
+    SongDocument *d = begin();
+    if (!d)
+        return 0;
+    int count = 0;
+    if (checkChunk(d, chunk, "deleteRawEvents")) {
+        const size_t size = d->smf().tracks[size_t(chunk)].events.size();
+        std::set<size_t> unique;
+        for (const QVariant &v : indices) {
+            const double i = v.toDouble();
+            if (std::isfinite(i) && i >= 0.0 && i < double(size))
+                unique.insert(size_t(i));
+        }
+        if (!unique.empty()) {
+            d->deleteRawEvents(chunk, std::vector<size_t>(unique.begin(), unique.end()));
+            count = int(unique.size());
+        }
+    }
+    done();
+    return count;
+}
+
+bool EditApi::moveRawEvent(int chunk, int index, int destIndex)
+{
+    SongDocument *d = begin();
+    if (!d)
+        return false;
+    bool moved = false;
+    size_t first = 0, last = 0;
+    if (!checkChunk(d, chunk, "moveRawEvent")) {
+    } else if (index < 0 || !d->rawEventMoveBounds(chunk, size_t(index), &first, &last)) {
+        throwError(QStringLiteral("edit.moveRawEvent: no such event"));
+    } else {
+        const size_t dest = size_t(std::clamp<int64_t>(destIndex, int64_t(first), int64_t(last)));
+        if (dest != size_t(index)) {
+            d->moveRawEvent(chunk, size_t(index), dest);
+            moved = true;
+        }
+    }
+    done();
+    return moved;
+}
+
+void EditApi::setChunkEndTick(int chunk, double tick)
+{
+    SongDocument *d = begin();
+    if (!d)
+        return;
+    if (checkChunk(d, chunk, "setChunkEndTick"))
+        d->setTrackEndTick(chunk, clampTick(tick));
+    done();
+}
+
 bool EditApi::nudgeSelection(bool right)
 {
     SongDocument *d = begin();
@@ -1582,6 +2605,7 @@ bool installApi(ScriptHost &host, Plugin &plugin, QString *error)
     add(new ViewApi(host, plugin));
     add(new AudioApi(host, plugin));
     add(new UiApi(host, plugin));
+    add(new IoApi(host, plugin));
 
     const QJSValue result = factory.call(facades);
     if (result.isError() || !result.isObject()) {

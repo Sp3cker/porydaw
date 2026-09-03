@@ -15,6 +15,7 @@
 class QAction;
 class QChildEvent;
 class QDockWidget;
+struct WavExportOptions;
 class QLabel;
 class QTabWidget;
 class QSettings;
@@ -71,6 +72,10 @@ class MainWindow : public QMainWindow
     // song half.
     bool runScriptHostCheck(const QString &pluginsDir, const QString &projectRoot,
                             const QString &songLabel);
+    // HostBindings::renderWav: the active song through the Export WAV
+    // path, without the dialogs. False with *error on failure.
+    bool renderActiveSongWav(const QString &path, const WavExportOptions &opts, double *seconds,
+                             QString *error);
 #endif
 
     // Headless smoke test (--selftest <projectRoot> <songLabel>): opens the
@@ -422,5 +427,6 @@ class MainWindow : public QMainWindow
     QDockWidget *m_consoleDock = nullptr;
     // View → Plugin Panels: one toggle per plugin dock (hidden while empty).
     QMenu *m_pluginPanelsMenu = nullptr;
+    QMenu *m_pluginsMenu = nullptr; // menu-bar Plugins menu; shown while a plugin fills it
 #endif
 };

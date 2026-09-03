@@ -283,6 +283,20 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
         bindings.addDock = [this](QDockWidget *dock, Qt::DockWidgetArea area) {
             addPluginDock(dock, area);
         };
+        bindings.pluginsMenu = [this]() -> QMenu * { return m_pluginsMenu; };
+        bindings.openSong = [this](const QString &label, bool newTab) {
+            for (const SongInfo &song : m_project.songs()) {
+                if (song.label == label && song.isPlayable()) {
+                    loadSong(song, newTab);
+                    return m_active && m_active->doc.label() == label;
+                }
+            }
+            return false;
+        };
+        bindings.renderWav = [this](const QString &path, const WavExportOptions &opts,
+                                    double *seconds, QString *error) {
+            return renderActiveSongWav(path, opts, seconds, error);
+        };
         bindings.audio = &m_audio;
         bindings.project = &m_project;
         m_scriptHost->setBindings(std::move(bindings));
@@ -437,6 +451,14 @@ void MainWindow::buildUi()
         toolsMenu->addAction(tr("Import &Sample..."), this, &MainWindow::importSample);
     keys.attach(QStringLiteral("tools.import_sample"), m_importSampleAction);
     m_importSampleAction->setEnabled(false);
+
+#ifdef PORYDAW_SCRIPTING
+    // Plugins menu: one submenu per plugin that asks for one
+    // (porydaw.ui.menu); hidden while empty, like View → Plugin Panels.
+    m_pluginsMenu = menuBar()->addMenu(tr("&Plugins"));
+    m_pluginsMenu->setObjectName(QStringLiteral("pluginsMenu"));
+    m_pluginsMenu->menuAction()->setVisible(false);
+#endif
 
     QMenu *helpMenu = menuBar()->addMenu(tr("&Help"));
     QAction *aboutAction = helpMenu->addAction(tr("&About porydaw"), this, [this] {
@@ -2066,6 +2088,30 @@ void MainWindow::exportWav()
                                  .arg(opts.sampleRate),
                              8000);
 }
+
+#ifdef PORYDAW_SCRIPTING
+bool MainWindow::renderActiveSongWav(const QString &path, const WavExportOptions &opts,
+                                     double *seconds, QString *error)
+{
+    SongSession *session = m_active;
+    if (!session || !m_audio.songLoaded()) {
+        *error = tr("no song is loaded");
+        return false;
+    }
+    stopPlayback();
+    // Same path as Export WAV: a fresh timeline at the render rate, the
+    // voicegroup the engine borrows, so unsaved edits render as heard.
+    auto timeline = session->doc.buildTimeline(double(opts.sampleRate));
+    if (!::exportWav(path, *timeline, session->voicegroup, songSettingsFor(*session), opts, nullptr,
+                     error)) {
+        if (error->isEmpty())
+            *error = tr("the render was cancelled");
+        return false;
+    }
+    *seconds = double(wavExportTotals(*timeline, opts).totalSamples) / double(opts.sampleRate);
+    return true;
+}
+#endif
 
 void MainWindow::openSongSettings()
 {

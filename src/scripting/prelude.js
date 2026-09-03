@@ -4,11 +4,12 @@
 // result's `porydaw` and `console` as globals. ES2017 at most: Qt 6.2's
 // QJSEngine is the floor.
 (function (host, song, selection, cursor, transport, actions, storage, project, edit, view,
-          audio, ui) {
+          audio, ui, io) {
     "use strict";
 
     var listeners = {};
     var runners = {};
+    var api; // the porydaw object, assigned below (helpers close over it)
 
     function fmt(v) {
         if (v instanceof Error)
@@ -83,7 +84,43 @@
         return out;
     }
 
-    var api = {
+    // What an action's run(), a menu item's run() and a context-menu
+    // item's run() receive.
+    function actionContext() {
+        return { song: api.song, selection: api.selection, cursor: api.cursor,
+                 transport: api.transport, edit: api.edit, view: api.view };
+    }
+    // A menu handle (C++ MenuHandle) wrapped so items take {label, run(api,
+    // checked), action, checkable, checked, enabled, tooltip} specs.
+    function wrapMenu(handle) {
+        if (!handle) return handle;
+        return {
+            get label() { return handle.label; },
+            set label(v) { handle.label = String(v); },
+            get enabled() { return handle.enabled; },
+            set enabled(v) { handle.enabled = !!v; },
+            get visible() { return handle.visible; },
+            set visible(v) { handle.visible = !!v; },
+            addItem: function (spec) {
+                if (!spec || typeof spec !== "object")
+                    throw new TypeError("menu.addItem: expected a spec object");
+                var opts = {};
+                ["label", "action", "checkable", "checked", "enabled", "tooltip"].forEach(function (k) {
+                    if (spec[k] !== undefined) opts[k] = spec[k];
+                });
+                if (opts.label !== undefined) opts.label = String(opts.label);
+                var run = typeof spec.run === "function"
+                    ? function (checked) { spec.run(actionContext(), checked); }
+                    : undefined;
+                return handle.addItem(opts, run);
+            },
+            addSeparator: function () { handle.addSeparator(); },
+            addMenu: function (label) { return wrapMenu(handle.addMenu(String(label))); },
+            clear: function () { handle.clear(); }
+        };
+    }
+
+    api = {
         version: host.appVersion,
         api: { version: host.apiVersion, major: host.apiMajor },
         plugin: {
@@ -97,7 +134,11 @@
         project: {
             get isOpen() { return project.isOpen; },
             get root() { return project.root; },
-            songs: function () { return project.songs(); }
+            songs: function () { return project.songs(); },
+            // open(label, {newTab?}) → whether the song opened.
+            open: function (label, opts) {
+                return project.open(String(label), !!(opts && opts.newTab));
+            }
         },
 
         song: mix({
@@ -112,6 +153,14 @@
             get trackCount() { return song.trackCount; },
             get trackBudget() { return song.trackBudget; },
             get endTick() { return song.endTick; },
+            get chunkCount() { return song.chunkCount; },
+            chunkTrack: function (chunk) { return song.chunkTrack(trackArg(chunk, "song.chunkTrack")); },
+            chunkEndTick: function (chunk) {
+                return song.chunkEndTick(trackArg(chunk, "song.chunkEndTick"));
+            },
+            rawEvents: function (chunk, opts) {
+                return song.rawEvents(trackArg(chunk, "song.rawEvents"), opts || {});
+            },
             loop: function () { return song.loop(); },
             timeSigs: function () { return song.timeSigs(); },
             tracks: function () { return song.tracks(); },
@@ -218,6 +267,35 @@
             renameTrack: function (track, name) {
                 edit.renameTrack(trackArg(track, "edit.renameTrack"), String(name));
             },
+            moveRange: function (start, end, scope, dTick) {
+                return edit.moveRange(start, end, scope || {}, dTick || 0);
+            },
+            duplicateRange: function (start, end, scope, dTick) {
+                return edit.duplicateRange(start, end, scope || {}, dTick || 0);
+            },
+            insertRawEvent: function (chunk, ev) {
+                if (!ev || typeof ev !== "object")
+                    throw new TypeError("edit.insertRawEvent: expected an event object");
+                edit.insertRawEvent(trackArg(chunk, "edit.insertRawEvent"), ev);
+            },
+            modifyRawEvent: function (chunk, index, ev) {
+                if (!ev || typeof ev !== "object")
+                    throw new TypeError("edit.modifyRawEvent: expected an event object");
+                edit.modifyRawEvent(trackArg(chunk, "edit.modifyRawEvent"),
+                                    trackArg(index, "edit.modifyRawEvent"), ev);
+            },
+            deleteRawEvents: function (chunk, indices) {
+                if (!Array.isArray(indices)) indices = [indices];
+                return edit.deleteRawEvents(trackArg(chunk, "edit.deleteRawEvents"), indices);
+            },
+            moveRawEvent: function (chunk, index, dest) {
+                return edit.moveRawEvent(trackArg(chunk, "edit.moveRawEvent"),
+                                         trackArg(index, "edit.moveRawEvent"),
+                                         trackArg(dest, "edit.moveRawEvent"));
+            },
+            setChunkEndTick: function (chunk, tick) {
+                edit.setChunkEndTick(trackArg(chunk, "edit.setChunkEndTick"), tick);
+            },
             transposeSelection: function (dKey) { return edit.transposeSelection(dKey || 0); },
             // direction: "left" | "right"
             nudgeSelection: function (direction) {
@@ -270,7 +348,9 @@
             get rms() { return audio.rms(); },
             pcm: function () { return new Float32Array(audio.pcm()); },
             spectrum: function (bins) { return new Float32Array(audio.spectrum(bins || 64)); },
-            channels: function () { return audio.channels(); }
+            channels: function () { return audio.channels(); },
+            // render(path, {sampleRate?, loopCount?, fadeout?, tail?}) → {path, seconds}
+            render: function (path, opts) { return audio.render(String(path), opts || {}); }
         }, events("audio")),
 
         actions: {
@@ -312,22 +392,73 @@
             theme: function (name) { return ui.theme(name === undefined ? "" : String(name)); },
             loadImage: function (path) { return ui.loadImage(String(path)); },
             imageSize: function (id) { return ui.imageSize(id); },
-            freeImage: function (id) { ui.freeImage(id); }
+            freeImage: function (id) { ui.freeImage(id); },
+            // The plugin's submenu of the Plugins menu.
+            menu: function () { return wrapMenu(ui.menu()); },
+            // Items appended to a built-in context menu: "notes" | "range".
+            contextMenu: function (surface) { return wrapMenu(ui.contextMenu(String(surface))); },
+            // {id, paint(g, v)} → overlay handle (visible, repaint(), remove()).
+            overlay: function (spec) {
+                if (!spec || typeof spec !== "object")
+                    throw new TypeError("ui.overlay: expected a spec object");
+                return ui.overlay({ id: spec.id === undefined ? "" : String(spec.id) }, spec.paint);
+            },
+            dialog: {
+                alert: function (text, opts) { ui.alert(String(text), opts || {}); },
+                confirm: function (text, opts) { return ui.confirm(String(text), opts || {}); },
+                prompt: function (text, opts) { return ui.prompt(String(text), opts || {}); },
+                form: function (spec) {
+                    if (!spec || typeof spec !== "object")
+                        throw new TypeError("ui.dialog.form: expected a spec object");
+                    return ui.form(spec);
+                },
+                openFile: function (opts) { return ui.openFile(opts || {}); },
+                saveFile: function (opts) { return ui.saveFile(opts || {}); },
+                chooseDir: function (opts) { return ui.chooseDir(opts || {}); }
+            }
+        },
+
+        io: {
+            get pluginDir() { return io.pluginDir; },
+            get projectRoot() { return io.projectRoot; },
+            resolve: function (path) { return io.resolve(String(path)); },
+            exists: function (path) { return io.exists(String(path)); },
+            isDir: function (path) { return io.isDir(String(path)); },
+            readText: function (path) { return io.readText(String(path)); },
+            writeText: function (path, text) { io.writeText(String(path), String(text)); },
+            readBytes: function (path) { return new Uint8Array(io.readBytes(String(path))); },
+            writeBytes: function (path, bytes) {
+                if (bytes instanceof ArrayBuffer) bytes = new Uint8Array(bytes);
+                if (!ArrayBuffer.isView(bytes))
+                    throw new TypeError("io.writeBytes: expected a typed array or ArrayBuffer");
+                var copy = new Uint8Array(bytes.byteLength);
+                copy.set(new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength));
+                io.writeBytes(String(path), copy.buffer);
+            },
+            list: function (path) { return io.list(String(path)); },
+            mkdir: function (path) { io.mkdir(String(path)); },
+            remove: function (path) { io.remove(String(path)); }
         },
 
         storage: {
             get: function (key, fallback) { return storage.get(String(key), fallback); },
             set: function (key, value) { storage.set(String(key), value); },
             remove: function (key) { storage.remove(String(key)); },
-            keys: function () { return storage.keys(); }
+            keys: function () { return storage.keys(); },
+            // Per-song values, in the song's sidecar.
+            song: {
+                get: function (key, fallback) { return storage.songGet(String(key), fallback); },
+                set: function (key, value) { storage.songSet(String(key), value); },
+                remove: function (key) { storage.songRemove(String(key)); },
+                keys: function () { return storage.songKeys(); }
+            }
         }
     };
 
     function runAction(fullId) {
         var fn = runners[fullId];
         if (!fn) return false;
-        fn({ song: api.song, selection: api.selection, cursor: api.cursor,
-             transport: api.transport, edit: api.edit, view: api.view });
+        fn(actionContext());
         return true;
     }
 

@@ -11,8 +11,11 @@
 #include <vector>
 
 class QJSEngine;
+class QJsonObject;
+class QWidget;
 class SongDocument;
 class SongView;
+struct DocLanePoint;
 struct DocNote;
 struct SongSession;
 
@@ -84,9 +87,19 @@ class SongApi : public ApiObject
     Q_PROPERTY(int trackCount READ trackCount)
     Q_PROPERTY(int trackBudget READ trackBudget)
     Q_PROPERTY(double endTick READ endTick)
+    Q_PROPERTY(int chunkCount READ chunkCount)
   public:
     using ApiObject::ApiObject;
     bool loaded() const;
+    // SMF chunks (MTrk), the raw-event address space: tracks() reports
+    // each engine track's chunk, and chunkTrack maps back (-1 = a chunk
+    // with no channel events, e.g. the seq/tempo chunk).
+    int chunkCount() const;
+    Q_INVOKABLE int chunkTrack(int chunk) const;
+    Q_INVOKABLE double chunkEndTick(int chunk) const;
+    // The chunk's events as [{index, tick, status, type, channel, data0,
+    // data1, metaType, blob, text}]; {from?, to?} bound the tick.
+    Q_INVOKABLE QVariantList rawEvents(int chunk, const QVariantMap &opts) const;
     double revision() const;
     QString label() const;
     QString midPath() const;
@@ -195,7 +208,29 @@ class EditApi : public ApiObject
     Q_INVOKABLE bool transposeSelection(int dKey);
     Q_INVOKABLE bool nudgeSelection(bool right);
 
+    // Time-selection style moves: the notes and lane points of `scope`
+    // starting in [start, end) shift (or are copied) by dTick. → the
+    // number of notes plus points moved.
+    Q_INVOKABLE int moveRange(double start, double end, const QVariantMap &scope, double dTick);
+    Q_INVOKABLE int duplicateRange(double start, double end, const QVariantMap &scope,
+                                   double dTick);
+
+    // Raw SMF edits on one chunk (song.rawEvents' address space). An
+    // event spec is {tick, status | type (+ channel), data0, data1,
+    // metaType, blob | text}; no semantic validation beyond byte ranges —
+    // the raw editor's own prerogative.
+    Q_INVOKABLE void insertRawEvent(int chunk, const QVariantMap &event);
+    Q_INVOKABLE void modifyRawEvent(int chunk, int index, const QVariantMap &event);
+    Q_INVOKABLE int deleteRawEvents(int chunk, const QVariantList &indices);
+    Q_INVOKABLE bool moveRawEvent(int chunk, int index, int destIndex);
+    Q_INVOKABLE void setChunkEndTick(int chunk, double tick);
+
   private:
+    // The notes and lane points a moveRange/duplicateRange scope covers.
+    bool gatherRange(const SongDocument *d, double start, double end, const QVariantMap &scopeSpec,
+                     const char *api, std::vector<DocNote> *notes,
+                     std::vector<DocLanePoint> *points);
+    bool checkChunk(const SongDocument *d, int chunk, const char *api);
     // Begins an edit call: the transaction's document, or nullptr after
     // throwing. Pair with done().
     SongDocument *begin();
@@ -294,6 +329,10 @@ class AudioApi : public ApiObject
     Q_INVOKABLE QByteArray spectrum(int bins) const;
     // {pcm: [{on, releasing, track, key}], cgb: [...], maxPcm, activePcm, activeCgb}.
     Q_INVOKABLE QVariant channels() const;
+    // Renders the active song to a WAV file (the Export WAV path). opts:
+    // {sampleRate, loopCount, fadeout, tail} → {path, seconds}; throws on
+    // failure. The path must be writable by porydaw.io's rules.
+    Q_INVOKABLE QVariant render(const QString &path, const QVariantMap &opts);
 };
 
 // porydaw.ui beyond statusMessage: docks (scriptwidgets.h), theme colors
@@ -315,6 +354,67 @@ class UiApi : public ApiObject
     Q_INVOKABLE int loadImage(const QString &relativePath);
     Q_INVOKABLE QVariant imageSize(int id) const;
     Q_INVOKABLE void freeImage(int id);
+
+    // The plugin's submenu of the window's Plugins menu (scriptmenus.h);
+    // throws when the window offers none.
+    Q_INVOKABLE QObject *menu();
+    // Items for a built-in context menu: surface "notes" (the roll's note
+    // menu) or "range" (the time-selection menu).
+    Q_INVOKABLE QObject *contextMenu(const QString &surface);
+    // spec: {id}; paint(g, v) runs whenever the active roll repaints.
+    Q_INVOKABLE QObject *overlay(const QVariantMap &spec, const QJSValue &paint);
+
+    // Modal dialogs. Refused inside a transaction and from song.changed
+    // listeners (dialogsAllowed); the watchdog is paused while one is up.
+    // opts: {title, ok, cancel, detail}.
+    Q_INVOKABLE void alert(const QString &text, const QVariantMap &opts);
+    Q_INVOKABLE bool confirm(const QString &text, const QVariantMap &opts);
+    // → the string, or null when cancelled. opts: {title, value, ok, cancel}.
+    Q_INVOKABLE QVariant prompt(const QString &text, const QVariantMap &opts);
+    // spec: {title, text, ok, cancel, fields: [{key, label, type: "text"|
+    // "number"|"checkbox"|"combo", value, min, max, step, decimals, items,
+    // placeholder}]} → {key: value} or null when cancelled.
+    Q_INVOKABLE QVariant form(const QVariantMap &spec);
+    // File pickers → the chosen path (granted to porydaw.io) or null.
+    // opts: {title, dir, filter, name (saveFile's suggested file name)}.
+    Q_INVOKABLE QVariant openFile(const QVariantMap &opts);
+    Q_INVOKABLE QVariant saveFile(const QVariantMap &opts);
+    Q_INVOKABLE QVariant chooseDir(const QVariantMap &opts);
+
+  private:
+    bool dialogsAllowed(const char *api);
+    QWidget *dialogParent() const;
+};
+
+// porydaw.io: files inside the plugin's folder, the project, or paths the
+// user picked through a dialog (Plugin::grantedPaths). Relative paths are
+// against the plugin folder. Anything else throws.
+class IoApi : public ApiObject
+{
+    Q_OBJECT
+    Q_PROPERTY(QString pluginDir READ pluginDir CONSTANT)
+    Q_PROPERTY(QString projectRoot READ projectRoot)
+  public:
+    using ApiObject::ApiObject;
+    QString pluginDir() const;
+    QString projectRoot() const;
+    Q_INVOKABLE QString resolve(const QString &path);
+    Q_INVOKABLE bool exists(const QString &path);
+    Q_INVOKABLE bool isDir(const QString &path);
+    Q_INVOKABLE QString readText(const QString &path);
+    Q_INVOKABLE void writeText(const QString &path, const QString &text);
+    Q_INVOKABLE QByteArray readBytes(const QString &path);
+    Q_INVOKABLE void writeBytes(const QString &path, const QByteArray &bytes);
+    // Entries of a folder as [{name, dir, size}].
+    Q_INVOKABLE QVariantList list(const QString &path);
+    Q_INVOKABLE void mkdir(const QString &path);
+    // Files only; a folder throws.
+    Q_INVOKABLE void remove(const QString &path);
+
+  private:
+    // The absolute path when it is inside the sandbox, else empty after
+    // throwing.
+    QString allowed(const QString &path, const char *api);
 };
 
 class ActionsApi : public ApiObject
@@ -338,6 +438,18 @@ class StorageApi : public ApiObject
     Q_INVOKABLE void set(const QString &key, const QJSValue &value);
     Q_INVOKABLE void remove(const QString &key);
     Q_INVOKABLE QStringList keys() const;
+    // Per-song values in the song's sidecar (<root>/.porydaw/<song>.json,
+    // "plugins" → plugin id → key). Throws without a song in a project.
+    Q_INVOKABLE QJSValue songGet(const QString &key, const QJSValue &fallback) const;
+    Q_INVOKABLE void songSet(const QString &key, const QJSValue &value);
+    Q_INVOKABLE void songRemove(const QString &key);
+    Q_INVOKABLE QStringList songKeys() const;
+
+  private:
+    // The sidecar's "plugins"/<id> object for the active song; false
+    // (after throwing) without one.
+    bool songStore(QJsonObject *store, QString *path, const char *api) const;
+    void writeSongStore(const QString &path, const QJsonObject &store);
 };
 
 class ProjectApi : public ApiObject
@@ -351,6 +463,9 @@ class ProjectApi : public ApiObject
     QString root() const;
     // [{id, label, constant, player, midPath, hasMid, registered}].
     Q_INVOKABLE QVariantList songs() const;
+    // Opens a song by label (in a new tab when asked); false when the
+    // project has no playable song of that name.
+    Q_INVOKABLE bool open(const QString &label, bool newTab);
 };
 
 // Builds the facades into plugin.facades, runs prelude.js against them, and

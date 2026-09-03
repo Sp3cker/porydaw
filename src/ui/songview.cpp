@@ -36,6 +36,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPixmap>
+#include <QPointer>
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QScrollArea>
@@ -67,6 +68,14 @@
 #include "ui/playheadoverlay.h"
 
 namespace lyt = ::layout;
+
+namespace {
+// Plugin hooks (scripting), process-wide; set by the script host. Defined
+// here because the menus and the roll's paint use them above the key
+// handler's own definition.
+SongView::PluginMenuProvider g_pluginMenuProvider;
+SongView::PluginOverlayPainter g_pluginOverlayPainter;
+} // namespace
 using Space = lyt::Space;
 
 namespace songview {
@@ -522,6 +531,26 @@ class NoteContextMenu final : public ui::ContextMenu
     void showMenuAt(QPoint globalPos, int velocity)
     {
         m_velocityAction->setText(SongView::tr("Set velocity… (%1)").arg(velocity));
+        // Plugin entries are re-collected on every open: the menu is
+        // long-lived, the plugins that fill it are not. Their actions are
+        // owned by the plugins — only the membership is ours to drop.
+        for (QAction *action : m_pluginActions) {
+            if (!action)
+                continue;
+            if (action->isSeparator())
+                delete action; // ours: addSeparator made it
+            else
+                removeAction(action);
+        }
+        m_pluginActions.clear();
+        if (g_pluginMenuProvider) {
+            const QList<QAction *> before = actions();
+            g_pluginMenuProvider(*this, QStringLiteral("notes"));
+            for (QAction *action : actions()) {
+                if (!before.contains(action))
+                    m_pluginActions.append(action);
+            }
+        }
         popup(globalPos);
     }
 
@@ -543,6 +572,7 @@ class NoteContextMenu final : public ui::ContextMenu
     QAction *m_copyAction = nullptr;
     QAction *m_cutAction = nullptr;
     QAction *m_deleteAction = nullptr;
+    QList<QPointer<QAction>> m_pluginActions;
 };
 QFont timeRulerFont(const QFont &source)
 {
@@ -1544,6 +1574,26 @@ class PianoRoll : public TimelineSurface
         drawOverlays(p, m_sv, grid, kKeyboardW,
                      m_sv->timeSelectionCoversTrack(m_sv->selectedTrack()),
                      m_sv->rangeDragCoversTrack(m_sv->selectedTrack()));
+
+        if (g_pluginOverlayPainter) {
+            // Plugin overlays: over the notes, under the keyboard column,
+            // still inside the grid clip. Their painter state is theirs
+            // to wreck, so it is bracketed here.
+            const qreal dpr = devicePixelRatioF();
+            RollOverlayGeometry geometry;
+            geometry.grid = grid;
+            geometry.dpr = dpr;
+            geometry.xForTick = [this, dpr](double tick) {
+                return m_sv->displayX(tick, kKeyboardW, dpr);
+            };
+            geometry.tickForX = [this](qreal x) { return m_sv->tickAtContentX(x - kKeyboardW); };
+            geometry.keyTop = [this](int key) { return keyTop(std::clamp(key, 0, 127)); };
+            geometry.keyBottom = [this](int key) { return keyBottom(std::clamp(key, 0, 127)); };
+            geometry.keyAtY = [this](qreal y) { return yToKey(y); };
+            p.save();
+            g_pluginOverlayPainter(p, *m_sv, geometry);
+            p.restore();
+        }
 
         p.restore();
         drawKeyboard(p);
@@ -9992,6 +10042,22 @@ void SongView::setPluginKeyHandler(PluginKeyHandler handler)
     g_pluginKeyHandler = std::move(handler);
 }
 
+void SongView::setPluginMenuProvider(PluginMenuProvider provider)
+{
+    g_pluginMenuProvider = std::move(provider);
+}
+
+void SongView::setPluginOverlayPainter(PluginOverlayPainter painter)
+{
+    g_pluginOverlayPainter = std::move(painter);
+}
+
+void SongView::invalidateRoll()
+{
+    if (m_roll)
+        m_roll->invalidateContent();
+}
+
 bool SongView::handleEditKey(QKeyEvent *event, keymap::Context surface)
 {
     if (!m_document)
@@ -10138,6 +10204,8 @@ void SongView::showTimeSelectionMenu(const QPoint &globalPos)
     paste->setEnabled(clipboard().span > 0 && !clipboard().empty());
     menu.addSeparator();
     QAction *clear = menu.addAction(tr("Clear selection"));
+    if (g_pluginMenuProvider)
+        g_pluginMenuProvider(menu, QStringLiteral("range"));
     QAction *chosen = menu.exec(globalPos);
     if (chosen == copy) {
         copyTimeSelection();
