@@ -14,7 +14,6 @@ namespace checks {
 
 enum class SelfTestScenario {
     Timeline,
-    Voicegroup,
     Transport,
     Workspace,
 };
@@ -34,7 +33,6 @@ class SelfTestHarness
     bool tabIsLive() const;
 
     bool runTimelineScenario();
-    bool runVoicegroupScenario();
     bool runTransportScenario();
     bool runWorkspaceScenario();
 

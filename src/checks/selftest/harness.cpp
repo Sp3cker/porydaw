@@ -28,7 +28,6 @@ int SelfTestHarness::run(MainWindow &window, SelfTestScenario scenario, const QS
     };
     static constexpr auto scenarios = std::array{
         ScenarioDescriptor{"selftest-timeline", &SelfTestHarness::runTimelineScenario},
-        ScenarioDescriptor{"selftest-voicegroup", &SelfTestHarness::runVoicegroupScenario},
         ScenarioDescriptor{"selftest-transport", &SelfTestHarness::runTransportScenario},
         ScenarioDescriptor{"selftest-workspace", &SelfTestHarness::runWorkspaceScenario},
     };

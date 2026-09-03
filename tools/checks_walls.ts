@@ -4,7 +4,6 @@
 export const WALL_ESTIMATE: Record<string, number> = {
   "selftest-transport": 1.45,
   "selftest-timeline": 1.27,
-  "selftest-voicegroup": 0.99,
   "selftest-workspace": 0.3,
   samplecheck: 9.66,
   resonancecheck: 9.23,

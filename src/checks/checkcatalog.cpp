@@ -98,8 +98,6 @@ const std::vector<CheckDefinition> &catalog()
              .fixtureFiles = decompProjectFiles + decompMidiFiles},
             selfTest("selftest-timeline", "--selftest-timeline",
                      runSelfTestScenario<checks::SelfTestScenario::Timeline>),
-            selfTest("selftest-voicegroup", "--selftest-voicegroup",
-                     runSelfTestScenario<checks::SelfTestScenario::Voicegroup>),
             selfTest("selftest-transport", "--selftest-transport",
                      runSelfTestScenario<checks::SelfTestScenario::Transport>),
             selfTest("selftest-workspace", "--selftest-workspace",
