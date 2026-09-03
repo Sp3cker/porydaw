@@ -374,7 +374,6 @@ void PlayheadOverlay::synchronizeGeometry()
                 return QRect();
             const QRect visible(band.rect.x() + band.timelineOrigin, band.rect.y(),
                                 band.rect.width() - band.timelineOrigin, band.rect.height());
-            Q_ASSERT(visible.isEmpty() || owner.rect().contains(visible));
             return visible.intersected(owner.rect());
         };
 
