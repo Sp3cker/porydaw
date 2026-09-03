@@ -86,10 +86,6 @@ bool VelocityArea::event(QEvent *event)
 {
     if (event->type() == QEvent::UngrabMouse) {
         cancelInteraction();
-    } else if (event->type() == QEvent::FontChange) {
-        rebuildFonts();
-        m_geometry.resolve();
-        rebuildVisualState();
     }
     return QWidget::event(event);
 }

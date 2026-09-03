@@ -112,7 +112,6 @@ struct NodeLaneHoverState {
                                      bool pencilMode);
     QRegion clearHover();
     void invalidateCaches();
-    void invalidateFontCache();
     const ValueLabelFontCache &valueLabelFontCache(const QFont &font) const;
 
     struct ClampedValueLabel {

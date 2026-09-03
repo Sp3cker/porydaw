@@ -37,11 +37,6 @@ void NodeLaneHoverState::invalidateCaches()
     hoverTextCache = {};
 }
 
-void NodeLaneHoverState::invalidateFontCache()
-{
-    m_valueLabelFontCache = {};
-}
-
 const std::vector<NodePoint> &
 NodeLaneHoverState::cachedPoints(const NodeLane &lane, LaneHandle handle, uint64_t revision) const
 {

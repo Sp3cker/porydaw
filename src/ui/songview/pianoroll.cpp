@@ -216,16 +216,12 @@ bool PianoRoll::event(QEvent *event)
     case QEvent::ApplicationPaletteChange:
     case QEvent::StyleChange:
     case QEvent::ThemeChange:
-    case QEvent::FontChange:
     case QEvent::DevicePixelRatioChange:
         m_geometry = PianoRollGeometry::resolve();
         setMinimumHeight(m_geometry.minimumVisiblePianoRollHeight);
         m_cursors = loadMidiCursors(devicePixelRatioF(), m_geometry.midiCursorExtent);
         m_rowEdgesValid = false;
-        if (type == QEvent::FontChange)
-            rebuildFontCache();
-        else
-            refreshTextLayout();
+        refreshTextLayout();
         m_sv->syncTimelineQuickAppearance();
         break;
     default:

@@ -5,7 +5,6 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickview.h"
-#include <QEvent>
 #include <QFontMetrics>
 #include <QMouseEvent>
 #include <QStringList>
@@ -42,14 +41,6 @@ OtherStrip::OtherStrip(SongView *sv) : QWidget(sv), m_sv(sv), m_geometry(Geometr
 void OtherStrip::requestQuickUpdate()
 {
     m_sv->requestTimelineQuickUpdate(TimelineQuickDirty::OtherEvents);
-}
-
-bool OtherStrip::event(QEvent *event)
-{
-    const bool handled = QWidget::event(event);
-    if (event->type() == QEvent::FontChange)
-        refreshGeometry();
-    return handled;
 }
 
 void OtherStrip::resizeEvent(QResizeEvent *event)

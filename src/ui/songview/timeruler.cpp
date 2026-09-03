@@ -9,7 +9,6 @@
 #include "ui/typography.h"
 
 #include <QComboBox>
-#include <QEvent>
 #include <QFontMetrics>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -135,14 +134,6 @@ void TimeRuler::cancelTransientInput()
     m_dragSelEdge = -1;
     unsetCursor();
     requestQuickUpdate();
-}
-
-bool TimeRuler::event(QEvent *event)
-{
-    const bool handled = QWidget::event(event);
-    if (event->type() == QEvent::FontChange)
-        refreshGeometry();
-    return handled;
 }
 
 void TimeRuler::wheelEvent(QWheelEvent *event)

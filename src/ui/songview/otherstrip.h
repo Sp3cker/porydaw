@@ -2,7 +2,6 @@
 
 #include <QWidget>
 
-class QEvent;
 class QMouseEvent;
 class QResizeEvent;
 class SongView;
@@ -30,7 +29,6 @@ class OtherStrip : public QWidget
     explicit OtherStrip(SongView *sv);
 
   protected:
-    bool event(QEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
 

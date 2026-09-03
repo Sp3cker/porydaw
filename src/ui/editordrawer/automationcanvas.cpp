@@ -280,15 +280,6 @@ const QCursor &AutomationCanvas::pencilCursor()
 
 bool AutomationCanvas::event(QEvent *event)
 {
-    if (event->type() == QEvent::FontChange) {
-        rebuildFontCache();
-        m_hoverState.invalidateFontCache();
-        m_hoverState.hoverValueLabel = {};
-        m_hoverState.previewValueLabel = {};
-        syncHoverValueLabel();
-        syncPreviewValueLabel();
-        requestFullQuickUpdate();
-    }
     if (event->type() == QEvent::Hide || event->type() == QEvent::WindowDeactivate ||
         event->type() == QEvent::UngrabMouse)
         cancelInteraction();

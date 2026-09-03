@@ -10,7 +10,6 @@
 #include <vector>
 
 class QComboBox;
-class QEvent;
 class QMouseEvent;
 class QWheelEvent;
 class SongView;
@@ -42,7 +41,6 @@ class TimeRuler : public QWidget
     bool gestureActive() const;
 
   protected:
-    bool event(QEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
