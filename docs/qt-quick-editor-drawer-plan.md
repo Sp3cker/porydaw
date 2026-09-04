@@ -2,7 +2,15 @@
 
 ## Status
 
-Design complete; not implemented.
+The Qt Quick drawer cutover is implemented. `EditorDrawer`, `DrawerSections`,
+and `AutomationPage` are `QObject`s; `DrawerChromeLayer.qml` owns the visible
+chrome and scrollbar; and the shared timeline Quick host owns the five drawer
+input targets. The original Wave 1 and Wave 2 below record that completed
+cutover.
+
+The remaining work is narrow: remove the direct `QWidget` dependencies inside
+`src/ui/editordrawer/`. It adds no renderer, second Quick host, or compatibility
+widget shell.
 
 Open product or architecture decisions: none. Implementers fill function bodies and local test
 helpers. They do not invent types, signals, parents, Q_PROPERTY names, object names, scrollbar
@@ -14,11 +22,107 @@ This plan converts the remaining native `EditorDrawer` overlay into the existing
 `qt-cpp-reviewer` audited an earlier draft (FAIL, nine findings). This text is the locked
 correction of those findings.
 
-This plan assumes `docs/remove-fonts-plan.md`: bundled Atkinson for the process lifetime,
+This plan assumes `docs/old/remove-fonts-plan.md`: bundled Atkinson for the process lifetime,
 no `FontChange` / `ApplicationFontChange` handlers, no runtime font setter on timeline
 hosts. Chrome metrics use `layout::fontPx` and `typography::bodyFont()`; they are not
 recomputed because a font changed. Palette, theme, style, resize, screen, and DPR still
 refresh.
+
+## Remaining direct QWidget cleanup
+
+### Target invariant
+
+After this work, `src/ui/editordrawer/` contains no direct `QWidget`,
+`QScrollArea`, `QQuickWidget`, `QInputDialog`, `parentWidget()`, or
+`QApplication::focusWidget()` use. This applies to the drawer module only.
+`SongView` and the shared `TimelineQuickView` wrapper remain native Qt hosts;
+they are not drawer surfaces.
+
+| Current dependency | Current job | Replacement owner |
+| --- | --- | --- |
+| `EditorDrawer::arrange()` asks `m_rollStack->parentWidget()` for bounds | Finds the parent-owned roll-pane rectangle | `SongView::positionBandWidgets()` computes that rectangle and passes it through the existing `EditorDrawer::setHostBounds(const QRect &)` handoff. |
+| `AutomationPage` uses `QApplication::focusWidget()` and `SongView::window()` | Stops the pencil shortcut from firing while the value dialog accepts text | The Quick value prompt exposes `visible`; while it is visible, the app event filter leaves the shortcut alone. The filter identifies its Quick window through an injected `QWindow *`. |
+| `NodeLane::promptValue(QWidget *, ...)`, `TempoLane`, and `CCLaneAdapter` call `QInputDialog` | Edits one Tempo or CC value | `DrawerChrome` exposes a small Quick value prompt. `NodeLane` supplies value-domain data; `AutomationCanvas` owns the pending edit and commits it after acceptance. |
+
+### Cleanup phase 1 — parent-owned drawer bounds
+
+1. In `SongView::positionBandWidgets()`, after layout activation, resolve the
+   current roll-pane rectangle in `SongView` coordinates and call
+   `m_editorDrawer->setHostBounds(rect)`. Use the same rectangle that
+   `EditorDrawer::arrange()` reads today: `rollPane->mapTo(this, QPoint())`
+   and `rollPane->size()`.
+2. Keep `EditorDrawer::setHostBounds(const QRect &)`. Remove
+   `EditorDrawer::useParentBounds()`, `m_usesParentBounds`, the
+   `parentWidget()` branch in `arrange()`, and `<QWidget>` from
+   `editordrawer.cpp`.
+3. `setHostBounds()` remains the only outer-geometry handoff and keeps calling
+   `arrange()`. Delete the separate trailing `m_editorDrawer->arrange()` call
+   from `SongView::positionBandWidgets()` so each geometry update arranges once.
+4. Preserve overlay and body rectangles over resize, event-list switching, and
+   drawer visibility changes.
+
+### Cleanup phase 2 — Quick Tempo and CC value prompt
+
+1. Add `NodeValuePrompt` beside `NodeLane` in `nodelane.h`, containing exactly
+   `title`, `label`, `initialValue`, `minimum`, `maximum`, and `storedOffset`.
+   Replace `promptValue(QWidget *, int, int *)` with
+   `valuePrompt(int storedValue) const` returning this value-only struct.
+2. `TempoLane::valuePrompt()` keeps **Set tempo**, **BPM:**, BPM limits, and a
+   zero offset. `CCLaneAdapter::valuePrompt()` keeps its current labels;
+   controllers 10 and 24 retain displayed `-64..63` values and use a stored
+   offset of 64. Other CC and bend values use zero.
+3. `AutomationCanvas` owns `PendingValuePrompt`: target lane, original node or
+   insertion point, and document revision. Both current call sites—the **Set
+   Value** menu action and the double-click path—start it without changing the
+   document.
+4. `AutomationPage` publishes the pending prompt to `DrawerChrome`.
+   `DrawerChrome` exposes its visibility, title, label, initial value, minimum,
+   and maximum as QML properties, with `acceptNodeValuePrompt(int)` and
+   `cancelNodeValuePrompt()` invokables. It never owns the document edit.
+5. Add one inline `Rectangle` and `TextInput` prompt to
+   `DrawerChromeLayer.qml`; do not add `QtQuick.Controls`. Center it in the
+   automation band, select initial text on open, accept Return or Enter, and
+   cancel Escape, focus loss, page hide, document change, or Quick-window
+   deactivation. Restore focus to the automation input after either result.
+6. On acceptance, `AutomationCanvas` confirms the stored document revision,
+   converts displayed to stored value with `storedOffset`, then takes the same
+   current commit path: move the existing node or replace one insertion tick.
+   Cancellation or a stale revision changes nothing.
+7. Delete `QInputDialog` and all `QWidget *` prompt arguments from
+   `nodelane.h`, `tempolane.*`, `cclanes.*`, and both `AutomationCanvas` call
+   sites.
+
+### Cleanup phase 3 — widget-free pencil shortcut guard
+
+1. Let `TimelineQuickView` expose its existing `QQuickView` as a `QWindow *`
+   input-window accessor. After construction, `SongView` provides that pointer
+   to `AutomationPage` through `setInputWindow(QWindow *)`.
+2. Keep `AutomationPage`'s app event filter and `QAction` shortcut behavior.
+   Rewrite `belongsToPageWindow()` to walk only `QWindow` parents and compare
+   against that injected input window. Do not read `SongView::window()` or cast
+   arbitrary targets to `QWidget`.
+3. When the Quick value prompt is visible, the event filter must not claim its
+   shortcut. That replaces the `focusWidget()` plus `WA_InputMethodEnabled`
+   special case. Outside the prompt, retain the current page-visible,
+   shortcut-override, and auto-repeat behavior.
+4. Delete `<QApplication>` and `<QWidget>` from `automationpage.cpp` if no
+   other direct use remains.
+
+### Cleanup phase 4 — proof and archive
+
+1. Extend `editor-drawer` and `automation` checks through both value-prompt
+   entry points. Assert Tempo limits, the CC 10/24 center offset, Enter
+   acceptance, Escape cancellation, no write on cancellation, and focus return
+   to the automation input.
+2. Keep existing geometry, Quick-input, scrollbar, resize, toggle, and detent
+   checks. Add roll-pane resize and event-list-switch assertions for the direct
+   `setHostBounds()` handoff.
+3. Run `deno task verify --filter editor-drawer --filter automation --filter
+   automation-gestures --filter host-adapter --filter host-seams --filter
+   mainwindow-routing`.
+4. Confirm the target invariant with a literal search of
+   `src/ui/editordrawer/`. Only then mark this plan complete and move it to
+   `docs/old/`.
 
 
 ## Goal
@@ -810,7 +914,7 @@ component TimelineScrollbar: Item {
 }
 ```
 
-If `docs/qt-quick-track-headers-plan.md` has already landed a component with this
+If `docs/old/qt-quick-track-headers-plan.md` has already landed a component with this
 contract, reuse it and add `alwaysVisible`. Do not create a second QML scrollbar.
 
 `timelineAutomationInput` stays `anchors.fill` of the automation **band** (the
@@ -900,7 +1004,7 @@ Do not start Wave 2 in parallel with Wave 1: both mutate `TimelineCanvas.qml`,
 
 ## Non-goals
 
-- Track headers (`docs/qt-quick-track-headers-plan.md`).
+- Track headers (`docs/old/qt-quick-track-headers-plan.md`).
 - Time-ruler native controls.
 - Moving the playhead into Quick.
 - `QtQuick.Controls`, `QQuickPaintedItem`, per-toggle `MouseArea` trees.
