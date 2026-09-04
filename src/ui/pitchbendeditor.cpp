@@ -13,6 +13,7 @@
 #include <QPointer>
 #include <QSignalBlocker>
 #include <QUndoStack>
+#include <QWindow>
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -59,10 +60,21 @@ class PitchBendCloseController final : public QObject
         if (!m_popup || !m_popup->isVisible())
             return false;
         if (event->type() == QEvent::MouseButtonPress) {
+            auto *mouseEvent = static_cast<QMouseEvent *>(event);
             QWidget *const target = qobject_cast<QWidget *>(watched);
             if (target && (target == m_popup || m_popup->isAncestorOf(target)))
                 return false;
-            auto *mouseEvent = static_cast<QMouseEvent *>(event);
+            // Window-system delivery observes the press on the popup's native
+            // window before QWidgetWindow forwards it, so the watcher is not a
+            // QWidget. Ignores apply only to presses on our own window inside
+            // our frame; presses from any other surface keep the focus/dismiss
+            // path below (the popup occludes its frame, so those are outside).
+            if (!target) {
+                if (QWindow *window = qobject_cast<QWindow *>(watched);
+                    window != nullptr && window == m_popup->windowHandle() &&
+                    m_popup->frameGeometry().contains(mouseEvent->globalPosition().toPoint()))
+                    return false;
+            }
             if (m_focusNoteUnderCursor && m_focusNoteUnderCursor(mouseEvent->globalPosition())) {
                 m_restoreFocus();
                 event->accept();

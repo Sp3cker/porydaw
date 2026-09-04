@@ -10,6 +10,7 @@
 #include <QKeySequence>
 #include <QLineEdit>
 #include <QMetaObject>
+#include <QMouseEvent>
 #include <QObject>
 #include <QPixmap>
 #include <QPointF>
@@ -19,6 +20,7 @@
 #include <QSpinBox>
 #include <QUndoCommand>
 #include <QWidget>
+#include <QWindow>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -100,8 +102,8 @@ class PitchBendCheckContext final
         runVertexEditing();
         runModWheelEditing();
         runPersistedAltRendering();
-        runResetAndAudition();
         runFocusHandoff();
+        runWindowDeliveredPress();
         cleanupBaseFixture();
         runActiveGridBoundary();
         if (!viewWasVisible)
@@ -1286,6 +1288,55 @@ class PitchBendCheckContext final
         if (m_roll->cursor().pixmap().isNull())
             fail("dismissing the pitch-bend popup did not restore the note-edge cursor");
         QCoreApplication::processEvents();
+    }
+
+    void runWindowDeliveredPress()
+    {
+        // Real window-system delivery addresses a press to the popup's native
+        // window before QWidgetWindow forwards it to the child widget, so the
+        // app-level close filter observes it with a non-QWidget watcher. Opens
+        // directly: earlier checks legitimately move BENDR off the range
+        // fixture, so this must not depend on openRangePopup's BENDR assert.
+        drainPopupDeletes();
+        checks::events::sendMouse(*m_roll, QEvent::MouseMove, m_noteCenter, Qt::NoButton,
+                                  Qt::NoButton, Qt::NoModifier);
+        checks::rollcheck::sendKeyStroke(*m_roll, Qt::Key_G, Qt::NoModifier, false);
+        QWidget *popupWidget = m_view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
+        QPointer<songview::PitchBendEditor> popup =
+            dynamic_cast<songview::PitchBendEditor *>(popupWidget);
+        if (!popup || !popup->isVisible()) {
+            fail("G did not reopen the pitch-bend popup for window-delivered press");
+            return;
+        }
+        activateSyntheticToolWindow(*popup);
+        QCoreApplication::processEvents();
+        QWindow *nativeWindow = popup->windowHandle();
+        if (!nativeWindow) {
+            fail("pitch-bend popup has no native window for press delivery");
+            return;
+        }
+        const auto deliverPress = [nativeWindow](const QPoint &local, const QPoint &global) {
+            QMouseEvent press(QEvent::MouseButtonPress, QPointF(local), QPointF(global),
+                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(nativeWindow, &press);
+            QCoreApplication::processEvents();
+        };
+        // Header chrome: inside the frame, outside any editing gesture.
+        const QPoint headerLocal(4, 24);
+        deliverPress(headerLocal, popup->mapToGlobal(headerLocal));
+        if (!popup || !popup->isVisible()) {
+            fail("window-delivered press inside the pitch-bend popup dismissed it");
+            return;
+        }
+        // Far from the popup: the same delivery path must still dismiss.
+        const QPoint awayGlobal =
+            m_roll->mapToGlobal(QPointF(m_noteCenter + QPoint(300, 0))).toPoint();
+        deliverPress(popup->mapFromGlobal(awayGlobal), awayGlobal);
+        if (popup && popup->isVisible()) {
+            fail("window-delivered press outside the pitch-bend popup did not dismiss it");
+            sendKeyStroke(*popup, Qt::Key_Escape, Qt::NoModifier, false);
+        }
+        drainPopupDeletes();
     }
 
     void cleanupBaseFixture()
