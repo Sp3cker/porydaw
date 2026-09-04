@@ -197,7 +197,7 @@ effectiveVisible = requestedVisible
                    && localX < overlay width
 ```
 
-The key invariant is that the **playhead itself** (the 1px core line, vertical body, and ruler triangle) never renders to the left of the piano keys / timeline split. Soft playhead glow/bloom passing over to the left of the split into the key column is explicitly accepted as an insignificant detail; the strict requirement is preventing the playhead core and triangle from rendering over fixed chrome or keys.
+The key invariant is that the **playhead body itself** (the 1px core line and vertical stem) never renders to the left of the piano keys / timeline split. Soft playhead glow/bloom passing over to the left of the split into the key column is explicitly accepted as an insignificant detail. Furthermore, within the ruler row, the ruler triangle is horizontally centered on the playhead core line; when the playhead is at or near tick 0, the left wing of the triangle naturally extends left of the split into the ruler by up to `playheadTriangleHalfWidth()` (~3–4px). This overhang is expected and intended so the triangle remains intact rather than truncated. The strict requirement is preventing the playhead core and body stem from ever rendering over the piano keys or track headers.
 ### Retained mask
 
 Build the mask from the local plot rectangles for:
@@ -249,7 +249,7 @@ The current refactor does not need to remove those components; it completes the 
    - velocity label/axis occupies the piano-key column;
    - no label/control rectangle enters a plot rectangle.
 3. Cover normal and fractional DPR, resize, font-scaled metrics, drawer visibility changes, and event-list switching.
-4. Add playhead assertions that no playhead core or triangle pixels occur left of the split or inside excluded chrome (exercising `rollcheckplayhead.cpp` on macOS and `rollcheckplayhead_quick.cpp` on non-macOS).
+4. Add playhead assertions that no playhead core line or body pixels occur left of the split over piano keys or track headers, or inside excluded chrome (exercising `rollcheckplayhead.cpp` on macOS and `rollcheckplayhead_quick.cpp` on non-macOS). In the ruler row, allow the expected left-wing overhang of the centered triangle by up to `playheadTriangleHalfWidth()` when the playhead is at or near tick 0.
 5. Add a case where `contentX(playheadTick) < 0` and assert that the core and triangle are absent (soft bloom passing over the boundary is non-blocking).
 
 These checks establish observable contracts; do not assert implementation field names or source text.
@@ -336,8 +336,9 @@ The refactor is complete only when all of the following are observable:
 - The velocity label/axis occupies the piano-key column and ends at the same split.
 - Every timeline plot begins at the split at every supported UI scale.
 - Tick zero and all timeline guides align across ruler, roll, other events, automation, velocity, and voice changes.
-- No playhead core or triangle pixel appears over track headers, piano keys, labels, scrollbars, resize handles, separators, drawer chrome, or event-list content.
-- Soft playhead bloom/glow passing slightly over to the left of the split is non-blocking; the strict requirement is that the playhead itself (core, triangle, and vertical stem) never renders to the left of the piano keys.
+- In all body rows (piano roll, velocity, automation, voice changes), no playhead core or stem pixel appears over track headers, piano keys, labels, scrollbars, resize handles, separators, drawer chrome, or event-list content.
+- In the ruler row, the left wing of the centered ruler triangle naturally extends left of the split by up to its half-width (`playheadTriangleHalfWidth()`) when parked at or near tick 0; this is expected and intended so the triangle is not truncated.
+- Soft playhead bloom/glow passing slightly over to the left of the split is non-blocking; the strict requirement is that the playhead body never renders to the left of the piano keys.
 - Moving the playhead core left of the visible plot hides the complete playhead rather than pinning or slicing it.
 - Paused and playing playheads follow the same geometry and visibility rules.
 - Drawer and gutter interactions retain their current behavior and accessibility bounds.
