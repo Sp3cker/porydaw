@@ -618,6 +618,94 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
         m_workspace->selectSongTab(tabB);
         QCoreApplication::processEvents();
     }
+    QAction *soloAction = findChild<QAction *>(QStringLiteral("soloWindowAction"));
+    check(soloAction && soloAction == m_soloAction && soloAction->parent() == this,
+          "native Solo action is missing or is not owned by MainWindow");
+    check(editMenu && editMenu->actions().contains(soloAction),
+          "native Solo action is not a member of the Edit menu");
+    check(soloAction &&
+              soloAction->shortcuts() == keys.bindings(QStringLiteral("roll.solo_tracks")) &&
+              soloAction->shortcutContext() == Qt::WindowShortcut,
+          "native Solo action does not carry the roll.solo_tracks WindowShortcut");
+    const auto currentSoloBindings = keys.bindings(QStringLiteral("roll.solo_tracks"));
+    int liveSoloOwners = 0;
+    for (QAction *action : findChildren<QAction *>()) {
+        if (!action->isEnabled())
+            continue;
+        const bool ownsSolo = std::any_of(currentSoloBindings.cbegin(), currentSoloBindings.cend(),
+                                          [action](const QKeySequence &sequence) {
+                                              return action->shortcuts().contains(sequence);
+                                          });
+        if (ownsSolo)
+            ++liveSoloOwners;
+    }
+    check(currentSoloBindings.isEmpty() || liveSoloOwners == 1,
+          "more than one live QAction owns the Solo shortcut");
+    if (soloAction && tabBNote && !currentSoloBindings.isEmpty()) {
+        const int soloTrack = tabBView.selectionModel().primaryTrack();
+        for (int track = 0; track < tabB->document().engineTrackCount(); ++track)
+            tabBView.setTrackSolo(track, false);
+        const auto soloCombo = currentSoloBindings.front()[0];
+        auto soloTriggerCount = 0;
+        const QMetaObject::Connection soloTriggerSpy = connect(
+            soloAction, &QAction::triggered, this, [&soloTriggerCount] { ++soloTriggerCount; });
+        const auto sendSolo = [&](QWidget *target) {
+            QKeyEvent press(QEvent::KeyPress, soloCombo.key(), soloCombo.keyboardModifiers());
+            QKeyEvent release(QEvent::KeyRelease, soloCombo.key(), soloCombo.keyboardModifiers());
+            QApplication::sendEvent(target, &press);
+            QApplication::sendEvent(target, &release);
+            QCoreApplication::processEvents();
+        };
+        // Focus outside any song surface: the window action must solo the
+        // active tab's selected track exactly once per press.
+        menuBar()->setFocus();
+        QCoreApplication::processEvents();
+        QWidget *outsideTarget = QApplication::focusWidget();
+        if (!outsideTarget ||
+            (outsideTarget == &tabBView || tabBView.isAncestorOf(outsideTarget))) {
+            check(false, "Solo shortcut check could not focus outside the song surface");
+        } else {
+            sendSolo(outsideTarget);
+            check(tabBView.trackSoloed(soloTrack),
+                  "S with focus outside the song surface did not solo the selected track");
+            check(soloTriggerCount == 1,
+                  "outside-focus S did not trigger the Solo window action exactly once");
+            sendSolo(outsideTarget);
+            check(!tabBView.trackSoloed(soloTrack),
+                  "second S with focus outside the song surface did not clear Solo");
+            check(soloTriggerCount == 2,
+                  "second outside-focus S mis-triggered the Solo window action");
+        }
+        // Roll-focused S must toggle exactly once: the window action owns the
+        // binding and the surface defers to it instead of toggling twice.
+        tabBView.focusActiveSurface();
+        QCoreApplication::processEvents();
+        QWidget *rollTarget = QApplication::focusWidget();
+        if (!rollTarget || !(rollTarget == &tabBView || tabBView.isAncestorOf(rollTarget))) {
+            check(false, "Solo shortcut check did not focus the active tab surface");
+        } else {
+            sendSolo(rollTarget);
+            check(tabBView.trackSoloed(soloTrack),
+                  "S on the focused roll surface did not solo exactly once");
+            check(soloTriggerCount == 3,
+                  "roll-focused S did not trigger the Solo window action exactly once");
+            sendSolo(rollTarget);
+            check(!tabBView.trackSoloed(soloTrack),
+                  "second S on the focused roll surface did not clear Solo");
+            check(soloTriggerCount == 4,
+                  "second roll-focused S mis-triggered the Solo window action");
+        }
+        // Text entry keeps S as typed text.
+        auto textProbe = QLineEdit(this);
+        textProbe.show();
+        textProbe.setFocus();
+        QCoreApplication::processEvents();
+        sendSolo(&textProbe);
+        check(!tabBView.trackSoloed(soloTrack),
+              "S in a focused text field soloed the selected track");
+        check(soloTriggerCount == 4, "S in a focused text field triggered the Solo window action");
+        disconnect(soloTriggerSpy); // the lambda captures a block-local by reference
+    }
     check(m_automationDrawerAction->shortcut() == QKeySequence(Qt::Key_A) &&
               m_automationDrawerAction->shortcutContext() == Qt::WindowShortcut &&
               m_automationDrawerAction->toolTip() ==

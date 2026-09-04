@@ -276,6 +276,24 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     });
     editMenu->addAction(m_copyAction);
     m_copyAction->setEnabled(false);
+    // S solos at window scope so it works with focus anywhere outside text
+    // entry; the roll surface defers to this owner (see handleEditKey) so a
+    // focused roll never toggles twice.
+    m_soloAction = new QAction(tr("&Solo Selected Tracks"), this);
+    m_soloAction->setObjectName(QStringLiteral("soloWindowAction"));
+    m_soloAction->setShortcutContext(Qt::WindowShortcut);
+    keys.attach(QStringLiteral("roll.solo_tracks"), m_soloAction);
+    connect(m_soloAction, &QAction::triggered, this, [this] {
+        if (qobject_cast<QLineEdit *>(QApplication::focusWidget()) ||
+            qobject_cast<QPlainTextEdit *>(QApplication::focusWidget()) ||
+            qobject_cast<QTextEdit *>(QApplication::focusWidget())) {
+            return;
+        }
+        if (m_selectedTab)
+            m_selectedTab->view().toggleSoloOnSelectedTracks();
+    });
+    editMenu->addAction(m_soloAction);
+    m_soloAction->setEnabled(false);
     m_insertTimeAction = new QAction(tr("Insert &Time..."), this);
     connect(m_insertTimeAction, &QAction::triggered, this, [this] {
         if (m_selectedTab)
@@ -950,6 +968,7 @@ void MainWindow::updateChrome()
     m_exportWavAction->setEnabled(ready && m_audioOk && m_audio.songLoaded());
     m_settingsAction->setEnabled(ready);
     m_copyAction->setEnabled(ready);
+    m_soloAction->setEnabled(ready);
     m_insertTimeAction->setEnabled(ready);
     m_registerAction->setEnabled(ready && selectedSongRegistrationPending());
     m_closeTabAction->setEnabled(m_workspace->openTabCount() > 0);

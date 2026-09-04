@@ -727,6 +727,11 @@ bool SongView::handleEditKey(const songview::TimelineKeyInput &input)
         return true;
     }
     if (matches("roll.solo_tracks")) {
+        // MainWindow owns S at window scope (see its solo action) so a focused
+        // surface does not toggle twice. Standalone SongViews and harnesses
+        // outside a MainWindow have no window owner and keep the direct path.
+        if (qobject_cast<MainWindow *>(window()))
+            return false;
         toggleSoloOnSelectedTracks();
         return true;
     }
