@@ -26,6 +26,7 @@
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include <QRect>
@@ -348,7 +349,7 @@ void checkDirectHoverRoute(AutomationGestureCheckRig &rig, const PreparedLane &l
     const auto idle = rig.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
     rig.mouseMove(lane.insertionPos, Qt::NoButton);
     rig.pump();
-    const qreal expectedRootX = rig.view().timelinePlotOrigin() +
+    const qreal expectedRootX = rig.view().timelineSplitX() +
                                 rig.view().camera().contentX(lane.insertionTick) -
                                 quickHost->geometry().x();
     QDeadlineTimer timeout{1000};
@@ -484,16 +485,19 @@ Topology runCase(AutomationGestureCheckRig &rig, const Case &row,
     const QPointF nodeCenter = rig.automationContentToViewport(QPointF(lane.nodeX, lane.nodeY));
     const QPointF strayGhostCenter =
         rig.automationContentToViewport(QPointF(lane.nodeX, lane.heldY));
+    const QPointF framebufferOffset(rig.automationGutterInput().bounds().width(), 0.0);
+    const QPointF insertionFramebufferCenter = insertionCenter + framebufferOffset;
+    const QPointF nodeFramebufferCenter = nodeCenter + framebufferOffset;
 
     rig.mouseMove(lane.insertionPos, Qt::NoButton);
     rig.pump();
     const HoverObservation insertion = observeHover(rig);
     previewUnchanged("insertion preview");
     topology.insertionLine = insertion.framebufferReady && insertion.chromeVisible;
-    topology.heldGhost = insertion.framebufferReady &&
-                         insertion.layer.revision > idle.layer.revision &&
-                         hasFilledNodeAt(insertion.layer, insertionCenter) &&
-                         pixelChangedAt(idle.framebuffer, insertion.framebuffer, insertionCenter);
+    topology.heldGhost =
+        insertion.framebufferReady && insertion.layer.revision > idle.layer.revision &&
+        hasFilledNodeAt(insertion.layer, insertionCenter) &&
+        pixelChangedAt(idle.framebuffer, insertion.framebuffer, insertionFramebufferCenter);
     topology.insertionLabel = hasValueText(insertion);
     probe.require(topology.insertionLine,
                   QStringLiteral("inter-node hover did not retain its Quick insertion line"));
@@ -526,7 +530,7 @@ Topology runCase(AutomationGestureCheckRig &rig, const Case &row,
     topology.nodeRing =
         nodeHover.framebufferReady && nodeHover.layer.revision > insertion.layer.revision &&
         !nodeHover.layer.triangles.empty() &&
-        hasAnnulusPixelChanges(insertion.framebuffer, nodeHover.framebuffer, nodeCenter,
+        hasAnnulusPixelChanges(insertion.framebuffer, nodeHover.framebuffer, nodeFramebufferCenter,
                                nodelane::hoverRingRadius(geometry), 2 * layout::singlePixel());
     topology.nodeLabel = hasValueText(nodeHover);
     topology.noInsertionGhost = !hasFilledNodeAt(nodeHover.layer, strayGhostCenter);
@@ -554,9 +558,9 @@ Topology runCase(AutomationGestureCheckRig &rig, const Case &row,
     previewUnchanged("leave");
     topology.leaveCleared =
         isClear(transitioned) && isClear(left) &&
-        pixelClearedAt(idle.framebuffer, nodeHover.framebuffer, insertionCenter) &&
-        pixelClearedAt(idle.framebuffer, transitioned.framebuffer, insertionCenter) &&
-        pixelClearedAt(idle.framebuffer, left.framebuffer, insertionCenter);
+        pixelClearedAt(idle.framebuffer, nodeHover.framebuffer, insertionFramebufferCenter) &&
+        pixelClearedAt(idle.framebuffer, transitioned.framebuffer, insertionFramebufferCenter) &&
+        pixelClearedAt(idle.framebuffer, left.framebuffer, insertionFramebufferCenter);
     probe.require(topology.leaveCleared,
                   QStringLiteral("lane transition or leave retained dirty Quick hover state"));
     return topology;
@@ -578,8 +582,8 @@ void checkNodeLaneHoverParity(AutomationGestureCheckRig &rig, const AutomationGe
     rig.setAutomationScroll(0.0);
     rig.setPersistentPencil(false);
     rig.pump();
-    rig.mousePress(rig.tempoHeaderPoint());
-    rig.mouseRelease(rig.tempoHeaderPoint());
+    rig.gutterMousePress(rig.tempoHeaderPoint());
+    rig.gutterMouseRelease(rig.tempoHeaderPoint());
     rig.pump();
     const bool tempoExpanded =
         !rig.canvas().laneBody(AutomationGestureCheckRig::kTempoHandle).isEmpty();

@@ -58,7 +58,7 @@ AutomationCanvas::originPhantomAt(LaneHandle handle, const QPointF &position,
     const auto phantom = originPhantom(handle, proj, points);
     if (!phantom)
         return std::nullopt;
-    const QPointF center(qreal(m_geometry.plotOrigin),
+    const QPointF center(0.0,
                          AutomationProjection::valueY(body, m_geometry, phantom->minimumValue,
                                                       phantom->maximumValue, phantom->point.value));
     if (pointDistanceSquared(position, center) >
@@ -75,8 +75,8 @@ AutomationCanvas::originPhantom(LaneHandle handle, const AutomationProjection &p
     QRect body;
     if (!resolveLane(handle, &lane, &body) || !lane)
         return std::nullopt;
-    return ::originPhantomAt(points, handle, lane->minimumValue(), lane->maximumValue(),
-                             double(m_geometry.plotOrigin), [this, &proj](uint64_t tick) {
+    return ::originPhantomAt(points, handle, lane->minimumValue(), lane->maximumValue(), 0.0,
+                             [this, &proj](uint64_t tick) {
                                  return proj.displayX(
                                      tick, m_inputHost ? m_inputHost->devicePixelRatio() : 1.0);
                              });

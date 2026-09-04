@@ -12,16 +12,26 @@
 #include <QString>
 
 namespace songview {
+class TimelineInputHost;
+
+enum class TimelineInputSurface : uint8_t {
+    Plot,
+    Gutter,
+};
 
 // Normalized band input values. Positions are logical pixels: position is
-// band-local, globalPosition is screen-global. Button is the button that
-// changed for press/release/double-click; buttons is the full pressed set.
+// local to its physical surface, globalPosition is screen-global. Button is
+// the button that changed for press/release/double-click; buttons is the full
+// pressed set. Production dispatch provides the emitting host; aggregate
+// construction leaves it null by default.
 struct TimelinePointerInput {
     QPointF position;
     QPointF globalPosition;
     Qt::MouseButton button;
     Qt::MouseButtons buttons;
     Qt::KeyboardModifiers modifiers;
+    TimelineInputSurface surface = TimelineInputSurface::Plot;
+    TimelineInputHost *host = nullptr;
 };
 
 // Pixel wheels deliver pixelDelta; rotary wheels deliver angleDelta. Inverted
@@ -35,6 +45,8 @@ struct TimelineWheelInput {
     Qt::KeyboardModifiers modifiers;
     Qt::ScrollPhase phase = Qt::NoScrollPhase;
     bool inverted = false;
+    TimelineInputSurface surface = TimelineInputSurface::Plot;
+    TimelineInputHost *host = nullptr;
 };
 
 struct TimelineKeyInput {

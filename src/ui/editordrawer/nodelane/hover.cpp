@@ -134,7 +134,6 @@ QRect NodeLaneHoverState::hoverValueRect(const NodeLaneHoverTarget &target, cons
                                          const AutomationProjection &projection, qreal x,
                                          bool pencilMode) const
 {
-    const QRect plot = nodelane::plotRect(body, geometry);
     qreal anchorX = x;
     int mappedValue = 0;
     if (!hoverValueFor(lane, body, geometry, projection, insertionTick(projection, pencilMode),
@@ -142,7 +141,7 @@ QRect NodeLaneHoverState::hoverValueRect(const NodeLaneHoverTarget &target, cons
         return {};
     if (hover.hasPoint)
         anchorX = hover.originPhantom
-                      ? qreal(plot.left())
+                      ? qreal(body.left())
                       : projection.displayX(hover.point.tick, target.devicePixelRatio);
     const int anchorY = qRound(nodelane::valueY(lane, body, geometry, mappedValue));
     const auto &fontCache = m_valueLabelFontCache;
@@ -151,12 +150,12 @@ QRect NodeLaneHoverState::hoverValueRect(const NodeLaneHoverTarget &target, cons
     const int gap = layout::space(layout::Space::One);
     int textX = qCeil(anchorX - gap - textWidth);
     int textY = anchorY - gap - textHeight;
-    if (textX < plot.left())
+    if (textX < body.left())
         textX = qFloor(anchorX + gap);
-    if (textY < plot.top())
+    if (textY < body.top())
         textY = anchorY + gap;
-    textX = std::clamp(textX, plot.left(), std::max(plot.left(), plot.right() - textWidth + 1));
-    textY = std::clamp(textY, plot.top(), std::max(plot.top(), plot.bottom() - textHeight + 1));
+    textX = std::clamp(textX, body.left(), std::max(body.left(), body.right() - textWidth + 1));
+    textY = std::clamp(textY, body.top(), std::max(body.top(), body.bottom() - textHeight + 1));
     return {textX, textY, textWidth, textHeight};
 }
 
@@ -168,17 +167,16 @@ QRect NodeLaneHoverState::hoverPaintBounds(const NodeLaneHoverTarget &target, co
     if (!target.ready || !lane || !hover.lane.valid())
         return {};
     const double tick = insertionTick(projection, pencilMode);
-    const QRect plot = nodelane::plotRect(body, geometry);
     const qreal x = projection.displayX(uint64_t(std::max(0.0, tick)), target.devicePixelRatio);
     const QString &text = hoverTextCache.text;
     const int paintPadding = geometry.hoverPaintPadding;
     QRect bounds =
-        QRectF(x - paintPadding, plot.top(), 2 * paintPadding, plot.height()).toAlignedRect();
+        QRectF(x - paintPadding, body.top(), 2 * paintPadding, body.height()).toAlignedRect();
     if (hover.hasPoint) {
         const qreal nodeRadius = nodelane::hoverRingRadius(geometry);
         const qreal outerRadius = nodeRadius + paintPadding;
         const qreal centerX = hover.originPhantom
-                                  ? qreal(plot.left())
+                                  ? qreal(body.left())
                                   : projection.displayX(hover.point.tick, target.devicePixelRatio);
         const QPointF center(centerX, nodelane::valueY(*lane, body, geometry, hover.point.value));
         bounds = bounds.united(QRectF(center.x() - outerRadius, center.y() - outerRadius,
@@ -265,12 +263,11 @@ QRegion NodeLaneHoverState::updateHoverValueLabel(const NodeLaneHoverTarget &tar
     label.text = text;
     const auto &fontCache = m_valueLabelFontCache;
     label.font = fontCache.font;
-    const QRect plot = nodelane::plotRect(body, geometry);
     if (pencilMode) {
         const int gap = layout::space(layout::Space::One);
         const int width = fontCache.width;
         const int height = fontCache.height;
-        const QRect bounds(qFloor(x + gap), plot.top() + (plot.height() - height) / 2, width,
+        const QRect bounds(qFloor(x + gap), body.top() + (body.height() - height) / 2, width,
                            height);
         label.rect = bounds;
         label.bounds = bounds;
@@ -295,9 +292,8 @@ QRegion NodeLaneHoverState::updatePreviewValueLabel(const NodeLaneHoverTarget &t
     if (!target.ready || !lane || !handle.valid())
         return QRegion(previousBounds);
     const int y = qRound(nodelane::valueY(*lane, body, geometry, value));
-    const QRect plot = nodelane::plotRect(body, geometry);
     const auto &fontCache = m_valueLabelFontCache;
-    const auto clamped = clampedValueLabel(x, y, plot, fontCache);
+    const auto clamped = clampedValueLabel(x, y, body, fontCache);
     auto &label = previewValueLabel;
     label.lane = handle;
     label.text = lane->valueText(value);
@@ -341,10 +337,10 @@ QRegion NodeLaneHoverState::updateHover(const NodeLaneHoverTarget &target,
             hover.point = points[*hit];
         } else if (const auto phantom = originPhantomAt(
                        points, handle, lane.minimumValue(), lane.maximumValue(),
-                       double(geometry.plotOrigin), [&projection, &target](uint64_t tick) {
+                       double(body.left()), [&projection, &target](uint64_t tick) {
                            return projection.displayX(tick, target.devicePixelRatio);
                        })) {
-            const QPointF center(qreal(geometry.plotOrigin),
+            const QPointF center(qreal(body.left()),
                                  nodelane::valueY(lane, body, geometry, phantom->point.value));
             if (pointDistanceSquared(hover.pos, center) <=
                 geometry.pointHitRadius * geometry.pointHitRadius) {

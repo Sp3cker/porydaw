@@ -11,6 +11,7 @@
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/automationprojection.h"
+#include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -48,22 +49,28 @@ struct AutomationBandInput {
         checks::events::sendMouse(item, type, contentPosition - QPointF(0.0, page.verticalScroll()),
                                   button, buttons, modifiers);
     }
+    void wheel(const QPointF &contentPosition, const QPoint &pixelDelta,
+               const QPoint &angleDelta) const
+    {
+        checks::events::sendWheel(item, contentPosition - QPointF(0.0, page.verticalScroll()),
+                                  pixelDelta, angleDelta, Qt::NoButton, Qt::NoModifier,
+                                  Qt::NoScrollPhase, false);
+    }
 };
 
-songview::TimelineInputItem *automationInputItem(SongView &view)
+songview::TimelineInputItem *automationInputItem(SongView &view, const QString &objectName)
 {
     auto *quickCanvas =
         view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
     return quickCanvas && quickCanvas->rootObject()
-               ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(
-                     QStringLiteral("timelineAutomationInput"))
+               ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(objectName)
                : nullptr;
 }
 
 QPoint tempoHeaderPoint(const AutomationPage &page)
 {
     const QRect tempo = page.canvas()->pinnedTempoRect();
-    return {page.canvas()->plotOrigin() / 2, tempo.center().y()};
+    return {layout::space(layout::Space::One), tempo.center().y()};
 }
 
 } // namespace
@@ -72,10 +79,11 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
                                   const std::vector<AutomationRow> &rows, const QString &songLabel,
                                   int &failures)
 {
-    songview::TimelineInputItem *const input = automationInputItem(view);
+    songview::TimelineInputItem *const gutterInput =
+        automationInputItem(view, QStringLiteral("timelineAutomationGutterInput"));
     const auto &automationBand =
         view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
-    if (!input || !automationBand)
+    if (!gutterInput || !automationBand)
         return;
 
     const auto check = [&](bool condition, const QString &message) {
@@ -85,7 +93,7 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
                      qUtf8Printable(message));
         ++failures;
     };
-    const AutomationBandInput band{page, *input};
+    const AutomationBandInput gutter{page, *gutterInput};
     // Content y in viewport coordinates: content minus the page's vertical scroll.
     const auto contentPageY = [&](int contentY) { return contentY - page.verticalScroll(); };
     const auto automationBandRect = [&]() -> QRect {
@@ -100,7 +108,7 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
               QStringLiteral("automation viewport framebuffer capture failed: %1").arg(error));
         return image;
     };
-    const AutomationGeometry geometry = AutomationGeometry::resolve(view.timelineSplitX());
+    const AutomationGeometry geometry = AutomationGeometry::resolve();
     const EditorAutomationRowId tempoRow{EditorAutomationRowKind::Tempo, 0, 0};
     const EditorViewState originalViewState = view.editorViewState();
     EditorViewState configuredViewState = originalViewState;
@@ -127,10 +135,10 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
           QStringLiteral("collapsed Tempo must leave LaneHandle{0} without a body"));
 
     const QPoint collapsedHeader = tempoHeaderPoint(page);
-    band.mouse(QEvent::MouseButtonPress, collapsedHeader, Qt::LeftButton, Qt::LeftButton,
-               Qt::NoModifier);
-    band.mouse(QEvent::MouseButtonRelease, collapsedHeader, Qt::LeftButton, Qt::NoButton,
-               Qt::NoModifier);
+    gutter.mouse(QEvent::MouseButtonPress, collapsedHeader, Qt::LeftButton, Qt::LeftButton,
+                 Qt::NoModifier);
+    gutter.mouse(QEvent::MouseButtonRelease, collapsedHeader, Qt::LeftButton, Qt::NoButton,
+                 Qt::NoModifier);
     pump();
     const QRect expandedBody = page.canvas()->laneBody(LaneHandle{0});
     const int expandedMinimumHeight = page.canvas()->minimumContentHeight();
@@ -143,7 +151,14 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
     const QRect bodyBeforeScroll = page.canvas()->laneBody(LaneHandle{0});
     const QPoint pageBeforeScroll = QPoint(0, contentPageY(bodyBeforeScroll.top()));
     const QImage viewportBeforeScroll = captureAutomationViewport();
-    page.setVerticalScroll(automationMaximumScrollY(page));
+    const int maximumScroll = automationMaximumScrollY(page);
+    while (page.verticalScroll() < maximumScroll) {
+        const int previousScroll = page.verticalScroll();
+        gutter.wheel(QPointF(layout::space(layout::Space::One), bodyBeforeScroll.center().y()),
+                     QPoint(0, -maximumScroll), QPoint());
+        if (page.verticalScroll() == previousScroll)
+            break;
+    }
     pump();
     const QImage viewportAfterScroll = captureAutomationViewport();
     const int scrollAfter = page.verticalScroll();
@@ -192,10 +207,10 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
     page.setVerticalScroll(0);
     pump();
     const QPoint expandedHeader = tempoHeaderPoint(page);
-    band.mouse(QEvent::MouseButtonPress, expandedHeader, Qt::LeftButton, Qt::LeftButton,
-               Qt::NoModifier);
-    band.mouse(QEvent::MouseButtonRelease, expandedHeader, Qt::LeftButton, Qt::NoButton,
-               Qt::NoModifier);
+    gutter.mouse(QEvent::MouseButtonPress, expandedHeader, Qt::LeftButton, Qt::LeftButton,
+                 Qt::NoModifier);
+    gutter.mouse(QEvent::MouseButtonRelease, expandedHeader, Qt::LeftButton, Qt::NoButton,
+                 Qt::NoModifier);
     pump();
     const QRect recollapsedBody = page.canvas()->laneBody(LaneHandle{0});
     const int recollapsedMinimumHeight = page.canvas()->minimumContentHeight();
@@ -204,10 +219,10 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
           QStringLiteral("collapsing Tempo must remove its body and recover canvas space"));
 
     const QPoint recollapsedHeader = tempoHeaderPoint(page);
-    band.mouse(QEvent::MouseButtonPress, recollapsedHeader, Qt::LeftButton, Qt::LeftButton,
-               Qt::NoModifier);
-    band.mouse(QEvent::MouseButtonRelease, recollapsedHeader, Qt::LeftButton, Qt::NoButton,
-               Qt::NoModifier);
+    gutter.mouse(QEvent::MouseButtonPress, recollapsedHeader, Qt::LeftButton, Qt::LeftButton,
+                 Qt::NoModifier);
+    gutter.mouse(QEvent::MouseButtonRelease, recollapsedHeader, Qt::LeftButton, Qt::NoButton,
+                 Qt::NoModifier);
     pump();
     const QRect reexpandedBody = page.canvas()->laneBody(LaneHandle{0});
     const int reexpandedMinimumHeight = page.canvas()->minimumContentHeight();
@@ -218,10 +233,10 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
               "re-expanding Tempo must restore its configured height and pinned position"));
 
     const QPoint reexpandedHeader = tempoHeaderPoint(page);
-    band.mouse(QEvent::MouseButtonPress, reexpandedHeader, Qt::LeftButton, Qt::LeftButton,
-               Qt::NoModifier);
-    band.mouse(QEvent::MouseButtonRelease, reexpandedHeader, Qt::LeftButton, Qt::NoButton,
-               Qt::NoModifier);
+    gutter.mouse(QEvent::MouseButtonPress, reexpandedHeader, Qt::LeftButton, Qt::LeftButton,
+                 Qt::NoModifier);
+    gutter.mouse(QEvent::MouseButtonRelease, reexpandedHeader, Qt::LeftButton, Qt::NoButton,
+                 Qt::NoModifier);
     pump();
     check(page.canvas()->laneBody(LaneHandle{0}).isEmpty() &&
               page.canvas()->minimumContentHeight() == collapsedMinimumHeight,

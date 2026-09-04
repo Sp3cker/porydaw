@@ -21,6 +21,8 @@
 #include <QEvent>
 #include <QFontMetricsF>
 #include <QImage>
+#include <QMouseEvent>
+#include <QQuickWindow>
 #include <QTemporaryDir>
 
 #include "core/miditimeline.h"
@@ -79,10 +81,26 @@ QRect toPixels(const QRectF &logical, qreal scale)
                  qMax(1, qRound(logical.height() * scale)));
 }
 
+const std::optional<songview::TimelineBandGeometry> &velocityGeometry(const SongView &view)
+{
+    return view.timelineBandLayout().geometry(songview::TimelineBand::Velocity);
+}
+
 QRect velocityBandRect(const SongView &view)
 {
-    const auto &geometry = view.timelineBandLayout().geometry(songview::TimelineBand::Velocity);
-    return geometry ? geometry->rect : QRect{};
+    return velocityGeometry(view) ? velocityGeometry(view)->rect : QRect{};
+}
+
+QRect velocityPlotRect(const SongView &view)
+{
+    return velocityGeometry(view) ? velocityGeometry(view)->plotRect : QRect{};
+}
+
+int velocityFixedSpan(const SongView &view)
+{
+    return velocityGeometry(view) ? std::max(0, velocityGeometry(view)->plotRect.x() -
+                                                    velocityGeometry(view)->rect.x())
+                                  : 0;
 }
 
 QImage captureVelocityBand(SongView &view)
@@ -90,85 +108,7 @@ QImage captureVelocityBand(SongView &view)
     return checks::support::captureQuickBand(view, velocityBandRect(view));
 }
 
-// In-memory TimelineInputHost for this check: it services the velocity band's
-// host queries from SongView state, records the accessibility description the
-// area publishes, and swaps out the production QML input item wiring while the
-// check drives normalized interaction calls directly.
-class VelocityInputHost final : public songview::TimelineInputHost
-{
-  public:
-    VelocityInputHost(SongView &view, VelocityArea &area) : m_view(view), m_area(area) {}
-    ~VelocityInputHost() override { Q_ASSERT(!m_attached); }
-
-    void attach()
-    {
-        Q_ASSERT(!m_attached);
-        auto *quickView =
-            m_view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
-        m_productionItem = quickView && quickView->rootObject()
-                               ? quickView->rootObject()->findChild<songview::TimelineInputItem *>(
-                                     QStringLiteral("timelineVelocityInput"))
-                               : nullptr;
-        m_productionInteraction = m_productionItem ? m_productionItem->interaction() : nullptr;
-        if (m_productionItem && m_productionInteraction)
-            m_productionItem->setInteraction(nullptr);
-        m_area.attachInputHost(*this);
-        m_attached = true;
-    }
-
-    void detach()
-    {
-        Q_ASSERT(m_attached);
-        m_attached = false;
-        m_area.detachInputHost(*this);
-        if (m_productionItem && m_productionInteraction)
-            m_productionItem->setInteraction(m_productionInteraction);
-        m_productionItem = nullptr;
-        m_productionInteraction = nullptr;
-    }
-
-    QString accessibilityDescription() const { return m_accessibilityDescription; }
-
-    // TimelineInputHost
-    QRectF bounds() const override
-    {
-        const QRect band = velocityBandRect(m_view);
-        return QRectF(0.0, 0.0, band.width(), band.height());
-    }
-    qreal devicePixelRatio() const override { return m_view.devicePixelRatioF(); }
-    QFont font() const override { return m_view.font(); }
-    QPalette palette() const override { return m_view.palette(); }
-    QPointF mapFromGlobal(QPointF position) const override
-    {
-        return QPointF(m_view.mapFromGlobal(position.toPoint())) -
-               QPointF(velocityBandRect(m_view).topLeft());
-    }
-    QPointF mapToGlobal(QPointF position) const override
-    {
-        return QPointF(
-            m_view.mapToGlobal((QPointF(velocityBandRect(m_view).topLeft()) + position).toPoint()));
-    }
-    void requestFocus(Qt::FocusReason reason) override { m_view.setFocus(reason); }
-    void setCursor(const QCursor &cursor) override { m_view.setCursor(cursor); }
-    void clearCursor() override { m_view.unsetCursor(); }
-    void releasePointerGrab() override {}
-    void setAccessibilityDescription(const QString &description) override
-    {
-        m_accessibilityDescription = description;
-    }
-
-  private:
-    SongView &m_view;
-    VelocityArea &m_area;
-    songview::TimelineInputItem *m_productionItem = nullptr;
-    songview::TimelineBandInteraction *m_productionInteraction = nullptr;
-    QString m_accessibilityDescription;
-    bool m_attached = false;
-};
-
 struct ExpectedVelocityGeometry {
-    int plotOrigin;
-    int pianoKeyboardWidth;
     int densityThresholdD2;
     int densityThresholdD4;
     qreal nodePaintRadius;
@@ -177,11 +117,11 @@ struct ExpectedVelocityGeometry {
 
 ExpectedVelocityGeometry expectedVelocityGeometry()
 {
-    const int pianoKeyboardWidth = layout::fontPx(13.0 / 3.0);
     return {
-        layout::fontPx(17.5 + 13.0 / 3.0), pianoKeyboardWidth,
-        layout::fontPx(25.0 / 3.0),        layout::fontPx(24.0),
-        layout::fontPxF(7.0 / 24.0),       layout::fontPxF(1.0 / 12.0),
+        layout::fontPx(25.0 / 3.0),
+        layout::fontPx(24.0),
+        layout::fontPxF(7.0 / 26.0),
+        layout::fontPxF(1.0 / 12.0),
     };
 }
 
@@ -196,7 +136,8 @@ struct VelocityAreaEnv {
     const std::vector<DocNote> &notes;
     SongView &view;
     VelocityArea &area;
-    VelocityInputHost *host = nullptr;
+    songview::TimelineInputItem *velocityInput = nullptr;
+    songview::TimelineInputItem *velocityGutterInput = nullptr;
     DrawerChrome &chrome;
     songview::TimelineInputItem *barInput = nullptr;
     songview::TimelineInputItem *detentInput = nullptr;
@@ -210,40 +151,69 @@ struct VelocityAreaEnv {
     qreal imageScale = 1.0;
 };
 
-QPointF velocityGlobalPosition(VelocityAreaEnv &env, const QPointF &position)
-{
-    return env.host->mapToGlobal(position);
-}
-
 void velocityPress(VelocityAreaEnv &env, const QPointF &position, Qt::MouseButton button,
                    Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers)
 {
-    env.area.pointerPress(
-        {position, velocityGlobalPosition(env, position), button, buttons, modifiers});
+    checks::events::sendMouse(*env.velocityInput, QEvent::MouseButtonPress, position, button,
+                              buttons, modifiers);
 }
 
 void velocityMove(VelocityAreaEnv &env, const QPointF &position, Qt::MouseButtons buttons,
                   Qt::KeyboardModifiers modifiers)
 {
-    env.area.pointerMove(
-        {position, velocityGlobalPosition(env, position), Qt::NoButton, buttons, modifiers});
+    checks::events::sendMouse(*env.velocityInput, QEvent::MouseMove, position, Qt::NoButton,
+                              buttons, modifiers);
 }
 
 void velocityRelease(VelocityAreaEnv &env, const QPointF &position, Qt::MouseButton button,
                      Qt::KeyboardModifiers modifiers)
 {
-    env.area.pointerRelease(
-        {position, velocityGlobalPosition(env, position), button, Qt::NoButton, modifiers});
+    checks::events::sendMouse(*env.velocityInput, QEvent::MouseButtonRelease, position, button,
+                              Qt::NoButton, modifiers);
+}
+
+void velocityGutterPress(VelocityAreaEnv &env, const QPointF &position,
+                         Qt::KeyboardModifiers modifiers)
+{
+    checks::events::sendMouse(*env.velocityGutterInput, QEvent::MouseButtonPress, position,
+                              Qt::LeftButton, Qt::LeftButton, modifiers);
+}
+
+void velocityGutterRelease(VelocityAreaEnv &env, const QPointF &position,
+                           Qt::KeyboardModifiers modifiers)
+{
+    checks::events::sendMouse(*env.velocityGutterInput, QEvent::MouseButtonRelease, position,
+                              Qt::LeftButton, Qt::NoButton, modifiers);
 }
 
 void velocityLeave(VelocityAreaEnv &env)
 {
-    env.area.pointerLeave();
+    checks::events::sendMouse(*env.velocityInput, QEvent::Leave, QPointF{}, Qt::NoButton,
+                              Qt::NoButton, Qt::NoModifier);
+}
+
+void velocityPressWithImplicitGrab(VelocityAreaEnv &env, const QPointF &position,
+                                   Qt::MouseButton button)
+{
+    QQuickWindow *const window = env.velocityInput->window();
+    if (!window)
+        return;
+    const QPointF scenePosition = env.velocityInput->mapToScene(position);
+    const QPointF globalPosition(window->mapToGlobal(scenePosition.toPoint()));
+    QMouseEvent event(QEvent::MouseButtonPress, scenePosition, scenePosition, globalPosition,
+                      button, button, Qt::NoModifier);
+    QApplication::sendEvent(window, &event);
 }
 
 void velocityUngrab(VelocityAreaEnv &env)
 {
-    env.area.inputCancelled(songview::TimelineInputCancelReason::PointerUngrabbed);
+    env.velocityInput->ungrabMouse();
+    QApplication::processEvents();
+}
+
+double velocityXForTick(const VelocityAreaEnv &env, double tick)
+{
+    return env.view.camera().displayX(tick, 0.0, env.velocityInput->devicePixelRatio());
 }
 
 bool colorsMatch(const QColor &actual, const QColor &expected)
@@ -322,18 +292,12 @@ struct VelocityAreaRig {
 
     double paintGestureX(const DocNote &note) const
     {
-        return double(env.area.plotOrigin()) +
-               double(note.tick) * env.view.camera().pxPerBeat() /
-                   double(env.timeline->ticksPerBeat) -
-               env.view.camera().scrollX();
+        return velocityXForTick(env, double(note.tick));
     }
 
     QPointF velocityNode(const DocNote &note) const
     {
-        const double x =
-            double(env.area.plotOrigin()) +
-            double(note.tick) * env.live.timeZoom / double(env.timeline->ticksPerBeat) -
-            env.live.horizontalScroll;
+        const double x = velocityXForTick(env, double(note.tick));
         const std::optional<std::size_t> level = currentMap.levelOf(note.velocity);
         const bool intrinsic = env.area.axis().mode() == VelocityAxis::Mode::Intrinsic &&
                                env.area.axis().map().compatibleWith(currentMap);
@@ -353,7 +317,7 @@ int checkDrawerToggleGeometry(VelocityAreaEnv &env)
     const QRectF automationToggle = env.chrome.automationToggleRect();
     const QRectF velocityToggle = env.chrome.velocityToggleRect();
     const QRectF toggleGroup = voiceToggle.united(automationToggle).united(velocityToggle);
-    const int pianoKeysCenter = velocityBandRect(env.view).x() + env.area.plotOrigin() / 2;
+    const int pianoKeysCenter = velocityBandRect(env.view).x() + velocityFixedSpan(env.view) / 2;
     check(env.barInput &&
               env.barInput->interaction() == &env.chrome.interaction(DrawerChromeTarget::Bar) &&
               env.barInput->isVisible() &&
@@ -424,7 +388,7 @@ int checkDirectSoundChromeAndFocus(VelocityAreaEnv &env)
               env.chrome.detentRect().isEmpty(),
           "DrawerChrome detent must hide for DirectSound");
     check(env.area.axis().mode() == VelocityAxis::Mode::Continuous &&
-              env.host->accessibilityDescription() == QStringLiteral("Velocity"),
+              env.velocityInput->accessibilityDescription() == QStringLiteral("Velocity"),
           "DirectSound with no selection should publish the continuous accessible axis");
     check(!VelocityAxis::nodesFocusable() && !VelocityAxis::graduationLabelsFocusable(),
           "velocity nodes and ruler labels must add no focus targets");
@@ -467,11 +431,11 @@ int checkGridContinuesPastSongEnd(VelocityAreaEnv &env)
     // This fixture has no time signature, so the implicit grid is 4/4.
     const auto ticksPerBar = uint64_t{env.timeline->ticksPerBeat} * 4;
     const auto firstBarPastSongEnd = (env.timeline->lengthTicks / ticksPerBar + 1) * ticksPerBar;
-    // Retained scene geometry is local to the VelocityGrid QQuickItem, not the native
-    // QQuickView window. Match the renderer's snapped, camera-relative local x.
-    const qreal dpr = env.host->devicePixelRatio();
+    // Retained scene geometry is local to the plot-side VelocityGrid item.
+    // Match the renderer's snapped, camera-relative plot-local x.
+    const qreal dpr = env.velocityInput->devicePixelRatio();
     const auto gridX = [&env, dpr](uint64_t tick) {
-        return env.view.camera().displayX(double(tick), env.area.plotOrigin(), dpr);
+        return env.view.camera().displayX(double(tick), 0.0, dpr);
     };
     const qreal firstBarPastSongEndX = gridX(firstBarPastSongEnd);
     const std::array gridColors = {
@@ -504,8 +468,8 @@ int checkPanClampAtTickZero(VelocityAreaEnv &env)
     env.area.refreshLiveState(env.live);
     QApplication::processEvents();
     const auto beforePanPastZero = captureVelocityBand(env.view);
-    const auto panStart = QPointF(env.area.plotOrigin() + layout::space(layout::Space::Two),
-                                  velocityBandRect(env.view).height() / 2.0);
+    const auto panStart =
+        QPointF(layout::space(layout::Space::Two), velocityPlotRect(env.view).height() / 2.0);
     const auto panLeftPastZero = panStart + QPointF(layout::space(layout::Space::Eight), 0.0);
     velocityPress(env, panStart, Qt::MiddleButton, Qt::MiddleButton, Qt::NoModifier);
     velocityMove(env, panLeftPastZero, Qt::MiddleButton, Qt::NoModifier);
@@ -533,7 +497,7 @@ int checkPsgAxisContexts(VelocityAreaEnv &env)
     env.live.editCursorTick++;
     env.area.refreshLiveState(env.live);
     check(env.area.axis().mode() == VelocityAxis::Mode::Intrinsic &&
-              env.host->accessibilityDescription() ==
+              env.velocityInput->accessibilityDescription() ==
                   QStringLiteral("Velocity. Square 1 has 16 volume levels."),
           "compatible Square selection should publish intrinsic graduations");
     env.voicegroup.voices[0] = env.wave;
@@ -543,7 +507,7 @@ int checkPsgAxisContexts(VelocityAreaEnv &env)
     env.area.refreshLiveState(env.live);
     check(env.area.axis().mode() == VelocityAxis::Mode::Intrinsic &&
               env.area.axis().graduationCount() == 5 &&
-              env.host->accessibilityDescription() ==
+              env.velocityInput->accessibilityDescription() ==
                   QStringLiteral("Velocity. Programmable Wave has 5 volume levels."),
           "Wave selection should publish five intrinsic graduations");
     env.voicegroup.voices[0] = env.noise;
@@ -553,7 +517,7 @@ int checkPsgAxisContexts(VelocityAreaEnv &env)
     env.area.refreshLiveState(env.live);
     check(env.area.axis().mode() == VelocityAxis::Mode::Intrinsic &&
               env.area.axis().graduationCount() == 16 &&
-              env.host->accessibilityDescription() ==
+              env.velocityInput->accessibilityDescription() ==
                   QStringLiteral("Velocity. Noise has 16 volume levels."),
           "Noise selection should publish all intrinsic graduations");
 
@@ -594,10 +558,7 @@ int checkHoverAxisContext(VelocityAreaEnv &env)
     check(env.area.axis().map() == selectedMap && selectedMap != env.map,
           "hover context fixture must begin on the selected Wave note");
     velocityMove(env,
-                 QPointF(double(env.area.plotOrigin()) +
-                             double(env.notes[1].tick) * env.live.timeZoom /
-                                 double(env.timeline->ticksPerBeat) -
-                             env.live.horizontalScroll,
+                 QPointF(velocityXForTick(env, double(env.notes[1].tick)),
                          hoveredNoiseProjection.levelToY(int(env.hoveredPsgLevel))),
                  Qt::NoButton, Qt::NoModifier);
     QApplication::processEvents();
@@ -625,10 +586,7 @@ int checkVelocityRendering(VelocityAreaEnv &env)
     };
     const std::optional<std::size_t> selectedLevel = env.map.levelOf(env.notes[0].velocity);
     const std::optional<std::size_t> unselectedLevel = env.map.levelOf(env.notes[1].velocity);
-    const double paintNodeX =
-        double(env.area.plotOrigin()) +
-        double(env.notes[0].tick) * env.live.timeZoom / double(env.timeline->ticksPerBeat) -
-        env.live.horizontalScroll;
+    const double paintNodeX = velocityXForTick(env, double(env.notes[0].tick));
     const double selectedY = selectedLevel ? env.area.axis().levelToY(int(*selectedLevel))
                                            : env.area.axis().velocityToY(env.notes[0].velocity);
     const double unselectedY = env.area.axis().levelToY(int(env.hoveredPsgLevel));
@@ -636,9 +594,10 @@ int checkVelocityRendering(VelocityAreaEnv &env)
     const qreal imageScale = velocityImage.devicePixelRatio();
     env.imageScale = imageScale;
     const QColor expectedStem = songview::mixTowardOklab(env.live.trackColor, Qt::black, 1.0 / 3.0);
+    const int fixedSpan = velocityFixedSpan(env.view);
     const QRect velocityLabelBounds =
         toPixels(QRectF(double(layout::space(layout::Space::Two)), 0.0,
-                        double(env.area.plotOrigin() - 2 * layout::space(layout::Space::Two)),
+                        double(fixedSpan - 2 * layout::space(layout::Space::Two)),
                         velocityBandRect(env.view).height()),
                  env.imageScale);
     const quint64 axisBeforeHover = layerRevision(env, songview::TimelineQuickLayer::VelocityAxis);
@@ -692,18 +651,19 @@ int checkVelocityRendering(VelocityAreaEnv &env)
         paintNodeX - env.expected.nodePaintRadius, unselectedY - env.expected.nodePaintRadius,
         2.0 * env.expected.nodePaintRadius, 2.0 * env.expected.nodePaintRadius);
     check(selectedLevel && unselectedLevel && !velocityImage.isNull() &&
-              layerTouches(env.quickScene, songview::TimelineQuickLayer::VelocityStems,
-                           QRectF(paintNodeX, unselectedY - layout::singlePixel(),
-                                  env.notes[1].duration * env.live.timeZoom /
-                                      double(env.timeline->ticksPerBeat),
-                                  2.0 * layout::singlePixel()),
-                           expectedStem),
+              layerTouches(
+                  env.quickScene, songview::TimelineQuickLayer::VelocityStems,
+                  QRectF(paintNodeX, unselectedY - layout::singlePixel(),
+                         velocityXForTick(env, double(env.notes[1].tick + env.notes[1].duration)) -
+                             paintNodeX,
+                         2.0 * layout::singlePixel()),
+                  expectedStem),
           "unselected velocity duration stems must use the OKLab track shade");
     check(layerTouches(env.quickScene, songview::TimelineQuickLayer::VelocityNodes,
                        unselectedNodeProbe, Qt::black),
           "unselected velocity nodes must retain black outlines");
     check(layerTouches(env.quickScene, songview::TimelineQuickLayer::VelocityNodes,
-                       selectedNodeProbe, env.host->palette().highlight().color()),
+                       selectedNodeProbe, env.velocityInput->palette().highlight().color()),
           "selected velocity nodes must retain selection rings");
     check(layerTouches(env.quickScene, songview::TimelineQuickLayer::VelocityNodes,
                        unselectedNodeProbe, env.live.trackColor),
@@ -715,7 +675,7 @@ int checkVelocityRendering(VelocityAreaEnv &env)
     const QImage multiSelectionImage = captureVelocityBand(env.view);
     check(!multiSelectionImage.isNull() &&
               layerTouches(env.quickScene, songview::TimelineQuickLayer::VelocityNodes,
-                           unselectedNodeProbe, env.host->palette().mid().color()),
+                           unselectedNodeProbe, env.velocityInput->palette().mid().color()),
           "nodes outside a multi-node velocity selection must turn gray");
     check(!layerTouches(env.quickScene, songview::TimelineQuickLayer::VelocityNodes,
                         unselectedNodeProbe, Qt::black),
@@ -725,14 +685,14 @@ int checkVelocityRendering(VelocityAreaEnv &env)
     env.view.selectionModel().setNoteSelection({env.notes[0].noteId});
     ++env.live.editCursorTick;
     env.area.refreshLiveState(env.live);
-    const QRectF rulerAccentBounds(double(env.area.plotOrigin() - layout::singlePixel() -
-                                          3 * layout::space(layout::Space::Half) - 1),
-                                   selectedY - 2.0,
-                                   double(3 * layout::space(layout::Space::Half) + 2), 4.0);
+    const QRectF rulerAccentBounds(
+        double(fixedSpan - layout::singlePixel() - 3 * layout::space(layout::Space::Half) - 1),
+        selectedY - 2.0, double(3 * layout::space(layout::Space::Half) + 2), 4.0);
     const QImage rulerImage = captureVelocityBand(env.view);
     check(!rulerImage.isNull() &&
               layerTouches(env.quickScene, songview::TimelineQuickLayer::VelocityAxis,
-                           rulerAccentBounds, env.host->palette().highlight().color()),
+                           rulerAccentBounds,
+                           env.velocityGutterInput->palette().highlight().color()),
           "intrinsic ruler paint must preserve the emphasized accent tick");
     return failures;
 }
@@ -745,7 +705,8 @@ int checkEditCursorRepaint(VelocityAreaEnv &env)
     };
     const uint64_t viewCursorBefore = env.view.editCursorTick();
     const auto quickCursorAt = [&env](uint64_t tick) {
-        return env.view.timelinePlotOrigin() + qreal(env.view.camera().contentX(double(tick)));
+        return env.view.timelineSplitX() +
+               env.view.camera().displayX(double(tick), 0.0, env.velocityInput->devicePixelRatio());
     };
     env.live.editCursorTick = 12;
     env.view.setEditCursorTick(env.live.editCursorTick);
@@ -827,10 +788,7 @@ int checkRelativeDragDefersCommit(VelocityAreaRig &rig)
     const uint64_t revisionBeforeGesture = rig.env.document.revision();
     const std::optional<std::size_t> selectedPsgLevel =
         rig.env.map.levelOf(rig.env.notes[0].velocity);
-    const double nodeX = double(rig.env.area.plotOrigin()) +
-                         double(rig.env.notes[0].tick) * rig.env.live.timeZoom /
-                             double(rig.env.timeline->ticksPerBeat) -
-                         rig.env.live.horizontalScroll;
+    const double nodeX = velocityXForTick(rig.env, double(rig.env.notes[0].tick));
     rig.nodeX = nodeX;
     const double nodeY = selectedPsgLevel
                              ? rig.env.area.axis().levelToY(int(*selectedPsgLevel))
@@ -839,8 +797,8 @@ int checkRelativeDragDefersCommit(VelocityAreaRig &rig)
               nodeY != rig.env.area.axis().velocityToY(rig.env.notes[0].velocity),
           "compatible intrinsic notes must use their categorical graduation");
     const QPointF node(rig.nodeX, nodeY);
-    const double stemX = rig.nodeX + double(rig.env.notes[0].duration) * rig.env.live.timeZoom /
-                                         double(rig.env.timeline->ticksPerBeat) * 0.5;
+    const double stemX = velocityXForTick(rig.env, double(rig.env.notes[0].tick) +
+                                                       double(rig.env.notes[0].duration) * 0.5);
     const QPointF stem(stemX, nodeY);
     const QPointF firstDrag = stem + QPointF(0.0, double(velocityBandRect(rig.env.view).height()));
     const QPointF drag = stem + QPointF(0.0, -double(velocityBandRect(rig.env.view).height()));
@@ -875,7 +833,7 @@ int checkRelativeDragDefersCommit(VelocityAreaRig &rig)
                                 2.0 * rig.env.expected.nodePaintRadius);
     check(!activeDrag.isNull() &&
               layerTouches(rig.env.quickScene, songview::TimelineQuickLayer::VelocityNodes,
-                           activeDragRing, rig.env.host->palette().highlight().color()),
+                           activeDragRing, rig.env.velocityInput->palette().highlight().color()),
           "dragging a selected velocity node must retain its visible selection ring");
     velocityMove(rig.env, drag, Qt::LeftButton, Qt::NoModifier);
     const auto finalPreviewFirst = rig.env.view.previewVelocity(rig.env.notes[0].noteId);
@@ -938,7 +896,7 @@ int checkPointerUngrabCancelsProvisionalSelection(VelocityAreaRig &rig)
         rig.nodeX, secondLevel ? rig.env.area.axis().levelToY(int(*secondLevel))
                                : rig.env.area.axis().velocityToY(rig.env.notes[1].velocity));
     const int undoDepthBeforeUngrab = rig.env.document.undoStack()->count();
-    velocityPress(rig.env, secondNode, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    velocityPressWithImplicitGrab(rig.env, secondNode, Qt::LeftButton);
     velocityUngrab(rig.env);
     check(rig.env.view.selectionModel().noteSelection() ==
                   std::vector<NoteId>{rig.env.notes[0].noteId} &&
@@ -953,10 +911,9 @@ int checkDragBandOverlay(VelocityAreaRig &rig)
     const auto check = [&failures](bool condition, const char *message) {
         velocityFail(failures, condition, message);
     };
-    const QRectF selectorProbe(rig.env.area.plotOrigin() + layout::space(layout::Space::One),
-                               velocityBandRect(rig.env.view).height() / 3,
-                               2 * layout::space(layout::Space::Eight),
-                               layout::space(layout::Space::Eight));
+    const QRectF selectorProbe(
+        layout::space(layout::Space::One), velocityPlotRect(rig.env.view).height() / 3,
+        2 * layout::space(layout::Space::Eight), layout::space(layout::Space::Eight));
     const QPointF selectorStart = selectorProbe.topLeft();
     const QPointF selectorEnd = selectorProbe.bottomRight();
     const QPointF selectorContractedEnd =
@@ -1003,7 +960,7 @@ int checkDragBandOverlay(VelocityAreaRig &rig)
     ++rig.env.live.editCursorTick;
     rig.env.area.refreshLiveState(rig.env.live);
     QApplication::processEvents();
-    velocityPress(rig.env, selectorStart, Qt::RightButton, Qt::RightButton, Qt::NoModifier);
+    velocityPressWithImplicitGrab(rig.env, selectorStart, Qt::RightButton);
     velocityMove(rig.env, selectorEnd, Qt::RightButton, Qt::NoModifier);
     QApplication::processEvents();
     velocityUngrab(rig.env);
@@ -1035,10 +992,7 @@ int checkStackedNodeHitPriority(VelocityAreaRig &rig)
     QApplication::processEvents();
     rig.currentMap = VelocityMap::resolve(&rig.env.noise, currentFirst.key);
     const std::optional<std::size_t> currentLevel = rig.currentMap.levelOf(currentFirst.velocity);
-    const QPointF currentNode(double(rig.env.area.plotOrigin()) +
-                                  double(currentFirst.tick) * rig.env.live.timeZoom /
-                                      double(rig.env.timeline->ticksPerBeat) -
-                                  rig.env.live.horizontalScroll,
+    const QPointF currentNode(velocityXForTick(rig.env, double(currentFirst.tick)),
                               currentLevel
                                   ? rig.env.area.axis().levelToY(int(*currentLevel))
                                   : rig.env.area.axis().velocityToY(currentFirst.velocity));
@@ -1065,10 +1019,7 @@ int checkStackedNodeHitPriority(VelocityAreaRig &rig)
     if (overlapIt != overlapFixtureNotes.cend()) {
         const DocNote overlapNote = *overlapIt;
         const auto velocityNode = [&rig](const DocNote &note) {
-            const double x =
-                double(rig.env.area.plotOrigin()) +
-                double(note.tick) * rig.env.live.timeZoom / double(rig.env.timeline->ticksPerBeat) -
-                rig.env.live.horizontalScroll;
+            const double x = velocityXForTick(rig.env, double(note.tick));
             const std::optional<std::size_t> level = rig.currentMap.levelOf(note.velocity);
             const bool intrinsic = rig.env.area.axis().mode() == VelocityAxis::Mode::Intrinsic &&
                                    rig.env.area.axis().map().compatibleWith(rig.currentMap);
@@ -1114,7 +1065,7 @@ int checkStackedNodeHitPriority(VelocityAreaRig &rig)
                       std::vector<NoteId>{overlapNote.noteId} &&
                   !circleHeld.isNull() &&
                   velocityNodeHasColor(rig.env, circleNode,
-                                       rig.env.host->palette().highlight().color()),
+                                       rig.env.velocityInput->palette().highlight().color()),
               "a circle hit must outrank stem-only overlap and paint one selected ring");
         const QPointF movedRelease = velocityNode(currentFirst);
         velocityMove(rig.env, movedRelease, Qt::LeftButton, Qt::NoModifier);
@@ -1139,7 +1090,7 @@ int checkStackedNodeHitPriority(VelocityAreaRig &rig)
                     std::vector<NoteId>{rightTarget.noteId} &&
                 !rightNodeHeld.isNull() &&
                 velocityNodeHasColor(rig.env, rightTargetNode,
-                                     rig.env.host->palette().highlight().color()),
+                                     rig.env.velocityInput->palette().highlight().color()),
             "plain right press on an unselected velocity node must select and ring it immediately");
         velocityRelease(rig.env, rightTargetNode, Qt::RightButton, Qt::NoModifier);
         QApplication::processEvents();
@@ -1148,7 +1099,7 @@ int checkStackedNodeHitPriority(VelocityAreaRig &rig)
                       std::vector<NoteId>{rightTarget.noteId} &&
                   !rightNodeReleased.isNull() &&
                   velocityNodeHasColor(rig.env, rightTargetNode,
-                                       rig.env.host->palette().highlight().color()),
+                                       rig.env.velocityInput->palette().highlight().color()),
               "plain right release must retain its selected velocity node and ring");
         rig.env.view.selectionModel().setNoteSelection(
             {rig.env.notes[0].noteId, rightTarget.noteId});
@@ -1163,7 +1114,7 @@ int checkStackedNodeHitPriority(VelocityAreaRig &rig)
                       std::vector<NoteId>({rig.env.notes[0].noteId, rightTarget.noteId}) &&
                   !selectedRightHeld.isNull() &&
                   velocityNodeHasColor(rig.env, selectedRightNode,
-                                       rig.env.host->palette().highlight().color()),
+                                       rig.env.velocityInput->palette().highlight().color()),
               "plain right press on a selected velocity node must retain its visual group");
         velocityRelease(rig.env, selectedRightNode, Qt::RightButton, Qt::NoModifier);
         QApplication::processEvents();
@@ -1172,7 +1123,7 @@ int checkStackedNodeHitPriority(VelocityAreaRig &rig)
                       std::vector<NoteId>({rig.env.notes[0].noteId, rightTarget.noteId}) &&
                   !selectedRightReleased.isNull() &&
                   velocityNodeHasColor(rig.env, selectedRightNode,
-                                       rig.env.host->palette().highlight().color()),
+                                       rig.env.velocityInput->palette().highlight().color()),
               "plain right release on a selected velocity node must retain its group ring");
         rig.env.document.deleteNotes({overlapNote});
         rig.env.live.documentRevision = rig.env.document.revision();
@@ -1301,7 +1252,7 @@ int checkBlankAndGraduationClicks(VelocityAreaRig &rig)
     const auto check = [&failures](bool condition, const char *message) {
         velocityFail(failures, condition, message);
     };
-    const QPointF blankPoint(double(rig.env.area.plotOrigin() + rig.env.area.plotWidth() - 4),
+    const QPointF blankPoint(double(velocityPlotRect(rig.env.view).width() - 4),
                              rig.env.area.axis().levelToY(2));
     const uint64_t revisionBeforeBlankClick = rig.env.document.revision();
     const int undoDepthBeforeBlankClick = rig.env.document.undoStack()->count();
@@ -1319,8 +1270,8 @@ int checkBlankAndGraduationClicks(VelocityAreaRig &rig)
         {rig.env.notes[0].noteId, rig.env.notes[1].noteId});
     const VelocityAxisGraduation graduation = rig.env.area.axis().graduations()[2];
     const QPointF graduationPoint(graduation.x + graduation.width / 2.0, graduation.y);
-    velocityPress(rig.env, graduationPoint, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-    velocityRelease(rig.env, graduationPoint, Qt::LeftButton, Qt::NoModifier);
+    velocityGutterPress(rig.env, graduationPoint, Qt::NoModifier);
+    velocityGutterRelease(rig.env, graduationPoint, Qt::NoModifier);
     check(rig.env.view.selectionModel().noteSelection() ==
                   std::vector<NoteId>({rig.env.notes[0].noteId, rig.env.notes[1].noteId}) &&
               rig.env.document.findNote(rig.env.notes[0].noteId, &rig.graduatedFirst) &&
@@ -1350,9 +1301,9 @@ int checkRollVelocityDrag(VelocityAreaRig &rig)
     if (roll && velocityDragModifiers != Qt::NoModifier) {
         const int dragDelta = QApplication::startDragDistance() + 16;
         const QPointF rollNoteCenter(
-            double(rig.env.expected.pianoKeyboardWidth) +
-                double(rig.env.view.camera().contentX(double(rig.graduatedFirst.tick) +
-                                                      double(rig.graduatedFirst.duration) / 2.0)),
+            rig.env.view.camera().displayX(double(rig.graduatedFirst.tick) +
+                                               double(rig.graduatedFirst.duration) / 2.0,
+                                           0.0, roll->devicePixelRatio()),
             (127.5 - double(rig.graduatedFirst.key)) * rig.env.view.camera().keyHeight() -
                 rig.env.view.camera().scrollY());
         const QPointF rollDragPosition = rollNoteCenter - QPointF(0.0, double(dragDelta));
@@ -1419,8 +1370,7 @@ int checkRollVelocityDrag(VelocityAreaRig &rig)
         const std::optional<std::size_t> previewLevel = rig.env.map.levelOf(firstPreviewVelocity);
         const QImage rollDragPreview = captureVelocityBand(rig.env.view);
         const QPointF previewNodeCenter(
-            double(rig.env.area.plotOrigin()) +
-                double(rig.env.view.camera().contentX(double(dragBeforeFirst.tick))),
+            velocityXForTick(rig.env, double(dragBeforeFirst.tick)),
             previewLevel ? rig.env.area.axis().levelToY(int(*previewLevel))
                          : rig.env.area.axis().velocityToY(firstPreviewVelocity));
         check(rig.env.document.revision() == revisionBeforeRollDrag &&
@@ -1477,10 +1427,7 @@ int checkClickBelowSelectedNode(VelocityAreaRig &rig)
     ++rig.env.live.editCursorTick;
     rig.env.area.refreshLiveState(rig.env.live);
     const int axisVelocity = 40;
-    const QPointF axisPoint(double(rig.env.area.plotOrigin()) +
-                                double(axisSecondBefore.tick) * rig.env.live.timeZoom /
-                                    double(rig.env.timeline->ticksPerBeat) -
-                                rig.env.live.horizontalScroll,
+    const QPointF axisPoint(velocityXForTick(rig.env, double(axisSecondBefore.tick)),
                             rig.env.area.axis().velocityToY(axisVelocity));
     const uint64_t axisRevision = rig.env.document.revision();
     const int axisUndoDepth = rig.env.document.undoStack()->count();
@@ -1543,11 +1490,11 @@ int checkDetentUnlockGestures(VelocityAreaRig &rig)
         const VelocityAxisGraduation &vol1 = psgGraduations[0];
         const double labelLeft = double(layout::space(layout::Space::Two));
         const double labelRight =
-            std::max(labelLeft, double(rig.env.area.plotOrigin() - layout::singlePixel() -
+            std::max(labelLeft, double(velocityFixedSpan(rig.env.view) - layout::singlePixel() -
                                        layout::space(layout::Space::Two)));
         const double labelHeight = rig.env.area.axis().geometry().labelHeight;
         const QRectF vol1LabelBounds =
-            QFontMetricsF(typography::noteName(rig.env.host->font()))
+            QFontMetricsF(typography::noteName(rig.env.velocityGutterInput->font()))
                 .boundingRect(QRectF(labelLeft, vol1.y - labelHeight / 2.0, labelRight - labelLeft,
                                      labelHeight),
                               Qt::AlignRight | Qt::AlignVCenter, QStringLiteral("Vol 1"));
@@ -1565,7 +1512,7 @@ int checkDetentUnlockGestures(VelocityAreaRig &rig)
                   rig.env.chrome.detentVisible() && rig.env.chrome.detentEnabled() &&
                   rig.env.chrome.detentChecked() && !detentBounds.isEmpty() &&
                   detentBounds.left() == areaOrigin.x() &&
-                  detentBounds.right() < areaOrigin.x() + rig.env.area.plotOrigin(),
+                  detentBounds.right() < areaOrigin.x() + velocityFixedSpan(rig.env.view),
               "DrawerChrome detent must stay inside the PSG label gutter");
         check(detentBounds.bottom() == velocityBandRect(rig.env.view).bottom(),
               "DrawerChrome detent must stay flush with the PSG label gutter bottom");
@@ -1608,8 +1555,8 @@ int checkDetentUnlockGestures(VelocityAreaRig &rig)
             const qreal rulerScale = unlockedPsgRuler.devicePixelRatio();
             const int rulerHeight =
                 qFloor(double(detentBounds.top() - areaOrigin.y()) * rulerScale);
-            const QRect rulerBounds(0, 0, qCeil(double(rig.env.area.plotOrigin()) * rulerScale),
-                                    rulerHeight);
+            const QRect rulerBounds(
+                0, 0, qCeil(double(velocityFixedSpan(rig.env.view)) * rulerScale), rulerHeight);
             check(!directSoundRuler.isNull() && !unlockedPsgRuler.isNull() &&
                       layerRevision(rig.env, songview::TimelineQuickLayer::VelocityAxis) >
                           directAxisRevision &&
@@ -1618,11 +1565,10 @@ int checkDetentUnlockGestures(VelocityAreaRig &rig)
                   "disabled PSG detents must show the continuous sample-voice ruler");
             const int toggleUnlockedVelocity = 73;
             const QPointF toggleUnlockedRuler(
-                double(rig.env.area.plotOrigin()) - 1.0,
+                double(velocityFixedSpan(rig.env.view)) - 1.0,
                 rig.env.area.axis().velocityToY(toggleUnlockedVelocity));
-            velocityPress(rig.env, toggleUnlockedRuler, Qt::LeftButton, Qt::LeftButton,
-                          Qt::NoModifier);
-            velocityRelease(rig.env, toggleUnlockedRuler, Qt::LeftButton, Qt::NoModifier);
+            velocityGutterPress(rig.env, toggleUnlockedRuler, Qt::NoModifier);
+            velocityGutterRelease(rig.env, toggleUnlockedRuler, Qt::NoModifier);
             DocNote toggleUnlockedFirst;
             DocNote toggleUnlockedThird;
             check(!rig.env.chrome.detentChecked() &&
@@ -1682,11 +1628,10 @@ int checkDetentUnlockGestures(VelocityAreaRig &rig)
         rig.env.live.documentRevision = rig.env.document.revision();
         rig.env.area.refreshLiveState(rig.env.live);
         const int unlockedRulerVelocity = 73;
-        const QPointF unlockedRuler(double(rig.env.area.plotOrigin()) - 1.0,
+        const QPointF unlockedRuler(double(velocityFixedSpan(rig.env.view)) - 1.0,
                                     rig.env.area.axis().velocityToY(unlockedRulerVelocity));
-        velocityPress(rig.env, unlockedRuler, Qt::LeftButton, Qt::LeftButton,
-                      detentUnlockModifiers);
-        velocityRelease(rig.env, unlockedRuler, Qt::LeftButton, Qt::NoModifier);
+        velocityGutterPress(rig.env, unlockedRuler, detentUnlockModifiers);
+        velocityGutterRelease(rig.env, unlockedRuler, Qt::NoModifier);
         DocNote rulerUnlockedFirst;
         DocNote rulerUnlockedThird;
         check(rig.env.document.findNote(rig.env.notes[0].noteId, &rulerUnlockedFirst) &&
@@ -1909,9 +1854,17 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     QApplication::processEvents();
     auto *fixtureDrawer = fixtureView.editorDrawer();
     auto *fixtureArea = fixtureDrawer ? fixtureDrawer->velocityArea() : nullptr;
-    if (!fixtureArea) {
+    auto *fixtureQuickView =
+        fixtureView.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    auto *fixtureQuickRoot = fixtureQuickView ? fixtureQuickView->rootObject() : nullptr;
+    auto *fixtureInput = fixtureQuickRoot
+                             ? fixtureQuickRoot->findChild<songview::TimelineInputItem *>(
+                                   QStringLiteral("timelineVelocityInput"))
+                             : nullptr;
+    if (!fixtureArea || !fixtureInput) {
         std::fprintf(stderr,
-                     "velocity-page: FAIL %s: fixture SongView did not expose VelocityArea\n",
+                     "velocity-page: FAIL %s: fixture SongView did not expose its physical "
+                     "velocity input\n",
                      qUtf8Printable(songLabel));
         return 1;
     }
@@ -1919,8 +1872,6 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     fixtureView.setDrawerSectionHeight(EditorDrawerPage::Velocity,
                                        expected.densityThresholdD4 +
                                            layout::space(layout::Space::Six));
-    VelocityInputHost fixtureHost{fixtureView, *fixtureArea};
-    fixtureHost.attach();
     fixtureArea->songChanged();
     DrawerPageLiveState fixtureLive;
     fixtureLive.documentRevision = fixtureDocument.revision();
@@ -1930,18 +1881,17 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     fixtureLive.horizontalScroll = fixtureView.camera().scrollX();
     fixtureArea->refreshLiveState(fixtureLive);
     QApplication::processEvents();
-    const qreal zoomAnchorContentX = std::max(1, fixtureArea->plotWidth() / 2);
-    const QPointF zoomAnchor(fixtureArea->plotOrigin() + qRound(zoomAnchorContentX),
-                             velocityBandRect(fixtureView).height() / 2.0);
-    const double tickBeforeZoom = fixtureView.camera().tickAtContentX(zoomAnchorContentX);
+    const qreal zoomAnchorContentX = std::max<qreal>(1.0, fixtureInput->bounds().width() / 2.0);
+    const QPointF zoomAnchor(qRound(zoomAnchorContentX),
+                             velocityPlotRect(fixtureView).height() / 2.0);
+    const double tickBeforeZoom = fixtureView.camera().tickAtContentX(zoomAnchor.x());
     const double zoomBefore = fixtureView.camera().pxPerBeat();
-    fixtureArea->wheel({zoomAnchor, fixtureHost.mapToGlobal(zoomAnchor), QPoint(), QPoint(0, 120),
-                        Qt::NoModifier, Qt::NoScrollPhase, false});
+    checks::events::sendWheel(*fixtureInput, zoomAnchor, QPoint(), QPoint(0, 120), Qt::NoButton,
+                              Qt::NoModifier, Qt::NoScrollPhase, false);
     QApplication::processEvents();
     check(fixtureView.camera().pxPerBeat() > zoomBefore,
           "plain wheel must change velocity-lane time zoom");
-    check(std::abs(fixtureView.camera().tickAtContentX(zoomAnchorContentX) - tickBeforeZoom) <
-              0.001,
+    check(std::abs(fixtureView.camera().tickAtContentX(zoomAnchor.x()) - tickBeforeZoom) < 0.001,
           "velocity-lane time zoom must preserve the tick under the cursor");
     int fixtureTrack = -1;
     DocNote fixtureNote;
@@ -1960,7 +1910,6 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         std::fprintf(stderr,
                      "velocity-page: FAIL %s: fixture song has no real note on a usable track\n",
                      qUtf8Printable(songLabel));
-        fixtureHost.detach();
         fixtureView.hide();
         return 1;
     }
@@ -1983,7 +1932,6 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
               std::abs(fixtureMarkers[0].y -
                        fixtureArea->axis().velocityToY(fixtureNote.velocity)) < 0.001,
           "requested fixture note, velocity, and axis data must reach its concrete VelocityArea");
-    fixtureHost.detach();
     fixtureView.hide();
     QTemporaryDir temporary;
     QString error;
@@ -2046,6 +1994,12 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
         view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
     auto *quickScene = view.findChild<songview::TimelineQuickScene *>();
     auto *quickRoot = quickView ? quickView->rootObject() : nullptr;
+    auto *velocityInput = quickRoot ? quickRoot->findChild<songview::TimelineInputItem *>(
+                                          QStringLiteral("timelineVelocityInput"))
+                                    : nullptr;
+    auto *velocityGutterInput = quickRoot ? quickRoot->findChild<songview::TimelineInputItem *>(
+                                                QStringLiteral("timelineVelocityGutterInput"))
+                                          : nullptr;
     auto *barInput =
         quickRoot
             ? quickRoot->findChild<songview::TimelineInputItem *>(QStringLiteral("drawerBarInput"))
@@ -2053,17 +2007,25 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     auto *detentInput = quickRoot ? quickRoot->findChild<songview::TimelineInputItem *>(
                                         QStringLiteral("drawerDetentInput"))
                                   : nullptr;
-    check(quickView && quickScene && quickRoot && barInput && detentInput,
-          "concrete SongView should expose its retained Quick velocity and drawer chrome inputs");
-    if (!quickView || !quickScene || !quickRoot || !barInput || !detentInput)
+    check(quickView && quickScene && quickRoot && velocityInput && velocityGutterInput &&
+              barInput && detentInput,
+          "concrete SongView should expose physical velocity plot/gutter and drawer inputs");
+    if (!quickView || !quickScene || !quickRoot || !velocityInput || !velocityGutterInput ||
+        !barInput || !detentInput)
         return 1;
+    check(
+        velocityInput->bounds() == QRectF(QPointF{}, QSizeF(velocityPlotRect(view).width(),
+                                                            velocityPlotRect(view).height())) &&
+            velocityGutterInput->bounds() ==
+                QRectF(QPointF{}, QSizeF(velocityFixedSpan(view), velocityBandRect(view).height())),
+        "velocity physical plot/gutter input bounds must start at local x=0");
     auto &area = *areaPtr;
-    VelocityInputHost host{view, area};
-    host.attach();
     DrawerPageLiveState live;
-    VelocityAreaEnv env{document, timeline,    voicegroup, directSound, square, wave,
-                        noise,    notes,       view,       area,        &host,  chrome,
-                        barInput, detentInput, quickScene, quickView,   live,   expected};
+    VelocityAreaEnv env{document,  timeline, voicegroup,    directSound,
+                        square,    wave,     noise,         notes,
+                        view,      area,     velocityInput, velocityGutterInput,
+                        chrome,    barInput, detentInput,   quickScene,
+                        quickView, live,     expected};
     VelocityAreaRig rig{env, VelocityMap::resolve(&noise, notes[0].key)};
     view.setDrawerSectionHeight(EditorDrawerPage::Velocity,
                                 expected.densityThresholdD4 + layout::space(layout::Space::Six));
@@ -2122,8 +2084,9 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
               document.findNote(notes[2].noteId, &thirdBeforeKeyboard),
           "focused velocity keyboard fixture must resolve its selected notes");
     const uint64_t revisionBeforeKeyboard = document.revision();
-    host.requestFocus(Qt::OtherFocusReason);
-    area.keyPress({Qt::Key_Up, Qt::ShiftModifier, QString(), false});
+    velocityInput->requestFocus(Qt::OtherFocusReason);
+    checks::events::sendKey(*velocityInput, QEvent::KeyPress, Qt::Key_Up, Qt::ShiftModifier,
+                            QString(), false, 1);
     DocNote firstAfterKeyboard;
     DocNote thirdAfterKeyboard;
     check(document.revision() == revisionBeforeKeyboard &&
@@ -2136,6 +2099,5 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     if (!screenshotPath.isEmpty())
         check(captureVelocityBand(view).save(screenshotPath),
               "optional velocity screenshot should save");
-    host.detach();
     return failures == 0 ? 0 : 1;
 }

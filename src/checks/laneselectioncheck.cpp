@@ -63,8 +63,8 @@ struct ProjectionRig {
         m_timeline = MidiTimeline::build(SmfFile{}, 48000.0);
         m_view.setSong(m_timeline.get(), nullptr);
         m_view.setEditorTimeZoom(96.0);
-        m_projection = std::make_unique<AutomationProjection>(
-            AutomationGeometry::resolve(m_view.timelineSplitX()), &m_view);
+        m_projection =
+            std::make_unique<AutomationProjection>(AutomationGeometry::resolve(), &m_view);
     }
 
     AutomationProjection &projection() noexcept { return *m_projection; }

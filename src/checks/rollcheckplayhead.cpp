@@ -14,6 +14,7 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QRectF>
+#include <QScrollBar>
 
 #include <QScopeGuard>
 #include <QVariant>
@@ -86,6 +87,31 @@ qreal playheadCenterAt(const QImage &image, int logicalY, const QColor &color)
     }
     return first < 0 ? -1.0 : qreal(first + last) / 2.0;
 }
+
+QString playheadRectSummary(const QRect &rect)
+{
+    return QStringLiteral("(%1,%2 %3x%4)")
+        .arg(rect.x())
+        .arg(rect.y())
+        .arg(rect.width())
+        .arg(rect.height());
+}
+
+QRect solidPlayheadBounds(const QImage &image, const QRect &logicalRect, const QColor &color)
+{
+    const QRect imageRect = QRectF(QPointF{}, image.deviceIndependentSize()).toAlignedRect();
+    const QRect probeRect = logicalRect.intersected(imageRect);
+    QRect bounds;
+    for (int y = probeRect.top(); y <= probeRect.bottom(); ++y) {
+        for (int x = probeRect.left(); x <= probeRect.right(); ++x) {
+            if (!checks::support::hasSolidPlayheadPixel(image, QRect(x, y, 1, 1), color))
+                continue;
+            bounds = bounds.isEmpty() ? QRect(x, y, 1, 1) : bounds.united(QRect(x, y, 1, 1));
+        }
+    }
+    return bounds;
+}
+
 #endif
 
 void checkAutomationHover(SongView &view, QStringList &failures)
@@ -190,7 +216,7 @@ void checkAutomationHover(SongView &view, QStringList &failures)
 
     const int scroll = page->verticalScroll();
     const QRect liveCcBody = canvas->laneBody(fixtureHandle);
-    const int plotLeft = (std::max)(liveCcBody.left(), canvas->plotOrigin() + 1);
+    const int plotLeft = liveCcBody.left() + 1;
     const int plotRight =
         (std::min)({liveCcBody.right(), automationBandSize.width() - 1, inputWidth - 1});
     if (liveCcBody.isEmpty() || plotLeft > plotRight) {
@@ -438,7 +464,7 @@ void checkPositionOnlyQuickFrames(const MidiTimeline &timeline, QStringList &fai
 
     const uint64_t tick =
         uint64_t(std::max(0.0, probe.camera().tickAtContentX(std::max<qreal>(
-                                   1.0, probe.width() / 2.0 - probe.timelinePlotOrigin()))));
+                                   1.0, probe.width() / 2.0 - probe.timelineSplitX()))));
     probe.setPlayheadSample(timeline.sampleForTick(tick), false);
     for (int settle = 0; settle < 4; ++settle)
         checks::support::pumpQuick();
@@ -535,6 +561,14 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         !automationPage || !velocity || !voiceChanges) {
         failures.append("SongView did not expose its Quick and playhead surfaces");
     } else {
+        QQuickItem *const rollBandItem =
+            rollInput && rollInput->parentItem() ? rollInput->parentItem()->parentItem() : nullptr;
+        const auto quickItemRect = [root](const QQuickItem *item) {
+            return item ? QRectF(item->mapToItem(root, QPointF()), item->size()) : QRectF{};
+        };
+        const auto canonicalQuickRect = [quick](const QRect &songViewRect) {
+            return QRectF(songViewRect.translated(-quick->geometry().topLeft()));
+        };
 #ifdef __APPLE__
         if (quick->playheadVisible())
             failures.append("default chrome published a Quick playhead on the macOS native path");
@@ -556,7 +590,7 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
 
         const uint64_t tick =
             uint64_t(std::max(0.0, view.camera().tickAtContentX(std::max<qreal>(
-                                       1.0, view.width() / 2.0 - view.timelinePlotOrigin()))));
+                                       1.0, view.width() / 2.0 - view.timelineSplitX()))));
         const uint64_t sample = timeline.sampleForTick(tick);
         view.setEditCursorTick(tick);
         view.setPlayheadSample(sample, false);
@@ -572,9 +606,8 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         const auto expectedSongViewX = [&view, &bandLayout](double chromeTick) {
             const std::optional<songview::TimelineBandGeometry> &rulerGeometry =
                 bandLayout.geometry(songview::TimelineBand::Ruler);
-            return (rulerGeometry ? rulerGeometry->rect.x() + rulerGeometry->timelineOrigin
-                                  : qRound(view.timelinePlotOrigin())) +
-                   view.camera().contentX(chromeTick);
+            const int plotX = rulerGeometry ? rulerGeometry->plotRect.x() : view.timelineSplitX();
+            return plotX + view.camera().contentX(chromeTick);
         };
         const auto quickContentX = [quick, &view](qreal songViewX) {
             return songViewX - quick->mapTo(&view, QPoint{}).x();
@@ -597,7 +630,7 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         const qreal songStartSongViewX = expectedSongViewX(0.0);
         const qreal preSongSongViewX = songStartSongViewX - layout::singlePixel();
         view.clearTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation);
-        quick->synchronizeGuides(view.timelinePlotOrigin(), preSongSongViewX);
+        quick->synchronizeGuides(view.timelineSplitX(), preSongSongViewX);
         quick->publishHover(songview::TimelineQuickHoverOwner::Automation, 0, preSongSongViewX);
         checks::support::pumpQuick();
         if (quick->hoverVisible() || quick->editVisible() ||
@@ -605,7 +638,7 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
             failures.append("Quick guides remained visible before song tick 0");
         }
         view.clearTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation);
-        quick->synchronizeGuides(view.timelinePlotOrigin(), songStartSongViewX);
+        quick->synchronizeGuides(view.timelineSplitX(), songStartSongViewX);
         checks::support::pumpQuick();
         if (!quick->editVisible() ||
             std::abs(quick->editRootContentX() - quickContentX(songStartSongViewX)) > 0.2 ||
@@ -619,8 +652,7 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
             !chromeVisibilityMatches(true, false)) {
             failures.append("Quick hover guide did not render at song tick 0");
         }
-        quick->synchronizeGuides(view.timelinePlotOrigin(),
-                                 expectedSongViewX(view.editCursorTick()));
+        quick->synchronizeGuides(view.timelineSplitX(), expectedSongViewX(view.editCursorTick()));
         quick->publishHover(songview::TimelineQuickHoverOwner::Automation, tick,
                             expectedSongViewX(tick));
         checks::support::pumpQuick();
@@ -674,10 +706,13 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         }
         const std::optional<songview::TimelineBandGeometry> &resizedRoll =
             bandLayout.geometry(songview::TimelineBand::Roll);
-        if (!resizedRoll || !rollInput ||
-            QRectF(rollInput->mapToItem(root, QPointF()), rollInput->size()) !=
-                QRectF(resizedRoll->rect.translated(-quick->geometry().topLeft()))) {
+        if (!resizedRoll || !rollBandItem ||
+            quickItemRect(rollBandItem) != canonicalQuickRect(resizedRoll->rect)) {
             failures.append("canonical roll rectangle went stale after the canonical resize");
+        }
+        if (!resizedRoll || !rollInput ||
+            quickItemRect(rollInput) != canonicalQuickRect(resizedRoll->plotRect)) {
+            failures.append("roll input plot rectangle went stale after the canonical resize");
         }
         const qreal expectedEditRootX = quickContentX(expectedEdit);
         if (std::abs(quick->editRootContentX() - expectedEditRootX) > 0.2) {
@@ -756,28 +791,34 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         }
 
         const bool eventListWasVisible = view.eventListVisible();
-        const auto canonicalRollMatchesRoll = [&] {
+        const auto canonicalRollBandMatchesQuick = [&] {
+            const std::optional<songview::TimelineBandGeometry> &geometry =
+                bandLayout.geometry(songview::TimelineBand::Roll);
+            return geometry && rollBandItem && rollBandItem->isVisible() &&
+                   quickItemRect(rollBandItem) == canonicalQuickRect(geometry->rect);
+        };
+        const auto canonicalRollPlotMatchesInput = [&] {
             const std::optional<songview::TimelineBandGeometry> &geometry =
                 bandLayout.geometry(songview::TimelineBand::Roll);
             return geometry && rollInput && rollInput->isVisible() &&
-                   QRectF(rollInput->mapToItem(root, QPointF()), rollInput->size()) ==
-                       QRectF(geometry->rect.translated(-quick->geometry().topLeft()));
+                   quickItemRect(rollInput) == canonicalQuickRect(geometry->plotRect);
         };
-        if (!canonicalRollMatchesRoll())
+        if (!canonicalRollBandMatchesQuick())
+            failures.append("roll view canonical full-band entry diverged from the Quick band");
+        if (!canonicalRollPlotMatchesInput())
             failures.append("roll view canonical entry diverged from the piano-roll input item");
         const QColor playheadColor = themes::color(themes::Role::song_view_playhead);
 #ifdef __APPLE__
         const std::optional<songview::TimelineBandGeometry> &rulerBand =
             bandLayout.geometry(songview::TimelineBand::Ruler);
-        const QRect rollRect = bandLayout.geometry(songview::TimelineBand::Roll)
-                                   .value_or(songview::TimelineBandGeometry{})
-                                   .rect;
-        const QRect rulerRect = rulerBand.value_or(songview::TimelineBandGeometry{}).rect;
+        const QRect rollPlotRect = bandLayout.geometry(songview::TimelineBand::Roll)
+                                       .value_or(songview::TimelineBandGeometry{})
+                                       .plotRect.translated(-view.timelineSplitX(), 0);
+        const QRect rulerPlotRect = rulerBand.value_or(songview::TimelineBandGeometry{})
+                                        .plotRect.translated(-view.timelineSplitX(), 0);
         {
-            const qreal nativeX = (rulerBand ? rulerBand->rect.x() + rulerBand->timelineOrigin
-                                             : qRound(view.timelinePlotOrigin())) +
-                                  view.camera().contentX(timeline.tickForSample(sample));
-            qreal renderedNativeX = nativeX;
+            const qreal localX = view.camera().contentX(timeline.tickForSample(sample));
+            qreal renderedLocalX = localX;
             const QImage paused = renderMacPlayheadOverlay(view, failures).toImage();
             view.setPlayheadSample(sample, true);
             checks::support::pumpQuick();
@@ -785,38 +826,39 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
             if (paused.isNull() || playing.isNull()) {
                 failures.append("playhead overlay capture was empty");
             } else {
-                const qreal detectedNativeX =
-                    playheadCenterAt(paused, rollRect.center().y(), playheadColor);
-                if (detectedNativeX < 0.0) {
+                const qreal detectedLocalX =
+                    playheadCenterAt(paused, rollPlotRect.center().y(), playheadColor);
+                if (detectedLocalX < 0.0) {
                     failures.append("paused playhead was not clipped into the piano roll");
                 } else {
-                    renderedNativeX = detectedNativeX;
-                    if (std::abs(renderedNativeX - nativeX) > layout::singlePixel() + 0.75)
+                    renderedLocalX = detectedLocalX;
+                    if (std::abs(renderedLocalX - localX) > layout::singlePixel() + 0.75)
                         failures.append("playhead did not align with the timeline position");
                 }
                 if (!checks::support::hasPlayheadPixel(
                         paused,
-                        QRect(qRound(renderedNativeX) - songview::playheadGlowRadius(),
-                              rulerRect.top(), 2 * songview::playheadGlowRadius() + 1,
-                              std::max(1, rulerRect.height() - layout::singlePixel())),
+                        QRect(qRound(renderedLocalX) - songview::playheadGlowRadius(),
+                              rulerPlotRect.top(), 2 * songview::playheadGlowRadius() + 1,
+                              std::max(1, rulerPlotRect.height() - layout::singlePixel())),
                         playheadColor)) {
-                    failures.append("playhead body was not clipped into the ruler");
+                    failures.append("playhead body was not clipped into the ruler plot");
                 }
                 if (paused == playing)
                     failures.append("paused and playing playhead captures rendered identically");
 
-                const int triangleTop =
-                    rulerRect.bottom() - songview::playheadTriangleHeight() + layout::singlePixel();
+                const int triangleTop = rulerPlotRect.bottom() -
+                                        songview::playheadTriangleHeight() + layout::singlePixel();
                 const int topWidth = checks::support::playheadWidthAt(
-                    paused, triangleTop + layout::singlePixel(), renderedNativeX, playheadColor);
+                    paused, triangleTop + layout::singlePixel(), renderedLocalX, playheadColor);
                 const int bottomWidth = checks::support::playheadWidthAt(
                     paused,
                     triangleTop + songview::playheadTriangleHeight() - layout::singlePixel(),
-                    renderedNativeX, playheadColor);
-                if (topWidth <= bottomWidth || triangleTop < rulerRect.top() ||
-                    triangleTop + songview::playheadTriangleHeight() > rulerRect.bottom() + 1)
+                    renderedLocalX, playheadColor);
+                if (topWidth <= bottomWidth || triangleTop < rulerPlotRect.top() ||
+                    triangleTop + songview::playheadTriangleHeight() > rulerPlotRect.bottom() + 1) {
                     failures.append(
                         "native ruler triangle was not down and wholly inside the ruler");
+                }
             }
 
             overlay->setPlayhead(0.0, false, false);
@@ -828,12 +870,8 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
             checks::support::pumpQuick();
         }
 #endif
-        const auto currentNativeX = [&] {
-            const std::optional<songview::TimelineBandGeometry> &rulerGeometry =
-                bandLayout.geometry(songview::TimelineBand::Ruler);
-            return (rulerGeometry ? rulerGeometry->rect.x() + rulerGeometry->timelineOrigin
-                                  : qRound(view.timelinePlotOrigin())) +
-                   view.camera().contentX(timeline.tickForSample(sample));
+        const auto currentLocalX = [&] {
+            return view.camera().contentX(timeline.tickForSample(sample));
         };
 
         const EditorViewState savedEditorState = view.editorViewState();
@@ -841,53 +879,57 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         checks::support::pumpQuick();
         if (bandLayout.geometry(songview::TimelineBand::Roll))
             failures.append("event-list view retained a canonical roll rectangle");
-        const qreal eventListNativeX = currentNativeX();
+        const qreal eventListLocalX = currentLocalX();
 #ifdef __APPLE__
         {
             const QImage eventListImage = renderMacPlayheadOverlay(view, failures).toImage();
             if (checks::support::hasPlayheadPixel(
                     eventListImage,
-                    QRect(qRound(eventListNativeX) - songview::playheadGlowRadius(),
-                          rollRect.center().y(), 2 * songview::playheadGlowRadius() + 1,
+                    QRect(qRound(eventListLocalX) - songview::playheadGlowRadius(),
+                          rollPlotRect.center().y(), 2 * songview::playheadGlowRadius() + 1,
                           layout::singlePixel()),
                     playheadColor)) {
                 failures.append("hidden piano-roll playhead remained visible over the event list");
             }
             const int triangleTop =
-                rulerRect.bottom() - songview::playheadTriangleHeight() + layout::singlePixel();
+                rulerPlotRect.bottom() - songview::playheadTriangleHeight() + layout::singlePixel();
             const int topWidth = checks::support::playheadWidthAt(
-                eventListImage, triangleTop + layout::singlePixel(), eventListNativeX,
+                eventListImage, triangleTop + layout::singlePixel(), eventListLocalX,
                 playheadColor);
             const int bottomWidth = checks::support::playheadWidthAt(
                 eventListImage,
                 triangleTop + songview::playheadTriangleHeight() - layout::singlePixel(),
-                eventListNativeX, playheadColor);
+                eventListLocalX, playheadColor);
             if (bottomWidth <= topWidth)
                 failures.append("native ruler triangle did not flip up for the event list");
         }
 #endif
         view.setEventListVisible(false);
         checks::support::pumpQuick();
-        if (!canonicalRollMatchesRoll())
+        if (!canonicalRollBandMatchesQuick())
+            failures.append(
+                "restored roll view did not republish its canonical full-band rectangle");
+        if (!canonicalRollPlotMatchesInput())
             failures.append("restored roll view did not republish its canonical rectangle");
 
-        // Quick-rendered bands use canonical SongView-local rectangles for
-        // their playhead clip checks.
-        const auto checkVisibleBandRect = [&](const QRect &bandRect, const char *name) {
+        // Native overlay captures are timeline-column-local. Published plot
+        // rectangles remain SongView-local and are translated exactly once.
+        const auto checkVisiblePlotRect = [&](const QRect &songViewPlotRect, const char *name) {
 #ifdef __APPLE__
             const QImage image = renderMacPlayheadOverlay(view, failures).toImage();
-            const qreal bandNativeX = currentNativeX();
-            if (!bandRect.isValid() ||
+            const qreal localX = currentLocalX();
+            const QRect localPlotRect = songViewPlotRect.translated(-view.timelineSplitX(), 0);
+            if (!localPlotRect.isValid() ||
                 !checks::support::hasPlayheadPixel(
                     image,
-                    QRect(qRound(bandNativeX) - layout::singlePixel(), bandRect.center().y(),
+                    QRect(qRound(localX) - layout::singlePixel(), localPlotRect.center().y(),
                           2 * layout::singlePixel() + 1, layout::singlePixel()),
                     playheadColor)) {
-                failures.append(QStringLiteral("playhead was not clipped into the visible %1 band")
+                failures.append(QStringLiteral("playhead was not clipped into the visible %1 plot")
                                     .arg(QString::fromLatin1(name)));
             }
 #else
-            (void)bandRect;
+            (void)songViewPlotRect;
             (void)name;
 #endif
         };
@@ -895,28 +937,316 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
         view.setDrawerActivePage(EditorDrawerPage::Velocity);
         checks::support::pumpQuick();
-        checkVisibleBandRect(bandLayout.geometry(songview::TimelineBand::Velocity)
+        checkVisiblePlotRect(bandLayout.geometry(songview::TimelineBand::Velocity)
                                  .value_or(songview::TimelineBandGeometry{})
-                                 .rect,
+                                 .plotRect,
                              "velocity");
         view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
         view.setDrawerActivePage(EditorDrawerPage::VoiceChanges);
         checks::support::pumpQuick();
-        checkVisibleBandRect(bandLayout.geometry(songview::TimelineBand::VoiceChanges)
+        checkVisiblePlotRect(bandLayout.geometry(songview::TimelineBand::VoiceChanges)
                                  .value_or(songview::TimelineBandGeometry{})
-                                 .rect,
+                                 .plotRect,
                              "voice-change");
         view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
         view.setDrawerActivePage(EditorDrawerPage::Automations);
         checks::support::pumpQuick();
-        checkVisibleBandRect(bandLayout.geometry(songview::TimelineBand::Automation)
+        checkVisiblePlotRect(bandLayout.geometry(songview::TimelineBand::Automation)
                                  .value_or(songview::TimelineBandGeometry{})
-                                 .rect,
+                                 .plotRect,
                              "automation");
-        checkVisibleBandRect(bandLayout.geometry(songview::TimelineBand::OtherEvents)
+        checkVisiblePlotRect(bandLayout.geometry(songview::TimelineBand::OtherEvents)
                                  .value_or(songview::TimelineBandGeometry{})
-                                 .rect,
+                                 .plotRect,
                              "other-events");
+#ifdef __APPLE__
+        struct NamedBand {
+            songview::TimelineBand band;
+            const char *name;
+        };
+        const std::array<NamedBand, 6> bodyBands{{
+            {songview::TimelineBand::Ruler, "ruler"},
+            {songview::TimelineBand::Roll, "piano roll"},
+            {songview::TimelineBand::OtherEvents, "other events"},
+            {songview::TimelineBand::Automation, "automation"},
+            {songview::TimelineBand::Velocity, "velocity"},
+            {songview::TimelineBand::VoiceChanges, "voice changes"},
+        }};
+        struct CapturedPresentation {
+            QImage image;
+            qreal localX = 0.0;
+        };
+        const std::array<const char *, 2> presentationNames{{"paused", "playing"}};
+        const auto capturePresentations = [&](uint64_t playheadTick) {
+            const uint64_t playheadSample = timeline.sampleForTick(playheadTick);
+            const auto capture = [&](bool playing) {
+                view.setPlayheadSample(playheadSample, playing);
+                checks::support::pumpQuick();
+                const qreal localX = view.camera().contentX(view.playheadTick());
+                return CapturedPresentation{renderMacPlayheadOverlay(view, failures).toImage(),
+                                            localX};
+            };
+            return std::array<CapturedPresentation, 2>{{capture(false), capture(true)}};
+        };
+        const auto assertBodyAndChromeClipping = [&](const QImage &image, const char *presentation,
+                                                     qreal expectedCoreX) {
+            if (image.isNull()) {
+                failures.append(QStringLiteral("%1 shared playhead capture was empty")
+                                    .arg(QString::fromLatin1(presentation)));
+                return;
+            }
+
+            const int split = view.timelineSplitX();
+            const std::optional<songview::TimelineBandGeometry> &liveRuler =
+                bandLayout.geometry(songview::TimelineBand::Ruler);
+            const QRect localRulerPlot =
+                liveRuler ? liveRuler->plotRect.translated(-split, 0) : QRect{};
+            const int triangleTop = liveRuler ? localRulerPlot.bottom() -
+                                                    songview::playheadTriangleHeight() +
+                                                    layout::singlePixel()
+                                              : 0;
+            for (const NamedBand &named : bodyBands) {
+                const std::optional<songview::TimelineBandGeometry> &geometry =
+                    bandLayout.geometry(named.band);
+                if (!geometry)
+                    continue;
+
+                const QRect localBandRect = geometry->rect.translated(-split, 0);
+                const QRect localPlotRect = geometry->plotRect.translated(-split, 0);
+                QRect fixedSide = localBandRect.intersected(
+                    QRect(localBandRect.left(), localBandRect.top(),
+                          std::max(0, localPlotRect.left() - localBandRect.left()),
+                          localBandRect.height()));
+                if (named.band == songview::TimelineBand::Ruler)
+                    fixedSide.setBottom(
+                        std::min(fixedSide.bottom(), triangleTop - layout::singlePixel()));
+                if (checks::support::hasSolidPlayheadPixel(image, fixedSide, playheadColor)) {
+                    failures.append(
+                        QStringLiteral("%1 playhead core entered fixed chrome in the %2 band")
+                            .arg(QString::fromLatin1(presentation),
+                                 QString::fromLatin1(named.name)));
+                }
+
+                const int probeY =
+                    named.band == songview::TimelineBand::Ruler
+                        ? (localPlotRect.top() + triangleTop - layout::singlePixel()) / 2
+                        : localPlotRect.center().y();
+                const QPoint expectedPoint(qRound(expectedCoreX), probeY);
+                if (localPlotRect.contains(expectedPoint) &&
+                    !checks::support::hasSolidPlayheadPixel(
+                        image,
+                        QRect(qFloor(expectedCoreX) - layout::singlePixel(), probeY,
+                              2 * layout::singlePixel() + 1, layout::singlePixel()),
+                        playheadColor)) {
+                    failures.append(
+                        QStringLiteral("%1 playhead core was absent from the visible %2 plot")
+                            .arg(QString::fromLatin1(presentation),
+                                 QString::fromLatin1(named.name)));
+                }
+            }
+
+            if (const std::optional<songview::TimelineBandGeometry> &headers =
+                    bandLayout.geometry(songview::TimelineBand::TrackHeaders);
+                headers &&
+                checks::support::hasSolidPlayheadPixel(
+                    image, headers->rect.translated(-view.timelineSplitX(), 0), playheadColor)) {
+                failures.append(QStringLiteral("%1 playhead body entered the track headers")
+                                    .arg(QString::fromLatin1(presentation)));
+            }
+
+            for (QScrollBar *scrollbar : view.findChildren<QScrollBar *>()) {
+                if (!scrollbar->isVisible())
+                    continue;
+                const QRect scrollbarRect(scrollbar->mapTo(&view, QPoint{}), scrollbar->size());
+                const QRect localScrollbarRect =
+                    scrollbarRect.translated(-view.timelineSplitX(), 0);
+                if (checks::support::hasSolidPlayheadPixel(image, localScrollbarRect,
+                                                           playheadColor)) {
+                    failures.append(QStringLiteral("%1 playhead body entered the %2 scrollbar")
+                                        .arg(QString::fromLatin1(presentation),
+                                             scrollbar->orientation() == Qt::Vertical
+                                                 ? QStringLiteral("roll")
+                                                 : QStringLiteral("timeline")));
+                }
+            }
+
+            struct NamedChromeRect {
+                QRect rect;
+                bool visible;
+                const char *name;
+            };
+            const DrawerChrome &chrome = drawer->chrome();
+            const std::array<NamedChromeRect, 9> chromeRects{{
+                {chrome.voiceChangesHandleRect().toAlignedRect(),
+                 chrome.voiceChangesHandleVisible(), "voice-change separator"},
+                {chrome.velocityHandleRect().toAlignedRect(), chrome.velocityHandleVisible(),
+                 "velocity separator"},
+                {chrome.automationHandleRect().toAlignedRect(), chrome.automationHandleVisible(),
+                 "automation separator"},
+                {chrome.barRect().toAlignedRect(), chrome.barVisible(), "drawer bar"},
+                {chrome.voiceChangesToggleRect().toAlignedRect(),
+                 chrome.voiceChangesToggleVisible(), "voice-change toggle"},
+                {chrome.velocityToggleRect().toAlignedRect(), chrome.velocityToggleVisible(),
+                 "velocity toggle"},
+                {chrome.automationToggleRect().toAlignedRect(), chrome.automationToggleVisible(),
+                 "automation toggle"},
+                {chrome.detentRect().toAlignedRect(), chrome.detentVisible(), "velocity detent"},
+                {chrome.automationScrollbarRect().toAlignedRect(),
+                 chrome.automationScrollbarVisible(), "automation scrollbar"},
+            }};
+            for (const NamedChromeRect &excluded : chromeRects) {
+                const QRect localChromeRect = excluded.rect.translated(-view.timelineSplitX(), 0);
+                if (excluded.visible &&
+                    checks::support::hasSolidPlayheadPixel(image, localChromeRect, playheadColor)) {
+                    failures.append(QStringLiteral("%1 playhead body entered the %2")
+                                        .arg(QString::fromLatin1(presentation),
+                                             QString::fromLatin1(excluded.name)));
+                }
+            }
+        };
+
+        const std::array<CapturedPresentation, 2> bodyFrames = capturePresentations(tick);
+        for (std::size_t index = 0; index < bodyFrames.size(); ++index) {
+            assertBodyAndChromeClipping(bodyFrames[index].image, presentationNames[index],
+                                        bodyFrames[index].localX);
+        }
+
+        const SongView::ViewState playheadCameraState = view.viewState();
+        view.setFollowPlayhead(false);
+        SongView::ViewState boundaryState = playheadCameraState;
+        boundaryState.scrollPx = 0.0;
+        view.applyViewState(boundaryState);
+        checks::support::pumpQuick();
+        const std::array<CapturedPresentation, 2> boundaryFrames = capturePresentations(0);
+        for (std::size_t index = 0; index < boundaryFrames.size(); ++index) {
+            const CapturedPresentation &captured = boundaryFrames[index];
+            const QImage &frame = captured.image;
+            const char *presentation = presentationNames[index];
+            if (std::abs(captured.localX) > 0.01) {
+                failures.append(QStringLiteral("%1 tick-zero playhead boundary probe did not "
+                                               "resolve to content X zero")
+                                    .arg(QString::fromLatin1(presentation)));
+            }
+            assertBodyAndChromeClipping(frame, presentation, captured.localX);
+            const std::optional<songview::TimelineBandGeometry> &boundaryRuler =
+                bandLayout.geometry(songview::TimelineBand::Ruler);
+            if (!boundaryRuler || frame.isNull())
+                continue;
+
+            // The root-local bitmap begins at x=0. The macOS lifecycle check
+            // separately validates the triangle path's negative-X left wing.
+            const int halfWidth = songview::playheadTriangleHalfWidth();
+            const QRect localRulerPlot =
+                boundaryRuler->plotRect.translated(-view.timelineSplitX(), 0);
+            const int triangleTop = localRulerPlot.bottom() - songview::playheadTriangleHeight() +
+                                    layout::singlePixel();
+            const QRect rightWing(0, triangleTop, halfWidth, songview::playheadTriangleHeight());
+            const QRect logicalImageRect =
+                QRectF(QPointF{}, frame.deviceIndependentSize()).toAlignedRect();
+            const QRect beyondRight(halfWidth + 1, triangleTop,
+                                    std::max(0, logicalImageRect.right() - halfWidth),
+                                    songview::playheadTriangleHeight());
+            const QRect triangleProbe(
+                0, triangleTop,
+                std::min(logicalImageRect.width(), 2 * halfWidth + layout::singlePixel()),
+                songview::playheadTriangleHeight());
+            const QRect triangleSolidBounds =
+                solidPlayheadBounds(frame, triangleProbe, playheadColor);
+            const int requiredRight = std::max(0, halfWidth - 1);
+            const QString triangleEvidence =
+                QStringLiteral("requiredRight=%1 plot=%2 probe=%3 solid=%4")
+                    .arg(requiredRight)
+                    .arg(playheadRectSummary(localRulerPlot))
+                    .arg(playheadRectSummary(triangleProbe))
+                    .arg(triangleSolidBounds.isEmpty() ? QStringLiteral("none")
+                                                       : playheadRectSummary(triangleSolidBounds));
+            if (checks::support::hasSolidPlayheadPixel(frame, beyondRight, playheadColor)) {
+                failures.append(
+                    QStringLiteral("%1 ruler triangle exceeded its half-width right cap (%2)")
+                        .arg(QString::fromLatin1(presentation), triangleEvidence));
+            }
+            if (!checks::support::hasSolidPlayheadPixel(frame, rightWing, playheadColor) ||
+                triangleSolidBounds.isEmpty() || triangleSolidBounds.right() < requiredRight) {
+                failures.append(
+                    QStringLiteral("%1 ruler triangle did not retain its visible right wing at "
+                                   "the timeline boundary (%2)")
+                        .arg(QString::fromLatin1(presentation), triangleEvidence));
+            }
+        }
+
+        SongView::ViewState negativeState = boundaryState;
+        negativeState.scrollPx = 1.0;
+        view.applyViewState(negativeState);
+        checks::support::pumpQuick();
+        const std::array<CapturedPresentation, 2> negativeFrames = capturePresentations(0);
+        for (std::size_t index = 0; index < negativeFrames.size(); ++index) {
+            const CapturedPresentation &captured = negativeFrames[index];
+            const QImage &frame = captured.image;
+            if (captured.localX >= 0.0) {
+                failures.append(
+                    QStringLiteral("%1 negative playhead probe did not place the camera content "
+                                   "X offscreen")
+                        .arg(QString::fromLatin1(presentationNames[index])));
+            }
+            if (frame.isNull())
+                continue;
+            const QRect logicalImageRect =
+                QRectF(QPointF{}, frame.deviceIndependentSize()).toAlignedRect();
+            if (checks::support::hasSolidPlayheadPixel(frame, logicalImageRect, playheadColor)) {
+                failures.append(
+                    QStringLiteral("%1 negative-content playhead retained a core or triangle")
+                        .arg(QString::fromLatin1(presentationNames[index])));
+            }
+        }
+
+        view.applyViewState(boundaryState);
+        checks::support::pumpQuick();
+        const qreal timelineColumnWidth =
+            std::max<qreal>(0.0, view.width() - view.timelineSplitX());
+        for (std::size_t index = 0; index < presentationNames.size(); ++index) {
+            overlay->setPlayhead(timelineColumnWidth, true, index != 0);
+            checks::support::pumpQuick();
+            const QImage frame = renderMacPlayheadOverlay(view, failures).toImage();
+            if (frame.isNull()) {
+                failures.append(QStringLiteral("%1 right-edge playhead capture was empty")
+                                    .arg(QString::fromLatin1(presentationNames[index])));
+                continue;
+            }
+            const QRect logicalImageRect =
+                QRectF(QPointF{}, frame.deviceIndependentSize()).toAlignedRect();
+            if (checks::support::hasSolidPlayheadPixel(frame, logicalImageRect, playheadColor)) {
+                failures.append(QStringLiteral("%1 right-edge playhead retained a core or triangle")
+                                    .arg(QString::fromLatin1(presentationNames[index])));
+            }
+        }
+
+        songview::TimelineBandLayout rulerAbsentLayout = bandLayout;
+        rulerAbsentLayout.geometry(songview::TimelineBand::Ruler).reset();
+        overlay->updateBands(rulerAbsentLayout);
+        const qreal rulerAbsentX = view.camera().contentX(view.playheadTick());
+        for (std::size_t index = 0; index < presentationNames.size(); ++index) {
+            overlay->setPlayhead(rulerAbsentX, true, index != 0);
+            checks::support::pumpQuick();
+            const QImage frame = renderMacPlayheadOverlay(view, failures).toImage();
+            if (frame.isNull()) {
+                failures.append(QStringLiteral("%1 ruler-absent playhead capture was empty")
+                                    .arg(QString::fromLatin1(presentationNames[index])));
+                continue;
+            }
+            const QRect logicalImageRect =
+                QRectF(QPointF{}, frame.deviceIndependentSize()).toAlignedRect();
+            if (checks::support::hasSolidPlayheadPixel(frame, logicalImageRect, playheadColor)) {
+                failures.append(
+                    QStringLiteral("%1 ruler-absent playhead retained a core or triangle")
+                        .arg(QString::fromLatin1(presentationNames[index])));
+            }
+        }
+        overlay->updateBands(bandLayout);
+        view.applyViewState(playheadCameraState);
+        view.setPlayheadSample(sample, false);
+        view.setFollowPlayhead(true);
+        checks::support::pumpQuick();
+#endif
         // Equal-layout lifecycle events (Show, WinIdChange, density, screen)
         // republish the stored layout without touching the canonical value:
         // the Quick host frame, window mask, QML band geometry, and playhead
@@ -936,29 +1266,49 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         checks::support::pumpQuick();
         view.show();
         checks::support::pumpQuick();
-        const QRect lifecycleHost = quick->geometry();
-        const QRect lifecycleRoll = bandLayout.geometry(songview::TimelineBand::Roll)
-                                        .value_or(songview::TimelineBandGeometry{})
-                                        .rect;
-        const QRectF lifecycleRollLocal(lifecycleRoll.translated(-lifecycleHost.topLeft()));
-        if (bandLayout != canonicalBeforeLifecycle ||
-            lifecycleHost != canonicalHostRect().value_or(QRect{}))
-            failures.append(
-                "a lifecycle event moved the canonical layout or dropped the Quick host frame");
         const DrawerChrome &lifecycleChrome = drawer->chrome();
-        if (!root->property("rollBandVisible").toBool() ||
-            root->property("rollBandRect").toRectF() != lifecycleRollLocal ||
-            !checks::support::quickWindowIsUnmasked(*quick) ||
-            lifecycleHost !=
-                checks::support::canonicalVisibleQuickHostRect(bandLayout, &lifecycleChrome)) {
-            failures.append("lifecycle republish dropped QML roll geometry or the unmasked Quick "
-                            "host envelope");
+        const QRect expectedLifecycleHost =
+            checks::support::canonicalVisibleQuickHostRect(bandLayout, &lifecycleChrome);
+        const QRect lifecycleHost = quick->geometry();
+        const std::optional<songview::TimelineBandGeometry> &lifecycleRoll =
+            bandLayout.geometry(songview::TimelineBand::Roll);
+        const QRectF expectedLifecycleRoll =
+            lifecycleRoll ? QRectF(lifecycleRoll->rect.translated(-expectedLifecycleHost.topLeft()))
+                          : QRectF{};
+        const QRectF expectedLifecycleRollPlot =
+            lifecycleRoll
+                ? QRectF(lifecycleRoll->plotRect.translated(-expectedLifecycleHost.topLeft()))
+                : QRectF{};
+        if (bandLayout != canonicalBeforeLifecycle)
+            failures.append("a lifecycle event changed the canonical timeline layout");
+        if (lifecycleHost != expectedLifecycleHost)
+            failures.append("a lifecycle event dropped the canonical Quick host frame");
+        if (root->property("rollBandVisible").toBool() != lifecycleRoll.has_value() ||
+            root->property("rollBandRect").toRectF() != expectedLifecycleRoll ||
+            root->property("rollBandPlotRect").toRectF() != expectedLifecycleRollPlot) {
+            failures.append(
+                "lifecycle republish dropped the canonical QML roll band or plot geometry");
         }
-        checkVisibleBandRect(lifecycleRoll, "piano roll after lifecycle republish");
-        checkVisibleBandRect(bandLayout.geometry(songview::TimelineBand::Velocity)
-                                 .value_or(songview::TimelineBandGeometry{})
-                                 .rect,
-                             "velocity lane after lifecycle republish");
+        if (!checks::support::quickWindowIsUnmasked(*quick))
+            failures.append("lifecycle republish restored a mask on the shared Quick window");
+#ifdef __APPLE__
+        const auto checkLifecyclePlot = [&](songview::TimelineBand band, const char *name) {
+            const std::optional<songview::TimelineBandGeometry> &geometry =
+                bandLayout.geometry(band);
+            if (geometry && !geometry->plotRect.isEmpty())
+                checkVisiblePlotRect(geometry->plotRect, name);
+        };
+        checkLifecyclePlot(songview::TimelineBand::Ruler, "ruler after lifecycle republish");
+        checkLifecyclePlot(songview::TimelineBand::Roll, "piano roll after lifecycle republish");
+        checkLifecyclePlot(songview::TimelineBand::OtherEvents,
+                           "other-events after lifecycle republish");
+        checkLifecyclePlot(songview::TimelineBand::Automation,
+                           "automation after lifecycle republish");
+        checkLifecyclePlot(songview::TimelineBand::Velocity,
+                           "velocity lane after lifecycle republish");
+        checkLifecyclePlot(songview::TimelineBand::VoiceChanges,
+                           "voice-change after lifecycle republish");
+#endif
         // Hover must be checked while the automation page is the explicitly
         // shown, active surface — before the saved editor state restores the
         // fixture defaults and hides the sibling sections again.

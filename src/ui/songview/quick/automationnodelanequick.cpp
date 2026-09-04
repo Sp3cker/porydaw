@@ -192,7 +192,7 @@ void addPhantomCurvePreview(const NodeLaneQuickPaint::Context &context, Timeline
 void addPhantomNode(const NodeLaneQuickPaint::Context &context, TimelineQuickLayer layer,
                     const OriginPhantom &phantom, const QColor &color)
 {
-    const QPointF center(context.geometry.plotOrigin,
+    const QPointF center(context.plot.left(),
                          AutomationProjection::valueY(context.body, context.geometry,
                                                       phantom.minimumValue, phantom.maximumValue,
                                                       phantom.point.value));
@@ -565,8 +565,8 @@ void NodeLaneQuickPaint::composeHover(const Context &context, bool hover, const 
     const QString &text = context.hoverState.hoverTextCache.text;
     const auto &label = context.hoverState.hoverValueLabel;
     if (hoverState.hasPoint) {
-        const qreal displayX = hoverState.originPhantom ? context.geometry.plotOrigin
-                                                        : tickX(context, hoverState.point.tick);
+        const qreal displayX =
+            hoverState.originPhantom ? context.plot.left() : tickX(context, hoverState.point.tick);
         addEllipseRing(context.scene, TimelineQuickLayer::AutomationHover,
                        QPointF(displayX, nodeY(context, hoverState.point.value)),
                        nodelane::hoverRingRadius(context.geometry),

@@ -39,15 +39,15 @@ class QObject;
 class SongView;
 
 // In-memory TimelineInputHost driving the converted AutomationCanvas: it
-// serves the viewport bounds, font, palette, DPR, and global mapping the
-// production timelineAutomationInput item provides, and records focus,
-// cursor, pointer-grab, and accessibility calls so checks assert host state
-// instead of QWidget surface state. Bounds stay live on AutomationPage; this
-// host never caches viewport size, content height, or scroll.
+// mirrors the plot-local primary input bounds, font, palette, DPR, and global
+// mapping, and records focus, cursor, pointer-grab, and accessibility calls so
+// checks assert host state instead of QWidget surface state. Bounds stay live
+// on AutomationPage; this host never caches viewport size, content height, or
+// scroll.
 class AutomationInputHost final : public songview::TimelineInputHost
 {
   public:
-    explicit AutomationInputHost(const AutomationPage &page);
+    AutomationInputHost(const AutomationPage &page, const songview::TimelineInputItem &gutterInput);
     ~AutomationInputHost() override = default;
 
     AutomationInputHost(const AutomationInputHost &) = delete;
@@ -84,6 +84,7 @@ class AutomationInputHost final : public songview::TimelineInputHost
 
   private:
     const AutomationPage &m_page;
+    const songview::TimelineInputItem &m_gutterInput;
     qreal m_dpr = 1.0;
     QPointF m_globalOffset;
     QCursor m_cursor{Qt::ArrowCursor};
@@ -140,6 +141,8 @@ class AutomationGestureCheckRig final
     const AutomationCanvas &canvas() const noexcept;
     AutomationInputHost &automationHost() noexcept;
     const AutomationInputHost &automationHost() const noexcept;
+    songview::TimelineInputItem &automationGutterInput() noexcept;
+    const songview::TimelineInputItem &automationGutterInput() const noexcept;
     songview::TimelineInputItem &voiceInput() noexcept;
     const songview::TimelineInputItem &voiceInput() const noexcept;
     QAction *pencilModeAction() const noexcept;
@@ -201,9 +204,9 @@ class AutomationGestureCheckRig final
                    bool autoRepeat = false);
     void keyToWindow(QEvent::Type type, int key, Qt::KeyboardModifiers modifiers = Qt::NoModifier,
                      bool autoRepeat = false);
-    // All pointer positions are automation content coordinates; the rig
-    // converts them to viewport coordinates before constructing normalized
-    // TimelinePointerInput values for the canvas.
+    // Plot pointer positions are plot-local automation content coordinates;
+    // the rig only removes vertical scroll before constructing normalized
+    // TimelinePointerInput values.
     void mousePress(const QPointF &position, Qt::KeyboardModifiers modifiers = Qt::NoModifier,
                     Qt::MouseButton button = Qt::LeftButton);
     [[nodiscard]] bool dispatchMousePress(const QPointF &position,
@@ -215,6 +218,16 @@ class AutomationGestureCheckRig final
                       Qt::MouseButton button = Qt::LeftButton);
     void mouseDoubleClick(const QPointF &position,
                           Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void gutterMousePress(const QPointF &position, Qt::KeyboardModifiers modifiers = Qt::NoModifier,
+                          Qt::MouseButton button = Qt::LeftButton);
+    [[nodiscard]] bool dispatchGutterMousePress(const QPointF &position,
+                                                Qt::KeyboardModifiers modifiers = Qt::NoModifier,
+                                                Qt::MouseButton button = Qt::LeftButton);
+    void gutterMouseMove(const QPointF &position, Qt::MouseButtons buttons = Qt::NoButton,
+                         Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void gutterMouseRelease(const QPointF &position,
+                            Qt::KeyboardModifiers modifiers = Qt::NoModifier,
+                            Qt::MouseButton button = Qt::LeftButton);
     void voiceMousePress(const QPointF &position, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     [[nodiscard]] bool dispatchVoiceMousePress(const QPointF &position,
                                                Qt::KeyboardModifiers modifiers = Qt::NoModifier);
@@ -245,9 +258,11 @@ class AutomationGestureCheckRig final
     std::unique_ptr<SongView> m_view;
     AutomationPage *m_page = nullptr;
     std::unique_ptr<AutomationInputHost> m_inputHost;
-    // Production Quick wiring stolen for the check and restored at teardown.
-    songview::TimelineInputItem *m_productionInput = nullptr;
+    // Production plot wiring stolen for the in-memory check host and restored
+    // at teardown. The physical gutter remains wired and handles gutter input.
+    songview::TimelineInputItem *m_automationPlotInput = nullptr;
     songview::TimelineBandInteraction *m_productionInteraction = nullptr;
+    songview::TimelineInputItem *m_automationGutterInput = nullptr;
     songview::TimelineInputItem *m_voiceInput = nullptr;
     songview::TimelineQuickScene *m_quickScene = nullptr;
 };

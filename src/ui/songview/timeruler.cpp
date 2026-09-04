@@ -291,13 +291,12 @@ int TimeRuler::hitMarker(QPointF pos) const
         return -1;
     const auto markerHitHalfWidth = lyt::space(Space::Two);
     const qreal dpr = m_inputHost->devicePixelRatio();
-    const qreal plotOrigin = m_owner.timelinePlotOrigin();
     if (tl->loopStartTick != UINT64_MAX &&
-        std::abs(m_camera.displayX(double(tl->loopStartTick), plotOrigin, dpr) - pos.x()) <=
+        std::abs(m_camera.displayX(double(tl->loopStartTick), 0.0, dpr) - pos.x()) <=
             markerHitHalfWidth)
         return 0;
     if (tl->loopEndTick != UINT64_MAX &&
-        std::abs(m_camera.displayX(double(tl->loopEndTick), plotOrigin, dpr) - pos.x()) <=
+        std::abs(m_camera.displayX(double(tl->loopEndTick), 0.0, dpr) - pos.x()) <=
             markerHitHalfWidth)
         return 1;
     return -1;
@@ -312,11 +311,10 @@ std::vector<TimeRuler::SigChip> TimeRuler::sigChips() const
     std::vector<SigChip> chips;
     const TimeAxis &axis = m_owner.timeAxis();
     const qreal dpr = m_inputHost->devicePixelRatio();
-    const qreal plotOrigin = m_owner.timelinePlotOrigin();
     const QFontMetrics &fm = m_signatureMetrics;
     const auto labelInset = lyt::space(Space::Half);
     const auto add = [&](const TimeAxis::ResolvedTimeSignature &sig) {
-        const qreal x = m_camera.displayX(double(sig.tick), plotOrigin, dpr);
+        const qreal x = m_camera.displayX(double(sig.tick), 0.0, dpr);
         chips.push_back({sig.tick, sig.numerator, sig.denomPow2, sig.implicit, x, x + labelInset,
                          qreal(fm.horizontalAdvance(timeSigLabel(sig.numerator, sig.denomPow2)))});
     };
@@ -336,8 +334,7 @@ std::vector<TimeRuler::SigChip> TimeRuler::sigChips() const
         for (uint64_t loopTick : loops) {
             if (loopTick == UINT64_MAX)
                 continue;
-            const qreal bracketStart =
-                m_camera.displayX(double(loopTick), plotOrigin, dpr) + labelInset;
+            const qreal bracketStart = m_camera.displayX(double(loopTick), 0.0, dpr) + labelInset;
             const qreal bracketRight = bracketStart + bracketWidth;
             if (bracketRight > chip.labelX && bracketStart < chip.labelX + chip.labelW)
                 chip.labelX = bracketRight + labelInset;
@@ -392,12 +389,10 @@ int TimeRuler::hitSelEdge(QPointF pos) const
         return -1;
     const auto markerHitHalfWidth = lyt::space(Space::Two);
     const qreal dpr = m_inputHost->devicePixelRatio();
-    const qreal plotOrigin = m_owner.timelinePlotOrigin();
-    if (std::abs(m_camera.displayX(double(sel.startTick), plotOrigin, dpr) - pos.x()) <=
+    if (std::abs(m_camera.displayX(double(sel.startTick), 0.0, dpr) - pos.x()) <=
         markerHitHalfWidth)
         return 0;
-    if (std::abs(m_camera.displayX(double(sel.endTick), plotOrigin, dpr) - pos.x()) <=
-        markerHitHalfWidth)
+    if (std::abs(m_camera.displayX(double(sel.endTick), 0.0, dpr) - pos.x()) <= markerHitHalfWidth)
         return 1;
     return -1;
 }

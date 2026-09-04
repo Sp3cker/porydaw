@@ -129,8 +129,9 @@ void pump()
     QCoreApplication::processEvents();
 }
 
-// Canonical parent-owned band geometry: the shared TimelineBandLayout value
-// drives the QML band, the Quick input item, and these probes alike.
+// Canonical parent-owned band geometry is SongView-local. Physical input and
+// retained content layers are plot-local; whole-band framebuffer crops include
+// the fixed gutter, so translate plot rectangles only at the image boundary.
 const std::optional<songview::TimelineBandGeometry> &voiceGeometry(const AreaFixture &env)
 {
     return env.rig->view().timelineBandLayout().geometry(songview::TimelineBand::VoiceChanges);
@@ -141,14 +142,28 @@ QRect voiceRect(const AreaFixture &env)
     return voiceGeometry(env) ? voiceGeometry(env)->rect : QRect{};
 }
 
-int voicePlotOrigin(const AreaFixture &env)
+QRect voicePlotRect(const AreaFixture &env)
 {
-    return voiceGeometry(env) ? voiceGeometry(env)->timelineOrigin : 0;
+    return voiceGeometry(env) ? voiceGeometry(env)->plotRect : QRect{};
 }
 
-int voicePlotWidth(const AreaFixture &env)
+QRect voiceLocalPlotRect(const AreaFixture &env)
 {
-    return voiceGeometry(env) ? voiceGeometry(env)->rect.width() - voicePlotOrigin(env) : 0;
+    return voiceGeometry(env) ? QRect(QPoint{}, voiceGeometry(env)->plotRect.size()) : QRect{};
+}
+
+QRect voiceBandPlotRect(const AreaFixture &env)
+{
+    return voiceGeometry(env)
+               ? voiceGeometry(env)->plotRect.translated(-voiceGeometry(env)->rect.topLeft())
+               : QRect{};
+}
+
+int voiceFixedSpan(const AreaFixture &env)
+{
+    return voiceGeometry(env)
+               ? std::max(0, voiceGeometry(env)->plotRect.x() - voiceGeometry(env)->rect.x())
+               : 0;
 }
 
 qreal voiceDpr(const AreaFixture &env)
@@ -222,7 +237,7 @@ bool hasVoiceChangeMarkerAt(const songview::TimelineQuickScene &scene, qreal x)
 
 double xForTick(const AreaFixture &env, double tick)
 {
-    return env.rig->view().camera().displayX(tick, voicePlotOrigin(env), voiceDpr(env));
+    return env.rig->view().camera().displayX(tick, 0.0, voiceDpr(env));
 }
 
 // Schedules one pickerDialog acceptance: records the modal picker's title and
@@ -267,13 +282,20 @@ void checkAreaSurfaceBasics(const AreaFixture &env, int &failures)
     check(env.rig->view().drawerActivePage() == EditorDrawerPage::VoiceChanges &&
               env.rig->view().drawerSectionVisible(EditorDrawerPage::VoiceChanges),
           QStringLiteral("Voice Changes page was not the visible drawer page"));
-    const QRect plot = voiceGeometry(env)
-                           ? voiceGeometry(env)->rect.adjusted(voicePlotOrigin(env), 0, 0, 0)
-                           : QRect{};
-    check(voicePlotWidth(env) > 0 && !plot.isEmpty(),
-          QStringLiteral("VoiceChangeArea exposed no usable plot"));
-    check(voicePlotOrigin(env) == env.rig->view().timelinePlotOrigin(),
-          QStringLiteral("VoiceChangeArea did not use SongView's shared timeline origin"));
+    const QRect plot = voicePlotRect(env);
+    auto *voiceGutterInput = env.rig->quickRoot()
+                                 ? env.rig->quickRoot()->findChild<songview::TimelineInputItem *>(
+                                       QStringLiteral("timelineVoiceChangesGutterInput"))
+                                 : nullptr;
+    check(!plot.isEmpty(), QStringLiteral("VoiceChangeArea exposed no usable plot"));
+    check(plot.x() == env.rig->view().timelineSplitX(),
+          QStringLiteral("VoiceChangeArea did not use SongView's shared timeline split"));
+    check(env.rig->voiceInput().bounds() ==
+                  QRectF(QPointF{}, QSizeF(plot.width(), plot.height())) &&
+              voiceGutterInput &&
+              voiceGutterInput->bounds() ==
+                  QRectF(QPointF{}, QSizeF(voiceFixedSpan(env), voiceRect(env).height())),
+          QStringLiteral("Voice Changes physical plot/gutter inputs were not surface-local"));
 }
 
 // Paint lifecycle: document edits paint their marker, undo/song reattach
@@ -304,7 +326,7 @@ void checkAreaPaintLifecycle(AreaFixture &env, int &failures)
     pump();
     const QImage marked = checks::support::captureQuickBand(env.rig->view(), bandRect);
     const double markerX = xForTick(env, 120);
-    const QRectF markerProbe(markerX - 8, 0, 16, bandHeight);
+    const QRectF markerProbe(voiceFixedSpan(env) + markerX - 8, 0, 16, bandHeight);
     check(env.document.revision() == revisionBefore + 1 &&
               env.document.undoStack()->index() == undoBefore + 1 &&
               env.document.undoStack()->text(undoBefore) == QStringLiteral("add voice change"),
@@ -335,9 +357,9 @@ void checkAreaPaintLifecycle(AreaFixture &env, int &failures)
     env.rig->view().setPlayheadSample(env.rig->timeline().sampleForTick(64), true);
     pump();
     const QImage playingB = checks::support::captureQuickBand(env.rig->view(), bandRect);
+    const QRect localPlot = voiceBandPlotRect(env);
     check(changedPixels(playingA, playingB,
-                        QRectF(voicePlotOrigin(env) + voicePlotWidth(env) / 2.0, 0,
-                               voicePlotWidth(env) / 2.0, bandHeight),
+                        QRectF(localPlot.center().x(), 0, localPlot.width() / 2.0, bandHeight),
                         dpr) > 0,
           QStringLiteral("playhead crossing did not repaint the current-voice readout"));
     env.rig->view().setPlayheadSample(0, false);
@@ -416,14 +438,17 @@ void checkAreaHover(AreaFixture &env, int &failures)
     pump();
     const QImage offMarker = checks::support::captureQuickBand(env.rig->view(), bandRect);
     const QRectF hoverLabelRect = currentHoverLabelRect();
-    const QRectF hoverRegion = QRectF(offMarkerX - 2.0, 0.0, 4.0, bandHeight)
-                                   .united(hoverLabelRect.adjusted(-2.0, -2.0, 2.0, 2.0));
-    const auto hoverProbe = [bandHeight](double x, const QRectF &labelRect) {
-        return QRectF(x - 2.0, 0.0, 4.0, bandHeight)
-            .united(QRectF(labelRect.left() - 2.0, labelRect.top() - 2.0,
-                           std::min<qreal>(144.0, labelRect.width() + 4.0),
-                           labelRect.height() + 4.0));
+    const qreal imagePlotOffset = voiceFixedSpan(env);
+    const auto hoverProbe = [bandHeight, imagePlotOffset](double x, const QRectF &labelRect) {
+        const QRectF imageLabelRect = labelRect.translated(imagePlotOffset, 0.0);
+        return QRectF(imagePlotOffset + x - 2.0, 0.0, 4.0, bandHeight)
+            .united(QRectF(imageLabelRect.left() - 2.0, imageLabelRect.top() - 2.0,
+                           std::min<qreal>(144.0, imageLabelRect.width() + 4.0),
+                           imageLabelRect.height() + 4.0));
     };
+    const QRectF hoverRegion =
+        QRectF(imagePlotOffset + offMarkerX - 2.0, 0.0, 4.0, bandHeight)
+            .united(hoverLabelRect.translated(imagePlotOffset, 0.0).adjusted(-2.0, -2.0, 2.0, 2.0));
     check(voiceChangesHoverTextModel->rowCount() == 1 &&
               voiceChangesTextModel->rowCount() == mainTextRowCount,
           QStringLiteral("off-marker hover did not isolate its Quick text model"));
@@ -481,14 +506,15 @@ void checkAreaHover(AreaFixture &env, int &failures)
               voiceChangesTextModel->rowCount() == mainTextRowCount,
           QStringLiteral("marker hover did not keep the Quick text models isolated"));
     const qreal expectedMarkerHoverX =
-        env.rig->view().timelinePlotOrigin() + env.rig->view().camera().contentX(48);
+        env.rig->voiceInput().mapToItem(quickRoot, QPointF(markerX, 0)).x();
     check(hasVoiceChangeMarkerAt(*scene, markerX) && voiceHoverChrome->isVisible() &&
               std::abs(voiceHoverChrome->mapToItem(quickRoot, QPointF{}).x() -
                        expectedMarkerHoverX) <= 0.2 &&
               changedPixels(coalescedHover, onMarker,
                             hoverProbe(coalescedHoverX, coalescedLabelRect), dpr) > 0,
           QStringLiteral("hover did not track the marker tick"));
-    check(labelCrop(onMarker, markerX, dpr) == labelCrop(idle, markerX, dpr),
+    check(labelCrop(onMarker, imagePlotOffset + markerX, dpr) ==
+              labelCrop(idle, imagePlotOffset + markerX, dpr),
           QStringLiteral("hovering the marker painted a held label on top of it"));
 
     checks::events::sendMouse(env.rig->voiceInput(), QEvent::Leave, QPointF{}, Qt::NoButton,
@@ -705,7 +731,8 @@ void checkAreaCommits(AreaFixture &env, int &failures)
     check(document.findLanePoint(0, DOC_CC_VOICE, 96, &inserted) && inserted.value == 3 &&
               changedPixels(afterUndo,
                             checks::support::captureQuickBand(env.rig->view(), voiceRect(env)),
-                            QRectF(xForTick(env, 96) - 8, 0, 16, voiceRect(env).height()),
+                            QRectF(voiceFixedSpan(env) + xForTick(env, 96) - 8, 0, 16,
+                                   voiceRect(env).height()),
                             afterUndo.devicePixelRatio()) > 0,
           QStringLiteral("undo/redo did not remove and restore the inserted marker"));
 
@@ -846,18 +873,16 @@ void checkAreaCamera(AreaFixture &env, int &failures)
     check(checks::support::captureQuickBand(env.rig->view(), bandRect) != home,
           QStringLiteral("horizontal scroll did not scroll the voice content"));
 
-    const QPointF zoomAnchor(voicePlotOrigin(env) + voicePlotWidth(env) / 2.0,
-                             bandRect.height() / 2.0);
-    const double tickBeforeZoom =
-        env.rig->view().camera().tickAtContentX(zoomAnchor.x() - voicePlotOrigin(env));
+    const QRect localPlot = voiceLocalPlotRect(env);
+    const QPointF zoomAnchor(localPlot.center().x(), bandRect.height() / 2.0);
+    const double tickBeforeZoom = env.rig->view().camera().tickAtContentX(zoomAnchor.x());
     const double zoomBefore = env.rig->view().camera().pxPerBeat();
     checks::events::sendWheel(env.rig->voiceInput(), zoomAnchor, QPoint(), QPoint(0, 120),
                               Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
     pump();
     check(env.rig->view().camera().pxPerBeat() > zoomBefore,
           QStringLiteral("plain wheel did not zoom the shared timeline camera"));
-    const qreal anchoredX =
-        env.rig->view().camera().displayX(tickBeforeZoom, voicePlotOrigin(env), voiceDpr(env));
+    const qreal anchoredX = env.rig->view().camera().displayX(tickBeforeZoom, 0.0, voiceDpr(env));
     check(std::abs(anchoredX - zoomAnchor.x()) <= 1.0 / voiceDpr(env),
           QStringLiteral("wheel zoom did not preserve the tick under the cursor"));
 
@@ -868,7 +893,7 @@ void checkAreaCamera(AreaFixture &env, int &failures)
     env.rig->view().setEditorHorizontalScroll(minScroll);
     pump();
     const QImage atZero = checks::support::captureQuickBand(env.rig->view(), bandRect);
-    const QPointF panStart(voicePlotOrigin(env) + 40, bandRect.height() / 2.0);
+    const QPointF panStart(40, bandRect.height() / 2.0);
     checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseButtonPress, panStart,
                               Qt::MiddleButton, Qt::MiddleButton, Qt::NoModifier);
     checks::events::sendMouse(env.rig->voiceInput(), QEvent::MouseMove, panStart + QPointF(80, 0),

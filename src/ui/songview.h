@@ -209,8 +209,7 @@ class SongView : public QWidget
     const LoadedVoiceGroup *voicegroup() const { return m_voicegroup; }
     int trackHeaderWidth() const noexcept { return m_geometry.trackHeaderWidth; }
     int pianoKeyboardWidth() const noexcept { return m_geometry.pianoKeyboardWidth; }
-    int timelineSplitX() const noexcept { return m_geometry.plotOrigin; }
-    qreal timelinePlotOrigin() const noexcept { return m_geometry.plotOrigin; }
+    int timelineSplitX() const noexcept { return m_geometry.timelineSplitX; }
     void publishTimelineQuickHover(songview::TimelineQuickHoverOwner owner, uint64_t tick);
     void clearTimelineQuickHover(songview::TimelineQuickHoverOwner owner);
     // Widget-owned migrated bands route retained-scene invalidation through this seam.
@@ -562,7 +561,7 @@ class SongView : public QWidget
     struct Geometry {
         int trackHeaderWidth;
         int pianoKeyboardWidth;
-        int plotOrigin;
+        int timelineSplitX;
         int editorDefaultPixelsPerBeat;
         int pianoRollInitialViewportHeight;
         int timelineMinimumPixelsPerBeat;

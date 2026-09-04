@@ -301,10 +301,9 @@ void checkLifecycleCancellation(Harness &check, QQuickItem &rollInput, const Cel
         check.fail("lifecycle cancellation fixture lost its note");
         return;
     }
-    const QPointF pressPosition(
-        check.pianoKeyboardWidth() +
-            view.camera().contentX(double(note.tick) + double(note.dur) / 2),
-        note.center.y());
+    const QPointF pressPosition(view.camera().displayX(double(note.tick) + double(note.dur) / 2,
+                                                       0.0, check.rollInput().devicePixelRatio()),
+                                note.center.y());
     const uint64_t revisionBefore = doc.revision();
     const int undoIndexBefore = doc.undoStack()->index();
     const int undoCountBefore = doc.undoStack()->count();
@@ -347,6 +346,7 @@ ScenarioContinuation runQuickLifecycleScenarios(Harness &check)
     SongDocument &doc = check.document();
     SongView &view = check.view();
     QQuickItem &rollInput = check.rollInput();
+    QQuickItem &rollGutterInput = check.rollGutterInput();
     const int track = check.track();
     auto fail = [&](const char *what) { check.fail(what); };
 
@@ -403,11 +403,11 @@ ScenarioContinuation runQuickLifecycleScenarios(Harness &check)
     // item cursor to the resize grip; hovering the keyboard column restores
     // the arrow. Leaving the roll clears the cursor entirely.
     const qreal edgeX =
-        check.pianoKeyboardWidth() + view.camera().contentX(double(note.tick)) - 1.0;
+        view.camera().displayX(double(note.tick), 0.0, check.rollInput().devicePixelRatio()) - 1.0;
     events::sendMouse(rollInput, QEvent::MouseMove, QPointF(edgeX, cell.center.y()), Qt::NoButton,
                       Qt::NoButton, Qt::NoModifier);
     const bool edgeCursor = !rollInput.cursor().pixmap().isNull();
-    events::sendMouse(rollInput, QEvent::MouseMove, QPointF(1, cell.center.y()), Qt::NoButton,
+    events::sendMouse(rollGutterInput, QEvent::MouseMove, QPointF(1, cell.center.y()), Qt::NoButton,
                       Qt::NoButton, Qt::NoModifier);
     if (!edgeCursor || rollInput.cursor().shape() != Qt::ArrowCursor)
         fail("host cursor publication did not track the note edge and arrow zones");

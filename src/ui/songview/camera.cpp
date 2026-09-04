@@ -143,20 +143,20 @@ void SongView::updateScrollbars()
 }
 int SongView::viewportWidth() const
 {
-    // The canonical roll rectangle already excludes the vertical scrollbar;
-    // its timeline origin is the piano-keyboard column.
+    // The canonical roll plotRect already excludes the piano-key column and
+    // the vertical scrollbar.
     const std::optional<songview::TimelineBandGeometry> &roll =
         m_timelineBandLayout.geometry(songview::TimelineBand::Roll);
-    const int width = roll ? roll->rect.width() - roll->timelineOrigin : 0;
+    const int width = roll ? roll->plotRect.width() : 0;
     return std::max(m_geometry.timelineViewportMinimumWidth, width);
 }
 int SongView::rollViewportHeight() const
 {
-    const int drawerHeight = m_editorDrawer ? m_editorDrawer->overlayHeight() : 0;
+    // The canonical roll rect already excludes the EditorDrawer overlay.
     const std::optional<songview::TimelineBandGeometry> &roll =
         m_timelineBandLayout.geometry(songview::TimelineBand::Roll);
     const int height = roll ? roll->rect.height() : 0;
-    return std::max(0, height - drawerHeight);
+    return std::max(0, height);
 }
 void SongView::ensureTickVisible(uint64_t tick)
 {

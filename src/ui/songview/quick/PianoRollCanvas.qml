@@ -4,7 +4,11 @@ import Porydaw.Ui
 Item {
     id: root
 
+    required property Item gutterSide
+    required property Item plotSide
+
     TimelineQuickItem {
+        parent: root.plotSide
         objectName: "timelineQuickPianoGrid"
         anchors.fill: parent
         sceneLayer: TimelineQuickItem.PianoGrid
@@ -12,22 +16,25 @@ Item {
     }
 
     TimelineQuickItem {
+        parent: root.plotSide
         objectName: "timelineQuickPianoNoteFills"
         anchors.fill: parent
         sceneLayer: TimelineQuickItem.PianoNoteFills
-        z: 0
+        z: 1
     }
 
     TimelineQuickItem {
+        parent: root.plotSide
         objectName: "timelineQuickPianoDrawPreviewFill"
         anchors.fill: parent
         sceneLayer: TimelineQuickItem.PianoDrawPreviewFill
-        z: 0
+        z: 2
     }
 
     Item {
+        parent: root.plotSide
         anchors.fill: parent
-        z: 1
+        z: 3
 
         Repeater {
             model: timelineScene.pianoNoteTextModel
@@ -59,34 +66,39 @@ Item {
     }
 
     TimelineQuickItem {
+        parent: root.plotSide
         objectName: "timelineQuickPianoNoteBordersAndSelection"
         anchors.fill: parent
         sceneLayer: TimelineQuickItem.PianoNoteBordersAndSelection
-        z: 2
+        z: 4
     }
 
     TimelineQuickItem {
+        parent: root.plotSide
         objectName: "timelineQuickPianoOverlay"
         anchors.fill: parent
         sceneLayer: TimelineQuickItem.PianoOverlay
-        z: 2
+        z: 5
     }
 
     TimelineQuickItem {
+        parent: root.gutterSide
         objectName: "timelineQuickPianoKeyboardKeys"
         anchors.fill: parent
         sceneLayer: TimelineQuickItem.PianoKeyboardKeys
-        z: 4
+        z: 0
     }
 
     TimelineQuickItem {
+        parent: root.gutterSide
         objectName: "timelineQuickPianoKeyboardHighlights"
         anchors.fill: parent
         sceneLayer: TimelineQuickItem.PianoKeyboardHighlights
-        z: 4
+        z: 1
     }
 
     Rectangle {
+        parent: root.gutterSide
         objectName: "timelineQuickPianoHoverChip"
         x: timelineScene.hoverChipRect.x
         y: timelineScene.hoverChipRect.y
@@ -95,12 +107,13 @@ Item {
         visible: timelineScene.hoverChipVisible
         color: timelineScene.hoverChipFill
         radius: timelineScene.hoverChipRadius
-        z: 4.5
+        z: 2
     }
 
     Item {
+        parent: root.gutterSide
         anchors.fill: parent
-        z: 5
+        z: 3
 
         Repeater {
             model: timelineScene.pianoKeyboardTextModel
@@ -132,6 +145,7 @@ Item {
     }
 
     Text {
+        parent: root.gutterSide
         objectName: "timelineQuickPianoHoverChipText"
         x: timelineScene.hoverChipRect.x
         y: timelineScene.hoverChipRect.y
@@ -148,12 +162,13 @@ Item {
         elide: Text.ElideNone
         maximumLineCount: 1
         clip: true
-        z: 5
+        z: 4
     }
 
     Item {
+        parent: root.plotSide
         anchors.fill: parent
-        z: 5
+        z: 6
 
         Repeater {
             model: timelineScene.pianoLoadingTextModel

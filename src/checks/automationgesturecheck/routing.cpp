@@ -4,7 +4,6 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
-#include <optional>
 #include <vector>
 
 #include <QApplication>
@@ -12,6 +11,7 @@
 #include <QEvent>
 #include <QImage>
 #include <QPointF>
+#include <QRectF>
 #include <QString>
 
 #include "rig.h"
@@ -22,7 +22,6 @@
 #include "ui/songview/quick/timelinequickscene.h"
 
 #include "ui/songview.h"
-#include "ui/songview/timelinebandlayout.h"
 
 namespace {
 
@@ -67,44 +66,20 @@ bool routeIdle(const AutomationGestureCheckRig &rig, LaneHandle lane)
     return rig.isIdle() && !rig.canvas().isPanning() && !rig.canvas().bandPreviewContainsLane(lane);
 }
 
-// TimelineBandGeometry describes the parent Quick scene, whereas
-// VoiceChangeArea receives TimelineInputItem-local positions. Keep scene-space
-// marker probes and input positions distinct so the host inset is exercised.
-const std::optional<songview::TimelineBandGeometry> &
-voiceGeometry(const AutomationGestureCheckRig &rig)
+qreal voiceX(const AutomationGestureCheckRig &rig, uint64_t tick)
 {
-    return rig.view().timelineBandLayout().geometry(songview::TimelineBand::VoiceChanges);
-}
-
-QPointF voiceScenePoint(const AutomationGestureCheckRig &rig, uint64_t tick)
-{
-    const auto &geometry = voiceGeometry(rig);
-    return {rig.view().camera().displayX(double(tick), geometry ? geometry->timelineOrigin : 0,
-                                         rig.voiceInput().devicePixelRatio()),
-            qreal(geometry ? geometry->rect.center().y() : 0)};
+    return rig.view().camera().displayX(double(tick), 0.0, rig.voiceInput().devicePixelRatio());
 }
 
 QPointF voicePoint(const AutomationGestureCheckRig &rig, uint64_t tick)
 {
-    return rig.voiceInput().mapFromScene(voiceScenePoint(rig, tick));
-}
-
-qreal voicePlotOrigin(const AutomationGestureCheckRig &rig)
-{
-    const auto &geometry = voiceGeometry(rig);
-    return rig.voiceInput()
-        .mapFromScene(QPointF(geometry ? geometry->timelineOrigin : 0,
-                              geometry ? geometry->rect.center().y() : 0))
-        .x();
+    return {voiceX(rig, tick), rig.voiceInput().bounds().center().y()};
 }
 
 uint64_t voiceSnapTick(const AutomationGestureCheckRig &rig, qreal x, bool fine)
 {
-    const int plotOrigin = voiceGeometry(rig) ? voiceGeometry(rig)->timelineOrigin : 0;
-    const qreal sceneX =
-        rig.voiceInput().mapToScene(QPointF(x, rig.voiceInput().bounds().center().y())).x();
-    const double rawTick = std::max(
-        0.0, rig.view().camera().tickAtContentX(std::max<qreal>(plotOrigin, sceneX) - plotOrigin));
+    const double rawTick =
+        std::max(0.0, rig.view().camera().tickAtContentX(std::max<qreal>(0.0, x)));
     return rig.view().grid().snapTick(rawTick, fine);
 }
 
@@ -224,8 +199,9 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         uint64_t fineTick = 0;
         uint64_t normalTick = 0;
         const int slop = QApplication::startDragDistance();
-        const int plotStart = int(std::ceil(voicePlotOrigin(rig)));
-        const int plotEnd = int(rig.voiceInput().bounds().width());
+        const QRectF voicePlot = rig.voiceInput().bounds();
+        const int plotStart = int(std::ceil(voicePlot.left()));
+        const int plotEnd = int(std::floor(voicePlot.left() + voicePlot.width()));
         for (int x = plotStart; x < plotEnd; ++x) {
             const uint64_t fine = voiceSnapTick(rig, x, true);
             const uint64_t normal = voiceSnapTick(rig, x, false);
@@ -334,9 +310,9 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         const QImage previewFramebuffer = rig.renderVoiceChanges(&previewCaptureError);
         const auto previewMarkers =
             rig.quickScene().layer(songview::TimelineQuickLayer::VoiceChangesMarkers);
-        const qreal destinationX = voiceScenePoint(rig, destination).x();
-        const int idleSourceCount = markerCountAt(idleMarkers, voiceScenePoint(rig, 48).x());
-        const int previewSourceCount = markerCountAt(previewMarkers, voiceScenePoint(rig, 48).x());
+        const qreal destinationX = voiceX(rig, destination);
+        const int idleSourceCount = markerCountAt(idleMarkers, voiceX(rig, 48));
+        const int previewSourceCount = markerCountAt(previewMarkers, voiceX(rig, 48));
         const int idleDestinationCount = markerCountAt(idleMarkers, destinationX);
         const int previewDestinationCount = markerCountAt(previewMarkers, destinationX);
         check(idleCaptureError.isEmpty() && previewCaptureError.isEmpty() &&
@@ -392,8 +368,7 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
               QStringLiteral("middle-button pan did not end cleanly on release"));
     }
     {
-        const QPointF input(voiceGeometry(rig)->timelineOrigin + rig.geometry().pointHitRadius,
-                            voiceGeometry(rig)->rect.center().y());
+        const QPointF input(rig.geometry().pointHitRadius, rig.voiceInput().bounds().center().y());
         const auto before = snapshot(rig.document());
         const auto beforeHeights = laneHeights(rig);
         const QRect tempoBefore = rig.canvas().laneBody(AutomationGestureCheckRig::kTempoHandle);
@@ -405,7 +380,7 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
                   rig.canvas().laneBody(AutomationGestureCheckRig::kTempoHandle) == tempoBefore &&
                   rig.view().editCursorTick() == cursorBefore,
               QStringLiteral("Voice Change press did not stop at its accepted route"));
-        rig.voiceMouseRelease(rig.voiceInput().mapFromScene(input));
+        rig.voiceMouseRelease(input);
     }
     {
         const QPointF input = rig.tempoHeaderPoint();
@@ -414,43 +389,43 @@ void checkAutomationRouting(AutomationGestureCheckRig &rig, const AutomationGest
         const auto before = snapshot(rig.document());
         const auto beforeHeights = laneHeights(rig);
         const uint64_t cursorBefore = rig.view().editCursorTick();
-        const bool accepted = rig.dispatchMousePress(input);
+        const bool accepted = rig.dispatchGutterMousePress(input);
         const bool expandedAfter =
             !rig.canvas().laneBody(AutomationGestureCheckRig::kTempoHandle).isEmpty();
         check(accepted && expandedAfter != expandedBefore && routeIdle(rig, panHandle) &&
                   isUnchanged(before, snapshot(rig.document())) &&
                   beforeHeights == laneHeights(rig) && rig.view().editCursorTick() == cursorBefore,
               QStringLiteral("Tempo header press did not exclusively toggle its accepted route"));
-        rig.mouseRelease(input);
+        rig.gutterMouseRelease(input);
     }
 
-    // Bare-return routes: row resize, body-right band, Pencil, and default body.
+    // Bare-return routes: gutter row resize, plot body-right band, Pencil, and default body.
     {
         const QRect body = rig.bodyFor(panHandle);
         const auto beforeHeights = laneHeights(rig);
         const auto before = snapshot(rig.document());
         const uint64_t cursorBefore = rig.view().editCursorTick();
-        const QPointF input(rig.geometry().plotOrigin + rig.geometry().pointHitRadius,
+        const QPointF input(rig.automationGutterInput().bounds().center().x(),
                             body.top() + body.height());
         const int grow = rig.geometry().rowMaximumHeight - body.height();
         const int shrink = body.height() - rig.geometry().rowMinimumHeight;
         const int distance = std::max(1, rig.geometry().rowWheelIncrement);
         const int delta = grow > 0 ? std::min(grow, distance) : -std::min(shrink, distance);
-        const bool accepted = rig.dispatchMousePress(input);
+        const bool accepted = rig.dispatchGutterMousePress(input);
         check(accepted && !rig.canvas().isPanning() && rig.view().userGestureActive() &&
                   !rig.canvas().bandPreviewContainsLane(panHandle) &&
                   isUnchanged(before, snapshot(rig.document())) &&
                   beforeHeights == laneHeights(rig) && rig.view().editCursorTick() == cursorBefore,
               QStringLiteral("row-boundary Quick press did not enter resize state"));
         const QPointF moved = input + QPointF(0, delta);
-        rig.mouseMove(moved);
+        rig.gutterMouseMove(moved, Qt::LeftButton);
         const auto afterHeights = laneHeights(rig);
         check(delta != 0 && onlyHeightChanged(beforeHeights, afterHeights, panRow) &&
                   afterHeights[std::size_t(panRow)] == beforeHeights[std::size_t(panRow)] + delta &&
                   isUnchanged(before, snapshot(rig.document())) &&
                   rig.view().editCursorTick() == cursorBefore,
               QStringLiteral("resize route changed state outside its target row"));
-        rig.mouseRelease(moved);
+        rig.gutterMouseRelease(moved);
         rig.pump();
         check(routeIdle(rig, panHandle),
               QStringLiteral("row resize did not end cleanly on release"));

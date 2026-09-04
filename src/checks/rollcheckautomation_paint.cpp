@@ -39,13 +39,12 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
 
 namespace {
 
-songview::TimelineInputItem *automationInputItem(SongView &view)
+songview::TimelineInputItem *automationInputItem(SongView &view, const QString &objectName)
 {
     auto *quickCanvas =
         view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
     return quickCanvas && quickCanvas->rootObject()
-               ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(
-                     QStringLiteral("timelineAutomationInput"))
+               ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(objectName)
                : nullptr;
 }
 
@@ -117,7 +116,7 @@ void pump()
     QCoreApplication::processEvents();
 }
 
-QPoint automationContentToViewport(const AutomationPage &page)
+QPoint automationPlotContentToViewport(const AutomationPage &page)
 {
     return {0, -page.verticalScroll()};
 }
@@ -247,7 +246,7 @@ bool framebufferHasColorNear(const QImage &framebuffer, const QPointF &point,
 QPointF tempoHeaderPoint(const AutomationPage &page)
 {
     const QRect tempo = page.canvas()->pinnedTempoRect();
-    return {page.canvas()->plotOrigin() / 2.0, qreal(tempo.center().y())};
+    return {qreal(layout::space(layout::Space::One)), qreal(tempo.center().y())};
 }
 
 int panRowIndex(const AutomationPage &page)
@@ -301,11 +300,12 @@ bool toggleTempoExpanded(SongView &view, AutomationPage &page, bool wantExpanded
     const bool expanded = !page.canvas()->laneBody(LaneHandle{0}).isEmpty();
     if (expanded == wantExpanded)
         return expanded;
-    AutomationBandInput band{page, *automationInputItem(view)};
-    band.mouse(QEvent::MouseButtonPress, tempoHeaderPoint(page), Qt::LeftButton, Qt::LeftButton,
-               Qt::NoModifier);
-    band.mouse(QEvent::MouseButtonRelease, tempoHeaderPoint(page), Qt::LeftButton, Qt::NoButton,
-               Qt::NoModifier);
+    AutomationBandInput gutter{
+        page, *automationInputItem(view, QStringLiteral("timelineAutomationGutterInput"))};
+    gutter.mouse(QEvent::MouseButtonPress, tempoHeaderPoint(page), Qt::LeftButton, Qt::LeftButton,
+                 Qt::NoModifier);
+    gutter.mouse(QEvent::MouseButtonRelease, tempoHeaderPoint(page), Qt::LeftButton, Qt::NoButton,
+                 Qt::NoModifier);
     pump();
     return !page.canvas()->laneBody(LaneHandle{0}).isEmpty() == wantExpanded;
 }
@@ -313,7 +313,6 @@ bool toggleTempoExpanded(SongView &view, AutomationPage &page, bool wantExpanded
 LaneGeom laneGeom(AutomationPage &page, const LaneCase &row)
 {
     LaneGeom geom;
-    auto geometry = AutomationGeometry::resolve(page.canvas()->plotOrigin());
     if (row.kind == LaneKind::Tempo) {
         geom.handle = LaneHandle{0};
         geom.body = page.canvas()->laneBody(geom.handle);
@@ -326,7 +325,7 @@ LaneGeom laneGeom(AutomationPage &page, const LaneCase &row)
         geom.body = page.canvas()->laneBody(geom.handle);
         geom.curveColor = themes::trackIdentityColor(0);
     }
-    geom.plot = nodelane::plotRect(geom.body, geometry);
+    geom.plot = geom.body;
     return geom;
 }
 
@@ -374,15 +373,21 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         return quickScene &&
                layerHasColorIn(quickScene->layer(layer), contentProbe, contentOrigin, color);
     };
-    auto geometry = AutomationGeometry::resolve(page.canvas()->plotOrigin());
-    const AutomationBandInput band{page, *automationInputItem(view)};
+    auto geometry = AutomationGeometry::resolve();
+    const AutomationBandInput band{
+        page, *automationInputItem(view, QStringLiteral("timelineAutomationInput"))};
     const qreal dpr = band.item.devicePixelRatio();
-    const QPoint captureOrigin = automationContentToViewport(page);
+    const QPoint plotContentOrigin = automationPlotContentToViewport(page);
+    const auto &automationBandGeometry =
+        view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
     const auto automationBandRect = [&]() -> QRect {
-        const auto &bandGeometry =
-            view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
-        return bandGeometry ? bandGeometry->rect : QRect{};
+        return automationBandGeometry ? automationBandGeometry->rect : QRect{};
     };
+    const int automationGutterWidth =
+        automationBandGeometry
+            ? std::max(0, automationBandGeometry->plotRect.x() - automationBandGeometry->rect.x())
+            : 0;
+    const QPoint plotFramebufferOrigin = plotContentOrigin + QPoint(automationGutterWidth, 0);
     const auto captureAutomationViewport = [&] {
         QString error;
         const QImage image = checks::support::captureQuickBand(view, automationBandRect(), &error);
@@ -394,7 +399,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     const qreal lineHalf =
         std::max(qreal(layout::singlePixel()), qreal(geometry.hoverPaintPadding + 1));
     const auto tickX = [&](uint64_t tick) {
-        return view.camera().displayX(double(tick), geometry.plotOrigin, dpr);
+        return view.camera().displayX(double(tick), 0.0, dpr);
     };
     const auto paintUnchanged = [&](const char *label, const DocSnap &before) {
         check(unchanged(before, snapshot(document)),
@@ -420,11 +425,11 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     const qreal x96 = tickX(kNodeTick);
     report("Tempo",
            !layerHas(songview::TimelineQuickLayer::AutomationCurves,
-                     lineProbe(xMid, y120, 8, lineHalf), captureOrigin, tempoGeom.curveColor),
+                     lineProbe(xMid, y120, 8, lineHalf), plotContentOrigin, tempoGeom.curveColor),
            QStringLiteral("empty storage composed a 120 lead-in curve"));
     report("Tempo",
            !layerHas(songview::TimelineQuickLayer::AutomationNodes, nodeProbe(x0, y120, radius),
-                     captureOrigin, tempoGeom.curveColor),
+                     plotContentOrigin, tempoGeom.curveColor),
            QStringLiteral("empty storage composed a 120 lead-in node"));
     setTempoPoints(page, document, live,
                    {{kNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoNode)}});
@@ -433,15 +438,15 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     paintUnchanged("Tempo lead-in paint", leadSnap);
     report("Tempo",
            layerHas(songview::TimelineQuickLayer::AutomationCurves,
-                    lineProbe(xMid, y120, 8, lineHalf), captureOrigin, tempoGeom.curveColor),
+                    lineProbe(xMid, y120, 8, lineHalf), plotContentOrigin, tempoGeom.curveColor),
            QStringLiteral("first nonzero point composed no 120 lead-in"));
     report("Tempo",
            !layerHas(songview::TimelineQuickLayer::AutomationNodes, nodeProbe(x0, y120, radius),
-                     captureOrigin, tempoGeom.curveColor),
+                     plotContentOrigin, tempoGeom.curveColor),
            QStringLiteral("120 lead-in composed a tick-0 node"));
     report("Tempo",
            layerHas(songview::TimelineQuickLayer::AutomationNodes, nodeProbe(x96, y200, radius),
-                    captureOrigin, tempoGeom.curveColor),
+                    plotContentOrigin, tempoGeom.curveColor),
            QStringLiteral("first nonzero point composed no node"));
     setTempoPoints(page, document, live,
                    {{0, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoHeld)}});
@@ -450,11 +455,11 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
     paintUnchanged("Tempo tick-0 paint", tick0Snap);
     report("Tempo",
            layerHas(songview::TimelineQuickLayer::AutomationNodes, nodeProbe(x0, y80, radius),
-                    captureOrigin, tempoGeom.curveColor),
+                    plotContentOrigin, tempoGeom.curveColor),
            QStringLiteral("explicit tick-0 point composed no node"));
     report("Tempo",
            !layerHas(songview::TimelineQuickLayer::AutomationCurves,
-                     lineProbe(xMid, y120, 8, lineHalf), captureOrigin, tempoGeom.curveColor),
+                     lineProbe(xMid, y120, 8, lineHalf), plotContentOrigin, tempoGeom.curveColor),
            QStringLiteral("explicit tick-0 point did not suppress 120 lead-in"));
     // Normal curves, selected rings, and live gesture previews for both lanes.
     for (const auto &row : kLanes) {
@@ -495,19 +500,19 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
                QStringLiteral("document refresh did not rebuild the Quick curves and nodes"));
         report(row.name,
                layerHas(songview::TimelineQuickLayer::AutomationCurves,
-                        lineProbe(midX, heldY, 8, lineHalf), captureOrigin, geom.curveColor),
+                        lineProbe(midX, heldY, 8, lineHalf), plotContentOrigin, geom.curveColor),
                QStringLiteral("normal step curve is missing from the retained Quick layer"));
         report(row.name,
                layerHas(songview::TimelineQuickLayer::AutomationNodes,
-                        nodeProbe(nodeX, nodeY, radius), captureOrigin, geom.curveColor),
+                        nodeProbe(nodeX, nodeY, radius), plotContentOrigin, geom.curveColor),
                QStringLiteral("normal node is missing from the retained Quick layer"));
         const QImage normalFramebuffer = captureAutomationViewport();
         report(row.name,
                framebufferHasColorNear(normalFramebuffer,
-                                       QPointF(captureOrigin) + QPointF(midX, heldY),
+                                       QPointF(plotFramebufferOrigin) + QPointF(midX, heldY),
                                        geom.curveColor) &&
                    framebufferHasColorNear(normalFramebuffer,
-                                           QPointF(captureOrigin) + QPointF(nodeX, nodeY),
+                                           QPointF(plotFramebufferOrigin) + QPointF(nodeX, nodeY),
                                            geom.curveColor),
                QStringLiteral("normal step curve or node did not render at its Quick position"));
         const quint64 selectionRevision =
@@ -530,13 +535,13 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         const qreal ringOuter = geometry.selectedNodeRingRadius + layout::singlePixel();
         report(row.name,
                layerHas(songview::TimelineQuickLayer::AutomationNodes,
-                        nodeProbe(nodeX, nodeY, ringOuter), captureOrigin,
+                        nodeProbe(nodeX, nodeY, ringOuter), plotContentOrigin,
                         band.item.palette().highlight().color()),
                QStringLiteral("selected ring is missing from the retained Quick node layer"));
         const QImage selectedFramebuffer = captureAutomationViewport();
         report(row.name,
                framebufferHasColorNear(selectedFramebuffer,
-                                       QPointF(captureOrigin) +
+                                       QPointF(plotFramebufferOrigin) +
                                            QPointF(nodeX, nodeY - geometry.selectedNodeRingRadius),
                                        band.item.palette().highlight().color()),
                QStringLiteral("selected ring did not render at its Quick node position"));
@@ -551,10 +556,11 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
                layerHas(songview::TimelineQuickLayer::AutomationSelection,
                         QRectF((tickX(kNodeTick) + tickX(kNodeTick + 1)) / 2.0 - 2.0,
                                geom.plot.top() + 2.0, 4.0, 6.0),
-                        captureOrigin, themes::color(themes::Role::song_view_selection_edge)) ||
+                        plotContentOrigin, themes::color(themes::Role::song_view_selection_edge)) ||
                    layerHas(songview::TimelineQuickLayer::AutomationSelection,
                             QRectF(tickX(kNodeTick) + 4.0, geom.body.center().y() - 2.0, 8.0, 4.0),
-                            captureOrigin, themes::color(themes::Role::song_view_selection_fill)),
+                            plotContentOrigin,
+                            themes::color(themes::Role::song_view_selection_fill)),
                QStringLiteral("selection reticle is missing from the retained Quick layer"));
         view.selectionModel().clearTimeSelection();
         refresh(page, document, live);
@@ -570,7 +576,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         paintUnchanged(row.name, dragSnap);
         report(row.name,
                layerHas(songview::TimelineQuickLayer::AutomationTransient,
-                        nodeProbe(dragTarget.x(), dragTarget.y(), radius), captureOrigin,
+                        nodeProbe(dragTarget.x(), dragTarget.y(), radius), plotContentOrigin,
                         themes::color(themes::Role::song_view_edit_preview_outline)),
                QStringLiteral("node drag preview is missing from the retained Quick layer"));
         report(row.name,
@@ -596,10 +602,11 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
                                     nodelane::valueY(lane, geom.body, geometry, second - 24));
         report(row.name,
                layerHas(songview::TimelineQuickLayer::AutomationTransient,
-                        nodeProbe(multiTarget.x(), multiTarget.y(), radius), captureOrigin,
+                        nodeProbe(multiTarget.x(), multiTarget.y(), radius), plotContentOrigin,
                         themes::color(themes::Role::song_view_edit_preview_outline)) &&
                    layerHas(songview::TimelineQuickLayer::AutomationTransient,
-                            nodeProbe(secondPreview.x(), secondPreview.y(), radius), captureOrigin,
+                            nodeProbe(secondPreview.x(), secondPreview.y(), radius),
+                            plotContentOrigin,
                             themes::color(themes::Role::song_view_edit_preview_outline)),
                QStringLiteral("multi-drag preview is missing from the retained Quick layer"));
         report(row.name,
@@ -620,7 +627,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         paintUnchanged(row.name, sweepSnap);
         report(row.name,
                layerHas(songview::TimelineQuickLayer::AutomationTransient,
-                        nodeProbe(sweepTarget.x(), sweepTarget.y(), radius), captureOrigin,
+                        nodeProbe(sweepTarget.x(), sweepTarget.y(), radius), plotContentOrigin,
                         themes::color(themes::Role::song_view_edit_preview_outline)),
                QStringLiteral("sweep preview is missing from the retained Quick layer"));
         report(row.name,
@@ -643,7 +650,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
                               (rampStart.y() + rampEnd.y()) / 2.0);
         report(row.name,
                layerHas(songview::TimelineQuickLayer::AutomationTransient,
-                        QRectF(rampMid.x() - 3.0, rampMid.y() - 3.0, 6.0, 6.0), captureOrigin,
+                        QRectF(rampMid.x() - 3.0, rampMid.y() - 3.0, 6.0, 6.0), plotContentOrigin,
                         themes::color(themes::Role::song_view_edit_preview_outline)),
                QStringLiteral("Shift-ramp preview is missing from the retained Quick layer"));
         report(row.name,
@@ -672,14 +679,14 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         paintUnchanged(row.name, pencilSnap);
         report(row.name,
                layerHas(songview::TimelineQuickLayer::AutomationTransient,
-                        lineProbe(tickX(48), pencilHold.y(), 8, lineHalf), captureOrigin,
+                        lineProbe(tickX(48), pencilHold.y(), 8, lineHalf), plotContentOrigin,
                         themes::color(themes::Role::song_view_edit_preview_outline)),
                QStringLiteral("Pencil preview curve is missing from the retained Quick layer"));
         report(row.name,
                quickScene &&
                    textModelHasRecordIn(quickScene->automationTransientTextModel(),
                                         previewLabelProbe(pencilEnd.x(), pencilEnd.y(), geom.plot),
-                                        captureOrigin),
+                                        plotContentOrigin),
                QStringLiteral("Pencil preview value label is missing from the retained Quick "
                               "text model"));
         report(row.name,

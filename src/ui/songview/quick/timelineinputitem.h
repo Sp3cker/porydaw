@@ -38,9 +38,12 @@ class TimelineInputItem : public QQuickItem, public TimelineInputHost
     explicit TimelineInputItem(QQuickItem *parent = nullptr);
     ~TimelineInputItem() override;
 
-    // Sole attach/detach path: returns when unchanged, detaches the old
-    // interaction, then attaches the new one; nullptr only detaches.
-    void setInteraction(TimelineBandInteraction *interaction);
+    // Sole attach/detach path. A forwarding secondary input leaves
+    // attachHost false so it emits its own surface and host without replacing
+    // the interaction's primary host.
+    void setInteraction(TimelineBandInteraction *interaction,
+                        TimelineInputSurface surface = TimelineInputSurface::Plot,
+                        bool attachHost = true);
     TimelineBandInteraction *interaction() const noexcept;
     void notifyHostAppearanceChanged();
     void setHostAppearance(const QFont &font, const QPalette &palette);
@@ -79,6 +82,10 @@ class TimelineInputItem : public QQuickItem, public TimelineInputHost
 
   private:
     TimelineBandInteraction *m_interaction = nullptr;
+    TimelineInputSurface m_surface = TimelineInputSurface::Plot;
+    bool m_attachHost = true;
+    bool m_attachedInputHost = false;
+
     QString m_accessibilityDescription;
     QFont m_hostFont;
     QPalette m_hostPalette;

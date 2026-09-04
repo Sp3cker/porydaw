@@ -96,58 +96,59 @@ void PlayheadOverlay::syncAppearance()
     updatePlayhead();
 }
 
+QRect PlayheadOverlay::timelineColumnRect() const
+{
+    const int timelineSplitX = m_owner.timelineSplitX();
+    return QRect(timelineSplitX, 0, std::max(0, m_owner.width() - timelineSplitX),
+                 m_owner.height());
+}
+
 void PlayheadOverlay::synchronizeGeometry()
 {
 #ifdef __APPLE__
     SongView &owner = m_owner;
-
+    const QRect timelineColumn = timelineColumnRect();
+    const QRect localTimelineColumn(0, 0, timelineColumn.width(), timelineColumn.height());
     const std::optional<TimelineBandGeometry> &rulerBand = m_layout.geometry(TimelineBand::Ruler);
-    if (!rulerBand) {
-        // Without a ruler row nothing can be clipped to a timeline column.
+    if (!rulerBand || rulerBand->plotRect.isEmpty()) {
+        // Without a ruler plot nothing can be clipped to a timeline column.
         m_visibleSurfaceRegion = {};
         m_bodyGeometry = {};
         m_triangleClip = {};
     } else {
-        const QRect &rulerRect = rulerBand->rect;
-        const int bodyTop = rulerRect.top();
-        m_bodyGeometry = QRect(0, bodyTop, owner.width(), std::max(0, owner.height() - bodyTop));
-
-        // Canonical entries are SongView-local and omit hidden bands; each clip
-        // rect starts at its band's timeline origin. Producer contract
-        // (timelinebandlayout.h): band rects are already clipped to what their
-        // layout owner shows, and this overlay's owner is SongView, so one
-        // intersected(owner.rect()) bounds the surface — no ancestor walk.
-        const auto visibleBandRect = [&owner](const TimelineBandGeometry &band) {
-            if (band.timelineOrigin >= band.rect.width())
-                return QRect();
-            const QRect visible(band.rect.x() + band.timelineOrigin, band.rect.y(),
-                                band.rect.width() - band.timelineOrigin, band.rect.height());
-            return visible.intersected(owner.rect());
+        const auto visibleBandRect = [&timelineColumn,
+                                      &localTimelineColumn](const TimelineBandGeometry &band) {
+            return band.plotRect.translated(-timelineColumn.x(), 0)
+                .intersected(localTimelineColumn);
         };
 
         const QRect rulerVisible = visibleBandRect(*rulerBand);
-        const int triangleTop =
-            rulerRect.bottom() - playheadTriangleHeight() + layout::singlePixel();
-        m_triangleClip = rulerVisible.intersected(QRect(
-            rulerVisible.left(), triangleTop, rulerVisible.width(), playheadTriangleHeight()));
+        const int bodyTop = rulerVisible.top();
+        m_bodyGeometry =
+            QRect(0, bodyTop, timelineColumn.width(), std::max(0, owner.height() - bodyTop));
 
-        m_visibleSurfaceRegion = rulerVisible;
-        for (std::size_t index = 0; index < m_layout.bands.size(); ++index) {
-            if (index == timelineBandIndex(TimelineBand::Ruler))
+        m_visibleSurfaceRegion = {};
+        for (const std::optional<TimelineBandGeometry> &band : m_layout.bands) {
+            if (!band)
                 continue;
-            const std::optional<TimelineBandGeometry> &band = m_layout.bands[index];
-            if (band) {
-                const QRect visible = visibleBandRect(*band);
-                if (!visible.isEmpty())
-                    m_visibleSurfaceRegion += visible;
-            }
+            const QRect visible = visibleBandRect(*band);
+            if (!visible.isEmpty())
+                m_visibleSurfaceRegion += visible;
         }
-        m_timelineOrigin = rulerRect.x() + rulerBand->timelineOrigin;
+
+        if (rulerVisible.isEmpty()) {
+            m_triangleClip = {};
+        } else {
+            const int triangleHeight = playheadTriangleHeight();
+            const int triangleHalfWidth = playheadTriangleHalfWidth();
+            const int triangleTop = rulerVisible.bottom() - triangleHeight + layout::singlePixel();
+            const QRect triangleBounds(rulerVisible.left() - triangleHalfWidth, rulerVisible.top(),
+                                       rulerVisible.width() + triangleHalfWidth,
+                                       rulerVisible.height());
+            m_triangleClip = triangleBounds.intersected(
+                QRect(triangleBounds.x(), triangleTop, triangleBounds.width(), triangleHeight));
+        }
     }
-#else
-    if (const std::optional<TimelineBandGeometry> &rulerBand =
-            m_layout.geometry(TimelineBand::Ruler))
-        m_timelineOrigin = rulerBand->rect.x() + rulerBand->timelineOrigin;
 #endif
     m_trianglePointsUp = !m_layout.geometry(TimelineBand::Roll).has_value();
 
@@ -163,6 +164,13 @@ void PlayheadOverlay::synchronizeGeometry()
     updatePlayhead();
 }
 
+bool PlayheadOverlay::effectiveVisible() const
+{
+    const std::optional<TimelineBandGeometry> &rulerBand = m_layout.geometry(TimelineBand::Ruler);
+    return m_visible && rulerBand && !rulerBand->plotRect.isEmpty() && m_timelineX >= 0.0 &&
+           m_timelineX < timelineColumnRect().width();
+}
+
 void PlayheadOverlay::updatePlayhead()
 {
 #ifdef __APPLE__
@@ -170,7 +178,7 @@ void PlayheadOverlay::updatePlayhead()
         setPlatformPosition();
 #else
     if (auto *quickView = m_owner.quickView()) {
-        quickView->setPlayhead(finalX(), m_visible, m_playing, m_trianglePointsUp);
+        quickView->setPlayhead(m_timelineX, effectiveVisible(), m_playing, m_trianglePointsUp);
         quickView->setPlayheadColor(m_color);
     }
 #endif

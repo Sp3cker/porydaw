@@ -13,6 +13,7 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickscene.h"
+#include "ui/songview/timecamera.h"
 #include "ui/theme/themeruntime.h"
 
 namespace lyt = ::layout;
@@ -48,23 +49,23 @@ void appendAxisText(std::vector<TimelineQuickTextModel::Record> &records, quint6
 
 } // namespace songview
 
-void VelocityArea::rebuildQuickChrome(songview::TimelineQuickScene &scene, const QRectF &full,
-                                      int origin, int separatorX)
+void VelocityArea::rebuildQuickChrome(songview::TimelineQuickScene &scene, const QRectF &plot,
+                                      const QRectF &gutter, qreal separatorX)
 {
     using namespace songview;
+    constexpr TimelineQuickLayer gutterLayer = TimelineQuickLayer::VelocityGutterChrome;
     constexpr TimelineQuickLayer chromeLayer = TimelineQuickLayer::VelocityChrome;
     const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
-    const QColor gutter = m_inputHost->palette().alternateBase().color();
+    const QColor gutterColor = m_inputHost->palette().alternateBase().color();
     const QColor separator = m_inputHost->palette().mid().color();
-    addRect(scene, chromeLayer, full, background, full);
-    addRect(scene, chromeLayer, QRectF(0, 0, std::min<qreal>(origin, full.width()), full.height()),
-            gutter, full);
-    addVerticalLine(scene, chromeLayer, separatorX, 0, full.height(), lyt::singlePixel(), separator,
-                    full);
+    addRect(scene, chromeLayer, plot, background, plot);
+    addRect(scene, gutterLayer, gutter, gutterColor, gutter);
+    addVerticalLine(scene, gutterLayer, separatorX, 0, gutter.height(), lyt::singlePixel(),
+                    separator, gutter);
 }
 
-void VelocityArea::rebuildQuickAxis(songview::TimelineQuickScene &scene, const QRectF &full,
-                                    int separatorX)
+void VelocityArea::rebuildQuickAxis(songview::TimelineQuickScene &scene, const QRectF &gutter,
+                                    qreal separatorX)
 {
     using namespace songview;
     constexpr TimelineQuickLayer axisLayer = TimelineQuickLayer::VelocityAxis;
@@ -93,7 +94,7 @@ void VelocityArea::rebuildQuickAxis(songview::TimelineQuickScene &scene, const Q
             addHorizontalLine(scene, axisLayer, separatorX - 3.0 * lyt::space(Space::Half),
                               separatorX, graduation.y,
                               graduation.active ? 1.5 : lyt::singlePixel(),
-                              graduation.active ? selectedColor : labelColor, full);
+                              graduation.active ? selectedColor : labelColor, gutter);
             if ((!relativeGesture && graduation.labelVisible) || emphasizeLabel) {
                 appendAxisText(
                     axisText, index,
@@ -108,7 +109,7 @@ void VelocityArea::rebuildQuickAxis(songview::TimelineQuickScene &scene, const Q
             const qreal length = m_axis.hasLabel(tick.velocity) ? 3.0 * lyt::space(Space::Half)
                                                                 : lyt::space(Space::One);
             addHorizontalLine(scene, axisLayer, separatorX - length, separatorX, tick.y,
-                              lyt::singlePixel(), labelColor, full);
+                              lyt::singlePixel(), labelColor, gutter);
         }
         if (!relativeGesture) {
             for (std::size_t index = 0; index < m_axis.labelCount(); ++index) {
@@ -123,7 +124,7 @@ void VelocityArea::rebuildQuickAxis(songview::TimelineQuickScene &scene, const Q
         for (std::size_t index = 0; index < m_axis.markerCount(); ++index) {
             const VelocityAxisMarker &marker = m_axis.markers()[index];
             addHorizontalLine(scene, axisLayer, separatorX - lyt::space(Space::Two), separatorX,
-                              marker.y, 1.5, selectedColor, full);
+                              marker.y, 1.5, selectedColor, gutter);
             if (relativeGesture) {
                 appendAxisText(
                     axisText, index,
@@ -146,14 +147,12 @@ void VelocityArea::rebuildQuickPsgBands(songview::TimelineQuickScene &scene, con
 {
     using namespace songview;
     constexpr TimelineQuickLayer bandsLayer = TimelineQuickLayer::VelocityBands;
-    if (const MidiTimeline *timeline = m_owner.timeline()) {
-        const double ticksPerBeat = double(std::max(1u, timeline->ticksPerBeat));
-        const double ticksPerPixel = ticksPerBeat / pxPerBeat();
+    if (m_owner.timeline()) {
         const uint64_t firstTick =
-            uint64_t(std::max(0.0, std::floor(m_live.horizontalScroll * ticksPerPixel)));
+            uint64_t(std::max(0.0, std::floor(m_camera.tickAtContentX(plot.left()))));
         const uint64_t lastTick =
             std::max(firstTick + 1,
-                     uint64_t(std::ceil((m_live.horizontalScroll + plot.width()) * ticksPerPixel)));
+                     uint64_t(std::max(0.0, std::ceil(m_camera.tickAtContentX(plot.right())))));
         uint64_t sectionTick = firstTick;
         while (sectionTick < lastTick) {
             const DrawerPageVoiceContext context = m_owner.voiceContext(sectionTick);
@@ -253,27 +252,30 @@ void VelocityArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
         return;
     using namespace songview;
     constexpr std::array layers = {
-        TimelineQuickLayer::VelocityChrome,    TimelineQuickLayer::VelocityAxis,
-        TimelineQuickLayer::VelocityGrid,      TimelineQuickLayer::VelocityBands,
-        TimelineQuickLayer::VelocityStems,     TimelineQuickLayer::VelocityNodes,
-        TimelineQuickLayer::VelocityTransient,
+        TimelineQuickLayer::VelocityGutterChrome, TimelineQuickLayer::VelocityChrome,
+        TimelineQuickLayer::VelocityAxis,         TimelineQuickLayer::VelocityGrid,
+        TimelineQuickLayer::VelocityBands,        TimelineQuickLayer::VelocityStems,
+        TimelineQuickLayer::VelocityNodes,        TimelineQuickLayer::VelocityTransient,
     };
     for (const TimelineQuickLayer layer : layers)
         resetLayer(scene, layer);
     scene.setVelocityTextRecords(std::span<const TimelineQuickTextModel::Record>{});
     ++m_diagnostics.contentBuildCount;
-    const QRectF full = m_inputHost->bounds();
-    if (full.width() <= 0.0 || full.height() <= 0.0)
+    const QRectF bounds = m_inputHost->bounds();
+    const QRectF plot(QPointF{}, bounds.size());
+    if (plot.width() <= 0.0 || plot.height() <= 0.0)
         return;
+    const std::optional<songview::TimelineBandGeometry> &band =
+        m_owner.timelineBandLayout().geometry(songview::TimelineBand::Velocity);
+    if (!band)
+        return;
+    const QRect gutterRect = band->gutterRect();
+    const QRectF gutter(0.0, 0.0, gutterRect.width(), gutterRect.height());
     const qreal dpr = m_inputHost->devicePixelRatio();
-    const int origin = plotOrigin();
-    const QRectF plot(origin, 0, plotWidth(), full.height());
-    const int separatorX = origin - lyt::singlePixel();
-    rebuildQuickChrome(scene, full, origin, separatorX);
-    rebuildQuickAxis(scene, full, separatorX);
-    if (plot.width() <= 0.0)
-        return;
-    rebuildQuickGrid(scene, plot, origin, dpr);
+    const qreal separatorX = gutter.right() - lyt::singlePixel();
+    rebuildQuickChrome(scene, plot, gutter, separatorX);
+    rebuildQuickAxis(scene, gutter, separatorX);
+    rebuildQuickGrid(scene, plot, 0, dpr);
     rebuildQuickPsgBands(scene, plot);
     rebuildQuickNotes(scene, plot, dpr);
     rebuildQuickTransient(scene, plot);

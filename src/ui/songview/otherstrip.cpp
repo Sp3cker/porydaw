@@ -51,15 +51,13 @@ void OtherStrip::detachInputHost(TimelineInputHost &host)
 bool OtherStrip::pointerMove(const TimelinePointerInput &input)
 {
     const MidiTimeline *timeline = m_owner.timeline();
-    const qreal plotOrigin = m_owner.timelinePlotOrigin();
-    if (!m_inputHost || !timeline || input.position.x() < plotOrigin) {
+    if (!m_inputHost || !timeline || input.surface != TimelineInputSurface::Plot) {
         QToolTip::hideText();
         return true;
     }
     QStringList lines;
     for (const StripItem &item : m_owner.model().strip) {
-        const qreal x =
-            m_camera.displayX(double(item.tick), plotOrigin, m_inputHost->devicePixelRatio());
+        const qreal x = m_camera.displayX(double(item.tick), 0.0, m_inputHost->devicePixelRatio());
         if (std::abs(x - input.position.x()) > m_geometry.otherEventHitSlop)
             continue;
         const double seconds = double(timeline->sampleForTick(item.tick)) / timeline->sampleRate;

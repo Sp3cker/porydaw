@@ -12,6 +12,7 @@
 #include "rig.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/layout.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
 
 #include "ui/songview.h"
@@ -159,12 +160,12 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
     check(lfoHandle.valid(),
           QStringLiteral("Pencil ownership fixture did not expose the LFO lane"));
     if (lfoHandle.valid()) {
-        const auto lfoPoint = rig.pointAt(rig.lfo, 24, 64);
         const QRect lfoBody = rig.bodyFor(lfoHandle);
-        const QPointF boundary(lfoPoint.position.x(), lfoBody.top() + lfoBody.height());
-        rig.mouseMove(boundary, Qt::NoButton);
+        const QPointF boundary(rig.automationGutterInput().bounds().center().x(),
+                               lfoBody.top() + lfoBody.height());
+        rig.gutterMouseMove(boundary);
         rig.pump();
-        check(rig.automationCursor().shape() == Qt::SplitVCursor,
+        check(rig.automationGutterInput().cursor().shape() == Qt::SplitVCursor,
               QStringLiteral("Pencil row boundary did not retain resize cursor precedence"));
     }
 

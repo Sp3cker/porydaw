@@ -48,9 +48,9 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
     doc.addNote(track, d.tick, uint8_t(d.key), offDur, 100);
     const int rowY = rows.centerY(d.key);
     const qreal resizeNoteLeftX =
-        view.camera().displayX(double(d.tick), pianoKeyboardWidth, roll->devicePixelRatio());
-    const qreal resizeNoteRightX = view.camera().displayX(
-        double(d.tick + offDur), pianoKeyboardWidth, roll->devicePixelRatio());
+        view.camera().displayX(double(d.tick), 0.0, roll->devicePixelRatio());
+    const qreal resizeNoteRightX =
+        view.camera().displayX(double(d.tick + offDur), 0.0, roll->devicePixelRatio());
     // Probe 2.8 DIPs inward at both ends on the note row.
     const QPointF leftHandle(resizeNoteLeftX + 2.8, rowY);
     const QPointF rightHandle(resizeNoteRightX - 2.8, rowY);
@@ -77,8 +77,9 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
     checks::events::sendMouse(*roll, QEvent::MouseMove, rightHandle, Qt::NoButton, Qt::NoButton,
                               Qt::ControlModifier);
     failUnlessHoverShows(rightEdgeImage, "right note edge did not show its custom cursor");
-    const QPoint pull(
-        pianoKeyboardWidth + view.camera().contentX(double(d.tick) + 1.9 * double(d.dur)), rowY);
+    const QPointF pull(
+        view.camera().displayX(double(d.tick) + 1.9 * double(d.dur), 0.0, roll->devicePixelRatio()),
+        rowY);
     checks::events::sendMouse(*roll, QEvent::MouseButtonPress, rightHandle, Qt::LeftButton,
                               Qt::LeftButton, Qt::NoModifier);
     checks::events::sendMouse(*roll, QEvent::MouseMove, pull, Qt::NoButton, Qt::LeftButton,
@@ -96,9 +97,8 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
     // stationary Ctrl+edge click just joins, editing nothing.
     {
         const qreal dpr = roll->devicePixelRatio();
-        const QPointF ctrlEdge(
-            view.camera().displayX(double(d.tick + 2 * d.dur), pianoKeyboardWidth, dpr) - 2.8,
-            rowY);
+        const QPointF ctrlEdge(view.camera().displayX(double(d.tick + 2 * d.dur), 0.0, dpr) - 2.8,
+                               rowY);
         click(*roll, b.center); // selection = {B}
         const int preCount = doc.undoStack()->count();
         DocNote bBefore;
@@ -121,9 +121,8 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
             fail("a stationary Ctrl+edge click pushed an undo command");
         // Pull the grip one drawn cell further right: both selected notes
         // must grow by that same delta.
-        const qreal cellPx =
-            view.camera().displayX(double(d.tick + 3 * d.dur), pianoKeyboardWidth, dpr) -
-            view.camera().displayX(double(d.tick + 2 * d.dur), pianoKeyboardWidth, dpr);
+        const qreal cellPx = view.camera().displayX(double(d.tick + 3 * d.dur), 0.0, dpr) -
+                             view.camera().displayX(double(d.tick + 2 * d.dur), 0.0, dpr);
         const QPointF pull2(ctrlEdge.x() + cellPx, rowY);
         checks::events::sendMouse(*roll, QEvent::MouseButtonPress, ctrlEdge, Qt::LeftButton,
                                   Qt::LeftButton, Qt::ControlModifier);
@@ -145,10 +144,11 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
 
     // Overshooting the drag past the note's start must stop at one snap
     // cell, not collapse to the document's 1-tick floor.
-    const QPoint edge2(pianoKeyboardWidth + view.camera().contentX(double(d.tick + 2 * d.dur)),
-                       rowY);
-    const QPoint overshoot(
-        pianoKeyboardWidth + view.camera().contentX(double(d.tick) - 0.5 * double(d.dur)), rowY);
+    const QPointF edge2(
+        view.camera().displayX(double(d.tick + 2 * d.dur), 0.0, roll->devicePixelRatio()), rowY);
+    const QPointF overshoot(
+        view.camera().displayX(double(d.tick) - 0.5 * double(d.dur), 0.0, roll->devicePixelRatio()),
+        rowY);
     checks::events::sendMouse(*roll, QEvent::MouseButtonPress, edge2, Qt::LeftButton,
                               Qt::LeftButton, Qt::NoModifier);
     checks::events::sendMouse(*roll, QEvent::MouseMove, overshoot, Qt::NoButton, Qt::LeftButton,
@@ -163,9 +163,10 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
     // note that narrow the edge zones shrink to leave a grabbable middle,
     // so 6 DIPs in from the right edge is part of that middle: the hover
     // shows the plain arrow, not a resize cursor.
-    const QPointF narrowMiddle(pianoKeyboardWidth +
-                                   view.camera().contentX(double(d.tick) + double(snapCell)) - 6,
-                               rows.bottom(d.key) - 2);
+    const QPointF narrowMiddle(
+        view.camera().displayX(double(d.tick) + double(snapCell), 0.0, roll->devicePixelRatio()) -
+            6,
+        rows.bottom(d.key) - 2);
     checks::events::sendMouse(*roll, QEvent::MouseMove, narrowMiddle, Qt::NoButton, Qt::NoButton,
                               Qt::NoModifier);
     if (roll->cursor().shape() != Qt::ArrowCursor)
@@ -183,19 +184,20 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
         narrowView.scrollPx = std::max(0.0, double(d.tick) * narrowPxPerTick - 100.0);
         view.applyViewState(narrowView);
         const SnappedRows narrowRows{view, *roll};
-        const int narrowLeftX = pianoKeyboardWidth + view.camera().contentX(double(d.tick));
-        const int narrowRightX =
-            pianoKeyboardWidth + view.camera().contentX(double(d.tick + snapCell));
+        const qreal narrowDpr = roll->devicePixelRatio();
+        const qreal narrowLeftX = view.camera().displayX(double(d.tick), 0.0, narrowDpr);
+        const qreal narrowRightX =
+            view.camera().displayX(double(d.tick + snapCell), 0.0, narrowDpr);
         if (narrowRightX - narrowLeftX > 3)
             fail("narrow-zoom fixture note is unexpectedly wide");
         const QRectF narrowBox =
             narrowRows.noteBox(narrowRows.noteRect(narrowLeftX, narrowRightX, d.key));
         const QImage narrowImage = check.captureQuickFramebuffer();
-        const qreal narrowDpr = narrowImage.devicePixelRatio();
-        const auto toNarrowPixel = [narrowDpr](qreal position) {
-            return qRound(position * narrowDpr);
+        const qreal narrowRasterDpr = narrowImage.devicePixelRatio();
+        const auto toNarrowPixel = [narrowRasterDpr](qreal position) {
+            return qRound(position * narrowRasterDpr);
         };
-        const int sampleX = toNarrowPixel(narrowBox.center().x());
+        const int sampleX = toNarrowPixel(pianoKeyboardWidth + narrowBox.center().x());
         const QRgb topPixel = narrowImage.pixel(sampleX, toNarrowPixel(narrowBox.top()));
         const QRgb centerPixel = narrowImage.pixel(sampleX, toNarrowPixel(narrowBox.center().y()));
         const QColor top(topPixel);
@@ -226,8 +228,7 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
         doc.addNote(track, g.tick + g.dur, uint8_t(g.key), uint32_t(g.dur), 100);
         const qreal gDpr = roll->devicePixelRatio();
         const uint64_t gSnap = view.grid().snapTicksAt(g.tick);
-        const qreal boundaryX =
-            view.camera().displayX(double(g.tick + g.dur), pianoKeyboardWidth, gDpr);
+        const qreal boundaryX = view.camera().displayX(double(g.tick + g.dur), 0.0, gDpr);
         const int gRowY = rows.centerY(g.key);
         const QPointF leftSide(boundaryX - 2.8, gRowY);
         const QPointF rightSide(boundaryX + 2.8, gRowY);
@@ -247,9 +248,8 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
 
         // Drag from just left of the boundary: the LEFT note's end shrinks
         // one snap cell; the right note must not move or resize.
-        const QPointF pullLeft(
-            view.camera().displayX(double(g.tick + g.dur - gSnap), pianoKeyboardWidth, gDpr),
-            gRowY);
+        const QPointF pullLeft(view.camera().displayX(double(g.tick + g.dur - gSnap), 0.0, gDpr),
+                               gRowY);
         checks::events::sendMouse(*roll, QEvent::MouseButtonPress, leftSide, Qt::LeftButton,
                                   Qt::LeftButton, Qt::NoModifier);
         checks::events::sendMouse(*roll, QEvent::MouseMove, pullLeft, Qt::NoButton, Qt::LeftButton,
@@ -268,9 +268,8 @@ std::optional<ResizeFixture> runResizeScenarios(Harness &check,
         // stay put.
         doc.undoStack()->undo();
         view.selectionModel().clearNoteSelection();
-        const QPointF pullRight(
-            view.camera().displayX(double(g.tick + g.dur + gSnap), pianoKeyboardWidth, gDpr),
-            gRowY);
+        const QPointF pullRight(view.camera().displayX(double(g.tick + g.dur + gSnap), 0.0, gDpr),
+                                gRowY);
         checks::events::sendMouse(*roll, QEvent::MouseButtonPress, rightSide, Qt::LeftButton,
                                   Qt::LeftButton, Qt::NoModifier);
         checks::events::sendMouse(*roll, QEvent::MouseMove, pullRight, Qt::NoButton, Qt::LeftButton,

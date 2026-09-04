@@ -1,8 +1,9 @@
 #pragma once
 
 #include <QRect>
+#include <QSize>
 
-#include <array>
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -28,12 +29,22 @@ constexpr std::size_t timelineBandIndex(TimelineBand band)
 // Value contract: rect is the visible SongView-local band rectangle, already
 // clipped/limited by the band's parent layout owner (spacer row, roll page
 // minus scrollbar, drawer viewport/body). Hidden or fully occluded bands are
-// nullopt. timelineOrigin is the band's timeline x inside rect. Consumers can
-// therefore intersect SongView's rect alone; no ancestor widget walking.
+// nullopt. plotRect is the band's SongView-local time-plot rectangle; every
+// time plot starts at SongView's canonical split, and a band without a time
+// plot (TrackHeaders) carries an empty QRect(). Consumers can therefore
+// intersect SongView's rect alone; no ancestor widget walking.
 struct TimelineBandGeometry {
     QRect rect;
-    int timelineOrigin;
+    QRect plotRect;
 
+    QRect gutterRect() const noexcept
+    {
+        if (plotRect.isNull())
+            return rect;
+
+        const int gutterWidth = std::clamp(plotRect.left() - rect.left(), 0, rect.width());
+        return {rect.topLeft(), QSize(gutterWidth, rect.height())};
+    }
     friend bool operator==(const TimelineBandGeometry &, const TimelineBandGeometry &) = default;
 };
 

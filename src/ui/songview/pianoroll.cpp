@@ -200,6 +200,9 @@ void PianoRoll::cancelTransientInput()
     if (m_soundingKey >= 0)
         auditionKey(m_soundingKey, 0);
     stopBandAuditions();
+    if (m_panHost)
+        m_panHost->clearCursor();
+    m_panHost = nullptr;
     m_panning = false;
     m_panPos = {};
     m_leftDrag = LeftDrag::None;
@@ -255,9 +258,9 @@ void PianoRoll::cancelVelocityInteraction()
 bool PianoRoll::wheel(const TimelineWheelInput &input)
 {
     // Reaper-style bindings: plain wheel over the notes area zooms the
-    // timeline, over the keyboard column it scrolls the note range.
-    // Ctrl+wheel zooms the key height (the track-height analog); Shift
-    // (or a trackpad's horizontal delta) scrolls horizontally.
+    // timeline, while the gutter scrolls the note range. Ctrl+wheel zooms
+    // the key height (the track-height analog); Shift (or a trackpad's
+    // horizontal delta) scrolls horizontally.
     const QPoint delta = input.pixelDelta.isNull() ? input.angleDelta : input.pixelDelta;
     const int d = delta.y() ? delta.y() : delta.x();
     if (input.modifiers & Qt::ControlModifier) {
@@ -266,10 +269,10 @@ bool PianoRoll::wheel(const TimelineWheelInput &input)
         m_sv->scrollByPx(-d);
     } else if (delta.x() && !delta.y()) {
         m_sv->scrollByPx(-delta.x());
-    } else if (input.position.x() < m_geometry.pianoKeyboardWidth) {
+    } else if (input.surface == TimelineInputSurface::Gutter) {
         m_sv->scrollRollBy(-delta.y() / 2.0);
     } else {
-        m_sv->zoomTimelineAtWheel(input, input.position.x() - m_geometry.pianoKeyboardWidth);
+        m_sv->zoomTimelineAtWheel(input, input.position.x());
     }
     return true;
 }

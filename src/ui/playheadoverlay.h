@@ -40,7 +40,8 @@ class PlayheadOverlay final : public QObject
     void syncAppearance();
 
   private:
-    qreal finalX() const { return static_cast<qreal>(m_timelineOrigin) + m_timelineX; }
+    QRect timelineColumnRect() const;
+    bool effectiveVisible() const;
 
     void synchronizeGeometry();
 #ifdef __APPLE__
@@ -67,7 +68,6 @@ class PlayheadOverlay final : public QObject
     QRect m_triangleClip;
 #endif
     qreal m_timelineX = 0.0;
-    int m_timelineOrigin = 0;
     bool m_visible = false;
     bool m_playing = false;
     bool m_trianglePointsUp = false;

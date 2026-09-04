@@ -29,7 +29,7 @@ class TempoLane final : public NodeLane
     QString valueText(int value) const override;
     std::optional<NodePoint> leadIn() const override;
     void replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points) override;
-    void updateLayout(int width, int top, const AutomationGeometry &geometry);
+    void updateLayout(int width, int top, int gutterWidth, const AutomationGeometry &geometry);
     int totalHeight(const AutomationGeometry &geometry) const;
     QRect bodyRect() const noexcept { return m_body; }
     QRect headerRect() const noexcept { return m_header; }

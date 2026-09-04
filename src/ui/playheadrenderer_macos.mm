@@ -11,7 +11,6 @@
 #include <QPoint>
 #include <QRect>
 #include <QRegion>
-#include <QSize>
 #include <QWidget>
 #include <algorithm>
 #include <array>
@@ -134,19 +133,20 @@ class PlayheadOverlay::Platform final
         updateColors();
     }
 
-    void setLayout(const QSize &overlaySize, const QRegion &visibleSurfaces,
+    void setLayout(const QRect &timelineColumn, const QRegion &visibleSurfaces,
                    const QRect &triangleClip, const QRect &bodyGeometry, qreal devicePixelRatio,
                    bool playing, bool trianglePointsUp)
     {
         attachToNativeView();
         const QPoint overlayOffset = m_owner.mapTo(m_owner.window(), QPoint(0, 0));
         const qreal dpr = std::max<qreal>(devicePixelRatio, 1.0);
-        const bool clipLayoutChanged =
-            !m_hasLayout || m_overlaySize != overlaySize || m_overlayOffset != overlayOffset ||
-            m_visibleSurfaces != visibleSurfaces || m_triangleClip != triangleClip;
+        const bool clipLayoutChanged = !m_hasLayout || m_timelineColumn != timelineColumn ||
+                                       m_overlayOffset != overlayOffset ||
+                                       m_visibleSurfaces != visibleSurfaces ||
+                                       m_triangleClip != triangleClip;
         const bool playingChanged = m_playing != playing;
+        m_timelineColumn = timelineColumn;
 
-        m_overlaySize = overlaySize;
         m_overlayOffset = overlayOffset;
         m_visibleSurfaces = visibleSurfaces;
         m_triangleClip = triangleClip;
@@ -159,9 +159,11 @@ class PlayheadOverlay::Platform final
 
         DisabledActionTransaction transaction;
         if (clipLayoutChanged) {
-            const auto rootRect = CGRectMake(overlayOffset.x(), overlayOffset.y(),
-                                             overlaySize.width(), overlaySize.height());
-            const auto rootBounds = CGRectMake(0.0, 0.0, overlaySize.width(), overlaySize.height());
+            const auto rootRect = CGRectMake(overlayOffset.x() + timelineColumn.x(),
+                                             overlayOffset.y() + timelineColumn.y(),
+                                             timelineColumn.width(), timelineColumn.height());
+            const auto rootBounds =
+                CGRectMake(0.0, 0.0, timelineColumn.width(), timelineColumn.height());
             setLayerRect(m_rootLayer.get(), rootRect);
             setLayerRect(m_bodyClipLayer.get(), rootBounds);
             setLayerRect(m_bodyMaskLayer.get(), rootBounds);
@@ -189,7 +191,7 @@ class PlayheadOverlay::Platform final
         m_hasLayout = true;
     }
 
-    void setPosition(qreal finalX, bool visible, bool playing, bool trianglePointsUp)
+    void setPosition(qreal localX, bool visible, bool playing, bool trianglePointsUp)
     {
         attachToNativeView();
         // With no attached native view the playhead silently renders nothing:
@@ -208,9 +210,9 @@ class PlayheadOverlay::Platform final
                 updateColors();
         }
         m_bodyLayer.get().position =
-            CGPointMake(finalX - playheadGlowLeftExtent(playing), m_bodyTop);
+            CGPointMake(localX - playheadGlowLeftExtent(playing), m_bodyTop);
         m_triangleLayer.get().position =
-            CGPointMake(finalX - playheadTriangleHalfWidth(), m_triangleTop);
+            CGPointMake(localX - playheadTriangleHalfWidth(), m_triangleTop);
         m_rootLayer.get().hidden = visible ? NO : YES;
     }
 
@@ -293,7 +295,7 @@ class PlayheadOverlay::Platform final
     RetainedObject<CAShapeLayer> m_triangleMaskLayer;
     RetainedObject<CAShapeLayer> m_triangleLayer;
 
-    QSize m_overlaySize;
+    QRect m_timelineColumn;
     QPoint m_overlayOffset;
     QRegion m_visibleSurfaces;
     QRect m_triangleClip;
@@ -321,8 +323,8 @@ void PlayheadOverlay::initializePlatform(SongView &owner)
 void PlayheadOverlay::setPlatformLayout()
 {
     Q_ASSERT(m_platform);
-    m_platform->setLayout(m_owner.size(), m_visibleSurfaceRegion, m_triangleClip, m_bodyGeometry,
-                          m_devicePixelRatio, m_playing, m_trianglePointsUp);
+    m_platform->setLayout(timelineColumnRect(), m_visibleSurfaceRegion, m_triangleClip,
+                          m_bodyGeometry, m_devicePixelRatio, m_playing, m_trianglePointsUp);
 }
 
 void PlayheadOverlay::setPlatformImages()
@@ -334,7 +336,7 @@ void PlayheadOverlay::setPlatformImages()
 void PlayheadOverlay::setPlatformPosition()
 {
     Q_ASSERT(m_platform);
-    m_platform->setPosition(finalX(), m_visible, m_playing, m_trianglePointsUp);
+    m_platform->setPosition(m_timelineX, effectiveVisible(), m_playing, m_trianglePointsUp);
 }
 
 void PlayheadOverlay::PlatformDeleter::operator()(Platform *platform) const

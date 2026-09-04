@@ -114,30 +114,49 @@ void SongView::pushGridGeometryThresholds()
 TimelineBandLayout SongView::resolveTimelineBandLayout() const
 {
     TimelineBandLayout layout;
-    const auto publishBand = [&layout](TimelineBand band, const QRect &rect, int timelineOrigin) {
+    const auto publishBand = [&layout](TimelineBand band, const QRect &rect,
+                                       const QRect &plotRect) {
         if (!rect.isEmpty())
-            layout.geometry(band) = {rect, timelineOrigin};
+            layout.geometry(band) = {rect, plotRect};
     };
-    if (m_rulerSpacer && m_ruler)
-        publishBand(TimelineBand::Ruler, m_rulerSpacer->geometry(), m_geometry.plotOrigin);
+    // Every time plot starts at the canonical split; only each band owner's
+    // right edge (scrollbar, drawer viewport) differs.
+    const auto plotFromSplit = [this](const QRect &rect) {
+        return QRect(m_geometry.timelineSplitX, rect.y(),
+                     std::max(0, rect.right() + 1 - m_geometry.timelineSplitX), rect.height());
+    };
+    if (m_rulerSpacer && m_ruler) {
+        const QRect rect = m_rulerSpacer->geometry();
+        publishBand(TimelineBand::Ruler, rect, plotFromSplit(rect));
+    }
     if (m_headerSpacer && m_rollStack) {
         const QWidget *const rollPane = m_rollStack->parentWidget();
         if (rollPane) {
             QRect headerRect = m_headerSpacer->geometry();
             headerRect.moveTopLeft(rollPane->mapTo(this, headerRect.topLeft()));
-            publishBand(TimelineBand::TrackHeaders, headerRect, headerRect.width());
+            // Fixed chrome: track headers carry no time plot.
+            publishBand(TimelineBand::TrackHeaders, headerRect, QRect());
         }
     }
     // The roll band is the retained roll page minus the vertical scrollbar
-    // column. Nullopt while the event list replaces the roll page.
+    // column and the drawer overlay. The overlay owns its body and chrome, so
+    // the canonical roll ends immediately above it. Nullopt while the event
+    // list replaces the roll page.
     if (!eventListVisible()) {
         const QWidget *rollPage = m_rollStack->widget(0);
         QRect rollRect(rollPage->mapTo(this, QPoint(0, 0)), rollPage->size());
         rollRect.setWidth(std::max(0, rollRect.width() - m_vbar->width()));
-        publishBand(TimelineBand::Roll, rollRect, m_geometry.pianoKeyboardWidth);
+        if (m_editorDrawer) {
+            const QRect overlay = m_editorDrawer->overlayRect();
+            if (!overlay.isEmpty())
+                rollRect.setBottom(std::min(rollRect.bottom(), overlay.top() - 1));
+        }
+        publishBand(TimelineBand::Roll, rollRect, plotFromSplit(rollRect));
     }
-    if (m_stripSpacer && m_strip)
-        publishBand(TimelineBand::OtherEvents, m_stripSpacer->geometry(), m_geometry.plotOrigin);
+    if (m_stripSpacer && m_strip) {
+        const QRect rect = m_stripSpacer->geometry();
+        publishBand(TimelineBand::OtherEvents, rect, plotFromSplit(rect));
+    }
     if (const std::optional<QRect> body = m_editorDrawer->bodyRect(EditorDrawerPage::Automations)) {
         // The band is the lane viewport: the drawer body minus the left
         // scrollbar column; the canvas plot origin drops the same column, so
@@ -145,14 +164,12 @@ TimelineBandLayout SongView::resolveTimelineBandLayout() const
         const int scrollbarWidth = lyt::space(Space::Two);
         const int bandWidth = std::max(0, body->width() - scrollbarWidth);
         const QRect band(body->x() + scrollbarWidth, body->y(), bandWidth, body->height());
-        publishBand(TimelineBand::Automation, band,
-                    m_editorDrawer->automationPage()->canvas()->plotOrigin());
+        publishBand(TimelineBand::Automation, band, plotFromSplit(band));
     }
     if (const std::optional<QRect> body = m_editorDrawer->bodyRect(EditorDrawerPage::Velocity))
-        publishBand(TimelineBand::Velocity, *body, m_editorDrawer->velocityArea()->plotOrigin());
+        publishBand(TimelineBand::Velocity, *body, plotFromSplit(*body));
     if (const std::optional<QRect> body = m_editorDrawer->bodyRect(EditorDrawerPage::VoiceChanges))
-        publishBand(TimelineBand::VoiceChanges, *body,
-                    m_editorDrawer->voiceChangeArea()->plotOrigin());
+        publishBand(TimelineBand::VoiceChanges, *body, plotFromSplit(*body));
     return layout;
 }
 
@@ -213,7 +230,7 @@ SongView::SongView(QWidget *parent)
     m_ruler = std::make_unique<TimeRuler>(*this);
     m_headers = new TrackHeaderModel(*this, this);
     // Fixed-height spacer rows own the ruler and other-events rectangles.
-    m_rulerSpacer = new QSpacerItem(m_geometry.plotOrigin, m_geometry.rulerHeight,
+    m_rulerSpacer = new QSpacerItem(m_geometry.timelineSplitX, m_geometry.rulerHeight,
                                     QSizePolicy::Minimum, QSizePolicy::Fixed);
     vbox->addSpacerItem(m_rulerSpacer);
 
@@ -250,13 +267,13 @@ SongView::SongView(QWidget *parent)
     vbox->addWidget(rollPane, 1);
 
     m_strip = new OtherStrip(*this);
-    m_stripSpacer = new QSpacerItem(m_geometry.plotOrigin, m_geometry.otherEventsHeight,
+    m_stripSpacer = new QSpacerItem(m_geometry.timelineSplitX, m_geometry.otherEventsHeight,
                                     QSizePolicy::Minimum, QSizePolicy::Fixed);
     vbox->addSpacerItem(m_stripSpacer);
     m_hbar = new QScrollBar(Qt::Horizontal, this);
     m_hbar->setSingleStep(kScrollUnitsPerDip);
     m_hbarRow = new QHBoxLayout;
-    m_hbarGutter = new QSpacerItem(m_geometry.plotOrigin, lyt::space(Space::Zero),
+    m_hbarGutter = new QSpacerItem(m_geometry.timelineSplitX, lyt::space(Space::Zero),
                                    QSizePolicy::Fixed, QSizePolicy::Minimum);
     m_hbarRow->addItem(m_hbarGutter);
     m_hbarRow->addWidget(m_hbar);
@@ -895,7 +912,7 @@ void SongView::syncTimelineQuickAppearance()
 void SongView::publishTimelineQuickHover(songview::TimelineQuickHoverOwner owner, uint64_t tick)
 {
     if (m_quickView && m_timeline)
-        m_quickView->publishHover(owner, tick, timelinePlotOrigin() + m_camera.contentX(tick));
+        m_quickView->publishHover(owner, tick, timelineSplitX() + m_camera.contentX(tick));
 }
 
 void SongView::clearTimelineQuickHover(songview::TimelineQuickHoverOwner owner)
@@ -906,7 +923,7 @@ void SongView::clearTimelineQuickHover(songview::TimelineQuickHoverOwner owner)
 
 void SongView::syncTimelineIndicators()
 {
-    const qreal rootOriginX = timelinePlotOrigin();
+    const qreal rootOriginX = timelineSplitX();
     std::optional<qreal> editRootContentX;
     if (m_timeline)
         editRootContentX = rootOriginX + m_camera.contentX(m_editCursorTick);

@@ -446,12 +446,11 @@ void runOriginPhantom(Context &ctx)
     ctx.rig.setAutomationZoom(96.0);
     ctx.rig.setAutomationScroll(0.0);
     ctx.rig.pump();
-    const qreal originX = qreal(ctx.rig.geometry().plotOrigin);
     const qreal coveredX = at(ctx, kFixtureTick, 100).position.x();
-    ctx.rig.setAutomationScroll(coveredX - originX + 2.0 * ctx.rig.geometry().pointHitRadius);
+    ctx.rig.setAutomationScroll(coveredX + 2.0 * ctx.rig.geometry().pointHitRadius);
     ctx.rig.pump();
-    const QPointF start(originX, at(ctx, kFixtureTick, 100).position.y());
-    const QPointF target(originX, at(ctx, kFixtureTick, 110).position.y());
+    const QPointF start(0.0, at(ctx, kFixtureTick, 100).position.y());
+    const QPointF target(0.0, at(ctx, kFixtureTick, 110).position.y());
     const QPointF hover = ctx.adapter.kind == AdapterKind::Cc
                               ? start - QPointF(ctx.rig.geometry().pointHitRadius / 2.0, 0.0)
                               : start;

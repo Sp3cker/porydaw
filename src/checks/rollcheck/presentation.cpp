@@ -71,11 +71,11 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
     SongDocument &doc = check.document();
     SongView &view = check.view();
     songview::TimelineInputItem *roll = &check.rollInput();
+    songview::TimelineInputItem *rollGutter = &check.rollGutterInput();
     const int track = check.track();
-    const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const SnappedRows rows{view, *roll};
     const Cell &a = fixture.a;
-    const qreal vw = std::max<qreal>(50, roll->width() - pianoKeyboardWidth);
+    const qreal vw = std::max<qreal>(50, roll->width());
     const int undoBaseline = doc.undoStack()->index();
     auto fail = [&](const char *what) { check.fail(what); };
     auto *headers = model(view);
@@ -635,11 +635,12 @@ ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
     }
 
     const auto screenshotTick =
-        uint64_t(std::ceil(std::max(0.0, view.camera().tickAtContentX(view.width() / 2))));
+        uint64_t(std::ceil(std::max(0.0, view.camera().tickAtContentX(roll->width() / 2))));
     view.setPlayheadSample(check.timeline().sampleForTick(screenshotTick), false);
-    // Park the cursor mid-roll so the shot shows the hover mark + name chip.
-    checks::events::sendMouse(*roll, QEvent::MouseMove,
-                              QPointF(pianoKeyboardWidth + 60.0, roll->height() / 3.0),
+    // Park the cursor on a snapped piano-key row so the shot shows the hover
+    // mark and name chip through the physical gutter input.
+    const int hoverKey = rows.keyAt(rollGutter->height() / 3.0);
+    checks::events::sendMouse(*rollGutter, QEvent::MouseMove, QPointF(4.0, rows.centerY(hoverKey)),
                               Qt::NoButton, Qt::NoButton, Qt::NoModifier);
     const QImage image = view.grab().toImage();
     if (image.isNull())

@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Resonance suppression now uses a 150 ms default attack for faster response to ringing and whistles.
 
 ## Fixed
+- Keep velocity notes and PSG level bands aligned with the shared timeline camera during scrolling, zooming, and fractional display scaling.
 - Fixed audible click on transport transitions (pause/stop/play): the output now fades down, cuts, and fades back instead of hard-cutting sounding channels at full amplitude.
 - Fixed WAV export bypassing resonance suppression when the transport action was enabled.
 - Improved fidelity of CGB channels

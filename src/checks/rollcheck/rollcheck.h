@@ -46,15 +46,15 @@ class Harness final
     SongView &view() noexcept;
     const MidiTimeline &timeline() const noexcept;
     // The roll interaction object (hover-key property, Quick update requests)
-    // and the Quick input item that receives the suite's pointer/wheel/keys.
+    // and the physically split Quick input items for the plot and key column.
     songview::PianoRoll &roll() noexcept;
     songview::TimelineInputItem &rollInput() noexcept;
+    songview::TimelineInputItem &rollGutterInput() noexcept;
     QImage captureQuickFramebuffer();
     QImage captureQuickBand(const QRect &bandRect);
     QRect rollBandRect() const noexcept;
     int track() const noexcept;
     int pianoKeyboardWidth() const noexcept;
-    int plotOrigin() const noexcept;
     int pianoRollDefaultKeyHeight() const noexcept;
 
     void fail(const char *what);
@@ -69,9 +69,9 @@ class Harness final
     QString m_songLabel;
     songview::PianoRoll *m_roll = nullptr;
     songview::TimelineInputItem *m_rollInput = nullptr;
+    songview::TimelineInputItem *m_rollGutterInput = nullptr;
     int m_track = -1;
     int m_pianoKeyboardWidth = 0;
-    int m_plotOrigin = 0;
     int m_pianoRollDefaultKeyHeight = 0;
     int m_failures = 0;
     QMetaObject::Connection m_documentChanged;

@@ -75,7 +75,6 @@ class NodeLane
 
 namespace nodelane {
 
-QRect plotRect(const QRect &body, const AutomationGeometry &geometry);
 qreal valueY(const NodeLane &lane, const QRect &body, const AutomationGeometry &geometry,
              int value);
 QRectF nodeOverflowClip(const QRect &plot, const AutomationGeometry &geometry);

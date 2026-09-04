@@ -15,6 +15,8 @@
 
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/songview.h"
+#include "ui/songview/timelinebandlayout.h"
 
 namespace {
 
@@ -117,6 +119,12 @@ void runEmptyLane(TransactionContext &ctx)
 void runLfoTitle(TransactionContext &ctx)
 {
     AutomationGestureCheckRig &rig = ctx.rig;
+    const auto &automationGeometry =
+        rig.view().timelineBandLayout().geometry(songview::TimelineBand::Automation);
+    const int gutterWidth =
+        automationGeometry
+            ? std::max(0, automationGeometry->plotRect.left() - automationGeometry->rect.left())
+            : 0;
     constexpr uint8_t expressionController = 11;
     const Lane expression{
         {EditorAutomationRowKind::ControlChange, 0, expressionController}, 0, expressionController};
@@ -125,7 +133,7 @@ void runLfoTitle(TransactionContext &ctx)
     bool lfoTitleBeforeVisible = false;
     if (lfoHandleBefore.valid()) {
         const QRect lfoBody = rig.bodyFor(lfoHandleBefore);
-        const QRect lfoTitle(0, lfoBody.top(), rig.canvas().plotOrigin(), lfoBody.height());
+        const QRect lfoTitle(0, lfoBody.top(), gutterWidth, lfoBody.height());
         lfoTitleBeforeVisible = rig.automationViewportInContent().contains(lfoTitle);
         if (lfoTitleBeforeVisible)
             lfoTitleBefore = rig.renderAutomationContent(lfoTitle);
@@ -137,7 +145,7 @@ void runLfoTitle(TransactionContext &ctx)
     bool lfoTitleAfterVisible = false;
     if (lfoHandleAfter.valid()) {
         const QRect lfoBody = rig.bodyFor(lfoHandleAfter);
-        const QRect lfoTitle(0, lfoBody.top(), rig.canvas().plotOrigin(), lfoBody.height());
+        const QRect lfoTitle(0, lfoBody.top(), gutterWidth, lfoBody.height());
         lfoTitleAfterVisible = rig.automationViewportInContent().contains(lfoTitle);
         if (lfoTitleAfterVisible)
             lfoTitleAfter = rig.renderAutomationContent(lfoTitle);

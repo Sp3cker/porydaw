@@ -304,7 +304,10 @@ void DrawerSections::arrangeLocal(const QSize &overlaySize)
                        std::max(0, availableBodyHeight - voiceChangesHeight - automationHeight))
             : 0;
 
-    const int velocityLeftInset = std::max(0, m_chrome.plotOrigin - m_velocity->plotOrigin());
+    // This producer establishes the Velocity band's canonical gutter, so it
+    // must read the parent-owned input rather than the derived band snapshot.
+    const int velocityGutterWidth = m_owner.pianoKeyboardWidth();
+    const int velocityLeftInset = std::max(0, m_chrome.plotOrigin - velocityGutterWidth);
     const int velocityLeft = std::min(velocityLeftInset, width);
     const int velocityWidth = width - velocityLeft;
 
@@ -361,8 +364,7 @@ void DrawerSections::arrangeLocal(const QSize &overlaySize)
     snapshot.toggleIconInset = buttonInset;
     snapshot.detentIconInset = buttonInset / 2.0;
     const int toggleGroupWidth = 3 * buttonSize + 2 * buttonInset;
-    const int pianoKeysWidth =
-        std::min(m_velocity->plotOrigin(), std::max(0, width - velocityLeft));
+    const int pianoKeysWidth = std::min(velocityGutterWidth, std::max(0, width - velocityLeft));
     const int voiceChangesButtonX =
         std::clamp(velocityLeft + (pianoKeysWidth - toggleGroupWidth) / 2, 0,
                    std::max(0, width - toggleGroupWidth));
@@ -376,8 +378,8 @@ void DrawerSections::arrangeLocal(const QSize &overlaySize)
 
     snapshot.detentVisible = showVelocity && m_detentEnabled;
     if (snapshot.detentVisible && velocityBodyRect) {
-        const int velocityGutterWidth = std::min(m_velocity->plotOrigin(), velocityWidth);
-        const int detentButtonSize = std::min(buttonSize, velocityGutterWidth);
+        const int visibleVelocityGutterWidth = std::min(velocityGutterWidth, velocityWidth);
+        const int detentButtonSize = std::min(buttonSize, visibleVelocityGutterWidth);
         const int detentY = velocityBodyRect->bottom() + 1 - detentButtonSize;
         snapshot.detentRect =
             QRectF(velocityBodyRect->left(), detentY, detentButtonSize, detentButtonSize);

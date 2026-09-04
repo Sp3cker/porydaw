@@ -7,15 +7,20 @@
 // SongTab is not ready every fixed coverage surface exists, stays enabled
 // without disabled styling, and keeps the ordinary gestures consumed; the
 // terminal VoicegroupBound stage readies the tab and the same gestures simply
-// work again, with no child-control restyle across the transition. Fresh/
+// work again, with no child-control restyle across the transition, and
+// hovering a ruler grid control floats its tooltip below the ruler row on the
+// unclipped canvas overlay. Fresh/
 // unready, MidiStage-bound/unready, and VoicegroupBound/ready all run on one
 // tab. Raster and public-geometry assertions only; nothing here reads
 // production source text.
 #include <QCoreApplication>
+#include <QEnterEvent>
 #include <QImage>
+#include <QMouseEvent>
 #include <QPalette>
 #include <QPointer>
 #include <QQuickItem>
+#include <QQuickWindow>
 #include <QScrollBar>
 #include <QWidget>
 #include <QtGlobal>
@@ -137,6 +142,15 @@ int rulerBandHeight(const SongView &view)
         .rect.height();
 }
 
+// Ruler scene records are plot-local. A whole-band framebuffer crop starts at
+// rect, so raster probes alone add the published fixed-side span.
+qreal rulerRasterPlotOffset(const SongView &view)
+{
+    const std::optional<songview::TimelineBandGeometry> &band =
+        view.timelineBandLayout().geometry(songview::TimelineBand::Ruler);
+    return band ? band->plotRect.x() - band->rect.x() : 0.0;
+}
+
 // --- Geometry scenarios ----------------------------------------------------
 
 // The fallback musical axis: 24 ticks per beat with an implicit opening 4/4.
@@ -153,19 +167,20 @@ struct BarSample {
 // [(bar-1) * beatsPerBar * ticksPerBeat]. Expected positions come from the
 // view's public display geometry; detection asks the raster whether a line
 // and its number label were painted there.
-std::vector<BarSample> sampleBars(SongView &view, const RasterScan &raster, qreal plotOrigin,
-                                  uint32_t ticksPerBeat, int beatsPerBar, int bars)
+std::vector<BarSample> sampleBars(SongView &view, const RasterScan &raster,
+                                  qreal screenshotPlotOffset, uint32_t ticksPerBeat,
+                                  int beatsPerBar, int bars)
 {
     const int tickRowTop = int(raster.height() * 0.55);
     const int tickRowBottom = raster.height() - 3;
     const int labelWidth = int(34 * raster.dpr);
-    const QRgb backdrop = raster.at(plotOrigin + view.camera().leadPadPx() + 80.0, 2.0);
+    const QRgb backdrop = raster.at(screenshotPlotOffset + view.camera().leadPadPx() + 80.0, 2.0);
     std::vector<BarSample> samples;
     samples.reserve(size_t(bars));
     for (int bar = 1; bar <= bars; ++bar) {
         const uint64_t tick = uint64_t(bar - 1) * uint64_t(beatsPerBar) * ticksPerBeat;
         const int expected =
-            raster.deviceX(view.camera().displayX(double(tick), plotOrigin, raster.dpr));
+            raster.deviceX(view.camera().displayX(double(tick), screenshotPlotOffset, raster.dpr));
         if (expected < 2 || expected >= raster.width() - labelWidth - 2)
             continue;
         BarSample sample;
@@ -282,13 +297,13 @@ void observeFallbackGridAtTickCeiling(GeometryFixture &fx, Harness &check)
 
 // Ordinary pre-roll: the strip left of tick 0 paints a flat shade that
 // differs from the plain chrome right of it.
-void observeFallbackPreRollShade(const RasterScan &raster, qreal plotOrigin, qreal x0, QRgb chrome,
-                                 Harness &check)
+void observeFallbackPreRollShade(const RasterScan &raster, qreal screenshotPlotOffset, qreal x0,
+                                 QRgb chrome, Harness &check)
 {
     const qreal rulerLogicalHeight = raster.height() / raster.dpr;
-    const QRgb padShade = raster.at(plotOrigin + 4.0, rulerLogicalHeight * 0.5);
-    const QRgb padShadeLower =
-        raster.at(plotOrigin + 4.0 + (x0 - plotOrigin) * 0.5, rulerLogicalHeight - 4.0);
+    const QRgb padShade = raster.at(screenshotPlotOffset + 4.0, rulerLogicalHeight * 0.5);
+    const QRgb padShadeLower = raster.at(
+        screenshotPlotOffset + 4.0 + (x0 - screenshotPlotOffset) * 0.5, rulerLogicalHeight - 4.0);
     if (!sameColor(padShade, padShadeLower, 2))
         check.fail("fresh ruler pre-roll shade is not flat");
     if (sameColor(padShade, chrome, 1))
@@ -299,8 +314,8 @@ void observeFallbackPreRollShade(const RasterScan &raster, qreal plotOrigin, qre
 // the implicit (placeholder) presentation, and no loading caption left in
 // the pre-roll strip between the plot origin and the tick-0 chip. (Bounded
 // with margins: the far-right gutter combos would false-match.)
-void observeFallbackSignatureAndCaption(const RasterScan &raster, qreal plotOrigin, qreal x0,
-                                        QRgb placeholder, Harness &check)
+void observeFallbackSignatureAndCaption(const RasterScan &raster, qreal screenshotPlotOffset,
+                                        qreal x0, QRgb placeholder, Harness &check)
 {
     const int stemColumn = raster.deviceX(x0);
     const int stemTop = int(raster.height() * 0.05);
@@ -315,8 +330,9 @@ void observeFallbackSignatureAndCaption(const RasterScan &raster, qreal plotOrig
     }
     if (stemRun < (stemBottom - stemTop) * 7 / 10)
         check.fail("fresh ruler has no implicit 4/4 signature stem at tick 0");
-    if (raster.matchingInBox(raster.deviceX(plotOrigin + 4.0), stemColumn - raster.deviceX(4.0), 0,
-                             raster.height() - 1, placeholder, 12) > 0)
+    if (raster.matchingInBox(raster.deviceX(screenshotPlotOffset + 4.0),
+                             stemColumn - raster.deviceX(4.0), 0, raster.height() - 1, placeholder,
+                             12) > 0)
         check.fail("fresh ruler still paints the loading caption");
 }
 
@@ -324,10 +340,10 @@ void observeFallbackSignatureAndCaption(const RasterScan &raster, qreal plotOrig
 // line with its number label, at least two painted bars, and the first
 // three interior beat lines. Samples the bars into the fixture for the
 // binding phases.
-void observeFallbackBarsAndBeats(GeometryFixture &fx, const RasterScan &raster, qreal plotOrigin,
-                                 QRgb chrome, Harness &check)
+void observeFallbackBarsAndBeats(GeometryFixture &fx, const RasterScan &raster,
+                                 qreal screenshotPlotOffset, QRgb chrome, Harness &check)
 {
-    fx.bars = sampleBars(fx.bare, raster, plotOrigin, uint32_t(kFallbackTicksPerBeat),
+    fx.bars = sampleBars(fx.bare, raster, screenshotPlotOffset, uint32_t(kFallbackTicksPerBeat),
                          kFallbackBeatsPerBar, 6);
     int paintedBars = 0;
     for (const BarSample &sample : fx.bars) {
@@ -342,8 +358,8 @@ void observeFallbackBarsAndBeats(GeometryFixture &fx, const RasterScan &raster, 
         check.fail("fresh ruler painted too few bar lines to be the ordinary ruler");
     for (int beat = 1; beat <= 3; ++beat) {
         const uint64_t tick = uint64_t(beat) * kFallbackTicksPerBeat;
-        const int expected =
-            raster.deviceX(fx.bare.camera().displayX(double(tick), plotOrigin, raster.dpr));
+        const int expected = raster.deviceX(
+            fx.bare.camera().displayX(double(tick), screenshotPlotOffset, raster.dpr));
         bool found = false;
         for (int x = expected - 1; x <= expected + 1 && !found; ++x)
             found = raster.differingInColumn(x, int(raster.height() * 0.72), raster.height() - 3,
@@ -365,14 +381,15 @@ bool runFallbackRasterScenarios(GeometryFixture &fx, Harness &check)
         return false;
     }
 
-    const qreal plotOrigin = check.plotOrigin();
-    const qreal x0 = plotOrigin + fx.bare.camera().contentX(0.0); // tick 0 under the home camera
-    const QRgb chrome = raster.at(x0 + 80.0, 2.0); // marker row right of the 4/4 chip
+    const qreal screenshotPlotOffset = rulerRasterPlotOffset(fx.bare);
+    const qreal x0 =
+        screenshotPlotOffset + fx.bare.camera().contentX(0.0); // tick 0 under the home camera
+    const QRgb chrome = raster.at(x0 + 80.0, 2.0);             // marker row right of the 4/4 chip
     const QRgb placeholder = fx.bare.palette().color(QPalette::PlaceholderText).rgb();
 
-    observeFallbackPreRollShade(raster, plotOrigin, x0, chrome, check);
-    observeFallbackSignatureAndCaption(raster, plotOrigin, x0, placeholder, check);
-    observeFallbackBarsAndBeats(fx, raster, plotOrigin, chrome, check);
+    observeFallbackPreRollShade(raster, screenshotPlotOffset, x0, chrome, check);
+    observeFallbackSignatureAndCaption(raster, screenshotPlotOffset, x0, placeholder, check);
+    observeFallbackBarsAndBeats(fx, raster, screenshotPlotOffset, chrome, check);
     return true;
 }
 
@@ -390,20 +407,21 @@ void runDefaultBindScenarios(GeometryFixture &fx, Harness &check)
     QCoreApplication::processEvents();
     if (!qFuzzyCompare(fx.bare.camera().pxPerBeat(), fx.pxPerBeat))
         check.fail("default binding changed the canonical horizontal scale");
-    const qreal plotOrigin = check.plotOrigin();
+    const qreal screenshotPlotOffset = rulerRasterPlotOffset(fx.bare);
     const RasterScan bound = grabRulerRaster(fx.bare);
     if (!bound.valid()) {
         check.fail("bound ruler raster could not be captured");
     } else {
-        const std::vector<BarSample> boundBars = sampleBars(
-            fx.bare, bound, plotOrigin, uint32_t(kFallbackTicksPerBeat), kFallbackBeatsPerBar, 6);
+        const std::vector<BarSample> boundBars =
+            sampleBars(fx.bare, bound, screenshotPlotOffset, uint32_t(kFallbackTicksPerBeat),
+                       kFallbackBeatsPerBar, 6);
         if (boundBars.size() != fx.bars.size())
             check.fail("default binding changed the sampled bar count");
         for (size_t i = 0; i < boundBars.size() && i < fx.bars.size(); ++i) {
             if (boundBars[i].column != fx.bars[i].column)
                 check.fail("default binding moved a sampled bar line");
-            const int expected = bound.deviceX(
-                fx.bare.camera().displayX(double(boundBars[i].tick), plotOrigin, bound.dpr));
+            const int expected = bound.deviceX(fx.bare.camera().displayX(
+                double(boundBars[i].tick), screenshotPlotOffset, bound.dpr));
             if (std::abs(boundBars[i].column - expected) > 1)
                 check.fail("bound bar line drifted from the public geometry position");
         }
@@ -418,18 +436,19 @@ void runDefaultBindScenarios(GeometryFixture &fx, Harness &check)
 // and expose identical public geometry.
 void runTpbBindScenarios(GeometryFixture &fx, Harness &check)
 {
-    const qreal plotOrigin = check.plotOrigin();
+    const qreal screenshotPlotOffset = rulerRasterPlotOffset(fx.bare);
     const RasterScan t24 = grabRulerRaster(fx.bare);
-    const std::vector<BarSample> t24Bars = sampleBars(
-        fx.bare, t24, plotOrigin, uint32_t(kFallbackTicksPerBeat), kFallbackBeatsPerBar, 6);
+    const std::vector<BarSample> t24Bars =
+        sampleBars(fx.bare, t24, screenshotPlotOffset, uint32_t(kFallbackTicksPerBeat),
+                   kFallbackBeatsPerBar, 6);
     // The beat columns are read while the 24-TPB axis still governs the
     // projection: pxPerTick() follows the bound timeline, so after the
     // 48-TPB rebind these 24-TPB ticks would land on half beats instead of
     // the painted beat lines.
     std::vector<int> t24BeatColumns;
     for (int beat = 1; beat <= 3; ++beat)
-        t24BeatColumns.push_back(t24.deviceX(
-            fx.bare.camera().displayX(double(beat * kFallbackTicksPerBeat), plotOrigin, t24.dpr)));
+        t24BeatColumns.push_back(t24.deviceX(fx.bare.camera().displayX(
+            double(beat * kFallbackTicksPerBeat), screenshotPlotOffset, t24.dpr)));
     fx.bare.setSong(&fx.t48, nullptr);
     QCoreApplication::processEvents();
     if (!qFuzzyCompare(fx.bare.camera().pxPerBeat(), fx.pxPerBeat))
@@ -439,7 +458,7 @@ void runTpbBindScenarios(GeometryFixture &fx, Harness &check)
         check.fail("48-TPB ruler raster could not be captured");
     } else {
         const std::vector<BarSample> t48Bars =
-            sampleBars(fx.bare, t48Raster, plotOrigin, 48, kFallbackBeatsPerBar, 6);
+            sampleBars(fx.bare, t48Raster, screenshotPlotOffset, 48, kFallbackBeatsPerBar, 6);
         if (t48Bars.size() != t24Bars.size())
             check.fail("48-TPB binding changed the sampled bar count");
         for (size_t i = 0; i < t48Bars.size() && i < t24Bars.size(); ++i)
@@ -447,7 +466,7 @@ void runTpbBindScenarios(GeometryFixture &fx, Harness &check)
                 check.fail("48-TPB binding moved a bar line");
         for (int beat = 1; beat <= 3; ++beat) {
             const int t48Column = t48Raster.deviceX(
-                fx.bare.camera().displayX(double(beat * 48), plotOrigin, t48Raster.dpr));
+                fx.bare.camera().displayX(double(beat * 48), screenshotPlotOffset, t48Raster.dpr));
             if (std::abs(t48Column - t24BeatColumns[size_t(beat - 1)]) > 1)
                 check.fail("48-TPB binding moved a beat line");
         }
@@ -481,19 +500,19 @@ void observeSignaturePublicGeometry(GeometryFixture &fx, qreal rulerHeightBefore
 // Raster after the 3/4 binding: every expected 3-beat bar line is painted
 // at its signature geometry, and the grouping actually moved relative to
 // the sampled fallback bars.
-void observeSignatureBarGrouping(GeometryFixture &fx, const RasterScan &t34Raster, qreal plotOrigin,
-                                 Harness &check)
+void observeSignatureBarGrouping(GeometryFixture &fx, const RasterScan &t34Raster,
+                                 qreal screenshotPlotOffset, Harness &check)
 {
     const std::vector<BarSample> t34Bars =
-        sampleBars(fx.bare, t34Raster, plotOrigin, uint32_t(kFallbackTicksPerBeat), 3, 6);
+        sampleBars(fx.bare, t34Raster, screenshotPlotOffset, uint32_t(kFallbackTicksPerBeat), 3, 6);
     bool moved = false;
     for (size_t i = 0; i < t34Bars.size(); ++i) {
         if (t34Bars[i].column < 0) {
             check.fail("3/4 ruler is missing an expected bar line");
             continue;
         }
-        const int expected = t34Raster.deviceX(
-            fx.bare.camera().displayX(double(t34Bars[i].tick), plotOrigin, t34Raster.dpr));
+        const int expected = t34Raster.deviceX(fx.bare.camera().displayX(
+            double(t34Bars[i].tick), screenshotPlotOffset, t34Raster.dpr));
         if (std::abs(t34Bars[i].column - expected) > 1)
             check.fail("3/4 bar line drifted from its signature geometry");
         if (i < fx.bars.size() && t34Bars[i].column != fx.bars[i].column)
@@ -508,7 +527,7 @@ void observeSignatureBarGrouping(GeometryFixture &fx, const RasterScan &t34Raste
 // ruler height) follows.
 void runSignatureGroupingScenarios(GeometryFixture &fx, Harness &check)
 {
-    const qreal plotOrigin = check.plotOrigin();
+    const qreal screenshotPlotOffset = rulerRasterPlotOffset(fx.bare);
     const qreal rulerHeightBefore = rulerBandHeight(fx.bare);
     fx.bare.setSong(&fx.t34, nullptr);
     QCoreApplication::processEvents();
@@ -518,7 +537,7 @@ void runSignatureGroupingScenarios(GeometryFixture &fx, Harness &check)
         check.fail("3/4 ruler raster could not be captured");
         return;
     }
-    observeSignatureBarGrouping(fx, t34Raster, plotOrigin, check);
+    observeSignatureBarGrouping(fx, t34Raster, screenshotPlotOffset, check);
 }
 
 void runGeometryScenarios(Harness &check)
@@ -586,6 +605,7 @@ struct GateFixture {
                 quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineRulerDivisionControl"));
             feelControl =
                 quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineRulerFeelControl"));
+            toolTip = quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineRulerToolTip"));
         }
         ruler =
             rulerInput ? dynamic_cast<songview::TimeRuler *>(rulerInput->interaction()) : nullptr;
@@ -736,6 +756,7 @@ struct GateFixture {
     QPointer<QQuickItem> controls;
     QPointer<QQuickItem> divisionControl;
     QPointer<QQuickItem> feelControl;
+    QPointer<QQuickItem> toolTip;
     QPointer<songview::TimeRuler> ruler;
     QPointer<songview::TimelineInputItem> rollInput;
     QPointer<songview::TimelineInputItem> rulerInput;
@@ -761,8 +782,7 @@ struct RulerScrubSample {
 
 // One click at the covered ruler point. Empty when the view has no pre-roll
 // padding to anchor the point to.
-std::optional<RulerScrubSample> scrubRuler(SongView &view, songview::TimelineInputItem &rulerInput,
-                                           qreal plotOrigin)
+std::optional<RulerScrubSample> scrubRuler(SongView &view, songview::TimelineInputItem &rulerInput)
 {
     const qreal pad = view.camera().leadPadPx();
     if (pad <= 0)
@@ -771,7 +791,7 @@ std::optional<RulerScrubSample> scrubRuler(SongView &view, songview::TimelineInp
         view.timelineBandLayout().geometry(songview::TimelineBand::Ruler);
     if (!rulerBand)
         return std::nullopt;
-    const QPointF point(plotOrigin + pad + 140.0, rulerBand->rect.height() * 3.0 / 4.0);
+    const QPointF point(pad + 140.0, rulerBand->rect.height() * 3.0 / 4.0);
     RulerScrubSample sample;
     sample.cursorBefore = view.editCursorTick();
     checks::events::sendMouse(rulerInput, QEvent::MouseButtonPress, point, Qt::LeftButton,
@@ -789,13 +809,12 @@ struct RollWheelSample {
 };
 
 // One wheel tick over the piano roll at the covered point.
-RollWheelSample wheelRoll(Harness &check, songview::TimelineInputItem &roll, SongView &view)
+RollWheelSample wheelRoll(songview::TimelineInputItem &roll, SongView &view)
 {
     RollWheelSample sample;
     sample.zoomBefore = view.camera().pxPerBeat();
-    checks::events::sendWheel(roll, QPointF(check.pianoKeyboardWidth() + 80.0, 100.0), QPoint(0, 0),
-                              QPoint(0, 120), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase,
-                              false);
+    checks::events::sendWheel(roll, QPointF(80.0, 100.0), QPoint(0, 0), QPoint(0, 120),
+                              Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
     sample.zoomAfter = view.camera().pxPerBeat();
     return sample;
 }
@@ -823,8 +842,7 @@ void checkGatedRulerScrub(Harness &check, GateFixture &probe, const char *scrubF
 {
     if (!probe.rulerInput)
         return;
-    const std::optional<RulerScrubSample> sample =
-        scrubRuler(probe.tab.view(), *probe.rulerInput, check.plotOrigin());
+    const std::optional<RulerScrubSample> sample = scrubRuler(probe.tab.view(), *probe.rulerInput);
     if (!sample)
         return;
     if (sample->cursorAfter != sample->cursorBefore)
@@ -838,8 +856,7 @@ void checkReadyRulerScrub(Harness &check, GateFixture &probe)
 {
     if (!probe.rulerInput)
         return;
-    const std::optional<RulerScrubSample> sample =
-        scrubRuler(probe.tab.view(), *probe.rulerInput, check.plotOrigin());
+    const std::optional<RulerScrubSample> sample = scrubRuler(probe.tab.view(), *probe.rulerInput);
     if (!sample)
         return;
     if (sample->cursorAfter == sample->cursorBefore)
@@ -873,7 +890,7 @@ void checkGatedRollWheel(Harness &check, GateFixture &probe)
 {
     if (!probe.rollInput)
         return;
-    const RollWheelSample sample = wheelRoll(check, *probe.rollInput, probe.tab.view());
+    const RollWheelSample sample = wheelRoll(*probe.rollInput, probe.tab.view());
     if (!qFuzzyCompare(sample.zoomAfter, sample.zoomBefore))
         check.fail("roll wheel zoomed while the tab was loading");
 }
@@ -883,9 +900,78 @@ void checkReadyRollWheel(Harness &check, GateFixture &probe)
 {
     if (!probe.rollInput)
         return;
-    const RollWheelSample sample = wheelRoll(check, *probe.rollInput, probe.tab.view());
+    const RollWheelSample sample = wheelRoll(*probe.rollInput, probe.tab.view());
     if (qFuzzyCompare(sample.zoomAfter, sample.zoomBefore))
         check.fail("roll wheel did not zoom after readiness");
+}
+
+// --- Ruler tooltip overlay -------------------------------------------------
+
+// Hovering a grid control floats its tooltip on the unclipped canvas root,
+// below the ruler row whenever the canvas leaves room for it. Real QQuick
+// hover drives the control, and every expectation comes from mapped public
+// geometry of the published ruler row, the Quick canvas root, and the
+// tooltip itself.
+void checkRulerToolTipOverlay(Harness &check, GateFixture &probe)
+{
+    if (!probe.controls || !probe.divisionControl || !probe.feelControl || !probe.toolTip) {
+        check.fail("ready view is missing its Quick ruler tooltip overlay");
+        return;
+    }
+    SongView &view = probe.tab.view();
+    auto *const quick =
+        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    QQuickItem *const canvasRoot = quick ? quick->rootObject() : nullptr;
+    QQuickWindow *const quickWindow = quick ? quick->quickWindow() : nullptr;
+    if (!canvasRoot || !quickWindow) {
+        check.fail("ready view is missing its Quick canvas root or window");
+        return;
+    }
+
+    const auto setHover = [quickWindow, canvasRoot](QQuickItem &control, bool entering) {
+        const QPointF windowPosition =
+            entering ? control.mapToScene(QPointF(control.width() / 2.0, control.height() / 2.0))
+                     : canvasRoot->mapToScene(
+                           QPointF(canvasRoot->width() / 2.0, canvasRoot->height() / 2.0));
+        const QPointF globalPosition = quickWindow->mapToGlobal(windowPosition.toPoint());
+        if (entering) {
+            QEnterEvent enter(windowPosition, windowPosition, globalPosition);
+            QCoreApplication::sendEvent(quickWindow, &enter);
+        }
+        QMouseEvent move(QEvent::MouseMove, windowPosition, globalPosition, Qt::NoButton,
+                         Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(quickWindow, &move);
+        QCoreApplication::processEvents();
+    };
+    for (QQuickItem *const control : {probe.divisionControl.data(), probe.feelControl.data()}) {
+        if (!control)
+            continue;
+        setHover(*control, true);
+        if (!probe.toolTip->isVisible()) {
+            check.fail(qUtf8Printable(
+                QObject::tr("ruler tooltip did not appear while hovering the %1 control")
+                    .arg(control->objectName())));
+        } else {
+            const QRectF tooltipRect(probe.toolTip->mapToItem(canvasRoot, QPointF(0, 0)),
+                                     probe.toolTip->size());
+            const qreal rowBottom =
+                probe.controls->mapToItem(canvasRoot, QPointF(0, 0)).y() + rulerBandHeight(view);
+            // Room below the row exists, so the tooltip must float there
+            // instead of covering the row or spilling past the canvas.
+            if (rowBottom + tooltipRect.height() <= canvasRoot->height()) {
+                if (tooltipRect.top() < rowBottom - 0.5)
+                    check.fail("ruler tooltip covered the ruler row instead of floating below it");
+                else if (tooltipRect.bottom() > canvasRoot->height() + 0.5)
+                    check.fail("ruler tooltip spilled past the Quick canvas below the ruler row");
+                else if (tooltipRect.left() < -0.5 ||
+                         tooltipRect.right() > canvasRoot->width() + 0.5)
+                    check.fail("ruler tooltip left the Quick canvas while floating below the row");
+            }
+        }
+        setHover(*control, false);
+        if (probe.toolTip->isVisible())
+            check.fail("ruler tooltip stayed visible after the hover left the control");
+    }
 }
 
 // --- Phase one: fresh tab, nothing bound, gate fully closed ---------------
@@ -966,6 +1052,8 @@ void runReadyGatePhase(Harness &check, GateFixture &probe)
     checkReadyRulerScrub(check, probe);
     checkReadyScrollWheel(check, probe);
     checkReadyRollWheel(check, probe);
+    // The ruler tooltip floats below the ruler row on the unclipped overlay.
+    checkRulerToolTipOverlay(check, probe);
 }
 
 void runInputGateScenarios(Harness &check)

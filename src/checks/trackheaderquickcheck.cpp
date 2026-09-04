@@ -324,7 +324,7 @@ int runTrackHeaderQuickCheck(const QString &projectRoot, const QString &songLabe
     for (auto &geometry : isolatedLayout.bands)
         geometry.reset();
     isolatedLayout.geometry(songview::TimelineBand::TrackHeaders) =
-        songview::TimelineBandGeometry{isolatedHeaderRect, 0};
+        songview::TimelineBandGeometry{isolatedHeaderRect, QRect()};
     quick->setBandLayout(std::move(isolatedLayout));
     settleQuick();
     quick->syncAppearance();

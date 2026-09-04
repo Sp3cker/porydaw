@@ -88,8 +88,7 @@ T *descendant(QWidget &owner)
 QPointF velocityNodePosition(const SongView &view, const VelocityArea &area,
                              const MidiTimeline &timeline, const DocNote &note)
 {
-    const double x = double(area.plotOrigin()) +
-                     double(note.tick) * view.camera().pxPerBeat() / double(timeline.ticksPerBeat) -
+    const double x = double(note.tick) * view.camera().pxPerBeat() / double(timeline.ticksPerBeat) -
                      view.camera().scrollX();
     return {x, area.axis().velocityToY(note.velocity)};
 }
@@ -1788,7 +1787,7 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                             int(std::distance(automation->rows().begin(), laneRow));
                         const int rowHeight = layout::fontPx(4.0);
                         const qreal rowY = qreal(rowIndex * rowHeight + rowHeight / 2);
-                        const QPointF automationPoint(layout::fontPx(17.5 + 13.0 / 3.0), rowY);
+                        const QPointF automationPoint(layout::fontPx(4.0), rowY);
                         auto *quickCanvas = view.findChild<songview::TimelineQuickView *>(
                             QStringLiteral("timelineQuickCanvas"));
                         auto *automationInput =
@@ -1986,9 +1985,8 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                         const auto live = document->notesForTrack(noteTrack);
                         const QPointF velocityPoint =
                             velocityNodePosition(view, *velocity, *session->timeline(), live[0]);
-                        const QPointF velocityPaintPoint(
-                            std::max(double(velocity->plotOrigin() + 1), velocityPoint.x() - 32.0),
-                            8.0);
+                        const QPointF velocityPaintPoint(std::max(1.0, velocityPoint.x() - 32.0),
+                                                         8.0);
                         if (velocityInput) {
                             verifyTermination(*velocityInput, Qt::LeftButton,
                                               velocityPoint + QPointF(32, -24), identityPoint, [&] {

@@ -301,6 +301,7 @@ TimelineQuickScene::TimelineQuickScene(QObject *parent) : QObject(parent)
     m_rulerTextModel = new TimelineQuickTextModel(this);
     m_otherEventsTextModel = new TimelineQuickTextModel(this);
     m_velocityTextModel = new TimelineQuickTextModel(this);
+    m_voiceChangesGutterTextModel = new TimelineQuickTextModel(this);
     m_voiceChangesTextModel = new TimelineQuickTextModel(this);
     m_voiceChangesHoverTextModel = new TimelineQuickTextModel(this);
     m_automationTextModel = new TimelineQuickTextModel(this);
@@ -336,6 +337,11 @@ QAbstractItemModel *TimelineQuickScene::otherEventsTextModel() const noexcept
 QAbstractItemModel *TimelineQuickScene::velocityTextModel() const noexcept
 {
     return m_velocityTextModel;
+}
+
+QAbstractItemModel *TimelineQuickScene::voiceChangesGutterTextModel() const noexcept
+{
+    return m_voiceChangesGutterTextModel;
 }
 
 QAbstractItemModel *TimelineQuickScene::voiceChangesTextModel() const noexcept
@@ -379,6 +385,12 @@ void TimelineQuickScene::setVelocityTextRecords(
     std::span<const TimelineQuickTextModel::Record> records)
 {
     m_velocityTextModel->setRecords(records);
+}
+
+void TimelineQuickScene::setVoiceChangesGutterTextRecords(
+    std::span<const TimelineQuickTextModel::Record> records)
+{
+    m_voiceChangesGutterTextModel->setRecords(records);
 }
 
 void TimelineQuickScene::setVoiceChangesTextRecords(

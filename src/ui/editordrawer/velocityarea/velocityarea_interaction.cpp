@@ -257,12 +257,35 @@ bool VelocityArea::pointerPress(const songview::TimelinePointerInput &input)
     if (!hasDocument())
         return false;
     Q_ASSERT(m_inputHost);
+    if (!m_inputHost)
+        return false;
     m_inputHost->requestFocus(Qt::MouseFocusReason);
     const QPointF position = input.position;
     m_pressPosition = position;
     m_previousPosition = position;
     m_selectionBeforePress = m_owner.selectionModel().noteSelection();
     m_pressedNote.reset();
+    if (input.surface == songview::TimelineInputSurface::Gutter) {
+        if (input.button != Qt::LeftButton || !inRuler(position))
+            return false;
+        const bool detentUnlock = detentsUnlocked(input.modifiers, false);
+        const int velocity = detentUnlock ? exactVelocity(m_axis.yToVelocity(position.y()))
+                                          : rulerVelocityAt(position);
+        if (velocity >= 1) {
+            const std::vector<DocNote> notes = selectedNotes();
+            beginFrozenGesture(notes, Interaction::Relative, position, detentUnlock);
+            std::vector<NoteVelocity> updates;
+            updates.reserve(m_frozen.size());
+            for (const FrozenNote &note : m_frozen)
+                updates.push_back({note.noteId, velocity});
+            if (!updates.empty())
+                m_owner.updateVelocityGesture(updates);
+            finishGesture(true);
+        }
+        return true;
+    }
+    if (input.surface != songview::TimelineInputSurface::Plot)
+        return false;
     if (input.button == Qt::MiddleButton) {
         m_interaction = Interaction::Pan;
         pauseFollowScroll(true);
@@ -280,25 +303,7 @@ bool VelocityArea::pointerPress(const songview::TimelinePointerInput &input)
     }
     if (input.button != Qt::LeftButton)
         return false;
-    const bool inRulerPosition = inRuler(position);
-    const bool detentUnlock = detentsUnlocked(
-        input.modifiers, !inRulerPosition && input.modifiers.testFlag(Qt::ShiftModifier));
-    if (inRulerPosition) {
-        const int velocity = detentUnlock ? exactVelocity(m_axis.yToVelocity(position.y()))
-                                          : rulerVelocityAt(position);
-        if (velocity >= 1) {
-            const std::vector<DocNote> notes = selectedNotes();
-            beginFrozenGesture(notes, Interaction::Relative, position, detentUnlock);
-            std::vector<NoteVelocity> updates;
-            updates.reserve(m_frozen.size());
-            for (const FrozenNote &note : m_frozen)
-                updates.push_back({note.noteId, velocity});
-            if (!updates.empty())
-                m_owner.updateVelocityGesture(updates);
-            finishGesture(true);
-        }
-        return true;
-    }
+    const bool detentUnlock = detentsUnlocked(input.modifiers, true);
     if (input.modifiers.testFlag(Qt::ShiftModifier)) {
         beginFrozenGesture(selectedNotes(), Interaction::Ramp, position, detentUnlock);
         updateRampPreview(position);
@@ -327,6 +332,11 @@ bool VelocityArea::pointerPress(const songview::TimelinePointerInput &input)
 
 bool VelocityArea::pointerMove(const songview::TimelinePointerInput &input)
 {
+    if (input.surface != songview::TimelineInputSurface::Plot) {
+        if (m_interaction == Interaction::None)
+            setHoveredNote(std::nullopt);
+        return false;
+    }
     const QPointF position = input.position;
     if (m_interaction == Interaction::None)
         updateHoveredNote(position);
@@ -362,6 +372,10 @@ void VelocityArea::pointerLeave()
 
 bool VelocityArea::pointerRelease(const songview::TimelinePointerInput &input)
 {
+    if (input.surface == songview::TimelineInputSurface::Gutter)
+        return input.button == Qt::LeftButton;
+    if (input.surface != songview::TimelineInputSurface::Plot)
+        return false;
     if (input.button == Qt::MiddleButton && m_interaction == Interaction::Pan) {
         pauseFollowScroll(false);
         m_interaction = Interaction::None;
@@ -425,6 +439,8 @@ bool VelocityArea::pointerRelease(const songview::TimelinePointerInput &input)
 
 bool VelocityArea::wheel(const songview::TimelineWheelInput &input)
 {
+    if (input.surface != songview::TimelineInputSurface::Plot)
+        return false;
     const bool horizontal = input.modifiers.testFlag(Qt::ShiftModifier) ||
                             input.angleDelta.x() != 0 || input.pixelDelta.x() != 0;
     if (horizontal) {
@@ -432,9 +448,7 @@ bool VelocityArea::wheel(const songview::TimelineWheelInput &input)
         m_owner.setEditorHorizontalScroll(m_live.horizontalScroll - double(delta));
         return true;
     }
-    if (inRuler(input.position))
-        return false;
-    m_owner.zoomTimelineAtWheel(input, input.position.x() - plotOrigin());
+    m_owner.zoomTimelineAtWheel(input, input.position.x());
     return true;
 }
 

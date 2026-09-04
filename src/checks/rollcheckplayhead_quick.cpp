@@ -7,10 +7,12 @@
 #include <QImage>
 #include <QPoint>
 #include <QQuickItem>
+#include <QRectF>
 #include <QtGlobal>
 
 #include <algorithm>
 #include <cstdio>
+#include <initializer_list>
 #include <memory>
 #include <optional>
 
@@ -43,11 +45,6 @@ QStringList quickScenePlayheadCheckFailures(const MidiTimeline &timeline)
             bandLayout.geometry(songview::TimelineBand::Roll);
         return band ? band->rect : QRect{};
     };
-    const auto rollTimelineOrigin = [&bandLayout] {
-        const std::optional<songview::TimelineBandGeometry> &band =
-            bandLayout.geometry(songview::TimelineBand::Roll);
-        return band ? band->timelineOrigin : 0;
-    };
     if (!overlay || !quick || !bandLayout.geometry(songview::TimelineBand::Ruler) ||
         !rollBandRect().isValid()) {
         failures.append("default Quick playhead scene did not expose its rendering surfaces");
@@ -58,7 +55,7 @@ QStringList quickScenePlayheadCheckFailures(const MidiTimeline &timeline)
 
     const uint64_t tick =
         uint64_t(std::max(0.0, probe.camera().tickAtContentX(std::max<qreal>(
-                                   1.0, probe.width() / 2.0 - probe.timelinePlotOrigin()))));
+                                   1.0, probe.width() / 2.0 - probe.timelineSplitX()))));
     const QColor color = themes::color(themes::Role::song_view_playhead);
     const QRect rollRect = rollBandRect();
     // captureQuickBand crops are band-local logical coordinates; scan the full
@@ -81,6 +78,12 @@ QStringList quickScenePlayheadCheckFailures(const MidiTimeline &timeline)
                 .arg(body->height()));
     } else if (!kQuickCarriesPlayhead && body->isVisible()) {
         failures.append("macOS default playhead left the timelineQuickRollPlayhead item visible");
+    }
+    if (kQuickCarriesPlayhead && body && qAbs(body->x() - quick->rulerPlotOrigin()) > 0.01) {
+        failures.append(QStringLiteral("Quick playhead surface was not anchored at the "
+                                       "host-local timeline split (x=%1 split=%2)")
+                            .arg(body->x())
+                            .arg(quick->rulerPlotOrigin()));
     }
     assertQuickPlayheadPresent(failures, quick->playheadVisible(),
                                "SongView playhead sample did not publish visibility to the "
@@ -113,29 +116,221 @@ QStringList quickScenePlayheadCheckFailures(const MidiTimeline &timeline)
         }
     }
 
-    // Park the playhead just inside the plot: timeline X is relative to the plot
-    // origin, so 1.0 puts the core ~1px past it and the bloom would cross into
-    // the gutter unless the Quick renderer clips to the plot strip.
-    overlay->setPlayhead(1.0, true, true);
-    checks::support::pumpQuick();
-    const QImage gutterFrame = checks::support::captureQuickBand(probe, rollRect, &captureError);
-    const int timelineOrigin = rollTimelineOrigin();
-    if (gutterFrame.isNull()) {
-        failures.append(
-            QStringLiteral("Quick playhead gutter roll-band capture failed: %1").arg(captureError));
-    } else {
-        if (timelineOrigin > 0) {
-            const QRect gutterRect{0, 0, timelineOrigin, rollRect.height()};
-            if (checks::support::hasPlayheadPixel(gutterFrame, gutterRect, color))
-                failures.append("Quick playhead painted into the timelineOrigin gutter");
+    if (kQuickCarriesPlayhead && body) {
+        const QRectF staticSurface{body->x(), body->y(), body->width(), body->height()};
+        const qreal initialLocalX = probe.camera().contentX(probe.playheadTick());
+        for (int move = 1; move <= 128; ++move)
+            overlay->setPlayhead(initialLocalX + qreal(move) / 3.0, true, true);
+        checks::support::pumpQuick();
+        const QRectF movedSurface{body->x(), body->y(), body->width(), body->height()};
+        if (movedSurface != staticSurface) {
+            failures.append("128 position-only Quick playhead moves changed its static "
+                            "timeline-column surface");
         }
-        if (kQuickCarriesPlayhead) {
-            const QRect plotStripRect{timelineOrigin, 0, rollRect.width() - timelineOrigin,
-                                      rollRect.height()};
-            if (!checks::support::hasPlayheadPixel(gutterFrame, plotStripRect, color))
-                failures.append("Quick playhead gutter proof left no pixel in the roll plot strip");
-        }
+        overlay->setPlayhead(initialLocalX, true, false);
+        checks::support::pumpQuick();
     }
+
+    const auto checkFixedGutter = [&](songview::TimelineBand band, const char *name,
+                                      const QString &state) {
+        const std::optional<songview::TimelineBandGeometry> &geometry =
+            probe.timelineBandLayout().geometry(band);
+        if (!geometry)
+            return;
+        QString error;
+        const QImage frame = checks::support::captureQuickBand(probe, geometry->rect, &error);
+        if (frame.isNull()) {
+            failures.append(QStringLiteral("%1 Quick %2-band capture failed: %3")
+                                .arg(state, QString::fromLatin1(name), error));
+            return;
+        }
+        const QRect plotRect =
+            geometry->plotRect.translated(-geometry->rect.topLeft()).intersected(frame.rect());
+        const QRect fixedGutter{0, 0, plotRect.left(), geometry->rect.height()};
+        if (kQuickCarriesPlayhead &&
+            checks::support::hasSolidPlayheadPixel(frame, fixedGutter, color)) {
+            failures.append(QStringLiteral("%1 Quick playhead body painted left of timelineSplitX "
+                                           "in the %2 fixed gutter")
+                                .arg(state, QString::fromLatin1(name)));
+        }
+        const QRect plotStrip = plotRect;
+        if (kQuickCarriesPlayhead &&
+            !checks::support::hasSolidPlayheadPixel(frame, plotStrip, color)) {
+            failures.append(QStringLiteral("%1 Quick playhead body left no core pixel in the %2 "
+                                           "plot strip")
+                                .arg(state, QString::fromLatin1(name)));
+        }
+    };
+    const auto checkRulerAtSplit = [&](const QString &state) {
+        const std::optional<songview::TimelineBandGeometry> &geometry =
+            probe.timelineBandLayout().geometry(songview::TimelineBand::Ruler);
+        if (!geometry)
+            return;
+        QString error;
+        const QImage frame = checks::support::captureQuickBand(probe, geometry->rect, &error);
+        if (frame.isNull()) {
+            failures.append(
+                QStringLiteral("%1 Quick ruler-band capture failed: %2").arg(state, error));
+            return;
+        }
+        const QRect plotRect =
+            geometry->plotRect.translated(-geometry->rect.topLeft()).intersected(frame.rect());
+        const int forbiddenWidth =
+            std::max(0, plotRect.left() - songview::playheadTriangleHalfWidth());
+        const QRect beyondTriangleWing{0, 0, forbiddenWidth, geometry->rect.height()};
+        if (kQuickCarriesPlayhead &&
+            checks::support::hasSolidPlayheadPixel(frame, beyondTriangleWing, color)) {
+            failures.append(QStringLiteral("%1 Quick ruler playhead exceeded the permitted "
+                                           "triangle half-width left of timelineSplitX")
+                                .arg(state));
+        }
+        const QRect permittedTriangleWing{forbiddenWidth, 0, plotRect.left() - forbiddenWidth,
+                                          geometry->rect.height()};
+        if (kQuickCarriesPlayhead && !permittedTriangleWing.isEmpty() &&
+            !checks::support::hasSolidPlayheadPixel(frame, permittedTriangleWing, color)) {
+            failures.append(QStringLiteral("%1 Quick ruler playhead clipped the permitted "
+                                           "triangle half-width left of timelineSplitX")
+                                .arg(state));
+        }
+        if (kQuickCarriesPlayhead &&
+            !checks::support::hasSolidPlayheadPixel(frame, frame.rect(), color)) {
+            failures.append(
+                QStringLiteral("%1 Quick ruler capture left no core or triangle pixel").arg(state));
+        }
+    };
+    const auto checkTrackHeadersExcluded = [&](const QString &state) {
+        const std::optional<songview::TimelineBandGeometry> &geometry =
+            probe.timelineBandLayout().geometry(songview::TimelineBand::TrackHeaders);
+        if (!geometry)
+            return;
+        QString error;
+        const QImage frame = checks::support::captureQuickBand(probe, geometry->rect, &error);
+        if (frame.isNull()) {
+            failures.append(
+                QStringLiteral("%1 Quick track-header capture failed: %2").arg(state, error));
+        } else if (kQuickCarriesPlayhead &&
+                   checks::support::hasSolidPlayheadPixel(frame, frame.rect(), color)) {
+            failures.append(
+                QStringLiteral("%1 Quick playhead painted into the excluded track-header column")
+                    .arg(state));
+        }
+    };
+    const auto checkSplitClipping = [&](bool playing) {
+        SongView::ViewState stateAtSplit = probe.viewState();
+        stateAtSplit.scrollPx = 0.0;
+        probe.applyViewState(stateAtSplit);
+        probe.setPlayheadSample(timeline.sampleForTick(0), playing);
+        checks::support::pumpQuick();
+
+        const QString state = playing ? QStringLiteral("playing") : QStringLiteral("paused");
+        if (qAbs(probe.camera().contentX(probe.playheadTick())) > 0.5) {
+            failures.append(
+                QStringLiteral("%1 Quick split probe did not park tick zero at timelineSplitX")
+                    .arg(state));
+        }
+        checkRulerAtSplit(state);
+        checkFixedGutter(songview::TimelineBand::Roll, "roll", state);
+        checkFixedGutter(songview::TimelineBand::Automation, "automation", state);
+        checkFixedGutter(songview::TimelineBand::Velocity, "velocity", state);
+        checkFixedGutter(songview::TimelineBand::VoiceChanges, "voice-changes", state);
+        checkFixedGutter(songview::TimelineBand::OtherEvents, "other-events", state);
+        checkTrackHeadersExcluded(state);
+    };
+    checkSplitClipping(false);
+    checkSplitClipping(true);
+
+    const auto checkOutOfRangeRight = [&](bool playing) {
+        if (!body)
+            return;
+        overlay->setPlayhead(body->width(), true, playing);
+        checks::support::pumpQuick();
+        const QString state = playing ? QStringLiteral("playing") : QStringLiteral("paused");
+        if (kQuickCarriesPlayhead && quick->playheadVisible()) {
+            failures.append(QStringLiteral("%1 Quick playhead remained visible at the "
+                                           "timeline-column right edge")
+                                .arg(state));
+        }
+        for (const songview::TimelineBand band :
+             {songview::TimelineBand::Ruler, songview::TimelineBand::Roll}) {
+            const std::optional<songview::TimelineBandGeometry> &geometry =
+                probe.timelineBandLayout().geometry(band);
+            if (!geometry)
+                continue;
+            QString error;
+            const QImage frame = checks::support::captureQuickBand(probe, geometry->rect, &error);
+            if (frame.isNull()) {
+                failures.append(
+                    QStringLiteral("%1 right-edge Quick capture failed: %2").arg(state, error));
+            } else if (kQuickCarriesPlayhead &&
+                       checks::support::hasSolidPlayheadPixel(frame, frame.rect(), color)) {
+                failures.append(
+                    QStringLiteral("%1 right-edge Quick playhead retained pixels").arg(state));
+            }
+        }
+    };
+    checkOutOfRangeRight(false);
+    checkOutOfRangeRight(true);
+
+    const songview::TimelineBandLayout layout = probe.timelineBandLayout();
+    songview::TimelineBandLayout rulerlessLayout = layout;
+    rulerlessLayout.geometry(songview::TimelineBand::Ruler).reset();
+    overlay->updateBands(rulerlessLayout);
+    overlay->setPlayhead(0.0, true, false);
+    checks::support::pumpQuick();
+    if (kQuickCarriesPlayhead && quick->playheadVisible())
+        failures.append("Quick playhead remained visible without a ruler plot");
+    overlay->updateBands(layout);
+    checks::support::pumpQuick();
+
+    SongView::ViewState negativeState = probe.viewState();
+    negativeState.scrollPx = qreal(unit);
+    probe.applyViewState(negativeState);
+    const auto checkNegativeContentX = [&](bool playing) {
+        probe.setPlayheadSample(timeline.sampleForTick(0), playing);
+        checks::support::pumpQuick();
+        const QString state = playing ? QStringLiteral("playing") : QStringLiteral("paused");
+        if (probe.camera().contentX(probe.playheadTick()) >= 0.0) {
+            failures.append(
+                QStringLiteral("%1 Quick negative-X probe did not produce negative camera contentX")
+                    .arg(state));
+            return;
+        }
+        if (kQuickCarriesPlayhead && quick->playheadVisible()) {
+            failures.append(
+                QStringLiteral("%1 Quick playhead remained visible with negative camera contentX")
+                    .arg(state));
+        }
+        const std::optional<songview::TimelineBandGeometry> &ruler =
+            probe.timelineBandLayout().geometry(songview::TimelineBand::Ruler);
+        const std::optional<songview::TimelineBandGeometry> &roll =
+            probe.timelineBandLayout().geometry(songview::TimelineBand::Roll);
+        QString error;
+        const QImage rulerFrame =
+            ruler ? checks::support::captureQuickBand(probe, ruler->rect, &error) : QImage{};
+        if (!ruler || rulerFrame.isNull()) {
+            failures.append(
+                QStringLiteral("%1 negative-X Quick ruler capture failed: %2").arg(state, error));
+        } else if (kQuickCarriesPlayhead &&
+                   checks::support::hasSolidPlayheadPixel(rulerFrame, rulerFrame.rect(), color)) {
+            failures.append(QStringLiteral("%1 negative-X Quick ruler retained a core or triangle "
+                                           "pixel")
+                                .arg(state));
+        }
+        const QImage rollFrame =
+            roll ? checks::support::captureQuickBand(probe, roll->rect, &error) : QImage{};
+        if (!roll || rollFrame.isNull()) {
+            failures.append(
+                QStringLiteral("%1 negative-X Quick roll capture failed: %2").arg(state, error));
+        } else if (kQuickCarriesPlayhead &&
+                   checks::support::hasSolidPlayheadPixel(rollFrame, rollFrame.rect(), color)) {
+            failures.append(
+                QStringLiteral("%1 negative-X Quick roll retained a playhead body pixel")
+                    .arg(state));
+        }
+    };
+    checkNegativeContentX(false);
+    checkNegativeContentX(true);
+
     overlay->setPlayhead(0, false, false);
     checks::support::pumpQuick();
     if (quick->playheadVisible())

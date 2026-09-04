@@ -14,6 +14,7 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/timecamera.h"
 #include "ui/typography.h"
 
 using velocityarea::detail::contains;
@@ -41,9 +42,8 @@ uint64_t drawerContextTick(double tick)
 }
 
 } // namespace
-void VelocityArea::Geometry::resolve(int keyColumnWidth)
+void VelocityArea::Geometry::resolve()
 {
-    plotOrigin = keyColumnWidth;
     densityThresholdD1 = layout::fontPx(6.0);
     densityThresholdD2 = layout::fontPx(25.0 / 3.0);
     densityThresholdD3 = layout::fontPx(12.0);
@@ -52,7 +52,6 @@ void VelocityArea::Geometry::resolve(int keyColumnWidth)
     durationLineVerticalRadius = layout::fontPx(1.0 / 3.0);
     durationLineHorizontalSlop = layout::fontPx(1.0 / 6.0);
     relativeDragActivationDistance = layout::fontPx(1.0 / 12.0);
-    defaultPixelsPerBeat = layout::fontPx(8.0 / 3.0);
     nodePaintRadius = layout::fontPxF(7.0 / 26.0);
     nodeOutlineDipWidth = layout::fontPxF(1.0 / 12.0);
     selectedNodeRingRadius = layout::fontPxF(3.0 / 8.0);
@@ -70,7 +69,7 @@ VelocityArea::VelocityArea(SongView &owner, QObject *parent)
     , m_boldCaptionFont(typography::bold(m_captionFont))
     , m_captionFontHeight(QFontMetrics(m_captionFont).height())
 {
-    m_geometry.resolve(owner.pianoKeyboardWidth());
+    m_geometry.resolve();
 }
 
 void VelocityArea::attachInputHost(songview::TimelineInputHost &host)
@@ -196,15 +195,11 @@ VelocityAreaDiagnostics VelocityArea::diagnostics() const noexcept
     return m_diagnostics;
 }
 
-int VelocityArea::plotOrigin() const
+int VelocityArea::gutterWidth() const noexcept
 {
-    return m_geometry.plotOrigin;
-}
-
-int VelocityArea::plotWidth() const
-{
-    Q_ASSERT(m_inputHost);
-    return std::max(0, qRound(m_inputHost->bounds().width()) - plotOrigin());
+    const std::optional<songview::TimelineBandGeometry> &band =
+        m_owner.timelineBandLayout().geometry(songview::TimelineBand::Velocity);
+    return band ? band->gutterRect().width() : 0;
 }
 
 void VelocityArea::clearTrackHeaderSelection()
@@ -260,7 +255,7 @@ void VelocityArea::rebuildAxis()
     const VelocityAxisGeometry geometry{
         m_inputHost->bounds().height(),
         double(layout::space(layout::Space::Three)),
-        double(std::max(0, plotOrigin() - layout::singlePixel())),
+        double(std::max(0, gutterWidth() - layout::singlePixel())),
         double(layout::space(layout::Space::Two)),
         double(layout::space(layout::Space::One)),
         double(m_captionFontHeight),
@@ -419,10 +414,8 @@ QRectF VelocityArea::stemRect(const DocNote &note) const
 
 double VelocityArea::xForTick(uint64_t tick) const
 {
-    const MidiTimeline *timeline = m_owner.timeline();
-    const double ticksPerBeat = timeline ? double(std::max(1u, timeline->ticksPerBeat)) : 1.0;
-    return double(plotOrigin()) + double(tick) * pxPerBeat() / ticksPerBeat -
-           m_live.horizontalScroll;
+    const qreal dpr = m_inputHost ? m_inputHost->devicePixelRatio() : 1.0;
+    return m_camera.displayX(double(tick), 0.0, dpr);
 }
 
 double VelocityArea::yForVelocity(uint8_t velocity) const
@@ -470,15 +463,9 @@ uint8_t VelocityArea::displayedVelocity(const DocNote &note) const
     return note.velocity;
 }
 
-double VelocityArea::pxPerBeat() const
-{
-    return std::max(1.0, m_live.timeZoom > 1.0 ? m_live.timeZoom
-                                               : double(m_geometry.defaultPixelsPerBeat));
-}
-
 bool VelocityArea::inRuler(const QPointF &position) const
 {
-    return m_axis.inRuler(position, double(plotOrigin()));
+    return m_axis.inRuler(position, double(gutterWidth()));
 }
 
 int VelocityArea::rulerVelocityAt(const QPointF &position) const

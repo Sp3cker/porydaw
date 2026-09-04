@@ -199,8 +199,8 @@ ScenarioContinuation runScaleProjectionScenarios(Harness &check)
             const qreal dpr = image.devicePixelRatio();
             return image.pixel(qRound(x * dpr), qRound(y * dpr));
         };
-        const int laneX =
-            pianoKeyboardWidth + qRound(view.camera().leadPadPx()) + 20; // off the gridlines
+        const int plotLaneX = qRound(view.camera().leadPadPx()) + 20; // off the gridlines
+        const int bandLaneX = pianoKeyboardWidth + plotLaneX;
         const int kbdX = pianoKeyboardWidth - 10;
 
         view.setScaleHighlight(false);
@@ -237,17 +237,17 @@ ScenarioContinuation runScaleProjectionScenarios(Harness &check)
             QCoreApplication::processEvents();
 
             const QImage offPm = check.captureQuickFramebuffer();
-            const QRgb offScale = pixelAt(offPm, laneX, rows.centerY(scaleKey));
-            const QRgb offNon = pixelAt(offPm, laneX, rows.centerY(nonScaleKey));
+            const QRgb offScale = pixelAt(offPm, bandLaneX, rows.centerY(scaleKey));
+            const QRgb offNon = pixelAt(offPm, bandLaneX, rows.centerY(nonScaleKey));
             const QRgb offKbd = pixelAt(offPm, kbdX, rows.centerY(scaleKey));
 
             view.setScaleHighlight(true);
             view.setScaleFold(false);
             const QImage hlPm = check.captureQuickFramebuffer();
-            const QRgb hlScale = pixelAt(hlPm, laneX, rows.centerY(scaleKey));
-            const QRgb hlNon = pixelAt(hlPm, laneX, rows.centerY(nonScaleKey));
+            const QRgb hlScale = pixelAt(hlPm, bandLaneX, rows.centerY(scaleKey));
+            const QRgb hlNon = pixelAt(hlPm, bandLaneX, rows.centerY(nonScaleKey));
             const QRgb hlKbd = pixelAt(hlPm, kbdX, rows.centerY(scaleKey));
-            const QRgb hlRoot = pixelAt(hlPm, laneX, rows.centerY(rootKey));
+            const QRgb hlRoot = pixelAt(hlPm, bandLaneX, rows.centerY(rootKey));
 
             if (hlScale == offScale)
                 fail("Highlight did not tint the scale row");
@@ -271,7 +271,7 @@ ScenarioContinuation runScaleProjectionScenarios(Harness &check)
 
             view.setScaleRoot(1); // C# Major: the former non-scale C# row becomes the root.
             const QImage shiftedPm = check.captureQuickFramebuffer();
-            const QRgb shiftedRoot = pixelAt(shiftedPm, laneX, rows.centerY(nonScaleKey));
+            const QRgb shiftedRoot = pixelAt(shiftedPm, bandLaneX, rows.centerY(nonScaleKey));
             const QRgb expectedShiftedTint =
                 qRgb(blendedChannel(qRed(offNon), 0xb5), blendedChannel(qGreen(offNon), 0x95),
                      blendedChannel(qBlue(offNon), 0xfc));
@@ -284,7 +284,7 @@ ScenarioContinuation runScaleProjectionScenarios(Harness &check)
             view.setScaleId(porydaw_scale::ScaleId::phrygian);
             const QImage changedScalePm = check.captureQuickFramebuffer();
             const QRgb changedScalePitch =
-                pixelAt(changedScalePm, laneX, rows.centerY(nonScaleKey));
+                pixelAt(changedScalePm, bandLaneX, rows.centerY(nonScaleKey));
             if (std::abs(qRed(changedScalePitch) - qRed(expectedShiftedTint)) > 1 ||
                 std::abs(qGreen(changedScalePitch) - qGreen(expectedShiftedTint)) > 1 ||
                 std::abs(qBlue(changedScalePitch) - qBlue(expectedShiftedTint)) > 1) {
@@ -318,12 +318,12 @@ ScenarioContinuation runScaleProjectionScenarios(Harness &check)
                          "probe");
                 } else {
                     const QImage foldOffPm = check.captureQuickFramebuffer();
-                    const QRgb foldOff = pixelAt(foldOffPm, laneX, foldY);
+                    const QRgb foldOff = pixelAt(foldOffPm, bandLaneX, foldY);
                     view.setScaleHighlight(true);
                     if (!view.scaleHighlight() || !view.scaleFold())
                         fail("enabling Highlight disabled Fold");
                     const QImage foldHighlightPm = check.captureQuickFramebuffer();
-                    const QRgb foldHighlight = pixelAt(foldHighlightPm, laneX, foldY);
+                    const QRgb foldHighlight = pixelAt(foldHighlightPm, bandLaneX, foldY);
                     if (foldHighlight == foldOff)
                         fail("Highlight did not tint a visible occupied Fold scale row");
                     const QRgb expectedFoldTint = qRgb(blendedChannel(qRed(foldOff), 0xb5),
@@ -350,15 +350,15 @@ ScenarioContinuation runScaleProjectionScenarios(Harness &check)
             view.ensureKeyVisible(scaleKey);
             (void)view.grab();
             QCoreApplication::processEvents();
-            const QPoint notePos(laneX, rows.centerY(scaleKey));
+            const QPoint notePos(plotLaneX, rows.centerY(scaleKey));
             const int cmd0 = doc.undoStack()->index();
             drawNote(*roll, notePos); // commits a C-major-scale note (empty row)
             const QImage offPm = check.captureQuickFramebuffer();
-            const QRgb offFace = pixelAt(offPm, notePos.x(), notePos.y());
+            const QRgb offFace = pixelAt(offPm, bandLaneX, notePos.y());
             view.setScaleHighlight(true);
             view.setScaleFold(false);
             const QImage hlPm = check.captureQuickFramebuffer();
-            const QRgb hlFace = pixelAt(hlPm, notePos.x(), notePos.y());
+            const QRgb hlFace = pixelAt(hlPm, bandLaneX, notePos.y());
             view.setScaleHighlight(false);
             view.setScaleFold(false);
             if (hlFace != offFace)

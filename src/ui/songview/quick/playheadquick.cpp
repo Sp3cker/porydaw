@@ -1,8 +1,10 @@
 #include "ui/songview/quick/playheadquick.h"
 
+#include <QMatrix4x4>
 #include <QSGClipNode>
 #include <QSGGeometry>
 #include <QSGGeometryNode>
+#include <QSGTransformNode>
 #include <QSGVertexColorMaterial>
 
 #include <algorithm>
@@ -35,35 +37,76 @@ class PlayheadNode final : public QSGGeometryNode
     }
 };
 
-class PlayheadStripNode final : public QSGClipNode
+class PlayheadClipNode final : public QSGClipNode
 {
   public:
-    PlayheadStripNode()
+    PlayheadClipNode()
     {
         auto *geometry = new QSGGeometry(QSGGeometry::defaultAttributes_Point2D(), 4);
         geometry->setDrawingMode(QSGGeometry::DrawTriangleStrip);
         setGeometry(geometry);
         setFlag(OwnsGeometry);
         setIsRectangular(true);
-        appendChildNode(new PlayheadNode);
+
+        m_transform = new QSGTransformNode;
+        appendChildNode(m_transform);
+        m_transform->appendChildNode(new PlayheadNode);
     }
 
-    PlayheadNode *content() const { return static_cast<PlayheadNode *>(firstChild()); }
+    PlayheadNode *content() const { return static_cast<PlayheadNode *>(m_transform->firstChild()); }
+
+    void setContentTransform(const QMatrix4x4 &transform) { m_transform->setMatrix(transform); }
+
+  private:
+    QSGTransformNode *m_transform = nullptr;
 };
 
 class PlayheadRootNode final : public QSGNode
 {
   public:
-    void setStripCount(int count)
+    PlayheadRootNode()
     {
-        while (childCount() > count) {
-            QSGNode *node = lastChild();
-            removeChildNode(node);
+        m_bodyRoot = new QSGNode;
+        appendChildNode(m_bodyRoot);
+        m_triangleClip = new PlayheadClipNode;
+        appendChildNode(m_triangleClip);
+    }
+
+    void setBodyStripCount(int count)
+    {
+        while (m_bodyRoot->childCount() > count) {
+            QSGNode *node = m_bodyRoot->lastChild();
+            m_bodyRoot->removeChildNode(node);
             delete node;
         }
-        while (childCount() < count)
-            appendChildNode(new PlayheadStripNode);
+        while (m_bodyRoot->childCount() < count)
+            m_bodyRoot->appendChildNode(new PlayheadClipNode);
     }
+
+    int bodyStripCount() const { return m_bodyRoot->childCount(); }
+
+    PlayheadClipNode *bodyStrip(int index) const
+    {
+        QSGNode *node = m_bodyRoot->firstChild();
+        for (int current = 0; current < index; ++current)
+            node = node->nextSibling();
+        return static_cast<PlayheadClipNode *>(node);
+    }
+
+    PlayheadClipNode *triangleClip() const { return m_triangleClip; }
+
+    void setContentX(qreal x)
+    {
+        QMatrix4x4 transform;
+        transform.translate(x, 0.0);
+        for (QSGNode *node = m_bodyRoot->firstChild(); node; node = node->nextSibling())
+            static_cast<PlayheadClipNode *>(node)->setContentTransform(transform);
+        m_triangleClip->setContentTransform(transform);
+    }
+
+  private:
+    QSGNode *m_bodyRoot = nullptr;
+    PlayheadClipNode *m_triangleClip = nullptr;
 };
 
 void setVertex(QSGGeometry::ColoredPoint2D &vertex, const QPointF &point, const QColor &color)
@@ -103,16 +146,16 @@ class GeometryWriter
     QSGGeometry::ColoredPoint2D *m_vertices = nullptr;
 };
 
-void setRectangularClip(PlayheadStripNode *strip, const QRectF &rect)
+void setRectangularClip(PlayheadClipNode *clip, const QRectF &rect)
 {
-    strip->setClipRect(rect);
-    QSGGeometry::Point2D *const vertices = strip->geometry()->vertexDataAsPoint2D();
+    clip->setClipRect(rect);
+    QSGGeometry::Point2D *const vertices = clip->geometry()->vertexDataAsPoint2D();
     vertices[0].set(float(rect.left()), float(rect.top()));
     vertices[1].set(float(rect.left()), float(rect.bottom()));
     vertices[2].set(float(rect.right()), float(rect.top()));
     vertices[3].set(float(rect.right()), float(rect.bottom()));
-    strip->geometry()->markVertexDataDirty();
-    strip->markDirty(QSGNode::DirtyGeometry);
+    clip->geometry()->markVertexDataDirty();
+    clip->markDirty(QSGNode::DirtyGeometry);
 }
 
 // Quadratic ramp alpha = peak * t^2 evaluated at position x, t running 0 at
@@ -199,18 +242,18 @@ TimelinePlayheadItem::TimelinePlayheadItem(QQuickItem *parent) : QQuickItem(pare
     setFlag(ItemHasContents, true);
 }
 
-qreal TimelinePlayheadItem::coreRootX() const noexcept
+qreal TimelinePlayheadItem::localX() const noexcept
 {
-    return m_coreRootX;
+    return m_localX;
 }
 
-void TimelinePlayheadItem::setCoreRootX(qreal x) noexcept
+void TimelinePlayheadItem::setLocalX(qreal x) noexcept
 {
-    if (m_coreRootX == x)
+    if (m_localX == x)
         return;
-    m_coreRootX = x;
-    markClipDirty();
-    emit coreRootXChanged();
+    m_localX = x;
+    markTransformDirty();
+    emit localXChanged();
 }
 
 QColor TimelinePlayheadItem::color() const
@@ -251,8 +294,9 @@ void TimelinePlayheadItem::setGlowLeft(qreal extent) noexcept
     if (m_glowLeft == extent)
         return;
     m_glowLeft = extent;
-    markGeometryDirty();
-    markClipDirty();
+    m_geometryDirty = true;
+    m_transformDirty = true;
+    update();
     emit shapeChanged();
 }
 
@@ -308,7 +352,9 @@ void TimelinePlayheadItem::setTriangleHalfWidthPx(int halfWidth) noexcept
     if (m_triangleHalfWidthPx == halfWidth)
         return;
     m_triangleHalfWidthPx = halfWidth;
-    markGeometryDirty();
+    m_geometryDirty = true;
+    m_clipDirty = true;
+    update();
     emit shapeChanged();
 }
 
@@ -326,26 +372,28 @@ void TimelinePlayheadItem::setTriangleHeightPx(int height) noexcept
     emit shapeChanged();
 }
 
-QRectF TimelinePlayheadItem::triangleBandRect() const
+QRectF TimelinePlayheadItem::rulerPlotRect() const
 {
-    return m_triangleBandRect;
+    return m_rulerPlotRect;
 }
 
-void TimelinePlayheadItem::setTriangleBandRect(const QRectF &rect)
+void TimelinePlayheadItem::setRulerPlotRect(const QRectF &rect)
 {
-    if (m_triangleBandRect == rect)
+    if (m_rulerPlotRect == rect)
         return;
-    m_triangleBandRect = rect;
-    markGeometryDirty();
-    emit bandsChanged();
+    m_rulerPlotRect = rect;
+    m_geometryDirty = true;
+    m_clipDirty = true;
+    update();
+    emit clipsChanged();
 }
 
-QVariantList TimelinePlayheadItem::plotRects() const
+QVariantList TimelinePlayheadItem::bodyPlotRects() const
 {
-    return QVariantList{m_plotRects.cbegin(), m_plotRects.cend()};
+    return QVariantList{m_bodyPlotRects.cbegin(), m_bodyPlotRects.cend()};
 }
 
-void TimelinePlayheadItem::setPlotRects(const QVariantList &rects)
+void TimelinePlayheadItem::setBodyPlotRects(const QVariantList &rects)
 {
     QList<QRectF> converted;
     converted.reserve(rects.size());
@@ -353,17 +401,17 @@ void TimelinePlayheadItem::setPlotRects(const QVariantList &rects)
         if (value.canConvert<QRectF>())
             converted.append(value.toRectF());
     }
-    if (converted == m_plotRects)
+    if (converted == m_bodyPlotRects)
         return;
-    m_plotRects = std::move(converted);
+    m_bodyPlotRects = std::move(converted);
     markClipDirty();
-    emit bandsChanged();
+    emit clipsChanged();
 }
 
 void TimelinePlayheadItem::markClipDirty()
 {
     m_clipDirty = true;
-    syncLocalClips();
+    syncBodyClips();
     update();
 }
 
@@ -373,18 +421,29 @@ void TimelinePlayheadItem::markGeometryDirty()
     update();
 }
 
-void TimelinePlayheadItem::syncLocalClips()
+void TimelinePlayheadItem::markTransformDirty()
 {
-    m_localClips.clear();
-    m_localClips.reserve(m_plotRects.size());
+    m_transformDirty = true;
+    update();
+}
+
+void TimelinePlayheadItem::syncBodyClips()
+{
+    m_bodyClips.clear();
+    m_bodyClips.reserve(m_bodyPlotRects.size());
     const QRectF bounds = boundingRect();
-    for (const QRectF &plot : m_plotRects) {
-        const QRectF local(plot.x() - m_coreRootX + m_glowLeft, plot.y() - y(), plot.width(),
-                           plot.height());
-        const QRectF clipped = local.intersected(bounds);
+    for (const QRectF &plot : m_bodyPlotRects) {
+        const QRectF clipped = plot.translated(0.0, -y()).intersected(bounds);
         if (!clipped.isEmpty())
-            m_localClips.append(clipped);
+            m_bodyClips.append(clipped);
     }
+}
+
+QRectF TimelinePlayheadItem::triangleClipRect() const
+{
+    if (!m_rulerPlotRect.isValid())
+        return {};
+    return m_rulerPlotRect.translated(0.0, -y()).adjusted(-m_triangleHalfWidthPx, 0.0, 0.0, 0.0);
 }
 
 void TimelinePlayheadItem::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry)
@@ -398,34 +457,50 @@ void TimelinePlayheadItem::geometryChange(const QRectF &newGeometry, const QRect
 
 QSGNode *TimelinePlayheadItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
 {
+    const bool newNode = !oldNode;
     auto *root = static_cast<PlayheadRootNode *>(oldNode);
     if (!root)
         root = new PlayheadRootNode;
-    if (!m_clipDirty && !m_geometryDirty)
+    if (newNode) {
+        m_clipDirty = true;
+        m_geometryDirty = true;
+        m_transformDirty = true;
+    }
+    if (!m_clipDirty && !m_geometryDirty && !m_transformDirty)
         return root;
 
-    const int oldStripCount = root->childCount();
+    const int oldStripCount = root->bodyStripCount();
     if (m_clipDirty)
-        root->setStripCount(m_localClips.size());
-    const bool fillGeometry = m_geometryDirty || oldStripCount != root->childCount();
+        root->setBodyStripCount(m_bodyClips.size());
+    const bool fillBodyGeometry = m_geometryDirty || oldStripCount != root->bodyStripCount();
 
-    int index = 0;
-    for (QSGNode *node = root->firstChild(); node; node = node->nextSibling()) {
-        auto *strip = static_cast<PlayheadStripNode *>(node);
-        if (m_clipDirty)
-            setRectangularClip(strip, m_localClips.at(index));
-        if (fillGeometry) {
-            writePlayheadGeometry(strip->content()->geometry());
-            strip->content()->markDirty(QSGNode::DirtyGeometry);
-        }
-        ++index;
+    if (m_clipDirty) {
+        for (int index = 0; index < root->bodyStripCount(); ++index)
+            setRectangularClip(root->bodyStrip(index), m_bodyClips.at(index));
+        setRectangularClip(root->triangleClip(), triangleClipRect());
     }
+    if (fillBodyGeometry) {
+        for (int index = 0; index < root->bodyStripCount(); ++index) {
+            PlayheadNode *content = root->bodyStrip(index)->content();
+            writeBodyGeometry(content->geometry());
+            content->markDirty(QSGNode::DirtyGeometry);
+        }
+    }
+    if (m_geometryDirty) {
+        PlayheadNode *triangle = root->triangleClip()->content();
+        writeTriangleGeometry(triangle->geometry());
+        triangle->markDirty(QSGNode::DirtyGeometry);
+    }
+    if (m_transformDirty)
+        root->setContentX(m_localX - m_glowLeft);
+
     m_clipDirty = false;
     m_geometryDirty = false;
+    m_transformDirty = false;
     return root;
 }
 
-int TimelinePlayheadItem::playheadVertexCount() const
+int TimelinePlayheadItem::bodyVertexCount() const
 {
     const QRectF bounds = boundingRect();
     const qreal coreHalfWidth = m_lineWidthPx / 2.0;
@@ -434,14 +509,12 @@ int TimelinePlayheadItem::playheadVertexCount() const
     if ((std::min)(m_glowLeft + coreHalfWidth, bounds.right()) >
         (std::max)(m_glowLeft - coreHalfWidth, bounds.left()))
         vertices += 6;
-    if (m_triangleHeightPx > 0 && m_triangleHalfWidthPx > 0 && m_triangleBandRect.isValid())
-        vertices += 3;
     return vertices;
 }
 
-void TimelinePlayheadItem::writePlayheadGeometry(QSGGeometry *geometry) const
+void TimelinePlayheadItem::writeBodyGeometry(QSGGeometry *geometry) const
 {
-    geometry->allocate(playheadVertexCount());
+    geometry->allocate(bodyVertexCount());
     GeometryWriter writer(geometry->vertexDataAsColoredPoint2D());
     const QRectF bounds = boundingRect();
     const qreal coreHalfWidth = m_lineWidthPx / 2.0;
@@ -453,14 +526,20 @@ void TimelinePlayheadItem::writePlayheadGeometry(QSGGeometry *geometry) const
     const qreal coreRight = (std::min)(m_glowLeft + coreHalfWidth, bounds.right());
     if (coreRight > coreLeft)
         writer.rect(coreLeft, bounds.top(), coreRight, bounds.bottom(), m_color, m_color);
-    if (m_triangleHeightPx > 0 && m_triangleHalfWidthPx > 0 && m_triangleBandRect.isValid()) {
-        const QRectF band(m_triangleBandRect.x() - m_coreRootX + m_glowLeft,
-                          m_triangleBandRect.y() - y(), m_triangleBandRect.width(),
-                          m_triangleBandRect.height());
-        writer.triangle(rulerTriangle(m_glowLeft, band, m_triangleHalfWidthPx, m_triangleHeightPx,
-                                      m_trianglePointsUp),
-                        m_color);
-    }
+    geometry->markVertexDataDirty();
+}
+
+void TimelinePlayheadItem::writeTriangleGeometry(QSGGeometry *geometry) const
+{
+    const bool paintsTriangle =
+        m_triangleHeightPx > 0 && m_triangleHalfWidthPx > 0 && m_rulerPlotRect.isValid();
+    geometry->allocate(paintsTriangle ? 3 : 0);
+    if (!paintsTriangle)
+        return;
+    GeometryWriter writer(geometry->vertexDataAsColoredPoint2D());
+    writer.triangle(rulerTriangle(m_glowLeft, m_rulerPlotRect.translated(0.0, -y()),
+                                  m_triangleHalfWidthPx, m_triangleHeightPx, m_trianglePointsUp),
+                    m_color);
     geometry->markVertexDataDirty();
 }
 

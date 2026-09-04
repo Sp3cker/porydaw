@@ -83,9 +83,8 @@ bool PianoRoll::insideTimeSelection(qreal x) const
                                                          usedTrackMask(m_sv->timeline())))
         return false;
     const qreal dpr = devicePixelRatio();
-    const qreal startX =
-        m_camera.displayX(double(sel.startTick), m_geometry.pianoKeyboardWidth, dpr);
-    const qreal endX = m_camera.displayX(double(sel.endTick), m_geometry.pianoKeyboardWidth, dpr);
+    const qreal startX = m_camera.displayX(double(sel.startTick), 0.0, dpr);
+    const qreal endX = m_camera.displayX(double(sel.endTick), 0.0, dpr);
     return x >= startX && x < endX;
 }
 
@@ -211,9 +210,8 @@ QRectF PianoRoll::noteRect(qreal x0, qreal x1, int key) const
 QRectF PianoRoll::noteRect(const ViewNote &note) const
 {
     const qreal dpr = devicePixelRatio();
-    return noteRect(m_camera.displayX(double(note.startTick), m_geometry.pianoKeyboardWidth, dpr),
-                    m_camera.displayX(double(note.endTick), m_geometry.pianoKeyboardWidth, dpr),
-                    note.key);
+    return noteRect(m_camera.displayX(double(note.startTick), 0.0, dpr),
+                    m_camera.displayX(double(note.endTick), 0.0, dpr), note.key);
 }
 
 QRectF PianoRoll::noteBox(const QRectF &rect) const
@@ -280,8 +278,7 @@ void PianoRoll::refreshHoverCursor(QPointF pos, Qt::KeyboardModifiers modifiers)
 {
     if (m_cursors.dpr != devicePixelRatio())
         m_cursors = loadMidiCursors(devicePixelRatio(), m_geometry.midiCursorExtent);
-    const ViewNote *hit =
-        m_sv->document() && pos.x() >= m_geometry.pianoKeyboardWidth ? hitNote(pos) : nullptr;
+    const ViewNote *hit = m_sv->document() ? hitNote(pos) : nullptr;
     // Resize edges win over the modifier velocity hover.
     const auto &keys = keymap::Registry::instance();
     if (hit && nearRightEdge(*hit, pos))
@@ -312,8 +309,8 @@ QRectF PianoRoll::displayedNoteRect(const ViewNote &note) const
     }
     const int key = displayedNoteKey(note);
     const qreal dpr = devicePixelRatio();
-    const qreal x0 = m_camera.displayX(double(tick), m_geometry.pianoKeyboardWidth, dpr);
-    const qreal x1 = m_camera.displayX(double(endTick), m_geometry.pianoKeyboardWidth, dpr);
+    const qreal x0 = m_camera.displayX(double(tick), 0.0, dpr);
+    const qreal x1 = m_camera.displayX(double(endTick), 0.0, dpr);
     return noteRect(x0, x1, key);
 }
 

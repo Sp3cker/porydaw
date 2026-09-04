@@ -33,13 +33,12 @@
 
 namespace {
 
-songview::TimelineInputItem *automationInputItem(SongView &view)
+songview::TimelineInputItem *automationInputItem(SongView &view, const QString &objectName)
 {
     auto *quickCanvas =
         view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
     return quickCanvas && quickCanvas->rootObject()
-               ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(
-                     QStringLiteral("timelineAutomationInput"))
+               ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(objectName)
                : nullptr;
 }
 
@@ -108,7 +107,7 @@ void setCcPoints(AutomationPage &page, SongDocument &document, DrawerPageLiveSta
 QPointF tempoHeaderPoint(const AutomationPage &page)
 {
     const QRect tempo = page.canvas()->pinnedTempoRect();
-    return {page.canvas()->plotOrigin() / 2.0, qreal(tempo.center().y())};
+    return {qreal(layout::space(layout::Space::One)), qreal(tempo.center().y())};
 }
 
 bool toggleTempoExpanded(SongView &view, AutomationPage &page, bool wantExpanded, int &)
@@ -116,11 +115,12 @@ bool toggleTempoExpanded(SongView &view, AutomationPage &page, bool wantExpanded
     const bool expanded = !page.canvas()->laneBody(LaneHandle{0}).isEmpty();
     if (expanded == wantExpanded)
         return expanded;
-    AutomationBandInput band{page, *automationInputItem(view)};
-    band.mouse(QEvent::MouseButtonPress, tempoHeaderPoint(page), Qt::LeftButton, Qt::LeftButton,
-               Qt::NoModifier);
-    band.mouse(QEvent::MouseButtonRelease, tempoHeaderPoint(page), Qt::LeftButton, Qt::NoButton,
-               Qt::NoModifier);
+    AutomationBandInput gutter{
+        page, *automationInputItem(view, QStringLiteral("timelineAutomationGutterInput"))};
+    gutter.mouse(QEvent::MouseButtonPress, tempoHeaderPoint(page), Qt::LeftButton, Qt::LeftButton,
+                 Qt::NoModifier);
+    gutter.mouse(QEvent::MouseButtonRelease, tempoHeaderPoint(page), Qt::LeftButton, Qt::NoButton,
+                 Qt::NoModifier);
     pump();
     return !page.canvas()->laneBody(LaneHandle{0}).isEmpty() == wantExpanded;
 }
@@ -206,12 +206,13 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
         std::fprintf(stderr, "automation-check: FAIL paint: Tempo: %s\n", qUtf8Printable(message));
         ++failures;
     };
-    const AutomationBandInput band{page, *automationInputItem(view)};
+    const AutomationBandInput band{
+        page, *automationInputItem(view, QStringLiteral("timelineAutomationInput"))};
     auto *quickScene = view.findChild<songview::TimelineQuickScene *>();
     report(quickScene, QStringLiteral("retained Quick automation scene was not available"));
     if (!quickScene)
         return;
-    const AutomationGeometry geometry = AutomationGeometry::resolve(view.timelineSplitX());
+    const AutomationGeometry geometry = AutomationGeometry::resolve();
 
     const int originalSectionHeight = view.drawerSectionHeight(EditorDrawerPage::Automations);
     const auto automationBandRect = [&]() -> QRect {
@@ -370,7 +371,8 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
         ++failures;
     };
     AutomationCanvas *canvas = page.canvas();
-    const AutomationBandInput band{page, *automationInputItem(view)};
+    const AutomationBandInput plot{
+        page, *automationInputItem(view, QStringLiteral("timelineAutomationInput"))};
     const QByteArray originalSmf = document.smf().write();
     const int originalUndoIndex = document.undoStack()->index();
     const auto originalSelection = view.selectionModel().timeSelection();
@@ -405,7 +407,7 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
         pump();
         refresh(page, document, live);
         toggleTempoExpanded(view, page, originallyExpanded, failures);
-        leaveCanvas(band);
+        leaveCanvas(plot);
     };
     view.selectionModel().clearTimeSelection();
     const bool expanded = toggleTempoExpanded(view, page, true, failures);
@@ -416,7 +418,7 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
                 {kNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(180)}};
     document.applyTempoEdit(edit);
     refresh(page, document, live);
-    const AutomationGeometry sizingGeometry = AutomationGeometry::resolve(view.timelineSplitX());
+    const AutomationGeometry sizingGeometry = AutomationGeometry::resolve();
     int laneStackBottom = 0;
     for (int index = 0; index < int(canvas->rows().size()); ++index)
         laneStackBottom =
@@ -430,34 +432,44 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
         pump();
         refresh(page, document, live);
     }
-    leaveCanvas(band);
+    leaveCanvas(plot);
 
-    const AutomationGeometry geometry = AutomationGeometry::resolve(canvas->plotOrigin());
+    const AutomationGeometry geometry = AutomationGeometry::resolve();
     const QRect body = canvas->laneBody(LaneHandle{0});
-    const qreal dpr = band.item.devicePixelRatio();
+    const qreal dpr = plot.item.devicePixelRatio();
     const QPoint captureOrigin = automationContentToViewport(page);
+    const auto &automationBandGeometry =
+        view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
+    const int gutterWidth =
+        automationBandGeometry
+            ? std::max(0, automationBandGeometry->plotRect.x() - automationBandGeometry->rect.x())
+            : 0;
+    const QSize viewportSize(gutterWidth,
+                             automationBandGeometry ? automationBandGeometry->rect.height() : 0);
+    const QRectF viewportBounds(QPointF{}, QSizeF(viewportSize));
+    const int gutterMargin = layout::space(layout::Space::One);
+    const QRect gutterLabelColumn(gutterMargin, 0, std::max(0, gutterWidth - 2 * gutterMargin),
+                                  viewportSize.height());
     const auto laneLabel = [&](const QRect &laneBody, const AutomationGeometry &laneGeometry,
                                bool summary) {
-        const QRect gutter = canvas->labelGutter();
         const int arrowSize = std::max(layout::fontPx(0.5), laneGeometry.addLaneStripHeight / 3);
-        const int left = gutter.x() + arrowSize + layout::space(layout::Space::One);
+        const int left = gutterLabelColumn.x() + arrowSize + layout::space(layout::Space::One);
         const int top = laneBody.top() + (summary ? laneGeometry.addLaneStripHeight : 0);
         return QRect(left, top,
-                     std::max(0, gutter.width() - arrowSize - layout::space(layout::Space::One)),
+                     std::max(0, gutterLabelColumn.width() - arrowSize -
+                                     layout::space(layout::Space::One)),
                      laneGeometry.addLaneStripHeight)
             .intersected(laneBody);
     };
     const auto labelColumn = [&](const QRect &laneBody) {
-        const QRect gutter = canvas->labelGutter();
-        return QRect(gutter.x(), laneBody.top(), gutter.width(), laneBody.height())
+        return QRect(gutterLabelColumn.x(), laneBody.top(), gutterLabelColumn.width(),
+                     laneBody.height())
             .intersected(laneBody);
     };
     report(automationTextModel && automationTextModel->rowCount() > 0,
            QStringLiteral("retained Quick automation text model was empty"));
     const QRect title = laneLabel(body, geometry, false);
     const QRect summary = laneLabel(body, geometry, true);
-    const QSize viewportSize = page.automationViewportSize();
-    const QRectF viewportBounds(QPointF{}, QSizeF(viewportSize));
     const auto viewportLabelBounds = [&](const QRect &contentBounds) {
         return QRectF(contentBounds.translated(captureOrigin)).intersected(viewportBounds);
     };
@@ -496,8 +508,7 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
         const auto record = textRecord(expectedText, expectedBounds);
         const bool placed = !expectedBounds.isEmpty() && record && !record->isEmpty() &&
                             viewportBounds.contains(*record) && expectedBounds.contains(*record);
-        report(placed, QStringLiteral("%1 has no viewport-local retained Quick left-gutter record")
-                           .arg(label));
+        report(placed, QStringLiteral("%1 has no retained Quick gutter-local record").arg(label));
     };
     report(!body.isEmpty() && !title.isEmpty() && !summary.isEmpty(),
            QStringLiteral("expanded Tempo lane has no label bounds"));
@@ -517,15 +528,15 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
     const int addLaneTop = visibleRows.empty()
                                ? 0
                                : canvas->laneBody(LaneHandle{int(visibleRows.size())}).bottom() + 1;
-    const QRect gutter = canvas->labelGutter();
-    const QRect addLaneLabel(gutter.x(), addLaneTop, gutter.width(), geometry.addLaneStripHeight);
+    const QRect addLaneLabel(gutterLabelColumn.x(), addLaneTop, gutterLabelColumn.width(),
+                             geometry.addLaneStripHeight);
     checkMainText(QStringLiteral("Add automation lane"), canvas->tr("Add automation lane"),
                   viewportLabelBounds(addLaneLabel).intersected(scrollableViewportBounds));
 
     TempoLane tempoLane(document);
-    const QPointF node(view.camera().displayX(double(kNodeTick), geometry.plotOrigin, dpr),
+    const QPointF node(view.camera().displayX(double(kNodeTick), 0.0, dpr),
                        nodelane::valueY(tempoLane, body, geometry, 180));
-    band.mouse(QEvent::MouseMove, node, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+    plot.mouse(QEvent::MouseMove, node, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
     pump();
     const auto hoverText = firstTextRecord(automationHoverTextModel);
     report(hoverText && !hoverText->isEmpty(),

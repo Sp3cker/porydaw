@@ -8,6 +8,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QCursor>
+#include <QRect>
 
 #include "core/miditimeline.h"
 #include "ui/contextmenu.h"
@@ -17,11 +18,11 @@
 #include "ui/songview/editorselectionmodel.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timecamera.h"
+#include "ui/songview/timelinebandlayout.h"
 #include "ui/typography.h"
 
-void VoiceChangeArea::Geometry::resolve(int timelineSplitX)
+void VoiceChangeArea::Geometry::resolve()
 {
-    plotOrigin = timelineSplitX;
     markerHitRadius = layout::fontPx(3.0 / 4.0);
     hoverPaintPadding = layout::fontPx(1.0 / 6.0);
     gridMinimumCellWidth = layout::fontPx(4.0 / 3.0);
@@ -39,7 +40,7 @@ VoiceChangeArea::VoiceChangeArea(SongView &owner, QObject *parent)
     , m_textLayout(
           layout::twoLineText(m_titleFont, m_titleFont, m_captionFont, layout::Space::Zero))
 {
-    m_geometry.resolve(owner.timelineSplitX());
+    m_geometry.resolve();
 }
 
 void VoiceChangeArea::attachInputHost(songview::TimelineInputHost &host)
@@ -146,16 +147,6 @@ void VoiceChangeArea::tracksRemapped(const TrackRemap &)
     documentChanged();
 }
 
-int VoiceChangeArea::plotOrigin() const
-{
-    return m_geometry.plotOrigin;
-}
-
-int VoiceChangeArea::plotWidth() const
-{
-    return std::max(0, int(bounds().width()) - plotOrigin());
-}
-
 void VoiceChangeArea::presentPlayhead(double tick)
 {
     // The playhead line itself is painted by SongView's shared Quick chrome; this
@@ -178,6 +169,16 @@ void VoiceChangeArea::requestQuickUpdate()
 QRectF VoiceChangeArea::bounds() const
 {
     return m_inputHost ? m_inputHost->bounds() : QRectF();
+}
+
+QRectF VoiceChangeArea::gutterRect() const
+{
+    const auto &bandGeometry =
+        m_owner.timelineBandLayout().geometry(songview::TimelineBand::VoiceChanges);
+    if (!bandGeometry)
+        return {};
+    const QRect gutterGeometry = bandGeometry->gutterRect();
+    return QRectF(QPointF(), QSizeF(gutterGeometry.size()));
 }
 
 qreal VoiceChangeArea::devicePixelRatio() const
@@ -220,18 +221,17 @@ void VoiceChangeArea::clearHover()
 void VoiceChangeArea::updateHover(qreal x)
 {
     const QRect plot = plotRect();
-    if (!ready() || bounds().isEmpty() || x < qreal(plotOrigin())) {
+    if (!ready() || plot.isEmpty()) {
         clearHover();
         return;
     }
     const qreal dpr = devicePixelRatio();
-    const double tick = std::max(
-        0.0, m_camera.tickAtContentX(std::max<qreal>(plotOrigin(), x) - qreal(plotOrigin())));
+    const double tick = std::max(0.0, m_camera.tickAtContentX(std::max<qreal>(0.0, x)));
     const uint64_t snapped = m_grid.snapTick(tick, true);
     DocLanePoint markerPoint;
     const bool atMarker = voiceMarkerAt(x, &markerPoint);
     const uint64_t hoverTick = atMarker ? markerPoint.tick : snapped;
-    const qreal lineX = m_camera.displayX(double(hoverTick), plotOrigin(), dpr);
+    const qreal lineX = m_camera.displayX(double(hoverTick), 0.0, dpr);
     QString hoverLabel;
     if (!voiceMarkerAt(lineX, &markerPoint)) {
         const int slot = voiceSlotAt(hoverTick);
@@ -314,7 +314,8 @@ int VoiceChangeArea::voiceSlotAt(uint64_t tick) const
 
 QRect VoiceChangeArea::plotRect() const
 {
-    return QRect(plotOrigin(), 0, plotWidth(), int(bounds().height()));
+    const QRectF plot = bounds();
+    return {0, 0, qRound(plot.width()), qRound(plot.height())};
 }
 
 bool VoiceChangeArea::voiceMarkerAt(qreal x, DocLanePoint *out) const
@@ -325,8 +326,7 @@ bool VoiceChangeArea::voiceMarkerAt(qreal x, DocLanePoint *out) const
     const DocLanePoint *marker = nullptr;
     qreal distance = qreal(m_geometry.markerHitRadius) + 1;
     for (const DocLanePoint &point : m_voicePoints) {
-        const qreal candidate =
-            std::abs(m_camera.displayX(double(point.tick), plotOrigin(), dpr) - x);
+        const qreal candidate = std::abs(m_camera.displayX(double(point.tick), 0.0, dpr) - x);
         if (candidate <= qreal(m_geometry.markerHitRadius) && (!marker || candidate <= distance)) {
             marker = &point;
             distance = candidate;
@@ -350,13 +350,16 @@ void VoiceChangeArea::resetVoiceDrag()
 
 bool VoiceChangeArea::pointerPress(const songview::TimelinePointerInput &input)
 {
+    if (input.surface == songview::TimelineInputSurface::Gutter) {
+        clearHover();
+        return false;
+    }
     SongDocument *document = m_owner.document();
     if (!document)
         return false;
     const QPointF position = input.position;
     m_previousPosition = position;
-    const bool inPlot = position.x() >= qreal(plotOrigin());
-    if (input.button == Qt::MiddleButton && inPlot) {
+    if (input.button == Qt::MiddleButton) {
         m_inputHost->requestFocus(Qt::MouseFocusReason);
         m_interaction = Interaction::Pan;
         clearHover();
@@ -364,26 +367,22 @@ bool VoiceChangeArea::pointerPress(const songview::TimelinePointerInput &input)
         return true;
     }
     if (input.button == Qt::RightButton) {
-        if (inPlot) {
-            m_inputHost->requestFocus(Qt::MouseFocusReason);
-            showContextMenu(input.globalPosition.toPoint());
-        }
+        m_inputHost->requestFocus(Qt::MouseFocusReason);
+        showContextMenu(position.x(), input.globalPosition.toPoint());
         return true;
     }
     if (input.button == Qt::LeftButton) {
-        if (inPlot) {
-            m_inputHost->requestFocus(Qt::MouseFocusReason);
-            DocLanePoint point;
-            if (voiceMarkerAt(position.x(), &point)) {
-                m_voiceDrag = VoiceDragState{
-                    .phase = VoiceDragState::Phase::Pending,
-                    .pressPosition = position,
-                    .engineTrack = m_engineTrack,
-                    .point = point,
-                    .revision = document->revision(),
-                    .previewTick = point.tick,
-                };
-            }
+        m_inputHost->requestFocus(Qt::MouseFocusReason);
+        DocLanePoint point;
+        if (voiceMarkerAt(position.x(), &point)) {
+            m_voiceDrag = VoiceDragState{
+                .phase = VoiceDragState::Phase::Pending,
+                .pressPosition = position,
+                .engineTrack = m_engineTrack,
+                .point = point,
+                .revision = document->revision(),
+                .previewTick = point.tick,
+            };
         }
         return true;
     }
@@ -392,13 +391,20 @@ bool VoiceChangeArea::pointerPress(const songview::TimelinePointerInput &input)
 
 bool VoiceChangeArea::pointerDoubleClick(const songview::TimelinePointerInput &input)
 {
-    if (input.button == Qt::LeftButton && input.position.x() >= qreal(plotOrigin()))
-        showPicker(input.globalPosition.toPoint());
+    if (input.surface == songview::TimelineInputSurface::Gutter)
+        return false;
+    if (input.button == Qt::LeftButton)
+        showPicker(input.position.x());
     return true;
 }
 
 bool VoiceChangeArea::pointerMove(const songview::TimelinePointerInput &input)
 {
+    if (input.surface == songview::TimelineInputSurface::Gutter) {
+        if (!m_voiceDrag && m_interaction == Interaction::None)
+            clearHover();
+        return false;
+    }
     const QPointF position = input.position;
     if (m_voiceDrag) {
         if (m_voiceDrag->phase == VoiceDragState::Phase::Pending) {
@@ -413,8 +419,7 @@ bool VoiceChangeArea::pointerMove(const songview::TimelinePointerInput &input)
             requestQuickUpdate();
         }
         const double rawTick =
-            std::max(0.0, m_camera.tickAtContentX(std::max<qreal>(plotOrigin(), position.x()) -
-                                                  qreal(plotOrigin())));
+            std::max(0.0, m_camera.tickAtContentX(std::max<qreal>(0.0, position.x())));
         const uint64_t tick = m_grid.snapTick(rawTick, input.modifiers & Qt::AltModifier);
         if (tick != m_voiceDrag->previewTick) {
             m_voiceDrag->previewTick = tick;
@@ -438,6 +443,8 @@ bool VoiceChangeArea::pointerMove(const songview::TimelinePointerInput &input)
 
 bool VoiceChangeArea::pointerRelease(const songview::TimelinePointerInput &input)
 {
+    if (input.surface == songview::TimelineInputSurface::Gutter)
+        return false;
     if (input.button == Qt::MiddleButton && m_interaction == Interaction::Pan) {
         m_owner.setFollowScrollPaused(false);
         m_interaction = Interaction::None;
@@ -471,6 +478,8 @@ void VoiceChangeArea::pointerLeave()
 
 bool VoiceChangeArea::wheel(const songview::TimelineWheelInput &input)
 {
+    if (input.surface == songview::TimelineInputSurface::Gutter)
+        return false;
     const bool horizontal = input.modifiers.testFlag(Qt::ShiftModifier) ||
                             input.angleDelta.x() != 0 || input.pixelDelta.x() != 0;
     if (horizontal) {
@@ -478,7 +487,7 @@ bool VoiceChangeArea::wheel(const songview::TimelineWheelInput &input)
         m_owner.setEditorHorizontalScroll(m_live.horizontalScroll - double(delta));
         return true;
     }
-    m_owner.zoomTimelineAtWheel(input, input.position.x() - plotOrigin());
+    m_owner.zoomTimelineAtWheel(input, input.position.x());
     return true;
 }
 
@@ -491,17 +500,15 @@ bool VoiceChangeArea::keyPress(const songview::TimelineKeyInput &input)
     return false;
 }
 
-void VoiceChangeArea::showPicker(const QPoint &globalPosition)
+void VoiceChangeArea::showPicker(qreal plotX)
 {
     SongDocument *const sourceDocument = m_owner.document();
     if (!sourceDocument || m_engineTrack < 0)
         return;
     const int track = m_engineTrack;
-    const qreal x = m_inputHost->mapFromGlobal(QPointF(globalPosition)).x();
     DocLanePoint markerPoint;
-    const DocLanePoint *marker = voiceMarkerAt(x, &markerPoint) ? &markerPoint : nullptr;
-    const double rawTick = std::max(
-        0.0, m_camera.tickAtContentX(std::max<qreal>(plotOrigin(), x) - qreal(plotOrigin())));
+    const DocLanePoint *marker = voiceMarkerAt(plotX, &markerPoint) ? &markerPoint : nullptr;
+    const double rawTick = std::max(0.0, m_camera.tickAtContentX(std::max<qreal>(0.0, plotX)));
     const uint64_t tick = marker ? marker->tick : m_grid.snapTick(rawTick, false);
     const int current = marker ? marker->value : voiceSlotAt(tick);
     int selectedVoice = 0;
@@ -525,15 +532,14 @@ void VoiceChangeArea::showPicker(const QPoint &globalPosition)
     m_owner.refreshAllDrawerPages();
 }
 
-void VoiceChangeArea::showContextMenu(const QPoint &globalPosition)
+void VoiceChangeArea::showContextMenu(qreal plotX, const QPoint &globalPosition)
 {
     SongDocument *const sourceDocument = m_owner.document();
     if (!sourceDocument || m_engineTrack < 0)
         return;
     const int track = m_engineTrack;
-    const qreal x = m_inputHost->mapFromGlobal(QPointF(globalPosition)).x();
     DocLanePoint markerPoint;
-    const bool hasMarker = voiceMarkerAt(x, &markerPoint);
+    const bool hasMarker = voiceMarkerAt(plotX, &markerPoint);
     ui::ContextMenu menu(&m_owner);
     QAction *change = nullptr;
     QAction *insert = nullptr;
@@ -548,7 +554,7 @@ void VoiceChangeArea::showContextMenu(const QPoint &globalPosition)
     if (!chosen || m_owner.document() != sourceDocument || primaryTrack() != track)
         return;
     if (chosen == change || chosen == insert) {
-        showPicker(globalPosition);
+        showPicker(plotX);
         return;
     }
     DocLanePoint currentMarker;

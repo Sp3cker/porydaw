@@ -1,13 +1,13 @@
 #include "ui/editordrawer/automationcanvas.h"
 
 #include <QPalette>
-#include <QSize>
 
 #include "ui/editordrawer/automationpage.h"
 #include "ui/layout.h"
 #include "ui/songview/quick/automationnodelanequick.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/timelinebandlayout.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/theme/trackidentitycolors.h"
 
@@ -53,23 +53,22 @@ void addHeaderChrome(TimelineQuickScene &scene, const QRectF &band, const QRectF
                      const std::optional<QRect> &arrow, bool expanded, bool separator,
                      const QRectF &viewport)
 {
+    constexpr TimelineQuickLayer chromeLayer = TimelineQuickLayer::AutomationGutterChrome;
     if (separator) {
-        addHorizontalLine(scene, TimelineQuickLayer::AutomationGrid, band.left(), band.right(),
-                          band.bottom(), layout::singlePixel(),
-                          themes::color(themes::Role::song_view_separator), viewport);
+        addHorizontalLine(scene, chromeLayer, band.left(), band.right(), band.bottom(),
+                          layout::singlePixel(), themes::color(themes::Role::song_view_separator),
+                          viewport);
     }
     if (!arrow)
         return;
     const QRect &bounds = *arrow;
     const QColor color = themes::color(themes::Role::song_view_primary_text);
     if (expanded) {
-        addClippedTriangle(scene, TimelineQuickLayer::AutomationGrid,
-                           QPointF(bounds.left(), bounds.top()),
+        addClippedTriangle(scene, chromeLayer, QPointF(bounds.left(), bounds.top()),
                            QPointF(bounds.right(), bounds.top()),
                            QPointF(bounds.center().x(), bounds.bottom()), color, textClip);
     } else {
-        addClippedTriangle(scene, TimelineQuickLayer::AutomationGrid,
-                           QPointF(bounds.left(), bounds.top()),
+        addClippedTriangle(scene, chromeLayer, QPointF(bounds.left(), bounds.top()),
                            QPointF(bounds.right(), bounds.center().y()),
                            QPointF(bounds.left(), bounds.bottom()), color, textClip);
     }
@@ -86,6 +85,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     const bool transient = refresh.testFlag(AutomationRefresh::Transient);
     const bool hover = refresh.testFlag(AutomationRefresh::Hover);
     if (content) {
+        resetLayer(scene, TimelineQuickLayer::AutomationGutterChrome);
         resetLayer(scene, TimelineQuickLayer::AutomationGrid);
         resetLayer(scene, TimelineQuickLayer::AutomationCurves);
         resetLayer(scene, TimelineQuickLayer::AutomationNodes);
@@ -103,10 +103,19 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     if (!m_inputHost || !m_page.document())
         return;
 
-    const QSize viewportSize = m_page.automationViewportSize();
-    const QRectF viewport(0, 0, viewportSize.width(), viewportSize.height());
-    if (viewport.width() <= 0.0 || viewport.height() <= 0.0)
+    const QRectF viewport = m_inputHost->bounds();
+    if (viewport.height() <= 0.0)
         return;
+    const auto &bandGeometry =
+        m_page.m_owner.timelineBandLayout().geometry(TimelineBand::Automation);
+    const QRect gutter = bandGeometry ? bandGeometry->gutterRect() : QRect{};
+    const QRectF gutterViewport(0.0, 0.0, gutter.width(), gutter.height());
+    const int gutterMargin = layout::space(layout::Space::One);
+    const QRect labelGutter(gutterMargin, 0, std::max(0, gutter.width() - 2 * gutterMargin), 0);
+    const auto gutterClipFor = [&gutterViewport](const QRect &band) {
+        return QRectF(0.0, band.top(), gutterViewport.width(), band.height())
+            .intersected(gutterViewport);
+    };
     const int verticalScroll = m_page.verticalScroll();
     const qreal dpr = m_inputHost->devicePixelRatio();
     const AutomationProjection projection = this->projection();
@@ -167,6 +176,13 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     QRectF scrollableViewport = viewport;
     if (!tempoClip.isEmpty())
         scrollableViewport.setBottom(std::min(scrollableViewport.bottom(), tempoClip.top()));
+    const auto localPlotFor = [&viewport](const QRect &body, const QRectF &clip) {
+        return QRectF(0.0, body.top(), viewport.width(), body.height()).intersected(clip);
+    };
+    const auto localOverflowFor = [this, &viewport](const QRect &body, const QRectF &clip) {
+        const QRect plot(0, body.top(), std::max(0, int(viewport.width())), body.height());
+        return nodelane::nodeOverflowClip(plot, m_geometry).intersected(clip);
+    };
 
     std::vector<VisibleLane> lanes;
     lanes.reserve(m_nodeStack.size() < 2 ? 2 : std::min<std::size_t>(m_nodeStack.size(), 8));
@@ -192,10 +208,8 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                          .band = body,
                          .body = body,
                          .clip = clip,
-                         .plot = rectF(nodelane::plotRect(body, m_geometry)).intersected(clip),
-                         .overflow = nodelane::nodeOverflowClip(
-                                         nodelane::plotRect(body, m_geometry), m_geometry)
-                                         .intersected(clip),
+                         .plot = localPlotFor(body, clip),
+                         .overflow = localOverflowFor(body, clip),
                          .tempo = false,
                          .selectedLane = m_laneSelection.coversLane(slot.id) || bandLane,
                          .selectedNodesLane = selectedNodesLane,
@@ -219,13 +233,8 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
              .band = tempoBand,
              .body = tempoBody,
              .clip = tempoClip,
-             .plot = tempoExpanded
-                         ? rectF(nodelane::plotRect(tempoBody, m_geometry)).intersected(tempoClip)
-                         : QRectF{},
-             .overflow = tempoExpanded ? nodelane::nodeOverflowClip(
-                                             nodelane::plotRect(tempoBody, m_geometry), m_geometry)
-                                             .intersected(tempoClip)
-                                       : QRectF{},
+             .plot = tempoExpanded ? localPlotFor(tempoBody, tempoClip) : QRectF{},
+             .overflow = tempoExpanded ? localOverflowFor(tempoBody, tempoClip) : QRectF{},
              .tempo = true,
              .selectedLane = m_laneSelection.coversLane(tempoSlot->id) || bandLane,
              .selectedNodesLane = selectedNodesLane,
@@ -249,83 +258,82 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         hoverTextRecords.reserve(1);
     if (transient)
         transientTextRecords.reserve(1);
-    // Text must retain its pre-clip rectangle: the QML automation band clips
-    // viewport-local glyphs without changing their alignment origin.
+    // Gutter records use gutter-local label bounds; plot value labels retain
+    // their pre-clip rectangles so clipping does not move centered glyphs.
     const NodeLaneQuickPaint::Outputs outputs;
     const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
     const QColor primaryText = themes::color(themes::Role::song_view_primary_text);
     const QColor secondaryText = themes::color(themes::Role::song_view_secondary_text);
-    const QRectF gutterClip(m_labelGutter.x(), 0, m_labelGutter.width(), viewport.height());
-    if (content)
+    if (content) {
         addRect(scene, TimelineQuickLayer::AutomationGrid, viewport, background, viewport);
+        addRect(scene, TimelineQuickLayer::AutomationGutterChrome, gutterViewport, background,
+                gutterViewport);
+    }
 
     for (const VisibleLane &lane : lanes) {
+        const QRectF gutterBand = gutterClipFor(lane.band);
         if (!lane.tempo && content) {
             composeBandedGrid(scene, TimelineQuickLayer::AutomationGrid, m_page.m_owner, lane.plot,
-                              m_geometry.plotOrigin, dpr);
-            addHeaderChrome(scene, rectF(lane.band), rectF(lane.band), std::nullopt, true, true,
-                            lane.clip);
+                              0.0, dpr);
+            addHeaderChrome(scene, gutterBand, gutterBand, std::nullopt, true, true, gutterBand);
         }
         if (!lane.tempo && content && lane.slot->text) {
             CCLanes::RowTextCache &rowText = *lane.slot->text;
-            const QRect textBounds(m_labelGutter.x(), lane.body.top(), m_labelGutter.width(),
+            const QRect textBounds(labelGutter.x(), lane.body.top(), labelGutter.width(),
                                    lane.body.height());
             const auto textBoxes =
                 m_laneTextLayout.align(textBounds, layout::VerticalAlignment::Center);
             const QString &summary = refreshCcSummaryText(rowText, lane.points, *lane.slot->lane);
             appendText(mainText, TimelineQuickTextKeyKind::AutomationHeader,
                        quint64(2 * lane.handle.index), textBoxes.primary, rowText.title,
-                       primaryText, m_laneTitleFont, Qt::AlignLeft, lane.clip);
+                       primaryText, m_laneTitleFont, Qt::AlignLeft, gutterBand);
             appendText(mainText, TimelineQuickTextKeyKind::AutomationHeader,
                        quint64(2 * lane.handle.index + 1), textBoxes.secondary, summary,
-                       secondaryText, m_laneCaptionFont, Qt::AlignLeft, lane.clip);
+                       secondaryText, m_laneCaptionFont, Qt::AlignLeft, gutterBand);
         }
     }
 
     for (const VisibleLane &lane : lanes) {
         if (!lane.tempo)
             continue;
+        const QRectF gutterBand = gutterClipFor(lane.band);
         if (content) {
-            addRect(scene, TimelineQuickLayer::AutomationGrid, rectF(lane.band), background,
-                    lane.clip);
-            addHorizontalLine(scene, TimelineQuickLayer::AutomationGrid, lane.band.left(),
-                              lane.band.right(), lane.band.bottom(), layout::singlePixel(),
-                              themes::color(themes::Role::song_view_separator), lane.clip);
+            addRect(scene, TimelineQuickLayer::AutomationGutterChrome, gutterBand, background,
+                    gutterBand);
             addHeaderChrome(
-                scene, rectF(lane.band), gutterClip,
+                scene, gutterBand, gutterBand,
                 [&] {
-                    const QRect strip(lane.band.left(), lane.band.top(), lane.band.width(),
+                    const QRect strip(0, lane.band.top(), gutter.width(),
                                       m_geometry.addLaneStripHeight);
                     const int arrowSize = std::max(layout::fontPx(0.5), strip.height() / 3);
-                    return std::optional<QRect>{QRect(m_labelGutter.left(),
+                    return std::optional<QRect>{QRect(labelGutter.left(),
                                                       strip.center().y() - arrowSize / 2, arrowSize,
                                                       arrowSize)};
                 }(),
-                tempoExpanded, false, lane.clip);
+                tempoExpanded, false, gutterBand);
             if (tempoExpanded) {
                 composeBandedGrid(scene, TimelineQuickLayer::AutomationGrid, m_page.m_owner,
-                                  lane.plot, m_geometry.plotOrigin, dpr);
+                                  lane.plot, 0.0, dpr);
             }
         }
         if (content) {
-            const QRect strip(lane.band.left(), lane.band.top(), lane.band.width(),
-                              m_geometry.addLaneStripHeight);
+            const QRect strip(0, lane.band.top(), gutter.width(), m_geometry.addLaneStripHeight);
             const int arrowSize = std::max(layout::fontPx(0.5), strip.height() / 3);
             const QRect primary(
-                m_labelGutter.x() + arrowSize + layout::space(layout::Space::One), strip.top(),
-                std::max(0, m_labelGutter.width() - arrowSize - layout::space(layout::Space::One)),
+                labelGutter.x() + arrowSize + layout::space(layout::Space::One), strip.top(),
+                std::max(0, labelGutter.width() - arrowSize - layout::space(layout::Space::One)),
                 strip.height());
             const QRect secondary(primary.x(), strip.top() + strip.height(), primary.width(),
                                   strip.height());
             appendText(mainText, TimelineQuickTextKeyKind::AutomationHeader,
                        quint64(2 * lane.handle.index), primary, tr("Tempo (BPM)"), primaryText,
                        tempoExpanded ? m_laneTitleFont : m_laneCaptionFont, Qt::AlignLeft,
-                       lane.clip);
+                       gutterBand);
             if (tempoExpanded) {
                 appendText(mainText, TimelineQuickTextKeyKind::AutomationHeader,
                            quint64(2 * lane.handle.index + 1), secondary,
                            tr("%n point(s)", nullptr, int(lane.points.size())), secondaryText,
-                           m_laneCaptionFont, Qt::AlignLeft, lane.clip);
+                           m_laneCaptionFont, Qt::AlignLeft, gutterBand);
             }
         }
     }
@@ -333,7 +341,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         if (!lane.tempo || tempoExpanded || !lane.selectedLane || !selectedTickRange)
             continue;
         const auto [firstTick, lastTick] = *selectedTickRange;
-        const QRectF bounds = rectF(lane.band);
+        const QRectF bounds(0.0, lane.band.top(), viewport.width(), lane.band.height());
         const QRectF reticle(projection.displayX(firstTick, dpr), bounds.top(),
                              projection.displayX(lastTick, dpr) -
                                  projection.displayX(firstTick, dpr),
@@ -346,25 +354,22 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     }
 
     if (content) {
-        const QRect strip =
-            translatedToViewport(QRect(layout::space(layout::Space::Zero), addLaneStripTop(),
-                                       viewportSize.width(), m_geometry.addLaneStripHeight),
-                                 verticalScroll);
-        const QRectF stripClip = rectF(strip).intersected(scrollableViewport);
+        const QRect strip(0, addLaneStripTop() - verticalScroll, gutter.width(),
+                          m_geometry.addLaneStripHeight);
+        const QRectF stripClip = rectF(strip).intersected(gutterViewport);
         if (!stripClip.isEmpty()) {
-            addRect(scene, TimelineQuickLayer::AutomationGrid, rectF(strip), background, stripClip);
-            addHeaderChrome(scene, rectF(strip), rectF(strip), std::nullopt, true, true, stripClip);
+            addRect(scene, TimelineQuickLayer::AutomationGutterChrome, rectF(strip), background,
+                    stripClip);
+            addHeaderChrome(scene, rectF(strip), stripClip, std::nullopt, true, true, stripClip);
         }
     }
     if (content) {
-        const QRect strip =
-            translatedToViewport(QRect(layout::space(layout::Space::Zero), addLaneStripTop(),
-                                       viewportSize.width(), m_geometry.addLaneStripHeight),
-                                 verticalScroll);
-        const QRectF stripClip = rectF(strip).intersected(scrollableViewport);
+        const QRect strip(0, addLaneStripTop() - verticalScroll, gutter.width(),
+                          m_geometry.addLaneStripHeight);
+        const QRectF stripClip = rectF(strip).intersected(gutterViewport);
         if (!stripClip.isEmpty()) {
             appendText(mainText, TimelineQuickTextKeyKind::AutomationAddLane, 0,
-                       QRect(m_labelGutter.x(), strip.top(), m_labelGutter.width(), strip.height()),
+                       QRect(labelGutter.x(), strip.top(), labelGutter.width(), strip.height()),
                        tr("Add automation lane"),
                        themes::color(themes::Role::song_view_add_automation_lane_action),
                        m_laneCaptionFont, Qt::AlignLeft, stripClip);
@@ -388,7 +393,10 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
             .lane = *lane.slot->lane,
             .points = lane.points,
             .body = tempoExpanded ? lane.body : lane.band,
-            .plot = tempoExpanded ? lane.plot : rectF(lane.band).intersected(lane.clip),
+            .plot = tempoExpanded
+                        ? lane.plot
+                        : QRectF(0.0, lane.band.top(), viewport.width(), lane.band.height())
+                              .intersected(lane.clip),
             .contentYOffset = static_cast<qreal>(verticalScroll),
             .overflow = tempoExpanded ? lane.overflow : lane.clip,
             .geometry = m_geometry,

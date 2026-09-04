@@ -84,8 +84,7 @@ class TimelineQuickView final : public QWidget
     Q_PROPERTY(qreal hostX READ hostX NOTIFY hostGeometryChanged FINAL)
     Q_PROPERTY(qreal hostY READ hostY NOTIFY hostGeometryChanged FINAL)
     Q_PROPERTY(qreal rulerPlotOrigin READ rulerPlotOrigin NOTIFY hostGeometryChanged FINAL)
-    Q_PROPERTY(qreal rulerControlsWidth READ rulerControlsWidth NOTIFY hostGeometryChanged FINAL)
-    Q_PROPERTY(qreal playheadRootX READ playheadRootX NOTIFY playheadXChanged FINAL)
+    Q_PROPERTY(qreal playheadLocalX READ playheadLocalX NOTIFY playheadXChanged FINAL)
     Q_PROPERTY(bool playheadVisible READ playheadVisible NOTIFY playheadChanged FINAL)
     Q_PROPERTY(bool playheadPlaying READ playheadPlaying NOTIFY playheadChanged FINAL)
     Q_PROPERTY(QColor playheadColor READ playheadColor NOTIFY playheadChanged FINAL)
@@ -116,16 +115,14 @@ class TimelineQuickView final : public QWidget
     // these from SongView-local chrome rects.
     qreal hostX() const noexcept;
     qreal hostY() const noexcept;
-    // Root-local ruler plot origin. Ruler gutter controls end before this
-    // coordinate, while ruler marks start at it.
+    // Root-local canonical timeline split. Ruler gutter controls end before
+    // this coordinate, while ruler marks start at it.
     qreal rulerPlotOrigin() const noexcept;
-    // Root-local ruler gutter width reserved for the grid controls.
-    qreal rulerControlsWidth() const noexcept;
     // Playhead state pushed by PlayheadOverlay's Quick forwarder (the
-    // Windows/Linux playhead path); the stored X is SongView-local and
-    // converted to Quick-root coordinates at read time. Visible defaults
-    // to false, so the macOS native path never drives the Quick playhead.
-    qreal playheadRootX() const noexcept;
+    // Windows/Linux playhead path). X is raw timeline-column-local
+    // TimeCamera::contentX; visibility is already effective. Both default to
+    // hidden/zero so the macOS native path never drives the Quick playhead.
+    qreal playheadLocalX() const noexcept;
     bool playheadVisible() const noexcept;
     bool playheadPlaying() const noexcept;
     QColor playheadColor() const;
@@ -138,10 +135,9 @@ class TimelineQuickView final : public QWidget
     qreal playheadLineWidthPx() const noexcept;
     int playheadTriangleHalfWidthPx() const noexcept;
     int playheadTriangleHeightPx() const noexcept;
-    void setPlayhead(qreal songViewX, bool visible, bool playing, bool trianglePointsUp);
+    void setPlayhead(qreal localX, bool effectiveVisible, bool playing, bool trianglePointsUp);
     void setPlayheadColor(const QColor &color);
-    void synchronizeGuides(qreal songViewTimelineOriginX,
-                           std::optional<qreal> editSongViewContentX);
+    void synchronizeGuides(qreal songViewSplitX, std::optional<qreal> editSongViewContentX);
     void publishHover(TimelineQuickHoverOwner owner, uint64_t tick, qreal songViewContentX);
     void clearHover(TimelineQuickHoverOwner owner);
     QQuickItem *rootObject() const;
@@ -223,7 +219,10 @@ class TimelineQuickView final : public QWidget
     QPointer<DrawerChrome> m_drawerChrome;
     QPointer<SongView> m_songView;
     const TimeCamera &m_camera;
+    // Primary plot inputs own focus and their interaction host; gutter inputs
+    // only forward their physical-side event coordinates to that same interaction.
     std::array<TimelineInputItem *, timelineBandIndex(TimelineBand::Count)> m_inputItems{};
+    std::array<TimelineInputItem *, timelineBandIndex(TimelineBand::Count)> m_gutterInputItems{};
     std::array<TimelineInputItem *, 5> m_drawerChromeInputs{};
     TimelineQuickScene *m_scene = nullptr;
     QQuickView *m_quickView = nullptr;
@@ -235,11 +234,10 @@ class TimelineQuickView final : public QWidget
     // Quick-rendered drawer chrome; origin published to QML as hostX/hostY.
     QRect m_publishedHostRect;
     qreal m_publishedRulerPlotOrigin = 0.0;
-    qreal m_publishedRulerControlsWidth = 0.0;
     std::optional<qreal> m_hoverSongViewContentX;
     std::optional<qreal> m_editSongViewContentX;
-    qreal m_playheadSongViewX = 0.0;
-    bool m_playheadVisible = false;
+    qreal m_playheadLocalX = 0.0;
+    bool m_playheadEffectiveVisible = false;
     bool m_playheadPlaying = false;
     bool m_playheadTrianglePointsUp = false;
     QColor m_playheadColor;
