@@ -13,17 +13,49 @@ must know), **Seam** (where the interface lives), **Adapter** (what fills the sl
 boundaries; prefer one feature directory with a small public surface
 (`src/ui/editordrawer/` is the model).
 
-## Verdict
+---
 
-One merge, one removal, one split. Everything else stays separate. Reasoning for each
-below — each candidate was run through two tests:
+## 1. Test Suite Architecture & Concurrency Reality
 
-- **Deletion test:** delete the module; if complexity vanishes it was pass-through,
-  if it reappears across N callers it earns its keep.
-- **One-vs-two Adapter test:** one adapter means a hypothetical seam, two means a real
-  one. Merging two checks that need different harnesses creates a grab-bag, not a module.
+### The Real Scale & Coupling
+- **Scale:** ~61,700 LOC of check code across ~131 files and 60+ check targets vs ~73,000 LOC
+  of production code (near 1:1 ratio).
+- **White-box coupling:** 51 check files include `ui/songview.h`; 289 call sites fish for
+  private widgets via `findChild("...")`; 27 files re-derive canvas projection math via
+  `layout::fontPx` rather than asserting domain/model state (`SongDocument`, `SmfEvent`).
+- **Production class pollution:** Production `MainWindow` (`src/mainwindow.h`) declares 6
+  check-runner methods on its interface, placing ~1,020L of check bodies directly inside the
+  production class.
 
-## Rejected merges (keep separate)
+### Concurrency & Isolation Model
+`tools/run_checks.ts` executes checks as independent OS processes orchestrated via a JSON
+manifest (`porydaw_checks --manifest`):
+1. **Manifest-Driven Partitioning:**
+   - `Windowing::Offscreen` (~50 checks): Render headlessly (`QT_QPA_PLATFORM=offscreen`).
+     Executed in a parallel LPT pool pinned to 6 workers by empirical benchmark on Apple Silicon
+     (7+ workers cause thread/cache contention on CPU-saturating checks).
+   - `Windowing::WindowSystem` (6 checks: `rollcheck`, `trackheaderquickcheck`,
+     `rollwindowingcheck`, `automation-gestures`, `automation`, `rendering-playhead`):
+     Require native Cocoa windows and native event dispatch. Serialized with worker count 1
+     to prevent Cocoa window-activation and focus-stealing races.
+2. **QSettings Sandboxing:**
+   - `src/checks/checkregistry.cpp:139-144` redirects settings per-process via
+     `QSettings::setPath(IniFormat, UserScope, tmpdir)` and `setDefaultFormat(IniFormat)` before
+     every `StartupKind::Porydaw` check. Preferences do not leak or race across processes.
+3. **Immediate Runner Concurrency Optimization:**
+   - Today the runner drains the offscreen pool completely before starting the window-system
+     worker. Because offscreen checks never create native Cocoa windows, **the single
+     window-system worker can overlap concurrently alongside the offscreen pool from $t=0$**.
+     This cuts total suite makespan at zero risk of focus-theft flakiness.
+
+---
+
+## 2. Verdict & Planned Steps
+
+One removal (done), one structural extraction (next), one completion follow-up, and one split.
+Everything else stays separate.
+
+### Rejected merges (keep separate)
 
 - **selection + lane selection.** `selectioncheck.cpp` (475L, pure
   `songview/editorselectionmodel.h`, zero widgets) vs `laneselectioncheck.cpp` (245L,
@@ -51,55 +83,61 @@ below — each candidate was run through two tests:
   invariants (voice priming, loop-GOTO event ordering, cut-fade clicks). May group
   under `playback/` one day; never one file.
 
-## Approved changes
+---
 
-### 1. DONE — remove `selftest-voicegroup` (commit `739f6ba`)
+### Approved Changes
 
-`src/checks/selftest/voicegroup.cpp` (185L: scalar + structural voice edits, bank
-reload, undo, source-file identity) is fully subsumed by `vgsavecheck` (1821L); the
-only delta (15L live-playback assertion) was intentionally dropped, not ported.
-Removed: the file, `SelfTestScenario::Voicegroup` + decl (`harness.h`), descriptor
-(`harness.cpp`, enum order still index-safe: Timeline=0, Transport=1, Workspace=2),
-`CMakeLists.txt` source line, catalog entry (`checkcatalog.cpp`), wall entry
-(`tools/checks_walls.ts`). 6 files, 192 deletions. Verified: `build:checks` ok,
-`verify --filter vgsavecheck` PASS, zero live refs (only `docs/old/` history mentions
-remain). Covering check untouched.
+#### Step 1: DONE — remove `selftest-voicegroup` (commit `739f6ba`)
+`src/checks/selftest/voicegroup.cpp` (185L) fully subsumed by `vgsavecheck` (1821L).
+Removed: file, enum, descriptors, CMake entry, catalog entry, wall estimate. Verified clean.
 
-### 2. NEXT — merge host family into `src/checks/hostcheck/`
+#### Step 2: NEXT — Extract MainWindow Check Members & Modularize Host Family (`src/checks/hostcheck/`)
+- **Primary goal:** Extract `MainWindow::runMainWindowRoutingCheck` (`mainwindow.h:78-79`) and
+  `MainWindow::runPolyGateCheck` (`:98`) out of the production class.
+- Converts both into free functions owning a local `MainWindow` and accessing privates via
+  focused `friend` declarations (matching the existing `runHostIntegrationCheck` pattern).
+- Modularizes `hostcheck.cpp` (1955L) + `mainwindowroutingcheck.cpp` (2215L) into
+  `src/checks/hostcheck/` across 4 catalog rows (`host-seams`, `host-adapter`,
+  `mainwindow-routing`, `host-integration`) with shared rigs (`host_quick_rig`,
+  `host_workspace_rig`).
+- **Diff safety:** Code bodies are moved *verbatim* at statement boundaries with pruned includes;
+  no assertion rewriting in the same pass as relocation.
 
-The only two files violating the size rule at genuinely related seams:
-`hostcheck.cpp` (54 includes: `runHostSeamsCheck`, `runHostAdapterCheck`) +
-`mainwindowroutingcheck.cpp` (61 includes: `runMainWindowRoutingCheck`,
-`runHostIntegrationCheck`). Public `hostcheck.h` exposes the four `run*` signatures;
-private internal seams `host_quick_rig` (QML band helpers, adapter only) +
-`host_workspace_rig` (async readiness, routing + integration); ~12-include budget per
-file. Forces curing the member-check anti-pattern: `MainWindow::runMainWindowRoutingCheck`
-(`mainwindow.h:78`) + `runPolyGateCheck` (`:98`) are production members consumed only
-by checks (~1020L out, plus the 17L forwarding shim). Fold `polycheck` Stage C's
-MainWindow solo-overflow gate into routing. Medium risk (friendship rewiring, catalog
-+ `fwd.hpp` updates). Verify: `build:checks` + `verify --filter
-host-seams,host-adapter,mainwindow-routing,host-integration`.
+#### Step 2.5: FOLLOW-UP — Complete MainWindow Member Extraction
+Step 2 cures 2 of the 6 `MainWindow` check members. To complete the architectural decoupling,
+a follow-up pass converts the remaining 4 members into free functions with focused friendship:
+- `MainWindow::runTabCheck` (`mainwindow.h:70`, defined in `tabcheck.cpp:54`)
+- `MainWindow::runVgSaveCheck` (`mainwindow.h:64`, defined in `vgsavecheck.cpp:97`)
+- `MainWindow::runRegisterActionCheck` (`mainwindow.h:85`, defined in `onboardcheck.cpp:224`)
+- `MainWindow::runDeleteActionCheck` (`mainwindow.h:92`, defined in `onboardcheck.cpp:382`)
+**Acceptance:** `src/mainwindow.h` contains zero `run*Check` member function declarations.
 
-### 3. LATER — split `selftest/workspace.cpp`
+#### Step 3: LATER — Split `selftest/workspace.cpp` into Headless Codec & UI Smoke
+- ~300L pure `EditorViewState` QSettings/JSON codec extracted to headless
+  `src/checks/editorviewstatecheck.cpp` using an isolated `QTemporaryDir`.
+- Retains the existing check assertion idiom (`check(...)` / `fail(...)`) to maintain
+  clean integration with `tools/run_checks.ts` and the shared fixture header.
+- MainWindow-coupled smoke stays in `workspace.cpp`; timer assertions move to `tabcheck.cpp`.
 
-~300L pure `EditorViewState` QSettings codec → headless `editorviewstatecheck`;
-MainWindow-coupled smoke (dialog construction, playhead-timer teardown) stays, timer
-assertion moves to `tabcheck`. Verify: `editorviewstatecheck + tabcheck`.
+#### Step 4: FUTURE ROADMAP — Check Quality & Idiomatic Qt Testing
+1. **Canonical Assembly:** Migrate heavy GUI suites (`rollcheckautomation`,
+   `rollcheckpsgvelocity`) onto `checks/support/editorrig.h` to stop hand-assembling widget
+   stacks and fishing for QML items via `findChild`.
+2. **Domain-Level Assertions:** Replace pixel-offset checks (`layout::fontPx`) with model
+   invariants (`SongDocument`, `SmfEvent`, `QUndoStack`).
+3. **Idiomatic Qt Testing (`Qt6::Test`):**
+   - Add `Test` component to `find_package(Qt6 ...)` in `CMakeLists.txt`.
+   - Build a reporter adapter so `QCOMPARE` / `QVERIFY` failure diffs surface cleanly in
+     `tools/run_checks.ts`.
+   - Pilot `QTest` on newly added headless domain logic and pure algorithms (`porydaw_scale`,
+     `DecompProject`, `keymap::Registry`).
 
-## Coverage map (each path has exactly one owner when the above lands)
+---
 
-MIDI import/edit/undo: roundtrip, editcheck, smfcheck. Voicegroup: vgload, vgsave, vg,
-vgbank. Playback: transport, loop, prime, click, poly, selftest-transport.
-Selection/clip: selection, laneselection, clipmime, clip. Automation/velocity:
-automation, automation-gestures, automation-popup-menus, velocity-page, velocity-model,
-editor-drawer. Tabs/session/workspace/switch: tab, session, projectworkspace,
-projectio, selftest-workspace. Close boundary: tab timer + workspace dialog smoke.
-Theme/layout: theme, font, darkbase, editor-layout-12/16/18.
-
-## Step 2 mechanical spec — host merge (sonic-ready)
+## 3. Step 2 Mechanical Spec — Host Merge & Extraction (Sonic-Ready)
 
 Target: `src/checks/hostcheck.cpp` (1955L) + `src/checks/mainwindowroutingcheck.cpp`
-(2129L) → `src/checks/hostcheck/`. No signature changes: `fwd.hpp` and
+(2215L) → `src/checks/hostcheck/`. No signature changes: `fwd.hpp` and
 `checkcatalog.cpp` stay byte-identical (same 4 `run*` names/args). `mainwindow.h`
 gains two friend decls (B1/B2 below) and loses two member decls. Orchestrator owns
 the `CMakeLists.txt` edit inline after both units land: remove the 2 old `.cpp`
@@ -185,14 +223,15 @@ entries, add 6 new implementation files (+ their headers per project convention)
 `deno task build:checks`, then `verify --filter host-seams --filter host-adapter
 --filter mainwindow-routing --filter host-integration`.
 
-## Step 3 mechanical spec — workspace split (sonic-ready)
+---
+
+## 4. Step 3 Mechanical Spec — Workspace Split (Sonic-Ready)
 
 Contract first: 3A creates `src/checks/editorviewstatecheck.h` declaring the runner
 `int runEditorViewStateCheck()` PLUS the shared fixture/helper contract both halves
 use: `StoreShape`, `keyGroup`, `storeShape`, `laneBlobKey`, `storeLaneBlob`,
 `poisonLaneBlob`, `isCompactJsonObject`, `laneRowsDefaulted`, `lanesDefaulted`, and
 the `full`/`bare` fixture builders. 3B includes this header instead of duplicating.
-(Fixes the retained-helper gap: the live smoke needs all of these, not ~5 one-liners.)
 
 ### Unit 3A — new `editorviewstatecheck` (files: +editorviewstatecheck.h/.cpp, fwd.hpp, checkcatalog.cpp, checks_walls.ts)
 
@@ -214,36 +253,27 @@ the `full`/`bare` fixture builders. 3B includes this header instead of duplicati
 - Deps: `<QSettings>`, `<QTemporaryDir>`, `<QJsonDocument>`, `<QJsonObject>`,
   `<QJsonArray>`, `<QJsonParseError>`, `<QVariant>`/`<QMetaType>`, `<map>`/`<set>` (or
   Qt equivalents as used by the moved code), `ui/editorviewstate.h`, `ui/layout.h` —
-  no MainWindow/SongView/WorkspaceUi includes. (List is per moved code; if the moved
-  code uses more, follow include-what-you-use rather than this list.)
+  no MainWindow/SongView/WorkspaceUi includes.
 - Add `int runEditorViewStateCheck();` to `src/checks/fwd.hpp` (catalog dispatches
   through globals declared there — without this the new row has no callable).
 - Register `editorviewstatecheck` in `checkcatalog.cpp` next to the selftest rows
   (no fixture, no scratch dir — headless).
 - Add a `checks_walls.ts` row for the new check: mirror the `selftest-workspace`
-  entry's estimate format with a named estimate (do not invent a bare number and do
-  not rely silently on the 0.3 fallback).
-- Report the new files (`editorviewstatecheck.cpp` + `.h` per project convention
-  of listing headers) for the orchestrator's `CMakeLists.txt` addition — Step 3 is
-  an ADDITION (`workspace.cpp` stays), and no Step 3 build/verify runs until the
-  orchestrator lands the CMake edit.
+  entry's estimate format with a named estimate.
+- Report the new files (`editorviewstatecheck.cpp` + `.h`) for `CMakeLists.txt`.
 - Acceptance: new files compile with zero `mainwindow.h|songtab.h|songview.h|
-  workspaceui.h` includes; all 5 codec invariants present and named; braces
-  balanced (build proves it).
+  workspaceui.h` includes; all 5 codec invariants present and named; braces balanced.
 
 ### Unit 3B — trim workspace smoke + move timer (files: selftest/workspace.cpp, tabcheck.cpp)
 
 - In `workspace.cpp` keep: startup precondition (`:122-127`), dialog smoke
   (`:129-141`, `NewSongWizard` + `SettingsDialog`), capture (`:142`), live sidecar
-  (`:303-365`, starts at 303 not 311), clean close (`:366-398`). Delete the codec
-  blocks moved to 3A (through `:301`); replace ALL deleted helpers/fixtures with
-  `#include "checks/editorviewstatecheck.h"` — do not hand-duplicate any of them.
+  (`:303-365`), clean close (`:366-398`). Delete the codec blocks moved to 3A
+  (through `:301`); replace deleted helpers/fixtures with
+  `#include "checks/editorviewstatecheck.h"`.
 - Grep `m_playheadTimer` in `workspace.cpp`; move those assertions to `tabcheck.cpp`
   `MainWindow::runTabCheck` beside the existing `m_uiTimer` cadence assertions
-  (final-playing-tab section is `tabcheck.cpp:726-734`; assert playing: 100ms
-  cadence + playhead active; after close: 500ms cadence + playhead inactive + zero
-  tabs — direct `m_playheadTimer` access is available there). Delete from
-  `workspace.cpp`.
+  (`tabcheck.cpp:726-734`). Delete from `workspace.cpp`.
 - Acceptance: `workspace.cpp` ~130L, no codec invariant blocks remain;
   `m_playheadTimer` asserted in `tabcheck.cpp`, zero hits in `workspace.cpp`.
 
