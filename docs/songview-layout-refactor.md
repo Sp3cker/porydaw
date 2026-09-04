@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved design intent. Implementation has not started.
+Implemented and verified in `feature/songview-layout-refactor`.
 
 This plan makes the visible SongView structure its actual geometry: fixed chrome and labels live left of one canonical timeline split, time-based plots live right of it, and `PlayheadOverlay` is rooted in the timeline column. The playhead retains a mask for scrollbars, resize handles, separators, hidden rows, and other holes inside that column.
 

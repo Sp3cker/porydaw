@@ -27,6 +27,7 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
     SongDocument &doc = check.document();
     SongView &view = check.view();
     songview::TimelineInputItem *roll = &check.rollInput();
+    songview::TimelineInputItem *gutter = &check.rollGutterInput();
     const int track = check.track();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const SnappedRows rows{view, *roll};
@@ -58,7 +59,6 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
             int key = -1;
             QPointF center;
         } probe;
-        const qreal origin = qreal(pianoKeyboardWidth);
         const qreal dpr = roll->devicePixelRatio();
         const qreal rightLimit = qreal(roll->width()) - 4.0;
 
@@ -73,14 +73,14 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
                 const uint64_t next = view.grid().snapTickUp(double(tick) + 1.0);
                 if (next <= tick)
                     break;
-                const qreal leftX = view.camera().displayX(double(tick), origin, dpr);
-                const qreal rightX = view.camera().displayX(double(next), origin, dpr);
+                const qreal leftX = view.camera().displayX(double(tick), 0.0, dpr);
+                const qreal rightX = view.camera().displayX(double(next), 0.0, dpr);
                 if (leftX > rightLimit)
                     break;
                 const uint64_t dur = view.grid().gridTicksAt(tick);
                 const uint64_t previous =
                     tick == 0 ? tick : view.grid().snapTickDown(double(tick) - 1.0);
-                if (leftX >= origin + 4.0 && rightX <= rightLimit && rightX - leftX >= 4.0 &&
+                if (leftX >= 4.0 && rightX <= rightLimit && rightX - leftX >= 4.0 &&
                     !check.isOccupied(tick, dur, key)) {
                     const qreal centerX = (leftX + rightX) / 2.0;
                     if (std::abs(centerX - std::round(centerX)) < 1e-12) {
@@ -88,8 +88,8 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
                         continue;
                     }
                     const QPointF center(centerX, (top + bottom) / 2.0);
-                    if (view.grid().snapTickDown(
-                            view.camera().tickAtContentX(center.x() - origin)) == tick) {
+                    if (view.grid().snapTickDown(view.camera().tickAtContentX(center.x())) ==
+                        tick) {
                         probe.tick = tick;
                         probe.previous = previous;
                         probe.next = next;
@@ -187,14 +187,13 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
     // underlying roll. Nothing may paint past the end tick's column.
     view.setEditCursorTick(overlayTick);
     const QImage rollAfterDrawing = check.captureQuickFramebuffer();
-    const qreal noteLeftX =
-        view.camera().displayX(double(noteA.tick), pianoKeyboardWidth, rasterDpr);
+    const qreal noteLeftX = view.camera().displayX(double(noteA.tick), 0.0, rasterDpr);
     const qreal noteRightX =
-        view.camera().displayX(double(noteA.tick + noteA.duration), pianoKeyboardWidth, rasterDpr);
+        view.camera().displayX(double(noteA.tick + noteA.duration), 0.0, rasterDpr);
     const QRectF noteFrame = rows.noteRect(noteLeftX, noteRightX, noteA.key);
     const QRectF paintedNoteBox = rows.noteBox(noteFrame);
-    const int noteLeftPixel = toRasterPixel(noteFrame.left());
-    const int noteRightPixel = toRasterPixel(noteFrame.right());
+    const int noteLeftPixel = toRasterPixel(pianoKeyboardWidth + noteFrame.left());
+    const int noteRightPixel = toRasterPixel(pianoKeyboardWidth + noteFrame.right());
     const int noteTopPixel = toRasterPixel(noteFrame.top());
     const int noteFrameBottomPixel = toRasterPixel(noteFrame.bottom());
     const int paintedNoteBottomPixel = toRasterPixel(paintedNoteBox.bottom());
@@ -230,7 +229,7 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
         fail("intermediate velocity note color equals endpoint color");
 
     const QColor expectedNoteColor = SongView::noteColor(track, 100);
-    const QPoint noteInteriorSample(toRasterPixel(paintedNoteBox.center().x()),
+    const QPoint noteInteriorSample(toRasterPixel(pianoKeyboardWidth + paintedNoteBox.center().x()),
                                     toRasterPixel(paintedNoteBox.center().y()));
     if (QColor(rollAfterDrawing.pixel(noteInteriorSample)) != expectedNoteColor)
         fail("note interior color does not match noteColor(track, 100)");
@@ -239,11 +238,11 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
     // across the pair — no reserved background column that reads as a rest
     // between them. (findFreeCell guaranteed the adjacent cell is empty.)
     doc.addNote(track, noteA.tick + noteA.duration, noteA.key, noteA.duration, 100);
-    const qreal abuttingRightX = view.camera().displayX(double(noteA.tick + 2 * noteA.duration),
-                                                        pianoKeyboardWidth, rasterDpr);
+    const qreal abuttingRightX =
+        view.camera().displayX(double(noteA.tick + 2 * noteA.duration), 0.0, rasterDpr);
     const QImage abuttingImage = check.captureQuickFramebuffer();
     const int abuttingMidY = toRasterPixel(rows.centerY(noteA.key));
-    const int abuttingRightPixel = toRasterPixel(abuttingRightX);
+    const int abuttingRightPixel = toRasterPixel(pianoKeyboardWidth + abuttingRightX);
     bool restGapFound = false;
     for (int x = noteLeftPixel; x < abuttingRightPixel; ++x) {
         restGapFound |=
@@ -261,7 +260,7 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
                 expected.push_back(note.noteId);
         }
         view.selectionModel().clearNoteSelection();
-        click(*roll, QPoint(pianoKeyboardWidth - 1, rows.centerY(noteA.key)));
+        click(*gutter, QPoint(qRound(gutter->width()) - 1, rows.centerY(noteA.key)));
         const std::vector<NoteId> &selected = view.selectionModel().noteSelection();
         const bool allMatching = std::all_of(expected.begin(), expected.end(), [&](NoteId id) {
             return std::find(selected.begin(), selected.end(), id) != selected.end();

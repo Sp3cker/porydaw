@@ -32,7 +32,6 @@ struct AutomationGeometry {
     int rowMaximumHeight = 0;
     int rowWheelIncrement = 0;
     int addLaneStripHeight = 0;
-    int plotOrigin = 0;
     int pointHitRadius = 0;
     int neutralSnapRadius = 0;
     int deleteTimeRadius = 0;
@@ -46,7 +45,7 @@ struct AutomationGeometry {
     qreal selectedNodeRingDipWidth = 0.0;
     int valuePlotPadding = 0; // Aligns endpoint marker edges with row gutters.
 
-    static AutomationGeometry resolve(int timelineSplitX);
+    static AutomationGeometry resolve();
 };
 
 // AutomationProjection owns the current geometry for pixel <-> tick mapping.

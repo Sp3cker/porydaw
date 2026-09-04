@@ -12,7 +12,8 @@ namespace songview {
 
 namespace {
 
-TimelinePointerInput pointerInput(const QMouseEvent &event)
+TimelinePointerInput pointerInput(const QMouseEvent &event, TimelineInputSurface surface,
+                                  TimelineInputHost *host)
 {
     return TimelinePointerInput{
         .position = event.position(),
@@ -20,10 +21,13 @@ TimelinePointerInput pointerInput(const QMouseEvent &event)
         .button = event.button(),
         .buttons = event.buttons(),
         .modifiers = event.modifiers(),
+        .surface = surface,
+        .host = host,
     };
 }
 
-TimelinePointerInput pointerInput(const QHoverEvent &event)
+TimelinePointerInput pointerInput(const QHoverEvent &event, TimelineInputSurface surface,
+                                  TimelineInputHost *host)
 {
     return TimelinePointerInput{
         .position = event.position(),
@@ -31,10 +35,13 @@ TimelinePointerInput pointerInput(const QHoverEvent &event)
         .button = event.button(),
         .buttons = event.buttons(),
         .modifiers = event.modifiers(),
+        .surface = surface,
+        .host = host,
     };
 }
 
-TimelineWheelInput wheelInput(const QWheelEvent &event)
+TimelineWheelInput wheelInput(const QWheelEvent &event, TimelineInputSurface surface,
+                              TimelineInputHost *host)
 {
     return TimelineWheelInput{
         .position = event.position(),
@@ -44,6 +51,8 @@ TimelineWheelInput wheelInput(const QWheelEvent &event)
         .modifiers = event.modifiers(),
         .phase = event.phase(),
         .inverted = event.inverted(),
+        .surface = surface,
+        .host = host,
     };
 }
 
@@ -73,15 +82,25 @@ TimelineInputItem::~TimelineInputItem()
     setInteraction(nullptr);
 }
 
-void TimelineInputItem::setInteraction(TimelineBandInteraction *interaction)
+void TimelineInputItem::setInteraction(TimelineBandInteraction *interaction,
+                                       TimelineInputSurface surface, bool attachHost)
 {
-    if (m_interaction == interaction)
+    if (m_interaction == interaction && m_surface == surface && m_attachHost == attachHost)
         return;
-    if (m_interaction)
+
+    if (m_attachedInputHost) {
+        Q_ASSERT(m_interaction);
         m_interaction->detachInputHost(*this);
+        m_attachedInputHost = false;
+    }
+
     m_interaction = interaction;
-    if (m_interaction)
+    m_surface = surface;
+    m_attachHost = attachHost;
+    if (m_interaction && m_attachHost) {
         m_interaction->attachInputHost(*this);
+        m_attachedInputHost = true;
+    }
 }
 
 TimelineBandInteraction *TimelineInputItem::interaction() const noexcept
@@ -176,7 +195,7 @@ void TimelineInputItem::setAccessibilityDescription(const QString &description)
 
 void TimelineInputItem::mousePressEvent(QMouseEvent *event)
 {
-    if (!m_interaction || !m_interaction->pointerPress(pointerInput(*event))) {
+    if (!m_interaction || !m_interaction->pointerPress(pointerInput(*event, m_surface, this))) {
         event->ignore();
         return;
     }
@@ -185,7 +204,8 @@ void TimelineInputItem::mousePressEvent(QMouseEvent *event)
 
 void TimelineInputItem::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    if (!m_interaction || !m_interaction->pointerDoubleClick(pointerInput(*event))) {
+    if (!m_interaction ||
+        !m_interaction->pointerDoubleClick(pointerInput(*event, m_surface, this))) {
         event->ignore();
         return;
     }
@@ -194,7 +214,7 @@ void TimelineInputItem::mouseDoubleClickEvent(QMouseEvent *event)
 
 void TimelineInputItem::mouseMoveEvent(QMouseEvent *event)
 {
-    if (!m_interaction || !m_interaction->pointerMove(pointerInput(*event))) {
+    if (!m_interaction || !m_interaction->pointerMove(pointerInput(*event, m_surface, this))) {
         event->ignore();
         return;
     }
@@ -203,7 +223,7 @@ void TimelineInputItem::mouseMoveEvent(QMouseEvent *event)
 
 void TimelineInputItem::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (!m_interaction || !m_interaction->pointerRelease(pointerInput(*event))) {
+    if (!m_interaction || !m_interaction->pointerRelease(pointerInput(*event, m_surface, this))) {
         event->ignore();
         return;
     }
@@ -212,7 +232,7 @@ void TimelineInputItem::mouseReleaseEvent(QMouseEvent *event)
 
 void TimelineInputItem::hoverMoveEvent(QHoverEvent *event)
 {
-    if (!m_interaction || !m_interaction->pointerMove(pointerInput(*event))) {
+    if (!m_interaction || !m_interaction->pointerMove(pointerInput(*event, m_surface, this))) {
         event->ignore();
         return;
     }
@@ -230,7 +250,7 @@ void TimelineInputItem::hoverLeaveEvent(QHoverEvent *event)
 
 void TimelineInputItem::wheelEvent(QWheelEvent *event)
 {
-    if (!m_interaction || !m_interaction->wheel(wheelInput(*event))) {
+    if (!m_interaction || !m_interaction->wheel(wheelInput(*event, m_surface, this))) {
         event->ignore();
         return;
     }

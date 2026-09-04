@@ -9,7 +9,7 @@
 #include "ui/songview.h"
 #include "ui/songview/timecamera.h"
 
-AutomationGeometry AutomationGeometry::resolve(int timelineSplitX)
+AutomationGeometry AutomationGeometry::resolve()
 {
     AutomationGeometry geometry;
     geometry.rowDefaultHeight = layout::fontPx(4.0);
@@ -17,7 +17,6 @@ AutomationGeometry AutomationGeometry::resolve(int timelineSplitX)
     geometry.rowMaximumHeight = layout::fontPx(32.0 / 3.0);
     geometry.rowWheelIncrement = layout::fontPx(1.0 / 3.0);
     geometry.addLaneStripHeight = layout::fontPx(5.0 / 3.0);
-    geometry.plotOrigin = timelineSplitX;
     geometry.pointHitRadius = layout::fontPx(7.0 / 12.0);
     geometry.neutralSnapRadius = layout::fontPx(2.0 / 3.0);
     geometry.deleteTimeRadius = layout::fontPx(3.0 / 4.0);
@@ -113,7 +112,7 @@ AutomationProjection::PointerMapping AutomationProjection::pointerMapping(const 
 
 double AutomationProjection::rawTickAt(qreal x) const
 {
-    const qreal contentX = std::max(qreal(m_geometry.plotOrigin), x) - m_geometry.plotOrigin;
+    const qreal contentX = std::max(qreal(0.0), x);
     if (m_page)
         return std::max(0.0, m_page->tickAtContentX(contentX));
     return m_camera ? std::max(0.0, m_camera->tickAtContentX(contentX)) : 0.0;
@@ -122,8 +121,8 @@ double AutomationProjection::rawTickAt(qreal x) const
 qreal AutomationProjection::displayX(uint64_t tick, qreal devicePixelRatio) const
 {
     if (m_page)
-        return m_page->displayX(tick, m_geometry.plotOrigin, devicePixelRatio);
-    return m_camera ? m_camera->displayX(tick, m_geometry.plotOrigin, devicePixelRatio) : 0.0;
+        return m_page->displayX(tick, 0.0, devicePixelRatio);
+    return m_camera ? m_camera->displayX(tick, 0.0, devicePixelRatio) : 0.0;
 }
 
 uint64_t AutomationProjection::snapTickAt(qreal x, bool fine) const

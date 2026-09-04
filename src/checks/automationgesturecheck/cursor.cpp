@@ -4,6 +4,7 @@
 
 #include "rig.h"
 #include "ui/editordrawer/automationcanvas.h"
+#include "ui/songview/quick/timelineinputitem.h"
 
 // The Pencil cursor is a property of the pointer location, not of Pencil mode:
 // it appears only over an editable node-lane plot. Every probe moves the mouse
@@ -21,12 +22,15 @@ void checkAutomationPencilCursor(AutomationGestureCheckRig &rig,
         return;
 
     const auto pencilShown = [&rig] { return !rig.automationCursor().pixmap().isNull(); };
-    const auto shapeIs = [&rig](Qt::CursorShape shape) {
+    const auto plotShapeIs = [&rig](Qt::CursorShape shape) {
         return rig.automationCursor().shape() == shape;
+    };
+    const auto gutterShapeIs = [&rig](Qt::CursorShape shape) {
+        return rig.automationGutterInput().cursor().shape() == shape;
     };
 
     const QPointF plotPoint = rig.pointAt(rig.pan, 24, 64).position;
-    const QPointF gutterPoint(geometry.plotOrigin / 2.0, plotPoint.y());
+    const QPointF gutterPoint(rig.automationGutterInput().bounds().center().x(), plotPoint.y());
 
     rig.setPersistentPencil(true);
     rig.mouseMove(plotPoint, Qt::NoButton);
@@ -35,30 +39,30 @@ void checkAutomationPencilCursor(AutomationGestureCheckRig &rig,
           QStringLiteral("Pencil mode over an editable CC plot did not install the bitmap "
                          "pencil cursor"));
 
-    rig.mouseMove(gutterPoint, Qt::NoButton);
+    rig.gutterMouseMove(gutterPoint);
     rig.pump();
-    check(shapeIs(Qt::ArrowCursor),
-          QStringLiteral("Pencil mode over the left gutter did not keep the arrow cursor"));
+    check(gutterShapeIs(Qt::ArrowCursor),
+          QStringLiteral("Pencil mode over the physical gutter did not keep the arrow cursor"));
 
-    rig.mouseMove(QPointF(panBody.center().x(), qreal(panBody.bottom())), Qt::NoButton);
+    rig.gutterMouseMove(QPointF(gutterPoint.x(), qreal(panBody.bottom())));
     rig.pump();
-    check(shapeIs(Qt::SplitVCursor),
-          QStringLiteral("Pencil mode over a row boundary did not keep the resize cursor"));
+    check(gutterShapeIs(Qt::SplitVCursor),
+          QStringLiteral("Pencil mode over a gutter row boundary did not keep the resize cursor"));
 
     if (!rig.canvas().rows().empty()) {
         const qreal addLaneY =
             qreal(rig.automationContentHeight()) - qreal(geometry.addLaneStripHeight) / 2.0;
-        rig.mouseMove(QPointF(geometry.plotOrigin + 40.0, addLaneY), Qt::NoButton);
+        rig.gutterMouseMove(QPointF(gutterPoint.x(), addLaneY));
         rig.pump();
-        check(shapeIs(Qt::ArrowCursor),
-              QStringLiteral("Pencil mode over the Add Lane strip did not keep the arrow "
+        check(gutterShapeIs(Qt::ArrowCursor),
+              QStringLiteral("Pencil mode over the gutter Add Lane strip did not keep the arrow "
                              "cursor"));
     }
 
-    rig.mouseMove(rig.tempoHeaderPoint(), Qt::NoButton);
+    rig.gutterMouseMove(rig.tempoHeaderPoint());
     rig.pump();
-    check(shapeIs(Qt::ArrowCursor),
-          QStringLiteral("Pencil mode over the tempo header did not keep the arrow cursor"));
+    check(gutterShapeIs(Qt::ArrowCursor),
+          QStringLiteral("Pencil mode over the tempo gutter header did not keep the arrow cursor"));
 
     check(rig.expandTempo(), QStringLiteral("Cursor fixture could not expand the tempo lane"));
     const QPointF tempoPoint = rig.tempoBodyPoint(24, 60);
@@ -67,8 +71,8 @@ void checkAutomationPencilCursor(AutomationGestureCheckRig &rig,
     check(pencilShown(),
           QStringLiteral("Pencil mode over the expanded tempo node plot did not show the "
                          "bitmap pencil cursor"));
-    rig.mousePress(rig.tempoHeaderPoint());
-    rig.mouseRelease(rig.tempoHeaderPoint());
+    rig.gutterMousePress(rig.tempoHeaderPoint());
+    rig.gutterMouseRelease(rig.tempoHeaderPoint());
     rig.pump();
 
     // The pencil cursor bitmap is rebuilt against the host DPR, not a widget
@@ -88,7 +92,7 @@ void checkAutomationPencilCursor(AutomationGestureCheckRig &rig,
     rig.setPersistentPencil(false);
     rig.mouseMove(plotPoint, Qt::NoButton);
     rig.pump();
-    check(shapeIs(Qt::ArrowCursor),
+    check(plotShapeIs(Qt::ArrowCursor),
           QStringLiteral("Turning Pencil mode off did not restore the arrow cursor over an "
                          "editable plot"));
 }

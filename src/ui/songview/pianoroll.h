@@ -262,6 +262,7 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     const songview::TimeCamera &m_camera;
     const songview::Grid &m_grid;
     TimelineInputHost *m_inputHost = nullptr;
+    TimelineInputHost *m_panHost = nullptr; // physical host holding the active pan cursor
     pianoroll_detail::PianoRollGeometry m_geometry;
     pianoroll_detail::MidiCursors m_cursors;
     mutable std::array<qreal, PitchProjection::cMaxRows + 1> m_rowEdges{};
@@ -274,8 +275,8 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     LeftDrag m_leftDrag = LeftDrag::None;
     RightDrag m_rightDrag = RightDrag::None;
     QPointF m_pressPos;
-    QPointF m_curPos;           // last local pointer position
-    bool m_curPosValid = false; // valid while the pointer is inside the roll
+    QPointF m_curPos;           // last plot-local pointer position
+    bool m_curPosValid = false; // valid while the pointer is inside the plot
     double m_pressTick = 0.0;
     int m_pressKey = 0;
     uint64_t m_gripTick = 0;     // edge tick grabbed by a resize drag

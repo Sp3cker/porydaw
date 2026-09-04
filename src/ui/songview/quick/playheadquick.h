@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QColor>
+#include <QList>
 #include <QQuickItem>
 #include <QRectF>
 #include <QVariantList>
@@ -16,19 +17,18 @@ namespace songview {
 // are no gradient materials and no inline GLSL — nothing to compile through
 // runtime QSB.
 //
-// Motion is the QML transform's job: the item's geometry stays anchored at
-// x: 0 and a Translate moves it to (coreRootX - glowLeft, y) in parent
-// coordinates. Bloom vertices stay in that local frame (core at glowLeft).
-// Plot-strip clips live on QSGClipNode scissors, remapped when coreRootX
-// changes, so gutters get no pixels and a position-only tick does not
-// rewrite the bloom mesh.
+// QML anchors this item to the timeline column. Its internal transform moves
+// only the playhead geometry to localX, leaving body and ruler clips fixed in
+// the timeline-column coordinate system. The core is at glowLeft in geometry
+// coordinates, so the transform places it at localX without rebuilding meshes
+// or clip paths on each tick.
 class TimelinePlayheadItem : public QQuickItem
 {
     Q_OBJECT
     Q_DISABLE_COPY_MOVE(TimelinePlayheadItem)
 
-    // Quick-root X of the playhead core; bind timelineQuickView.playheadRootX.
-    Q_PROPERTY(qreal coreRootX READ coreRootX WRITE setCoreRootX NOTIFY coreRootXChanged FINAL)
+    // Raw TimeCamera::contentX in timeline-column coordinates.
+    Q_PROPERTY(qreal localX READ localX WRITE setLocalX NOTIFY localXChanged FINAL)
     // Peak alpha rides with color: both are appearance, never shape.
     Q_PROPERTY(QColor color READ color WRITE setColor NOTIFY colorChanged FINAL)
     Q_PROPERTY(qreal peakAlpha READ peakAlpha WRITE setPeakAlpha NOTIFY colorChanged FINAL)
@@ -42,18 +42,19 @@ class TimelinePlayheadItem : public QQuickItem
                    shapeChanged FINAL)
     Q_PROPERTY(int triangleHeightPx READ triangleHeightPx WRITE setTriangleHeightPx NOTIFY
                    shapeChanged FINAL)
-    // Ruler band in parent coordinates; the triangle sits on its continuous
-    // bottom edge (QRectF, no inclusive-QRect pixel correction).
-    Q_PROPERTY(QRectF triangleBandRect READ triangleBandRect WRITE setTriangleBandRect NOTIFY
-                   bandsChanged FINAL)
-    // Visible plot strips in parent coordinates (one per band, origin-clipped).
-    Q_PROPERTY(QVariantList plotRects READ plotRects WRITE setPlotRects NOTIFY bandsChanged FINAL)
+    // Timeline-column-local ruler plot. Its triangle-only clip extends left
+    // by triangleHalfWidthPx so the tick-zero triangle stays centered.
+    Q_PROPERTY(
+        QRectF rulerPlotRect READ rulerPlotRect WRITE setRulerPlotRect NOTIFY clipsChanged FINAL)
+    // Timeline-column-local visible plot strips for the strict body/core mask.
+    Q_PROPERTY(QVariantList bodyPlotRects READ bodyPlotRects WRITE setBodyPlotRects NOTIFY
+                   clipsChanged FINAL)
 
   public:
     explicit TimelinePlayheadItem(QQuickItem *parent = nullptr);
 
-    qreal coreRootX() const noexcept;
-    void setCoreRootX(qreal x) noexcept;
+    qreal localX() const noexcept;
+    void setLocalX(qreal x) noexcept;
 
     QColor color() const;
     void setColor(const QColor &color);
@@ -73,19 +74,19 @@ class TimelinePlayheadItem : public QQuickItem
     int triangleHeightPx() const noexcept;
     void setTriangleHeightPx(int height) noexcept;
 
-    QRectF triangleBandRect() const;
-    void setTriangleBandRect(const QRectF &rect);
-    QVariantList plotRects() const;
-    void setPlotRects(const QVariantList &rects);
+    QRectF rulerPlotRect() const;
+    void setRulerPlotRect(const QRectF &rect);
+    QVariantList bodyPlotRects() const;
+    void setBodyPlotRects(const QVariantList &rects);
 
   signals:
-    void coreRootXChanged();
+    void localXChanged();
     // Appearance: theme color and the playing-dependent bloom peak.
     void colorChanged();
     // Static-per-theme metrics plus the triangle orientation.
     void shapeChanged();
-    // Parent-coordinate masks from the published band layout.
-    void bandsChanged();
+    // Timeline-column-local body and ruler clips from the published layout.
+    void clipsChanged();
 
   protected:
     void geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry) override;
@@ -94,11 +95,14 @@ class TimelinePlayheadItem : public QQuickItem
   private:
     void markClipDirty();
     void markGeometryDirty();
-    void syncLocalClips();
-    int playheadVertexCount() const;
-    void writePlayheadGeometry(QSGGeometry *geometry) const;
+    void markTransformDirty();
+    void syncBodyClips();
+    QRectF triangleClipRect() const;
+    int bodyVertexCount() const;
+    void writeBodyGeometry(QSGGeometry *geometry) const;
+    void writeTriangleGeometry(QSGGeometry *geometry) const;
 
-    qreal m_coreRootX = 0.0;
+    qreal m_localX = 0.0;
     QColor m_color = Qt::transparent;
     qreal m_glowLeft = 0.0;
     qreal m_glowRight = 0.0;
@@ -107,14 +111,14 @@ class TimelinePlayheadItem : public QQuickItem
     bool m_trianglePointsUp = false;
     int m_triangleHalfWidthPx = 0;
     int m_triangleHeightPx = 0;
-    QRectF m_triangleBandRect;
-    // Property value pre-converted to QRectF so neither paint traversal pays
-    // for QVariant unwrapping.
-    QList<QRectF> m_plotRects;
-    // Plot strips in item-local space, including the current Translate.
-    QList<QRectF> m_localClips;
+    QRectF m_rulerPlotRect;
+    // Property values pre-converted to QRectF so paint traversal never
+    // unwraps QVariants. m_bodyClips is intersected with the static item.
+    QList<QRectF> m_bodyPlotRects;
+    QList<QRectF> m_bodyClips;
     bool m_clipDirty = true;
     bool m_geometryDirty = true;
+    bool m_transformDirty = true;
 };
 
 } // namespace songview

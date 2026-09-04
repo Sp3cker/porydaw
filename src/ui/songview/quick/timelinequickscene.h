@@ -125,6 +125,7 @@ class TimelineQuickItem : public QQuickItem
 
   public:
     enum class Layer : quint8 {
+        RulerGutterChrome,
         RulerChrome,
         RulerMarks,
         PianoGrid,
@@ -134,8 +135,10 @@ class TimelineQuickItem : public QQuickItem
         PianoOverlay,
         PianoKeyboardKeys,
         PianoKeyboardHighlights,
+        OtherEventsGutterChrome,
         OtherEventsChrome,
         OtherEventsMarkers,
+        VelocityGutterChrome,
         VelocityChrome,
         VelocityAxis,
         VelocityGrid,
@@ -143,12 +146,14 @@ class TimelineQuickItem : public QQuickItem
         VelocityStems,
         VelocityNodes,
         VelocityTransient,
+        VoiceChangesGutterChrome,
         VoiceChangesChrome,
         VoiceChangesGrid,
         VoiceChangesSpans,
         VoiceChangesMarkers,
         VoiceChangesTransient,
         VoiceChangesHover,
+        AutomationGutterChrome,
         AutomationGrid,
         AutomationCurves,
         AutomationNodes,
@@ -191,6 +196,8 @@ struct TimelineQuickScene final : public QObject {
     Q_PROPERTY(QAbstractItemModel *rulerTextModel READ rulerTextModel CONSTANT FINAL)
     Q_PROPERTY(QAbstractItemModel *otherEventsTextModel READ otherEventsTextModel CONSTANT FINAL)
     Q_PROPERTY(QAbstractItemModel *velocityTextModel READ velocityTextModel CONSTANT FINAL)
+    Q_PROPERTY(QAbstractItemModel *voiceChangesGutterTextModel READ voiceChangesGutterTextModel
+                   CONSTANT FINAL)
     Q_PROPERTY(QAbstractItemModel *voiceChangesTextModel READ voiceChangesTextModel CONSTANT FINAL)
     Q_PROPERTY(QAbstractItemModel *voiceChangesHoverTextModel READ voiceChangesHoverTextModel
                    CONSTANT FINAL)
@@ -215,6 +222,7 @@ struct TimelineQuickScene final : public QObject {
     QAbstractItemModel *rulerTextModel() const noexcept;
     QAbstractItemModel *otherEventsTextModel() const noexcept;
     QAbstractItemModel *velocityTextModel() const noexcept;
+    QAbstractItemModel *voiceChangesGutterTextModel() const noexcept;
     QAbstractItemModel *voiceChangesTextModel() const noexcept;
     QAbstractItemModel *voiceChangesHoverTextModel() const noexcept;
     QAbstractItemModel *automationTextModel() const noexcept;
@@ -223,6 +231,7 @@ struct TimelineQuickScene final : public QObject {
     void setRulerTextRecords(std::span<const TimelineQuickTextModel::Record> records);
     void setOtherEventsTextRecords(std::span<const TimelineQuickTextModel::Record> records);
     void setVelocityTextRecords(std::span<const TimelineQuickTextModel::Record> records);
+    void setVoiceChangesGutterTextRecords(std::span<const TimelineQuickTextModel::Record> records);
     void setVoiceChangesTextRecords(std::span<const TimelineQuickTextModel::Record> records);
     void setVoiceChangesHoverTextRecords(std::span<const TimelineQuickTextModel::Record> records);
     void setAutomationTextRecords(std::span<const TimelineQuickTextModel::Record> records);
@@ -255,6 +264,7 @@ struct TimelineQuickScene final : public QObject {
     TimelineQuickTextModel *m_rulerTextModel = nullptr;
     TimelineQuickTextModel *m_otherEventsTextModel = nullptr;
     TimelineQuickTextModel *m_velocityTextModel = nullptr;
+    TimelineQuickTextModel *m_voiceChangesGutterTextModel = nullptr;
     TimelineQuickTextModel *m_voiceChangesTextModel = nullptr;
     TimelineQuickTextModel *m_voiceChangesHoverTextModel = nullptr;
     TimelineQuickTextModel *m_automationTextModel = nullptr;

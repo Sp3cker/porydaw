@@ -122,20 +122,8 @@ int runCheck(QApplication &application, int baseFontPx)
     reporter.check(layout::singlePixel() == 1, "singlePixel",
                    "is not invariant at one physical pixel");
 
-    const int expectedPlotOrigin = resolveFontFactor(baseFontPx, 17.5 + 13.0 / 3.0);
-    reporter.check(layout::fontPx(17.5 + 13.0 / 3.0) == expectedPlotOrigin, "plot arithmetic",
-                   "does not resolve the combined plot origin");
-    if (baseFontPx == 12)
-        reporter.check(expectedPlotOrigin == 262, "12px plot arithmetic",
-                       "does not preserve the expected plot origin");
-    if (baseFontPx == 16)
-        reporter.check(expectedPlotOrigin == 349, "16px plot arithmetic",
-                       "does not preserve the expected plot origin");
-    if (baseFontPx == 18)
-        reporter.check(expectedPlotOrigin == 393, "18px plot arithmetic",
-                       "does not preserve the expected plot origin");
     return reporter.finish(int(integralValues.size() + boundaryValues.size() +
-                               fractionalValues.size() + spaceValues.size() + 5));
+                               fractionalValues.size() + spaceValues.size() + 3));
 }
 
 } // namespace

@@ -57,8 +57,9 @@ void PianoRoll::beginPanGesture(const TimelinePointerInput &input)
 {
     m_panning = true;
     m_panPos = input.globalPosition;
-    if (m_inputHost)
-        m_inputHost->setCursor(Qt::ClosedHandCursor);
+    m_panHost = input.host ? input.host : m_inputHost;
+    if (m_panHost)
+        m_panHost->setCursor(Qt::ClosedHandCursor);
 }
 
 void PianoRoll::beginKbdAudition(const TimelinePointerInput &input)
@@ -84,8 +85,7 @@ void PianoRoll::beginPendingMenu(const TimelinePointerInput &input, const ViewNo
     m_pressPos = m_curPos = input.position;
     m_rightDrag = RightDrag::PendingMenu;
     m_rightShift = input.modifiers & Qt::ShiftModifier;
-    m_rightAnchorTick = m_grid.snapTick(
-        m_camera.tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth));
+    m_rightAnchorTick = m_grid.snapTick(m_camera.tickAtContentX(input.position.x()));
     m_rightHit = hit != nullptr;
     if (hit)
         m_rightHitId = hit->noteId;
@@ -94,7 +94,7 @@ void PianoRoll::beginPendingMenu(const TimelinePointerInput &input, const ViewNo
 void PianoRoll::beginLeftPress(const TimelinePointerInput &input)
 {
     m_pressPos = m_curPos = input.position;
-    m_pressTick = m_camera.tickAtContentX(input.position.x() - m_geometry.pianoKeyboardWidth);
+    m_pressTick = m_camera.tickAtContentX(input.position.x());
     m_pressKey = yToKey(input.position.y());
     m_dTick = 0;
     m_dKey = 0;

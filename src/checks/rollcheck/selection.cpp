@@ -52,7 +52,7 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
                                          }
                                      });
         const int preBandCount = doc.undoStack()->count();
-        const QPoint sweepStart(pianoKeyboardWidth + 1, 0);
+        const QPoint sweepStart(1, 0);
         const QPoint sweepEnd(std::max(a.center.x(), b.center.x()) + 4,
                               std::max(a.center.y(), b.center.y()) + 4);
         view.selectionModel().clearNoteSelection();
@@ -60,9 +60,8 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
         // use the same selection ring as the velocity drawer's live preview.
         const qreal previewDpr = roll->devicePixelRatio();
         const QRectF previewNoteBox = rows.noteBox(rows.noteRect(
-            view.camera().displayX(double(noteA.tick), pianoKeyboardWidth, previewDpr),
-            view.camera().displayX(double(noteA.tick + noteA.duration), pianoKeyboardWidth,
-                                   previewDpr),
+            view.camera().displayX(double(noteA.tick), 0.0, previewDpr),
+            view.camera().displayX(double(noteA.tick + noteA.duration), 0.0, previewDpr),
             noteA.key));
         checks::events::sendMouse(*roll, QEvent::MouseButtonPress, sweepStart, Qt::RightButton,
                                   Qt::RightButton, Qt::NoModifier);
@@ -70,7 +69,8 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
                                   Qt::RightButton, Qt::NoModifier);
         const QImage previewImage = check.captureQuickFramebuffer();
         const qreal previewRasterDpr = previewImage.devicePixelRatio();
-        const int previewCenterX = qRound(previewNoteBox.center().x() * previewRasterDpr);
+        const int previewCenterX =
+            qRound((pianoKeyboardWidth + previewNoteBox.center().x()) * previewRasterDpr);
         const int previewBottomY = qRound(previewNoteBox.bottom() * previewRasterDpr) - 1;
         if (!isSelectionRingColor(previewImage.pixel(previewCenterX, previewBottomY)))
             fail("band-dragged note did not show a provisional selection ring");
@@ -145,7 +145,7 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
         if (doc.undoStack()->count() != preCount)
             fail("a plain empty-space click edited the document");
         if (view.editCursorTick() !=
-            view.grid().snapTick(view.camera().tickAtContentX(e.center.x() - pianoKeyboardWidth)))
+            view.grid().snapTick(view.camera().tickAtContentX(e.center.x())))
             fail("the press audition broke the click's edit-cursor park");
         // Draw growth: press the still-free cell again and drag right past
         // the drag threshold; the press's preview must carry into the draw
@@ -422,10 +422,11 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
             return ScenarioContinuation::Stop;
         }
         const uint64_t snap = view.grid().snapTicksAt(cell.tick);
-        const qreal cellPx = view.camera().contentX(double(cell.tick + snap)) -
-                             view.camera().contentX(double(cell.tick));
+        const qreal dpr = roll->devicePixelRatio();
+        const qreal cellPx = view.camera().displayX(double(cell.tick + snap), 0.0, dpr) -
+                             view.camera().displayX(double(cell.tick), 0.0, dpr);
         uint64_t widthTicks = snap * 4;
-        while (pianoKeyboardWidth + view.camera().contentX(double(cell.tick + widthTicks)) >
+        while (view.camera().displayX(double(cell.tick + widthTicks), 0.0, dpr) >
                    roll->width() - 4 &&
                widthTicks > snap * 2)
             widthTicks -= snap;
@@ -445,10 +446,10 @@ ScenarioContinuation runSelectionGestureScenarios(Harness &check,
         const NoteId moveId = probe.noteId;
         // Press the body center: whole snap cells of width keep the point
         // clear of the edge grips on both sides.
-        const int bodyX = qRound((view.camera().contentX(double(cell.tick)) +
-                                  view.camera().contentX(double(cell.tick + widthTicks))) /
-                                 2.0) +
-                          pianoKeyboardWidth;
+        const int bodyX =
+            qRound((view.camera().displayX(double(cell.tick), 0.0, dpr) +
+                    view.camera().displayX(double(cell.tick + widthTicks), 0.0, dpr)) /
+                   2.0);
         const QPoint body(bodyX, rows.centerY(cell.key));
         checks::events::sendMouse(*roll, QEvent::MouseButtonPress, body, Qt::LeftButton,
                                   Qt::LeftButton, Qt::NoModifier);

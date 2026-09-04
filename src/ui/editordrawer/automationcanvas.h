@@ -55,8 +55,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     bool pencilMode() const noexcept { return m_pencilMode; }
     bool isPanning() const noexcept;
     bool bandPreviewContainsLane(LaneHandle handle) const noexcept;
-    QRect labelGutter() const noexcept { return m_labelGutter; }
-    int plotOrigin() const noexcept { return m_geometry.plotOrigin; }
     QRect laneBody(LaneHandle handle) const;
     QRect pinnedTempoRect() const noexcept;
     int minimumContentHeight() const noexcept;
@@ -202,7 +200,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     QFont m_laneTitleFont;
     QFont m_laneCaptionFont;
     layout::TwoLineTextLayout m_laneTextLayout;
-    QRect m_labelGutter;
     AutomationPage &m_page;
     songview::TimelineInputHost *m_inputHost = nullptr;
     CCLanes m_rowData;

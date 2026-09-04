@@ -20,6 +20,7 @@ ScenarioContinuation runScaleEditingScenarios(Harness &check)
     SongDocument &doc = check.document();
     SongView &view = check.view();
     songview::TimelineInputItem *roll = &check.rollInput();
+    songview::TimelineInputItem *rollGutter = &check.rollGutterInput();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const int pianoRollDefaultKeyHeight = check.pianoRollDefaultKeyHeight();
     const auto scaleMajor = porydaw_scale::ScaleId::major;
@@ -178,7 +179,7 @@ ScenarioContinuation runScaleEditingScenarios(Harness &check)
             (void)view.grab();
             QCoreApplication::processEvents();
             const size_t before = doc.notesForTrack(scaleTrack).size();
-            drawNote(*roll, QPoint(pianoKeyboardWidth + 40, foldCenterY(61)));
+            drawNote(*roll, QPoint(40, foldCenterY(61)));
             QCoreApplication::processEvents();
             if (doc.notesForTrack(scaleTrack).size() != before)
                 fail("Fold accepted a draw into an off-scale exception row");
@@ -208,13 +209,13 @@ ScenarioContinuation runScaleEditingScenarios(Harness &check)
                                              if (velocity > 0)
                                                  audKey = key;
                                          });
-            checks::events::sendMouse(*roll, QEvent::MouseButtonPress,
+            checks::events::sendMouse(*rollGutter, QEvent::MouseButtonPress,
                                       QPoint(pianoKeyboardWidth / 2, foldCenterY(61)),
                                       Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
             QObject::disconnect(conn);
             if (audKey != 61)
                 fail("Fold exception-row piano key did not audition pitch 61");
-            checks::events::sendMouse(*roll, QEvent::MouseButtonRelease,
+            checks::events::sendMouse(*rollGutter, QEvent::MouseButtonRelease,
                                       QPoint(pianoKeyboardWidth / 2, foldCenterY(61)),
                                       Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
             while (doc.undoStack()->index() > cmd0)
@@ -275,8 +276,7 @@ ScenarioContinuation runScaleEditingScenarios(Harness &check)
             // avoids the 3px edge-grip zones on this 5px-wide, 4-tick note.
             const int x = int((view.camera().contentX(double(tBase)) +
                                view.camera().contentX(double(tBase) + doc.ticksPerClock() * 4)) /
-                                  2.0 +
-                              pianoKeyboardWidth);
+                              2.0);
             const QPoint press(x, foldCenterY(src));
             int dragAud = -1;
             auto dconn = QObject::connect(&view, &SongView::auditionNote, &view,

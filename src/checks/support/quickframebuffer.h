@@ -33,6 +33,7 @@ QRect widgetRectIn(const QWidget &widget, const QWidget &owner);
 int playheadWidthAt(const QImage &image, int logicalY, qreal logicalX, const QColor &color);
 bool isPlayheadPixel(const QColor &actual, const QColor &expected);
 bool hasPlayheadPixel(const QImage &image, const QRect &logicalRect, const QColor &color);
+bool hasSolidPlayheadPixel(const QImage &image, const QRect &logicalRect, const QColor &color);
 qreal quickRootX(const QQuickItem &item, QQuickItem &root);
 using TimelineQuickLayerRevisions =
     std::array<quint64, static_cast<std::size_t>(songview::TimelineQuickLayer::Count)>;

@@ -22,11 +22,9 @@ bool TimeRuler::pointerPress(const TimelinePointerInput &input)
 {
     SongDocument *doc = m_owner.document();
     const MidiTimeline *timeline = m_owner.timeline();
-    const qreal plotOrigin = m_owner.timelinePlotOrigin();
-    if (!timeline || input.position.x() < plotOrigin)
+    if (!timeline || input.surface != TimelineInputSurface::Plot)
         return false;
-    const uint64_t clickTick =
-        m_grid.snapTick(m_camera.tickAtContentX(input.position.x() - plotOrigin));
+    const uint64_t clickTick = m_grid.snapTick(m_camera.tickAtContentX(input.position.x()));
 
     if (input.button == Qt::RightButton) {
         // Deferred until release so the loop/selection menu opens at the
@@ -73,10 +71,10 @@ bool TimeRuler::pointerPress(const TimelinePointerInput &input)
 
 bool TimeRuler::pointerMove(const TimelinePointerInput &input)
 {
-    const qreal plotOrigin = m_owner.timelinePlotOrigin();
-    const auto dragTick = [this, &input, plotOrigin] {
-        return m_grid.snapTick(
-            m_camera.tickAtContentX(std::max(plotOrigin, input.position.x()) - plotOrigin));
+    if (input.surface != TimelineInputSurface::Plot)
+        return false;
+    const auto dragTick = [this, &input] {
+        return m_grid.snapTick(m_camera.tickAtContentX(std::max(0.0, input.position.x())));
     };
     if (m_rightPress)
         return true;
@@ -140,6 +138,9 @@ bool TimeRuler::pointerMove(const TimelinePointerInput &input)
 
 bool TimeRuler::pointerRelease(const TimelinePointerInput &input)
 {
+    if (input.surface != TimelineInputSurface::Plot)
+        return false;
+
     if (input.button == Qt::RightButton && m_rightPress) {
         m_rightPress = false;
         showRulerMenu(m_selAnchor, input.globalPosition.toPoint());
@@ -189,6 +190,9 @@ bool TimeRuler::pointerRelease(const TimelinePointerInput &input)
 
 bool TimeRuler::pointerDoubleClick(const TimelinePointerInput &input)
 {
+    if (input.surface != TimelineInputSurface::Plot)
+        return false;
+
     SongDocument *doc = m_owner.document();
     uint64_t sigTick;
     int numerator, denomPow2;
@@ -214,6 +218,8 @@ void TimeRuler::pointerLeave()
 
 bool TimeRuler::wheel(const TimelineWheelInput &input)
 {
+    if (input.surface != TimelineInputSurface::Plot)
+        return false;
     // Same bindings as the roll's notes area: plain wheel zooms the
     // timeline; Shift (or a trackpad's horizontal delta) scrolls it.
     const QPoint delta = input.pixelDelta.isNull() ? input.angleDelta : input.pixelDelta;
@@ -222,7 +228,7 @@ bool TimeRuler::wheel(const TimelineWheelInput &input)
     } else if (delta.x() && !delta.y()) {
         m_owner.scrollByPx(-delta.x());
     } else {
-        m_owner.zoomTimelineAtWheel(input, input.position.x() - m_owner.timelinePlotOrigin());
+        m_owner.zoomTimelineAtWheel(input, input.position.x());
     }
     return true;
 }

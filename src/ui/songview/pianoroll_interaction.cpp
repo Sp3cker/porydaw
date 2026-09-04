@@ -10,22 +10,30 @@ namespace songview {
 
 bool PianoRoll::pointerPress(const TimelinePointerInput &input)
 {
-    m_curPos = input.position;
-    m_curPosValid = true;
+    if (input.surface == TimelineInputSurface::Plot) {
+        m_curPos = input.position;
+        m_curPosValid = true;
+    } else {
+        m_curPosValid = false;
+    }
     if (!m_sv->timeline())
         return false;
-    m_inputHost->requestFocus(Qt::MouseFocusReason);
-    m_sv->setProjectionLocked(true);
+    if (m_inputHost)
+        m_inputHost->requestFocus(Qt::MouseFocusReason);
     if (input.button == Qt::MiddleButton) {
+        m_sv->setProjectionLocked(true);
         beginPanGesture(input);
         return true;
     }
-    if (input.position.x() < m_geometry.pianoKeyboardWidth) {
+    if (input.surface == TimelineInputSurface::Gutter) {
+        if (m_inputHost)
+            m_inputHost->clearCursor();
         if (input.button != Qt::LeftButton)
             return false;
         beginKbdAudition(input);
         return true;
     }
+    m_sv->setProjectionLocked(true);
     if (input.button == Qt::RightButton) {
         if (!m_sv->document())
             return false;
@@ -40,18 +48,18 @@ bool PianoRoll::pointerPress(const TimelinePointerInput &input)
 
 bool PianoRoll::pointerDoubleClick(const TimelinePointerInput &input)
 {
-    m_curPos = input.position;
-    m_curPosValid = true;
     // Double-click on empty space drops a grid-sized note (committed on
     // release; dragging before release still sizes it); on a note it
     // deletes that note. Anywhere else a fast click-click behaves as two
     // presses — Qt replaces the second press with this event.
     SongDocument *doc = m_sv->document();
-    if (input.button != Qt::LeftButton || !doc ||
-        input.position.x() < m_geometry.pianoKeyboardWidth)
+    if (input.surface == TimelineInputSurface::Gutter || input.button != Qt::LeftButton || !doc)
         return pointerPress(input);
+    m_curPos = input.position;
+    m_curPosValid = true;
     m_sv->setProjectionLocked(true);
-    m_inputHost->requestFocus(Qt::MouseFocusReason);
+    if (m_inputHost)
+        m_inputHost->requestFocus(Qt::MouseFocusReason);
     if (const ViewNote *hit = hitNote(input.position)) {
         DocNote note;
         if (doc->findNote(hit->noteId, &note)) {
@@ -68,15 +76,25 @@ bool PianoRoll::pointerDoubleClick(const TimelinePointerInput &input)
 
 bool PianoRoll::pointerMove(const TimelinePointerInput &input)
 {
-    m_curPos = input.position;
-    m_curPosValid = true;
-    updateHoverKey(input);
-    if (m_panning) {
-        panMove(input);
+    if (input.surface == TimelineInputSurface::Gutter) {
+        m_curPosValid = false;
+        if (m_inputHost)
+            m_inputHost->clearCursor();
+        updateHoverKey(input);
+        if (m_panning) {
+            panMove(input);
+            return true;
+        }
+        if (m_kbdKey >= 0) {
+            kbdGlissandoMove(input);
+            return true;
+        }
         return true;
     }
-    if (m_kbdKey >= 0) {
-        kbdGlissandoMove(input);
+    m_curPos = input.position;
+    m_curPosValid = true;
+    if (m_panning) {
+        panMove(input);
         return true;
     }
     if (!resolvePendingPresses(input))
@@ -139,7 +157,10 @@ bool PianoRoll::pointerRelease(const TimelinePointerInput &input)
     }
     if (m_kbdKey >= 0) {
         endKbdAudition();
+        return true;
     }
+    if (input.surface == TimelineInputSurface::Gutter)
+        return true;
     if (input.button == Qt::RightButton && m_rightDrag != RightDrag::None) {
         releaseRightPress(input);
         return true;
@@ -207,9 +228,10 @@ void PianoRoll::kbdGlissandoMove(const TimelinePointerInput &input)
 
 void PianoRoll::endPanGesture()
 {
+    if (m_panHost)
+        m_panHost->clearCursor();
+    m_panHost = nullptr;
     m_panning = false;
-    if (m_inputHost)
-        m_inputHost->clearCursor();
     completeProjectionGesture();
 }
 

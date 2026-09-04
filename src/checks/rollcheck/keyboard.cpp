@@ -48,7 +48,8 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
     // Up is a semitone, Shift+Down an octave, and Right
     // moves one snap cell from an on-grid start.
     const QPoint dCenter(
-        pianoKeyboardWidth + view.camera().contentX(double(d.tick) + 0.5 * double(snapCell)), rowY);
+        qRound(view.camera().displayX(double(d.tick) + 0.5 * double(snapCell), 0.0, rows.dpr())),
+        rowY);
     click(*roll, dCenter);
     sendKeyStroke(*roll, Qt::Key_Up, Qt::NoModifier, false);
     DocNote transposed;
@@ -97,7 +98,7 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
     if (view.camera().displayX(double(nStart), 0.0, dpr) != 0.0)
         fail("Right off-screen-left did not scroll the start flush to the "
              "left edge");
-    const qreal vw = std::max<qreal>(50, roll->width() - pianoKeyboardWidth);
+    const qreal vw = std::max<qreal>(50, roll->width());
     const qreal cellPx =
         view.camera().contentX(double(nStart + snapCell)) - view.camera().contentX(double(nStart));
     const int rides = (vw - view.camera().contentX(double(nStart + snapCell))) / cellPx + 2;
@@ -133,12 +134,11 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
     }
     if (rulerInput && rulerBand) {
         const qreal rulerDpr = rulerInput->devicePixelRatio();
-        const qreal rulerOrigin = view.timelinePlotOrigin();
         const uint64_t startTick = d.tick + snapCell;
         const uint64_t endTick = d.tick + 2 * snapCell;
-        const QPointF start(view.camera().displayX(double(startTick), rulerOrigin, rulerDpr),
+        const QPointF start(view.camera().displayX(double(startTick), 0.0, rulerDpr),
                             rulerBand->rect.height() - 2.0);
-        const QPointF end(view.camera().displayX(double(endTick), rulerOrigin, rulerDpr),
+        const QPointF end(view.camera().displayX(double(endTick), 0.0, rulerDpr),
                           rulerBand->rect.height() - 2.0);
 
         view.selectionModel().clearTimeSelection();
@@ -203,15 +203,13 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
                                   roll->height() / 2.0);
             view.applyViewState(ghostViewState);
             const SnappedRows ghostRows{view, *roll};
-            const QRectF ghostBox = ghostRows.noteBox(
-                ghostRows.noteRect(view.camera().displayX(double(scopedGhost->startTick),
-                                                          pianoKeyboardWidth, ghostRows.dpr()),
-                                   view.camera().displayX(double(scopedGhost->endTick),
-                                                          pianoKeyboardWidth, ghostRows.dpr()),
-                                   scopedGhost->key));
-            const QRectF visibleGhostBox = ghostBox.intersected(
-                QRectF(pianoKeyboardWidth, 0.0, qreal(roll->width() - pianoKeyboardWidth),
-                       qreal(roll->height())));
+            const QRectF ghostPlotBox = ghostRows.noteBox(ghostRows.noteRect(
+                view.camera().displayX(double(scopedGhost->startTick), 0.0, ghostRows.dpr()),
+                view.camera().displayX(double(scopedGhost->endTick), 0.0, ghostRows.dpr()),
+                scopedGhost->key));
+            const QRectF ghostBandBox = ghostPlotBox.translated(pianoKeyboardWidth, 0.0);
+            const QRectF visibleGhostBox = ghostBandBox.intersected(
+                QRectF(pianoKeyboardWidth, 0.0, qreal(roll->width()), qreal(roll->height())));
             const QImage scopedImage = check.captureQuickFramebuffer();
             if (visibleGhostBox.isEmpty()) {
                 fail("time-scoped ghost note is outside the horizontal viewport");
@@ -239,8 +237,8 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
                 fail("timeline fixture has no track-colored other-events marker");
             const double originalScroll = view.camera().scrollX();
             if (otherEvents && trackEvent) {
-                const qreal visibleContentX = std::max<qreal>(
-                    1.0, (otherEvents->rect.width() - view.timelinePlotOrigin()) / 3.0);
+                const qreal visibleContentX =
+                    std::max<qreal>(1.0, otherEvents->plotRect.width() / 3.0);
                 view.setEditorHorizontalScroll(originalScroll +
                                                view.camera().contentX(double(trackEvent->tick)) -
                                                visibleContentX);
@@ -261,11 +259,11 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
             }
             if (trackEvent && !afterStripImage.isNull()) {
                 const qreal stripDpr = afterStripImage.devicePixelRatioF();
-                const int markerX =
-                    qRound(view.camera().displayX(double(trackEvent->tick),
-                                                  view.timelinePlotOrigin(), stripDpr) *
-                           stripDpr);
-                const int plotLeft = qRound(view.timelinePlotOrigin() * stripDpr);
+                const qreal plotOffset = otherEvents->plotRect.left() - otherEvents->rect.left();
+                const int markerX = qRound(
+                    (plotOffset + view.camera().displayX(double(trackEvent->tick), 0.0, stripDpr)) *
+                    stripDpr);
+                const int plotLeft = qRound(plotOffset * stripDpr);
                 const int markerY = afterStripImage.height() / 2;
                 const QRgb expected = SongView::trackColor(trackEvent->track).rgba();
                 bool foundMarker = false;
@@ -319,7 +317,7 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
             }
         }
         const QPointF outsideSelection(
-            view.camera().displayX(double(endTick + snapCell), rulerOrigin, rulerDpr),
+            view.camera().displayX(double(endTick + snapCell), 0.0, rulerDpr),
             rulerBand->rect.height() - 2.0);
         checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, outsideSelection,
                                   Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
@@ -354,11 +352,13 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
     band.endTick = d.tick + 2 * snapCell;
     view.selectionModel().setTimeSelection(band);
     {
-        const QRectF selectedByTimeBox = rows.noteBox(rows.noteRect(
-            view.camera().displayX(double(transposed.tick), pianoKeyboardWidth, rows.dpr()),
-            view.camera().displayX(double(transposed.tick + transposed.duration),
-                                   pianoKeyboardWidth, rows.dpr()),
-            transposed.key));
+        const QRectF selectedByTimeBox =
+            rows.noteBox(rows.noteRect(
+                             view.camera().displayX(double(transposed.tick), 0.0, rows.dpr()),
+                             view.camera().displayX(double(transposed.tick + transposed.duration),
+                                                    0.0, rows.dpr()),
+                             transposed.key))
+                .translated(pianoKeyboardWidth, 0.0);
         const QImage selectedByTimeImage = check.captureQuickFramebuffer();
         const qreal selectedByTimeDpr = selectedByTimeImage.devicePixelRatio();
         const int centerX = qRound(selectedByTimeBox.center().x() * selectedByTimeDpr);
@@ -388,7 +388,7 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
             fail("could not find empty roll space inside the time selection");
         } else {
             const QPoint emptyInside(
-                qRound(view.camera().displayX(double(emptyTick), pianoKeyboardWidth, rows.dpr())),
+                qRound(view.camera().displayX(double(emptyTick), 0.0, rows.dpr())),
                 rows.centerY(emptyKey));
             click(*roll, emptyInside);
             if (view.selectionModel().timeSelection().active())
@@ -428,7 +428,7 @@ ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const Resiz
             fail("Ctrl+D did not duplicate once and advance the time selection");
         }
         const qreal duplicateDpr = roll->devicePixelRatio();
-        const qreal duplicateViewport = std::max<qreal>(50, roll->width() - pianoKeyboardWidth);
+        const qreal duplicateViewport = std::max<qreal>(50, roll->width());
         if (view.camera().displayX(double(firstStart), 0.0, duplicateDpr) < 0.0 ||
             view.camera().displayX(double(firstEnd), 0.0, duplicateDpr) > duplicateViewport) {
             fail("first duplicated range was not made visible");

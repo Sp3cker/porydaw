@@ -20,14 +20,13 @@ ScenarioContinuation runGestureInterlockScenarios(Harness &check,
     SongDocument &doc = check.document();
     SongView &view = check.view();
     songview::TimelineInputItem *roll = &check.rollInput();
-    const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const SnappedRows rows{view, *roll};
     const Cell &a = fixture.a;
     const Cell &b = fixture.b;
     const DocNote &noteA = fixture.noteA;
     const DocNote &noteB = fixture.noteB;
     const Qt::MouseButtons bothButtons = Qt::LeftButton | Qt::RightButton;
-    const QPoint bandStart(pianoKeyboardWidth + 1, 0);
+    const QPoint bandStart(1, 0);
     const int startDragDistance = QApplication::startDragDistance();
     const QPoint bandWarmup = bandStart + QPoint(startDragDistance + 1, 0);
     const auto beyond = [](const QPoint &origin, const QPoint &target) {

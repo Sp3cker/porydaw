@@ -90,6 +90,23 @@ bool hasPlayheadPixel(const QImage &image, const QRect &logicalRect, const QColo
     return false;
 }
 
+bool hasSolidPlayheadPixel(const QImage &image, const QRect &logicalRect, const QColor &color)
+{
+    const QRect deviceRect = devicePixelRect(image, logicalRect);
+    if (deviceRect.isEmpty())
+        return false;
+
+    const int solidAlpha = std::max(64, color.alpha() / 2);
+    for (int y = deviceRect.top(); y <= deviceRect.bottom(); ++y) {
+        for (int x = deviceRect.left(); x <= deviceRect.right(); ++x) {
+            const QColor actual = image.pixelColor(x, y);
+            if (actual.alpha() >= solidAlpha && isPlayheadPixel(actual, color))
+                return true;
+        }
+    }
+    return false;
+}
+
 qreal quickRootX(const QQuickItem &item, QQuickItem &root)
 {
     return item.mapToItem(&root, QPointF{}).x();

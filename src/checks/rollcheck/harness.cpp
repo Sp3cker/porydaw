@@ -37,20 +37,35 @@ bool Harness::prepare()
     QCoreApplication::processEvents();
     (void)songView.grab(); // force layout so child geometry is real
     QCoreApplication::processEvents();
-    m_pianoKeyboardWidth = layout::fontPx(13.0 / 3.0);
-    m_plotOrigin = layout::fontPx(17.5 + 13.0 / 3.0);
     m_pianoRollDefaultKeyHeight = layout::fontPx(1.0);
     auto *quick =
         songView.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    QQuickItem *const quickRoot = quick ? quick->rootObject() : nullptr;
     m_roll = songView.findChild<songview::PianoRoll *>();
-    m_rollInput = quick && quick->rootObject()
-                      ? quick->rootObject()->findChild<songview::TimelineInputItem *>(
-                            QStringLiteral("timelineRollInput"))
-                      : nullptr;
-    const QRect rollBand = rollBandRect();
-    if (!m_roll || !m_rollInput || rollBand.width() <= m_pianoKeyboardWidth ||
-        rollBand.height() <= 0 ||
-        m_rollInput->bounds() != QRectF(QPointF{}, QSizeF(rollBand.width(), rollBand.height()))) {
+    m_rollInput = quickRoot ? quickRoot->findChild<songview::TimelineInputItem *>(
+                                  QStringLiteral("timelineRollInput"))
+                            : nullptr;
+    m_rollGutterInput = quickRoot ? quickRoot->findChild<songview::TimelineInputItem *>(
+                                        QStringLiteral("timelineRollGutterInput"))
+                                  : nullptr;
+    const std::optional<songview::TimelineBandGeometry> &geometry =
+        songView.timelineBandLayout().geometry(songview::TimelineBand::Roll);
+    const QRect plotRect = geometry ? geometry->plotRect : QRect{};
+    const QRect gutterRect = geometry
+                                 ? QRect(geometry->rect.topLeft(),
+                                         QSize(geometry->plotRect.left() - geometry->rect.left(),
+                                               geometry->rect.height()))
+                                 : QRect{};
+    m_pianoKeyboardWidth = gutterRect.width();
+    const auto inputMatches = [quickRoot, quick](const songview::TimelineInputItem *input,
+                                                 const QRect &songViewRect) {
+        return input && input->isVisible() &&
+               input->bounds() == QRectF(QPointF{}, songViewRect.size()) &&
+               QRectF(input->mapToItem(quickRoot, QPointF{}), input->size()) ==
+                   QRectF(songViewRect.translated(-quick->geometry().topLeft()));
+    };
+    if (!m_roll || !geometry || plotRect.isEmpty() || gutterRect.isEmpty() ||
+        !inputMatches(m_rollInput, plotRect) || !inputMatches(m_rollGutterInput, gutterRect)) {
         fail("piano roll not found or not laid out");
         return false;
     }
@@ -98,6 +113,11 @@ songview::TimelineInputItem &Harness::rollInput() noexcept
     return *m_rollInput;
 }
 
+songview::TimelineInputItem &Harness::rollGutterInput() noexcept
+{
+    return *m_rollGutterInput;
+}
+
 QRect Harness::rollBandRect() const noexcept
 {
     const std::optional<songview::TimelineBandGeometry> band =
@@ -131,11 +151,6 @@ int Harness::track() const noexcept
 int Harness::pianoKeyboardWidth() const noexcept
 {
     return m_pianoKeyboardWidth;
-}
-
-int Harness::plotOrigin() const noexcept
-{
-    return m_plotOrigin;
 }
 
 int Harness::pianoRollDefaultKeyHeight() const noexcept
@@ -192,18 +207,15 @@ Cell Harness::findFreeCell(int firstProbe, bool checkAllTracks)
         const qreal bottom = rows.bottom(key);
         if (top < 0 || bottom > pianoRoll.bounds().height())
             continue;
-        for (int probe = firstProbe;
-             probe < int(pianoRoll.bounds().width()) - m_pianoKeyboardWidth - 40; probe += 24) {
+        for (int probe = firstProbe; probe < int(pianoRoll.bounds().width()) - 40; probe += 24) {
             const uint64_t tick =
                 songView.grid().snapTickDown(songView.camera().tickAtContentX(probe));
             const uint64_t dur = songView.grid().gridTicksAt(tick);
-            const int x0 = m_pianoKeyboardWidth + songView.camera().contentX(double(tick));
-            const int x1 = m_pianoKeyboardWidth + songView.camera().contentX(double(tick + dur));
+            const int x0 = songView.camera().contentX(double(tick));
+            const int x1 = songView.camera().contentX(double(tick + dur));
             const int xs =
-                m_pianoKeyboardWidth +
                 songView.camera().contentX(double(tick + songView.grid().snapTicksAt(tick)));
-            if (x0 < m_pianoKeyboardWidth || x1 - x0 < 12 || xs - x0 < 8 ||
-                x1 >= int(pianoRoll.bounds().width()))
+            if (x0 < 0 || x1 - x0 < 12 || xs - x0 < 8 || x1 >= int(pianoRoll.bounds().width()))
                 continue;
             if (isOccupied(tick, dur, key, checkAllTracks))
                 continue;

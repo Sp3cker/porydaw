@@ -36,24 +36,24 @@ struct TimelineBandQmlProperties {
     TimelineBand band;
     const char *rect;
     const char *visible;
-    const char *timelineOrigin;
+    const char *plotRect;
 };
 
 constexpr std::array kTimelineBandQmlProperties{
     TimelineBandQmlProperties{TimelineBand::Ruler, "rulerBandRect", "rulerBandVisible",
-                              "rulerBandTimelineOrigin"},
+                              "rulerBandPlotRect"},
     TimelineBandQmlProperties{TimelineBand::Roll, "rollBandRect", "rollBandVisible",
-                              "rollBandTimelineOrigin"},
+                              "rollBandPlotRect"},
     TimelineBandQmlProperties{TimelineBand::OtherEvents, "otherEventsBandRect",
-                              "otherEventsBandVisible", "otherEventsBandTimelineOrigin"},
+                              "otherEventsBandVisible", "otherEventsBandPlotRect"},
     TimelineBandQmlProperties{TimelineBand::Automation, "automationBandRect",
-                              "automationBandVisible", "automationBandTimelineOrigin"},
+                              "automationBandVisible", "automationBandPlotRect"},
     TimelineBandQmlProperties{TimelineBand::Velocity, "velocityBandRect", "velocityBandVisible",
-                              "velocityBandTimelineOrigin"},
+                              "velocityBandPlotRect"},
     TimelineBandQmlProperties{TimelineBand::VoiceChanges, "voiceChangesBandRect",
-                              "voiceChangesBandVisible", "voiceChangesBandTimelineOrigin"},
+                              "voiceChangesBandVisible", "voiceChangesBandPlotRect"},
     TimelineBandQmlProperties{TimelineBand::TrackHeaders, "trackHeadersBandRect",
-                              "trackHeadersBandVisible", "trackHeadersBandTimelineOrigin"},
+                              "trackHeadersBandVisible", "trackHeadersBandPlotRect"},
 };
 static_assert(kTimelineBandQmlProperties.size() == timelineBandIndex(TimelineBand::Count));
 
@@ -176,6 +176,7 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
         qFatal("Qt Quick timeline QML has no root object");
 
     static constexpr std::array layers = {
+        std::pair{TimelineQuickLayer::RulerGutterChrome, "timelineQuickRulerGutterChrome"},
         std::pair{TimelineQuickLayer::RulerChrome, "timelineQuickRulerChrome"},
         std::pair{TimelineQuickLayer::RulerMarks, "timelineQuickRulerMarks"},
         std::pair{TimelineQuickLayer::PianoGrid, "timelineQuickPianoGrid"},
@@ -187,8 +188,11 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
         std::pair{TimelineQuickLayer::PianoKeyboardKeys, "timelineQuickPianoKeyboardKeys"},
         std::pair{TimelineQuickLayer::PianoKeyboardHighlights,
                   "timelineQuickPianoKeyboardHighlights"},
+        std::pair{TimelineQuickLayer::OtherEventsGutterChrome,
+                  "timelineQuickOtherEventsGutterChrome"},
         std::pair{TimelineQuickLayer::OtherEventsChrome, "timelineQuickOtherEventsChrome"},
         std::pair{TimelineQuickLayer::OtherEventsMarkers, "timelineQuickOtherEventsMarkers"},
+        std::pair{TimelineQuickLayer::VelocityGutterChrome, "timelineQuickVelocityGutterChrome"},
         std::pair{TimelineQuickLayer::VelocityChrome, "timelineQuickVelocityChrome"},
         std::pair{TimelineQuickLayer::VelocityAxis, "timelineQuickVelocityAxis"},
         std::pair{TimelineQuickLayer::VelocityGrid, "timelineQuickVelocityGrid"},
@@ -196,12 +200,16 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
         std::pair{TimelineQuickLayer::VelocityStems, "timelineQuickVelocityStems"},
         std::pair{TimelineQuickLayer::VelocityNodes, "timelineQuickVelocityNodes"},
         std::pair{TimelineQuickLayer::VelocityTransient, "timelineQuickVelocityTransient"},
+        std::pair{TimelineQuickLayer::VoiceChangesGutterChrome,
+                  "timelineQuickVoiceChangesGutterChrome"},
         std::pair{TimelineQuickLayer::VoiceChangesChrome, "timelineQuickVoiceChangesChrome"},
         std::pair{TimelineQuickLayer::VoiceChangesGrid, "timelineQuickVoiceChangesGrid"},
         std::pair{TimelineQuickLayer::VoiceChangesSpans, "timelineQuickVoiceChangesSpans"},
         std::pair{TimelineQuickLayer::VoiceChangesMarkers, "timelineQuickVoiceChangesMarkers"},
         std::pair{TimelineQuickLayer::VoiceChangesTransient, "timelineQuickVoiceChangesTransient"},
         std::pair{TimelineQuickLayer::VoiceChangesHover, "timelineQuickVoiceChangesHover"},
+        std::pair{TimelineQuickLayer::AutomationGutterChrome,
+                  "timelineQuickAutomationGutterChrome"},
         std::pair{TimelineQuickLayer::AutomationGrid, "timelineQuickAutomationGrid"},
         std::pair{TimelineQuickLayer::AutomationCurves, "timelineQuickAutomationCurves"},
         std::pair{TimelineQuickLayer::AutomationNodes, "timelineQuickAutomationNodes"},
@@ -253,53 +261,56 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
             qFatal("Qt Quick timeline QML has no band property '%s'", properties.rect);
         if (!root->property(properties.visible).isValid())
             qFatal("Qt Quick timeline QML has no band property '%s'", properties.visible);
-        if (!root->property(properties.timelineOrigin).isValid())
-            qFatal("Qt Quick timeline QML has no band property '%s'", properties.timelineOrigin);
+        if (!root->property(properties.plotRect).isValid())
+            qFatal("Qt Quick timeline QML has no band property '%s'", properties.plotRect);
     }
 
-    // All seven bands attach through their matching input items.
-    TimelineInputItem *const rulerInput =
-        root->findChild<TimelineInputItem *>(QStringLiteral("timelineRulerInput"));
-    if (!rulerInput)
-        qFatal("Qt Quick timeline QML has no input item 'timelineRulerInput'");
-    rulerInput->setInteraction(m_ruler);
-    m_inputItems[timelineBandIndex(TimelineBand::Ruler)] = rulerInput;
-    TimelineInputItem *const velocityInput =
-        root->findChild<TimelineInputItem *>(QStringLiteral("timelineVelocityInput"));
-    if (!velocityInput)
-        qFatal("Qt Quick timeline QML has no input item 'timelineVelocityInput'");
-    velocityInput->setInteraction(m_velocity.data());
-    m_inputItems[timelineBandIndex(TimelineBand::Velocity)] = velocityInput;
-    TimelineInputItem *const voiceChangesInput =
-        root->findChild<TimelineInputItem *>(QStringLiteral("timelineVoiceChangesInput"));
-    if (!voiceChangesInput)
-        qFatal("Qt Quick timeline QML has no input item 'timelineVoiceChangesInput'");
-    voiceChangesInput->setInteraction(m_voiceChanges.data());
-    m_inputItems[timelineBandIndex(TimelineBand::VoiceChanges)] = voiceChangesInput;
-    TimelineInputItem *const otherEventsInput =
-        root->findChild<TimelineInputItem *>(QStringLiteral("timelineOtherEventsInput"));
-    if (!otherEventsInput)
-        qFatal("Qt Quick timeline QML has no input item 'timelineOtherEventsInput'");
-    otherEventsInput->setInteraction(m_otherEvents.data());
-    m_inputItems[timelineBandIndex(TimelineBand::OtherEvents)] = otherEventsInput;
-    TimelineInputItem *const rollInput =
-        root->findChild<TimelineInputItem *>(QStringLiteral("timelineRollInput"));
-    if (!rollInput)
-        qFatal("Qt Quick timeline QML has no input item 'timelineRollInput'");
-    rollInput->setInteraction(m_roll.data());
-    m_inputItems[timelineBandIndex(TimelineBand::Roll)] = rollInput;
-    TimelineInputItem *const automationInput =
-        root->findChild<TimelineInputItem *>(QStringLiteral("timelineAutomationInput"));
-    if (!automationInput)
-        qFatal("Qt Quick timeline QML has no input item 'timelineAutomationInput'");
-    automationInput->setInteraction(m_automation->canvas());
-    m_inputItems[timelineBandIndex(TimelineBand::Automation)] = automationInput;
-    TimelineInputItem *const trackHeadersInput =
-        root->findChild<TimelineInputItem *>(QStringLiteral("timelineTrackHeadersInput"));
-    if (!trackHeadersInput)
-        qFatal("Qt Quick timeline QML has no input item 'timelineTrackHeadersInput'");
-    trackHeadersInput->setInteraction(m_trackHeaders.data());
-    m_inputItems[timelineBandIndex(TimelineBand::TrackHeaders)] = trackHeadersInput;
+    const auto bindInput = [&root](TimelineInputItem *&destination,
+                                   TimelineBandInteraction *interaction, const char *objectName,
+                                   TimelineInputSurface surface, bool attachHost) {
+        TimelineInputItem *const input =
+            root->findChild<TimelineInputItem *>(QString::fromLatin1(objectName));
+        if (!input)
+            qFatal("Qt Quick timeline QML has no input item '%s'", objectName);
+        input->setInteraction(interaction, surface, attachHost);
+        destination = input;
+    };
+
+    bindInput(m_inputItems[timelineBandIndex(TimelineBand::Ruler)], m_ruler, "timelineRulerInput",
+              TimelineInputSurface::Plot, true);
+    bindInput(m_gutterInputItems[timelineBandIndex(TimelineBand::Ruler)], m_ruler,
+              "timelineRulerGutterInput", TimelineInputSurface::Gutter, false);
+
+    bindInput(m_inputItems[timelineBandIndex(TimelineBand::Roll)], m_roll.data(),
+              "timelineRollInput", TimelineInputSurface::Plot, true);
+    bindInput(m_gutterInputItems[timelineBandIndex(TimelineBand::Roll)], m_roll.data(),
+              "timelineRollGutterInput", TimelineInputSurface::Gutter, false);
+
+    bindInput(m_inputItems[timelineBandIndex(TimelineBand::OtherEvents)], m_otherEvents.data(),
+              "timelineOtherEventsInput", TimelineInputSurface::Plot, true);
+    bindInput(m_gutterInputItems[timelineBandIndex(TimelineBand::OtherEvents)],
+              m_otherEvents.data(), "timelineOtherEventsGutterInput", TimelineInputSurface::Gutter,
+              false);
+
+    bindInput(m_inputItems[timelineBandIndex(TimelineBand::Automation)], m_automation->canvas(),
+              "timelineAutomationInput", TimelineInputSurface::Plot, true);
+    bindInput(m_gutterInputItems[timelineBandIndex(TimelineBand::Automation)],
+              m_automation->canvas(), "timelineAutomationGutterInput", TimelineInputSurface::Gutter,
+              false);
+
+    bindInput(m_inputItems[timelineBandIndex(TimelineBand::Velocity)], m_velocity.data(),
+              "timelineVelocityInput", TimelineInputSurface::Plot, true);
+    bindInput(m_gutterInputItems[timelineBandIndex(TimelineBand::Velocity)], m_velocity.data(),
+              "timelineVelocityGutterInput", TimelineInputSurface::Gutter, false);
+
+    bindInput(m_inputItems[timelineBandIndex(TimelineBand::VoiceChanges)], m_voiceChanges.data(),
+              "timelineVoiceChangesInput", TimelineInputSurface::Plot, true);
+    bindInput(m_gutterInputItems[timelineBandIndex(TimelineBand::VoiceChanges)],
+              m_voiceChanges.data(), "timelineVoiceChangesGutterInput",
+              TimelineInputSurface::Gutter, false);
+
+    bindInput(m_inputItems[timelineBandIndex(TimelineBand::TrackHeaders)], m_trackHeaders.data(),
+              "timelineTrackHeadersInput", TimelineInputSurface::Gutter, true);
 
     for (std::size_t index = 0; index < kDrawerChromeInputQmlProperties.size(); ++index) {
         const DrawerChromeInputQmlProperties &properties = kDrawerChromeInputQmlProperties[index];
@@ -321,6 +332,10 @@ TimelineQuickView::~TimelineQuickView()
         if (item)
             item->setInteraction(nullptr);
     }
+    for (TimelineInputItem *item : m_gutterInputItems) {
+        if (item)
+            item->setInteraction(nullptr);
+    }
     for (TimelineInputItem *item : m_inputItems) {
         if (item)
             item->setInteraction(nullptr);
@@ -330,8 +345,11 @@ TimelineQuickView::~TimelineQuickView()
 
 void TimelineQuickView::detachInputInteraction(TimelineBand band)
 {
-    if (TimelineInputItem *const item = m_inputItems[timelineBandIndex(band)])
-        item->setInteraction(nullptr);
+    const std::size_t index = timelineBandIndex(band);
+    if (TimelineInputItem *const gutterItem = m_gutterInputItems[index])
+        gutterItem->setInteraction(nullptr);
+    if (TimelineInputItem *const primaryItem = m_inputItems[index])
+        primaryItem->setInteraction(nullptr);
 }
 
 qreal TimelineQuickView::quickDevicePixelRatio() const
@@ -359,14 +377,14 @@ bool TimelineQuickView::editVisible() const noexcept
     return m_editSongViewContentX.has_value();
 }
 
-qreal TimelineQuickView::playheadRootX() const noexcept
+qreal TimelineQuickView::playheadLocalX() const noexcept
 {
-    return quickRootXForSongViewX(m_playheadSongViewX);
+    return m_playheadLocalX;
 }
 
 bool TimelineQuickView::playheadVisible() const noexcept
 {
-    return m_playheadVisible;
+    return m_playheadEffectiveVisible;
 }
 
 bool TimelineQuickView::playheadPlaying() const noexcept
@@ -414,16 +432,17 @@ int TimelineQuickView::playheadTriangleHeightPx() const noexcept
     return songview::playheadTriangleHeight();
 }
 
-void TimelineQuickView::setPlayhead(qreal songViewX, bool visible, bool playing,
+void TimelineQuickView::setPlayhead(qreal localX, bool effectiveVisible, bool playing,
                                     bool trianglePointsUp)
 {
-    const bool xChanged = m_playheadSongViewX != songViewX;
-    const bool appearanceChanged = m_playheadVisible != visible || m_playheadPlaying != playing ||
+    const bool xChanged = m_playheadLocalX != localX;
+    const bool appearanceChanged = m_playheadEffectiveVisible != effectiveVisible ||
+                                   m_playheadPlaying != playing ||
                                    m_playheadTrianglePointsUp != trianglePointsUp;
     if (!xChanged && !appearanceChanged)
         return;
-    m_playheadSongViewX = songViewX;
-    m_playheadVisible = visible;
+    m_playheadLocalX = localX;
+    m_playheadEffectiveVisible = effectiveVisible;
     m_playheadPlaying = playing;
     m_playheadTrianglePointsUp = trianglePointsUp;
     if (xChanged)
@@ -451,24 +470,15 @@ qreal TimelineQuickView::hostY() const noexcept
 }
 qreal TimelineQuickView::rulerPlotOrigin() const noexcept
 {
-    return m_songView ? quickRootXForSongViewX(m_songView->timelinePlotOrigin()) : 0.0;
+    return m_publishedRulerPlotOrigin;
 }
 
-qreal TimelineQuickView::rulerControlsWidth() const noexcept
-{
-    const std::optional<TimelineBandGeometry> &ruler = m_bandLayout.geometry(TimelineBand::Ruler);
-    if (!m_songView || !ruler)
-        return 0.0;
-    return std::max(0.0, rulerPlotOrigin() - quickRootXForSongViewX(ruler->rect.x()) -
-                             static_cast<qreal>(layout::space(layout::Space::One)));
-}
-
-void TimelineQuickView::synchronizeGuides(qreal songViewTimelineOriginX,
+void TimelineQuickView::synchronizeGuides(qreal songViewSplitX,
                                           std::optional<qreal> editSongViewContentX)
 {
     setEditChrome(editSongViewContentX);
     if (m_hoverOwner != TimelineQuickHoverOwner::None && m_songView)
-        setHoverChrome(songViewTimelineOriginX + m_camera.contentX(m_hoverTick));
+        setHoverChrome(songViewSplitX + m_camera.contentX(m_hoverTick));
 }
 
 void TimelineQuickView::publishHover(TimelineQuickHoverOwner owner, uint64_t tick,
@@ -509,7 +519,7 @@ std::optional<qreal> TimelineQuickView::guideSongViewContentXAtOrAfterStart(
 {
     if (!songViewContentX || !m_songView)
         return std::nullopt;
-    const qreal songStartX = m_songView->timelinePlotOrigin() + m_camera.contentX(0.0);
+    const qreal songStartX = m_songView->timelineSplitX() + m_camera.contentX(0.0);
     return *songViewContentX >= songStartX ? songViewContentX : std::nullopt;
 }
 
@@ -587,7 +597,10 @@ void TimelineQuickView::setBandLayout(TimelineBandLayout layout)
                                                TimelineBand band) {
         const std::optional<TimelineBandGeometry> &before = published.geometry(band);
         const std::optional<TimelineBandGeometry> &after = current.geometry(band);
-        return after && (!before || before->rect.size() != after->rect.size());
+        // Plot pixels also depend on the plot rectangle: a split or scrollbar
+        // change can resize the plot while the row rectangle stays put.
+        return after && (!before || before->rect.size() != after->rect.size() ||
+                         before->plotRect.size() != after->plotRect.size());
     };
 
     PianoRollQuickDirtySet pianoDirty = PianoRollQuickDirty::None;
@@ -677,14 +690,7 @@ void TimelineQuickView::publishTimelineBandLayout()
         hostRect = hostRect ? hostRect->united(chromeRect) : chromeRect;
     }
     const QRect publishedHostRect = hostRect.value_or(QRect{});
-    const qreal publishedRulerPlotOrigin = m_songView->timelinePlotOrigin() - publishedHostRect.x();
-    const std::optional<TimelineBandGeometry> &rulerBand =
-        m_bandLayout.geometry(TimelineBand::Ruler);
-    const qreal publishedRulerControlsWidth =
-        rulerBand ? std::max(0.0, static_cast<qreal>(m_songView->timelinePlotOrigin() -
-                                                     rulerBand->rect.x() -
-                                                     layout::space(layout::Space::One)))
-                  : 0.0;
+    const qreal publishedRulerPlotOrigin = m_songView->timelineSplitX() - publishedHostRect.x();
     const bool hostOriginChanged = m_publishedHostRect.topLeft() != publishedHostRect.topLeft();
     if (geometry() != publishedHostRect)
         setGeometry(publishedHostRect);
@@ -699,13 +705,13 @@ void TimelineQuickView::publishTimelineBandLayout()
         const std::optional<TimelineBandGeometry> &band = m_bandLayout.geometry(properties.band);
         const QRectF localBandRect =
             band ? QRectF{band->rect.translated(-publishedHostRect.topLeft())} : QRectF{};
-        // timelineOrigin is band-local inside rect; it survives host
-        // translation and clears when the band disappears.
-        const qreal localBandTimelineOrigin = band ? static_cast<qreal>(band->timelineOrigin) : 0.0;
+        // Plot rects are SongView-local like the band rect and share the
+        // same host translation; empty plot rects (TrackHeaders) stay empty.
+        const QRectF localBandPlotRect =
+            band ? QRectF{band->plotRect.translated(-publishedHostRect.topLeft())} : QRectF{};
         if (!root->setProperty(properties.rect, QVariant::fromValue(localBandRect)) ||
             !root->setProperty(properties.visible, QVariant::fromValue(band.has_value())) ||
-            !root->setProperty(properties.timelineOrigin,
-                               QVariant::fromValue(localBandTimelineOrigin))) {
+            !root->setProperty(properties.plotRect, QVariant::fromValue(localBandPlotRect))) {
             qFatal("Qt Quick timeline QML has incomplete band properties");
         }
     }
@@ -713,17 +719,11 @@ void TimelineQuickView::publishTimelineBandLayout()
     const bool publishedGeometryChanged =
         std::exchange(m_publishedHostRect, publishedHostRect) != publishedHostRect ||
         std::exchange(m_publishedRulerPlotOrigin, publishedRulerPlotOrigin) !=
-            publishedRulerPlotOrigin ||
-        std::exchange(m_publishedRulerControlsWidth, publishedRulerControlsWidth) !=
-            publishedRulerControlsWidth;
+            publishedRulerPlotOrigin;
     if (publishedGeometryChanged)
         emit hostGeometryChanged();
 
     if (hostOriginChanged) {
-        // playheadRootX() reads geometry().x(); a host origin shift moves the
-        // published playhead X even when setPlayhead() saw no new state, so
-        // QML bindings must re-read it. Appearance fields are untouched.
-        emit playheadXChanged();
         if (m_hoverSongViewContentX)
             emit hoverChromeChanged();
         if (m_editSongViewContentX)
@@ -733,6 +733,10 @@ void TimelineQuickView::publishTimelineBandLayout()
 
 void TimelineQuickView::syncAppearance()
 {
+    for (TimelineInputItem *item : m_gutterInputItems) {
+        if (item && m_songView)
+            item->setHostAppearance(m_songView->font(), m_songView->palette());
+    }
     for (TimelineInputItem *item : m_inputItems) {
         if (!item)
             continue;
@@ -814,6 +818,7 @@ void TimelineQuickView::syncRuler()
     if (!m_ruler)
         return;
     m_ruler->rebuildQuickScene(*m_scene);
+    updateLayer(TimelineQuickLayer::RulerGutterChrome);
     updateLayer(TimelineQuickLayer::RulerChrome);
     updateLayer(TimelineQuickLayer::RulerMarks);
 }
@@ -823,6 +828,7 @@ void TimelineQuickView::syncOtherEvents()
     if (!m_otherEvents)
         return;
     m_otherEvents->rebuildQuickScene(*m_scene);
+    updateLayer(TimelineQuickLayer::OtherEventsGutterChrome);
     updateLayer(TimelineQuickLayer::OtherEventsChrome);
     updateLayer(TimelineQuickLayer::OtherEventsMarkers);
 }
@@ -832,6 +838,7 @@ void TimelineQuickView::syncVelocity()
     if (!m_velocity)
         return;
     m_velocity->rebuildQuickScene(*m_scene);
+    updateLayer(TimelineQuickLayer::VelocityGutterChrome);
     updateLayer(TimelineQuickLayer::VelocityChrome);
     updateLayer(TimelineQuickLayer::VelocityAxis);
     updateLayer(TimelineQuickLayer::VelocityGrid);
@@ -847,6 +854,7 @@ void TimelineQuickView::syncVoiceChanges(TimelineQuickDirtySet dirty)
         return;
     if (dirty & TimelineQuickDirty::VoiceChanges) {
         m_voiceChanges->rebuildQuickScene(*m_scene);
+        updateLayer(TimelineQuickLayer::VoiceChangesGutterChrome);
         updateLayer(TimelineQuickLayer::VoiceChangesChrome);
         updateLayer(TimelineQuickLayer::VoiceChangesGrid);
         updateLayer(TimelineQuickLayer::VoiceChangesSpans);
@@ -867,6 +875,7 @@ void TimelineQuickView::syncAutomation(AutomationRefreshSet refresh)
         return;
     m_automation->canvas()->rebuildQuickScene(*m_scene, refresh);
     if (refresh.testFlag(AutomationRefresh::Content)) {
+        updateLayer(TimelineQuickLayer::AutomationGutterChrome);
         updateLayer(TimelineQuickLayer::AutomationGrid);
         updateLayer(TimelineQuickLayer::AutomationCurves);
         updateLayer(TimelineQuickLayer::AutomationNodes);

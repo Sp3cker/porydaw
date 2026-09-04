@@ -3,7 +3,8 @@ import QtQuick
 Item {
     id: controls
 
-    required property Item rulerBand
+    required property Item menuTarget
+    required property Item overlayRoot
     required property var ruler
     clip: true
 
@@ -27,8 +28,8 @@ Item {
                                                         ? rulerFeelControl : null
         if (!control)
             return Qt.rect(0, 0, 0, 0)
-        return Qt.rect(rulerBand.x + controls.x + control.x,
-                       rulerBand.y + controls.y + control.y, control.width, control.height)
+        const topLeft = control.mapToItem(controls.overlayRoot, 0, 0)
+        return Qt.rect(topLeft.x, topLeft.y, control.width, control.height)
     }
     readonly property color buttonPressedBackground: appearance
                                                      ? appearance.buttonPressedBackground
@@ -60,7 +61,7 @@ Item {
         function openMenu(localPosition) {
             if (!controls.ruler)
                 return
-            const point = mapToItem(controls.rulerBand, localPosition.x, localPosition.y)
+            const point = mapToItem(controls.menuTarget, localPosition.x, localPosition.y)
             if (divisionControl)
                 controls.ruler.openDivisionMenu(point)
             else
@@ -178,11 +179,12 @@ Item {
     }
 
     RulerToolTip {
-        parent: controls.rulerBand.parent
-        overlayRoot: controls.rulerBand.parent
+        parent: controls.overlayRoot
+        objectName: "timelineRulerToolTip"
+        overlayRoot: controls.overlayRoot
         anchorRect: controls.toolTipAnchorRect
         toolTipText: controls.toolTipText
-        visibleForControl: controls.rulerBand.visible && controls.toolTipVisible
+        visibleForControl: controls.toolTipVisible
         controlFont: controls.controlFont
         backgroundColor: controls.buttonBackground
         textColor: controls.buttonText

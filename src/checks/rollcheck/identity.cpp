@@ -16,9 +16,8 @@ namespace checks::rollcheck {
 ScenarioContinuation runIdentityScenarios(Harness &check, const SongInfo &song)
 {
     SongView &view = check.view();
-    songview::TimelineInputItem *roll = &check.rollInput();
+    songview::TimelineInputItem &rollInput = check.rollInput();
     const int track = check.track();
-    const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     auto fail = [&](const char *what) { check.fail(what); };
     // Coordinates cannot distinguish duplicate notes; their document IDs must
     // survive the timeline and view-model projections independently.
@@ -196,9 +195,9 @@ ScenarioContinuation runIdentityScenarios(Harness &check, const SongInfo &song)
         const double tpb = double(check.timeline().ticksPerBeat);
         const double maxHScroll =
             std::max(0.0, double(check.timeline().lengthTicks) * expected.pxPerBeat / tpb + 100.0 -
-                              std::max<qreal>(50, roll->width() - pianoKeyboardWidth));
+                              std::max<qreal>(50, rollInput.width()));
         expected.scrollPx = std::clamp(perturbed.scrollPx, 0.0, maxHScroll);
-        const double maxRollScroll = std::max(0.0, 128.0 * expected.keyHeight - roll->height());
+        const double maxRollScroll = std::max(0.0, 128.0 * expected.keyHeight - rollInput.height());
         expected.scrollY = std::clamp(perturbed.scrollY, 0.0, maxRollScroll);
         expected.selectedTrack = snapshot.selectedTrack;
         if (perturbed.selectedTrack >= 0 && perturbed.selectedTrack < 16 &&

@@ -148,8 +148,7 @@ void PianoRoll::openPitchBendEditor()
         // keeps the -1 fallback.
         if (m_curPosValid && noteLocalRect.contains(m_curPos)) {
             noteFraction =
-                double(m_camera.tickAtContentX(m_curPos.x() - m_geometry.pianoKeyboardWidth) -
-                       double(notes.front().tick)) /
+                double(m_camera.tickAtContentX(m_curPos.x()) - double(notes.front().tick)) /
                 double(popup->endTick() - notes.front().tick);
             noteFraction = std::clamp(noteFraction, 0.0, 1.0);
         }
@@ -321,8 +320,7 @@ void PianoRoll::showNoteMenu(QPointF localPos)
 bool PianoRoll::focusNoteUnderCursor(QPointF globalPos)
 {
     const QPointF pos = m_inputHost->mapFromGlobal(globalPos);
-    const ViewNote *hit =
-        m_sv->document() && pos.x() >= m_geometry.pianoKeyboardWidth ? hitNote(pos) : nullptr;
+    const ViewNote *hit = m_sv->document() ? hitNote(pos) : nullptr;
     if (!hit)
         return false;
     if (hit->track != m_sv->selectionModel().primaryTrack() || !hit->noteId.isAssigned() ||

@@ -18,13 +18,13 @@ Item {
     property bool otherEventsBandVisible: false
     property bool automationBandVisible: false
     property bool trackHeadersBandVisible: false
-    property real rulerBandTimelineOrigin: 0
-    property real rollBandTimelineOrigin: 0
-    property real velocityBandTimelineOrigin: 0
-    property real voiceChangesBandTimelineOrigin: 0
-    property real otherEventsBandTimelineOrigin: 0
-    property real automationBandTimelineOrigin: 0
-    property real trackHeadersBandTimelineOrigin: 0
+    property rect rulerBandPlotRect: Qt.rect(0, 0, 0, 0)
+    property rect rollBandPlotRect: Qt.rect(0, 0, 0, 0)
+    property rect velocityBandPlotRect: Qt.rect(0, 0, 0, 0)
+    property rect voiceChangesBandPlotRect: Qt.rect(0, 0, 0, 0)
+    property rect otherEventsBandPlotRect: Qt.rect(0, 0, 0, 0)
+    property rect automationBandPlotRect: Qt.rect(0, 0, 0, 0)
+    property rect trackHeadersBandPlotRect: Qt.rect(0, 0, 0, 0)
     property font fallbackRulerFont
     readonly property var rulerAppearance: timeRuler ? timeRuler.gridControlAppearance : null
     readonly property font rulerFont: rulerAppearance ? rulerAppearance.font : fallbackRulerFont
@@ -103,8 +103,14 @@ Item {
         id: sceneBand
 
         required property rect bandRect
+        required property rect plotRect
         required property bool bandVisible
         required property string bandName
+        required property string plotInputName
+        required property string gutterInputName
+        readonly property real gutterWidth: Math.max(0, plotRect.x - bandRect.x)
+        property alias gutterSide: gutterBox
+        property alias plotSide: plotBox
 
         x: bandRect.x
         y: bandRect.y
@@ -113,11 +119,45 @@ Item {
         clip: true
         visible: bandVisible
 
-        TimelineChromeBand {
-            anchors.fill: parent
-            bandRect: sceneBand.bandRect
-            bandVisible: sceneBand.bandVisible
-            bandName: sceneBand.bandName
+        Item {
+            id: gutterBox
+
+            objectName: sceneBand.bandName + "Gutter"
+            width: sceneBand.gutterWidth
+            height: parent.height
+            clip: true
+
+            TimelineInputItem {
+                objectName: sceneBand.gutterInputName
+                anchors.fill: parent
+                Accessible.description: accessibilityDescription
+                z: 2
+            }
+        }
+
+        Item {
+            id: plotBox
+
+            objectName: sceneBand.bandName + "Plot"
+            x: sceneBand.gutterWidth
+            y: sceneBand.plotRect.y - sceneBand.bandRect.y
+            width: sceneBand.plotRect.width
+            height: sceneBand.plotRect.height
+            clip: true
+
+            TimelineInputItem {
+                objectName: sceneBand.plotInputName
+                anchors.fill: parent
+                Accessible.description: accessibilityDescription
+                z: 8.5
+            }
+
+            TimelineChromeBand {
+                anchors.fill: parent
+                bandRect: sceneBand.plotRect
+                bandVisible: sceneBand.bandVisible
+                bandName: sceneBand.bandName
+            }
         }
     }
 
@@ -138,251 +178,320 @@ Item {
         }
     }
 
-
-
     TimelineSceneBand {
         id: rulerBand
+
         bandRect: root.rulerBandRect
+        plotRect: root.rulerBandPlotRect
         bandVisible: root.rulerBandVisible
         bandName: "timelineQuickRuler"
+        plotInputName: "timelineRulerInput"
+        gutterInputName: "timelineRulerGutterInput"
 
         TimelineSceneLayer {
+            parent: rulerBand.gutterSide
+            objectName: "timelineQuickRulerGutterChrome"
+            sceneLayer: TimelineQuickItem.RulerGutterChrome
+            z: 0
+        }
+
+        TimelineSceneLayer {
+            parent: rulerBand.plotSide
             objectName: "timelineQuickRulerChrome"
             sceneLayer: TimelineQuickItem.RulerChrome
             z: 0
         }
         TimelineSceneLayer {
+            parent: rulerBand.plotSide
             objectName: "timelineQuickRulerMarks"
             sceneLayer: TimelineQuickItem.RulerMarks
             z: 1
         }
         TimelineTextLayer {
+            parent: rulerBand.plotSide
             textModel: timelineScene.rulerTextModel
             z: 2
         }
 
+        // Controls stay physically in the gutter; the menu anchor maps into
+        // the plot host, and the tooltip overlays the unclipped canvas root.
         RulerControls {
+            parent: rulerBand.gutterSide
             objectName: "timelineRulerControls"
-            width: timelineQuickView.rulerControlsWidth
+            width: rulerBand.gutterSide.width
             height: parent.height
-            rulerBand: rulerBand
+            menuTarget: rulerBand.plotSide
+            overlayRoot: root
             ruler: timeRuler
             z: 3
         }
-
-        TimelineInputItem {
-            objectName: "timelineRulerInput"
-            anchors.fill: parent
-            Accessible.description: accessibilityDescription
-        }
     }
 
     TimelineSceneBand {
+        id: rollBand
+
         bandRect: root.rollBandRect
+        plotRect: root.rollBandPlotRect
         bandVisible: root.rollBandVisible
         bandName: "timelineQuickRoll"
+        plotInputName: "timelineRollInput"
+        gutterInputName: "timelineRollGutterInput"
 
         PianoRollCanvas {
-            anchors.fill: parent
-        }
-
-        TimelineInputItem {
-            objectName: "timelineRollInput"
-            anchors.fill: parent
-            Accessible.description: accessibilityDescription
+            gutterSide: rollBand.gutterSide
+            plotSide: rollBand.plotSide
         }
     }
 
     TimelineSceneBand {
+        id: automationBand
+
         bandRect: root.automationBandRect
+        plotRect: root.automationBandPlotRect
         bandVisible: root.automationBandVisible
         bandName: "timelineQuickAutomation"
+        plotInputName: "timelineAutomationInput"
+        gutterInputName: "timelineAutomationGutterInput"
         z: 1
 
         TimelineSceneLayer {
+            parent: automationBand.gutterSide
+            objectName: "timelineQuickAutomationGutterChrome"
+            sceneLayer: TimelineQuickItem.AutomationGutterChrome
+            z: 0
+        }
+
+        TimelineTextLayer {
+            parent: automationBand.gutterSide
+            textModel: timelineScene.automationTextModel
+            z: 1
+        }
+        TimelineSceneLayer {
+            parent: automationBand.plotSide
             objectName: "timelineQuickAutomationGrid"
             sceneLayer: TimelineQuickItem.AutomationGrid
             z: 0
         }
         TimelineSceneLayer {
+            parent: automationBand.plotSide
             objectName: "timelineQuickAutomationCurves"
             sceneLayer: TimelineQuickItem.AutomationCurves
             z: 1
         }
         TimelineSceneLayer {
+            parent: automationBand.plotSide
             objectName: "timelineQuickAutomationNodes"
             sceneLayer: TimelineQuickItem.AutomationNodes
             z: 2
         }
         TimelineSceneLayer {
+            parent: automationBand.plotSide
             objectName: "timelineQuickAutomationSelection"
             sceneLayer: TimelineQuickItem.AutomationSelection
             z: 3
         }
         TimelineSceneLayer {
+            parent: automationBand.plotSide
             objectName: "timelineQuickAutomationTransient"
             sceneLayer: TimelineQuickItem.AutomationTransient
             z: 4
         }
         TimelineSceneLayer {
+            parent: automationBand.plotSide
             objectName: "timelineQuickAutomationHover"
             sceneLayer: TimelineQuickItem.AutomationHover
             z: 5
         }
         TimelineTextLayer {
-            textModel: timelineScene.automationTextModel
-            z: 6
-        }
-        TimelineTextLayer {
+            parent: automationBand.plotSide
             textModel: timelineScene.automationHoverTextModel
             z: 7
         }
         TimelineTextLayer {
+            parent: automationBand.plotSide
             textModel: timelineScene.automationTransientTextModel
             z: 8
-        }
-        TimelineInputItem {
-            objectName: "timelineAutomationInput"
-            anchors.fill: parent
-            Accessible.description: accessibilityDescription
         }
     }
 
     TimelineSceneBand {
+        id: velocityBand
+
         bandRect: root.velocityBandRect
+        plotRect: root.velocityBandPlotRect
         bandVisible: root.velocityBandVisible
         bandName: "timelineQuickVelocity"
+        plotInputName: "timelineVelocityInput"
+        gutterInputName: "timelineVelocityGutterInput"
         z: 1
 
         TimelineSceneLayer {
+            parent: velocityBand.gutterSide
+            objectName: "timelineQuickVelocityGutterChrome"
+            sceneLayer: TimelineQuickItem.VelocityGutterChrome
+            z: 0
+        }
+        TimelineSceneLayer {
+            parent: velocityBand.gutterSide
+            objectName: "timelineQuickVelocityAxis"
+            sceneLayer: TimelineQuickItem.VelocityAxis
+            z: 1
+        }
+        TimelineTextLayer {
+            parent: velocityBand.gutterSide
+            textModel: timelineScene.velocityTextModel
+            z: 2
+        }
+
+        TimelineSceneLayer {
+            parent: velocityBand.plotSide
             objectName: "timelineQuickVelocityChrome"
             sceneLayer: TimelineQuickItem.VelocityChrome
             z: 0
         }
         TimelineSceneLayer {
-            objectName: "timelineQuickVelocityAxis"
-            sceneLayer: TimelineQuickItem.VelocityAxis
-            z: 1
-        }
-        TimelineSceneLayer {
+            parent: velocityBand.plotSide
             objectName: "timelineQuickVelocityGrid"
             sceneLayer: TimelineQuickItem.VelocityGrid
             z: 2
         }
         TimelineSceneLayer {
+            parent: velocityBand.plotSide
             objectName: "timelineQuickVelocityBands"
             sceneLayer: TimelineQuickItem.VelocityBands
             z: 3
         }
         TimelineSceneLayer {
+            parent: velocityBand.plotSide
             objectName: "timelineQuickVelocityStems"
             sceneLayer: TimelineQuickItem.VelocityStems
             z: 4
         }
         TimelineSceneLayer {
+            parent: velocityBand.plotSide
             objectName: "timelineQuickVelocityNodes"
             sceneLayer: TimelineQuickItem.VelocityNodes
             z: 5
         }
         TimelineSceneLayer {
+            parent: velocityBand.plotSide
             objectName: "timelineQuickVelocityTransient"
             sceneLayer: TimelineQuickItem.VelocityTransient
             z: 6
         }
-        TimelineTextLayer {
-            textModel: timelineScene.velocityTextModel
-            z: 7
-        }
-        TimelineInputItem {
-            objectName: "timelineVelocityInput"
-            anchors.fill: parent
-            Accessible.description: accessibilityDescription
-        }
     }
 
     TimelineSceneBand {
+        id: voiceChangesBand
+
         bandRect: root.voiceChangesBandRect
+        plotRect: root.voiceChangesBandPlotRect
         bandVisible: root.voiceChangesBandVisible
         bandName: "timelineQuickVoiceChanges"
+        plotInputName: "timelineVoiceChangesInput"
+        gutterInputName: "timelineVoiceChangesGutterInput"
         z: 2
 
         TimelineSceneLayer {
+            parent: voiceChangesBand.gutterSide
+            objectName: "timelineQuickVoiceChangesGutterChrome"
+            sceneLayer: TimelineQuickItem.VoiceChangesGutterChrome
+            z: 0
+        }
+        TimelineTextLayer {
+            parent: voiceChangesBand.gutterSide
+            textModel: timelineScene.voiceChangesGutterTextModel
+            z: 1
+        }
+
+        TimelineSceneLayer {
+            parent: voiceChangesBand.plotSide
             objectName: "timelineQuickVoiceChangesChrome"
             sceneLayer: TimelineQuickItem.VoiceChangesChrome
             z: 0
         }
         TimelineSceneLayer {
+            parent: voiceChangesBand.plotSide
             objectName: "timelineQuickVoiceChangesGrid"
             sceneLayer: TimelineQuickItem.VoiceChangesGrid
             z: 1
         }
         TimelineSceneLayer {
+            parent: voiceChangesBand.plotSide
             objectName: "timelineQuickVoiceChangesSpans"
             sceneLayer: TimelineQuickItem.VoiceChangesSpans
             z: 2
         }
         TimelineSceneLayer {
+            parent: voiceChangesBand.plotSide
             objectName: "timelineQuickVoiceChangesMarkers"
             sceneLayer: TimelineQuickItem.VoiceChangesMarkers
             z: 3
         }
         TimelineSceneLayer {
+            parent: voiceChangesBand.plotSide
             objectName: "timelineQuickVoiceChangesTransient"
             sceneLayer: TimelineQuickItem.VoiceChangesTransient
             z: 4
         }
         TimelineSceneLayer {
+            parent: voiceChangesBand.plotSide
             objectName: "timelineQuickVoiceChangesHover"
             sceneLayer: TimelineQuickItem.VoiceChangesHover
             z: 5
         }
         TimelineTextLayer {
+            parent: voiceChangesBand.plotSide
             textModel: timelineScene.voiceChangesTextModel
             z: 6
         }
         TimelineTextLayer {
+            parent: voiceChangesBand.plotSide
             textModel: timelineScene.voiceChangesHoverTextModel
             z: 7
-        }
-        TimelineInputItem {
-            objectName: "timelineVoiceChangesInput"
-            anchors.fill: parent
-            Accessible.description: accessibilityDescription
         }
     }
 
     TimelineSceneBand {
+        id: otherEventsBand
+
         bandRect: root.otherEventsBandRect
+        plotRect: root.otherEventsBandPlotRect
         bandVisible: root.otherEventsBandVisible
         bandName: "timelineQuickOtherEvents"
+        plotInputName: "timelineOtherEventsInput"
+        gutterInputName: "timelineOtherEventsGutterInput"
 
         TimelineSceneLayer {
+            parent: otherEventsBand.gutterSide
+            objectName: "timelineQuickOtherEventsGutterChrome"
+            sceneLayer: TimelineQuickItem.OtherEventsGutterChrome
+            z: 0
+        }
+        TimelineTextLayer {
+            parent: otherEventsBand.gutterSide
+            textModel: timelineScene.otherEventsTextModel
+            z: 1
+        }
+
+        TimelineSceneLayer {
+            parent: otherEventsBand.plotSide
             objectName: "timelineQuickOtherEventsChrome"
             sceneLayer: TimelineQuickItem.OtherEventsChrome
             z: 0
         }
         TimelineSceneLayer {
+            parent: otherEventsBand.plotSide
             objectName: "timelineQuickOtherEventsMarkers"
             sceneLayer: TimelineQuickItem.OtherEventsMarkers
             z: 1
         }
-        TimelineTextLayer {
-            textModel: timelineScene.otherEventsTextModel
-            z: 2
-        }
-
-        TimelineInputItem {
-            objectName: "timelineOtherEventsInput"
-            anchors.fill: parent
-            Accessible.description: accessibilityDescription
-        }
     }
 
-    // Single Quick playhead: one TimelinePlayheadItem paints the bloom, core
-    // bar and ruler triangle once instead of one Gradient copy per band. It
-    // spans the union of the visible scene bands and clips to their plot
-    // strips, so gutters and splitters get no playhead pixels. Motion rides
-    // on a Translate; clip scissors remap, bloom vertices stay put.
+    // Single Quick playhead: one static TimelinePlayheadItem paints the bloom,
+    // core bar and ruler triangle once. Its QSG clips remain in the
+    // timeline-column frame while its child transform moves only geometry, so
+    // gutters and splitters get no body pixels on position-only moves.
     TimelinePlayheadItem {
         id: timelinePlayhead
 
@@ -391,15 +500,15 @@ Item {
         enabled: false
         visible: timelineQuickView.playheadVisible
 
-        // Bands the playhead may paint in, with their timeline origins —
-        // never the track headers.
+        // Bands the playhead may paint in, with their published plot
+        // rectangles — never the track headers.
         readonly property var sceneBands: [
-            { visible: root.rulerBandVisible, rect: root.rulerBandRect, origin: root.rulerBandTimelineOrigin },
-            { visible: root.rollBandVisible, rect: root.rollBandRect, origin: root.rollBandTimelineOrigin },
-            { visible: root.automationBandVisible, rect: root.automationBandRect, origin: root.automationBandTimelineOrigin },
-            { visible: root.velocityBandVisible, rect: root.velocityBandRect, origin: root.velocityBandTimelineOrigin },
-            { visible: root.voiceChangesBandVisible, rect: root.voiceChangesBandRect, origin: root.voiceChangesBandTimelineOrigin },
-            { visible: root.otherEventsBandVisible, rect: root.otherEventsBandRect, origin: root.otherEventsBandTimelineOrigin }
+            { visible: root.rulerBandVisible, rect: root.rulerBandRect, plotRect: root.rulerBandPlotRect },
+            { visible: root.rollBandVisible, rect: root.rollBandRect, plotRect: root.rollBandPlotRect },
+            { visible: root.automationBandVisible, rect: root.automationBandRect, plotRect: root.automationBandPlotRect },
+            { visible: root.velocityBandVisible, rect: root.velocityBandRect, plotRect: root.velocityBandPlotRect },
+            { visible: root.voiceChangesBandVisible, rect: root.voiceChangesBandRect, plotRect: root.voiceChangesBandPlotRect },
+            { visible: root.otherEventsBandVisible, rect: root.otherEventsBandRect, plotRect: root.otherEventsBandPlotRect }
         ]
 
         readonly property var visibleBandRects: sceneBands.filter(band => band.visible)
@@ -414,19 +523,28 @@ Item {
                 : visibleBandRects.reduce((bottom, rect) => Math.max(bottom, rect.y + rect.height),
                                           -Infinity) - y
 
-        // Plot strip per visible band; the gutter left of the band's timeline
-        // origin must stay playhead-free.
-        plotRects: {
+        // The host-local canonical split anchors this timeline-column surface.
+        x: timelineQuickView.rulerPlotOrigin
+        width: Math.max(0, root.width - x)
+
+        // Published plot strips are host-local. Translate them by the canonical
+        // split into this item's timeline-column-local body-mask coordinates.
+        bodyPlotRects: {
             const strips = []
             for (const band of sceneBands) {
-                if (band.visible && band.origin < band.rect.width) {
-                    strips.push(Qt.rect(band.rect.x + band.origin, band.rect.y,
-                                        Math.max(0, band.rect.width - band.origin),
-                                        band.rect.height))
+                if (band.visible && band.plotRect.width > 0) {
+                    strips.push(Qt.rect(band.plotRect.x - timelineQuickView.rulerPlotOrigin,
+                                        band.plotRect.y, band.plotRect.width,
+                                        band.plotRect.height))
                 }
             }
             return strips
         }
+        // The item derives its triangle-only overhang clip from this local
+        // ruler plot; the body strips above remain strict at x >= 0.
+        rulerPlotRect: Qt.rect(root.rulerBandPlotRect.x - timelineQuickView.rulerPlotOrigin,
+                               root.rulerBandPlotRect.y, root.rulerBandPlotRect.width,
+                               root.rulerBandPlotRect.height)
 
         // Appearance (playheadChanged): color and shape.
         color: timelineQuickView.playheadColor
@@ -437,14 +555,10 @@ Item {
         trianglePointsUp: timelineQuickView.playheadTrianglePointsUp
         triangleHalfWidthPx: timelineQuickView.playheadTriangleHalfWidthPx
         triangleHeightPx: timelineQuickView.playheadTriangleHeightPx
-        triangleBandRect: root.rulerBandRect
 
-        // Motion (playheadXChanged): Translate moves the item. coreRootX
-        // remaps plot-strip clip rects only; bloom vertices stay put.
-        coreRootX: timelineQuickView.playheadRootX
-        x: 0
-        width: Math.max(glowLeft + glowRight, lineWidthPx)
-        transform: Translate { x: timelineQuickView.playheadRootX - timelinePlayhead.glowLeft }
+        // Position (playheadXChanged): raw timeline-local X moves only the
+        // item's scene-graph geometry; clip paths and bounds stay static.
+        localX: timelineQuickView.playheadLocalX
     }
 
     TrackHeaderBand {

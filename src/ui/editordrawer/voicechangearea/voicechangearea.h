@@ -37,12 +37,14 @@ class TimelineQuickView;
 // DOC_CC_VOICE commits for the current primary track. SongView owns the
 // shared camera and document; this module captures the primary track and
 // live camera state on every refresh, so it never holds a persistent track
-// identity. Input arrives normalized from the attached TimelineInputHost,
-// which also supplies bounds, fonts, DPR, focus, cursor, and coordinate
+// identity. Plot input arrives plot-local; gutter input is used only for
+// physical fixed-side behavior. The attached input host is always the plot
+// host, which supplies plot bounds, fonts, DPR, focus, cursor, and coordinate
 // mapping; native picker and menu popups anchor to SongView.
 class VoiceChangeArea final : public QObject, public songview::TimelineBandInteraction
 {
     Q_OBJECT
+    Q_DISABLE_COPY_MOVE(VoiceChangeArea)
 
   public:
     explicit VoiceChangeArea(SongView &owner, QObject *parent = nullptr);
@@ -51,8 +53,6 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
     void cancelInteraction();
     void documentChanged();
     void tracksRemapped(const TrackRemap &remap);
-    int plotOrigin() const;
-    int plotWidth() const;
     void presentPlayhead(double tick);
 
     void attachInputHost(songview::TimelineInputHost &host) override;
@@ -89,11 +89,10 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
         int program = 0;
     };
     struct Geometry {
-        int plotOrigin = 0;
         int markerHitRadius = 0;
         int hoverPaintPadding = 0;
         int gridMinimumCellWidth = 0;
-        void resolve(int timelineSplitX);
+        void resolve();
     };
     // Resolved label text for one program slot. Cached until the voicegroup
     // pointer, the slot's type, or its source name changes; songChanged drops
@@ -118,6 +117,7 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
     void clearHover();
     void updateHover(qreal x);
     QRectF bounds() const;
+    QRectF gutterRect() const;
     qreal devicePixelRatio() const;
     bool ready() const noexcept;
     int primaryTrack() const noexcept;
@@ -127,8 +127,8 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
     bool voiceMarkerAt(qreal x, DocLanePoint *out) const;
     bool voiceDragActive() const noexcept;
     void resetVoiceDrag();
-    void showPicker(const QPoint &globalPosition);
-    void showContextMenu(const QPoint &globalPosition);
+    void showPicker(qreal plotX);
+    void showContextMenu(qreal plotX, const QPoint &globalPosition);
     SongView &m_owner;
     const songview::TimeCamera &m_camera;
     const songview::Grid &m_grid;

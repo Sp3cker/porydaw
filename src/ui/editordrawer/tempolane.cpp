@@ -27,14 +27,14 @@ TempoLane::TempoLane(AutomationPage *page) noexcept : m_page(page) {}
 
 TempoLane::TempoLane(SongDocument &document) noexcept : m_document(&document) {}
 
-void TempoLane::updateLayout(int width, int top, const AutomationGeometry &geometry)
+void TempoLane::updateLayout(int width, int top, int gutterWidth,
+                             const AutomationGeometry &geometry)
 {
     // Expanded, the lane is a single automation row: the header shrinks to
-    // that row's label gutter (the collapse click target) while the body
+    // the resolved physical gutter (the collapse click target) while the body
     // spans the full row. Collapsed, only a thin caption strip remains.
     const int height = totalHeight(geometry);
-    m_header = {layout::space(layout::Space::Zero), top, m_expanded ? geometry.plotOrigin : width,
-                height};
+    m_header = {layout::space(layout::Space::Zero), top, m_expanded ? gutterWidth : width, height};
     m_body = {layout::space(layout::Space::Zero), top, width, m_expanded ? height : 0};
 }
 

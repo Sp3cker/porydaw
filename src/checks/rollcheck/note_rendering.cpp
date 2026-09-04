@@ -36,15 +36,17 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
     const DocNote &noteA = fixture.noteA;
     const int undoBaseline = doc.undoStack()->index();
     const qreal displayDpr = roll->devicePixelRatio();
-    const qreal noteLeftX =
-        view.camera().displayX(double(noteA.tick), pianoKeyboardWidth, displayDpr);
+    const auto plotToBandX = [pianoKeyboardWidth](qreal x) {
+        return qreal(pianoKeyboardWidth) + x;
+    };
+    const qreal noteLeftX = view.camera().displayX(double(noteA.tick), 0, displayDpr);
     const qreal noteRightX =
-        view.camera().displayX(double(noteA.tick + noteA.duration), pianoKeyboardWidth, displayDpr);
+        view.camera().displayX(double(noteA.tick + noteA.duration), 0, displayDpr);
     const QRectF noteFrame = rows.noteRect(noteLeftX, noteRightX, noteA.key);
     const QRectF paintedNoteBox = rows.noteBox(noteFrame);
     const QColor expectedNoteColor = SongView::noteColor(track, 100);
-    const qreal abuttingRightX = view.camera().displayX(double(noteA.tick + 2 * noteA.duration),
-                                                        pianoKeyboardWidth, displayDpr);
+    const qreal abuttingRightX =
+        view.camera().displayX(double(noteA.tick + 2 * noteA.duration), 0, displayDpr);
     auto fail = [&](const char *what) { check.fail(what); };
     // Timeline overlays are composited above notes and can tint frame colors
     // by a few channel values.
@@ -69,7 +71,7 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
         const QImage tinyImage = check.captureQuickFramebuffer();
         const qreal tinyDpr = tinyImage.devicePixelRatio();
         const auto toTinyPixel = [tinyDpr](qreal position) { return qRound(position * tinyDpr); };
-        const int tinyCenterX = toTinyPixel(tinyBox.center().x());
+        const int tinyCenterX = toTinyPixel(plotToBandX(tinyBox.center().x()));
         const int tinyTopPixel = toTinyPixel(tinyBox.top());
         // Quick thins the border to the widest frame that leaves a face
         // (fittedFrameThickness), not the painter's fixed single pixel.
@@ -111,11 +113,11 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
         const auto toPhysicalPixel = [devicePixelRatio](qreal position) {
             return qRound(position * devicePixelRatio);
         };
-        const int leftPixel = toPhysicalPixel(fractionalNoteBox.left());
-        const int rightPixel = toPhysicalPixel(fractionalNoteBox.right());
+        const int leftPixel = toPhysicalPixel(plotToBandX(fractionalNoteBox.left()));
+        const int rightPixel = toPhysicalPixel(plotToBandX(fractionalNoteBox.right()));
         const int topPixel = toPhysicalPixel(fractionalNoteBox.top());
         const int bottomPixel = toPhysicalPixel(fractionalNoteBox.bottom());
-        const int centerPixelX = toPhysicalPixel(fractionalNoteBox.center().x());
+        const int centerPixelX = toPhysicalPixel(plotToBandX(fractionalNoteBox.center().x()));
         const int centerPixelY = toPhysicalPixel(fractionalNoteBox.center().y());
         // Frame weights scale with the display ratio (1-DIP border, 1.5-DIP
         // ring) — assert the display-scaled pixel counts.
@@ -168,9 +170,9 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
     const QImage ghostNoteRender = check.captureQuickFramebuffer();
     const qreal ghostDpr = ghostNoteRender.devicePixelRatio();
     const auto toGhostPixel = [ghostDpr](qreal position) { return qRound(position * ghostDpr); };
-    const QPoint noteInteriorSample(toGhostPixel(paintedNoteBox.center().x()),
+    const QPoint noteInteriorSample(toGhostPixel(plotToBandX(paintedNoteBox.center().x())),
                                     toGhostPixel(paintedNoteBox.center().y()));
-    const int ghostCenterX = toGhostPixel(paintedNoteBox.center().x());
+    const int ghostCenterX = toGhostPixel(plotToBandX(paintedNoteBox.center().x()));
     const int ghostTopPixel = toGhostPixel(paintedNoteBox.top());
     const int ghostBottomPixel = toGhostPixel(paintedNoteBox.bottom()) - 1;
     const QRgb ghostTopEdge = ghostNoteRender.pixel(ghostCenterX, ghostTopPixel);
@@ -253,10 +255,10 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
         const auto toNamesPixel = [namesDpr](qreal position) {
             return qRound(position * namesDpr);
         };
-        const QRect noteARegion(
-            QPoint(toNamesPixel(namedNoteBox.left()), toNamesPixel(namedNoteBox.top())),
-            QPoint(toNamesPixel(namedNoteBox.right()) - 1,
-                   toNamesPixel(namedNoteBox.bottom()) - 1));
+        const QRect noteARegion(QPoint(toNamesPixel(plotToBandX(namedNoteBox.left())),
+                                       toNamesPixel(namedNoteBox.top())),
+                                QPoint(toNamesPixel(plotToBandX(namedNoteBox.right())) - 1,
+                                       toNamesPixel(namedNoteBox.bottom()) - 1));
 
         // With the other track selected note A is a ghost, and its face must
         // render identically with the mode on or off.
@@ -302,8 +304,8 @@ ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
         const int runRowTop = toNamesPixel(runRowBox.top());
         const int runRowBottom = toNamesPixel(runRowBox.bottom()) - 1;
         const auto labelStrip = [&](uint64_t tick, int width) {
-            const int left = toNamesPixel(
-                view.camera().displayX(double(tick), pianoKeyboardWidth, namedRows.dpr()));
+            const int left =
+                toNamesPixel(plotToBandX(view.camera().displayX(double(tick), 0, namedRows.dpr())));
             return QRect(QPoint(left, runRowTop), QPoint(left + width - 1, runRowBottom));
         };
         if (runKey < 0 || closeTicks * pxPerTick > 12.0 ||
@@ -413,6 +415,9 @@ ScenarioContinuation runSelectionRasterScenarios(Harness &check,
     songview::TimelineInputItem *roll = &check.rollInput();
     const int track = check.track();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
+    const auto plotToBandX = [pianoKeyboardWidth](qreal x) {
+        return qreal(pianoKeyboardWidth) + x;
+    };
     const Cell &a = fixture.a;
     const int undoBaseline = doc.undoStack()->index();
     auto fail = [&](const char *what) { check.fail(what); };
@@ -443,18 +448,15 @@ ScenarioContinuation runSelectionRasterScenarios(Harness &check,
             for (int key = 115; key >= 24 && cell.key < 0; --key) {
                 if (shortRows.top(key) < 3.0 || shortRows.bottom(key) > roll->height() - 3.0)
                     continue;
-                for (int probe = 8; probe < roll->width() - pianoKeyboardWidth - 40; probe += 24) {
+                for (int probe = 8; probe < roll->width() - 40; probe += 24) {
                     const uint64_t tick =
                         view.grid().snapTickDown(view.camera().tickAtContentX(probe));
                     const uint64_t dur = view.grid().gridTicksAt(tick);
-                    const int x0 = pianoKeyboardWidth + view.camera().contentX(double(tick));
+                    const int x0 = view.camera().contentX(double(tick));
                     const int xs =
-                        pianoKeyboardWidth +
                         view.camera().contentX(double(tick + view.grid().snapTicksAt(tick)));
-                    const int x2 =
-                        pianoKeyboardWidth + view.camera().contentX(double(tick + 2 * dur));
-                    if (x0 < pianoKeyboardWidth || xs - x0 < 8 || x2 - x0 < 24 ||
-                        x2 >= roll->width())
+                    const int x2 = view.camera().contentX(double(tick + 2 * dur));
+                    if (x0 < 0 || xs - x0 < 8 || x2 - x0 < 24 || x2 >= roll->width())
                         continue;
                     bool blocked = false;
                     for (int neighborKey = key - 1; neighborKey <= key + 1; ++neighborKey)
@@ -497,15 +499,14 @@ ScenarioContinuation runSelectionRasterScenarios(Harness &check,
                                       dragCell.center + QPoint(0, 12), Qt::LeftButton, Qt::NoButton,
                                       Qt::ControlModifier);
 
-            const int shortLeftX = pianoKeyboardWidth + view.camera().contentX(double(cell.tick));
-            const int shortRightX =
-                pianoKeyboardWidth + view.camera().contentX(double(cell.tick + 2 * cell.dur));
+            const int shortLeftX = view.camera().contentX(double(cell.tick));
+            const int shortRightX = view.camera().contentX(double(cell.tick + 2 * cell.dur));
             const QRectF shortRect = shortRows.noteRect(shortLeftX, shortRightX, cell.key);
             const QRectF shortBox = shortRows.noteBox(shortRect);
 
             const int frameMargin = songview::noteBorderPixels(rasterDpr);
-            const int boxLeftPixel = toRasterPixel(shortBox.left());
-            const int boxRightPixel = toRasterPixel(shortBox.right());
+            const int boxLeftPixel = toRasterPixel(plotToBandX(shortBox.left()));
+            const int boxRightPixel = toRasterPixel(plotToBandX(shortBox.right()));
             const int boxTopPixel = toRasterPixel(shortBox.top());
             const int boxBottomPixel = toRasterPixel(shortBox.bottom());
             const int inkTop = boxTopPixel + frameMargin;

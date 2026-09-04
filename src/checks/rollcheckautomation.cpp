@@ -86,7 +86,6 @@ struct ExpectedAutomationGeometry {
     int pointDetailThreshold;
     int timelineMinimumPixelsPerBeat;
     int timelineMaximumPixelsPerBeat;
-    int plotOrigin;
     int valuePlotPadding;
 };
 
@@ -103,7 +102,6 @@ ExpectedAutomationGeometry expectedAutomationGeometry()
         layout::fontPx(2.0),
         layout::fontPx(1.0 / 3.0),
         layout::fontPx(160.0 / 3.0),
-        layout::fontPx(17.5 + 13.0 / 3.0),
         qRound(std::max(layout::fontPxF(7.0 / 24.0) * 0.75 + layout::fontPxF(1.0 / 12.0),
                         layout::fontPxF(3.0 / 8.0) * 0.75 + layout::fontPxF(1.0 / 6.0) * 0.5)),
     };
@@ -167,13 +165,12 @@ std::optional<QRectF> quickTextRect(QAbstractItemModel *model, const QString &te
     return std::nullopt;
 }
 
-songview::TimelineInputItem *automationInputItem(SongView &view)
+songview::TimelineInputItem *automationInputItem(SongView &view, const QString &objectName)
 {
     auto *quickCanvas =
         view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
     return quickCanvas && quickCanvas->rootObject()
-               ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(
-                     QStringLiteral("timelineAutomationInput"))
+               ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(objectName)
                : nullptr;
 }
 
@@ -215,7 +212,7 @@ QPointF automationNodePoint(SongView &view, const AutomationPage &page, qreal dp
                             uint64_t tick, int value)
 {
     const QRect body = automationRowBody(page, id);
-    return {view.camera().displayX(double(tick), geometry.plotOrigin, dpr),
+    return {view.camera().displayX(double(tick), 0.0, dpr),
             AutomationProjection::valueY(body, geometry,
                                          CoreTimeDefaults::laneValueMinimum(id.controller),
                                          CoreTimeDefaults::laneValueMaximum(id.controller), value)};
@@ -285,8 +282,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     view.setEditCursorTick(24);
     page.refreshLiveState(live);
     pumpQuickEvents();
-    expected.plotOrigin = page.canvas()->plotOrigin();
-    auto projectionGeometry = AutomationGeometry::resolve(expected.plotOrigin);
+    auto projectionGeometry = AutomationGeometry::resolve();
 
     int failures = 0;
     const auto recordFailure = [&](const QString &message) {
@@ -316,12 +312,16 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     };
     check(!automationBandRect().isNull(),
           QStringLiteral("automation page did not publish its canonical band"));
-    songview::TimelineInputItem *const automationInput = automationInputItem(view);
-    check(automationInput != nullptr,
-          QStringLiteral("automation page did not expose its Quick input item"));
+    songview::TimelineInputItem *const automationInput =
+        automationInputItem(view, QStringLiteral("timelineAutomationInput"));
+    songview::TimelineInputItem *const automationGutterInput =
+        automationInputItem(view, QStringLiteral("timelineAutomationGutterInput"));
+    check(automationInput != nullptr && automationGutterInput != nullptr,
+          QStringLiteral("automation page did not expose its physical Quick input items"));
     auto *quickScene = view.findChild<songview::TimelineQuickScene *>();
     check(quickScene, QStringLiteral("automation page did not expose its retained Quick scene"));
     const AutomationBandInput band{page, *automationInput};
+    const AutomationBandInput gutterBand{page, *automationGutterInput};
     // Viewport positions: content probes shift up by the page's vertical scroll.
     const auto viewportPosition = [&](const QPointF &contentPosition) {
         return contentPosition - QPointF(0.0, page.verticalScroll());
@@ -339,29 +339,6 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             !image.isNull(),
             QStringLiteral("automation viewport framebuffer capture failed: %1").arg(captureError));
         return image;
-    };
-    const auto contentToViewport = [&](const QRect &content) {
-        return QRect{viewportPosition(content.topLeft()).toPoint(), content.size()};
-    };
-    const auto captureAutomationContent = [&](const QRect &content) {
-        const QRect viewportRect = contentToViewport(content);
-        const QRect bandBounds(QPoint(0, 0), automationBandRect().size());
-        check(bandBounds.contains(viewportRect),
-              QStringLiteral("automation content crop is outside the automation band"));
-        const QImage image = captureAutomationViewport();
-        if (image.isNull() || !bandBounds.contains(viewportRect))
-            return QImage{};
-        const qreal imageDpr = image.devicePixelRatio();
-        const int left = qRound(viewportRect.left() * imageDpr);
-        const int top = qRound(viewportRect.top() * imageDpr);
-        const int right = qRound((viewportRect.right() + 1) * imageDpr);
-        const int bottom = qRound((viewportRect.bottom() + 1) * imageDpr);
-        const QRect crop(left, top, right - left, bottom - top);
-        check(image.rect().contains(crop),
-              QStringLiteral("automation content crop exceeds the viewport framebuffer"));
-        QImage result = image.copy(crop);
-        result.setDevicePixelRatio(imageDpr);
-        return result;
     };
     auto *quickHost =
         view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
@@ -433,52 +410,66 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                          "dimensions and fill the resized TimelineScrollbar track"));
     view.setDrawerSectionHeight(EditorDrawerPage::Automations, scrollbarSectionHeight);
     pumpQuickEvents();
-    const int automationPlotStart = page.canvas()->plotOrigin();
-    const QRect labelGutter = page.canvas()->labelGutter();
-    const QRect automationLabelGutterInHost =
-        automationBandGeometry ? QRect(labelGutter.x(), labelGutter.y(), labelGutter.width(),
-                                       automationBandGeometry->rect.height())
-                                     .translated(automationBandGeometry->rect.topLeft())
-                               : QRect{};
+    const int automationGutterWidth =
+        automationBandGeometry
+            ? std::max(0, automationBandGeometry->plotRect.x() - automationBandGeometry->rect.x())
+            : 0;
+    const QRect automationGutterRect(
+        automationBandGeometry ? automationBandGeometry->rect.topLeft() : QPoint{},
+        QSize(automationGutterWidth,
+              automationBandGeometry ? automationBandGeometry->rect.height() : 0));
     check(quickHost && quickHost->quickWindow() && automationBandGeometry &&
-              !automationLabelGutterInHost.isEmpty() &&
-              quickHost->geometry().contains(automationLabelGutterInHost) &&
+              !automationGutterRect.isEmpty() &&
+              quickHost->geometry().contains(automationGutterRect) &&
               quickHost->quickWindow()->mask().isEmpty(),
-          QStringLiteral(
-              "unmasked Quick host must fully contain the automation label-gutter column"));
-    // The painted header includes the label gutter's symmetric horizontal margins.
-    const QRect headerRect(0, 0, labelGutter.width() + 2 * labelGutter.x(),
-                           automationViewportSize.height());
-    const QRect plot(automationPlotStart, 0,
-                     std::max(0, automationViewportSize.width() - automationPlotStart),
-                     automationViewportSize.height());
-    const bool headerEndsAtPlotOrigin = headerRect.right() + 1 == automationPlotStart;
+          QStringLiteral("unmasked Quick host must fully contain the automation gutter"));
+    const QSize automationPlotSize =
+        automationBandGeometry ? automationBandGeometry->plotRect.size() : QSize{};
+    const QPoint quickHostOrigin = quickHost ? quickHost->geometry().topLeft() : QPoint{};
+    const QRectF expectedAutomationPlotInputRect =
+        automationBandGeometry
+            ? QRectF(automationBandGeometry->plotRect.translated(-quickHostOrigin))
+            : QRectF{};
+    const QRectF expectedAutomationGutterInputRect =
+        QRectF(automationGutterRect.translated(-quickHostOrigin));
+    const QRectF automationPlotInputRect(
+        automationInput->mapToScene(QPointF{}),
+        QSizeF(automationInput->width(), automationInput->height()));
+    const QRectF automationGutterInputRect(
+        automationGutterInput->mapToScene(QPointF{}),
+        QSizeF(automationGutterInput->width(), automationGutterInput->height()));
     const std::optional<songview::TimelineBandGeometry> rollBandGeometry =
         view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
-    const int pianoGridStartOnView =
-        rollBandGeometry ? rollBandGeometry->rect.x() + rollBandGeometry->timelineOrigin : -1;
+    const int pianoGridStartOnView = rollBandGeometry ? rollBandGeometry->plotRect.x() : -1;
     const int automationPlotStartOnView =
-        automationBandGeometry
-            ? automationBandGeometry->rect.x() + automationBandGeometry->timelineOrigin
-            : -1;
-    check(automationBandGeometry && automationBandGeometry->timelineOrigin == automationPlotStart &&
-              rollBandGeometry && automationPlotStartOnView == pianoGridStartOnView,
-          QStringLiteral("editable automation lanes must start vertically inline with the piano "
-                         "grid (automation %1 = %2 + %3, piano %4)")
+        automationBandGeometry ? automationBandGeometry->plotRect.x() : -1;
+    check(automationBandGeometry && !automationBandGeometry->plotRect.isEmpty() &&
+              automationPlotStartOnView == view.timelineSplitX() &&
+              resizedScrollbarRect.right() <= automationBandGeometry->rect.x() &&
+              rollBandGeometry && !rollBandGeometry->plotRect.isEmpty() &&
+              pianoGridStartOnView == view.timelineSplitX(),
+          QStringLiteral("editable automation plotRect must start at timelineSplitX and align "
+                         "with the piano grid while excluding its left scrollbar "
+                         "(automation %1, rect-x %2, local fixed span %3, piano %4, split %5)")
               .arg(automationPlotStartOnView)
               .arg(automationBandGeometry ? automationBandGeometry->rect.x() : -1)
-              .arg(automationPlotStart)
-              .arg(pianoGridStartOnView));
-    check(headerEndsAtPlotOrigin && labelGutter.left() >= headerRect.left() &&
-              labelGutter.right() < automationPlotStart && plot.left() == automationPlotStart &&
-              plot.width() == std::max(0, automationViewportSize.width() - automationPlotStart),
-          QStringLiteral("automation header must end exactly at the editable lane start"));
-    const QPointF panStart(expected.plotOrigin + 160, expected.defaultRowHeight / 2);
+              .arg(automationGutterWidth)
+              .arg(pianoGridStartOnView)
+              .arg(view.timelineSplitX()));
+    check(automationInput->x() == 0.0 && automationInput->y() == 0.0 &&
+              qRound(automationInput->width()) == automationPlotSize.width() &&
+              qRound(automationInput->height()) == automationPlotSize.height() &&
+              automationGutterInput->x() == 0.0 && automationGutterInput->y() == 0.0 &&
+              qRound(automationGutterInput->width()) == automationGutterWidth &&
+              qRound(automationGutterInput->height()) == automationBandGeometry->rect.height() &&
+              automationPlotInputRect == expectedAutomationPlotInputRect &&
+              automationGutterInputRect == expectedAutomationGutterInputRect,
+          QStringLiteral("automation plot and gutter inputs did not match their physical spans"));
+    const QPointF panStart(160, expected.defaultRowHeight / 2);
     const QPointF panFirstMove = panStart - QPointF(24, 0);
     const QPointF panSecondMove = panStart - QPointF(48, 0);
     constexpr uint64_t panProbeTick = 240;
-    const qreal panProbeBefore =
-        view.camera().displayX(double(panProbeTick), expected.plotOrigin, dpr);
+    const qreal panProbeBefore = view.camera().displayX(double(panProbeTick), 0.0, dpr);
     band.mouse(QEvent::MouseButtonPress, panStart, Qt::MiddleButton, Qt::MiddleButton,
                Qt::NoModifier);
     band.mouse(QEvent::MouseMove, panFirstMove, Qt::NoButton, Qt::MiddleButton, Qt::NoModifier);
@@ -486,8 +477,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     band.mouse(QEvent::MouseMove, panSecondMove, Qt::NoButton, Qt::MiddleButton, Qt::NoModifier);
     band.mouse(QEvent::MouseButtonRelease, panSecondMove, Qt::MiddleButton, Qt::NoButton,
                Qt::NoModifier);
-    const qreal panProbeAfter =
-        view.camera().displayX(double(panProbeTick), expected.plotOrigin, dpr);
+    const qreal panProbeAfter = view.camera().displayX(double(panProbeTick), 0.0, dpr);
     check(panRemainedActive && qAbs((panProbeBefore - panProbeAfter) - 48.0) < 0.5,
           QStringLiteral("middle-button automation pan stopped after its first scroll refresh"));
     view.setEditorHorizontalScroll(0.0);
@@ -767,7 +757,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     const int panHeight = heightFor(pan);
     const int panY = panTop + panHeight / 2;
     const uint64_t clickTick = 120;
-    const int clickX = qRound(view.camera().displayX(double(clickTick), expected.plotOrigin, dpr));
+    const int clickX = qRound(view.camera().displayX(double(clickTick), 0.0, dpr));
     const QPoint clickPoint(clickX, panY);
     const QByteArray clickMidi = document.smf().write();
     const uint64_t clickRevision = document.revision();
@@ -966,14 +956,15 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     // A row resize boundary owns the primary click, so its idle affordance
     // must not advertise an insertion in either adjacent row.
     band.leave();
+    gutterBand.leave();
     QCoreApplication::processEvents();
     const QRect lfoBody = automationRowBody(page, lfo);
-    const QPoint boundaryPoint(page.canvas()->plotOrigin() + 48, lfoBody.top() + lfoBody.height());
+    const QPoint boundaryPoint(layout::space(layout::Space::One), lfoBody.top() + lfoBody.height());
     const QImage boundaryBaseline = captureAutomationViewport();
-    band.mouse(QEvent::MouseMove, boundaryPoint, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+    gutterBand.mouse(QEvent::MouseMove, boundaryPoint, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
     QCoreApplication::processEvents();
     const QImage boundaryHover = captureAutomationViewport();
-    check(automationInput->cursor().shape() == Qt::SplitVCursor,
+    check(automationGutterInput->cursor().shape() == Qt::SplitVCursor,
           QStringLiteral("automation row boundary did not advertise its resize action"));
     check(!boundaryBaseline.isNull() && boundaryHover == boundaryBaseline,
           QStringLiteral("automation row boundary painted an insertion preview"));
@@ -1260,8 +1251,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     QCoreApplication::processEvents();
     const EditorViewState drawerBeforeAutomationPublication = view.editorViewState();
     const qreal zoomAnchorContentX = 200.0;
-    const QPoint zoomAnchor(expected.plotOrigin + qRound(zoomAnchorContentX),
-                            expected.defaultRowHeight / 2);
+    const QPoint zoomAnchor(qRound(zoomAnchorContentX), expected.defaultRowHeight / 2);
     const double tickBeforeZoom = view.camera().tickAtContentX(zoomAnchorContentX);
     const double zoomBefore = view.camera().pxPerBeat();
     band.wheel(zoomAnchor, QPoint(), QPoint(0, 120), Qt::NoButton, Qt::NoModifier,
@@ -1277,8 +1267,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     QCoreApplication::processEvents();
 
     const int initialHeight = page.automationViewState().laneHeight;
-    band.wheel(QPointF(QPoint(expected.plotOrigin + 20, expected.defaultRowHeight / 2)), QPoint(),
-               QPoint(0, 120), Qt::NoButton, Qt::ControlModifier, Qt::NoScrollPhase, false);
+    gutterBand.wheel(QPointF(QPoint(20, expected.defaultRowHeight / 2)), QPoint(), QPoint(0, 120),
+                     Qt::NoButton, Qt::ControlModifier, Qt::NoScrollPhase, false);
     check(page.automationViewState().laneHeight > initialHeight,
           QStringLiteral("Ctrl-wheel did not publish typed row-height state"));
     const EditorViewState afterAutomationPublication = view.editorViewState();
@@ -1289,8 +1279,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
           QStringLiteral("automation publication discarded drawer state"));
 
     const int selectionRowY = automationRowTop(page, pan) + heightFor(pan) / 2;
-    const QPoint selectionStart(expected.plotOrigin + 24, selectionRowY);
-    const QPoint selectionEnd(expected.plotOrigin + 216, selectionRowY);
+    const QPoint selectionStart(24, selectionRowY);
+    const QPoint selectionEnd(216, selectionRowY);
     const QPoint selectionContractedEnd((selectionStart.x() + selectionEnd.x()) / 2,
                                         selectionEnd.y());
     band.mouse(QEvent::MouseButtonPress, selectionStart, Qt::RightButton, Qt::RightButton,
@@ -1314,7 +1304,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
                 selectionActions.push_back(action->text());
             menu->close();
         });
-        const QPoint selectionInside(expected.plotOrigin + 100, selectionRowY);
+        const QPoint selectionInside(100, selectionRowY);
         band.mouse(QEvent::MouseButtonPress, selectionInside, Qt::RightButton, Qt::RightButton,
                    Qt::NoModifier);
         band.mouse(QEvent::MouseButtonRelease, selectionInside, Qt::RightButton, Qt::NoButton,
@@ -1322,7 +1312,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         popupCheck(selectionActions.contains(QStringLiteral("Clear time selection")),
                    QStringLiteral("right click inside a time selection did not open its menu"));
     }
-    const QPoint selectionOutside(expected.plotOrigin + 260, selectionRowY);
+    const QPoint selectionOutside(260, selectionRowY);
     band.mouse(QEvent::MouseButtonPress, selectionOutside, Qt::LeftButton, Qt::LeftButton,
                Qt::NoModifier);
     check(!view.selectionModel().timeSelection().active(),
@@ -1343,11 +1333,11 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     band.mouse(QEvent::MouseButtonRelease, selectionOutside, Qt::RightButton, Qt::NoButton,
                Qt::NoModifier);
     view.selectionModel().setTimeSelection(timeSelection);
-    const QPoint laneHeader(expected.plotOrigin - layout::space(layout::Space::One), selectionRowY);
-    band.mouse(QEvent::MouseButtonPress, laneHeader, Qt::LeftButton, Qt::LeftButton,
-               Qt::NoModifier);
-    band.mouse(QEvent::MouseButtonRelease, laneHeader, Qt::LeftButton, Qt::NoButton,
-               Qt::NoModifier);
+    const QPoint laneHeader(layout::space(layout::Space::One), selectionRowY);
+    gutterBand.mouse(QEvent::MouseButtonPress, laneHeader, Qt::LeftButton, Qt::LeftButton,
+                     Qt::NoModifier);
+    gutterBand.mouse(QEvent::MouseButtonRelease, laneHeader, Qt::LeftButton, Qt::NoButton,
+                     Qt::NoModifier);
     check(!view.selectionModel().timeSelection().active(),
           QStringLiteral("left click in a lane header did not clear the time selection"));
     view.selectionModel().setTimeSelection(timeSelection);
@@ -1412,7 +1402,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         const int groupPlotTop = groupPanBody.top() + expected.valuePlotPadding;
         const int groupPlotBottom = groupPanBody.bottom() + 1 - expected.valuePlotPadding;
         const auto groupPointAt = [&](uint64_t tick, int value) {
-            return QPoint(qRound(view.camera().displayX(double(tick), expected.plotOrigin, dpr)),
+            return QPoint(qRound(view.camera().displayX(double(tick), 0.0, dpr)),
                           groupPlotBottom - value * (groupPlotBottom - groupPlotTop) / 127);
         };
         const QPoint groupAPoint = groupPointAt(groupA, groupAValue);
@@ -1446,7 +1436,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         const qreal ringWidth = projectionGeometry.selectedNodeRingDipWidth;
         const auto hasSelectionRing = [&](const songview::TimelineQuickLayerData &layer,
                                           const QPoint &contentPoint) {
-            const QPointF center = contentToViewport(QRect(contentPoint, QSize(1, 1))).topLeft();
+            const QPointF center = QPointF(contentPoint) - QPointF(0.0, page.verticalScroll());
             const qreal tolerance = layout::singlePixel();
             const qreal inner = std::max<qreal>(0.0, ringRadius - ringWidth / 2.0 - tolerance);
             const qreal outer = ringRadius + ringWidth / 2.0 + tolerance;
@@ -1473,7 +1463,8 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
             const qreal framebufferDpr = framebuffer.devicePixelRatio();
             if (framebufferDpr <= 0.0)
                 return false;
-            const QPointF center = contentToViewport(QRect(contentPoint, QSize(1, 1))).topLeft();
+            const QPointF center =
+                QPointF(contentPoint) + QPointF(automationGutterWidth, -page.verticalScroll());
             const qreal tolerance = 2 * layout::singlePixel();
             const qreal inner = std::max<qreal>(0.0, ringRadius - ringWidth / 2.0 - tolerance);
             const qreal outer = ringRadius + ringWidth / 2.0 + tolerance;
@@ -1653,7 +1644,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
         const int lockPlotTop = lockPanTop + expected.valuePlotPadding;
         const int lockPlotBottom = lockPanTop + lockPanHeight - expected.valuePlotPadding;
         const auto lockPointAt = [&](uint64_t tick, int value) {
-            return QPoint(qRound(view.camera().displayX(double(tick), expected.plotOrigin, dpr)),
+            return QPoint(qRound(view.camera().displayX(double(tick), 0.0, dpr)),
                           lockPlotBottom - value * (lockPlotBottom - lockPlotTop) / 127);
         };
         const QPoint lockAPoint = lockPointAt(lockA, lockAValue);
@@ -1732,8 +1723,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     const auto checkCancelledGesture = [&](auto cancel, const QString &route) {
         const uint64_t revision = document.revision();
         const int undoIndex = document.undoStack()->index();
-        const QPoint start(expected.plotOrigin + 24,
-                           automationRowTop(page, pan) + heightFor(pan) / 2);
+        const QPoint start(24, automationRowTop(page, pan) + heightFor(pan) / 2);
         band.mouse(QEvent::MouseButtonPress, start, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
         band.mouse(QEvent::MouseMove, start + QPoint(80, 12), Qt::NoButton, Qt::LeftButton,
                    Qt::NoModifier);

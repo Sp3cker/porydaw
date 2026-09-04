@@ -50,8 +50,7 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
 
     VelocityAreaDiagnostics diagnostics() const noexcept;
     const VelocityAxis &axis() const noexcept { return m_axis; }
-    int plotOrigin() const;
-    int plotWidth() const;
+    int gutterWidth() const noexcept;
     bool useDetents() const noexcept { return m_useDetents; }
     bool isPsgContext() const { return m_axis.map().isPsg(); }
     void clearTrackHeaderSelection();
@@ -81,7 +80,6 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
         Pan,
     };
     struct Geometry {
-        int plotOrigin = 0;
         int densityThresholdD1 = 0;
         int densityThresholdD2 = 0;
         int densityThresholdD3 = 0;
@@ -90,7 +88,6 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
         int durationLineVerticalRadius = 0;
         int durationLineHorizontalSlop = 0;
         int relativeDragActivationDistance = 0;
-        int defaultPixelsPerBeat = 0;
         qreal nodePaintRadius = 0.0;
         qreal nodeOutlineDipWidth = 0.0;
         qreal selectedNodeRingRadius = 0.0;
@@ -98,7 +95,7 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
         qreal stemDipWidth = 0.0;
         qreal selectedStemDipWidth = 0.0;
 
-        void resolve(int keyColumnWidth);
+        void resolve();
     };
 
     // Snapshot of one note taken when a gesture begins. Mouse movement must never
@@ -118,9 +115,10 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
 
     void requestQuickUpdate();
     void rebuildQuickScene(songview::TimelineQuickScene &scene);
-    void rebuildQuickChrome(songview::TimelineQuickScene &scene, const QRectF &full, int origin,
-                            int separatorX);
-    void rebuildQuickAxis(songview::TimelineQuickScene &scene, const QRectF &full, int separatorX);
+    void rebuildQuickChrome(songview::TimelineQuickScene &scene, const QRectF &plot,
+                            const QRectF &gutter, qreal separatorX);
+    void rebuildQuickAxis(songview::TimelineQuickScene &scene, const QRectF &gutter,
+                          qreal separatorX);
     void rebuildQuickGrid(songview::TimelineQuickScene &scene, const QRectF &plot, int origin,
                           qreal dpr);
     void rebuildQuickPsgBands(songview::TimelineQuickScene &scene, const QRectF &plot);
@@ -146,7 +144,6 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
     double levelBoundaryY(const VelocityMap &map, int lowerLevel) const;
     double levelCenterY(const VelocityMap &map, int level) const;
     uint8_t displayedVelocity(const DocNote &note) const;
-    double pxPerBeat() const;
     bool inRuler(const QPointF &position) const;
     int rulerVelocityAt(const QPointF &position) const;
     void setSelection(const std::vector<NoteId> &selection);

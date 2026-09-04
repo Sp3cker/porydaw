@@ -19,14 +19,7 @@
 
 void AutomationCanvas::refreshGeometry()
 {
-    m_geometry = AutomationGeometry::resolve(m_page.m_owner.timelineSplitX());
-    m_geometry.plotOrigin = std::max(layout::space(layout::Space::Zero),
-                                     m_geometry.plotOrigin - layout::space(layout::Space::Two));
-    const int gutterMargin = layout::space(layout::Space::One);
-    m_labelGutter = QRect(
-        gutterMargin, layout::space(layout::Space::Zero),
-        std::max(layout::space(layout::Space::Zero), m_geometry.plotOrigin - 2 * gutterMargin),
-        layout::space(layout::Space::Zero));
+    m_geometry = AutomationGeometry::resolve();
 }
 
 const QString &AutomationCanvas::refreshCcSummaryText(CCLanes::RowTextCache &cache,
@@ -56,7 +49,7 @@ const QString &AutomationCanvas::refreshCcSummaryText(CCLanes::RowTextCache &cac
 
 AutomationCanvas::AutomationCanvas(AutomationPage &page)
     : QObject(&page)
-    , m_geometry(AutomationGeometry::resolve(page.m_owner.timelineSplitX()))
+    , m_geometry(AutomationGeometry::resolve())
     , m_laneTitleFont(typography::bold(typography::caption(page.m_owner.font())))
     , m_laneCaptionFont(typography::regular(typography::caption(page.m_owner.font())))
     , m_laneTextLayout(layout::twoLineText(m_laneTitleFont, m_laneTitleFont, m_laneCaptionFont,
@@ -334,7 +327,8 @@ int AutomationCanvas::tempoTop() const
 
 void AutomationCanvas::syncPinnedTempoLayout()
 {
-    m_tempoLane.updateLayout(m_page.automationViewportSize().width(), tempoTop(), m_geometry);
+    m_tempoLane.updateLayout(m_page.automationViewportSize().width(), tempoTop(),
+                             m_page.m_owner.timelineSplitX(), m_geometry);
     for (NodeLaneSlot &slot : m_nodeStack) {
         if (slot.isTempo()) {
             slot.body = m_tempoLane.bodyRect();
@@ -411,16 +405,14 @@ void AutomationCanvas::refreshHoverAt(const QPointF &position)
         m_hoverState.clearHover();
         return;
     }
-    const qreal x = position.x();
-    const LaneHandle handle =
-        x >= m_geometry.plotOrigin - m_geometry.pointHitRadius ? pointer.lane : LaneHandle{};
+    const LaneHandle handle = pointer.lane;
     const auto *slot = resolveSlot(handle);
     if (!slot) {
         m_hoverState.clearHover();
         return;
     }
     m_hoverState.updateHover(hoverTarget(), m_geometry, *slot->lane, slot->body, handle,
-                             projection(), x, position.toPoint().y(), m_pencilMode);
+                             projection(), position.x(), position.toPoint().y(), m_pencilMode);
 }
 
 const AutomationCanvas::NodeLaneSlot *
@@ -483,21 +475,19 @@ void AutomationCanvas::syncPreviewValueLabel()
     if (m_activeGesture && m_page.ready()) {
         handle = std::visit([](const auto &gesture) { return gesture.lane; }, *m_activeGesture);
         if (resolveLane(handle, &lane, &body)) {
+            const qreal dpr = m_inputHost ? m_inputHost->devicePixelRatio() : 1.0;
             if (const auto *gesture = std::get_if<NodeDragGesture>(&*m_activeGesture)) {
                 if (gesture->grabbedPoint < gesture->points.size()) {
                     const auto &point = gesture->points[gesture->grabbedPoint];
-                    x = m_page.displayX(point.current.tick, m_geometry.plotOrigin,
-                                        m_inputHost ? m_inputHost->devicePixelRatio() : 1.0);
+                    x = projection().displayX(point.current.tick, dpr);
                     value = point.current.value;
                 } else {
                     lane = nullptr;
                 }
             } else if (const auto *gesture = std::get_if<PhantomGesture>(&*m_activeGesture)) {
-                x = qreal(m_geometry.plotOrigin);
                 value = gesture->point.current.value;
             } else if (const auto *gesture = std::get_if<SweepGesture>(&*m_activeGesture)) {
-                x = m_page.displayX(gesture->current.tick, m_geometry.plotOrigin,
-                                    m_inputHost ? m_inputHost->devicePixelRatio() : 1.0);
+                x = projection().displayX(gesture->current.tick, dpr);
                 value = gesture->current.value;
             } else if (const auto *gesture = std::get_if<PencilGesture>(&*m_activeGesture)) {
                 const auto &sample = gesture->stroke.lastSample();
