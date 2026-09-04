@@ -71,6 +71,7 @@ std::array<ChromeCopies, 7> chromeCopies(QQuickItem &root)
     return copies;
 }
 
+#ifdef __APPLE__
 qreal playheadCenterAt(const QImage &image, int logicalY, const QColor &color)
 {
     int first = -1;
@@ -85,28 +86,7 @@ qreal playheadCenterAt(const QImage &image, int logicalY, const QColor &color)
     }
     return first < 0 ? -1.0 : qreal(first + last) / 2.0;
 }
-
-QPixmap grabPlayhead(SongView &view, songview::PlayheadOverlay &overlay, QStringList &failures)
-{
-#ifdef __APPLE__
-    if (songview::platformPlayheadRendererEnabled())
-        return renderMacPlayheadOverlay(view, failures);
-#else
-    (void)view;
-    (void)failures;
 #endif
-    QWidget *const fallback = overlay.fallbackWidget();
-    return fallback ? fallback->grab() : QPixmap{};
-}
-
-bool expectsCapturablePlayhead()
-{
-#ifdef __APPLE__
-    return songview::platformPlayheadRendererEnabled();
-#else
-    return false;
-#endif
-}
 
 void checkAutomationHover(SongView &view, QStringList &failures)
 {
@@ -123,8 +103,7 @@ void checkAutomationHover(SongView &view, QStringList &failures)
     const EditorViewState savedEditorState = view.editorViewState();
     const int savedScroll = page->verticalScroll();
     const bool savedPencilMode = canvas->pencilMode();
-    auto *quickCanvas =
-        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    auto *quickCanvas = view.quickView();
     songview::TimelineInputItem *automationInput = nullptr;
     const auto clearQuickHover = [&] {
         if (!automationInput || !automationInput->interaction())
@@ -442,15 +421,17 @@ void checkPositionOnlyQuickFrames(const MidiTimeline &timeline, QStringList &fai
     for (int settle = 0; settle < 4; ++settle)
         checks::support::pumpQuick();
 
-    auto *quick =
-        probe.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    auto *quick = probe.quickView();
     auto *scene = quick ? quick->findChild<songview::TimelineQuickScene *>() : nullptr;
     auto *overlay = probe.findChild<songview::PlayheadOverlay *>();
     QQuickWindow *const quickWindow = quick ? quick->quickWindow() : nullptr;
     const songview::TimelineBandLayout &bandLayout = probe.timelineBandLayout();
     if (!quick || !scene || !bandLayout.geometry(songview::TimelineBand::Ruler) || !overlay ||
         !quickWindow) {
-        failures.append("isolated SongView did not expose its Quick and native render surfaces");
+        failures.append(kQuickCarriesPlayhead
+                            ? "isolated SongView did not expose its Quick render surfaces"
+                            : "isolated SongView did not expose its Quick and native render "
+                              "surfaces");
         probe.hide();
         return;
     }
@@ -478,13 +459,20 @@ void checkPositionOnlyQuickFrames(const MidiTimeline &timeline, QStringList &fai
         checks::support::captureQuickBand(probe, playingRulerRect, &captureError);
     if (quickPaused.isNull() || quickPlaying.isNull()) {
         failures.append(
-            QStringLiteral("isolated playhead-free Quick capture failed: %1").arg(captureError));
+            QStringLiteral("isolated Quick ruler-band capture failed: %1").arg(captureError));
     } else {
         const QColor playheadColor = themes::color(themes::Role::song_view_playhead);
-        if (checks::support::hasPlayheadPixel(quickPaused, quickPaused.rect(), playheadColor) ||
-            checks::support::hasPlayheadPixel(quickPlaying, quickPlaying.rect(), playheadColor)) {
-            failures.append("isolated Quick framebuffer retained playhead-role pixels");
-        }
+        const bool pausedHasPlayhead =
+            checks::support::hasPlayheadPixel(quickPaused, quickPaused.rect(), playheadColor);
+        const bool playingHasPlayhead =
+            checks::support::hasPlayheadPixel(quickPlaying, quickPlaying.rect(), playheadColor);
+        if (kQuickCarriesPlayhead)
+            assertQuickPlayheadPresent(
+                failures, pausedHasPlayhead && playingHasPlayhead,
+                "Quick playhead missing from the isolated ruler-band framebuffer capture");
+        else
+            assertQuickPlayheadAbsent(failures, pausedHasPlayhead || playingHasPlayhead,
+                                      "isolated Quick framebuffer retained playhead-role pixels");
     }
 
     UpdateRequestCounter updateRequests;
@@ -499,7 +487,7 @@ void checkPositionOnlyQuickFrames(const MidiTimeline &timeline, QStringList &fai
     QCoreApplication::sendPostedEvents(quickWindow, QEvent::UpdateRequest);
     QCoreApplication::processEvents(QEventLoop::AllEvents);
     QCoreApplication::sendPostedEvents(quickWindow, QEvent::UpdateRequest);
-    if (updateRequests.count() != 0) {
+    if (!kQuickCarriesPlayhead && updateRequests.count() != 0) {
         failures.append(
             QStringLiteral("128 position-only SongView moves requested %1 Quick update(s)")
                 .arg(updateRequests.count()));
@@ -525,8 +513,7 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         view.show();
     checks::support::pumpQuick();
 
-    auto *quick =
-        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    auto *quick = view.quickView();
     auto *root = quick ? qobject_cast<QQuickItem *>(quick->rootObject()) : nullptr;
     auto *scene = quick ? quick->findChild<songview::TimelineQuickScene *>() : nullptr;
     auto *roll = view.findChild<songview::PianoRoll *>();
@@ -546,11 +533,12 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
     if (!quick || !root || !scene ||
         !view.timelineBandLayout().geometry(songview::TimelineBand::Ruler) || !roll || !overlay ||
         !automationPage || !velocity || !voiceChanges) {
-        failures.append("SongView did not expose its Quick chrome and native playhead bands");
+        failures.append("SongView did not expose its Quick and playhead surfaces");
     } else {
-        if (!overlay->fallbackWidget() && quick->playheadVisible())
-            failures.append(
-                "default chrome published a Quick playhead without a native fallback widget");
+#ifdef __APPLE__
+        if (quick->playheadVisible())
+            failures.append("default chrome published a Quick playhead on the macOS native path");
+#endif
         const auto copies = chromeCopies(*root);
         if (root->findChildren<songview::TimelineChromeItem *>().size() != 14)
             failures.append("Quick timeline did not retain 14 hover/edit guides");
@@ -778,35 +766,33 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         if (!canonicalRollMatchesRoll())
             failures.append("roll view canonical entry diverged from the piano-roll input item");
         const QColor playheadColor = themes::color(themes::Role::song_view_playhead);
+#ifdef __APPLE__
         const std::optional<songview::TimelineBandGeometry> &rulerBand =
             bandLayout.geometry(songview::TimelineBand::Ruler);
-        const qreal nativeX = (rulerBand ? rulerBand->rect.x() + rulerBand->timelineOrigin
-                                         : qRound(view.timelinePlotOrigin())) +
-                              view.camera().contentX(timeline.tickForSample(sample));
-        qreal renderedNativeX = nativeX;
         const QRect rollRect = bandLayout.geometry(songview::TimelineBand::Roll)
                                    .value_or(songview::TimelineBandGeometry{})
                                    .rect;
         const QRect rulerRect = rulerBand.value_or(songview::TimelineBandGeometry{}).rect;
-        const bool captureExpected = expectsCapturablePlayhead();
-        QImage paused;
-        QImage playing;
-        if (captureExpected) {
-            paused = grabPlayhead(view, *overlay, failures).toImage();
+        {
+            const qreal nativeX = (rulerBand ? rulerBand->rect.x() + rulerBand->timelineOrigin
+                                             : qRound(view.timelinePlotOrigin())) +
+                                  view.camera().contentX(timeline.tickForSample(sample));
+            qreal renderedNativeX = nativeX;
+            const QImage paused = renderMacPlayheadOverlay(view, failures).toImage();
             view.setPlayheadSample(sample, true);
             checks::support::pumpQuick();
-            playing = grabPlayhead(view, *overlay, failures).toImage();
+            const QImage playing = renderMacPlayheadOverlay(view, failures).toImage();
             if (paused.isNull() || playing.isNull()) {
-                failures.append("native playhead capture was empty");
+                failures.append("playhead overlay capture was empty");
             } else {
                 const qreal detectedNativeX =
                     playheadCenterAt(paused, rollRect.center().y(), playheadColor);
                 if (detectedNativeX < 0.0) {
-                    failures.append("paused native playhead was not clipped into the piano roll");
+                    failures.append("paused playhead was not clipped into the piano roll");
                 } else {
                     renderedNativeX = detectedNativeX;
                     if (std::abs(renderedNativeX - nativeX) > layout::singlePixel() + 0.75)
-                        failures.append("native playhead did not align with the timeline position");
+                        failures.append("playhead did not align with the timeline position");
                 }
                 if (!checks::support::hasPlayheadPixel(
                         paused,
@@ -814,10 +800,10 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
                               rulerRect.top(), 2 * songview::playheadGlowRadius() + 1,
                               std::max(1, rulerRect.height() - layout::singlePixel())),
                         playheadColor)) {
-                    failures.append("native playhead body was not clipped into the ruler");
+                    failures.append("playhead body was not clipped into the ruler");
                 }
                 if (paused == playing)
-                    failures.append("paused and playing native playheads rendered identically");
+                    failures.append("paused and playing playhead captures rendered identically");
 
                 const int triangleTop =
                     rulerRect.bottom() - songview::playheadTriangleHeight() + layout::singlePixel();
@@ -835,12 +821,13 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
 
             overlay->setPlayhead(0.0, false, false);
             checks::support::pumpQuick();
-            const QImage hidden = grabPlayhead(view, *overlay, failures).toImage();
+            const QImage hidden = renderMacPlayheadOverlay(view, failures).toImage();
             if (checks::support::hasPlayheadPixel(hidden, hidden.rect(), playheadColor))
-                failures.append("native playhead remained painted after a hidden presentation");
+                failures.append("playhead remained painted after a hidden presentation");
             view.setPlayheadSample(sample, false);
             checks::support::pumpQuick();
         }
+#endif
         const auto currentNativeX = [&] {
             const std::optional<songview::TimelineBandGeometry> &rulerGeometry =
                 bandLayout.geometry(songview::TimelineBand::Ruler);
@@ -855,8 +842,9 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         if (bandLayout.geometry(songview::TimelineBand::Roll))
             failures.append("event-list view retained a canonical roll rectangle");
         const qreal eventListNativeX = currentNativeX();
-        if (captureExpected) {
-            const QImage eventListImage = grabPlayhead(view, *overlay, failures).toImage();
+#ifdef __APPLE__
+        {
+            const QImage eventListImage = renderMacPlayheadOverlay(view, failures).toImage();
             if (checks::support::hasPlayheadPixel(
                     eventListImage,
                     QRect(qRound(eventListNativeX) - songview::playheadGlowRadius(),
@@ -877,17 +865,17 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
             if (bottomWidth <= topWidth)
                 failures.append("native ruler triangle did not flip up for the event list");
         }
+#endif
         view.setEventListVisible(false);
         checks::support::pumpQuick();
         if (!canonicalRollMatchesRoll())
             failures.append("restored roll view did not republish its canonical rectangle");
 
         // Quick-rendered bands use canonical SongView-local rectangles for
-        // their native-playhead clip checks.
+        // their playhead clip checks.
         const auto checkVisibleBandRect = [&](const QRect &bandRect, const char *name) {
-            if (!captureExpected)
-                return;
-            const QImage image = grabPlayhead(view, *overlay, failures).toImage();
+#ifdef __APPLE__
+            const QImage image = renderMacPlayheadOverlay(view, failures).toImage();
             const qreal bandNativeX = currentNativeX();
             if (!bandRect.isValid() ||
                 !checks::support::hasPlayheadPixel(
@@ -895,10 +883,13 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
                     QRect(qRound(bandNativeX) - layout::singlePixel(), bandRect.center().y(),
                           2 * layout::singlePixel() + 1, layout::singlePixel()),
                     playheadColor)) {
-                failures.append(
-                    QStringLiteral("native playhead was not clipped into the visible %1 band")
-                        .arg(QString::fromLatin1(name)));
+                failures.append(QStringLiteral("playhead was not clipped into the visible %1 band")
+                                    .arg(QString::fromLatin1(name)));
             }
+#else
+            (void)bandRect;
+            (void)name;
+#endif
         };
 
         view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
@@ -994,7 +985,6 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
 #endif
     }
 
-    failures += quickFallbackPlayheadCheckFailures(timeline);
     failures += quickScenePlayheadCheckFailures(timeline);
     checkPositionOnlyQuickFrames(timeline, failures);
 

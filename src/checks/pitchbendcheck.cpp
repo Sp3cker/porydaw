@@ -1275,15 +1275,17 @@ class PitchBendCheckContext final
             fail("replacing the pitch-bend popup did not retain graph focus");
             return;
         }
-        // Park the pointer on the note edge while the popup is open; teardown
-        // must refresh hover for that stationary synthetic pointer.
+        // Keep teardown in the direct-event fixture's queue. A full event-loop
+        // pump can import an unrelated native cursor position when the Quick
+        // window reactivates, replacing this stationary synthetic hover.
         checks::events::sendMouse(*m_roll, QEvent::MouseMove, edgeHandle, Qt::NoButton,
                                   Qt::NoButton, Qt::NoModifier);
         sendKeyStroke(*popup, Qt::Key_Escape, Qt::NoModifier, false);
-        drainPopupDeletes();
-        QCoreApplication::processEvents();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::MetaCall);
         if (m_roll->cursor().pixmap().isNull())
             fail("dismissing the pitch-bend popup did not restore the note-edge cursor");
+        QCoreApplication::processEvents();
     }
 
     void cleanupBaseFixture()

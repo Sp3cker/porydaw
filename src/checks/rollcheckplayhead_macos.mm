@@ -114,8 +114,6 @@ CALayer *currentOwnerLayer(SongView &view, QStringList &failures)
 void checkMacPlayheadLifecycle(SongView &view, songview::PlayheadOverlay &overlay,
                                QStringList &failures)
 {
-    if (!songview::platformPlayheadRendererEnabled())
-        return;
     if (![NSThread isMainThread]) {
         failures.append("macOS playhead layer check did not run on the GUI thread");
         return;
@@ -131,7 +129,7 @@ void checkMacPlayheadLifecycle(SongView &view, songview::PlayheadOverlay &overla
         return;
     }
     if (countPlayheadLayers(ownerLayer) != 1)
-        failures.append("macOS host retained more than one native playhead layer");
+        failures.append("macOS host retained more than one playhead layer");
     if (root.superlayer != ownerLayer)
         failures.append("macOS playhead was reparented away from the current backing layer");
     if (root.zPosition < 1'000'000.0)
@@ -213,10 +211,10 @@ void checkMacPlayheadLifecycle(SongView &view, songview::PlayheadOverlay &overla
         !CGRectEqualToRect(core.bounds, coreBounds) ||
         !CGRectEqualToRect(triangleClip.bounds, triangleClipBounds) ||
         !CGRectEqualToRect(triangle.bounds, triangleBounds)) {
-        failures.append("position-only macOS updates regenerated native playhead geometry");
+        failures.append("position-only macOS updates regenerated playhead geometry");
     }
     if (CGPointEqualToPoint(body.position, startingBodyPosition))
-        failures.append("position-only macOS updates did not move the native playhead");
+        failures.append("position-only macOS updates did not move the playhead");
 
     CALayer *fakeQuickLayer = [CALayer layer];
     fakeQuickLayer.name = @"PorydawPlayheadCheckQuickLayer";

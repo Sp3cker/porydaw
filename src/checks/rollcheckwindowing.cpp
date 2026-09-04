@@ -78,21 +78,15 @@ int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel)
     if (!waitForNativeWindowExposure(view))
         fail("SongView did not create an exposed native window");
 
-    auto *quick = view.findChild<songview::TimelineQuickView *>(
-        QStringLiteral("timelineQuickCanvas"), Qt::FindDirectChildrenOnly);
+    auto *quick = view.quickView();
     auto *overlay =
         view.findChild<songview::PlayheadOverlay *>(QString{}, Qt::FindDirectChildrenOnly);
     if (!quick || !overlay) {
-        fail("SongView did not create direct Quick and native playhead children");
-    } else if (QWidget *const fallback = overlay->fallbackWidget()) {
-        if (fallback->parentWidget() != &view || fallback->geometry() != view.rect())
-            fail("playhead fallback widget was reparented away from the SongView");
-        const QList<QWidget *> widgetStacking =
-            view.findChildren<QWidget *>(QString{}, Qt::FindDirectChildrenOnly);
-        if (widgetStacking.indexOf(fallback) <= widgetStacking.indexOf(quick))
-            fail("playhead fallback widget is stacked below the retained Quick host");
+        fail("SongView did not create direct Quick and playhead surfaces");
+#ifdef __APPLE__
     } else if (quick->playheadVisible()) {
-        fail("default windowing published a Quick playhead without a native fallback widget");
+        fail("default windowing published a Quick playhead on the macOS native path");
+#endif
     }
 
     if (!quick) {

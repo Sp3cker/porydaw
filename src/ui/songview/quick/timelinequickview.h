@@ -121,10 +121,10 @@ class TimelineQuickView final : public QWidget
     qreal rulerPlotOrigin() const noexcept;
     // Root-local ruler gutter width reserved for the grid controls.
     qreal rulerControlsWidth() const noexcept;
-    // Playhead state pushed by PlayheadOverlay's opt-in Quick renderer; the
-    // stored X is SongView-local and converted to Quick-root coordinates at
-    // read time. Visible defaults to false, so the default native/fallback
-    // path never shows a Quick playhead.
+    // Playhead state pushed by PlayheadOverlay's Quick forwarder (the
+    // Windows/Linux playhead path); the stored X is SongView-local and
+    // converted to Quick-root coordinates at read time. Visible defaults
+    // to false, so the macOS native path never drives the Quick playhead.
     qreal playheadRootX() const noexcept;
     bool playheadVisible() const noexcept;
     bool playheadPlaying() const noexcept;

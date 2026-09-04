@@ -400,15 +400,8 @@ if(APPLE)
         ${APPKIT_FRAMEWORK}
         ${QUARTZCORE_FRAMEWORK}
     )
-elseif(WIN32)
-    target_sources(porydaw_app PRIVATE
-        src/ui/playheadrenderer_dcomp.cpp
-    )
-    target_link_libraries(porydaw_app PRIVATE d2d1 d3d11 dcomp dxgi)
 endif()
-if(APPLE OR WIN32)
-    target_compile_definitions(porydaw_app PUBLIC PORYDAW_USE_DIRECT_PLAYHEAD)
-endif()
+
 target_include_directories(porydaw_app PUBLIC
     src
     ${PORYAAAA_DIR}/third_party
@@ -539,7 +532,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/rollcheck/scale_editing.cpp
         src/checks/rollcheckwindowing.cpp
         src/checks/rollcheckplayhead.cpp
-        src/checks/rollcheckplayhead_fallback.cpp
+        src/checks/rollcheckplayhead_quick.cpp
         src/checks/rollcheckplayhead.h
         src/checks/viewcheck.cpp
         src/checks/roundtrip.cpp

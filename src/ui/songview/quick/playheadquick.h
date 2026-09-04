@@ -9,12 +9,12 @@ class QSGGeometry;
 
 namespace songview {
 
-// The one Qt Quick playhead for the opt-in Quick renderer
-// (PORYDAW_FORCE_QUICK_PLAYHEAD). A single QSGGeometryNode paints the
-// quadratic bloom, the 1px core, and the ruler triangle as ColoredPoint2D
-// triangles with premultiplied vertex colors — the same math as setQuadStops
-// in playheadoverlay.cpp, without gradient materials or inline GLSL (safe on
-// Metal and D3D, no runtime QSB).
+// The one Qt Quick playhead for the default Windows/Linux renderer. A single
+// QSGGeometryNode paints the quadratic bloom, the 1px core, and the ruler
+// triangle as ColoredPoint2D triangles with premultiplied vertex colors —
+// the quadratic alpha ramp is baked directly into the vertex colors, so there
+// are no gradient materials and no inline GLSL — nothing to compile through
+// runtime QSB.
 //
 // Motion is the QML transform's job: the item's geometry stays anchored at
 // x: 0 and a Translate moves it to (coreRootX - glowLeft, y) in parent

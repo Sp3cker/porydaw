@@ -553,7 +553,7 @@ bool MainWindow::runMainWindowRoutingCheck(const QString &projectRoot, const QSt
         quick ? quick->findChildren<QWidget *>(QString{}, Qt::FindDirectChildrenOnly)
               : QList<QWidget *>{};
     QWidget *const quickContainer = quickChildren.size() == 1 ? quickChildren.front() : nullptr;
-    check(overlay, "active tab view did not retain its native playhead overlay");
+    check(overlay, "active tab view did not retain its playhead overlay");
     check(quickContainer && quickContainer->focusPolicy() == Qt::NoFocus,
           "TimelineQuickView native container did not enforce its no-focus contract");
     auto *const focusTarget = QApplication::focusWidget();

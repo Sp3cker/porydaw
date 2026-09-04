@@ -12,9 +12,8 @@ namespace songview {
 namespace {
 
 // Quadratic bloom tessellation: 9 stops per side, alpha = peak * t^2 with
-// t = 0 at the outer edge and 1 at the core — setQuadStops from
-// playheadoverlay.cpp expressed as vertex colors (each segment interpolates
-// linearly between its boundary stops).
+// t = 0 at the outer edge and 1 at the core, baked directly into vertex
+// colors (each segment interpolates linearly between its boundary stops).
 constexpr int kBloomSegments = 8;
 constexpr int kBloomStops = kBloomSegments + 1;
 

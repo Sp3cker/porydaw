@@ -164,6 +164,12 @@ class SongView : public QWidget
     EditorDrawerPage drawerActivePage() const;
     bool hasVisibleDrawerSection() const;
     EditorDrawer *editorDrawer() const noexcept { return m_editorDrawer; }
+    // The Quick host of the migrated timeline bands; created unconditionally
+    // in the constructor — production callers use quickView() instead of
+    // findChild by object name (checks/harnesses may still look it up).
+    // Out-of-line: TimelineQuickView is forward-declared here, so the
+    // QPointer conversion needs the complete type in songview.cpp.
+    songview::TimelineQuickView *quickView() const noexcept;
     // Canonical SongView-local timeline band geometry: one parent-owned
     // value drives Quick/QML band placement and native playhead clipping.
     // Hidden bands hold nullopt.

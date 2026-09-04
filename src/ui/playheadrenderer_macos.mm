@@ -189,11 +189,12 @@ class PlayheadOverlay::Platform final
         m_hasLayout = true;
     }
 
-    bool setPosition(qreal finalX, bool visible, bool playing, bool trianglePointsUp)
+    void setPosition(qreal finalX, bool visible, bool playing, bool trianglePointsUp)
     {
         attachToNativeView();
-        if (!m_attachedView || m_rootLayer.get().superlayer != m_attachedView.layer)
-            return false;
+        // With no attached native view the playhead silently renders nothing:
+        // the position push is retried on the next frame and there is no
+        // fallback renderer.
 
         const bool playingChanged = m_playing != playing;
         const bool visualGeometryChanged = playingChanged || m_trianglePointsUp != trianglePointsUp;
@@ -211,7 +212,6 @@ class PlayheadOverlay::Platform final
         m_triangleLayer.get().position =
             CGPointMake(finalX - playheadTriangleHalfWidth(), m_triangleTop);
         m_rootLayer.get().hidden = visible ? NO : YES;
-        return true;
     }
 
   private:
@@ -309,6 +309,9 @@ class PlayheadOverlay::Platform final
 
 void PlayheadOverlay::initializePlatform(SongView &owner)
 {
+    // No Platform off-cocoa (offscreen/CI): the overlay stays silent and
+    // retries next frame. Offscreen WIds are not NSViews, so construction —
+    // not a pointer check at attach time — is the correct gate.
     if (QGuiApplication::platformName() != QLatin1String("cocoa"))
         return;
 
@@ -328,10 +331,10 @@ void PlayheadOverlay::setPlatformImages()
     m_platform->setImages(m_color);
 }
 
-bool PlayheadOverlay::setPlatformPosition()
+void PlayheadOverlay::setPlatformPosition()
 {
     Q_ASSERT(m_platform);
-    return m_platform->setPosition(finalX(), m_visible, m_playing, m_trianglePointsUp);
+    m_platform->setPosition(finalX(), m_visible, m_playing, m_trianglePointsUp);
 }
 
 void PlayheadOverlay::PlatformDeleter::operator()(Platform *platform) const

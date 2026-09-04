@@ -311,6 +311,12 @@ SongView::~SongView()
     m_quickView->detachInputInteraction(TimelineBand::Velocity);
     m_quickView->detachInputInteraction(TimelineBand::VoiceChanges);
 }
+
+songview::TimelineQuickView *SongView::quickView() const noexcept
+{
+    return m_quickView;
+}
+
 bool SongView::advanceTrackActivity(const TrackActivityLevels &levels, float elapsedSeconds,
                                     bool playing)
 {

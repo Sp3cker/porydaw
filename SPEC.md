@@ -439,27 +439,34 @@ open.
 
 ### 7.1 Playhead rendering & timeline paint caching
 
-- One transparent `PlayheadOverlay` widget spans every timeline-aligned surface
-  (ruler triangle, roll, automation lanes, other-events strip) and draws the
-  glow + 1 px core at a sample-accurate, fractional x.
-- **Native compositor paths:** on macOS the playhead is CALayer sublayers of the
-  top-level window's content view (masked to the visible surfaces); on Windows a
-  DirectComposition visual tree in a transparent `WS_EX_NOREDIRECTIONBITMAP`
-  child window. A playhead tick is then a single float position update + commit —
-  no Qt repaints at all. Any platform failure logs a warning and falls back
-  permanently (for that overlay) to the widget path; the
-  `PORYDAW_FORCE_WIDGET_PLAYHEAD` environment variable forces the fallback for
-  debugging. Elsewhere (Linux, and whenever the platform path is unavailable)
-  the overlay paints antialiased vectors, which keeps the same subpixel motion.
+- `PlayheadOverlay` is a QObject policy object, not a widget: it owns the
+  shared playhead state — position, origin, visibility, playing flag, triangle
+  direction, color — for every timeline-aligned surface (ruler triangle, roll,
+  automation lanes, other-events strip) at a sample-accurate, fractional x and
+  never paints. Pixels come from the platform paths below: the CoreAnimation
+  layer tree on Apple, or the QML `timelineQuickRollPlayhead` item that
+  `TimelineQuickView::setPlayhead` moves on Windows and Linux.
+- **Native playhead paths:** on Apple (`#ifdef __APPLE__`) the playhead is a
+  CoreAnimation native Platform path: the overlay's geometry snapshot feeds
+  `setLayout`/`setImages` on the layer tree and each tick is a single
+  `setPosition` update — no Qt repaints. `setPosition` is void: when the
+  layer tree is unattached the playhead is silently absent for that frame
+  and the overlay retries on the next one; there is no fallback. Under a
+  non-cocoa QPA (offscreen/CI) or with a detached view the playhead renders
+  nothing — intended no-fallback behavior. On Windows and Linux the
+  overlay is only a geometry forwarder driving
+  `TimelineQuickView::setPlayhead`/`setPlayheadColor`, which move the QML
+  `timelineQuickRollPlayhead` item. The QWidget FallbackWidget, the Windows
+  DirectComposition renderer, `PORYDAW_FORCE_WIDGET_PLAYHEAD`,
+  `PORYDAW_FORCE_UNCACHED_TIMELINE`, and `PORYDAW_USE_DIRECT_PLAYHEAD` no
+  longer exist.
 - **Timeline paint caching:** roll, lanes, and strip derive from
   `TimelineSurface`, which rasterizes content into a cached pixmap so the
   playhead sweeping across them costs blits, not note/lane re-rasters. Content
   changes must go through `invalidateContent()` — a plain `update()` repaints
   the stale cache (see the class comment in `src/ui/timelinesurface.h`).
   Partial updates and clips are snapped to a device-aligned logical grid so
-  fractional scale factors cannot leave stale boundary pixels;
-  `PORYDAW_FORCE_UNCACHED_TIMELINE` disables the cache entirely for
-  diagnosing stale-pixel artifacts in the field.
+  fractional scale factors cannot leave stale boundary pixels.
 - **Update cadences:** playhead timer 60 Hz while playing; time/polyphony status
   labels 10 Hz while playing, 2 Hz otherwise, writing widgets only on change.
 
