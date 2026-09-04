@@ -193,13 +193,18 @@ QString comfortGeometryStyleSheet(const FontScaledGeometry &geometry)
                       pixels((geometry.indicatorExtent + 2 * geometry.border) / 2));
     // Checkable menu items share the checkbox indicator; every item indents
     // past the indicator column so labels align whether checkable or not.
-    sheet +=
-        QStringLiteral("QMenu::item{padding-left:%1;}"
-                       "QMenu::indicator{width:%2;height:%2;left:%3;"
-                       "subcontrol-origin:border;subcontrol-position:left center;"
-                       "border:%4 solid transparent;}")
-            .arg(pixels(geometry.indicatorExtent + 2 * geometry.one + 2 * geometry.border),
-                 pixels(geometry.indicatorExtent), pixels(geometry.one), pixels(geometry.border));
+    // The submenu arrow sits right-aligned inside the item's padding box and
+    // the stylesheet renderer sizes boxed items from their text alone, so the
+    // right padding reserves the arrow's lane or the arrow lands on the label
+    // (visible in a menu whose widest entry is itself a submenu).
+    sheet += QStringLiteral("QMenu::item{padding-left:%1;padding-right:%5;}"
+                            "QMenu::indicator{width:%2;height:%2;left:%3;"
+                            "subcontrol-origin:border;subcontrol-position:left center;"
+                            "border:%4 solid transparent;}"
+                            "QMenu::right-arrow{width:%2;height:%2;right:%3;}")
+                 .arg(pixels(geometry.indicatorExtent + 2 * geometry.one + 2 * geometry.border),
+                      pixels(geometry.indicatorExtent), pixels(geometry.one),
+                      pixels(geometry.border), pixels(geometry.indicatorExtent + 2 * geometry.one));
     sheet +=
         QStringLiteral("QGroupBox{margin-top:%1;padding-top:%2;}"
                        "QGroupBox::title{subcontrol-origin:margin;"
