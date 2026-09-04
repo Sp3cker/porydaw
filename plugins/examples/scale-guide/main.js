@@ -41,11 +41,11 @@ function inScale(key) {
 
 function paint(g, v) {
     if (!state.show) return;
-    var shade = porydaw.ui.theme("window_text");
+    var shade = '#ff0000';
     var topKey = v.key(0), bottomKey = v.key(v.height - 1);
     for (var key = bottomKey; key <= topKey; key++) {
         if (inScale(key)) continue;
-        g.opacity(0.10);
+        g.opacity(0.5);
         g.fillRect(0, v.keyTop(key), v.width, v.keyBottom(key) - v.keyTop(key), shade);
     }
     g.opacity(0.85);
