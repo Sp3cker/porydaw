@@ -321,9 +321,7 @@ QAction *AutomationGestureCheckRig::pencilModeAction() const noexcept
 
 AutomationGeometry AutomationGestureCheckRig::geometry() const
 {
-    auto result = AutomationGeometry::resolve();
-    result.plotOrigin = canvas().plotOrigin();
-    return result;
+    return AutomationGeometry::resolve(canvas().plotOrigin());
 }
 
 AutomationProjection AutomationGestureCheckRig::projection() const

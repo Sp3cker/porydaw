@@ -19,9 +19,9 @@
 #include "ui/songview/timecamera.h"
 #include "ui/typography.h"
 
-void VoiceChangeArea::Geometry::resolve()
+void VoiceChangeArea::Geometry::resolve(int timelineSplitX)
 {
-    plotOrigin = layout::fontPx(17.5 + 13.0 / 3.0);
+    plotOrigin = timelineSplitX;
     markerHitRadius = layout::fontPx(3.0 / 4.0);
     hoverPaintPadding = layout::fontPx(1.0 / 6.0);
     gridMinimumCellWidth = layout::fontPx(4.0 / 3.0);
@@ -39,7 +39,7 @@ VoiceChangeArea::VoiceChangeArea(SongView &owner, QObject *parent)
     , m_textLayout(
           layout::twoLineText(m_titleFont, m_titleFont, m_captionFont, layout::Space::Zero))
 {
-    m_geometry.resolve();
+    m_geometry.resolve(owner.timelineSplitX());
 }
 
 void VoiceChangeArea::attachInputHost(songview::TimelineInputHost &host)

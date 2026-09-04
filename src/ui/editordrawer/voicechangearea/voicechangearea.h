@@ -93,7 +93,7 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
         int markerHitRadius = 0;
         int hoverPaintPadding = 0;
         int gridMinimumCellWidth = 0;
-        void resolve();
+        void resolve(int timelineSplitX);
     };
     // Resolved label text for one program slot. Cached until the voicegroup
     // pointer, the slot's type, or its source name changes; songChanged drops

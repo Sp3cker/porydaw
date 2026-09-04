@@ -136,8 +136,11 @@ void PlayheadOverlay::synchronizeGeometry()
             if (index == timelineBandIndex(TimelineBand::Ruler))
                 continue;
             const std::optional<TimelineBandGeometry> &band = m_layout.bands[index];
-            if (band)
-                m_visibleSurfaceRegion += visibleBandRect(*band);
+            if (band) {
+                const QRect visible = visibleBandRect(*band);
+                if (!visible.isEmpty())
+                    m_visibleSurfaceRegion += visible;
+            }
         }
         m_timelineOrigin = rulerRect.x() + rulerBand->timelineOrigin;
     }

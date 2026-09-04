@@ -98,7 +98,7 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
         qreal stemDipWidth = 0.0;
         qreal selectedStemDipWidth = 0.0;
 
-        void resolve();
+        void resolve(int keyColumnWidth);
     };
 
     // Snapshot of one note taken when a gesture begins. Mouse movement must never

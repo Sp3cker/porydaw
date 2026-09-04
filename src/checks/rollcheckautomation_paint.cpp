@@ -313,8 +313,7 @@ bool toggleTempoExpanded(SongView &view, AutomationPage &page, bool wantExpanded
 LaneGeom laneGeom(AutomationPage &page, const LaneCase &row)
 {
     LaneGeom geom;
-    auto geometry = AutomationGeometry::resolve();
-    geometry.plotOrigin = page.canvas()->plotOrigin();
+    auto geometry = AutomationGeometry::resolve(page.canvas()->plotOrigin());
     if (row.kind == LaneKind::Tempo) {
         geom.handle = LaneHandle{0};
         geom.body = page.canvas()->laneBody(geom.handle);
@@ -375,8 +374,7 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         return quickScene &&
                layerHasColorIn(quickScene->layer(layer), contentProbe, contentOrigin, color);
     };
-    auto geometry = AutomationGeometry::resolve();
-    geometry.plotOrigin = page.canvas()->plotOrigin();
+    auto geometry = AutomationGeometry::resolve(page.canvas()->plotOrigin());
     const AutomationBandInput band{page, *automationInputItem(view)};
     const qreal dpr = band.item.devicePixelRatio();
     const QPoint captureOrigin = automationContentToViewport(page);

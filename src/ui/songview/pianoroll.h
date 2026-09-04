@@ -73,7 +73,7 @@ struct PianoRollGeometry {
     int keyboardHoverChipCornerRadius;
     int pianoKeyboardLabelRightInset;
 
-    static PianoRollGeometry resolve();
+    static PianoRollGeometry resolve(int pianoKeyboardWidth);
 };
 
 struct MidiCursors {

@@ -68,7 +68,7 @@ PianoRoll::PianoRoll(SongView *sv)
     : m_sv(sv)
     , m_camera(sv->camera())
     , m_grid(sv->grid())
-    , m_geometry(PianoRollGeometry::resolve())
+    , m_geometry(PianoRollGeometry::resolve(sv->pianoKeyboardWidth()))
 {
     setObjectName(QStringLiteral("pianoRoll")); // findChild for tests
     m_fixedNoteNameFont = typography::noteName(sv->font());

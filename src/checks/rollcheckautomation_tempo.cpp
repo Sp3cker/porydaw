@@ -100,7 +100,7 @@ void checkAutomationTempoGeometry(SongView &view, AutomationPage &page,
               QStringLiteral("automation viewport framebuffer capture failed: %1").arg(error));
         return image;
     };
-    const AutomationGeometry geometry = AutomationGeometry::resolve();
+    const AutomationGeometry geometry = AutomationGeometry::resolve(view.timelineSplitX());
     const EditorAutomationRowId tempoRow{EditorAutomationRowKind::Tempo, 0, 0};
     const EditorViewState originalViewState = view.editorViewState();
     EditorViewState configuredViewState = originalViewState;

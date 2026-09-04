@@ -9,7 +9,7 @@
 #include "ui/songview.h"
 #include "ui/songview/timecamera.h"
 
-AutomationGeometry AutomationGeometry::resolve()
+AutomationGeometry AutomationGeometry::resolve(int timelineSplitX)
 {
     AutomationGeometry geometry;
     geometry.rowDefaultHeight = layout::fontPx(4.0);
@@ -17,7 +17,7 @@ AutomationGeometry AutomationGeometry::resolve()
     geometry.rowMaximumHeight = layout::fontPx(32.0 / 3.0);
     geometry.rowWheelIncrement = layout::fontPx(1.0 / 3.0);
     geometry.addLaneStripHeight = layout::fontPx(5.0 / 3.0);
-    geometry.plotOrigin = layout::fontPx(17.5 + 13.0 / 3.0);
+    geometry.plotOrigin = timelineSplitX;
     geometry.pointHitRadius = layout::fontPx(7.0 / 12.0);
     geometry.neutralSnapRadius = layout::fontPx(2.0 / 3.0);
     geometry.deleteTimeRadius = layout::fontPx(3.0 / 4.0);

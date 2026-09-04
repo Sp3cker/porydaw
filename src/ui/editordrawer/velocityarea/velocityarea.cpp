@@ -41,9 +41,9 @@ uint64_t drawerContextTick(double tick)
 }
 
 } // namespace
-void VelocityArea::Geometry::resolve()
+void VelocityArea::Geometry::resolve(int keyColumnWidth)
 {
-    plotOrigin = layout::fontPx(13.0 / 3.0);
+    plotOrigin = keyColumnWidth;
     densityThresholdD1 = layout::fontPx(6.0);
     densityThresholdD2 = layout::fontPx(25.0 / 3.0);
     densityThresholdD3 = layout::fontPx(12.0);
@@ -70,7 +70,7 @@ VelocityArea::VelocityArea(SongView &owner, QObject *parent)
     , m_boldCaptionFont(typography::bold(m_captionFont))
     , m_captionFontHeight(QFontMetrics(m_captionFont).height())
 {
-    m_geometry.resolve();
+    m_geometry.resolve(owner.pianoKeyboardWidth());
 }
 
 void VelocityArea::attachInputHost(songview::TimelineInputHost &host)

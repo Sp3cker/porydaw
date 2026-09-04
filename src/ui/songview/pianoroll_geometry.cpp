@@ -22,11 +22,11 @@ using Space = lyt::Space;
 namespace songview::pianoroll_detail {
 using namespace songview::detail;
 
-PianoRollGeometry PianoRollGeometry::resolve()
+PianoRollGeometry PianoRollGeometry::resolve(int pianoKeyboardWidth)
 {
     return {
         .minimumVisiblePianoRollHeight = lyt::fontPx(10.0),
-        .pianoKeyboardWidth = lyt::fontPx(13.0 / 3.0),
+        .pianoKeyboardWidth = pianoKeyboardWidth,
         .midiCursorExtent = lyt::fontPx(2.0),
         .pianoRollNoteMinimumWidth = lyt::fontPx(1.0 / 6.0),
         .pianoRollNoteMinimumHeight = lyt::fontPx(1.0 / 6.0),
@@ -72,8 +72,7 @@ int noteBorderPixels(qreal dpr)
 
 int selectionRingPixels(qreal dpr)
 {
-    return std::max(lyt::singlePixel(),
-                    qRound(PianoRollGeometry::resolve().selectionRingDipWidth * dpr));
+    return std::max(lyt::singlePixel(), qRound(lyt::fontPxF(1.0 / 8.0) * dpr));
 }
 
 bool PianoRoll::insideTimeSelection(qreal x) const

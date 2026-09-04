@@ -37,7 +37,7 @@ void DrawerSections::ensureChrome() const
     m_chrome.handle = layout::fontPx(1.0 / 3.0);
     m_chrome.minBody = layout::fontPx(17.0 / 5.0);
     m_chrome.pianoRollReserve = layout::fontPx(10.0);
-    m_chrome.plotOrigin = layout::fontPx(17.5 + 13.0 / 3.0);
+    m_chrome.plotOrigin = m_owner.timelineSplitX();
     m_chromeDirty = false;
 }
 

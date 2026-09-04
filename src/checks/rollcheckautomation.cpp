@@ -286,8 +286,7 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     page.refreshLiveState(live);
     pumpQuickEvents();
     expected.plotOrigin = page.canvas()->plotOrigin();
-    auto projectionGeometry = AutomationGeometry::resolve();
-    projectionGeometry.plotOrigin = expected.plotOrigin;
+    auto projectionGeometry = AutomationGeometry::resolve(expected.plotOrigin);
 
     int failures = 0;
     const auto recordFailure = [&](const QString &message) {

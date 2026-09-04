@@ -47,7 +47,7 @@ Label sections must end no farther right than the canonical split. Their right e
 9. A playhead whose core has local `x < 0` is fully hidden; no clipped bloom or triangle remains at the plot edge.
 10. The playhead remains absent over scrollbars, drawer resize handles, separators, the drawer bar, and the event-list body.
 11. Visual ownership, hit testing, context menus, wheel behavior, focus, keyboard audition, and accessibility follow the same physical rectangles.
-12. Production assumes the native macOS CALayer or Windows DirectComposition playhead renderer works. The QWidget fallback and `PORYDAW_FORCE_WIDGET_PLAYHEAD` do not remain.
+12. Production uses the native macOS CALayer compositor on macOS and the Qt Quick `TimelinePlayheadItem` on Windows/Linux. The software QWidget fallback, Windows DirectComposition renderer, and `PORYDAW_FORCE_*` environment variables were already removed in commit `8eea7b9`.
 
 ## Current implementation and problem
 
@@ -86,12 +86,11 @@ The rendered division is real to the user but not real in layout ownership.
 
 ### PlayheadOverlay is owner-wide
 
-`SongView::syncTimelineIndicators()` sends `TimeCamera::contentX(m_playheadTick)` to `PlayheadOverlay`. The overlay then adds a ruler-derived `m_timelineOrigin` through `finalX()` and renders in an owner-sized surface.
+`SongView::syncTimelineIndicators()` sends `TimeCamera::contentX(m_playheadTick)` to `PlayheadOverlay`. The overlay then adds a ruler-derived `m_timelineOrigin` through `finalX()`, driving the native macOS `Platform` CALayer or forwarding via `TimelineQuickView::setPlayhead()` to the Qt Quick `TimelinePlayheadItem` on non-macOS platforms.
 
-`PlayheadOverlay::synchronizeGeometry()` builds a union of visible band strips. It currently visits every published band, including `TrackHeaders`. Because the track-header band has `timelineOrigin == 0`, the resulting mask authorizes playhead pixels in that column. There is also no visibility gate when camera-space `contentX` becomes negative.
+`PlayheadOverlay::synchronizeGeometry()` builds a union of visible band strips in full SongView space. It currently visits every published band, including `TrackHeaders`. Because the track-header band has `timelineOrigin == 0`, the resulting mask authorizes playhead pixels in that column. There is also no visibility gate when camera-space `contentX` becomes negative.
 
 The mask itself is not the architectural defect. One playhead crosses disconnected vertical plots, and those plots contain scrollbars, resize handles, separators, hidden sections, and differing right edges. The defect is using the mask to reconstruct the primary chrome-versus-timeline partition.
-
 ## Target layout model
 
 ### SongView-owned columns
@@ -102,48 +101,65 @@ Dependent modules receive resolved dimensions from SongView rather than calling 
 
 The layout model must distinguish:
 
-- a row's complete rectangle;
+- a row's complete rectangle (`rect`);
 - its fixed-side label/control rectangle or rectangles;
-- its exact time-plot rectangle.
+- its exact time-plot rectangle (`plotRect`).
 
-A suitable final representation is a band geometry containing an explicit `bandRect` and `plotRect`, both in SongView coordinates. Lane-specific label rectangles remain owned by the lane layout because velocity, automation, and full-width labels use the fixed columns differently. Remove `timelineOrigin` after all consumers use `plotRect`.
+The canonical representation in `src/ui/songview/timelinebandlayout.h` is:
 
-`TrackHeaders` may remain a published visual/input band if the shared Quick host requires it, but it must have no time `plotRect`. Playhead code consumes only non-empty time-plot rectangles.
-
-### Physical label and plot boxes
-
-For each migrated Quick row, create sibling fixed-side and plot items rather than painting both through one full-band item:
-
-```text
-Row
-|- fixed-side item: label/control paint and gutter input
-`- plot item: grid/content paint and time-axis input
+```cpp
+struct TimelineBandGeometry {
+    QRect rect;     // visible SongView-local band rectangle, clipped by parent layout owner
+    QRect plotRect; // SongView-local time-plot rectangle; empty QRect() if band has no time plot
+};
 ```
 
-The fixed-side item ends at the canonical split. The plot item begins there and uses plot-local coordinates.
+Exact SongView-local contracts:
+- `TrackHeaders`: `rect` is `[0, rollTop, trackHeaderWidth, rollHeight]`; `plotRect` is empty `QRect()`.
+- `Ruler`: `rect` is `[0, 0, width, rulerHeight]`; `plotRect` is `[timelineSplitX, 0, width - timelineSplitX, rulerHeight]`.
+- `Roll`: `rect` is `[trackHeaderWidth, rollTop, width - trackHeaderWidth - vbarWidth, rollHeight]`; `plotRect` is `[timelineSplitX, rollTop, width - timelineSplitX - vbarWidth, rollHeight]`.
+- `OtherEvents`: `rect` is `[0, otherTop, width, otherHeight]`; `plotRect` is `[timelineSplitX, otherTop, width - timelineSplitX, otherHeight]`.
+- `Automation`: `rect` is `[scrollbarWidth, autoTop, bodyWidth - scrollbarWidth, autoHeight]`; `plotRect` is `[timelineSplitX, autoTop, bodyWidth - timelineSplitX, autoHeight]`.
+- `Velocity`: `rect` is `[trackHeaderWidth, velTop, width - trackHeaderWidth, velHeight]`; `plotRect` is `[timelineSplitX, velTop, width - timelineSplitX, velHeight]`. Its fixed-side gutter spans `[rect.x(), rect.y(), plotRect.x() - rect.x(), rect.height()]` = `[trackHeaderWidth, velTop, pianoKeyboardWidth, velHeight]`.
 
-Do not require every fixed-side item to have the same internal span:
+Remove `timelineOrigin` across all modules after consumers migrate to `plotRect`. Playhead overlay and Quick clipping code consume only non-empty `plotRect`s.
+### Physical label and plot boxes in Qt Quick
 
-- other-event, voice-change, and automation label sections may span both fixed columns but stop at the split;
-- velocity label/axis starts at `trackHeaderWidth` and spans only the piano-key column;
-- track headers and piano keys remain separate adjacent boxes in the roll row.
+In `TimelineCanvas.qml`, each row retains its outer band container (`TimelineSceneBand`) positioned at `bandRect`, but internally partitions fixed-side chrome from the time plot:
 
-Use existing `layout::` and typography primitives for text inset and vertical centering. Do not introduce hard-coded pixels.
+```text
+TimelineSceneBand (x: bandRect.x, y: bandRect.y, width: bandRect.width, height: bandRect.height)
+|- Fixed-side item: x: 0, width: plotRect.x - bandRect.x
+|  |- Gutter chrome (background, separators, lane headers)
+|  |- Gutter text layer (anchored to fixed-side item)
+|  `- Gutter input item (lane selection, menus, wheel behavior)
+`- Plot item: x: plotRect.x - bandRect.x, width: plotRect.width
+   |- Grid and content layers (grid, notes, curves, markers, transient preview, hover)
+   |- Plot text layer (note text, transient chips)
+   `- Plot input item (time-axis gestures, plot-local coordinates where local x = 0 is timelineSplitX)
+```
+
+For the Piano Roll:
+- `PianoRollCanvas.qml` partitions the piano keyboard (keys, highlights, key text) into the fixed-side key column (`[0, pianoKeyboardWidth)`), and note fills, grid, borders, selections, and overlay into the plot column (`[pianoKeyboardWidth, rollBand.width)`).
+
+C++ Scene Graph & Layer strategy:
+- Separate gutter chrome from plot chrome in `TimelineQuickScene` layer generation:
+  - Time-plot layers (`PianoGrid`, `PianoNoteFills`, `AutomationCurves`, `AutomationNodes`, `OtherEventsMarkers`, `VelocityGrid`, `VoiceChangesSpans`, etc.) use plot-local coordinates where `TimeCamera::displayX(tick, 0.0, dpr)` is relative to `0.0`.
+  - Gutter chrome layers and text model records use gutter-local coordinates relative to their parent fixed-side item.
+  - No single layer draws across both sides of `timelineSplitX`.
+- The Qt Quick playhead (`TimelinePlayheadItem`) is anchored directly in the timeline column at `x: timelineSplitX`, spanning the height of the scene with width `Math.max(0, root.width - timelineSplitX)`. It receives timeline-local `plotRects` translated by `(-timelineSplitX, 0)` and tracks `playheadContentX` directly.
 
 ### Input and accessibility
 
-Move input ownership with the visible boxes; do not leave owner-wide input surfaces behind a physically split presentation.
+Move input ownership with the physical boxes:
 
-- Plot input receives plot-local X, where zero is the canonical split.
-- Gutter input owns label menus, vertical wheel behavior, and gutter hover.
-- Piano-key input continues to own audition and key interaction.
-- Automation gutter retains vertical scrolling and lane-menu behavior.
-- Velocity gutter retains axis-label and detent behavior.
-- Drawer resize handles, toggles, scrollbar, and bar retain their dedicated Quick input objects and accessible names.
-- Accessibility bounds must match the visible item that owns the interaction.
-
-Delete obsolete `x < plotOrigin` routing only after the equivalent gutter input path exists. Do not add coordinate shims that preserve both models.
-
+- **Plot input (`TimelineInputItem` inside Plot item):** receives plot-local X, where `0` is the canonical split (`timelineSplitX`). No coordinate subtraction or `x < plotOrigin` guard is required in plot gesture code.
+- **Gutter input (`TimelineInputItem` inside Fixed-side item):** receives gutter-local coordinates. Owns lane menus, track header interactions, vertical wheel behavior, and gutter hover.
+- **Piano-key input:** continues to own audition and key interaction within the piano-key column (`[trackHeaderWidth, timelineSplitX)` in SongView space).
+- **Automation gutter:** retains vertical lane scrolling, lane header drag, and lane popup menus.
+- **Velocity gutter:** retains axis labels and detent toggle button behavior within the piano-key column.
+- **Focus:** `TimelineQuickView::focusBand()` focuses the primary plot input item of the band for keyboard editing.
+- **Accessibility bounds:** match the visible item that owns the interaction.
 ## PlayheadOverlay after the layout cutover
 
 ### Root geometry
@@ -200,50 +216,30 @@ The ruler triangle uses only the ruler plot rectangle. The playhead body uses th
 
 Never add `TrackHeaders` or a label/control rectangle to this mask.
 
-### Native renderers
+### Platform renderers
 
-For macOS:
+#### macOS (Native CALayer Compositor)
+- Set the root CALayer frame to the timeline-column rectangle mapped into the native window: `CGRectMake(overlayOffset.x() + timelineSplitX, overlayOffset.y(), overlaySize.width() - timelineSplitX, overlaySize.height())`.
+- Keep child playhead positions timeline-local (`contentX`).
+- Use the timeline-local plot-region path as the body mask (`plotRect.translated(-timelineSplitX, 0)`).
+- Use the timeline-local ruler plot as the triangle mask.
+- Clip root sublayers to the timeline-column bounds.
 
-- set the root CALayer frame to the timeline-column rectangle mapped into the native host;
-- keep child playhead positions timeline-local;
-- use the local plot-region path as the body mask;
-- use the local ruler plot as the triangle mask;
-- clip root sublayers to the timeline-column bounds.
+#### Windows & Linux (Qt Quick Playhead)
+- Anchor `TimelinePlayheadItem` at `x: timelineSplitX` in `TimelineCanvas.qml`.
+- Translate published `plotRect`s by `(-timelineSplitX, 0)` to provide timeline-local clip strips.
+- Position the item with raw `contentX(playheadTick)`.
+- Apply identical effective-visibility rules (`localX >= 0 && localX < overlayWidth`).
+- Keep track headers and piano keys structurally outside the playhead's parent coordinate frame.
 
-For Windows:
+### Prior cutovers already completed
+Commit `8eea7b9` completed the initial renderer simplification:
+- Deleted `PlayheadOverlay::FallbackWidget` and software QWidget fallback painting.
+- Deleted the Windows DirectComposition renderer (`playheadrenderer_dcomp.cpp`).
+- Removed `PORYDAW_FORCE_WIDGET_PLAYHEAD` and all playhead environment overrides.
+- Renamed and transitioned playhead checks to `src/checks/rollcheckplayhead_quick.cpp`.
 
-- set the DirectComposition root/host geometry to the timeline-column rectangle;
-- use local X for the shared playhead transform;
-- keep per-row rectangle clips for plot holes and differing right edges.
-
-Both renderers consume the same local layout and effective visibility. Platform code must not reconstruct SongView gutters.
-
-### Quick playhead path
-
-Migrate the existing opt-in Quick playhead to the same timeline-local contract so tests do not preserve a second coordinate system:
-
-- parent it to the timeline-column item;
-- provide local plot rectangles;
-- position it with raw `contentX`;
-- apply the same effective-visibility rule;
-- keep track headers structurally outside its parent.
-
-This does not make Quick the production playback renderer.
-
-### Remove QWidget fallback
-
-Delete the software playhead fallback and its selector as part of the same clean cutover:
-
-- `PlayheadOverlay::FallbackWidget`;
-- fallback painting and region-update helpers;
-- `fallbackWidget()` and fallback-only test access;
-- `PORYDAW_FORCE_WIDGET_PLAYHEAD`;
-- failure messages that claim the renderer will fall back to QWidget.
-
-Assume the compiled platform-native renderer applies successfully. Keep explicit failure reporting rather than silently switching renderers.
-
-`src/checks/rollcheckplayhead_fallback.cpp` also contains retained Quick scene and rendering-check runner functions. Move those retained functions to an accurately named check source before deleting only the forced-widget assertions and setup. Update `CMakeLists.txt` atomically so the check binary continues to link.
-
+The current refactor does not need to remove those components; it completes the geometry model by migrating macOS CALayer and Qt Quick playheads onto the unified timeline-local coordinate system and removing `m_timelineOrigin`, `finalX()`, and `TimelineBandGeometry::timelineOrigin`.
 ## Implementation sequence
 
 ### Phase 1 - Lock geometry contracts in checks
@@ -254,7 +250,7 @@ Assume the compiled platform-native renderer applies successfully. Keep explicit
    - velocity label/axis occupies the piano-key column;
    - no label/control rectangle enters a plot rectangle.
 3. Cover normal and fractional DPR, resize, font-scaled metrics, drawer visibility changes, and event-list switching.
-4. Add native-playhead assertions that no playhead-role pixels occur left of the split or inside excluded chrome.
+4. Add playhead assertions that no playhead-role pixels occur left of the split or inside excluded chrome (exercising `rollcheckplayhead.cpp` on macOS and `rollcheckplayhead_quick.cpp` on non-macOS).
 5. Add a case where `contentX(playheadTick) < 0` and assert that core, bloom, and triangle are all absent.
 
 These checks establish observable contracts; do not assert implementation field names or source text.
@@ -269,7 +265,7 @@ These checks establish observable contracts; do not assert implementation field 
 
 ### Phase 3 - Publish physical row and plot rectangles
 
-1. Replace `TimelineBandGeometry::timelineOrigin` with explicit full-row and time-plot rectangles.
+1. Replace `TimelineBandGeometry::timelineOrigin` with explicit full-row (`rect`) and time-plot (`plotRect`) rectangles.
 2. Update `SongView::resolveTimelineBandLayout()` to publish exact SongView-local plot rectangles.
 3. Exclude roll and its playhead plot while event-list mode is active.
 4. Ensure automation's left scrollbar and the roll's right vertical scrollbar are outside their plot rectangles.
@@ -281,8 +277,8 @@ Perform a clean cutover; do not retain both `timelineOrigin` and `plotRect` as p
 ### Phase 4 - Split visible and input boxes
 
 1. In `TimelineCanvas.qml`, give each migrated row separate fixed-side and plot items positioned from the published geometry.
-2. Move other-event, voice-change, automation, and velocity label drawing into their fixed-side items.
-3. Keep all grid, notes, curves, nodes, selections, hover, and edit chrome inside plot items.
+2. Separate other-event, voice-change, automation, and velocity gutter chrome and label drawing from plot items.
+3. Keep all grid, notes, curves, nodes, selections, hover, and edit chrome inside plot items in plot-local coordinates.
 4. Split or relocate input surfaces so gutter behavior stays on fixed-side items and time editing uses plot-local coordinates.
 5. Preserve drawer chrome stacking, resize cursors, menus, focus, keyboard audition, and accessible names.
 6. Delete superseded coordinate rejection and translation code once each caller is migrated.
@@ -293,17 +289,15 @@ Perform a clean cutover; do not retain both `timelineOrigin` and `plotRect` as p
 2. Convert its state and platform calls to timeline-local X.
 3. Build the retained body mask from local plot rectangles and the triangle mask from the ruler plot.
 4. Apply effective visibility before publishing any renderer state.
-5. Update macOS, DirectComposition, and opt-in Quick playhead implementations to the same contract.
+5. Update macOS CALayer and Qt Quick playhead implementations to the unified timeline-local contract.
 6. Confirm position-only native movement remains a compositor-only update and does not rebuild Quick scene data or masks.
 
-### Phase 6 - Remove fallback and obsolete geometry
+### Phase 6 - Remove obsolete geometry
 
-1. Remove the QWidget fallback implementation and environment selector.
-2. Preserve and relocate non-fallback rendering-check functions currently sharing its source file.
-3. Remove dead paint helpers, accessors, state, includes, CMake entries, comments, and warning text.
-4. Remove all obsolete per-band origin fields and aliases.
-5. Search the affected modules for duplicated split formulas and old fallback names; no compatibility path remains.
-
+1. Remove `m_timelineOrigin`, `finalX()`, and ruler-origin addition in PlayheadOverlay.
+2. Remove `timelineOrigin` from `TimelineBandGeometry` and QML property bindings.
+3. Remove all dead coordinate helper functions, comments, and unused origin fields.
+4. Search the affected modules for duplicated split formulas; ensure no compatibility path remains.
 ### Phase 7 - Verify the complete surface
 
 1. Format the changed files with `deno task format`.
@@ -331,7 +325,7 @@ deno task verify --filter velocity-page --verbose
    - operate automation gutter menus and scrolling;
    - audition piano keys;
    - inspect label alignment at normal and fractional display scale.
-5. Verify on macOS. Keep Windows-specific DirectComposition behavior covered by compile and focused checks; perform an actual Windows surface check before release when a Windows runner is available.
+5. Verify on macOS and verify Qt Quick playhead behavior through focused checks and `porydaw_checks`.
 6. Run the full `deno task verify` only after focused behavior is clean. Resolve every failing assertion before handoff.
 
 ## Acceptance criteria
@@ -348,11 +342,11 @@ The refactor is complete only when all of the following are observable:
 - Paused and playing playheads follow the same geometry and visibility rules.
 - Drawer and gutter interactions retain their current behavior and accessibility bounds.
 - Native playhead position-only updates remain independent of Quick scene rebuilds.
-- No QWidget playhead fallback, `PORYDAW_FORCE_WIDGET_PLAYHEAD`, `timelineOrigin` compatibility field, or duplicated split formula remains.
+- No `timelineOrigin` compatibility field or duplicated split formula remains.
 
 ## Non-goals
 
-- Moving the production playback playhead into Qt Quick.
+- Moving the production macOS playback playhead into Qt Quick.
 - Creating one playhead renderer per timeline band.
 - Teaching `TimeCamera` about headers, keys, labels, or SongView layout.
 - Changing musical scrolling, zoom, follow-playhead, or pre-roll semantics.

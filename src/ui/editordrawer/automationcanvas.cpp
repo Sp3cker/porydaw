@@ -19,7 +19,7 @@
 
 void AutomationCanvas::refreshGeometry()
 {
-    m_geometry = AutomationGeometry::resolve();
+    m_geometry = AutomationGeometry::resolve(m_page.m_owner.timelineSplitX());
     m_geometry.plotOrigin = std::max(layout::space(layout::Space::Zero),
                                      m_geometry.plotOrigin - layout::space(layout::Space::Two));
     const int gutterMargin = layout::space(layout::Space::One);
@@ -56,7 +56,7 @@ const QString &AutomationCanvas::refreshCcSummaryText(CCLanes::RowTextCache &cac
 
 AutomationCanvas::AutomationCanvas(AutomationPage &page)
     : QObject(&page)
-    , m_geometry(AutomationGeometry::resolve())
+    , m_geometry(AutomationGeometry::resolve(page.m_owner.timelineSplitX()))
     , m_laneTitleFont(typography::bold(typography::caption(page.m_owner.font())))
     , m_laneCaptionFont(typography::regular(typography::caption(page.m_owner.font())))
     , m_laneTextLayout(layout::twoLineText(m_laneTitleFont, m_laneTitleFont, m_laneCaptionFont,

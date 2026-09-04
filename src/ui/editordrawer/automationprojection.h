@@ -46,7 +46,7 @@ struct AutomationGeometry {
     qreal selectedNodeRingDipWidth = 0.0;
     int valuePlotPadding = 0; // Aligns endpoint marker edges with row gutters.
 
-    static AutomationGeometry resolve();
+    static AutomationGeometry resolve(int timelineSplitX);
 };
 
 // AutomationProjection owns the current geometry for pixel <-> tick mapping.

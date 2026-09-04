@@ -211,7 +211,7 @@ void checkAutomationTempoOcclusion(SongView &view, AutomationPage &page, SongDoc
     report(quickScene, QStringLiteral("retained Quick automation scene was not available"));
     if (!quickScene)
         return;
-    const AutomationGeometry geometry = AutomationGeometry::resolve();
+    const AutomationGeometry geometry = AutomationGeometry::resolve(view.timelineSplitX());
 
     const int originalSectionHeight = view.drawerSectionHeight(EditorDrawerPage::Automations);
     const auto automationBandRect = [&]() -> QRect {
@@ -416,7 +416,7 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
                 {kNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(180)}};
     document.applyTempoEdit(edit);
     refresh(page, document, live);
-    const AutomationGeometry sizingGeometry = AutomationGeometry::resolve();
+    const AutomationGeometry sizingGeometry = AutomationGeometry::resolve(view.timelineSplitX());
     int laneStackBottom = 0;
     for (int index = 0; index < int(canvas->rows().size()); ++index)
         laneStackBottom =
@@ -432,11 +432,7 @@ void checkAutomationCanvasFontPaint(SongView &view, AutomationPage &page, SongDo
     }
     leaveCanvas(band);
 
-    const AutomationGeometry geometry = [&] {
-        auto resolved = AutomationGeometry::resolve();
-        resolved.plotOrigin = canvas->plotOrigin();
-        return resolved;
-    }();
+    const AutomationGeometry geometry = AutomationGeometry::resolve(canvas->plotOrigin());
     const QRect body = canvas->laneBody(LaneHandle{0});
     const qreal dpr = band.item.devicePixelRatio();
     const QPoint captureOrigin = automationContentToViewport(page);

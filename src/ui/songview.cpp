@@ -66,7 +66,7 @@ SongView::Geometry SongView::Geometry::resolve()
     const int pianoKeyboardWidth = lyt::fontPx(13.0 / 3.0);
     return {trackHeaderWidth,
             pianoKeyboardWidth,
-            lyt::fontPx(17.5 + 13.0 / 3.0),
+            trackHeaderWidth + pianoKeyboardWidth,
             lyt::fontPx(8.0 / 3.0),
             lyt::fontPx(50.0 / 3.0),
             lyt::fontPx(1.0 / 3.0),
@@ -125,7 +125,7 @@ TimelineBandLayout SongView::resolveTimelineBandLayout() const
         if (rollPane) {
             QRect headerRect = m_headerSpacer->geometry();
             headerRect.moveTopLeft(rollPane->mapTo(this, headerRect.topLeft()));
-            publishBand(TimelineBand::TrackHeaders, headerRect, 0);
+            publishBand(TimelineBand::TrackHeaders, headerRect, headerRect.width());
         }
     }
     // The roll band is the retained roll page minus the vertical scrollbar

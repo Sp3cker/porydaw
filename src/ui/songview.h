@@ -207,6 +207,9 @@ class SongView : public QWidget
     const songview::TimeAxis &timeAxis() const { return m_timeAxis; }
     const SongViewModel &model() const { return m_model; }
     const LoadedVoiceGroup *voicegroup() const { return m_voicegroup; }
+    int trackHeaderWidth() const noexcept { return m_geometry.trackHeaderWidth; }
+    int pianoKeyboardWidth() const noexcept { return m_geometry.pianoKeyboardWidth; }
+    int timelineSplitX() const noexcept { return m_geometry.plotOrigin; }
     qreal timelinePlotOrigin() const noexcept { return m_geometry.plotOrigin; }
     void publishTimelineQuickHover(songview::TimelineQuickHoverOwner owner, uint64_t tick);
     void clearTimelineQuickHover(songview::TimelineQuickHoverOwner owner);
