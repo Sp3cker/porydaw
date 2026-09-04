@@ -197,8 +197,7 @@ effectiveVisible = requestedVisible
                    && localX < overlay width
 ```
 
-The explicit left gate is required even with rectangular clipping: otherwise a core just left of zero can leave part of its right bloom or triangle visible at the plot edge. Hide; do not clamp or pin.
-
+The key invariant is that the **playhead itself** (the 1px core line, vertical body, and ruler triangle) never renders to the left of the piano keys / timeline split. Soft playhead glow/bloom passing over to the left of the split into the key column is explicitly accepted as an insignificant detail; the strict requirement is preventing the playhead core and triangle from rendering over fixed chrome or keys.
 ### Retained mask
 
 Build the mask from the local plot rectangles for:
@@ -250,8 +249,8 @@ The current refactor does not need to remove those components; it completes the 
    - velocity label/axis occupies the piano-key column;
    - no label/control rectangle enters a plot rectangle.
 3. Cover normal and fractional DPR, resize, font-scaled metrics, drawer visibility changes, and event-list switching.
-4. Add playhead assertions that no playhead-role pixels occur left of the split or inside excluded chrome (exercising `rollcheckplayhead.cpp` on macOS and `rollcheckplayhead_quick.cpp` on non-macOS).
-5. Add a case where `contentX(playheadTick) < 0` and assert that core, bloom, and triangle are all absent.
+4. Add playhead assertions that no playhead core or triangle pixels occur left of the split or inside excluded chrome (exercising `rollcheckplayhead.cpp` on macOS and `rollcheckplayhead_quick.cpp` on non-macOS).
+5. Add a case where `contentX(playheadTick) < 0` and assert that the core and triangle are absent (soft bloom passing over the boundary is non-blocking).
 
 These checks establish observable contracts; do not assert implementation field names or source text.
 
@@ -337,7 +336,8 @@ The refactor is complete only when all of the following are observable:
 - The velocity label/axis occupies the piano-key column and ends at the same split.
 - Every timeline plot begins at the split at every supported UI scale.
 - Tick zero and all timeline guides align across ruler, roll, other events, automation, velocity, and voice changes.
-- No playhead pixel appears over track headers, piano keys, labels, scrollbars, resize handles, separators, drawer chrome, or event-list content.
+- No playhead core or triangle pixel appears over track headers, piano keys, labels, scrollbars, resize handles, separators, drawer chrome, or event-list content.
+- Soft playhead bloom/glow passing slightly over to the left of the split is non-blocking; the strict requirement is that the playhead itself (core, triangle, and vertical stem) never renders to the left of the piano keys.
 - Moving the playhead core left of the visible plot hides the complete playhead rather than pinning or slicing it.
 - Paused and playing playheads follow the same geometry and visibility rules.
 - Drawer and gutter interactions retain their current behavior and accessibility bounds.
@@ -355,6 +355,7 @@ The refactor is complete only when all of the following are observable:
 - Removing the mask that protects scrollbars, handles, separators, and inactive regions.
 - Adding a general-purpose layout framework or renderer abstraction.
 
+- Pixel-perfect clipping or elimination of soft playhead glow/bloom that bleeds slightly left of the split boundary (this detail is explicitly out of scope; the requirement is keeping the playhead itself—core, triangle, and body—strictly to the right of the piano keys).
 ## Design rationale
 
 The layout and mask enforce different classes of constraints:
