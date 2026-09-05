@@ -165,7 +165,6 @@ bool AutomationCanvas::pointerPress(const songview::TimelinePointerInput &input)
 {
     m_hoverState.clearHover();
     requestHoverQuickUpdate();
-    m_deletedNodeClick.clear();
     if (!m_page.document())
         return false;
     const QPointF position = contentPosition(input.position);
@@ -380,6 +379,7 @@ bool AutomationCanvas::pointerMove(const songview::TimelinePointerInput &input)
 
 bool AutomationCanvas::pointerRelease(const songview::TimelinePointerInput &input)
 {
+    m_deletedNodeClick.clear();
     const QPointF position = contentPosition(input.position);
     songview::TimelineInputHost *const host = input.host ? input.host : m_inputHost;
     if (input.surface == songview::TimelineInputSurface::Gutter) {

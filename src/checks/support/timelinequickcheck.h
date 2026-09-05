@@ -1,10 +1,13 @@
 #pragma once
 
 #include "ui/editordrawer/drawerchrome.h"
+#include "ui/layout.h"
 #include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timelinebandlayout.h"
 
+#include <QColor>
 #include <QPointF>
 #include <QQuickItem>
 #include <QQuickWindow>
@@ -86,6 +89,53 @@ inline QRect canonicalVisibleQuickHostRect(const songview::TimelineBandLayout &b
         addChrome(chrome->automationScrollbarRect(), chrome->automationScrollbarVisible());
     }
     return hostRect.value_or(QRect{});
+}
+
+inline bool layerHasColorIn(const songview::TimelineQuickLayerData &layer, const QRectF &probe,
+                            const QColor &color)
+{
+    for (const songview::TimelineQuickRect &rect : layer.rects) {
+        if (rect.rect.intersects(probe) &&
+            (rect.topLeft == color || rect.topRight == color || rect.bottomRight == color ||
+             rect.bottomLeft == color)) {
+            return true;
+        }
+    }
+    for (const songview::TimelineQuickTriangle &triangle : layer.triangles) {
+        const qreal left = std::min({triangle.first.x(), triangle.second.x(), triangle.third.x()});
+        const qreal right = std::max({triangle.first.x(), triangle.second.x(), triangle.third.x()});
+        const qreal top = std::min({triangle.first.y(), triangle.second.y(), triangle.third.y()});
+        const qreal bottom =
+            std::max({triangle.first.y(), triangle.second.y(), triangle.third.y()});
+        if (QRectF(QPointF(left, top), QPointF(right, bottom)).intersects(probe) &&
+            (triangle.firstColor == color || triangle.secondColor == color ||
+             triangle.thirdColor == color)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+inline bool layerHasRingAt(const songview::TimelineQuickLayerData &layer,
+                           const QPointF &viewportCenter, qreal radius, qreal width,
+                           const QColor &color)
+{
+    const qreal tolerance = layout::singlePixel();
+    const qreal inner = std::max<qreal>(0.0, radius - width / 2.0 - tolerance);
+    const qreal outer = radius + width / 2.0 + tolerance;
+    const qreal innerSquared = inner * inner;
+    const qreal outerSquared = outer * outer;
+    const auto onRing = [&](const QPointF &point) {
+        const QPointF delta = point - viewportCenter;
+        const qreal distanceSquared = delta.x() * delta.x() + delta.y() * delta.y();
+        return distanceSquared >= innerSquared && distanceSquared <= outerSquared;
+    };
+    return std::count_if(layer.triangles.cbegin(), layer.triangles.cend(),
+                         [&](const songview::TimelineQuickTriangle &triangle) {
+                             return triangle.firstColor == color && triangle.secondColor == color &&
+                                    triangle.thirdColor == color && onRing(triangle.first) &&
+                                    onRing(triangle.second) && onRing(triangle.third);
+                         }) >= 4;
 }
 
 } // namespace checks::support

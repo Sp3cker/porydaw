@@ -9,6 +9,7 @@
 class QObject;
 class QWidget;
 class QQuickItem;
+class QQuickWindow;
 
 namespace checks::events {
 
@@ -28,5 +29,9 @@ void sendMouse(QQuickItem &target, QEvent::Type type, const QPointF &localPositi
 void sendWheel(QQuickItem &target, const QPointF &localPosition, const QPoint &pixelDelta,
                const QPoint &angleDelta, Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers,
                Qt::ScrollPhase phase, bool inverted);
+
+// Sends one adjacent QPA mouse move inside surface when target is within that
+// surface. Callers retain window-enter delivery and the final target move.
+bool primeMouseMove(QQuickWindow &window, const QQuickItem &surface, const QPoint &target);
 
 } // namespace checks::events

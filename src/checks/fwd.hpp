@@ -54,11 +54,8 @@ int runNoteIdentityCheck(const QString &scratchProject);
 int runHostSeamsCheck();
 int runVelocityModelCheck();
 int runEditorDrawerCheck(const QString &screenshotPath = QString());
-int runAutomationCheck(const QString &scratchProject, const QString &songLabel);
-int runAutomationGestureCheck(const QString &scratchProject, const QString &songLabel,
-                              const QString &domain = QString());
-int runAutomationPopupMenuCheck(const QString &scratchProject, const QString &songLabel,
-                                const QString &screenshotPath = QString());
+int runAutomationPaintRasterCheck(const QString &scratchProject, const QString &songLabel);
+int runAutomationInteractionRasterCheck(const QString &scratchProject, const QString &songLabel);
 int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel,
                          const QString &screenshotPath = QString());
 int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel);
@@ -72,3 +69,6 @@ int runThemeHarness(QApplication &application, const QString &command);
 int runEditorLayoutCheck(QApplication &application, int baseFontPx);
 int runVelocityEditingCheck(const QStringList &qtArguments);
 int runAutomationEditingCheck(const QStringList &qtArguments);
+int runAutomationDomainCheck(const QStringList &qtArguments);
+int runAutomationPresentationCheck(const QStringList &qtArguments);
+int runAutomationHoverCheck(const QStringList &qtArguments);

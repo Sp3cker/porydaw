@@ -7,23 +7,12 @@
 
 #include <QtTest>
 
-#include <algorithm>
-#include <optional>
-#include <utility>
-#include <variant>
-#include <vector>
-
-#include <QQuickItem>
-
-#include "core/tracklimits.h"
-#include "project/projectidentity.h"
-#include "project/voicegroupsource.h"
-#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
-#include "ui/editordrawer/automationprojection.h"
-#include "ui/editordrawer/editordrawer.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include <algorithm>
+#include <optional>
+#include <variant>
 
 namespace {
 
@@ -37,27 +26,6 @@ constexpr int kCommittedValue = 84;
 constexpr int kIndependentValue = 100;
 constexpr int kBlankProbeValue = 64;
 
-SmfEvent programChange(uint64_t tick, uint8_t program)
-{
-    SmfEvent event;
-    event.status = 0xC0;
-    event.tick = tick;
-    event.data0 = program;
-    return event;
-}
-
-SmfFile automationEditingSmf()
-{
-    SmfFile smf;
-    smf.format = 1;
-    smf.division = 24;
-    SmfTrack track;
-    track.events = {programChange(0, 0)};
-    track.endTick = kEndTick;
-    smf.tracks.push_back(track);
-    return smf;
-}
-
 bool transientLayerContainsNodeAt(const songview::TimelineQuickLayerData &layer,
                                   const QPointF &center)
 {
@@ -68,108 +36,6 @@ bool transientLayerContainsNodeAt(const songview::TimelineQuickLayerData &layer,
 }
 
 } // namespace
-
-void AutomationEditingTest::init()
-{
-    m_heldButton = Qt::NoButton;
-    m_lastWindowPos = {};
-
-    m_bank = LoadedVoiceGroup{};
-    m_bank.voices[0].type = VOICE_DIRECTSOUND;
-    m_bank.voices[1].type = VOICE_SQUARE_1;
-    m_bank.voices[2].type = VOICE_PROGRAMMABLE_WAVE;
-    m_bank.voices[3].type = VOICE_NOISE;
-
-    const std::optional<SongName> name = SongName::create(QStringLiteral("automation-editing"));
-    QVERIFY(name.has_value());
-    m_tab = std::make_unique<SongTab>(std::move(*name));
-    m_tab->resize(960, 480);
-    // MidiStage builds the timeline projection, so its sample rate must be
-    // fixed before staging it into the tab.
-    m_tab->setSampleRate(48000.0);
-
-    const std::optional<VoicegroupId> identity =
-        VoicegroupId::create(QStringLiteral("automation-editing-check"), QString());
-    QVERIFY(identity.has_value());
-
-    SongInfo song;
-    song.label = QStringLiteral("automation-editing");
-    song.hasMid = true;
-    // The tab's load protocol is MIDI, then the borrowed bank, then identity.
-    m_tab->applyMidiStage(std::move(song), automationEditingSmf(), track_limits::kHardwareCapacity);
-    QVERIFY(m_tab->presentationError().isEmpty());
-    m_tab->applyBankView(LoadedBankView{*identity, borrowVoicegroupLease(&m_bank), QString()});
-    m_tab->applyVoicegroupBound(*identity);
-
-    QTRY_VERIFY(m_tab->isReady());
-    QVERIFY(m_tab->voicegroupLease().get() == &m_bank);
-
-    SongView &view = m_tab->view();
-    view.setDrawerActivePage(EditorDrawerPage::Automations);
-    view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
-    view.setDrawerSectionHeight(EditorDrawerPage::Automations, 320);
-
-    m_page = view.editorDrawer() ? view.editorDrawer()->automationPage() : nullptr;
-    QVERIFY(m_page);
-    songview::TimelineQuickView *quick = view.quickView();
-    QVERIFY(quick);
-    m_quickWindow = quick->quickWindow();
-    QVERIFY(m_quickWindow);
-    QObject *const quickRoot = quick->rootObject();
-    QVERIFY(quickRoot);
-    m_automationInput = quickRoot->findChild<songview::TimelineInputItem *>(
-        QStringLiteral("timelineAutomationInput"));
-    QVERIFY(m_automationInput);
-
-    arrangeCcLane();
-    // QTest delivers integral window positions. Give the 0...127 CC domain
-    // the largest supported lane so this literal target is representable by
-    // that real input path instead of changing the expected controller value.
-    EditorViewState automationState = view.editorViewState();
-    const EditorAutomationRowId ccRow{EditorAutomationRowKind::ControlChange, 0, kController};
-    automationState.laneHeights[ccRow] = AutomationGeometry::resolve().rowMaximumHeight;
-    view.applyEditorViewState(automationState);
-    QTRY_VERIFY(ccLaneHandle().valid());
-    QTRY_VERIFY(!m_page->canvas()->laneBody(ccLaneHandle()).isEmpty());
-    QTRY_COMPARE(m_page->canvas()->laneBody(ccLaneHandle()).height(),
-                 AutomationGeometry::resolve().rowMaximumHeight);
-
-    m_tab->show();
-    QTRY_VERIFY(m_quickWindow->isVisible() && m_quickWindow->isExposed());
-    QTRY_VERIFY(!m_automationInput->bounds().isEmpty());
-    QTRY_COMPARE(m_automationInput->window(), m_quickWindow.data());
-    const QPointF draggedViewport =
-        ccPoint(kDraggedTick, kDraggedValue) - QPointF(0.0, m_page->verticalScroll());
-    QVERIFY(m_automationInput->bounds().contains(draggedViewport));
-    QVERIFY(laneValue(kDraggedTick) == kDraggedValue);
-    QVERIFY(laneValue(kIndependentTick) == kIndependentValue);
-
-    focusAutomationBand();
-}
-
-void AutomationEditingTest::cleanup()
-{
-    // This is deliberately unconditional: a failed assertion after a press
-    // must still cancel, release, and ungrab before the borrowed bank outlives
-    // the tab teardown.
-    bool mouseGrabCleared = true;
-    if (m_quickWindow) {
-        QTest::keyClick(m_quickWindow, Qt::Key_Escape, Qt::NoModifier);
-        if (m_heldButton != Qt::NoButton)
-            QTest::mouseRelease(m_quickWindow, m_heldButton, Qt::NoModifier, m_lastWindowPos);
-        if (QQuickItem *grabber = m_quickWindow->mouseGrabberItem())
-            grabber->ungrabMouse();
-        mouseGrabCleared = QTest::qWaitFor(
-            [this] { return !m_quickWindow || !m_quickWindow->mouseGrabberItem(); });
-    }
-    m_heldButton = Qt::NoButton;
-    m_page.clear();
-    m_automationInput.clear();
-    m_quickWindow.clear();
-    m_tab.reset();
-
-    QVERIFY(mouseGrabCleared);
-}
 
 void AutomationEditingTest::ccDragCommitsOnce()
 {
@@ -285,8 +151,8 @@ void AutomationEditingTest::releaseWithoutActivationDoesNotCommit()
     QVERIFY(documentChanged.isValid());
     QVERIFY(edited.isValid());
 
-    mousePress(Qt::LeftButton, windowPoint(blank), Qt::NoModifier);
-    mouseRelease(Qt::LeftButton, windowPoint(blank), Qt::NoModifier);
+    mousePress(Qt::LeftButton, automationWindowPoint(blank), Qt::NoModifier);
+    mouseRelease(Qt::LeftButton, automationWindowPoint(blank), Qt::NoModifier);
 
     // A blank, unactivated sweep commits cursor placement—not a document
     // mutation. Stationary clicks on existing nodes intentionally delete.
@@ -302,43 +168,10 @@ void AutomationEditingTest::releaseWithoutActivationDoesNotCommit()
     QCOMPARE(laneValue(kBlankTick), -1);
 }
 
-void AutomationEditingTest::arrangeCcLane()
-{
-    m_tab->document().writeLanePoints(
-        0, kController, 0, kEndTick,
-        {{kDraggedTick, kDraggedValue}, {kIndependentTick, kIndependentValue}});
-}
-
-LaneHandle AutomationEditingTest::ccLaneHandle() const
-{
-    if (!m_page)
-        return {};
-    const EditorAutomationRowId wanted{EditorAutomationRowKind::ControlChange, 0, kController};
-    const auto &rows = m_page->canvas()->rows();
-    for (int index = 0; index < int(rows.size()); ++index) {
-        if (rows[std::size_t(index)].id == wanted)
-            return {index + 1};
-    }
-    return {};
-}
-
 QPointF AutomationEditingTest::ccPoint(uint64_t tick, int value) const
 {
-    const LaneHandle lane = ccLaneHandle();
-    const QRect body = m_page ? m_page->canvas()->laneBody(lane) : QRect{};
-    if (!m_tab || !m_automationInput || body.isEmpty())
-        return {};
-    const qreal x =
-        m_tab->view().camera().displayX(double(tick), 0.0, m_automationInput->devicePixelRatio());
-    const qreal y =
-        AutomationProjection::valueY(body, AutomationGeometry::resolve(), 0, 127, value);
-    return {x, y};
-}
-
-QPoint AutomationEditingTest::windowPoint(const QPointF &contentPoint) const
-{
-    const QPointF viewportPoint(contentPoint.x(), contentPoint.y() - m_page->verticalScroll());
-    return m_automationInput->mapToScene(viewportPoint).toPoint();
+    return inputPoint(findRow({EditorAutomationRowKind::ControlChange, 0, kController}),
+                      double(tick), value);
 }
 
 std::optional<AutomationEditingTest::ArmedCcDrag>
@@ -360,9 +193,9 @@ AutomationEditingTest::armCcDrag(songview::TimelineQuickScene *quickScene)
     // delta must be target minus press, relative to that activation origin.
     const int activationTravel = AutomationGeometry::resolve().nodeDragActivationDistance + 2;
     const QPointF activation = source + QPointF(0.0, -activationTravel);
-    const QPoint sourceWindow = windowPoint(source);
-    const QPoint targetWindow = windowPoint(target);
-    const QPoint activationWindow = windowPoint(activation);
+    const QPoint sourceWindow = automationWindowPoint(source);
+    const QPoint targetWindow = automationWindowPoint(target);
+    const QPoint activationWindow = automationWindowPoint(activation);
     const QPoint dragEndWindow = activationWindow + (targetWindow - sourceWindow);
     const quint64 transientRevisionBefore =
         quickScene->layer(songview::TimelineQuickLayer::AutomationTransient).revision;
@@ -376,51 +209,6 @@ AutomationEditingTest::armCcDrag(songview::TimelineQuickScene *quickScene)
         .targetViewport = target - scrollOffset,
         .transientRevisionBefore = transientRevisionBefore,
     };
-}
-
-AutomationEditingTest::FrozenDocumentState
-AutomationEditingTest::frozenDocumentState(int documentChanges, int edits) const
-{
-    return {
-        .smf = m_tab->document().smf().write(),
-        .revision = m_tab->document().revision(),
-        .undoCount = m_tab->document().undoStack()->count(),
-        .undoIndex = m_tab->document().undoStack()->index(),
-        .documentChanges = documentChanges,
-        .edits = edits,
-    };
-}
-
-void AutomationEditingTest::mousePress(Qt::MouseButton button, const QPoint &windowPos,
-                                       Qt::KeyboardModifiers modifiers)
-{
-    m_lastWindowPos = windowPos;
-    QTest::mouseEvent(QTest::MouseMove, m_quickWindow, Qt::NoButton, modifiers, m_lastWindowPos);
-    QTest::mousePress(m_quickWindow, button, modifiers, m_lastWindowPos);
-    m_heldButton = button;
-}
-
-void AutomationEditingTest::mouseMove(const QPoint &windowPos, Qt::KeyboardModifiers modifiers)
-{
-    m_lastWindowPos = windowPos;
-    QTest::mouseEvent(QTest::MouseMove, m_quickWindow, Qt::NoButton, modifiers, m_lastWindowPos);
-}
-
-void AutomationEditingTest::mouseRelease(Qt::MouseButton button, const QPoint &windowPos,
-                                         Qt::KeyboardModifiers modifiers)
-{
-    m_lastWindowPos = windowPos;
-    QTest::mouseRelease(m_quickWindow, button, modifiers, m_lastWindowPos);
-    m_heldButton = Qt::NoButton;
-}
-
-void AutomationEditingTest::focusAutomationBand()
-{
-    QVERIFY(m_tab->view().quickView()->focusBand(songview::TimelineBand::Automation,
-                                                 Qt::OtherFocusReason));
-    QTRY_VERIFY(m_tab->view().quickView()->focusedBand() == songview::TimelineBand::Automation);
-    QTRY_COMPARE(m_quickWindow->activeFocusItem(),
-                 static_cast<QQuickItem *>(m_automationInput.data()));
 }
 
 int AutomationEditingTest::laneValue(uint64_t tick) const

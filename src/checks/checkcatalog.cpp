@@ -384,34 +384,14 @@ const std::vector<CheckDefinition> &catalog()
                     },
             },
             {
-                .name = "automation-gestures",
-                .argv = strings({"--check-automation-gestures", "{scratch}", "mus_route101"}),
+                .name = "automation-raster",
+                .argv = strings({"--check-automation-raster", "{scratch}", "mus_route101"}),
                 .handler =
                     [](QApplication &, const QStringList &args) {
-                        return runAutomationGestureCheck(args[1], args[2], optional(args, 3));
-                    },
-                .scratchKind = ScratchKind::ExistingDirectory,
-                .fixtureRootKind = FixtureRootKind::DecompProject,
-                .fixtureFiles = route101Files,
-                .windowing = Windowing::WindowSystem,
-            },
-            {
-                .name = "automation-popup-menus",
-                .argv = strings({"--check-automation-popup-menus", "{scratch}", "mus_route101"}),
-                .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runAutomationPopupMenuCheck(args[1], args[2], optional(args, 3));
-                    },
-                .scratchKind = ScratchKind::ExistingDirectory,
-                .fixtureRootKind = FixtureRootKind::DecompProject,
-                .fixtureFiles = route101Files,
-            },
-            {
-                .name = "automation",
-                .argv = strings({"--check-automation", "{scratch}", "mus_route101"}),
-                .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runAutomationCheck(args[1], args[2]);
+                        const int painting = runAutomationPaintRasterCheck(args[1], args[2]);
+                        const int interaction =
+                            runAutomationInteractionRasterCheck(args[1], args[2]);
+                        return painting == 0 && interaction == 0 ? 0 : 1;
                     },
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
@@ -445,6 +425,36 @@ const std::vector<CheckDefinition> &catalog()
                 .handler =
                     [](QApplication &, const QStringList &args) {
                         return runAutomationEditingCheck(args.mid(1));
+                    },
+                .windowing = Windowing::Offscreen,
+                .framework = Framework::QtTest,
+            },
+            {
+                .name = "automation-domain",
+                .argv = strings({"--automation-domain"}),
+                .handler =
+                    [](QApplication &, const QStringList &args) {
+                        return runAutomationDomainCheck(args.mid(1));
+                    },
+                .windowing = Windowing::Offscreen,
+                .framework = Framework::QtTest,
+            },
+            {
+                .name = "automation-presentation",
+                .argv = strings({"--automation-presentation"}),
+                .handler =
+                    [](QApplication &, const QStringList &args) {
+                        return runAutomationPresentationCheck(args.mid(1));
+                    },
+                .windowing = Windowing::Offscreen,
+                .framework = Framework::QtTest,
+            },
+            {
+                .name = "automation-hover",
+                .argv = strings({"--automation-hover"}),
+                .handler =
+                    [](QApplication &, const QStringList &args) {
+                        return runAutomationHoverCheck(args.mid(1));
                     },
                 .windowing = Windowing::Offscreen,
                 .framework = Framework::QtTest,

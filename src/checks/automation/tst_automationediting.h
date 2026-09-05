@@ -4,8 +4,11 @@
 
 #include <memory>
 #include <optional>
+#include <vector>
 
+#include "ui/editordrawer/automationprojection.h"
 #include <QByteArray>
+#include <QEvent>
 #include <QObject>
 #include <QPoint>
 #include <QPointF>
@@ -16,11 +19,21 @@
 #include "ui/songtab.h"
 #include "ui/songview/quick/timelineinputitem.h"
 
+class QAction;
 class AutomationPage;
 
 namespace songview {
 class TimelineQuickScene;
 }
+
+namespace automation_test {
+QPoint windowFromContent(const AutomationPage &page, const songview::TimelineInputItem &input,
+                         const QPointF &contentPoint);
+QPointF contentFromWindow(const AutomationPage &page, const songview::TimelineInputItem &input,
+                          const QPoint &windowPoint);
+QPointF effectiveDragContent(const AutomationPage &page, const songview::TimelineInputItem &input,
+                             const QPoint &press, const QPoint &activation, const QPoint &end);
+} // namespace automation_test
 
 class AutomationEditingTest final : public QObject
 {
@@ -33,9 +46,147 @@ class AutomationEditingTest final : public QObject
   private slots:
     void init();
     void cleanup();
+
+    // Pilot coverage.
     void ccDragCommitsOnce();
     void escapeCancelsCcDrag();
     void releaseWithoutActivationDoesNotCommit();
+
+    // Pencil transaction and stroke coverage.
+    void pencilStrokeOnEmptyLaneCommitsOnce();
+    void pencilPreviewDoesNotMutateUntilRelease();
+    void pencilStrokeRestoresHeldEndpointValue();
+    void pencilSingleClickOnTempoLaneRestoresDefaultTempoAtCellEnd();
+    void pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd();
+    void pencilFlatStrokeAndRedundantClickAreNoOps();
+    void pencilClickOnExcursionNodeDeletesExcursion();
+    void pencilCancellationRoutesAbortGestureWithoutCommit_data();
+    void pencilCancellationRoutesAbortGestureWithoutCommit();
+    void pencilSubCellHorizontalJitterDoesNotAlterStroke();
+    void pencilZigzagStrokePreservesDirectionalExtrema();
+    void pencilVerticalMotionInSingleCellRetainsFinalValue();
+    void pencilDiagonalStrokeEventDensityInvariance_data();
+    void pencilDiagonalStrokeEventDensityInvariance();
+    void pencilBacktrackingStrokeRetainsExtremaAndLatestRevisit();
+    void pencilShiftModifierLocksValueDimension();
+    void pencilControlModifierDrawsUnsnappedClockQuantizedPoints();
+    void pencilMixedModifierComposesFreehandAndSnappedSegments();
+    void pencilAltModifierIsIgnoredDuringStroke();
+
+    // Retained Quick automation presentation coverage.
+    void emptyTempoStorageComposesNoLeadIn();
+    void firstNonzeroTempoPointComposesImplicitLeadInCurve();
+    void explicitTickZeroTempoPointSuppressesLeadInCurve();
+    void stepCurvesAndNodesComposed_data();
+    void stepCurvesAndNodesComposed();
+    void selectionRingsAndReticlesComposed_data();
+    void selectionRingsAndReticlesComposed();
+    void halfOpenTimeSelectionComposesNodeRings();
+    void singleNodeDragPreview_data();
+    void singleNodeDragPreview();
+    void multiNodeDragPreview_data();
+    void multiNodeDragPreview();
+    void sweepPreview_data();
+    void sweepPreview();
+    void shiftRampPreview_data();
+    void shiftRampPreview();
+    void pencilPreviewAndValueLabel();
+    void editCursorTracksQuickView();
+
+    // Cross-lane selection coverage.
+    void bandSelectionIsolatesTempoAndControlChangeRows();
+    void multiLaneSelectionDragPreservesTempoAndCcOrder();
+    void multiLaneSelectionDeleteAndEmptyDeleteNoop();
+    void multiLaneSelectionDragAbortsOnDocumentRebuild();
+    void multiCcLaneSelectionDragExcludesTempoAndVolume();
+
+    // Menu and clipboard coverage.
+    void contextMenuRoutingAndAvailableLanes();
+    void contextMenuActionsApplyEffects();
+    void clipboardCrossLanePasteClamps();
+    void pointMenuDeleteCommitsEdit();
+    void pointMenuNumericDialogUpdatesOneDuplicateOccurrence();
+    void outsideRightClickDismissesPointMenu();
+    void selectionContextMenuRoutesInsideActiveSelection();
+
+    // Voice and routed physical-input coverage.
+    void voiceHorizontalPreviewCommitsAndUndoes();
+    void voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit();
+    void voiceAltDragUsesFineSnap();
+    void voiceCollisionAndStaleRevision();
+    void voiceEscapeAndUngrabCancel();
+    void voiceDuplicateOccurrenceMovesSingleIdentity();
+    void middlePanIsolated();
+    void voicePressIsolated();
+    void tempoHeaderExpansionIsolated();
+    void rowResizeChangesOnlyTarget();
+    void rightBandPreviewIsolated();
+    void pencilEditTargetsOnlyItsLane();
+    void defaultBodyClickSetsCursorOnly();
+    void firstCcRowOriginRebuildAndUndo();
+
+    // Action, projection, and ownership coverage.
+    void actionShortcutLatching();
+    void actionTextInputImmunity();
+    void actionRepeatImmunity();
+    void actionCustomBinding();
+    void actionHeldKeyGestures();
+    void projectionPartialCell();
+    void projectionValueBounds();
+    void projectionCanvasOrigin();
+    void projectionInsertionTiming();
+    void pencilClickHalfOpenQuantization();
+    void tracksSelectionRings();
+    void tracksSelectionGroupDragUndo();
+    void pencilModeChangeRetainsPencilGesture();
+    void pencilModeChangeRetainsNodeGesture();
+    void pencilStrokeOutsideSelectionClearsSelection();
+    void detailThresholdHiddenVisibleNodePrecedence();
+
+    // Automation canvas layout and remaining interaction coverage.
+    void automationBandAndInputsExposed();
+    void scrollbarChromeTracksZeroRangeResize();
+    void layoutAlignsPlotGutterAndRollGrid();
+    void rowStackAndGridResolution();
+    void middleMousePanSurvivesRefresh();
+    void boundaryHoverAndEmptyLaneUpdateTextAndGrid();
+    void viewStateSwitchPreservesAutomationState();
+    void wheelZoomAndCtrlWheelRowHeightPreserveDrawerState();
+    void activationSlopDoesNotCommit();
+    void selectionClearingAndMultilaneReplacement();
+    void additionalDragCancellationRoutesLeaveDocumentUntouched_data();
+    void additionalDragCancellationRoutesLeaveDocumentUntouched();
+    void voiceContextFollowsPlaybackOrEditCursor();
+
+    // Tempo/CC parity coverage.
+    void hoverInsertionDoesNotMutateDocument_data();
+    void hoverInsertionDoesNotMutateDocument();
+    void stationaryNodeInteractions_data();
+    void stationaryNodeInteractions();
+    void independentDoubleClickAfterDeleteOpensValueDialog_data();
+    void independentDoubleClickAfterDeleteOpensValueDialog();
+    void doubleClickDeletesOnceWithoutValueDialog_data();
+    void doubleClickDeletesOnceWithoutValueDialog();
+    void sweepAndRampCommit_data();
+    void sweepAndRampCommit();
+    void pencilPreviewCommits_data();
+    void pencilPreviewCommits();
+    void laneBandSelectsRange_data();
+    void laneBandSelectsRange();
+    void blankAndSubThresholdNoOps_data();
+    void blankAndSubThresholdNoOps();
+    void nodeDragCommits_data();
+    void nodeDragCommits();
+    void nodeDragShiftAxisLocks_data();
+    void nodeDragShiftAxisLocks();
+    void scrolledOriginPhantomCommits_data();
+    void scrolledOriginPhantomCommits();
+    void selectedRangeDragAndDelete_data();
+    void selectedRangeDragAndDelete();
+    void escapeCancelsAdapterDrag_data();
+    void escapeCancelsAdapterDrag();
+    void rebuildCancelsAdapterDragAndRecovers_data();
+    void rebuildCancelsAdapterDragAndRecovers();
 
   private:
     struct ArmedCcDrag final {
@@ -55,18 +206,64 @@ class AutomationEditingTest final : public QObject
         bool operator==(const FrozenDocumentState &) const = default;
     };
 
-    void arrangeCcLane();
-    LaneHandle ccLaneHandle() const;
-    QPointF ccPoint(uint64_t tick, int value) const;
-    QPoint windowPoint(const QPointF &contentPoint) const;
-    std::optional<ArmedCcDrag> armCcDrag(songview::TimelineQuickScene *quickScene);
-    FrozenDocumentState frozenDocumentState(int documentChanges, int edits) const;
+    bool stage(SmfFile smf);
+    bool stageSong(SmfFile smf);
+    bool quiesceInput();
+    LaneHandle findRow(const EditorAutomationRowId &row) const;
+    QRect laneBody(LaneHandle lane) const;
+    QPointF inputPoint(LaneHandle lane, double tick, int value) const;
+    AutomationProjection::PointerMapping pointerMapping(LaneHandle lane,
+                                                        QPointF contentPoint) const;
+    QPoint windowPoint(const songview::TimelineInputItem &input, QPointF itemPoint) const;
+    QPoint automationWindowPoint(QPointF contentPoint) const;
+    QPoint automationGutterWindowPoint(QPointF contentPoint) const;
+    QPoint voiceWindowPoint(QPointF itemPoint) const;
+    QPointF voicePoint(uint64_t tick) const;
+    bool expandTempo();
+    void setRowMaximumHeight(const EditorAutomationRowId &row);
+    void setPencilMode(bool enabled);
+    QAction *pencilModeAction() const;
+    songview::TimelineQuickScene *quickScene() const;
+
+    SongTab &tab() noexcept;
+    const SongTab &tab() const noexcept;
+    AutomationPage &page() noexcept;
+    const AutomationPage &page() const noexcept;
+    songview::TimelineInputItem &automationInput() noexcept;
+    songview::TimelineInputItem &automationGutterInput() noexcept;
+    songview::TimelineInputItem &voiceChangeInput() noexcept;
+    QQuickWindow &quickWindow() noexcept;
+
+    FrozenDocumentState frozenDocumentState(int documentChanges = 0, int edits = 0) const;
     void mousePress(Qt::MouseButton button, const QPoint &windowPos,
-                    Qt::KeyboardModifiers modifiers);
-    void mouseMove(const QPoint &windowPos, Qt::KeyboardModifiers modifiers);
+                    Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void mouseMove(const QPoint &windowPos, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     void mouseRelease(Qt::MouseButton button, const QPoint &windowPos,
-                      Qt::KeyboardModifiers modifiers);
-    void focusAutomationBand();
+                      Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void mouseDClick(Qt::MouseButton button, const QPoint &windowPos,
+                     Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void mousePress(const songview::TimelineInputItem &input, Qt::MouseButton button,
+                    QPointF itemPoint, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void mouseMove(const songview::TimelineInputItem &input, QPointF itemPoint,
+                   Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void mouseRelease(const songview::TimelineInputItem &input, Qt::MouseButton button,
+                      QPointF itemPoint, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void mouseDClick(const songview::TimelineInputItem &input, Qt::MouseButton button,
+                     QPointF itemPoint, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void wheel(const songview::TimelineInputItem &input, QPointF itemPoint, QPoint angleDelta,
+               Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void sendWindowDeactivate();
+    void keyEvent(QEvent::Type type, Qt::Key key, Qt::KeyboardModifiers modifiers = Qt::NoModifier,
+                  bool autoRepeat = false);
+    void keyPress(Qt::Key key, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void keyRelease(Qt::Key key, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    void keyClick(Qt::Key key, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
+    bool focusAutomationBand();
+
+    // Pilot baseline setup retained with its original literals and assertions.
+    void arrangeCcLane();
+    QPointF ccPoint(uint64_t tick, int value) const;
+    std::optional<ArmedCcDrag> armCcDrag(songview::TimelineQuickScene *quickScene);
     int laneValue(uint64_t tick) const;
     int timelineCcValue(uint64_t tick) const;
 
@@ -75,9 +272,12 @@ class AutomationEditingTest final : public QObject
     std::unique_ptr<SongTab> m_tab;
     QPointer<AutomationPage> m_page;
     QPointer<songview::TimelineInputItem> m_automationInput;
+    QPointer<songview::TimelineInputItem> m_automationGutterInput;
+    QPointer<songview::TimelineInputItem> m_voiceInput;
     QPointer<QQuickWindow> m_quickWindow;
-    // Escape cancels the gesture but deliberately does not clear this record;
-    // cleanup still releases the originally held button before tab destruction.
-    Qt::MouseButton m_heldButton = Qt::NoButton;
+    bool m_windowEntered = false;
+    Qt::MouseButtons m_heldButtons = Qt::NoButton;
+    Qt::KeyboardModifiers m_lastModifiers = Qt::NoModifier;
+    std::vector<Qt::Key> m_heldKeys;
     QPoint m_lastWindowPos;
 };

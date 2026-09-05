@@ -605,25 +605,10 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/hostcheck.cpp
         src/checks/mainwindowroutingcheck.cpp
         src/checks/noteidcheck.cpp
-        src/checks/rollcheckautomation.cpp
-        src/checks/rollcheckautomation_tempo.cpp
-        src/checks/rollcheckautomation_paint.cpp
-        src/checks/rollcheckautomation_tempo_paint.cpp
-        src/checks/rollcheckautomation_popup.cpp
-        src/checks/automationgesturecheck/rig.cpp
-        src/checks/automationgesturecheck/runner.cpp
-        src/checks/automationgesturecheck/action.cpp
-        src/checks/automationgesturecheck/cursor.cpp
-        src/checks/automationgesturecheck/mapping.cpp
-        src/checks/automationgesturecheck/stroke.cpp
-        src/checks/automationgesturecheck/ownership.cpp
-        src/checks/automationgesturecheck/transactions.cpp
-        src/checks/automationgesturecheck/parity.cpp
-        src/checks/automationgesturecheck/crosslane.cpp
-        src/checks/automationgesturecheck/contract.cpp
-        src/checks/automationgesturecheck/hover.cpp
-        src/checks/automationgesturecheck/lifecycle.cpp
-        src/checks/automationgesturecheck/routing.cpp
+        src/checks/automation/raster/painting.cpp
+        src/checks/automation/raster/interaction.cpp
+        src/checks/automation/raster/rasterfixture.cpp
+        src/checks/automation/raster/rasterfixture.h
         src/checks/rollcheckdrawer.cpp
         src/checks/rollcheckvoicechange.cpp
         src/checks/rollcheckvoicechange.h
@@ -640,6 +625,33 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/velocity/velocitydetentdragging.cpp
         src/checks/automation/tst_automationediting.cpp
         src/checks/automation/tst_automationediting.h
+        src/checks/automation/automationfixture.cpp
+        src/checks/automation/automationpencil.cpp
+        src/checks/automation/automationstroke.cpp
+        src/checks/automation/automationparity.cpp
+        src/checks/automation/automationnodedrag.cpp
+        src/checks/automation/automationselection.cpp
+        src/checks/automation/automationactions.cpp
+        src/checks/automation/automationownership.cpp
+        src/checks/automation/automationrouting.cpp
+        src/checks/automation/automationvoice.cpp
+        src/checks/automation/automationpainting.cpp
+        src/checks/automation/automationpreviews.cpp
+        src/checks/automation/automationmenus.cpp
+        src/checks/automation/automationclipboard.cpp
+        src/checks/automation/automationcanvaslayout.cpp
+        src/checks/automation/automationcanvasediting.cpp
+        src/checks/automation/domain/tst_automationdomain.h
+        src/checks/automation/domain/tst_automationdomain.cpp
+        src/checks/automation/domain/gestures.cpp
+        src/checks/automation/domain/xcmd.cpp
+        src/checks/automation/presentation/tst_automationpresentation.h
+        src/checks/automation/presentation/tst_automationpresentation.cpp
+        src/checks/automation/presentation/painting.cpp
+        src/checks/automation/hover/tst_automationhover.h
+        src/checks/automation/hover/tst_automationhover.cpp
+        src/checks/automation/hover/hoverfixture.h
+        src/checks/automation/hover/hoverfixture.cpp
         src/checks/themechecks.cpp
         src/checks/fontcheck.cpp
         src/ui/theme/themecheck.cpp

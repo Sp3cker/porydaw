@@ -31,13 +31,31 @@ boundaries; prefer one feature directory with a small public surface
 `tools/run_checks.ts` executes checks as independent OS processes orchestrated via a JSON
 manifest (`porydaw_checks --manifest`):
 1. **Manifest-Driven Partitioning:**
-   - `Windowing::Offscreen` (~50 checks): Render headlessly (`QT_QPA_PLATFORM=offscreen`).
+   - `Windowing::Offscreen` (61 checks after the 2026-09-05 automation cutover):
+     Render headlessly (`QT_QPA_PLATFORM=offscreen`).
      Executed in a parallel LPT pool pinned to 6 workers by empirical benchmark on Apple Silicon
      (7+ workers cause thread/cache contention on CPU-saturating checks).
-   - `Windowing::WindowSystem` (6 checks: `rollcheck`, `trackheaderquickcheck`,
-     `rollwindowingcheck`, `automation-gestures`, `automation`, `rendering-playhead`):
+   - `Windowing::WindowSystem` (5 checks after the 2026-09-05 automation
+     cutover: `rollcheck`, `trackheaderquickcheck`, `rollwindowingcheck`,
+     `automation-raster`, `rendering-playhead`):
      Require native Cocoa windows and native event dispatch. Serialized with worker count 1
      to prevent Cocoa window-activation and focus-stealing races.
+   - Observed offscreen rendering boundary (2026-09-05): `QOffscreenIntegration`
+     rejects `RhiBasedRendering`, so Qt Quick loads its **software** scene-graph
+     adaptation, and that adaptation skips arbitrary custom `QSGGeometryNode`
+     subclasses (primary Qt sources and the evidence register:
+     `docs/automation-qt-test-migration-plan.md` §4.7/§9). Offscreen proves
+     CPU retained-composition, document/undo, input, and domain contracts;
+     raster evidence for custom geometry (porydaw's timeline paint layers are
+     custom geometry nodes) stays `Windowing::WindowSystem`.
+     Offscreen also demonstrably runs the modal `QMenu`/`QInputDialog` driver
+     (the former `automation-popup-menus` row passed there, driving the exact
+     queued-menu → modal-dialog flow) and the injected
+     deactivation/playhead seams — ledger §9 closes both as not-native
+     (injected routes only; no OS focus/timer equivalence claimed). The
+     raster residual is registered as the `automation-raster`
+     `Windowing::WindowSystem` row — compiled and source-reviewed,
+     deliberately not executed natively (skipped by `--no-windowing-checks`).
 2. **QSettings Sandboxing:**
    - `src/checks/checkregistry.cpp:139-144` redirects settings per-process via
      `QSettings::setPath(IniFormat, UserScope, tmpdir)` and `setDefaultFormat(IniFormat)` before
@@ -78,12 +96,17 @@ Everything else stays separate.
 - **Automation sprawl.** `automationgesturecheck/` (17 files, `rig.h` + `support.h`
   internal seams) is already the exemplar module. `rollcheckautomation*` exercises a
   different seam (canvas impl + popup menus vs TimelineInputHost gestures).
-  Transaction drag→commit coverage additionally lives in the `automation-editing`
-  Qt suite (host-choice rule below); all legacy automation rows are unchanged. Note:
-  `runAutomationCheck` / `runAutomationPopupMenuCheck` already share
-  `runAutomationCheckImpl(..., popupMenus)` — merged in code, two catalog rows is
-  intentional parameterization, same as `exportcheck`/`exportcheck-tail` and the
-  layout/theme rows.
+  Transaction drag→commit coverage additionally lived in the `automation-editing`
+  Qt suite (host-choice rule below); the whole legacy family was migrated and
+  removed in the 2026-09-05 cutover (the former `automation` /
+  `automation-gestures` / `automation-popup-menus` rows are gone;
+  `runAutomationCheck` / `runAutomationPopupMenuCheck` shared
+  `runAutomationCheckImpl(..., popupMenus)` until removal — merged in code,
+  two catalog rows was intentional parameterization, same as
+  `exportcheck`/`exportcheck-tail` and the layout/theme rows).
+  Full-migration ledger for the family (every `automationgesturecheck/` and
+  `rollcheckautomation*` contract row, duplicate crosslinks, cutover gates,
+  native-evidence register): `docs/automation-qt-test-migration-plan.md`.
 - **prime / loop / click.** All synth `TimelinePlayer` + `m4a_engine.h`, but distinct
   invariants (voice priming, loop-GOTO event ordering, cut-fade clicks). May group
   under `playback/` one day; never one file.
@@ -151,15 +174,47 @@ suites; the host-extraction roadmap (Steps 2/2.5/3) is unaffected. Recorded
   deletes it. Positive previews are observed via the public retained
   `AutomationTransient` scene triangles, not pixel capture. No universal
   fixture and no wheel/chord coverage; the legacy `automationgesturecheck/` and
-  `rollcheckautomation*` rows are unchanged.
+  `rollcheckautomation*` rows were unchanged at pilot time.
+
+  (Pilot scope as recorded; the suite now carries the full migration ledger —
+  every `automationgesturecheck/` and `rollcheckautomation*` contract row in
+  `docs/automation-qt-test-migration-plan.md` — through the shared
+  `AutomationFixture` header. The legacy files and catalog rows were removed
+  in the 2026-09-05 cutover batch; gate and receipt detail lives in the
+  ledger.)
+
+Three further automation-family Qt Test runners are registered, all
+`Framework::QtTest` + `Windowing::Offscreen`: `automation-domain` (GUI-free),
+`automation-presentation` (EditorRig static), `automation-hover` (own QObject +
+real `QQuickWindow` input). Coverage state lives in
+`docs/automation-qt-test-migration-plan.md`. Observed: `automation-domain`
+passed its full set (26 Qt results) before its readback additions;
+`automation-editing` re-ran its pilot green (5 Qt results) and its first full
+offscreen run split 6 passed / 19 failed exactly along the offscreen
+software-backend boundary — custom-geometry pixel oracles are the
+retained-native residual (ledger §4.7/§9). What followed, all observed
+2026-09-05: the shared-fixture root fixes and the double-click production
+guard repair (ledger §6.4 note); the full safe automation gate; the per-row
+isolation run — 182/182 rows PASS individually (editing 131 / domain 24 /
+presentation 16 / hover 11), all four suites PASS with reversed data-row
+order (133/26/18/13 Qt results), and two targeted production mutation
+controls failed the expected slots and passed after restore; and the cutover
+batch, which removed all 22 legacy automation files plus the three legacy
+catalog rows and registered ONE `automation-raster` `Windowing::WindowSystem`
+row carrying the two raster exports. Final gates: `deno task verify
+--no-windowing-checks --verbose` 61/66 ok, 5 native skips, 0 fail (build
+32.48s, suite 4.01s); ASAN+UBSAN automation filter 4/66 ok, 0 fail with
+flags verified and restored exactly; the modal menu driver demonstrably
+works offscreen. The 5 skips are the `WindowSystem` rows — native execution
+is the deliberate ledger §9 boundary, not an incomplete migration.
 
 1. **Canonical Assembly:** Host *static presentation* checks on
    `checks/support/editorrig.h` instead of hand-assembling widget stacks and
    fishing for QML items via `findChild`. Transaction coverage follows the
-   host-choice rule above (production-`SongTab` Qt suites, not EditorRig); the
-   legacy automation rows keep their current scope, and `rollcheckpsgvelocity`
-   retains only rendering/chrome/grid/axis/playhead helpers after its
-   completed trim.
+   host-choice rule above (production-`SongTab` Qt suites, not EditorRig).
+   Native automation pixel checks are isolated in `automation-raster`;
+   `rollcheckpsgvelocity` retains only rendering/chrome/grid/axis/playhead
+   helpers after its completed trim.
 2. **Domain-Level Assertions:** Replace pixel-offset checks (`layout::fontPx`) with model
    invariants (`SongDocument`, `SmfEvent`, `QUndoStack`).
 3. **Idiomatic Qt Testing (`Qt6::Test`):** the framework convention is established and

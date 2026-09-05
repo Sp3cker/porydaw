@@ -9,13 +9,11 @@ export const WALL_ESTIMATE: Record<string, number> = {
   resonancecheck: 9.23,
   transportcheck: 3.77,
   vgsavecheck: 2.4,
+  "automation-editing": 2.49,
   tabcheck: 2.35,
   "exportcheck-tail": 1.44,
   "exportcheck-loop": 1.3,
-  automation: 1.27,
-  "automation-gestures": 1.26,
   onboardcheck: 1.18,
-  "automation-popup-menus": 1.16,
   "host-integration": 1.1,
   rollcheck: 0.99,
   clickcheck: 0.84,
@@ -31,9 +29,10 @@ export const WALL_ESTIMATE: Record<string, number> = {
   // velocity-editing: unmeasured (new pilot suite) — fallback-level estimate
   // until the first measured verbose run.
   "velocity-editing": 0.3,
-  // automation-editing: unmeasured (new offscreen Qt suite) — fallback-level estimate
-  // until the first measured verbose run.
-  "automation-editing": 0.3,
+  // Automation estimates measured during the offscreen migration verification.
+  "automation-domain": 0.13,
+  "automation-presentation": 0.37,
+  "automation-hover": 0.31,
   vgcheck: 0.28,
   keymapcheck: 0.27,
   audiocheck: 0.25,
