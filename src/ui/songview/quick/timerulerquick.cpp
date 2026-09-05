@@ -46,9 +46,9 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
     constexpr TimelineQuickLayer chromeLayer = TimelineQuickLayer::RulerChrome;
     constexpr TimelineQuickLayer gutterChromeLayer = TimelineQuickLayer::RulerGutterChrome;
     constexpr TimelineQuickLayer marksLayer = TimelineQuickLayer::RulerMarks;
-    resetLayer(scene, chromeLayer);
-    resetLayer(scene, gutterChromeLayer);
-    resetLayer(scene, marksLayer);
+    resetLayer(scene.layer(chromeLayer));
+    resetLayer(scene.layer(gutterChromeLayer));
+    resetLayer(scene.layer(marksLayer));
 
     if (!m_inputHost) {
         scene.setRulerTextRecords({});
@@ -68,18 +68,18 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
     const QRectF gutter(0.0, 0.0, gutterGeometry.width(), gutterGeometry.height());
     const QPalette palette = m_inputHost->palette();
     const QColor chrome = themes::color(themes::Role::song_view_timeline_chrome_background);
-    addRect(scene, gutterChromeLayer, gutter, chrome, gutter);
-    addHorizontalLine(scene, gutterChromeLayer, gutter.left(), gutter.right(),
+    addRect(scene.layer(gutterChromeLayer), gutter, chrome, gutter);
+    addHorizontalLine(scene.layer(gutterChromeLayer), gutter.left(), gutter.right(),
                       gutter.height() - lyt::singlePixel() / 2.0, lyt::singlePixel(),
                       themes::color(themes::Role::song_view_separator), gutter);
-    addRect(scene, chromeLayer, full, chrome, full);
-    addHorizontalLine(scene, chromeLayer, 0, width, height - lyt::singlePixel() / 2.0,
+    addRect(scene.layer(chromeLayer), full, chrome, full);
+    addHorizontalLine(scene.layer(chromeLayer), 0, width, height - lyt::singlePixel() / 2.0,
                       lyt::singlePixel(), themes::color(themes::Role::song_view_separator), full);
 
     const QRectF area = full;
     const qreal tickZero = m_camera.displayX(0.0, 0.0, dpr);
     if (tickZero > area.left()) {
-        addRect(scene, chromeLayer,
+        addRect(scene.layer(chromeLayer),
                 QRectF(area.left(), area.top(), tickZero - area.left(), area.height()),
                 mixTowardOklab(chrome, detail::gridLineColor(), 0.15), area);
     }
@@ -92,12 +92,12 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
             if (x1 > area.left() && x0 < area.right()) {
                 QColor fill = themes::color(themes::Role::song_view_selection_fill);
                 fill.setAlpha(30);
-                addRect(scene, chromeLayer, QRectF(x0, area.top(), x1 - x0, area.height()), fill,
-                        area);
+                addRect(scene.layer(chromeLayer), QRectF(x0, area.top(), x1 - x0, area.height()),
+                        fill, area);
                 const QColor edge = themes::color(themes::Role::song_view_selection_edge);
-                addVerticalLine(scene, chromeLayer, x0, area.top(), area.bottom(),
+                addVerticalLine(scene.layer(chromeLayer), x0, area.top(), area.bottom(),
                                 lyt::singlePixel(), edge, area);
-                addVerticalLine(scene, chromeLayer, x1, area.top(), area.bottom(),
+                addVerticalLine(scene.layer(chromeLayer), x1, area.top(), area.bottom(),
                                 lyt::singlePixel(), edge, area);
             }
         }
@@ -120,29 +120,29 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
                 transparent.setAlpha(0);
                 if (hasLoopStart && glowWidth > 0) {
                     const qreal knee = glowWidth * 0.2;
-                    addHorizontalGradient(scene, chromeLayer,
+                    addHorizontalGradient(scene.layer(chromeLayer),
                                           QRectF(x0, area.top(), knee, area.height()), strong,
                                           middle, area);
                     addHorizontalGradient(
-                        scene, chromeLayer,
+                        scene.layer(chromeLayer),
                         QRectF(x0 + knee, area.top(), glowWidth - knee, area.height()), middle,
                         transparent, area);
                 }
                 if (hasLoopEnd && glowWidth > 0) {
                     const qreal knee = glowWidth * 0.2;
-                    addHorizontalGradient(scene, chromeLayer,
+                    addHorizontalGradient(scene.layer(chromeLayer),
                                           QRectF(x1 - knee, area.top(), knee, area.height()),
                                           middle, strong, area);
                     addHorizontalGradient(
-                        scene, chromeLayer,
+                        scene.layer(chromeLayer),
                         QRectF(x1 - glowWidth, area.top(), glowWidth - knee, area.height()),
                         transparent, middle, area);
                 }
                 if (hasLoopStart)
-                    addVerticalLine(scene, chromeLayer, x0, area.top(), area.bottom(),
+                    addVerticalLine(scene.layer(chromeLayer), x0, area.top(), area.bottom(),
                                     lyt::singlePixel(), detail::loopEdge(), area);
                 if (hasLoopEnd)
-                    addVerticalLine(scene, chromeLayer, x1, area.top(), area.bottom(),
+                    addVerticalLine(scene.layer(chromeLayer), x1, area.top(), area.bottom(),
                                     lyt::singlePixel(), detail::loopEdge(), area);
             }
         }
@@ -182,8 +182,9 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
         [&](uint64_t tick, int level) {
             const qreal x = m_camera.displayX(double(tick), 0.0, dpr);
             const int tickHeight = level == 1 ? lyt::space(Space::Half) : lyt::singlePixel();
-            addVerticalLine(scene, marksLayer, x, tickBottom - tickHeight + lyt::singlePixel(),
-                            tickBottom, lyt::singlePixel(), indicatorColor, area);
+            addVerticalLine(scene.layer(marksLayer), x,
+                            tickBottom - tickHeight + lyt::singlePixel(), tickBottom,
+                            lyt::singlePixel(), indicatorColor, area);
         });
 
     int widestDetailWidth = 0;
@@ -206,7 +207,7 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
             const qreal x = m_camera.displayX(double(tick), 0.0, dpr);
             if (!isBar && !showBeatLabels) {
                 if (drawBeatTicks) {
-                    addVerticalLine(scene, marksLayer, x, ticks.center().y() - indicatorRise,
+                    addVerticalLine(scene.layer(marksLayer), x, ticks.center().y() - indicatorRise,
                                     tickBottom, lyt::singlePixel(), indicatorColor, area);
                 }
                 return;
@@ -215,7 +216,7 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
             const qreal labelX = x + barCapWidth;
             if (labelX < lastLabelRight + labelGap) {
                 if (!isBar && drawBeatTicks) {
-                    addVerticalLine(scene, marksLayer, x, ticks.center().y() - indicatorRise,
+                    addVerticalLine(scene.layer(marksLayer), x, ticks.center().y() - indicatorRise,
                                     tickBottom, lyt::singlePixel(), indicatorColor, area);
                 }
                 return;
@@ -225,12 +226,12 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
             const int labelWidth = (isBar ? tickMetrics : beatMetrics).horizontalAdvance(label);
             if (isBar) {
                 const int indicatorTop = ticks.top() - indicatorRise;
-                addVerticalLine(scene, marksLayer, x, indicatorTop, tickBottom, lyt::singlePixel(),
-                                indicatorColor, area);
-                addHorizontalLine(scene, marksLayer, x, x + barCapWidth, indicatorTop,
+                addVerticalLine(scene.layer(marksLayer), x, indicatorTop, tickBottom,
+                                lyt::singlePixel(), indicatorColor, area);
+                addHorizontalLine(scene.layer(marksLayer), x, x + barCapWidth, indicatorTop,
                                   lyt::singlePixel(), indicatorColor, area);
             } else {
-                addVerticalLine(scene, marksLayer, x, ticks.center().y() - indicatorRise,
+                addVerticalLine(scene.layer(marksLayer), x, ticks.center().y() - indicatorRise,
                                 tickBottom, lyt::singlePixel(), indicatorColor, area);
             }
             const QFontMetrics &metrics = isBar ? tickMetrics : beatMetrics;
@@ -250,7 +251,7 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
             continue;
         const QColor color =
             palette.color(chip.implicit ? QPalette::PlaceholderText : QPalette::WindowText);
-        addVerticalLine(scene, marksLayer, chip.x, markers.top(), markers.bottom(),
+        addVerticalLine(scene.layer(marksLayer), chip.x, markers.top(), markers.bottom(),
                         lyt::singlePixel(), color, area);
         if (chip.labelW > 0) {
             const QString label = detail::timeSigLabel(chip.numerator, chip.denomPow2);
@@ -285,7 +286,7 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
         if (m_dragMarker >= 0 || m_dragTimeSig) {
             const qreal x = m_camera.displayX(double(m_dragTick), 0.0, dpr);
             addVerticalLine(
-                scene, marksLayer, x, 0, height, markerStroke,
+                scene.layer(marksLayer), x, 0, height, markerStroke,
                 m_dragMarker >= 0 ? detail::loopEdge() : palette.color(QPalette::WindowText), area);
         }
         const auto &selection = m_owner.selectionModel().timeSelection();
@@ -293,10 +294,10 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
             const QColor edge = themes::color(themes::Role::song_view_selection_edge);
             const qreal x0 = m_camera.displayX(double(selection.startTick), 0.0, dpr);
             const qreal x1 = m_camera.displayX(double(selection.endTick), 0.0, dpr);
-            addVerticalLine(scene, marksLayer, x0, markers.top(), markers.bottom(), markerStroke,
-                            edge, area);
-            addVerticalLine(scene, marksLayer, x1, markers.top(), markers.bottom(), markerStroke,
-                            edge, area);
+            addVerticalLine(scene.layer(marksLayer), x0, markers.top(), markers.bottom(),
+                            markerStroke, edge, area);
+            addVerticalLine(scene.layer(marksLayer), x1, markers.top(), markers.bottom(),
+                            markerStroke, edge, area);
         }
     }
     scene.setRulerTextRecords(labels);

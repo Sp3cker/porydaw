@@ -63,7 +63,7 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
         TimelineQuickLayer::VoiceChangesHover,
     };
     for (const TimelineQuickLayer layer : layers)
-        timeline_quick::resetLayer(scene, layer);
+        timeline_quick::resetLayer(scene.layer(layer));
     // Reconcile text against the previous frame so panning retains QML delegates.
     if (!m_hoverActive)
         scene.setVoiceChangesHoverTextRecords({});
@@ -82,14 +82,14 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
     constexpr TimelineQuickLayer gutterChromeLayer = TimelineQuickLayer::VoiceChangesGutterChrome;
     constexpr TimelineQuickLayer chromeLayer = TimelineQuickLayer::VoiceChangesChrome;
     if (gutter.width() > 0.0) {
-        timeline_quick::addRect(scene, gutterChromeLayer, gutter, background, gutter);
-        timeline_quick::addHorizontalLine(scene, gutterChromeLayer, gutter.left(), gutter.right(),
-                                          gutter.bottom(), lyt::singlePixel(),
+        timeline_quick::addRect(scene.layer(gutterChromeLayer), gutter, background, gutter);
+        timeline_quick::addHorizontalLine(scene.layer(gutterChromeLayer), gutter.left(),
+                                          gutter.right(), gutter.bottom(), lyt::singlePixel(),
                                           themes::color(themes::Role::song_view_separator), gutter);
     }
-    timeline_quick::addRect(scene, chromeLayer, plot, background, plot);
-    timeline_quick::addHorizontalLine(scene, chromeLayer, plot.left(), plot.right(), plot.bottom(),
-                                      lyt::singlePixel(),
+    timeline_quick::addRect(scene.layer(chromeLayer), plot, background, plot);
+    timeline_quick::addHorizontalLine(scene.layer(chromeLayer), plot.left(), plot.right(),
+                                      plot.bottom(), lyt::singlePixel(),
                                       themes::color(themes::Role::song_view_separator), plot);
 
     std::vector<TimelineQuickTextModel::Record> gutterTextRecords;
@@ -175,7 +175,7 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
     for (std::size_t index = 0; index < paintEntryCount; ++index) {
         const VoicePaintEntry entry = paintEntryAt(index);
         if (program >= 0 && entry.tick > spanStart) {
-            timeline_quick::addRect(scene, TimelineQuickLayer::VoiceChangesSpans,
+            timeline_quick::addRect(scene.layer(TimelineQuickLayer::VoiceChangesSpans),
                                     heldSpanRect(spanStart, entry.tick, m_camera, plot), heldColor,
                                     plot);
         }
@@ -183,7 +183,7 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
         spanStart = entry.tick;
     }
     if (program >= 0 && timeline->lengthTicks > spanStart) {
-        timeline_quick::addRect(scene, TimelineQuickLayer::VoiceChangesSpans,
+        timeline_quick::addRect(scene.layer(TimelineQuickLayer::VoiceChangesSpans),
                                 heldSpanRect(spanStart, timeline->lengthTicks, m_camera, plot),
                                 heldColor, plot);
     }
@@ -243,8 +243,8 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
     const qreal markerWidth = lyt::singlePixel() + lyt::singlePixel();
     for (const VoiceLabelLayout &markerLabel : m_labelLayouts) {
         const qreal markerX = markerLabel.rect.left() - pad;
-        timeline_quick::addVerticalLine(scene, TimelineQuickLayer::VoiceChangesMarkers, markerX,
-                                        plot.top() + pad, plot.bottom() - pad, markerWidth,
+        timeline_quick::addVerticalLine(scene.layer(TimelineQuickLayer::VoiceChangesMarkers),
+                                        markerX, plot.top() + pad, plot.bottom() - pad, markerWidth,
                                         trackColor, plot);
     }
     for (std::size_t index = 0; index < m_labelLayouts.size(); ++index) {
@@ -261,7 +261,7 @@ void VoiceChangeArea::rebuildQuickHover(songview::TimelineQuickScene &scene)
 {
     using namespace songview;
     constexpr TimelineQuickLayer hoverLayer = TimelineQuickLayer::VoiceChangesHover;
-    timeline_quick::resetLayer(scene, hoverLayer);
+    timeline_quick::resetLayer(scene.layer(hoverLayer));
 
     const QRectF plot(plotRect());
     if (!m_hoverActive || plot.width() <= 0.0 || plot.height() <= 0.0 || !m_owner.document() ||

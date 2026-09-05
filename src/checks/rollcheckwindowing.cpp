@@ -317,16 +317,17 @@ int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel)
 
             const auto addRectLoad = [&] {
                 for (int index = 0; index < 256; ++index)
-                    songview::timeline_quick::addRect(*geometryScene, layer, filler, fillerColor,
-                                                      clip);
+                    songview::timeline_quick::addRect(geometryScene->layer(layer), filler,
+                                                      fillerColor, clip);
             };
             const auto addTriangleLoad = [&](const std::array<QPointF, 3> &special,
                                              const QColor &specialColor) {
-                songview::timeline_quick::addClippedTriangle(
-                    *geometryScene, layer, special[0], special[1], special[2], specialColor, clip);
+                songview::timeline_quick::addClippedTriangle(geometryScene->layer(layer),
+                                                             special[0], special[1], special[2],
+                                                             specialColor, clip);
                 for (int index = 1; index < 506; ++index) {
                     songview::timeline_quick::addClippedTriangle(
-                        *geometryScene, layer, filler.topLeft(), filler.bottomRight(),
+                        geometryScene->layer(layer), filler.topLeft(), filler.bottomRight(),
                         filler.bottomLeft(), fillerColor, clip);
                 }
             };
@@ -379,15 +380,16 @@ int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel)
                        isNear(sample(frame, point), sample(baseline, point));
             };
 
-            songview::timeline_quick::resetLayer(*geometryScene, layer);
+            songview::timeline_quick::resetLayer(geometryScene->layer(layer));
             addRectLoad();
-            songview::timeline_quick::addRect(*geometryScene, layer, shrinkMarker, shrinkColor,
+            songview::timeline_quick::addRect(geometryScene->layer(layer), shrinkMarker,
+                                              shrinkColor, clip);
+            songview::timeline_quick::addRect(geometryScene->layer(layer), oldSolid, oldSolidColor,
                                               clip);
-            songview::timeline_quick::addRect(*geometryScene, layer, oldSolid, oldSolidColor, clip);
-            songview::timeline_quick::addRect(*geometryScene, layer, oldGradientBase, oldBaseColor,
-                                              clip);
-            songview::timeline_quick::addHorizontalGradient(*geometryScene, layer, oldGradient,
-                                                            oldLeft, oldRight, clip);
+            songview::timeline_quick::addRect(geometryScene->layer(layer), oldGradientBase,
+                                              oldBaseColor, clip);
+            songview::timeline_quick::addHorizontalGradient(geometryScene->layer(layer),
+                                                            oldGradient, oldLeft, oldRight, clip);
             addTriangleLoad(oldTriangle, oldTriangleColor);
             const QImage populated = capture("populated");
             if (!populated.isNull() &&
@@ -396,10 +398,10 @@ int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel)
                 fail("Quick geometry chunk setup did not render its solid rect and triangle");
             }
 
-            songview::timeline_quick::resetLayer(*geometryScene, layer);
+            songview::timeline_quick::resetLayer(geometryScene->layer(layer));
             addRectLoad();
-            songview::timeline_quick::addRect(*geometryScene, layer, shrinkMarker, shrinkColor,
-                                              clip);
+            songview::timeline_quick::addRect(geometryScene->layer(layer), shrinkMarker,
+                                              shrinkColor, clip);
             const QImage shrunken = capture("shrunken");
             if (!shrunken.isNull() &&
                 (!isNear(sample(shrunken, center(shrinkMarker)), shrinkColor) ||
@@ -409,7 +411,7 @@ int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel)
                 fail("Quick geometry chunk shrink retained stale rect or triangle pixels");
             }
 
-            songview::timeline_quick::resetLayer(*geometryScene, layer);
+            songview::timeline_quick::resetLayer(geometryScene->layer(layer));
             const QImage cleared = capture("cleared");
             if (!cleared.isNull() &&
                 (!unchangedFromBaseline(cleared, center(shrinkMarker)) ||
@@ -418,11 +420,11 @@ int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel)
                 fail("Quick geometry chunk clear retained visible pixels");
             }
 
-            songview::timeline_quick::resetLayer(*geometryScene, layer);
+            songview::timeline_quick::resetLayer(geometryScene->layer(layer));
             addRectLoad();
-            songview::timeline_quick::addClippedTriangle(*geometryScene, layer, newTriangle[0],
-                                                         newTriangle[1], newTriangle[2],
-                                                         newTriangleColor, clip);
+            songview::timeline_quick::addClippedTriangle(geometryScene->layer(layer),
+                                                         newTriangle[0], newTriangle[1],
+                                                         newTriangle[2], newTriangleColor, clip);
             const QImage partialReactivation = capture("partial-reactivation");
             const QPointF shrinkTail =
                 shrinkMarker.topLeft() +
@@ -434,15 +436,16 @@ int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel)
                 fail("Quick geometry chunk partial reactivation retained a blocked chunk tail");
             }
 
-            songview::timeline_quick::resetLayer(*geometryScene, layer);
+            songview::timeline_quick::resetLayer(geometryScene->layer(layer));
             addRectLoad();
-            songview::timeline_quick::addRect(*geometryScene, layer, shrinkMarker, newSolidColor,
+            songview::timeline_quick::addRect(geometryScene->layer(layer), shrinkMarker,
+                                              newSolidColor, clip);
+            songview::timeline_quick::addRect(geometryScene->layer(layer), newSolid, newSolidColor,
                                               clip);
-            songview::timeline_quick::addRect(*geometryScene, layer, newSolid, newSolidColor, clip);
-            songview::timeline_quick::addRect(*geometryScene, layer, newGradientBase, newBaseColor,
-                                              clip);
-            songview::timeline_quick::addHorizontalGradient(*geometryScene, layer, newGradient,
-                                                            newLeft, newRight, clip);
+            songview::timeline_quick::addRect(geometryScene->layer(layer), newGradientBase,
+                                              newBaseColor, clip);
+            songview::timeline_quick::addHorizontalGradient(geometryScene->layer(layer),
+                                                            newGradient, newLeft, newRight, clip);
             addTriangleLoad(newTriangle, newTriangleColor);
             const QImage reactivated = capture("reactivated");
             if (!reactivated.isNull() &&

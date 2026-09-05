@@ -69,7 +69,7 @@ void addNode(TimelineQuickScene &scene, TimelineQuickLayer layer,
              bool selected = false, bool dimUnselected = false)
 {
     if (selected && context.selectedColor.isValid()) {
-        addEllipseRing(scene, layer, center, context.geometry.selectedNodeRingRadius,
+        addEllipseRing(scene.layer(layer), center, context.geometry.selectedNodeRingRadius,
                        context.geometry.selectedNodeRingRadius,
                        context.geometry.selectedNodeRingDipWidth, context.selectedColor,
                        context.overflow);
@@ -78,14 +78,14 @@ void addNode(TimelineQuickScene &scene, TimelineQuickLayer layer,
         const QColor dimmed = context.dimmedColor.isValid()
                                   ? context.dimmedColor
                                   : themes::color(themes::Role::song_view_secondary_text);
-        addEllipse(scene, layer, center, context.geometry.nodePaintRadius,
+        addEllipse(scene.layer(layer), center, context.geometry.nodePaintRadius,
                    context.geometry.nodePaintRadius, dimmed, context.overflow);
         return;
     }
-    addEllipse(scene, layer, center, context.geometry.nodePaintRadius,
+    addEllipse(scene.layer(layer), center, context.geometry.nodePaintRadius,
                context.geometry.nodePaintRadius,
                themes::color(themes::Role::song_view_piano_roll_background), context.overflow);
-    addEllipseRing(scene, layer, center, context.geometry.nodePaintRadius,
+    addEllipseRing(scene.layer(layer), center, context.geometry.nodePaintRadius,
                    context.geometry.nodePaintRadius, context.geometry.nodeOutlineDipWidth * 2.0,
                    color, context.overflow);
 }
@@ -111,10 +111,10 @@ void addStepCurve(const NodeLaneQuickPaint::Context &context, TimelineQuickLayer
         const qreal x = tickX(context, points.front().tick);
         const qreal y = nodeY(context, points.front().value);
         const qreal leadY = nodeY(context, leadIn->value);
-        addLine(context.scene, layer, QPointF(tickX(context, leadIn->tick), leadY),
+        addLine(context.scene.layer(layer), QPointF(tickX(context, leadIn->tick), leadY),
                 QPointF(x, leadY), width, color, context.plot);
         if (y != leadY)
-            addLine(context.scene, layer, QPointF(x, leadY), QPointF(x, y), width, color,
+            addLine(context.scene.layer(layer), QPointF(x, leadY), QPointF(x, y), width, color,
                     context.plot);
     }
     for (std::size_t index = 0; index < points.size(); ++index) {
@@ -129,9 +129,10 @@ void addStepCurve(const NodeLaneQuickPaint::Context &context, TimelineQuickLayer
         if (x1 < context.plot.left() || x0 > context.plot.right())
             continue;
         const qreal y = nodeY(context, points[index].value);
-        addLine(context.scene, layer, QPointF(x0, y), QPointF(x1, y), width, color, context.plot);
+        addLine(context.scene.layer(layer), QPointF(x0, y), QPointF(x1, y), width, color,
+                context.plot);
         if (index + 1 < points.size()) {
-            addLine(context.scene, layer, QPointF(x1, y),
+            addLine(context.scene.layer(layer), QPointF(x1, y),
                     QPointF(x1, nodeY(context, points[index + 1].value)), width, color,
                     context.plot);
         }
@@ -178,10 +179,10 @@ void addPhantomCurvePreview(const NodeLaneQuickPaint::Context &context, Timeline
                                      phantom.maximumValue, phantom.point.value);
     const qreal nextX = next == points.end() ? context.plot.right() : tickX(context, next->tick);
     const QColor preview = themes::color(themes::Role::song_view_edit_preview_outline);
-    addLine(context.scene, layer, QPointF(context.plot.left(), y), QPointF(nextX, y),
+    addLine(context.scene.layer(layer), QPointF(context.plot.left(), y), QPointF(nextX, y),
             layout::singlePixel(), preview, context.plot);
     if (next != points.end()) {
-        addLine(context.scene, layer, QPointF(nextX, y),
+        addLine(context.scene.layer(layer), QPointF(nextX, y),
                 QPointF(nextX, AutomationProjection::valueY(context.body, context.geometry,
                                                             phantom.minimumValue,
                                                             phantom.maximumValue, next->value)),
@@ -227,7 +228,7 @@ void addValueLabelBackdrop(const NodeLaneQuickPaint::Context &context, TimelineQ
     const QRectF bounds = QRectF(label.bounds)
                               .translated(0.0, -context.contentYOffset)
                               .adjusted(-padding, -padding, padding, padding);
-    addRect(context.scene, layer, bounds,
+    addRect(context.scene.layer(layer), bounds,
             themes::color(themes::Role::song_view_piano_roll_accidental_lane), context.overflow);
 }
 
@@ -269,17 +270,17 @@ void addSingleDragPreview(const NodeLaneQuickPaint::Context &context,
     const qreal y = nodeY(context, grabbed.current.value);
     if (previous) {
         const qreal previousY = nodeY(context, previous->value);
-        addLine(context.scene, TimelineQuickLayer::AutomationTransient,
+        addLine(context.scene.layer(TimelineQuickLayer::AutomationTransient),
                 QPointF(tickX(context, previous->tick), previousY), QPointF(x, previousY),
                 layout::singlePixel(), preview, context.plot);
-        addLine(context.scene, TimelineQuickLayer::AutomationTransient, QPointF(x, previousY),
+        addLine(context.scene.layer(TimelineQuickLayer::AutomationTransient), QPointF(x, previousY),
                 QPointF(x, y), layout::singlePixel(), preview, context.plot);
     }
     const qreal nextX = next ? tickX(context, next->tick) : context.plot.right();
-    addLine(context.scene, TimelineQuickLayer::AutomationTransient, QPointF(x, y),
+    addLine(context.scene.layer(TimelineQuickLayer::AutomationTransient), QPointF(x, y),
             QPointF(nextX, y), layout::singlePixel(), preview, context.plot);
     if (next) {
-        addLine(context.scene, TimelineQuickLayer::AutomationTransient, QPointF(nextX, y),
+        addLine(context.scene.layer(TimelineQuickLayer::AutomationTransient), QPointF(nextX, y),
                 QPointF(nextX, nodeY(context, next->value)), layout::singlePixel(), preview,
                 context.plot);
     }
@@ -327,7 +328,7 @@ void addSweepPreview(const NodeLaneQuickPaint::Context &context,
     const QColor preview = themes::color(themes::Role::song_view_edit_preview_outline);
     if (gesture.mode == SweepGesture::Mode::Ramp) {
         addLine(
-            context.scene, TimelineQuickLayer::AutomationTransient,
+            context.scene.layer(TimelineQuickLayer::AutomationTransient),
             QPointF(tickX(context, gesture.anchor.tick), nodeY(context, gesture.anchor.value)),
             QPointF(tickX(context, gesture.current.tick), nodeY(context, gesture.current.value)),
             layout::singlePixel(), preview, context.plot);
@@ -335,10 +336,10 @@ void addSweepPreview(const NodeLaneQuickPaint::Context &context,
         for (std::size_t index = 0; index + 1 < gesture.points.size(); ++index) {
             const qreal y = nodeY(context, gesture.points[index].value);
             const qreal nextX = tickX(context, gesture.points[index + 1].tick);
-            addLine(context.scene, TimelineQuickLayer::AutomationTransient,
+            addLine(context.scene.layer(TimelineQuickLayer::AutomationTransient),
                     QPointF(tickX(context, gesture.points[index].tick), y), QPointF(nextX, y),
                     layout::singlePixel(), preview, context.plot);
-            addLine(context.scene, TimelineQuickLayer::AutomationTransient, QPointF(nextX, y),
+            addLine(context.scene.layer(TimelineQuickLayer::AutomationTransient), QPointF(nextX, y),
                     QPointF(nextX, nodeY(context, gesture.points[index + 1].value)),
                     layout::singlePixel(), preview, context.plot);
         }
@@ -358,7 +359,7 @@ void addPencilPreview(const NodeLaneQuickPaint::Context &context,
     const auto addHeld = [&](uint64_t first, uint64_t last, int value, const QColor &color) {
         if (first >= last)
             return;
-        addLine(context.scene, TimelineQuickLayer::AutomationTransient,
+        addLine(context.scene.layer(TimelineQuickLayer::AutomationTransient),
                 QPointF(tickX(context, first), nodeY(context, value)),
                 QPointF(tickX(context, last), nodeY(context, value)),
                 layout::singlePixel() + layout::singlePixel(), color, context.plot);
@@ -380,7 +381,7 @@ void addPencilPreview(const NodeLaneQuickPaint::Context &context,
         if (point.tick < preview.tickBegin) {
             addHeld(point.tick, std::min(nextTick, preview.tickBegin), point.value, context.color);
             if (nextTick < preview.tickBegin) {
-                addLine(context.scene, TimelineQuickLayer::AutomationTransient,
+                addLine(context.scene.layer(TimelineQuickLayer::AutomationTransient),
                         QPointF(tickX(context, nextTick), nodeY(context, point.value)),
                         QPointF(tickX(context, nextTick),
                                 nodeY(context, context.points[index + 1].value)),
@@ -391,12 +392,12 @@ void addPencilPreview(const NodeLaneQuickPaint::Context &context,
                 const uint64_t last = context.points[index + 1].tick;
                 addHeld(point.tick, last, point.value, context.color);
                 addLine(
-                    context.scene, TimelineQuickLayer::AutomationTransient,
+                    context.scene.layer(TimelineQuickLayer::AutomationTransient),
                     QPointF(tickX(context, last), nodeY(context, point.value)),
                     QPointF(tickX(context, last), nodeY(context, context.points[index + 1].value)),
                     layout::singlePixel() + layout::singlePixel(), context.color, context.plot);
             } else {
-                addLine(context.scene, TimelineQuickLayer::AutomationTransient,
+                addLine(context.scene.layer(TimelineQuickLayer::AutomationTransient),
                         QPointF(tickX(context, point.tick), nodeY(context, point.value)),
                         QPointF(context.plot.right(), nodeY(context, point.value)),
                         layout::singlePixel() + layout::singlePixel(), context.color, context.plot);
@@ -412,7 +413,7 @@ void addPencilPreview(const NodeLaneQuickPaint::Context &context,
         if (previewValue)
             addHeld(cursor, point.tick, *previewValue, previewColor);
         if (previewValue && *previewValue != point.value) {
-            addLine(context.scene, TimelineQuickLayer::AutomationTransient,
+            addLine(context.scene.layer(TimelineQuickLayer::AutomationTransient),
                     QPointF(tickX(context, point.tick), nodeY(context, *previewValue)),
                     QPointF(tickX(context, point.tick), nodeY(context, point.value)),
                     layout::singlePixel(), previewColor, context.plot);
@@ -425,14 +426,14 @@ void addPencilPreview(const NodeLaneQuickPaint::Context &context,
     if (previewValue && nextAfterRange) {
         addHeld(preview.tickEnd, nextAfterRange->tick, *previewValue, previewColor);
         if (*previewValue != nextAfterRange->value) {
-            addLine(context.scene, TimelineQuickLayer::AutomationTransient,
+            addLine(context.scene.layer(TimelineQuickLayer::AutomationTransient),
                     QPointF(tickX(context, nextAfterRange->tick), nodeY(context, *previewValue)),
                     QPointF(tickX(context, nextAfterRange->tick),
                             nodeY(context, nextAfterRange->value)),
                     layout::singlePixel(), previewColor, context.plot);
         }
     } else if (previewValue) {
-        addLine(context.scene, TimelineQuickLayer::AutomationTransient,
+        addLine(context.scene.layer(TimelineQuickLayer::AutomationTransient),
                 QPointF(tickX(context, preview.tickEnd), nodeY(context, *previewValue)),
                 QPointF(context.plot.right(), nodeY(context, *previewValue)),
                 layout::singlePixel() + layout::singlePixel(), previewColor, context.plot);
@@ -509,7 +510,7 @@ void NodeLaneQuickPaint::composeStatic(const Context &context, bool curves, bool
         const auto [firstTick, lastTick] = *context.selectedTickRange;
         const QRectF bounds(context.plot.left(), context.body.top(), context.plot.width(),
                             context.body.height());
-        addSelectionReticle(context.scene, TimelineQuickLayer::AutomationSelection,
+        addSelectionReticle(context.scene.layer(TimelineQuickLayer::AutomationSelection),
                             QRectF(tickX(context, firstTick), bounds.top(),
                                    tickX(context, lastTick) - tickX(context, firstTick),
                                    bounds.height()),
@@ -545,7 +546,7 @@ void NodeLaneQuickPaint::composeTransient(const Context &context, bool transient
             const auto [firstTick, lastTick] = *context.selectedTickRange;
             const QRectF bounds(context.plot.left(), context.body.top(), context.plot.width(),
                                 context.body.height());
-            addSelectionReticle(context.scene, TimelineQuickLayer::AutomationTransient,
+            addSelectionReticle(context.scene.layer(TimelineQuickLayer::AutomationTransient),
                                 QRectF(tickX(context, firstTick), bounds.top(),
                                        tickX(context, lastTick) - tickX(context, firstTick),
                                        bounds.height()),
@@ -567,7 +568,7 @@ void NodeLaneQuickPaint::composeHover(const Context &context, bool hover, const 
     if (hoverState.hasPoint) {
         const qreal displayX =
             hoverState.originPhantom ? context.plot.left() : tickX(context, hoverState.point.tick);
-        addEllipseRing(context.scene, TimelineQuickLayer::AutomationHover,
+        addEllipseRing(context.scene.layer(TimelineQuickLayer::AutomationHover),
                        QPointF(displayX, nodeY(context, hoverState.point.value)),
                        nodelane::hoverRingRadius(context.geometry),
                        nodelane::hoverRingRadius(context.geometry), 2 * layout::singlePixel(),

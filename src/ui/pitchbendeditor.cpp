@@ -1,108 +1,67 @@
 #include "pitchbendeditor.hpp"
-#include "dragspinbox.h"
 
+#include "layout.h"
+#include "m4asemantics.h"
+
+#include "songview.h"
 #include "theme/themeruntime.h"
 #include "typography.h"
-#include "ui/keymap.h"
 
 #include <QApplication>
-#include <QKeySequence>
-#include <QMetaObject>
-#include <QMouseEvent>
-#include <QPainter>
-#include <QPointer>
-#include <QSignalBlocker>
+#include <QFont>
 #include <QUndoStack>
+#include <QVariant>
 #include <QWindow>
 #include <algorithm>
-#include <cmath>
 #include <map>
 #include <utility>
 
 namespace {
-constexpr int kHostInset = 8;
-constexpr int kNoteGap = 8;
-
-QPoint hostClippedPopupPosition(const QRect &noteHost, const QRect &hostRect,
-                                const QSize &popupSize)
+QFont chromeFont(const QPointer<::SongView> &songView)
 {
-    const QRect available = hostRect.adjusted(kHostInset, kHostInset, -kHostInset, -kHostInset);
-    QPoint popupPos(noteHost.center().x() - popupSize.width() / 2,
-                    noteHost.bottom() + 1 + kNoteGap);
-    const int maxX = std::max(available.left(), available.right() - popupSize.width() + 1);
-    const int maxY = std::max(available.top(), available.bottom() - popupSize.height() + 1);
-    popupPos.setX(std::clamp(popupPos.x(), available.left(), maxX));
-    if (popupPos.y() + popupSize.height() > available.bottom() + 1)
-        popupPos.setY(noteHost.top() - kNoteGap - popupSize.height());
-    popupPos.setY(std::clamp(popupPos.y(), available.top(), maxY));
-    return popupPos;
+    if (songView && songView->window())
+        return songView->window()->font();
+    return QApplication::font();
 }
 
-class PitchBendCloseController final : public QObject
+qreal chromeDpr(const QPointer<::SongView> &songView)
 {
-  public:
-    PitchBendCloseController(QWidget *popup, std::function<bool(QPointF)> focusNoteUnderCursor,
-                             std::function<void()> restoreFocus, std::function<void()> dismiss)
-        : QObject(popup)
-        , m_popup(popup)
-        , m_focusNoteUnderCursor(std::move(focusNoteUnderCursor))
-        , m_restoreFocus(std::move(restoreFocus))
-        , m_dismiss(std::move(dismiss))
-    {
-        qApp->installEventFilter(this);
-    }
+    if (songView && songView->window() && songView->window()->windowHandle())
+        return songView->window()->windowHandle()->devicePixelRatio();
+    return qApp->devicePixelRatio();
+}
 
-    ~PitchBendCloseController() override { qApp->removeEventFilter(this); }
-
-  protected:
-    bool eventFilter(QObject *watched, QEvent *event) override
-    {
-        if (!m_popup || !m_popup->isVisible())
-            return false;
-        if (event->type() == QEvent::MouseButtonPress) {
-            auto *mouseEvent = static_cast<QMouseEvent *>(event);
-            QWidget *const target = qobject_cast<QWidget *>(watched);
-            if (target && (target == m_popup || m_popup->isAncestorOf(target)))
-                return false;
-            // Window-system delivery observes the press on the popup's native
-            // window before QWidgetWindow forwards it, so the watcher is not a
-            // QWidget. Ignores apply only to presses on our own window inside
-            // our frame; presses from any other surface keep the focus/dismiss
-            // path below (the popup occludes its frame, so those are outside).
-            if (!target) {
-                if (QWindow *window = qobject_cast<QWindow *>(watched);
-                    window != nullptr && window == m_popup->windowHandle() &&
-                    m_popup->frameGeometry().contains(mouseEvent->globalPosition().toPoint()))
-                    return false;
-            }
-            if (m_focusNoteUnderCursor && m_focusNoteUnderCursor(mouseEvent->globalPosition())) {
-                m_restoreFocus();
-                event->accept();
-                return true;
-            }
-            m_dismiss();
-            return false;
-        }
-        if (event->type() == QEvent::ApplicationDeactivate) {
-            m_dismiss();
-            return false;
-        }
-        return false;
-    }
-
-  private:
-    QPointer<QWidget> m_popup;
-    std::function<bool(QPointF)> m_focusNoteUnderCursor;
-    std::function<void()> m_restoreFocus;
-    std::function<void()> m_dismiss;
+struct CurveSnapshot {
+    std::map<uint64_t, int> points;
+    int endValue = 0;
 };
+
+CurveSnapshot readCurveSnapshot(const SongDocument *document, int engineTrack, uint8_t cc,
+                                uint64_t startTick, uint64_t endTick)
+{
+    CurveSnapshot snapshot;
+    int enteringValue = 0;
+    for (const DocLanePoint &point : document->lanePoints(engineTrack, cc)) {
+        if (point.tick <= startTick)
+            enteringValue = point.value;
+        if (point.tick > endTick)
+            break;
+        snapshot.endValue = point.value;
+        if (point.tick > startTick && point.tick < endTick)
+            snapshot.points[point.tick] = point.value;
+    }
+    snapshot.points[startTick] = enteringValue;
+    snapshot.points[endTick] = snapshot.endValue;
+    return snapshot;
+}
+
 } // namespace
 
 namespace songview {
 
 PitchBendEditor::PitchBendEditor(::SongView *songView, SongDocument *document, const DocNote &note,
                                  std::function<bool(QPointF)> focusNoteUnderCursor)
-    : QFrame(songView->window(), Qt::Tool | Qt::FramelessWindowHint)
+    : QObject(songView)
     , m_songView(songView)
     , m_document(document)
     , m_noteSnapshot(note)
@@ -111,305 +70,108 @@ PitchBendEditor::PitchBendEditor(::SongView *songView, SongDocument *document, c
     , m_unterminated(note.unterminated())
 {
     setObjectName(QStringLiteral("pitchBendPopup"));
-    setAttribute(Qt::WA_OpaquePaintEvent);
-    setFixedSize(kPopupWidth, kPopupHeight);
-    setFocusPolicy(Qt::StrongFocus);
-    setMouseTracking(true);
-    setCursor(Qt::CrossCursor);
-    setAccessibleName(SongView::tr("Note automation editor"));
     m_endTick = m_document->noteEndTick(m_noteSnapshot);
-    m_pitchGraph = new PitchBendGraph(m_songView, m_engineTrack, m_startTick, m_endTick,
-                                      m_unterminated, PitchBendGraph::Lane::PitchBend, this);
-    m_modGraph = new PitchBendGraph(m_songView, m_engineTrack, m_startTick, m_endTick,
-                                    m_unterminated, PitchBendGraph::Lane::ModWheel, this);
-    const auto configureGraph = [this](PitchBendGraph *graph) {
-        graph->installEventFilter(this);
-        graph->setGeometry(0, graph == m_pitchGraph ? kHeaderHeight : kHeaderHeight + kGraphHeight,
-                           kPopupWidth, kGraphHeight);
-        PitchBendGraph::Callbacks callbacks;
-        callbacks.previewChanged = [this, graph] {
-            markCurvePending(graph);
-            update();
-        };
-        callbacks.commitRequested = [this] { commitCurve(); };
-        callbacks.cancelRequested = [this] { close(CloseState::Cancel, CloseFocus::Restore); };
-        callbacks.auditionRequested = [this] {
-            commitCurve();
-            m_songView->requestPlayPauseFrom(m_startTick);
-        };
-        if (graph == m_pitchGraph)
-            callbacks.rangeChangeRequested = [this](int steps) { updateRange(steps); };
-        graph->setCallbacks(std::move(callbacks));
-        graph->show();
-    };
-    configureGraph(m_pitchGraph);
-    configureGraph(m_modGraph);
-    const auto configureReset = [this](QPushButton *button, PitchBendGraph *graph, int y) {
-        button->setGeometry(kPopupWidth - kOuterInset - kResetWidth, y, kResetWidth, kResetHeight);
-        button->setFocusPolicy(Qt::NoFocus);
-        button->setCursor(Qt::ArrowCursor);
-        connect(button, &QPushButton::clicked, this, [this, graph] { resetCurve(graph); });
-    };
-    m_pitchResetButton = new QPushButton(SongView::tr("Reset"), this);
-    m_pitchResetButton->setObjectName(QStringLiteral("pitchBendReset"));
-    configureReset(m_pitchResetButton, m_pitchGraph, kHeaderHeight + 5);
-    m_modResetButton = new QPushButton(SongView::tr("Reset"), this);
-    m_modResetButton->setObjectName(QStringLiteral("modWheelReset"));
-    configureReset(m_modResetButton, m_modGraph, kHeaderHeight + kGraphHeight + 5);
-    const auto configureController = [this](QSpinBox *spin, const QString &name, int x) {
-        spin->setObjectName(name);
-        spin->setRange(0, 127);
-        spin->setKeyboardTracking(false);
-        spin->setGeometry(x, 36, 78, 24);
-        spin->setCursor(Qt::ArrowCursor);
-        spin->installEventFilter(this);
-        for (QObject *child : spin->findChildren<QObject *>())
-            child->installEventFilter(this);
-    };
-    m_bendRangeSpin = new DragSpinBox(this);
-    configureController(m_bendRangeSpin, QStringLiteral("bendRangeSpin"), 60);
-    m_bendRangeSpin->setAccessibleName(SongView::tr("Pitch-bend range"));
-    m_bendRangeSpin->setToolTip(SongView::tr("Pitch-bend range in semitones for this note"));
-    connect(m_bendRangeSpin, &QSpinBox::valueChanged, this,
-            [this](int value) { setBendRange(value); });
-    m_lfoSpeedSpin = new DragSpinBox(this);
-    configureController(m_lfoSpeedSpin, QStringLiteral("lfoSpeedSpin"), 226);
-    m_lfoSpeedSpin->setAccessibleName(SongView::tr("LFO speed"));
-    m_lfoSpeedSpin->setToolTip(SongView::tr("M4A LFO speed for this note"));
-    connect(m_lfoSpeedSpin, &QSpinBox::valueChanged, this,
-            [this](int value) { setLfoSpeed(value); });
-    snapshotCurves();
+    snapshotControllerValues();
+    resolveChromeGeometry();
+    rebuildCachedChrome();
     updateDescription();
     connect(m_document->undoStack(), &QUndoStack::indexChanged, this, [this] {
         snapshotCurves();
         updateDescription();
-        update();
     });
     connect(m_document, &SongDocument::documentChanged, this, [this] {
         if (!noteSpanStillPresent())
-            close(CloseState::Cancel, CloseFocus::Restore);
+            close(DismissAction::Cancel, CloseFocus::Restore);
     });
-    new PitchBendCloseController(
-        this, std::move(focusNoteUnderCursor),
-        [this] { close(CloseState::Open, CloseFocus::Restore); },
-        [this] { close(CloseState::Open, CloseFocus::Discard); });
+    installCloseController(std::move(focusNoteUnderCursor));
 }
 
-void PitchBendEditor::cancelAndClose()
+void PitchBendEditor::setBendRange(int range)
 {
-    close(CloseState::Cancel, CloseFocus::Restore);
-}
-void PitchBendEditor::cancelAndCloseWithoutFocus()
-{
-    close(CloseState::Cancel, CloseFocus::Discard);
-}
-
-void PitchBendEditor::openAt(const QRect &noteGlobal, double noteFraction)
-{
-    const double fraction = noteFraction >= 0.0 && noteFraction <= 1.0 ? noteFraction : 0.5;
-    QWidget *host = parentWidget();
-    const QRect noteHost(host->mapFromGlobal(noteGlobal.topLeft()),
-                         host->mapFromGlobal(noteGlobal.bottomRight()));
-    const QPoint popupPos = hostClippedPopupPosition(noteHost, host->rect(), size());
-    m_pitchGraph->setKeyboardFraction(fraction);
-    m_modGraph->setKeyboardFraction(fraction);
-    move(host->mapToGlobal(popupPos));
-    show();
-    raise();
-    activateWindow();
-    m_pitchGraph->setFocus(Qt::PopupFocusReason);
-}
-
-bool PitchBendEditor::hasEditableSpan() const
-{
-    return m_endTick > m_startTick;
-}
-
-uint64_t PitchBendEditor::endTick() const
-{
-    return m_endTick;
-}
-
-QRect PitchBendEditor::graphRect() const
-{
-    return m_pitchGraph ? m_pitchGraph->canvasRect().translated(m_pitchGraph->pos()) : QRect();
-}
-
-QRect PitchBendEditor::modGraphRect() const
-{
-    return m_modGraph ? m_modGraph->canvasRect().translated(m_modGraph->pos()) : QRect();
-}
-
-void PitchBendEditor::paintEvent(QPaintEvent *)
-{
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.fillRect(rect(), themes::color(themes::Role::window_background));
-    painter.setPen(QPen(themes::color(themes::Role::menu_outline), 1));
-    painter.drawRect(rect().adjusted(0, 0, -1, -1));
-    painter.setFont(typography::bold(font()));
-    painter.setPen(themes::color(themes::Role::song_view_primary_text));
-    painter.drawText(QRect(kOuterInset, 3, width() - 2 * kOuterInset, 17),
-                     Qt::AlignLeft | Qt::AlignVCenter, SongView::tr("Note automation"));
-    painter.setFont(typography::caption(font()));
-    painter.setPen(themes::color(themes::Role::song_view_secondary_text));
-    painter.drawText(
-        QRect(kOuterInset, 19, width() - 2 * kOuterInset, 15), Qt::AlignLeft | Qt::AlignVCenter,
-        SongView::tr("%1 · note-scoped · channel-wide").arg(midiKeyName(m_noteSnapshot.key)));
-    painter.drawText(QRect(kOuterInset, 36, 48, 24), Qt::AlignLeft | Qt::AlignVCenter,
-                     SongView::tr("BENDR"));
-    painter.drawText(QRect(156, 36, 66, 24), Qt::AlignLeft | Qt::AlignVCenter,
-                     SongView::tr("LFO speed"));
-}
-
-bool PitchBendEditor::event(QEvent *event)
-{
-    if (event->type() == QEvent::ShortcutOverride) {
-        auto *keyEvent = static_cast<QKeyEvent *>(event);
-        if (keyEvent->matches(QKeySequence::Undo) ||
-            keymap::Registry::instance().matches(keyEvent,
-                                                 QStringLiteral("transport.play_pause"))) {
-            event->accept();
-            return true;
-        }
-    }
-    return QFrame::event(event);
-}
-bool PitchBendEditor::eventFilter(QObject *watched, QEvent *event)
-{
-    PitchBendGraph *watchedGraph = nullptr;
-    if (watched == m_pitchGraph)
-        watchedGraph = m_pitchGraph;
-    else if (watched == m_modGraph)
-        watchedGraph = m_modGraph;
-    if (event->type() != QEvent::ShortcutOverride && event->type() != QEvent::KeyPress)
-        return QFrame::eventFilter(watched, event);
-    auto *keyEvent = static_cast<QKeyEvent *>(event);
-    if (keyEvent->matches(QKeySequence::Undo)) {
-        if (event->type() == QEvent::KeyPress)
-            undoCurve();
-        event->accept();
-        return true;
-    }
-    if (event->type() == QEvent::ShortcutOverride &&
-        keymap::Registry::instance().matches(keyEvent, QStringLiteral("transport.play_pause"))) {
-        event->accept();
-        return true;
-    }
-    if (event->type() == QEvent::KeyPress && tryDeleteSelectedVertex(watchedGraph, keyEvent))
-        return true;
-    return QFrame::eventFilter(watched, event);
-}
-
-void PitchBendEditor::keyPressEvent(QKeyEvent *event)
-{
-    if (event->key() == Qt::Key_Escape) {
-        close(CloseState::Cancel, CloseFocus::Restore);
-        event->accept();
+    range = std::clamp(range, 0, 127);
+    if (range == m_bendRange)
+        return;
+    if (!writeController(0x14, range, m_endRange)) {
+        // Rejected by the document: notify so a QML field resyncs to the
+        // still-committed value instead of showing the rejected edit.
+        emit controllerValuesChanged();
         return;
     }
-    if (event->matches(QKeySequence::Undo)) {
-        undoCurve();
-        event->accept();
+    m_bendRange = range;
+    if (m_pitchGraph)
+        m_pitchGraph->setBendRange(range);
+    updateDescription();
+    emit controllerValuesChanged();
+}
+
+void PitchBendEditor::setLfoSpeed(int speed)
+{
+    speed = std::clamp(speed, 0, 127);
+    if (speed == m_lfoSpeed)
+        return;
+    if (!writeController(0x15, speed, m_endLfoSpeed)) {
+        emit controllerValuesChanged();
         return;
     }
-    if (tryDeleteSelectedVertex(focusedGraph(), event))
-        return;
-    if (PitchBendGraph *graph = focusedGraph(); graph && graph->handleKeyPress(event))
-        return;
-    // Only solo routes out of the popup; the remaining roll edit commands
-    // must not reach the song while the note automation popup has focus.
-    if (m_songView &&
-        keymap::Registry::instance().matches(event, QStringLiteral("roll.solo_tracks"))) {
-        m_songView->toggleSoloOnSelectedTracks();
-        event->accept();
-        return;
-    }
-    event->accept();
-}
-
-void PitchBendEditor::focusInEvent(QFocusEvent *event)
-{
-    QFrame::focusInEvent(event);
-    update();
-    m_pitchGraph->update();
-    m_modGraph->update();
-}
-
-void PitchBendEditor::focusOutEvent(QFocusEvent *event)
-{
-    QFrame::focusOutEvent(event);
-    update();
-    m_pitchGraph->update();
-    m_modGraph->update();
-}
-
-void PitchBendEditor::hideEvent(QHideEvent *event)
-{
-    QFrame::hideEvent(event);
-    if (m_closeState == CloseState::Closed)
-        return;
-    m_pitchGraph->cancelGesture();
-    m_modGraph->cancelGesture();
-    if (m_closeState == CloseState::Cancel)
-        cancelCurve();
-    else
-        commitCurve();
-    m_closeState = CloseState::Closed;
-    if (m_closeFocus == CloseFocus::Restore && m_songView) {
-        const QPointer<::SongView> songView = m_songView;
-        QMetaObject::invokeMethod(
-            songView.data(),
-            [songView] {
-                if (songView)
-                    songView->focusTimelineBand(songview::TimelineBand::Roll, Qt::PopupFocusReason);
-            },
-            Qt::QueuedConnection);
-    }
-    deleteLater();
-}
-PitchBendGraph *PitchBendEditor::focusedGraph() const
-{
-    return m_modGraph && m_modGraph->hasFocus() ? m_modGraph : m_pitchGraph;
-}
-
-bool PitchBendEditor::tryDeleteSelectedVertex(PitchBendGraph *graph, QKeyEvent *event)
-{
-    const bool deleting = event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace;
-    if (!deleting || !graph || !graph->selectedTick())
-        return false;
-    if (noteSpanStillPresent())
-        graph->removeSelectedVertex();
-    event->accept();
-    return true;
-}
-
-uint8_t PitchBendEditor::ccForGraph(const PitchBendGraph *graph) const
-{
-    return graph == m_modGraph ? uint8_t{1} : DOC_CC_BEND;
-}
-
-void PitchBendEditor::undoCurve()
-{
-    m_pitchGraph->cancelGesture();
-    m_modGraph->cancelGesture();
-    cancelCurve();
-    if (!m_document->undoStack()->canUndo())
-        return;
-    m_document->undoStack()->undo();
+    m_lfoSpeed = speed;
+    updateDescription();
+    emit controllerValuesChanged();
 }
 
 void PitchBendEditor::resetCurve(PitchBendGraph *graph)
 {
+    if (!graph)
+        return;
     graph->resetCurve();
     commitCurve();
-    graph->setFocus(Qt::MouseFocusReason);
-    update();
+    // Reset returns focus to its graph.
+    graph->forceActiveFocus(Qt::MouseFocusReason);
 }
 
-void PitchBendEditor::snapshotCurves()
+void PitchBendEditor::resetPitchCurve()
 {
-    if (m_pitchGraph->hasGesture() || m_modGraph->hasGesture())
+    resetCurve(m_pitchGraph.data());
+}
+
+void PitchBendEditor::resetModCurve()
+{
+    resetCurve(m_modGraph.data());
+}
+
+PitchBendGraph *PitchBendEditor::focusedGraph() const
+{
+    return (m_modGraph && m_modGraph->hasActiveFocus()) ? m_modGraph.data() : m_pitchGraph.data();
+}
+
+void PitchBendEditor::onGrabLost()
+{
+    // A lost grab is not an Escape-close: resolve only the unsettled preview
+    // while the session is still open. commitCurve() settles exactly once, so
+    // a normal release (or teardown) cannot double-commit here.
+    if (m_lifecycle == Lifecycle::Open)
+        commitCurve();
+}
+
+void PitchBendEditor::undoCurve()
+{
+    if (m_pitchGraph)
+        m_pitchGraph->cancelGesture();
+    if (m_modGraph)
+        m_modGraph->cancelGesture();
+    cancelCurve();
+    if (!m_document || !m_document->undoStack()->canUndo())
+        return;
+    m_document->undoStack()->undo();
+}
+
+void PitchBendEditor::updateRange(int steps)
+{
+    setBendRange(std::clamp(m_bendRange + steps, 0, 127));
+}
+
+void PitchBendEditor::snapshotControllerValues()
+{
+    if (!m_document)
         return;
     const auto snapshotController = [this](uint8_t cc, int defaultValue, int *startValue,
                                            int *endValue) {
@@ -426,32 +188,27 @@ void PitchBendEditor::snapshotCurves()
     };
     snapshotController(0x14, 2, &m_bendRange, &m_endRange);
     snapshotController(0x15, 22, &m_lfoSpeed, &m_endLfoSpeed);
-    const QSignalBlocker bendBlocker(m_bendRangeSpin);
-    const QSignalBlocker lfoBlocker(m_lfoSpeedSpin);
-    m_bendRangeSpin->setValue(m_bendRange);
-    m_lfoSpeedSpin->setValue(m_lfoSpeed);
-    m_pitchGraph->setBendRange(m_bendRange);
-    snapshotCurve(m_pitchGraph, DOC_CC_BEND);
-    snapshotCurve(m_modGraph, 1);
+}
+
+void PitchBendEditor::snapshotCurves()
+{
+    if ((m_pitchGraph && m_pitchGraph->hasGesture()) || (m_modGraph && m_modGraph->hasGesture()))
+        return;
+    snapshotControllerValues();
+    if (m_pitchGraph) {
+        m_pitchGraph->setBendRange(m_bendRange);
+        snapshotCurve(m_pitchGraph.data(), DOC_CC_BEND);
+    }
+    if (m_modGraph)
+        snapshotCurve(m_modGraph.data(), 1);
+    emit controllerValuesChanged();
 }
 
 void PitchBendEditor::snapshotCurve(PitchBendGraph *graph, uint8_t cc)
 {
-    const auto points = m_document->lanePoints(m_engineTrack, cc);
-    std::map<uint64_t, int> curve;
-    int enteringValue = 0;
-    int endValue = 0;
-    for (const DocLanePoint &point : points) {
-        if (point.tick <= m_startTick)
-            enteringValue = point.value;
-        if (point.tick <= m_endTick)
-            endValue = point.value;
-        if (point.tick > m_startTick && point.tick < m_endTick)
-            curve[point.tick] = point.value;
-    }
-    curve[m_startTick] = enteringValue;
-    curve[m_endTick] = endValue;
-    graph->setCurve(curve, endValue);
+    CurveSnapshot snapshot =
+        readCurveSnapshot(m_document, m_engineTrack, cc, m_startTick, m_endTick);
+    graph->setCurve(snapshot.points, snapshot.endValue);
 }
 
 bool PitchBendEditor::writeController(uint8_t cc, int value, int endValue)
@@ -479,65 +236,23 @@ void PitchBendEditor::markCurvePending(PitchBendGraph *graph)
 
 void PitchBendEditor::commitCurve()
 {
-    if (m_pending != PendingEdit::Curve || !m_pendingGraph)
+    if (m_pending != PendingEdit::Curve || m_pendingGraph.isNull())
         return;
-    PitchBendGraph *graph = m_pendingGraph;
-    m_pendingGraph = nullptr;
+    PitchBendGraph *graph = m_pendingGraph.data();
+    m_pendingGraph.clear();
     m_pending = PendingEdit::None;
     writeCurve(graph);
 }
 
 void PitchBendEditor::cancelCurve()
 {
-    m_pendingGraph = nullptr;
+    m_pendingGraph.clear();
     m_pending = PendingEdit::None;
 }
 
-void PitchBendEditor::updateRange(int steps)
+uint8_t PitchBendEditor::ccForGraph(const PitchBendGraph *graph) const
 {
-    m_bendRangeSpin->setValue(std::clamp(m_bendRange + steps, 0, 127));
-}
-
-void PitchBendEditor::setBendRange(int range)
-{
-    range = std::clamp(range, 0, 127);
-    if (range == m_bendRange)
-        return;
-    if (!writeController(0x14, range, m_endRange)) {
-        const QSignalBlocker blocker(m_bendRangeSpin);
-        m_bendRangeSpin->setValue(m_bendRange);
-        return;
-    }
-    m_bendRange = range;
-    m_pitchGraph->setBendRange(range);
-    updateDescription();
-    update();
-}
-
-void PitchBendEditor::setLfoSpeed(int speed)
-{
-    speed = std::clamp(speed, 0, 127);
-    if (speed == m_lfoSpeed)
-        return;
-    if (!writeController(0x15, speed, m_endLfoSpeed)) {
-        const QSignalBlocker blocker(m_lfoSpeedSpin);
-        m_lfoSpeedSpin->setValue(m_lfoSpeed);
-        return;
-    }
-    m_lfoSpeed = speed;
-    updateDescription();
-    update();
-}
-
-void PitchBendEditor::close(CloseState state, CloseFocus focus)
-{
-    if (m_closeState == CloseState::Closed)
-        return;
-    m_pitchGraph->cancelGesture();
-    m_modGraph->cancelGesture();
-    m_closeState = state;
-    m_closeFocus = focus;
-    hide();
+    return graph == m_modGraph ? uint8_t{1} : DOC_CC_BEND;
 }
 
 void PitchBendEditor::updateDescription()
@@ -549,13 +264,135 @@ void PitchBendEditor::updateDescription()
                      "note on this MIDI channel.")
             .arg(m_bendRange)
             .arg(m_lfoSpeed);
-    setAccessibleDescription(description);
-    setToolTip(description);
+    const QString noteDescription =
+        SongView::tr("%1 · note-scoped · channel-wide").arg(midiKeyName(m_noteSnapshot.key));
+    if (description == m_description && noteDescription == m_noteDescription)
+        return;
+    m_description = description;
+    m_noteDescription = noteDescription;
+    emit appearanceChanged();
 }
 
 bool PitchBendEditor::noteSpanStillPresent() const
 {
     return m_document && m_document->containsNoteSpan(m_engineTrack, m_noteSnapshot, m_endTick);
+}
+
+void PitchBendEditor::resolveChromeGeometry()
+{
+    m_geometry = PitchBendGeometry::resolve(chromeFont(m_songView), chromeDpr(m_songView));
+}
+
+void PitchBendEditor::rebuildCachedChrome()
+{
+    QVariantMap metrics;
+    metrics.insert(QStringLiteral("popupWidth"), m_geometry.popupSize.width());
+    metrics.insert(QStringLiteral("popupHeight"), m_geometry.popupSize.height());
+    metrics.insert(QStringLiteral("headerHeight"), m_geometry.headerHeight);
+    metrics.insert(QStringLiteral("graphHeight"), m_geometry.graphHeight);
+    metrics.insert(QStringLiteral("outerInset"), m_geometry.outerInset);
+    metrics.insert(QStringLiteral("titleHeight"), m_geometry.titleHeight);
+    metrics.insert(QStringLiteral("descriptionHeight"), m_geometry.descriptionHeight);
+    metrics.insert(QStringLiteral("controlsHeight"), m_geometry.controlsHeight);
+    metrics.insert(QStringLiteral("fieldWidth"), m_geometry.fieldWidth);
+    metrics.insert(QStringLiteral("fieldHeight"), m_geometry.fieldHeight);
+    metrics.insert(QStringLiteral("resetWidth"), m_geometry.resetWidth);
+    metrics.insert(QStringLiteral("resetHeight"), m_geometry.resetHeight);
+    metrics.insert(QStringLiteral("axisLabelHeight"), m_geometry.axisLabelHeight);
+    metrics.insert(QStringLiteral("scrubThreshold"), m_geometry.scrubThreshold);
+    metrics.insert(QStringLiteral("hairline"), m_geometry.hairline);
+
+    const QFont base = chromeFont(m_songView);
+    QVariantMap appearance;
+    appearance.insert(QStringLiteral("windowBackground"),
+                      QVariant::fromValue(themes::color(themes::Role::window_background)));
+    appearance.insert(QStringLiteral("primaryText"),
+                      QVariant::fromValue(themes::color(themes::Role::song_view_primary_text)));
+    appearance.insert(QStringLiteral("secondaryText"),
+                      QVariant::fromValue(themes::color(themes::Role::song_view_secondary_text)));
+    appearance.insert(QStringLiteral("outline"),
+                      QVariant::fromValue(themes::color(themes::Role::menu_outline)));
+    appearance.insert(QStringLiteral("focus"),
+                      QVariant::fromValue(themes::color(themes::Role::focus_outline)));
+    QVariantMap dragInput;
+    dragInput.insert(QStringLiteral("background"),
+                     QVariant::fromValue(themes::color(themes::Role::spin_box_background)));
+    dragInput.insert(QStringLiteral("text"),
+                     QVariant::fromValue(themes::color(themes::Role::spin_box_text)));
+    dragInput.insert(QStringLiteral("outline"),
+                     QVariant::fromValue(themes::color(themes::Role::spin_box_outline)));
+    dragInput.insert(QStringLiteral("focus"),
+                     QVariant::fromValue(themes::color(themes::Role::focus_outline)));
+    dragInput.insert(QStringLiteral("font"), QVariant::fromValue(base));
+    dragInput.insert(QStringLiteral("borderWidth"), m_geometry.hairline);
+    dragInput.insert(QStringLiteral("radius"), layout::space(layout::Space::One));
+    dragInput.insert(QStringLiteral("horizontalPadding"), layout::space(layout::Space::One));
+    dragInput.insert(QStringLiteral("verticalPadding"), layout::space(layout::Space::Half));
+    dragInput.insert(QStringLiteral("dragThreshold"), m_geometry.scrubThreshold);
+    appearance.insert(QStringLiteral("dragInput"), dragInput);
+
+    appearance.insert(QStringLiteral("trackColor"),
+                      QVariant::fromValue(SongView::trackColor(m_engineTrack)));
+    appearance.insert(QStringLiteral("font"), QVariant::fromValue(base));
+    appearance.insert(QStringLiteral("titleFont"), QVariant::fromValue(typography::bold(base)));
+    appearance.insert(QStringLiteral("captionFont"),
+                      QVariant::fromValue(typography::caption(base)));
+    appearance.insert(QStringLiteral("monospaceFont"),
+                      QVariant::fromValue(typography::bodyMono(base)));
+
+    const bool changed = metrics != m_metrics || appearance != m_appearance;
+    m_metrics = std::move(metrics);
+    m_appearance = std::move(appearance);
+    if (changed)
+        emit appearanceChanged();
+}
+
+void PitchBendEditor::refreshChrome()
+{
+    const QVariantMap previousMetrics = m_metrics;
+    resolveChromeGeometry();
+    rebuildCachedChrome();
+    if (m_metrics != previousMetrics) {
+        if (m_pitchGraph)
+            m_pitchGraph->setMetrics(m_geometry);
+        if (m_modGraph)
+            m_modGraph->setMetrics(m_geometry);
+    }
+}
+
+void PitchBendEditor::bindGraph(PitchBendGraph *graph, PitchBendGraph::Lane lane)
+{
+    if (!graph)
+        return;
+    PitchBendGraph::Callbacks callbacks;
+    callbacks.previewChanged = [this, graph] { markCurvePending(graph); };
+    callbacks.commitRequested = [this] { commitCurve(); };
+    callbacks.cancelRequested = [this] { close(DismissAction::Cancel, CloseFocus::Restore); };
+    // The modulation lane never emits this (it ignores the wheel); binding it
+    // for both lanes preserves the widget popup's behavior exactly.
+    callbacks.rangeChangeRequested = [this](int steps) { updateRange(steps); };
+    callbacks.auditionRequested = [this] {
+        commitCurve();
+        if (m_songView)
+            m_songView->requestPlayPauseFrom(m_startTick);
+    };
+    callbacks.grabLost = [this] { onGrabLost(); };
+
+    CurveSnapshot snapshot = readCurveSnapshot(m_document.data(), m_engineTrack, ccForGraph(graph),
+                                               m_startTick, m_endTick);
+    graph->initialize({
+        .songView = m_songView.data(),
+        .engineTrack = m_engineTrack,
+        .startTick = m_startTick,
+        .endTick = m_endTick,
+        .unterminated = m_unterminated,
+        .lane = lane,
+        .geometry = m_geometry,
+        .bendRange = m_bendRange,
+        .points = std::move(snapshot.points),
+        .endValue = snapshot.endValue,
+        .callbacks = std::move(callbacks),
+    });
 }
 
 } // namespace songview

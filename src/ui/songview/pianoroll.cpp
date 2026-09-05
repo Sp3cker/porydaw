@@ -179,18 +179,18 @@ bool PianoRoll::gestureActive() const
 {
     return m_panning || dragLive() || m_leftDrag == LeftDrag::PendingDraw ||
            m_rightDrag != RightDrag::None || m_kbdKey >= 0 ||
-           (m_bendPopup && m_bendPopup->isVisible());
+           (m_bendPopup && m_bendPopup->isOpen());
 }
 
 void PianoRoll::cancelPitchBendPopup()
 {
-    if (m_bendPopup && m_bendPopup->isVisible())
+    if (m_bendPopup && m_bendPopup->isOpen())
         m_bendPopup->cancelAndClose();
 }
 
 void PianoRoll::cancelTransientInput()
 {
-    if (m_bendPopup && m_bendPopup->isVisible())
+    if (m_bendPopup && m_bendPopup->isOpen())
         m_bendPopup->cancelAndCloseWithoutFocus();
     if (m_leftDrag == LeftDrag::Velocity || m_leftDrag == LeftDrag::PendingVelocity)
         cancelVelocityInteraction();

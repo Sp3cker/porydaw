@@ -31,14 +31,15 @@ bool dashClippingPreservesPhase()
             // The former full walk is a small pixel-geometry oracle. Fractional
             // origins and edge crossings catch a pattern shifted by clipping.
             for (qreal at = start; at < 200.0; at += 5.75) {
-                addHorizontalLine(reference, layer, at, std::min(at + 4.5, 200.0), across, 1.0,
-                                  Qt::red, clip);
-                addVerticalLine(reference, layer, across, at, std::min(at + 4.5, 200.0), 1.0,
+                addHorizontalLine(reference.layer(layer), at, std::min(at + 4.5, 200.0), across,
+                                  1.0, Qt::red, clip);
+                addVerticalLine(reference.layer(layer), across, at, std::min(at + 4.5, 200.0), 1.0,
                                 Qt::red, clip);
             }
-            addDashedHorizontal(bounded, layer, start, 200.0, across, 1.0, 4.5, 1.25, Qt::red,
+            addDashedHorizontal(bounded.layer(layer), start, 200.0, across, 1.0, 4.5, 1.25, Qt::red,
                                 clip);
-            addDashedVertical(bounded, layer, across, start, 200.0, 1.0, 4.5, 1.25, Qt::red, clip);
+            addDashedVertical(bounded.layer(layer), across, start, 200.0, 1.0, 4.5, 1.25, Qt::red,
+                              clip);
             const auto orderedRects = [layer](TimelineQuickScene &scene) {
                 std::vector<QRectF> result;
                 for (const auto &primitive : scene.layer(layer).rects)

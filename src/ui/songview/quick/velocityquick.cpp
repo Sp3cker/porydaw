@@ -58,9 +58,9 @@ void VelocityArea::rebuildQuickChrome(songview::TimelineQuickScene &scene, const
     const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
     const QColor gutterColor = m_inputHost->palette().alternateBase().color();
     const QColor separator = m_inputHost->palette().mid().color();
-    addRect(scene, chromeLayer, plot, background, plot);
-    addRect(scene, gutterLayer, gutter, gutterColor, gutter);
-    addVerticalLine(scene, gutterLayer, separatorX, 0, gutter.height(), lyt::singlePixel(),
+    addRect(scene.layer(chromeLayer), plot, background, plot);
+    addRect(scene.layer(gutterLayer), gutter, gutterColor, gutter);
+    addVerticalLine(scene.layer(gutterLayer), separatorX, 0, gutter.height(), lyt::singlePixel(),
                     separator, gutter);
 }
 
@@ -91,7 +91,7 @@ void VelocityArea::rebuildQuickAxis(songview::TimelineQuickScene &scene, const Q
             const VelocityAxisGraduation &graduation = m_axis.graduations()[index];
             const bool emphasizeLabel =
                 graduation.active && (relativeGesture || !graduation.labelVisible);
-            addHorizontalLine(scene, axisLayer, separatorX - 3.0 * lyt::space(Space::Half),
+            addHorizontalLine(scene.layer(axisLayer), separatorX - 3.0 * lyt::space(Space::Half),
                               separatorX, graduation.y,
                               graduation.active ? 1.5 : lyt::singlePixel(),
                               graduation.active ? selectedColor : labelColor, gutter);
@@ -108,7 +108,7 @@ void VelocityArea::rebuildQuickAxis(songview::TimelineQuickScene &scene, const Q
             const VelocityAxisTick &tick = m_axis.ticks()[index];
             const qreal length = m_axis.hasLabel(tick.velocity) ? 3.0 * lyt::space(Space::Half)
                                                                 : lyt::space(Space::One);
-            addHorizontalLine(scene, axisLayer, separatorX - length, separatorX, tick.y,
+            addHorizontalLine(scene.layer(axisLayer), separatorX - length, separatorX, tick.y,
                               lyt::singlePixel(), labelColor, gutter);
         }
         if (!relativeGesture) {
@@ -123,8 +123,8 @@ void VelocityArea::rebuildQuickAxis(songview::TimelineQuickScene &scene, const Q
         }
         for (std::size_t index = 0; index < m_axis.markerCount(); ++index) {
             const VelocityAxisMarker &marker = m_axis.markers()[index];
-            addHorizontalLine(scene, axisLayer, separatorX - lyt::space(Space::Two), separatorX,
-                              marker.y, 1.5, selectedColor, gutter);
+            addHorizontalLine(scene.layer(axisLayer), separatorX - lyt::space(Space::Two),
+                              separatorX, marker.y, 1.5, selectedColor, gutter);
             if (relativeGesture) {
                 appendAxisText(
                     axisText, index,
@@ -166,7 +166,7 @@ void VelocityArea::rebuildQuickPsgBands(songview::TimelineQuickScene &scene, con
                 const qreal right =
                     std::clamp<qreal>(xForTick(sectionEnd), plot.left(), plot.right());
                 for (std::size_t level = 0; level + 1 < map.levelCount(); ++level) {
-                    addHorizontalLine(scene, bandsLayer, left, right,
+                    addHorizontalLine(scene.layer(bandsLayer), left, right,
                                       levelBoundaryY(map, int(level)), lyt::singlePixel(),
                                       themes::color(themes::Role::song_view_psg_velocity_levels),
                                       plot);
@@ -220,7 +220,7 @@ void VelocityArea::rebuildQuickNotes(songview::TimelineQuickScene &scene, const 
         const qreal y = yForNote(note, velocity);
         if (end + noteStemWidth / 2.0 >= plot.left() &&
             start - noteStemWidth / 2.0 <= plot.right()) {
-            addLine(scene, stemsLayer, QPointF(start, y), QPointF(end, y), noteStemWidth,
+            addLine(scene.layer(stemsLayer), QPointF(start, y), QPointF(end, y), noteStemWidth,
                     isSelected ? selectedColor : stemColor, plot);
         }
 
@@ -228,19 +228,19 @@ void VelocityArea::rebuildQuickNotes(songview::TimelineQuickScene &scene, const 
             continue;
         const QPointF center(start, y);
         if (isSelected) {
-            addEllipseRing(scene, nodesLayer, center, m_geometry.selectedNodeRingRadius,
+            addEllipseRing(scene.layer(nodesLayer), center, m_geometry.selectedNodeRingRadius,
                            m_geometry.selectedNodeRingRadius, m_geometry.selectedNodeRingDipWidth,
                            selectedColor, plot);
-            addEllipse(scene, nodesLayer, center, m_geometry.nodePaintRadius,
+            addEllipse(scene.layer(nodesLayer), center, m_geometry.nodePaintRadius,
                        m_geometry.nodePaintRadius, trackColor, plot);
-            addEllipseRing(scene, nodesLayer, center, m_geometry.nodePaintRadius,
+            addEllipseRing(scene.layer(nodesLayer), center, m_geometry.nodePaintRadius,
                            m_geometry.nodePaintRadius, m_geometry.nodeOutlineDipWidth, Qt::black,
                            plot);
         } else {
-            addEllipse(scene, nodesLayer, center, m_geometry.nodePaintRadius,
+            addEllipse(scene.layer(nodesLayer), center, m_geometry.nodePaintRadius,
                        m_geometry.nodePaintRadius, unselectedNodeColor, plot);
             if (!dimUnselectedNodes) {
-                addEllipseRing(scene, nodesLayer, center, m_geometry.nodePaintRadius,
+                addEllipseRing(scene.layer(nodesLayer), center, m_geometry.nodePaintRadius,
                                m_geometry.nodePaintRadius, m_geometry.nodeOutlineDipWidth,
                                Qt::black, plot);
             }
@@ -253,11 +253,12 @@ void VelocityArea::rebuildQuickTransient(songview::TimelineQuickScene &scene, co
     using namespace songview;
     constexpr TimelineQuickLayer transientLayer = TimelineQuickLayer::VelocityTransient;
     if (m_interaction == Interaction::Ramp) {
-        addLine(scene, transientLayer, m_pressPosition, m_previousPosition, lyt::singlePixel(),
-                themes::color(themes::Role::song_view_edit_preview_outline), plot);
+        addLine(scene.layer(transientLayer), m_pressPosition, m_previousPosition,
+                lyt::singlePixel(), themes::color(themes::Role::song_view_edit_preview_outline),
+                plot);
     }
     if (m_interaction == Interaction::Band)
-        addSelectionReticle(scene, transientLayer, m_bandRect, plot);
+        addSelectionReticle(scene.layer(transientLayer), m_bandRect, plot);
 }
 
 void VelocityArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
@@ -272,7 +273,7 @@ void VelocityArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
         TimelineQuickLayer::VelocityNodes,        TimelineQuickLayer::VelocityTransient,
     };
     for (const TimelineQuickLayer layer : layers)
-        resetLayer(scene, layer);
+        resetLayer(scene.layer(layer));
     ++m_diagnostics.contentBuildCount;
     const QRectF bounds = m_inputHost->bounds();
     const QRectF plot(QPointF{}, bounds.size());

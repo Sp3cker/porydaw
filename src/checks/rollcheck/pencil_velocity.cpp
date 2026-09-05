@@ -7,6 +7,7 @@
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPoint>
+#include <QQuickView>
 #include <QQuickWindow>
 #include <algorithm>
 #include <vector>
@@ -418,15 +419,14 @@ ScenarioContinuation runQuickLifecycleScenarios(Harness &check)
     // item when it closes, never to a deleted surface.
     sendKeyStroke(rollInput, Qt::Key_G, Qt::NoModifier, false);
     QCoreApplication::processEvents();
-    QWidget *popupWidget = view.findChild<QWidget *>(QStringLiteral("pitchBendPopup"));
-    auto *popup = dynamic_cast<songview::PitchBendEditor *>(popupWidget);
-    if (!popup || !popup->isVisible()) {
+    auto *popup = view.findChild<songview::PitchBendEditor *>(QStringLiteral("pitchBendPopup"));
+    if (!popup || !popup->isOpen()) {
         fail("G did not open the pitch-bend popup for the lifecycle return-focus check");
     } else {
-        events::sendKey(*popup, QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier, QString(), false,
-                        1);
-        events::sendKey(*popup, QEvent::KeyRelease, Qt::Key_Escape, Qt::NoModifier, QString(),
+        events::sendKey(*popup->view(), QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier, QString(),
                         false, 1);
+        events::sendKey(*popup->view(), QEvent::KeyRelease, Qt::Key_Escape, Qt::NoModifier,
+                        QString(), false, 1);
         bool focusReturned = false;
         for (int spin = 0; spin < 20 && !focusReturned; ++spin) {
             QCoreApplication::processEvents();

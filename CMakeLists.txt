@@ -323,6 +323,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/quick/timelinequickchrome.h
     src/ui/songview/quick/playheadquick.cpp
     src/ui/songview/quick/playheadquick.h
+    src/ui/songview/quick/timelinequicklayer.h
     src/ui/songview/quick/timelinequickscene.h
     src/ui/songview/quick/timelinequickview.cpp
     src/ui/songview/quick/timelinequickview.h
@@ -332,6 +333,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/pitchbendeditor.hpp
     src/ui/pitchbendgraph.cpp
     src/ui/pitchbendgraph.hpp
+    src/ui/pitchbendeditor_window.cpp
+    src/ui/pitchbendgraph_render.cpp
     src/ui/eventlistview.cpp
     src/ui/eventlistview.h
     src/ui/eventtablemodel.cpp
@@ -450,6 +453,14 @@ set_source_files_properties(
     src/ui/songview/quick/DrawerChromeLayer.qml
     PROPERTIES QT_RESOURCE_ALIAS DrawerChromeLayer.qml
 )
+set_source_files_properties(
+    src/ui/songview/quick/DragInput.qml
+    PROPERTIES QT_RESOURCE_ALIAS DragInput.qml
+)
+set_source_files_properties(
+    src/ui/songview/quick/PitchBendPopup.qml
+    PROPERTIES QT_RESOURCE_ALIAS PitchBendPopup.qml
+)
 qt_add_qml_module(porydaw_app
     URI Porydaw.Ui
     VERSION 1.0
@@ -464,6 +475,8 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/TrackHeaderBand.qml
         src/ui/songview/quick/TrackHeaderToolTip.qml
         src/ui/songview/quick/DrawerChromeLayer.qml
+        src/ui/songview/quick/DragInput.qml
+        src/ui/songview/quick/PitchBendPopup.qml
 )
 target_precompile_headers(porydaw_app PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")

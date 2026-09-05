@@ -55,7 +55,7 @@ void addHeaderChrome(TimelineQuickScene &scene, const QRectF &band, const QRectF
 {
     constexpr TimelineQuickLayer chromeLayer = TimelineQuickLayer::AutomationGutterChrome;
     if (separator) {
-        addHorizontalLine(scene, chromeLayer, band.left(), band.right(), band.bottom(),
+        addHorizontalLine(scene.layer(chromeLayer), band.left(), band.right(), band.bottom(),
                           layout::singlePixel(), themes::color(themes::Role::song_view_separator),
                           viewport);
     }
@@ -64,11 +64,11 @@ void addHeaderChrome(TimelineQuickScene &scene, const QRectF &band, const QRectF
     const QRect &bounds = *arrow;
     const QColor color = themes::color(themes::Role::song_view_primary_text);
     if (expanded) {
-        addClippedTriangle(scene, chromeLayer, QPointF(bounds.left(), bounds.top()),
+        addClippedTriangle(scene.layer(chromeLayer), QPointF(bounds.left(), bounds.top()),
                            QPointF(bounds.right(), bounds.top()),
                            QPointF(bounds.center().x(), bounds.bottom()), color, textClip);
     } else {
-        addClippedTriangle(scene, chromeLayer, QPointF(bounds.left(), bounds.top()),
+        addClippedTriangle(scene.layer(chromeLayer), QPointF(bounds.left(), bounds.top()),
                            QPointF(bounds.right(), bounds.center().y()),
                            QPointF(bounds.left(), bounds.bottom()), color, textClip);
     }
@@ -86,17 +86,17 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     const bool hover = refresh.testFlag(AutomationRefresh::Hover);
     // Publish each text model once below. Clearing first destroys its QML delegates.
     if (content) {
-        resetLayer(scene, TimelineQuickLayer::AutomationGutterChrome);
-        resetLayer(scene, TimelineQuickLayer::AutomationGrid);
-        resetLayer(scene, TimelineQuickLayer::AutomationCurves);
-        resetLayer(scene, TimelineQuickLayer::AutomationNodes);
-        resetLayer(scene, TimelineQuickLayer::AutomationSelection);
+        resetLayer(scene.layer(TimelineQuickLayer::AutomationGutterChrome));
+        resetLayer(scene.layer(TimelineQuickLayer::AutomationGrid));
+        resetLayer(scene.layer(TimelineQuickLayer::AutomationCurves));
+        resetLayer(scene.layer(TimelineQuickLayer::AutomationNodes));
+        resetLayer(scene.layer(TimelineQuickLayer::AutomationSelection));
     }
     if (transient) {
-        resetLayer(scene, TimelineQuickLayer::AutomationTransient);
+        resetLayer(scene.layer(TimelineQuickLayer::AutomationTransient));
     }
     if (hover) {
-        resetLayer(scene, TimelineQuickLayer::AutomationHover);
+        resetLayer(scene.layer(TimelineQuickLayer::AutomationHover));
     }
     const QRectF viewport = m_inputHost ? m_inputHost->bounds() : QRectF{};
     if (!m_inputHost || !m_page.document() || viewport.height() <= 0.0) {
@@ -267,8 +267,8 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     const QColor primaryText = themes::color(themes::Role::song_view_primary_text);
     const QColor secondaryText = themes::color(themes::Role::song_view_secondary_text);
     if (content) {
-        addRect(scene, TimelineQuickLayer::AutomationGrid, viewport, background, viewport);
-        addRect(scene, TimelineQuickLayer::AutomationGutterChrome, gutterViewport, background,
+        addRect(scene.layer(TimelineQuickLayer::AutomationGrid), viewport, background, viewport);
+        addRect(scene.layer(TimelineQuickLayer::AutomationGutterChrome), gutterViewport, background,
                 gutterViewport);
     }
 
@@ -300,7 +300,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
             continue;
         const QRectF gutterBand = gutterClipFor(lane.band);
         if (content) {
-            addRect(scene, TimelineQuickLayer::AutomationGutterChrome, gutterBand, background,
+            addRect(scene.layer(TimelineQuickLayer::AutomationGutterChrome), gutterBand, background,
                     gutterBand);
             addHeaderChrome(
                 scene, gutterBand, gutterBand,
@@ -349,9 +349,11 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                                  projection.displayX(firstTick, dpr),
                              bounds.height());
         if (content && !m_band.active) {
-            addSelectionReticle(scene, TimelineQuickLayer::AutomationSelection, reticle, lane.clip);
+            addSelectionReticle(scene.layer(TimelineQuickLayer::AutomationSelection), reticle,
+                                lane.clip);
         } else if (transient && m_band.active) {
-            addSelectionReticle(scene, TimelineQuickLayer::AutomationTransient, reticle, lane.clip);
+            addSelectionReticle(scene.layer(TimelineQuickLayer::AutomationTransient), reticle,
+                                lane.clip);
         }
     }
 
@@ -360,8 +362,8 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                           m_geometry.addLaneStripHeight);
         const QRectF stripClip = rectF(strip).intersected(gutterViewport);
         if (!stripClip.isEmpty()) {
-            addRect(scene, TimelineQuickLayer::AutomationGutterChrome, rectF(strip), background,
-                    stripClip);
+            addRect(scene.layer(TimelineQuickLayer::AutomationGutterChrome), rectF(strip),
+                    background, stripClip);
             addHeaderChrome(scene, rectF(strip), stripClip, std::nullopt, true, true, stripClip);
         }
     }
