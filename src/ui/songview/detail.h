@@ -13,13 +13,10 @@
 
 namespace songview::detail {
 
-inline constexpr int kScrollUnitsPerDip = 16;
 inline constexpr int kVoiceAuditionKey = 60; // middle C, matching the voicegroup browser
 inline constexpr int kVoiceAuditionVel = 112;
 
 qreal logicalPhysicalPixel(qreal dpr);
-int scrollUnits(double dip);
-double scrollDips(int units);
 QPoint wheelDelta(const QWheelEvent *event);
 double wheelAngleUnits(const QWheelEvent *event);
 double cursorAnchoredScroll(double anchor, double oldScale, double oldScroll, double newScale);

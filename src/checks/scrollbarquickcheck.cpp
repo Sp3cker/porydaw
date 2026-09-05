@@ -32,6 +32,10 @@
 #include <cstdio>
 #include <utility>
 
+// Real-input SongView scenarios for the two timeline scrollbars; defined in
+// scrollbarquickcheck_songview.cpp and run against this check's exposed view.
+void runSongViewScrollbarChecks(SongView &view, int &failures);
+
 namespace {
 
 constexpr int kViewWidth = 1280;
@@ -463,6 +467,10 @@ int runScrollbarQuickCheck(const QString &projectRoot, const QString &songLabel)
         thumbPositionFor(20.0, -80.0, 180.0, standalone->width() - standaloneThumb->width());
     check(failures, near(standaloneThumb->x(), expectedHorizontalX),
           "external horizontal model value did not reposition the thumb after drag release");
+
+    // Real-input SongView scenarios for the two timeline scrollbars that
+    // replaced the QWidget bars: same exposed view, same failure counter.
+    runSongViewScrollbarChecks(view, failures);
 
     return finish();
 }

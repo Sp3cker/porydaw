@@ -155,8 +155,8 @@ int runEditorDrawerCheck(const QString &screenshotPath)
                QRectF(input->mapToItem(quickRoot, QPointF()), input->size()) ==
                    songViewRect.translated(-QPointF(quick->geometry().topLeft()));
     };
-    const auto canonicalUnionRect = [&bandLayout, &chrome] {
-        return checks::support::canonicalVisibleQuickHostRect(bandLayout, &chrome);
+    const auto canonicalUnionRect = [&view, &chrome] {
+        return checks::support::canonicalVisibleQuickHostRect(view, &chrome);
     };
 
     const auto clickBarToggle = [&](const QRectF &toggleRect) {

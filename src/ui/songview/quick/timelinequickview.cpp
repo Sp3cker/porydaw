@@ -15,6 +15,7 @@
 #include "ui/songview/timeruler.h"
 #include "ui/songview/trackheadermodel.h"
 #include "ui/theme/themeruntime.h"
+#include <QApplication>
 #include <QColor>
 #include <QQmlContext>
 #include <QQmlError>
@@ -99,6 +100,25 @@ std::array<DrawerChromeRect, 9> visibleDrawerChromeRects(const DrawerChrome *chr
         {chrome->detentRect(), chrome->detentVisible()},
         {chrome->automationScrollbarRect(), chrome->automationScrollbarVisible()},
     }};
+}
+
+// Wheel deltas to a signed DIP scroll step for one scrollbar axis. Pixel
+// deltas are consumed one-to-one as DIPs; rotary notches convert at
+// QApplication::wheelScrollLines() lines of one DIP each — the legacy
+// widgets' line step. The bar's own axis wins and the other axis still
+// scrolls a wheel that carries only it. The returned value negates the
+// delta so a conventional wheel-up (positive delta) scrolls toward the
+// bar's minimum, and the platform's natural-scroll sign travels inside the
+// delivered deltas — `inverted` must never flip it a second time.
+qreal scrollbarWheelDips(bool preferX, qreal pixelX, qreal pixelY, qreal angleX, qreal angleY)
+{
+    const qreal pixel =
+        preferX ? (pixelX != 0.0 ? pixelX : pixelY) : (pixelY != 0.0 ? pixelY : pixelX);
+    if (pixel != 0.0)
+        return -pixel;
+    const qreal angle =
+        preferX ? (angleX != 0.0 ? angleX : angleY) : (angleY != 0.0 ? angleY : angleX);
+    return -angle * QApplication::wheelScrollLines() / 120.0;
 }
 
 } // namespace
@@ -473,6 +493,86 @@ qreal TimelineQuickView::rulerPlotOrigin() const noexcept
     return m_publishedRulerPlotOrigin;
 }
 
+QRectF TimelineQuickView::horizontalScrollbarRect() const noexcept
+{
+    return m_publishedHorizontalScrollbarRect;
+}
+
+QRectF TimelineQuickView::verticalScrollbarRect() const noexcept
+{
+    return m_publishedVerticalScrollbarRect;
+}
+
+qreal TimelineQuickView::horizontalScrollValue() const
+{
+    return m_camera.scrollX();
+}
+
+qreal TimelineQuickView::horizontalScrollMinimum() const
+{
+    return m_camera.minHScroll();
+}
+
+qreal TimelineQuickView::horizontalScrollMaximum() const
+{
+    return m_camera.maxHScroll();
+}
+
+qreal TimelineQuickView::horizontalScrollPageStep() const
+{
+    return m_songView ? m_songView->viewportWidth() : 0.0;
+}
+
+qreal TimelineQuickView::verticalScrollValue() const
+{
+    return m_camera.scrollY();
+}
+
+qreal TimelineQuickView::verticalScrollMaximum() const
+{
+    return m_camera.maxRollScroll();
+}
+
+qreal TimelineQuickView::verticalScrollPageStep() const
+{
+    return m_songView ? m_songView->rollViewportHeight() : 0.0;
+}
+
+void TimelineQuickView::setHorizontalScroll(qreal value)
+{
+    // SongView owns the camera; its sync tail re-notifies
+    // scrollbarStateChanged with the clamped outcome.
+    if (m_songView)
+        m_songView->setHScroll(value);
+}
+
+void TimelineQuickView::setVerticalScroll(qreal value)
+{
+    if (m_songView)
+        m_songView->setVScroll(value);
+}
+
+void TimelineQuickView::scrollHorizontalByWheel(qreal pixelX, qreal pixelY, qreal angleX,
+                                                qreal angleY, bool inverted)
+{
+    Q_UNUSED(inverted); // the delivered deltas already carry the natural-scroll sign
+    if (m_songView)
+        m_songView->scrollByPx(scrollbarWheelDips(true, pixelX, pixelY, angleX, angleY));
+}
+
+void TimelineQuickView::scrollVerticalByWheel(qreal pixelX, qreal pixelY, qreal angleX,
+                                              qreal angleY, bool inverted)
+{
+    Q_UNUSED(inverted);
+    if (m_songView)
+        m_songView->scrollRollBy(scrollbarWheelDips(false, pixelX, pixelY, angleX, angleY));
+}
+
+void TimelineQuickView::notifyScrollbarsChanged()
+{
+    emit scrollbarStateChanged();
+}
+
 void TimelineQuickView::synchronizeGuides(qreal songViewSplitX,
                                           std::optional<qreal> editSongViewContentX)
 {
@@ -689,6 +789,15 @@ void TimelineQuickView::publishTimelineBandLayout()
         const QRect chromeRect = chrome.rect.toAlignedRect();
         hostRect = hostRect ? hostRect->united(chromeRect) : chromeRect;
     }
+    // The two QML scrollbar lanes extend the envelope so the Quick window
+    // covers the controls; SongView resolves their canonical SongView-local
+    // rectangles (empty = absent lane).
+    const std::array<QRect, 2> scrollbarRects = {m_songView->horizontalScrollbarRect(),
+                                                 m_songView->verticalScrollbarRect()};
+    for (const QRect &rect : scrollbarRects) {
+        if (!rect.isEmpty())
+            hostRect = hostRect ? hostRect->united(rect) : rect;
+    }
     const QRect publishedHostRect = hostRect.value_or(QRect{});
     const qreal publishedRulerPlotOrigin = m_songView->timelineSplitX() - publishedHostRect.x();
     const bool hostOriginChanged = m_publishedHostRect.topLeft() != publishedHostRect.topLeft();
@@ -716,12 +825,27 @@ void TimelineQuickView::publishTimelineBandLayout()
         }
     }
 
+    // Scrollbar lanes share the host translation; empty lanes stay empty.
+    const auto toRootLocalScrollbar = [&publishedHostRect](const QRect &rect) {
+        return rect.isEmpty() ? QRectF{} : QRectF{rect.translated(-publishedHostRect.topLeft())};
+    };
+    const QRectF publishedHorizontalScrollbar = toRootLocalScrollbar(scrollbarRects[0]);
+    const QRectF publishedVerticalScrollbar = toRootLocalScrollbar(scrollbarRects[1]);
+
     const bool publishedGeometryChanged =
         std::exchange(m_publishedHostRect, publishedHostRect) != publishedHostRect ||
         std::exchange(m_publishedRulerPlotOrigin, publishedRulerPlotOrigin) !=
             publishedRulerPlotOrigin;
+    const bool horizontalScrollbarChanged =
+        std::exchange(m_publishedHorizontalScrollbarRect, publishedHorizontalScrollbar) !=
+        publishedHorizontalScrollbar;
+    const bool verticalScrollbarChanged =
+        std::exchange(m_publishedVerticalScrollbarRect, publishedVerticalScrollbar) !=
+        publishedVerticalScrollbar;
     if (publishedGeometryChanged)
         emit hostGeometryChanged();
+    if (horizontalScrollbarChanged || verticalScrollbarChanged)
+        emit scrollbarRectsChanged();
 
     if (hostOriginChanged) {
         if (m_hoverSongViewContentX)

@@ -98,6 +98,24 @@ class TimelineQuickView final : public QWidget
                    playheadChanged FINAL)
     Q_PROPERTY(
         int playheadTriangleHeightPx READ playheadTriangleHeightPx NOTIFY playheadChanged FINAL)
+    Q_PROPERTY(QRectF horizontalScrollbarRect READ horizontalScrollbarRect NOTIFY
+                   scrollbarRectsChanged FINAL)
+    Q_PROPERTY(
+        QRectF verticalScrollbarRect READ verticalScrollbarRect NOTIFY scrollbarRectsChanged FINAL)
+    Q_PROPERTY(
+        qreal horizontalScrollValue READ horizontalScrollValue NOTIFY scrollbarStateChanged FINAL)
+    Q_PROPERTY(qreal horizontalScrollMinimum READ horizontalScrollMinimum NOTIFY
+                   scrollbarStateChanged FINAL)
+    Q_PROPERTY(qreal horizontalScrollMaximum READ horizontalScrollMaximum NOTIFY
+                   scrollbarStateChanged FINAL)
+    Q_PROPERTY(qreal horizontalScrollPageStep READ horizontalScrollPageStep NOTIFY
+                   scrollbarStateChanged FINAL)
+    Q_PROPERTY(
+        qreal verticalScrollValue READ verticalScrollValue NOTIFY scrollbarStateChanged FINAL)
+    Q_PROPERTY(
+        qreal verticalScrollMaximum READ verticalScrollMaximum NOTIFY scrollbarStateChanged FINAL)
+    Q_PROPERTY(
+        qreal verticalScrollPageStep READ verticalScrollPageStep NOTIFY scrollbarStateChanged FINAL)
 
   public:
     TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStrip &otherEvents,
@@ -147,6 +165,34 @@ class TimelineQuickView final : public QWidget
     // Republishes the stored band layout after Quick-window lifecycle events
     // (show, WinId, DPR); changes neither the canonical value nor dirty domains.
     void refreshBandLayout();
+    // Canonical scrollbar lanes, Quick-root-local; empty means the lane is
+    // absent (the roll bar hides in EventList mode). Published with the
+    // band layout and notified on geometry change even when the host
+    // origin stays put.
+    QRectF horizontalScrollbarRect() const noexcept;
+    QRectF verticalScrollbarRect() const noexcept;
+    // Fractional-DIP camera scroll state for the QML scrollbar controls;
+    // read straight from SongView's camera, never cached here.
+    qreal horizontalScrollValue() const;
+    qreal horizontalScrollMinimum() const;
+    qreal horizontalScrollMaximum() const;
+    qreal horizontalScrollPageStep() const;
+    qreal verticalScrollValue() const;
+    qreal verticalScrollMaximum() const;
+    qreal verticalScrollPageStep() const;
+    // QML scrollbar input entry points: authoritative SongView camera
+    // updates. The SongTab InputGate filters the delivering wheel events,
+    // so no readiness flag lives here; wheel deltas keep the platform's
+    // natural-scroll sign (never re-inverted).
+    Q_INVOKABLE void setHorizontalScroll(qreal value);
+    Q_INVOKABLE void setVerticalScroll(qreal value);
+    Q_INVOKABLE void scrollHorizontalByWheel(qreal pixelX, qreal pixelY, qreal angleX, qreal angleY,
+                                             bool inverted);
+    Q_INVOKABLE void scrollVerticalByWheel(qreal pixelX, qreal pixelY, qreal angleX, qreal angleY,
+                                           bool inverted);
+    // SongView camera tail: refreshes the scrollbar scalar bindings after
+    // any camera/viewport/range mutation, even a no-op one.
+    void notifyScrollbarsChanged();
     // Live Quick-window device pixel ratio for camera and projection math;
     // 1.0 only before the Quick window exists. Not named devicePixelRatio()
     // — this QWidget already inherits that QPaintDevice method.
@@ -171,6 +217,8 @@ class TimelineQuickView final : public QWidget
     void editChromeChanged();
     void hostGeometryChanged();
     void playheadChanged();
+    void scrollbarRectsChanged();
+    void scrollbarStateChanged();
     void playheadXChanged();
 
   protected:
@@ -234,6 +282,8 @@ class TimelineQuickView final : public QWidget
     // Quick-rendered drawer chrome; origin published to QML as hostX/hostY.
     QRect m_publishedHostRect;
     qreal m_publishedRulerPlotOrigin = 0.0;
+    QRectF m_publishedHorizontalScrollbarRect;
+    QRectF m_publishedVerticalScrollbarRect;
     std::optional<qreal> m_hoverSongViewContentX;
     std::optional<qreal> m_editSongViewContentX;
     qreal m_playheadLocalX = 0.0;

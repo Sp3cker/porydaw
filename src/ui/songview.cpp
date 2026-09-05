@@ -1,7 +1,6 @@
 #include "songview.h"
 #include "core/songdocument.h"
 #include "layout.h"
-#include "songview/detail.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
@@ -28,7 +27,6 @@
 #include <QLayout>
 #include <QPointer>
 #include <QResizeEvent>
-#include <QScrollBar>
 #include <QSizePolicy>
 #include <QSpacerItem>
 #include <QStackedWidget>
@@ -42,10 +40,6 @@
 namespace lyt = ::layout;
 using Space = lyt::Space;
 
-namespace songview {
-using namespace songview::detail;
-} // namespace songview
-
 // ------------------------------------------------------------------ SongView
 
 using namespace songview;
@@ -58,24 +52,6 @@ int resolveOtherEventsRowHeight()
     return QFontMetrics(body).height() + lyt::space(Space::Two);
 }
 
-// The application stylesheet paints this horizontal bar's zero-margin
-// rectangle and every subcontrol with opaque solid colors.
-class OpaqueHorizontalScrollBar final : public QScrollBar
-{
-  public:
-    explicit OpaqueHorizontalScrollBar(QWidget *parent) : QScrollBar(Qt::Horizontal, parent) {}
-
-  protected:
-    // Stylesheet polish clears the opaque attribute for boxed rules, so
-    // restore this horizontal-only contract after its base event completes.
-    bool event(QEvent *event) override
-    {
-        const bool handled = QScrollBar::event(event);
-        if (event->type() == QEvent::Polish || event->type() == QEvent::StyleChange)
-            setAttribute(Qt::WA_OpaquePaintEvent);
-        return handled;
-    }
-};
 } // namespace
 
 SongView::Geometry SongView::Geometry::resolve()
@@ -143,6 +119,8 @@ TimelineBandLayout SongView::resolveTimelineBandLayout() const
         return QRect(m_geometry.timelineSplitX, rect.y(),
                      std::max(0, rect.right() + 1 - m_geometry.timelineSplitX), rect.height());
     };
+    // Shared breadth of the Quick-drawn scrollbar rows and columns.
+    const int scrollbarBreadth = lyt::space(Space::Two);
     if (m_rulerSpacer && m_ruler) {
         const QRect rect = m_rulerSpacer->geometry();
         publishBand(TimelineBand::Ruler, rect, plotFromSplit(rect));
@@ -156,14 +134,14 @@ TimelineBandLayout SongView::resolveTimelineBandLayout() const
             publishBand(TimelineBand::TrackHeaders, headerRect, QRect());
         }
     }
-    // The roll band is the retained roll page minus the vertical scrollbar
-    // column and the drawer overlay. The overlay owns its body and chrome, so
-    // the canonical roll ends immediately above it. Nullopt while the event
-    // list replaces the roll page.
+    // The roll band is the retained roll page minus the Quick-drawn vertical
+    // scrollbar column and the drawer overlay. The overlay owns its body and
+    // chrome, so the canonical roll ends immediately above it. Nullopt while
+    // the event list replaces the roll page.
     if (!eventListVisible()) {
         const QWidget *rollPage = m_rollStack->widget(0);
         QRect rollRect(rollPage->mapTo(this, QPoint(0, 0)), rollPage->size());
-        rollRect.setWidth(std::max(0, rollRect.width() - m_vbar->width()));
+        rollRect.setWidth(std::max(0, rollRect.width() - scrollbarBreadth));
         if (m_editorDrawer) {
             const QRect overlay = m_editorDrawer->overlayRect();
             if (!overlay.isEmpty())
@@ -179,9 +157,8 @@ TimelineBandLayout SongView::resolveTimelineBandLayout() const
         // The band is the lane viewport: the drawer body minus the left
         // scrollbar column; the canvas plot origin drops the same column, so
         // the Quick plot stays aligned with the piano grid.
-        const int scrollbarWidth = lyt::space(Space::Two);
-        const int bandWidth = std::max(0, body->width() - scrollbarWidth);
-        const QRect band(body->x() + scrollbarWidth, body->y(), bandWidth, body->height());
+        const int bandWidth = std::max(0, body->width() - scrollbarBreadth);
+        const QRect band(body->x() + scrollbarBreadth, body->y(), bandWidth, body->height());
         publishBand(TimelineBand::Automation, band, plotFromSplit(band));
     }
     if (const std::optional<QRect> body = m_editorDrawer->bodyRect(EditorDrawerPage::Velocity))
@@ -189,6 +166,28 @@ TimelineBandLayout SongView::resolveTimelineBandLayout() const
     if (const std::optional<QRect> body = m_editorDrawer->bodyRect(EditorDrawerPage::VoiceChanges))
         publishBand(TimelineBand::VoiceChanges, *body, plotFromSplit(*body));
     return layout;
+}
+
+// Canonical SongView-local scrollbar lanes for the QML controls: the
+// horizontal row reserves the bottom spacer's font-metric height right of
+// the split, and the vertical column sits directly right of the canonical
+// (drawer-clipped) roll band. Empty means the lane is absent.
+QRect SongView::horizontalScrollbarRect() const
+{
+    if (!m_hbarSpacer)
+        return {};
+    const QRect row = m_hbarSpacer->geometry();
+    return {m_geometry.timelineSplitX, row.y(), std::max(0, width() - m_geometry.timelineSplitX),
+            row.height()};
+}
+
+QRect SongView::verticalScrollbarRect() const
+{
+    const std::optional<songview::TimelineBandGeometry> &roll =
+        m_timelineBandLayout.geometry(songview::TimelineBand::Roll);
+    if (!roll)
+        return {};
+    return {roll->rect.right() + 1, roll->rect.top(), lyt::space(Space::Two), roll->rect.height()};
 }
 
 // Fixed resolve → compare → store → push sequence for the canonical band
@@ -267,17 +266,10 @@ SongView::SongView(QWidget *parent)
     m_rollStack->setObjectName(QStringLiteral("songViewRollStack"));
     m_rollStack->setStyleSheet(
         QStringLiteral("QStackedWidget#songViewRollStack { background-color: transparent; }"));
+    // Geometry placeholder for the roll band: the roll paints through the
+    // Quick host, so the page only carries its rectangle.
     auto *rollPage = new QWidget(m_rollStack);
-    auto *rollBox = new QHBoxLayout(rollPage);
-    rollBox->setContentsMargins(lyt::space(Space::Zero), lyt::space(Space::Zero),
-                                lyt::space(Space::Zero), lyt::space(Space::Zero));
-    rollBox->setSpacing(lyt::space(Space::Zero));
     m_roll = new PianoRoll(this);
-    m_vbar = new QScrollBar(Qt::Vertical, rollPage);
-    ::layout::configureListPositionIndicator(*m_vbar);
-    m_vbar->setSingleStep(kScrollUnitsPerDip);
-    rollBox->addStretch(1);
-    rollBox->addWidget(m_vbar);
     m_rollStack->addWidget(rollPage);
     m_events = new EventListView(this);
     m_rollStack->addWidget(m_events);
@@ -288,14 +280,12 @@ SongView::SongView(QWidget *parent)
     m_stripSpacer = new QSpacerItem(m_geometry.timelineSplitX, m_geometry.otherEventsHeight,
                                     QSizePolicy::Minimum, QSizePolicy::Fixed);
     vbox->addSpacerItem(m_stripSpacer);
-    m_hbar = new OpaqueHorizontalScrollBar(this);
-    m_hbar->setSingleStep(kScrollUnitsPerDip);
-    m_hbarRow = new QHBoxLayout;
-    m_hbarGutter = new QSpacerItem(m_geometry.timelineSplitX, lyt::space(Space::Zero),
-                                   QSizePolicy::Fixed, QSizePolicy::Minimum);
-    m_hbarRow->addItem(m_hbarGutter);
-    m_hbarRow->addWidget(m_hbar);
-    vbox->addLayout(m_hbarRow);
+    // The QML horizontal timeline scrollbar lane: the font-metric spacer
+    // owns the row height, and the control spans [timelineSplitX, width]
+    // inside the Quick window envelope.
+    m_hbarSpacer = new QSpacerItem(m_geometry.timelineSplitX, lyt::space(Space::Two),
+                                   QSizePolicy::Minimum, QSizePolicy::Fixed);
+    vbox->addSpacerItem(m_hbarSpacer);
 
     m_editorDrawer = new EditorDrawer(*this, m_editorViewState);
     m_quickView =
@@ -318,11 +308,6 @@ SongView::SongView(QWidget *parent)
         [this](const songview::EditorSelectionModel::SelectionTransition &transition) {
             coordinateSelectionChange(transition);
         });
-
-    connect(m_hbar, &QScrollBar::valueChanged, this,
-            [this](int value) { setHScroll(scrollDips(value)); });
-    connect(m_vbar, &QScrollBar::valueChanged, this,
-            [this](int value) { setVScroll(scrollDips(value)); });
 
     positionBandWidgets();
     // Both consumers exist: publish the first canonical layout handoff.

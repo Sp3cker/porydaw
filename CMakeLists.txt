@@ -584,6 +584,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/trackactivitymetercheck.cpp
         src/checks/trackheaderquickcheck.cpp
         src/checks/scrollbarquickcheck.cpp
+        src/checks/scrollbarquickcheck_songview.cpp
         src/checks/audiocheck.cpp
         src/checks/resonancecheck.cpp
         src/checks/mkcheck.cpp

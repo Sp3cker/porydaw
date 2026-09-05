@@ -1,19 +1,14 @@
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/songview.h"
-#include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelineinput.h"
 #include "ui/songview/quick/timelinequickview.h"
-#include <QScrollBar>
-#include <QSizePolicy>
-#include <QSpacerItem>
 
 #include <algorithm>
 #include <cmath>
 
 using namespace songview;
-using namespace songview::detail;
 
 namespace {
 
@@ -94,12 +89,8 @@ void SongView::scrollRollBy(double dy)
 }
 void SongView::syncHorizontalCamera(bool cameraChanged)
 {
-    const int scrollbarValue = scrollUnits(m_camera.scrollX());
-    if (m_hbar->value() != scrollbarValue) {
-        m_hbar->blockSignals(true);
-        m_hbar->setValue(scrollbarValue);
-        m_hbar->blockSignals(false);
-    }
+    if (m_quickView)
+        m_quickView->notifyScrollbarsChanged();
     if (cameraChanged) {
         refreshTimelineViews(cPlotDirty);
         refreshDrawerPages();
@@ -111,12 +102,8 @@ void SongView::setHScroll(double px)
 }
 void SongView::syncVerticalCamera(bool cameraChanged)
 {
-    const int scrollbarValue = scrollUnits(m_camera.scrollY());
-    if (m_vbar->value() != scrollbarValue) {
-        m_vbar->blockSignals(true);
-        m_vbar->setValue(scrollbarValue);
-        m_vbar->blockSignals(false);
-    }
+    if (m_quickView)
+        m_quickView->notifyScrollbarsChanged();
     if (cameraChanged)
         m_roll->requestQuickUpdate(PianoRollQuickDirty::All);
 }
@@ -127,18 +114,11 @@ void SongView::setVScroll(double y)
 void SongView::updateScrollbars()
 {
     m_camera.setViewport(double(viewportWidth()), double(rollViewportHeight()));
-    m_hbar->blockSignals(true);
-    m_hbar->setRange(scrollUnits(m_camera.minHScroll()), scrollUnits(m_camera.maxHScroll()));
-    m_hbar->setPageStep(scrollUnits(double(viewportWidth())));
-    m_hbar->blockSignals(false);
     // The unbound axis's provisional camera tracks the newly resolved
-    // pre-roll home; a bound camera stays where its user put it.
+    // pre-roll home; a bound camera stays where its user put it. Both tails
+    // re-notify the QML scrollbars, whose bindings read the camera live, so
+    // range and page changes land even when a value clamps to no change.
     setHScroll(m_timeAxis.isBound() ? m_camera.scrollX() : m_camera.minHScroll());
-
-    m_vbar->blockSignals(true);
-    m_vbar->setRange(0, scrollUnits(m_camera.maxRollScroll()));
-    m_vbar->setPageStep(scrollUnits(double(rollViewportHeight())));
-    m_vbar->blockSignals(false);
     setVScroll(m_camera.scrollY());
 }
 int SongView::viewportWidth() const

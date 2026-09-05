@@ -14,7 +14,6 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QRectF>
-#include <QScrollBar>
 
 #include <QScopeGuard>
 #include <QVariant>
@@ -597,9 +596,9 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         checks::support::pumpQuick();
 
         const songview::TimelineBandLayout &bandLayout = view.timelineBandLayout();
-        const auto canonicalHostRect = [&bandLayout, drawer] {
+        const auto canonicalHostRect = [drawer, &view] {
             const QRect rect =
-                checks::support::canonicalVisibleQuickHostRect(bandLayout, &drawer->chrome());
+                checks::support::canonicalVisibleQuickHostRect(view, &drawer->chrome());
             return rect.isEmpty() ? std::optional<QRect>{} : std::optional<QRect>{rect};
         };
 
@@ -1054,19 +1053,29 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
                                     .arg(QString::fromLatin1(presentation)));
             }
 
-            for (QScrollBar *scrollbar : view.findChildren<QScrollBar *>()) {
-                if (!scrollbar->isVisible())
+            struct NamedQuickScrollbar {
+                const char *objectName;
+                const char *label;
+            };
+            const std::array<NamedQuickScrollbar, 2> quickScrollbars{{
+                {"timelineHorizontalScrollBar", "timeline"},
+                {"timelineRollScrollBar", "roll"},
+            }};
+            for (const NamedQuickScrollbar &quickScrollbar : quickScrollbars) {
+                QQuickItem *scrollbar =
+                    root->findChild<QQuickItem *>(QString::fromLatin1(quickScrollbar.objectName));
+                if (!scrollbar || !scrollbar->isVisible())
                     continue;
-                const QRect scrollbarRect(scrollbar->mapTo(&view, QPoint{}), scrollbar->size());
+                const QRect scrollbarRect = quickItemRect(scrollbar)
+                                                .translated(quick->geometry().topLeft())
+                                                .toAlignedRect();
                 const QRect localScrollbarRect =
                     scrollbarRect.translated(-view.timelineSplitX(), 0);
                 if (checks::support::hasSolidPlayheadPixel(image, localScrollbarRect,
                                                            playheadColor)) {
                     failures.append(QStringLiteral("%1 playhead body entered the %2 scrollbar")
                                         .arg(QString::fromLatin1(presentation),
-                                             scrollbar->orientation() == Qt::Vertical
-                                                 ? QStringLiteral("roll")
-                                                 : QStringLiteral("timeline")));
+                                             QString::fromLatin1(quickScrollbar.label)));
                 }
             }
 
@@ -1268,7 +1277,7 @@ QStringList timelineChromeCheckFailures(SongView &view, const MidiTimeline &time
         checks::support::pumpQuick();
         const DrawerChrome &lifecycleChrome = drawer->chrome();
         const QRect expectedLifecycleHost =
-            checks::support::canonicalVisibleQuickHostRect(bandLayout, &lifecycleChrome);
+            checks::support::canonicalVisibleQuickHostRect(view, &lifecycleChrome);
         const QRect lifecycleHost = quick->geometry();
         const std::optional<songview::TimelineBandGeometry> &lifecycleRoll =
             bandLayout.geometry(songview::TimelineBand::Roll);

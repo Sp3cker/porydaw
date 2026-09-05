@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Press `G` with one note selected to edit its channel-wide pitch bend: scroll the graph for a note-scoped BENDR range, hold `Option`/`Alt` for angled lines, reset to zero, and audition from note-on with `Space`. The popup stays open until click-away or `Escape`.
 
 ## Changed
+- Render the main timeline and piano-roll scrollbars in the existing Qt Quick scene, using the shared scrollbar control and the camera's fractional scroll positions.
 - Resonance suppression now uses a 150 ms default attack for faster response to ringing and whistles.
 
 ## Fixed
@@ -26,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed bug where the right edge of a note couldn't be grabbed for resizing when two notes were adjacent.
 - Fixed bug where velocity values could visually bleed out of the note box.
 - Avoid recreating velocity-axis QML labels during panning by retaining unchanged model rows; still clear labels when the axis has no valid geometry.
-- Reduced low-zoom SongView panning CPU: velocity notes are culled before per-note lookups, circles reuse one-time exact unit-circle points, Quick geometry chunks use packed colors with incremental clearing, the horizontal scrollbar stays opaque after style polish so ancestors skip repainting it, low-zoom ruler labels skip measurement/shaping, and keymap modifier lookups are cached with invalidation on mutation.
+- Reduced low-zoom SongView panning CPU: velocity notes are culled before per-note lookups, circles reuse one-time exact unit-circle points, Quick geometry chunks use packed colors with incremental clearing, low-zoom ruler labels skip measurement/shaping, and keymap modifier lookups are cached with invalidation on mutation.
 - Simplified Quick rectangle and triangle color packing to straight-line per-corner operations, removing nested color-comparison branches.
 
 ## [1.0.0] - 2026-08-01

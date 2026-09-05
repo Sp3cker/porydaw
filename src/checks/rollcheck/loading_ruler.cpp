@@ -21,7 +21,7 @@
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
-#include <QScrollBar>
+#include <QWheelEvent>
 #include <QWidget>
 #include <QtGlobal>
 
@@ -622,14 +622,13 @@ struct GateFixture {
         }
         events = view.findChild<EventListView *>();
         drawer = view.editorDrawer();
-        for (QScrollBar *scrollbar : view.findChildren<QScrollBar *>()) {
-            if (!scrollbar->isVisibleTo(&view))
-                continue;
-            if (scrollbar->orientation() == Qt::Horizontal)
-                hbar = scrollbar;
-            else
-                vbar = scrollbar;
-        }
+        hbar =
+            quickRoot
+                ? quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineHorizontalScrollBar"))
+                : nullptr;
+        vbar = quickRoot
+                   ? quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineRollScrollBar"))
+                   : nullptr;
     }
 
     // Window teardown settles while every child is still alive.
@@ -643,18 +642,24 @@ struct GateFixture {
     // the gate must not reuse the disabled-styling presentation.
     void checkSurfacesEnabled(Harness &check) const
     {
-        const std::pair<const char *, QWidget *> widgetSurfaces[] = {
-            {"event list", events.data()},
+        const std::pair<const char *, const QQuickItem *> quickScrollbars[] = {
             {"horizontal scrollbar", hbar.data()},
             {"vertical scrollbar", vbar.data()},
         };
-        for (const auto &[name, widget] : widgetSurfaces) {
-            if (!widget)
+        for (const auto &[name, item] : quickScrollbars) {
+            if (!item)
                 check.fail(qUtf8Printable(QObject::tr("loading view is missing its %1").arg(name)));
-            else if (!widget->isEnabled())
+            else if (!item->isVisible())
+                check.fail(qUtf8Printable(
+                    QObject::tr("loading %1 was hidden instead of gated").arg(name)));
+            else if (!item->isEnabled())
                 check.fail(qUtf8Printable(
                     QObject::tr("loading %1 was disabled instead of gated").arg(name)));
         }
+        if (!events)
+            check.fail("loading view is missing its event list");
+        else if (!events->isEnabled())
+            check.fail("loading event list was disabled instead of gated");
         if (!drawer)
             check.fail("loading view is missing its editor drawer");
         if (!headers)
@@ -764,8 +769,8 @@ struct GateFixture {
     std::array<QPointer<songview::TimelineInputItem>, 5> drawerInputs;
     QPointer<EventListView> events;
     QPointer<EditorDrawer> drawer;
-    QPointer<QScrollBar> hbar;
-    QPointer<QScrollBar> vbar;
+    QPointer<QQuickItem> hbar;
+    QPointer<QQuickItem> vbar;
     std::optional<GridControlsState> gatedGridControls;
 };
 
@@ -820,19 +825,26 @@ RollWheelSample wheelRoll(songview::TimelineInputItem &roll, SongView &view)
 }
 
 struct ScrollWheelSample {
-    int valueBefore = 0;
-    int valueAfter = 0;
+    double scrollBefore = 0.0;
+    double scrollAfter = 0.0;
 };
 
-// One wheel tick over the horizontal camera scrollbar.
-ScrollWheelSample wheelHorizontalScrollbar(QScrollBar &bar)
+// One wheel tick over the horizontal timeline scrollbar, delivered through
+// the real Quick window so the QML WheelHandler routes it exactly like user
+// input; the authoritative camera is the oracle, not a scrollbar value.
+ScrollWheelSample wheelHorizontalScrollbar(QQuickItem &bar, SongView &view)
 {
     ScrollWheelSample sample;
-    sample.valueBefore = bar.value();
-    checks::events::sendWheel(bar, QPointF(bar.width() / 2.0, bar.height() / 2.0), QPoint(0, 0),
-                              QPoint(0, -120), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase,
-                              false);
-    sample.valueAfter = bar.value();
+    sample.scrollBefore = view.camera().scrollX();
+    if (QQuickWindow *const window = bar.window()) {
+        const QPointF center(bar.width() / 2.0, bar.height() / 2.0);
+        const QPointF windowPosition = bar.mapToScene(center);
+        QWheelEvent event(windowPosition, window->mapToGlobal(windowPosition.toPoint()),
+                          QPoint(0, 0), QPoint(0, -120), Qt::NoButton, Qt::NoModifier,
+                          Qt::NoScrollPhase, false);
+        QCoreApplication::sendEvent(window, &event);
+    }
+    sample.scrollAfter = view.camera().scrollX();
     return sample;
 }
 
@@ -870,8 +882,8 @@ void checkGatedScrollWheel(Harness &check, GateFixture &probe)
 {
     if (!probe.hbar)
         return;
-    const ScrollWheelSample sample = wheelHorizontalScrollbar(*probe.hbar);
-    if (sample.valueAfter != sample.valueBefore)
+    const ScrollWheelSample sample = wheelHorizontalScrollbar(*probe.hbar, probe.tab.view());
+    if (!qFuzzyCompare(sample.scrollAfter, sample.scrollBefore))
         check.fail("scrollbar wheel scrolled while the tab was loading");
 }
 
@@ -880,8 +892,8 @@ void checkReadyScrollWheel(Harness &check, GateFixture &probe)
 {
     if (!probe.hbar)
         return;
-    const ScrollWheelSample sample = wheelHorizontalScrollbar(*probe.hbar);
-    if (sample.valueAfter == sample.valueBefore)
+    const ScrollWheelSample sample = wheelHorizontalScrollbar(*probe.hbar, probe.tab.view());
+    if (qFuzzyCompare(sample.scrollAfter, sample.scrollBefore))
         check.fail("scrollbar wheel did not scroll after readiness");
 }
 
