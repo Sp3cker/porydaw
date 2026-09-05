@@ -18,13 +18,16 @@ function usage(): never {
   console.error(`usage:
  deno task build:app [--release]    build porydaw app only
  deno task build:checks [--release] build porydaw + checks + mid2agb
- deno task verify [--verbose] [--filter <name>] [-- <run_checks args>]
+ deno task verify [--verbose] [--filter <name>] [--qt <qt args...>] [-- <run_checks args>]
  deno task format [--check] [files...]`);
   console.error("");
   console.error(
     "verify forwards --all/--no-windowing-checks/--filter to run_checks.ts",
   );
   console.error(" --verbose  show per-harness ok: lines");
+  console.error(
+    " --qt <args...>  run exactly one qt-test check; <args...> goes verbatim to Qt",
+  );
   console.error(" --release  configure and build the Release configuration");
   Deno.exit(2);
 }
@@ -122,24 +125,30 @@ async function runBuild(
 }
 
 async function runVerify(rawArgs: string[]): Promise<void> {
-  if (rawArgs.includes("--no-build")) usage();
-  const verbose = isVerbose(rawArgs);
+  // Terminal --qt: everything after it is the Qt test payload. It is never
+  // parsed as a runner option — not by the loop below and not by the
+  // no-build/verbose pre-scans. run_checks.ts parses the marker identically.
+  const qtIndex = rawArgs.indexOf("--qt");
+  const runnerArgs = qtIndex === -1 ? rawArgs : rawArgs.slice(0, qtIndex);
+  const qtPayload = qtIndex === -1 ? undefined : rawArgs.slice(qtIndex + 1);
+  if (runnerArgs.includes("--no-build")) usage();
+  const verbose = isVerbose(runnerArgs);
   const filters: string[] = [];
   const passthrough: string[] = [];
-  for (let i = 0; i < rawArgs.length; i++) {
-    const arg = rawArgs[i];
+  for (let i = 0; i < runnerArgs.length; i++) {
+    const arg = runnerArgs[i];
     if (arg === "--verbose" || arg === "-v") {
       continue;
     } else if (arg.startsWith("--filter=")) {
       filters.push(arg);
     } else if (arg === "--filter") {
-      const next = rawArgs[++i];
+      const next = runnerArgs[++i];
       if (!next) usage();
       filters.push(`--filter=${next}`);
     } else if (arg === "--all" || arg === "--no-windowing-checks") {
       passthrough.push(arg);
     } else if (arg === "--") {
-      passthrough.push(...rawArgs.slice(i + 1));
+      passthrough.push(...runnerArgs.slice(i + 1));
       break;
     } else if (arg.startsWith("-")) {
       passthrough.push(arg);
@@ -153,6 +162,7 @@ async function runVerify(rawArgs: string[]): Promise<void> {
   const binary = join(BUILD_DIR, "porydaw_checks");
   const reporterArgs = verbose ? ["--reporter=verbose"] : [];
   const args = [...reporterArgs, ...filters, ...passthrough];
+  if (qtPayload !== undefined) args.push("--qt", ...qtPayload);
   const cmd = new Deno.Command("deno", {
     args: [
       "run",

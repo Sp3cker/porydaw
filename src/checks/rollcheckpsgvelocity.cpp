@@ -14,15 +14,12 @@
 #include <cstdint>
 #include <cstdio>
 #include <optional>
-#include <utility>
 #include <vector>
 
 #include <QApplication>
 #include <QEvent>
 #include <QFontMetricsF>
 #include <QImage>
-#include <QMouseEvent>
-#include <QQuickWindow>
 #include <QTemporaryDir>
 
 #include "core/miditimeline.h"
@@ -36,7 +33,6 @@
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
-#include "ui/velocitygesturemodel.h"
 
 namespace {
 SmfEvent noteEvent(uint8_t status, uint64_t tick, uint8_t key, uint8_t velocity)
@@ -112,7 +108,6 @@ struct ExpectedVelocityGeometry {
     int densityThresholdD2;
     int densityThresholdD4;
     qreal nodePaintRadius;
-    qreal nodeOutlineDipWidth;
 };
 
 ExpectedVelocityGeometry expectedVelocityGeometry()
@@ -121,7 +116,6 @@ ExpectedVelocityGeometry expectedVelocityGeometry()
         layout::fontPx(25.0 / 3.0),
         layout::fontPx(24.0),
         layout::fontPxF(7.0 / 26.0),
-        layout::fontPxF(1.0 / 12.0),
     };
 }
 
@@ -172,43 +166,10 @@ void velocityRelease(VelocityAreaEnv &env, const QPointF &position, Qt::MouseBut
                               Qt::NoButton, modifiers);
 }
 
-void velocityGutterPress(VelocityAreaEnv &env, const QPointF &position,
-                         Qt::KeyboardModifiers modifiers)
-{
-    checks::events::sendMouse(*env.velocityGutterInput, QEvent::MouseButtonPress, position,
-                              Qt::LeftButton, Qt::LeftButton, modifiers);
-}
-
-void velocityGutterRelease(VelocityAreaEnv &env, const QPointF &position,
-                           Qt::KeyboardModifiers modifiers)
-{
-    checks::events::sendMouse(*env.velocityGutterInput, QEvent::MouseButtonRelease, position,
-                              Qt::LeftButton, Qt::NoButton, modifiers);
-}
-
 void velocityLeave(VelocityAreaEnv &env)
 {
     checks::events::sendMouse(*env.velocityInput, QEvent::Leave, QPointF{}, Qt::NoButton,
                               Qt::NoButton, Qt::NoModifier);
-}
-
-void velocityPressWithImplicitGrab(VelocityAreaEnv &env, const QPointF &position,
-                                   Qt::MouseButton button)
-{
-    QQuickWindow *const window = env.velocityInput->window();
-    if (!window)
-        return;
-    const QPointF scenePosition = env.velocityInput->mapToScene(position);
-    const QPointF globalPosition(window->mapToGlobal(scenePosition.toPoint()));
-    QMouseEvent event(QEvent::MouseButtonPress, scenePosition, scenePosition, globalPosition,
-                      button, button, Qt::NoModifier);
-    QApplication::sendEvent(window, &event);
-}
-
-void velocityUngrab(VelocityAreaEnv &env)
-{
-    env.velocityInput->ungrabMouse();
-    QApplication::processEvents();
 }
 
 double velocityXForTick(const VelocityAreaEnv &env, double tick)
@@ -280,32 +241,6 @@ bool velocityNodeHasColor(const VelocityAreaEnv &env, const QPointF &center, con
         env.quickScene, songview::TimelineQuickLayer::VelocityNodes,
         QRectF(center.x() - radius, center.y() - radius, 2.0 * radius, 2.0 * radius), color);
 }
-
-struct VelocityAreaRig {
-    VelocityAreaEnv &env;
-    VelocityMap currentMap;
-    double nodeX = 0.0;
-    DocNote paintFirstBefore{};
-    DocNote paintThirdBefore{};
-    DocNote graduatedFirst{};
-    DocNote graduatedSecond{};
-
-    double paintGestureX(const DocNote &note) const
-    {
-        return velocityXForTick(env, double(note.tick));
-    }
-
-    QPointF velocityNode(const DocNote &note) const
-    {
-        const double x = velocityXForTick(env, double(note.tick));
-        const std::optional<std::size_t> level = currentMap.levelOf(note.velocity);
-        const bool intrinsic = env.area.axis().mode() == VelocityAxis::Mode::Intrinsic &&
-                               env.area.axis().map().compatibleWith(currentMap);
-        const double y = intrinsic && level ? env.area.axis().levelToY(int(*level))
-                                            : env.area.axis().velocityToY(note.velocity);
-        return QPointF(x, y);
-    }
-};
 
 int checkDrawerToggleGeometry(VelocityAreaEnv &env)
 {
@@ -534,6 +469,13 @@ int checkHoverAxisContext(VelocityAreaEnv &env)
         velocityFail(failures, condition, message);
     };
     env.map = VelocityMap::resolve(&env.noise, env.notes[0].key);
+    env.voicegroup.voices[0] = env.noise;
+    env.view.setVoicegroup(&env.voicegroup);
+    env.view.selectionModel().setNoteSelection({env.notes[0].noteId});
+    env.area.songChanged();
+    ++env.live.editCursorTick;
+    env.area.refreshLiveState(env.live);
+    QApplication::processEvents();
     env.hoveredPsgVelocity = 74;
     env.hoveredPsgLevel = 9;
     check(env.view.beginVelocityGesture({env.notes[1]}) &&
@@ -568,6 +510,8 @@ int checkHoverAxisContext(VelocityAreaEnv &env)
               contextGraduations[env.hoveredPsgLevel].active,
           "hovered PSG node must replace an incompatible selected-note axis context");
     velocityLeave(env);
+    env.view.cancelVelocityGesture();
+    QApplication::processEvents();
     env.voicegroup.voices[0] = env.noise;
     env.view.setVoicegroup(&env.voicegroup);
     env.view.selectionModel().setNoteSelection({env.notes[0].noteId});
@@ -584,6 +528,19 @@ int checkVelocityRendering(VelocityAreaEnv &env)
     const auto check = [&failures](bool condition, const char *message) {
         velocityFail(failures, condition, message);
     };
+    env.map = VelocityMap::resolve(&env.noise, env.notes[0].key);
+    env.hoveredPsgVelocity = 74;
+    env.hoveredPsgLevel = 9;
+    env.voicegroup.voices[0] = env.noise;
+    env.view.setVoicegroup(&env.voicegroup);
+    env.view.selectionModel().setNoteSelection({env.notes[0].noteId});
+    env.area.songChanged();
+    ++env.live.editCursorTick;
+    env.area.refreshLiveState(env.live);
+    check(env.view.beginVelocityGesture({env.notes[1]}) &&
+              env.view.updateVelocityGesture({{env.notes[1].noteId, env.hoveredPsgVelocity}}),
+          "velocity rendering fixture must stage its hovered PSG preview");
+    QApplication::processEvents();
     const std::optional<std::size_t> selectedLevel = env.map.levelOf(env.notes[0].velocity);
     const std::optional<std::size_t> unselectedLevel = env.map.levelOf(env.notes[1].velocity);
     const double paintNodeX = velocityXForTick(env, double(env.notes[0].tick));
@@ -765,1054 +722,315 @@ int checkDrawerContextTickRounding(VelocityAreaEnv &env)
     return failures;
 }
 
-int checkRelativeDragDefersCommit(VelocityAreaRig &rig)
+int checkBandOverlayRendering(VelocityAreaEnv &env)
 {
     int failures = 0;
     const auto check = [&failures](bool condition, const char *message) {
         velocityFail(failures, condition, message);
     };
-    const auto rebuildConnection =
-        QObject::connect(&rig.env.document, &SongDocument::documentChanged, &rig.env.view, [&] {
-            auto rebuilt = rig.env.document.buildTimeline(48000.0);
-            if (!rebuilt)
-                return;
-            rig.env.timeline = std::move(rebuilt);
-            rig.env.view.updateSong(rig.env.timeline.get());
-        });
-    rig.env.view.selectionModel().setNoteSelection(
-        {rig.env.notes[0].noteId, rig.env.notes[1].noteId});
-    rig.env.live.playback.playing = false;
-    rig.env.live.editCursorTick++;
-    rig.env.area.refreshLiveState(rig.env.live);
-    const int undoDepth = rig.env.document.undoStack()->count();
-    const uint64_t revisionBeforeGesture = rig.env.document.revision();
-    const std::optional<std::size_t> selectedPsgLevel =
-        rig.env.map.levelOf(rig.env.notes[0].velocity);
-    const double nodeX = velocityXForTick(rig.env, double(rig.env.notes[0].tick));
-    rig.nodeX = nodeX;
-    const double nodeY = selectedPsgLevel
-                             ? rig.env.area.axis().levelToY(int(*selectedPsgLevel))
-                             : rig.env.area.axis().velocityToY(rig.env.notes[0].velocity);
-    check(rig.env.area.axis().mode() == VelocityAxis::Mode::Intrinsic && selectedPsgLevel &&
-              nodeY != rig.env.area.axis().velocityToY(rig.env.notes[0].velocity),
-          "compatible intrinsic notes must use their categorical graduation");
-    const QPointF node(rig.nodeX, nodeY);
-    const double stemX = velocityXForTick(rig.env, double(rig.env.notes[0].tick) +
-                                                       double(rig.env.notes[0].duration) * 0.5);
-    const QPointF stem(stemX, nodeY);
-    const QPointF firstDrag = stem + QPointF(0.0, double(velocityBandRect(rig.env.view).height()));
-    const QPointF drag = stem + QPointF(0.0, -double(velocityBandRect(rig.env.view).height()));
-    velocityPress(rig.env, stem, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-    velocityMove(rig.env, firstDrag, Qt::LeftButton, Qt::NoModifier);
-    check(rig.env.view.selectionModel().noteSelection() ==
-              std::vector<NoteId>({rig.env.notes[0].noteId, rig.env.notes[1].noteId}),
-          "dragging selected velocity nodes must preserve their shared selection");
-    const auto firstPreviewFirst = rig.env.view.previewVelocity(rig.env.notes[0].noteId);
-    const auto firstPreviewSecond = rig.env.view.previewVelocity(rig.env.notes[1].noteId);
-    DocNote draggedFirst;
-    DocNote draggedSecond;
-    check(
-        rig.env.document.findNote(rig.env.notes[0].noteId, &draggedFirst) &&
-            rig.env.document.findNote(rig.env.notes[1].noteId, &draggedSecond) &&
-            draggedFirst.velocity == rig.env.notes[0].velocity &&
-            draggedSecond.velocity == rig.env.notes[1].velocity && firstPreviewFirst &&
-            firstPreviewSecond && *firstPreviewFirst != rig.env.notes[0].velocity &&
-            *firstPreviewSecond != rig.env.notes[1].velocity &&
-            rig.env.document.revision() == revisionBeforeGesture &&
-            rig.env.document.undoStack()->count() == undoDepth,
-        "velocity drag moves must update preview without changing document revision or undo depth");
-    const QImage activeDrag = captureVelocityBand(rig.env.view);
-    const uint8_t firstPreviewVelocity = firstPreviewFirst.value_or(rig.env.notes[0].velocity);
-    const std::optional<std::size_t> firstDraggedLevel = rig.env.map.levelOf(firstPreviewVelocity);
-    const double firstDraggedY = firstDraggedLevel
-                                     ? rig.env.area.axis().levelToY(int(*firstDraggedLevel))
-                                     : rig.env.area.axis().velocityToY(firstPreviewVelocity);
-    const QRectF activeDragRing(rig.nodeX - rig.env.expected.nodePaintRadius,
-                                firstDraggedY - rig.env.expected.nodePaintRadius,
-                                2.0 * rig.env.expected.nodePaintRadius,
-                                2.0 * rig.env.expected.nodePaintRadius);
-    check(!activeDrag.isNull() &&
-              layerTouches(rig.env.quickScene, songview::TimelineQuickLayer::VelocityNodes,
-                           activeDragRing, rig.env.velocityInput->palette().highlight().color()),
-          "dragging a selected velocity node must retain its visible selection ring");
-    velocityMove(rig.env, drag, Qt::LeftButton, Qt::NoModifier);
-    const auto finalPreviewFirst = rig.env.view.previewVelocity(rig.env.notes[0].noteId);
-    const auto finalPreviewSecond = rig.env.view.previewVelocity(rig.env.notes[1].noteId);
-    check(finalPreviewFirst && finalPreviewSecond && firstPreviewFirst &&
-              *finalPreviewFirst != *firstPreviewFirst &&
-              rig.env.document.revision() == revisionBeforeGesture &&
-              rig.env.document.undoStack()->count() == undoDepth,
-          "successive velocity updates must remain deferred while the drag is held");
-    velocityRelease(rig.env, drag, Qt::LeftButton, Qt::NoModifier);
-    QObject::disconnect(rebuildConnection);
-    DocNote committedFirst;
-    DocNote committedSecond;
-    check(rig.env.document.revision() == revisionBeforeGesture + 1 &&
-              rig.env.document.undoStack()->count() == undoDepth + 1 &&
-              !rig.env.view.previewVelocity(rig.env.notes[0].noteId) &&
-              !rig.env.view.previewVelocity(rig.env.notes[1].noteId) && finalPreviewFirst &&
-              finalPreviewSecond &&
-              rig.env.document.findNote(rig.env.notes[0].noteId, &committedFirst) &&
-              rig.env.document.findNote(rig.env.notes[1].noteId, &committedSecond) &&
-              committedFirst.velocity == *finalPreviewFirst &&
-              committedSecond.velocity == *finalPreviewSecond &&
-              rig.env.view.selectionModel().noteSelection() ==
-                  std::vector<NoteId>({rig.env.notes[0].noteId, rig.env.notes[1].noteId}),
-          "relative drag must commit both final previews in one batch and preserve selection");
-    const std::vector<NoteId> selectedBeforeUndo = rig.env.view.selectionModel().noteSelection();
-    rig.env.document.undoStack()->undo();
-    rig.env.area.documentChanged();
-    rig.env.live.documentRevision = rig.env.document.revision();
-    rig.env.area.refreshLiveState(rig.env.live);
+    env.view.selectionModel().setNoteSelection({env.notes[0].noteId});
+    ++env.live.editCursorTick;
+    env.area.refreshLiveState(env.live);
     QApplication::processEvents();
-    check(rig.env.view.selectionModel().noteSelection() == selectedBeforeUndo,
-          "Undo must preserve the shared selection identities of surviving notes");
-    DocNote restoredFirst;
-    check(rig.env.document.findNote(rig.env.notes[0].noteId, &restoredFirst),
-          "click-collapse fixture must resolve the restored velocity note");
-    const std::optional<std::size_t> restoredLevel = rig.env.map.levelOf(restoredFirst.velocity);
-    const QPointF restoredNode(
-        rig.nodeX, restoredLevel ? rig.env.area.axis().levelToY(int(*restoredLevel))
-                                 : rig.env.area.axis().velocityToY(restoredFirst.velocity));
-    velocityPress(rig.env, restoredNode, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-    velocityRelease(rig.env, restoredNode, Qt::LeftButton, Qt::NoModifier);
-    check(rig.env.view.selectionModel().noteSelection() ==
-              std::vector<NoteId>{rig.env.notes[0].noteId},
-          "clicking one selected velocity node must collapse the other selected nodes");
-    return failures;
-}
-
-int checkPointerUngrabCancelsProvisionalSelection(VelocityAreaRig &rig)
-{
-    int failures = 0;
-    const auto check = [&failures](bool condition, const char *message) {
-        velocityFail(failures, condition, message);
-    };
-    rig.env.view.selectionModel().setNoteSelection({rig.env.notes[0].noteId});
-    ++rig.env.live.editCursorTick;
-    rig.env.area.refreshLiveState(rig.env.live);
-    const std::optional<std::size_t> secondLevel = rig.env.map.levelOf(rig.env.notes[1].velocity);
-    const QPointF secondNode(
-        rig.nodeX, secondLevel ? rig.env.area.axis().levelToY(int(*secondLevel))
-                               : rig.env.area.axis().velocityToY(rig.env.notes[1].velocity));
-    const int undoDepthBeforeUngrab = rig.env.document.undoStack()->count();
-    velocityPressWithImplicitGrab(rig.env, secondNode, Qt::LeftButton);
-    velocityUngrab(rig.env);
-    check(rig.env.view.selectionModel().noteSelection() ==
-                  std::vector<NoteId>{rig.env.notes[0].noteId} &&
-              rig.env.document.undoStack()->count() == undoDepthBeforeUngrab,
-          "pointer ungrab must cancel a provisional selection without history residue");
-    return failures;
-}
-
-int checkDragBandOverlay(VelocityAreaRig &rig)
-{
-    int failures = 0;
-    const auto check = [&failures](bool condition, const char *message) {
-        velocityFail(failures, condition, message);
-    };
     const QRectF selectorProbe(
-        layout::space(layout::Space::One), velocityPlotRect(rig.env.view).height() / 3,
+        layout::space(layout::Space::One), velocityPlotRect(env.view).height() / 3.0,
         2 * layout::space(layout::Space::Eight), layout::space(layout::Space::Eight));
     const QPointF selectorStart = selectorProbe.topLeft();
     const QPointF selectorEnd = selectorProbe.bottomRight();
-    const QPointF selectorContractedEnd =
-        selectorStart + QPointF(selectorProbe.width() / 2.0, selectorProbe.height() / 2.0);
     QColor selectionFill = themes::color(themes::Role::song_view_selection_fill);
     selectionFill.setAlpha(30);
     const QColor selectionEdge = themes::color(themes::Role::song_view_selection_edge);
-    const auto selectionRect = [&rig, &selectionFill] {
-        return solidLayerRect(rig.env.quickScene, songview::TimelineQuickLayer::VelocityTransient,
+    const auto selectionRect = [&env, &selectionFill] {
+        return solidLayerRect(env.quickScene, songview::TimelineQuickLayer::VelocityTransient,
                               selectionFill);
     };
-    const quint64 transientBeforeBand =
-        layerRevision(rig.env, songview::TimelineQuickLayer::VelocityTransient);
-    velocityPress(rig.env, selectorStart, Qt::RightButton, Qt::RightButton, Qt::NoModifier);
-    velocityMove(rig.env, selectorEnd, Qt::RightButton, Qt::NoModifier);
+    const quint64 transientBefore =
+        layerRevision(env, songview::TimelineQuickLayer::VelocityTransient);
+    velocityPress(env, selectorStart, Qt::RightButton, Qt::RightButton, Qt::NoModifier);
+    velocityMove(env, selectorEnd, Qt::RightButton, Qt::NoModifier);
     QApplication::processEvents();
     const auto activeSelectionRect = selectionRect();
-    check(layerRevision(rig.env, songview::TimelineQuickLayer::VelocityTransient) >
-                  transientBeforeBand &&
+    check(layerRevision(env, songview::TimelineQuickLayer::VelocityTransient) > transientBefore &&
               activeSelectionRect && activeSelectionRect->contains(selectorProbe.center()) &&
-              layerTouches(rig.env.quickScene, songview::TimelineQuickLayer::VelocityTransient,
+              layerTouches(env.quickScene, songview::TimelineQuickLayer::VelocityTransient,
                            selectorProbe, selectionEdge),
-          "drag-select must visibly paint its selector overlay");
-    check(activeSelectionRect && activeSelectionRect->contains(selectorProbe.center()),
-          "drag-select must composite the translucent selection fill over velocity content");
-    velocityMove(rig.env, selectorContractedEnd, Qt::RightButton, Qt::NoModifier);
+          "velocity band selection must paint its translucent fill and edge");
+    velocityRelease(env, selectorEnd, Qt::RightButton, Qt::NoModifier);
     QApplication::processEvents();
-    const auto contractedSelectionRect = selectionRect();
-    const QPointF abandonedPoint = (selectorEnd + selectorContractedEnd) / 2.0;
-    const QPointF contractedInterior = (selectorStart + selectorContractedEnd) / 2.0;
-    check(activeSelectionRect && contractedSelectionRect &&
-              activeSelectionRect->contains(abandonedPoint) &&
-              !contractedSelectionRect->contains(abandonedPoint) &&
-              contractedSelectionRect->contains(contractedInterior) &&
-              contractedSelectionRect->width() < activeSelectionRect->width() &&
-              contractedSelectionRect->height() < activeSelectionRect->height(),
-          "contracting drag-select must clear the abandoned selector area");
-    velocityRelease(rig.env, selectorContractedEnd, Qt::RightButton, Qt::NoModifier);
-    QApplication::processEvents();
-    check(layerIsEmpty(rig.env.quickScene, songview::TimelineQuickLayer::VelocityTransient),
-          "completed drag-select must clear its selector overlay");
-
-    rig.env.view.selectionModel().setNoteSelection({rig.env.notes[0].noteId});
-    ++rig.env.live.editCursorTick;
-    rig.env.area.refreshLiveState(rig.env.live);
-    QApplication::processEvents();
-    velocityPressWithImplicitGrab(rig.env, selectorStart, Qt::RightButton);
-    velocityMove(rig.env, selectorEnd, Qt::RightButton, Qt::NoModifier);
-    QApplication::processEvents();
-    velocityUngrab(rig.env);
-    QApplication::processEvents();
-    check(rig.env.view.selectionModel().noteSelection() ==
-                  std::vector<NoteId>{rig.env.notes[0].noteId} &&
-              layerIsEmpty(rig.env.quickScene, songview::TimelineQuickLayer::VelocityTransient),
-          "cancelled drag-select must clear its selector overlay and restore selection");
-    rig.env.live.documentRevision = rig.env.document.revision();
-    rig.env.area.refreshLiveState(rig.env.live);
-    QApplication::processEvents();
+    check(layerIsEmpty(env.quickScene, songview::TimelineQuickLayer::VelocityTransient),
+          "releasing velocity band selection must clear its rendered overlay");
     return failures;
 }
 
-int checkStackedNodeHitPriority(VelocityAreaRig &rig)
+int checkStackedNodeRendering(VelocityAreaEnv &env)
 {
     int failures = 0;
     const auto check = [&failures](bool condition, const char *message) {
         velocityFail(failures, condition, message);
     };
-    DocNote currentFirst;
-    DocNote currentSecond;
-    check(rig.env.document.findNote(rig.env.notes[0].noteId, &currentFirst) &&
-              rig.env.document.findNote(rig.env.notes[1].noteId, &currentSecond),
-          "velocity node click fixture must resolve its notes");
-    rig.env.document.setNotesVelocity({currentSecond}, currentFirst.velocity);
-    rig.env.live.documentRevision = rig.env.document.revision();
-    rig.env.area.refreshLiveState(rig.env.live);
+    env.voicegroup.voices[0] = env.noise;
+    env.view.setVoicegroup(&env.voicegroup);
+    env.view.selectionModel().setNoteSelection({});
+    env.area.songChanged();
+    ++env.live.editCursorTick;
+    env.area.refreshLiveState(env.live);
     QApplication::processEvents();
-    rig.currentMap = VelocityMap::resolve(&rig.env.noise, currentFirst.key);
-    const std::optional<std::size_t> currentLevel = rig.currentMap.levelOf(currentFirst.velocity);
-    const QPointF currentNode(velocityXForTick(rig.env, double(currentFirst.tick)),
-                              currentLevel
-                                  ? rig.env.area.axis().levelToY(int(*currentLevel))
-                                  : rig.env.area.axis().velocityToY(currentFirst.velocity));
-    velocityPress(rig.env, currentNode, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-    velocityRelease(rig.env, currentNode, Qt::LeftButton, Qt::NoModifier);
-    check(rig.env.view.selectionModel().noteSelection() ==
-              std::vector<NoteId>{rig.env.notes[0].noteId},
-          "selected velocity node must win a stacked-node click");
-    rig.env.document.addNote(0, currentFirst.tick + 8, currentFirst.key, currentFirst.duration,
-                             currentFirst.velocity);
-    rig.env.live.documentRevision = rig.env.document.revision();
-    rig.env.area.refreshLiveState(rig.env.live);
+    DocNote first;
+    check(env.document.findNote(env.notes[0].noteId, &first),
+          "stacked-node rendering fixture must resolve its first note");
+    if (!env.document.findNote(env.notes[0].noteId, &first))
+        return failures;
+    env.document.addNote(0, first.tick + 8, first.key, first.duration, first.velocity);
+    env.live.documentRevision = env.document.revision();
+    env.area.refreshLiveState(env.live);
     QApplication::processEvents();
-    const std::vector<DocNote> overlapFixtureNotes = rig.env.document.notesForTrack(0);
-    rig.env.live.timeZoom = rig.env.view.camera().pxPerBeat();
-    rig.env.live.horizontalScroll = rig.env.view.camera().scrollX();
-    const auto overlapIt = std::find_if(overlapFixtureNotes.cbegin(), overlapFixtureNotes.cend(),
-                                        [&currentFirst](const DocNote &note) {
-                                            return note.tick == currentFirst.tick + 8 &&
-                                                   note.noteId != currentFirst.noteId;
-                                        });
-    check(overlapIt != overlapFixtureNotes.cend(),
-          "velocity overlap fixture must add a circle candidate beside a duration stem");
-    if (overlapIt != overlapFixtureNotes.cend()) {
-        const DocNote overlapNote = *overlapIt;
-        const auto velocityNode = [&rig](const DocNote &note) {
-            const double x = velocityXForTick(rig.env, double(note.tick));
-            const std::optional<std::size_t> level = rig.currentMap.levelOf(note.velocity);
-            const bool intrinsic = rig.env.area.axis().mode() == VelocityAxis::Mode::Intrinsic &&
-                                   rig.env.area.axis().map().compatibleWith(rig.currentMap);
-            const double y = intrinsic && level ? rig.env.area.axis().levelToY(int(*level))
-                                                : rig.env.area.axis().velocityToY(note.velocity);
-            return QPointF(x, y);
-        };
-        rig.env.view.selectionModel().setNoteSelection({});
-        ++rig.env.live.editCursorTick;
-        rig.env.area.refreshLiveState(rig.env.live);
-        QApplication::processEvents();
-        const QPointF stackedNode = velocityNode(currentFirst);
-        velocityPress(rig.env, stackedNode, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-        check(rig.env.view.selectionModel().noteSelection() ==
-                  std::vector<NoteId>{rig.env.notes[1].noteId},
-              "overlapping circles must resolve to one later-painted target");
-        velocityRelease(rig.env, stackedNode, Qt::LeftButton, Qt::NoModifier);
-        check(rig.env.view.selectionModel().noteSelection() ==
-                  std::vector<NoteId>{rig.env.notes[1].noteId},
-              "overlapping-circle release must retain its frozen target");
-        ++rig.env.live.editCursorTick;
-        rig.env.view.selectionModel().setNoteSelection({rig.env.notes[0].noteId});
-        rig.env.area.refreshLiveState(rig.env.live);
-        QApplication::processEvents();
-        const QPointF selectedStackedNode = velocityNode(currentFirst);
-        velocityPress(rig.env, selectedStackedNode, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-        check(rig.env.view.selectionModel().noteSelection() ==
-                  std::vector<NoteId>{rig.env.notes[0].noteId},
-              "selected overlapping velocity nodes must outrank unselected candidates");
-        velocityRelease(rig.env, selectedStackedNode, Qt::LeftButton, Qt::NoModifier);
-        check(rig.env.view.selectionModel().noteSelection() ==
-                  std::vector<NoteId>{rig.env.notes[0].noteId},
-              "selected-layer velocity click must keep its selected target");
-        rig.env.view.selectionModel().setNoteSelection({});
-        ++rig.env.live.editCursorTick;
-        rig.env.area.refreshLiveState(rig.env.live);
-        QApplication::processEvents();
-        const QPointF circleNode = velocityNode(overlapNote);
-        velocityPress(rig.env, circleNode, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-        QApplication::processEvents();
-        const QImage circleHeld = captureVelocityBand(rig.env.view);
-        check(rig.env.view.selectionModel().noteSelection() ==
-                      std::vector<NoteId>{overlapNote.noteId} &&
-                  !circleHeld.isNull() &&
-                  velocityNodeHasColor(rig.env, circleNode,
-                                       rig.env.velocityInput->palette().highlight().color()),
-              "a circle hit must outrank stem-only overlap and paint one selected ring");
-        const QPointF movedRelease = velocityNode(currentFirst);
-        velocityMove(rig.env, movedRelease, Qt::LeftButton, Qt::NoModifier);
-        check(rig.env.view.selectionModel().noteSelection() ==
-                  std::vector<NoteId>{overlapNote.noteId},
-              "a velocity gesture must retain its frozen target while the cursor moves");
-        velocityRelease(rig.env, movedRelease, Qt::LeftButton, Qt::NoModifier);
-        check(rig.env.view.selectionModel().noteSelection() ==
-                  std::vector<NoteId>{overlapNote.noteId},
-              "moving release away from a velocity node must not click through to another target");
-        const DocNote rightTarget = rig.env.notes[2];
-        rig.env.view.selectionModel().setNoteSelection({rig.env.notes[0].noteId});
-        ++rig.env.live.editCursorTick;
-        rig.env.area.refreshLiveState(rig.env.live);
-        QApplication::processEvents();
-        const QPointF rightTargetNode = velocityNode(rightTarget);
-        velocityPress(rig.env, rightTargetNode, Qt::RightButton, Qt::RightButton, Qt::NoModifier);
-        QApplication::processEvents();
-        const QImage rightNodeHeld = captureVelocityBand(rig.env.view);
-        check(
-            rig.env.view.selectionModel().noteSelection() ==
-                    std::vector<NoteId>{rightTarget.noteId} &&
-                !rightNodeHeld.isNull() &&
-                velocityNodeHasColor(rig.env, rightTargetNode,
-                                     rig.env.velocityInput->palette().highlight().color()),
-            "plain right press on an unselected velocity node must select and ring it immediately");
-        velocityRelease(rig.env, rightTargetNode, Qt::RightButton, Qt::NoModifier);
-        QApplication::processEvents();
-        const QImage rightNodeReleased = captureVelocityBand(rig.env.view);
-        check(rig.env.view.selectionModel().noteSelection() ==
-                      std::vector<NoteId>{rightTarget.noteId} &&
-                  !rightNodeReleased.isNull() &&
-                  velocityNodeHasColor(rig.env, rightTargetNode,
-                                       rig.env.velocityInput->palette().highlight().color()),
-              "plain right release must retain its selected velocity node and ring");
-        rig.env.view.selectionModel().setNoteSelection(
-            {rig.env.notes[0].noteId, rightTarget.noteId});
-        ++rig.env.live.editCursorTick;
-        rig.env.area.refreshLiveState(rig.env.live);
-        QApplication::processEvents();
-        const QPointF selectedRightNode = velocityNode(currentFirst);
-        velocityPress(rig.env, selectedRightNode, Qt::RightButton, Qt::RightButton, Qt::NoModifier);
-        QApplication::processEvents();
-        const QImage selectedRightHeld = captureVelocityBand(rig.env.view);
-        check(rig.env.view.selectionModel().noteSelection() ==
-                      std::vector<NoteId>({rig.env.notes[0].noteId, rightTarget.noteId}) &&
-                  !selectedRightHeld.isNull() &&
-                  velocityNodeHasColor(rig.env, selectedRightNode,
-                                       rig.env.velocityInput->palette().highlight().color()),
-              "plain right press on a selected velocity node must retain its visual group");
-        velocityRelease(rig.env, selectedRightNode, Qt::RightButton, Qt::NoModifier);
-        QApplication::processEvents();
-        const QImage selectedRightReleased = captureVelocityBand(rig.env.view);
-        check(rig.env.view.selectionModel().noteSelection() ==
-                      std::vector<NoteId>({rig.env.notes[0].noteId, rightTarget.noteId}) &&
-                  !selectedRightReleased.isNull() &&
-                  velocityNodeHasColor(rig.env, selectedRightNode,
-                                       rig.env.velocityInput->palette().highlight().color()),
-              "plain right release on a selected velocity node must retain its group ring");
-        rig.env.document.deleteNotes({overlapNote});
-        rig.env.live.documentRevision = rig.env.document.revision();
-        rig.env.area.refreshLiveState(rig.env.live);
-        QApplication::processEvents();
-    }
+    const std::vector<DocNote> fixtureNotes = env.document.notesForTrack(0);
+    const auto overlap =
+        std::find_if(fixtureNotes.cbegin(), fixtureNotes.cend(), [&first](const DocNote &note) {
+            return note.tick == first.tick + 8 && note.noteId != first.noteId;
+        });
+    check(overlap != fixtureNotes.cend(),
+          "stacked-node rendering fixture must add an overlapping circle");
+    if (overlap == fixtureNotes.cend())
+        return failures;
+    env.map = VelocityMap::resolve(&env.noise, overlap->key);
+    const auto nodeFor = [&env](const DocNote &note) {
+        const std::optional<std::size_t> level = env.map.levelOf(note.velocity);
+        const double y = level ? env.area.axis().levelToY(int(*level))
+                               : env.area.axis().velocityToY(note.velocity);
+        return QPointF(velocityXForTick(env, double(note.tick)), y);
+    };
+    const QPointF overlapNode = nodeFor(*overlap);
+    velocityPress(env, overlapNode, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QApplication::processEvents();
+    const QImage overlapImage = captureVelocityBand(env.view);
+    check(!overlapImage.isNull() &&
+              velocityNodeHasColor(env, overlapNode,
+                                   env.velocityInput->palette().highlight().color()),
+          "a velocity circle over a duration stem must render its selected ring");
+    velocityRelease(env, overlapNode, Qt::LeftButton, Qt::NoModifier);
+
+    env.view.selectionModel().setNoteSelection({env.notes[0].noteId, env.notes[2].noteId});
+    ++env.live.editCursorTick;
+    env.area.refreshLiveState(env.live);
+    QApplication::processEvents();
+    const QPointF selectedNode = nodeFor(first);
+    velocityPress(env, selectedNode, Qt::RightButton, Qt::RightButton, Qt::NoModifier);
+    QApplication::processEvents();
+    const QImage selectedImage = captureVelocityBand(env.view);
+    check(!selectedImage.isNull() &&
+              velocityNodeHasColor(env, selectedNode,
+                                   env.velocityInput->palette().highlight().color()),
+          "a selected velocity-node group must retain its rendered ring");
+    velocityRelease(env, selectedNode, Qt::RightButton, Qt::NoModifier);
+    env.document.deleteNotes({*overlap});
+    env.live.documentRevision = env.document.revision();
+    env.area.refreshLiveState(env.live);
+    QApplication::processEvents();
     return failures;
 }
 
-int checkPaintGestureDefersCommit(VelocityAreaRig &rig)
+int checkRampPreviewRendering(VelocityAreaEnv &env)
 {
     int failures = 0;
     const auto check = [&failures](bool condition, const char *message) {
         velocityFail(failures, condition, message);
     };
-    rig.env.view.selectionModel().setNoteSelection(
-        {rig.env.notes[0].noteId, rig.env.notes[2].noteId});
-    rig.env.document.findNote(rig.env.notes[0].noteId, &rig.paintFirstBefore);
-    rig.env.document.findNote(rig.env.notes[2].noteId, &rig.paintThirdBefore);
-    const QPointF paintStart(rig.paintGestureX(rig.paintFirstBefore),
-                             rig.env.area.axis().levelToY(0));
-    const QPointF paintEnd(rig.paintGestureX(rig.paintThirdBefore),
-                           rig.env.area.axis().levelToY(4));
-    const uint64_t revisionBeforePaint = rig.env.document.revision();
-    const int undoIndexBeforePaint = rig.env.document.undoStack()->index();
-    velocityPress(rig.env, paintStart, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-    velocityMove(rig.env, paintEnd, Qt::LeftButton, Qt::NoModifier);
-    const auto paintPreviewFirst = rig.env.view.previewVelocity(rig.env.notes[0].noteId);
-    const auto paintPreviewThird = rig.env.view.previewVelocity(rig.env.notes[2].noteId);
-    check(rig.env.view.selectionModel().noteSelection() ==
-                  std::vector<NoteId>({rig.env.notes[0].noteId, rig.env.notes[2].noteId}) &&
-              rig.env.document.revision() == revisionBeforePaint &&
-              rig.env.document.undoStack()->index() == undoIndexBeforePaint && paintPreviewFirst &&
-              paintPreviewThird && *paintPreviewFirst == rig.currentMap.representative(0) &&
-              *paintPreviewThird == rig.currentMap.representative(4),
-          "holding velocity paint must update preview while deferring document changes");
-    velocityRelease(rig.env, paintEnd, Qt::LeftButton, Qt::NoModifier);
-    DocNote paintedFirst;
-    DocNote paintedThird;
-    check(rig.env.document.revision() == revisionBeforePaint + 1 &&
-              rig.env.document.undoStack()->index() == undoIndexBeforePaint + 1 &&
-              !rig.env.view.previewVelocity(rig.env.notes[0].noteId) &&
-              !rig.env.view.previewVelocity(rig.env.notes[2].noteId) &&
-              rig.env.document.findNote(rig.env.notes[0].noteId, &paintedFirst) &&
-              rig.env.document.findNote(rig.env.notes[2].noteId, &paintedThird) &&
-              paintedFirst.velocity == rig.currentMap.representative(0) &&
-              paintedThird.velocity == rig.currentMap.representative(4),
-          "held velocity paint must commit one batch and clear its preview");
+    env.voicegroup.voices[0] = env.noise;
+    env.view.setVoicegroup(&env.voicegroup);
+    env.map = VelocityMap::resolve(&env.noise, env.notes[0].key);
+    DocNote first;
+    DocNote third;
+    check(env.document.findNote(env.notes[0].noteId, &first) &&
+              env.document.findNote(env.notes[2].noteId, &third),
+          "ramp-preview rendering fixture must resolve its endpoint notes");
+    if (!env.document.findNote(env.notes[0].noteId, &first) ||
+        !env.document.findNote(env.notes[2].noteId, &third))
+        return failures;
+    env.document.setNotesVelocity({first}, env.map.representative(0));
+    env.document.setNotesVelocity({third}, env.map.representative(4));
+    env.document.addNote(0, 36, first.key, 12, env.map.representative(3));
+    const std::vector<DocNote> fixtureNotes = env.document.notesForTrack(0);
+    const auto middle = std::find_if(fixtureNotes.cbegin(), fixtureNotes.cend(),
+                                     [](const DocNote &note) { return note.tick == 36; });
+    check(middle != fixtureNotes.cend(), "ramp-preview rendering fixture must add a midpoint");
+    if (middle == fixtureNotes.cend())
+        return failures;
+    env.view.selectionModel().setNoteSelection(
+        {env.notes[0].noteId, middle->noteId, env.notes[2].noteId});
+    env.area.songChanged();
+    env.live.documentRevision = env.document.revision();
+    ++env.live.editCursorTick;
+    env.area.refreshLiveState(env.live);
+    QApplication::processEvents();
+    const QPointF start(velocityXForTick(env, double(first.tick)), env.area.axis().levelToY(0));
+    const QPointF end(velocityXForTick(env, double(third.tick)), env.area.axis().levelToY(4));
+    velocityPress(env, start, Qt::LeftButton, Qt::LeftButton, Qt::ShiftModifier);
+    velocityMove(env, end, Qt::LeftButton, Qt::ShiftModifier);
+    QApplication::processEvents();
+    const QPointF quarter = start + 0.25 * (end - start);
+    const QImage preview = captureVelocityBand(env.view);
+    check(!preview.isNull() &&
+              layerTouches(env.quickScene, songview::TimelineQuickLayer::VelocityTransient,
+                           QRectF(quarter.x() - 2.0, quarter.y() - 2.0, 5.0, 5.0),
+                           themes::color(themes::Role::song_view_edit_preview_outline)),
+          "Shift-ramp preview must retain its rendered outline");
+    velocityRelease(env, end, Qt::LeftButton, Qt::ShiftModifier);
+    env.document.deleteNotes({*middle});
+    env.live.documentRevision = env.document.revision();
+    env.area.refreshLiveState(env.live);
+    QApplication::processEvents();
     return failures;
 }
 
-int checkRampGestureCommits(VelocityAreaRig &rig)
+int checkRollVelocityPreviewRendering(VelocityAreaEnv &env)
 {
     int failures = 0;
     const auto check = [&failures](bool condition, const char *message) {
         velocityFail(failures, condition, message);
     };
-    rig.env.document.addNote(0, 36, rig.paintFirstBefore.key, 12, rig.currentMap.representative(3));
-    const std::vector<DocNote> rampFixtureNotes = rig.env.document.notesForTrack(0);
-    const auto rampMiddleIt = std::find_if(rampFixtureNotes.cbegin(), rampFixtureNotes.cend(),
-                                           [](const DocNote &note) { return note.tick == 36; });
-    check(rampMiddleIt != rampFixtureNotes.cend(),
-          "velocity ramp fixture must create its midpoint note");
-    if (rampMiddleIt != rampFixtureNotes.cend()) {
-        const DocNote rampMiddleBefore = *rampMiddleIt;
-        rig.env.live.documentRevision = rig.env.document.revision();
-        rig.env.area.refreshLiveState(rig.env.live);
-        rig.env.view.selectionModel().setNoteSelection(
-            {rig.env.notes[0].noteId, rampMiddleBefore.noteId, rig.env.notes[2].noteId});
-        const QPointF rampStart(rig.paintGestureX(rig.paintFirstBefore),
-                                rig.env.area.axis().levelToY(0));
-        const QPointF rampEnd(rig.paintGestureX(rig.paintThirdBefore),
-                              rig.env.area.axis().levelToY(4));
-        const uint64_t revisionBeforeRamp = rig.env.document.revision();
-        const int undoIndexBeforeRamp = rig.env.document.undoStack()->index();
-        velocityPress(rig.env, rampStart, Qt::LeftButton, Qt::LeftButton, Qt::ShiftModifier);
-        velocityMove(rig.env, rampEnd, Qt::LeftButton, Qt::ShiftModifier);
-        const auto rampPreviewFirst = rig.env.view.previewVelocity(rig.env.notes[0].noteId);
-        const auto rampPreviewMiddle = rig.env.view.previewVelocity(rampMiddleBefore.noteId);
-        const auto rampPreviewThird = rig.env.view.previewVelocity(rig.env.notes[2].noteId);
-        check(rig.env.document.revision() == revisionBeforeRamp &&
-                  rig.env.document.undoStack()->index() == undoIndexBeforeRamp &&
-                  rampPreviewFirst && rampPreviewMiddle && rampPreviewThird &&
-                  *rampPreviewFirst == rig.currentMap.representative(0) &&
-                  *rampPreviewMiddle == rig.currentMap.representative(2) &&
-                  *rampPreviewThird == rig.currentMap.representative(4),
-              "holding a velocity ramp must update preview while deferring document changes");
-        const QPointF rampQuarter = rampStart + 0.25 * (rampEnd - rampStart);
-        const QImage rampPreview = captureVelocityBand(rig.env.view);
-        check(!rampPreview.isNull() &&
-                  layerTouches(rig.env.quickScene, songview::TimelineQuickLayer::VelocityTransient,
-                               QRectF(rampQuarter.x() - 2.0, rampQuarter.y() - 2.0, 5.0, 5.0),
-                               themes::color(themes::Role::song_view_edit_preview_outline)),
-              "velocity Shift-drag did not render its ramp line preview");
-        velocityRelease(rig.env, rampEnd, Qt::LeftButton, Qt::ShiftModifier);
-        DocNote rampedFirst;
-        DocNote rampedMiddle;
-        DocNote rampedThird;
-        check(rig.env.document.revision() == revisionBeforeRamp + 1 &&
-                  rig.env.document.undoStack()->index() == undoIndexBeforeRamp + 1 &&
-                  !rig.env.view.previewVelocity(rig.env.notes[0].noteId) &&
-                  !rig.env.view.previewVelocity(rampMiddleBefore.noteId) &&
-                  !rig.env.view.previewVelocity(rig.env.notes[2].noteId) &&
-                  rig.env.view.selectionModel().noteSelection() ==
-                      std::vector<NoteId>({rig.env.notes[0].noteId, rampMiddleBefore.noteId,
-                                           rig.env.notes[2].noteId}) &&
-                  rig.env.document.findNote(rig.env.notes[0].noteId, &rampedFirst) &&
-                  rig.env.document.findNote(rampMiddleBefore.noteId, &rampedMiddle) &&
-                  rig.env.document.findNote(rig.env.notes[2].noteId, &rampedThird) &&
-                  rampedFirst.velocity == rig.currentMap.representative(0) &&
-                  rampedMiddle.velocity == rig.currentMap.representative(2) &&
-                  rampedThird.velocity == rig.currentMap.representative(4),
-              "Shift-drag must commit one ramp batch and clear its preview");
-        rig.env.document.deleteNotes({rampMiddleBefore});
-        rig.env.live.documentRevision = rig.env.document.revision();
-        rig.env.area.refreshLiveState(rig.env.live);
-        rig.env.view.selectionModel().setNoteSelection(
-            {rig.env.notes[0].noteId, rig.env.notes[2].noteId});
-    }
-    return failures;
-}
-
-int checkBlankAndGraduationClicks(VelocityAreaRig &rig)
-{
-    int failures = 0;
-    const auto check = [&failures](bool condition, const char *message) {
-        velocityFail(failures, condition, message);
-    };
-    const QPointF blankPoint(double(velocityPlotRect(rig.env.view).width() - 4),
-                             rig.env.area.axis().levelToY(2));
-    const uint64_t revisionBeforeBlankClick = rig.env.document.revision();
-    const int undoDepthBeforeBlankClick = rig.env.document.undoStack()->count();
-    velocityPress(rig.env, blankPoint, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-    check(rig.env.view.selectionModel().noteSelection() ==
-              std::vector<NoteId>({rig.env.notes[0].noteId, rig.env.notes[2].noteId}),
-          "blank velocity press must retain selection until mouse-up");
-    velocityRelease(rig.env, blankPoint, Qt::LeftButton, Qt::NoModifier);
-    check(rig.env.view.selectionModel().noteSelection().empty() &&
-              rig.env.document.revision() == revisionBeforeBlankClick &&
-              rig.env.document.undoStack()->count() == undoDepthBeforeBlankClick,
-          "blank velocity click must deselect only on mouse-up");
-
-    rig.env.view.selectionModel().setNoteSelection(
-        {rig.env.notes[0].noteId, rig.env.notes[1].noteId});
-    const VelocityAxisGraduation graduation = rig.env.area.axis().graduations()[2];
-    const QPointF graduationPoint(graduation.x + graduation.width / 2.0, graduation.y);
-    velocityGutterPress(rig.env, graduationPoint, Qt::NoModifier);
-    velocityGutterRelease(rig.env, graduationPoint, Qt::NoModifier);
-    check(rig.env.view.selectionModel().noteSelection() ==
-                  std::vector<NoteId>({rig.env.notes[0].noteId, rig.env.notes[1].noteId}) &&
-              rig.env.document.findNote(rig.env.notes[0].noteId, &rig.graduatedFirst) &&
-              rig.env.document.findNote(rig.env.notes[1].noteId, &rig.graduatedSecond) &&
-              rig.graduatedFirst.velocity == graduation.velocity &&
-              rig.graduatedSecond.velocity == graduation.velocity,
-          "clicking a graduation must retain and move the selected nodes");
-    return failures;
-}
-
-int checkRollVelocityDrag(VelocityAreaRig &rig)
-{
-    int failures = 0;
-    const auto check = [&failures](bool condition, const char *message) {
-        velocityFail(failures, condition, message);
-    };
-    auto *quickView = rig.env.view.findChild<songview::TimelineQuickView *>(
-        QStringLiteral("timelineQuickCanvas"));
-    auto *roll = quickView && quickView->rootObject()
-                     ? quickView->rootObject()->findChild<songview::TimelineInputItem *>(
+    auto *roll = env.quickView && env.quickView->rootObject()
+                     ? env.quickView->rootObject()->findChild<songview::TimelineInputItem *>(
                            QStringLiteral("timelineRollInput"))
                      : nullptr;
-    const auto velocityDragModifiers =
+    const auto modifiers =
         keymap::Registry::instance().modifierBinding(QStringLiteral("roll.velocity_drag"));
-    check(roll != nullptr && velocityDragModifiers != Qt::NoModifier,
-          "velocity preview fixture must expose the piano roll drag shortcut");
-    if (roll && velocityDragModifiers != Qt::NoModifier) {
-        const int dragDelta = QApplication::startDragDistance() + 16;
-        const QPointF rollNoteCenter(
-            rig.env.view.camera().displayX(double(rig.graduatedFirst.tick) +
-                                               double(rig.graduatedFirst.duration) / 2.0,
-                                           0.0, roll->devicePixelRatio()),
-            (127.5 - double(rig.graduatedFirst.key)) * rig.env.view.camera().keyHeight() -
-                rig.env.view.camera().scrollY());
-        const QPointF rollDragPosition = rollNoteCenter - QPointF(0.0, double(dragDelta));
-        const auto stageRollVelocityPreview = [&]() {
-            checks::events::sendMouse(*roll, QEvent::MouseButtonPress, rollNoteCenter,
-                                      Qt::LeftButton, Qt::LeftButton, velocityDragModifiers);
-            checks::events::sendMouse(*roll, QEvent::MouseMove, rollDragPosition, Qt::NoButton,
-                                      Qt::LeftButton, velocityDragModifiers);
-            QApplication::processEvents();
-        };
-        DocNote beforeFirst{};
-        DocNote beforeSecond{};
-        check(rig.env.document.findNote(rig.graduatedFirst.noteId, &beforeFirst) &&
-                  rig.env.document.findNote(rig.graduatedSecond.noteId, &beforeSecond),
-              "piano-roll cancellation fixture must retain both selected notes");
-        const uint64_t revisionBeforeRollCancel = rig.env.document.revision();
-        const int undoIndexBeforeRollCancel = rig.env.document.undoStack()->index();
-        const int undoCountBeforeRollCancel = rig.env.document.undoStack()->count();
-        stageRollVelocityPreview();
-        const auto cancellationFirstPreview = rig.env.view.previewVelocity(beforeFirst.noteId);
-        const auto cancellationSecondPreview = rig.env.view.previewVelocity(beforeSecond.noteId);
-        check(
-            cancellationFirstPreview && *cancellationFirstPreview != beforeFirst.velocity &&
-                cancellationSecondPreview && *cancellationSecondPreview != beforeSecond.velocity &&
-                rig.env.view.selectionModel().noteSelection() ==
-                    std::vector<NoteId>({rig.graduatedFirst.noteId, rig.graduatedSecond.noteId}) &&
-                rig.env.document.revision() == revisionBeforeRollCancel &&
-                rig.env.document.undoStack()->index() == undoIndexBeforeRollCancel &&
-                rig.env.document.undoStack()->count() == undoCountBeforeRollCancel,
-            "piano-roll cancellation must stage both selected velocity previews");
-        rig.env.view.cancelActiveInteractions();
-        checks::events::sendMouse(*roll, QEvent::MouseMove, rollDragPosition, Qt::NoButton,
-                                  Qt::LeftButton, velocityDragModifiers);
-        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, rollDragPosition,
-                                  Qt::LeftButton, Qt::NoButton, velocityDragModifiers);
-        QApplication::processEvents();
-        DocNote cancelledAfterFirst;
-        DocNote cancelledAfterSecond;
-        check(!rig.env.view.previewVelocity(beforeFirst.noteId) &&
-                  !rig.env.view.previewVelocity(beforeSecond.noteId) &&
-                  rig.env.document.revision() == revisionBeforeRollCancel &&
-                  rig.env.document.undoStack()->index() == undoIndexBeforeRollCancel &&
-                  rig.env.document.undoStack()->count() == undoCountBeforeRollCancel &&
-                  rig.env.document.findNote(beforeFirst.noteId, &cancelledAfterFirst) &&
-                  rig.env.document.findNote(beforeSecond.noteId, &cancelledAfterSecond) &&
-                  cancelledAfterFirst.velocity == beforeFirst.velocity &&
-                  cancelledAfterSecond.velocity == beforeSecond.velocity,
-              "SongView cancellation must clear both piano-roll previews and prevent commit");
-
-        const uint64_t revisionBeforeRollDrag = rig.env.document.revision();
-        const int undoBeforeRollDrag = rig.env.document.undoStack()->count();
-        DocNote dragBeforeFirst{};
-        DocNote dragBeforeSecond{};
-        check(rig.env.document.findNote(rig.graduatedFirst.noteId, &dragBeforeFirst) &&
-                  rig.env.document.findNote(rig.graduatedSecond.noteId, &dragBeforeSecond),
-              "piano-roll drag fixture must retain both selected notes");
-        stageRollVelocityPreview();
-        const auto firstPreviewVelocity =
-            uint8_t(std::clamp(int(dragBeforeFirst.velocity) + dragDelta, 1, 127));
-        const auto secondPreviewVelocity =
-            uint8_t(std::clamp(int(dragBeforeSecond.velocity) + dragDelta, 1, 127));
-        const auto firstRollPreview = rig.env.view.previewVelocity(dragBeforeFirst.noteId);
-        const auto secondRollPreview = rig.env.view.previewVelocity(dragBeforeSecond.noteId);
-        const std::optional<std::size_t> previewLevel = rig.env.map.levelOf(firstPreviewVelocity);
-        const QImage rollDragPreview = captureVelocityBand(rig.env.view);
-        const QPointF previewNodeCenter(
-            velocityXForTick(rig.env, double(dragBeforeFirst.tick)),
-            previewLevel ? rig.env.area.axis().levelToY(int(*previewLevel))
-                         : rig.env.area.axis().velocityToY(firstPreviewVelocity));
-        check(rig.env.document.revision() == revisionBeforeRollDrag &&
-                  rig.env.document.undoStack()->count() == undoBeforeRollDrag && firstRollPreview &&
-                  *firstRollPreview == firstPreviewVelocity && secondRollPreview &&
-                  *secondRollPreview == secondPreviewVelocity &&
-                  rig.env.view.selectionModel().noteSelection() ==
-                      std::vector<NoteId>({rig.graduatedFirst.noteId, rig.graduatedSecond.noteId}),
-              "piano-roll velocity preview must stage every selected note before release");
-        check(previewLevel && rig.env.area.axis().graduations()[*previewLevel].active,
-              "piano-roll velocity drag must update the velocity drawer's active graduation");
-        check(!rollDragPreview.isNull() &&
-                  velocityNodeHasColor(rig.env, previewNodeCenter, Qt::black),
-              "piano-roll velocity drag must move the velocity drawer node before release");
-        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, rollDragPosition,
-                                  Qt::LeftButton, Qt::NoButton, velocityDragModifiers);
-        DocNote committedFirst;
-        DocNote committedSecond;
-        check(rig.env.document.revision() == revisionBeforeRollDrag + 1 &&
-                  rig.env.document.undoStack()->count() == undoBeforeRollDrag + 1 &&
-                  !rig.env.view.previewVelocity(dragBeforeFirst.noteId) &&
-                  !rig.env.view.previewVelocity(dragBeforeSecond.noteId) &&
-                  rig.env.document.findNote(dragBeforeFirst.noteId, &committedFirst) &&
-                  rig.env.document.findNote(dragBeforeSecond.noteId, &committedSecond) &&
-                  committedFirst.velocity == firstPreviewVelocity &&
-                  committedSecond.velocity == secondPreviewVelocity,
-              "piano-roll velocity drag must commit every selected note in one command and "
-              "clear previews");
-        rig.env.live.documentRevision = rig.env.document.revision();
-    }
-    return failures;
-}
-
-int checkClickBelowSelectedNode(VelocityAreaRig &rig)
-{
-    int failures = 0;
-    const auto check = [&failures](bool condition, const char *message) {
-        velocityFail(failures, condition, message);
-    };
-    rig.env.view.selectionModel().setNoteSelection({rig.env.notes[1].noteId});
-    rig.env.voicegroup.voices[0] = rig.env.directSound;
-    rig.env.view.setVoicegroup(&rig.env.voicegroup);
-    rig.env.area.songChanged();
-    DocNote axisFirstBefore;
-    DocNote axisSecondBefore;
-    rig.env.document.findNote(rig.env.notes[0].noteId, &axisFirstBefore);
-    rig.env.document.findNote(rig.env.notes[1].noteId, &axisSecondBefore);
-    rig.env.document.setNotesVelocity({axisFirstBefore}, 1);
-    rig.env.document.findNote(rig.env.notes[0].noteId, &axisFirstBefore);
-    rig.env.document.setNotesVelocity({axisSecondBefore}, 70);
-    rig.env.document.findNote(rig.env.notes[1].noteId, &axisSecondBefore);
-    rig.env.live.documentRevision = rig.env.document.revision();
-    rig.env.live.playback.playing = false;
-    ++rig.env.live.editCursorTick;
-    rig.env.area.refreshLiveState(rig.env.live);
-    const int axisVelocity = 40;
-    const QPointF axisPoint(velocityXForTick(rig.env, double(axisSecondBefore.tick)),
-                            rig.env.area.axis().velocityToY(axisVelocity));
-    const uint64_t axisRevision = rig.env.document.revision();
-    const int axisUndoDepth = rig.env.document.undoStack()->count();
-    velocityPress(rig.env, axisPoint, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-    velocityRelease(rig.env, axisPoint, Qt::LeftButton, Qt::NoModifier);
-    DocNote axisFirstAfter;
-    DocNote axisSecondAfter;
-    check(rig.env.area.axis().mode() == VelocityAxis::Mode::Continuous &&
-              rig.env.view.selectionModel().noteSelection() ==
-                  std::vector<NoteId>{rig.env.notes[1].noteId} &&
-              rig.env.document.revision() == axisRevision + 1 &&
-              rig.env.document.undoStack()->count() == axisUndoDepth + 1 &&
-              rig.env.document.findNote(rig.env.notes[0].noteId, &axisFirstAfter) &&
-              rig.env.document.findNote(rig.env.notes[1].noteId, &axisSecondAfter) &&
-              axisFirstAfter.velocity == axisFirstBefore.velocity &&
-              axisSecondAfter.velocity == axisVelocity,
-          "clicking below a selected node must set only that node to the clicked velocity");
-    return failures;
-}
-
-int checkDetentUnlockGestures(VelocityAreaRig &rig)
-{
-    int failures = 0;
-    const auto check = [&failures](bool condition, const char *message) {
-        velocityFail(failures, condition, message);
-    };
-    const Qt::KeyboardModifiers detentUnlockModifiers = Qt::ControlModifier;
-    check(keymap::Registry::instance().modifierBinding(QStringLiteral("velocity.detent_unlock")) ==
-              detentUnlockModifiers,
-          "velocity detent unlock shortcut must retain its Ctrl default");
-    // Earlier density checks resize the canvas directly. Restore container-owned
-    // geometry before asserting the sibling Quick drawer chrome.
-    const int velocitySectionHeight = rig.env.view.drawerSectionHeight(EditorDrawerPage::Velocity);
-    rig.env.view.setDrawerSectionHeight(EditorDrawerPage::Velocity, std::nullopt);
-    rig.env.view.setDrawerSectionHeight(EditorDrawerPage::Velocity, velocitySectionHeight);
+    check(roll && modifiers != Qt::NoModifier,
+          "roll-preview rendering fixture must expose the velocity drag input");
+    if (!roll || modifiers == Qt::NoModifier)
+        return failures;
+    env.voicegroup.voices[0] = env.noise;
+    env.view.setVoicegroup(&env.voicegroup);
+    env.view.selectionModel().setNoteSelection({env.notes[0].noteId, env.notes[1].noteId});
+    env.area.songChanged();
+    ++env.live.editCursorTick;
+    env.area.refreshLiveState(env.live);
     QApplication::processEvents();
-    rig.env.live.timeZoom = rig.env.view.camera().pxPerBeat();
-    rig.env.live.horizontalScroll = rig.env.view.camera().scrollX();
-    if (detentUnlockModifiers != Qt::NoModifier) {
-        rig.env.voicegroup.voices[0] = rig.env.wave;
-        rig.env.view.setVoicegroup(&rig.env.voicegroup);
-        rig.env.area.songChanged();
-        rig.env.live.documentRevision = rig.env.document.revision();
-        ++rig.env.live.editCursorTick;
-        rig.env.area.refreshLiveState(rig.env.live);
-        QApplication::processEvents();
-        const VelocityMap unlockedMap = VelocityMap::resolve(&rig.env.wave, rig.env.notes[0].key);
-        const auto isOffDetent = [&unlockedMap](int velocity) {
-            return unlockedMap.canonicalize(velocity) != velocity;
-        };
-        const auto setVelocity = [&rig](NoteId noteId, uint8_t velocity) {
-            DocNote note;
-            if (!rig.env.document.findNote(noteId, &note))
-                return false;
-            rig.env.document.setNotesVelocity({note}, velocity);
-            return true;
-        };
-
-        const auto &psgGraduations = rig.env.area.axis().graduations();
-        const VelocityAxisGraduation &vol1 = psgGraduations[0];
-        const double labelLeft = double(layout::space(layout::Space::Two));
-        const double labelRight =
-            std::max(labelLeft, double(velocityFixedSpan(rig.env.view) - layout::singlePixel() -
-                                       layout::space(layout::Space::Two)));
-        const double labelHeight = rig.env.area.axis().geometry().labelHeight;
-        const QRectF vol1LabelBounds =
-            QFontMetricsF(typography::noteName(rig.env.velocityGutterInput->font()))
-                .boundingRect(QRectF(labelLeft, vol1.y - labelHeight / 2.0, labelRight - labelLeft,
-                                     labelHeight),
-                              Qt::AlignRight | Qt::AlignVCenter, QStringLiteral("Vol 1"));
-        const QPoint areaOrigin = velocityBandRect(rig.env.view).topLeft();
-        const QRect detentBounds = rig.env.chrome.detentRect().toAlignedRect();
-        const QRectF vol1LabelBoundsInDrawer =
-            vol1LabelBounds.translated(areaOrigin.x(), areaOrigin.y());
-        const QRect trackHeaderBounds(0, 0, areaOrigin.x(), rig.env.view.height());
-        check(rig.env.detentInput &&
-                  rig.env.detentInput->interaction() ==
-                      &rig.env.chrome.interaction(DrawerChromeTarget::Detent) &&
-                  rig.env.detentInput->isVisible() &&
-                  rig.env.detentInput->bounds() ==
-                      QRectF(QPointF{}, rig.env.chrome.detentRect().size()) &&
-                  rig.env.chrome.detentVisible() && rig.env.chrome.detentEnabled() &&
-                  rig.env.chrome.detentChecked() && !detentBounds.isEmpty() &&
-                  detentBounds.left() == areaOrigin.x() &&
-                  detentBounds.right() < areaOrigin.x() + velocityFixedSpan(rig.env.view),
-              "DrawerChrome detent must stay inside the PSG label gutter");
-        check(detentBounds.bottom() == velocityBandRect(rig.env.view).bottom(),
-              "DrawerChrome detent must stay flush with the PSG label gutter bottom");
-        check(!detentBounds.intersects(trackHeaderBounds),
-              "DrawerChrome detent must not cover the track headers");
-        check(rig.env.area.axis().graduationCount() > 0 && vol1.labelVisible &&
-                  !QRectF(detentBounds).intersects(vol1LabelBoundsInDrawer),
-              "PSG detent must not overlap the Vol 1 label");
-        if (rig.env.detentInput) {
-            rig.env.voicegroup.voices[0] = rig.env.directSound;
-            rig.env.view.selectionModel().setNoteSelection(
-                {rig.env.notes[0].noteId, rig.env.notes[2].noteId});
-            QApplication::processEvents();
-            check(!rig.env.detentInput->isVisible() && !rig.env.chrome.detentVisible() &&
-                      !rig.env.chrome.detentEnabled() && !rig.env.chrome.detentChecked() &&
-                      rig.env.chrome.detentRect().isEmpty(),
-                  "DrawerChrome detent must hide and turn off for a DirectSound selection");
-            check(setVelocity(rig.env.notes[0].noteId, 1) &&
-                      setVelocity(rig.env.notes[2].noteId, 127),
-                  "detent toggle fixture must reset its ruler values");
-            rig.env.live.documentRevision = rig.env.document.revision();
-            rig.env.area.refreshLiveState(rig.env.live);
-            QApplication::processEvents();
-            const QImage directSoundRuler = captureVelocityBand(rig.env.view);
-            const quint64 directAxisRevision =
-                layerRevision(rig.env, songview::TimelineQuickLayer::VelocityAxis);
-            rig.env.voicegroup.voices[0] = rig.env.wave;
-            rig.env.area.songChanged();
-            QApplication::processEvents();
-            check(rig.env.detentInput->isVisible() && rig.env.chrome.detentVisible() &&
-                      rig.env.chrome.detentEnabled() && rig.env.chrome.detentChecked(),
-                  "DrawerChrome detent must reappear immediately for a PSG selection");
-            const int checkedDetentIconRevision = rig.env.chrome.iconRevision();
-            rig.env.chrome.setDetentChecked(false);
-            QApplication::processEvents();
-            check(!rig.env.chrome.detentChecked() && !rig.env.area.useDetents() &&
-                      rig.env.chrome.iconRevision() > checkedDetentIconRevision,
-                  "DrawerChrome detent API did not disable and redraw snapped PSG editing");
-            const QImage unlockedPsgRuler = captureVelocityBand(rig.env.view);
-            const qreal rulerScale = unlockedPsgRuler.devicePixelRatio();
-            const int rulerHeight =
-                qFloor(double(detentBounds.top() - areaOrigin.y()) * rulerScale);
-            const QRect rulerBounds(
-                0, 0, qCeil(double(velocityFixedSpan(rig.env.view)) * rulerScale), rulerHeight);
-            check(!directSoundRuler.isNull() && !unlockedPsgRuler.isNull() &&
-                      layerRevision(rig.env, songview::TimelineQuickLayer::VelocityAxis) >
-                          directAxisRevision &&
-                      samePixels(directSoundRuler.copy(rulerBounds),
-                                 unlockedPsgRuler.copy(rulerBounds)),
-                  "disabled PSG detents must show the continuous sample-voice ruler");
-            const int toggleUnlockedVelocity = 73;
-            const QPointF toggleUnlockedRuler(
-                double(velocityFixedSpan(rig.env.view)) - 1.0,
-                rig.env.area.axis().velocityToY(toggleUnlockedVelocity));
-            velocityGutterPress(rig.env, toggleUnlockedRuler, Qt::NoModifier);
-            velocityGutterRelease(rig.env, toggleUnlockedRuler, Qt::NoModifier);
-            DocNote toggleUnlockedFirst;
-            DocNote toggleUnlockedThird;
-            check(!rig.env.chrome.detentChecked() &&
-                      rig.env.document.findNote(rig.env.notes[0].noteId, &toggleUnlockedFirst) &&
-                      rig.env.document.findNote(rig.env.notes[2].noteId, &toggleUnlockedThird) &&
-                      toggleUnlockedFirst.velocity == toggleUnlockedVelocity &&
-                      toggleUnlockedThird.velocity == toggleUnlockedVelocity &&
-                      isOffDetent(toggleUnlockedVelocity),
-                  "disabled velocity detents must write exact PSG velocities without a modifier");
-            const QImage unlockedNodeImage = captureVelocityBand(rig.env.view);
-            const QPointF unlockedNodeCenter(
-                rig.paintGestureX(toggleUnlockedFirst),
-                rig.env.area.axis().velocityToY(toggleUnlockedVelocity));
-            check(!unlockedNodeImage.isNull() &&
-                      velocityNodeHasColor(rig.env, unlockedNodeCenter, Qt::black),
-                  "disabled velocity detents must keep idle nodes at exact velocity positions");
-            const int uncheckedDetentIconRevision = rig.env.chrome.iconRevision();
-            const QPointF detentCenter = rig.env.detentInput->bounds().center();
-            checks::events::sendMouse(*rig.env.detentInput, QEvent::MouseButtonPress, detentCenter,
-                                      Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-            checks::events::sendMouse(*rig.env.detentInput, QEvent::MouseButtonRelease,
-                                      detentCenter, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
-            QApplication::processEvents();
-            check(rig.env.chrome.detentChecked() && rig.env.area.useDetents() &&
-                      rig.env.chrome.iconRevision() > uncheckedDetentIconRevision,
-                  "drawerDetentInput did not restore and redraw snapped PSG editing");
-        }
-
-        rig.env.view.selectionModel().setNoteSelection(
-            {rig.env.notes[0].noteId, rig.env.notes[2].noteId});
-        check(setVelocity(rig.env.notes[0].noteId, 1) && setVelocity(rig.env.notes[2].noteId, 127),
-              "unlocked wave fixture must reset its ruler values");
-        rig.env.live.documentRevision = rig.env.document.revision();
-        rig.env.area.refreshLiveState(rig.env.live);
-        const int lockedPaintVelocity = 73;
-        const QPointF lockedPaintStart(rig.paintGestureX(rig.env.notes[0]),
-                                       rig.env.area.axis().velocityToY(lockedPaintVelocity));
-        const QPointF lockedPaintEnd(rig.paintGestureX(rig.env.notes[2]),
-                                     rig.env.area.axis().velocityToY(lockedPaintVelocity));
-        const uint64_t revisionBeforeLockedPaint = rig.env.document.revision();
-        velocityPress(rig.env, lockedPaintStart, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-        velocityMove(rig.env, lockedPaintEnd, Qt::LeftButton, Qt::NoModifier);
-        velocityRelease(rig.env, lockedPaintEnd, Qt::LeftButton, Qt::NoModifier);
-        DocNote lockedPaintFirst;
-        DocNote lockedPaintThird;
-        check(rig.env.document.findNote(rig.env.notes[0].noteId, &lockedPaintFirst) &&
-                  rig.env.document.findNote(rig.env.notes[2].noteId, &lockedPaintThird) &&
-                  rig.env.document.revision() == revisionBeforeLockedPaint + 1 &&
-                  lockedPaintFirst.velocity == unlockedMap.canonicalize(lockedPaintVelocity) &&
-                  lockedPaintThird.velocity == unlockedMap.canonicalize(lockedPaintVelocity) &&
-                  isOffDetent(lockedPaintVelocity),
-              "no-modifier velocity paint must retain snapped PSG semantics");
-        rig.env.view.selectionModel().setNoteSelection(
-            {rig.env.notes[0].noteId, rig.env.notes[2].noteId});
-        check(setVelocity(rig.env.notes[0].noteId, 1) && setVelocity(rig.env.notes[2].noteId, 127),
-              "unlocked wave fixture must reset its ruler values");
-        rig.env.live.documentRevision = rig.env.document.revision();
-        rig.env.area.refreshLiveState(rig.env.live);
-        const int unlockedRulerVelocity = 73;
-        const QPointF unlockedRuler(double(velocityFixedSpan(rig.env.view)) - 1.0,
-                                    rig.env.area.axis().velocityToY(unlockedRulerVelocity));
-        velocityGutterPress(rig.env, unlockedRuler, detentUnlockModifiers);
-        velocityGutterRelease(rig.env, unlockedRuler, Qt::NoModifier);
-        DocNote rulerUnlockedFirst;
-        DocNote rulerUnlockedThird;
-        check(rig.env.document.findNote(rig.env.notes[0].noteId, &rulerUnlockedFirst) &&
-                  rig.env.document.findNote(rig.env.notes[2].noteId, &rulerUnlockedThird) &&
-                  rulerUnlockedFirst.velocity == unlockedRulerVelocity &&
-                  rulerUnlockedThird.velocity == unlockedRulerVelocity &&
-                  isOffDetent(unlockedRulerVelocity),
-              "unlocked intrinsic ruler clicks must write exact off-detent values");
-
-        rig.env.view.selectionModel().setNoteSelection(
-            {rig.env.notes[0].noteId, rig.env.notes[2].noteId});
-        check(setVelocity(rig.env.notes[0].noteId, 1) && setVelocity(rig.env.notes[2].noteId, 127),
-              "unlocked wave paint fixture must reset its endpoints");
-        rig.env.live.documentRevision = rig.env.document.revision();
-        rig.env.area.refreshLiveState(rig.env.live);
-        DocNote paintUnlockedFirst;
-        DocNote paintUnlockedThird;
-        rig.env.document.findNote(rig.env.notes[0].noteId, &paintUnlockedFirst);
-        rig.env.document.findNote(rig.env.notes[2].noteId, &paintUnlockedThird);
-        const int unlockedPaintFirstVelocity = 37;
-        const int unlockedPaintThirdVelocity = 91;
-        const QPointF unlockedPaintStart(
-            rig.paintGestureX(paintUnlockedFirst),
-            rig.env.area.axis().velocityToY(unlockedPaintFirstVelocity));
-        const QPointF unlockedPaintEnd(rig.paintGestureX(paintUnlockedThird),
-                                       rig.env.area.axis().velocityToY(unlockedPaintThirdVelocity));
-        const uint64_t revisionBeforeUnlockedPaint = rig.env.document.revision();
-        velocityPress(rig.env, unlockedPaintStart, Qt::LeftButton, Qt::LeftButton,
-                      detentUnlockModifiers);
-        velocityMove(rig.env, unlockedPaintEnd, Qt::LeftButton, Qt::NoModifier);
-        const QImage unlockedPaintPreview = captureVelocityBand(rig.env.view);
-        const QPointF unlockedPaintCenter(
-            rig.paintGestureX(paintUnlockedFirst),
-            rig.env.area.axis().velocityToY(unlockedPaintFirstVelocity));
-        check(rig.env.document.revision() == revisionBeforeUnlockedPaint &&
-                  !unlockedPaintPreview.isNull() &&
-                  velocityNodeHasColor(rig.env, unlockedPaintCenter, Qt::black),
-              "unlocked paint preview must remain at its continuous y position");
-        velocityRelease(rig.env, unlockedPaintEnd, Qt::LeftButton, Qt::NoModifier);
-        DocNote paintedUnlockedFirst;
-        DocNote paintedUnlockedThird;
-        check(rig.env.document.findNote(rig.env.notes[0].noteId, &paintedUnlockedFirst) &&
-                  rig.env.document.findNote(rig.env.notes[2].noteId, &paintedUnlockedThird) &&
-                  paintedUnlockedFirst.velocity == unlockedPaintFirstVelocity &&
-                  paintedUnlockedThird.velocity == unlockedPaintThirdVelocity &&
-                  isOffDetent(unlockedPaintFirstVelocity) &&
-                  isOffDetent(unlockedPaintThirdVelocity),
-              "unlocked paint must commit exact off-detent wave values");
-
-        rig.env.view.selectionModel().setNoteSelection(
-            {rig.env.notes[0].noteId, rig.env.notes[2].noteId});
-        check(setVelocity(rig.env.notes[0].noteId, 33) && setVelocity(rig.env.notes[2].noteId, 87),
-              "unlocked wave relative fixture must reset its origins");
-        rig.env.live.documentRevision = rig.env.document.revision();
-        rig.env.area.refreshLiveState(rig.env.live);
-        const int lockedRelativeOriginFirst = 33;
-        const int lockedRelativeOriginThird = 87;
-        const int lockedRelativeDelta = 20;
-        const double lockedRelativeStartY = rig.env.area.axis().levelToY(
-            int(unlockedMap.levelOf(lockedRelativeOriginFirst).value()));
-        const double lockedRelativeEndY =
-            rig.env.area.axis().velocityToY(lockedRelativeOriginFirst + lockedRelativeDelta);
-        const QPointF lockedRelativeStart(rig.paintGestureX(rig.env.notes[0]),
-                                          lockedRelativeStartY);
-        const QPointF lockedRelativeEnd(lockedRelativeStart.x(), lockedRelativeEndY);
-        const int lockedRelativeLevelDelta = rig.env.area.axis().yToLevel(lockedRelativeEndY) -
-                                             rig.env.area.axis().yToLevel(lockedRelativeStartY);
-        const int lockedProposedFirst = lockedRelativeOriginFirst + lockedRelativeDelta;
-        const int lockedProposedThird = lockedRelativeOriginThird + lockedRelativeDelta;
-        const uint8_t lockedExpectedFirst =
-            unlockedMap.moveLevels(uint8_t(lockedRelativeOriginFirst), lockedRelativeLevelDelta);
-        const uint8_t lockedExpectedThird =
-            unlockedMap.moveLevels(uint8_t(lockedRelativeOriginThird), lockedRelativeLevelDelta);
-        const uint64_t revisionBeforeLockedStart = rig.env.document.revision();
-        velocityPress(rig.env, lockedRelativeStart, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-        velocityMove(rig.env, lockedRelativeEnd, Qt::LeftButton, detentUnlockModifiers);
-        velocityRelease(rig.env, lockedRelativeEnd, Qt::LeftButton, Qt::NoModifier);
-        DocNote lockedRelativeFirst;
-        DocNote lockedRelativeThird;
-        check(rig.env.document.findNote(rig.env.notes[0].noteId, &lockedRelativeFirst) &&
-                  rig.env.document.findNote(rig.env.notes[2].noteId, &lockedRelativeThird) &&
-                  rig.env.document.revision() == revisionBeforeLockedStart + 1 &&
-                  lockedRelativeFirst.velocity == lockedExpectedFirst &&
-                  lockedRelativeThird.velocity == lockedExpectedThird &&
-                  lockedRelativeLevelDelta != 0 && isOffDetent(lockedProposedFirst) &&
-                  isOffDetent(lockedProposedThird),
-              "unlock added after a gesture starts must not bypass snapped PSG semantics");
-        rig.env.view.selectionModel().setNoteSelection(
-            {rig.env.notes[0].noteId, rig.env.notes[2].noteId});
-        check(setVelocity(rig.env.notes[0].noteId, lockedRelativeOriginFirst) &&
-                  setVelocity(rig.env.notes[2].noteId, lockedRelativeOriginThird),
-              "unlocked wave relative fixture must reset its origins");
-        rig.env.live.documentRevision = rig.env.document.revision();
-        rig.env.area.refreshLiveState(rig.env.live);
-        DocNote relativeUnlockedFirst;
-        DocNote relativeUnlockedThird;
-        rig.env.document.findNote(rig.env.notes[0].noteId, &relativeUnlockedFirst);
-        rig.env.document.findNote(rig.env.notes[2].noteId, &relativeUnlockedThird);
-        const int unlockedRelativeDelta = 7;
-        const QPointF unlockedRelativeStart(
-            rig.paintGestureX(relativeUnlockedFirst),
-            rig.env.area.axis().levelToY(
-                int(unlockedMap.levelOf(relativeUnlockedFirst.velocity).value())));
-        const QPointF unlockedRelativeEnd(
-            unlockedRelativeStart.x(), rig.env.area.axis().velocityToY(
-                                           relativeUnlockedFirst.velocity + unlockedRelativeDelta));
-        velocityPress(rig.env, unlockedRelativeStart, Qt::LeftButton, Qt::LeftButton,
-                      detentUnlockModifiers);
-        velocityMove(rig.env, unlockedRelativeEnd, Qt::LeftButton, Qt::NoModifier);
-        velocityRelease(rig.env, unlockedRelativeEnd, Qt::LeftButton, Qt::NoModifier);
-        DocNote relativeUnlockedFirstAfter;
-        DocNote relativeUnlockedThirdAfter;
-        check(rig.env.document.findNote(rig.env.notes[0].noteId, &relativeUnlockedFirstAfter) &&
-                  rig.env.document.findNote(rig.env.notes[2].noteId, &relativeUnlockedThirdAfter) &&
-                  relativeUnlockedFirstAfter.velocity == 40 &&
-                  relativeUnlockedThirdAfter.velocity == 94 &&
-                  isOffDetent(relativeUnlockedFirstAfter.velocity) &&
-                  isOffDetent(relativeUnlockedThirdAfter.velocity),
-              "unlocked relative drag must preserve exact off-detent origins");
-
-        rig.env.document.addNote(0, 36, relativeUnlockedFirst.key, 12, 56);
-        const std::vector<DocNote> unlockedRampNotes = rig.env.document.notesForTrack(0);
-        const auto unlockedRampMiddleIt =
-            std::find_if(unlockedRampNotes.cbegin(), unlockedRampNotes.cend(),
-                         [](const DocNote &note) { return note.tick == 36; });
-        check(unlockedRampMiddleIt != unlockedRampNotes.cend(),
-              "unlocked wave ramp fixture must create its midpoint note");
-        if (unlockedRampMiddleIt != unlockedRampNotes.cend()) {
-            const DocNote unlockedRampMiddleBefore = *unlockedRampMiddleIt;
-            rig.env.view.selectionModel().setNoteSelection({rig.env.notes[0].noteId,
-                                                            unlockedRampMiddleBefore.noteId,
-                                                            rig.env.notes[2].noteId});
-            rig.env.live.documentRevision = rig.env.document.revision();
-            rig.env.area.refreshLiveState(rig.env.live);
-            const DocNote unlockedRampFirst = relativeUnlockedFirstAfter;
-            const DocNote unlockedRampThird = relativeUnlockedThirdAfter;
-            const double unlockedRampStartX = rig.paintGestureX(unlockedRampFirst);
-            const double unlockedRampEndX = rig.paintGestureX(unlockedRampThird);
-            const int unlockedRampFirstVelocity = 37;
-            const int unlockedRampThirdVelocity = 93;
-            const QPointF unlockedRampStart(
-                unlockedRampStartX, rig.env.area.axis().velocityToY(unlockedRampFirstVelocity));
-            const QPointF unlockedRampEnd(
-                unlockedRampEndX, rig.env.area.axis().velocityToY(unlockedRampThirdVelocity));
-            const double middleRatio =
-                (rig.paintGestureX(unlockedRampMiddleBefore) - unlockedRampStartX) /
-                (unlockedRampEndX - unlockedRampStartX);
-            const int unlockedRampMiddleVelocity = rig.env.area.axis().yToVelocity(
-                unlockedRampStart.y() +
-                middleRatio * (unlockedRampEnd.y() - unlockedRampStart.y()));
-            const uint64_t revisionBeforeUnlockedRamp = rig.env.document.revision();
-            const Qt::KeyboardModifiers unlockedRampModifiers =
-                detentUnlockModifiers | Qt::ShiftModifier;
-            velocityPress(rig.env, unlockedRampStart, Qt::LeftButton, Qt::LeftButton,
-                          unlockedRampModifiers);
-            velocityMove(rig.env, unlockedRampEnd, Qt::LeftButton, Qt::NoModifier);
-            check(rig.env.document.revision() == revisionBeforeUnlockedRamp,
-                  "unlocked Shift-ramp must defer document changes");
-            velocityRelease(rig.env, unlockedRampEnd, Qt::LeftButton, Qt::NoModifier);
-            DocNote rampedUnlockedFirst;
-            DocNote rampedUnlockedMiddle;
-            DocNote rampedUnlockedThird;
-            check(rig.env.document.findNote(rig.env.notes[0].noteId, &rampedUnlockedFirst) &&
-                      rig.env.document.findNote(unlockedRampMiddleBefore.noteId,
-                                                &rampedUnlockedMiddle) &&
-                      rig.env.document.findNote(rig.env.notes[2].noteId, &rampedUnlockedThird) &&
-                      rampedUnlockedFirst.velocity == unlockedRampFirstVelocity &&
-                      rampedUnlockedMiddle.velocity == unlockedRampMiddleVelocity &&
-                      rampedUnlockedThird.velocity == unlockedRampThirdVelocity &&
-                      isOffDetent(rampedUnlockedFirst.velocity) &&
-                      isOffDetent(rampedUnlockedMiddle.velocity) &&
-                      isOffDetent(rampedUnlockedThird.velocity),
-                  "unlocked Shift-ramp must commit exact continuous wave values");
-            rig.env.document.deleteNotes({unlockedRampMiddleBefore});
-            rig.env.live.documentRevision = rig.env.document.revision();
-            rig.env.area.refreshLiveState(rig.env.live);
-        }
-    }
+    DocNote first;
+    check(env.document.findNote(env.notes[0].noteId, &first),
+          "roll-preview rendering fixture must resolve its first note");
+    if (!env.document.findNote(env.notes[0].noteId, &first))
+        return failures;
+    env.map = VelocityMap::resolve(&env.noise, first.key);
+    const QPointF center(
+        env.view.camera().displayX(double(first.tick) + double(first.duration) / 2.0, 0.0,
+                                   roll->devicePixelRatio()),
+        (127.5 - double(first.key)) * env.view.camera().keyHeight() - env.view.camera().scrollY());
+    const int delta = QApplication::startDragDistance() + 16;
+    const QPointF dragged = center - QPointF(0.0, double(delta));
+    checks::events::sendMouse(*roll, QEvent::MouseButtonPress, center, Qt::LeftButton,
+                              Qt::LeftButton, modifiers);
+    checks::events::sendMouse(*roll, QEvent::MouseMove, dragged, Qt::NoButton, Qt::LeftButton,
+                              modifiers);
+    QApplication::processEvents();
+    const auto previewVelocity = env.view.previewVelocity(first.noteId);
+    const std::optional<std::size_t> previewLevel =
+        previewVelocity ? env.map.levelOf(*previewVelocity) : std::nullopt;
+    const QPointF previewNode(velocityXForTick(env, double(first.tick)),
+                              previewVelocity && previewLevel
+                                  ? env.area.axis().levelToY(int(*previewLevel))
+                                  : env.area.axis().velocityToY(first.velocity));
+    const QImage preview = captureVelocityBand(env.view);
+    check(previewVelocity && !preview.isNull() && velocityNodeHasColor(env, previewNode, Qt::black),
+          "piano-roll velocity preview must move the drawer node before release");
+    checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, dragged, Qt::LeftButton,
+                              Qt::NoButton, modifiers);
+    env.live.documentRevision = env.document.revision();
+    env.area.refreshLiveState(env.live);
+    QApplication::processEvents();
     return failures;
 }
 
+int checkDetentChromeRendering(VelocityAreaEnv &env)
+{
+    int failures = 0;
+    const auto check = [&failures](bool condition, const char *message) {
+        velocityFail(failures, condition, message);
+    };
+    env.voicegroup.voices[0] = env.wave;
+    env.view.setVoicegroup(&env.voicegroup);
+    env.view.selectionModel().setNoteSelection({env.notes[0].noteId});
+    env.area.songChanged();
+    ++env.live.editCursorTick;
+    env.area.refreshLiveState(env.live);
+    QApplication::processEvents();
+    const auto &graduations = env.area.axis().graduations();
+    const VelocityAxisGraduation &vol1 = graduations[0];
+    const QPoint areaOrigin = velocityBandRect(env.view).topLeft();
+    const QRect detentBounds = env.chrome.detentRect().toAlignedRect();
+    const double labelLeft = double(layout::space(layout::Space::Two));
+    const double labelRight =
+        std::max(labelLeft, double(velocityFixedSpan(env.view) - layout::singlePixel() -
+                                   layout::space(layout::Space::Two)));
+    const double labelHeight = env.area.axis().geometry().labelHeight;
+    const QRectF labelBounds =
+        QFontMetricsF(typography::noteName(env.velocityGutterInput->font()))
+            .boundingRect(
+                QRectF(labelLeft, vol1.y - labelHeight / 2.0, labelRight - labelLeft, labelHeight),
+                Qt::AlignRight | Qt::AlignVCenter, QStringLiteral("Vol 1"))
+            .translated(areaOrigin.x(), areaOrigin.y());
+    const QRect trackHeaderBounds(0, 0, areaOrigin.x(), env.view.height());
+    check(env.detentInput &&
+              env.detentInput->interaction() ==
+                  &env.chrome.interaction(DrawerChromeTarget::Detent) &&
+              env.detentInput->isVisible() &&
+              env.detentInput->bounds() == QRectF(QPointF{}, env.chrome.detentRect().size()) &&
+              env.chrome.detentVisible() && env.chrome.detentEnabled() &&
+              env.chrome.detentChecked() && !detentBounds.isEmpty() &&
+              detentBounds.left() == areaOrigin.x() &&
+              detentBounds.right() < areaOrigin.x() + velocityFixedSpan(env.view) &&
+              detentBounds.bottom() == velocityBandRect(env.view).bottom() &&
+              !detentBounds.intersects(trackHeaderBounds) && vol1.labelVisible &&
+              !QRectF(detentBounds).intersects(labelBounds),
+          "PSG detent chrome must stay in the label gutter without covering Vol 1");
+
+    env.voicegroup.voices[0] = env.directSound;
+    env.view.setVoicegroup(&env.voicegroup);
+    env.view.selectionModel().setNoteSelection({env.notes[0].noteId, env.notes[2].noteId});
+    env.area.songChanged();
+    ++env.live.editCursorTick;
+    env.area.refreshLiveState(env.live);
+    QApplication::processEvents();
+    const QImage directSoundRuler = captureVelocityBand(env.view);
+    const quint64 directAxisRevision =
+        layerRevision(env, songview::TimelineQuickLayer::VelocityAxis);
+    check(!env.detentInput->isVisible() && !env.chrome.detentVisible() &&
+              !env.chrome.detentEnabled() && !env.chrome.detentChecked() &&
+              env.chrome.detentRect().isEmpty(),
+          "detent chrome must hide for a DirectSound selection");
+
+    env.voicegroup.voices[0] = env.wave;
+    env.view.setVoicegroup(&env.voicegroup);
+    env.area.songChanged();
+    ++env.live.editCursorTick;
+    env.area.refreshLiveState(env.live);
+    QApplication::processEvents();
+    const int checkedIconRevision = env.chrome.iconRevision();
+    env.chrome.setDetentChecked(false);
+    QApplication::processEvents();
+    const QImage unlockedRuler = captureVelocityBand(env.view);
+    const qreal scale = unlockedRuler.devicePixelRatio();
+    const QRect rulerBounds(0, 0, qCeil(double(velocityFixedSpan(env.view)) * scale),
+                            qFloor(double(detentBounds.top() - areaOrigin.y()) * scale));
+    check(env.detentInput->isVisible() && env.chrome.detentVisible() &&
+              env.chrome.detentEnabled() && !env.chrome.detentChecked() && !env.area.useDetents() &&
+              env.chrome.iconRevision() > checkedIconRevision && !directSoundRuler.isNull() &&
+              !unlockedRuler.isNull() &&
+              layerRevision(env, songview::TimelineQuickLayer::VelocityAxis) > directAxisRevision &&
+              samePixels(directSoundRuler.copy(rulerBounds), unlockedRuler.copy(rulerBounds)),
+          "disabling PSG detents must redraw the continuous sample-voice ruler");
+    const int uncheckedIconRevision = env.chrome.iconRevision();
+    const QPointF detentCenter = env.detentInput->bounds().center();
+    checks::events::sendMouse(*env.detentInput, QEvent::MouseButtonPress, detentCenter,
+                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*env.detentInput, QEvent::MouseButtonRelease, detentCenter,
+                              Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    QApplication::processEvents();
+    check(env.chrome.detentChecked() && env.area.useDetents() &&
+              env.chrome.iconRevision() > uncheckedIconRevision,
+          "drawer detent input must restore the snapped ruler");
+    return failures;
+}
 } // namespace
 
 int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel,
@@ -2026,7 +1244,6 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
                         view,      area,     velocityInput, velocityGutterInput,
                         chrome,    barInput, detentInput,   quickScene,
                         quickView, live,     expected};
-    VelocityAreaRig rig{env, VelocityMap::resolve(&noise, notes[0].key)};
     view.setDrawerSectionHeight(EditorDrawerPage::Velocity,
                                 expected.densityThresholdD4 + layout::space(layout::Space::Six));
     area.songChanged();
@@ -2050,16 +1267,11 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     failures += checkVelocityRendering(env);
     failures += checkEditCursorRepaint(env);
     failures += checkDrawerContextTickRounding(env);
-    failures += checkRelativeDragDefersCommit(rig);
-    failures += checkPointerUngrabCancelsProvisionalSelection(rig);
-    failures += checkDragBandOverlay(rig);
-    failures += checkStackedNodeHitPriority(rig);
-    failures += checkPaintGestureDefersCommit(rig);
-    failures += checkRampGestureCommits(rig);
-    failures += checkBlankAndGraduationClicks(rig);
-    failures += checkRollVelocityDrag(rig);
-    failures += checkClickBelowSelectedNode(rig);
-    failures += checkDetentUnlockGestures(rig);
+    failures += checkBandOverlayRendering(env);
+    failures += checkStackedNodeRendering(env);
+    failures += checkRampPreviewRendering(env);
+    failures += checkRollVelocityPreviewRendering(env);
+    failures += checkDetentChromeRendering(env);
 
     live.playback.playing = true;
     live.playback.playheadTick = -1.0;
@@ -2076,26 +1288,6 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
               area.diagnostics().playheadPresentationCount == warm.playheadPresentationCount + 120,
           "120 playhead presentations must not rebuild velocity content");
 
-    view.selectionModel().setNoteSelection({notes[0].noteId, notes[2].noteId});
-    const std::vector<NoteId> selectedBeforeKeyboard = view.selectionModel().noteSelection();
-    DocNote firstBeforeKeyboard;
-    DocNote thirdBeforeKeyboard;
-    check(document.findNote(notes[0].noteId, &firstBeforeKeyboard) &&
-              document.findNote(notes[2].noteId, &thirdBeforeKeyboard),
-          "focused velocity keyboard fixture must resolve its selected notes");
-    const uint64_t revisionBeforeKeyboard = document.revision();
-    velocityInput->requestFocus(Qt::OtherFocusReason);
-    checks::events::sendKey(*velocityInput, QEvent::KeyPress, Qt::Key_Up, Qt::ShiftModifier,
-                            QString(), false, 1);
-    DocNote firstAfterKeyboard;
-    DocNote thirdAfterKeyboard;
-    check(document.revision() == revisionBeforeKeyboard &&
-              view.selectionModel().noteSelection() == selectedBeforeKeyboard &&
-              document.findNote(notes[0].noteId, &firstAfterKeyboard) &&
-              document.findNote(notes[2].noteId, &thirdAfterKeyboard) &&
-              firstAfterKeyboard.key == firstBeforeKeyboard.key &&
-              thirdAfterKeyboard.key == thirdBeforeKeyboard.key,
-          "focused velocity keyboard pitch editing must leave selected notes unchanged");
     if (!screenshotPath.isEmpty())
         check(captureVelocityBand(view).save(screenshotPath),
               "optional velocity screenshot should save");

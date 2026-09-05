@@ -430,6 +430,16 @@ const std::vector<CheckDefinition> &catalog()
                 .fixtureFiles = route101Files,
             },
             {
+                .name = "velocity-editing",
+                .argv = strings({"--velocity-editing"}),
+                .handler =
+                    [](QApplication &, const QStringList &args) {
+                        return runVelocityEditingCheck(args.mid(1));
+                    },
+                .windowing = Windowing::Offscreen,
+                .framework = Framework::QtTest,
+            },
+            {
                 .name = "host-adapter",
                 .argv = strings({"--check-host-adapter", "{scratch}", "mus_route101"}),
                 .handler =

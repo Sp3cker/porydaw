@@ -479,6 +479,8 @@ qt_add_executable(porydaw
 target_link_libraries(porydaw PRIVATE porydaw_app)
 
 if(PORYDAW_BUILD_CHECKS)
+    # Qt Test is required only by the checks target; app-only builds must not need it.
+    find_package(Qt6 REQUIRED COMPONENTS Test)
     qt_add_executable(porydaw_checks
         src/checks/checks_main.cpp
         src/checks/checkregistry.cpp
@@ -627,6 +629,15 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/rollcheckvoicechange.h
         src/checks/rollcheckpsgvelocity.cpp
         src/checks/velocitymodelcheck.cpp
+        src/checks/velocity/tst_velocityediting.cpp
+        src/checks/velocity/tst_velocityediting.h
+        src/checks/velocity/velocityselection.cpp
+        src/checks/velocity/velocityhitpriority.cpp
+        src/checks/velocity/velocitypainting.cpp
+        src/checks/velocity/velocityclicks.cpp
+        src/checks/velocity/velocityroll.cpp
+        src/checks/velocity/velocitydetentpainting.cpp
+        src/checks/velocity/velocitydetentdragging.cpp
         src/checks/themechecks.cpp
         src/checks/fontcheck.cpp
         src/ui/theme/themecheck.cpp
@@ -642,7 +653,7 @@ if(PORYDAW_BUILD_CHECKS)
     if(APPLE)
         set_target_properties(porydaw_checks PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
     endif()
-    target_link_libraries(porydaw_checks PRIVATE porydaw_app Qt6::QuickWidgets)
+    target_link_libraries(porydaw_checks PRIVATE porydaw_app Qt6::QuickWidgets Qt6::Test)
     target_precompile_headers(porydaw_checks PRIVATE
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
     add_dependencies(porydaw_checks mid2agb)

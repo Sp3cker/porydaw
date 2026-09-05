@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QString>
+#include <QStringList>
 
 class QApplication;
 
@@ -69,3 +70,4 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
                             const QString &songB, const QString &screenshotPath = QString());
 int runThemeHarness(QApplication &application, const QString &command);
 int runEditorLayoutCheck(QApplication &application, int baseFontPx);
+int runVelocityEditingCheck(const QStringList &qtArguments);

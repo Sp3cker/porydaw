@@ -16,6 +16,7 @@ enum class ScratchKind { Unused, ExistingDirectory, MustNotExistPath };
 enum class FixtureRootKind { None, DecompProject, SongsMkProject };
 enum class BinaryKind { Checks, Application };
 enum class Windowing { Offscreen, WindowSystem };
+enum class Framework { Legacy, QtTest };
 
 struct CheckDefinition {
     const char *name;
@@ -29,6 +30,7 @@ struct CheckDefinition {
     BinaryKind binary = BinaryKind::Checks;
     StartupKind startup = StartupKind::Porydaw;
     Windowing windowing = Windowing::Offscreen;
+    Framework framework = Framework::Legacy;
 };
 
 const std::vector<CheckDefinition> &catalog();

@@ -72,6 +72,9 @@ Everything else stays separate.
 - **Velocity pair.** `velocitymodelcheck` (296L headless math, no harness) vs
   `rollcheckpsgvelocity` (2141L QML integration with VelocityInputHost). Locality:
   quantization/gesture-transaction changes verify headlessly without the QML stack.
+  (Update: the `rollcheckpsgvelocity` editing interactions have since migrated to the
+  `velocity-editing` Qt Test suite — see `docs/velocity-qt-test-migration-plan.md`;
+  the numerical seam stays headless.)
 - **Automation sprawl.** `automationgesturecheck/` (17 files, `rig.h` + `support.h`
   internal seams) is already the exemplar module. `rollcheckautomation*` exercises a
   different seam (canvas impl + popup menus vs TimelineInputHost gestures). Note:
@@ -120,17 +123,38 @@ a follow-up pass converts the remaining 4 members into free functions with focus
 - MainWindow-coupled smoke stays in `workspace.cpp`; timer assertions move to `tabcheck.cpp`.
 
 #### Step 4: FUTURE ROADMAP — Check Quality & Idiomatic Qt Testing
-1. **Canonical Assembly:** Migrate heavy GUI suites (`rollcheckautomation`,
-   `rollcheckpsgvelocity`) onto `checks/support/editorrig.h` to stop hand-assembling widget
-   stacks and fishing for QML items via `findChild`.
+
+**Velocity exception (recorded 2026-09):** the `velocity-editing` pilot superseded
+item 1 for `rollcheckpsgvelocity` only. Its editing coverage now lives in the Qt Test
+suite `src/checks/velocity/` — catalog row `velocity-editing`, `Framework::QtTest`,
+`Windowing::Offscreen`, driven through a real `SongTab` rather than an `EditorRig`
+adoption (full record: `docs/velocity-qt-test-migration-plan.md`). This is a
+one-suite exception, not a new mandate: item 1 remains authoritative for
+`rollcheckautomation` and future heavy-suite rework, and the host-extraction roadmap
+(Steps 2/2.5/3) is unaffected.
+
+1. **Canonical Assembly:** Migrate remaining heavy GUI suites (`rollcheckautomation`,
+   …) onto `checks/support/editorrig.h` to stop hand-assembling widget stacks and
+   fishing for QML items via `findChild`. (`rollcheckpsgvelocity` editing coverage is
+   the recorded exception above; its legacy file keeps only rendering/chrome/grid/
+   axis/playhead helpers after the completed trim.)
 2. **Domain-Level Assertions:** Replace pixel-offset checks (`layout::fontPx`) with model
    invariants (`SongDocument`, `SmfEvent`, `QUndoStack`).
-3. **Idiomatic Qt Testing (`Qt6::Test`):**
-   - Add `Test` component to `find_package(Qt6 ...)` in `CMakeLists.txt`.
-   - Build a reporter adapter so `QCOMPARE` / `QVERIFY` failure diffs surface cleanly in
-     `tools/run_checks.ts`.
-   - Pilot `QTest` on newly added headless domain logic and pure algorithms (`porydaw_scale`,
-     `DecompProject`, `keymap::Registry`).
+3. **Idiomatic Qt Testing (`Qt6::Test`):** the framework convention is established and
+   reusable, proven by the `velocity-editing` pilot:
+   - `CheckDefinition::framework` (`Framework::Legacy`/`QtTest`), serialized as
+     `"framework": "legacy"|"qt-test"` in the manifest; `tools/run_checks.ts` requires
+     the field like any other manifest invariant.
+   - `Qt6::Test` linked PRIVATE to `porydaw_checks` only, inside
+     `PORYDAW_BUILD_CHECKS`; app target untouched.
+   - `--qt` terminal marker in both `tools/cli.ts` and `tools/run_checks.ts` forwards
+     everything after it verbatim to the one selected qt-test harness (`--filter`
+     selects, `--qt` forwards; unknown Qt case names fail non-zero natively).
+   - Explicit `--qt` runs print the complete raw Qt output; failure output is never
+     line-capped for any check.
+   - Still open: pilot `QTest` on newly added headless domain logic and pure
+     algorithms (`porydaw_scale`, `DecompProject`, `keymap::Registry`). The retired
+     "reporter adapter" idea is superseded by the raw-output policy above.
 
 ---
 

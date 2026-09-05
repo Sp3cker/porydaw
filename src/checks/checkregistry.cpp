@@ -20,6 +20,7 @@ namespace {
 using detail::BinaryKind;
 using detail::CheckDefinition;
 using detail::FixtureRootKind;
+using detail::Framework;
 using detail::ScratchKind;
 using detail::StartupKind;
 using detail::Windowing;
@@ -80,6 +81,17 @@ QString jsonName(Windowing windowing)
     Q_UNREACHABLE();
 }
 
+QString jsonName(Framework framework)
+{
+    switch (framework) {
+    case Framework::Legacy:
+        return QStringLiteral("legacy");
+    case Framework::QtTest:
+        return QStringLiteral("qt-test");
+    }
+    Q_UNREACHABLE();
+}
+
 QJsonObject manifestEntry(const CheckDefinition &definition)
 {
     auto entry = QJsonObject{
@@ -90,6 +102,7 @@ QJsonObject manifestEntry(const CheckDefinition &definition)
         {QStringLiteral("fixtureFiles"), QJsonArray::fromStringList(definition.fixtureFiles)},
         {QStringLiteral("binary"), jsonName(definition.binary)},
         {QStringLiteral("windowing"), jsonName(definition.windowing)},
+        {QStringLiteral("framework"), jsonName(definition.framework)},
     };
     if (!definition.environment.isEmpty())
         entry.insert(QStringLiteral("environment"), jsonObject(definition.environment));

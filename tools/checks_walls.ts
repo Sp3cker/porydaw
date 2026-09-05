@@ -28,6 +28,9 @@ export const WALL_ESTIMATE: Record<string, number> = {
   "velocity-page": 0.4,
   editcheck: 0.39,
   eventviewcheck: 0.33,
+  // velocity-editing: unmeasured (new pilot suite) — fallback-level estimate
+  // until the first measured verbose run.
+  "velocity-editing": 0.3,
   vgcheck: 0.28,
   keymapcheck: 0.27,
   audiocheck: 0.25,

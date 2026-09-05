@@ -20,6 +20,7 @@ interface CheckManifestEntry {
   readonly argv: readonly string[];
   readonly binary: "application" | "checks";
   readonly windowing: Windowing;
+  readonly framework: "legacy" | "qt-test";
 
   readonly environment?: Readonly<Record<string, string>>;
   readonly optionalArgumentEnvironment?: Readonly<Record<string, string>>;
@@ -41,10 +42,11 @@ function parsePool(value: string): number {
   return parsed;
 }
 const decoder = new TextDecoder();
+const encoder = new TextEncoder();
 
 function usage(): never {
   console.error(
-    "usage: tools/run_checks.ts <porydaw-checks-binary> [--all|--no-windowing-checks] [--reporter=quiet|verbose] [--filter=<name>] [--exclude=<name>] [--pool=<n>]",
+    "usage: tools/run_checks.ts <porydaw-checks-binary> [--all|--no-windowing-checks] [--reporter=quiet|verbose] [--filter=<name>] [--exclude=<name>] [--qt <args...>] [--pool=<n>]",
   );
   console.error("  --all (default): all checks");
   console.error(
@@ -56,6 +58,9 @@ function usage(): never {
   );
   console.error(
     "  --exclude=<name>: skip the harness with this exact name (repeatable)",
+  );
+  console.error(
+    "  --qt <args...>: run exactly one qt-test harness, forwarding <args...> verbatim to the Qt test runner (terminal: everything after --qt belongs to Qt)",
   );
   console.error("  --verbose: alias for --reporter=verbose");
   console.error(
@@ -168,6 +173,14 @@ async function loadManifest(
     )
   ) {
     console.error("run_checks: manifest has an unsupported windowing mode");
+    Deno.exit(2);
+  }
+  if (
+    checks.some(
+      (check) => check.framework !== "legacy" && check.framework !== "qt-test",
+    )
+  ) {
+    console.error("run_checks: manifest has an unsupported framework");
     Deno.exit(2);
   }
   return checks;
@@ -352,6 +365,7 @@ let reporterMode: "quiet" | "verbose" = "quiet";
 const filters: string[] = [];
 const exclusions: string[] = [];
 let unifiedPoolSize = MAX_PARALLEL_CHECKS;
+let qtPayload: readonly string[] | undefined;
 for (let i = 1; i < Deno.args.length; i++) {
   const arg = Deno.args[i];
   if (arg === "--all" || arg === "--no-windowing-checks") {
@@ -390,6 +404,13 @@ for (let i = 1; i < Deno.args.length; i++) {
     const value = Deno.args[++i];
     if (!value) usage();
     exclusions.push(value);
+  } else if (arg === "--qt") {
+    // Terminal: the rest of the command line is the Qt test payload,
+    // forwarded verbatim and never parsed as runner options. The equals
+    // form --qt=... falls through to the usage error below.
+    qtPayload = Deno.args.slice(i + 1);
+    if (qtPayload.length === 0) usage();
+    break;
   } else {
     usage();
   }
@@ -418,7 +439,6 @@ const songsMkFixture = join(
   "fixtures",
   "songsmkproject",
 );
-const tempRoot = await Deno.makeTempDir({ prefix: "porydaw-checks-" });
 const failures: string[] = [];
 const suiteStartedAt = performance.now();
 // deno-lint-ignore prefer-const
@@ -439,11 +459,9 @@ async function runCheck(check: CheckManifestEntry): Promise<void> {
     const binary = check.binary === "application"
       ? applicationBinary
       : checksBinary;
-    result = await runProcess(
-      binary,
-      expandArguments(check, scratch, mid2agb),
-      executionEnvironment(check),
-    );
+    const args = expandArguments(check, scratch, mid2agb);
+    if (qtPayload !== undefined) args.push(...qtPayload);
+    result = await runProcess(binary, args, executionEnvironment(check));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     result = {
@@ -458,6 +476,11 @@ async function runCheck(check: CheckManifestEntry): Promise<void> {
     failures.push(check.name);
     reporter.onCheckFail(check.name, result);
     return;
+  }
+  if (qtPayload !== undefined && result.output.length > 0) {
+    // Explicit --qt run: the complete raw output (listings, -v1 runs) is
+    // the point of the mode; print it even with the quiet reporter.
+    Deno.stdout.writeSync(encoder.encode(result.output));
   }
   const detail = lastNonemptyLine(result.output);
   reporter.onCheckPass(check.name, result.durationMs, detail);
@@ -511,7 +534,30 @@ if (exclusions.length > 0) {
     !excludedNames.has(check.name)
   );
 }
+if (qtPayload !== undefined) {
+  if (runnableChecks.length === 0) {
+    console.error("run_checks: --qt selected no harness");
+    Deno.exit(2);
+  }
+  if (runnableChecks.length > 1) {
+    console.error(
+      `run_checks: --qt requires exactly one harness, selected: ${
+        runnableChecks.map((check) => check.name).join(", ")
+      }`,
+    );
+    Deno.exit(2);
+  }
+  if (runnableChecks[0].framework !== "qt-test") {
+    console.error(
+      `run_checks: --qt requires a qt-test harness; ${
+        runnableChecks[0].name
+      } is ${runnableChecks[0].framework}`,
+    );
+    Deno.exit(2);
+  }
+}
 reporter = createReporter(reporterMode, runnableChecks.length);
+const tempRoot = await Deno.makeTempDir({ prefix: "porydaw-checks-" });
 try {
   // Offscreen checks are isolated processes. Native-window checks also share
   // the host window server's active window and pointer, so running two at once

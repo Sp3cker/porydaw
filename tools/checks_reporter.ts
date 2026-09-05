@@ -81,9 +81,9 @@ export function createReporter(
       console.log(`not ok: ${name} (${sec}s)`);
       const output = result.output.trim();
       if (output) {
-        const lines = output.split("\n");
-        // Print last 40 lines like old printFailure
-        console.log(lines.slice(-40).join("\n"));
+        // Full output, never capped: Qt multi-failure diagnostics and
+        // listings must not be clipped.
+        console.log(output);
       }
       if (result.timedOut) {
         console.log(`timed out after ${sec}s`);
