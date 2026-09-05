@@ -638,6 +638,8 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/velocity/velocityroll.cpp
         src/checks/velocity/velocitydetentpainting.cpp
         src/checks/velocity/velocitydetentdragging.cpp
+        src/checks/automation/tst_automationediting.cpp
+        src/checks/automation/tst_automationediting.h
         src/checks/themechecks.cpp
         src/checks/fontcheck.cpp
         src/ui/theme/themecheck.cpp

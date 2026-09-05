@@ -31,6 +31,9 @@ export const WALL_ESTIMATE: Record<string, number> = {
   // velocity-editing: unmeasured (new pilot suite) — fallback-level estimate
   // until the first measured verbose run.
   "velocity-editing": 0.3,
+  // automation-editing: unmeasured (new offscreen Qt suite) — fallback-level estimate
+  // until the first measured verbose run.
+  "automation-editing": 0.3,
   vgcheck: 0.28,
   keymapcheck: 0.27,
   audiocheck: 0.25,

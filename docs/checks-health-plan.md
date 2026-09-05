@@ -77,7 +77,9 @@ Everything else stays separate.
   the numerical seam stays headless.)
 - **Automation sprawl.** `automationgesturecheck/` (17 files, `rig.h` + `support.h`
   internal seams) is already the exemplar module. `rollcheckautomation*` exercises a
-  different seam (canvas impl + popup menus vs TimelineInputHost gestures). Note:
+  different seam (canvas impl + popup menus vs TimelineInputHost gestures).
+  Transaction drag→commit coverage additionally lives in the `automation-editing`
+  Qt suite (host-choice rule below); all legacy automation rows are unchanged. Note:
   `runAutomationCheck` / `runAutomationPopupMenuCheck` already share
   `runAutomationCheckImpl(..., popupMenus)` — merged in code, two catalog rows is
   intentional parameterization, same as `exportcheck`/`exportcheck-tail` and the
@@ -124,24 +126,44 @@ a follow-up pass converts the remaining 4 members into free functions with focus
 
 #### Step 4: FUTURE ROADMAP — Check Quality & Idiomatic Qt Testing
 
-**Velocity exception (recorded 2026-09):** the `velocity-editing` pilot superseded
-item 1 for `rollcheckpsgvelocity` only. Its editing coverage now lives in the Qt Test
-suite `src/checks/velocity/` — catalog row `velocity-editing`, `Framework::QtTest`,
-`Windowing::Offscreen`, driven through a real `SongTab` rather than an `EditorRig`
-adoption (full record: `docs/velocity-qt-test-migration-plan.md`). This is a
-one-suite exception, not a new mandate: item 1 remains authoritative for
-`rollcheckautomation` and future heavy-suite rework, and the host-extraction roadmap
-(Steps 2/2.5/3) is unaffected.
+**Host-choice rule (recorded 2026-09):** pick the host by what a check asserts,
+not by suite size. *Transaction* coverage — gestures that must drive real
+document→timeline rebuilding, undo entries, and commit signals — runs on a
+production `SongTab`; `checks/support/editorrig.h` hosts *static presentation*
+checks (assembled widget stacks, chrome, geometry without gestures); GUI-free
+domain tests (codecs, model math, `SongDocument`/`SmfEvent` invariants) need no
+host. EditorRig is no longer mandated for velocity/automation transaction
+suites; the host-extraction roadmap (Steps 2/2.5/3) is unaffected. Recorded
+`SongTab` Qt Test suites, both `Framework::QtTest` + `Windowing::Offscreen`:
 
-1. **Canonical Assembly:** Migrate remaining heavy GUI suites (`rollcheckautomation`,
-   …) onto `checks/support/editorrig.h` to stop hand-assembling widget stacks and
-   fishing for QML items via `findChild`. (`rollcheckpsgvelocity` editing coverage is
-   the recorded exception above; its legacy file keeps only rendering/chrome/grid/
-   axis/playhead helpers after the completed trim.)
+- `velocity-editing` (`src/checks/velocity/`): the migrated
+  `rollcheckpsgvelocity` editing interactions (full record:
+  `docs/velocity-qt-test-migration-plan.md`; the trimmed legacy file keeps only
+  rendering/chrome/grid/axis/playhead helpers).
+- `automation-editing` (`src/checks/automation/`, argv `--automation-editing`):
+  exactly three behaviors, delivered through the real `timelineAutomationInput`
+  item over a real CC lane. (1) A left-button drag commits exactly once —
+  one document transaction, one undo entry, undo/redo symmetric, reacquired
+  timeline updated. (2) Escape cancels the armed drag; later move/release
+  commits nothing. (3) A stationary press/release on **blank** lane space is
+  the only no-op — cursor placement (`editCursorTick`) with zero document
+  transactions, because a stationary click on an existing node intentionally
+  deletes it. Positive previews are observed via the public retained
+  `AutomationTransient` scene triangles, not pixel capture. No universal
+  fixture and no wheel/chord coverage; the legacy `automationgesturecheck/` and
+  `rollcheckautomation*` rows are unchanged.
+
+1. **Canonical Assembly:** Host *static presentation* checks on
+   `checks/support/editorrig.h` instead of hand-assembling widget stacks and
+   fishing for QML items via `findChild`. Transaction coverage follows the
+   host-choice rule above (production-`SongTab` Qt suites, not EditorRig); the
+   legacy automation rows keep their current scope, and `rollcheckpsgvelocity`
+   retains only rendering/chrome/grid/axis/playhead helpers after its
+   completed trim.
 2. **Domain-Level Assertions:** Replace pixel-offset checks (`layout::fontPx`) with model
    invariants (`SongDocument`, `SmfEvent`, `QUndoStack`).
 3. **Idiomatic Qt Testing (`Qt6::Test`):** the framework convention is established and
-   reusable, proven by the `velocity-editing` pilot:
+   reusable, proven by the `velocity-editing` and `automation-editing` suites:
    - `CheckDefinition::framework` (`Framework::Legacy`/`QtTest`), serialized as
      `"framework": "legacy"|"qt-test"` in the manifest; `tools/run_checks.ts` requires
      the field like any other manifest invariant.
@@ -305,3 +327,37 @@ the `full`/`bare` fixture builders. 3B includes this header instead of duplicati
 
 Land 3A's `CMakeLists.txt` addition FIRST, then `deno task build:checks`, then
 `verify --filter editorviewstatecheck --filter tabcheck --filter selftest-workspace`.
+
+---
+
+## 5. Acceptance record — `automation-editing`
+
+Established (2026-09, this worktree): the full suite passes — 5 Qt results
+(3 behaviors plus lifecycle hooks) in 97 ms; suite source, header, and catalog
+row carry clean LSP diagnostics.
+
+Final verification after review corrections:
+- Each of the three functions passes alone; `--qt -functions` lists all three.
+  Reversed execution passes all 5 Qt results, zero failures/skips, in 52 ms.
+- Real production negative controls were caught: suppressing the node-move commit
+  failed the expected single `documentChanged` assertion; finishing during held
+  movement failed the actual preview-target assertion; disconnecting Quick release
+  routing failed the single-commit assertion. All mutations were restored.
+- Both Qt suites passed together in ordinary runner mode (2/65 selected, 0.73 s),
+  then with AddressSanitizer and UndefinedBehaviorSanitizer enabled (1.72 s).
+  Leak detection was disabled; the temporary compiler flags were restored.
+- Final normal `deno task verify --no-windowing-checks`: 59/65 checks passed,
+  zero failures, 6 native-only rows intentionally skipped, 3.79 s (build 36.37 s).
+- Thermo-nuclear review: PASS after extracting the repeated drag-arm geometry into
+  one local helper and checking that post-Escape movement cannot revive preview.
+  Source/header/catalog and timing-registry diagnostics are clean.
+
+The input correction is fixture geometry, not a changed CC oracle: the default row
+could not represent the requested 40→84 drag through integral QTest coordinates.
+The test uses the supported maximum row height and preserves the delivered integer
+delta across the activation-reset move. Literal document/timeline expectations stay
+40→84, with the independent point at 100 unchanged.
+
+The three-case slice is complete; the remaining legacy automation families have
+not been migrated or removed. No production behavior changed, no wheel/chord or
+pixel-capture capability was claimed, and no desktop interaction was used.

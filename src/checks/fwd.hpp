@@ -71,3 +71,4 @@ int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
 int runThemeHarness(QApplication &application, const QString &command);
 int runEditorLayoutCheck(QApplication &application, int baseFontPx);
 int runVelocityEditingCheck(const QStringList &qtArguments);
+int runAutomationEditingCheck(const QStringList &qtArguments);

@@ -440,6 +440,16 @@ const std::vector<CheckDefinition> &catalog()
                 .framework = Framework::QtTest,
             },
             {
+                .name = "automation-editing",
+                .argv = strings({"--automation-editing"}),
+                .handler =
+                    [](QApplication &, const QStringList &args) {
+                        return runAutomationEditingCheck(args.mid(1));
+                    },
+                .windowing = Windowing::Offscreen,
+                .framework = Framework::QtTest,
+            },
+            {
                 .name = "host-adapter",
                 .argv = strings({"--check-host-adapter", "{scratch}", "mus_route101"}),
                 .handler =
