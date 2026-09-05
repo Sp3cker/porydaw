@@ -45,8 +45,6 @@ extern "C" {
 class EventListView;
 class QKeyEvent;
 class QEvent;
-class QHBoxLayout;
-class QScrollBar;
 class QSpacerItem;
 class QStackedWidget;
 class SongDocument;
@@ -177,6 +175,14 @@ class SongView : public QWidget
     {
         return m_timelineBandLayout;
     }
+
+    // Canonical SongView-local rectangles of the two QML scrollbar lanes:
+    // the horizontal timeline row right of the split, and the column
+    // directly right of the canonical roll band (drawer-clipped height;
+    // empty in EventList mode). TimelineQuickView unions them into the
+    // Quick window envelope and republishes them Quick-root-local.
+    QRect horizontalScrollbarRect() const;
+    QRect verticalScrollbarRect() const;
 
     // User-added automation lanes with no events yet (SPEC §6.1 "addable from
     // the m4a parameter list). They live in the application-wide editor
@@ -494,6 +500,17 @@ class SongView : public QWidget
     void zoomKeyHeight(const songview::TimelineWheelInput &input);
     void scrollByPx(double dx);
     void scrollRollBy(double dy);
+
+    // Camera setters behind the QML scrollbar controls' value requests:
+    // each clamps through TimeCamera and fans the sync tail (scrollbar
+    // notification + redraw) out.
+    void setHScroll(double px);
+    void setVScroll(double y);
+    // Fractional-DIP viewport the camera is bound to; the QML scrollbars'
+    // page steps read the same values updateScrollbars() pushes.
+    int viewportWidth() const;
+    int rollViewportHeight() const;
+
     // Scrolls horizontally so the tick sits a third of the way into the
     // viewport if it is currently off-screen; on-screen ticks are left
     // alone. Pastes anchor at the edit cursor, which can be scrolled out
@@ -620,15 +637,11 @@ class SongView : public QWidget
     void refreshAutomationPage();
     void refreshVelocityPage();
     void refreshVoiceChangePage();
-    int viewportWidth() const;
-    int rollViewportHeight() const;
-    void setHScroll(double px);
     void applyEditorViewStateToWidgets(bool drawerChanged);
     double minHScroll() const { return m_camera.minHScroll(); }
     double maxHScroll() const { return m_camera.maxHScroll(); }
-    void setVScroll(double y);
-    // Camera-tail fan-out (scrollbar sync + redraw) shared by the scroll
-    // wrappers and paths that mutate the camera directly.
+    // Camera-tail fan-out (QML scrollbar notification + redraw) shared by
+    // the scroll wrappers and paths that mutate the camera directly.
     void syncHorizontalCamera(bool cameraChanged);
     void syncVerticalCamera(bool cameraChanged);
     double maxRollScroll() const { return m_camera.maxRollScroll(); }
@@ -726,14 +739,11 @@ class SongView : public QWidget
     QPointer<songview::TimelineQuickView> m_quickView;
     songview::PlayheadOverlay *m_playheadOverlay = nullptr;
     songview::TimelineBandLayout m_timelineBandLayout;
-    QStackedWidget *m_rollStack = nullptr; // page 0: roll (+vbar), page 1: event list
+    QStackedWidget *m_rollStack = nullptr; // page 0: roll placeholder, page 1: event list
     EventListView *m_events = nullptr;
     songview::OtherStrip *m_strip = nullptr;
-    QScrollBar *m_hbar = nullptr;
-    QHBoxLayout *m_hbarRow = nullptr;
-    QSpacerItem *m_hbarGutter = nullptr;
     QSpacerItem *m_rulerSpacer = nullptr;  // owns the ruler row height
     QSpacerItem *m_headerSpacer = nullptr; // reserves the Quick header column
     QSpacerItem *m_stripSpacer = nullptr;  // owns the other-events row height
-    QScrollBar *m_vbar = nullptr;
+    QSpacerItem *m_hbarSpacer = nullptr;   // owns the QML scrollbar row height
 };

@@ -92,13 +92,14 @@ Item {
     }
 
     visible: externalVisible && (visibleWhenNotScrollable || scrollable)
-    activeFocusOnTab: scrollable
+    // Qt cannot revoke tab eligibility while this item still owns active focus.
+    activeFocusOnTab: scrollable || activeFocus
     Keys.onPressed: (event) => scrollbar.handleKey(event)
 
     Accessible.role: Accessible.ScrollBar
     Accessible.name: scrollbar.accessibleName
     Accessible.description: qsTr("Use arrow or page keys to scroll")
-    Accessible.focusable: scrollbar.scrollable
+    Accessible.focusable: scrollbar.activeFocusOnTab
     Accessible.onIncreaseAction: scrollbar.requestLine(1)
     Accessible.onDecreaseAction: scrollbar.requestLine(-1)
     Accessible.onScrollUpAction: scrollbar.requestPage(-1)
@@ -123,10 +124,25 @@ Item {
         }
     }
 
+    // Both handlers can receive diagonal or ongoing gestures. Dispatch from
+    // exactly one: the horizontal handler owns events with an X component.
     WheelHandler {
-        onWheel: (event) => scrollbar.wheelRequested(event.pixelDelta.x, event.pixelDelta.y,
-                                                      event.angleDelta.x, event.angleDelta.y,
-                                                      event.inverted)
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+        onWheel: (event) => {
+            if (event.pixelDelta.x === 0 && event.angleDelta.x === 0)
+                scrollbar.wheelRequested(event.pixelDelta.x, event.pixelDelta.y,
+                                         event.angleDelta.x, event.angleDelta.y, event.inverted)
+        }
+    }
+
+    WheelHandler {
+        orientation: Qt.Horizontal
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+        onWheel: (event) => {
+            if (event.pixelDelta.x !== 0 || event.angleDelta.x !== 0)
+                scrollbar.wheelRequested(event.pixelDelta.x, event.pixelDelta.y,
+                                         event.angleDelta.x, event.angleDelta.y, event.inverted)
+        }
     }
 
     Rectangle {

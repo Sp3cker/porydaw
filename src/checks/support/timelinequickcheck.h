@@ -2,6 +2,7 @@
 
 #include "ui/editordrawer/drawerchrome.h"
 #include "ui/layout.h"
+#include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -61,11 +62,11 @@ inline bool physicalInputsMatchCanonical(const songview::TimelineBandLayout &ban
            surfaceMatches(*gutterInput, gutterRect);
 }
 
-inline QRect canonicalVisibleQuickHostRect(const songview::TimelineBandLayout &bandLayout,
-                                           const DrawerChrome *chrome)
+inline QRect canonicalVisibleQuickHostRect(const SongView &view, const DrawerChrome *chrome)
 {
     std::optional<QRect> hostRect;
-    for (const std::optional<songview::TimelineBandGeometry> &band : bandLayout.bands) {
+    for (const std::optional<songview::TimelineBandGeometry> &band :
+         view.timelineBandLayout().bands) {
         if (!band)
             continue;
         hostRect = hostRect ? hostRect->united(band->rect) : band->rect;
@@ -88,6 +89,10 @@ inline QRect canonicalVisibleQuickHostRect(const songview::TimelineBandLayout &b
         addChrome(chrome->detentRect(), chrome->detentVisible());
         addChrome(chrome->automationScrollbarRect(), chrome->automationScrollbarVisible());
     }
+    // The two QML scrollbar lanes extend the envelope; SongView resolves
+    // their canonical SongView-local rectangles (empty = absent lane).
+    addChrome(view.horizontalScrollbarRect(), true);
+    addChrome(view.verticalScrollbarRect(), true);
     return hostRect.value_or(QRect{});
 }
 

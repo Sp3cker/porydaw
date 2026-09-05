@@ -37,7 +37,6 @@
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
-#include <QScrollBar>
 #include <QSize>
 #include <QSizeF>
 #include <QString>
@@ -741,16 +740,19 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
               "TrackHeaders should publish model-backed Quick rows, input, and scrollbar geometry");
 
         const auto canonicalVisibleUnion = [&] {
-            return checks::support::canonicalVisibleQuickHostRect(
-                bandLayout, drawer ? &drawer->chrome() : nullptr);
+            return checks::support::canonicalVisibleQuickHostRect(view, drawer ? &drawer->chrome()
+                                                                               : nullptr);
         };
-        QScrollBar *rollScrollbar = nullptr;
-        for (QScrollBar *candidate : view.findChildren<QScrollBar *>()) {
-            if (candidate->orientation() == Qt::Vertical && candidate->isVisibleTo(&view)) {
-                rollScrollbar = candidate;
-                break;
-            }
-        }
+        QQuickItem *rollScrollbar =
+            quickRoot ? quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineRollScrollBar"))
+                      : nullptr;
+        const auto mappedRollScrollbarRect = [&] {
+            return rollScrollbar && rollScrollbar->isVisible()
+                       ? QRectF(rollScrollbar->mapToItem(quickRoot, QPointF()),
+                                rollScrollbar->size())
+                             .translated(quick->geometry().topLeft())
+                       : QRectF{};
+        };
         for (const QmlBandPropertyNames &names : qmlBandPropertyNames) {
             const auto &geometry = bandLayout.geometry(names.band);
             if (!geometry || names.band == songview::TimelineBand::TrackHeaders)
@@ -790,13 +792,9 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
                   initialVelocityGeometry->plotRect.right() ==
                       initialVelocityGeometry->rect.right(),
               "Velocity and Roll gutters must span the piano-key column after TrackHeaders");
-        const QRect rollScrollbarRect =
-            rollScrollbar ? QRect(rollScrollbar->mapTo(&view, QPoint{}), rollScrollbar->size())
-                          : QRect{};
-        check(initialRollGeometry && rollScrollbar &&
-                  initialRollGeometry->plotRect.x() == view.timelineSplitX() &&
+        check(initialRollGeometry && initialRollGeometry->plotRect.x() == view.timelineSplitX() &&
                   initialRollGeometry->plotRect.right() == initialRollGeometry->rect.right() &&
-                  rollScrollbarRect.left() > initialRollGeometry->plotRect.right(),
+                  mappedRollScrollbarRect().left() > initialRollGeometry->plotRect.right(),
               "Roll plot surface must exclude the vertical scrollbar");
         check(checks::support::physicalInputsMatchCanonical(
                   bandLayout, *quick, *quickRoot, songview::TimelineBand::Roll,
@@ -957,9 +955,8 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
         const auto &hiddenRoll = bandLayout.geometry(songview::TimelineBand::Roll);
         check(hiddenHeaders && hiddenHeaders->plotRect.isEmpty(),
               "TrackHeaders must retain an empty plotRect after drawer hide");
-        check(hiddenRoll && rollScrollbar &&
-                  hiddenRoll->plotRect.right() == hiddenRoll->rect.right() &&
-                  rollScrollbarRect.left() > hiddenRoll->plotRect.right(),
+        check(hiddenRoll && hiddenRoll->plotRect.right() == hiddenRoll->rect.right() &&
+                  mappedRollScrollbarRect().left() > hiddenRoll->plotRect.right(),
               "Roll rect and plotRect must remain outside the scrollbar after drawer hide");
         const QFont originalHostFont = view.font();
         QFont distinctHostFont = originalHostFont;
@@ -1036,9 +1033,8 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
                   shownVelocityGeometry->plotRect.x() == view.timelineSplitX() &&
                   shownVelocityGeometry->plotRect.right() == shownVelocityGeometry->rect.right(),
               "Shown Velocity gutter must span the piano-key column after TrackHeaders");
-        check(shownRoll && rollScrollbar &&
-                  shownRoll->plotRect.right() == shownRoll->rect.right() &&
-                  rollScrollbarRect.left() > shownRoll->plotRect.right(),
+        check(shownRoll && shownRoll->plotRect.right() == shownRoll->rect.right() &&
+                  mappedRollScrollbarRect().left() > shownRoll->plotRect.right(),
               "Roll rect and plotRect must remain outside the scrollbar after Velocity show");
         check(quick->geometry() == canonicalVisibleUnion(),
               "reshown velocity band should re-enter the canonical layout");
@@ -1128,9 +1124,8 @@ int runHostAdapterCheck(const QString &scratchProject, const QString &songLabel)
                   restoredVelocity->plotRect.x() == view.timelineSplitX() &&
                   restoredVelocity->plotRect.right() == restoredVelocity->rect.right(),
               "Velocity gutter must span the piano-key column after roll restore");
-        check(restoredRoll && rollScrollbar &&
-                  restoredRoll->plotRect.right() == restoredRoll->rect.right() &&
-                  rollScrollbarRect.left() > restoredRoll->plotRect.right(),
+        check(restoredRoll && restoredRoll->plotRect.right() == restoredRoll->rect.right() &&
+                  mappedRollScrollbarRect().left() > restoredRoll->plotRect.right(),
               "Roll rect and plotRect must remain outside the scrollbar after roll restore");
     }
     const std::optional<songview::TimelineBandGeometry> captureOtherEventsGeometry =

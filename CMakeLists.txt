@@ -584,7 +584,12 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/trackactivitycheck.cpp
         src/checks/trackactivitymetercheck.cpp
         src/checks/trackheaderquickcheck.cpp
-        src/checks/scrollbarquickcheck.cpp
+        src/checks/scrollbar/tst_scrollbar.cpp
+        src/checks/scrollbar/tst_scrollbar.h
+        src/checks/scrollbar/control.cpp
+        src/checks/scrollbar/input.cpp
+        src/checks/scrollbar/geometry.cpp
+        src/checks/scrollbar/drag.cpp
         src/checks/audiocheck.cpp
         src/checks/resonancecheck.cpp
         src/checks/mkcheck.cpp

@@ -588,7 +588,68 @@ Item {
         z: 30
     }
 
+    // Canonical scrollbars. Both occupy quick-root-local rectangles supplied by
+    // timelineQuickView (an empty rect means absent) and sit above the scene
+    // bands (z <= 2) while staying under the playhead, tooltips and drawer
+    // chrome. The model remains authoritative: the control only relays
+    // requested values and wheel deltas.
+    TimelineScrollbar {
+        objectName: "timelineHorizontalScrollBar"
+        z: 3
+        x: timelineQuickView.horizontalScrollbarRect.x
+        y: timelineQuickView.horizontalScrollbarRect.y
+        width: timelineQuickView.horizontalScrollbarRect.width
+        height: timelineQuickView.horizontalScrollbarRect.height
+        orientation: Qt.Horizontal
+        minimum: timelineQuickView.horizontalScrollMinimum
+        maximum: timelineQuickView.horizontalScrollMaximum
+        value: timelineQuickView.horizontalScrollValue
+        pageStep: timelineQuickView.horizontalScrollPageStep
+        singleStep: 1
+        minimumThumbLength: drawerChrome.scrollbarMinimumThumbHeight
+        accessibleName: qsTr("Timeline")
+        handleColor: drawerChrome.scrollbarHandle
+        handleHoverColor: drawerChrome.scrollbarHandleHover
+        externalVisible: timelineQuickView.horizontalScrollbarRect.width > 0
+                         && timelineQuickView.horizontalScrollbarRect.height > 0
+        visibleWhenNotScrollable: true
+        thumbObjectName: "timelineHorizontalScrollThumb"
 
+        onValueRequested: (value) => timelineQuickView.setHorizontalScroll(value)
+        onWheelRequested: (pixelX, pixelY, angleX, angleY, inverted) =>
+                              timelineQuickView.scrollHorizontalByWheel(pixelX, pixelY,
+                                                                        angleX, angleY,
+                                                                        inverted)
+    }
+
+    TimelineScrollbar {
+        objectName: "timelineRollScrollBar"
+        z: 3
+        x: timelineQuickView.verticalScrollbarRect.x
+        y: timelineQuickView.verticalScrollbarRect.y
+        width: timelineQuickView.verticalScrollbarRect.width
+        height: timelineQuickView.verticalScrollbarRect.height
+        orientation: Qt.Vertical
+        minimum: 0
+        maximum: timelineQuickView.verticalScrollMaximum
+        value: timelineQuickView.verticalScrollValue
+        pageStep: timelineQuickView.verticalScrollPageStep
+        singleStep: 1
+        minimumThumbLength: drawerChrome.scrollbarMinimumThumbHeight
+        accessibleName: qsTr("Piano roll")
+        handleColor: drawerChrome.scrollbarHandle
+        handleHoverColor: drawerChrome.scrollbarHandleHover
+        externalVisible: timelineQuickView.verticalScrollbarRect.width > 0
+                         && timelineQuickView.verticalScrollbarRect.height > 0
+        visibleWhenNotScrollable: true
+        thumbObjectName: "timelineRollScrollThumb"
+
+        onValueRequested: (value) => timelineQuickView.setVerticalScroll(value)
+        onWheelRequested: (pixelX, pixelY, angleX, angleY, inverted) =>
+                              timelineQuickView.scrollVerticalByWheel(pixelX, pixelY,
+                                                                      angleX, angleY,
+                                                                      inverted)
+    }
 
     DrawerChromeLayer {
         anchors.fill: parent

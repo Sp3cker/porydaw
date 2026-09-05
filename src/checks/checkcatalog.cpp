@@ -253,16 +253,6 @@ const std::vector<CheckDefinition> &catalog()
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = route101Files,
              .windowing = Windowing::WindowSystem},
-            {.name = "scrollbarquickcheck",
-             .argv = strings({"--scrollbarquickcheck", "{scratch}", "mus_route101"}),
-             .handler =
-                 [](QApplication &, const QStringList &args) {
-                     return runScrollbarQuickCheck(args[1], args[2]);
-                 },
-             .scratchKind = ScratchKind::ExistingDirectory,
-             .fixtureRootKind = FixtureRootKind::DecompProject,
-             .fixtureFiles = route101Files,
-             .windowing = Windowing::WindowSystem},
             {.name = "rollwindowingcheck",
              .argv = strings({"--rollwindowingcheck", "{scratch}", "mus_route101"}),
              .handler =
@@ -428,6 +418,19 @@ const std::vector<CheckDefinition> &catalog()
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = route101Files,
+            },
+            {
+                .name = "scrollbar",
+                .argv = strings({"--scrollbar", "{scratch}", "mus_route101"}),
+                .handler =
+                    [](QApplication &, const QStringList &args) {
+                        return runScrollbarCheck(args[1], args[2], args.mid(3));
+                    },
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = route101Files,
+                .windowing = Windowing::Offscreen,
+                .framework = Framework::QtTest,
             },
             {
                 .name = "velocity-editing",

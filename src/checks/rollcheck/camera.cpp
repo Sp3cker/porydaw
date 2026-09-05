@@ -4,8 +4,6 @@
 #include <QEvent>
 #include <QImage>
 #include <QPoint>
-#include <QScrollBar>
-#include <QStackedWidget>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -18,6 +16,7 @@
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 namespace checks::rollcheck {
 
@@ -31,17 +30,24 @@ ScenarioContinuation runCameraScenarios(Harness &check)
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const int undoBaseline = doc.undoStack()->index();
     auto fail = [&](const char *what) { check.fail(what); };
-    QScrollBar *rollVbar = nullptr;
-    for (QScrollBar *bar : view.findChildren<QScrollBar *>()) {
-        QWidget *page = bar->parentWidget();
-        if (bar->orientation() == Qt::Vertical && page &&
-            qobject_cast<QStackedWidget *>(page->parentWidget())) {
-            rollVbar = bar;
-            break;
-        }
-    }
-    if (!rollVbar || rollVbar->geometry().right() != rollVbar->parentWidget()->rect().right())
+    songview::TimelineQuickView *quick = view.quickView();
+    QQuickItem *quickRoot = quick ? quick->rootObject() : nullptr;
+    QQuickItem *rollVbar =
+        quickRoot ? quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineRollScrollBar"))
+                  : nullptr;
+    const QRect scrollbarRect =
+        quick && rollVbar ? QRectF(rollVbar->mapToItem(quickRoot, QPointF()), rollVbar->size())
+                                .translated(quick->geometry().topLeft())
+                                .toAlignedRect()
+                          : QRect{};
+    const std::optional<songview::TimelineBandGeometry> &rollGeometry =
+        view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
+    if (!rollVbar || scrollbarRect.isEmpty() || !rollGeometry ||
+        scrollbarRect.left() != rollGeometry->rect.right() + 1 ||
+        scrollbarRect.right() != view.width() - 1)
         fail("roll scrollbar is not docked to the right edge");
+    if (rollGeometry && scrollbarRect.left() <= rollGeometry->plotRect.right())
+        fail("roll scrollbar overlaps the roll plot");
     // The shared tick-range resolver guards every double -> uint64 grid
     // conversion in the Quick renderers: non-finite, reversed/empty, wholly
     // pre-roll, and at-or-over the 2^64 conversion ceiling must all resolve
@@ -125,7 +131,7 @@ ScenarioContinuation runCameraScenarios(Harness &check)
 
     // The Y camera is continuous: partial wheel deltas are immediately
     // multiplicative, preserve the cursor's content row, and remain precise
-    // through the integer-native scrollbar projection.
+    // through the Quick scrollbar projection.
     {
         const SongView::ViewState original = view.viewState();
         SongView::ViewState zoom = original;
@@ -233,7 +239,7 @@ ScenarioContinuation runCameraScenarios(Harness &check)
 
     // The X camera follows the same continuous contract as the Y camera:
     // wheel deltas compose, the exact qreal cursor anchor stays pinned, and
-    // the integer scrollbar is only a projection of the fractional camera.
+    // the scrollbar is only a projection of the fractional camera.
     {
         const SongView::ViewState original = view.viewState();
         SongView::ViewState zoom = original;

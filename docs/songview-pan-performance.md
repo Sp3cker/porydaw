@@ -181,13 +181,15 @@ Other Events band and plot, matching the canonical layout.
 - Vertex colors are premultiplied and packed once per distinct primitive
   color, rather than per vertex. Geometry chunks are initialized once;
   shrinking clears only the newly unused suffix.
-- The SongView horizontal scrollbar re-asserts `WA_OpaquePaintEvent` after
-  polish and style changes, which stylesheet polish clears for boxed rules.
-  The main window and `SongView` stopped repainting the scrollbar strip on
-  every pan. The scrollbar still paints itself and the backing-store flush
-  remains: paint logs show 360 scrollbar-only paints per phase after the
-  change, where the baseline painted the main window and `SongView` over the
-  same strip as well.
+- In the QWidget implementation measured here, the SongView horizontal
+  scrollbar re-asserted `WA_OpaquePaintEvent` after polish and style changes,
+  which stylesheet polish cleared for boxed rules. The main window and
+  `SongView` stopped repainting the scrollbar strip on every pan. The
+  scrollbar still painted itself and the backing-store flush remained:
+  paint logs showed 360 scrollbar-only paints per phase, where the baseline
+  also painted the main window and `SongView` over the same strip.
+  The main timeline and piano-roll scrollbars have since moved into the
+  existing Qt Quick scene; the QWidget opacity workaround is removed.
 - The time ruler runs its widest-beat-label measurement pass only at zooms
   where beat labels could fit, and builds and measures a beat label only
   after it passes the overlap rejection, so rejected labels are never
@@ -227,11 +229,13 @@ nine open-low pairs. No high-zoom gain is established — the high-zoom
 means end slightly higher, the first six closed-drawer pairs ran higher
 while the last three reversed without a source change, and individual
 pairs overlap widely. A three-run no-opacity ablation of the scrollbar
-change did not isolate a stable CPU effect either way; the opacity change
-stays because the paint logs demonstrate ancestor paints dropping from 360
-to 0 per phase while the scrollbar still paints its 360. These are CPU
-times, not FPS, from one inactive window state; nothing here establishes
-active-window behavior, per-pan-position costs, or multi-hour behavior.
+change did not isolate a stable CPU effect either way. At that point, the
+opacity change was retained because paint logs demonstrated ancestor paints
+dropping from 360 to 0 per phase while the scrollbar still painted its 360.
+These CPU measurements predate the Qt Quick scrollbar cutover. They are not
+FPS measurements and cover one inactive window state; nothing here
+establishes active-window behavior, per-pan-position costs, or multi-hour
+behavior.
 
 ### Capture equivalence
 

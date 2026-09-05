@@ -31,14 +31,14 @@ boundaries; prefer one feature directory with a small public surface
 `tools/run_checks.ts` executes checks as independent OS processes orchestrated via a JSON
 manifest (`porydaw_checks --manifest`):
 1. **Manifest-Driven Partitioning:**
-   - `Windowing::Offscreen` (61 checks after the 2026-09-05 automation cutover):
+   - `Windowing::Offscreen` (62 checks after the 2026-09-05 scrollbar cutover;
+     68 catalog rows total):
      Render headlessly (`QT_QPA_PLATFORM=offscreen`).
      Executed in a parallel LPT pool pinned to 6 workers by empirical benchmark on Apple Silicon
      (7+ workers cause thread/cache contention on CPU-saturating checks).
-   - `Windowing::WindowSystem` (7 checks after integrating `fork-main` at
-     `87f7dc9`: `rollcheck`, `trackheaderquickcheck`, `scrollbarquickcheck`,
-     `rollwindowingcheck`, `timelinepancheck`, `automation-raster`,
-     `rendering-playhead`):
+   - `Windowing::WindowSystem` (6 checks after the 2026-09-05 scrollbar cutover:
+     `rollcheck`, `trackheaderquickcheck`, `rollwindowingcheck`,
+     `timelinepancheck`, `automation-raster`, `rendering-playhead`):
      Require native Cocoa windows and native event dispatch. Serialized with worker count 1
      to prevent Cocoa window-activation and focus-stealing races.
    - Observed offscreen rendering boundary (2026-09-05): `QOffscreenIntegration`
@@ -208,6 +208,60 @@ row carrying the two raster exports. Final gates: `deno task verify
 flags verified and restored exactly; the modal menu driver demonstrably
 works offscreen. The 5 skips are the `WindowSystem` rows — native execution
 is the deliberate ledger §9 boundary, not an incomplete migration.
+
+**Scrollbar migration — complete (2026-09-05; legacy originals audited at
+`fork-main` `51a07a1`).** The `WindowSystem` Legacy row `scrollbarquickcheck`
+and its two sources (`src/checks/scrollbarquickcheck.cpp`,
+`scrollbarquickcheck_songview.cpp`) are removed, replaced by the `scrollbar`
+row (`Framework::QtTest` + `Windowing::Offscreen`, Route 101 project fixture)
+in `src/checks/scrollbar/`: `tst_scrollbar.h/.cpp` (lifecycle, automation
+drawer and standalone signed-range slots), `control.cpp` (press/move/release/
+drag/wheel primitives, `withinTrack`), `geometry.cpp`, `drag.cpp`, `input.cpp`.
+Coverage by legacy group: automation drawer → `automationTrackPages`,
+`automationDragClampsAndReverses`, `automationZeroRangeIgnoresDrag`;
+standalone signed `TimelineScrollbar` → `signedRangeDragRebasesAndTracksModel`;
+SongView geometry → `layoutFollowsCanonicalBands`,
+`scrollbarHostContainsBothTracks`, `drawerResizeFollowsRollBand`,
+`eventListHidesOnlyRollScrollbar`; drag → `dragClampsAndReverses` (2 rows),
+`dragRebasesAfterZoom`, `dragRebasesAfterResize`,
+`foldingDisablesAndRestoresRollDrag`, `externalCameraMovesReleasedThumb`
+(2 rows); input → `trackPaging` (4), `wheelScrolling` (15),
+`keyboardNavigation` (6). From source: 16 test slots (5 data-driven) plus the
+`init`/`cleanup` fixture pair and 29 data rows — 40 behavior/data rows total.
+Every slot and data row runs against a fresh project-backed Route 101 `SongTab`
++ `QQuickWindow` (the value-owned voice bank outlives the tab by declaration
+order; `cleanup` cancels wheel sessions on both axes, releases grabs and held
+buttons, clears item caches); synthetic mouse/wheel/key input drives the
+QWindow with QTRY conditions on `QQuickWindow::isVisible()` instead of the
+legacy native-exposure `msleep` loops. The legacy non-null `captureQuickBand`
+framebuffer assertions are replaced by QQuickWindow host-containment geometry —
+a containment oracle, not pixel equivalence; no native pixel evidence is
+claimed. All legacy contracts are preserved: automation paging/clamping/
+zero-range (released-thumb model tracking lives in the automation slot itself —
+after release `setVerticalScroll` repositions the released thumb, QTRY-verified),
+generic geometry, signed-range initial proportion, held-drag resize-rebasing
+arithmetic and external model tracking, paging/wheel/keyboard input, drag
+clamp/reverse, mid-drag zoom/resize rebasing, pitch fold, event-list toggle,
+drawer resize.
+
+Measured receipts (2026-09-05): the first full offscreen run passed 37/40
+rows; all 3 failures were fixture defects, fixed — the automation drag pressed
+the roll thumb instead of `drawerAutomationScrollThumb` (`beginAutomationDrag`
+now targets the drawer thumb with QTRY waits on its QML `maximum`/`height`
+bindings), and the horizontal paging rows failed the
+`span > page + kWheelMargin` fixture guard (the slot doubles `pxPerBeat`
+locally and QTRY-synchronizes the QML scrollbar bindings); the follow-up full
+offscreen run passed all 40 rows. Isolation and controls: all 40 rows pass as
+40 independent single-row invocations (exact Qt XML per row) and in exact
+reversed row order; negative control removing `TouchPad` from both QML wheel
+handlers failed exactly the `horizontal-touchpad`/`vertical-touchpad` rows and
+`dragBaseTranslation = 0` failed exactly `dragRebasesAfterZoom`/
+`dragRebasesAfterResize`, both restored and passing; `TimelineScrollbar.qml`
+is byte-identical before/after (SHA-256
+`0c5a2232dc38228e035000808664dea2cccea7701bb7239fa40966b3245e59f2`). Final
+gate: `deno task verify --no-windowing-checks --verbose` 62/68 ok, 6 native
+skips, 0 fail (build 2.14s, suite 4.13s). `timelinepancheck` stays native
+outside this cutover's scope.
 
 1. **Canonical Assembly:** Host *static presentation* checks on
    `checks/support/editorrig.h` instead of hand-assembling widget stacks and

@@ -1,4 +1,3 @@
-#include <QApplication>
 #include <QColor>
 #include <QCoreApplication>
 #include <QDialog>
@@ -15,7 +14,6 @@
 #include <QQuickWindow>
 #include <QRect>
 #include <QRegion>
-#include <QScrollBar>
 #include <QThread>
 #include <QTimer>
 #include <QWindow>
@@ -58,20 +56,6 @@ bool waitForNativeWindowExposure(QWidget &widget)
     } while (elapsed.elapsed() < 1000);
     return false;
 }
-
-class PaintEventCounter final : public QObject
-{
-  public:
-    int count = 0;
-
-  protected:
-    bool eventFilter(QObject *, QEvent *event) override
-    {
-        if (event->type() == QEvent::Paint)
-            ++count;
-        return false;
-    }
-};
 
 } // namespace
 
@@ -273,72 +257,6 @@ int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel)
                 }
             }
         }
-    }
-
-    QScrollBar *hbar = nullptr;
-    for (auto *bar : view.findChildren<QScrollBar *>(QString{}, Qt::FindDirectChildrenOnly)) {
-        if (bar->orientation() == Qt::Horizontal) {
-            hbar = bar;
-            break;
-        }
-    }
-    if (!hbar || hbar->size().isEmpty()) {
-        fail("SongView did not expose a sized horizontal scrollbar");
-    } else {
-        QScrollBar reference(Qt::Horizontal, &view);
-        const auto matchesReference = [&] {
-            reference.setGeometry(hbar->geometry());
-            reference.setRange(hbar->minimum(), hbar->maximum());
-            reference.setPageStep(hbar->pageStep());
-            reference.setSingleStep(hbar->singleStep());
-            reference.setInvertedAppearance(hbar->invertedAppearance());
-            reference.setInvertedControls(hbar->invertedControls());
-            reference.setLayoutDirection(hbar->layoutDirection());
-            reference.setPalette(hbar->palette());
-            reference.setEnabled(hbar->isEnabled());
-            reference.setValue(hbar->value());
-            reference.ensurePolished();
-            const QImage actualRaw = hbar->grab().toImage();
-            const QImage expectedRaw = reference.grab().toImage();
-            const QImage actual = actualRaw.convertToFormat(QImage::Format_ARGB32);
-            const QImage expected = expectedRaw.convertToFormat(QImage::Format_ARGB32);
-            return !actual.isNull() && actual == expected;
-        };
-
-        const bool initiallyEnabled = hbar->isEnabled();
-        hbar->setEnabled(true);
-        if (!matchesReference())
-            fail("horizontal scrollbar pixels differed from QScrollBar while enabled");
-        hbar->setEnabled(false);
-        if (!matchesReference())
-            fail("horizontal scrollbar pixels differed from QScrollBar while disabled");
-        hbar->setEnabled(true);
-
-        auto *application = qobject_cast<QApplication *>(QCoreApplication::instance());
-        if (!application) {
-            fail("horizontal scrollbar check did not have a QApplication");
-        } else {
-            application->setStyleSheet(application->styleSheet());
-            processWindowEvents();
-            if (!matchesReference())
-                fail("horizontal scrollbar pixels changed after stylesheet repolish");
-
-            PaintEventCounter ancestorPaints;
-            view.installEventFilter(&ancestorPaints);
-            const int originalValue = hbar->value();
-            const int movedValue =
-                originalValue < hbar->maximum() ? originalValue + 1 : originalValue - 1;
-            if (movedValue >= hbar->minimum() && movedValue <= hbar->maximum()) {
-                hbar->setValue(movedValue);
-                processWindowEvents();
-                if (ancestorPaints.count != 0)
-                    fail("horizontal scrollbar value change repainted its SongView parent");
-                hbar->setValue(originalValue);
-                processWindowEvents();
-            }
-            view.removeEventFilter(&ancestorPaints);
-        }
-        hbar->setEnabled(initiallyEnabled);
     }
 
     if (!quick || !quickRoot) {

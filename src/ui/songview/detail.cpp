@@ -25,19 +25,6 @@ qreal logicalPhysicalPixel(qreal dpr)
     return dpr > 0.0 ? 1.0 / dpr : 1.0;
 }
 
-int scrollUnits(double dip)
-{
-    // Negative units carry the pre-roll pad (scroll positions left of
-    // tick 0) into the scrollbar's range.
-    const double units = std::clamp(dip * kScrollUnitsPerDip, double(INT_MIN), double(INT_MAX));
-    return int(std::lround(units));
-}
-
-double scrollDips(int units)
-{
-    return double(units) / kScrollUnitsPerDip;
-}
-
 QPoint wheelDelta(const QWheelEvent *event)
 {
     const QPoint pixelDelta = event->pixelDelta();
