@@ -50,7 +50,8 @@ Item {
             y: effectiveClipRect.y
             width: effectiveClipRect.width
             height: effectiveClipRect.height
-            clip: true
+            // Text already clips to labelRect; only lane-specific clips need a second clip.
+            clip: labelClipRect.width > 0 && labelClipRect.height > 0
 
             Text {
                 x: labelRect.x - parent.x
@@ -116,7 +117,7 @@ Item {
         y: bandRect.y
         width: bandRect.width
         height: bandRect.height
-        clip: true
+        // Both fixed and scrolling children clip to their own band bounds.
         visible: bandVisible
 
         Item {

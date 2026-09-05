@@ -526,11 +526,12 @@ AutomationGestureCheckRig::Snapshot AutomationGestureCheckRig::snapshot(int trac
 void AutomationGestureCheckRig::documentChanged()
 {
     m_page->documentChanged();
-    // Mirror MainWindow's document-change path: the drawer paints Voice
-    // changes from SongViewModel, so refreshing only the page leaves its
-    // presentation model on the fixture's original timeline.
-    m_timeline = document().buildTimeline(kCheckSampleRate);
-    m_view->updateSong(m_timeline.get());
+    // Mirror SongTab's borrow-safe handoff: updateSong cancels interactions that
+    // still use the view's old timeline before repointing it. The drawer also
+    // paints Voice changes from SongViewModel, so refresh only after replacement.
+    auto newTimeline = document().buildTimeline(kCheckSampleRate);
+    m_view->updateSong(newTimeline.get());
+    m_timeline = std::move(newTimeline);
     refreshPage();
     pump();
 }

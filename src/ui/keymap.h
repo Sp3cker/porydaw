@@ -122,6 +122,9 @@ class Registry : public QObject
         QString id;
         QPointer<QAction> action;
     };
+    // Lazily parsed effective modifier bindings; every Registry settings write
+    // invalidates the affected entry or the whole cache.
+    mutable QMap<QString, Qt::KeyboardModifiers> m_modifierBindings;
     QList<Attached> m_actions;
 };
 

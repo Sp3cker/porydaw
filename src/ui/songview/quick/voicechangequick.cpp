@@ -64,15 +64,19 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
     };
     for (const TimelineQuickLayer layer : layers)
         timeline_quick::resetLayer(scene, layer);
-    scene.setVoiceChangesGutterTextRecords({});
-    scene.setVoiceChangesTextRecords({});
-    scene.setVoiceChangesHoverTextRecords({});
+    // Reconcile text against the previous frame so panning retains QML delegates.
+    if (!m_hoverActive)
+        scene.setVoiceChangesHoverTextRecords({});
 
     const QRectF sceneBounds = bounds();
     const QRectF plot(QPointF(), sceneBounds.size());
     const QRectF gutter = gutterRect();
-    if (plot.width() <= 0.0 || plot.height() <= 0.0)
+    if (plot.width() <= 0.0 || plot.height() <= 0.0) {
+        scene.setVoiceChangesGutterTextRecords({});
+        scene.setVoiceChangesTextRecords({});
+        scene.setVoiceChangesHoverTextRecords({});
         return;
+    }
 
     const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
     constexpr TimelineQuickLayer gutterChromeLayer = TimelineQuickLayer::VoiceChangesGutterChrome;
@@ -258,15 +262,13 @@ void VoiceChangeArea::rebuildQuickHover(songview::TimelineQuickScene &scene)
     using namespace songview;
     constexpr TimelineQuickLayer hoverLayer = TimelineQuickLayer::VoiceChangesHover;
     timeline_quick::resetLayer(scene, hoverLayer);
-    scene.setVoiceChangesHoverTextRecords(std::span<const TimelineQuickTextModel::Record>{});
 
     const QRectF plot(plotRect());
     if (!m_hoverActive || plot.width() <= 0.0 || plot.height() <= 0.0 || !m_owner.document() ||
-        !m_owner.timeline() || m_engineTrack < 0 || m_engineTrack >= 16) {
+        !m_owner.timeline() || m_engineTrack < 0 || m_engineTrack >= 16 || m_hoverLabel.isEmpty()) {
+        scene.setVoiceChangesHoverTextRecords({});
         return;
     }
-    if (m_hoverLabel.isEmpty())
-        return;
     const TimelineQuickTextModel::Record label = {
         {TimelineQuickTextKeyKind::VoiceChangesHover, {}, 0},
         m_hoverLabelRect,

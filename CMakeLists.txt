@@ -479,6 +479,7 @@ qt_add_executable(porydaw
 target_link_libraries(porydaw PRIVATE porydaw_app)
 
 if(PORYDAW_BUILD_CHECKS)
+    find_package(Qt6 REQUIRED COMPONENTS Test)
     qt_add_executable(porydaw_checks
         src/checks/checks_main.cpp
         src/checks/checkregistry.cpp
@@ -531,6 +532,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/rollcheck/scale_fold.cpp
         src/checks/rollcheck/scale_editing.cpp
         src/checks/rollcheckwindowing.cpp
+        src/checks/timelinepancheck.cpp
         src/checks/rollcheckplayhead.cpp
         src/checks/rollcheckplayhead_quick.cpp
         src/checks/rollcheckplayhead.h
@@ -581,6 +583,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/trackactivitycheck.cpp
         src/checks/trackactivitymetercheck.cpp
         src/checks/trackheaderquickcheck.cpp
+        src/checks/scrollbarquickcheck.cpp
         src/checks/audiocheck.cpp
         src/checks/resonancecheck.cpp
         src/checks/mkcheck.cpp
@@ -642,7 +645,7 @@ if(PORYDAW_BUILD_CHECKS)
     if(APPLE)
         set_target_properties(porydaw_checks PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
     endif()
-    target_link_libraries(porydaw_checks PRIVATE porydaw_app Qt6::QuickWidgets)
+    target_link_libraries(porydaw_checks PRIVATE porydaw_app Qt6::QuickWidgets Qt6::Test)
     target_precompile_headers(porydaw_checks PRIVATE
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
     add_dependencies(porydaw_checks mid2agb)

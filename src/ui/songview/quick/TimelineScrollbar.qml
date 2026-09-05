@@ -1,78 +1,91 @@
 import QtQuick
 
+// Shared scrollbar for timeline Quick surfaces, in either orientation. The
+// owning model stays authoritative: the control reports requested values and
+// renders thumb geometry from its inputs, never touching model state itself.
 Item {
     id: scrollbar
 
-    required property real scrollY
-    required property real contentHeight
-    required property real viewportHeight
-    required property real maximumScrollY
-    required property real minimumThumbHeight
+    property int orientation: Qt.Vertical
+    property real minimum: 0
+    property real maximum: 0
+    property real value: 0
+    property real pageStep: 0
+    property real singleStep: 1
+    property real minimumThumbLength: 0
     required property color handleColor
     required property color handleHoverColor
     property bool externalVisible: true
     property bool visibleWhenNotScrollable: false
     property string thumbObjectName: ""
     property string accessibleName: qsTr("Timeline")
-    property real lineStep: Math.max(1, safeViewportHeight / 10)
 
-    readonly property real safeViewportHeight: Math.max(0, viewportHeight)
-    readonly property real safeContentHeight: Math.max(safeViewportHeight, contentHeight)
-    readonly property bool scrollable: maximumScrollY > 0 && safeViewportHeight > 0
-                                    && safeContentHeight > 0
-    readonly property real thumbHeight: {
-        if (safeViewportHeight <= 0 || height <= 0)
+    readonly property real span: Math.max(0, Math.max(minimum, maximum) - minimum)
+    readonly property bool scrollable: span > 0
+    onSpanChanged: scrollbar.rebaseDrag()
+    readonly property real trackLength: orientation === Qt.Vertical ? height : width
+    readonly property real thumbLength: {
+        if (!(trackLength > 0))
             return 0
         if (!scrollable)
-            return visibleWhenNotScrollable ? height : 0
-        return Math.min(Math.max(0, height), Math.max(minimumThumbHeight,
-                                                        safeViewportHeight / safeContentHeight
-                                                        * safeViewportHeight))
+            return visibleWhenNotScrollable ? trackLength : 0
+        const fraction = pageStep > 0 ? Math.min(1, pageStep / (span + pageStep)) : 0
+        return Math.min(trackLength, Math.max(minimumThumbLength, fraction * trackLength))
     }
-    readonly property real thumbTravel: Math.max(0, height - thumbHeight)
-    readonly property real thumbY: maximumScrollY === 0 ? 0
-                                                          : scrollY / maximumScrollY * thumbTravel
-    property real dragStartThumbY: 0
+    readonly property real thumbTravel: Math.max(0, trackLength - thumbLength)
+    onThumbTravelChanged: scrollbar.rebaseDrag()
+    readonly property real thumbPos: !scrollable || thumbTravel <= 0
+                                     ? 0
+                                     : (Math.min(Math.max(minimum, maximum),
+                                                 Math.max(minimum, value)) - minimum)
+                                       / span * thumbTravel
+    property real dragStartValue: 0
+    property real dragBaseTranslation: 0
 
-    signal scrollYRequested(real value)
-    signal pageRequested(real localY)
+    signal valueRequested(real value)
     signal wheelRequested(real pixelX, real pixelY, real angleX, real angleY, bool inverted)
 
-    function requestScroll(value) {
+    function clampedValue(requested) {
+        return Math.max(minimum, Math.min(maximum, requested))
+    }
+
+    function requestScroll(requested) {
         if (!scrollable)
             return
-        scrollYRequested(Math.min(maximumScrollY, Math.max(0, value)))
+        valueRequested(clampedValue(requested))
+    }
+
+    function rebaseDrag() {
+        if (!thumbDrag || !thumbDrag.active)
+            return
+        dragStartValue = clampedValue(value)
+        dragBaseTranslation = scrollbar.orientation === Qt.Vertical ? thumbDrag.translation.y
+                                                                    : thumbDrag.translation.x
     }
 
     function requestLine(direction) {
-        requestScroll(scrollY + direction * Math.max(1, lineStep))
+        requestScroll(value + direction * Math.max(0, singleStep))
     }
 
     function requestPage(direction) {
-        requestScroll(scrollY + direction * safeViewportHeight)
+        requestScroll(value + direction * Math.max(0, pageStep))
     }
 
     function handleKey(event) {
-        switch (event.key) {
-        case Qt.Key_Up:
+        const vertical = orientation === Qt.Vertical
+        if (event.key === (vertical ? Qt.Key_Up : Qt.Key_Left)) {
             requestLine(-1)
-            break
-        case Qt.Key_Down:
+        } else if (event.key === (vertical ? Qt.Key_Down : Qt.Key_Right)) {
             requestLine(1)
-            break
-        case Qt.Key_PageUp:
+        } else if (event.key === Qt.Key_PageUp) {
             requestPage(-1)
-            break
-        case Qt.Key_PageDown:
+        } else if (event.key === Qt.Key_PageDown) {
             requestPage(1)
-            break
-        case Qt.Key_Home:
-            requestScroll(0)
-            break
-        case Qt.Key_End:
-            requestScroll(maximumScrollY)
-            break
-        default:
+        } else if (event.key === Qt.Key_Home) {
+            requestScroll(minimum)
+        } else if (event.key === Qt.Key_End) {
+            requestScroll(maximum)
+        } else {
             return
         }
         event.accepted = true
@@ -90,6 +103,8 @@ Item {
     Accessible.onDecreaseAction: scrollbar.requestLine(-1)
     Accessible.onScrollUpAction: scrollbar.requestPage(-1)
     Accessible.onScrollDownAction: scrollbar.requestPage(1)
+    Accessible.onScrollLeftAction: scrollbar.requestPage(-1)
+    Accessible.onScrollRightAction: scrollbar.requestPage(1)
     Accessible.onPreviousPageAction: scrollbar.requestPage(-1)
     Accessible.onNextPageAction: scrollbar.requestPage(1)
 
@@ -99,10 +114,12 @@ Item {
         onTapped: (eventPoint) => {
             if (!scrollbar.scrollable)
                 return
-            const y = eventPoint.position.y
-            if (y >= scrollbar.thumbY && y < scrollbar.thumbY + scrollbar.thumbHeight)
+            const position = scrollbar.orientation === Qt.Vertical
+                             ? eventPoint.position.y : eventPoint.position.x
+            if (position >= scrollbar.thumbPos
+                    && position < scrollbar.thumbPos + scrollbar.thumbLength)
                 return
-            scrollbar.pageRequested(y)
+            scrollbar.requestPage(position < scrollbar.thumbPos ? -1 : 1)
         }
     }
 
@@ -116,9 +133,10 @@ Item {
         id: thumb
 
         objectName: scrollbar.thumbObjectName
-        y: scrollbar.thumbY
-        width: parent.width
-        height: scrollbar.thumbHeight
+        x: scrollbar.orientation === Qt.Vertical ? 0 : scrollbar.thumbPos
+        y: scrollbar.orientation === Qt.Vertical ? scrollbar.thumbPos : 0
+        width: scrollbar.orientation === Qt.Vertical ? parent.width : scrollbar.thumbLength
+        height: scrollbar.orientation === Qt.Vertical ? scrollbar.thumbLength : parent.height
         visible: (scrollbar.scrollable || scrollbar.visibleWhenNotScrollable)
                  && width > 0 && height > 0
         color: thumbHover.hovered ? scrollbar.handleHoverColor : scrollbar.handleColor
@@ -127,20 +145,35 @@ Item {
             id: thumbHover
         }
 
+        // target stays null: the model is authoritative, so dragging only maps
+        // gesture translation onto a requested value and the thumb position is
+        // a pure binding of value and geometry. A mid-gesture span or travel
+        // change rebases the gesture (onSpanChanged/onThumbTravelChanged), so
+        // deltas after the change map through the fresh geometry instead of
+        // reinterpreting the accumulated translation at a stale scale.
         DragHandler {
-            yAxis.enabled: true
-            xAxis.enabled: false
+            id: thumbDrag
+
+            xAxis.enabled: scrollbar.orientation === Qt.Horizontal
+            yAxis.enabled: scrollbar.orientation === Qt.Vertical
+            target: null
+            enabled: scrollbar.scrollable && scrollbar.thumbTravel > 0
 
             onActiveChanged: {
-                if (active)
-                    scrollbar.dragStartThumbY = scrollbar.thumbY
+                if (active) {
+                    scrollbar.dragStartValue = scrollbar.clampedValue(scrollbar.value)
+                    scrollbar.dragBaseTranslation = 0
+                }
             }
             onTranslationChanged: {
-                if (scrollbar.thumbTravel <= 0)
+                if (!active || scrollbar.thumbTravel <= 0)
                     return
-                const y = Math.min(scrollbar.thumbTravel,
-                                   Math.max(0, scrollbar.dragStartThumbY + translation.y))
-                scrollbar.scrollYRequested(y / scrollbar.thumbTravel * scrollbar.maximumScrollY)
+                const axisTranslation = (scrollbar.orientation === Qt.Vertical
+                                         ? translation.y : translation.x)
+                                        - scrollbar.dragBaseTranslation
+                scrollbar.requestScroll(scrollbar.dragStartValue
+                                        + axisTranslation / scrollbar.thumbTravel
+                                          * scrollbar.span)
             }
         }
     }

@@ -1,13 +1,14 @@
 #include "domains.h"
 
 #include <algorithm>
-#include <cmath>
 #include <iterator>
 #include <limits>
 #include <vector>
 
 #include <QColor>
 #include <QImage>
+#include <QQuickWindow>
+#include <QtTest/QTest>
 
 #include "rig.h"
 #include "ui/editordrawer/automationcanvas.h"
@@ -163,7 +164,12 @@ void checkAutomationPencilOwnership(AutomationGestureCheckRig &rig,
         const QRect lfoBody = rig.bodyFor(lfoHandle);
         const QPointF boundary(rig.automationGutterInput().bounds().center().x(),
                                lfoBody.top() + lfoBody.height());
-        rig.gutterMouseMove(boundary);
+        const QPointF viewportBoundary = rig.automationContentToViewport(boundary);
+        QQuickWindow *const window = rig.automationGutterInput().window();
+        check(window != nullptr, QStringLiteral("Pencil row-boundary fixture has no Quick window"));
+        if (window)
+            QTest::mouseMove(window,
+                             rig.automationGutterInput().mapToScene(viewportBoundary).toPoint());
         rig.pump();
         check(rig.automationGutterInput().cursor().shape() == Qt::SplitVCursor,
               QStringLiteral("Pencil row boundary did not retain resize cursor precedence"));

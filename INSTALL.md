@@ -11,6 +11,8 @@
 
 Building from source requires CMake 3.21+, a C11/C++20 compiler, and Qt 6.2 or newer (Widgets).
 
+Building the checks additionally requires the Qt Test module. Application-only builds do not require Qt Test.
+
 Porydaw embeds the [poryaaaa](https://github.com/huderlem/poryaaaa) engine as a git submodule, so clone with `--recursive`. If you already cloned without it, run `git submodule update --init` inside the repository.
 
 ## macOS

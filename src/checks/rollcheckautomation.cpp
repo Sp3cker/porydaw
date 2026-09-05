@@ -374,12 +374,12 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     const int fitViewportHeight = chrome.automationViewportHeight();
     const int fitContentHeight = chrome.automationContentHeight();
     const int fitTrackHeight = fitScrollbarItem ? qRound(fitScrollbarItem->height()) : -1;
-    const int fitThumbHeight =
-        fitScrollbarItem ? fitScrollbarItem->property("thumbHeight").toInt() : -1;
+    const int fitThumbLength =
+        fitScrollbarItem ? qRound(fitScrollbarItem->property("thumbLength").toReal()) : -1;
     check(chrome.automationMaximumScrollY() == 0 && fitScrollbarRect.isValid() &&
               !fitScrollbarRect.isEmpty() && fitScrollbarItem && fitScrollbarItem->isVisible() &&
               fitViewportHeight == fitContentHeight && fitViewportHeight == fitTrackHeight &&
-              fitThumbHeight == fitTrackHeight,
+              fitThumbLength == fitTrackHeight,
           QStringLiteral("automation scrollbar must stay visible and fill its track when "
                          "maximumScrollY is zero"));
 
@@ -391,21 +391,15 @@ int runAutomationCheckImpl(const QString &scratchProject, const QString &songLab
     const int resizedContentHeight = chrome.automationContentHeight();
     const int resizedTrackHeight =
         resizedScrollbarItem ? qRound(resizedScrollbarItem->height()) : -1;
-    const int resizedThumbHeight =
-        resizedScrollbarItem ? resizedScrollbarItem->property("thumbHeight").toInt() : -1;
-    const int resizedQmlContentHeight =
-        resizedScrollbarItem ? resizedScrollbarItem->property("contentHeight").toInt() : -1;
-    const int resizedQmlViewportHeight =
-        resizedScrollbarItem ? resizedScrollbarItem->property("viewportHeight").toInt() : -1;
+    const int resizedThumbLength =
+        resizedScrollbarItem ? qRound(resizedScrollbarItem->property("thumbLength").toReal()) : -1;
     check(chrome.automationMaximumScrollY() == 0 && resizedScrollbarRect.isValid() &&
               !resizedScrollbarRect.isEmpty() && resizedScrollbarItem &&
               resizedScrollbarItem->isVisible() && resizedViewportHeight > fitViewportHeight &&
               resizedContentHeight > fitContentHeight &&
               resizedContentHeight == resizedViewportHeight &&
-              resizedQmlContentHeight == resizedContentHeight &&
-              resizedQmlViewportHeight == resizedViewportHeight &&
               resizedViewportHeight == resizedTrackHeight &&
-              resizedThumbHeight == resizedTrackHeight,
+              resizedThumbLength == resizedTrackHeight,
           QStringLiteral("resizing a zero-range automation viewport did not update DrawerChrome "
                          "dimensions and fill the resized TimelineScrollbar track"));
     view.setDrawerSectionHeight(EditorDrawerPage::Automations, scrollbarSectionHeight);

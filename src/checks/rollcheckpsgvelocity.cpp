@@ -17,6 +17,7 @@
 #include <utility>
 #include <vector>
 
+#include <QAbstractItemModel>
 #include <QApplication>
 #include <QEvent>
 #include <QFontMetricsF>
@@ -776,8 +777,8 @@ int checkRelativeDragDefersCommit(VelocityAreaRig &rig)
             auto rebuilt = rig.env.document.buildTimeline(48000.0);
             if (!rebuilt)
                 return;
+            rig.env.view.updateSong(rebuilt.get());
             rig.env.timeline = std::move(rebuilt);
-            rig.env.view.updateSong(rig.env.timeline.get());
         });
     rig.env.view.selectionModel().setNoteSelection(
         {rig.env.notes[0].noteId, rig.env.notes[1].noteId});
@@ -1813,6 +1814,54 @@ int checkDetentUnlockGestures(VelocityAreaRig &rig)
     return failures;
 }
 
+int checkVelocityTextModelRetention(VelocityAreaEnv &env)
+{
+    int failures = 0;
+    const auto check = [&failures](bool condition, const char *message) {
+        velocityFail(failures, condition, message);
+    };
+    QAbstractItemModel *const textModel = env.quickScene->velocityTextModel();
+    const int initialRows = textModel ? textModel->rowCount() : 0;
+    check(initialRows > 0, "velocity axis labels should publish retained text rows");
+    if (!textModel || initialRows == 0)
+        return failures;
+
+    int churned = 0;
+    QObject observer;
+    const auto countChurn = [&](const QModelIndex &, int first, int last) {
+        churned += last - first + 1;
+    };
+    QObject::connect(textModel, &QAbstractItemModel::rowsRemoved, &observer, countChurn);
+    QObject::connect(textModel, &QAbstractItemModel::rowsInserted, &observer, countChurn);
+
+    // A forced rebuild with unchanged content must retain the published rows.
+    env.area.songChanged();
+    QApplication::processEvents();
+    check(churned == 0, "an unchanged velocity rebuild must retain its axis text rows");
+
+    // A camera-pan rebuild must retain the rows too.
+    const double scrollBefore = env.view.camera().scrollX();
+    const double scrollTarget = std::min(scrollBefore + 96.0, env.view.camera().maxHScroll());
+    env.live.horizontalScroll = scrollTarget;
+    env.view.setEditorHorizontalScroll(scrollTarget);
+    env.live.horizontalScroll = env.view.camera().scrollX();
+    env.area.refreshLiveState(env.live);
+    QApplication::processEvents();
+    check(env.view.camera().scrollX() != scrollBefore && churned == 0,
+          "a panned velocity rebuild must retain its axis text rows");
+
+    // Hiding may defer publication and legitimately retain hidden rows, so
+    // the consumer contract is a correct model once the band is visible again.
+    env.view.setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
+    QApplication::processEvents();
+    env.view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
+    env.area.refreshLiveState(env.live);
+    QApplication::processEvents();
+    check(textModel->rowCount() == initialRows,
+          "a hide/show cycle with unchanged content must leave the axis text rows correct");
+    return failures;
+}
+
 } // namespace
 
 int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel,
@@ -2060,6 +2109,7 @@ int runVelocityPageCheck(const QString &scratchProject, const QString &songLabel
     failures += checkRollVelocityDrag(rig);
     failures += checkClickBelowSelectedNode(rig);
     failures += checkDetentUnlockGestures(rig);
+    failures += checkVelocityTextModelRetention(env);
 
     live.playback.playing = true;
     live.playback.playheadTick = -1.0;

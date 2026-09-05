@@ -216,6 +216,7 @@ void Registry::restoreOverrides(const OverrideSnapshot &snapshot)
     settings.remove(QStringLiteral("keymap"));
     for (auto it = snapshot.m_overrides.cbegin(); it != snapshot.m_overrides.cend(); ++it)
         settings.setValue(settingsKey(it.key()), it.value());
+    m_modifierBindings.clear();
     applyToActions();
     emit bindingsChanged();
 }
@@ -290,17 +291,25 @@ Qt::KeyboardModifiers Registry::modifierBinding(const QString &id) const
     Q_ASSERT(def && def->modifier);
     if (!def || !def->modifier)
         return Qt::NoModifier;
+    const auto cached = m_modifierBindings.constFind(id);
+    if (cached != m_modifierBindings.cend())
+        return cached.value();
+
     const QSettings settings;
     const QString key = settingsKey(id);
-    if (!settings.contains(key))
-        return modifierFromText(QLatin1String(def->keys));
-    const QString stored = settings.value(key).toString();
-    if (stored.isEmpty()) // explicitly unbound: the gesture is off
-        return Qt::NoModifier;
-    const Qt::KeyboardModifiers mods = modifierFromText(stored);
-    if (mods == Qt::NoModifier) // unparseable hand-edited value: fall back
-        return modifierFromText(QLatin1String(def->keys));
-    return mods;
+    Qt::KeyboardModifiers binding = modifierFromText(QLatin1String(def->keys));
+    if (settings.contains(key)) {
+        const QString stored = settings.value(key).toString();
+        if (stored.isEmpty()) // explicitly unbound: the gesture is off
+            binding = Qt::NoModifier;
+        else {
+            const Qt::KeyboardModifiers mods = modifierFromText(stored);
+            if (mods != Qt::NoModifier) // unparseable hand-edited value: fall back
+                binding = mods;
+        }
+    }
+    m_modifierBindings.insert(id, binding);
+    return binding;
 }
 
 bool Registry::matchesModifier(Qt::KeyboardModifiers mods, const QString &id) const
@@ -328,6 +337,7 @@ void Registry::setModifierBinding(const QString &id, Qt::KeyboardModifiers mods)
         settings.remove(settingsKey(id));
     else
         settings.setValue(settingsKey(id), mods == Qt::NoModifier ? QString() : modifierText(mods));
+    m_modifierBindings.remove(id);
     emit bindingsChanged();
 }
 
@@ -371,6 +381,7 @@ void Registry::resetBinding(const QString &id)
 {
     QSettings settings;
     settings.remove(settingsKey(id));
+    m_modifierBindings.remove(id);
     applyToActions();
     emit bindingsChanged();
 }
@@ -379,6 +390,7 @@ void Registry::resetAll()
 {
     QSettings settings;
     settings.remove(QStringLiteral("keymap"));
+    m_modifierBindings.clear();
     applyToActions();
     emit bindingsChanged();
 }

@@ -149,9 +149,14 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
     }
 
     const qreal roundingMargin = physicalPixel / 2.0;
-    const double t0 = std::max(0.0, m_camera.tickAtContentX(area.left() - roundingMargin));
+    const double t0 = m_camera.tickAtContentX(area.left() - roundingMargin);
     const double t1 =
         m_camera.tickAtContentX(area.x() + area.width() - physicalPixel + roundingMargin) + 1;
+    // A narrow viewport wholly inside the pre-roll, a non-finite camera
+    // projection, or an interval beyond the uint64 conversion ceiling all
+    // resolve to empty bounds: the grid passes below draw nothing while the
+    // surrounding ruler chrome and markers keep rendering.
+    const detail::TickRange range = detail::tickRange(t0, t1);
     const QColor indicatorColor = detail::gridLineColor();
     const QColor secondary = themes::color(themes::Role::song_view_secondary_text);
     const auto recede = [](int foreground, int background) {
@@ -173,7 +178,7 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
         m_camera.pxPerBeat() >= m_geometry.timelineDetailMinimumPixelsPerBeat;
 
     detail::forEachSubGridLine(
-        m_owner.grid(), m_camera, t0, t1, m_geometry.timelineDetailMinimumPixelsPerBeat,
+        m_owner.grid(), m_camera, range, m_geometry.timelineDetailMinimumPixelsPerBeat,
         [&](uint64_t tick, int level) {
             const qreal x = m_camera.displayX(double(tick), 0.0, dpr);
             const int tickHeight = level == 1 ? lyt::space(Space::Half) : lyt::singlePixel();
@@ -182,21 +187,23 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
         });
 
     int widestDetailWidth = 0;
-    m_owner.forEachGridLine(
-        uint64_t(t0), uint64_t(t1), [&](uint64_t, bool, int barNumber, int beatNumber) {
-            widestDetailWidth = std::max(
-                widestDetailWidth, beatMetrics.horizontalAdvance(
-                                       QStringLiteral("%1.%2").arg(barNumber).arg(beatNumber)));
-        });
+    if (m_camera.pxPerBeat() >= m_geometry.timeRulerBeatLabelZoomFactor *
+                                    (barCapWidth + 2 * labelGap + beatDetailReserve)) {
+        m_owner.forEachGridLine(
+            range.begin, range.end, [&](uint64_t, bool, int barNumber, int beatNumber) {
+                widestDetailWidth = std::max(
+                    widestDetailWidth, beatMetrics.horizontalAdvance(
+                                           QStringLiteral("%1.%2").arg(barNumber).arg(beatNumber)));
+            });
+    }
     const bool showBeatLabels = m_camera.pxPerBeat() >= m_geometry.timeRulerBeatLabelZoomFactor *
                                                             (barCapWidth + 2 * labelGap +
                                                              beatDetailReserve + widestDetailWidth);
     std::vector<TimelineQuickTextModel::Record> labels;
     qreal lastLabelRight = area.left() - labelGap;
     m_owner.forEachGridLine(
-        uint64_t(t0), uint64_t(t1), [&](uint64_t tick, bool isBar, int barNumber, int beatNumber) {
+        range.begin, range.end, [&](uint64_t tick, bool isBar, int barNumber, int beatNumber) {
             const qreal x = m_camera.displayX(double(tick), 0.0, dpr);
-            const QString detailLabel = QStringLiteral("%1.%2").arg(barNumber).arg(beatNumber);
             if (!isBar && !showBeatLabels) {
                 if (drawBeatTicks) {
                     addVerticalLine(scene, marksLayer, x, ticks.center().y() - indicatorRise,
@@ -204,9 +211,7 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
                 }
                 return;
             }
-            const QString label = isBar ? QString::number(barNumber) : detailLabel;
             const QFont &font = isBar ? m_rulerFont : m_beatFont;
-            const int labelWidth = (isBar ? tickMetrics : beatMetrics).horizontalAdvance(label);
             const qreal labelX = x + barCapWidth;
             if (labelX < lastLabelRight + labelGap) {
                 if (!isBar && drawBeatTicks) {
@@ -215,6 +220,9 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
                 }
                 return;
             }
+            const QString label = isBar ? QString::number(barNumber)
+                                        : QStringLiteral("%1.%2").arg(barNumber).arg(beatNumber);
+            const int labelWidth = (isBar ? tickMetrics : beatMetrics).horizontalAdvance(label);
             if (isBar) {
                 const int indicatorTop = ticks.top() - indicatorRise;
                 addVerticalLine(scene, marksLayer, x, indicatorTop, tickBottom, lyt::singlePixel(),

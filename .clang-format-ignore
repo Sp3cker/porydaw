@@ -1,0 +1,12 @@
+# clang-format is for C/C++ only; QML must never go through it.
+# Patterns anchor to this file's directory and are matched fnmatch-style
+# against the formatted file's absolute path; * and ? never cross "/", and
+# only a "**/" segment does (matching zero or more directories), so
+# "**/*.qml" ignores QML at any depth including this root, while a bare
+# "*.qml" would only ignore files sitting directly in this root
+# (semantics of clang-format 22 matchFilePath; keep the "**/").
+# deno task format rejects non-C/C++ files before invoking clang-format;
+# this stopgap covers raw clang-format runs. Ignored files are skipped
+# silently (exit 0); clang-format --list-ignored <files> enumerates them.
+*.qml
+**/*.qml

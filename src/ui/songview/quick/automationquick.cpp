@@ -84,28 +84,30 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     const bool content = refresh.testFlag(AutomationRefresh::Content);
     const bool transient = refresh.testFlag(AutomationRefresh::Transient);
     const bool hover = refresh.testFlag(AutomationRefresh::Hover);
+    // Publish each text model once below. Clearing first destroys its QML delegates.
     if (content) {
         resetLayer(scene, TimelineQuickLayer::AutomationGutterChrome);
         resetLayer(scene, TimelineQuickLayer::AutomationGrid);
         resetLayer(scene, TimelineQuickLayer::AutomationCurves);
         resetLayer(scene, TimelineQuickLayer::AutomationNodes);
         resetLayer(scene, TimelineQuickLayer::AutomationSelection);
-        scene.setAutomationTextRecords({});
     }
     if (transient) {
         resetLayer(scene, TimelineQuickLayer::AutomationTransient);
-        scene.setAutomationTransientTextRecords({});
     }
     if (hover) {
         resetLayer(scene, TimelineQuickLayer::AutomationHover);
-        scene.setAutomationHoverTextRecords({});
     }
-    if (!m_inputHost || !m_page.document())
+    const QRectF viewport = m_inputHost ? m_inputHost->bounds() : QRectF{};
+    if (!m_inputHost || !m_page.document() || viewport.height() <= 0.0) {
+        if (content)
+            scene.setAutomationTextRecords({});
+        if (transient)
+            scene.setAutomationTransientTextRecords({});
+        if (hover)
+            scene.setAutomationHoverTextRecords({});
         return;
-
-    const QRectF viewport = m_inputHost->bounds();
-    if (viewport.height() <= 0.0)
-        return;
+    }
     const auto &bandGeometry =
         m_page.m_owner.timelineBandLayout().geometry(TimelineBand::Automation);
     const QRect gutter = bandGeometry ? bandGeometry->gutterRect() : QRect{};

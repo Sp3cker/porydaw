@@ -12,7 +12,9 @@
 #include <QCoreApplication>
 #include <QEvent>
 #include <QImage>
+#include <QQuickWindow>
 #include <QUndoStack>
+#include <QtTest/QTest>
 
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
@@ -638,11 +640,19 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
             layerRevision(songview::TimelineQuickLayer::AutomationTransient);
         const QPointF rampStart(tickX(48), heldY);
         const QPointF rampEnd(tickX(kSecondTick), nodeY);
-        band.mouse(QEvent::MouseButtonPress, rampStart, Qt::LeftButton, Qt::LeftButton,
-                   Qt::ShiftModifier);
-        band.mouse(QEvent::MouseMove, rampStart + QPointF(drag, 0), Qt::NoButton, Qt::LeftButton,
-                   Qt::ShiftModifier);
-        band.mouse(QEvent::MouseMove, rampEnd, Qt::NoButton, Qt::LeftButton, Qt::ShiftModifier);
+        QQuickWindow *const inputWindow = band.item.window();
+        report(row.name, inputWindow != nullptr,
+               QStringLiteral("Shift-ramp input item has no Quick window"));
+        const auto rampWindowPosition = [&](const QPointF &contentPosition) {
+            return band.item.mapToScene(contentPosition - QPointF(0.0, page.verticalScroll()))
+                .toPoint();
+        };
+        if (inputWindow) {
+            QTest::mousePress(inputWindow, Qt::LeftButton, Qt::ShiftModifier,
+                              rampWindowPosition(rampStart));
+            QTest::mouseMove(inputWindow, rampWindowPosition(rampStart + QPointF(drag, 0)));
+            QTest::mouseMove(inputWindow, rampWindowPosition(rampEnd));
+        }
         pump();
         const auto rampSnap = snapshot(document);
         paintUnchanged(row.name, rampSnap);
@@ -656,7 +666,11 @@ void checkAutomationNodePaint(SongView &view, AutomationPage &page, SongDocument
         report(row.name,
                layerRevision(songview::TimelineQuickLayer::AutomationTransient) > rampRevision,
                QStringLiteral("Shift-ramp did not rebuild the Quick transient layer"));
-        cancel();
+        page.cancelInteraction();
+        if (inputWindow)
+            QTest::mouseRelease(inputWindow, Qt::LeftButton, Qt::ShiftModifier,
+                                rampWindowPosition(rampEnd));
+        leaveCanvas(band);
         if (row.kind != LaneKind::Cc)
             continue;
         QAction *pencil = pencilModeAction(page);
