@@ -157,7 +157,6 @@ class DrawerChrome final : public QObject
 
     Q_INVOKABLE void setAutomationScrollY(int value);
     Q_INVOKABLE void scrollAutomationByWheel(int pixelDeltaY, int angleDeltaY, bool inverted);
-    Q_INVOKABLE void pageAutomationToward(int localY);
     Q_INVOKABLE void activateToggle(int page);
     Q_INVOKABLE void setDetentChecked(bool checked);
     Q_INVOKABLE void adjustResizeHandle(int target, int direction);

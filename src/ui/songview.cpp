@@ -58,6 +58,24 @@ int resolveOtherEventsRowHeight()
     return QFontMetrics(body).height() + lyt::space(Space::Two);
 }
 
+// The application stylesheet paints this horizontal bar's zero-margin
+// rectangle and every subcontrol with opaque solid colors.
+class OpaqueHorizontalScrollBar final : public QScrollBar
+{
+  public:
+    explicit OpaqueHorizontalScrollBar(QWidget *parent) : QScrollBar(Qt::Horizontal, parent) {}
+
+  protected:
+    // Stylesheet polish clears the opaque attribute for boxed rules, so
+    // restore this horizontal-only contract after its base event completes.
+    bool event(QEvent *event) override
+    {
+        const bool handled = QScrollBar::event(event);
+        if (event->type() == QEvent::Polish || event->type() == QEvent::StyleChange)
+            setAttribute(Qt::WA_OpaquePaintEvent);
+        return handled;
+    }
+};
 } // namespace
 
 SongView::Geometry SongView::Geometry::resolve()
@@ -270,7 +288,7 @@ SongView::SongView(QWidget *parent)
     m_stripSpacer = new QSpacerItem(m_geometry.timelineSplitX, m_geometry.otherEventsHeight,
                                     QSizePolicy::Minimum, QSizePolicy::Fixed);
     vbox->addSpacerItem(m_stripSpacer);
-    m_hbar = new QScrollBar(Qt::Horizontal, this);
+    m_hbar = new OpaqueHorizontalScrollBar(this);
     m_hbar->setSingleStep(kScrollUnitsPerDip);
     m_hbarRow = new QHBoxLayout;
     m_hbarGutter = new QSpacerItem(m_geometry.timelineSplitX, lyt::space(Space::Zero),

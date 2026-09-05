@@ -128,7 +128,6 @@ Item {
             id: trackHeaderViewport
 
             anchors.fill: parent
-            clip: true
 
             Item {
                 id: trackHeaderRowArea
@@ -383,25 +382,21 @@ Item {
                 x: trackHeaderRowArea.width
                 width: Math.max(0, root.model.scrollbarWidth)
                 height: parent.height
-                scrollY: root.model.scrollY
-                contentHeight: root.model.contentHeight
-                viewportHeight: root.model.viewportHeight
-                maximumScrollY: root.model.maximumScrollY
-                minimumThumbHeight: root.model.scrollbarMinimumThumbHeight
+                orientation: Qt.Vertical
+                minimum: 0
+                value: root.model.scrollY
+                maximum: root.model.maximumScrollY
+                pageStep: root.model.viewportHeight
+                singleStep: root.model.rowHeight
+                minimumThumbLength: root.model.scrollbarMinimumThumbHeight
                 accessibleName: qsTr("Track headers")
-                lineStep: root.model.rowHeight
                 handleColor: root.scrollbarHandle
                 handleHoverColor: root.scrollbarHandleHover
                 externalVisible: root.bandVisible
                 thumbObjectName: "timelineTrackHeaderScrollThumb"
                 z: 4
 
-                onScrollYRequested: (value) => root.model.scrollY = value
-                onPageRequested: (localY) => {
-                    const direction = localY < trackHeaderScrollBar.thumbY ? -1 : 1
-                    root.model.scrollY = root.model.scrollY
-                                         + direction * root.model.viewportHeight
-                }
+                onValueRequested: (value) => root.model.scrollY = value
                 onWheelRequested: (pixelX, pixelY, angleX, angleY, inverted) => {
                     const pixelHorizontal = Math.abs(pixelX) > Math.abs(pixelY)
                     const angleHorizontal = Math.abs(angleX) > Math.abs(angleY)

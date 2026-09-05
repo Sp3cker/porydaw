@@ -8,6 +8,7 @@
 
 import { join } from "node:path";
 import { poryaaaaConfiguration } from "./poryaaaa_source.ts";
+import { unsupportedSources, unsupportedSourcesError } from "./format.ts";
 
 const decoder = new TextDecoder();
 const BUILD_DIR = "build";
@@ -184,7 +185,18 @@ async function runVerify(rawArgs: string[]): Promise<void> {
 
 async function runFormat(rawArgs: string[]): Promise<void> {
   const check = rawArgs.includes("--check");
+
   const files = rawArgs.filter((a) => a !== "--check");
+
+  // Reject unsupported explicit files up front: a mixed list such as
+  // `deno task format a.ts b.qml` must fail before deno fmt touches the
+  // TypeScript half. tools/format.ts re-applies the same rule when invoked
+  // directly.
+  const bad = unsupportedSources(files.filter((f) => !f.endsWith(".ts")));
+  if (bad.length > 0) {
+    console.error(`format: ${unsupportedSourcesError(bad)}`);
+    Deno.exit(2);
+  }
 
   const tsFiles = files.filter((f) => f.endsWith(".ts"));
   if (files.length === 0) {

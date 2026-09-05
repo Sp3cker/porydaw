@@ -34,6 +34,8 @@ deno task format          # reformat TypeScript and C/C++ sources in place
 deno task format:check    # what CI runs
 ```
 
+QML is deliberately excluded from clang-format. Explicit QML paths make `deno task format` reject the entire file list before changing anything; `.clang-format-ignore` also protects QML files at every directory depth from direct clang-format invocations.
+
 Build and run the complete application check sweep with Deno:
 
 ```bash

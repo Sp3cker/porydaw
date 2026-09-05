@@ -35,9 +35,10 @@ manifest (`porydaw_checks --manifest`):
      Render headlessly (`QT_QPA_PLATFORM=offscreen`).
      Executed in a parallel LPT pool pinned to 6 workers by empirical benchmark on Apple Silicon
      (7+ workers cause thread/cache contention on CPU-saturating checks).
-   - `Windowing::WindowSystem` (5 checks after the 2026-09-05 automation
-     cutover: `rollcheck`, `trackheaderquickcheck`, `rollwindowingcheck`,
-     `automation-raster`, `rendering-playhead`):
+   - `Windowing::WindowSystem` (7 checks after integrating `fork-main` at
+     `87f7dc9`: `rollcheck`, `trackheaderquickcheck`, `scrollbarquickcheck`,
+     `rollwindowingcheck`, `timelinepancheck`, `automation-raster`,
+     `rendering-playhead`):
      Require native Cocoa windows and native event dispatch. Serialized with worker count 1
      to prevent Cocoa window-activation and focus-stealing races.
    - Observed offscreen rendering boundary (2026-09-05): `QOffscreenIntegration`

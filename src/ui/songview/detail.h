@@ -43,23 +43,35 @@ QColor contrastingTextColor(const QColor &backdrop);
 QColor ghostNoteColor(int track, bool accidentalRow);
 int subGridLevel(uint64_t relTick, uint64_t beatTicks, bool triplet);
 
-// Calls fn(tick, level) for every sub-beat visible-grid position in [t0, t1)
-// that is not a beat line, at the current zoom's drawn resolution
-// (Grid::gridTicksAt, which bottoms out at the mid2agb clock grid; the
-// snap grid runs one ladder step finer between these lines).
-// Walks time-signature segments so the positions stay snappable and match
-// the beat lines. No callbacks in segments whose grid is at (or coarser
-// than) whole beats.
+// Half-open tick bounds for grid iteration, resolved from the fractional
+// tick interval a viewport covers. empty() unless the interval is finite,
+// non-empty once a negative begin clips to the song start, and strictly
+// below 2^64, where double -> uint64 conversion stays defined.
+struct TickRange {
+    uint64_t begin = 0;
+    uint64_t end = 0;
+
+    bool empty() const noexcept { return begin == end; }
+};
+
+TickRange tickRange(double begin, double end) noexcept;
+
+// Calls fn(tick, level) for every sub-beat visible-grid position in
+// [range.begin, range.end) that is not a beat line, at the current zoom's
+// drawn resolution (Grid::gridTicksAt, which bottoms out at the mid2agb
+// clock grid; the snap grid runs one ladder step finer between these
+// lines). Walks time-signature segments so the positions stay snappable
+// and match the beat lines. No callbacks in segments whose grid is at (or
+// coarser than) whole beats.
 template <typename F>
-void forEachSubGridLine(const Grid &grid, const TimeCamera &camera, double t0, double t1,
+void forEachSubGridLine(const Grid &grid, const TimeCamera &camera, TickRange range,
                         int timelineDetailMinimumPixelsPerBeat, F &&fn)
 {
     const bool triplet = grid.feel() == GridFeel::Triplet;
-    uint64_t at = uint64_t(std::max(0.0, t0));
-    const uint64_t end = t1 <= 0.0 ? 0 : uint64_t(t1);
-    while (at < end) {
+    uint64_t at = range.begin;
+    while (at < range.end) {
         const Grid::Segment seg = grid.segmentAt(at);
-        const uint64_t segEnd = std::min(seg.next, end);
+        const uint64_t segEnd = std::min(seg.next, range.end);
         const uint64_t g = grid.gridTicksAt(at);
         if (g > 0 && g < seg.beatTicks &&
             camera.pxPerTick() * double(seg.beatTicks) >= timelineDetailMinimumPixelsPerBeat) {
@@ -70,7 +82,7 @@ void forEachSubGridLine(const Grid &grid, const TimeCamera &camera, double t0, d
                 fn(tick, subGridLevel(tick - seg.start, seg.beatTicks, triplet));
             }
         }
-        if (seg.next >= end)
+        if (seg.next >= range.end)
             break;
         at = seg.next;
     }

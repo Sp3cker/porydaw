@@ -138,7 +138,7 @@ void AutomationEditingTest::scrollbarChromeTracksZeroRangeResize()
     QCOMPARE(chrome.automationMaximumScrollY(), 0);
     QCOMPARE(chrome.automationViewportHeight(), chrome.automationContentHeight());
     QCOMPARE(qRound(fittingItem->height()), chrome.automationViewportHeight());
-    QCOMPARE(fittingItem->property("thumbHeight").toInt(), qRound(fittingItem->height()));
+    QCOMPARE(qRound(fittingItem->property("thumbLength").toReal()), qRound(fittingItem->height()));
 
     const int fittingViewportHeight = chrome.automationViewportHeight();
     view.setDrawerSectionHeight(EditorDrawerPage::Automations, drawer->maximumSectionHeight());
@@ -153,10 +153,8 @@ void AutomationEditingTest::scrollbarChromeTracksZeroRangeResize()
     QCOMPARE(chrome.automationMaximumScrollY(), 0);
     QVERIFY(chrome.automationViewportHeight() > fittingViewportHeight);
     QCOMPARE(chrome.automationContentHeight(), chrome.automationViewportHeight());
-    QCOMPARE(resizedItem->property("contentHeight").toInt(), chrome.automationContentHeight());
-    QCOMPARE(resizedItem->property("viewportHeight").toInt(), chrome.automationViewportHeight());
     QCOMPARE(qRound(resizedItem->height()), chrome.automationViewportHeight());
-    QCOMPARE(resizedItem->property("thumbHeight").toInt(), qRound(resizedItem->height()));
+    QCOMPARE(qRound(resizedItem->property("thumbLength").toReal()), qRound(resizedItem->height()));
 
     view.setDrawerSectionHeight(EditorDrawerPage::Automations, originalHeight);
     pumpQuick();

@@ -199,20 +199,34 @@ void VelocityArea::rebuildQuickNotes(songview::TimelineQuickScene &scene, const 
     const QColor unselectedNodeColor =
         dimUnselectedNodes ? m_inputHost->palette().mid().color() : trackColor;
     const qreal stemWidth = m_geometry.stemDipWidth / dpr;
+    const qreal selectedStemWidth = m_geometry.selectedStemDipWidth / dpr;
+    const qreal nodeOutlineRadius =
+        m_geometry.nodePaintRadius + m_geometry.nodeOutlineDipWidth / 2.0;
+    const qreal selectedNodeRingRadius =
+        m_geometry.selectedNodeRingRadius + m_geometry.selectedNodeRingDipWidth / 2.0;
     for (const DocNote &note : notes) {
         const bool isSelected = selected(note);
-        const uint8_t velocity = displayedVelocity(note);
         const qreal start = xForTick(note.tick);
         const qreal end = std::max(start + 1.0, qreal(xForTick(note.tick + note.duration)));
-        addLine(scene, stemsLayer, QPointF(start, yForNote(note, velocity)),
-                QPointF(end, yForNote(note, velocity)),
-                isSelected ? m_geometry.selectedStemDipWidth / dpr : stemWidth,
-                isSelected ? selectedColor : stemColor, plot);
-    }
-    for (const DocNote &note : notes) {
+        const qreal noteStemWidth = isSelected ? selectedStemWidth : stemWidth;
+        const qreal nodeRadius =
+            isSelected ? selectedNodeRingRadius
+                       : (dimUnselectedNodes ? m_geometry.nodePaintRadius : nodeOutlineRadius);
+        const qreal horizontalExtent = std::max(noteStemWidth / 2.0, nodeRadius);
+        if (end + horizontalExtent < plot.left() || start - horizontalExtent > plot.right())
+            continue;
+
         const uint8_t velocity = displayedVelocity(note);
-        const QPointF center(xForTick(note.tick), yForNote(note, velocity));
-        const bool isSelected = selected(note);
+        const qreal y = yForNote(note, velocity);
+        if (end + noteStemWidth / 2.0 >= plot.left() &&
+            start - noteStemWidth / 2.0 <= plot.right()) {
+            addLine(scene, stemsLayer, QPointF(start, y), QPointF(end, y), noteStemWidth,
+                    isSelected ? selectedColor : stemColor, plot);
+        }
+
+        if (start + nodeRadius < plot.left() || start - nodeRadius > plot.right())
+            continue;
+        const QPointF center(start, y);
         if (isSelected) {
             addEllipseRing(scene, nodesLayer, center, m_geometry.selectedNodeRingRadius,
                            m_geometry.selectedNodeRingRadius, m_geometry.selectedNodeRingDipWidth,
@@ -259,16 +273,19 @@ void VelocityArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
     };
     for (const TimelineQuickLayer layer : layers)
         resetLayer(scene, layer);
-    scene.setVelocityTextRecords(std::span<const TimelineQuickTextModel::Record>{});
     ++m_diagnostics.contentBuildCount;
     const QRectF bounds = m_inputHost->bounds();
     const QRectF plot(QPointF{}, bounds.size());
-    if (plot.width() <= 0.0 || plot.height() <= 0.0)
+    if (plot.width() <= 0.0 || plot.height() <= 0.0) {
+        scene.setVelocityTextRecords({});
         return;
+    }
     const std::optional<songview::TimelineBandGeometry> &band =
         m_owner.timelineBandLayout().geometry(songview::TimelineBand::Velocity);
-    if (!band)
+    if (!band) {
+        scene.setVelocityTextRecords({});
         return;
+    }
     const QRect gutterRect = band->gutterRect();
     const QRectF gutter(0.0, 0.0, gutterRect.width(), gutterRect.height());
     const qreal dpr = m_inputHost->devicePixelRatio();

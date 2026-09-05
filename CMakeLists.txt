@@ -533,6 +533,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/rollcheck/scale_fold.cpp
         src/checks/rollcheck/scale_editing.cpp
         src/checks/rollcheckwindowing.cpp
+        src/checks/timelinepancheck.cpp
         src/checks/rollcheckplayhead.cpp
         src/checks/rollcheckplayhead_quick.cpp
         src/checks/rollcheckplayhead.h
@@ -583,6 +584,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/trackactivitycheck.cpp
         src/checks/trackactivitymetercheck.cpp
         src/checks/trackheaderquickcheck.cpp
+        src/checks/scrollbarquickcheck.cpp
         src/checks/audiocheck.cpp
         src/checks/resonancecheck.cpp
         src/checks/mkcheck.cpp

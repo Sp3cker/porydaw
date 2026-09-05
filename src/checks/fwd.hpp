@@ -26,8 +26,10 @@ int runSessionCheck(const QString &projectRoot, const QString &songLabel);
 int runTabCheck(const QString &projectRoot, const QString &songA, const QString &songB);
 int runRollCheck(const QString &projectRoot, const QString &songLabel,
                  const QString &screenshotPath = QString());
+int runTimelinePanCheck(const QString &projectRoot, const QString &songLabel);
 int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel);
 int runTrackHeaderQuickCheck(const QString &projectRoot, const QString &songLabel);
+int runScrollbarQuickCheck(const QString &projectRoot, const QString &songLabel);
 int runLoopCheck();
 int runClickCheck();
 int runPolyCheck(const QString &screenshotPath = QString());

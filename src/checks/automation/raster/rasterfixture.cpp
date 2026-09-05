@@ -264,8 +264,9 @@ void AutomationRasterFixture::setPersistentPencil(bool enabled)
 void AutomationRasterFixture::documentChanged()
 {
     m_page->documentChanged();
-    m_timeline = document().buildTimeline(kCheckSampleRate);
-    m_view->updateSong(m_timeline.get());
+    auto newTimeline = document().buildTimeline(kCheckSampleRate);
+    m_view->updateSong(newTimeline.get());
+    m_timeline = std::move(newTimeline);
     refreshPage();
     pump();
 }

@@ -262,27 +262,6 @@ void DrawerChrome::scrollAutomationByWheel(int pixelDeltaY, int angleDeltaY, boo
     });
 }
 
-void DrawerChrome::pageAutomationToward(int localY)
-{
-    const int viewportHeight = automationViewportHeight();
-    if (viewportHeight <= 0)
-        return;
-
-    const int maximumScrollY = automationMaximumScrollY();
-    const int contentHeight = std::max(automationContentHeight(), viewportHeight);
-    const int thumbHeight =
-        std::max(scrollbarMinimumThumbHeight(),
-                 static_cast<int>(std::lround(static_cast<qreal>(viewportHeight) / contentHeight *
-                                              viewportHeight)));
-    const int thumbTravel = std::max(0, viewportHeight - thumbHeight);
-    const int thumbY = maximumScrollY == 0
-                           ? 0
-                           : static_cast<int>(std::lround(static_cast<qreal>(automationScrollY()) /
-                                                          maximumScrollY * thumbTravel));
-    m_page.setVerticalScroll(m_page.verticalScroll() +
-                             (localY < thumbY ? -viewportHeight : viewportHeight));
-}
-
 void DrawerChrome::activateToggle(int page)
 {
     switch (page) {

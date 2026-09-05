@@ -238,6 +238,21 @@ int subGridLevel(uint64_t relTick, uint64_t beatTicks, bool triplet)
     return 3;
 }
 
+// Strictly below 2^64, where double -> uint64 conversion is defined; the
+// largest representable double below it (2^64 - 2^11) still converts
+// exactly, and anything at or above the ceiling is out of tick range.
+constexpr double kUint64TickCeiling = 0x1p64;
+
+TickRange tickRange(const double begin, const double end) noexcept
+{
+    if (!std::isfinite(begin) || !std::isfinite(end))
+        return {};
+    const double first = std::max(0.0, begin);
+    if (end <= first || end >= kUint64TickCeiling)
+        return {};
+    return {uint64_t(first), uint64_t(end)};
+}
+
 QColor gridLineColor(int alpha)
 {
     auto color = themes::color(themes::Role::song_view_grid);

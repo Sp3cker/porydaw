@@ -15,7 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Fixed
 - Double-clicking a tempo or CC automation node now deletes it once without opening an unintended value dialog.
+- Keep automation and track-header scrollbar thumbs inside their tracks during dragging, including when the content reaches an endpoint.
 - Keep velocity notes and PSG level bands aligned with the shared timeline camera during scrolling, zooming, and fractional display scaling.
+- Centralized safe grid tick-range conversion across the piano roll, banded grids, and time ruler. Pre-roll, non-finite, reversed, and out-of-range bounds produce empty grids without losing ruler chrome or markers.
 - Fixed audible click on transport transitions (pause/stop/play): the output now fades down, cuts, and fades back instead of hard-cutting sounding channels at full amplitude.
 - Fixed WAV export bypassing resonance suppression when the transport action was enabled.
 - Improved fidelity of CGB channels
@@ -24,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    - m4a's master volume is now set to 12 instead of 15, which matches the Pokemon games. This fixes the loudness imbalance between directsound and CGB channels.
 - Fixed bug where the right edge of a note couldn't be grabbed for resizing when two notes were adjacent.
 - Fixed bug where velocity values could visually bleed out of the note box.
+- Avoid recreating velocity-axis QML labels during panning by retaining unchanged model rows; still clear labels when the axis has no valid geometry.
+- Reduced low-zoom SongView panning CPU: velocity notes are culled before per-note lookups, circles reuse one-time exact unit-circle points, Quick geometry chunks use packed colors with incremental clearing, the horizontal scrollbar stays opaque after style polish so ancestors skip repainting it, low-zoom ruler labels skip measurement/shaping, and keymap modifier lookups are cached with invalidation on mutation.
+- Simplified Quick rectangle and triangle color packing to straight-line per-corner operations, removing nested color-comparison branches.
 
 ## [1.0.0] - 2026-08-01
 Initial release.

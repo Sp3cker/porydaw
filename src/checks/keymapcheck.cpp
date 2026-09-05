@@ -279,15 +279,17 @@ int runKeymapCheck()
               "a key event matched a modifier command");
 
         registry.setModifierBinding(id, Qt::AltModifier);
-        check(registry.modifierBinding(id) == Qt::AltModifier, "modifier override did not apply");
+        check(registry.modifierBinding(id) == Qt::AltModifier &&
+                  registry.matchesModifier(Qt::AltModifier, id),
+              "modifier override did not apply");
         check(registry.isOverridden(id), "modifier override not marked as overridden");
         check(QSettings().value(QStringLiteral("keymap/roll.velocity_drag")).toString() ==
                   QStringLiteral("Alt"),
               "modifier override not persisted as portable text");
 
         registry.setModifierBinding(id, Qt::ControlModifier);
-        check(!registry.isOverridden(id),
-              "re-assigning the default modifier should store no delta");
+        check(!registry.isOverridden(id) && registry.matchesModifier(Qt::ControlModifier, id),
+              "re-assigning the default modifier did not restore Ctrl");
 
         registry.setModifierBinding(id, Qt::NoModifier);
         check(registry.modifierBinding(id) == Qt::NoModifier && registry.isOverridden(id),
@@ -295,6 +297,28 @@ int runKeymapCheck()
         registry.resetBinding(id);
         check(registry.modifierBinding(id) == Qt::ControlModifier,
               "modifier reset did not restore Ctrl");
+
+        registry.setModifierBinding(id, Qt::AltModifier);
+        const auto modifierSnapshot = registry.snapshotOverrides();
+        registry.setModifierBinding(id, Qt::ShiftModifier);
+        registry.restoreOverrides(modifierSnapshot);
+        check(registry.modifierBinding(id) == Qt::AltModifier &&
+                  registry.matchesModifier(Qt::AltModifier, id),
+              "modifier snapshot restore did not replace the cached binding");
+        registry.resetAll();
+        check(registry.modifierBinding(id) == Qt::ControlModifier &&
+                  registry.matchesModifier(Qt::ControlModifier, id),
+              "resetAll did not restore the cached modifier default");
+
+        registry.resetBinding(id);
+        {
+            QSettings settings;
+            settings.setValue(QStringLiteral("keymap/roll.velocity_drag"),
+                              QStringLiteral("Ctrl+F5"));
+        }
+        check(registry.modifierBinding(id) == Qt::ControlModifier,
+              "invalid persisted modifier did not fall back to the default");
+        registry.resetBinding(id);
 
         check(keymap::Registry::modifierFromText(QStringLiteral("ctrl+shift")) ==
                   (Qt::ControlModifier | Qt::ShiftModifier),

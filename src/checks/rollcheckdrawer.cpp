@@ -567,9 +567,10 @@ int runEditorDrawerCheck(const QString &screenshotPath)
               !drawer->bodyRect(EditorDrawerPage::Automations) &&
               !drawer->bodyRect(EditorDrawerPage::VoiceChanges) &&
               bandLayout.geometry(songview::TimelineBand::Ruler) &&
-              bandLayout.geometry(songview::TimelineBand::Roll) &&
-              bandLayout.geometry(songview::TimelineBand::OtherEvents),
+              bandLayout.geometry(songview::TimelineBand::Roll),
           "a fully collapsed drawer must clear every canonical drawer entry");
+    check(bandLayout.geometry(songview::TimelineBand::OtherEvents).has_value(),
+          "collapsing every drawer page must preserve the independent Other Events band");
 
     chrome.activateToggle(static_cast<int>(EditorDrawerPage::Velocity));
     chrome.activateToggle(static_cast<int>(EditorDrawerPage::Automations));

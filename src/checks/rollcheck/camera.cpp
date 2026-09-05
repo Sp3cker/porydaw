@@ -8,10 +8,14 @@
 #include <QStackedWidget>
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <limits>
+#include <vector>
 
 #include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
+#include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelineinputitem.h"
 
@@ -38,6 +42,87 @@ ScenarioContinuation runCameraScenarios(Harness &check)
     }
     if (!rollVbar || rollVbar->geometry().right() != rollVbar->parentWidget()->rect().right())
         fail("roll scrollbar is not docked to the right edge");
+    // The shared tick-range resolver guards every double -> uint64 grid
+    // conversion in the Quick renderers: non-finite, reversed/empty, wholly
+    // pre-roll, and at-or-over the 2^64 conversion ceiling must all resolve
+    // to empty bounds instead of undefined conversions, while fractional
+    // bounds truncate to the half-open tick interval the subgrid walk has
+    // always iterated.
+    {
+        using songview::detail::TickRange;
+        const auto expectEmpty = [&](const double begin, const double end, const char *what) {
+            if (!songview::detail::tickRange(begin, end).empty())
+                fail(what);
+        };
+        const auto expectBounds = [&](const double begin, const double end,
+                                      const uint64_t beginTick, const uint64_t endTick,
+                                      const char *what) {
+            const TickRange range = songview::detail::tickRange(begin, end);
+            if (range.empty() || range.begin != beginTick || range.end != endTick)
+                fail(what);
+        };
+
+        const double nan = std::numeric_limits<double>::quiet_NaN();
+        const double inf = std::numeric_limits<double>::infinity();
+        expectEmpty(nan, 100.0, "a NaN begin did not reject the tick range");
+        expectEmpty(0.0, nan, "a NaN end did not reject the tick range");
+        expectEmpty(inf, 100.0, "an infinite begin did not reject the tick range");
+        expectEmpty(0.0, -inf, "an infinite end did not reject the tick range");
+        expectEmpty(-64.0, -1.0, "a wholly pre-roll range did not resolve empty");
+        expectEmpty(48.0, 48.0, "an empty interval did not resolve empty");
+        expectEmpty(64.0, 32.0, "a reversed interval did not resolve empty");
+        expectEmpty(1.0, 0x1p64, "the 2^64 conversion ceiling did not reject the tick range");
+        expectEmpty(0x1p64, 0x1p64 + 4096.0, "a begin at the conversion ceiling did not reject");
+        expectEmpty(1.0, std::numeric_limits<double>::max(),
+                    "an out-of-uint64-range end did not reject the tick range");
+
+        expectBounds(-24.0, 72.5, 0, 72, "pre-roll clipping did not floor to the song start");
+        expectBounds(96.75, 289.25, 96, 289, "fractional bounds did not truncate half-open");
+        const double largestBelowCeiling = 0x1p64 - 0x1p11; // densest double step below 2^64
+        expectBounds(0.0, largestBelowCeiling, 0, uint64_t(largestBelowCeiling),
+                     "the largest double below 2^64 did not convert exactly");
+        expectBounds(0x1p63, 0x1p63 + 0x1p11, 0x1p63, 0x1p63 + 0x1p11,
+                     "a range above 2^63 did not convert exactly");
+
+        // Fractional viewport ticks must enumerate the same sub-beat lattice
+        // the resolver's truncated bounds name: walk tickRange(96.75, 289.25)
+        // and compare against the documented lattice membership over the same
+        // half-open interval; a rejected range must keep the walk silent.
+        const SongView::ViewState originalState = view.viewState();
+        SongView::ViewState zoomed = originalState;
+        zoomed.pxPerBeat = 384.0;
+        zoomed.gridMinDenom = 0;
+        view.applyViewState(zoomed);
+        const songview::Grid::Segment segment = view.grid().segmentAt(96);
+        if (segment.start > 96 || segment.next < 289)
+            fail("the fixture grid is not one uniform segment over the probe range");
+        else if (const uint64_t lattice = view.grid().gridTicksAt(96);
+                 lattice == 0 || lattice >= segment.beatTicks)
+            fail("the zoomed grid drew no sub-beat lattice to compare");
+        else {
+            std::vector<uint64_t> expectedTicks;
+            const uint64_t first =
+                segment.start + (96 - segment.start + lattice - 1) / lattice * lattice;
+            for (uint64_t tick = first; tick < 289; tick += lattice) {
+                if ((tick - segment.start) % segment.beatTicks != 0)
+                    expectedTicks.push_back(tick);
+            }
+            std::vector<uint64_t> walkedTicks;
+            songview::detail::forEachSubGridLine(
+                view.grid(), view.camera(), songview::detail::tickRange(96.75, 289.25), 1,
+                [&](const uint64_t tick, int) { walkedTicks.push_back(tick); });
+            std::vector<uint64_t> rejectedTicks;
+            songview::detail::forEachSubGridLine(
+                view.grid(), view.camera(), songview::detail::tickRange(nan, 100.0), 1,
+                [&](const uint64_t tick, int) { rejectedTicks.push_back(tick); });
+            if (walkedTicks != expectedTicks)
+                fail("the resolved fractional range did not enumerate the sub-beat lattice");
+            else if (!rejectedTicks.empty())
+                fail("a rejected range still emitted sub-grid ticks");
+        }
+        view.applyViewState(originalState);
+    }
+
     // The Y camera is continuous: partial wheel deltas are immediately
     // multiplicative, preserve the cursor's content row, and remain precise
     // through the integer-native scrollbar projection.

@@ -16,7 +16,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cmath>
 
 namespace lyt = ::layout;
 using Space = lyt::Space;
@@ -32,6 +31,7 @@ using detail::keyName;
 using detail::logicalPhysicalPixel;
 using detail::usedTrackMask;
 
+using timeline_quick::addDashedHorizontal;
 using timeline_quick::addDashedVertical;
 using timeline_quick::addHorizontalGradient;
 using timeline_quick::addHorizontalLine;
@@ -70,22 +70,13 @@ int addFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &
     return thicknessPixels;
 }
 
-void addDashedHorizontal(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &clip,
-                         qreal x0, qreal x1, qreal y, qreal width, qreal dash, qreal gap,
-                         const QColor &color)
-{
-    for (qreal x = x0; x < x1; x += dash + gap)
-        addRect(scene, layer, QRectF(x, y - width / 2.0, (std::min)(dash, x1 - x), width), color,
-                clip);
-}
-
 void addDashedFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
                     const QColor &color, qreal width, qreal dash, qreal gap, const QRectF &clip)
 {
-    addDashedHorizontal(scene, layer, clip, rect.left(), rect.right(), rect.top(), width, dash, gap,
-                        color);
-    addDashedHorizontal(scene, layer, clip, rect.left(), rect.right(), rect.bottom(), width, dash,
-                        gap, color);
+    addDashedHorizontal(scene, layer, rect.left(), rect.right(), rect.top(), width, dash, gap,
+                        color, clip);
+    addDashedHorizontal(scene, layer, rect.left(), rect.right(), rect.bottom(), width, dash, gap,
+                        color, clip);
     addDashedVertical(scene, layer, rect.left(), rect.top(), rect.bottom(), width, dash, gap, color,
                       clip);
     addDashedVertical(scene, layer, rect.right(), rect.top(), rect.bottom(), width, dash, gap,
@@ -224,11 +215,13 @@ void TimelineQuickView::rebuildGrid()
     }
 
     const qreal roundingMargin = pixel / 2.0;
-    const double t0 = (std::max)(0.0, roll.m_camera.tickAtContentX(plot.left() - roundingMargin));
+    const double t0 = roll.m_camera.tickAtContentX(plot.left() - roundingMargin);
     const double t1 = roll.m_camera.tickAtContentX(plot.right() - pixel + roundingMargin) + 1.0;
-    // During the first narrow resize pass the plot can have no tick range.
-    // Keep its negative/reversed range from converting to UINT64_MAX below.
-    if (!std::isfinite(t0) || !std::isfinite(t1) || t1 <= t0)
+    // During the first narrow resize pass the plot can have no tick range;
+    // the resolver turns a negative/reversed/unrepresentable one into empty
+    // bounds instead of an undefined uint64 conversion.
+    const detail::TickRange range = detail::tickRange(t0, t1);
+    if (range.empty())
         return;
     const std::array<QColor, 6> gridColors = {gridLineColor(125), gridLineColor(100),
                                               gridLineColor(75),  gridLineColor(160),
@@ -238,23 +231,21 @@ void TimelineQuickView::rebuildGrid()
     const qreal gridWidth = lyt::fontPx(1.0 / 6.0) * pixel;
     const Grid &grid = roll.m_sv->grid();
     detail::forEachSubGridLine(
-        grid, roll.m_camera, t0, t1, detailMinimumPixelsPerBeat, [&](uint64_t tick, int level) {
+        grid, roll.m_camera, range, detailMinimumPixelsPerBeat, [&](uint64_t tick, int level) {
             const qreal x = roll.m_camera.displayX(double(tick), 0.0, dpr);
             addVerticalLine(scene, TimelineQuickLayer::PianoGrid, x, plot.top(), plot.bottom(),
                             gridWidth, gridColors[std::size_t(level - 1)], plot);
         });
     const bool drawBeats = roll.m_camera.pxPerBeat() >= detailMinimumPixelsPerBeat;
-    roll.m_sv->forEachGridLine(
-        uint64_t(t0), uint64_t(t1), [&](uint64_t tick, bool isBar, int, int) {
-            if (!isBar && !drawBeats)
-                return;
-            const bool finest =
-                roll.m_sv->document() && grid.gridTicksAt(tick) == grid.fineGridTicks();
-            const auto colorIndex = isBar ? 5u : finest ? 4u : 3u;
-            const qreal x = roll.m_camera.displayX(double(tick), 0.0, dpr);
-            addVerticalLine(scene, TimelineQuickLayer::PianoGrid, x, plot.top(), plot.bottom(),
-                            gridWidth, gridColors[colorIndex], plot);
-        });
+    roll.m_sv->forEachGridLine(range.begin, range.end, [&](uint64_t tick, bool isBar, int, int) {
+        if (!isBar && !drawBeats)
+            return;
+        const bool finest = roll.m_sv->document() && grid.gridTicksAt(tick) == grid.fineGridTicks();
+        const auto colorIndex = isBar ? 5u : finest ? 4u : 3u;
+        const qreal x = roll.m_camera.displayX(double(tick), 0.0, dpr);
+        addVerticalLine(scene, TimelineQuickLayer::PianoGrid, x, plot.top(), plot.bottom(),
+                        gridWidth, gridColors[colorIndex], plot);
+    });
 }
 
 void TimelineQuickView::rebuildNoteFills()
