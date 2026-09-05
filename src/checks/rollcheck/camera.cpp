@@ -16,7 +16,6 @@
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelineinputitem.h"
-#include "ui/songview/quick/timelinequickview.h"
 
 namespace checks::rollcheck {
 
@@ -30,24 +29,6 @@ ScenarioContinuation runCameraScenarios(Harness &check)
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const int undoBaseline = doc.undoStack()->index();
     auto fail = [&](const char *what) { check.fail(what); };
-    songview::TimelineQuickView *quick = view.quickView();
-    QQuickItem *quickRoot = quick ? quick->rootObject() : nullptr;
-    QQuickItem *rollVbar =
-        quickRoot ? quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineRollScrollBar"))
-                  : nullptr;
-    const QRect scrollbarRect =
-        quick && rollVbar ? QRectF(rollVbar->mapToItem(quickRoot, QPointF()), rollVbar->size())
-                                .translated(quick->geometry().topLeft())
-                                .toAlignedRect()
-                          : QRect{};
-    const std::optional<songview::TimelineBandGeometry> &rollGeometry =
-        view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
-    if (!rollVbar || scrollbarRect.isEmpty() || !rollGeometry ||
-        scrollbarRect.left() != rollGeometry->rect.right() + 1 ||
-        scrollbarRect.right() != view.width() - 1)
-        fail("roll scrollbar is not docked to the right edge");
-    if (rollGeometry && scrollbarRect.left() <= rollGeometry->plotRect.right())
-        fail("roll scrollbar overlaps the roll plot");
     // The shared tick-range resolver guards every double -> uint64 grid
     // conversion in the Quick renderers: non-finite, reversed/empty, wholly
     // pre-roll, and at-or-over the 2^64 conversion ceiling must all resolve

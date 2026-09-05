@@ -66,6 +66,15 @@ void ScrollbarTest::layoutFollowsCanonicalBands()
 
     QTRY_VERIFY(bar(Qt::Horizontal).isVisible() && thumb(Qt::Horizontal).isVisible());
     QTRY_VERIFY(bar(Qt::Vertical).isVisible() && thumb(Qt::Vertical).isVisible());
+    const auto actualVerticalRect = [&] {
+        return sceneRect(bar(Qt::Vertical))
+            .translated(songView.quickView()->geometry().topLeft())
+            .toAlignedRect();
+    };
+    QTRY_VERIFY(!actualVerticalRect().isEmpty());
+    QTRY_COMPARE(actualVerticalRect().left(), roll->rect.right() + 1);
+    QTRY_COMPARE(actualVerticalRect().right(), songView.width() - 1);
+    QVERIFY(actualVerticalRect().left() > roll->plotRect.right());
     QVERIFY(withinTrack(Qt::Horizontal));
     QVERIFY(withinTrack(Qt::Vertical));
 }
