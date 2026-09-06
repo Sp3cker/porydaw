@@ -1,6 +1,5 @@
 #include "checks/rollcheck/rollcheck.h"
 
-#include <QApplication>
 #include <QColor>
 #include <QCoreApplication>
 #include <QEvent>
@@ -170,16 +169,14 @@ std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check)
         fail("fresh document does not draw at velocity 100");
     view.raise();
     view.activateWindow();
-    // macOS may deny foreground activation to a check launched from the runner.
-    // Force Qt's test-visible active window so popup focus routing is deterministic.
-    QT_WARNING_PUSH
-    QT_WARNING_DISABLE_DEPRECATED
-    QApplication::setActiveWindow(&view);
-    QT_WARNING_POP
     roll->forceActiveFocus(Qt::OtherFocusReason);
     QCoreApplication::processEvents();
 
-    check.addFailures(runPitchBendCheck(doc, view, roll, track, noteA, a.center, songLabel));
+    const int pitchBendFailures =
+        runPitchBendCheck(doc, view, roll, track, noteA, a.center, songLabel);
+    check.addFailures(pitchBendFailures);
+    if (pitchBendFailures)
+        return std::nullopt;
 
     // The painted box runs flush to the note's right interaction edge
     // (consecutive notes abut with no phantom rest column) but stops one

@@ -8,17 +8,16 @@
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QMetaObject>
-#include <QMouseEvent>
 #include <QObject>
 #include <QPointF>
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickView>
 #include <QRect>
+#include <QTest>
 #include <QUndoCommand>
 #include <QVariant>
 #include <QWidget>
-#include <QWindow>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -60,6 +59,9 @@ void drainPopupDeletes()
 {
     QCoreApplication::processEvents();
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    // Native window teardown can enqueue activation changes. Deliver them
+    // before another popup session starts so they cannot dismiss its window.
+    QCoreApplication::processEvents();
 }
 
 QQuickItem *findPopupItem(QQuickView *view, const QString &name)
@@ -71,9 +73,14 @@ void sendWindowMouse(QQuickWindow &window, QEvent::Type type, const QPointF &win
                      Qt::MouseButton button, Qt::MouseButtons buttons,
                      Qt::KeyboardModifiers modifiers)
 {
-    QMouseEvent event(type, windowLocal, QPointF(window.mapToGlobal(windowLocal.toPoint())), button,
-                      buttons, modifiers);
-    QCoreApplication::sendEvent(&window, &event);
+    Q_UNUSED(buttons);
+    const QPoint position = windowLocal.toPoint();
+    if (type == QEvent::MouseButtonPress)
+        QTest::mousePress(&window, button, modifiers, position);
+    else if (type == QEvent::MouseButtonRelease)
+        QTest::mouseRelease(&window, button, modifiers, position);
+    else
+        QTest::mouseEvent(QTest::MouseMove, &window, Qt::NoButton, modifiers, position);
 }
 
 class PitchBendCheckContext final
@@ -98,6 +105,12 @@ class PitchBendCheckContext final
             m_view.show();
             QCoreApplication::processEvents();
         }
+        const auto finish = [&] {
+            cleanupBaseFixture();
+            if (!viewWasVisible)
+                m_view.hide();
+            return m_failures;
+        };
         m_endTick = m_document.noteEndTick(m_note);
         installRangeFixture();
         m_beforeBend = m_document.smf().write();
@@ -106,17 +119,44 @@ class PitchBendCheckContext final
             if (point.tick <= m_endTick)
                 m_bendAtEnd = point.value;
         }
+        if (m_failures)
+            return finish();
         runDuplicateAnchor();
+        if (m_failures)
+            return finish();
         runSnapshotDuringGesture();
+        if (m_failures)
+            return finish();
         runLifecycleCancellation();
+        if (m_failures)
+            return finish();
         runControllerButtons();
+        if (m_failures)
+            return finish();
         runRangeFreehandAndUndo();
+        if (m_failures)
+            return finish();
         runVertexEditing();
+        if (m_failures)
+            return finish();
         runModWheelEditing();
+        if (m_failures)
+            return finish();
         runPersistedAltRendering();
+        if (m_failures)
+            return finish();
         runFocusHandoff();
+        if (m_failures)
+            return finish();
         runWindowDeliveredPress();
+        if (m_failures)
+            return finish();
         cleanupBaseFixture();
+        if (m_failures) {
+            if (!viewWasVisible)
+                m_view.hide();
+            return m_failures;
+        }
         runActiveGridBoundary();
         if (!viewWasVisible)
             m_view.hide();
@@ -140,35 +180,64 @@ class PitchBendCheckContext final
             fail("BENDR fixture did not push exactly one undo command");
     }
 
-    static void activateSyntheticToolWindow(QQuickView &window)
-    {
-        // Direct QQuickItem event synthesis bypasses native window activation.
-        // Activate the Quick surface so active-focus bookkeeping is exercised.
-        window.requestActivate();
-    }
-
     struct RangePopupState {
-        songview::PitchBendEditor *popup = nullptr;
-        songview::PitchBendGraph *graphWidget = nullptr;
+        QPointer<songview::PitchBendEditor> popup;
+        QPointer<songview::PitchBendGraph> graphWidget;
         QRect graph;
     };
 
     RangePopupState openRangePopup()
     {
+        // Direct item delivery does not establish native activation. Settle
+        // the host before opening a transient window that must receive input.
+        if (!QTest::qWaitForWindowExposed(&m_view) || !QTest::qWaitForWindowActive(&m_view)) {
+            fail("roll host did not become ready before popup input");
+            return {};
+        }
         const QPoint noteGlobal = m_roll->mapToGlobal(QPointF(m_noteCenter)).toPoint();
         // Deliberately hover away from the note: G must anchor the popup to the
         // selected note, never to the pointer.
         checks::events::sendMouse(*m_roll, QEvent::MouseMove, m_noteCenter + QPoint(300, 0),
                                   Qt::NoButton, Qt::NoButton, Qt::NoModifier);
         checks::rollcheck::sendKeyStroke(*m_roll, Qt::Key_G, Qt::NoModifier, false);
-        auto *bendPopup =
+        QPointer<songview::PitchBendEditor> bendPopup =
             m_view.findChild<songview::PitchBendEditor *>(QStringLiteral("pitchBendPopup"));
+        const auto discardFailedPopup = [&] {
+            if (bendPopup)
+                bendPopup->cancelAndCloseWithoutFocus();
+            drainPopupDeletes();
+        };
         if (!bendPopup || !bendPopup->isOpen()) {
             fail("G did not open the selected note's pitch-bend popup");
+            if (bendPopup)
+                discardFailedPopup();
+            return {};
+        }
+        QPointer<QQuickView> surface = bendPopup->view();
+        if (!surface || !QTest::qWaitForWindowExposed(surface.data()) || !bendPopup ||
+            !bendPopup->isOpen()) {
+            fail("pitch-bend popup did not become exposed before input");
+            discardFailedPopup();
+            return {};
+        }
+        const bool activeWait = QTest::qWaitForWindowActive(surface.data());
+        if (!bendPopup || !surface || !bendPopup->isOpen()) {
+            fail("pitch-bend popup was dismissed before native activation completed");
+            discardFailedPopup();
+            return {};
+        }
+        if (!activeWait) {
+            fail("pitch-bend popup did not become active before input");
+            discardFailedPopup();
             return {};
         }
         QCoreApplication::processEvents();
-        QQuickView *surface = bendPopup->view();
+        if (!bendPopup || !surface || !bendPopup->isOpen() || !surface->isExposed() ||
+            !surface->isActive()) {
+            fail("pitch-bend popup was dismissed while its window settled");
+            discardFailedPopup();
+            return {};
+        }
         const QImage surfaceImage = surface->grabWindow();
         const qreal surfaceDpr = surfaceImage.devicePixelRatio();
         bool opaqueSurface = !surfaceImage.isNull();
@@ -204,17 +273,22 @@ class PitchBendCheckContext final
             fail("pitch-bend popup followed the mouse instead of the selected note");
         if (!bendPopup->description().contains(QStringLiteral("12 semitones")))
             fail("pitch-bend popup did not present the active BENDR value");
-        auto *graphWidget = dynamic_cast<songview::PitchBendGraph *>(
+        QPointer<songview::PitchBendGraph> graphWidget = dynamic_cast<songview::PitchBendGraph *>(
             findPopupItem(surface, QStringLiteral("pitchBendGraph")));
         if (!graphWidget) {
             fail("pitch-bend popup has no pitchBendGraph child");
+            discardFailedPopup();
             return {};
         }
         const QRect graph = graphWidget->canvasRect();
-        checks::events::sendMouse(*graphWidget, QEvent::MouseMove, QPointF(graph.center()),
-                                  Qt::NoButton, Qt::NoButton, Qt::NoModifier);
-        if (!bendPopup->isOpen())
+        const QPointF graphCenter = graphWidget->mapToScene(QPointF(graph.center()));
+        sendWindowMouse(*surface, QEvent::MouseMove, graphCenter, Qt::NoButton, Qt::NoButton,
+                        Qt::NoModifier);
+        if (!bendPopup || !bendPopup->isOpen() || !graphWidget) {
             fail("idle mouse movement dismissed the pitch-bend popup");
+            discardFailedPopup();
+            return {};
+        }
         return {bendPopup, graphWidget, graph};
     }
 
@@ -260,6 +334,10 @@ class PitchBendCheckContext final
         if (m_document.undoStack()->index() != undoIndex + 1)
             fail("Shift pitch-bend drag did not push one curve command");
         QCoreApplication::processEvents();
+        if (!range.popup || !range.graphWidget) {
+            fail("pitch-bend popup was dismissed while rendering its Shift line");
+            return;
+        }
         const QImage lineImage = range.popup->view()->grabWindow();
         const qreal lineDpr = lineImage.devicePixelRatio();
         const QColor curveColor = SongView::trackColor(m_engineTrack);
@@ -288,17 +366,32 @@ class PitchBendCheckContext final
         const QPoint start(range.graph.left() + range.graph.width() / 3, range.graph.center().y());
         const QPoint finish(range.graph.left() + 2 * range.graph.width() / 3,
                             range.graph.top() + range.graph.height() / 3);
-        checks::events::sendMouse(*range.graphWidget, QEvent::MouseButtonPress, QPointF(start),
-                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*range.graphWidget, QEvent::MouseMove, QPointF(finish),
-                                  Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*range.graphWidget, QEvent::MouseButtonRelease, QPointF(finish),
-                                  Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
-        if (!range.popup->isOpen())
+        QPointer<QQuickView> surface = range.popup->view();
+        const QPointF startOnWindow = range.graphWidget->mapToScene(QPointF(start));
+        const QPointF finishOnWindow = range.graphWidget->mapToScene(QPointF(finish));
+        sendWindowMouse(*surface, QEvent::MouseButtonPress, startOnWindow, Qt::LeftButton,
+                        Qt::LeftButton, Qt::NoModifier);
+        if (!range.popup || !range.graphWidget || !surface) {
             fail("pitch-bend popup dismissed after its freehand stroke");
-        sendKeyStroke(*range.popup->view(), Qt::Key_Enter, Qt::NoModifier, false);
-        if (!range.popup->isOpen())
+            return false;
+        }
+        sendWindowMouse(*surface, QEvent::MouseMove, finishOnWindow, Qt::NoButton, Qt::LeftButton,
+                        Qt::NoModifier);
+        if (!range.popup || !range.graphWidget || !surface) {
+            fail("pitch-bend popup dismissed after its freehand stroke");
+            return false;
+        }
+        sendWindowMouse(*surface, QEvent::MouseButtonRelease, finishOnWindow, Qt::LeftButton,
+                        Qt::NoButton, Qt::NoModifier);
+        if (!range.popup || !range.popup->isOpen() || !surface) {
+            fail("pitch-bend popup dismissed after its freehand stroke");
+            return false;
+        }
+        QTest::keyClick(surface.data(), Qt::Key_Enter);
+        if (!range.popup || !range.popup->isOpen()) {
             fail("Enter dismissed the pitch-bend popup");
+            return false;
+        }
         if (m_document.undoStack()->index() != m_curveUndoIndex + 1) {
             fail("pitch-bend stroke did not push exactly one undo command");
             return false;
@@ -310,6 +403,10 @@ class PitchBendCheckContext final
     {
         range.graphWidget->forceActiveFocus();
         QCoreApplication::processEvents();
+        if (!range.popup || !range.graphWidget) {
+            fail("pitch-bend popup was dismissed while acquiring Undo focus");
+            return false;
+        }
         if (!range.graphWidget->hasActiveFocus()) {
             fail("pitch-bend graph did not hold focus for Undo");
             return false;
@@ -462,10 +559,13 @@ class PitchBendCheckContext final
         m_view.updateSong(duplicateTimeline.get());
         m_view.selectionModel().setNoteSelection({m_note.noteId});
         const RangePopupState range = openRangePopup();
-        if (range.popup) {
-            sendKeyStroke(*range.popup->view(), Qt::Key_Escape, Qt::NoModifier, false);
-            drainPopupDeletes();
+        if (!range.popup) {
+            m_view.updateSong(originalTimeline);
+            m_view.selectionModel().setNoteSelection({m_note.noteId});
+            return;
         }
+        sendKeyStroke(*range.popup->view(), Qt::Key_Escape, Qt::NoModifier, false);
+        drainPopupDeletes();
         m_view.updateSong(originalTimeline);
         m_view.selectionModel().setNoteSelection({m_note.noteId});
         const QByteArray beforeIdentity = m_document.smf().write();
@@ -492,7 +592,7 @@ class PitchBendCheckContext final
         const RangePopupState range = openRangePopup();
         if (!range.popup || !range.graphWidget)
             return;
-        auto *graph = range.graphWidget;
+        const QPointer<songview::PitchBendGraph> graph = range.graphWidget;
         const int beforeUndoIndex = m_document.undoStack()->index();
         const QByteArray before = m_document.smf().write();
         const QPoint start(range.graph.left() + range.graph.width() / 3, range.graph.center().y());
@@ -591,7 +691,8 @@ class PitchBendCheckContext final
                 m_document.smf().write() != m_beforeCurve)
                 fail("failed pitch-bend stroke did not restore the document");
         }
-        sendKeyStroke(*range.popup->view(), Qt::Key_Escape, Qt::NoModifier, false);
+        if (range.popup)
+            sendKeyStroke(*range.popup->view(), Qt::Key_Escape, Qt::NoModifier, false);
         drainPopupDeletes();
         checks::events::sendMouse(*m_roll, QEvent::MouseMove, m_noteCenter, Qt::NoButton,
                                   Qt::NoButton, Qt::NoModifier);
@@ -1270,8 +1371,6 @@ class PitchBendCheckContext final
         checks::rollcheck::sendKeyStroke(*m_roll, Qt::Key_G, Qt::NoModifier, false);
         drainPopupDeletes();
         popup = m_view.findChild<songview::PitchBendEditor *>(QStringLiteral("pitchBendPopup"));
-        if (popup && popup->view())
-            activateSyntheticToolWindow(*popup->view());
         QCoreApplication::processEvents();
         auto *replacementGraph = popup ? dynamic_cast<songview::PitchBendGraph *>(findPopupItem(
                                              popup->view(), QStringLiteral("pitchBendGraph")))
@@ -1296,12 +1395,11 @@ class PitchBendCheckContext final
 
     void runWindowDeliveredPress()
     {
-        // A real window-system press lands on the popup's QQuickWindow, so the
-        // session's outside-close filter must observe the press on the popup's
-        // own window. Delivered as a direct window sendEvent here; opens
-        // directly because earlier checks legitimately move BENDR off the
-        // range fixture, so this must not depend on openRangePopup's BENDR
-        // assert.
+        // Exercise the production window paths: header input is delivered to
+        // the popup window, while an outside click is delivered to the Roll's
+        // Quick window. Earlier checks legitimately move BENDR off the range
+        // fixture, so open directly rather than depending on openRangePopup's
+        // BENDR assertion.
         drainPopupDeletes();
         checks::events::sendMouse(*m_roll, QEvent::MouseMove, m_noteCenter, Qt::NoButton,
                                   Qt::NoButton, Qt::NoModifier);
@@ -1312,28 +1410,30 @@ class PitchBendCheckContext final
             fail("G did not reopen the pitch-bend popup for window-delivered press");
             return;
         }
-        QWindow *nativeWindow = popup->view();
-        if (!nativeWindow) {
-            fail("pitch-bend popup has no native window for press delivery");
+        QQuickView *popupWindow = popup->view();
+        QQuickWindow *rollWindow = m_roll->window();
+        if (!popupWindow || !rollWindow) {
+            fail("pitch-bend popup or Roll has no native Quick window for press delivery");
             return;
         }
-        const auto deliverPress = [nativeWindow](const QPoint &local, const QPoint &global) {
-            QMouseEvent press(QEvent::MouseButtonPress, QPointF(local), QPointF(global),
-                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-            QCoreApplication::sendEvent(nativeWindow, &press);
-            QCoreApplication::processEvents();
-        };
         // Header chrome: inside the frame, outside any editing gesture.
         const QPoint headerLocal(4, 24);
-        deliverPress(headerLocal, nativeWindow->mapToGlobal(headerLocal));
+        sendWindowMouse(*popupWindow, QEvent::MouseButtonPress, headerLocal, Qt::LeftButton,
+                        Qt::LeftButton, Qt::NoModifier);
+        sendWindowMouse(*popupWindow, QEvent::MouseButtonRelease, headerLocal, Qt::LeftButton,
+                        Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::processEvents();
         if (!popup || !popup->isOpen()) {
             fail("window-delivered press inside the pitch-bend popup dismissed it");
             return;
         }
-        // Far from the popup: the same delivery path must still dismiss.
+        // Far from the popup: deliver through the actual window under that
+        // point, not through the popup with an out-of-bounds local coordinate.
         const QPoint awayGlobal =
             m_roll->mapToGlobal(QPointF(m_noteCenter + QPoint(300, 0))).toPoint();
-        deliverPress(nativeWindow->mapFromGlobal(awayGlobal), awayGlobal);
+        const QPoint awayLocal = rollWindow->mapFromGlobal(awayGlobal);
+        QTest::mouseClick(rollWindow, Qt::LeftButton, Qt::NoModifier, awayLocal);
+        QCoreApplication::processEvents();
         if (popup && popup->isOpen()) {
             fail("window-delivered press outside the pitch-bend popup did not dismiss it");
             sendKeyStroke(*popup->view(), Qt::Key_Escape, Qt::NoModifier, false);

@@ -9,6 +9,7 @@
 #include <QPoint>
 #include <QQuickView>
 #include <QQuickWindow>
+#include <QtTest>
 #include <algorithm>
 #include <vector>
 
@@ -153,7 +154,8 @@ void runVelocityCancellationScenarios(Harness &check, const Cell &b, NoteId note
     songview::TimelineInputItem *roll = &check.rollInput();
     const int track = check.track();
     const auto checkVelocityCancellation = [&](const char *fixtureFailure, const char *stageFailure,
-                                               const char *cancelFailure, const auto &cancel) {
+                                               const char *cancelFailure, const auto &stage,
+                                               const auto &cancel) {
         const uint64_t revisionBeforeCancel = doc.revision();
         const int undoIndexBeforeCancel = doc.undoStack()->index();
         const int undoCountBeforeCancel = doc.undoStack()->count();
@@ -161,19 +163,16 @@ void runVelocityCancellationScenarios(Harness &check, const Cell &b, NoteId note
         if (!doc.findNote(track, b.tick, uint8_t(b.key), &before))
             check.fail(fixtureFailure);
         const uint8_t expectedVelocity = uint8_t(std::clamp(int(before.velocity) + 15, 1, 127));
-        checks::events::sendMouse(*roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
-                                  Qt::LeftButton, Qt::ControlModifier);
-        checks::events::sendMouse(*roll, QEvent::MouseMove, b.center - QPoint(0, 15), Qt::NoButton,
-                                  Qt::LeftButton, Qt::ControlModifier);
-        QCoreApplication::processEvents();
+        const bool staged = stage();
         const auto preview = view.previewVelocity(noteBId);
-        if (!preview || *preview != expectedVelocity || doc.revision() != revisionBeforeCancel ||
+        if (!staged || !preview || *preview != expectedVelocity ||
+            doc.revision() != revisionBeforeCancel ||
             doc.undoStack()->index() != undoIndexBeforeCancel ||
             doc.undoStack()->count() != undoCountBeforeCancel)
             check.fail(stageFailure);
-        cancel();
+        const bool cancellationObserved = staged && cancel();
         DocNote after;
-        if (doc.revision() != revisionBeforeCancel ||
+        if (!cancellationObserved || doc.revision() != revisionBeforeCancel ||
             doc.undoStack()->index() != undoIndexBeforeCancel ||
             doc.undoStack()->count() != undoCountBeforeCancel || view.previewVelocity(noteBId) ||
             !doc.findNote(track, b.tick, uint8_t(b.key), &after) ||
@@ -183,33 +182,51 @@ void runVelocityCancellationScenarios(Harness &check, const Cell &b, NoteId note
     checkVelocityCancellation(
         "velocity cancellation fixture lost note B",
         "cancelled velocity drag must stage its changed preview without document history",
-        "SongView cancellation must reset piano-roll local drag state without mutation", [&] {
+        "SongView cancellation must reset piano-roll local drag state without mutation",
+        [&] {
+            checks::events::sendMouse(*roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
+                                      Qt::LeftButton, Qt::ControlModifier);
+            checks::events::sendMouse(*roll, QEvent::MouseMove, b.center - QPoint(0, 15),
+                                      Qt::NoButton, Qt::LeftButton, Qt::ControlModifier);
+            return true;
+        },
+        [&] {
             view.cancelActiveInteractions();
             checks::events::sendMouse(*roll, QEvent::MouseMove, b.center - QPoint(0, 15),
                                       Qt::NoButton, Qt::LeftButton, Qt::ControlModifier);
             checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, b.center - QPoint(0, 15),
                                       Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
-            QCoreApplication::processEvents();
+            return !view.previewVelocity(noteBId).has_value();
         });
+
+    QQuickWindow *nativeWindow = nullptr;
+    QPoint nativeDragPosition;
     checkVelocityCancellation(
         "mouse-ungrab cancellation fixture lost note B",
         "mouse-ungrab cancellation must stage its changed velocity preview",
-        "mouse ungrab must cancel the local velocity drag without mutation", [&] {
+        "mouse ungrab must cancel the local velocity drag without mutation",
+        [&] {
             auto *quick = view.findChild<songview::TimelineQuickView *>(
                 QStringLiteral("timelineQuickCanvas"));
-            QQuickWindow *const quickWindow = quick ? quick->quickWindow() : nullptr;
-            if (roll && quickWindow) {
-                // The grab only exists for window-delivered
-                // presses, so stage the drag through the real
-                // Quick window before taking it away.
-                const QPointF windowPosition = roll->mapToScene(QPointF(b.center));
-                QMouseEvent press(QEvent::MouseButtonPress, windowPosition,
-                                  QPointF(quickWindow->mapToGlobal(windowPosition.toPoint())),
-                                  Qt::LeftButton, Qt::LeftButton, Qt::ControlModifier);
-                QCoreApplication::sendEvent(quickWindow, &press);
-            }
+            nativeWindow = quick ? quick->quickWindow() : nullptr;
+            if (!nativeWindow || !QTest::qWaitForWindowExposed(nativeWindow))
+                return false;
+            const QPoint pressPosition = roll->mapToScene(QPointF(b.center)).toPoint();
+            nativeDragPosition = roll->mapToScene(QPointF(b.center - QPoint(0, 15))).toPoint();
+            if (!checks::events::primeMouseMove(*nativeWindow, *roll, pressPosition))
+                return false;
+            QTest::mousePress(nativeWindow, Qt::LeftButton, Qt::ControlModifier, pressPosition);
+            QTest::mouseMove(nativeWindow, nativeDragPosition);
+            return true;
+        },
+        [&] {
+            if (!nativeWindow)
+                return false;
             roll->ungrabMouse();
-            QApplication::processEvents();
+            const bool cancelledOnUngrab = !view.previewVelocity(noteBId).has_value();
+            QTest::mouseRelease(nativeWindow, Qt::LeftButton, Qt::ControlModifier,
+                                nativeDragPosition);
+            return cancelledOnUngrab;
         });
 }
 

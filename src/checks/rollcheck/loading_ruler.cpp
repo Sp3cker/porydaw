@@ -16,14 +16,15 @@
 #include <QCoreApplication>
 #include <QEnterEvent>
 #include <QImage>
-#include <QMouseEvent>
 #include <QPalette>
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QWheelEvent>
 #include <QWidget>
+#include <QWindow>
 #include <QtGlobal>
+#include <QtTest>
 
 #include <algorithm>
 #include <array>
@@ -933,56 +934,142 @@ void checkRulerToolTipOverlay(Harness &check, GateFixture &probe)
     SongView &view = probe.tab.view();
     auto *const quick =
         view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
-    QQuickItem *const canvasRoot = quick ? quick->rootObject() : nullptr;
-    QQuickWindow *const quickWindow = quick ? quick->quickWindow() : nullptr;
-    if (!canvasRoot || !quickWindow) {
-        check.fail("ready view is missing its Quick canvas root or window");
+    const QPointer<songview::TimelineQuickView> guardedQuick = quick;
+    const QPointer<QQuickItem> guardedCanvasRoot = quick ? quick->rootObject() : nullptr;
+    const QPointer<QQuickWindow> guardedQuickWindow = quick ? quick->quickWindow() : nullptr;
+    const QPointer<QWindow> guardedHostWindow = probe.tab.windowHandle();
+    const QPointer<QQuickItem> guardedControls = probe.controls;
+    const QPointer<QQuickItem> guardedDivisionControl = probe.divisionControl;
+    const QPointer<QQuickItem> guardedFeelControl = probe.feelControl;
+    const QPointer<QQuickItem> guardedToolTip = probe.toolTip;
+    const auto sceneReady = [&] {
+        return guardedQuick && guardedCanvasRoot && guardedQuickWindow && guardedHostWindow &&
+               guardedControls && guardedDivisionControl && guardedFeelControl && guardedToolTip &&
+               probe.tab.isVisible() && probe.tab.windowHandle() == guardedHostWindow &&
+               guardedHostWindow->isExposed() && guardedQuickWindow->isVisible() &&
+               guardedQuickWindow->isExposed() && guardedCanvasRoot->isVisible() &&
+               guardedCanvasRoot->width() > 0.0 && guardedCanvasRoot->height() > 0.0 &&
+               guardedToolTip->window() == guardedQuickWindow;
+    };
+    const auto usableControl = [&sceneReady,
+                                &guardedQuickWindow](const QPointer<QQuickItem> &control) {
+        return sceneReady() && control->isVisible() && control->isEnabled() &&
+               control->width() > 0.0 && control->height() > 0.0 &&
+               control->window() == guardedQuickWindow;
+    };
+    if (!QTest::qWaitFor([&] {
+            return usableControl(guardedDivisionControl) && usableControl(guardedFeelControl);
+        })) {
+        check.fail("ready ruler tooltip Quick surface did not become input-ready");
         return;
     }
 
-    const auto setHover = [quickWindow, canvasRoot](QQuickItem &control, bool entering) {
-        const QPointF windowPosition =
-            entering ? control.mapToScene(QPointF(control.width() / 2.0, control.height() / 2.0))
-                     : canvasRoot->mapToScene(
-                           QPointF(canvasRoot->width() / 2.0, canvasRoot->height() / 2.0));
-        const QPointF globalPosition = quickWindow->mapToGlobal(windowPosition.toPoint());
+    bool windowEntered = false;
+    const auto setHover = [&guardedCanvasRoot, &guardedQuickWindow,
+                           &windowEntered](const QPointer<QQuickItem> &control, bool entering) {
+        if (!guardedCanvasRoot || !guardedQuickWindow || !control)
+            return false;
+        QQuickItem *const canvasRoot = guardedCanvasRoot.data();
+        QQuickWindow *const quickWindow = guardedQuickWindow.data();
+        const QPoint windowPosition =
+            (entering
+                 ? control->mapToScene(QPointF(control->width() / 2.0, control->height() / 2.0))
+                 : canvasRoot->mapToScene(
+                       QPointF(canvasRoot->width() / 2.0, canvasRoot->height() / 2.0)))
+                .toPoint();
         if (entering) {
-            QEnterEvent enter(windowPosition, windowPosition, globalPosition);
-            QCoreApplication::sendEvent(quickWindow, &enter);
+            if (!windowEntered) {
+                const QPointF point(windowPosition);
+                QEnterEvent enter(point, point, QPointF(quickWindow->mapToGlobal(windowPosition)));
+                QCoreApplication::sendEvent(quickWindow, &enter);
+                windowEntered = true;
+            }
+            if (!checks::events::primeMouseMove(*quickWindow, *control, windowPosition))
+                return false;
         }
-        QMouseEvent move(QEvent::MouseMove, windowPosition, globalPosition, Qt::NoButton,
-                         Qt::NoButton, Qt::NoModifier);
-        QCoreApplication::sendEvent(quickWindow, &move);
-        QCoreApplication::processEvents();
+        QTest::mouseMove(quickWindow, windowPosition);
+        return true;
     };
-    for (QQuickItem *const control : {probe.divisionControl.data(), probe.feelControl.data()}) {
-        if (!control)
-            continue;
-        setHover(*control, true);
-        if (!probe.toolTip->isVisible()) {
-            check.fail(qUtf8Printable(
-                QObject::tr("ruler tooltip did not appear while hovering the %1 control")
-                    .arg(control->objectName())));
-        } else {
-            const QRectF tooltipRect(probe.toolTip->mapToItem(canvasRoot, QPointF(0, 0)),
-                                     probe.toolTip->size());
-            const qreal rowBottom =
-                probe.controls->mapToItem(canvasRoot, QPointF(0, 0)).y() + rulerBandHeight(view);
-            // Room below the row exists, so the tooltip must float there
-            // instead of covering the row or spilling past the canvas.
-            if (rowBottom + tooltipRect.height() <= canvasRoot->height()) {
-                if (tooltipRect.top() < rowBottom - 0.5)
-                    check.fail("ruler tooltip covered the ruler row instead of floating below it");
-                else if (tooltipRect.bottom() > canvasRoot->height() + 0.5)
-                    check.fail("ruler tooltip spilled past the Quick canvas below the ruler row");
-                else if (tooltipRect.left() < -0.5 ||
-                         tooltipRect.right() > canvasRoot->width() + 0.5)
-                    check.fail("ruler tooltip left the Quick canvas while floating below the row");
+    const auto hoverDiagnostic = [&sceneReady, &guardedQuickWindow,
+                                  &guardedToolTip](const QPointer<QQuickItem> &control) {
+        return QObject::tr(
+                   "ruler tooltip did not appear while hovering the %1 control "
+                   "(scene-ready=%2 hovered=%3 visible=%4 enabled=%5 size=%6x%7 window=%8 "
+                   "tooltip-visibleForControl=%9 tooltip-text-empty=%10 tooltip-size=%11x%12)")
+            .arg(control ? control->objectName() : QStringLiteral("<destroyed>"))
+            .arg(sceneReady())
+            .arg(control && control->property("hovered").toBool())
+            .arg(control && control->isVisible())
+            .arg(control && control->isEnabled())
+            .arg(control ? control->width() : 0.0)
+            .arg(control ? control->height() : 0.0)
+            .arg(control && control->window() == guardedQuickWindow)
+            .arg(guardedToolTip && guardedToolTip->property("visibleForControl").toBool())
+            .arg(guardedToolTip && guardedToolTip->property("toolTipText").toString().isEmpty())
+            .arg(guardedToolTip ? guardedToolTip->width() : 0.0)
+            .arg(guardedToolTip ? guardedToolTip->height() : 0.0);
+    };
+    for (const QPointer<QQuickItem> &control : {guardedDivisionControl, guardedFeelControl}) {
+        if (!usableControl(control)) {
+            check.fail("ready ruler tooltip Quick control was destroyed before hover delivery");
+            return;
+        }
+        if (!setHover(control, true)) {
+            check.fail(qUtf8Printable(QObject::tr("could not deliver ruler hover to the %1 control")
+                                          .arg(control->objectName())));
+            setHover(control, false);
+            return;
+        }
+        if (!QTest::qWaitFor(
+                [&] { return sceneReady() && control && guardedToolTip->isVisible(); })) {
+            check.fail(qUtf8Printable(hoverDiagnostic(control)));
+            setHover(control, false);
+            return;
+        }
+        if (!sceneReady() || !control || !guardedToolTip->isVisible()) {
+            check.fail("ready ruler tooltip Quick scene was destroyed after hover delivery");
+            return;
+        }
+        const QRectF tooltipRect(guardedToolTip->mapToItem(guardedCanvasRoot, QPointF(0, 0)),
+                                 guardedToolTip->size());
+        const qreal rowBottom = guardedControls->mapToItem(guardedCanvasRoot, QPointF(0, 0)).y() +
+                                rulerBandHeight(view);
+        // Room below the row exists, so the tooltip must float there instead
+        // of covering the row or spilling past the canvas.
+        if (rowBottom + tooltipRect.height() <= guardedCanvasRoot->height()) {
+            if (tooltipRect.top() < rowBottom - 0.5) {
+                check.fail("ruler tooltip covered the ruler row instead of floating below it");
+                setHover(control, false);
+                return;
+            }
+            if (tooltipRect.bottom() > guardedCanvasRoot->height() + 0.5) {
+                check.fail("ruler tooltip spilled past the Quick canvas below the ruler row");
+                setHover(control, false);
+                return;
+            }
+            if (tooltipRect.left() < -0.5 ||
+                tooltipRect.right() > guardedCanvasRoot->width() + 0.5) {
+                check.fail("ruler tooltip left the Quick canvas while floating below the row");
+                setHover(control, false);
+                return;
             }
         }
-        setHover(*control, false);
-        if (probe.toolTip->isVisible())
-            check.fail("ruler tooltip stayed visible after the hover left the control");
+        if (!setHover(control, false)) {
+            check.fail(qUtf8Printable(
+                QObject::tr("could not deliver ruler hover leave from the %1 control")
+                    .arg(control->objectName())));
+            return;
+        }
+        if (!QTest::qWaitFor(
+                [&] { return sceneReady() && control && !guardedToolTip->isVisible(); })) {
+            if (!sceneReady() || !control || !guardedToolTip) {
+                check.fail(
+                    "ready ruler tooltip Quick scene was destroyed while awaiting hover leave");
+            } else {
+                check.fail("ruler tooltip stayed visible after the hover left the control");
+            }
+            return;
+        }
     }
 }
 
@@ -1068,27 +1155,39 @@ void runReadyGatePhase(Harness &check, GateFixture &probe)
     checkRulerToolTipOverlay(check, probe);
 }
 
-void runInputGateScenarios(Harness &check)
+ScenarioContinuation runInputGateScenarios(Harness &check)
 {
+    const int failuresAtEntry = check.failures();
     const std::optional<SongName> probeName =
         SongName::create(QStringLiteral("mus_loading_ruler_probe"));
     if (!probeName) {
         check.fail("probe song name was rejected as an identity");
-        return;
+        return ScenarioContinuation::Stop;
     }
 
     GateFixture probe(*probeName);
     runFreshGatePhase(check, probe);
+    if (check.failures() != failuresAtEntry)
+        return ScenarioContinuation::Stop;
     runMidiStageGatePhase(check, probe);
+    if (check.failures() != failuresAtEntry)
+        return ScenarioContinuation::Stop;
     runReadyGatePhase(check, probe);
+    return check.failures() == failuresAtEntry ? ScenarioContinuation::Continue
+                                               : ScenarioContinuation::Stop;
 }
 
 } // namespace
 
 ScenarioContinuation runLoadingRulerScenarios(Harness &check)
 {
+    const int failuresAtEntry = check.failures();
     runGeometryScenarios(check);
-    runInputGateScenarios(check);
+    if (check.failures() != failuresAtEntry)
+        return ScenarioContinuation::Stop;
+    if (runInputGateScenarios(check) == ScenarioContinuation::Stop ||
+        check.failures() != failuresAtEntry)
+        return ScenarioContinuation::Stop;
 
     // The scenarios above raise their own windows; hand focus back to the
     // rig view for the sequential gesture suites that follow.
