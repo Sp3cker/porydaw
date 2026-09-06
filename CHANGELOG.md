@@ -11,10 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Press `G` with one note selected to edit its channel-wide pitch bend: scroll the graph for a note-scoped BENDR range, hold `Option`/`Alt` for angled lines, reset to zero, and audition from note-on with `Space`. The popup stays open until click-away or `Escape`.
 
 ## Changed
+- Expose selection-keyboard routing checks as independently selectable Qt Test cases with isolated fixtures.
+- Consolidate duplicated check coverage: the keymap conflict matrix runs one case per command across all four routed contexts, velocity roll-drag regressions share a staged setup, and vacuous or duplicated selection and cancellation assertions were repaired or removed.
+- Route note keyboard commands by selection across timeline drawers, while text editors and keyboard-focused grips and scrollbars retain their local keys.
 - Render the main timeline and piano-roll scrollbars in the existing Qt Quick scene, using the shared scrollbar control and the camera's fractional scroll positions.
 - Resonance suppression now uses a 150 ms default attack for faster response to ringing and whistles.
 
 ## Fixed
+- Prevent timeline cancellation from releasing a pitch-bend popup's mouse grab and corrupting undo history during an external document edit.
+- Cancel active timeline gestures with Escape without clearing their captured selection; an idle Escape clears the selection.
+- Keep automation pencil-hover Delete from overriding selected notes or a scoped time selection.
+- Typing in Qt Quick text inputs no longer toggles the automation Pencil tool.
 - Double-clicking a tempo or CC automation node now deletes it once without opening an unintended value dialog.
 - Keep automation and track-header scrollbar thumbs inside their tracks during dragging, including when the content reaches an endpoint.
 - Keep velocity notes and PSG level bands aligned with the shared timeline camera during scrolling, zooming, and fractional display scaling.

@@ -157,6 +157,10 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     std::call_once(registered, [] {
         qmlRegisterType<TimelineChromeItem>("Porydaw.Ui", 1, 0, "TimelineChromeItem");
         qmlRegisterType<TimelineInputItem>("Porydaw.Ui", 1, 0, "TimelineInputItem");
+        // TimelineGestureScrollbar inherits activeFocusOnTab from QQuickItem,
+        // introduced at the QtQuick 2.1 base meta-object revision.
+        qmlRegisterRevision<QQuickItem, 1>("Porydaw.Ui", 1, 0);
+        qmlRegisterType<TimelineGestureScrollbar>("Porydaw.Ui", 1, 0, "TimelineGestureScrollbar");
         qmlRegisterType<TimelinePlayheadItem>("Porydaw.Ui", 1, 0, "TimelinePlayheadItem");
         qmlRegisterType<TimelineQuickItem>("Porydaw.Ui", 1, 0, "TimelineQuickItem");
     });
@@ -194,6 +198,7 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     QObject *root = rootObject();
     if (!root)
         qFatal("Qt Quick timeline QML has no root object");
+    discoverGestureScrollbars(*root);
 
     static constexpr std::array layers = {
         std::pair{TimelineQuickLayer::RulerGutterChrome, "timelineQuickRulerGutterChrome"},
@@ -342,12 +347,21 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
         input->setInteraction(&drawerChrome.interaction(properties.target));
         m_drawerChromeInputs[index] = input;
     }
+    // Typed scrollbar roots are discovered once while this QML root exists.
+    discoverGestureScrollbars(*root);
+    // The shared song-policy callback turns every band, gutter and
+    // drawer-chrome input into a route to SongView::handleEditKey once the
+    // interaction's restricted local handling declines; see
+    // timelinequickview_keyrouting.cpp.
+    installKeyPolicyHandlers();
 
     syncAppearance();
 }
 
 TimelineQuickView::~TimelineQuickView()
 {
+    clearKeyPolicyHandlers();
+    m_gestureScrollbars.clear();
     for (TimelineInputItem *item : m_drawerChromeInputs) {
         if (item)
             item->setInteraction(nullptr);
@@ -366,10 +380,16 @@ TimelineQuickView::~TimelineQuickView()
 void TimelineQuickView::detachInputInteraction(TimelineBand band)
 {
     const std::size_t index = timelineBandIndex(band);
-    if (TimelineInputItem *const gutterItem = m_gutterInputItems[index])
+    // Clear first so a band being destroyed cannot retain a route to this
+    // host while its input detaches.
+    if (TimelineInputItem *const gutterItem = m_gutterInputItems[index]) {
+        gutterItem->clearKeyPolicy();
         gutterItem->setInteraction(nullptr);
-    if (TimelineInputItem *const primaryItem = m_inputItems[index])
+    }
+    if (TimelineInputItem *const primaryItem = m_inputItems[index]) {
+        primaryItem->clearKeyPolicy();
         primaryItem->setInteraction(nullptr);
+    }
 }
 
 qreal TimelineQuickView::quickDevicePixelRatio() const
@@ -659,16 +679,6 @@ bool TimelineQuickView::eventFilter(QObject *watched, QEvent *event)
         if (m_songView) {
             m_songView->focusActiveSurface();
             return true;
-        }
-    }
-    if (watched == m_quickView && event->type() == QEvent::WindowDeactivate) {
-        for (TimelineInputItem *item : m_drawerChromeInputs) {
-            if (item && item->interaction())
-                item->interaction()->inputCancelled(TimelineInputCancelReason::WindowDeactivated);
-        }
-        for (TimelineInputItem *item : m_inputItems) {
-            if (item && item->interaction())
-                item->interaction()->inputCancelled(TimelineInputCancelReason::WindowDeactivated);
         }
     }
     return QWidget::eventFilter(watched, event);

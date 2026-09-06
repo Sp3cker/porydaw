@@ -50,7 +50,7 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
     explicit VoiceChangeArea(SongView &owner, QObject *parent = nullptr);
     void songChanged();
     void refreshLiveState(const DrawerPageLiveState &liveState);
-    void cancelInteraction();
+    void cancelInteraction() override;
     void documentChanged();
     void tracksRemapped(const TrackRemap &remap);
     void presentPlayhead(double tick);
@@ -64,6 +64,7 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
     void pointerLeave() override;
     bool wheel(const songview::TimelineWheelInput &input) override;
     bool keyPress(const songview::TimelineKeyInput &input) override;
+    bool gestureActive() const override;
     void inputCancelled(songview::TimelineInputCancelReason reason) override;
     void hostAppearanceChanged() override;
 

@@ -124,63 +124,30 @@ void PianoRollTest::scaleFoldTrackScope()
                 doc.undoStack()->undo();
         }
     }
-    view.setScaleHighlight(false);
-    view.setScaleFold(false);
-    view.setScaleRoot(0);
-    view.setScaleId(scaleMajor);
-    if (doc.undoStack()->index() != undo)
-        QFAIL("gesture pass pushed an unexpected number of undo commands");
-    QCOMPARE(doc.smf().write(), before);
-}
 
-void PianoRollTest::scaleFoldProjectionLock()
-{
-    PianoRollFixture &check = *m_fixture;
-    SongDocument &doc = check.document();
-    SongView &view = check.view();
-    const auto scaleMajor = porydaw_scale::ScaleId::major;
-    const int scaleTrack = view.selectionModel().primaryTrack();
-    const QByteArray before = doc.smf().write();
-    const int undo = doc.undoStack()->index();
-    view.setScaleHighlight(false);
-    view.setScaleFold(true);
-    view.setScaleRoot(0);
-    view.setScaleId(scaleMajor);
-    const auto &proj = view.pitchProjection();
-    const uint64_t cTick =
-        uint64_t(check.timeline().lengthTicks) + uint64_t(doc.ticksPerClock()) * 8;
-    const auto firstFreeOffScale = [&](const bool occ[128]) {
-        for (int k = 1; k < 128; k += 12)
-            if (!occ[k])
-                return k;
-        return -1;
-    };
-
-    // C3. A held pointer gesture (projection locked) keeps the row set
-    // stable until release, then rebuilds.
-    {
-        bool occ[128] = {};
-        for (const DocNote &n : doc.notesForTrack(scaleTrack))
-            occ[n.key] = true;
-        const int base = firstFreeOffScale(occ);
-        if (base >= 0) {
-            const int cmd0 = doc.undoStack()->index();
-            doc.addNote(scaleTrack, cTick, uint8_t(base), doc.ticksPerClock(), 100);
-            const int withNote = proj.visibleRowCount();
-            DocNote n;
-            if (doc.findNote(scaleTrack, cTick, uint8_t(base), &n)) {
-                view.setProjectionLocked(true);
-                doc.deleteNotes({n}); // rebuild deferred by the lock
-                if (proj.visibleRowCount() != withNote)
-                    QFAIL("Fold rebuilt its layout mid-gesture");
-                view.setProjectionLocked(false);
-                view.flushProjectionIfDirty();
-                if (proj.visibleRowCount() >= withNote)
-                    QFAIL("Fold did not rebuild its layout on gesture release");
+    // A selected-track switch preserves Fold and replaces the row set
+    // with the incoming track's exact occupancy.
+    if (other >= 0) {
+        view.selectTrack(other);
+        if (view.scaleHighlight() || !view.scaleFold())
+            QFAIL("selected-track change altered Fold or enabled Highlight");
+        bool incomingOccupancy[128] = {};
+        int incomingCount = 0;
+        for (const DocNote &n : doc.notesForTrack(other)) {
+            if (!incomingOccupancy[n.key]) {
+                incomingOccupancy[n.key] = true;
+                incomingCount++;
             }
-            while (doc.undoStack()->index() > cmd0)
-                doc.undoStack()->undo();
         }
+        if (proj.visibleRowCount() != incomingCount)
+            QFAIL("Fold did not rebuild for the incoming selected track");
+        for (int pitch = 0; pitch < 128; pitch++) {
+            if ((proj.rowForPitch(pitch) != projHidden) != incomingOccupancy[pitch]) {
+                QFAIL("incoming selected-track Fold rows do not match occupancy");
+                break;
+            }
+        }
+        view.selectTrack(scaleTrack);
     }
     view.setScaleHighlight(false);
     view.setScaleFold(false);
@@ -215,6 +182,8 @@ void PianoRollTest::scaleFoldUndoLifecycle()
         return -1;
     };
 
+    // Held-drag stability is covered by the press/move/release sequence in
+    // scale_editing.cpp; document replacement here terminates interactions.
     // C4. Layout rebuilds after add, delete/undo, and redo.
     {
         bool occ[128] = {};

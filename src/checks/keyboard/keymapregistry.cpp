@@ -6,6 +6,7 @@
 #include <QSettings>
 #include <QtTest>
 
+#include <array>
 #include <memory>
 
 void KeymapCheckTest::initTestCase()
@@ -43,9 +44,12 @@ void KeymapCheckTest::shippedTable()
     for (const keymap::CommandInfo &command : commands) {
         QVERIFY(!ids.contains(command.id));
         ids.insert(command.id);
-        for (const QKeySequence &sequence : command.defaults)
+        // Effective bindings probed from Global: that context overlaps every
+        // consumer context, so a conflict here would make two commands fire
+        // on one key anywhere.
+        for (const QKeySequence &sequence : keymap::Registry::instance().bindings(command.id))
             QVERIFY(keymap::Registry::instance()
-                        .conflicts(command.id, command.context, sequence)
+                        .conflicts(command.id, keymap::Context::Global, sequence)
                         .isEmpty());
     }
 }
@@ -112,13 +116,6 @@ void KeymapCheckTest::defaultMatching()
 
     QCOMPARE(matches(id, key, modifiers), expected);
 }
-void KeymapCheckTest::commandContexts()
-{
-    const auto &registry = keymap::Registry::instance();
-    QCOMPARE(registry.command(QStringLiteral("edit.insert_time")).context, keymap::Context::Global);
-    QCOMPARE(registry.command(QStringLiteral("roll.duplicate_time")).context,
-             keymap::Context::PianoRoll);
-}
 
 void KeymapCheckTest::overrideReplacesDefaultAndPersists()
 {
@@ -138,6 +135,10 @@ void KeymapCheckTest::overrideReplacesDefaultAndPersists()
              QList<QKeySequence>{QKeySequence(QStringLiteral("Alt+D"))});
     QCOMPARE(QSettings().value(QStringLiteral("keymap/") + duplicateTime).toString(),
              QStringLiteral("Alt+D"));
+    QVERIFY(keymap::Registry::instance()
+                .conflicts(duplicateTime, keymap::Context::Global,
+                           QKeySequence(QStringLiteral("Alt+D")))
+                .isEmpty());
     registry.resetBinding(duplicateTime);
     QVERIFY(!registry.isOverridden(duplicateTime));
     QVERIFY(matches(duplicateTime, Qt::Key_D, Qt::ControlModifier));
@@ -240,6 +241,102 @@ void KeymapCheckTest::conflicts()
         QVERIFY(conflicts.contains(expectedConflict));
 }
 
+void KeymapCheckTest::routedCommandConflicts_data()
+{
+    QTest::addColumn<QString>("id");
+    QTest::addColumn<bool>("conflictsInEventList");
+
+    struct RoutedCommand {
+        const char *id;
+        bool conflictsWithEventList;
+    };
+    // Every shared timeline command overlaps Piano Roll, Velocity, and
+    // Automation. Only window-owned Copy and Solo (Global) also overlap the
+    // Event List; the global Insert Time command stays here to prove its own
+    // scope.
+    // One row per command: the test binds the command once to the temporary
+    // probe key and checks conflicts() for all four routed contexts against
+    // the expectations derived from this flag.
+    static constexpr std::array routedCommands = {
+        RoutedCommand{"roll.copy", true},
+        RoutedCommand{"roll.cut", false},
+        RoutedCommand{"roll.duplicate_time", false},
+        RoutedCommand{"roll.paste", false},
+        RoutedCommand{"roll.select_all", false},
+        RoutedCommand{"roll.delete", false},
+        RoutedCommand{"roll.pitch_bend", false},
+        RoutedCommand{"roll.transpose_up", false},
+        RoutedCommand{"roll.transpose_down", false},
+        RoutedCommand{"roll.transpose_up_octave", false},
+        RoutedCommand{"roll.transpose_down_octave", false},
+        RoutedCommand{"roll.nudge_left", false},
+        RoutedCommand{"roll.nudge_right", false},
+        RoutedCommand{"roll.mute_tracks", false},
+        RoutedCommand{"roll.solo_tracks", true},
+        RoutedCommand{"edit.insert_time", true},
+    };
+    for (const RoutedCommand &command : routedCommands)
+        QTest::newRow(command.id) << QString(QLatin1String(command.id))
+                                  << command.conflictsWithEventList;
+}
+
+void KeymapCheckTest::routedCommandConflicts()
+{
+    QFETCH(QString, id);
+    QFETCH(bool, conflictsInEventList);
+
+    auto &registry = keymap::Registry::instance();
+    const QString probeId = QStringLiteral("keymapcheck.temporary_probe");
+    const QKeySequence temporaryBinding(QStringLiteral("Alt+9"));
+    struct ProbedContext {
+        keymap::Context context;
+        const char *name;
+    };
+    static constexpr std::array probedContexts = {
+        ProbedContext{keymap::Context::PianoRoll, "piano-roll"},
+        ProbedContext{keymap::Context::Velocity, "velocity"},
+        ProbedContext{keymap::Context::Automation, "automation"},
+        ProbedContext{keymap::Context::EventList, "event-list"},
+    };
+    const auto probeConflicts = [&registry, &probeId,
+                                 &temporaryBinding](keymap::Context context) -> QStringList {
+        return registry.conflicts(probeId, context, temporaryBinding);
+    };
+
+    // Before the temporary bind the probe key must be free in every probed scope.
+    for (const ProbedContext &probed : probedContexts) {
+        QVERIFY2(probeConflicts(probed.context).isEmpty(),
+                 qPrintable(QStringLiteral("Alt+9 probe is already in use in the %1 context")
+                                .arg(QString::fromLatin1(probed.name))));
+    }
+
+    registry.setBinding(id, temporaryBinding);
+
+    for (const ProbedContext &probed : probedContexts) {
+        const bool expectedConflict =
+            probed.context == keymap::Context::EventList ? conflictsInEventList : true;
+        const QStringList conflicts = probeConflicts(probed.context);
+        QVERIFY2(
+            conflicts.contains(id) == expectedConflict,
+            qPrintable(QStringLiteral("%1 bound to Alt+9 in the %2 context: expected %3, got %4")
+                           .arg(id, QString::fromLatin1(probed.name),
+                                expectedConflict ? QStringLiteral("a conflict")
+                                                 : QStringLiteral("no conflict"),
+                                conflicts.isEmpty() ? QStringLiteral("none")
+                                                    : conflicts.join(QLatin1String(", ")))));
+    }
+
+    registry.resetBinding(id);
+    QVERIFY2(!registry.isOverridden(id),
+             qPrintable(QStringLiteral("temporary binding on %1 was not restored").arg(id)));
+    for (const ProbedContext &probed : probedContexts) {
+        QVERIFY2(
+            probeConflicts(probed.context).isEmpty(),
+            qPrintable(QStringLiteral("Alt+9 probe remained in use in the %1 context after reset")
+                           .arg(QString::fromLatin1(probed.name))));
+    }
+}
+
 void KeymapCheckTest::modifierChords()
 {
     auto &registry = keymap::Registry::instance();
@@ -285,11 +382,11 @@ void KeymapCheckTest::modifierChords()
     QCOMPARE(keymap::Registry::modifierFromText(QStringLiteral("Ctrl+F5")), Qt::NoModifier);
 
     QVERIFY(registry.command(unlockId).modifier);
-    QCOMPARE(registry.command(unlockId).context, keymap::Context::Velocity);
+    const auto detent = registry.command(unlockId);
     QCOMPARE(registry.modifierBinding(unlockId), Qt::ControlModifier);
     QVERIFY(registry.bindings(unlockId).isEmpty());
     QVERIFY(!matches(unlockId, Qt::Key_C, Qt::ControlModifier));
-    QVERIFY(!registry.modifierConflicts(unlockId, keymap::Context::Velocity, Qt::ControlModifier)
+    QVERIFY(!registry.modifierConflicts(unlockId, detent.context, Qt::ControlModifier)
                  .contains(dragId));
     QVERIFY(registry.modifierConflicts(unlockId, keymap::Context::Global, Qt::ControlModifier)
                 .contains(dragId));

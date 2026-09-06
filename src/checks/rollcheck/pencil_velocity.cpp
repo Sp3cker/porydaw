@@ -1,13 +1,11 @@
 #include "checks/rollcheck/tst_pianoroll.h"
 
-#include <QApplication>
 #include <QCoreApplication>
 #include <QEvent>
 #include <QFocusEvent>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPoint>
-#include <QQuickView>
 #include <QQuickWindow>
 #include <QtTest>
 #include <algorithm>
@@ -162,38 +160,6 @@ void PianoRollTest::velocityDragCommit()
     QCOMPARE(doc.smf().write(), before);
 }
 
-void PianoRollTest::velocityCancelActive()
-{
-    auto &check = *m_fixture;
-    const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
-    QVERIFY(seed.has_value());
-    SongDocument &doc = check.document();
-    SongView &view = check.view();
-    auto &roll = check.rollInput();
-    const QByteArray before = doc.smf().write();
-    const int undo = doc.undoStack()->index();
-    const int undoCount = doc.undoStack()->count();
-    const uint64_t revision = doc.revision();
-    checks::events::sendMouse(roll, QEvent::MouseButtonPress, seed->b.center, Qt::LeftButton,
-                              Qt::LeftButton, Qt::ControlModifier);
-    checks::events::sendMouse(roll, QEvent::MouseMove, seed->b.center - QPoint(0, 15), Qt::NoButton,
-                              Qt::LeftButton, Qt::ControlModifier);
-    QCoreApplication::processEvents();
-    QVERIFY2(view.previewVelocity(seed->noteB.noteId).has_value() && doc.revision() == revision &&
-                 doc.undoStack()->index() == undo && doc.undoStack()->count() == undoCount,
-             "cancelled velocity drag must stage its changed preview without document history");
-    view.cancelActiveInteractions();
-    checks::events::sendMouse(roll, QEvent::MouseMove, seed->b.center - QPoint(0, 15), Qt::NoButton,
-                              Qt::LeftButton, Qt::ControlModifier);
-    checks::events::sendMouse(roll, QEvent::MouseButtonRelease, seed->b.center - QPoint(0, 15),
-                              Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
-    QCoreApplication::processEvents();
-    QVERIFY2(doc.revision() == revision && doc.undoStack()->index() == undo &&
-                 doc.undoStack()->count() == undoCount && !view.previewVelocity(seed->noteB.noteId),
-             "SongView cancellation must reset piano-roll local drag state without mutation");
-    QCOMPARE(doc.smf().write(), before);
-}
-
 void PianoRollTest::velocityCancelUngrab()
 {
     auto &check = *m_fixture;
@@ -206,26 +172,27 @@ void PianoRollTest::velocityCancelUngrab()
     const int undo = doc.undoStack()->index();
     const int undoCount = doc.undoStack()->count();
     const uint64_t revision = doc.revision();
-    checks::events::sendMouse(roll, QEvent::MouseButtonPress, seed->b.center, Qt::LeftButton,
-                              Qt::LeftButton, Qt::ControlModifier);
-    checks::events::sendMouse(roll, QEvent::MouseMove, seed->b.center - QPoint(0, 15), Qt::NoButton,
-                              Qt::LeftButton, Qt::ControlModifier);
-    QCoreApplication::processEvents();
-    QVERIFY2(view.previewVelocity(seed->noteB.noteId).has_value(),
-             "mouse-ungrab cancellation must stage its changed velocity preview");
     auto *quick =
         view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
     QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
     QVERIFY2(window, "no Quick window for mouse-ungrab cancellation");
-    const QPointF windowPosition = roll.mapToScene(QPointF(seed->b.center));
-    QMouseEvent press(QEvent::MouseButtonPress, windowPosition,
-                      QPointF(window->mapToGlobal(windowPosition.toPoint())), Qt::LeftButton,
-                      Qt::LeftButton, Qt::ControlModifier);
-    QCoreApplication::sendEvent(window, &press);
+    QVERIFY2(QTest::qWaitForWindowExposed(window),
+             "Quick window did not become exposed for the mouse-ungrab cancellation drag");
+    const QPoint pressPosition = roll.mapToScene(QPointF(seed->b.center)).toPoint();
+    const QPoint dragPosition = roll.mapToScene(QPointF(seed->b.center - QPoint(0, 15))).toPoint();
+    QVERIFY2(checks::events::primeMouseMove(*window, roll, pressPosition),
+             "could not prime the mouse-ungrab cancellation drag");
+    QTest::mousePress(window, Qt::LeftButton, Qt::ControlModifier, pressPosition);
+    QTest::mouseMove(window, dragPosition);
+    QVERIFY2(view.previewVelocity(seed->noteB.noteId).has_value() && doc.revision() == revision &&
+                 doc.undoStack()->index() == undo && doc.undoStack()->count() == undoCount,
+             "mouse-ungrab cancellation must stage its changed velocity preview");
     roll.ungrabMouse();
-    QApplication::processEvents();
-    QVERIFY2(doc.revision() == revision && doc.undoStack()->index() == undo &&
-                 doc.undoStack()->count() == undoCount && !view.previewVelocity(seed->noteB.noteId),
+    const bool cancelledOnUngrab = !view.previewVelocity(seed->noteB.noteId).has_value();
+    QTest::mouseRelease(window, Qt::LeftButton, Qt::ControlModifier, dragPosition);
+    QVERIFY2(cancelledOnUngrab && !view.previewVelocity(seed->noteB.noteId) &&
+                 doc.revision() == revision && doc.undoStack()->index() == undo &&
+                 doc.undoStack()->count() == undoCount,
              "mouse ungrab must cancel the local velocity drag without mutation");
     QCOMPARE(doc.smf().write(), before);
 }

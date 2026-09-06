@@ -7,6 +7,7 @@ Item {
     required property var chrome
     required property var quickView
 
+
     anchors.fill: parent
 
     component ResizeHandle: Rectangle {
@@ -45,6 +46,10 @@ Item {
             handle.adjust(-1)
             event.accepted = true
         }
+        // Cross-axis arrows are deliberate consumed no-ops on this grip, so a
+        // focused control never forwards unowned song-edit arrows.
+        Keys.onLeftPressed: (event) => event.accepted = true
+        Keys.onRightPressed: (event) => event.accepted = true
 
         Accessible.role: Accessible.Grip
         Accessible.name: accessibleName
@@ -141,6 +146,13 @@ Item {
         Keys.onReturnPressed: (event) => toggle.activateFromKeyboard(event)
         Keys.onEnterPressed: (event) => toggle.activateFromKeyboard(event)
         Keys.onSpacePressed: (event) => toggle.activateFromKeyboard(event)
+        // Claim the activation keys before window-level shortcuts (the
+        // transport play/pause Space binding) can take them from this
+        // focused control: an item beats a shortcut only by accepting the
+        // ShortcutOverride event.
+        Keys.onShortcutOverride: (event) => event.accepted =
+            event.key === Qt.Key_Space || event.key === Qt.Key_Return
+            || event.key === Qt.Key_Enter
 
         Accessible.role: Accessible.Button
         Accessible.name: accessibleName
@@ -235,6 +247,10 @@ Item {
         Keys.onReturnPressed: (event) => drawerDetent.activateFromKeyboard(event)
         Keys.onEnterPressed: (event) => drawerDetent.activateFromKeyboard(event)
         Keys.onSpacePressed: (event) => drawerDetent.activateFromKeyboard(event)
+        // Same activation-key claim as DrawerToggle above.
+        Keys.onShortcutOverride: (event) => event.accepted =
+            event.key === Qt.Key_Space || event.key === Qt.Key_Return
+            || event.key === Qt.Key_Enter
 
         Accessible.role: Accessible.CheckBox
         Accessible.name: qsTr("Velocity detents")
@@ -255,8 +271,9 @@ Item {
     }
 
     TimelineScrollbar {
-        x: layer.chrome.automationScrollbarRect.x - layer.quickView.hostX
+        id: automationScrollBar
         objectName: "drawerAutomationScrollBar"
+        x: layer.chrome.automationScrollbarRect.x - layer.quickView.hostX
         y: layer.chrome.automationScrollbarRect.y - layer.quickView.hostY
         width: layer.chrome.automationScrollbarRect.width
         height: layer.chrome.automationScrollbarRect.height

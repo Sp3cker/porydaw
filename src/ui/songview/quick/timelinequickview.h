@@ -8,11 +8,11 @@
 
 #include <QColor>
 #include <QEvent>
-#include <QFlags>
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QResizeEvent>
+#include <QString>
 #include <QTimer>
 #include <QWidget>
 #include <array>
@@ -34,6 +34,7 @@ class OtherStrip;
 class PianoRoll;
 class TimeCamera;
 class TimelineInputItem;
+class TimelineGestureScrollbar;
 enum class TimelineQuickHoverOwner : quint8 {
     None,
     Automation,
@@ -208,6 +209,22 @@ class TimelineQuickView final : public QWidget
     // SongView calls this before destroying a direct-owned band interaction.
     void detachInputInteraction(TimelineBand band);
 
+    // Song key-policy bridge over the converted Quick inputs. Band, gutter
+    // and drawer-chrome input items run their attached interaction first and
+    // hand declined keys to SongView::handleEditKey through the guarded
+    // callback installed here; forwardUnhandledKey(Release) is the matching
+    // scene-root fallback for keys unclaimed by non-band QML chrome. A true
+    // return means the shared policy consumed the key. gestureActive() and
+    // cancelActiveGestures() let the shared policy protect command execution
+    // from live pointer gestures across every attached interaction and QML
+    // scrollbar thumb drag.
+    bool gestureActive() const;
+    void cancelActiveGestures();
+    Q_INVOKABLE bool forwardUnhandledKey(int key, int modifiers, const QString &text,
+                                         bool autoRepeat);
+    Q_INVOKABLE bool forwardUnhandledKeyRelease(int key, int modifiers, const QString &text,
+                                                bool autoRepeat);
+
     void requestUpdate(PianoRollQuickDirtySet dirty);
     void requestTimelineUpdate(TimelineQuickDirtySet dirty);
     void requestAutomationUpdate(AutomationRefreshSet dirty);
@@ -234,6 +251,13 @@ class TimelineQuickView final : public QWidget
 
     void scheduleTimelineBandLayoutPublication();
     void publishTimelineBandLayout();
+    void discoverGestureScrollbars(QObject &root);
+    void registerGestureScrollbar(TimelineGestureScrollbar &scrollbar);
+    void forgetGestureScrollbar(TimelineGestureScrollbar *scrollbar);
+    void installKeyPolicyHandlers();
+    void clearKeyPolicyHandlers();
+    bool dispatchSongKey(const TimelineKeyInput &input);
+    bool dispatchSongKeyRelease(const TimelineKeyInput &input);
     void flushUpdate();
     // One sync entry point per band; flushUpdate dispatches one call per
     // dirty band, and each sync owns that band's rebuild + layer updates.
@@ -272,6 +296,10 @@ class TimelineQuickView final : public QWidget
     std::array<TimelineInputItem *, timelineBandIndex(TimelineBand::Count)> m_inputItems{};
     std::array<TimelineInputItem *, timelineBandIndex(TimelineBand::Count)> m_gutterInputItems{};
     std::array<TimelineInputItem *, 5> m_drawerChromeInputs{};
+    // Typed QML scrollbar roots discovered once after scene construction.
+    // QPointers survive teardown; destroyed connections erase identities as
+    // soon as their QML object dies.
+    std::vector<QPointer<TimelineGestureScrollbar>> m_gestureScrollbars;
     TimelineQuickScene *m_scene = nullptr;
     QQuickView *m_quickView = nullptr;
     QWidget *m_quickContainer = nullptr;

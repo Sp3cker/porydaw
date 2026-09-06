@@ -33,7 +33,6 @@ class KeymapCheckTest final : public QObject
     void preferencesDefaultBinding();
     void defaultMatching_data();
     void defaultMatching();
-    void commandContexts();
     void overrideReplacesDefaultAndPersists();
     void unbindPersistsEmptyDelta();
     void resetSemantics();
@@ -41,6 +40,8 @@ class KeymapCheckTest final : public QObject
     void attachedActionTracksBinding();
     void conflicts_data();
     void conflicts();
+    void routedCommandConflicts_data();
+    void routedCommandConflicts();
     void modifierChords();
 
     void columnFitsContent();

@@ -80,6 +80,8 @@ class DrawerChromeInteraction final : public songview::TimelineBandInteraction
     bool pointerRelease(const songview::TimelinePointerInput &input) override;
     void pointerLeave() override;
     void inputCancelled(songview::TimelineInputCancelReason reason) override;
+    void cancelInteraction() override;
+    bool gestureActive() const override;
     void hostAppearanceChanged() override;
 
   private:

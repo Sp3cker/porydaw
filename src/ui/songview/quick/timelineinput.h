@@ -97,6 +97,21 @@ class TimelineBandInteraction
     virtual void attachInputHost(TimelineInputHost &host) = 0;
     virtual void detachInputHost(TimelineInputHost &host) = 0;
 
+    // True while a live pointer/keyboard gesture owns the band (pan, drag,
+    // pending draw). The shared song keyboard policy must not mutate
+    // selection under an active gesture; default false for gesture-free
+    // bands. Roll and ruler interactions override with their live flags.
+    virtual bool gestureActive() const { return false; }
+
+    // Canonical cancellation of this band's live gesture: the shared Escape /
+    // focus-loss route calls this once per live interaction, and each band
+    // keeps its own teardown semantics. Default defers to the pointer
+    // cancellation path.
+    virtual void cancelInteraction()
+    {
+        inputCancelled(TimelineInputCancelReason::PointerUngrabbed);
+    }
+
     virtual bool pointerPress(const TimelinePointerInput &) { return false; }
     virtual bool pointerDoubleClick(const TimelinePointerInput &) { return false; }
     virtual bool pointerMove(const TimelinePointerInput &) { return false; }

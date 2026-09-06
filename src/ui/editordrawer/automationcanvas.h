@@ -50,7 +50,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     const std::vector<AutomationRow> &rows() const noexcept { return m_rowData.rows(); }
     void rebuildRows();
     void updateTempoLayout();
-    void cancelInteraction();
+    void cancelInteraction() override;
     void setPencilMode(bool enabled);
     bool pencilMode() const noexcept { return m_pencilMode; }
     bool isPanning() const noexcept;
@@ -68,6 +68,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void pointerLeave() override;
     bool wheel(const songview::TimelineWheelInput &input) override;
     bool keyPress(const songview::TimelineKeyInput &input) override;
+    bool gestureActive() const override;
     void inputCancelled(songview::TimelineInputCancelReason reason) override;
     void hostAppearanceChanged() override;
 

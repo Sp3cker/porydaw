@@ -6,6 +6,7 @@
 
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/keymap.h"
 #include "ui/layout.h"
 
 bool AutomationCanvas::isEditablePencilHit(const QPointF &position) const noexcept
@@ -513,32 +514,28 @@ bool AutomationCanvas::pointerDoubleClick(const songview::TimelinePointerInput &
     return true;
 }
 
+bool AutomationCanvas::gestureActive() const
+{
+    // Same ownership set cancelInteraction treats as live: pan, lane resize,
+    // band range press/drag, or a node/sweep/pencil gesture.
+    return m_pan.active || m_resize.row >= 0 || m_band.pending || m_activeGesture.has_value();
+}
+
 bool AutomationCanvas::keyPress(const songview::TimelineKeyInput &input)
 {
-    if (input.key == Qt::Key_Escape) {
-        if (m_band.pending || m_activeGesture) {
-            cancelInteraction();
-        } else {
-            auto &model = m_page.m_owner.selectionModel();
-            if (model.timeSelection().active()) {
-                model.clearTimeSelection();
-                requestSelectionQuickUpdate();
-            }
-            m_hoverState.clearHover();
-            requestHoverQuickUpdate();
-        }
-        return true;
-    }
-    if (input.key == Qt::Key_Delete || input.key == Qt::Key_Backspace) {
-        auto selected = collectSelectedNodeDrags();
-        if (!selected.points.empty()) {
-            commitNodePointDeletes(std::nullopt, selected.points);
-            m_hoverState.clearHover();
-            requestHoverQuickUpdate();
-            m_page.requestRefresh();
-            return true;
-        }
-        if (m_pencilMode && m_hoverState.hover.lane.valid()) {
+    // Gesture cancellation is centralized in SongView's shared policy so
+    // Escape follows the same path on every timeline surface. Keep the
+    // pencil hover tool local only while no pointer gesture owns this band.
+    if (gestureActive())
+        return false;
+    const auto &keys = keymap::Registry::instance();
+    if (keys.matches(input.key, input.modifiers, QLatin1String("roll.delete")) && m_pencilMode &&
+        m_hoverState.hover.lane.valid()) {
+        // Hover delete is a tool action, not selection editing: eligible only
+        // when no note or time selection exists. A miss stays a consumed
+        // no-op; a visible selection defers to the shared policy.
+        auto &model = m_page.m_owner.selectionModel();
+        if (model.noteSelection().empty() && !model.timeSelection().active()) {
             NodePoint point;
             if (nodePointHit(m_hoverState.hover.lane, m_hoverState.hover.pos, &point)) {
                 if (const auto *slot = resolveSlot(m_hoverState.hover.lane); slot && slot->lane) {

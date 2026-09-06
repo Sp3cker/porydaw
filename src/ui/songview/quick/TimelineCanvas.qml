@@ -29,6 +29,18 @@ Item {
     readonly property var rulerAppearance: timeRuler ? timeRuler.gridControlAppearance : null
     readonly property font rulerFont: rulerAppearance ? rulerAppearance.font : fallbackRulerFont
 
+    // Unclaimed-key fallback for non-band chrome (scrollbars, grips,
+    // buttons, toggles, text fields): locally advertised keys are accepted
+    // below and never arrive here; keys that reach the root go to the shared
+    // SongView policy. A declined policy key stays ignored.
+    Keys.onPressed: (event) => {
+        event.accepted = timelineQuickView.forwardUnhandledKey(
+            event.key, event.modifiers, event.text, event.isAutoRepeat)
+    }
+    Keys.onReleased: (event) => {
+        event.accepted = timelineQuickView.forwardUnhandledKeyRelease(
+            event.key, event.modifiers, event.text, event.isAutoRepeat)
+    }
 
     Component {
         id: bandTextDelegate
@@ -563,6 +575,7 @@ Item {
     }
 
     TrackHeaderBand {
+        id: trackHeaders
         anchors.fill: parent
         bandRect: root.trackHeadersBandRect
         bandVisible: root.trackHeadersBandVisible
@@ -594,6 +607,7 @@ Item {
     // chrome. The model remains authoritative: the control only relays
     // requested values and wheel deltas.
     TimelineScrollbar {
+        id: horizontalScrollBar
         objectName: "timelineHorizontalScrollBar"
         z: 3
         x: timelineQuickView.horizontalScrollbarRect.x
@@ -623,6 +637,7 @@ Item {
     }
 
     TimelineScrollbar {
+        id: rollScrollBar
         objectName: "timelineRollScrollBar"
         z: 3
         x: timelineQuickView.verticalScrollbarRect.x
@@ -652,6 +667,7 @@ Item {
     }
 
     DrawerChromeLayer {
+        id: drawerChromeLayer
         anchors.fill: parent
         chrome: drawerChrome
         quickView: timelineQuickView

@@ -81,14 +81,18 @@ void PitchBendRasterTest::popupSurfaceIsOpaqueAndUsesWindowBackground()
 
 void PitchBendRasterTest::shiftCurvePaintsDiagonal()
 {
-    songview::PitchBendEditor *editor = m_fixture.openPopup();
+    QPointer<songview::PitchBendEditor> editor = m_fixture.openPopup();
     QVERIFY(editor);
-    songview::PitchBendGraph *graph = m_fixture.graph(QStringLiteral("pitchBendGraph"));
+    QPointer<songview::PitchBendGraph> graph = m_fixture.graph(QStringLiteral("pitchBendGraph"));
     QVERIFY(graph);
     const QPoint start = canvasPoint(*graph, 0.15, 0.80);
     const QPoint finish = canvasPoint(*graph, 0.85, 0.20);
     QVERIFY(m_fixture.stroke(*graph, start, finish, Qt::ShiftModifier));
     QCoreApplication::processEvents();
+    if (!editor || !editor->isOpen()) {
+        QFAIL("pitch-bend popup was dismissed while rendering its Shift line");
+        return;
+    }
     const QImage image = editor->view()->grabWindow();
     QVERIFY(!image.isNull());
     QVERIFY(coloredHits(image, *graph, start, finish) >= 4);

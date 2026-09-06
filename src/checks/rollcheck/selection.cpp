@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "checks/support/eventsynth.h"
+#include "checks/support/quickframebuffer.h"
 #include "core/songdocument.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
@@ -77,6 +78,10 @@ void PianoRollTest::selectionBandSweep()
                                   Qt::RightButton, Qt::NoModifier);
         checks::events::sendMouse(*roll, QEvent::MouseMove, a.center + QPoint(4, 4), Qt::NoButton,
                                   Qt::RightButton, Qt::NoModifier);
+        // The gesture queues the retained-layer rebuild through the Quick
+        // host's zero-duration coalescing timer. Drain that synchronization
+        // before captureQuickFramebuffer() requests the frame to sample.
+        checks::support::pumpQuick();
         const QImage previewImage = check.captureQuickFramebuffer();
         const qreal previewRasterDpr = previewImage.devicePixelRatio();
         const int previewCenterX =

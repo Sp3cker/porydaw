@@ -59,14 +59,16 @@ void PitchBendEditingTest::idleMouseMovementPreservesPopup()
 {
     songview::PitchBendEditor *editorResult = popup();
     QVERIFY(editorResult);
-    songview::PitchBendEditor &editor = *editorResult;
+    QPointer<songview::PitchBendEditor> editor = editorResult;
     songview::PitchBendGraph *graphResult = pitchGraph();
     QVERIFY(graphResult);
     songview::PitchBendGraph &graph = *graphResult;
-    checks::events::sendMouse(graph, QEvent::MouseMove, graph.canvasRect().center(), Qt::NoButton,
-                              Qt::NoButton, Qt::NoModifier);
-    QVERIFY(editor.isOpen());
-    QVERIFY(m_fixture.popup() == &editor);
+    // Idle hover follows the production path: the move lands on the popup's
+    // own window, never directly on the graph item.
+    QTest::mouseEvent(QTest::MouseMove, editor->view(), Qt::NoButton, Qt::NoModifier,
+                      m_fixture.windowPoint(graph, graph.canvasRect().center()));
+    QVERIFY(editor && editor->isOpen());
+    QVERIFY(m_fixture.popup() == editor);
 }
 
 void PitchBendEditingTest::enterKeyDoesNotDismissPopup()

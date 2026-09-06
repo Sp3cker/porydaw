@@ -168,3 +168,13 @@ int runAutomationEditingCheck(const QStringList &qtArguments);
 int runAutomationDomainCheck(const QStringList &qtArguments);
 int runAutomationPresentationCheck(const QStringList &qtArguments);
 int runAutomationHoverCheck(const QStringList &qtArguments);
+
+// Selection-driven keyboard routing (src/checks/selectionkey).
+int runSelectionKeyCoreCheck(const QString &projectRoot, const QString &songLabel,
+                             const QStringList &qtArguments);
+int runSelectionKeyGestureCheck(const QString &projectRoot, const QString &songLabel,
+                                const QStringList &qtArguments);
+int runSelectionKeyWindowCheck(const QString &projectRoot, const QString &songA,
+                               const QString &songB, const QStringList &qtArguments);
+int runSelectionKeyLocalInputCheck(const QString &projectRoot, const QString &songLabel,
+                                   const QStringList &qtArguments);

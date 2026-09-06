@@ -175,6 +175,26 @@ void DrawerChromeInteraction::inputCancelled(songview::TimelineInputCancelReason
     m_chrome.handleCancelled(m_target, reason);
 }
 
+void DrawerChromeInteraction::cancelInteraction()
+{
+    // Press state is whole-chrome: handleCancelled ignores the target and
+    // routes every reason to the chrome's own reset, so per-target
+    // cancellation forwards there directly.
+    m_chrome.cancelInteraction();
+}
+
+bool DrawerChromeInteraction::gestureActive() const
+{
+    // Live per-target reads of the chrome's actual press state — the same
+    // ownership set cancelInteraction() resets; hover alone is not a gesture.
+    if (resizePage(m_target))
+        return m_chrome.m_resizeTarget == m_target;
+    if (m_target == DrawerChromeTarget::Bar)
+        return m_chrome.m_pressedToggle.has_value();
+    Q_ASSERT(m_target == DrawerChromeTarget::Detent);
+    return m_chrome.m_pressedDetent;
+}
+
 void DrawerChromeInteraction::hostAppearanceChanged() {}
 
 DrawerChrome::DrawerChrome(AutomationPage &page, EditorDrawer *parent)

@@ -2,10 +2,11 @@
 
 #include <QCoreApplication>
 #include <QEnterEvent>
-#include <QMouseEvent>
+#include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QWheelEvent>
+#include <QWindow>
 #include <QtTest>
 
 #include <array>
@@ -349,35 +350,132 @@ void PianoRollStaticTest::tooltipFloatsBelowRuler()
     QVERIFY2(fixture.create(error), qPrintable(error));
     QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()));
     QVERIFY(bindVoicegroup(fixture));
-    auto *const control = division ? fixture.divisionControl() : fixture.feelControl();
-    QVERIFY(control);
-    auto *const root = control->window() ? control->window()->contentItem() : nullptr;
-    QVERIFY(root);
-    QQuickWindow *const window = control->window();
-    const QPointF scene =
-        control->mapToScene(QPointF(control->width() / 2.0, control->height() / 2.0));
-    const QPointF global = window->mapToGlobal(scene.toPoint());
-    QEnterEvent enter(scene, scene, global);
-    QCoreApplication::sendEvent(window, &enter);
-    QMouseEvent move(QEvent::MouseMove, scene, global, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
-    QCoreApplication::sendEvent(window, &move);
-    QCoreApplication::processEvents();
-    QVERIFY(fixture.toolTip()->isVisible());
-    const QRectF tooltip(fixture.toolTip()->mapToItem(root, QPointF()), fixture.toolTip()->size());
-    const qreal rowBottom =
-        fixture.controls()->mapToItem(root, QPointF()).y() + rulerBandHeight(*fixture.view());
-    if (rowBottom + tooltip.height() <= root->height()) {
-        QVERIFY(tooltip.top() >= rowBottom - 0.5);
-        QVERIFY(tooltip.bottom() <= root->height() + 0.5);
-        QVERIFY(tooltip.left() >= -0.5);
-        QVERIFY(tooltip.right() <= root->width() + 0.5);
+    auto *const quick = fixture.view()->findChild<songview::TimelineQuickView *>(
+        QStringLiteral("timelineQuickCanvas"));
+    const QPointer<songview::TimelineQuickView> guardedQuick = quick;
+    const QPointer<QQuickItem> guardedCanvasRoot = quick ? quick->rootObject() : nullptr;
+    const QPointer<QQuickWindow> guardedQuickWindow = quick ? quick->quickWindow() : nullptr;
+    const QPointer<QWindow> guardedHostWindow = fixture.tab()->windowHandle();
+    const QPointer<QQuickItem> guardedControls = fixture.controls();
+    const QPointer<QQuickItem> guardedDivisionControl = fixture.divisionControl();
+    const QPointer<QQuickItem> guardedFeelControl = fixture.feelControl();
+    const QPointer<QQuickItem> guardedToolTip = fixture.toolTip();
+    const auto sceneReady = [&] {
+        return guardedQuick && guardedCanvasRoot && guardedQuickWindow && guardedHostWindow &&
+               guardedControls && guardedDivisionControl && guardedFeelControl && guardedToolTip &&
+               fixture.tab()->isVisible() && fixture.tab()->windowHandle() == guardedHostWindow &&
+               guardedHostWindow->isExposed() && guardedQuickWindow->isVisible() &&
+               guardedQuickWindow->isExposed() && guardedCanvasRoot->isVisible() &&
+               guardedCanvasRoot->width() > 0.0 && guardedCanvasRoot->height() > 0.0 &&
+               guardedToolTip->window() == guardedQuickWindow;
+    };
+    const auto usableControl = [&sceneReady,
+                                &guardedQuickWindow](const QPointer<QQuickItem> &control) {
+        return sceneReady() && control->isVisible() && control->isEnabled() &&
+               control->width() > 0.0 && control->height() > 0.0 &&
+               control->window() == guardedQuickWindow;
+    };
+    if (!QTest::qWaitFor([&] {
+            return usableControl(guardedDivisionControl) && usableControl(guardedFeelControl);
+        })) {
+        QFAIL("ready ruler tooltip Quick surface did not become input-ready");
     }
-    const QPointF away = root->mapToScene(QPointF(root->width() / 2.0, root->height() / 2.0));
-    QMouseEvent leave(QEvent::MouseMove, away, window->mapToGlobal(away.toPoint()), Qt::NoButton,
-                      Qt::NoButton, Qt::NoModifier);
-    QCoreApplication::sendEvent(window, &leave);
-    QCoreApplication::processEvents();
-    QVERIFY(!fixture.toolTip()->isVisible());
+    const QPointer<QQuickItem> guardedControl =
+        division ? guardedDivisionControl : guardedFeelControl;
+    bool windowEntered = false;
+    const auto setHover = [&guardedCanvasRoot, &guardedQuickWindow,
+                           &windowEntered](const QPointer<QQuickItem> &control, bool entering) {
+        if (!guardedCanvasRoot || !guardedQuickWindow || !control)
+            return false;
+        QQuickItem *const canvasRoot = guardedCanvasRoot.data();
+        QQuickWindow *const quickWindow = guardedQuickWindow.data();
+        const QPoint windowPosition =
+            (entering
+                 ? control->mapToScene(QPointF(control->width() / 2.0, control->height() / 2.0))
+                 : canvasRoot->mapToScene(
+                       QPointF(canvasRoot->width() / 2.0, canvasRoot->height() / 2.0)))
+                .toPoint();
+        if (entering) {
+            if (!windowEntered) {
+                const QPointF point(windowPosition);
+                QEnterEvent enter(point, point, QPointF(quickWindow->mapToGlobal(windowPosition)));
+                QCoreApplication::sendEvent(quickWindow, &enter);
+                windowEntered = true;
+            }
+            if (!checks::events::primeMouseMove(*quickWindow, *control, windowPosition))
+                return false;
+        }
+        QTest::mouseMove(quickWindow, windowPosition);
+        return true;
+    };
+    const auto hoverDiagnostic = [&sceneReady, &guardedQuickWindow,
+                                  &guardedToolTip](const QPointer<QQuickItem> &control) {
+        return QObject::tr(
+                   "ruler tooltip did not appear while hovering the %1 control "
+                   "(scene-ready=%2 hovered=%3 visible=%4 enabled=%5 size=%6x%7 window=%8 "
+                   "tooltip-visibleForControl=%9 tooltip-text-empty=%10 tooltip-size=%11x%12)")
+            .arg(control ? control->objectName() : QStringLiteral("<destroyed>"))
+            .arg(sceneReady())
+            .arg(control && control->property("hovered").toBool())
+            .arg(control && control->isVisible())
+            .arg(control && control->isEnabled())
+            .arg(control ? control->width() : 0.0)
+            .arg(control ? control->height() : 0.0)
+            .arg(control && control->window() == guardedQuickWindow)
+            .arg(guardedToolTip && guardedToolTip->property("visibleForControl").toBool())
+            .arg(guardedToolTip && guardedToolTip->property("toolTipText").toString().isEmpty())
+            .arg(guardedToolTip ? guardedToolTip->width() : 0.0)
+            .arg(guardedToolTip ? guardedToolTip->height() : 0.0);
+    };
+
+    if (!usableControl(guardedControl)) {
+        QFAIL("ready ruler tooltip Quick control was destroyed before hover delivery");
+    }
+    if (!setHover(guardedControl, true)) {
+        setHover(guardedControl, false);
+        QFAIL(qUtf8Printable(QObject::tr("could not deliver ruler hover to the %1 control")
+                                 .arg(guardedControl->objectName())));
+    }
+    if (!QTest::qWaitFor(
+            [&] { return sceneReady() && guardedControl && guardedToolTip->isVisible(); })) {
+        setHover(guardedControl, false);
+        QFAIL(qUtf8Printable(hoverDiagnostic(guardedControl)));
+    }
+    if (!sceneReady() || !guardedControl || !guardedToolTip->isVisible()) {
+        QFAIL("ready ruler tooltip Quick scene was destroyed after hover delivery");
+    }
+    const QRectF tooltipRect(guardedToolTip->mapToItem(guardedCanvasRoot, QPointF(0, 0)),
+                             guardedToolTip->size());
+    const qreal rowBottom = guardedControls->mapToItem(guardedCanvasRoot, QPointF(0, 0)).y() +
+                            rulerBandHeight(*fixture.view());
+    // Room below the row exists, so the tooltip must float there instead
+    // of covering the row or spilling past the canvas.
+    if (rowBottom + tooltipRect.height() <= guardedCanvasRoot->height()) {
+        if (tooltipRect.top() < rowBottom - 0.5) {
+            setHover(guardedControl, false);
+            QFAIL("ruler tooltip covered the ruler row instead of floating below it");
+        }
+        if (tooltipRect.bottom() > guardedCanvasRoot->height() + 0.5) {
+            setHover(guardedControl, false);
+            QFAIL("ruler tooltip spilled past the Quick canvas below the ruler row");
+        }
+        if (tooltipRect.left() < -0.5 || tooltipRect.right() > guardedCanvasRoot->width() + 0.5) {
+            setHover(guardedControl, false);
+            QFAIL("ruler tooltip left the Quick canvas while floating below the row");
+        }
+    }
+    if (!setHover(guardedControl, false)) {
+        QFAIL(qUtf8Printable(QObject::tr("could not deliver ruler hover leave from the %1 control")
+                                 .arg(guardedControl->objectName())));
+    }
+    if (!QTest::qWaitFor(
+            [&] { return sceneReady() && guardedControl && !guardedToolTip->isVisible(); })) {
+        if (!sceneReady() || !guardedControl || !guardedToolTip) {
+            QFAIL("ready ruler tooltip Quick scene was destroyed while awaiting hover leave");
+        } else {
+            QFAIL("ruler tooltip stayed visible after the hover left the control");
+        }
+    }
 }
 
 } // namespace checks::rollcheck::staticcheck

@@ -45,7 +45,6 @@ void PitchBendEditingTest::shiftDragDrawsLinearRamp()
 {
     songview::PitchBendEditor *editorResult = popup();
     QVERIFY(editorResult);
-    songview::PitchBendEditor &editor = *editorResult;
     songview::PitchBendGraph *graphResult = pitchGraph();
     QVERIFY(graphResult);
     songview::PitchBendGraph &graph = *graphResult;
@@ -54,7 +53,11 @@ void PitchBendEditingTest::shiftDragDrawsLinearRamp()
     QVERIFY(m_fixture.stroke(graph, canvasPoint(graph, 0.15, 0.80), canvasPoint(graph, 0.85, 0.20),
                              Qt::ShiftModifier));
     QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
-    QVERIFY(editor.isOpen());
+    // Rendering the Shift line can race a dismissed popup; assert liveness
+    // instead of dereferencing a dead editor.
+    QCoreApplication::processEvents();
+    QPointer<songview::PitchBendEditor> alive = editorResult;
+    QVERIFY2(alive && alive->isOpen(), "popup was dismissed while rendering its Shift line");
     const std::vector<DocLanePoint> interior = m_fixture.interiorPoints(DOC_CC_BEND);
     QVERIFY(interior.size() >= 2);
     QVERIFY(std::adjacent_find(interior.cbegin(), interior.cend(),
@@ -69,22 +72,22 @@ void PitchBendEditingTest::freehandStrokePushesSingleUndoCommand()
 {
     songview::PitchBendEditor *editorResult = popup();
     QVERIFY(editorResult);
-    songview::PitchBendEditor &editor = *editorResult;
     songview::PitchBendGraph *graph = pitchGraph();
     QVERIFY(graph);
     const int index = m_fixture.document().undoStack()->index();
     QVERIFY(drawPitchCurve(*graph));
     QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
-    QVERIFY(editor.isOpen());
-    QTest::keyClick(editor.view(), Qt::Key_Enter);
-    QVERIFY(editor.isOpen());
+    QPointer<songview::PitchBendEditor> alive = editorResult;
+    QVERIFY(alive && alive->isOpen());
+    QTest::keyClick(alive->view(), Qt::Key_Enter);
+    QVERIFY(alive && alive->isOpen());
+    QVERIFY(m_fixture.popup() == alive);
 }
 
 void PitchBendEditingTest::standardUndoShortcutRestoresCurve()
 {
     songview::PitchBendEditor *editorResult = popup();
     QVERIFY(editorResult);
-    songview::PitchBendEditor &editor = *editorResult;
     songview::PitchBendGraph *graphResult = pitchGraph();
     QVERIFY(graphResult);
     songview::PitchBendGraph &graph = *graphResult;
@@ -94,8 +97,12 @@ void PitchBendEditingTest::standardUndoShortcutRestoresCurve()
     QVERIFY(m_fixture.sendUndo());
     QCOMPARE(m_fixture.document().undoStack()->index(), index);
     QCOMPARE(m_fixture.smf(), before);
-    QVERIFY(editor.isOpen());
-    QVERIFY(graph.hasActiveFocus());
+    // Acquiring Undo focus can dismiss a closing popup; guard the liveness
+    // assertions.
+    QPointer<songview::PitchBendEditor> alive = editorResult;
+    QPointer<songview::PitchBendGraph> guardedGraph = graphResult;
+    QVERIFY(alive && alive->isOpen());
+    QVERIFY(guardedGraph && guardedGraph->hasActiveFocus());
 }
 
 void PitchBendEditingTest::navigationKeysDoNotModifyCurve_data()
@@ -238,28 +245,40 @@ void PitchBendEditingTest::duplicateNoteAtSameTickDoesNotAnchorStaleNote()
 
 void PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit()
 {
-    songview::PitchBendEditor *editorResult = popup();
-    QVERIFY(editorResult);
-    songview::PitchBendEditor &editor = *editorResult;
-    songview::PitchBendGraph *graphResult = pitchGraph();
-    QVERIFY(graphResult);
-    songview::PitchBendGraph &graph = *graphResult;
-    const QPoint start = canvasPoint(graph, 0.25, 0.70);
-    const QPoint finish = canvasPoint(graph, 0.75, 0.30);
-    QTest::mousePress(editor.view(), Qt::LeftButton, Qt::NoModifier,
-                      m_fixture.windowPoint(graph, start));
-    checks::events::sendMouse(graph, QEvent::MouseMove, finish, Qt::NoButton, Qt::LeftButton,
+    QPointer<songview::PitchBendEditor> editor = popup();
+    QVERIFY(editor);
+    QPointer<songview::PitchBendGraph> graph = pitchGraph();
+    QVERIFY(graph);
+    const QPoint start = canvasPoint(*graph, 0.25, 0.70);
+    const QPoint finish = canvasPoint(*graph, 0.75, 0.30);
+    QTest::mousePress(editor->view(), Qt::LeftButton, Qt::NoModifier,
+                      m_fixture.windowPoint(*graph, start));
+    checks::events::sendMouse(*graph, QEvent::MouseMove, finish, Qt::NoButton, Qt::LeftButton,
                               Qt::NoModifier);
-    QVERIFY(graph.hasGesture());
-    const auto preview = graph.curvePoints();
+    QVERIFY(graph && graph->hasGesture());
+    const auto preview = graph->curvePoints();
     const QByteArray beforeExternalEdit = m_fixture.smf();
     const int externalEditIndex = m_fixture.document().undoStack()->index();
     m_fixture.document().writeLanePoints(0, 0x15, m_fixture.note().tick, m_fixture.endTick(),
                                          {{m_fixture.note().tick, 23}, {m_fixture.endTick(), 22}});
+    // The external edit pushes exactly one command and must not resolve the
+    // live preview through a reentrant history push.
     QCOMPARE(m_fixture.document().undoStack()->index(), externalEditIndex + 1);
     QVERIFY(m_fixture.smf() != beforeExternalEdit);
-    QVERIFY(sameLaneValues(graph.curvePoints(), preview));
-    QTest::keyClick(editor.view(), Qt::Key_Escape);
+    QVERIFY(graph && sameLaneValues(graph->curvePoints(), preview));
+    // Undoing the real external lane edit restores the exact pre-edit SMF
+    // while the pending preview stays live; redo re-applies it the same way.
+    m_fixture.document().undoStack()->undo();
+    QCOMPARE(m_fixture.document().undoStack()->index(), externalEditIndex);
+    QCOMPARE(m_fixture.smf(), beforeExternalEdit);
+    QVERIFY(graph && graph->hasGesture());
+    QVERIFY(graph && sameLaneValues(graph->curvePoints(), preview));
+    m_fixture.document().undoStack()->redo();
+    QCOMPARE(m_fixture.document().undoStack()->index(), externalEditIndex + 1);
+    QVERIFY(m_fixture.smf() != beforeExternalEdit);
+    QVERIFY(graph && sameLaneValues(graph->curvePoints(), preview));
+    if (editor)
+        QTest::keyClick(editor->view(), Qt::Key_Escape);
     m_fixture.drainDeferredDeletes();
     QVERIFY(!m_fixture.popup());
 }

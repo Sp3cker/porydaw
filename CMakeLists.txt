@@ -292,6 +292,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/timecamera.cpp
     src/ui/songview/timecamera.h
     src/ui/songview/rangeedit.cpp
+    src/ui/songview/editkeyrouting.cpp
     src/ui/songview/scalecontroller.cpp
     src/ui/songview/scalecontroller.h
     src/ui/songview/clipmime.cpp
@@ -328,6 +329,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/quick/timelinequickview.cpp
     src/ui/songview/quick/timelinequickview.h
     src/ui/songview/quick/timelinequickview_pianoroll.cpp
+    src/ui/songview/quick/timelinequickview_keyrouting.cpp
     src/ui/songview/quick/timerulerquick.cpp
     src/ui/pitchbendeditor.cpp
     src/ui/pitchbendeditor.hpp
@@ -723,6 +725,31 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/polyphony/polyphonyengine.cpp
         src/checks/polyphony/polyphonypanel.cpp
         src/checks/polyphony/polyphonygate.cpp
+        src/checks/selectionkey/primitives.h
+        src/checks/selectionkey/automationprobe.h
+        src/checks/selectionkey/automationprobe.cpp
+        src/checks/selectionkey/tst_selectionkeycore.h
+        src/checks/selectionkey/corefixture.h
+        src/checks/selectionkey/corefixture.cpp
+        src/checks/selectionkey/core.cpp
+        src/checks/selectionkey/corearrows.cpp
+        src/checks/selectionkey/coreediting.cpp
+        src/checks/selectionkey/gesturecheck.h
+        src/checks/selectionkey/gesture.cpp
+        src/checks/selectionkey/gesturevelocity.cpp
+        src/checks/selectionkey/gesturecommands.cpp
+        src/checks/selectionkey/gesturethumbs.cpp
+        src/checks/selectionkey/session.h
+        src/checks/selectionkey/tst_windowtier.h
+        src/checks/selectionkey/window.cpp
+        src/checks/selectionkey/windowtier_keyboard.cpp
+        src/checks/selectionkey/windowtier_gestures.cpp
+        src/checks/selectionkey/windowtier_lifetime.cpp
+        src/checks/selectionkey/tst_localinputtier.h
+        src/checks/selectionkey/localinput.cpp
+        src/checks/selectionkey/localinputtier_text.cpp
+        src/checks/selectionkey/localinputtier_pitchbend.cpp
+        src/checks/selectionkey/localinputtier_eventlist.cpp
         src/checks/automation/raster/tst_automationraster.h
         src/checks/automation/raster/painting.cpp
         src/checks/automation/raster/interaction.cpp

@@ -90,37 +90,37 @@ const Def kDefs[] = {
     // Piano roll. The old modifier-changes-the-step families (Ctrl+Up, with
     // Shift meaning an octave) are split into explicit commands so each step
     // is independently rebindable.
-    {"roll.copy", Context::PianoRoll, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Copy Selection"),
+    {"roll.copy", Context::Global, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Copy Selection"),
      QKeySequence::Copy, ""},
-    {"roll.cut", Context::PianoRoll, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Cut Selection"),
+    {"roll.cut", Context::Timeline, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Cut Selection"),
      QKeySequence::Cut, ""},
-    {"roll.duplicate_time", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+    {"roll.duplicate_time", Context::Timeline, QT_TR_NOOP("Piano Roll"),
      QT_TR_NOOP("Duplicate time"), QKeySequence::UnknownKey, "Ctrl+D"},
-    {"roll.paste", Context::PianoRoll, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Paste at Edit Cursor"),
+    {"roll.paste", Context::Timeline, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Paste at Edit Cursor"),
      QKeySequence::Paste, ""},
-    {"roll.select_all", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
-     QT_TR_NOOP("Select All Notes"), QKeySequence::SelectAll, ""},
-    {"roll.delete", Context::PianoRoll, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Delete Selection"),
+    {"roll.select_all", Context::Timeline, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Select All Notes"),
+     QKeySequence::SelectAll, ""},
+    {"roll.delete", Context::Timeline, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Delete Selection"),
      QKeySequence::UnknownKey, "Delete;Backspace"},
-    {"roll.pitch_bend", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+    {"roll.pitch_bend", Context::Timeline, QT_TR_NOOP("Piano Roll"),
      QT_TR_NOOP("Edit Note Pitch Bend"), QKeySequence::UnknownKey, "G"},
-    {"roll.transpose_up", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+    {"roll.transpose_up", Context::Timeline, QT_TR_NOOP("Piano Roll"),
      QT_TR_NOOP("Transpose Up (Semitone)"), QKeySequence::UnknownKey, "Up"},
-    {"roll.transpose_down", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+    {"roll.transpose_down", Context::Timeline, QT_TR_NOOP("Piano Roll"),
      QT_TR_NOOP("Transpose Down (Semitone)"), QKeySequence::UnknownKey, "Down"},
-    {"roll.transpose_up_octave", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+    {"roll.transpose_up_octave", Context::Timeline, QT_TR_NOOP("Piano Roll"),
      QT_TR_NOOP("Transpose Up (Octave)"), QKeySequence::UnknownKey, "Shift+Up"},
-    {"roll.transpose_down_octave", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+    {"roll.transpose_down_octave", Context::Timeline, QT_TR_NOOP("Piano Roll"),
      QT_TR_NOOP("Transpose Down (Octave)"), QKeySequence::UnknownKey, "Shift+Down"},
-    {"roll.nudge_left", Context::PianoRoll, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Nudge Left"),
+    {"roll.nudge_left", Context::Timeline, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Nudge Left"),
      QKeySequence::UnknownKey, "Left"},
-    {"roll.nudge_right", Context::PianoRoll, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Nudge Right"),
+    {"roll.nudge_right", Context::Timeline, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Nudge Right"),
      QKeySequence::UnknownKey, "Right"},
     // Toggle the header buttons from the keyboard, over the whole
     // multi-track scope (the selected track plus Ctrl/Shift-scoped rows).
-    {"roll.mute_tracks", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+    {"roll.mute_tracks", Context::Timeline, QT_TR_NOOP("Piano Roll"),
      QT_TR_NOOP("Mute Selected Tracks"), QKeySequence::UnknownKey, "M"},
-    {"roll.solo_tracks", Context::PianoRoll, QT_TR_NOOP("Piano Roll"),
+    {"roll.solo_tracks", Context::Global, QT_TR_NOOP("Piano Roll"),
      QT_TR_NOOP("Solo Selected Tracks"), QKeySequence::UnknownKey, "S"},
     // Ableton-style: hold the modifier and drag vertically anywhere on a
     // note to adjust its velocity. Qt maps Ctrl to Cmd on macOS.
@@ -177,10 +177,18 @@ QString settingsKey(const QString &id)
     return QStringLiteral("keymap/") + id;
 }
 
-// Global shortcuts stay live while any local context has focus.
+// Shared timeline commands are delivered from each timeline band. Local
+// tools keep their own contexts, so only the shared scope overlaps them.
 bool contextsOverlap(Context a, Context b)
 {
-    return a == b || a == Context::Global || b == Context::Global;
+    if (a == b || a == Context::Global || b == Context::Global)
+        return true;
+    const auto isTimelineLocal = [](Context context) {
+        return context == Context::PianoRoll || context == Context::Velocity ||
+               context == Context::Automation;
+    };
+    return (a == Context::Timeline && isTimelineLocal(b)) ||
+           (b == Context::Timeline && isTimelineLocal(a));
 }
 
 Qt::KeyboardModifiers shortcutModifiers(Qt::KeyboardModifiers modifiers)

@@ -202,14 +202,33 @@ songview::PitchBendEditor *PitchBendFixture::openPopup()
     rollInput().forceActiveFocus(Qt::OtherFocusReason);
     if (!QTest::qWaitFor([this] { return rollInput().hasActiveFocus(); }))
         return nullptr;
+    // Direct item delivery does not establish native activation. Settle the
+    // host before opening a transient window that must receive input.
+    if (!QTest::qWaitForWindowExposed(&timelineWindow()) ||
+        !QTest::qWaitForWindowActive(&timelineWindow()))
+        return nullptr;
+    // Deliberately hover away from the note: G must anchor the popup to the
+    // selected note, never to the pointer.
+    checks::events::sendMouse(rollInput(), QEvent::MouseMove, notePoint() + QPoint(300, 0),
+                              Qt::NoButton, Qt::NoButton, Qt::NoModifier);
     QTest::keyClick(&timelineWindow(), Qt::Key_G);
     if (!QTest::qWaitFor([this] {
             songview::PitchBendEditor *editor = popup();
-            return editor && editor->isOpen() && editor->view() && editor->view()->isVisible();
+            return editor && editor->isOpen() && editor->view() && editor->view()->isVisible() &&
+                   editor->view()->isExposed();
         })) {
         return nullptr;
     }
-    return popup();
+    QPointer<songview::PitchBendEditor> editor = popup();
+    if (!editor || !editor->view())
+        return nullptr;
+    QPointer<QQuickWindow> surface = editor->view();
+    if (!QTest::qWaitForWindowActive(surface.data()))
+        return nullptr;
+    QCoreApplication::processEvents();
+    if (!editor || !editor->isOpen() || !surface || !surface->isExposed() || !surface->isActive())
+        return nullptr;
+    return editor;
 }
 
 songview::PitchBendEditor *PitchBendFixture::popup() const
@@ -257,15 +276,19 @@ QPoint PitchBendFixture::windowPoint(const QQuickItem &item, QPointF local) cons
 bool PitchBendFixture::stroke(songview::PitchBendGraph &target, QPoint start, QPoint finish,
                               Qt::KeyboardModifiers modifiers)
 {
-    songview::PitchBendEditor *editor = popup();
+    QPointer<songview::PitchBendEditor> editor = popup();
     if (!editor || !editor->view())
         return false;
-    QQuickWindow *window = editor->view();
-    QTest::mousePress(window, Qt::LeftButton, modifiers, windowPoint(target, start));
-    checks::events::sendMouse(target, QEvent::MouseMove, finish, Qt::NoButton, Qt::LeftButton,
-                              modifiers);
-    QTest::mouseRelease(window, Qt::LeftButton, modifiers, windowPoint(target, finish));
-    return true;
+    QPointer<QQuickWindow> window = editor->view();
+    QTest::mousePress(window.data(), Qt::LeftButton, modifiers, windowPoint(target, start));
+    if (!editor || !window)
+        return false;
+    QTest::mouseEvent(QTest::MouseMove, window.data(), Qt::NoButton, modifiers,
+                      windowPoint(target, finish));
+    if (!editor || !window)
+        return false;
+    QTest::mouseRelease(window.data(), Qt::LeftButton, modifiers, windowPoint(target, finish));
+    return editor && window;
 }
 
 bool PitchBendFixture::wheel(songview::PitchBendGraph &target, QPoint point, QPoint angleDelta)
@@ -283,7 +306,7 @@ bool PitchBendFixture::wheel(songview::PitchBendGraph &target, QPoint point, QPo
 
 bool PitchBendFixture::scrub(QQuickItem &field, int steps, Qt::KeyboardModifiers modifiers)
 {
-    songview::PitchBendEditor *editor = popup();
+    QPointer<songview::PitchBendEditor> editor = popup();
     if (!editor || !editor->view())
         return false;
     const qreal threshold = editor->metrics().value(QStringLiteral("scrubThreshold")).toReal();
@@ -291,11 +314,16 @@ bool PitchBendFixture::scrub(QQuickItem &field, int steps, Qt::KeyboardModifiers
     const QPointF start = field.boundingRect().center();
     const int pixels = qRound(threshold) + extra;
     const QPointF finish = start + QPointF(0, steps > 0 ? -pixels : pixels);
-    QTest::mousePress(editor->view(), Qt::LeftButton, modifiers, windowPoint(field, start));
-    checks::events::sendMouse(field, QEvent::MouseMove, finish, Qt::NoButton, Qt::LeftButton,
-                              modifiers);
-    QTest::mouseRelease(editor->view(), Qt::LeftButton, modifiers, windowPoint(field, finish));
-    return true;
+    QPointer<QQuickWindow> window = editor->view();
+    QTest::mousePress(window.data(), Qt::LeftButton, modifiers, windowPoint(field, start));
+    if (!editor || !window)
+        return false;
+    QTest::mouseEvent(QTest::MouseMove, window.data(), Qt::NoButton, modifiers,
+                      windowPoint(field, finish));
+    if (!editor || !window)
+        return false;
+    QTest::mouseRelease(window.data(), Qt::LeftButton, modifiers, windowPoint(field, finish));
+    return editor && window;
 }
 
 bool PitchBendFixture::click(QQuickItem &target)

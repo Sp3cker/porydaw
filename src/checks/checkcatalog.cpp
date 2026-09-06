@@ -629,6 +629,55 @@ const std::vector<CheckDefinition> &catalog()
                 .windowing = Windowing::WindowSystem,
             },
             {
+                .name = "selectionkey-core",
+                .argv = strings({"--selectionkey-core", "{scratch}", "mus_route101"}),
+                .handler =
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return runSelectionKeyCoreCheck(args[1], args[2], qtArgs);
+                    },
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = route101RichFiles,
+                .windowing = Windowing::WindowSystem,
+            },
+            {
+                .name = "selectionkey-gesture",
+                .argv = strings({"--selectionkey-gesture", "{scratch}", "mus_route101"}),
+                .handler =
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return runSelectionKeyGestureCheck(args[1], args[2], qtArgs);
+                    },
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = route101RichFiles,
+                .windowing = Windowing::WindowSystem,
+            },
+            {
+                .name = "selectionkey-window",
+                .argv = strings(
+                    {"--selectionkey-window", "{scratch}", "mus_route101", "mus_petalburg"}),
+                .handler =
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return runSelectionKeyWindowCheck(args[1], args[2], args[3], qtArgs);
+                    },
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = twoSongRichFiles,
+                .windowing = Windowing::WindowSystem,
+            },
+            {
+                .name = "selectionkey-local-input",
+                .argv = strings({"--selectionkey-local-input", "{scratch}", "mus_route101"}),
+                .handler =
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return runSelectionKeyLocalInputCheck(args[1], args[2], qtArgs);
+                    },
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = route101RichFiles,
+                .windowing = Windowing::WindowSystem,
+            },
+            {
                 .name = "rendering-playhead",
                 .argv = strings({"--check-rendering-playhead", "{scratch}", "mus_route101"}),
                 .handler =

@@ -1,6 +1,5 @@
 #include "core/mid2agbtables.h"
 #include "core/songdocument.h"
-#include "mainwindow.h"
 #include "ui/dragspinbox.h"
 #include "ui/keymap.h"
 #include "ui/songview.h"
@@ -12,7 +11,6 @@
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QFormLayout>
-#include <QKeyEvent>
 #include <QMenu>
 #include <QPoint>
 
@@ -647,22 +645,6 @@ void SongView::pasteFromClipboard()
     ensureTickVisible(base);
     announce(tr("Pasted %n note(s)", nullptr, int(notes.size())));
 }
-// Maps the four transpose commands to their semitone step, 0 when the event
-// matches none. Shared by the note-selection and time-selection key paths so
-// a rebinding changes both at once.
-int SongView::transposeStepFor(const songview::TimelineKeyInput &input) const
-{
-    const auto &keys = keymap::Registry::instance();
-    if (keys.matches(input.key, input.modifiers, QStringLiteral("roll.transpose_up")))
-        return 1;
-    if (keys.matches(input.key, input.modifiers, QStringLiteral("roll.transpose_down")))
-        return -1;
-    if (keys.matches(input.key, input.modifiers, QStringLiteral("roll.transpose_up_octave")))
-        return 12;
-    if (keys.matches(input.key, input.modifiers, QStringLiteral("roll.transpose_down_octave")))
-        return -12;
-    return 0;
-}
 std::optional<Clip> SongView::readClipboardClip()
 {
     if (!m_timeline)
@@ -674,68 +656,6 @@ std::optional<Clip> SongView::readClipboardClip()
     if (decodeFailed)
         announce(tr("Cannot paste: clipboard clip could not be decoded"));
     return std::nullopt;
-}
-bool SongView::handleEditKey(const songview::TimelineKeyInput &input)
-{
-    if (!m_document)
-        return false;
-    const auto &keys = keymap::Registry::instance();
-    const auto matches = [&keys, &input](const char *id) {
-        return keys.matches(input.key, input.modifiers, QLatin1String(id));
-    };
-    if (matches("roll.copy")) {
-        // MainWindow's Edit action owns the live application shortcut, with
-        // its focus-widget copy pre-emption for text fields. This direct
-        // path remains only for standalone SongViews and harnesses outside a
-        // MainWindow, which have no window-level owner of the binding.
-        if (qobject_cast<MainWindow *>(window()))
-            return false;
-        copySelection();
-        return true;
-    }
-    const bool sel = m_selectionModel.timeSelection().active();
-    if (sel && matches("roll.cut")) {
-        copyTimeSelection();
-        deleteTimeSelection();
-        return true;
-    }
-    if (sel && matches("roll.duplicate_time")) {
-        duplicateTimeSelection();
-        return true;
-    }
-    if (sel && matches("roll.delete")) {
-        deleteTimeSelection();
-        return true;
-    }
-    if (sel) {
-        const int transpose = transposeStepFor(input);
-        if (transpose != 0) {
-            transposeTimeSelection(transpose);
-            return true;
-        }
-    }
-    if (sel && (matches("roll.nudge_left") || matches("roll.nudge_right"))) {
-        nudgeTimeSelection(matches("roll.nudge_right"));
-        return true;
-    }
-    if (matches("roll.paste")) {
-        pasteFromClipboard();
-        return true;
-    }
-    if (matches("roll.mute_tracks")) {
-        toggleMuteOnSelectedTracks();
-        return true;
-    }
-    if (matches("roll.solo_tracks")) {
-        // MainWindow owns S at window scope (see its solo action) so a focused
-        // surface does not toggle twice. Standalone SongViews and harnesses
-        // outside a MainWindow have no window owner and keep the direct path.
-        if (qobject_cast<MainWindow *>(window()))
-            return false;
-        toggleSoloOnSelectedTracks();
-        return true;
-    }
-    return false;
 }
 void SongView::showTimeSelectionMenu(const QPoint &globalPos)
 {

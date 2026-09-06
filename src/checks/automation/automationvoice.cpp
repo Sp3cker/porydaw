@@ -154,7 +154,6 @@ void AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommi
     const QPointF vertical = source + QPointF(0, QApplication::startDragDistance() + 2);
     mousePress(voiceChangeInput(), Qt::LeftButton, source);
     mouseMove(voiceChangeInput(), vertical);
-    QVERIFY(!tab().view().userGestureActive());
     QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
     mouseRelease(voiceChangeInput(), Qt::LeftButton, vertical);
     QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);

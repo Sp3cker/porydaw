@@ -7,6 +7,8 @@
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/timeruler.h"
 
 #include <optional>
 
@@ -157,12 +159,24 @@ DrawerPageLiveState SongView::drawerPageLiveState() const
 
 void SongView::cancelActiveInteractions()
 {
-    if (m_editorDrawer) {
-        m_editorDrawer->cancelVisiblePageInteraction();
-        m_editorDrawer->chrome().cancelInteraction();
+    // The converted Quick scene is the sole pointer-cancellation traversal.
+    // Its primary inputs cover ruler, roll, headers, every drawer page, and
+    // drawer chrome exactly once. Keep the direct path only before that scene
+    // exists, during native construction/destruction.
+    if (m_quickView) {
+        m_quickView->cancelActiveGestures();
+    } else {
+        if (m_ruler)
+            m_ruler->cancelInteraction();
+        if (m_roll)
+            m_roll->cancelInteraction();
+        if (m_editorDrawer) {
+            m_editorDrawer->cancelVisiblePageInteraction();
+            m_editorDrawer->chrome().cancelInteraction();
+        }
     }
-    if (m_roll)
-        m_roll->cancelVelocityInteraction();
+    // A model gesture can outlive its originating item during teardown; end
+    // it only if the semantic traversal did not already do so.
     if (m_velocityGesture.active())
         cancelVelocityGesture();
 }

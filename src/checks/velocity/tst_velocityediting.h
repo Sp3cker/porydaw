@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include <QObject>
@@ -10,6 +11,7 @@
 #include <QPointF>
 #include <QPointer>
 #include <QQuickWindow>
+#include <QtTest>
 
 #include "core/noteid.h"
 #include "core/songdocument.h"
@@ -47,7 +49,7 @@ class VelocityEditingTest final : public QObject
     void rollDragCommitsOnce();
     void controllerCancellationStopsRollDrag();
     void escapeStopsRollDrag();
-    void velocityFocusIgnoresPitchShortcut();
+    void velocityFocusOctaveShortcutMovesSelectedNotes();
     void rulerUnlockKeepsRawVelocity_data();
     void rulerUnlockKeepsRawVelocity();
     void lockedPaintUsesDetents_data();
@@ -74,6 +76,26 @@ class VelocityEditingTest final : public QObject
     int documentVelocity(NoteId noteId) const;
     int timelineVelocity(NoteId noteId) const;
     bool noteSelectionIs(const std::vector<NoteId> &expected) const;
+
+    // Shared prologue for the roll-drag regressions. Drives the real-window
+    // press and move until both selected notes hold staged previews while the
+    // document, history, and timeline projection stay frozen. A failed setup
+    // check only aborts the helper, so callers must bail out via
+    // QTest::currentTestFailed() before touching the session.
+    struct RollDragSession {
+        Qt::KeyboardModifiers dragModifiers = Qt::NoModifier;
+        QPoint pressWindow;
+        QPoint dragWindow;
+        int expectedQuiet = 0;
+        int expectedLater = 0;
+        uint64_t revisionBefore = 0;
+        int undoIndexBefore = 0;
+        int undoDepthBefore = 0;
+        std::optional<QSignalSpy> documentChanged;
+        std::optional<QSignalSpy> edited;
+    };
+    void beginStagedRollDrag(RollDragSession *session);
+    void verifyCancelledRollDragIdle(const RollDragSession &session);
 
     // Value-owned bank first: the tab borrows it, so declaration order must
     // keep it alive past every tab reset below.

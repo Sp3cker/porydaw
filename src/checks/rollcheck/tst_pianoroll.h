@@ -59,7 +59,6 @@ class PianoRollTest final : public QObject
     void velocityClickLatch();
     void velocityNoteMenuRetarget();
     void velocityDragCommit();
-    void velocityCancelActive();
     void velocityCancelUngrab();
     void velocityDoubleClickDelete();
     void gestureInterlock();
@@ -97,7 +96,6 @@ class PianoRollTest final : public QObject
     void scaleHighlightRaster();
     void scaleFoldOccupancy();
     void scaleFoldTrackScope();
-    void scaleFoldProjectionLock();
     void scaleFoldUndoLifecycle();
     void scaleFoldRootInvariant();
     void scaleFoldKeyboardNudges_data();

@@ -18,24 +18,93 @@ boundaries; prefer one feature directory with a small public surface
 ## 1. Current Test Architecture & Safety Boundary
 
 ### Current partition
-`src/checks/checkcatalog.cpp` is the single catalog of 84 checks:
+`src/checks/checkcatalog.cpp` is the single catalog of 88 checks:
 
 - **75 safe-lane rows:** 74 `Framework::QtTest` suites under
   `Windowing::Offscreen`, plus the `production-startup` `Framework::Process`
   smoke (`--version`).
-- **9 native-only Qt Test suites:** `rollcheck`, `trackheaderquickcheck`,
+- **13 native-only Qt Test suites:** `rollcheck`, `trackheaderquickcheck`,
   `rollwindowingcheck`, `timelinepan-native`, `rollcheck-static`,
-  `automation-raster`, `mainwindow-routing-native`, `rendering-playhead`, and
-  `pitch-bend-raster`, all `Windowing::WindowSystem`.
+  `automation-raster`, `mainwindow-routing-native`, `rendering-playhead`,
+  `pitch-bend-raster`, `selectionkey-core`, `selectionkey-gesture`,
+  `selectionkey-window`, and `selectionkey-local-input`, all
+  `Windowing::WindowSystem`.
 
 The authoritative safe command is `deno task verify --no-windowing-checks`.
 It exercises the complete offscreen/process partition and intentionally skips
-the nine native-only rows. The native boundary is evidence, not a missing
+the thirteen native-only rows. The native boundary is evidence, not a missing
 migration: offscreen Qt Quick uses a software scene-graph path that cannot
 establish raster equivalence for porydaw's custom `QSGGeometryNode` timeline
 layers. Offscreen nevertheless covers retained composition, document/undo,
 input, modal menu/dialog routing, and the injected deactivation/playhead
 seams; native rows retain only the window-system/raster contracts.
+
+The selection-keyboard routing integration adds four genuine Qt suites under
+`src/checks/selectionkey/`: 28 selectable slots and 56 case/data rows. Their
+constructors only retain fixture arguments; offscreen `-functions` and
+`-datatags` discovery succeeds without staged project contents or windows.
+The keymap routed-command conflict matrix is independently selectable as 16
+command-ID rows: each row binds and resets its command once and probes all
+four routed contexts, so all 64 command×context behavioral expectations are
+retained while each command is bound and reset once instead of four times.
+
+Integration verification (pre-slimming receipt; historical counts, not
+current measurements): `build:checks` and the safe gate passed **75/88**,
+with 13 native rows intentionally excluded. Seventeen affected safe suites
+passed all 516 case/data rows in both normal and exact reversed order.
+With explicit native-execution permission, the supported Deno runner also
+passed all six `selectionkey-gesture` cases in normal and exact reversed
+order, with zero failures or skips inside the suite. The earlier standalone
+probe failures did not recur; no assertions were weakened. The other twelve
+native suites, including the three other new routing suites, were not run
+in this integration verification.
+
+Slimming verification (observed 2026-09-06, after the deduplication pass
+recorded next): `build:checks` and clangd diagnostics pass on the slimmed
+tree, and six affected suites re-ran in normal and exact reversed order for
+112 case/data rows with zero failures: `keymapcheck` 50, `velocity-editing`
+41, `selectionkey-gesture` 6, `selectionkey-core` 10 (incidental-band,
+pencil-precedence, and rebound-delete slots), `selectionkey-window` 3
+(scrollbar, resize, and lifetime slots), and `selectionkey-local-input` 2
+(search and event-list slots). The final safe gate also passed **75/88**,
+with 13 native suites intentionally excluded. Native execution above is
+limited to the named cases, not the complete native partition.
+
+One intermediate native run failed eligible pencil-hover Delete. Hover is
+now established after mode, focus, selection, and coordinate staging; the
+same ten core rows then passed ten consecutive runs (100 executions), and
+the final 112-row normal/reverse run passed. The original intermittent
+failure was not conclusively traced; no assertion or Delete binding was
+weakened to obtain these results.
+
+Thermo-nuclear review of the prospective merge against `2a9fcf0a` passed
+both harness/tooling and production gates with no blockers. Stale theme
+harness comments were corrected; the final safe rerun remained **75/88**
+with 13 native suites excluded.
+
+Slimming pass (2026-09-06): the incidental-band click now proves the
+eligible selection is preserved on every row, repairing outcome assertions
+that were vacuous outside the two staged click kinds; the search line-edit
+case drops typing guards because Copy and Solo were not bound to the typed
+keys; duplicate cancellation coverage is consolidated — the
+velocity roll-drag cancelled contract is one shared helper behind the
+controller and Escape paths, the duplicate rollcheck velocity-cancel slot is
+gone, and the window scrollbar-thumb case no longer repeats the post-cancel
+proof owned by selectionkey-gesture's scrollbarThumbGuardsSharedCommands
+(gesturethumbs.cpp, both bar rows); repeated setup is extracted
+into one velocity roll-drag prologue, and the pencil-precedence matrix drives
+the shipped Delete default instead of re-binding per case. The distinct
+Escape contracts are retained: a roll note-drag Escape restores the captured
+note selection, the automation pan keeps its idle-Escape time-selection
+clear, and the canonical note-selection idle clear lives in the velocity and
+window-resize cases.
+
+The integration also repairs cross-window grab cancellation: Qt can return a
+device-global grabber from `mouseGrabberItem()`. Timeline cancellation now
+checks window ownership before releasing it. This keeps a live pitch-bend
+preview from committing reentrantly during another document edit; the real
+external-edit regression verifies exact-byte undo, redo, and live-preview
+preservation.
 
 ### Runner and fixture contract
 
@@ -64,8 +133,10 @@ completed record in §2.
 
 ## 2. Completed Migration Record & Current Ownership
 
-The migration is complete. The catalog, runner, and source are frozen after
-the final safe and sanitizer gates. `src/mainwindow.h` has no `run*Check`
+The migration is complete. The catalog, runner, and source were frozen after
+the migration's final safe and sanitizer gates; those receipts below are
+historical, and the current post-migration slimming pass is recorded in §1.
+`src/mainwindow.h` has no `run*Check`
 member declarations: host and routing coverage now lives in
 `src/checks/host/` and `src/checks/mainwindowrouting/`, with their local
 fixtures and focused Qt suites.
@@ -97,7 +168,8 @@ Velocity refresh preserves the previous axis while its input host remains
 attached, so the canonical rebuild detects and publishes the PSG-to-DirectSound
 context transition instead of hiding it behind an early axis reset.
 
-Final verification record: the safe gate passed **75/84**, with nine native
+Pre-integration verification record (historical receipt; not current
+counts): the safe gate passed **75/84**, with nine native
 rows intentionally skipped and zero failures. The 74 Qt offscreen suites were
 also exercised as 824 listed slots and 1,632 case/data rows in ordinary and
 exact reversed selector/data order; `samplecheck` alone reported its documented

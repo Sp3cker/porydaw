@@ -67,6 +67,20 @@ TimelineKeyInput keyInput(const QKeyEvent &event)
 }
 
 } // namespace
+TimelineGestureScrollbar::TimelineGestureScrollbar(QQuickItem *parent) : QQuickItem(parent) {}
+
+bool TimelineGestureScrollbar::gestureActive() const noexcept
+{
+    return m_gestureActive;
+}
+
+void TimelineGestureScrollbar::setGestureActive(bool active)
+{
+    if (m_gestureActive == active)
+        return;
+    m_gestureActive = active;
+    emit gestureActiveChanged();
+}
 
 TimelineInputItem::TimelineInputItem(QQuickItem *parent)
     : QQuickItem(parent)
@@ -79,12 +93,15 @@ TimelineInputItem::TimelineInputItem(QQuickItem *parent)
 
 TimelineInputItem::~TimelineInputItem()
 {
+    clearKeyPolicy();
     setInteraction(nullptr);
 }
 
 void TimelineInputItem::setInteraction(TimelineBandInteraction *interaction,
                                        TimelineInputSurface surface, bool attachHost)
 {
+    if (!interaction || m_interaction != interaction)
+        clearKeyPolicy();
     if (m_interaction == interaction && m_surface == surface && m_attachHost == attachHost)
         return;
 
@@ -93,7 +110,6 @@ void TimelineInputItem::setInteraction(TimelineBandInteraction *interaction,
         m_interaction->detachInputHost(*this);
         m_attachedInputHost = false;
     }
-
     m_interaction = interaction;
     m_surface = surface;
     m_attachHost = attachHost;
@@ -106,6 +122,16 @@ void TimelineInputItem::setInteraction(TimelineBandInteraction *interaction,
 TimelineBandInteraction *TimelineInputItem::interaction() const noexcept
 {
     return m_interaction;
+}
+
+void TimelineInputItem::setKeyPolicy(TimelineKeyPolicy policy)
+{
+    m_keyPolicy = std::move(policy);
+}
+
+void TimelineInputItem::clearKeyPolicy()
+{
+    m_keyPolicy = {};
 }
 
 void TimelineInputItem::notifyHostAppearanceChanged()
@@ -259,20 +285,27 @@ void TimelineInputItem::wheelEvent(QWheelEvent *event)
 
 void TimelineInputItem::keyPressEvent(QKeyEvent *event)
 {
-    if (!m_interaction || !m_interaction->keyPress(keyInput(*event))) {
-        event->ignore();
+    const TimelineKeyInput input = keyInput(*event);
+    // Restricted local interaction handling first, then the shared song
+    // policy. Either claiming the key accepts the event exactly once; an
+    // unclaimed key is ignored so the Quick root fallback can route it.
+    if ((m_interaction && m_interaction->keyPress(input)) ||
+        (m_keyPolicy.press && m_keyPolicy.press(input))) {
+        event->accept();
         return;
     }
-    event->accept();
+    event->ignore();
 }
 
 void TimelineInputItem::keyReleaseEvent(QKeyEvent *event)
 {
-    if (!m_interaction || !m_interaction->keyRelease(keyInput(*event))) {
-        event->ignore();
+    const TimelineKeyInput input = keyInput(*event);
+    if ((m_interaction && m_interaction->keyRelease(input)) ||
+        (m_keyPolicy.release && m_keyPolicy.release(input))) {
+        event->accept();
         return;
     }
-    event->accept();
+    event->ignore();
 }
 
 void TimelineInputItem::focusOutEvent(QFocusEvent *event)

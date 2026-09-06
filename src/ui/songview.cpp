@@ -525,13 +525,13 @@ void SongView::prepareForSongReplacement()
 void SongView::cancelTransientInput()
 {
     ++m_transientInputGeneration;
-    if (m_roll)
-        m_roll->cancelTransientInput();
-    if (m_ruler) {
-        m_ruler->cancelInteraction();
-        m_ruler->closePopups();
-    }
+    // First cancel pointer state through the canonical traversal. Strong
+    // document/readiness cleanup then applies its separate popup policy.
     cancelActiveInteractions();
+    if (m_roll)
+        m_roll->cancelPitchBendPopupWithoutFocus();
+    if (m_ruler)
+        m_ruler->closePopups();
     if (m_headers)
         m_headers->cancelTransientState();
     if (QWidget *mouseGrabber = QWidget::mouseGrabber();
@@ -793,19 +793,24 @@ bool SongView::event(QEvent *event)
     if (event->type() == QEvent::Hide || event->type() == QEvent::WindowDeactivate ||
         event->type() == QEvent::UngrabMouse) {
         cancelActiveInteractions();
-    } else if (event->type() == QEvent::KeyPress) {
+    } else if (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease) {
         auto *keyEvent = static_cast<QKeyEvent *>(event);
-        if (keyEvent->key() == Qt::Key_Escape)
-            cancelActiveInteractions();
-        // Drawer canvases pass unclaimed keys up to their SongView parent.
+        // Event-list row commands stay local. Quick drawer/root inputs call
+        // the default policy entry directly, so EventList visibility never
+        // disables their note target.
         const songview::TimelineKeyInput keyInput{
             .key = keyEvent->key(),
             .modifiers = keyEvent->modifiers(),
             .text = keyEvent->text(),
             .autoRepeat = keyEvent->isAutoRepeat(),
         };
-        if (handleEditKey(keyInput))
+        if (event->type() == QEvent::KeyPress) {
+            if (handleEditKey(keyInput, eventListVisible() ? EditKeyOrigin::EventList
+                                                           : EditKeyOrigin::Timeline))
+                return true;
+        } else if (handleEditKeyRelease(keyInput)) {
             return true;
+        }
     }
     const bool handled = QWidget::event(event);
     // After Show/WinIdChange the playhead's native window exists and its
@@ -828,13 +833,6 @@ bool SongView::event(QEvent *event)
     if (appearanceChanged && m_playheadOverlay)
         m_playheadOverlay->syncAppearance();
     return handled;
-}
-void SongView::copySelection()
-{
-    if (m_selectionModel.timeSelection().active())
-        copyTimeSelection();
-    else
-        m_roll->copySelectedNotes();
 }
 
 void SongView::setPlayheadSample(uint64_t samplePos, bool playing)
@@ -882,10 +880,19 @@ void SongView::setPlayheadSample(uint64_t samplePos, bool playing)
     syncTimelineIndicators();
 }
 
+bool SongView::timelinePointerGestureActive() const
+{
+    // Once the converted scene exists it owns the complete timeline pointer
+    // aggregate, including ruler and velocity; do not fold stale native
+    // queries into that authoritative result.
+    if (m_quickView)
+        return m_quickView->gestureActive();
+    return (m_ruler && m_ruler->gestureActive()) || (m_roll && m_roll->gestureActive());
+}
+
 bool SongView::userGestureActive() const
 {
-    return m_followScrollPaused || (m_ruler && m_ruler->gestureActive()) ||
-           (m_roll && m_roll->gestureActive());
+    return timelinePointerGestureActive();
 }
 
 void SongView::requestPianoRollQuickUpdate(PianoRollQuickDirtySet dirty)

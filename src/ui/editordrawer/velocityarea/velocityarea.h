@@ -42,7 +42,7 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
 
     void songChanged();
     void refreshLiveState(const DrawerPageLiveState &liveState);
-    void cancelInteraction();
+    void cancelInteraction() override;
     void documentChanged();
     void tracksRemapped(const TrackRemap &remap);
     void setUseDetents(bool on);
@@ -65,6 +65,7 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
     void pointerLeave() override;
     bool wheel(const songview::TimelineWheelInput &input) override;
     bool keyPress(const songview::TimelineKeyInput &input) override;
+    bool gestureActive() const override;
     void inputCancelled(songview::TimelineInputCancelReason reason) override;
     void hostAppearanceChanged() override;
 

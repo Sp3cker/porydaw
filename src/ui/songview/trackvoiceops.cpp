@@ -108,8 +108,12 @@ static QString scopedTracksText(uint32_t mask)
     return nums.size() == 1 ? SongView::tr("track %1").arg(nums.first())
                             : SongView::tr("tracks %1").arg(nums.join(QStringLiteral(", ")));
 }
+// Audible-mask operations reject live pointer ownership at every entry point.
+// Popup focus permits graph Solo; document-command protection belongs to routing.
 void SongView::toggleMuteOnSelectedTracks()
 {
+    if (timelinePointerGestureActive())
+        return;
     const uint32_t scope = m_selectionModel.resolvedTrackScope(usedTrackMask(m_timeline));
     const bool allOn = (m_muteMask & scope) == scope;
     const uint32_t mask = allOn ? (m_muteMask & ~scope) : (m_muteMask | scope);
@@ -122,6 +126,9 @@ void SongView::toggleMuteOnSelectedTracks()
 }
 void SongView::toggleSoloOnSelectedTracks()
 {
+    // The window-owned action remains available from the pitch-bend graph.
+    if (timelinePointerGestureActive())
+        return;
     const uint32_t scope = m_selectionModel.resolvedTrackScope(usedTrackMask(m_timeline));
     const bool allOn = (m_soloMask & scope) == scope;
     const uint32_t mask = allOn ? (m_soloMask & ~scope) : (m_soloMask | scope);

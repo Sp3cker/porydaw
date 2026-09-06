@@ -178,8 +178,8 @@ void PianoRoll::refreshTextLayout()
 bool PianoRoll::gestureActive() const
 {
     return m_panning || dragLive() || m_leftDrag == LeftDrag::PendingDraw ||
-           m_rightDrag != RightDrag::None || m_kbdKey >= 0 ||
-           (m_bendPopup && m_bendPopup->isOpen());
+           m_leftDrag == LeftDrag::PendingVelocity || m_rightDrag != RightDrag::None ||
+           m_kbdKey >= 0;
 }
 
 void PianoRoll::cancelPitchBendPopup()
@@ -188,10 +188,25 @@ void PianoRoll::cancelPitchBendPopup()
         m_bendPopup->cancelAndClose();
 }
 
-void PianoRoll::cancelTransientInput()
+void PianoRoll::cancelPitchBendPopupWithoutFocus()
 {
     if (m_bendPopup && m_bendPopup->isOpen())
         m_bendPopup->cancelAndCloseWithoutFocus();
+}
+
+void PianoRoll::cancelInteraction()
+{
+    cancelPointerInteraction();
+}
+
+void PianoRoll::cancelTransientInput()
+{
+    cancelPitchBendPopupWithoutFocus();
+    cancelPointerInteraction();
+}
+
+void PianoRoll::cancelPointerInteraction()
+{
     if (m_leftDrag == LeftDrag::Velocity || m_leftDrag == LeftDrag::PendingVelocity)
         cancelVelocityInteraction();
     if (m_kbdKey >= 0)

@@ -383,8 +383,7 @@ Theme derive(const QColor &primary, const QColor &accent)
     theme.color(Role::tab_background) = buttonBackground;
     theme.color(Role::tab_hover_background) = buttonHoverBackground;
     // Combo, text, and spin-box fields keep separate roles but share one
-    // resting surface; themecheck pins the trio together so a later change
-    // must stay deliberate.
+    // resting surface.
     theme.color(Role::combo_background) = buttonHoverBackground;
     theme.color(Role::input_background) = buttonHoverBackground;
     theme.color(Role::spin_box_background) = buttonHoverBackground;

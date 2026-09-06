@@ -7,6 +7,8 @@
 #include <QApplication>
 #include <QEvent>
 #include <QKeyEvent>
+#include <QQuickItem>
+#include <QQuickWindow>
 #include <QWidget>
 #include <QWindow>
 
@@ -163,6 +165,11 @@ bool AutomationPage::eventFilter(QObject *watched, QEvent *event)
     const QWidget *focus = QApplication::focusWidget();
     if (focus && focus->testAttribute(Qt::WA_InputMethodEnabled))
         return QObject::eventFilter(watched, event);
+    if (const auto *quickWindow = qobject_cast<const QQuickWindow *>(watched)) {
+        const auto *quickFocus = quickWindow->activeFocusItem();
+        if (quickFocus && quickFocus->flags().testFlag(QQuickItem::ItemAcceptsInputMethod))
+            return QObject::eventFilter(watched, event);
+    }
     if (type == QEvent::ShortcutOverride) {
         event->accept();
         return true;
