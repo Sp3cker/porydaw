@@ -160,7 +160,11 @@
         },
 
         song: mix({
-            CC: { BEND: 0xFF, TEMPO: 0xFE, VOICE: 0xFD },
+            // Lane identities: the controller numbers porydaw draws as first-class
+            // automation lanes (mid2agb's MOD/VOL/PAN/BENDR/LFOS) and the
+            // pseudo-CCs for the event-backed lanes (DOC_CC_* in songdocument.h).
+            CC: { MOD: 1, VOLUME: 7, PAN: 10, BEND_RANGE: 20, LFO_SPEED: 21,
+                  BEND: 0xFF, TEMPO: 0xFE, VOICE: 0xFD },
             get loaded() { return song.loaded; },
             get revision() { return song.revision; },
             get label() { return song.label; },

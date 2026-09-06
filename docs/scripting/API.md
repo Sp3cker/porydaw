@@ -105,6 +105,7 @@ opaque numbers valid for the life of the document.
 | `notes({track?, from?, to?, selectedOnly?})` | `[{id, track, tick, key, len, vel}]`; `from`/`to` bound the start tick, half-open |
 | `note(id)` | one note or `null` |
 | `lanePoints(track, cc, {from?, to?})` | `[{tick, value}]`; `cc` is 0–127 or `song.CC.BEND` / `.TEMPO` / `.VOICE` |
+| `CC` | lane constants: the controllers porydaw draws as automation lanes, `MOD` (1), `VOLUME` (7), `PAN` (10), `BEND_RANGE` (20), `LFO_SPEED` (21), plus the pseudo-CCs for event-backed lanes, `BEND` (pitch bend), `TEMPO` (song-level, `track: -1`), `VOICE` (program changes). Anywhere a `cc` is accepted |
 | `on("changed", fn({revision}))` | after every edit, undo, redo |
 | `on("activated", fn({label} \| null))` | the active tab changed |
 | `chunkCount`, `chunkTrack(chunk)`, `chunkEndTick(chunk)` | the file's MTrk chunks: the engine track a chunk is (-1 for the seq/tempo chunk and other trackless chunks) and its end-of-track tick |

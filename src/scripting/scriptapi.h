@@ -126,7 +126,8 @@ class SongApi : public ApiObject
     Q_INVOKABLE QVariantList notes(const QVariantMap &opts) const;
     Q_INVOKABLE QVariant note(double id) const;
     // Automation points of one lane: cc 0-127, or the pseudo-CCs in
-    // porydaw.song.CC (BEND/TEMPO/VOICE). {from?, to?} bound the tick.
+    // porydaw.song.CC (BEND/TEMPO/VOICE; the lane CCs are plain numbers).
+    // {from?, to?} bound the tick.
     Q_INVOKABLE QVariantList lanePoints(int track, int cc, const QVariantMap &opts) const;
 };
 

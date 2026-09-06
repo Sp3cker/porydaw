@@ -143,7 +143,10 @@ declare namespace porydaw {
         to?: number;
     }
     namespace song {
-        const CC: { BEND: number; TEMPO: number; VOICE: number };
+        const CC: {
+            MOD: number; VOLUME: number; PAN: number; BEND_RANGE: number; LFO_SPEED: number;
+            BEND: number; TEMPO: number; VOICE: number;
+        };
         const loaded: boolean;
         const revision: number;
         const label: string;

@@ -576,13 +576,21 @@ void runEditChecks(const Check &check, scripting::ScriptHost &host, SongSession 
           "view.revealTick did not scroll the tick into view");
     run("porydaw.view.revealTick(0)");
 
+    // song.CC names every first-class lane (mid2agb's audible CCs + the
+    // pseudo-CCs) so scripts don't hard-code controller numbers.
+    check(run("var C = porydaw.song.CC; C.MOD === 1 && C.VOLUME === 7 && C.PAN === 10 && "
+              "C.BEND_RANGE === 20 && C.LFO_SPEED === 21 && C.BEND === 0xFF && "
+              "C.TEMPO === 0xFE && C.VOICE === 0xFD") == QStringLiteral("true"),
+          "song.CC does not name every first-class lane");
+
     // The rest of the surface in one transaction; undo restores the bytes.
     check(run("porydaw.edit.transaction('Sink', function () {"
               "  var e = porydaw.edit, CC = porydaw.song.CC;"
-              "  e.addLanePoint(0, 7, 96, 100);"
-              "  e.writeLanePoints(0, 10, 0, 192, [{tick: 0, value: 10}, {tick: 192, value: 120}]);"
-              "  e.moveLanePoints(0, 10, [{tick: 192, newTick: 144, newValue: 64}]);"
-              "  if (e.deleteLanePoints(0, 7, [96]) !== 1) throw new Error('del');"
+              "  e.addLanePoint(0, CC.VOLUME, 96, 100);"
+              "  e.writeLanePoints(0, CC.PAN, 0, 192, [{tick: 0, value: 10}, {tick: 192, value: "
+              "120}]);"
+              "  e.moveLanePoints(0, CC.PAN, [{tick: 192, newTick: 144, newValue: 64}]);"
+              "  if (e.deleteLanePoints(0, CC.VOLUME, [96]) !== 1) throw new Error('del');"
               "  e.addLanePoint(-1, CC.TEMPO, 480, 150);"
               "  e.setStartTempo(99);"
               "  e.setLoop(96, 960);"
