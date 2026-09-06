@@ -22,9 +22,12 @@ Plugins reload themselves when their files change, so editing one while
 Porydaw runs is fine.
 
 !!! tip "Where the folder is"
-    The plugins folder lives in Porydaw's application-data directory (the
-    Settings page shows the exact path). Setting the `PORYDAW_PLUGINS_DIR`
-    environment variable points Porydaw at a different folder instead.
+    By default the plugins folder lives in Porydaw's application-data
+    directory. **Change…** on the Settings page points Porydaw at any
+    folder you like (the choice is remembered, and plugins reload from the
+    new folder right away); **Use Default** goes back. Setting the
+    `PORYDAW_PLUGINS_DIR` environment variable overrides the saved folder
+    for that run only. The Settings page says when that is the case.
 
 ## Bundled examples
 

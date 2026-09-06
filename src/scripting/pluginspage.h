@@ -3,6 +3,7 @@
 #include <QWidget>
 
 class QLabel;
+class QLineEdit;
 class QPushButton;
 class QTreeWidget;
 class QTreeWidgetItem;
@@ -13,7 +14,9 @@ class ScriptHost;
 
 // Settings → Plugins: every plugin found in the plugins folder with an
 // enable checkbox (persisted, applies immediately), its state, and the
-// reason when it failed to load; Reload / Open Folder buttons.
+// reason when it failed to load; Reload / Open Folder buttons; and the
+// plugins folder itself (Change… / Use Default, applied and persisted at
+// once; read-only while PORYDAW_PLUGINS_DIR overrides it).
 class PluginsPage : public QWidget
 {
     Q_OBJECT
@@ -26,10 +29,14 @@ class PluginsPage : public QWidget
   private:
     void rebuild();
     void updateDetail();
+    void applyFolder(const QString &dir);
     QString currentId() const;
 
     ScriptHost &m_host;
-    QLabel *m_folder = nullptr;
+    QLineEdit *m_folder = nullptr;
+    QPushButton *m_changeFolder = nullptr;
+    QPushButton *m_defaultFolder = nullptr;
+    QLabel *m_folderNote = nullptr;
     QTreeWidget *m_tree = nullptr;
     QLabel *m_detail = nullptr;
     QPushButton *m_reload = nullptr;

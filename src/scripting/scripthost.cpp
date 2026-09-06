@@ -34,6 +34,7 @@ constexpr int kRescanDebounceMs = 300;
 // 60 Hz is 16.6 ms; the main window's playhead timer uses the same figure.
 constexpr int kFrameIntervalMs = 17;
 const QString kConsoleId = QStringLiteral("console");
+const QString kPluginsDirKey = QStringLiteral("pluginsDir");
 
 QString enabledKey(const QString &id)
 {
@@ -116,7 +117,7 @@ void Watchdog::run()
 
 // ---- ScriptHost ----
 
-ScriptHost::ScriptHost(QObject *parent) : QObject(parent), m_pluginsDir(defaultPluginsDir())
+ScriptHost::ScriptHost(QObject *parent) : QObject(parent), m_pluginsDir(resolvePluginsDir())
 {
     m_watcher = new QFileSystemWatcher(this);
     connect(m_watcher, &QFileSystemWatcher::fileChanged, this, &ScriptHost::onPathChanged);
@@ -164,11 +165,43 @@ void ScriptHost::setBindings(HostBindings bindings)
 
 QString ScriptHost::defaultPluginsDir()
 {
-    const QByteArray env = qgetenv("PORYDAW_PLUGINS_DIR");
-    if (!env.isEmpty())
-        return QString::fromLocal8Bit(env);
     return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
            QStringLiteral("/plugins");
+}
+
+QString ScriptHost::environmentPluginsDir()
+{
+    return QString::fromLocal8Bit(qgetenv("PORYDAW_PLUGINS_DIR"));
+}
+
+QString ScriptHost::configuredPluginsDir()
+{
+    // A relative (hand-edited, corrupt) value would resolve against the
+    // launch directory and scatter folders around; only absolute paths count.
+    const QString saved = QSettings().value(kPluginsDirKey).toString();
+    if (saved.isEmpty() || !QDir::isAbsolutePath(saved))
+        return defaultPluginsDir();
+    return QDir::cleanPath(saved);
+}
+
+QString ScriptHost::resolvePluginsDir()
+{
+    const QString env = environmentPluginsDir();
+    return env.isEmpty() ? configuredPluginsDir() : env;
+}
+
+void ScriptHost::setPluginsDirSetting(const QString &dir)
+{
+    // Normalised once here so "the default spelled differently" (trailing
+    // slash, "." segment) clears the key rather than storing it.
+    const QString clean = dir.isEmpty() ? QString() : QDir::cleanPath(dir);
+    QSettings settings;
+    if (clean.isEmpty() || clean == QDir::cleanPath(defaultPluginsDir()))
+        settings.remove(kPluginsDirKey);
+    else
+        settings.setValue(kPluginsDirKey, clean);
+    if (environmentPluginsDir().isEmpty())
+        setPluginsDir(configuredPluginsDir());
 }
 
 void ScriptHost::setPluginsDir(const QString &dir)
@@ -273,6 +306,10 @@ void ScriptHost::loadAll()
 void ScriptHost::unloadAll()
 {
     for (auto &plugin : m_plugins) {
+        // Reached from the Settings page only between script calls (every
+        // nested loop a script can open is an app-modal dialog): a plugin
+        // still on the stack would be freed under guarded().
+        Q_ASSERT(plugin->callDepth == 0);
         teardown(*plugin);
         unwatch(*plugin);
         plugin->reloadTimer->deleteLater();

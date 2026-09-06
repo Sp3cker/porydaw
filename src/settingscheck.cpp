@@ -2,6 +2,7 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDir>
 #include <QFontInfo>
 #include <QKeyEvent>
 #include <QListWidget>
@@ -10,6 +11,7 @@
 #include <QSlider>
 #include <QSpinBox>
 #include <QStackedWidget>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTreeWidget>
 #include <cstdio>
@@ -20,6 +22,11 @@
 #include "ui/keyboardshortcutspage.h"
 #include "ui/settingsdialog.h"
 #include "ui/typography.h"
+#ifdef PORYDAW_SCRIPTING
+#include <QLineEdit>
+
+#include "scripting/scripthost.h"
+#endif
 
 // --settingscheck: the Settings window (Edit → Settings…). Self-contained —
 // no project needed; QSettings is redirected into a temp dir first so the
@@ -41,6 +48,9 @@ int runSettingsCheck(const QString &shotPath)
     }
     QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
+    // The plugins-folder check returns to the *default* folder, which must
+    // not be the user's real app data (their plugins would load and run).
+    QStandardPaths::setTestModeEnabled(true);
 
     int failures = 0;
     const auto check = [&failures](bool ok, const char *what) {
@@ -112,6 +122,76 @@ int runSettingsCheck(const QString &shotPath)
                   dialog->pluginsPage()->findChild<QTreeWidget *>() != nullptr,
               "selecting Plugins did not show the plugins page");
         shoot("plugins");
+
+        // The plugins folder is a setting: the row shows the folder in
+        // use, a changed folder persists and reloads the host at once, Use
+        // Default clears it, and PORYDAW_PLUGINS_DIR beats the setting for
+        // a run without touching it.
+        {
+            QTemporaryDir customDir;
+            scripting::ScriptHost *host = window.scriptHost();
+            auto *folder = dialog->pluginsPage()->findChild<QLineEdit *>(
+                QStringLiteral("settingsPluginsFolder"));
+            auto *change = dialog->pluginsPage()->findChild<QPushButton *>(
+                QStringLiteral("settingsPluginsChangeFolder"));
+            auto *useDefault = dialog->pluginsPage()->findChild<QPushButton *>(
+                QStringLiteral("settingsPluginsDefaultFolder"));
+            const bool envSet = !scripting::ScriptHost::environmentPluginsDir().isEmpty();
+            if (envSet)
+                std::fprintf(stderr, "settingscheck: PORYDAW_PLUGINS_DIR is set; skipping the "
+                                     "plugins-folder setting check\n");
+            if (check(host && folder && change && useDefault && customDir.isValid(),
+                      "Plugins page folder row not found") &&
+                !envSet) {
+                const QString defaultDir = scripting::ScriptHost::defaultPluginsDir();
+                check(QDir::cleanPath(host->pluginsDir()) == QDir::cleanPath(defaultDir) &&
+                          folder->text() == QDir::toNativeSeparators(defaultDir) &&
+                          !useDefault->isEnabled() && change->isEnabled(),
+                      "Plugins page did not start on the default folder");
+                host->setPluginsDirSetting(customDir.path());
+                host->loadAll();
+                QApplication::processEvents();
+                check(QSettings().value(QStringLiteral("pluginsDir")).toString() ==
+                          customDir.path(),
+                      "changed plugins folder was not persisted");
+                check(host->pluginsDir() == customDir.path() &&
+                          folder->text() == QDir::toNativeSeparators(customDir.path()) &&
+                          useDefault->isEnabled(),
+                      "changed plugins folder did not reach the host and the page");
+                check(scripting::ScriptHost::resolvePluginsDir() == customDir.path(),
+                      "a fresh host would not start on the saved folder");
+                QSettings().setValue(QStringLiteral("pluginsDir"), QStringLiteral("plugins"));
+                check(scripting::ScriptHost::configuredPluginsDir() == defaultDir,
+                      "a relative saved folder must fall back to the default");
+                QSettings().setValue(QStringLiteral("pluginsDir"), customDir.path() + "/./");
+                check(scripting::ScriptHost::configuredPluginsDir() == customDir.path(),
+                      "the saved folder was not normalised");
+                host->setPluginsDirSetting(customDir.path());
+                qputenv("PORYDAW_PLUGINS_DIR", "/nonexistent/env-plugins");
+                check(scripting::ScriptHost::resolvePluginsDir() ==
+                              QStringLiteral("/nonexistent/env-plugins") &&
+                          scripting::ScriptHost::configuredPluginsDir() == customDir.path(),
+                      "PORYDAW_PLUGINS_DIR did not override the saved folder");
+                host->setPluginsDirSetting(defaultDir);
+                check(host->pluginsDir() == customDir.path() &&
+                          !QSettings().contains(QStringLiteral("pluginsDir")),
+                      "with the environment override, the setting must persist without moving "
+                      "the host");
+                qunsetenv("PORYDAW_PLUGINS_DIR");
+                host->setPluginsDirSetting(customDir.path());
+                host->loadAll();
+                QApplication::processEvents();
+                check(useDefault->isEnabled(),
+                      "Use Default was not re-enabled after the folder changed");
+                useDefault->click();
+                QApplication::processEvents();
+                check(QDir::cleanPath(host->pluginsDir()) == QDir::cleanPath(defaultDir) &&
+                          !QSettings().contains(QStringLiteral("pluginsDir")) &&
+                          !useDefault->isEnabled() &&
+                          folder->text() == QDir::toNativeSeparators(defaultDir),
+                      "Use Default did not return to the default folder");
+            }
+        }
 #endif
         sections->setCurrentRow(1);
         closeButton->click();

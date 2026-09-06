@@ -262,8 +262,20 @@ class ScriptHost : public QObject
     void setBindings(HostBindings bindings);
     const HostBindings &bindings() const { return m_bindings; }
 
-    // <AppDataLocation>/plugins unless PORYDAW_PLUGINS_DIR overrides it.
+    // Where plugins live. The folder is resolved at construction:
+    // PORYDAW_PLUGINS_DIR when set (a launch-time override for developers
+    // and harnesses; it beats the saved setting so what the launcher asked
+    // for is what runs), else the folder saved in Settings → Plugins (the
+    // "pluginsDir" QSettings key), else <AppDataLocation>/plugins.
     static QString defaultPluginsDir();
+    static QString environmentPluginsDir(); // empty unless the variable is set
+    static QString configuredPluginsDir();  // the saved setting, or default
+    static QString resolvePluginsDir();
+    // Persists the setting (empty = default) and, unless the environment
+    // overrides it, unloads everything and points the host at the new
+    // folder. Call loadAll() afterwards to load what it holds.
+    void setPluginsDirSetting(const QString &dir);
+    // Points the host at a folder without persisting anything (harnesses).
     void setPluginsDir(const QString &dir);
     QString pluginsDir() const { return m_pluginsDir; }
     // Per-call script budget (default 5000 ms). Harnesses shorten it.

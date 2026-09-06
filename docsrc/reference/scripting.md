@@ -14,8 +14,10 @@ longer than 5 s is interrupted and the plugin is disabled until reloaded.
 
 ## Installing a plugin
 
-Settings → Plugins shows the plugins folder (`<app data>/plugins`, or the
-`PORYDAW_PLUGINS_DIR` environment variable). One folder per plugin:
+Settings → Plugins shows the plugins folder and lets you change it
+(`<app data>/plugins` by default; the choice is saved). The
+`PORYDAW_PLUGINS_DIR` environment variable overrides the saved folder for
+one run. One folder per plugin:
 
 ```
 plugins/

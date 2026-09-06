@@ -2,9 +2,11 @@
 
 #include <QDesktopServices>
 #include <QDir>
+#include <QFileDialog>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QTreeWidget>
 #include <QUrl>
@@ -21,10 +23,26 @@ constexpr int kIdRole = Qt::UserRole;
 
 PluginsPage::PluginsPage(ScriptHost &host, QWidget *parent) : QWidget(parent), m_host(host)
 {
-    m_folder = new QLabel(this);
+    // The folder row: the path in use, Change… (a directory picker) and Use
+    // Default. Both apply immediately — the host unloads, repoints and
+    // reloads — and persist. When PORYDAW_PLUGINS_DIR is set the row is
+    // read-only for this run and the caption says so.
+    m_folder = new QLineEdit(this);
     m_folder->setObjectName(QStringLiteral("settingsPluginsFolder"));
-    m_folder->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    m_folder->setWordWrap(true);
+    m_folder->setReadOnly(true);
+    m_changeFolder = new QPushButton(tr("Change…"), this);
+    m_changeFolder->setObjectName(QStringLiteral("settingsPluginsChangeFolder"));
+    m_defaultFolder = new QPushButton(tr("Use Default"), this);
+    m_defaultFolder->setObjectName(QStringLiteral("settingsPluginsDefaultFolder"));
+    auto *folderRow = new QHBoxLayout;
+    folderRow->addWidget(new QLabel(tr("Plugins folder:"), this));
+    folderRow->addWidget(m_folder, 1);
+    folderRow->addWidget(m_changeFolder);
+    folderRow->addWidget(m_defaultFolder);
+    m_folderNote = new QLabel(this);
+    m_folderNote->setObjectName(QStringLiteral("settingsPluginsFolderNote"));
+    m_folderNote->setForegroundRole(QPalette::PlaceholderText);
+    m_folderNote->setWordWrap(true);
 
     m_tree = new QTreeWidget(this);
     m_tree->setObjectName(QStringLiteral("settingsPluginsTree"));
@@ -55,7 +73,8 @@ PluginsPage::PluginsPage(ScriptHost &host, QWidget *parent) : QWidget(parent), m
     buttons->addWidget(m_openFolder);
 
     auto *layout = new QVBoxLayout(this);
-    layout->addWidget(m_folder);
+    layout->addLayout(folderRow);
+    layout->addWidget(m_folderNote);
     layout->addWidget(m_tree, 1);
     layout->addWidget(m_detail);
     layout->addLayout(buttons);
@@ -77,6 +96,14 @@ PluginsPage::PluginsPage(ScriptHost &host, QWidget *parent) : QWidget(parent), m
             m_host.reload(id);
     });
     connect(m_reloadAll, &QPushButton::clicked, this, [this] { m_host.loadAll(); });
+    connect(m_changeFolder, &QPushButton::clicked, this, [this] {
+        const QString dir = QFileDialog::getExistingDirectory(this, tr("Choose Plugins Folder"),
+                                                              m_host.pluginsDir());
+        if (!dir.isEmpty())
+            applyFolder(dir);
+    });
+    connect(m_defaultFolder, &QPushButton::clicked, this,
+            [this] { applyFolder(ScriptHost::defaultPluginsDir()); });
     connect(m_openFolder, &QPushButton::clicked, this, [this] {
         QDir().mkpath(m_host.pluginsDir());
         QDesktopServices::openUrl(QUrl::fromLocalFile(m_host.pluginsDir()));
@@ -99,13 +126,37 @@ QTreeWidgetItem *PluginsPage::itemFor(const QString &pluginId) const
     return nullptr;
 }
 
+void PluginsPage::applyFolder(const QString &dir)
+{
+    if (QDir::cleanPath(dir) == QDir::cleanPath(m_host.pluginsDir()))
+        return;
+    m_host.setPluginsDirSetting(dir);
+    m_host.loadAll();
+}
+
 void PluginsPage::rebuild()
 {
     m_rebuilding = true;
     const QString selected = currentId();
-    m_folder->setText(tr("Plugins load from %1 — one folder per plugin, each with a "
-                         "plugin.json. Edits reload automatically.")
-                          .arg(QDir::toNativeSeparators(m_host.pluginsDir())));
+    const QString envDir = ScriptHost::environmentPluginsDir();
+    const bool overridden = !envDir.isEmpty();
+    m_folder->setText(QDir::toNativeSeparators(m_host.pluginsDir()));
+    m_changeFolder->setEnabled(!overridden);
+    m_defaultFolder->setEnabled(!overridden &&
+                                QDir::cleanPath(m_host.pluginsDir()) !=
+                                    QDir::cleanPath(ScriptHost::defaultPluginsDir()));
+    QString note;
+    if (overridden) {
+        note = tr("Set by the PORYDAW_PLUGINS_DIR environment variable for this run; the saved "
+                  "folder (%1) is used again once porydaw starts without it.")
+                   .arg(QDir::toNativeSeparators(ScriptHost::configuredPluginsDir()));
+    } else {
+        note = tr("One folder per plugin, each with a plugin.json. Edits reload "
+                  "automatically. Changing the folder reloads all plugins.");
+    }
+    if (!QDir(m_host.pluginsDir()).exists())
+        note += QLatin1Char(' ') + tr("This folder does not exist and could not be created.");
+    m_folderNote->setText(note);
     m_tree->clear();
     QTreeWidgetItem *reselect = nullptr;
     for (const QString &id : m_host.pluginIds()) {
