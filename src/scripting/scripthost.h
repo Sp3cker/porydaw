@@ -12,6 +12,7 @@
 #include <QString>
 #include <QStringList>
 #include <QThread>
+#include <QVariantMap>
 #include <QWaitCondition>
 
 #include <atomic>
@@ -22,6 +23,7 @@
 
 #include "audio/audiotap.h"
 #include "pluginmanifest.h"
+#include "ui/enginesettings.h"
 #include "ui/keymap.h"
 
 class AudioEngine;
@@ -116,9 +118,21 @@ struct HostBindings {
     // open edit group takes it), applying it to audio and the dock.
     std::function<bool(SongSession &session, int slot, const VgVoice &voice, QString *error)>
         editVoice;
+    // The GBA engine settings (Settings → Audio: PCM polyphony, mix rate,
+    // analog filter), read and written through porydaw.audio.engine /
+    // setEngine. The write goes through the Settings window's page so the
+    // page, QSettings and the audio device all follow; false with *error
+    // set when the window can't take it. Absent: reads give the defaults,
+    // writes are refused.
+    std::function<EngineSettings()> engineSettings;
+    std::function<bool(const EngineSettings &settings, QString *error)> setEngineSettings;
     const AudioEngine *audio = nullptr;
     const DecompProject *project = nullptr;
 };
+
+// {maxPcmChannels, pcmMixRate, analogFilter}: porydaw.audio.engine and the
+// audio.engine event payload.
+QVariantMap engineSettingsMap(const EngineSettings &settings);
 
 enum class PluginState { Disabled, Loaded, Error };
 

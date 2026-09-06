@@ -299,6 +299,15 @@ declare namespace porydaw {
         track: number;
         key: number;
     }
+    /** The GBA engine settings (Settings → Audio); user-global, not part of a song. */
+    interface EngineSettings {
+        /** PCM (DirectSound) polyphony, 1..engineLimits().maxPcmChannels. */
+        maxPcmChannels: number;
+        /** DirectSound mix rate in Hz: 0 = the host rate, else one of engineLimits().mixRates. */
+        pcmMixRate: number;
+        /** The GBA analog output low-pass. */
+        analogFilter: boolean;
+    }
     namespace audio {
         const sampleRate: number;
         const windowFrames: number;
@@ -309,7 +318,12 @@ declare namespace porydaw {
         function channels(): { pcm: ChannelState[]; cgb: ChannelState[]; maxPcm: number; activePcm: number; activeCgb: number } | null;
         /** Renders the active song to a WAV file (blocks; refused inside a transaction). */
         function render(path: string, opts?: { sampleRate?: number; loopCount?: number; fadeout?: number; tail?: number }): { path: string; seconds: number };
+        const engine: EngineSettings;
+        function engineLimits(): { maxPcmChannels: number; mixRates: number[] };
+        /** Partial update; persists, updates Settings → Audio and restarts the audio device. Throws on unknown keys or bad values. */
+        function setEngine(spec: Partial<EngineSettings>): void;
         function on(event: "frame", fn: (frame: AudioFrame) => void): Unsubscribe;
+        function on(event: "engine", fn: (settings: EngineSettings) => void): Unsubscribe;
         function off(event: string, fn: Function): void;
     }
 

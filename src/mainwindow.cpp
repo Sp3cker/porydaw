@@ -317,6 +317,17 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
             }
             return true;
         };
+        bindings.engineSettings = [this] { return m_engineSettings; };
+        bindings.setEngineSettings = [this](const EngineSettings &settings, QString *error) {
+            if (!m_settingsDialog) {
+                *error = tr("the Settings window is not available");
+                return false;
+            }
+            // The page reports only a real change, and its report is what
+            // persists, applies and announces the settings (buildSettingsDialog).
+            m_settingsDialog->audioPage()->setEngineSettings(settings);
+            return true;
+        };
         bindings.createVoicegroup = [this](const QString &name, const QString &copyFromArg,
                                            QString *error) {
             return createVoicegroupNamed(name, copyFromArg, error);
@@ -2204,6 +2215,12 @@ void MainWindow::buildSettingsDialog()
     connect(m_engineApplyTimer, &QTimer::timeout, this, [this] {
         if (m_audioOk && m_active && m_audio.songLoaded())
             m_audio.updateSettings(songSettingsFor(*m_active));
+#ifdef PORYDAW_SCRIPTING
+        // Once settled (whoever changed them: the page or a script), so a
+        // script's own setEngine never re-enters it mid-call.
+        m_scriptHost->emitEventAll(QStringLiteral("audio.engine"),
+                                   scripting::engineSettingsMap(m_engineSettings));
+#endif
     });
     connect(m_settingsDialog.get(), &SettingsDialog::engineSettingsChanged, this,
             [this](const EngineSettings &settings) {

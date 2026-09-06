@@ -505,6 +505,79 @@ QVariant AudioApi::render(const QString &path, const QVariantMap &opts)
     return QVariantMap{{QStringLiteral("path"), target}, {QStringLiteral("seconds"), seconds}};
 }
 
+QVariantMap AudioApi::engine() const
+{
+    const auto &read = m_host.bindings().engineSettings;
+    return engineSettingsMap(read ? read() : EngineSettings());
+}
+
+QVariantMap AudioApi::engineLimits() const
+{
+    QVariantList rates;
+    for (int rate : kGbaMixRates)
+        rates.append(rate);
+    return {{QStringLiteral("maxPcmChannels"), int(MAX_PCM_CHANNELS)},
+            {QStringLiteral("mixRates"), rates}};
+}
+
+void AudioApi::setEngine(const QVariantMap &spec)
+{
+    const auto &read = m_host.bindings().engineSettings;
+    if (!read || !m_host.bindings().setEngineSettings) {
+        throwError(QStringLiteral("audio.setEngine: engine settings are not available"));
+        return;
+    }
+    EngineSettings next = read();
+    for (auto it = spec.cbegin(); it != spec.cend(); ++it) {
+        const QString &key = it.key();
+        const QVariant &v = it.value();
+        // A number that is a whole integer (no NaN/strings/booleans).
+        const auto integer = [&](int *out) {
+            bool ok = false;
+            const double d = v.toDouble(&ok);
+            if (!ok || v.typeId() == QMetaType::Bool || v.typeId() == QMetaType::QString ||
+                !std::isfinite(d) || d != std::floor(d) || d < 0.0 || d > 1e6)
+                return false;
+            *out = int(d);
+            return true;
+        };
+        if (key == QLatin1String("maxPcmChannels")) {
+            int n = 0;
+            if (!integer(&n) || n < 1 || n > int(MAX_PCM_CHANNELS)) {
+                throwError(QStringLiteral("audio.setEngine: maxPcmChannels must be an integer "
+                                          "from 1 to %1")
+                               .arg(MAX_PCM_CHANNELS));
+                return;
+            }
+            next.maxPcmChannels = n;
+        } else if (key == QLatin1String("pcmMixRate")) {
+            int rate = 0;
+            const bool listed =
+                integer(&rate) &&
+                (rate == 0 || std::find(std::begin(kGbaMixRates), std::end(kGbaMixRates), rate) !=
+                                  std::end(kGbaMixRates));
+            if (!listed) {
+                throwError(QStringLiteral("audio.setEngine: pcmMixRate must be 0 (the host "
+                                          "rate) or one of audio.engineLimits().mixRates"));
+                return;
+            }
+            next.pcmMixRate = float(rate);
+        } else if (key == QLatin1String("analogFilter")) {
+            if (v.typeId() != QMetaType::Bool) {
+                throwError(QStringLiteral("audio.setEngine: analogFilter must be a boolean"));
+                return;
+            }
+            next.analogFilter = v.toBool();
+        } else {
+            throwError(QStringLiteral("audio.setEngine: unknown key '%1'").arg(key));
+            return;
+        }
+    }
+    QString error;
+    if (!m_host.bindings().setEngineSettings(next, &error))
+        throwError(QStringLiteral("audio.setEngine: ") + error);
+}
+
 // ---- UiApi ----
 
 QObject *UiApi::dock(const QVariantMap &spec, const QJSValue &build, const QJSValue &paint,

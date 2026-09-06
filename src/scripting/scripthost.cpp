@@ -1104,6 +1104,13 @@ void ScriptHost::emitEventAll(const QString &event, const QVariant &payload)
         send(*m_console);
 }
 
+QVariantMap engineSettingsMap(const EngineSettings &settings)
+{
+    return {{QStringLiteral("maxPcmChannels"), settings.maxPcmChannels},
+            {QStringLiteral("pcmMixRate"), double(settings.pcmMixRate)},
+            {QStringLiteral("analogFilter"), settings.analogFilter}};
+}
+
 QString ScriptHost::evalConsole(const QString &code)
 {
     if (!m_console) {

@@ -380,7 +380,17 @@
             spectrum: function (bins) { return new Float32Array(audio.spectrum(bins || 64)); },
             channels: function () { return audio.channels(); },
             // render(path, {sampleRate?, loopCount?, fadeout?, tail?}) → {path, seconds}
-            render: function (path, opts) { return audio.render(String(path), opts || {}); }
+            render: function (path, opts) { return audio.render(String(path), opts || {}); },
+            // The GBA engine settings (Settings → Audio):
+            // {maxPcmChannels, pcmMixRate, analogFilter}; setEngine takes a
+            // partial object. engineLimits() → {maxPcmChannels, mixRates}.
+            get engine() { return audio.engine(); },
+            engineLimits: function () { return audio.engineLimits(); },
+            setEngine: function (spec) {
+                if (spec === null || typeof spec !== "object" || Array.isArray(spec))
+                    throw new TypeError("audio.setEngine: expected an object");
+                audio.setEngine(spec);
+            }
         }, events("audio")),
 
         actions: {

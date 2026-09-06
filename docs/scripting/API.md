@@ -241,6 +241,22 @@ renders the active song to a WAV file the way File → Export WAV does
 `porydaw.io`'s rules, playback stops first, and the call blocks (the watchdog
 is paused). Refused inside a transaction.
 
+**GBA engine settings.** The user-global accuracy knobs from Settings →
+Audio (they are porydaw preferences, not part of any song; reverb stays in
+`song.settings()`):
+
+| Member | Meaning |
+|---|---|
+| `engine` | `{maxPcmChannels, pcmMixRate, analogFilter}` — PCM polyphony (pokeemerald's default 5), the DirectSound mix rate in Hz (`0` = the host rate, no GBA resampling), and the GBA analog output low-pass |
+| `engineLimits()` | `{maxPcmChannels, mixRates}` — the polyphony ceiling and the selectable rates (m4aSoundInit's 5734 … 42048 Hz) |
+| `setEngine({maxPcmChannels?, pcmMixRate?, analogFilter?})` | partial update; unknown keys, a polyphony outside `1..maxPcmChannels`, a rate that is neither `0` nor listed, or a non-boolean filter throw and change nothing |
+
+A write persists immediately, updates the Settings window, and restarts the
+audio device once the knobs come to rest (a short coalescing delay, so a loop
+of `setEngine` calls restarts it once). `on("engine", fn(settings))` fires
+after that with the settled `engine` value, whether a script or the Settings
+window changed it.
+
 Bundled examples: `plugins/examples/vu-meter`, `plugins/examples/spectrum`,
 `plugins/examples/dancer` (beats), `plugins/examples/song-report` (render).
 
