@@ -85,7 +85,8 @@
     }
 
     // A menu handle (C++ MenuHandle) wrapped so items take {label,
-    // run(checked), action, checkable, checked, enabled, tooltip} specs.
+    // run(checked), shouldShow(), action, checkable, checked, enabled,
+    // tooltip} specs.
     function wrapMenu(handle) {
         if (!handle) return handle;
         return {
@@ -106,7 +107,10 @@
                 var run = typeof spec.run === "function"
                     ? function (checked) { spec.run(checked); }
                     : undefined;
-                return handle.addItem(opts, run);
+                var shouldShow = typeof spec.shouldShow === "function"
+                    ? function () { return !!spec.shouldShow(); }
+                    : undefined;
+                return handle.addItem(opts, run, shouldShow);
             },
             addSeparator: function () { handle.addSeparator(); },
             addMenu: function (label) { return wrapMenu(handle.addMenu(String(label))); },

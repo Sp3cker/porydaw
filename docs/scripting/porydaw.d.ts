@@ -439,6 +439,8 @@ declare namespace porydaw {
     interface MenuItemSpec {
         label: string;
         run?: (checked: boolean) => void;
+        /** Asked each time the menu opens; return false to leave the entry out of that opening. */
+        shouldShow?: () => boolean;
         /** A full command id from actions.register: shows its binding, and runs it without `run`. */
         action?: string;
         checkable?: boolean;

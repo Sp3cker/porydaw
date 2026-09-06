@@ -1091,14 +1091,19 @@ void ScriptHost::appendContextMenu(QMenu &menu, const QString &surface)
     const auto append = [&](Plugin &plugin) {
         if (plugin.state != PluginState::Loaded)
             return;
-        for (const Plugin::ContextItem &item : plugin.contextItems) {
-            if (item.surface != surface || !item.action || !item.action->isVisible())
+        // A copy: a shouldShow() predicate may add or remove items.
+        const std::vector<Plugin::ContextItem> items = plugin.contextItems;
+        for (const Plugin::ContextItem &entry : items) {
+            if (entry.surface != surface || !entry.item || !entry.item->shouldShow())
+                continue;
+            QAction *action = entry.item->action();
+            if (!action || plugin.state != PluginState::Loaded)
                 continue;
             if (!separated) {
                 menu.addSeparator();
                 separated = true;
             }
-            menu.addAction(item.action);
+            menu.addAction(action);
         }
     };
     for (auto &plugin : m_plugins)

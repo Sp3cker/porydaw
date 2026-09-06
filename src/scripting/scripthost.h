@@ -48,6 +48,7 @@ struct WavExportOptions;
 namespace scripting {
 
 class MenuHandle;
+class MenuItemHandle;
 class OverlayHandle;
 
 // The project's instrument catalog as porydaw.project.voicegroups() and
@@ -185,7 +186,7 @@ struct Plugin {
     // menu ("notes") or the time-selection menu ("range") when they open.
     struct ContextItem {
         QString surface;
-        QPointer<QAction> action;
+        QPointer<MenuItemHandle> item;
     };
     std::vector<ContextItem> contextItems;
     std::vector<QPointer<OverlayHandle>> overlays;

@@ -378,13 +378,16 @@ Both give a menu handle:
 
 | Call | |
 |---|---|
-| `addItem({label, run(checked), action?, checkable?, checked?, enabled?, tooltip?})` | → item handle. `run` receives the item's checked state (checkable items). `action` links the item to a command from `actions.register` (its id): the item shows the command's current binding as a hint and, without `run`, triggers it |
+| `addItem({label, run(checked), shouldShow()?, action?, checkable?, checked?, enabled?, tooltip?})` | → item handle. `run` receives the item's checked state (checkable items). `shouldShow` is asked every time the menu opens: return `false` and the entry is left out of that opening (say, a note-menu item that only applies to two or more selected notes). Without it the entry always shows; an entry whose predicate throws still shows (the error is logged). `action` links the item to a command from `actions.register` (its id): the item shows the command's current binding as a hint and, without `run`, triggers it |
 | `addSeparator()`, `addMenu(label)` → nested menu | menu-bar menus only |
 | `clear()` | removes every entry; handles stay alive but dead |
 | `label`, `enabled`, `visible` | read/write |
 
 Item handles: `label`, `enabled`, `visible`, `checked` (read/write; setting
-it never fires `run`), `remove()`. Everything is released on unload/reload.
+it never fires `run`), `remove()`. `visible = false` keeps an entry out
+regardless of its `shouldShow`. Everything is released on unload/reload.
+`plugins/examples/note-tools` (its note-menu entries) and
+`plugins/examples/range-tools` ("Reverse notes") show `shouldShow` in use.
 
 #### Roll overlays
 

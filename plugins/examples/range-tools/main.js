@@ -83,7 +83,12 @@ export function activate() {
     var menu = porydaw.ui.contextMenu("range");
     menu.addItem({ label: "Duplicate after itself", action: dup });
     menu.addItem({ label: "Echo…", run: echo });
-    menu.addItem({ label: "Reverse notes", run: reverse });
+    // Reversing acts on notes, so the entry only shows for a track-scoped
+    // selection (a lane selection holds automation, not notes).
+    menu.addItem({ label: "Reverse notes", run: reverse, shouldShow: function () {
+        var sel = porydaw.selection.time();
+        return !!sel && sel.scope === "tracks";
+    } });
 }
 
 export function deactivate() {}

@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Plugins can now maintain the project: read and change a song's settings (voicegroup, master volume, reverb, …) and its voicegroup's voices as undoable edits, save the song, register or unregister songs, and create voicegroups. Bundled example `project-tools` adds a registration audit and an "apply envelope to sample voices" tool. The scripting reference is now part of the user manual.
 - The plugins folder can be changed in Settings → Plugins (**Change…** / **Use Default**); the choice is remembered. `PORYDAW_PLUGINS_DIR` still overrides it for a single run.
 - Plugins can read and change the GBA engine settings (PCM polyphony, PCM mix rate, analog output filter) through `porydaw.audio.engine` / `setEngine`, and are told when they change.
+- Plugin menu items take a `shouldShow()` predicate that is asked each time the menu opens, so a context-menu entry can appear only when it applies (say, to the current note selection).
 - Added an Output level control (Settings → Audio) for porydaw's output volume.
 - Added ability to copy/paste notes and events between different songs. Before, each song had its own separate clipboard.
 - Added a Tempo input to the transport bar for the song's starting tempo. A warning appears next to it when the tempo changes later in the song. Click it to show the Tempo automation lane.

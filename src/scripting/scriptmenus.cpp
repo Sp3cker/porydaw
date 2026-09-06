@@ -24,7 +24,7 @@ constexpr int kPaintErrorHoldMs = 1000;
 // ---- MenuItemHandle ----
 
 MenuItemHandle::MenuItemHandle(ScriptHost &host, Plugin &plugin, const QVariantMap &spec,
-                               const QJSValue &run, QObject *parent)
+                               const QJSValue &run, const QJSValue &shouldShow, QObject *parent)
     : QObject(parent)
     , m_host(host)
     , m_plugin(plugin)
@@ -32,6 +32,7 @@ MenuItemHandle::MenuItemHandle(ScriptHost &host, Plugin &plugin, const QVariantM
     , m_label(spec.value(QStringLiteral("label")).toString())
     , m_commandId(spec.value(QStringLiteral("action")).toString())
     , m_run(run)
+    , m_shouldShow(shouldShow.isCallable() ? shouldShow : QJSValue())
 {
     m_action->setCheckable(spec.value(QStringLiteral("checkable")).toBool());
     if (m_action->isCheckable())
@@ -90,13 +91,31 @@ void MenuItemHandle::setEnabled(bool on)
 
 bool MenuItemHandle::visible() const
 {
-    return m_action && m_action->isVisible();
+    return m_action && m_visible;
 }
 
 void MenuItemHandle::setVisible(bool on)
 {
+    m_visible = on;
     if (m_action)
         m_action->setVisible(on);
+}
+
+bool MenuItemHandle::shouldShow()
+{
+    if (!m_action || !m_visible)
+        return false;
+    if (!m_shouldShow.isCallable())
+        return true;
+    // The call may unwind into a teardown that deletes this handle (a
+    // predicate spinning a nested loop while a reload lands), or the
+    // predicate may remove the item: nothing of `this` is read after it
+    // without the guard.
+    const QPointer<MenuItemHandle> self(this);
+    const QJSValue verdict = m_host.invoke(m_plugin, m_shouldShow, {});
+    if (!self || !self->m_action)
+        return false;
+    return verdict.isError() || verdict.isUndefined() || verdict.toBool();
 }
 
 bool MenuItemHandle::checked() const
@@ -122,6 +141,7 @@ void MenuItemHandle::remove()
     QAction *dying = m_action.data();
     m_action = nullptr;
     m_run = QJSValue();
+    m_shouldShow = QJSValue();
     if (!dying)
         return;
     dying->setVisible(false);
@@ -137,7 +157,34 @@ MenuHandle::MenuHandle(ScriptHost &host, Plugin &plugin, QMenu *menu, QObject *p
     , m_host(host)
     , m_plugin(plugin)
     , m_menu(menu)
-{}
+{
+    if (menu)
+        connect(menu, &QMenu::aboutToShow, this, &MenuHandle::refreshItems);
+}
+
+void MenuHandle::refreshItems()
+{
+    // Guarded copies: a predicate may remove its item or add another, and
+    // its call may tear the plugin down, deleting this handle and every
+    // item with it.
+    const QPointer<MenuHandle> self(this);
+    QList<QPointer<MenuItemHandle>> items;
+    for (QObject *child : children()) {
+        if (auto *item = qobject_cast<MenuItemHandle *>(child))
+            items.append(item);
+    }
+    for (const QPointer<MenuItemHandle> &item : items) {
+        if (!self)
+            return;
+        if (!item || !item->visible())
+            continue;
+        const bool show = item->shouldShow();
+        if (!self || !item)
+            return;
+        if (QAction *action = item->action())
+            action->setVisible(show);
+    }
+}
 
 MenuHandle::MenuHandle(ScriptHost &host, Plugin &plugin, const QString &surface, QObject *parent)
     : QObject(parent)
@@ -198,7 +245,8 @@ void MenuHandle::setVisible(bool on)
     }
 }
 
-QObject *MenuHandle::addItem(const QVariantMap &spec, const QJSValue &run)
+QObject *MenuHandle::addItem(const QVariantMap &spec, const QJSValue &run,
+                             const QJSValue &shouldShow)
 {
     QJSEngine *e = m_plugin.engine.get();
     if (m_surface.isEmpty() && !m_menu) {
@@ -229,7 +277,7 @@ QObject *MenuHandle::addItem(const QVariantMap &spec, const QJSValue &run)
                           QStringLiteral("menu.addItem: an item needs run() or an action"));
         return nullptr;
     }
-    auto *item = new MenuItemHandle(m_host, m_plugin, spec, run, this);
+    auto *item = new MenuItemHandle(m_host, m_plugin, spec, run, shouldShow, this);
     QJSEngine::setObjectOwnership(item, QJSEngine::CppOwnership);
     if (m_menu) {
         m_menu->addAction(item->action());
@@ -238,9 +286,11 @@ QObject *MenuHandle::addItem(const QVariantMap &spec, const QJSValue &run)
         // menu opens. Prune entries whose actions were removed.
         auto &items = m_plugin.contextItems;
         items.erase(std::remove_if(items.begin(), items.end(),
-                                   [](const Plugin::ContextItem &c) { return c.action.isNull(); }),
+                                   [](const Plugin::ContextItem &c) {
+                                       return c.item.isNull() || !c.item->action();
+                                   }),
                     items.end());
-        items.push_back({m_surface, item->action()});
+        items.push_back({m_surface, item});
         if (!m_enabled)
             item->setEnabled(false);
         if (!m_visible)

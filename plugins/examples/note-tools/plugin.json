@@ -4,5 +4,5 @@
   "version": "1.0.0",
   "api": 1,
   "main": "main.js",
-  "description": "Five piano-roll editing commands built on porydaw.edit transactions: Legato, Insert Chord, Humanize, Strum and Quantize. Each is one undo entry."
+  "description": "Five piano-roll editing commands built on porydaw.edit transactions: Legato, Insert Chord, Humanize, Strum and Quantize, also in the note context menu. Each is one undo entry."
 }

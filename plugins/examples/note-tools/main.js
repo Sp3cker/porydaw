@@ -147,11 +147,21 @@ export function activate(ctx) {
         { id: "strum", name: "Strum selection", key: "Ctrl+Shift+U", run: strum },
         { id: "quantize", name: "Quantize selection to grid", key: "Ctrl+Shift+G", run: quantize }
     ];
+    var ids = {};
     tools.forEach(function (tool) {
-        porydaw.actions.register({
+        ids[tool.id] = porydaw.actions.register({
             id: tool.id, name: tool.name, context: "roll", default: tool.key, run: tool.run
         });
     });
+    // The note context menu lists the selection tools. Legato and Strum
+    // relate one note to the next, so they only appear when two or more
+    // notes are selected: shouldShow() is asked as the menu opens.
+    var twoOrMore = function () { return porydaw.selection.notes().length >= 2; };
+    var menu = porydaw.ui.contextMenu("notes");
+    menu.addItem({ label: "Legato", action: ids.legato, shouldShow: twoOrMore });
+    menu.addItem({ label: "Strum", action: ids.strum, shouldShow: twoOrMore });
+    menu.addItem({ label: "Humanize velocities", action: ids.humanize });
+    menu.addItem({ label: "Quantize to grid", action: ids.quantize });
     porydaw.log("ready: " + ctx.name + " " + ctx.version);
 }
 

@@ -37,10 +37,16 @@ class MenuItemHandle : public QObject
   public:
     // spec: {label, action?: full keymap id, checkable?, checked?, enabled?,
     // tooltip?}. `run` is called on trigger (with the checked state);
-    // without it, `action` runs through the host.
+    // without it, `action` runs through the host. `shouldShow`, when
+    // callable, is asked each time the item's menu opens (shouldShow()).
     MenuItemHandle(ScriptHost &host, Plugin &plugin, const QVariantMap &spec, const QJSValue &run,
-                   QObject *parent);
+                   const QJSValue &shouldShow, QObject *parent);
     QAction *action() const { return m_action; }
+    // The script's shouldShow() verdict for the menu opening now: true
+    // without a predicate, and when the predicate throws (the error is
+    // logged; a hidden entry would only hide the bug). The entry also
+    // stays out while `visible` is false.
+    bool shouldShow();
     QString label() const { return m_label; }
     void setLabel(const QString &label);
     bool enabled() const;
@@ -63,6 +69,8 @@ class MenuItemHandle : public QObject
     QString m_label;
     QString m_commandId;
     QJSValue m_run;
+    QJSValue m_shouldShow;
+    bool m_visible = true; // the `visible` property; the action's follows shouldShow too
     bool m_settingValue = false;
 };
 
@@ -89,13 +97,17 @@ class MenuHandle : public QObject
     void setEnabled(bool on);
     bool visible() const;
     void setVisible(bool on);
-    Q_INVOKABLE QObject *addItem(const QVariantMap &spec, const QJSValue &run);
+    Q_INVOKABLE QObject *addItem(const QVariantMap &spec, const QJSValue &run,
+                                 const QJSValue &shouldShow);
     Q_INVOKABLE void addSeparator();
     Q_INVOKABLE QObject *addMenu(const QString &label);
     // Removes every item (and submenu) added so far.
     Q_INVOKABLE void clear();
 
   private:
+    // Menu-bar menus: re-asks every item's shouldShow() as the menu opens.
+    void refreshItems();
+
     ScriptHost &m_host;
     Plugin &m_plugin;
     QPointer<QMenu> m_menu;

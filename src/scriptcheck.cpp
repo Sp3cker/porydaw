@@ -1583,6 +1583,85 @@ void runReachChecks(const Check &check, scripting::ScriptHost &host, MainWindow 
     }
     check(plugCount == 1, "reopening the note menu duplicated the plugin entries");
     oneEntryThenUndo("Note for menu", "the note transaction is not one entry");
+    if (host.plugin(QStringLiteral("note-tools"))) {
+        // note-tools' Legato entry is gated on shouldShow() (two or more
+        // selected notes): out with one note selected, in with two.
+        const auto noteMenuHas = [&](const QString &label) {
+            QMenu *menu = rightClickNote(72, 60);
+            const bool found = menu && actionNamed(menu->actions(), label);
+            if (menu)
+                menu->close();
+            return found;
+        };
+        check(run(QStringLiteral(
+                  "var NIDS = porydaw.edit.transaction('Notes for shouldShow', function () { "
+                  "return porydaw.edit.addNotes(0, [{tick: 48, key: 60, len: 48, vel: 100}, "
+                  "{tick: 144, key: 64, len: 48, vel: 100}]); }); "
+                  "porydaw.selection.setNotes(NIDS[0]); porydaw.view.revealRange(0, 192); "
+                  "porydaw.view.revealNote(NIDS[0])")) == QStringLiteral("true"),
+              "could not place the notes for the example shouldShow test");
+        check(!noteMenuHas(QStringLiteral("Legato")) &&
+                  noteMenuHas(QStringLiteral("Humanize velocities")),
+              "note-tools' Legato showed for a single note (or Humanize was missing)");
+        check(run(QStringLiteral("porydaw.selection.setNotes(NIDS); "
+                                 "porydaw.selection.notes().length")) == QStringLiteral("2") &&
+                  noteMenuHas(QStringLiteral("Legato")),
+              "note-tools' Legato stayed hidden for two selected notes");
+        oneEntryThenUndo("Notes for shouldShow", "the example notes transaction is not one entry");
+    }
+    // shouldShow(): asked as the menu opens; a false verdict leaves the
+    // entry out of that opening only. A throwing predicate keeps the
+    // entry (logged), and `visible = false` wins over a true verdict.
+    check(run(QStringLiteral(
+              "var SS = porydaw.ui.contextMenu('range').addItem({label: 'Maybe', run: function "
+              "() {}, shouldShow: function () { porydaw.storage.set('asked', "
+              "(porydaw.storage.get('asked') || 0) + 1); return porydaw.storage.get('want') == "
+              "1; }}); var TS = porydaw.ui.contextMenu('range').addItem({label: 'Throws', run: "
+              "function "
+              "() {}, shouldShow: function () { throw new Error('boom'); }}); 'ok'")) ==
+              QStringLiteral("ok"),
+          "shouldShow items could not be added");
+    run(QStringLiteral("porydaw.selection.setTime({start: 0, end: 96})"));
+    const auto rangeMenuHas = [&](const QString &label) {
+        bool found = false;
+        driveNextPopup(
+            [&](QMenu *menu) {
+                found = actionNamed(menu->actions(), label) != nullptr;
+                menu->close();
+            },
+            QDeadlineTimer(3000));
+        view.showTimeSelectionMenu(view.mapToGlobal(QPoint(200, 100)));
+        return found;
+    };
+    check(!rangeMenuHas(QStringLiteral("Maybe")) &&
+              storedCounter(QStringLiteral("console"), QStringLiteral("asked")) == 1,
+          "a false shouldShow() did not hide the entry (or was not asked once)");
+    run(QStringLiteral("porydaw.storage.set('want', 1)"));
+    check(rangeMenuHas(QStringLiteral("Maybe")) &&
+              storedCounter(QStringLiteral("console"), QStringLiteral("asked")) == 2,
+          "a true shouldShow() did not show the entry on the next opening");
+    check(rangeMenuHas(QStringLiteral("Throws")) && errorLogged("boom"),
+          "a throwing shouldShow() hid the entry or went unlogged");
+    run(QStringLiteral("TS.remove()"));
+    check(run(QStringLiteral("SS.visible = false; 'ok'")) == QStringLiteral("ok") &&
+              !rangeMenuHas(QStringLiteral("Maybe")),
+          "visible = false did not win over a true shouldShow()");
+    run(QStringLiteral("SS.remove(); porydaw.selection.clearTime()"));
+    // The same for a menu-bar item, asked on the menu's aboutToShow.
+    check(run(QStringLiteral(
+              "var MS = M.addItem({label: 'MaybeBar', run: function () {}, shouldShow: function "
+              "() { return porydaw.storage.get('wantbar') == 1; }}); 'ok'")) ==
+              QStringLiteral("ok"),
+          "a menu-bar shouldShow item could not be added");
+    QAction *maybeBar = actionNamed(consoleMenu->actions(), QStringLiteral("MaybeBar"));
+    emit consoleMenu->aboutToShow();
+    check(maybeBar && !maybeBar->isVisible(),
+          "a false shouldShow() left the menu-bar entry visible");
+    run(QStringLiteral("porydaw.storage.set('wantbar', 1)"));
+    emit consoleMenu->aboutToShow();
+    check(maybeBar && maybeBar->isVisible(),
+          "a true shouldShow() did not bring the menu-bar entry back");
+    run(QStringLiteral("MS.remove()"));
 
     // --- dialogs ---
     check(run(QStringLiteral("porydaw.edit.transaction('D', function () { "
