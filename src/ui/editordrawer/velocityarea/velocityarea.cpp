@@ -102,8 +102,8 @@ void VelocityArea::songChanged()
     m_hoveredNote.reset();
     m_lastPresentedPlayheadTick.reset();
     m_live = {};
-    m_axis = VelocityAxis(VelocityMap::resolve(nullptr, std::nullopt), {});
-    publishAccessibleDescription();
+    if (!m_inputHost)
+        m_axis = VelocityAxis(VelocityMap::resolve(nullptr, std::nullopt), {});
     rebuildVisualState();
 }
 

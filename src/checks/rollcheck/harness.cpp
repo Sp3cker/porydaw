@@ -2,15 +2,13 @@
 
 #include <QColor>
 #include <QCoreApplication>
-#include <QObject>
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
 
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
-#include "checks/support/songfixture.h"
 #include "ui/layout.h"
+#include "ui/songtab.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -18,25 +16,20 @@
 
 namespace checks::rollcheck {
 
-Harness::Harness(SongViewRig &rig, const QString &songLabel) : m_rig(rig), m_songLabel(songLabel) {}
+PianoRollFixture::PianoRollFixture(SongTab &tab, const QString &songLabel)
+    : m_tab(tab)
+    , m_songLabel(songLabel)
+{}
 
-Harness::~Harness()
+bool PianoRollFixture::prepare()
 {
-    QObject::disconnect(m_documentChanged);
-}
+    m_tab.resize(1280, 800);
+    m_tab.show();
+    m_tab.ensurePolished();
+    QCoreApplication::processEvents();
 
-bool Harness::prepare()
-{
     SongView &songView = view();
-    songView.resize(1280, 800);
     songView.setGridMinDenom(4);
-    songView.show();
-    songView.raise();
-    songView.activateWindow();
-    songView.ensurePolished();
-    QCoreApplication::processEvents();
-    (void)songView.grab(); // force layout so child geometry is real
-    QCoreApplication::processEvents();
     m_pianoRollDefaultKeyHeight = layout::fontPx(1.0);
     auto *quick =
         songView.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
@@ -48,7 +41,7 @@ bool Harness::prepare()
     m_rollGutterInput = quickRoot ? quickRoot->findChild<songview::TimelineInputItem *>(
                                         QStringLiteral("timelineRollGutterInput"))
                                   : nullptr;
-    const std::optional<songview::TimelineBandGeometry> &geometry =
+    const std::optional<songview::TimelineBandGeometry> geometry =
         songView.timelineBandLayout().geometry(songview::TimelineBand::Roll);
     const QRect plotRect = geometry ? geometry->plotRect : QRect{};
     const QRect gutterRect = geometry
@@ -57,129 +50,85 @@ bool Harness::prepare()
                                                geometry->rect.height()))
                                  : QRect{};
     m_pianoKeyboardWidth = gutterRect.width();
-    const auto inputMatches = [quickRoot, quick](const songview::TimelineInputItem *input,
-                                                 const QRect &songViewRect) {
-        return input && input->isVisible() &&
-               input->bounds() == QRectF(QPointF{}, songViewRect.size()) &&
-               QRectF(input->mapToItem(quickRoot, QPointF{}), input->size()) ==
-                   QRectF(songViewRect.translated(-quick->geometry().topLeft()));
-    };
-    if (!m_roll || !geometry || plotRect.isEmpty() || gutterRect.isEmpty() ||
-        !inputMatches(m_rollInput, plotRect) || !inputMatches(m_rollGutterInput, gutterRect)) {
-        fail("piano roll not found or not laid out");
+    if (!m_roll || !geometry || plotRect.isEmpty() || gutterRect.isEmpty() || !m_rollInput ||
+        !m_rollGutterInput)
         return false;
-    }
 
     m_track = songView.selectionModel().primaryTrack();
-    if (document().engineTrackCount() <= m_track) {
-        fail("no engine track to draw on");
-        return false;
-    }
-
-    if (captureQuickFramebuffer().isNull())
+    if (document().engineTrackCount() <= m_track)
         return false;
 
-    m_documentChanged =
-        QObject::connect(&document(), &SongDocument::documentChanged, &songView, [this] {
-            QString error;
-            if (!m_rig.rebuildTimeline(error))
-                fail(qUtf8Printable(error));
-        });
-    return true;
+    return !captureQuickFramebuffer().isNull();
 }
 
-SongDocument &Harness::document() noexcept
+SongDocument &PianoRollFixture::document() noexcept
 {
-    return m_rig.document();
+    return m_tab.document();
 }
 
-SongView &Harness::view() noexcept
+SongView &PianoRollFixture::view() noexcept
 {
-    return m_rig.view();
+    return m_tab.view();
 }
 
-const MidiTimeline &Harness::timeline() const noexcept
+const MidiTimeline &PianoRollFixture::timeline() const noexcept
 {
-    return m_rig.timeline();
+    return *m_tab.timeline();
 }
 
-songview::PianoRoll &Harness::roll() noexcept
+songview::PianoRoll &PianoRollFixture::roll() noexcept
 {
     return *m_roll;
 }
 
-songview::TimelineInputItem &Harness::rollInput() noexcept
+songview::TimelineInputItem &PianoRollFixture::rollInput() noexcept
 {
     return *m_rollInput;
 }
 
-songview::TimelineInputItem &Harness::rollGutterInput() noexcept
+songview::TimelineInputItem &PianoRollFixture::rollGutterInput() noexcept
 {
     return *m_rollGutterInput;
 }
 
-QRect Harness::rollBandRect() const noexcept
+QRect PianoRollFixture::rollBandRect() const noexcept
 {
     const std::optional<songview::TimelineBandGeometry> band =
-        m_rig.view().timelineBandLayout().geometry(songview::TimelineBand::Roll);
+        m_tab.view().timelineBandLayout().geometry(songview::TimelineBand::Roll);
     return band ? band->rect : QRect{};
 }
 
-QImage Harness::captureQuickFramebuffer()
+QImage PianoRollFixture::captureQuickFramebuffer()
 {
-    if (!m_roll) {
-        fail("piano roll not found");
-        return {};
-    }
-    return captureQuickBand(rollBandRect());
+    return m_roll ? captureQuickBand(rollBandRect()) : QImage{};
 }
 
-QImage Harness::captureQuickBand(const QRect &bandRect)
+QImage PianoRollFixture::captureQuickBand(const QRect &bandRect)
 {
-    QString error;
-    const QImage framebuffer = checks::support::captureQuickBand(view(), bandRect, &error);
-    if (framebuffer.isNull())
-        fail(qUtf8Printable(error));
-    return framebuffer;
+    return checks::support::captureQuickBand(view(), bandRect);
 }
 
-int Harness::track() const noexcept
+int PianoRollFixture::track() const noexcept
 {
     return m_track;
 }
 
-int Harness::pianoKeyboardWidth() const noexcept
+int PianoRollFixture::pianoKeyboardWidth() const noexcept
 {
     return m_pianoKeyboardWidth;
 }
 
-int Harness::pianoRollDefaultKeyHeight() const noexcept
+int PianoRollFixture::pianoRollDefaultKeyHeight() const noexcept
 {
     return m_pianoRollDefaultKeyHeight;
 }
 
-void Harness::fail(const char *what)
-{
-    std::fprintf(stderr, "rollcheck: FAIL %s: %s\n", qUtf8Printable(m_songLabel), what);
-    ++m_failures;
-}
-
-const QString &Harness::songLabel() const noexcept
+const QString &PianoRollFixture::songLabel() const noexcept
 {
     return m_songLabel;
 }
 
-void Harness::addFailures(int count) noexcept
-{
-    m_failures += count;
-}
-
-int Harness::failures() const noexcept
-{
-    return m_failures;
-}
-
-bool Harness::isOccupied(uint64_t tick, uint64_t dur, int key, bool checkAllTracks)
+bool PianoRollFixture::isOccupied(uint64_t tick, uint64_t dur, int key, bool checkAllTracks)
 {
     const SongDocument &doc = document();
     const int startTrack = checkAllTracks ? 0 : m_track;
@@ -196,7 +145,7 @@ bool Harness::isOccupied(uint64_t tick, uint64_t dur, int key, bool checkAllTrac
     return false;
 }
 
-Cell Harness::findFreeCell(int firstProbe, bool checkAllTracks)
+Cell PianoRollFixture::findFreeCell(int firstProbe, bool checkAllTracks)
 {
     const SongView &songView = view();
     const songview::TimelineInputItem &pianoRoll = rollInput();
@@ -229,6 +178,48 @@ Cell Harness::findFreeCell(int firstProbe, bool checkAllTracks)
         }
     }
     return {};
+}
+
+std::optional<PencilPaintingFixture> makePaintingSeed(PianoRollFixture &fixture)
+{
+    const Cell cell = fixture.findFreeCell(40, true);
+    if (cell.key < 0)
+        return std::nullopt;
+    fixture.document().addNote(fixture.track(), cell.tick, uint8_t(cell.key), uint32_t(cell.dur),
+                               100);
+    DocNote note;
+    if (!fixture.document().findNote(fixture.track(), cell.tick, uint8_t(cell.key), &note))
+        return std::nullopt;
+    return PencilPaintingFixture{cell, note};
+}
+
+std::optional<PencilVelocityFixture> makeVelocitySeed(PianoRollFixture &fixture)
+{
+    const std::optional<PencilPaintingFixture> painting = makePaintingSeed(fixture);
+    if (!painting)
+        return std::nullopt;
+    const Cell cell = fixture.findFreeCell(64, true);
+    if (cell.key < 0)
+        return std::nullopt;
+    fixture.document().addNote(fixture.track(), cell.tick, uint8_t(cell.key), uint32_t(cell.dur),
+                               73);
+    DocNote note;
+    if (!fixture.document().findNote(fixture.track(), cell.tick, uint8_t(cell.key), &note))
+        return std::nullopt;
+    return PencilVelocityFixture{painting->a, cell, painting->noteA, note};
+}
+
+std::optional<ResizeFixture> makeResizeSeed(PianoRollFixture &fixture)
+{
+    const Cell cell = fixture.findFreeCell(88, true);
+    if (cell.key < 0)
+        return std::nullopt;
+    fixture.document().addNote(fixture.track(), cell.tick, uint8_t(cell.key), uint32_t(cell.dur),
+                               100);
+    DocNote note;
+    if (!fixture.document().findNote(fixture.track(), cell.tick, uint8_t(cell.key), &note))
+        return std::nullopt;
+    return ResizeFixture{cell, fixture.view().grid().snapTicksAt(cell.tick)};
 }
 
 qreal SnappedRows::dpr() const

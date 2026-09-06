@@ -1,314 +1,259 @@
+#include "checks/onboardcheck/onboardingtest.h"
+
 #include <QFile>
 #include <QRegularExpression>
-#include <cstdio>
 
-#include "core/smf.h"
-#include "mainwindow.h"
-#include "pipeline.h"
+#include "checks/support/songfixture.h"
 #include "project/voicegroupsource.h"
 
-namespace OnboardCheck {
-
-void runDeletionChecks(const QString &projectRoot, const QString &midiDir, DecompProject &project,
-                       const SongCfg &cfg, bool charmapApplicable, CheckReporter &reporter)
+namespace {
+QString songMid(const QString &root, const QString &label)
 {
-    const auto check = [&](bool ok, const char *what) { reporter.check(ok, what); };
-    const RegistrationPlan plan = SongRegistry::makePlan(
-        projectRoot, QStringLiteral("mus_onboardcheck"), QStringLiteral("MUS_ONBOARDCHECK"),
-        QStringLiteral("MUSIC_PLAYER_BGM"));
-    Q_UNUSED(charmapApplicable);
-    const QString tablePath = projectRoot + QStringLiteral("/sound/song_table.inc");
-    const QString songsHPath = projectRoot + QStringLiteral("/include/constants/songs.h");
-    const QString ldPath = projectRoot + QStringLiteral("/ld_script.ld");
-    const QString charmapPath = projectRoot + QStringLiteral("/charmap.txt");
-    const QString importLabel = QStringLiteral("mus_onboardcheck_import");
+    return root + QStringLiteral("/sound/songs/midi/%1.mid").arg(label);
+}
+
+QString songCfg(const QString &root)
+{
+    return root + QStringLiteral("/sound/songs/midi/midi.cfg");
+}
+
+QString songTable(const QString &root)
+{
+    return root + QStringLiteral("/sound/song_table.inc");
+}
+} // namespace
+
+void OnboardingTest::songDeletion_data()
+{
+    QTest::addColumn<QString>("caseName");
+    QTest::newRow("mid-delete-and-reuse") << QStringLiteral("reuse");
+    QTest::newRow("double-delete-six-files") << QStringLiteral("double");
+    QTest::newRow("entry-zero-refused") << QStringLiteral("entry-zero");
+    QTest::newRow("stray-unregistered") << QStringLiteral("stray");
+}
+
+void OnboardingTest::songDeletion()
+{
+    QFETCH(QString, caseName);
     QString error;
-    QString regError;
-    // ---- Delete Song --------------------------------------------------------
-    // The inverse of the flows above. A full create→register→delete cycle
-    // must leave every file byte-identical; a mid-table delete leaves a free
-    // slot — a plain duplicate of entry 0's dummy line — that keeps later
-    // IDs stable and is reused by the next registration; entry 0 itself (the
-    // fallback song) is untouchable either way.
-    const QString cfgPath = midiDir + QStringLiteral("/midi.cfg");
-    QString firstLabel; // the song table's entry 0
-    {
-        const QByteArray table0 = readAllBytes(tablePath);
-        const QByteArray songsH0 = readAllBytes(songsHPath);
-        const QByteArray ld0 = readAllBytes(ldPath);
-        const QByteArray charmap0 = readAllBytes(charmapPath);
-        const QByteArray cfg0 = readAllBytes(cfgPath);
-        // Empty on vanilla; on an expansion checkout the delete cycle must
-        // round-trip the debug menu's sound lists too.
-        const QString debugCPath = projectRoot + QStringLiteral("/src/debug.c");
-        const QByteArray debug0 = readAllBytes(debugCPath);
-
-        static const QRegularExpression songEntryRe(QStringLiteral(R"(^\s*song\s+(\w+))"));
-        int tableEntries = 0;
-        for (const QByteArray &line : table0.split('\n')) {
-            const QRegularExpressionMatch m = songEntryRe.match(QString::fromUtf8(line));
-            if (!m.hasMatch())
-                continue;
-            if (firstLabel.isEmpty())
-                firstLabel = m.captured(1);
-            tableEntries++;
+    std::unique_ptr<checks::ProjectFixture> fixture = copyProject(error);
+    QVERIFY2(fixture, qPrintable(error));
+    const QString root = fixture->root();
+    const QString midiDir = midiDirectory(root);
+    SongCfg cfg;
+    QVERIFY2(defaultCfg(root, cfg, error), qPrintable(error));
+    const QStringList snapshots = {songTable(root),
+                                   root + QStringLiteral("/include/constants/songs.h"),
+                                   root + QStringLiteral("/ld_script.ld"),
+                                   root + QStringLiteral("/charmap.txt"),
+                                   songCfg(root),
+                                   root + QStringLiteral("/src/debug.c")};
+    QList<QByteArray> original;
+    for (const QString &path : snapshots) {
+        QVERIFY2(QFile::exists(path), qPrintable(path));
+        original.append(readFile(path, error));
+        QVERIFY2(error.isEmpty(), qPrintable(error));
+    }
+    const QByteArray table0 = original[0];
+    QRegularExpression entry(QStringLiteral(R"(^\s*song\s+(\w+))"));
+    QString fallback;
+    int tableEntries = 0;
+    int originalDummies = 0;
+    for (const QByteArray &line : table0.split('\n')) {
+        const QRegularExpressionMatch match = entry.match(QString::fromUtf8(line));
+        if (!match.hasMatch())
+            continue;
+        if (fallback.isEmpty())
+            fallback = match.captured(1);
+        ++tableEntries;
+    }
+    QVERIFY(!fallback.isEmpty());
+    for (const QByteArray &line : table0.split('\n')) {
+        const QRegularExpressionMatch match = entry.match(QString::fromUtf8(line));
+        originalDummies += match.hasMatch() && match.captured(1) == fallback;
+    }
+    const RegistrationPlan probe = SongRegistry::makePlan(
+        root, QStringLiteral("mus_onboardcheck_probe"), QStringLiteral("MUS_ONBOARDCHECK_PROBE"),
+        QStringLiteral("MUSIC_PLAYER_BGM"));
+    QVERIFY(probe.songId != 0);
+    if (originalDummies == 1)
+        QCOMPARE(probe.songId, tableEntries);
+    if (caseName == QStringLiteral("entry-zero")) {
+        QVERIFY(!SongRegistry::unregisterSong(root, fallback,
+                                              SongRegistry::constantForLabel(fallback), &error));
+        QVERIFY(!error.isEmpty());
+        for (int i = 0; i < snapshots.size(); ++i) {
+            QCOMPARE(readFile(snapshots[i], error), original[i]);
+            QVERIFY2(error.isEmpty(), qPrintable(error));
         }
-        check(!firstLabel.isEmpty(), "delete: no entry 0 in song_table.inc");
-        // Entries bearing entry 0's label; one more than at the snapshot
-        // means one free slot is open.
-        const auto dummyEntries = [&]() {
-            int n = 0;
-            for (const QByteArray &line : readAllBytes(tablePath).split('\n')) {
-                const QRegularExpressionMatch m = songEntryRe.match(QString::fromUtf8(line));
-                if (m.hasMatch() && m.captured(1) == firstLabel)
-                    n++;
-            }
-            return n;
-        };
-        const int dummies0 = dummyEntries();
-
-        const QString labelA = QStringLiteral("mus_onboardcheck_del_a");
-        const QString labelB = QStringLiteral("mus_onboardcheck_del_b");
-        const QString labelC = QStringLiteral("mus_onboardcheck_del_c");
-        const auto createAndRegister = [&](const QString &lab, int *id) {
-            const SmfFile smf = SongRegistry::blankSong();
-            check(smf.writeFile(midiDir + QStringLiteral("/%1.mid").arg(lab), &error),
-                  "delete: write .mid");
-            check(SongRegistry::writeSongFlags(midiDir, lab, cfg.rawFlags, &error),
-                  "delete: write flags");
-            check(SongRegistry::registerSong(projectRoot, lab, SongRegistry::constantForLabel(lab),
-                                             QStringLiteral("MUSIC_PLAYER_BGM"), &regError, id),
-                  "delete: registerSong failed");
-        };
-        const auto deleteSong = [&](const QString &lab) {
-            QString err;
-            check(SongRegistry::unregisterSong(projectRoot, lab,
-                                               SongRegistry::constantForLabel(lab), &err),
-                  "delete: unregisterSong failed");
-            check(SongRegistry::removeSongFlags(midiDir, lab, &err),
-                  "delete: removeSongFlags failed");
-            check(QFile::remove(midiDir + QStringLiteral("/%1.mid").arg(lab)),
-                  "delete: remove .mid");
-        };
-
-        int idA = -1, idB = -1, idC = -1;
-        createAndRegister(labelA, &idA);
-        createAndRegister(labelB, &idB);
-        check(idB == idA + 1, "delete: fresh registrations not sequential");
-
-        // Mid-table delete: A leaves a free slot; B keeps its ID.
-        deleteSong(labelA);
-        check(dummyEntries() == dummies0 + 1, "mid-table delete left no free slot");
-        check(!readAllBytes(songsHPath).contains("MUS_ONBOARDCHECK_DEL_A"),
-              "deleted song's define still in songs.h");
-        check(!readAllBytes(ldPath).contains("mus_onboardcheck_del_a.o"),
-              "deleted song's object line still in ld_script.ld");
-        check(!readAllBytes(charmapPath).contains("MUS_ONBOARDCHECK_DEL_A"),
-              "deleted song's charmap entry still present");
-        check(!readAllBytes(debugCPath).contains("MUS_ONBOARDCHECK_DEL_A"),
-              "deleted song's debug menu entry still present");
-        check(!readAllBytes(cfgPath).contains("mus_onboardcheck_del_a.mid"),
-              "deleted song's midi.cfg line still present");
-        RegistrationStatus after = SongRegistry::checkRegistration(
-            projectRoot, labelB, SongRegistry::constantForLabel(labelB));
-        check(after.complete(), "surviving song's registration broke on delete");
-        // The free slot borrows entry 0's label without impersonating it:
-        // the fallback song must still read as correctly registered.
-        after = SongRegistry::checkRegistration(projectRoot, firstLabel,
-                                                SongRegistry::constantForLabel(firstLabel));
-        check(after.inSongTable && after.inSongsH,
-              "free slot misattributed the fallback song's table entry");
-
-        // Reuse: the next song is offered the freed ID, and its lines land
-        // in ID order (songs.h sorted like the charmap insertion).
-        const RegistrationPlan planC =
-            SongRegistry::makePlan(projectRoot, labelC, SongRegistry::constantForLabel(labelC),
-                                   QStringLiteral("MUSIC_PLAYER_BGM"));
-        check(planC.songId == idA, "free slot not proposed for the next song");
-        createAndRegister(labelC, &idC);
-        check(idC == idA, "free slot not reused on registration");
-        check(dummyEntries() == dummies0, "reused slot kept its dummy entry");
-        {
-            const QByteArray songsH = readAllBytes(songsHPath);
-            const auto defineAt = [&songsH](const char *constant) {
-                return songsH.indexOf(QByteArray("#define ") + constant);
-            };
-            check(defineAt("MUS_ONBOARDCHECK_DEL_C") >= 0 &&
-                      defineAt("MUS_ONBOARDCHECK_DEL_C") < defineAt("MUS_ONBOARDCHECK_DEL_B"),
-                  "reused ID's define not inserted in songs.h ID order");
-        }
-        if (plan.charmapApplicable) {
-            const QByteArray charmap = readAllBytes(charmapPath);
-            check(charmap.indexOf("MUS_ONBOARDCHECK_DEL_C") >= 0 &&
-                      charmap.indexOf("MUS_ONBOARDCHECK_DEL_C") <
-                          charmap.indexOf("MUS_ONBOARDCHECK_DEL_B"),
-                  "reused ID's charmap entry not in ID order");
-        }
-
-        // Deleting an already-deleted song is a byte-level no-op success.
-        {
-            const QByteArray t = readAllBytes(tablePath);
-            const QByteArray h = readAllBytes(songsHPath);
-            QString err;
-            check(SongRegistry::unregisterSong(projectRoot, labelA,
-                                               SongRegistry::constantForLabel(labelA), &err),
-                  "second unregister failed");
-            check(readAllBytes(tablePath) == t && readAllBytes(songsHPath) == h,
-                  "second unregister was not byte-identical");
-        }
-
-        // Wind back down: C leaves the slot again; B's last-entry delete then
-        // collapses the trailing free slot. Everything must round-trip to the
-        // pre-cycle bytes.
-        deleteSong(labelC);
-        check(dummyEntries() == dummies0 + 1, "re-deleted slot is not free again");
-        deleteSong(labelB);
-        check(readAllBytes(tablePath) == table0, "song_table.inc did not round-trip");
-        check(readAllBytes(songsHPath) == songsH0, "songs.h did not round-trip");
-        check(readAllBytes(ldPath) == ld0, "ld_script.ld did not round-trip");
-        check(readAllBytes(charmapPath) == charmap0, "charmap.txt did not round-trip");
-        check(readAllBytes(cfgPath) == cfg0, "midi.cfg did not round-trip");
-        check(readAllBytes(debugCPath) == debug0, "src/debug.c did not round-trip");
-
-        // Entry 0 is never deletable...
-        {
-            QString err;
-            check(!SongRegistry::unregisterSong(projectRoot, firstLabel,
-                                                SongRegistry::constantForLabel(firstLabel), &err) &&
-                      !err.isEmpty(),
-                  "unregisterSong deleted the fallback song");
-            check(readAllBytes(tablePath) == table0, "refused delete still wrote");
-        }
-        // ...and never a free slot: entry 0 bears the dummy label like any
-        // tombstone would, but the planner must not offer ID 0 — on a table
-        // whose only dummy entry IS entry 0, it appends.
-        {
-            const RegistrationPlan probed = SongRegistry::makePlan(
-                projectRoot, QStringLiteral("mus_onboardcheck_probe"),
-                QStringLiteral("MUS_ONBOARDCHECK_PROBE"), QStringLiteral("MUSIC_PLAYER_BGM"));
-            check(probed.songId != 0, "entry 0 was offered as a free slot");
-            if (dummies0 == 1)
-                check(probed.songId == tableEntries,
-                      "planner did not append with no free slots open");
-        }
-
-        if (QFile::exists(midiDir + QStringLiteral("/%1.mid").arg(importLabel))) {
-            // An unregistered stray (the imported song): no table entry at all,
-            // so deletion is just the .mid and the cfg line.
-            {
-                QString err;
-                check(SongRegistry::unregisterSong(projectRoot, importLabel,
-                                                   SongRegistry::constantForLabel(importLabel),
-                                                   &err),
-                      "stray unregister failed");
-                check(readAllBytes(tablePath) == table0, "stray unregister touched song_table.inc");
-                check(SongRegistry::removeSongFlags(midiDir, importLabel, &err),
-                      "stray removeSongFlags failed");
-                check(!readAllBytes(cfgPath).contains(importLabel.toUtf8() + ".mid"),
-                      "stray's midi.cfg line still present");
-            }
-        }
+        return;
     }
 
-    // ---- Delete voicegroup --------------------------------------------------
-    // deletableVoicegroup gates the offer: sole song user, per-file layout,
-    // no keysplit/drumkit reference, no C reference. deleteVoicegroup then
-    // inverts createVoicegroup + appendIncludeLine byte-identically.
-    {
-        const QString hubPath = projectRoot + QStringLiteral("/sound/voice_groups.inc");
-        const QByteArray hub0 = readAllBytes(hubPath);
-        const QString vgName = QStringLiteral("onboardcheckvg");
-        const bool created =
-            VoicegroupSource::createVoicegroup(projectRoot, vgName, QString(), QString(), &error) &&
-            VoicegroupSource::appendIncludeLine(projectRoot, vgName, &error);
-        check(created, "vg delete: createVoicegroup/appendIncludeLine failed");
-        if (created) {
-            QVector<SongInfo> songs = project.songs();
-            SongInfo user;
-            user.label = QStringLiteral("mus_vg_user");
-            user.cfg.voicegroupArg = QStringLiteral("_onboardcheckvg");
-            songs.append(user);
-            check(SongRegistry::deletableVoicegroup(projectRoot, songs, user.label) == vgName,
-                  "sole-user voicegroup not deletable");
-
-            SongInfo second = user;
-            second.label = QStringLiteral("mus_vg_user2");
-            songs.append(second);
-            check(SongRegistry::deletableVoicegroup(projectRoot, songs, user.label).isEmpty(),
-                  "shared voicegroup offered for deletion");
-            songs.removeLast();
-
-            // A keysplit reference from another voicegroup is load-bearing.
-            const QString subName = QStringLiteral("onboardchecksub");
-            check(VoicegroupSource::createVoicegroup(projectRoot, subName, QString(), QString(),
-                                                     &error),
-                  "vg delete: create sub voicegroup");
-            {
-                QFile host(projectRoot + QStringLiteral("/sound/voicegroups/onboardcheckvg.inc"));
-                check(host.open(QIODevice::Append), "vg delete: append keysplit line");
-                host.write("\tvoice_keysplit voicegroup_onboardchecksub, "
-                           "KeySplitTable1\n");
-            }
-            SongInfo subUser = user;
-            subUser.label = QStringLiteral("mus_vg_sub_user");
-            subUser.cfg.voicegroupArg = QStringLiteral("_onboardchecksub");
-            QVector<SongInfo> subSongs = songs;
-            subSongs.append(subUser);
-            check(SongRegistry::deletableVoicegroup(projectRoot, subSongs, subUser.label).isEmpty(),
-                  "keysplit sub-voicegroup offered for deletion");
-            check(VoicegroupSource::deleteVoicegroup(projectRoot, subName, &error),
-                  "vg delete: remove sub voicegroup");
-
-            // A C reference would break the link, not merely dangle.
-            const QString refPath = projectRoot + QStringLiteral("/src/onboardcheck_ref.c");
-            {
-                QFile ref(refPath);
-                check(ref.open(QIODevice::WriteOnly), "vg delete: write C ref");
-                ref.write("extern int voicegroup_onboardcheckvg[];\n");
-            }
-            check(SongRegistry::deletableVoicegroup(projectRoot, songs, user.label).isEmpty(),
-                  "C-referenced voicegroup offered for deletion");
-            QFile::remove(refPath);
-            check(SongRegistry::deletableVoicegroup(projectRoot, songs, user.label) == vgName,
-                  "vg delete: dropped C reference not re-detected");
-
-            check(VoicegroupSource::deleteVoicegroup(projectRoot, vgName, &error),
-                  "deleteVoicegroup failed");
-            check(!QFile::exists(projectRoot +
-                                 QStringLiteral("/sound/voicegroups/onboardcheckvg.inc")),
-                  "voicegroup file survived deletion");
-            check(readAllBytes(hubPath) == hub0, "voice_groups.inc did not round-trip");
-            check(VoicegroupSource::deleteVoicegroup(projectRoot, vgName, &error),
-                  "second deleteVoicegroup failed");
-        }
+    const QString label = caseName == QStringLiteral("stray")
+                              ? QStringLiteral("mus_onboardcheck_stray")
+                              : QStringLiteral("mus_onboardcheck_del_a");
+    QVERIFY2(SongRegistry::blankSong().writeFile(songMid(root, label), &error), qPrintable(error));
+    QVERIFY2(SongRegistry::writeSongFlags(midiDir, label, cfg.rawFlags, &error), qPrintable(error));
+    if (caseName == QStringLiteral("stray")) {
+        QVERIFY2(SongRegistry::unregisterSong(root, label, SongRegistry::constantForLabel(label),
+                                              &error),
+                 qPrintable(error));
+        QCOMPARE(readFile(songTable(root), error), table0);
+        QVERIFY2(error.isEmpty(), qPrintable(error));
+        QVERIFY2(SongRegistry::removeSongFlags(midiDir, label, &error), qPrintable(error));
+        const QByteArray cfgBytes = readFile(songCfg(root), error);
+        QVERIFY2(error.isEmpty(), qPrintable(error));
+        QVERIFY(!cfgBytes.contains(label.toUtf8() + ".mid"));
+        return;
     }
-
-    // ---- Delete action wiring ----------------------------------------------
-    // The MainWindow path: deleting an open song closes its tab, drops it
-    // from the model and browser, and moves the .mid to .porydaw/trash/.
-    {
-        const QString delLabel = QStringLiteral("mus_onboardcheck_del_ui");
-        const SmfFile smf = SongRegistry::blankSong();
-        const QString fallbackMid = midiDir + QStringLiteral("/%1.mid").arg(firstLabel);
-        const bool removeFallbackMid = !firstLabel.isEmpty() && !QFile::exists(fallbackMid);
-        if (removeFallbackMid)
-            check(smf.writeFile(fallbackMid, &error), "action delete: write fallback .mid");
-        check(smf.writeFile(midiDir + QStringLiteral("/%1.mid").arg(delLabel), &error),
-              "action delete: write .mid");
-        check(SongRegistry::writeSongFlags(midiDir, delLabel, cfg.rawFlags, &error),
-              "action delete: write flags");
-        int id = -1;
-        check(SongRegistry::registerSong(projectRoot, delLabel,
-                                         SongRegistry::constantForLabel(delLabel),
-                                         QStringLiteral("MUSIC_PLAYER_BGM"), &regError, &id),
-              "action delete: registerSong failed");
-
-        MainWindow window;
-        check(window.runDeleteActionCheck(projectRoot, delLabel),
-              "delete-action check did not run");
-        if (removeFallbackMid)
-            check(QFile::remove(fallbackMid), "action delete: remove fallback .mid");
+    int id = -1;
+    QVERIFY2(SongRegistry::registerSong(root, label, SongRegistry::constantForLabel(label),
+                                        QStringLiteral("MUSIC_PLAYER_BGM"), &error, &id),
+             qPrintable(error));
+    const QString second = QStringLiteral("mus_onboardcheck_del_b");
+    QVERIFY2(SongRegistry::blankSong().writeFile(songMid(root, second), &error), qPrintable(error));
+    QVERIFY2(SongRegistry::writeSongFlags(midiDir, second, cfg.rawFlags, &error),
+             qPrintable(error));
+    int secondId = -1;
+    QVERIFY2(SongRegistry::registerSong(root, second, SongRegistry::constantForLabel(second),
+                                        QStringLiteral("MUSIC_PLAYER_BGM"), &error, &secondId),
+             qPrintable(error));
+    QCOMPARE(secondId, id + 1);
+    QVERIFY2(
+        SongRegistry::unregisterSong(root, label, SongRegistry::constantForLabel(label), &error),
+        qPrintable(error));
+    QVERIFY2(SongRegistry::removeSongFlags(midiDir, label, &error), qPrintable(error));
+    QVERIFY(QFile::remove(songMid(root, label)));
+    int dummiesAfterDelete = 0;
+    for (const QByteArray &line : readFile(songTable(root), error).split('\n')) {
+        const QRegularExpressionMatch match = entry.match(QString::fromUtf8(line));
+        dummiesAfterDelete += match.hasMatch() && match.captured(1) == fallback;
+    }
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    QCOMPARE(dummiesAfterDelete, originalDummies + 1);
+    const RegistrationPlan replacementPlan = SongRegistry::makePlan(
+        root, QStringLiteral("mus_onboardcheck_del_c"), QStringLiteral("MUS_ONBOARDCHECK_DEL_C"),
+        QStringLiteral("MUSIC_PLAYER_BGM"));
+    QCOMPARE(replacementPlan.songId, id);
+    for (int index = 1; index < snapshots.size(); ++index) {
+        const QByteArray bytes = readFile(snapshots[index], error);
+        QVERIFY2(error.isEmpty(), qPrintable(error));
+        QVERIFY(!bytes.contains("MUS_ONBOARDCHECK_DEL_A"));
+    }
+    QVERIFY(SongRegistry::checkRegistration(root, second, SongRegistry::constantForLabel(second))
+                .complete());
+    if (caseName == QStringLiteral("double")) {
+        QList<QByteArray> before;
+        for (const QString &path : snapshots) {
+            before.append(readFile(path, error));
+            QVERIFY2(error.isEmpty(), qPrintable(error));
+        }
+        QVERIFY2(SongRegistry::unregisterSong(root, label, SongRegistry::constantForLabel(label),
+                                              &error),
+                 qPrintable(error));
+        for (int i = 0; i < snapshots.size(); ++i) {
+            QCOMPARE(readFile(snapshots[i], error), before[i]);
+            QVERIFY2(error.isEmpty(), qPrintable(error));
+        }
+        return;
+    }
+    const QString replacement = QStringLiteral("mus_onboardcheck_del_c");
+    QVERIFY2(SongRegistry::blankSong().writeFile(songMid(root, replacement), &error),
+             qPrintable(error));
+    QVERIFY2(SongRegistry::writeSongFlags(midiDir, replacement, cfg.rawFlags, &error),
+             qPrintable(error));
+    int replacementId = -1;
+    QVERIFY2(SongRegistry::registerSong(root, replacement,
+                                        SongRegistry::constantForLabel(replacement),
+                                        QStringLiteral("MUSIC_PLAYER_BGM"), &error, &replacementId),
+             qPrintable(error));
+    QCOMPARE(replacementId, id);
+    const QByteArray header = readFile(snapshots[1], error);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    QVERIFY(header.indexOf("MUS_ONBOARDCHECK_DEL_C") < header.indexOf("MUS_ONBOARDCHECK_DEL_B"));
+    const QByteArray charmap = readFile(snapshots[3], error);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    QVERIFY(charmap.indexOf("MUS_ONBOARDCHECK_DEL_C") < charmap.indexOf("MUS_ONBOARDCHECK_DEL_B"));
+    QVERIFY2(SongRegistry::unregisterSong(root, replacement,
+                                          SongRegistry::constantForLabel(replacement), &error),
+             qPrintable(error));
+    QVERIFY2(SongRegistry::removeSongFlags(midiDir, replacement, &error), qPrintable(error));
+    QVERIFY(QFile::remove(songMid(root, replacement)));
+    QVERIFY2(
+        SongRegistry::unregisterSong(root, second, SongRegistry::constantForLabel(second), &error),
+        qPrintable(error));
+    QVERIFY2(SongRegistry::removeSongFlags(midiDir, second, &error), qPrintable(error));
+    QVERIFY(QFile::remove(songMid(root, second)));
+    for (int i = 0; i < snapshots.size(); ++i) {
+        QCOMPARE(readFile(snapshots[i], error), original[i]);
+        QVERIFY2(error.isEmpty(), qPrintable(error));
     }
 }
 
-} // namespace OnboardCheck
+void OnboardingTest::voicegroupDeletion_data()
+{
+    QTest::addColumn<QString>("gate");
+    QTest::newRow("sole-user") << QStringLiteral("sole");
+    QTest::newRow("shared-user") << QStringLiteral("shared");
+    QTest::newRow("keysplit-reference") << QStringLiteral("keysplit");
+    QTest::newRow("c-reference") << QStringLiteral("c-reference");
+}
+
+void OnboardingTest::voicegroupDeletion()
+{
+    QFETCH(QString, gate);
+    QString error;
+    std::unique_ptr<checks::ProjectFixture> fixture = copyProject(error);
+    QVERIFY2(fixture, qPrintable(error));
+    const QString root = fixture->root();
+    const QString name = QStringLiteral("onboardcheckvg");
+    const QString hub = root + QStringLiteral("/sound/voice_groups.inc");
+    const QByteArray hubBefore = readFile(hub, error);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    QVERIFY2(VoicegroupSource::createVoicegroup(root, name, {}, {}, &error), qPrintable(error));
+    QVERIFY2(VoicegroupSource::appendIncludeLine(root, name, &error), qPrintable(error));
+    SongInfo user;
+    user.label = QStringLiteral("mus_vg_user");
+    user.cfg.voicegroupArg = QStringLiteral("_onboardcheckvg");
+    QVector<SongInfo> songs{user};
+    if (gate == QStringLiteral("shared")) {
+        SongInfo second = user;
+        second.label = QStringLiteral("mus_vg_user_2");
+        songs.append(second);
+        QVERIFY(SongRegistry::deletableVoicegroup(root, songs, user.label).isEmpty());
+        return;
+    }
+    const QString ref = root + QStringLiteral("/src/onboardcheck_ref.c");
+    if (gate == QStringLiteral("c-reference")) {
+        QVERIFY2(
+            writeFile(ref, QByteArrayLiteral("extern int voicegroup_onboardcheckvg[];\n"), error),
+            qPrintable(error));
+        QVERIFY(SongRegistry::deletableVoicegroup(root, songs, user.label).isEmpty());
+        QVERIFY(QFile::remove(ref));
+    }
+    if (gate == QStringLiteral("keysplit")) {
+        const QString sub = QStringLiteral("onboardchecksub");
+        QVERIFY2(VoicegroupSource::createVoicegroup(root, sub, {}, {}, &error), qPrintable(error));
+        const QString host = root + QStringLiteral("/sound/voicegroups/onboardcheckvg.inc");
+        const QByteArray hostBefore = readFile(host, error);
+        QVERIFY2(error.isEmpty(), qPrintable(error));
+        QVERIFY2(writeFile(host,
+                           hostBefore +
+                               QByteArrayLiteral(
+                                   "\tvoice_keysplit voicegroup_onboardchecksub, KeySplitTable1\n"),
+                           error),
+                 qPrintable(error));
+        SongInfo subUser = user;
+        subUser.label = QStringLiteral("mus_vg_sub_user");
+        subUser.cfg.voicegroupArg = QStringLiteral("_onboardchecksub");
+        songs.append(subUser);
+        QVERIFY(SongRegistry::deletableVoicegroup(root, songs, subUser.label).isEmpty());
+        return;
+    }
+    QCOMPARE(SongRegistry::deletableVoicegroup(root, songs, user.label), name);
+    QVERIFY2(VoicegroupSource::deleteVoicegroup(root, name, &error), qPrintable(error));
+    QVERIFY(!QFile::exists(root + QStringLiteral("/sound/voicegroups/onboardcheckvg.inc")));
+    QCOMPARE(readFile(hub, error), hubBefore);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    QVERIFY2(VoicegroupSource::deleteVoicegroup(root, name, &error), qPrintable(error));
+}

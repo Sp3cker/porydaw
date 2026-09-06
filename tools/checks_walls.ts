@@ -20,12 +20,20 @@ export const WALL_ESTIMATE: Record<string, number> = {
   polycheck: 0.83,
   sessioncheck: 0.8,
   rollwindowingcheck: 0.77,
-  "mainwindow-routing": 0.71,
+  // mainwindow-routing (0.71) was retired by the input/state/lifecycle/native
+  // split; its single measurement cannot transfer to four successors without
+  // over-ordering them, so all four use the fallback until the next measured
+  // verbose run.
   loopcheck: 0.65,
   roundtrip: 0.41,
   "velocity-page": 0.4,
   editcheck: 0.39,
-  eventviewcheck: 0.33,
+  // Retired viewcheck/eventviewcheck rows measured 0.22/0.33; their coverage
+  // is now the eventviews row family. The two direct successors inherit the
+  // preserved measurements; the remaining family rows use the 0.3 fallback
+  // until the first measured verbose run.
+  "eventviews-chrome": 0.22,
+  "eventviews-edits": 0.33,
   // velocity-editing: unmeasured (new pilot suite) — fallback-level estimate
   // until the first measured verbose run.
   "velocity-editing": 0.3,
@@ -39,7 +47,6 @@ export const WALL_ESTIMATE: Record<string, number> = {
   smfcheck: 0.23,
   savecheck: 0.23,
   "host-seams": 0.23,
-  viewcheck: 0.22,
   mkcheck: 0.21,
   xcmdcheck: 0.2,
   primecheck: 0.2,
@@ -55,7 +62,6 @@ export const WALL_ESTIMATE: Record<string, number> = {
   scalecheck: 0.16,
   noteidcheck: 0.16,
   "production-startup": 0.14,
-  sidecar: 0.13,
   "rendering-playhead": 0.13,
   fontcheck: 0.13,
   darkbasecheck: 0.11,

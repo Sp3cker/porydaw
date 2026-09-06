@@ -1,51 +1,107 @@
 #pragma once
 
 #include <QByteArray>
+#include <QObject>
 #include <QString>
-#include <optional>
-
-#include "audio/sampleimport.h"
 
 namespace samplecheck {
 
-class Reporter
+class SampleProcessingTest final : public QObject
 {
+    Q_OBJECT
+    Q_DISABLE_COPY_MOVE(SampleProcessingTest)
+
   public:
-    void expect(bool ok, const char *what);
-    bool expectError(const QString &got, const QString &want, const char *what);
-    void noteFailure();
-    [[nodiscard]] int failureCount() const;
+    explicit SampleProcessingTest(QString corpusRoot);
+
+  private slots:
+    void projectProbe();
+    void projectSanitizeValidate();
+    void projectInspect();
+    void projectRegister();
+    void projectDuplicate();
+    void projectCrlf();
+    void decodeWidths_data();
+    void decodeWidths();
+    void decodeStereoPolicy();
+    void decodeAiff();
+    void decodeRefusalBoundaries_data();
+    void decodeRefusalBoundaries();
+    void compressedContainers_data();
+    void compressedContainers();
+    void compressedRefusals();
+    void optionalCorpus();
+
+    void resamplePassband_data();
+    void resamplePassband();
+    void resampleAliasRejection_data();
+    void resampleAliasRejection();
+    void resampleDcGain();
+    void resampleImpulseSymmetry();
+    void resampleFrequencyAccuracy();
+    void resampleIdentity();
+    void quantizationVectors_data();
+    void quantizationVectors();
+    void quantizationU8Roundtrip();
+    void quantizationDither();
+    void markerMapping();
+    void normalization_data();
+    void normalization();
+    void dspDeterminism();
+    void parityCases_data();
+    void parityCases();
+    void parityLoopGeometry();
+    void parityRiffPadding();
+    void retuneVectors_data();
+    void retuneVectors();
+
+    void pitchMatrix_data();
+    void pitchMatrix();
+    void pitchNegativeCases();
+    void loopAndCrossfade();
+    void auditionSlotLifecycle();
+
+    void pipelinePrefillCollision();
+    void pipelinePreparedDefaults();
+    void pipelineKeyOverride();
+    void pipelineLoopToggle();
+    void pipelineRateCommit_data();
+    void pipelineRateCommit();
+    void pipelineCropNormalize();
+
+    void editorDrag();
+    void editorPitchAdoption();
+    void editorLoopPopulate();
+    void editorLoopRefine();
+    void editorCrossfade();
+    void editorAuditionStrip();
+    void editorUndo();
+    void editorScroll();
+    void editorSplitter();
+    void editorCommit();
+    void spaceAudition();
+
+    void soundFontExtraction();
+    void soundFontRefusals_data();
+    void soundFontRefusals();
+    void soundFontPicker();
+    void engineLoop();
+    void sidecarRoundtrip();
+    void sidecarRerender();
+    void sidecarTouchedSource();
+    void sidecarFallback();
+    void sampleUpdate();
+    void sampleUpdateRefusals_data();
+    void sampleUpdateRefusals();
+    void sidecarEditDialog();
+    void sidecarRemove();
 
   private:
-    int failures_ = 0;
+    QString m_corpusRoot;
 };
 
-struct RegisteredSampleProject {
-    const QString root;
-    const QByteArray wavFixture;
-    const QString registeredSampleName;
-};
-
-struct DspFixture {
-    ImportedSample hiRes;
-    QByteArray hiResWav;
-};
-
-std::optional<RegisteredSampleProject>
-prepareRegisteredSampleProject(Reporter &reporter, const QString &root, const QString &scratchDir);
-void runDecodeChecks(Reporter &reporter, const RegisteredSampleProject &project);
-std::optional<DspFixture> runDspChecks(Reporter &reporter, const RegisteredSampleProject &project);
-void runPipelineDialogChecks(Reporter &reporter, const RegisteredSampleProject &project,
-                             const DspFixture &dspFixture);
-void runAnalysisChecks(Reporter &reporter);
-void runEditorChecks(Reporter &reporter, const RegisteredSampleProject &project,
-                     const DspFixture &dspFixture, const QString &screenshotPath);
-void runCompressedChecks(Reporter &reporter);
-void runSoundFontChecks(Reporter &reporter);
-void runEngineLoopChecks(Reporter &reporter, const RegisteredSampleProject &project,
-                         const DspFixture &dspFixture);
-void runProvenanceChecks(Reporter &reporter, const RegisteredSampleProject &project,
-                         const DspFixture &dspFixture, const QString &scratchDir);
-void runCorpusChecks(Reporter &reporter, const QString &corpusRoot);
+bool createWav2AgbProject(const QString &root);
+QByteArray preparedSampleWav();
+QByteArray hiResSampleWav();
 
 } // namespace samplecheck

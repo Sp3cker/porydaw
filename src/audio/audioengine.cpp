@@ -4,6 +4,7 @@
 #include <QFile>
 
 #include <algorithm>
+#include <cmath>
 #include <span>
 
 #include "miniaudio.h"
@@ -142,9 +143,16 @@ bool AudioEngine::init(QString *error)
         std::max<uint32_t>(1, uint32_t(m_sampleRate * kOutputGainRampSeconds));
     const uint32_t driverQueueSamples =
         std::max<uint32_t>(1, uint32_t(m_sampleRate * kDriverQueueSettleSeconds));
+    // HwAudio has a 1536-frame presentation FIFO in front of HwResample's
+    // separate 1536-frame availability gate. A submission just below the
+    // latter gate may complete one more 2048-clock resampler batch
+    // (hw_resample.c: factor_fits_state).
+    const uint32_t frontendResamplerGrowthSamples =
+        std::max<uint32_t>(1, uint32_t(std::ceil(m_sampleRate * kFrontendResamplerFrameSeconds)));
     const uint32_t currentRenderBlockSamples =
         std::max<uint32_t>(1, m_device->playback.internalPeriodSizeInFrames);
-    m_cutFadeSettleSamples = currentRenderBlockSamples + driverQueueSamples + kFrontendQueueFrames;
+    m_cutFadeSettleSamples = currentRenderBlockSamples + driverQueueSamples +
+                             2 * kFrontendQueueFrames + frontendResamplerGrowthSamples;
     resetOutputCut();
     const int targetOutputVolume = m_targetOutputVolume.load();
     m_outputGainTargetVolume = targetOutputVolume;
@@ -618,7 +626,6 @@ void AudioEngine::finishOutputCut()
     switch (static_cast<Transport>(target)) {
     case Transport::Stopped:
         m_player.reset();
-        m_resonance.reset();
         break;
     case Transport::Paused:
         break;
@@ -870,6 +877,18 @@ void AudioEngine::process(float *interleavedOut, uint32_t frameCount)
                 if (m_cutFadeHold > 0) {
                     --m_cutFadeHold;
                     m_cutFadeGain = 0.0f;
+                    if (m_cutFadeHold == 0 &&
+                        m_cutFadeTargetTransport == static_cast<int>(Transport::Stopped)) {
+                        // The upstream driver/frontend queues are now drained.
+                        // Reset only Stop's suppressor history, then discard
+                        // the rest of this already-suppressed render chunk so
+                        // no pre-reset delayed samples reach the fade-up.
+                        m_resonance.reset();
+                        for (uint32_t j = i; j < n; ++j) {
+                            interleavedOut[(done + j) * 2] = 0.0f;
+                            interleavedOut[(done + j) * 2 + 1] = 0.0f;
+                        }
+                    }
                     if (m_cutFadeHold == 0 && m_cutFadeRemaining == 0 &&
                         m_cutFadeTargetTransport == static_cast<int>(Transport::Playing) &&
                         m_appliedTransport != m_cutFadeTargetTransport) {

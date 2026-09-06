@@ -11,7 +11,7 @@ Source of truth: `upstream/main:src/core/velocitymodel.cpp` and `upstream/main:s
 - **D-1** `VelocityMap::compatibleWith` compares voice, trackVolume, and trackPan. The fork's body compares voice only, so a multi-note selection spanning a CC 7/10 change shared one drifted detent table; `VelocityArea::currentContext` gates on this predicate, so with upstream semantics such a selection falls back to the continuous ruler.
 - **D-2** `VelocityAxis::mode()` gates on `VelocityMap::hasDetents()`, not `levelCount() == 0`: a PSG channel the volume has squeezed to a single silent step keeps the plain velocity ruler instead of rendering a one-row intrinsic axis with nothing to detent.
 - **D-3** Check expectations come from the public API of resolved maps. The arithmetic helpers (`cgbEnvelopeGoal`, `kWaveClassOfEnvelopeGoal`, `kDefaultVolX`) live in velocitymodel.cpp's anonymous namespace and are never called, exposed, or reimplemented by a harness.
-- **D-4** Verification uses the real check-catalog names `velocity-model` and `velocity-page`. `velocitymodelcheck` and `rollcheckpsgvelocity` are file names, not catalog entries; no `--filter` matches them.
+- **D-4** Verification uses the real check-catalog names `velocity-model` and `velocity-page`. `velocitymodelcheck` and `rollcheckpsgvelocity` were historical file names, not catalog entries; no `--filter` matches them.
 - **D-5** Every velocity-area resolve site captures the full `DrawerPageVoiceContext` inline and passes its volume and pan; none projects `.voice` off a temporary.
 - **D-6** Upstream's `operator!=` is ported verbatim alongside the custom `operator==` (decision stated in Stage 1).
 
@@ -133,19 +133,21 @@ Worktree `velocity-dynamic-detents`. Depends on Stage 2.
 7. **`src/ui/editordrawer/velocityarea/velocityarea_paint.cpp`**
    - The per-section loop already captures `DrawerPageVoiceContext`; pass `context.trackVolume, context.trackPan` to its `resolve` so painted detent bands follow each section's effective state.
 
-8. **`src/checks/velocitymodelcheck.cpp`** (D-3)
+8. **`src/checks/keyboard/tst_velocitymodel.cpp`** (D-3)
    - Update every two-argument `resolve` call to pass `kM4aMaxVolume` (plus an explicit pan where the scenario needs one).
    - Keep the pinned full-state tables (`squareNoiseRepresentatives`, `waveRepresentatives`): full volume 127 with pan 0 reproduces them exactly.
    - Derive every volume/pan expectation through public queries on maps resolved at the fixture state: `levelCount()` falls as volume drops; `levelRange()` runs stay contiguous and ordered; centered and `-32` panned Square and Wave pairs have distinct `levelRange()` results; `hasDetents()` is false at the single-step squeeze and `VelocityAxis::mode()` picks `Continuous` there; `compatibleWith` is false across any volume or pan difference; `canonicalize`/`moveLevels` clamp at the endpoints. `m4aEffectiveTrackVolume` (public) may build fixture states; the file-local envelope chain is never referenced or duplicated.
 
-9. **`src/checks/rollcheckpsgvelocity.cpp`** (D-3)
-   - Update every `resolve` call to the fixture's captured volume/pan.
+9. **`src/checks/drawerpresentation/velocity.cpp`** (D-3)
+   - `VelocityPageTest` updates every `resolve` call to the fixture's captured volume/pan.
    - Derive representative and graduation expectations by resolving each fixture's map (voice, key, effective volume, pan) and querying it — never by re-deriving the envelope chain inside the harness.
 
-10. **Verification** (D-4) — the catalog entries are `velocity-model` (`runVelocityModelCheck`) and `velocity-page` (`runVelocityPageCheck`, hosted in rollcheckpsgvelocity.cpp):
+10. **Verification** (D-4) — the catalog entries are `velocity-model`
+    (`runVelocityModelCheck`) and `velocity-page` (`runVelocityPageCheck`,
+    which executes `VelocityPageTest`):
     - `deno task build:checks`
-    - `deno task verify --filter velocity-model --verbose`
-    - `deno task verify --filter velocity-page --verbose`
+    - `deno task verify --no-windowing-checks --filter velocity-model --verbose`
+    - `deno task verify --no-windowing-checks --filter velocity-page --verbose`
     - Open a Square or Wave velocity lane. Change track volume and pan, then confirm detent rows shift and lower effective volume produces fewer reachable levels.
     - Confirm a CC 7, CC 10, or voice change after the inspected tick limits the returned context section at the earliest next change.
     - Select notes on both sides of a volume change: the lane must show the continuous ruler, not detents from one note's state.
@@ -165,7 +167,8 @@ Run the thermo-nuclear code-quality review (read-only) over the working-tree dif
 - `src/ui/editordrawer/drawerpage.h` — volume/pan in the resolved voice context.
 - `src/ui/songview.h` and `src/ui/songview/trackvoiceops.cpp` — CC 7/10 and master-volume resolution.
 - `src/ui/editordrawer/velocityarea/velocityarea*.cpp` and `.h` — map consumers with inline context capture.
-- `src/checks/velocitymodelcheck.cpp` and `src/checks/rollcheckpsgvelocity.cpp` — behavioral contracts.
+- `src/checks/keyboard/tst_velocitymodel.cpp` and
+  `src/checks/drawerpresentation/velocity.cpp` — behavioral contracts.
 
 ## Re-baselining rule
 

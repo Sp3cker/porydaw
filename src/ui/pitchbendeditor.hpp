@@ -2,68 +2,98 @@
 
 #include "core/songdocument.h"
 #include "pitchbendgraph.hpp"
-#include "songview.h"
 
-#include <QEvent>
-#include <QFocusEvent>
-#include <QFrame>
-#include <QHideEvent>
-#include <QKeyEvent>
-#include <QPaintEvent>
-#include <QPoint>
+#include <QMetaType>
+#include <QObject>
 #include <QPointF>
 #include <QPointer>
-#include <QPushButton>
+#include <QQuickView>
 #include <QRect>
-#include <QSpinBox>
-#include <QString>
+#include <QVariantMap>
 #include <cstdint>
 #include <functional>
 
+class QKeyEvent;
+class SongView;
+
 namespace songview {
 
-class PitchBendEditor final : public QFrame
+// Session object backing the transient Qt Quick pitch-bend popup. Owns the
+// document snapshots, pending commit/cancel, controller values, cached chrome
+// (geometry + appearance) and the lazily constructed QQuickView window; the
+// window/filter/arbitration implementation lives in pitchbendeditor_window.cpp.
+class PitchBendEditor final : public QObject
 {
+    Q_OBJECT
+    Q_PROPERTY(int bendRange READ bendRange NOTIFY controllerValuesChanged)
+    Q_PROPERTY(int lfoSpeed READ lfoSpeed NOTIFY controllerValuesChanged)
+    Q_PROPERTY(QString description READ description NOTIFY appearanceChanged)
+    Q_PROPERTY(QString noteDescription READ noteDescription NOTIFY appearanceChanged)
+    Q_PROPERTY(QVariantMap metrics READ metrics NOTIFY appearanceChanged)
+    Q_PROPERTY(QVariantMap appearance READ appearance NOTIFY appearanceChanged)
+
+  private:
+    enum class DismissAction { Commit, Cancel };
+    enum class Lifecycle { Open, Closed };
+    enum class CloseFocus { Restore, Discard };
+
   public:
     PitchBendEditor(::SongView *songView, SongDocument *document, const DocNote &note,
                     std::function<bool(QPointF)> focusNoteUnderCursor);
+    ~PitchBendEditor() override;
 
     void openAt(const QRect &noteGlobal, double noteFraction);
     void cancelAndClose();
     void cancelAndCloseWithoutFocus();
 
-    bool hasEditableSpan() const;
-    uint64_t endTick() const;
-    QRect graphRect() const;
-    QRect modGraphRect() const;
+    bool isOpen() const { return m_lifecycle == Lifecycle::Open; }
+    bool hasEditableSpan() const { return m_endTick > m_startTick; }
+    uint64_t endTick() const { return m_endTick; }
+    QQuickView *view() const { return m_view.data(); }
 
-  protected:
-    bool event(QEvent *event) override;
-    bool eventFilter(QObject *watched, QEvent *event) override;
-    void paintEvent(QPaintEvent *event) override;
-    void keyPressEvent(QKeyEvent *event) override;
-    void focusInEvent(QFocusEvent *event) override;
-    void focusOutEvent(QFocusEvent *event) override;
-    void hideEvent(QHideEvent *event) override;
+    int bendRange() const { return m_bendRange; }
+    int lfoSpeed() const { return m_lfoSpeed; }
+    QString description() const { return m_description; }
+    QString noteDescription() const { return m_noteDescription; }
+    QVariantMap metrics() const { return m_metrics; }
+    QVariantMap appearance() const { return m_appearance; }
+
+    Q_INVOKABLE void setBendRange(int range);
+    Q_INVOKABLE void setLfoSpeed(int speed);
+    Q_INVOKABLE void resetPitchCurve();
+    Q_INVOKABLE void resetModCurve();
+
+  signals:
+    void controllerValuesChanged();
+    void appearanceChanged();
 
   private:
+    friend class PitchBendCloseController;
+    friend class PitchBendPopupView;
+
     enum class PendingEdit { None, Curve };
-    enum class CloseState { Open, Cancel, Closed };
-    enum class CloseFocus { Restore, Discard };
 
-    static constexpr int kPopupWidth = 340;
-    static constexpr int kPopupHeight = 432;
-    static constexpr int kOuterInset = 8;
-    static constexpr int kResetWidth = 60;
-    static constexpr int kResetHeight = 26;
-    static constexpr int kHeaderHeight = 64;
-    static constexpr int kGraphHeight = 184;
+    // Window-only arbitration surface.
+    void undoFromKeyboard();
+    void requestCancelClose();
+    void dismissWithCommit(bool restoreFocus);
+    bool handleUnclaimedKeyPress(QKeyEvent *event);
+    void refreshChrome();
 
-    bool tryDeleteSelectedVertex(PitchBendGraph *graph, QKeyEvent *event);
+    void installCloseController(std::function<bool(QPointF)> focusNoteUnderCursor);
+    bool ensureView();
+    void bindGraph(PitchBendGraph *graph, PitchBendGraph::Lane lane);
+    void resolveChromeGeometry();
+    void rebuildCachedChrome();
+    void finalize(DismissAction action, CloseFocus focus, bool deferTeardown);
+    void close(DismissAction action, CloseFocus focus);
+
     PitchBendGraph *focusedGraph() const;
-    uint8_t ccForGraph(const PitchBendGraph *graph) const;
+    void onGrabLost();
     void undoCurve();
     void resetCurve(PitchBendGraph *graph);
+    void updateRange(int steps);
+    void snapshotControllerValues();
     void snapshotCurves();
     void snapshotCurve(PitchBendGraph *graph, uint8_t cc);
     bool writeController(uint8_t cc, int value, int endValue);
@@ -71,16 +101,12 @@ class PitchBendEditor final : public QFrame
     void markCurvePending(PitchBendGraph *graph);
     void commitCurve();
     void cancelCurve();
-    void updateRange(int steps);
-    void setBendRange(int range);
-    void setLfoSpeed(int speed);
-    void close(CloseState state, CloseFocus focus);
+    uint8_t ccForGraph(const PitchBendGraph *graph) const;
     void updateDescription();
-
     bool noteSpanStillPresent() const;
 
     QPointer<::SongView> m_songView;
-    SongDocument *m_document = nullptr;
+    QPointer<SongDocument> m_document;
     DocNote m_noteSnapshot;
     int m_engineTrack = -1;
     uint64_t m_startTick = 0;
@@ -90,15 +116,17 @@ class PitchBendEditor final : public QFrame
     int m_endRange = 2;
     int m_lfoSpeed = 22;
     int m_endLfoSpeed = 22;
-    PitchBendGraph *m_pitchGraph = nullptr;
-    PitchBendGraph *m_modGraph = nullptr;
-    QPushButton *m_pitchResetButton = nullptr;
-    QPushButton *m_modResetButton = nullptr;
-    QSpinBox *m_bendRangeSpin = nullptr;
-    QSpinBox *m_lfoSpeedSpin = nullptr;
-    PitchBendGraph *m_pendingGraph = nullptr;
+    PitchBendGeometry m_geometry;
+    QString m_description;
+    QString m_noteDescription;
+    QVariantMap m_metrics;
+    QVariantMap m_appearance;
+    QPointer<PitchBendGraph> m_pitchGraph;
+    QPointer<PitchBendGraph> m_modGraph;
+    QPointer<QQuickView> m_view;
+    QPointer<PitchBendGraph> m_pendingGraph;
     PendingEdit m_pending = PendingEdit::None;
-    CloseState m_closeState = CloseState::Open;
+    Lifecycle m_lifecycle = Lifecycle::Open;
     CloseFocus m_closeFocus = CloseFocus::Restore;
 };
 } // namespace songview

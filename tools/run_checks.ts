@@ -20,7 +20,7 @@ interface CheckManifestEntry {
   readonly argv: readonly string[];
   readonly binary: "application" | "checks";
   readonly windowing: Windowing;
-  readonly framework: "legacy" | "qt-test";
+  readonly framework: "qt-test" | "process";
 
   readonly environment?: Readonly<Record<string, string>>;
   readonly optionalArgumentEnvironment?: Readonly<Record<string, string>>;
@@ -60,7 +60,7 @@ function usage(): never {
     "  --exclude=<name>: skip the harness with this exact name (repeatable)",
   );
   console.error(
-    "  --qt <args...>: run exactly one qt-test harness, forwarding <args...> verbatim to the Qt test runner (terminal: everything after --qt belongs to Qt)",
+    "  --qt <args...>: run exactly one qt-test harness; the runner passes the payload to the child after a --qt separator so it can never be read as check arguments",
   );
   console.error("  --verbose: alias for --reporter=verbose");
   console.error(
@@ -177,7 +177,7 @@ async function loadManifest(
   }
   if (
     checks.some(
-      (check) => check.framework !== "legacy" && check.framework !== "qt-test",
+      (check) => check.framework !== "qt-test" && check.framework !== "process",
     )
   ) {
     console.error("run_checks: manifest has an unsupported framework");
@@ -460,7 +460,11 @@ async function runCheck(check: CheckManifestEntry): Promise<void> {
       ? applicationBinary
       : checksBinary;
     const args = expandArguments(check, scratch, mid2agb);
-    if (qtPayload !== undefined) args.push(...qtPayload);
+    if (qtPayload !== undefined) {
+      // Terminal separator: the checks binary splits here before interpreting
+      // optional check arguments, so the payload can never eat check flags.
+      args.push("--qt", ...qtPayload);
+    }
     result = await runProcess(binary, args, executionEnvironment(check));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

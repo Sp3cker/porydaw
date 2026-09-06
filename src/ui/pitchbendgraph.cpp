@@ -1,12 +1,14 @@
 #include "pitchbendgraph.hpp"
+
 #include "songview.h"
 
-#include "theme/themeruntime.h"
-#include "typography.h"
 #include "ui/keymap.h"
-#include "ui/m4asemantics.h"
 
-#include <QPainter>
+#include <QFocusEvent>
+#include <QKeyEvent>
+#include <QMouseEvent>
+#include <QWheelEvent>
+
 #include <algorithm>
 #include <cmath>
 #include <iterator>
@@ -14,38 +16,73 @@
 
 namespace songview {
 
-PitchBendGraph::PitchBendGraph(::SongView *songView, int engineTrack, uint64_t startTick,
-                               uint64_t endTick, bool unterminated, Lane lane, QWidget *parent)
-    : QWidget(parent)
-    , m_songView(songView)
-    , m_grid(songView ? &songView->grid() : nullptr)
-    , m_engineTrack(engineTrack)
-    , m_startTick(startTick)
-    , m_endTick(endTick)
-    , m_unterminated(unterminated)
-    , m_lane(lane)
-    , m_keyboardTick(startTick)
+PitchBendGraph::PitchBendGraph(QQuickItem *parent) : QQuickItem(parent)
 {
-    setObjectName(lane == Lane::PitchBend ? QStringLiteral("pitchBendGraph")
-                                          : QStringLiteral("modWheelGraph"));
-    setFocusPolicy(Qt::StrongFocus);
-    setMouseTracking(true);
+    setAcceptedMouseButtons(Qt::NoButton);
+    setActiveFocusOnTab(false);
     setCursor(Qt::CrossCursor);
 }
 
-void PitchBendGraph::setCallbacks(Callbacks callbacks)
+void PitchBendGraph::initialize(Initialization initial)
 {
-    m_callbacks = std::move(callbacks);
+    if (m_initialized || !initial.songView)
+        return;
+
+    m_songView = initial.songView;
+    m_grid = &m_songView->grid();
+    m_engineTrack = initial.engineTrack;
+    m_startTick = initial.startTick;
+    m_endTick = initial.endTick;
+    m_unterminated = initial.unterminated;
+    m_lane = initial.lane;
+    m_geometry = initial.geometry;
+    m_bendRange = std::clamp(initial.bendRange, 0, 127);
+    m_points = std::move(initial.points);
+    m_endValue = std::clamp(initial.endValue, minimumValue(), maximumValue());
+    m_points[m_endTick] = m_endValue;
+    m_callbacks = std::move(initial.callbacks);
+    m_rangeWheelRemainder = 0.0;
+    m_strokeState.reset();
+    m_vertexDragState.reset();
+    m_selectedTick.reset();
+    m_keyboardTick = m_startTick;
+    m_liveValue = valueAtTick(m_keyboardTick);
+
+    m_initialized = true;
+    setFlag(ItemHasContents, true);
+    setAcceptedMouseButtons(Qt::LeftButton);
+    setActiveFocusOnTab(true);
+    redraw();
+    notifyPresentationChanged();
+    notifyLiveValueChanged();
+}
+
+void PitchBendGraph::setMetrics(const PitchBendGeometry &geometry)
+{
+    if (!m_initialized)
+        return;
+    m_geometry = geometry;
+    redraw();
+    notifyPresentationChanged();
 }
 
 void PitchBendGraph::setBendRange(int range)
 {
-    m_bendRange = std::clamp(range, 0, 127);
-    update();
+    if (!m_initialized)
+        return;
+    const int clampedRange = std::clamp(range, 0, 127);
+    if (m_bendRange == clampedRange)
+        return;
+    m_bendRange = clampedRange;
+    redraw();
+    notifyPresentationChanged();
+    notifyLiveValueChanged();
 }
 
 void PitchBendGraph::setCurve(const std::map<uint64_t, int> &points, int endValue)
 {
+    if (!m_initialized)
+        return;
     m_points = points;
     m_endValue = std::clamp(endValue, minimumValue(), maximumValue());
     m_points[m_endTick] = m_endValue;
@@ -54,11 +91,14 @@ void PitchBendGraph::setCurve(const std::map<uint64_t, int> &points, int endValu
     cancelGesture();
     m_keyboardTick = m_startTick;
     m_liveValue = valueAtTick(m_keyboardTick);
-    update();
+    redraw();
+    notifyLiveValueChanged();
 }
 
 void PitchBendGraph::resetCurve()
 {
+    if (!m_initialized)
+        return;
     m_points.clear();
     m_points[m_startTick] = defaultValue();
     m_points[m_endTick] = m_endValue;
@@ -67,8 +107,9 @@ void PitchBendGraph::resetCurve()
     m_keyboardTick = m_startTick;
     m_liveValue = defaultValue();
     notifyPreviewChanged();
-    setFocus(Qt::MouseFocusReason);
-    update();
+    forceActiveFocus(Qt::MouseFocusReason);
+    redraw();
+    notifyLiveValueChanged();
 }
 
 std::optional<uint64_t> PitchBendGraph::selectedTick() const
@@ -78,18 +119,23 @@ std::optional<uint64_t> PitchBendGraph::selectedTick() const
 
 void PitchBendGraph::setSelectedTick(std::optional<uint64_t> tick)
 {
+    if (!m_initialized)
+        return;
     if (tick && !m_points.contains(*tick))
         tick.reset();
     if (m_selectedTick == tick)
         return;
     m_selectedTick = tick;
-    update();
+    redraw();
 }
 
 std::optional<std::pair<uint64_t, int>> PitchBendGraph::hitTest(const QPointF &position) const
 {
-    const qreal radius = kNodeHitRadius * std::max<qreal>(devicePixelRatioF(), 1.0);
-    const qreal radiusSquared = radius * radius;
+    if (!m_initialized)
+        return std::nullopt;
+    // Node radii are DIPs; Quick delivers item-local points, so unlike the
+    // widget surface there is no per-window DPR multiplier here.
+    const qreal radiusSquared = m_geometry.nodeHitRadius * m_geometry.nodeHitRadius;
     qreal nearestDistanceSquared = radiusSquared;
     std::optional<std::pair<uint64_t, int>> nearest;
     for (const auto &[tick, value] : m_points) {
@@ -110,26 +156,35 @@ std::optional<std::pair<uint64_t, int>> PitchBendGraph::hitTest(const QPointF &p
 
 bool PitchBendGraph::removeSelectedVertex()
 {
-    if (!m_selectedTick || *m_selectedTick == m_startTick || *m_selectedTick == m_endTick)
+    if (!m_initialized || !m_selectedTick || *m_selectedTick == m_startTick ||
+        *m_selectedTick == m_endTick) {
         return false;
+    }
     if (m_points.erase(*m_selectedTick) == 0)
         return false;
     setSelectedTick(std::nullopt);
+    m_liveValue = valueAtTick(m_keyboardTick);
     notifyPreviewChanged();
+    notifyLiveValueChanged();
     notifyCommitRequested();
     return true;
 }
 
 QPoint PitchBendGraph::vertexPosition(uint64_t tick, int value) const
 {
+    if (!m_initialized)
+        return {};
     return {xAtTick(tick), yAtValue(value)};
 }
 
 void PitchBendGraph::setKeyboardFraction(double fraction)
 {
+    if (!m_initialized)
+        return;
     m_keyboardTick = tickAtFraction(fraction, Sampling::Normal);
     m_liveValue = valueAtTick(m_keyboardTick);
-    update();
+    redraw();
+    notifyLiveValueChanged();
 }
 
 void PitchBendGraph::cancelGesture()
@@ -140,6 +195,10 @@ void PitchBendGraph::cancelGesture()
 
 bool PitchBendGraph::handleKeyPress(QKeyEvent *event)
 {
+    if (!m_initialized) {
+        event->ignore();
+        return false;
+    }
     if (event->key() == Qt::Key_Escape) {
         cancelGesture();
         notifyCancelRequested();
@@ -164,27 +223,29 @@ bool PitchBendGraph::handleKeyPress(QKeyEvent *event)
         return true;
     }
     event->ignore();
-    QWidget::keyPressEvent(event);
+    QQuickItem::keyPressEvent(event);
     return event->isAccepted();
 }
 
 QRect PitchBendGraph::canvasRect() const
 {
-    return QRect(kAxisGutter, kGraphTop, kGraphWidth, kGraphHeight);
+    return m_initialized ? m_geometry.canvas : QRect{};
 }
 
 bool PitchBendGraph::hasGesture() const
 {
-    return m_strokeState || m_vertexDragState;
+    return m_initialized && (m_strokeState || m_vertexDragState);
 }
 
 int PitchBendGraph::liveValue() const
 {
-    return m_liveValue;
+    return m_initialized ? m_liveValue : 0;
 }
 
 std::vector<SongDocument::LanePointValue> PitchBendGraph::curvePoints() const
 {
+    if (!m_initialized)
+        return {};
     std::vector<SongDocument::LanePointValue> points;
     points.reserve(m_points.size());
     const uint64_t fineTick = m_grid ? m_grid->fineGridTicks() : 1;
@@ -209,29 +270,66 @@ PitchBendGraph::Lane PitchBendGraph::lane() const
     return m_lane;
 }
 
-void PitchBendGraph::paintEvent(QPaintEvent *)
+QString PitchBendGraph::laneTitle() const
 {
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.fillRect(canvasRect(), themes::color(themes::Role::song_view_piano_roll_background));
-    painter.save();
-    painter.setClipRect(canvasRect());
-    paintGrid(painter);
-    paintCurve(painter);
-    paintLinePreview(painter);
-    painter.restore();
-    paintAxes(painter);
-    paintFocus(painter);
+    return m_lane == Lane::PitchBend ? SongView::tr("Pitch bend (BEND)")
+                                     : SongView::tr("Mod wheel (CC1)");
+}
+
+QString PitchBendGraph::liveValueText() const
+{
+    return formatLiveValue();
+}
+
+QString PitchBendGraph::upperValueText() const
+{
+    return formatRangeLimit(true);
+}
+
+QString PitchBendGraph::lowerValueText() const
+{
+    return formatRangeLimit(false);
+}
+
+QString PitchBendGraph::endLabel() const
+{
+    return m_unterminated ? SongView::tr("Song end") : SongView::tr("Note off");
+}
+
+bool PitchBendGraph::bipolar() const
+{
+    return m_lane == Lane::PitchBend;
+}
+
+void PitchBendGraph::redraw()
+{
+    if (!m_initialized)
+        return;
+    rebuildLayer();
+    update();
+}
+
+void PitchBendGraph::notifyPresentationChanged()
+{
+    if (m_initialized)
+        emit presentationChanged();
+}
+
+void PitchBendGraph::notifyLiveValueChanged()
+{
+    if (m_initialized)
+        emit liveValueChanged();
 }
 
 void PitchBendGraph::mousePressEvent(QMouseEvent *event)
 {
-    if (event->button() != Qt::LeftButton || !canvasRect().contains(event->position().toPoint())) {
+    if (!m_initialized || event->button() != Qt::LeftButton ||
+        !canvasRect().contains(event->position().toPoint())) {
         event->ignore();
         return;
     }
     if (const auto hit = hitTest(event->position())) {
-        setFocus(Qt::MouseFocusReason);
+        forceActiveFocus(Qt::MouseFocusReason);
         setSelectedTick(hit->first);
         m_vertexDragState.emplace();
         auto &state = *m_vertexDragState;
@@ -240,12 +338,13 @@ void PitchBendGraph::mousePressEvent(QMouseEvent *event)
         m_keyboardTick = hit->first;
         m_liveValue = hit->second;
         notifyPreviewChanged();
-        update();
+        redraw();
+        notifyLiveValueChanged();
         event->accept();
         return;
     }
     setSelectedTick(std::nullopt);
-    setFocus(Qt::MouseFocusReason);
+    forceActiveFocus(Qt::MouseFocusReason);
     m_strokeState.emplace();
     auto &state = *m_strokeState;
     state.mode = (event->modifiers() & (Qt::ShiftModifier | Qt::AltModifier))
@@ -262,13 +361,14 @@ void PitchBendGraph::mousePressEvent(QMouseEvent *event)
     m_keyboardTick = state.previousTick;
     m_liveValue = state.previousValue;
     notifyPreviewChanged();
-    update();
+    redraw();
+    notifyLiveValueChanged();
     event->accept();
 }
 
 void PitchBendGraph::mouseMoveEvent(QMouseEvent *event)
 {
-    if (!m_strokeState && !m_vertexDragState) {
+    if (!m_initialized || (!m_strokeState && !m_vertexDragState)) {
         event->ignore();
         return;
     }
@@ -281,7 +381,8 @@ void PitchBendGraph::mouseMoveEvent(QMouseEvent *event)
 
 void PitchBendGraph::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (event->button() != Qt::LeftButton || (!m_strokeState && !m_vertexDragState)) {
+    if (!m_initialized || event->button() != Qt::LeftButton ||
+        (!m_strokeState && !m_vertexDragState)) {
         event->ignore();
         return;
     }
@@ -295,7 +396,8 @@ void PitchBendGraph::mouseReleaseEvent(QMouseEvent *event)
 
 void PitchBendGraph::wheelEvent(QWheelEvent *event)
 {
-    if (m_lane != Lane::PitchBend || !canvasRect().contains(event->position().toPoint())) {
+    if (!m_initialized || m_lane != Lane::PitchBend ||
+        !canvasRect().contains(event->position().toPoint())) {
         event->ignore();
         return;
     }
@@ -316,173 +418,69 @@ void PitchBendGraph::wheelEvent(QWheelEvent *event)
 void PitchBendGraph::keyPressEvent(QKeyEvent *event)
 {
     if (!handleKeyPress(event))
-        QWidget::keyPressEvent(event);
+        QQuickItem::keyPressEvent(event);
 }
 
 void PitchBendGraph::focusInEvent(QFocusEvent *event)
 {
-    QWidget::focusInEvent(event);
-    update();
+    QQuickItem::focusInEvent(event);
+    if (m_initialized)
+        redraw();
 }
 
 void PitchBendGraph::focusOutEvent(QFocusEvent *event)
 {
-    QWidget::focusOutEvent(event);
-    update();
+    // Ordinary focus movement between popup controls must not dismiss or
+    // cancel anything; it only repaints the focus frame.
+    QQuickItem::focusOutEvent(event);
+    if (m_initialized)
+        redraw();
 }
 
-void PitchBendGraph::paintGrid(QPainter &painter)
+void PitchBendGraph::mouseUngrabEvent()
 {
-    painter.setPen(QPen(themes::color(themes::Role::song_view_grid), 1));
-    if (m_grid && m_endTick > m_startTick) {
-        uint64_t segmentTick = m_startTick;
-        while (segmentTick < m_endTick) {
-            const Grid::Segment segment = m_grid->segmentAt(segmentTick);
-            const uint64_t segmentEnd = std::min(m_endTick, segment.next);
-            const uint64_t cell = normalCellTicksAt(segmentTick);
-            const uint64_t anchor = segment.start;
-            const uint64_t offset = segmentTick > anchor ? segmentTick - anchor : 0;
-            const uint64_t quotient = offset / cell;
-            uint64_t tick = anchor;
-            if (quotient < UINT64_MAX / cell)
-                tick = anchor + (quotient + 1) * cell;
-            while (tick < segmentEnd) {
-                const int x = xAtTick(tick);
-                painter.drawLine(x, canvasRect().top(), x, canvasRect().bottom());
-                if (UINT64_MAX - tick < cell)
-                    break;
-                tick += cell;
-            }
-            if (segmentEnd >= m_endTick)
-                break;
-            segmentTick = segmentEnd;
-        }
-    }
-    painter.setPen(QPen(themes::color(themes::Role::song_view_separator), 1, Qt::DashLine));
-    painter.drawLine(canvasRect().left(), yAtValue(0), canvasRect().right(), yAtValue(0));
-}
-
-void PitchBendGraph::paintCurve(QPainter &painter)
-{
-    const QColor curveColor = SongView::trackColor(m_engineTrack);
-    const QColor endpointColor = themes::color(themes::Role::song_view_secondary_text);
-    const QColor selectedRing = themes::color(themes::Role::focus_outline);
-    painter.save();
-    painter.setClipRect(canvasRect(), Qt::IntersectClip);
-    painter.setPen(QPen(curveColor, 2));
-    const uint64_t fineTick = m_grid ? m_grid->fineGridTicks() : 1;
-    for (auto it = m_points.cbegin(); it != m_points.cend(); ++it) {
-        const auto next = std::next(it);
-        const int x0 = xAtTick(it->first);
-        const int x1 = next == m_points.cend() ? canvasRect().right() : xAtTick(next->first);
-        const int y = yAtValue(it->second);
-        const bool angled = next != m_points.cend() && next->first > it->first &&
-                            next->first - it->first == fineTick;
-        if (angled) {
-            painter.drawLine(x0, y, x1, yAtValue(next->second));
-        } else {
-            painter.drawLine(x0, y, x1, y);
-            if (next != m_points.cend())
-                painter.drawLine(x1, y, x1, yAtValue(next->second));
-        }
-    }
-    const bool antialiasing = painter.testRenderHint(QPainter::Antialiasing);
-    painter.setRenderHint(QPainter::Antialiasing, true);
-    for (const auto &[tick, value] : m_points) {
-        const QPointF center(vertexPosition(tick, value));
-        const bool selected = m_selectedTick && *m_selectedTick == tick;
-        if (selected) {
-            painter.setPen(QPen(selectedRing, 1.5));
-            painter.setBrush(Qt::NoBrush);
-            painter.drawEllipse(center, kSelectedNodeRingRadius, kSelectedNodeRingRadius);
-            painter.setPen(Qt::NoPen);
-            painter.setBrush(curveColor);
-            painter.drawEllipse(center, kNodePaintRadius, kNodePaintRadius);
-            continue;
-        }
-        painter.setPen(Qt::NoPen);
-        painter.setBrush(tick == m_startTick || tick == m_endTick ? endpointColor : curveColor);
-        const qreal radius = tick == m_startTick || tick == m_endTick
-                                 ? std::max(1, kNodePaintRadius - 1)
-                                 : kNodePaintRadius;
-        painter.drawEllipse(center, radius, radius);
-    }
-    painter.setRenderHint(QPainter::Antialiasing, antialiasing);
-    painter.setPen(QPen(themes::color(themes::Role::song_view_edit_preview_outline), 1));
-    painter.setBrush(Qt::NoBrush);
-    painter.drawEllipse(vertexPosition(m_keyboardTick, m_liveValue), 3, 3);
-    painter.restore();
-}
-
-void PitchBendGraph::paintLinePreview(QPainter &painter)
-{
-    if (!m_strokeState || !isLineGesture())
-        return;
-    const StrokeState &state = *m_strokeState;
-    painter.setPen(QPen(themes::color(themes::Role::song_view_edit_preview_outline), 1));
-    painter.drawLine(QPointF(vertexPosition(state.anchorTick, state.anchorValue)),
-                     QPointF(vertexPosition(state.previousTick, state.previousValue)));
-}
-
-void PitchBendGraph::paintAxes(QPainter &painter)
-{
-    const QRect graph = canvasRect();
-    painter.setFont(typography::caption(font()));
-    painter.setPen(themes::color(themes::Role::song_view_secondary_text));
-    const QRect axisRect(8, graph.top() - 7, kAxisGutter - 12, 14);
-    const QRect titleRect(graph.left(), 3, graph.width() - 68, 17);
-    painter.drawText(titleRect, Qt::AlignLeft | Qt::AlignVCenter, laneTitle());
-    painter.drawText(titleRect, Qt::AlignRight | Qt::AlignVCenter, formatLiveValue());
-    painter.drawText(axisRect, Qt::AlignRight | Qt::AlignVCenter, formatRangeLimit(true));
-    if (m_lane == Lane::PitchBend) {
-        painter.drawText(axisRect.translated(0, yAtValue(0) - graph.top()),
-                         Qt::AlignRight | Qt::AlignVCenter, QStringLiteral("0"));
-    }
-    painter.drawText(axisRect.translated(0, graph.bottom() - graph.top()),
-                     Qt::AlignRight | Qt::AlignVCenter, formatRangeLimit(false));
-    painter.drawText(QRect(graph.left(), graph.bottom() + 2, graph.width(), kAxisLabelHeight),
-                     Qt::AlignLeft | Qt::AlignVCenter, SongView::tr("Note on"));
-    painter.drawText(QRect(graph.left(), graph.bottom() + 2, graph.width(), kAxisLabelHeight),
-                     Qt::AlignRight | Qt::AlignVCenter,
-                     m_unterminated ? SongView::tr("Song end") : SongView::tr("Note off"));
-}
-
-void PitchBendGraph::paintFocus(QPainter &painter)
-{
-    if (!hasFocus() && (!parentWidget() || !parentWidget()->hasFocus()))
-        return;
-    painter.setPen(QPen(themes::color(themes::Role::focus_outline), 1));
-    painter.setBrush(Qt::NoBrush);
-    painter.drawRect(canvasRect().adjusted(1, 1, -1, -1));
+    if (!m_initialized || (!m_strokeState && !m_vertexDragState))
+        return; // Normal release already settled the gesture; never double-fire.
+    // Keep the drawn preview; the session resolves the unsettled preview by
+    // close reason instead of treating grab loss as Escape or commit.
+    cancelGesture();
+    redraw();
+    notifyGrabLost();
 }
 
 void PitchBendGraph::notifyPreviewChanged()
 {
-    if (m_callbacks.previewChanged)
+    if (m_initialized && m_callbacks.previewChanged)
         m_callbacks.previewChanged();
 }
 
 void PitchBendGraph::notifyCommitRequested()
 {
-    if (m_callbacks.commitRequested)
+    if (m_initialized && m_callbacks.commitRequested)
         m_callbacks.commitRequested();
 }
 
 void PitchBendGraph::notifyCancelRequested()
 {
-    if (m_callbacks.cancelRequested)
+    if (m_initialized && m_callbacks.cancelRequested)
         m_callbacks.cancelRequested();
 }
 
 void PitchBendGraph::notifyAuditionRequested()
 {
-    if (m_callbacks.auditionRequested)
+    if (m_initialized && m_callbacks.auditionRequested)
         m_callbacks.auditionRequested();
+}
+
+void PitchBendGraph::notifyGrabLost()
+{
+    if (m_initialized && m_callbacks.grabLost)
+        m_callbacks.grabLost();
 }
 
 void PitchBendGraph::updateStroke(const QPointF &position)
 {
-    if (!m_strokeState)
+    if (!m_initialized || !m_strokeState)
         return;
     auto &state = *m_strokeState;
     const uint64_t tick = tickAtX(position.x(), gestureSampling());
@@ -498,12 +496,13 @@ void PitchBendGraph::updateStroke(const QPointF &position)
     m_keyboardTick = tick;
     m_liveValue = value;
     notifyPreviewChanged();
-    update();
+    redraw();
+    notifyLiveValueChanged();
 }
 
 void PitchBendGraph::updateVertexDrag(const QPointF &position, Qt::KeyboardModifiers modifiers)
 {
-    if (!m_vertexDragState)
+    if (!m_initialized || !m_vertexDragState)
         return;
     auto &state = *m_vertexDragState;
     m_points = state.snapshot;
@@ -548,12 +547,14 @@ void PitchBendGraph::updateVertexDrag(const QPointF &position, Qt::KeyboardModif
     m_keyboardTick = tick;
     m_liveValue = storedValue;
     notifyPreviewChanged();
-    update();
+    redraw();
+    notifyLiveValueChanged();
 }
 
 void PitchBendGraph::finishGesture()
 {
     cancelGesture();
+    redraw();
     notifyCommitRequested();
 }
 
@@ -698,7 +699,7 @@ int PitchBendGraph::valueAtY(qreal y) const
             0, 127);
     }
     const int center = graph.center().y();
-    if (std::abs(clampedY - center) <= kZeroDetentPixels)
+    if (std::abs(clampedY - center) <= m_geometry.zeroDetent)
         return 0;
     int value = 0;
     if (clampedY <= center)
@@ -744,12 +745,6 @@ int PitchBendGraph::maximumValue() const
 int PitchBendGraph::defaultValue() const
 {
     return 0;
-}
-
-QString PitchBendGraph::laneTitle() const
-{
-    return m_lane == Lane::PitchBend ? SongView::tr("Pitch bend (BEND)")
-                                     : SongView::tr("Mod wheel (CC1)");
 }
 
 QString PitchBendGraph::formatLiveValue() const

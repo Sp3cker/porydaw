@@ -1,7 +1,10 @@
 #include "checks/samplecheck/fixtures.h"
 #include "checks/samplecheck/samplecheck.h"
 
-#include <cstdio>
+#include <QTemporaryDir>
+#include <QtTest>
+
+#include <memory>
 
 #include "project/samplereg.h"
 #include "project/voicegroupsource.h"
@@ -12,294 +15,247 @@ extern "C" {
 
 namespace samplecheck {
 namespace {
-const char *const kWav2AgbRules = "SOUND_BIN_DIR := $(OBJ_DIR)/sound\n"
-                                  "\n"
-                                  "$(SOUND_BIN_DIR)/%.bin: sound/%.wav \n"
-                                  "\t$(WAV2AGB) -b $< $@\n";
-
-// One registered entry, LF endings — the shipped pokeemerald layout.
-const char *const kIncSeed = "\t.align 2\n"
-                             "DirectSoundWaveData_existing::\n"
-                             "\t.incbin \"sound/direct_sound_samples/existing.bin\"\n";
+constexpr auto kWav2AgbRules = "SOUND_BIN_DIR := $(OBJ_DIR)/sound\n"
+                               "\n"
+                               "$(SOUND_BIN_DIR)/%.bin: sound/%.wav \n"
+                               "\t$(WAV2AGB) -b $< $@\n";
+constexpr auto kIncSeed = "\t.align 2\n"
+                          "DirectSoundWaveData_existing::\n"
+                          "\t.incbin \"sound/direct_sound_samples/existing.bin\"\n";
+constexpr auto kRegisteredSampleName = "samplecheck_tone";
 } // namespace
 
-std::optional<RegisteredSampleProject>
-prepareRegisteredSampleProject(Reporter &reporter, const QString &root, const QString &scratchDir)
+bool createWav2AgbProject(const QString &root)
 {
-    if (!(writeFile(root + QStringLiteral("/Makefile"), "include audio_rules.mk\n") &&
-          writeFile(root + QStringLiteral("/audio_rules.mk"), kWav2AgbRules) &&
-          writeFile(root + QStringLiteral("/sound/direct_sound_data.inc"), kIncSeed) &&
-          writeFile(root + QStringLiteral("/sound/direct_sound_samples/existing.wav"),
-                    "placeholder") &&
-          writeFile(root + QStringLiteral("/sound/direct_sound_samples/orphan.wav"),
-                    "placeholder"))) {
-        std::fprintf(stderr, "samplecheck: cannot build fake project\n");
-        return std::nullopt;
-    }
+    return writeFile(root + QStringLiteral("/Makefile"), "include audio_rules.mk\n") &&
+           writeFile(root + QStringLiteral("/audio_rules.mk"), kWav2AgbRules) &&
+           writeFile(root + QStringLiteral("/sound/direct_sound_data.inc"), kIncSeed) &&
+           writeFile(root + QStringLiteral("/sound/direct_sound_samples/existing.wav"),
+                     "placeholder") &&
+           writeFile(root + QStringLiteral("/sound/direct_sound_samples/orphan.wav"),
+                     "placeholder");
+}
 
-    // ---- probe: the wav2agb project registers, the broken ones refuse ----
-    {
-        const int before = reporter.failureCount();
-        const SampleFormatProbe probe = SampleRegistrar::probeSampleFormat(root);
-        reporter.expect(probe.ok() && probe.pipeline == SampleFormatProbe::Wav2Agb,
-                        "wav2agb project probes OK");
-
-        const QString aifRoot = scratchDir + QStringLiteral("/aifproj");
-        writeFile(aifRoot + QStringLiteral("/audio_rules.mk"),
-                  "$(SOUND_BIN_DIR)/%.bin: $(SAMPLE_SUBDIR)/%.aif\n"
-                  "\t$(AIF2PCM) $< $@\n");
-        writeFile(aifRoot + QStringLiteral("/sound/direct_sound_data.inc"), kIncSeed);
-        const SampleFormatProbe aif = SampleRegistrar::probeSampleFormat(aifRoot);
-        reporter.expect(aif.pipeline == SampleFormatProbe::LegacyAif,
-                        "aif project detected as legacy");
-        reporter.expectError(aif.refusal,
-                             QStringLiteral("this project predates wav2agb: its samples build from "
-                                            ".aif sources via aif2pcm. Port the sample pipeline to "
-                                            "wav2agb (pret's current layout), then import again."),
-                             "legacy-aif refusal text");
-
-        const QString noRuleRoot = scratchDir + QStringLiteral("/noruleproj");
-        writeFile(noRuleRoot + QStringLiteral("/sound/direct_sound_data.inc"), kIncSeed);
-        reporter.expectError(SampleRegistrar::probeSampleFormat(noRuleRoot).refusal,
-                             QStringLiteral("cannot find a wav2agb build rule (%.bin: %.wav) in "
-                                            "the project's make files; add pret's audio_rules.mk "
-                                            "pattern rule, then import again."),
-                             "missing-rule refusal text");
-
-        const QString noIncRoot = scratchDir + QStringLiteral("/noincproj");
-        writeFile(noIncRoot + QStringLiteral("/audio_rules.mk"), kWav2AgbRules);
-        reporter.expectError(SampleRegistrar::probeSampleFormat(noIncRoot).refusal,
-                             QStringLiteral("cannot find sound/direct_sound_data.inc — samples are "
-                                            "registered there. Set up pret's sample layout, then "
-                                            "import again."),
-                             "missing-inc refusal text");
-        if (reporter.failureCount() == before)
-            std::printf("samplecheck: pipeline probe OK\n");
-    }
-
-    // ---- name sanitizing/validation ----
-    {
-        const int before = reporter.failureCount();
-        reporter.expect(SampleRegistrar::sanitizeSampleName(QStringLiteral("My Sample #2")) ==
-                            QStringLiteral("my_sample_2"),
-                        "sanitize collapses separators");
-        reporter.expect(SampleRegistrar::sanitizeSampleName(QStringLiteral("Bell (C5)")) ==
-                            QStringLiteral("bell_c5"),
-                        "sanitize trims trailing junk");
-        const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-        QString error;
-        reporter.expect(SampleRegistrar::validateSampleName(root, QStringLiteral("fresh_tone"),
-                                                            symbols, &error),
-                        "fresh name validates");
-        reporter.expect(!SampleRegistrar::validateSampleName(root, QString(), symbols, &error),
-                        "empty name refused");
-        reporter.expectError(error, QStringLiteral("sample name is empty."), "empty-name text");
-        reporter.expect(
-            !SampleRegistrar::validateSampleName(root, QStringLiteral("Bad Name"), symbols, &error),
-            "bad grammar refused");
-        reporter.expectError(error,
-                             QStringLiteral("sample names use lowercase letters, "
-                                            "digits, and underscores only."),
-                             "grammar text");
-        reporter.expect(
-            !SampleRegistrar::validateSampleName(root, QStringLiteral("existing"), symbols, &error),
-            "symbol collision refused");
-        reporter.expectError(
-            error, QStringLiteral("DirectSoundWaveData_existing already exists in this project."),
-            "symbol-collision text");
-        reporter.expect(
-            !SampleRegistrar::validateSampleName(root, QStringLiteral("orphan"), symbols, &error),
-            "on-disk file collision refused");
-        reporter.expectError(error,
-                             QStringLiteral("orphan.wav already exists in "
-                                            "sound/direct_sound_samples."),
-                             "file-collision text");
-        if (reporter.failureCount() == before)
-            std::printf("samplecheck: name validation OK\n");
-    }
-
-    // ---- fixture inspection ----
-    FixtureSpec spec;
-    for (int i = 0; i < 64; i++)
-        spec.samples += char(i * 2); // u8 ramp 0..126
+QByteArray preparedSampleWav()
+{
+    auto spec = FixtureSpec{};
+    for (int i = 0; i < 64; ++i)
+        spec.samples += char(i * 2);
     spec.unityKey = 58;
-    spec.pitchFraction = 0x40000000; // 0.25 semitone, standard semantics
+    spec.pitchFraction = 0x40000000;
     spec.numLoops = 1;
     spec.loopStart = 8;
     spec.loopEndIncl = 47;
     spec.agbp = 15000000;
     spec.agbl = 64;
-    const QByteArray fixture = fixtureWav(spec);
-    const QString registeredSampleName = QStringLiteral("samplecheck_tone");
-    bool sampleRegistered = false;
-    {
-        const int before = reporter.failureCount();
-        SampleWavInfo info;
-        QString error;
-        reporter.expect(SampleRegistrar::inspectSampleWav(fixture, &info, &error),
-                        "fixture inspects OK");
-        reporter.expect(info.formatTag == 1 && info.channels == 1 && info.bitsPerSample == 8 &&
-                            info.sampleRate == 13379 && info.numSamples == 64,
-                        "fmt/data fields");
-        reporter.expect(info.hasSmpl && info.midiKey == 58 && info.pitchFraction == 0x40000000 &&
-                            info.loopEnabled && info.loopStart == 8 && info.loopEndIncl == 47,
-                        "smpl fields");
-        reporter.expect(info.agbPitch == 15000000 && info.agbLoopEnd == 64, "agbp/agbl fields");
-        // The derived WaveData header: agbp verbatim, agbl overriding size.
-        reporter.expect(info.waveFreq == 15000000 && info.waveLoopStart == 8 &&
-                            info.waveSize == 64 && info.waveLooped,
-                        "derived WaveData projection");
+    return fixtureWav(spec);
+}
 
-        reporter.expect(
-            !SampleRegistrar::inspectSampleWav(QByteArray("not a wav"), nullptr, &error),
-            "garbage refused");
-        reporter.expectError(error, QStringLiteral("not a RIFF/WAVE file."), "garbage text");
-        FixtureSpec stereo = spec;
-        stereo.channels = 2;
-        reporter.expect(!SampleRegistrar::inspectSampleWav(fixtureWav(stereo), nullptr, &error),
-                        "stereo refused");
-        reporter.expectError(
-            error, QStringLiteral("only mono samples are supported (this file has 2 channels)."),
-            "stereo text");
-        FixtureSpec twoLoops = spec;
-        twoLoops.numLoops = 2;
-        reporter.expect(!SampleRegistrar::inspectSampleWav(fixtureWav(twoLoops), nullptr, &error),
-                        "multi-loop refused");
-        reporter.expectError(error,
-                             QStringLiteral("the smpl chunk declares 2 loops; wav2agb "
-                                            "supports at most one."),
-                             "multi-loop text");
-        FixtureSpec backward = spec;
-        backward.loopType = 1;
-        reporter.expect(!SampleRegistrar::inspectSampleWav(fixtureWav(backward), nullptr, &error),
-                        "non-forward loop refused");
-        reporter.expectError(error,
-                             QStringLiteral("the smpl loop is not a forward loop (type "
-                                            "1); wav2agb only supports forward loops."),
-                             "loop-type text");
-        // No agbp/agbl: freq falls back to the loader's smpl-derived math and
-        // size to the smpl loop end.
-        FixtureSpec bare = spec;
-        bare.agbp = 0;
-        bare.agbl = 0;
-        SampleWavInfo bareInfo;
-        reporter.expect(SampleRegistrar::inspectSampleWav(fixtureWav(bare), &bareInfo, &error) &&
-                            bareInfo.waveSize == 48 && bareInfo.waveFreq != 0 &&
-                            bareInfo.agbPitch == 0,
-                        "smpl-only fallback projection");
-        if (reporter.failureCount() == before)
-            std::printf("samplecheck: wav inspection OK\n");
+QByteArray hiResSampleWav()
+{
+    auto spec = FixtureSpec{};
+    spec.bits = 16;
+    spec.rate = 44100;
+    spec.numLoops = 1;
+    spec.loopStart = 2000;
+    spec.loopEndIncl = 9999;
+    for (int i = 0; i < 12000; ++i) {
+        const double value = 0.5 * std::sin(2.0 * 3.14159265358979323846 * 220.5 * i / 44100.0);
+        putU16(&spec.samples, quint16(qint16(std::lround(value * 32000.0))));
     }
+    return fixtureWav(spec);
+}
 
-    // ---- register + .inc bytes + loader resolution ----
+void SampleProcessingTest::projectProbe()
+{
+    auto scratch = QTemporaryDir{};
+    QVERIFY2(scratch.isValid(), "project-probe scratch directory is available");
+
+    const QString root = scratch.filePath(QStringLiteral("wavproj"));
+    QVERIFY2(createWav2AgbProject(root), "synthetic wav2agb project is created");
+    const SampleFormatProbe probe = SampleRegistrar::probeSampleFormat(root);
+    QVERIFY2(probe.ok() && probe.pipeline == SampleFormatProbe::Wav2Agb,
+             "wav2agb project probes OK");
+
+    const QString aifRoot = scratch.filePath(QStringLiteral("aifproj"));
+    QVERIFY(writeFile(aifRoot + QStringLiteral("/audio_rules.mk"),
+                      "$(SOUND_BIN_DIR)/%.bin: $(SAMPLE_SUBDIR)/%.aif\n\t$(AIF2PCM) $< $@\n"));
+    QVERIFY(writeFile(aifRoot + QStringLiteral("/sound/direct_sound_data.inc"), kIncSeed));
+    const SampleFormatProbe aif = SampleRegistrar::probeSampleFormat(aifRoot);
+    QCOMPARE(aif.pipeline, SampleFormatProbe::LegacyAif);
+    QVERIFY2(!aif.refusal.isEmpty(), "legacy AIFF project layout is refused");
+
+    const QString noRuleRoot = scratch.filePath(QStringLiteral("noruleproj"));
+    QVERIFY(writeFile(noRuleRoot + QStringLiteral("/sound/direct_sound_data.inc"), kIncSeed));
+    QVERIFY2(!SampleRegistrar::probeSampleFormat(noRuleRoot).refusal.isEmpty(),
+             "unsupported project layout is refused");
+
+    const QString noIncRoot = scratch.filePath(QStringLiteral("noincproj"));
+    QVERIFY(writeFile(noIncRoot + QStringLiteral("/audio_rules.mk"), kWav2AgbRules));
+    QVERIFY2(!SampleRegistrar::probeSampleFormat(noIncRoot).refusal.isEmpty(),
+             "unsupported project layout is refused");
+}
+
+void SampleProcessingTest::projectSanitizeValidate()
+{
+    auto scratch = QTemporaryDir{};
+    QVERIFY2(scratch.isValid(), "project-sanitize scratch directory is available");
+    const QString root = scratch.filePath(QStringLiteral("wavproj"));
+    QVERIFY2(createWav2AgbProject(root), "synthetic wav2agb project is created");
+
+    QCOMPARE(SampleRegistrar::sanitizeSampleName(QStringLiteral("My Sample #2")),
+             QStringLiteral("my_sample_2"));
+    QCOMPARE(SampleRegistrar::sanitizeSampleName(QStringLiteral("Bell (C5)")),
+             QStringLiteral("bell_c5"));
+
+    const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
+    auto error = QString{};
+    QVERIFY(
+        SampleRegistrar::validateSampleName(root, QStringLiteral("fresh_tone"), symbols, &error));
+    QVERIFY(!SampleRegistrar::validateSampleName(root, {}, symbols, &error));
+    QVERIFY2(!error.isEmpty(), "rejected input reports a refusal");
+    QVERIFY(
+        !SampleRegistrar::validateSampleName(root, QStringLiteral("Bad Name"), symbols, &error));
+    QVERIFY2(!error.isEmpty(), "rejected input reports a refusal");
+    QVERIFY(
+        !SampleRegistrar::validateSampleName(root, QStringLiteral("existing"), symbols, &error));
+    QVERIFY2(!error.isEmpty(), "rejected input reports a refusal");
+    QVERIFY(!SampleRegistrar::validateSampleName(root, QStringLiteral("orphan"), symbols, &error));
+    QVERIFY2(!error.isEmpty(), "rejected input reports a refusal");
+}
+
+void SampleProcessingTest::projectInspect()
+{
+    const QByteArray fixture = preparedSampleWav();
+    auto error = QString{};
+    auto info = SampleWavInfo{};
+    QVERIFY(SampleRegistrar::inspectSampleWav(fixture, &info, &error));
+    QVERIFY(info.formatTag == 1 && info.channels == 1 && info.bitsPerSample == 8 &&
+            info.sampleRate == 13379 && info.numSamples == 64);
+    QVERIFY(info.hasSmpl && info.midiKey == 58 && info.pitchFraction == 0x40000000 &&
+            info.loopEnabled && info.loopStart == 8 && info.loopEndIncl == 47);
+    QVERIFY(info.agbPitch == 15000000 && info.agbLoopEnd == 64);
+    QVERIFY(info.waveFreq == 15000000 && info.waveLoopStart == 8 && info.waveSize == 64 &&
+            info.waveLooped);
+
+    QVERIFY(!SampleRegistrar::inspectSampleWav(QByteArray("not a wav"), nullptr, &error));
+    QVERIFY2(!error.isEmpty(), "rejected input reports a refusal");
+
+    auto stereo = FixtureSpec{};
+    stereo.samples = fixture.mid(44, 64);
+    stereo.channels = 2;
+    stereo.unityKey = 58;
+    stereo.pitchFraction = 0x40000000;
+    stereo.numLoops = 1;
+    stereo.loopStart = 8;
+    stereo.loopEndIncl = 47;
+    stereo.agbp = 15000000;
+    stereo.agbl = 64;
+    QVERIFY(!SampleRegistrar::inspectSampleWav(fixtureWav(stereo), nullptr, &error));
+    QVERIFY2(!error.isEmpty(), "rejected input reports a refusal");
+
+    auto twoLoops = FixtureSpec{};
+    twoLoops.samples = fixture.mid(44, 64);
+    twoLoops.numLoops = 2;
+    twoLoops.loopStart = 8;
+    twoLoops.loopEndIncl = 47;
+    QVERIFY(!SampleRegistrar::inspectSampleWav(fixtureWav(twoLoops), nullptr, &error));
+    QVERIFY2(!error.isEmpty(), "rejected input reports a refusal");
+
+    auto backward = twoLoops;
+    backward.numLoops = 1;
+    backward.loopType = 1;
+    QVERIFY(!SampleRegistrar::inspectSampleWav(fixtureWav(backward), nullptr, &error));
+    QVERIFY2(!error.isEmpty(), "rejected input reports a refusal");
+
+    auto bare = FixtureSpec{};
+    bare.samples = fixture.mid(44, 64);
+    bare.numLoops = 1;
+    bare.loopStart = 8;
+    bare.loopEndIncl = 47;
+    auto bareInfo = SampleWavInfo{};
+    QVERIFY(SampleRegistrar::inspectSampleWav(fixtureWav(bare), &bareInfo, &error));
+    QVERIFY(bareInfo.waveSize == 48 && bareInfo.waveFreq != 0 && bareInfo.agbPitch == 0);
+}
+
+void SampleProcessingTest::projectRegister()
+{
+    auto scratch = QTemporaryDir{};
+    QVERIFY2(scratch.isValid(), "project-register scratch directory is available");
+    const QString root = scratch.filePath(QStringLiteral("wavproj"));
+    QVERIFY2(createWav2AgbProject(root), "synthetic wav2agb project is created");
+
+    const QByteArray fixture = preparedSampleWav();
+    auto error = QString{};
     const QString incPath = root + QStringLiteral("/sound/direct_sound_data.inc");
-    {
-        const int before = reporter.failureCount();
-        QString error;
-        sampleRegistered =
-            SampleRegistrar::registerSample(root, registeredSampleName, fixture, &error);
-        reporter.expect(sampleRegistered, "registerSample succeeds");
-        reporter.expect(readFileBytes(root + QStringLiteral("/sound/direct_sound_samples/"
-                                                            "samplecheck_tone.wav")) == fixture,
-                        "sample .wav copied verbatim");
-        const QByteArray expectedInc =
-            QByteArray(kIncSeed) +
-            "\n"
-            "\t.align 2\n"
-            "DirectSoundWaveData_samplecheck_tone::\n"
-            "\t.incbin \"sound/direct_sound_samples/samplecheck_tone.bin\"\n";
-        reporter.expect(readFileBytes(incPath) == expectedInc,
-                        ".inc gains exactly the registration block");
+    QVERIFY(SampleRegistrar::registerSample(root, QLatin1String(kRegisteredSampleName), fixture,
+                                            &error));
+    QCOMPARE(
+        readFileBytes(root + QStringLiteral("/sound/direct_sound_samples/samplecheck_tone.wav")),
+        fixture);
+    const QByteArray expectedInc =
+        QByteArray(kIncSeed) + "\n\t.align 2\n"
+                               "DirectSoundWaveData_samplecheck_tone::\n"
+                               "\t.incbin \"sound/direct_sound_samples/samplecheck_tone.bin\"\n";
+    QCOMPARE(readFileBytes(incPath), expectedInc);
+    const QStringList registeredSymbols = VoicegroupSource::directSoundSymbols(root);
+    QVERIFY(registeredSymbols.contains(QStringLiteral("DirectSoundWaveData_samplecheck_tone")) &&
+            registeredSymbols.contains(QStringLiteral("DirectSoundWaveData_existing")));
 
-        const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
-        reporter.expect(symbols.contains(QStringLiteral("DirectSoundWaveData_samplecheck_tone")) &&
-                            symbols.contains(QStringLiteral("DirectSoundWaveData_existing")),
-                        "directSoundSymbols sees the new symbol");
+    QVERIFY(writeFile(root + QStringLiteral("/sound/voicegroups/voicegroup_samplecheck.inc"),
+                      "voicegroup_samplecheck::\n\tvoice_directsound 60, 0, "
+                      "DirectSoundWaveData_samplecheck_tone, 255, 165, 90, 178\n"));
+    const QByteArray rootUtf8 = root.toLocal8Bit();
+    auto voicegroup = std::unique_ptr<LoadedVoiceGroup, decltype(&voicegroup_free)>{
+        voicegroup_load(rootUtf8.constData(), "voicegroup_samplecheck", nullptr), voicegroup_free};
+    QVERIFY2(voicegroup, "registered sample resolves through the production voicegroup loader");
+    const ToneData &tone = voicegroup->voices[0];
+    QVERIFY(tone.type == 0 && tone.key == 60 && tone.attack == 255 && tone.decay == 165 &&
+            tone.sustain == 90 && tone.release == 178);
+    QVERIFY(tone.wav && tone.wav->freq == 15000000 && tone.wav->loopStart == 8 &&
+            tone.wav->size == 64 && tone.wav->status == 0x4000 && tone.wav->data);
+    for (int i = 0; i < 64; ++i)
+        QCOMPARE(tone.wav->data[i], qint8(i * 2 - 128));
+    QCOMPARE(QByteArray(voicegroup->voiceNames[0]), QByteArray("samplecheck_tone"));
+}
 
-        // A voicegroup referencing the symbol resolves through the C loader,
-        // .wav-first, with the WaveData header the inspector predicted.
-        writeFile(root + QStringLiteral("/sound/voicegroups/voicegroup_samplecheck.inc"),
-                  "voicegroup_samplecheck::\n"
-                  "\tvoice_directsound 60, 0, "
-                  "DirectSoundWaveData_samplecheck_tone, 255, 165, 90, 178\n");
-        const QByteArray rootUtf8 = root.toLocal8Bit();
-        LoadedVoiceGroup *vg =
-            voicegroup_load(rootUtf8.constData(), "voicegroup_samplecheck", nullptr);
-        if (!vg) {
-            std::fprintf(stderr, "samplecheck: FAIL: voicegroup_load failed\n");
-            reporter.noteFailure();
-        } else {
-            const ToneData &td = vg->voices[0];
-            reporter.expect(td.type == 0 && td.key == 60 && td.attack == 255 && td.decay == 165 &&
-                                td.sustain == 90 && td.release == 178,
-                            "loaded voice scalars");
-            reporter.expect(td.wav && td.wav->freq == 15000000 && td.wav->loopStart == 8 &&
-                                td.wav->size == 64 && td.wav->status == 0x4000,
-                            "loaded WaveData header matches the inspection");
-            bool dataOk = td.wav && td.wav->data;
-            for (int i = 0; dataOk && i < 64; i++)
-                dataOk = td.wav->data[i] == qint8(i * 2 - 128);
-            reporter.expect(dataOk, "loaded sample bytes are the u8 data minus 128");
-            reporter.expect(QByteArray(vg->voiceNames[0]) == "samplecheck_tone",
-                            "loader-derived voice name");
-            voicegroup_free(vg);
-        }
-        if (reporter.failureCount() == before)
-            std::printf("samplecheck: register + loader resolution OK\n");
-    }
+void SampleProcessingTest::projectDuplicate()
+{
+    auto scratch = QTemporaryDir{};
+    QVERIFY2(scratch.isValid(), "project-duplicate scratch directory is available");
+    const QString root = scratch.filePath(QStringLiteral("wavproj"));
+    QVERIFY2(createWav2AgbProject(root), "synthetic wav2agb project is created");
 
-    // ---- re-registration refusal leaves the .inc untouched ----
-    {
-        const int before = reporter.failureCount();
-        const QByteArray incBefore = readFileBytes(incPath);
-        QString error;
-        reporter.expect(!SampleRegistrar::registerSample(root, QStringLiteral("samplecheck_tone"),
-                                                         fixture, &error),
-                        "duplicate registration refused");
-        reporter.expectError(error,
-                             QStringLiteral("DirectSoundWaveData_samplecheck_tone "
-                                            "already exists in this project."),
-                             "duplicate-registration text");
-        reporter.expect(readFileBytes(incPath) == incBefore,
-                        "refused registration leaves the .inc byte-identical");
-        if (reporter.failureCount() == before)
-            std::printf("samplecheck: duplicate refusal OK\n");
-    }
+    const QByteArray fixture = preparedSampleWav();
+    auto error = QString{};
+    QVERIFY(SampleRegistrar::registerSample(root, QLatin1String(kRegisteredSampleName), fixture,
+                                            &error));
+    const QString incPath = root + QStringLiteral("/sound/direct_sound_data.inc");
+    const QByteArray incBeforeDuplicate = readFileBytes(incPath);
+    QVERIFY(!SampleRegistrar::registerSample(root, QLatin1String(kRegisteredSampleName), fixture,
+                                             &error));
+    QVERIFY2(!error.isEmpty(), "rejected input reports a refusal");
+    QCOMPARE(readFileBytes(incPath), incBeforeDuplicate);
+}
 
-    // ---- CRLF project: appended block matches the file's line endings ----
-    {
-        const int before = reporter.failureCount();
-        const QString crlfRoot = scratchDir + QStringLiteral("/crlfproj");
-        const QByteArray crlfSeed = "\t.align 2\r\n"
-                                    "DirectSoundWaveData_existing::\r\n"
-                                    "\t.incbin \"sound/direct_sound_samples/existing.bin\"\r\n";
-        writeFile(crlfRoot + QStringLiteral("/audio_rules.mk"), kWav2AgbRules);
-        writeFile(crlfRoot + QStringLiteral("/sound/direct_sound_data.inc"), crlfSeed);
-        QString error;
-        reporter.expect(
-            SampleRegistrar::registerSample(crlfRoot, QStringLiteral("crlf_tone"), fixture, &error),
-            "CRLF-project registration succeeds");
-        const QByteArray grown =
-            readFileBytes(crlfRoot + QStringLiteral("/sound/direct_sound_data.inc"));
-        reporter.expect(grown == crlfSeed +
-                                     QByteArray("\r\n"
-                                                "\t.align 2\r\n"
-                                                "DirectSoundWaveData_crlf_tone::\r\n"
-                                                "\t.incbin "
-                                                "\"sound/direct_sound_samples/crlf_tone.bin\"\r\n"),
-                        "CRLF block appended with CRLF endings");
-        bool crlfOk = true;
-        for (int i = 0; i < grown.size(); i++) {
-            if (grown[i] == '\n' && (i == 0 || grown[i - 1] != '\r'))
-                crlfOk = false;
-        }
-        reporter.expect(crlfOk, "no bare LF snuck into the CRLF .inc");
-        if (reporter.failureCount() == before)
-            std::printf("samplecheck: CRLF preservation OK\n");
-    }
-    if (!sampleRegistered)
-        return std::nullopt;
-    return RegisteredSampleProject{root, fixture, registeredSampleName};
+void SampleProcessingTest::projectCrlf()
+{
+    auto scratch = QTemporaryDir{};
+    QVERIFY2(scratch.isValid(), "project-crlf scratch directory is available");
+    const QString root = scratch.filePath(QStringLiteral("crlfproj"));
+    const QByteArray fixture = preparedSampleWav();
+    const QByteArray crlfSeed = "\t.align 2\r\nDirectSoundWaveData_existing::\r\n"
+                                "\t.incbin \"sound/direct_sound_samples/existing.bin\"\r\n";
+    QVERIFY(writeFile(root + QStringLiteral("/audio_rules.mk"), kWav2AgbRules));
+    QVERIFY(writeFile(root + QStringLiteral("/sound/direct_sound_data.inc"), crlfSeed));
+    auto error = QString{};
+    QVERIFY(SampleRegistrar::registerSample(root, QStringLiteral("crlf_tone"), fixture, &error));
+    const QByteArray grown = readFileBytes(root + QStringLiteral("/sound/direct_sound_data.inc"));
+    QCOMPARE(grown,
+             crlfSeed + QByteArray("\r\n\t.align 2\r\nDirectSoundWaveData_crlf_tone::\r\n"
+                                   "\t.incbin \"sound/direct_sound_samples/crlf_tone.bin\"\r\n"));
+    for (qsizetype i = 0; i < grown.size(); ++i)
+        QVERIFY(grown[i] != '\n' || (i > 0 && grown[i - 1] == '\r'));
 }
 
 } // namespace samplecheck

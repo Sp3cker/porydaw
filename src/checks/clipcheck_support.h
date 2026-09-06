@@ -3,6 +3,7 @@
 #include "ui/songview/clipmime.h"
 
 #include <cstddef>
+#include <memory>
 #include <optional>
 
 #include <QClipboard>
@@ -23,6 +24,45 @@ inline std::optional<songview::DecodedClip> checkClipboardClip()
         return std::nullopt;
     return songview::decodeClip(mimeData->data(songview::kClipMimeType));
 }
+
+// QClipboard is process-global even on the offscreen platform. Snapshot all
+// advertised formats before a test replaces it, then restore them at scope
+// exit so one Qt Test row cannot seed another row's clipboard state.
+class ClipboardStateGuard final
+{
+  public:
+    ClipboardStateGuard() : m_clipboard(QGuiApplication::clipboard())
+    {
+        if (!m_clipboard)
+            return;
+
+        m_previous = std::make_unique<QMimeData>();
+        const QMimeData *const current = m_clipboard->mimeData();
+        if (!current)
+            return;
+        for (const QString &format : current->formats())
+            m_previous->setData(format, current->data(format));
+    }
+
+    ~ClipboardStateGuard()
+    {
+        if (m_clipboard)
+            m_clipboard->setMimeData(m_previous ? m_previous.release() : new QMimeData);
+    }
+
+    ClipboardStateGuard(const ClipboardStateGuard &) = delete;
+    ClipboardStateGuard &operator=(const ClipboardStateGuard &) = delete;
+
+    void clear() const
+    {
+        if (m_clipboard)
+            m_clipboard->setMimeData(new QMimeData);
+    }
+
+  private:
+    QClipboard *m_clipboard = nullptr;
+    std::unique_ptr<QMimeData> m_previous;
+};
 
 inline bool sameClip(const songview::Clip &a, const songview::Clip &b)
 {

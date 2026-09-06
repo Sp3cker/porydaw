@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/noteid.h"
+#include "ui/songview/quick/timelinequicklayer.h"
 
 #include <QAbstractListModel>
 #include <QColor>
@@ -17,33 +18,11 @@
 #include <vector>
 
 class SongView;
+class QSGNode;
 
 namespace songview {
 
 class TimelineQuickView;
-
-struct TimelineQuickRect {
-    QRectF rect;
-    QColor topLeft;
-    QColor topRight;
-    QColor bottomRight;
-    QColor bottomLeft;
-};
-
-struct TimelineQuickTriangle {
-    QPointF first;
-    QPointF second;
-    QPointF third;
-    QColor firstColor;
-    QColor secondColor;
-    QColor thirdColor;
-};
-
-struct TimelineQuickLayerData {
-    std::vector<TimelineQuickRect> rects;
-    std::vector<TimelineQuickTriangle> triangles;
-    quint64 revision = 0;
-};
 
 enum class TimelineQuickTextKeyKind : quint8 {
     PianoNoteName,
@@ -281,35 +260,8 @@ struct TimelineQuickScene final : public QObject {
 
 namespace timeline_quick {
 
-void resetLayer(TimelineQuickScene &scene, TimelineQuickLayer layer);
-void addRect(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
-             const QColor &color, const QRectF &clip);
-void addHorizontalGradient(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
-                           const QColor &left, const QColor &right, const QRectF &clip);
-void addHorizontalLine(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x0, qreal x1,
-                       qreal y, qreal width, const QColor &color, const QRectF &clip);
-void addVerticalLine(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x, qreal y0,
-                     qreal y1, qreal width, const QColor &color, const QRectF &clip);
 void composeBandedGrid(TimelineQuickScene &scene, TimelineQuickLayer layer, const ::SongView &owner,
                        const QRectF &plot, int origin, qreal dpr);
-void addDashedVertical(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x, qreal y0,
-                       qreal y1, qreal width, qreal dash, qreal gap, const QColor &color,
-                       const QRectF &clip);
-void addDashedHorizontal(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x0, qreal x1,
-                         qreal y, qreal width, qreal dash, qreal gap, const QColor &color,
-                         const QRectF &clip);
-void addSelectionReticle(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
-                         const QRectF &clip);
-void addClippedTriangle(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPointF &first,
-                        const QPointF &second, const QPointF &third, const QColor &color,
-                        const QRectF &clip);
-void addLine(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPointF &from,
-             const QPointF &to, qreal width, const QColor &color, const QRectF &clip);
-void addEllipse(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPointF &center,
-                qreal radiusX, qreal radiusY, const QColor &color, const QRectF &clip);
-void addEllipseRing(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPointF &center,
-                    qreal radiusX, qreal radiusY, qreal width, const QColor &color,
-                    const QRectF &clip);
 
 } // namespace timeline_quick
 

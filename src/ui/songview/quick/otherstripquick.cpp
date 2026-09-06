@@ -23,9 +23,9 @@ void OtherStrip::rebuildQuickScene(TimelineQuickScene &scene)
     constexpr TimelineQuickLayer chromeLayer = TimelineQuickLayer::OtherEventsChrome;
     constexpr TimelineQuickLayer gutterChromeLayer = TimelineQuickLayer::OtherEventsGutterChrome;
     constexpr TimelineQuickLayer markersLayer = TimelineQuickLayer::OtherEventsMarkers;
-    resetLayer(scene, chromeLayer);
-    resetLayer(scene, gutterChromeLayer);
-    resetLayer(scene, markersLayer);
+    resetLayer(scene.layer(chromeLayer));
+    resetLayer(scene.layer(gutterChromeLayer));
+    resetLayer(scene.layer(markersLayer));
 
     if (!m_inputHost) {
         scene.setOtherEventsTextRecords({});
@@ -43,11 +43,11 @@ void OtherStrip::rebuildQuickScene(TimelineQuickScene &scene)
     const QRect gutterGeometry = bandGeometry->gutterRect();
     const QRectF gutter(0.0, 0.0, gutterGeometry.width(), gutterGeometry.height());
     const QColor chrome = themes::color(themes::Role::song_view_timeline_chrome_background);
-    addRect(scene, gutterChromeLayer, gutter, chrome, gutter);
-    addRect(scene, chromeLayer, full, chrome, full);
-    addRect(scene, gutterChromeLayer, QRectF(0, 0, gutter.width(), lyt::singlePixel()),
+    addRect(scene.layer(gutterChromeLayer), gutter, chrome, gutter);
+    addRect(scene.layer(chromeLayer), full, chrome, full);
+    addRect(scene.layer(gutterChromeLayer), QRectF(0, 0, gutter.width(), lyt::singlePixel()),
             themes::color(themes::Role::song_view_separator), gutter);
-    addRect(scene, chromeLayer, QRectF(0, 0, width, lyt::singlePixel()),
+    addRect(scene.layer(chromeLayer), QRectF(0, 0, width, lyt::singlePixel()),
             themes::color(themes::Role::song_view_separator), full);
 
     const QRectF area = full;
@@ -67,7 +67,7 @@ void OtherStrip::rebuildQuickScene(TimelineQuickScene &scene)
 
     const qreal tickZero = m_camera.displayX(0.0, 0.0, dpr);
     if (tickZero > area.left()) {
-        addRect(scene, chromeLayer,
+        addRect(scene.layer(chromeLayer),
                 QRectF(area.left(), area.top(), tickZero - area.left(), area.height()),
                 mixTowardOklab(chrome, detail::gridLineColor(), 0.15), area);
     }
@@ -86,8 +86,8 @@ void OtherStrip::rebuildQuickScene(TimelineQuickScene &scene)
         const QPointF top(x, markerY - m_geometry.otherEventMarkerHalfHeight);
         const QPointF right(x + m_geometry.otherEventMarkerHalfWidth, markerY);
         const QPointF bottom(x, markerY + m_geometry.otherEventMarkerHalfHeight);
-        addClippedTriangle(scene, markersLayer, left, right, top, color, area);
-        addClippedTriangle(scene, markersLayer, left, bottom, right, color, area);
+        addClippedTriangle(scene.layer(markersLayer), left, right, top, color, area);
+        addClippedTriangle(scene.layer(markersLayer), left, bottom, right, color, area);
     }
 }
 

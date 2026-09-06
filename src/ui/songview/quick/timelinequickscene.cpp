@@ -43,8 +43,7 @@ class TimelineQuickGeometryChunkNode final : public QSGGeometryNode
 class TimelineQuickLayerNode final : public QSGNode
 {
   public:
-    const TimelineQuickScene *builtScene = nullptr;
-    TimelineQuickLayer builtLayer = TimelineQuickLayer::Count;
+    const TimelineQuickLayerData *builtData = nullptr;
     quint64 builtRevision = 0;
 };
 
@@ -534,25 +533,77 @@ ClippedPolygon clipToEdge(const ClippedPolygon &input, const QRectF &clip, ClipE
 
 } // namespace
 
-void resetLayer(TimelineQuickScene &scene, TimelineQuickLayer layer)
+QSGNode *syncLayerNode(QSGNode *oldNode, const TimelineQuickLayerData *data)
 {
-    TimelineQuickLayerData &data = scene.layer(layer);
+    auto *node = static_cast<TimelineQuickLayerNode *>(oldNode);
+    if (!data) {
+        if (node) {
+            blockChunks(node->firstChild());
+            node->builtData = nullptr;
+        }
+        return node;
+    }
+    if (node && node->builtData == data && node->builtRevision == data->revision)
+        return node;
+    if (!node)
+        node = new TimelineQuickLayerNode;
+
+    QSGNode *child = node->firstChild();
+    std::size_t rect = 0;
+    std::size_t triangle = 0;
+    while (rect < data->rects.size() || triangle < data->triangles.size()) {
+        if (!child) {
+            auto *newChunk = newGeometryChunk();
+            node->appendChildNode(newChunk);
+            child = newChunk;
+        }
+        auto *chunk = static_cast<TimelineQuickGeometryChunkNode *>(child);
+        child = child->nextSibling();
+        chunk->setBlocked(false);
+
+        QSGGeometry *geometry = chunk->geometry();
+        auto *vertices = geometry->vertexDataAsColoredPoint2D();
+        auto *nextVertex = vertices;
+        int usedVertices = 0;
+        while (rect < data->rects.size() && usedVertices + 6 <= cVerticesPerChunk) {
+            writeRect(nextVertex, data->rects[rect++]);
+            usedVertices += 6;
+        }
+        while (triangle < data->triangles.size() && usedVertices + 3 <= cVerticesPerChunk) {
+            writeTriangle(nextVertex, data->triangles[triangle++]);
+            usedVertices += 3;
+        }
+        if (usedVertices < chunk->writtenVertices)
+            clearVertices(vertices, usedVertices, chunk->writtenVertices);
+        chunk->writtenVertices = usedVertices;
+        geometry->markVertexDataDirty();
+        chunk->markDirty(QSGNode::DirtyGeometry);
+    }
+    blockChunks(child);
+
+    node->builtData = data;
+    node->builtRevision = data->revision;
+    return node;
+}
+
+void resetLayer(TimelineQuickLayerData &data)
+{
     data.rects.clear();
     data.triangles.clear();
     ++data.revision;
 }
 
-void addRect(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
-             const QColor &color, const QRectF &clip)
+void addRect(TimelineQuickLayerData &data, const QRectF &rect, const QColor &color,
+             const QRectF &clip)
 {
     const QRectF clipped = rect.normalized().intersected(clip);
     if (clipped.width() <= 0.0 || clipped.height() <= 0.0)
         return;
-    scene.layer(layer).rects.push_back({clipped, color, color, color, color});
+    data.rects.push_back({clipped, color, color, color, color});
 }
 
-void addHorizontalGradient(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
-                           const QColor &left, const QColor &right, const QRectF &clip)
+void addHorizontalGradient(TimelineQuickLayerData &data, const QRectF &rect, const QColor &left,
+                           const QColor &right, const QRectF &clip)
 {
     const QRectF source = rect.normalized();
     const QRectF clipped = source.intersected(clip.normalized());
@@ -570,20 +621,19 @@ void addHorizontalGradient(TimelineQuickScene &scene, TimelineQuickLayer layer, 
     };
     const QColor clippedLeft = mix(left, right, interpolationAt(clipped.left()));
     const QColor clippedRight = mix(left, right, interpolationAt(clipped.right()));
-    scene.layer(layer).rects.push_back(
-        {clipped, clippedLeft, clippedRight, clippedRight, clippedLeft});
+    data.rects.push_back({clipped, clippedLeft, clippedRight, clippedRight, clippedLeft});
 }
 
-void addHorizontalLine(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x0, qreal x1,
-                       qreal y, qreal width, const QColor &color, const QRectF &clip)
+void addHorizontalLine(TimelineQuickLayerData &data, qreal x0, qreal x1, qreal y, qreal width,
+                       const QColor &color, const QRectF &clip)
 {
-    addRect(scene, layer, QRectF(x0, y - width / 2.0, x1 - x0, width), color, clip);
+    addRect(data, QRectF(x0, y - width / 2.0, x1 - x0, width), color, clip);
 }
 
-void addVerticalLine(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x, qreal y0,
-                     qreal y1, qreal width, const QColor &color, const QRectF &clip)
+void addVerticalLine(TimelineQuickLayerData &data, qreal x, qreal y0, qreal y1, qreal width,
+                     const QColor &color, const QRectF &clip)
 {
-    addRect(scene, layer, QRectF(x - width / 2.0, y0, width, y1 - y0), color, clip);
+    addRect(data, QRectF(x - width / 2.0, y0, width, y1 - y0), color, clip);
 }
 
 void composeBandedGrid(TimelineQuickScene &scene, TimelineQuickLayer layer, const ::SongView &owner,
@@ -607,7 +657,7 @@ void composeBandedGrid(TimelineQuickScene &scene, TimelineQuickLayer layer, cons
     detail::forEachSubGridLine(
         grid, camera, range, detailMinimumPixelsPerBeat, [&](uint64_t tick, int level) {
             const qreal x = camera.displayX(double(tick), origin, dpr);
-            addVerticalLine(scene, layer, x, plot.top(), plot.bottom(), gridWidth,
+            addVerticalLine(scene.layer(layer), x, plot.top(), plot.bottom(), gridWidth,
                             gridColors[std::size_t(level - 1)], plot);
         });
     const bool drawBeats = camera.pxPerBeat() >= detailMinimumPixelsPerBeat;
@@ -617,14 +667,13 @@ void composeBandedGrid(TimelineQuickScene &scene, TimelineQuickLayer layer, cons
         const bool finest = owner.document() && grid.gridTicksAt(tick) == grid.fineGridTicks();
         const std::size_t color = isBar ? 5u : finest ? 4u : 3u;
         const qreal x = camera.displayX(double(tick), origin, dpr);
-        addVerticalLine(scene, layer, x, plot.top(), plot.bottom(), gridWidth, gridColors[color],
-                        plot);
+        addVerticalLine(scene.layer(layer), x, plot.top(), plot.bottom(), gridWidth,
+                        gridColors[color], plot);
     });
 }
 
-void addDashedVertical(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x, qreal y0,
-                       qreal y1, qreal width, qreal dash, qreal gap, const QColor &color,
-                       const QRectF &clip)
+void addDashedVertical(TimelineQuickLayerData &data, qreal x, qreal y0, qreal y1, qreal width,
+                       qreal dash, qreal gap, const QColor &color, const QRectF &clip)
 {
     if (x + width / 2.0 <= clip.left() || x - width / 2.0 >= clip.right())
         return;
@@ -633,12 +682,11 @@ void addDashedVertical(TimelineQuickScene &scene, TimelineQuickLayer layer, qrea
     const qreal first = y0 + std::max<qreal>(0.0, std::floor((clip.top() - y0) / period)) * period;
     const qreal end = std::min(y1, clip.bottom());
     for (qreal y = first; y < end; y += period)
-        addVerticalLine(scene, layer, x, y, (std::min)(y + dash, y1), width, color, clip);
+        addVerticalLine(data, x, y, (std::min)(y + dash, y1), width, color, clip);
 }
 
-void addDashedHorizontal(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal x0, qreal x1,
-                         qreal y, qreal width, qreal dash, qreal gap, const QColor &color,
-                         const QRectF &clip)
+void addDashedHorizontal(TimelineQuickLayerData &data, qreal x0, qreal x1, qreal y, qreal width,
+                         qreal dash, qreal gap, const QColor &color, const QRectF &clip)
 {
     if (y + width / 2.0 <= clip.top() || y - width / 2.0 >= clip.bottom())
         return;
@@ -646,35 +694,30 @@ void addDashedHorizontal(TimelineQuickScene &scene, TimelineQuickLayer layer, qr
     const qreal first = x0 + std::max<qreal>(0.0, std::floor((clip.left() - x0) / period)) * period;
     const qreal end = std::min(x1, clip.right());
     for (qreal x = first; x < end; x += period)
-        addHorizontalLine(scene, layer, x, std::min(x + dash, x1), y, width, color, clip);
+        addHorizontalLine(data, x, std::min(x + dash, x1), y, width, color, clip);
 }
 
-void addSelectionReticle(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
-                         const QRectF &clip)
+void addSelectionReticle(TimelineQuickLayerData &data, const QRectF &rect, const QRectF &clip)
 {
     QColor fill = themes::color(themes::Role::song_view_selection_fill);
     fill.setAlpha(kSelectionFillAlpha);
-    addRect(scene, layer, rect, fill, clip);
+    addRect(data, rect, fill, clip);
     const QColor edge = themes::color(themes::Role::song_view_selection_edge);
     const qreal width = ::layout::singlePixel();
     const qreal dash = kSelectionDashMultiplier * width;
     const qreal gap = kSelectionGapMultiplier * width;
-    addDashedHorizontal(scene, layer, rect.left(), rect.right(), rect.top(), width, dash, gap, edge,
+    addDashedHorizontal(data, rect.left(), rect.right(), rect.top(), width, dash, gap, edge, clip);
+    addDashedHorizontal(data, rect.left(), rect.right(), rect.bottom(), width, dash, gap, edge,
                         clip);
-    addDashedHorizontal(scene, layer, rect.left(), rect.right(), rect.bottom(), width, dash, gap,
-                        edge, clip);
-    addDashedVertical(scene, layer, rect.left(), rect.top(), rect.bottom(), width, dash, gap, edge,
-                      clip);
-    addDashedVertical(scene, layer, rect.right(), rect.top(), rect.bottom(), width, dash, gap, edge,
-                      clip);
+    addDashedVertical(data, rect.left(), rect.top(), rect.bottom(), width, dash, gap, edge, clip);
+    addDashedVertical(data, rect.right(), rect.top(), rect.bottom(), width, dash, gap, edge, clip);
 }
 
-void addClippedTriangle(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPointF &first,
-                        const QPointF &second, const QPointF &third, const QColor &color,
-                        const QRectF &clip)
+void addClippedTriangle(TimelineQuickLayerData &data, const QPointF &first, const QPointF &second,
+                        const QPointF &third, const QColor &color, const QRectF &clip)
 {
     if (clip.contains(first) && clip.contains(second) && clip.contains(third)) {
-        scene.layer(layer).triangles.push_back({first, second, third, color, color, color});
+        data.triangles.push_back({first, second, third, color, color, color});
         return;
     }
     ClippedPolygon polygon{{first, second, third}, 3};
@@ -682,7 +725,6 @@ void addClippedTriangle(TimelineQuickScene &scene, TimelineQuickLayer layer, con
     polygon = clipToEdge(polygon, clip, ClipEdge::Right);
     polygon = clipToEdge(polygon, clip, ClipEdge::Top);
     polygon = clipToEdge(polygon, clip, ClipEdge::Bottom);
-    TimelineQuickLayerData &data = scene.layer(layer);
     for (int index = 1; index + 1 < polygon.size; ++index) {
         data.triangles.push_back(
             {polygon.points[0], polygon.points[static_cast<std::size_t>(index)],
@@ -690,20 +732,20 @@ void addClippedTriangle(TimelineQuickScene &scene, TimelineQuickLayer layer, con
     }
 }
 
-void addLine(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPointF &from,
-             const QPointF &to, qreal width, const QColor &color, const QRectF &clip)
+void addLine(TimelineQuickLayerData &data, const QPointF &from, const QPointF &to, qreal width,
+             const QColor &color, const QRectF &clip)
 {
     const QPointF delta = to - from;
     const qreal length = std::hypot(delta.x(), delta.y());
     if (length == 0.0)
         return;
     const QPointF normal(-delta.y() * width / (2.0 * length), delta.x() * width / (2.0 * length));
-    addClippedTriangle(scene, layer, from + normal, to + normal, to - normal, color, clip);
-    addClippedTriangle(scene, layer, from + normal, to - normal, from - normal, color, clip);
+    addClippedTriangle(data, from + normal, to + normal, to - normal, color, clip);
+    addClippedTriangle(data, from + normal, to - normal, from - normal, color, clip);
 }
 
-void addEllipse(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPointF &center,
-                qreal radiusX, qreal radiusY, const QColor &color, const QRectF &clip)
+void addEllipse(TimelineQuickLayerData &data, const QPointF &center, qreal radiusX, qreal radiusY,
+                const QColor &color, const QRectF &clip)
 {
     if (!QRectF(center.x() - radiusX, center.y() - radiusY, 2.0 * radiusX, 2.0 * radiusY)
              .intersects(clip))
@@ -716,13 +758,12 @@ void addEllipse(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPoin
                             center.y() + radiusY * firstUnit.y());
         const QPointF second(center.x() + radiusX * secondUnit.x(),
                              center.y() + radiusY * secondUnit.y());
-        addClippedTriangle(scene, layer, center, first, second, color, clip);
+        addClippedTriangle(data, center, first, second, color, clip);
     }
 }
 
-void addEllipseRing(TimelineQuickScene &scene, TimelineQuickLayer layer, const QPointF &center,
-                    qreal radiusX, qreal radiusY, qreal width, const QColor &color,
-                    const QRectF &clip)
+void addEllipseRing(TimelineQuickLayerData &data, const QPointF &center, qreal radiusX,
+                    qreal radiusY, qreal width, const QColor &color, const QRectF &clip)
 {
     const qreal outerX = radiusX + width / 2.0;
     const qreal outerY = radiusY + width / 2.0;
@@ -743,8 +784,8 @@ void addEllipseRing(TimelineQuickScene &scene, TimelineQuickLayer layer, const Q
                                  center.y() + innerY * firstUnit.y());
         const QPointF innerSecond(center.x() + innerX * secondUnit.x(),
                                   center.y() + innerY * secondUnit.y());
-        addClippedTriangle(scene, layer, outerFirst, outerSecond, innerSecond, color, clip);
-        addClippedTriangle(scene, layer, outerFirst, innerSecond, innerFirst, color, clip);
+        addClippedTriangle(data, outerFirst, outerSecond, innerSecond, color, clip);
+        addClippedTriangle(data, outerFirst, innerSecond, innerFirst, color, clip);
     }
 }
 
@@ -831,60 +872,7 @@ void TimelineQuickItem::setScene(TimelineQuickScene *scene)
 QSGNode *TimelineQuickItem::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
 {
     const TimelineQuickScene *scene = m_scene;
-    const TimelineQuickLayer layerIndex = m_layer;
-    const TimelineQuickLayerData *layer = scene ? &scene->layer(layerIndex) : nullptr;
-    auto *node = static_cast<TimelineQuickLayerNode *>(oldNode);
-    if (!layer) {
-        if (node) {
-            blockChunks(node->firstChild());
-            node->builtScene = nullptr;
-        }
-        return node;
-    }
-    if (node && node->builtScene == scene && node->builtRevision == layer->revision &&
-        node->builtLayer == layerIndex) {
-        return node;
-    }
-    if (!node)
-        node = new TimelineQuickLayerNode;
-
-    QSGNode *child = node->firstChild();
-    std::size_t rect = 0;
-    std::size_t triangle = 0;
-    while (rect < layer->rects.size() || triangle < layer->triangles.size()) {
-        if (!child) {
-            auto *newChunk = newGeometryChunk();
-            node->appendChildNode(newChunk);
-            child = newChunk;
-        }
-        auto *chunk = static_cast<TimelineQuickGeometryChunkNode *>(child);
-        child = child->nextSibling();
-        chunk->setBlocked(false);
-
-        QSGGeometry *geometry = chunk->geometry();
-        auto *vertices = geometry->vertexDataAsColoredPoint2D();
-        auto *nextVertex = vertices;
-        int usedVertices = 0;
-        while (rect < layer->rects.size() && usedVertices + 6 <= cVerticesPerChunk) {
-            writeRect(nextVertex, layer->rects[rect++]);
-            usedVertices += 6;
-        }
-        while (triangle < layer->triangles.size() && usedVertices + 3 <= cVerticesPerChunk) {
-            writeTriangle(nextVertex, layer->triangles[triangle++]);
-            usedVertices += 3;
-        }
-        if (usedVertices < chunk->writtenVertices)
-            clearVertices(vertices, usedVertices, chunk->writtenVertices);
-        chunk->writtenVertices = usedVertices;
-        geometry->markVertexDataDirty();
-        chunk->markDirty(QSGNode::DirtyGeometry);
-    }
-    blockChunks(child);
-
-    node->builtScene = scene;
-    node->builtLayer = layerIndex;
-    node->builtRevision = layer->revision;
-    return node;
+    return timeline_quick::syncLayerNode(oldNode, scene ? &scene->layer(m_layer) : nullptr);
 }
 
 } // namespace songview

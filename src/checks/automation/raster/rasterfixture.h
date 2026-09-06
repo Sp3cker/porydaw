@@ -50,6 +50,13 @@ class AutomationRasterFixture final
     SongDocument &document() noexcept;
     SongView &view() noexcept;
     const SongView &view() const noexcept;
+    void configurePainting();
+    void configureInteraction();
+    void shutdown();
+
+    void setAutomationDpr(qreal dpr) noexcept;
+    qreal nativeAutomationDpr() const noexcept;
+
     AutomationPage &page() noexcept;
     const AutomationPage &page() const noexcept;
     AutomationCanvas &canvas() noexcept;
@@ -105,4 +112,5 @@ class AutomationRasterFixture final
     songview::TimelineInputItem *m_automationGutterInput = nullptr;
     songview::TimelineInputItem *m_voiceInput = nullptr;
     songview::TimelineQuickScene *m_quickScene = nullptr;
+    bool m_shutdown = false;
 };

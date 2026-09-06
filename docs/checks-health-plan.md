@@ -15,66 +15,100 @@ boundaries; prefer one feature directory with a small public surface
 
 ---
 
-## 1. Test Suite Architecture & Concurrency Reality
+## 1. Current Test Architecture & Safety Boundary
 
-### The Real Scale & Coupling
-- **Scale:** ~61,700 LOC of check code across ~131 files and 60+ check targets vs ~73,000 LOC
-  of production code (near 1:1 ratio).
-- **White-box coupling:** 51 check files include `ui/songview.h`; 289 call sites fish for
-  private widgets via `findChild("...")`; 27 files re-derive canvas projection math via
-  `layout::fontPx` rather than asserting domain/model state (`SongDocument`, `SmfEvent`).
-- **Production class pollution:** Production `MainWindow` (`src/mainwindow.h`) declares 6
-  check-runner methods on its interface, placing ~1,020L of check bodies directly inside the
-  production class.
+### Current partition
+`src/checks/checkcatalog.cpp` is the single catalog of 84 checks:
 
-### Concurrency & Isolation Model
-`tools/run_checks.ts` executes checks as independent OS processes orchestrated via a JSON
-manifest (`porydaw_checks --manifest`):
-1. **Manifest-Driven Partitioning:**
-   - `Windowing::Offscreen` (62 checks after the 2026-09-05 scrollbar cutover;
-     68 catalog rows total):
-     Render headlessly (`QT_QPA_PLATFORM=offscreen`).
-     Executed in a parallel LPT pool pinned to 6 workers by empirical benchmark on Apple Silicon
-     (7+ workers cause thread/cache contention on CPU-saturating checks).
-   - `Windowing::WindowSystem` (6 checks after the 2026-09-05 scrollbar cutover:
-     `rollcheck`, `trackheaderquickcheck`, `rollwindowingcheck`,
-     `timelinepancheck`, `automation-raster`, `rendering-playhead`):
-     Require native Cocoa windows and native event dispatch. Serialized with worker count 1
-     to prevent Cocoa window-activation and focus-stealing races.
-   - Observed offscreen rendering boundary (2026-09-05): `QOffscreenIntegration`
-     rejects `RhiBasedRendering`, so Qt Quick loads its **software** scene-graph
-     adaptation, and that adaptation skips arbitrary custom `QSGGeometryNode`
-     subclasses (primary Qt sources and the evidence register:
-     `docs/automation-qt-test-migration-plan.md` §4.7/§9). Offscreen proves
-     CPU retained-composition, document/undo, input, and domain contracts;
-     raster evidence for custom geometry (porydaw's timeline paint layers are
-     custom geometry nodes) stays `Windowing::WindowSystem`.
-     Offscreen also demonstrably runs the modal `QMenu`/`QInputDialog` driver
-     (the former `automation-popup-menus` row passed there, driving the exact
-     queued-menu → modal-dialog flow) and the injected
-     deactivation/playhead seams — ledger §9 closes both as not-native
-     (injected routes only; no OS focus/timer equivalence claimed). The
-     raster residual is registered as the `automation-raster`
-     `Windowing::WindowSystem` row — compiled and source-reviewed,
-     deliberately not executed natively (skipped by `--no-windowing-checks`).
-2. **QSettings Sandboxing:**
-   - `src/checks/checkregistry.cpp:139-144` redirects settings per-process via
-     `QSettings::setPath(IniFormat, UserScope, tmpdir)` and `setDefaultFormat(IniFormat)` before
-     every `StartupKind::Porydaw` check. Preferences do not leak or race across processes.
-3. **Immediate Runner Concurrency Optimization:**
-   - Today the runner drains the offscreen pool completely before starting the window-system
-     worker. Because offscreen checks never create native Cocoa windows, **the single
-     window-system worker can overlap concurrently alongside the offscreen pool from $t=0$**.
-     This cuts total suite makespan at zero risk of focus-theft flakiness.
+- **75 safe-lane rows:** 74 `Framework::QtTest` suites under
+  `Windowing::Offscreen`, plus the `production-startup` `Framework::Process`
+  smoke (`--version`).
+- **9 native-only Qt Test suites:** `rollcheck`, `trackheaderquickcheck`,
+  `rollwindowingcheck`, `timelinepan-native`, `rollcheck-static`,
+  `automation-raster`, `mainwindow-routing-native`, `rendering-playhead`, and
+  `pitch-bend-raster`, all `Windowing::WindowSystem`.
+
+The authoritative safe command is `deno task verify --no-windowing-checks`.
+It exercises the complete offscreen/process partition and intentionally skips
+the nine native-only rows. The native boundary is evidence, not a missing
+migration: offscreen Qt Quick uses a software scene-graph path that cannot
+establish raster equivalence for porydaw's custom `QSGGeometryNode` timeline
+layers. Offscreen nevertheless covers retained composition, document/undo,
+input, modal menu/dialog routing, and the injected deactivation/playhead
+seams; native rows retain only the window-system/raster contracts.
+
+### Runner and fixture contract
+
+- `Framework` is exactly `QtTest` or `Process`; the legacy assertion framework
+  and its `check(...)`/`fail(...)` harness are removed.
+- Every in-process catalog runner accepts `const QStringList &qtArguments` and
+  passes the terminal payload after `--qt` to one `QTest::qExec`. Public Qt
+  arguments remain verbatim: `--filter` selects the catalog row, while `--qt`
+  addresses that selected suite.
+- Catalog fixture declarations own scratch and source material. Project-backed
+  Qt suites create fresh fixtures in their lifecycle hooks; isolation evidence
+  is suite isolation and the explicitly exercised reversed selector/data order,
+  not a claim that every data row receives a separate process.
+- The offscreen pool remains bounded to six workers; native checks remain
+  serialized to avoid Cocoa activation/focus races. `QSettings` is redirected
+  to each runner's temporary path before Porydaw startup.
+
+### Historical audit, not current measurement
+The LOC, white-box-coupling, and `MainWindow` member counts in the original
+2026-09 planning audit were useful prioritization evidence, but are **not**
+fresh measurements of this tree. The remaining historical receipts below are
+preserved as dated observations; current guidance is this section and the
+completed record in §2.
 
 ---
 
-## 2. Verdict & Planned Steps
+## 2. Completed Migration Record & Current Ownership
 
-One removal (done), one structural extraction (next), one completion follow-up, and one split.
-Everything else stays separate.
+The migration is complete. The catalog, runner, and source are frozen after
+the final safe and sanitizer gates. `src/mainwindow.h` has no `run*Check`
+member declarations: host and routing coverage now lives in
+`src/checks/host/` and `src/checks/mainwindowrouting/`, with their local
+fixtures and focused Qt suites.
 
-### Rejected merges (keep separate)
+The former proposed workspace split is also complete, but not in the proposed
+`editorviewstatecheck.cpp` shape. `src/checks/workspace/` owns the actual
+workspace seam: `fixture.*`, `tst_workspacesessions.*`, `session.cpp`,
+`tabs_lifecycle.cpp`, `tabs_persistence.cpp`, `tabs_scale.cpp`,
+`tabs_transport.cpp`, and the three `selftest_*.cpp` suites. This is the
+current home for workspace/session, persistence, scale, transport, and
+self-test behavior.
+
+Useful ownership boundaries in the current catalog are:
+
+- `workspace/`, `host/`, and `mainwindowrouting/`: production startup,
+  sessions/tabs, host wiring, and routing lifecycle.
+- `project/`, `midi/`, `editcheck/`, `eventviews/`, `playback/`, `audio/`,
+  `keyboard/`, `polyphony/`, and `clipboard/`: domain, persistence, codec,
+  playback, DSP, and selection contracts.
+- `velocity/`, `automation/`, `scrollbar/`, `drawerpresentation/`,
+  `trackheaders/`, `timelinepan/`, `pitchbend/`, and `nativegraphics/`:
+  editor interaction/presentation; their native residuals are catalogued
+  explicitly rather than hidden in offscreen suites.
+
+Production repairs found by the migration are retained: Stop holds output at
+zero until the driver/frontend queues drain, then resets its resonance
+suppressor and discards the already-filtered chunk remainder before fade-up.
+Velocity refresh preserves the previous axis while its input host remains
+attached, so the canonical rebuild detects and publishes the PSG-to-DirectSound
+context transition instead of hiding it behind an early axis reset.
+
+Final verification record: the safe gate passed **75/84**, with nine native
+rows intentionally skipped and zero failures. The 74 Qt offscreen suites were
+also exercised as 824 listed slots and 1,632 case/data rows in ordinary and
+exact reversed selector/data order; `samplecheck` alone reported its documented
+optional-corpus skip when no corpus was supplied. Three production negative
+controls were detected and restored: popup reset commit, premature
+all-sound-off audio cut, and SMF VLQ continuation. Combined ASan+UBSan
+full-safe verification passed; LeakSanitizer is disabled on macOS. The normal
+full-safe gate passed again after sanitizer flags and the original
+`CMakeCache.txt` were restored.
+
+### Historical decisions and receipts (superseded as guidance)
 
 - **selection + lane selection.** `selectioncheck.cpp` (475L, pure
   `songview/editorselectionmodel.h`, zero widgets) vs `laneselectioncheck.cpp` (245L,
@@ -114,75 +148,27 @@ Everything else stays separate.
 
 ---
 
-### Approved Changes
+### Completed roadmap
 
-#### Step 1: DONE — remove `selftest-voicegroup` (commit `739f6ba`)
-`src/checks/selftest/voicegroup.cpp` (185L) fully subsumed by `vgsavecheck` (1821L).
-Removed: file, enum, descriptors, CMake entry, catalog entry, wall estimate. Verified clean.
+1. `selftest-voicegroup` was removed when `vgsavecheck` subsumed its coverage
+   (commit `739f6ba`).
+2. The `MainWindow` test-member extraction and host/routing modularization are
+   complete. The old `hostcheck.cpp` and `mainwindowroutingcheck.cpp` plan is
+   superseded by `src/checks/host/` and `src/checks/mainwindowrouting/`.
+3. The workspace/self-test split is complete in `src/checks/workspace/`; no
+   proposed `editorviewstatecheck` file exists or is required.
+4. Qt Test migration is complete for the domain and algorithm suites, including
+   scale, SMF, keymap, and project identity. New checks follow the current
+   catalog/Qt Test contract rather than introducing a legacy default or adapter.
 
-#### Step 2: NEXT — Extract MainWindow Check Members & Modularize Host Family (`src/checks/hostcheck/`)
-- **Primary goal:** Extract `MainWindow::runMainWindowRoutingCheck` (`mainwindow.h:78-79`) and
-  `MainWindow::runPolyGateCheck` (`:98`) out of the production class.
-- Converts both into free functions owning a local `MainWindow` and accessing privates via
-  focused `friend` declarations (matching the existing `runHostIntegrationCheck` pattern).
-- Modularizes `hostcheck.cpp` (1955L) + `mainwindowroutingcheck.cpp` (2215L) into
-  `src/checks/hostcheck/` across 4 catalog rows (`host-seams`, `host-adapter`,
-  `mainwindow-routing`, `host-integration`) with shared rigs (`host_quick_rig`,
-  `host_workspace_rig`).
-- **Diff safety:** Code bodies are moved *verbatim* at statement boundaries with pruned includes;
-  no assertion rewriting in the same pass as relocation.
+**Host-choice rule:** choose the host for the asserted contract, not suite
+size. Gesture transactions that require document→timeline rebuilding, undo, and
+commit signals use a production `SongTab`; static presentation checks use
+`checks/support/editorrig.h`; GUI-free domain invariants use no UI host.
 
-#### Step 2.5: FOLLOW-UP — Complete MainWindow Member Extraction
-Step 2 cures 2 of the 6 `MainWindow` check members. To complete the architectural decoupling,
-a follow-up pass converts the remaining 4 members into free functions with focused friendship:
-- `MainWindow::runTabCheck` (`mainwindow.h:70`, defined in `tabcheck.cpp:54`)
-- `MainWindow::runVgSaveCheck` (`mainwindow.h:64`, defined in `vgsavecheck.cpp:97`)
-- `MainWindow::runRegisterActionCheck` (`mainwindow.h:85`, defined in `onboardcheck.cpp:224`)
-- `MainWindow::runDeleteActionCheck` (`mainwindow.h:92`, defined in `onboardcheck.cpp:382`)
-**Acceptance:** `src/mainwindow.h` contains zero `run*Check` member function declarations.
-
-#### Step 3: LATER — Split `selftest/workspace.cpp` into Headless Codec & UI Smoke
-- ~300L pure `EditorViewState` QSettings/JSON codec extracted to headless
-  `src/checks/editorviewstatecheck.cpp` using an isolated `QTemporaryDir`.
-- Retains the existing check assertion idiom (`check(...)` / `fail(...)`) to maintain
-  clean integration with `tools/run_checks.ts` and the shared fixture header.
-- MainWindow-coupled smoke stays in `workspace.cpp`; timer assertions move to `tabcheck.cpp`.
-
-#### Step 4: FUTURE ROADMAP — Check Quality & Idiomatic Qt Testing
-
-**Host-choice rule (recorded 2026-09):** pick the host by what a check asserts,
-not by suite size. *Transaction* coverage — gestures that must drive real
-document→timeline rebuilding, undo entries, and commit signals — runs on a
-production `SongTab`; `checks/support/editorrig.h` hosts *static presentation*
-checks (assembled widget stacks, chrome, geometry without gestures); GUI-free
-domain tests (codecs, model math, `SongDocument`/`SmfEvent` invariants) need no
-host. EditorRig is no longer mandated for velocity/automation transaction
-suites; the host-extraction roadmap (Steps 2/2.5/3) is unaffected. Recorded
-`SongTab` Qt Test suites, both `Framework::QtTest` + `Windowing::Offscreen`:
-
-- `velocity-editing` (`src/checks/velocity/`): the migrated
-  `rollcheckpsgvelocity` editing interactions (full record:
-  `docs/velocity-qt-test-migration-plan.md`; the trimmed legacy file keeps only
-  rendering/chrome/grid/axis/playhead helpers).
-- `automation-editing` (`src/checks/automation/`, argv `--automation-editing`):
-  exactly three behaviors, delivered through the real `timelineAutomationInput`
-  item over a real CC lane. (1) A left-button drag commits exactly once —
-  one document transaction, one undo entry, undo/redo symmetric, reacquired
-  timeline updated. (2) Escape cancels the armed drag; later move/release
-  commits nothing. (3) A stationary press/release on **blank** lane space is
-  the only no-op — cursor placement (`editCursorTick`) with zero document
-  transactions, because a stationary click on an existing node intentionally
-  deletes it. Positive previews are observed via the public retained
-  `AutomationTransient` scene triangles, not pixel capture. No universal
-  fixture and no wheel/chord coverage; the legacy `automationgesturecheck/` and
-  `rollcheckautomation*` rows were unchanged at pilot time.
-
-  (Pilot scope as recorded; the suite now carries the full migration ledger —
-  every `automationgesturecheck/` and `rollcheckautomation*` contract row in
-  `docs/automation-qt-test-migration-plan.md` — through the shared
-  `AutomationFixture` header. The legacy files and catalog rows were removed
-  in the 2026-09-05 cutover batch; gate and receipt detail lives in the
-  ledger.)
+### Dated automation and scrollbar receipts
+The following 2026-09-05 receipts are historical migration evidence. Their
+61/66 and 62/68 gates are intermediate catalog sizes, not current results.
 
 Three further automation-family Qt Test runners are registered, all
 `Framework::QtTest` + `Windowing::Offscreen`: `automation-domain` (GUI-free),
@@ -195,10 +181,10 @@ offscreen run split 6 passed / 19 failed exactly along the offscreen
 software-backend boundary — custom-geometry pixel oracles are the
 retained-native residual (ledger §4.7/§9). What followed, all observed
 2026-09-05: the shared-fixture root fixes and the double-click production
-guard repair (ledger §6.4 note); the full safe automation gate; the per-row
-isolation run — 182/182 rows PASS individually (editing 131 / domain 24 /
-presentation 16 / hover 11), all four suites PASS with reversed data-row
-order (133/26/18/13 Qt results), and two targeted production mutation
+guard repair (ledger §6.4 note); the full safe automation gate; every one of
+the 182 rows passing when individually selected (editing 131 / domain 24 /
+presentation 16 / hover 11), followed by all four suites passing with reversed
+data-row order (133/26/18/13 Qt results); and two targeted production mutation
 controls failed the expected slots and passed after restore; and the cutover
 batch, which removed all 22 legacy automation files plus the three legacy
 catalog rows and registered ONE `automation-raster` `Windowing::WindowSystem`
@@ -251,223 +237,45 @@ now targets the drawer thumb with QTRY waits on its QML `maximum`/`height`
 bindings), and the horizontal paging rows failed the
 `span > page + kWheelMargin` fixture guard (the slot doubles `pxPerBeat`
 locally and QTRY-synchronizes the QML scrollbar bindings); the follow-up full
-offscreen run passed all 40 rows. Isolation and controls: all 40 rows pass as
-40 independent single-row invocations (exact Qt XML per row) and in exact
-reversed row order; negative control removing `TouchPad` from both QML wheel
-handlers failed exactly the `horizontal-touchpad`/`vertical-touchpad` rows and
+offscreen run passed all 40 rows. Isolation and controls: all 40 rows passed
+when individually selected and in exact reversed row order; negative control
+removing `TouchPad` from both QML wheel handlers failed exactly the
+`horizontal-touchpad`/`vertical-touchpad` rows and
 `dragBaseTranslation = 0` failed exactly `dragRebasesAfterZoom`/
 `dragRebasesAfterResize`, both restored and passing; `TimelineScrollbar.qml`
 is byte-identical before/after (SHA-256
 `0c5a2232dc38228e035000808664dea2cccea7701bb7239fa40966b3245e59f2`). Final
 gate: `deno task verify --no-windowing-checks --verbose` 62/68 ok, 6 native
-skips, 0 fail (build 2.14s, suite 4.13s). `timelinepancheck` stays native
-outside this cutover's scope.
+skips, 0 fail (build 2.14s, suite 4.13s). At that historical cutover point,
+`timelinepancheck` remained native and was outside its scope.
 
-1. **Canonical Assembly:** Host *static presentation* checks on
-   `checks/support/editorrig.h` instead of hand-assembling widget stacks and
-   fishing for QML items via `findChild`. Transaction coverage follows the
-   host-choice rule above (production-`SongTab` Qt suites, not EditorRig).
-   Native automation pixel checks are isolated in `automation-raster`;
-   `rollcheckpsgvelocity` retains only rendering/chrome/grid/axis/playhead
-   helpers after its completed trim.
-2. **Domain-Level Assertions:** Replace pixel-offset checks (`layout::fontPx`) with model
-   invariants (`SongDocument`, `SmfEvent`, `QUndoStack`).
-3. **Idiomatic Qt Testing (`Qt6::Test`):** the framework convention is established and
-   reusable, proven by the `velocity-editing` and `automation-editing` suites:
-   - `CheckDefinition::framework` (`Framework::Legacy`/`QtTest`), serialized as
-     `"framework": "legacy"|"qt-test"` in the manifest; `tools/run_checks.ts` requires
-     the field like any other manifest invariant.
-   - `Qt6::Test` linked PRIVATE to `porydaw_checks` only, inside
-     `PORYDAW_BUILD_CHECKS`; app target untouched.
-   - `--qt` terminal marker in both `tools/cli.ts` and `tools/run_checks.ts` forwards
-     everything after it verbatim to the one selected qt-test harness (`--filter`
-     selects, `--qt` forwards; unknown Qt case names fail non-zero natively).
-   - Explicit `--qt` runs print the complete raw Qt output; failure output is never
-     line-capped for any check.
-   - Still open: pilot `QTest` on newly added headless domain logic and pure
-     algorithms (`porydaw_scale`, `DecompProject`, `keymap::Registry`). The retired
-     "reporter adapter" idea is superseded by the raw-output policy above.
+### Current Qt Test guidance
 
----
+Use canonical production fixtures for transaction coverage, `EditorRig` for
+static presentation, and model/domain assertions where no UI contract is under
+test. Prefer document, undo, and retained-scene contracts over pixel offsets;
+keep pixel/raster assertions only in the explicit native residual rows.
 
-## 3. Step 2 Mechanical Spec — Host Merge & Extraction (Sonic-Ready)
+`Qt6::Test` is linked only into `porydaw_checks` under
+`PORYDAW_BUILD_CHECKS`; the application target remains independent. The
+manifest emits `"qt-test"` or `"process"` only. Explicit `--qt` invocations
+retain complete raw Qt output, including failures.
 
-Target: `src/checks/hostcheck.cpp` (1955L) + `src/checks/mainwindowroutingcheck.cpp`
-(2215L) → `src/checks/hostcheck/`. No signature changes: `fwd.hpp` and
-`checkcatalog.cpp` stay byte-identical (same 4 `run*` names/args). `mainwindow.h`
-gains two friend decls (B1/B2 below) and loses two member decls. Orchestrator owns
-the `CMakeLists.txt` edit inline after both units land: remove the 2 old `.cpp`
-entries, add 6 new implementation files (+ their headers per project convention).
+The deleted `rollcheckpsgvelocity` and legacy automation files are not current
+extension points. Velocity editing belongs in `src/checks/velocity/`;
+automation coverage belongs in `src/checks/automation/`; velocity-page
+presentation is in `src/checks/drawerpresentation/velocity.cpp`.
 
-### Unit 2A — split `hostcheck.cpp` (files: hostcheck.cpp)
+### Earlier pilot receipt (historical)
 
-- New `hostcheck/hostcheck.h`: public interface only — copy these 4 decls BY SYMBOL
-  NAME from `fwd.hpp` (`runHostSeamsCheck`, `runHostAdapterCheck`,
-  `runMainWindowRoutingCheck`, `runHostIntegrationCheck`). WARNING: the span around
-  them also contains unrelated `runRenderingPlayheadCheck` — do NOT copy it.
-  Also declare the free poly-gate replacement defined in Unit 2B. Narrow includes only.
-- New `hostcheck/host_quick_rig.h/.cpp`: move `hostcheck.cpp:101-369`
-  (`pumpZeroDelayTimers`, `QmlBandPropertyNames` + table, `describeRect*`,
-  `describeSize*`, `quickHostGeometryDetails`, `describeRectDelta`,
-  `canonicalInputFailureDetails`, `otherEventsHoverCandidateDetails`, `imageDetails`,
-  `publishedQmlRectsMatchCanonical`, `inputMatchesCanonical`,
-  `trackHeadersInputMatchesCanonical`, `inputMatchesDrawerChrome`).
-- New `hostcheck/host_shared.h`: move `noteEvent` (`:60-68`) marked explicitly
-  `inline`. Do NOT move or unify `nodePosition` (`:93-100`): the seams click
-  calculation (`:1856-1858`, live zoom 48 / h-scroll 0, no subtraction) is a
-  different transform from the adapter helper (camera zoom minus camera scroll,
-  `:96-99`) — leave the seams formula exactly as is.
-- New `hostcheck/host_adapter_check.cpp`: `hostcheck.cpp:371-1679` verbatim, includes
-  pruned to adapter-only + rig headers (drop `<QPointer>`; keep the adapter-only
-  includes minus those that moved to `host_quick_rig`). The body directly uses all
-  15 current UI headers — do NOT chase a count by relying on transitive includes;
-  the rule is include-what-you-use, count may stay where it lands.
-- New `hostcheck/host_seams_check.cpp`: `hostcheck.cpp:1681-1955` verbatim, includes
-  pruned to seams needs + rig headers (only seams-only include is `<QPointer>`).
-- Adapter-only drawer accessors stay local to the adapter file: `drawerContextTick`
-  (begins `:70`), `editorDrawer` (begins `:75`), `velocityArea` (begins `:80`),
-  `automationCanvas` (begins `:86`).
-- Delete `src/checks/hostcheck.cpp`.
-- Acceptance: `hostcheck.cpp` gone; both new files include `hostcheck/hostcheck.h`
-  + their rig; no `ui/*` include added that the source body did not already use;
-  `build:checks` ok (orchestrator verifies).
-
-### Unit 2B — split routing file + MainWindow extraction (files: mainwindowroutingcheck.cpp, mainwindow.h, polycheck.cpp)
-
-- Shared `hostcheck/host_workspace_rig.h/.cpp`: move `mainwindowroutingcheck.cpp:72-76`
-  (`fileContents`), `:99-125` (`waitForTabReady`), `:129-135` (`waitForProjectReady`),
-  `:157-178` (`porydawSnapshot`). Both halves include it. (Candidates are stateless
-  free functions; the recursive visitor inside is a call-local lambda — safe to move.)
-- New `hostcheck/mainwindow_routing_check.cpp`: helpers `:66-70` (`sendKeyStroke`),
-  `:78-86` (`descendant`), `:142-151` (`waitForNativeActivation`), `:183-203`
-  (`freshViewStateAtCanonicalDefaults`), `:209-242` (`checkFreshBind`), `:246-253`
-  (`sameViewState`), `:264-359` (`checkStagedFullReload`), `:365-410`
-  (`checkBankOnlyRebind`) + body `:413-1431` converted to a free
-  `int runMainWindowRoutingCheck(same args as fwd.hpp)` that OWNS a local
-  `MainWindow window`: merge the QSettings seed + construction from the shim
-  (`:1433-1450`, 18 lines) into the top of the free function, rewrite every former
-  `this`/member/inherited call (`this` at 443, 497, 507, 570, 610, 662, 871, 1413;
-  private `stopPlayback()` at 469, 478) through `window`. Touched privates, all via
-  the new friendship: `m_audioOk`, `m_workspace`, `m_audio`, `m_copyAction`,
-  `m_automationDrawerAction`, `m_insertTimeAction`, `m_velocityDrawerAction`,
-  `m_voiceChangesDrawerAction`, `m_closeAccepted`.
-- In `mainwindow.h`: ADD `friend int runMainWindowRoutingCheck(...)` with the exact
-  signature BEFORE removing the member decl (`:78-79`). Keep the `:52-53` friend
-  lines for `runHostIntegrationCheck`.
-- Delete the member body qualifier and the shim file range (shim merged, not dropped).
-- New `hostcheck/host_integration_check.cpp`: helper `:88-95`
-  (`velocityNodePosition`) + body `:1452-2129` as free `runHostIntegrationCheck`
-  (friendship already at `mainwindow.h:52-53` — keep). Only private accesses:
-  `window.m_audioOk`, `window.m_workspace`, `window.m_closeAccepted`.
-- Poly gate: move the FULL `MainWindow::runPolyGateCheck` body
-  (`polycheck.cpp:508-552`, note 546-551 hold the final assertion, reset, return)
-  into `mainwindow_routing_check.cpp` as a NON-static free function declared in
-  `hostcheck/hostcheck.h`; ADD exact matching friendship in `mainwindow.h` (needed
-  privates: `m_audioOk`, `m_polyDock`, `m_audio`, `m_polyPanel`); update the existing
-  caller `runPolyCheck()` (`polycheck.cpp:559-561`) to call it; delete the member
-  body + `mainwindow.h:98` decl. (A `static` helper is WRONG: internal linkage
-  hides it from the polycheck caller, and routing-function friendship does not
-  transfer to callees.)
-- Delete `src/checks/mainwindowroutingcheck.cpp`.
-- Acceptance: `grep MainWindow::runMainWindowRoutingCheck|MainWindow::runPolyGateCheck
-  src/` zero hits; `mainwindow.h` keeps `:52-53` friend lines, gains 2 exact friend
-  decls, loses `:78-79,:98`; routing/integration halves include
-  `host_workspace_rig`; no new `ui/*` includes beyond what the moved bodies use.
-
-### Step 2 verify (orchestrator)
-
-`deno task build:checks`, then `verify --filter host-seams --filter host-adapter
---filter mainwindow-routing --filter host-integration`.
-
----
-
-## 4. Step 3 Mechanical Spec — Workspace Split (Sonic-Ready)
-
-Contract first: 3A creates `src/checks/editorviewstatecheck.h` declaring the runner
-`int runEditorViewStateCheck()` PLUS the shared fixture/helper contract both halves
-use: `StoreShape`, `keyGroup`, `storeShape`, `laneBlobKey`, `storeLaneBlob`,
-`poisonLaneBlob`, `isCompactJsonObject`, `laneRowsDefaulted`, `lanesDefaulted`, and
-the `full`/`bare` fixture builders. 3B includes this header instead of duplicating.
-
-### Unit 3A — new `editorviewstatecheck` (files: +editorviewstatecheck.h/.cpp, fwd.hpp, checkcatalog.cpp, checks_walls.ts)
-
-- New `src/checks/editorviewstatecheck.cpp`: global (outside any namespace `checks`
-  block — own anonymous namespace for file-local helpers) `int
-  runEditorViewStateCheck()` using a `QTemporaryDir` isolated store. Move the pure
-  codec coverage from `selftest/workspace.cpp`, CUT AT STATEMENT BOUNDARIES through
-  `:301`: store/blob helpers (`StoreShape`, `keyGroup`, `laneBlobKey`, `storeShape`,
-  `storeLaneBlob`, `poisonLaneBlob`, `isCompactJsonObject`, `laneRowsDefaulted`,
-  `lanesDefaulted` — opened namespace context starts `:24-26`, closes `:119`; move
-  whole declarations, never partial braces), fixtures incl. empty-store `if`
-  (begins `:180`), invariants: defaults + 3-page round-trip, optional heights
-  (`:204-212`), poison recovery (begins `:214`), row grammar (begins `:241`),
-  lane-height clamping (`:288-301`). STOP at `:301` — the live-store smoke starts
-  at `:303` and stays in 3B.
-- The shared helpers + `full`/`bare` fixture builders go in / behind
-  `editorviewstatecheck.h` per the contract above (declare in header, define once
-  in the new `.cpp`).
-- Deps: `<QSettings>`, `<QTemporaryDir>`, `<QJsonDocument>`, `<QJsonObject>`,
-  `<QJsonArray>`, `<QJsonParseError>`, `<QVariant>`/`<QMetaType>`, `<map>`/`<set>` (or
-  Qt equivalents as used by the moved code), `ui/editorviewstate.h`, `ui/layout.h` —
-  no MainWindow/SongView/WorkspaceUi includes.
-- Add `int runEditorViewStateCheck();` to `src/checks/fwd.hpp` (catalog dispatches
-  through globals declared there — without this the new row has no callable).
-- Register `editorviewstatecheck` in `checkcatalog.cpp` next to the selftest rows
-  (no fixture, no scratch dir — headless).
-- Add a `checks_walls.ts` row for the new check: mirror the `selftest-workspace`
-  entry's estimate format with a named estimate.
-- Report the new files (`editorviewstatecheck.cpp` + `.h`) for `CMakeLists.txt`.
-- Acceptance: new files compile with zero `mainwindow.h|songtab.h|songview.h|
-  workspaceui.h` includes; all 5 codec invariants present and named; braces balanced.
-
-### Unit 3B — trim workspace smoke + move timer (files: selftest/workspace.cpp, tabcheck.cpp)
-
-- In `workspace.cpp` keep: startup precondition (`:122-127`), dialog smoke
-  (`:129-141`, `NewSongWizard` + `SettingsDialog`), capture (`:142`), live sidecar
-  (`:303-365`), clean close (`:366-398`). Delete the codec blocks moved to 3A
-  (through `:301`); replace deleted helpers/fixtures with
-  `#include "checks/editorviewstatecheck.h"`.
-- Grep `m_playheadTimer` in `workspace.cpp`; move those assertions to `tabcheck.cpp`
-  `MainWindow::runTabCheck` beside the existing `m_uiTimer` cadence assertions
-  (`tabcheck.cpp:726-734`). Delete from `workspace.cpp`.
-- Acceptance: `workspace.cpp` ~130L, no codec invariant blocks remain;
-  `m_playheadTimer` asserted in `tabcheck.cpp`, zero hits in `workspace.cpp`.
-
-### Step 3 verify (orchestrator)
-
-Land 3A's `CMakeLists.txt` addition FIRST, then `deno task build:checks`, then
-`verify --filter editorviewstatecheck --filter tabcheck --filter selftest-workspace`.
-
----
-
-## 5. Acceptance record — `automation-editing`
-
-Established (2026-09, this worktree): the full suite passes — 5 Qt results
-(3 behaviors plus lifecycle hooks) in 97 ms; suite source, header, and catalog
-row carry clean LSP diagnostics.
-
-Final verification after review corrections:
-- Each of the three functions passes alone; `--qt -functions` lists all three.
-  Reversed execution passes all 5 Qt results, zero failures/skips, in 52 ms.
-- Real production negative controls were caught: suppressing the node-move commit
-  failed the expected single `documentChanged` assertion; finishing during held
-  movement failed the actual preview-target assertion; disconnecting Quick release
-  routing failed the single-commit assertion. All mutations were restored.
-- Both Qt suites passed together in ordinary runner mode (2/65 selected, 0.73 s),
-  then with AddressSanitizer and UndefinedBehaviorSanitizer enabled (1.72 s).
-  Leak detection was disabled; the temporary compiler flags were restored.
-- Final normal `deno task verify --no-windowing-checks`: 59/65 checks passed,
-  zero failures, 6 native-only rows intentionally skipped, 3.79 s (build 36.37 s).
-- Thermo-nuclear review: PASS after extracting the repeated drag-arm geometry into
-  one local helper and checking that post-Escape movement cannot revive preview.
-  Source/header/catalog and timing-registry diagnostics are clean.
-
-The input correction is fixture geometry, not a changed CC oracle: the default row
-could not represent the requested 40→84 drag through integral QTest coordinates.
-The test uses the supported maximum row height and preserves the delivered integer
-delta across the activation-reset move. Literal document/timeline expectations stay
-40→84, with the independent point at 100 unchanged.
-
-The three-case slice is complete; the remaining legacy automation families have
-not been migrated or removed. No production behavior changed, no wheel/chord or
-pixel-capture capability was claimed, and no desktop interaction was used.
+The following pre-completion automation receipt is retained for chronology, not
+as current scope or gate guidance. At that point the three-case
+`automation-editing` slice passed 5 Qt results, each function also passed when
+selected alone, and reversed execution passed 5 results without failures or
+skips. Its three production controls (node-move commit, held-movement preview
+target, and Quick release routing) failed their intended assertions and passed
+after restoration. The then-current combined run selected 2/65 rows and the
+normal safe gate was 59/65 with six native skips; ASan+UBSan passed with leak
+detection disabled and temporary flags restored. The later full-migration
+record in §2 supersedes that pilot state: the remaining legacy automation
+families were subsequently migrated and removed.

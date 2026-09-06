@@ -23,6 +23,22 @@ Section 15 records completed gates. Historical source references describe the
 initial `feature/velocity-qt-tests` worktree, forked from `fork-main` at `e4a9b9b`;
 they are not completion claims.
 
+## Current all-suite follow-up
+
+This pilot's legacy exceptions are superseded by the completed all-suite Qt
+migration. `velocity-page` is now the `VelocityPageTest` Qt suite in
+`src/checks/drawerpresentation/velocity.cpp`; the historical
+`rollcheckpsgvelocity.cpp` owner no longer exists. Likewise, the temporary
+`Framework::Legacy` migration state is gone: the current catalog uses
+`Framework::QtTest` for in-process suites and `Framework::Process` only for
+the production-startup smoke.
+
+The plan and §15 receipts below remain historical evidence for the original
+pilot, including their legacy-file and framework requirements. They are not
+current exceptions or current runner guidance. The current all-suite runner
+executes 83 in-process Qt suites plus the production-startup process smoke;
+the mouse-safe lane is `deno task verify --no-windowing-checks`.
+
 ## 1. User goal and locked decisions
 
 Migrate the **velocity-editing** coverage of `src/checks/rollcheckpsgvelocity.cpp`

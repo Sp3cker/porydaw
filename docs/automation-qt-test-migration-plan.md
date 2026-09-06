@@ -43,7 +43,7 @@ rollcheckautomation family 3,741L (`rollcheckautomation.cpp` 1,818,
 | `AutomationPresentationTest` | Existing EditorRig, static (quickRoot) — chrome, geometry, tempo lane, cursors, gutter text | AutomationChrome | `src/checks/automation/presentation/`: `tst_automationpresentation.h`, `tst_automationpresentation.cpp`, `painting.cpp` |
 | AutomationHover suite | Independent QObject; EditorRig + actual `QQuickWindow` input; direct canvas cancellation API only for the cancellation contract | AutomationHover | `src/checks/automation/hover/`: `tst_automationhover.h`, `tst_automationhover.cpp`, `hoverfixture.h`, `hoverfixture.cpp` |
 | `AutomationDomainTest` | GUI-free QObject; `runAutomationDomainCheck(const QStringList&)`, one `qExec`; `SongDocument`/`RangeEdit`/SMF byte-stream | AutomationDomain | `src/checks/automation/domain/tst_automationdomain.h/.cpp`, `xcmd.cpp`, `gestures.cpp` |
-| `automation-raster` (retained-native residual runner, legacy framework) | Real native `WindowSystem` window + `captureQuickBand` — the §9 raster residual only; handler runs `runAutomationPaintRasterCheck` then `runAutomationInteractionRasterCheck` and combines the statuses | — (private fixture `automation/raster/rasterfixture.h`) | `src/checks/automation/raster/`: `painting.cpp`, `interaction.cpp`, `rasterfixture.h`, `rasterfixture.cpp` |
+| `automation-raster` (retained-native Qt Test suite) | Real native `WindowSystem` window + `captureQuickBand` — the §9 raster residual only; `AutomationRasterTest` executes once through `QTest::qExec` | — (private fixture `automation/raster/rasterfixture.h`) | `src/checks/automation/raster/`: `tst_automationraster.h`, `painting.cpp`, `interaction.cpp`, `rasterfixture.h`, `rasterfixture.cpp` |
 
 Fixture discipline (landed contract): helpers contain no Qt assertions — Qt
 macros live at slot level; fresh fixture state per slot; `stage(SmfFile)`
@@ -54,7 +54,7 @@ input goes through the real `TimelineInputItem`/`QQuickWindow` delivery
 `keyEvent(..., autoRepeat)`); no native window activation, no physical cursor.
 Member definitions spread across per-behavior cpp files; every owner sends slot
 declarations to AutomationFixture; no universal rig (EditorRig quickRoot is the
-static seam). Registration landed in Main's batch: catalog rows `automation-domain`, `automation-presentation`, `automation-hover` (`Framework::QtTest` + `Windowing::Offscreen`), `fwd.hpp` decls, and CMake sources; the legacy catalog rows (`automation`, `automation-gestures`, `automation-popup-menus`) were removed in the 2026-09-05 cutover batch together with the `automation-raster` `Windowing::WindowSystem` registration.
+static seam). Registration landed in Main's batch: catalog rows `automation-domain`, `automation-presentation`, `automation-hover` (`Framework::QtTest` + `Windowing::Offscreen`), `fwd.hpp` decls, and CMake sources; the legacy catalog rows (`automation`, `automation-gestures`, `automation-popup-menus`) were removed in the 2026-09-05 cutover batch. The current `automation-raster` `Windowing::WindowSystem` row runs `AutomationRasterTest` through one `QTest::qExec`.
 
 ## 2. Status vocabulary
 
@@ -657,24 +657,23 @@ Catalog reality after Main's 2026-09-05 cutover: the legacy rows `automation`,
 `automation-gestures`, and `automation-popup-menus` are removed;
 `automation-editing` and the three runners (`automation-domain`,
 `automation-presentation`, `automation-hover`) are registered
-`Offscreen`+`QtTest`; and ONE `automation-raster` row
-(`checkcatalog.cpp:387-395`, `Windowing::WindowSystem`) carries the two
-raster exports, combining their statuses. Native execution is deliberately
-not performed: the `WindowSystem` rows are exactly the 5 skips of the
-standard verify lane, and no ledger entry may claim native execution — the
-ban is absolute; what is recorded is the native raster evidence in the
-removed legacy files (baseline `7430fb4`) and its compiled, source-reviewed
-residual row, not a native run. Not native, and never re-added here: real `QQuickWindow`
-input delivery offscreen (AET/hover input rows), the host-injected DPR seam
-(§6.6, closed), the public retained-layer seam
-`TimelineQuickScene::layer(TimelineQuickLayer)` → `TimelineQuickLayerData`
-rects/triangles (proves composition or absence without framebuffer pixels),
-and the public negative playhead seam: `VelocityArea::refreshLiveState` driven
-with a negative playback tick and observed through the `VelocityAxis` context
-clamp at -3.0 (`automationcanvasediting.cpp:219-221`, restored
-automation-canvas oracles); the offscreen-proven modal
-`QMenu`/`QInputDialog` driver (§9 modal row); and the injected deactivation
-routes — direct
+`Offscreen`+`QtTest`; and ONE `automation-raster` `Windowing::WindowSystem`
+row invokes `runAutomationRasterCheck`, which executes `AutomationRasterTest`
+once through `QTest::qExec`. Native execution is deliberately not performed:
+the `WindowSystem` rows are exactly the 5 skips of the standard verify lane,
+and no ledger entry may claim native execution — the ban is absolute; what is
+recorded is the native raster evidence in the removed legacy files (baseline
+`7430fb4`) and its compiled, source-reviewed residual suite, not a native run.
+Not native, and never re-added here: real `QQuickWindow` input delivery
+offscreen (AET/hover input rows), the host-injected DPR seam (§6.6, closed),
+the public retained-layer seam `TimelineQuickScene::layer(TimelineQuickLayer)`
+→ `TimelineQuickLayerData` rects/triangles (proves composition or absence
+without framebuffer pixels), and the public negative playhead seam:
+`VelocityArea::refreshLiveState` driven with a negative playback tick and
+observed through the `VelocityAxis` context clamp at -3.0
+(`automationcanvasediting.cpp:219-221`, restored automation-canvas oracles);
+the offscreen-proven modal `QMenu`/`QInputDialog` driver (§9 modal row); and
+the injected deactivation routes — direct
 `inputCancelled(TimelineInputCancelReason::WindowDeactivated)` or a synthetic
 `QEvent(WindowDeactivate)` — which both old and new suites drive, never an
 OS-generated focus change (§9 deactivation row). Every native residual's
@@ -699,18 +698,17 @@ the included capture, B in the included capture; **no negative pixel-B probe
 exists**, the earlier scout claim was false) + 963-970,
 `rollcheckautomation_paint.cpp` 509-517 + 541-547,
 `automationgesturecheck/hover.cpp` 498-565, `routing.cpp` 140-150 — are
-carried by `src/checks/automation/raster/` (`painting.cpp` exporting
-`runAutomationPaintRasterCheck(project, song)`, `interaction.cpp` +
-`rasterfixture.h/.cpp` exporting
-`runAutomationInteractionRasterCheck(project, song)`; source-parity maps
+carried by `src/checks/automation/raster/`, whose
+`AutomationRasterTest` (`tst_automationraster.h`) owns the painting and
+interaction slots with `rasterfixture.h/.cpp`; source-parity maps
 agent://ExtractAutomationPaintRaster and
 agent://ExtractAutomationInteractionRaster; independent Qt + thermo-nuclear
 source reviews PASS, no blockers). The residual is registered as the ONE
-`automation-raster` `Windowing::WindowSystem` catalog row calling the two
-exports and combining their statuses (`checkcatalog.cpp:387-395`,
-`fwd.hpp:57-58`, four `CMakeLists.txt` sources); it compiles and links and
-is deliberately not executed in the standard verify lane — native raster
-execution is the documented §9 boundary, not an open migration gate.
+`automation-raster` `Windowing::WindowSystem` catalog row. Its current handler,
+`runAutomationRasterCheck`, executes that one suite through `QTest::qExec`; it
+compiles and links and is deliberately not executed in the standard verify
+lane — native raster execution is the documented §9 boundary, not an open
+migration gate.
 `rollcheckautomation_tempo_paint.cpp` carried no native residual (zero pixel
 oracles, source-verified) and was retired whole in the cutover like any
 CPU-only legacy file.
@@ -722,8 +720,8 @@ automation files are removed (19 `.cpp` + 3 headers: the 12
 (`automation`, `automation-gestures`, `automation-popup-menus`) and their
 `fwd.hpp` declarations are gone; old timing keys are removed
 (`checks_walls.ts` keeps the four Qt-suite walls); the single
-`automation-raster` row is registered (`checkcatalog.cpp:387-395`,
-`fwd.hpp:57-58`, four `automation/raster/` sources in `CMakeLists.txt`).
+`automation-raster` Qt Test suite is registered with its `Windowing::WindowSystem`
+catalog row and raster sources.
 Verification: `deno task verify --no-windowing-checks --verbose` 61/66 ok,
 5 native skips, 0 fail (final restored-normal run: build 32.48s, suite
 4.01s); ASAN+UBSAN passed the automation filter (4/66 ok, 0 fail; flags
@@ -774,13 +772,12 @@ execution is the deliberate §9 boundary, not an incomplete migration.
   declarations; all 22 legacy files (19 `.cpp` + 3 headers); old
   `checks_walls.ts` automation keys (the four Qt-suite walls remain; the
   native `automation-raster` row has no wall estimate).
-- Landed: `automation-raster` (`checkcatalog.cpp:387-395`,
-  `Windowing::WindowSystem`, ExistingDirectory scratch +
-  `DecompProject`/route101 fixtures) — the handler runs
-  `runAutomationPaintRasterCheck` then `runAutomationInteractionRasterCheck`
-  and combines the statuses; `fwd.hpp:57-58` decls; four `automation/raster/`
-  sources in `CMakeLists.txt`; final registration Qt review PASS. Compiled
-  and source-reviewed; deliberately not executed natively (§9 boundary).
+- Landed: `automation-raster` (`Windowing::WindowSystem`, ExistingDirectory
+  scratch + `DecompProject`/route101 fixtures) — `runAutomationRasterCheck`
+  executes the single `AutomationRasterTest` suite through `QTest::qExec`;
+  its raster sources are listed in `CMakeLists.txt`; final registration Qt
+  review PASS. Compiled and source-reviewed; deliberately not executed
+  natively (§9 boundary).
 - Final verification (2026-09-05): `deno task verify --no-windowing-checks
   --verbose` 61/66 ok, 5 native skips, 0 fail (build 32.48s, suite 4.01s);
   ASAN+UBSAN automation filter 4/66 ok, 0 fail with flags verified and

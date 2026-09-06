@@ -1,7 +1,6 @@
 #include "checkregistry.hpp"
 #include "checkcatalog.h"
 
-#include "mainwindow.h"
 #include "ui/applicationstartup.h"
 
 #include <algorithm>
@@ -84,10 +83,10 @@ QString jsonName(Windowing windowing)
 QString jsonName(Framework framework)
 {
     switch (framework) {
-    case Framework::Legacy:
-        return QStringLiteral("legacy");
     case Framework::QtTest:
         return QStringLiteral("qt-test");
+    case Framework::Process:
+        return QStringLiteral("process");
     }
     Q_UNREACHABLE();
 }
@@ -132,13 +131,20 @@ bool writeManifest(const QStringList &arguments)
 
 std::optional<int> runRequested(QApplication &application, const QStringList &arguments)
 {
+    // The check command is anchored at argv[1]; a terminal "--qt" separator
+    // splits Qt test payload off before any check argument is interpreted, so
+    // optional check arguments (sample corpus, screenshots) can never eat Qt
+    // flags. The payload is forwarded to the row's single qExec verbatim.
+    const auto qtSeparator = arguments.indexOf(QStringLiteral("--qt"));
     for (const auto &definition : detail::catalog()) {
-        if (!definition.handler)
+        if (!definition.handler || arguments.value(1) != definition.argv.value(0))
             continue;
-        const auto commandIndex = arguments.indexOf(definition.argv[0]);
-        if (commandIndex < 0)
-            continue;
-        const auto checkArguments = arguments.mid(commandIndex);
+        auto qtArguments = QStringList{};
+        auto checkArguments = arguments.mid(1);
+        if (qtSeparator > 0) {
+            qtArguments = arguments.mid(qtSeparator + 1);
+            checkArguments = arguments.mid(1, qtSeparator - 1);
+        }
         const auto requiredArguments = std::count_if(
             definition.argv.cbegin(), definition.argv.cend(), [&](const auto &argument) {
                 return !definition.optionalArgumentEnvironment.contains(argument);
@@ -149,7 +155,7 @@ std::optional<int> runRequested(QApplication &application, const QStringList &ar
             return 2;
         }
         if (definition.startup == StartupKind::HandlerOwned)
-            return definition.handler(application, checkArguments);
+            return definition.handler(application, checkArguments, qtArguments);
         auto settingsDirectory = QTemporaryDir{};
         if (!settingsDirectory.isValid())
             return 1;
@@ -157,7 +163,7 @@ std::optional<int> runRequested(QApplication &application, const QStringList &ar
         QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDirectory.path());
         if (!ui::initializePorydawApplication(application))
             return 1;
-        return definition.handler(application, checkArguments);
+        return definition.handler(application, checkArguments, qtArguments);
     }
     return std::nullopt;
 }

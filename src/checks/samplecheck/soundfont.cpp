@@ -6,8 +6,8 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QTreeWidget>
+#include <QtTest>
 #include <cmath>
-#include <cstdio>
 #include <cstring>
 #include <vector>
 
@@ -18,264 +18,259 @@
 
 namespace {
 constexpr double kPi = 3.14159265358979323846;
+struct SoundFontFixture {
+    std::vector<qint16> pool;
+    QByteArray bytes;
+    QByteArray romOnlyBytes;
+};
+
+SoundFontFixture makeSoundFontFixture()
+{
+    SoundFontFixture fixture;
+    fixture.pool.reserve(600);
+    for (int i = 0; i < 400; ++i)
+        fixture.pool.push_back(
+            qint16(std::lround(16383.0 * std::sin(2.0 * kPi * 441.0 * i / 22050.0))));
+    for (int i = 0; i < 200; ++i)
+        fixture.pool.push_back(qint16(i * 100 - 10000));
+
+    QByteArray poolBytes;
+    for (const qint16 sample : fixture.pool)
+        putU16(&poolBytes, quint16(sample));
+
+    const auto makeChunk = [](const char *id, const QByteArray &body) {
+        QByteArray chunk(id, 4);
+        putU32(&chunk, quint32(body.size()));
+        chunk += body;
+        if (body.size() & 1)
+            chunk += '\0';
+        return chunk;
+    };
+    const auto makeList = [&makeChunk](const char *type, const QByteArray &subchunks) {
+        return makeChunk("LIST", QByteArray(type, 4) + subchunks);
+    };
+    const auto appendName20 = [](QByteArray *out, const char *name) {
+        char buffer[20] = {};
+        std::strncpy(buffer, name, 19);
+        out->append(buffer, 20);
+    };
+    const auto appendSampleHeader = [&appendName20](QByteArray *out, const char *name,
+                                                    quint32 start, quint32 end, quint32 loopStart,
+                                                    quint32 loopEndExclusive, quint32 rate,
+                                                    quint8 pitch, qint8 correction, quint16 type) {
+        appendName20(out, name);
+        putU32(out, start);
+        putU32(out, end);
+        putU32(out, loopStart);
+        putU32(out, loopEndExclusive);
+        putU32(out, rate);
+        out->append(char(pitch)).append(char(correction));
+        putU16(out, 0);
+        putU16(out, type);
+    };
+    const auto buildFont = [&appendName20, &makeChunk, &makeList,
+                            &poolBytes](const QByteArray &sampleHeaders) {
+        QByteArray presetHeaders;
+        appendName20(&presetHeaders, "TestPreset");
+        putU16(&presetHeaders, 0);
+        putU16(&presetHeaders, 0);
+        putU16(&presetHeaders, 0);
+        putU32(&presetHeaders, 0);
+        putU32(&presetHeaders, 0);
+        putU32(&presetHeaders, 0);
+        appendName20(&presetHeaders, "EOP");
+        putU16(&presetHeaders, 0);
+        putU16(&presetHeaders, 0);
+        putU16(&presetHeaders, 1);
+        putU32(&presetHeaders, 0);
+        putU32(&presetHeaders, 0);
+        putU32(&presetHeaders, 0);
+
+        QByteArray presetBags;
+        putU16(&presetBags, 0);
+        putU16(&presetBags, 0);
+        putU16(&presetBags, 1);
+        putU16(&presetBags, 0);
+        QByteArray presetGenerators;
+        putU16(&presetGenerators, 41);
+        putU16(&presetGenerators, 0);
+        putU16(&presetGenerators, 0);
+        putU16(&presetGenerators, 0);
+
+        QByteArray instruments;
+        appendName20(&instruments, "TestInst");
+        putU16(&instruments, 0);
+        appendName20(&instruments, "EOI");
+        putU16(&instruments, 1);
+        QByteArray instrumentBags;
+        putU16(&instrumentBags, 0);
+        putU16(&instrumentBags, 0);
+        putU16(&instrumentBags, 1);
+        putU16(&instrumentBags, 0);
+        QByteArray instrumentGenerators;
+        putU16(&instrumentGenerators, 53);
+        putU16(&instrumentGenerators, 0);
+        putU16(&instrumentGenerators, 0);
+        putU16(&instrumentGenerators, 0);
+
+        QByteArray version;
+        putU16(&version, 2);
+        putU16(&version, 1);
+        QByteArray body("sfbk", 4);
+        body += makeList("INFO", makeChunk("ifil", version) +
+                                     makeChunk("INAM", QByteArray("samplecheck\0", 12)));
+        body += makeList("sdta", makeChunk("smpl", poolBytes));
+        body += makeList(
+            "pdta", makeChunk("phdr", presetHeaders) + makeChunk("pbag", presetBags) +
+                        makeChunk("pmod", QByteArray(10, '\0')) +
+                        makeChunk("pgen", presetGenerators) + makeChunk("inst", instruments) +
+                        makeChunk("ibag", instrumentBags) +
+                        makeChunk("imod", QByteArray(10, '\0')) +
+                        makeChunk("igen", instrumentGenerators) + makeChunk("shdr", sampleHeaders));
+        QByteArray font("RIFF", 4);
+        putU32(&font, quint32(body.size()));
+        return font + body;
+    };
+
+    QByteArray headers;
+    appendSampleHeader(&headers, "Test Tone", 0, 400, 100, 300, 22050, 69, -20, 1);
+    appendSampleHeader(&headers, "PadL", 400, 600, 400, 400, 32000, 60, 50, 4);
+    appendSampleHeader(&headers, "RomTone", 0, 400, 0, 0, 22050, 60, 0, 0x8001);
+    appendSampleHeader(&headers, "Unpitched", 400, 600, 0, 0, 22050, 255, 0, 1);
+    appendSampleHeader(&headers, "EOS", 0, 0, 0, 0, 0, 0, 0, 0);
+    fixture.bytes = buildFont(headers);
+
+    QByteArray romOnlyHeaders;
+    appendSampleHeader(&romOnlyHeaders, "RomTone", 0, 400, 0, 0, 22050, 60, 0, 0x8001);
+    appendSampleHeader(&romOnlyHeaders, "EOS", 0, 0, 0, 0, 0, 0, 0, 0);
+    fixture.romOnlyBytes = buildFont(romOnlyHeaders);
+    return fixture;
 }
+} // namespace
 
 namespace samplecheck {
 
-void runSoundFontChecks(Reporter &reporter)
+void SampleProcessingTest::soundFontExtraction()
 {
-    // ---- SoundFont (phase 5): harness-synthesized minimal .sf2 — zone
-    // metadata → ImportedSample, reader/front-door refusals, and the zone
-    // picker driven offscreen ----
-    {
-        const int before = reporter.failureCount();
-        QString error;
+    const SoundFontFixture fixture = makeSoundFontFixture();
+    QString error;
+    QVERIFY2(sf2Magic(fixture.bytes), "sf2 magic sniffs");
+    Sf2File font;
+    QVERIFY2(readSf2Bytes(fixture.bytes, QStringLiteral("f/test.sf2"), &font, &error),
+             "sf2 fixture reads");
+    QCOMPARE(font.zones.size(), 3);
+    const Sf2Zone &tone = font.zones[0];
+    QVERIFY2(tone.name == QStringLiteral("Test Tone") &&
+                 tone.instrument == QStringLiteral("TestInst") &&
+                 tone.preset == QStringLiteral("TestPreset"),
+             "grouping labels resolve through the pdta index arrays");
+    QVERIFY2(font.zones[1].name == QStringLiteral("PadL") && font.zones[1].stereoPair() &&
+                 font.zones[1].instrument.isEmpty(),
+             "left-linked zone flags as a stereo pair, ungrouped");
 
-        // 600-frame 16-bit pool: a 441 Hz half-scale sine (frames 0-399,
-        // zone "Test Tone") and a linear ramp (frames 400-599, shared by
-        // the left-linked and unpitched zones).
-        std::vector<qint16> poolRef;
-        for (int i = 0; i < 400; i++)
-            poolRef.push_back(
-                qint16(std::lround(16383.0 * std::sin(2.0 * kPi * 441.0 * i / 22050.0))));
-        for (int i = 0; i < 200; i++)
-            poolRef.push_back(qint16(i * 100 - 10000));
-        QByteArray pool;
-        for (const qint16 s : poolRef)
-            putU16(&pool, quint16(s));
+    ImportedSample z0;
+    QVERIFY2(extractSf2Zone(font, 0, &z0, &error), "zone 0 extracts");
+    QVERIFY2(z0.sourceKind == ImportedSample::Sf2 && z0.sourceChannels == 1 &&
+                 z0.sourceBits == 16 && !z0.gbaReady && z0.warnings.isEmpty(),
+             "zone 0 structure");
+    QVERIFY2(z0.frameCount() == 400 && z0.playLength == 400 && z0.sampleRate == 22050.0,
+             "zone 0 pool segment bounds");
+    QVERIFY2(z0.hasPitchMetadata && z0.baseKey == 68 && std::abs(z0.fracSemitone - 0.8) < 1e-9,
+             "negative pitchCorrection renormalizes below the unity key");
+    QVERIFY2(z0.hasLoop && z0.loopStart == 100 && z0.loopEndIncl == 299,
+             "sf2 exclusive loop end converts to inclusive");
+    QVERIFY2(z0.suggestedName == QStringLiteral("test_tone"),
+             "zone name sanitizes into the suggested name");
+    for (int i = 0; i < 400; ++i)
+        QCOMPARE(z0.buffer[size_t(i)], float(double(fixture.pool[size_t(i)]) / 32768.0));
 
-        auto chunk = [](const char *id, const QByteArray &body) {
-            QByteArray c(id, 4);
-            putU32(&c, quint32(body.size()));
-            c += body;
-            if (body.size() & 1)
-                c += '\0';
-            return c;
-        };
-        auto list = [&chunk](const char *type, const QByteArray &subs) {
-            return chunk("LIST", QByteArray(type, 4) + subs);
-        };
-        auto name20 = [](QByteArray *out, const char *name) {
-            char buf[20] = {};
-            std::strncpy(buf, name, 19);
-            out->append(buf, 20);
-        };
-        auto shdrRec = [&name20](QByteArray *out, const char *name, quint32 start, quint32 end,
-                                 quint32 loopStart, quint32 loopEndExcl, quint32 rate, quint8 pitch,
-                                 qint8 corr, quint16 type) {
-            name20(out, name);
-            putU32(out, start);
-            putU32(out, end);
-            putU32(out, loopStart);
-            putU32(out, loopEndExcl);
-            putU32(out, rate);
-            out->append(char(pitch)).append(char(corr));
-            putU16(out, 0); // sampleLink
-            putU16(out, type);
-        };
-        // One preset ("TestPreset") over one instrument ("TestInst") whose
-        // single zone references sample 0 — enough pdta to prove the
-        // grouping-label walk (phdr/pbag/pgen → inst/ibag/igen → shdr).
-        auto buildSf2 = [&](const QByteArray &shdr) {
-            QByteArray phdr;
-            name20(&phdr, "TestPreset");
-            putU16(&phdr, 0); // wPreset
-            putU16(&phdr, 0); // wBank
-            putU16(&phdr, 0); // wPresetBagNdx
-            putU32(&phdr, 0);
-            putU32(&phdr, 0);
-            putU32(&phdr, 0);
-            name20(&phdr, "EOP");
-            putU16(&phdr, 0);
-            putU16(&phdr, 0);
-            putU16(&phdr, 1);
-            putU32(&phdr, 0);
-            putU32(&phdr, 0);
-            putU32(&phdr, 0);
-            QByteArray pbag;
-            putU16(&pbag, 0);
-            putU16(&pbag, 0);
-            putU16(&pbag, 1);
-            putU16(&pbag, 0);
-            QByteArray pgen;
-            putU16(&pgen, 41); // instrument generator
-            putU16(&pgen, 0);
-            putU16(&pgen, 0);
-            putU16(&pgen, 0);
-            QByteArray instData;
-            name20(&instData, "TestInst");
-            putU16(&instData, 0);
-            name20(&instData, "EOI");
-            putU16(&instData, 1);
-            QByteArray ibag;
-            putU16(&ibag, 0);
-            putU16(&ibag, 0);
-            putU16(&ibag, 1);
-            putU16(&ibag, 0);
-            QByteArray igen;
-            putU16(&igen, 53); // sampleID generator
-            putU16(&igen, 0);
-            putU16(&igen, 0);
-            putU16(&igen, 0);
-            QByteArray ifil;
-            putU16(&ifil, 2);
-            putU16(&ifil, 1);
-            QByteArray body("sfbk", 4);
-            body +=
-                list("INFO", chunk("ifil", ifil) + chunk("INAM", QByteArray("samplecheck\0", 12)));
-            body += list("sdta", chunk("smpl", pool));
-            body += list("pdta", chunk("phdr", phdr) + chunk("pbag", pbag) +
-                                     chunk("pmod", QByteArray(10, '\0')) + chunk("pgen", pgen) +
-                                     chunk("inst", instData) + chunk("ibag", ibag) +
-                                     chunk("imod", QByteArray(10, '\0')) + chunk("igen", igen) +
-                                     chunk("shdr", shdr));
-            QByteArray sf2("RIFF", 4);
-            putU32(&sf2, quint32(body.size()));
-            sf2 += body;
-            return sf2;
-        };
+    ImportedSample z1;
+    QVERIFY2(extractSf2Zone(font, 1, &z1, &error), "zone 1 extracts");
+    QVERIFY2(!z1.warnings.isEmpty(), "stereo-pair extraction reports its one-channel conversion");
+    QVERIFY2(z1.frameCount() == 200 && !z1.hasLoop && z1.hasPitchMetadata && z1.baseKey == 60 &&
+                 std::abs(z1.fracSemitone - 0.5) < 1e-9 &&
+                 z1.buffer[0] == float(double(fixture.pool[400]) / 32768.0),
+             "positive pitchCorrection becomes the semitone fraction");
 
-        QByteArray shdr;
-        shdrRec(&shdr, "Test Tone", 0, 400, 100, 300, 22050, 69, -20, 1);
-        shdrRec(&shdr, "PadL", 400, 600, 400, 400, 32000, 60, 50, 4);
-        shdrRec(&shdr, "RomTone", 0, 400, 0, 0, 22050, 60, 0, 0x8001);
-        shdrRec(&shdr, "Unpitched", 400, 600, 0, 0, 22050, 255, 0, 1);
-        shdrRec(&shdr, "EOS", 0, 0, 0, 0, 0, 0, 0, 0);
-        const QByteArray sf2Bytes = buildSf2(shdr);
+    ImportedSample z2;
+    QVERIFY2(extractSf2Zone(font, 2, &z2, &error), "zone 2 extracts");
+    QVERIFY2(!z2.hasPitchMetadata && z2.baseKey == 60,
+             "unpitched (255) zone defers to pitch detection");
 
-        reporter.expect(sf2Magic(sf2Bytes), "sf2 magic sniffs");
-        Sf2File font;
-        reporter.expect(readSf2Bytes(sf2Bytes, QStringLiteral("f/test.sf2"), &font, &error),
-                        "sf2 fixture reads");
-        reporter.expect(font.zones.size() == 3, "ROM sample and EOS terminator are skipped");
-        if (font.zones.size() == 3) {
-            const Sf2Zone &tone = font.zones[0];
-            reporter.expect(tone.name == QStringLiteral("Test Tone") &&
-                                tone.instrument == QStringLiteral("TestInst") &&
-                                tone.preset == QStringLiteral("TestPreset"),
-                            "grouping labels resolve through the pdta index arrays");
-            reporter.expect(font.zones[1].name == QStringLiteral("PadL") &&
-                                font.zones[1].stereoPair() && font.zones[1].instrument.isEmpty(),
-                            "left-linked zone flags as a stereo pair, ungrouped");
+    SampleDocument doc(z0);
+    doc.setParams(SampleDocument::defaultParams(z0));
+    const ProcessedSample &out = doc.processed();
+    QVERIFY2(!out.s8.isEmpty() && out.size == quint32(out.s8.size()) && out.freq > 0 && out.looped,
+             "sf2 zone renders through the pipeline");
+}
 
-            ImportedSample z0;
-            reporter.expect(extractSf2Zone(font, 0, &z0, &error), "zone 0 extracts");
-            reporter.expect(z0.sourceKind == ImportedSample::Sf2 && z0.sourceChannels == 1 &&
-                                z0.sourceBits == 16 && !z0.gbaReady && z0.warnings.isEmpty(),
-                            "zone 0 structure");
-            reporter.expect(z0.frameCount() == 400 && z0.playLength == 400 &&
-                                z0.sampleRate == 22050.0,
-                            "zone 0 pool segment bounds");
-            reporter.expect(z0.hasPitchMetadata && z0.baseKey == 68 &&
-                                std::abs(z0.fracSemitone - 0.8) < 1e-9,
-                            "negative pitchCorrection renormalizes below the unity "
-                            "key");
-            reporter.expect(z0.hasLoop && z0.loopStart == 100 && z0.loopEndIncl == 299,
-                            "sf2 exclusive loop end converts to inclusive");
-            reporter.expect(z0.suggestedName == QStringLiteral("test_tone"),
-                            "zone name sanitizes into the suggested name");
-            bool bytesMatch = z0.frameCount() == 400;
-            for (int i = 0; i < 400 && bytesMatch; i++)
-                bytesMatch = z0.buffer[size_t(i)] == float(double(poolRef[size_t(i)]) / 32768.0);
-            reporter.expect(bytesMatch, "zone 0 audio matches the pool segment");
+void SampleProcessingTest::soundFontRefusals_data()
+{
+    QTest::addColumn<QByteArray>("bytes");
+    QTest::addColumn<bool>("singleStream");
 
-            ImportedSample z1;
-            reporter.expect(extractSf2Zone(font, 1, &z1, &error), "zone 1 extracts");
-            reporter.expect(z1.warnings.join(QLatin1Char(' '))
-                                .contains(QStringLiteral("stereo pair — imported one channel.")),
-                            "stereo-pair zone carries the one-channel warning");
-            reporter.expect(z1.frameCount() == 200 && !z1.hasLoop && z1.hasPitchMetadata &&
-                                z1.baseKey == 60 && std::abs(z1.fracSemitone - 0.5) < 1e-9 &&
-                                z1.buffer[0] == float(double(poolRef[400]) / 32768.0),
-                            "positive pitchCorrection becomes the semitone fraction");
+    const SoundFontFixture fixture = makeSoundFontFixture();
+    QTest::newRow("single-stream-front-door") << fixture.bytes << true;
+    QTest::newRow("truncated-container") << fixture.bytes.left(200) << false;
+    QTest::newRow("rom-only-font") << fixture.romOnlyBytes << false;
+}
 
-            ImportedSample z2;
-            reporter.expect(extractSf2Zone(font, 2, &z2, &error), "zone 2 extracts");
-            reporter.expect(!z2.hasPitchMetadata && z2.baseKey == 60,
-                            "unpitched (255) zone defers to pitch detection");
+void SampleProcessingTest::soundFontRefusals()
+{
+    QFETCH(QByteArray, bytes);
+    QFETCH(bool, singleStream);
+    QString error;
+    ImportedSample imported;
+    Sf2File font;
+    const bool accepted =
+        singleStream ? importAudioBytes(bytes, QStringLiteral("f/test.sf2"), &imported, &error)
+                     : readSf2Bytes(bytes, QStringLiteral("f/test.sf2"), &font, &error);
+    QVERIFY2(!accepted, "invalid SoundFont input is refused");
+    QVERIFY2(!error.isEmpty(), "rejected input reports a refusal");
+}
 
-            // Downstream is untouched: an sf2 zone runs the ordinary
-            // pipeline to final s8 bytes.
-            SampleDocument doc(z0);
-            doc.setParams(SampleDocument::defaultParams(z0));
-            const ProcessedSample &out = doc.processed();
-            reporter.expect(!out.s8.isEmpty() && out.size == quint32(out.s8.size()) &&
-                                out.freq > 0 && out.looped,
-                            "sf2 zone renders through the pipeline");
-        }
+void SampleProcessingTest::soundFontPicker()
+{
+    const SoundFontFixture fixture = makeSoundFontFixture();
+    QString error;
+    Sf2File font;
+    QVERIFY2(readSf2Bytes(fixture.bytes, QStringLiteral("f/test.sf2"), &font, &error),
+             "sf2 fixture reads");
 
-        // Refusals: the single-stream front door, a truncated container,
-        // and a font whose only sample is a skipped ROM sample.
-        ImportedSample junk;
-        reporter.expect(!importAudioBytes(sf2Bytes, QStringLiteral("f/test.sf2"), &junk, &error),
-                        "sf2 refused by the single-stream front door");
-        reporter.expectError(error,
-                             QStringLiteral("SoundFont files hold multiple samples — "
-                                            "pick a zone with the SoundFont zone "
-                                            "picker."),
-                             "sf2 front-door refusal text");
-        Sf2File bad;
-        reporter.expect(!readSf2Bytes(sf2Bytes.left(200), QStringLiteral("f/t.sf2"), &bad, &error),
-                        "truncated sf2 refused");
-        reporter.expectError(error, QStringLiteral("the SoundFont file is corrupt or truncated."),
-                             "sf2 corrupt text");
-        QByteArray romOnly;
-        shdrRec(&romOnly, "RomTone", 0, 400, 0, 0, 22050, 60, 0, 0x8001);
-        shdrRec(&romOnly, "EOS", 0, 0, 0, 0, 0, 0, 0, 0);
-        reporter.expect(!readSf2Bytes(buildSf2(romOnly), QStringLiteral("f/r.sf2"), &bad, &error),
-                        "ROM-only font refused");
-        reporter.expectError(error, QStringLiteral("the SoundFont contains no importable samples."),
-                             "no-importable-samples text");
-
-        // The picker, offscreen: grouping, search filter, selection arming
-        // OK, and accept returning the picked zone index.
-        {
-            Sf2ZonePicker picker(font);
-            picker.resize(720, 480);
-            picker.show();
-            QApplication::processEvents();
-            auto *tree = picker.findChild<QTreeWidget *>(QStringLiteral("sf2ZoneTree"));
-            auto *searchEdit = picker.findChild<QLineEdit *>(QStringLiteral("sf2SearchEdit"));
-            auto *buttons = picker.findChild<QDialogButtonBox *>(QStringLiteral("sf2ButtonBox"));
-            reporter.expect(tree && searchEdit && buttons, "picker widgets found");
-            if (tree && searchEdit && buttons) {
-                QPushButton *ok = buttons->button(QDialogButtonBox::Ok);
-                reporter.expect(tree->topLevelItemCount() == 2,
-                                "zones group under instrument and (no instrument)");
-                QTreeWidgetItem *grp0 = tree->topLevelItem(0);
-                QTreeWidgetItem *grp1 = tree->topLevelItem(1);
-                reporter.expect(grp0 && grp0->text(0) == QStringLiteral("TestInst — TestPreset") &&
-                                    grp0->childCount() == 1,
-                                "group label names the instrument and preset");
-                reporter.expect(grp1 && grp1->childCount() == 2,
-                                "unreferenced zones fall under (no instrument)");
-                reporter.expect(ok && !ok->isEnabled() && picker.selectedZone() == -1,
-                                "nothing picked until a zone row is chosen");
-                tree->setCurrentItem(grp0->child(0));
-                reporter.expect(picker.selectedZone() == 0 && ok->isEnabled(),
-                                "selecting a zone row arms OK");
-                tree->setCurrentItem(grp0);
-                reporter.expect(picker.selectedZone() == -1 && !ok->isEnabled(),
-                                "group rows are not pickable");
-                searchEdit->setText(QStringLiteral("pad"));
-                reporter.expect(tree->topLevelItemCount() == 1 &&
-                                    tree->topLevelItem(0)->childCount() == 1,
-                                "search filters to matching zones");
-                tree->setCurrentItem(tree->topLevelItem(0)->child(0));
-                reporter.expect(picker.selectedZone() == 1,
-                                "filtered pick maps to the right zone index");
-                searchEdit->clear();
-                reporter.expect(tree->topLevelItemCount() == 2,
-                                "clearing the search restores every zone");
-                tree->setCurrentItem(tree->topLevelItem(0)->child(0));
-                ok->click();
-                reporter.expect(picker.result() == QDialog::Accepted && picker.selectedZone() == 0,
-                                "OK accepts with the picked zone");
-            }
-        }
-        if (reporter.failureCount() == before)
-            std::printf("samplecheck: soundfont OK\n");
-    }
+    Sf2ZonePicker picker(font);
+    picker.resize(720, 480);
+    picker.show();
+    QApplication::processEvents();
+    auto *tree = picker.findChild<QTreeWidget *>(QStringLiteral("sf2ZoneTree"));
+    auto *searchEdit = picker.findChild<QLineEdit *>(QStringLiteral("sf2SearchEdit"));
+    auto *buttons = picker.findChild<QDialogButtonBox *>(QStringLiteral("sf2ButtonBox"));
+    QVERIFY2(tree && searchEdit && buttons, "picker widgets found");
+    QPushButton *ok = buttons->button(QDialogButtonBox::Ok);
+    QVERIFY2(ok, "picker has an accept button");
+    QCOMPARE(tree->topLevelItemCount(), 2);
+    QTreeWidgetItem *firstGroup = tree->topLevelItem(0);
+    QTreeWidgetItem *secondGroup = tree->topLevelItem(1);
+    QVERIFY2(firstGroup && firstGroup->childCount() == 1,
+             "instrument/preset zones form one picker group");
+    QVERIFY2(secondGroup && secondGroup->childCount() == 2,
+             "unreferenced zones fall under (no instrument)");
+    QVERIFY2(!ok->isEnabled() && picker.selectedZone() == -1,
+             "nothing picked until a zone row is chosen");
+    tree->setCurrentItem(firstGroup->child(0));
+    QVERIFY2(picker.selectedZone() == 0 && ok->isEnabled(), "selecting a zone row arms OK");
+    tree->setCurrentItem(firstGroup);
+    QVERIFY2(picker.selectedZone() == -1 && !ok->isEnabled(), "group rows are not pickable");
+    searchEdit->setText(QStringLiteral("pad"));
+    QCOMPARE(tree->topLevelItemCount(), 1);
+    QCOMPARE(tree->topLevelItem(0)->childCount(), 1);
+    tree->setCurrentItem(tree->topLevelItem(0)->child(0));
+    QCOMPARE(picker.selectedZone(), 1);
+    searchEdit->clear();
+    QCOMPARE(tree->topLevelItemCount(), 2);
+    tree->setCurrentItem(tree->topLevelItem(0)->child(0));
+    ok->click();
+    QVERIFY2(picker.result() == QDialog::Accepted && picker.selectedZone() == 0,
+             "OK accepts with the picked zone");
 }
 
 } // namespace samplecheck

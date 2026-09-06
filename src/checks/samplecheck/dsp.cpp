@@ -1,10 +1,12 @@
 #include "checks/samplecheck/fixtures.h"
 #include "checks/samplecheck/samplecheck.h"
 
+#include <QTemporaryDir>
+#include <QtTest>
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
 #include <cstring>
+#include <memory>
 #include <span>
 #include <utility>
 #include <vector>
@@ -20,485 +22,488 @@ extern "C" {
 }
 
 namespace {
-constexpr double kPi = 3.14159265358979323846;
+
+enum class ParityProfile {
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+};
+
+struct ImportedHiRes {
+    ImportedSample sample;
+    QString error;
+    bool ok = false;
+};
+
+ImportedHiRes importHiRes()
+{
+    ImportedHiRes result;
+    result.ok =
+        importAudioBytes(samplecheck::hiResSampleWav(), QStringLiteral("fix/hires_tone.wav"),
+                         &result.sample, &result.error);
+    return result;
 }
+
+SampleEditParams parityParams(ParityProfile profile, double sourceRate, SampleEditParams params)
+{
+    switch (profile) {
+    case ParityProfile::A:
+        params.targetRate = 13379.0;
+        break;
+    case ParityProfile::B:
+        params.loopOn = false;
+        params.cropStart = 500;
+        params.cropEnd = 8500;
+        params.baseKey = 58;
+        params.fineTuneCents = 25.0;
+        params.targetRate = 13379.0;
+        break;
+    case ParityProfile::C:
+        params.targetRate = 6689.5;
+        params.normalizeMode = SampleEditParams::NormalizeOff;
+        params.dcRemove = SampleEditParams::Off;
+        params.fadeIn = false;
+        params.fadeOut = false;
+        break;
+    case ParityProfile::D:
+        params.targetRate = sourceRate;
+        params.normalizeMode = SampleEditParams::NormalizeLooped;
+        break;
+    case ParityProfile::E:
+        params.targetRate = 13379.0;
+        params.ditherOn = true;
+        params.normalizeMode = SampleEditParams::NormalizeOff;
+        break;
+    case ParityProfile::F:
+        params.loopOn = false;
+        params.targetRate = 26758.0;
+        params.normalizeMode = SampleEditParams::NormalizeOff;
+        params.dcRemove = SampleEditParams::Off;
+        params.fadeIn = false;
+        params.fadeOut = false;
+        break;
+    }
+    return params;
+}
+} // namespace
 
 namespace samplecheck {
 
-std::optional<DspFixture> runDspChecks(Reporter &reporter, const RegisteredSampleProject &project)
+void SampleProcessingTest::resamplePassband_data()
 {
-    const QString &root = project.root;
-    // ---- resampler (DSP.md §9 items 1-4) ----
-    {
-        const int before = reporter.failureCount();
-        const double srcRate = 44100.0, dstRate = 13379.0;
-        const double r = dstRate / srcRate;
+    QTest::addColumn<double>("frequency");
+    QTest::newRow("100-hz") << 100.0;
+    QTest::newRow("500-hz") << 500.0;
+    QTest::newRow("1-khz") << 1000.0;
+    QTest::newRow("2-khz") << 2000.0;
+    QTest::newRow("4-khz") << 4000.0;
+    QTest::newRow("5-khz") << 5000.0;
+    QTest::newRow("5.5-khz") << 5500.0;
+    QTest::newRow("6-khz") << 6000.0;
+}
 
-        // 1. Passband: 100 Hz–6.0 kHz within ±0.1 dB of unity.
-        for (const double f : {100.0, 500.0, 1000.0, 2000.0, 4000.0, 5000.0, 5500.0, 6000.0}) {
-            const std::vector<float> in = genSineFast(srcRate, f, 0.3, 0.5);
-            const qint64 nOut = qint64(std::llround(double(in.size()) * r));
-            const std::vector<float> out = SampleDsp::resampleSinc(in, r, nOut);
-            const double amp = toneAmp(out, dstRate, f, size_t(nOut / 5), size_t(nOut * 4 / 5));
-            const double db = 20.0 * std::log10(amp / 0.5);
-            if (std::abs(db) > 0.1) {
-                std::fprintf(stderr,
-                             "samplecheck: FAIL: passband %.0f Hz off by "
-                             "%.3f dB\n",
-                             f, db);
-                reporter.noteFailure();
-            }
-        }
+void SampleProcessingTest::resamplePassband()
+{
+    QFETCH(double, frequency);
+    constexpr double sourceRate = 44100.0;
+    constexpr double targetRate = 13379.0;
+    constexpr double ratio = targetRate / sourceRate;
+    const std::vector<float> input = genSineFast(sourceRate, frequency, 0.3, 0.5);
+    const qint64 outputLength = qint64(std::llround(double(input.size()) * ratio));
+    const std::vector<float> output = SampleDsp::resampleSinc(input, ratio, outputLength);
+    const double amplitude = toneAmp(output, targetRate, frequency, size_t(outputLength / 5),
+                                     size_t(outputLength * 4 / 5));
+    const double decibels = 20.0 * std::log10(amplitude / 0.5);
+    QVERIFY2(
+        std::abs(decibels) <= 0.1,
+        qPrintable(QStringLiteral("passband %1 Hz offset %2 dB").arg(frequency).arg(decibels)));
+}
 
-        // 2. Alias rejection: above-Nyquist input ≤ −80 dB re input.
-        for (const double f : {8000.0, 10000.0, 14000.0}) {
-            const std::vector<float> in = genSine(srcRate, f, 0.3, 0.5);
-            const qint64 nOut = qint64(std::llround(double(in.size()) * r));
-            const std::vector<float> out = SampleDsp::resampleSinc(in, r, nOut);
-            const double rms = rmsOf(out, size_t(nOut / 5), size_t(nOut * 4 / 5));
-            const double inRms = 0.5 / std::sqrt(2.0);
-            if (rms > inRms * 1e-4) {
-                std::fprintf(stderr, "samplecheck: FAIL: alias %.0f Hz leaks %.1f dB\n", f,
-                             20.0 * std::log10(rms / inRms));
-                reporter.noteFailure();
-            }
-        }
+void SampleProcessingTest::resampleAliasRejection_data()
+{
+    QTest::addColumn<double>("frequency");
+    QTest::newRow("8-khz") << 8000.0;
+    QTest::newRow("10-khz") << 10000.0;
+    QTest::newRow("14-khz") << 14000.0;
+}
 
-        // 3a. DC: constant in → same constant (±1e-4) away from the edges.
-        {
-            std::vector<float> in(size_t(srcRate * 0.2), 0.25f);
-            const qint64 nOut = qint64(std::llround(double(in.size()) * r));
-            const std::vector<float> out = SampleDsp::resampleSinc(in, r, nOut);
-            bool flat = true;
-            for (qint64 i = 100; i < nOut - 100; i++)
-                flat = flat && std::abs(double(out[size_t(i)]) - 0.25) <= 1e-4;
-            reporter.expect(flat, "constant input passes at unity DC gain");
-        }
+void SampleProcessingTest::resampleAliasRejection()
+{
+    QFETCH(double, frequency);
+    constexpr double sourceRate = 44100.0;
+    constexpr double targetRate = 13379.0;
+    constexpr double ratio = targetRate / sourceRate;
+    const std::vector<float> input = genSine(sourceRate, frequency, 0.3, 0.5);
+    const qint64 outputLength = qint64(std::llround(double(input.size()) * ratio));
+    const std::vector<float> output = SampleDsp::resampleSinc(input, ratio, outputLength);
+    const double outputRms = rmsOf(output, size_t(outputLength / 5), size_t(outputLength * 4 / 5));
+    const double inputRms = 0.5 / std::sqrt(2.0);
+    QVERIFY2(outputRms <= inputRms * 1e-4,
+             qPrintable(QStringLiteral("alias %1 Hz leaked").arg(frequency)));
+}
 
-        // 3b. Impulse response symmetric (linear phase) at ratio 1/2.
-        {
-            std::vector<float> in(4000, 0.0f);
-            in[2000] = 1.0f;
-            const std::vector<float> out = SampleDsp::resampleSinc(in, 0.5, 2000);
-            bool symmetric = true;
-            for (int d = 1; d <= 500; d++)
-                symmetric = symmetric && std::abs(double(out[size_t(1000 + d)]) -
-                                                  double(out[size_t(1000 - d)])) <= 2e-6;
-            reporter.expect(symmetric && out[1000] > 0.1,
-                            "impulse response is symmetric about the center");
-        }
+void SampleProcessingTest::resampleDcGain()
+{
+    constexpr double sourceRate = 44100.0;
+    constexpr double targetRate = 13379.0;
+    constexpr double ratio = targetRate / sourceRate;
+    const std::vector<float> input(size_t(sourceRate * 0.2), 0.25f);
+    const qint64 outputLength = qint64(std::llround(double(input.size()) * ratio));
+    const std::vector<float> output = SampleDsp::resampleSinc(input, ratio, outputLength);
+    for (qint64 i = 100; i < outputLength - 100; ++i)
+        QVERIFY(std::abs(double(output[size_t(i)]) - 0.25) <= 1e-4);
+}
 
-        // 3c. 1 kHz in → spectral peak at 1000 ± 0.5 Hz out.
-        {
-            const std::vector<float> in = genSine(srcRate, 1000.0, 1.2, 0.5);
-            const qint64 nOut = qint64(std::llround(double(in.size()) * r));
-            const std::vector<float> out = SampleDsp::resampleSinc(in, r, nOut);
-            double bestF = 0.0, bestAmp = -1.0;
-            for (double f = 998.0; f <= 1002.0; f += 0.05) {
-                const double amp = toneAmp(out, dstRate, f, 0, size_t(nOut));
-                if (amp > bestAmp) {
-                    bestAmp = amp;
-                    bestF = f;
-                }
-            }
-            reporter.expect(std::abs(bestF - 1000.0) <= 0.5,
-                            "1 kHz spectral peak lands within ±0.5 Hz");
-        }
+void SampleProcessingTest::resampleImpulseSymmetry()
+{
+    std::vector<float> input(4000, 0.0f);
+    input[2000] = 1.0f;
+    const std::vector<float> output = SampleDsp::resampleSinc(input, 0.5, 2000);
+    QVERIFY(output[1000] > 0.1);
+    for (int distance = 1; distance <= 500; ++distance)
+        QVERIFY(std::abs(double(output[size_t(1000 + distance)]) -
+                         double(output[size_t(1000 - distance)])) <= 2e-6);
+}
 
-        // 4. Identity bypass: equal rates → bit-exact passthrough.
-        {
-            std::vector<float> in(size_t(5000));
-            quint32 rng = 12345;
-            for (auto &v : in) {
-                rng = rng * 1664525u + 1013904223u;
-                v = float(double(rng) / 4294967296.0 - 0.5);
-            }
-            const std::vector<float> out = SampleDsp::resampleSinc(in, 1.0, qint64(in.size()));
-            reporter.expect(std::memcmp(in.data(), out.data(), in.size() * sizeof(float)) == 0,
-                            "identity ratio is a bit-exact passthrough");
+void SampleProcessingTest::resampleFrequencyAccuracy()
+{
+    constexpr double sourceRate = 44100.0;
+    constexpr double targetRate = 13379.0;
+    constexpr double ratio = targetRate / sourceRate;
+    const std::vector<float> input = genSine(sourceRate, 1000.0, 1.2, 0.5);
+    const qint64 outputLength = qint64(std::llround(double(input.size()) * ratio));
+    const std::vector<float> output = SampleDsp::resampleSinc(input, ratio, outputLength);
+    double bestFrequency = 0.0;
+    double bestAmplitude = -1.0;
+    for (double frequency = 998.0; frequency <= 1002.0; frequency += 0.05) {
+        const double amplitude = toneAmp(output, targetRate, frequency, 0, size_t(outputLength));
+        if (amplitude > bestAmplitude) {
+            bestAmplitude = amplitude;
+            bestFrequency = frequency;
         }
-        if (reporter.failureCount() == before)
-            std::printf("samplecheck: resampler OK\n");
     }
+    QVERIFY(std::abs(bestFrequency - 1000.0) <= 0.5);
+}
 
-    // ---- quantizer (DSP.md §9 item 5, synthetic half) ----
-    {
-        const int before = reporter.failureCount();
-        const struct {
-            double in;
-            int out;
-        } vectors[] = {
-            {1.0, 127},
-            {-1.0, -128},
-            {127.5 / 128.0, 127},
-            {-127.5 / 128.0, -128},
-            {127.0 / 128.0, 127},
-            {-127.0 / 128.0, -127},
-            {0.5, 64},
-            {-0.5, -64},
-            {1e-9, 0},
-            {-1e-9, -1}, // floor, not truncate
-            {0.0, 0},
-        };
-        bool vecOk = true;
-        for (const auto &v : vectors)
-            vecOk = vecOk && SampleDsp::quantizeToAgb8(v.in) == v.out;
-        reporter.expect(vecOk, "quantizer matches clamp(floor(x*128), -128, 127)");
-
-        bool u8Round = true;
-        for (int v = 0; v < 256; v++)
-            u8Round = u8Round && SampleDsp::quantizeToAgb8((v - 128) / 128.0) == v - 128;
-        reporter.expect(u8Round, "u8 → float → s8 is the identity for all 256 values");
-
-        std::vector<float> noise(size_t(2000));
-        quint32 rng = 999;
-        for (auto &v : noise) {
-            rng = rng * 1664525u + 1013904223u;
-            v = float(double(rng) / 4294967296.0 - 0.5);
-        }
-        reporter.expect(SampleDsp::quantizeBuffer(noise, true) ==
-                            SampleDsp::quantizeBuffer(noise, true),
-                        "dither uses a fixed seed — renders are deterministic");
-        reporter.expect(SampleDsp::quantizeBuffer(noise, true) !=
-                            SampleDsp::quantizeBuffer(noise, false),
-                        "dither actually perturbs the output");
-
-        // Zero-crossing snap: sign changes at 4 and 8.
-        const float zx[] = {0.5f,  0.5f,  0.5f, 0.5f, -0.5f, -0.5f,
-                            -0.5f, -0.5f, 0.5f, 0.5f, 0.5f,  0.5f};
-        reporter.expect(SampleDsp::nearestZeroCrossing(std::span<const float>(zx), 5) == 4 &&
-                            SampleDsp::nearestZeroCrossing(std::span<const float>(zx), 7) == 8 &&
-                            SampleDsp::nearestZeroCrossing(std::span<const float>(zx), 0) == 4,
-                        "nearest zero crossing snaps to the closest sign change");
-        // Marker mapping: crop offset then ratio, rounded.
-        reporter.expect(SampleDsp::mapMarker(2000, 500, 0.5) == 750 &&
-                            SampleDsp::mapMarker(2001, 0, 13379.0 / 44100.0) == 607,
-                        "marker mapping crops then scales");
-        if (reporter.failureCount() == before)
-            std::printf("samplecheck: quantizer OK\n");
+void SampleProcessingTest::resampleIdentity()
+{
+    std::vector<float> input(5000);
+    quint32 random = 12345;
+    for (float &value : input) {
+        random = random * 1664525u + 1013904223u;
+        value = float(double(random) / 4294967296.0 - 0.5);
     }
+    const std::vector<float> output = SampleDsp::resampleSinc(input, 1.0, qint64(input.size()));
+    QCOMPARE(output.size(), input.size());
+    QVERIFY(std::memcmp(input.data(), output.data(), input.size() * sizeof(float)) == 0);
+}
 
-    // ---- normalization (DSP.md §9 item 6, synthetic half) ----
-    {
-        const int before = reporter.failureCount();
-        QString warning;
+void SampleProcessingTest::quantizationVectors_data()
+{
+    QTest::addColumn<double>("input");
+    QTest::addColumn<int>("expected");
+    QTest::newRow("positive-ceiling") << 1.0 << 127;
+    QTest::newRow("negative-floor") << -1.0 << -128;
+    QTest::newRow("positive-half-ceiling") << 127.5 / 128.0 << 127;
+    QTest::newRow("negative-half-floor") << -127.5 / 128.0 << -128;
+    QTest::newRow("positive-exact") << 127.0 / 128.0 << 127;
+    QTest::newRow("negative-exact") << -127.0 / 128.0 << -127;
+    QTest::newRow("positive-half") << 0.5 << 64;
+    QTest::newRow("negative-half") << -0.5 << -64;
+    QTest::newRow("positive-near-zero") << 1e-9 << 0;
+    QTest::newRow("negative-near-zero") << -1e-9 << -1;
+    QTest::newRow("zero") << 0.0 << 0;
+}
 
-        // Looped tone with a comfortable crest: RMS lands on target.
+void SampleProcessingTest::quantizationVectors()
+{
+    QFETCH(double, input);
+    QFETCH(int, expected);
+    QCOMPARE(int(SampleDsp::quantizeToAgb8(input)), expected);
+}
+
+void SampleProcessingTest::quantizationU8Roundtrip()
+{
+    for (int value = 0; value < 256; ++value)
+        QCOMPARE(int(SampleDsp::quantizeToAgb8((value - 128) / 128.0)), value - 128);
+}
+
+void SampleProcessingTest::quantizationDither()
+{
+    std::vector<float> noise(2000);
+    quint32 random = 999;
+    for (float &value : noise) {
+        random = random * 1664525u + 1013904223u;
+        value = float(double(random) / 4294967296.0 - 0.5);
+    }
+    const QByteArray dithered = SampleDsp::quantizeBuffer(noise, true);
+    QCOMPARE(SampleDsp::quantizeBuffer(noise, true), dithered);
+    QVERIFY(SampleDsp::quantizeBuffer(noise, false) != dithered);
+}
+
+void SampleProcessingTest::markerMapping()
+{
+    const float zeroCrossings[] = {0.5f,  0.5f,  0.5f, 0.5f, -0.5f, -0.5f,
+                                   -0.5f, -0.5f, 0.5f, 0.5f, 0.5f,  0.5f};
+    QCOMPARE(SampleDsp::nearestZeroCrossing(std::span<const float>(zeroCrossings), 5), qint64(4));
+    QCOMPARE(SampleDsp::nearestZeroCrossing(std::span<const float>(zeroCrossings), 7), qint64(8));
+    QCOMPARE(SampleDsp::nearestZeroCrossing(std::span<const float>(zeroCrossings), 0), qint64(4));
+    QCOMPARE(SampleDsp::mapMarker(2000, 500, 0.5), qint64(750));
+    QCOMPARE(SampleDsp::mapMarker(2001, 0, 13379.0 / 44100.0), qint64(607));
+}
+
+void SampleProcessingTest::normalization_data()
+{
+    QTest::addColumn<int>("profile");
+    QTest::newRow("looped-rms") << 0;
+    QTest::newRow("looped-peak-cap") << 1;
+    QTest::newRow("one-shot-peak") << 2;
+    QTest::newRow("near-silent-refusal") << 3;
+}
+
+void SampleProcessingTest::normalization()
+{
+    QFETCH(int, profile);
+    QString warning;
+
+    if (profile == 0) {
         std::vector<float> tone = genSine(13379.0, 440.0, 0.5, 0.11);
-        double gain = SampleDsp::normalizeGain(tone, true, 0, &warning);
-        for (auto &v : tone)
-            v = float(double(v) * gain);
+        const double gain = SampleDsp::normalizeGain(tone, true, 0, &warning);
+        for (float &value : tone)
+            value = float(double(value) * gain);
         const double rms = rmsOf(tone, 0, tone.size());
-        reporter.expect(std::abs(20.0 * std::log10(rms / SampleDsp::kTargetLoopRms)) < 0.1,
-                        "looped normalize lands within 0.1 dB of the target RMS");
-        reporter.expect(warning.isEmpty(), "clean tone normalizes without warnings");
+        QVERIFY(std::abs(20.0 * std::log10(rms / SampleDsp::kTargetLoopRms)) < 0.1);
+        QVERIFY(warning.isEmpty());
+        return;
+    }
 
-        // High crest: the peak cap engages and is never exceeded.
+    if (profile == 1) {
         std::vector<float> crest = genSine(13379.0, 440.0, 0.5, 0.05);
         crest[100] = 0.9f;
-        gain = SampleDsp::normalizeGain(crest, true, 0, &warning);
+        const double gain = SampleDsp::normalizeGain(crest, true, 0, &warning);
         double peak = 0.0;
-        for (const auto &v : crest)
-            peak = std::max(peak, std::abs(double(v) * gain));
-        reporter.expect(peak <= SampleDsp::kPeakCeiling + 1e-9 &&
-                            std::abs(peak - SampleDsp::kPeakCeiling) < 1e-6,
-                        "peak cap engages on high-crest material");
-
-        // One-shot: pure peak normalize.
-        std::vector<float> hit = genSine(13379.0, 200.0, 0.1, 0.4);
-        gain = SampleDsp::normalizeGain(hit, false, 0, &warning);
-        peak = 0.0;
-        for (const auto &v : hit)
-            peak = std::max(peak, std::abs(double(v) * gain));
-        reporter.expect(std::abs(peak - SampleDsp::kPeakCeiling) < 1e-6,
-                        "one-shot normalizes to the peak ceiling");
-
-        // Near-silent input refuses auto-normalize.
-        std::vector<float> quiet(1000, 0.01f);
-        gain = SampleDsp::normalizeGain(quiet, false, 0, &warning);
-        reporter.expect(gain == 1.0 &&
-                            warning == QStringLiteral("silent sample — auto-normalize skipped."),
-                        "silent sample refuses auto-normalize");
-        if (reporter.failureCount() == before)
-            std::printf("samplecheck: normalization OK\n");
+        for (const float value : crest)
+            peak = (std::max)(peak, std::abs(double(value) * gain));
+        QVERIFY(peak <= SampleDsp::kPeakCeiling + 1e-9);
+        QVERIFY(std::abs(peak - SampleDsp::kPeakCeiling) < 1e-6);
+        return;
     }
 
-    // ---- the parity fixture: hi-res 16-bit source used from here on ----
-    FixtureSpec hiSpec;
-    hiSpec.bits = 16;
-    hiSpec.rate = 44100;
-    hiSpec.numLoops = 1;
-    hiSpec.loopStart = 2000;
-    hiSpec.loopEndIncl = 9999;
-    for (int i = 0; i < 12000; i++) {
-        const double v = 0.5 * std::sin(2.0 * kPi * 220.5 * i / 44100.0);
-        putU16(&hiSpec.samples, quint16(qint16(std::lround(v * 32000.0))));
-    }
-    const QByteArray hiResWav = fixtureWav(hiSpec);
-    ImportedSample hiRes;
-    {
-        QString error;
-        if (!importAudioBytes(hiResWav, QStringLiteral("fix/hires_tone.wav"), &hiRes, &error)) {
-            std::fprintf(stderr, "samplecheck: FAIL: hi-res fixture import: %s\n",
-                         qUtf8Printable(error));
-            return std::nullopt;
-        }
+    if (profile == 2) {
+        const std::vector<float> hit = genSine(13379.0, 200.0, 0.1, 0.4);
+        const double gain = SampleDsp::normalizeGain(hit, false, 0, &warning);
+        double peak = 0.0;
+        for (const float value : hit)
+            peak = (std::max)(peak, std::abs(double(value) * gain));
+        QVERIFY(std::abs(peak - SampleDsp::kPeakCeiling) < 1e-6);
+        return;
     }
 
-    // ---- pipeline determinism: two fresh documents → identical bytes ----
-    {
-        const int before = reporter.failureCount();
-        // Fresh (non-prepared) sources default to the GBA mix rate; sources
-        // at or below it keep their own. Prepared files are covered by the
-        // byte-faithful dialog assertions.
-        reporter.expect(SampleDocument::defaultParams(hiRes).targetRate == 13379.0,
-                        "fresh hi-res source defaults to 13379 Hz");
-        {
-            ImportedSample low = hiRes;
-            low.sampleRate = 8000.0;
-            low.gbaReady = false;
-            reporter.expect(SampleDocument::defaultParams(low).targetRate == 8000.0,
-                            "sources below the GBA rate keep their own");
-        }
-        SampleEditParams p = SampleDocument::defaultParams(hiRes);
-        p.cropStart = 100;
-        p.cropEnd = 11500;
-        p.targetRate = 13379.0;
-        p.baseKey = 59;
-        p.fineTuneCents = 10.0;
-        p.ditherOn = true;
-        SampleDocument docA(hiRes), docB(hiRes);
-        docA.setParams(p);
-        docB.setParams(p);
-        const ProcessedSample &a = docA.processed();
-        const ProcessedSample &b = docB.processed();
-        reporter.expect(a.s8 == b.s8 && a.freq == b.freq && a.size == b.size &&
-                            a.loopStart == b.loopStart && a.pitchFraction == b.pitchFraction,
-                        "two renders of the same params are byte-identical");
-        // A no-op params round trip re-renders identically too.
-        SampleEditParams q = p;
-        q.baseKey = 60;
-        docA.setParams(q);
-        docA.processed();
-        docA.setParams(p);
-        reporter.expect(docA.processed().s8 == b.s8, "param round-trip re-renders identically");
-
-        // Seam metrics: a mid-buffer loop start forms the NCC window; a
-        // loop starting at 0 has no pre-start context, so ncc is flagged
-        // invalid (amp/slope stay valid) and readouts must not show 0%.
-        SampleEditParams mid = SampleDocument::defaultParams(hiRes);
-        SampleDocument docMid(hiRes);
-        docMid.setParams(mid);
-        reporter.expect(docMid.processed().seam.valid && docMid.processed().seam.nccValid,
-                        "mid-buffer loop start gets a valid NCC");
-        SampleEditParams zero = mid;
-        zero.loopStart = 0;
-        SampleDocument docZero(hiRes);
-        docZero.setParams(zero);
-        reporter.expect(docZero.processed().seam.valid && !docZero.processed().seam.nccValid,
-                        "loop-from-0 seam flags NCC as unformable");
-        if (reporter.failureCount() == before)
-            std::printf("samplecheck: pipeline determinism OK\n");
+    if (profile == 3) {
+        const std::vector<float> quiet(1000, 0.01f);
+        QCOMPARE(SampleDsp::normalizeGain(quiet, false, 0, &warning), 1.0);
+        QVERIFY(!warning.isEmpty());
+        return;
     }
 
-    // ---- retune vectors (FORMATS.md §3, independently precomputed) ----
-    {
-        const int before = reporter.failureCount();
-        FixtureSpec flat;
-        flat.rate = 44100;
-        flat.withSmpl = false;
-        flat.samples = QByteArray(64, char(0x80));
-        ImportedSample flatSrc;
-        QString error;
-        importAudioBytes(fixtureWav(flat), QStringLiteral("f/flat.wav"), &flatSrc, &error);
-        const struct {
-            double rate;
-            int key;
-            double cents;
-            quint32 agbp;
-        } vectors[] = {
-            {13379.0, 60, 0.0, 13700096}, {13379.0, 72, 0.0, 6850048},
-            {13379.0, 57, 0.0, 16292252}, {13379.0, 58, 25.0, 15157369},
-            {3344.75, 60, 0.0, 3425024},  {44100.0, 69, 50.0, 26086940},
-            {6689.5, 60, 0.0, 6850048},
-        };
-        for (const auto &v : vectors) {
-            SampleDocument doc(flatSrc);
-            SampleEditParams p = doc.params();
-            p.targetRate = v.rate;
-            p.baseKey = v.key;
-            p.fineTuneCents = v.cents;
-            doc.setParams(p);
-            if (doc.processed().freq != v.agbp) {
-                std::fprintf(stderr,
-                             "samplecheck: FAIL: retune (%g Hz, key %d, %g "
-                             "cents): agbp %u, want %u\n",
-                             v.rate, v.key, v.cents, doc.processed().freq, v.agbp);
-                reporter.noteFailure();
-            }
-        }
-        if (reporter.failureCount() == before)
-            std::printf("samplecheck: retune vectors OK\n");
-    }
+    QFAIL("unsupported normalization profile");
+}
 
-    // ---- parity matrix: in-memory render == loader-decoded project file
-    // (the audition == build invariant), plus metadata round-trip ----
-    {
-        const int before = reporter.failureCount();
-        struct Case {
-            const char *name;
-            SampleEditParams params;
-        };
-        const SampleEditParams d = SampleDocument::defaultParams(hiRes);
-        std::vector<Case> cases;
-        {
-            SampleEditParams p = d; // downsample, loop, auto-normalize, fades
-            p.targetRate = 13379.0;
-            cases.push_back({"pm_a", p});
-        }
-        {
-            SampleEditParams p = d; // one-shot crop + retune
-            p.loopOn = false;
-            p.cropStart = 500;
-            p.cropEnd = 8500;
-            p.baseKey = 58;
-            p.fineTuneCents = 25.0;
-            p.targetRate = 13379.0;
-            cases.push_back({"pm_b", p});
-        }
-        {
-            SampleEditParams p = d; // fractional rate, bare pipeline
-            p.targetRate = 6689.5;
-            p.normalizeMode = SampleEditParams::NormalizeOff;
-            p.dcRemove = SampleEditParams::Off;
-            p.fadeIn = false;
-            p.fadeOut = false;
-            cases.push_back({"pm_c", p});
-        }
-        {
-            SampleEditParams p = d; // identity rate, explicit looped gain
-            p.targetRate = hiRes.sampleRate;
-            p.normalizeMode = SampleEditParams::NormalizeLooped;
-            cases.push_back({"pm_d", p});
-        }
-        {
-            SampleEditParams p = d; // dithered
-            p.targetRate = 13379.0;
-            p.ditherOn = true;
-            p.normalizeMode = SampleEditParams::NormalizeOff;
-            cases.push_back({"pm_e", p});
-        }
-        {
-            SampleEditParams p = d; // one-shot, odd output length (pad byte)
-            p.loopOn = false;
-            p.targetRate = 26758.0;
-            p.normalizeMode = SampleEditParams::NormalizeOff;
-            p.dcRemove = SampleEditParams::Off;
-            p.fadeIn = false;
-            p.fadeOut = false;
-            cases.push_back({"pm_f", p});
-        }
+void SampleProcessingTest::dspDeterminism()
+{
+    const ImportedHiRes imported = importHiRes();
+    QVERIFY2(imported.ok, qPrintable(imported.error));
+    const ImportedSample &source = imported.sample;
 
-        std::vector<ProcessedSample> renders;
-        QString vgText = QStringLiteral("voicegroup_parity::\n");
-        for (const Case &c : cases) {
-            SampleDocument doc(hiRes);
-            doc.setParams(c.params);
-            renders.push_back(doc.processed());
-            const QByteArray bytes = writeSampleWav(renders.back());
-            QString error;
-            if (!SampleRegistrar::registerSample(root, QLatin1String(c.name), bytes, &error)) {
-                std::fprintf(stderr, "samplecheck: FAIL: register %s: %s\n", c.name,
-                             qUtf8Printable(error));
-                reporter.noteFailure();
-                continue;
-            }
-            vgText += QStringLiteral("\tvoice_directsound 60, 0, DirectSoundWaveData_%1, "
-                                     "255, 0, 255, 0\n")
-                          .arg(QLatin1String(c.name));
+    QCOMPARE(SampleDocument::defaultParams(source).targetRate, 13379.0);
+    ImportedSample lowRate = source;
+    lowRate.sampleRate = 8000.0;
+    lowRate.gbaReady = false;
+    QCOMPARE(SampleDocument::defaultParams(lowRate).targetRate, 8000.0);
 
-            // Metadata round-trip (DSP.md §9 item 10) on the written bytes.
-            SampleWavInfo info;
-            const bool inspected = SampleRegistrar::inspectSampleWav(bytes, &info, &error);
-            const ProcessedSample &p = renders.back();
-            reporter.expect(inspected, "export re-inspects");
-            if (inspected) {
-                reporter.expect(info.agbPitch == p.freq && info.agbLoopEnd == p.size &&
-                                    info.numSamples == p.size &&
-                                    info.sampleRate == p.declaredRate &&
-                                    info.midiKey == quint32(p.unityNote) &&
-                                    info.pitchFraction == p.pitchFraction,
-                                "smpl/agbp/agbl re-parse to identical values");
-                reporter.expect(info.loopEnabled == p.looped &&
-                                    (!p.looped || (info.loopStart == p.loopStart &&
-                                                   info.loopEndIncl == p.size - 1)),
-                                "loop record re-parses (inclusive end n-1)");
-                reporter.expect(info.waveFreq == p.freq && info.waveSize == p.size &&
-                                    info.waveLoopStart == p.loopStart,
-                                "derived WaveData projection matches the render");
-                // Unity/fraction reconstruct m_exact with frac ∈ [0, 1).
-                const double frac = double(info.pitchFraction) / 4294967296.0;
-                const double exact = double(c.params.baseKey) + c.params.fineTuneCents / 100.0;
-                reporter.expect(frac >= 0.0 && frac < 1.0 &&
-                                    std::abs((double(info.midiKey) + frac) - exact) < 1e-6,
-                                "unity/fraction reconstruct the exact key");
-            }
-        }
+    SampleEditParams params = SampleDocument::defaultParams(source);
+    params.cropStart = 100;
+    params.cropEnd = 11500;
+    params.targetRate = 13379.0;
+    params.baseKey = 59;
+    params.fineTuneCents = 10.0;
+    params.ditherOn = true;
+    SampleDocument first(source);
+    SampleDocument second(source);
+    first.setParams(params);
+    second.setParams(params);
+    const ProcessedSample &firstRender = first.processed();
+    const ProcessedSample &secondRender = second.processed();
+    QVERIFY(firstRender.s8 == secondRender.s8 && firstRender.freq == secondRender.freq &&
+            firstRender.size == secondRender.size &&
+            firstRender.loopStart == secondRender.loopStart &&
+            firstRender.pitchFraction == secondRender.pitchFraction);
 
-        // Loop nudge geometry for pm_a: Lout = round(8000·r0) = 2427,
-        // S_out = round(2000·2427/8000) = 607, n = 3034.
-        reporter.expect(renders[0].looped && renders[0].loopStart == 607 &&
-                            renders[0].size == 3034 && renders[0].declaredRate == 13379,
-                        "looped resample nudges the ratio onto an integer loop");
-        // pm_f: odd data length exercises the RIFF pad byte.
-        reporter.expect(renders[5].size == 7281, "odd-length one-shot render");
-        {
-            const QByteArray bytes = writeSampleWav(renders[5]);
-            // Chunk order fmt/data/smpl/agbp/agbl with a pad byte after data.
-            const qsizetype dataAt = 12 + 8 + 16;
-            reporter.expect(bytes.mid(12, 4) == "fmt " && bytes.mid(dataAt, 4) == "data" &&
-                                getU32(bytes, dataAt + 4) == 7281 &&
-                                bytes[dataAt + 8 + 7281] == '\0' &&
-                                bytes.mid(dataAt + 8 + 7281 + 1, 4) == "smpl" &&
-                                bytes.mid(dataAt + 8 + 7281 + 1 + 8 + 36, 4) == "agbp" &&
-                                bytes.mid(dataAt + 8 + 7281 + 1 + 8 + 36 + 12, 4) == "agbl",
-                            "writer chunk order and RIFF pad byte");
-        }
+    SampleEditParams changed = params;
+    changed.baseKey = 60;
+    first.setParams(changed);
+    first.processed();
+    first.setParams(params);
+    QCOMPARE(first.processed().s8, secondRender.s8);
 
-        writeFile(root + QStringLiteral("/sound/voicegroups/voicegroup_parity.inc"),
-                  vgText.toUtf8());
-        const QByteArray rootUtf8 = root.toLocal8Bit();
-        LoadedVoiceGroup *vg = voicegroup_load(rootUtf8.constData(), "voicegroup_parity", nullptr);
-        if (!vg) {
-            std::fprintf(stderr, "samplecheck: FAIL: parity voicegroup_load failed\n");
-            reporter.noteFailure();
-        } else {
-            for (size_t i = 0; i < cases.size(); i++) {
-                const ProcessedSample &p = renders[i];
-                const WaveData *wd = vg->voices[i].wav;
-                if (!wd || !wd->data) {
-                    std::fprintf(stderr, "samplecheck: FAIL: %s did not resolve\n", cases[i].name);
-                    reporter.noteFailure();
-                    continue;
-                }
-                const bool headerOk = wd->freq == p.freq && wd->loopStart == p.loopStart &&
-                                      wd->size == p.size && wd->status == (p.looped ? 0x4000 : 0);
-                const bool bytesOk =
-                    headerOk && std::memcmp(wd->data, p.s8.constData(), p.size) == 0;
-                if (!headerOk || !bytesOk) {
-                    std::fprintf(stderr,
-                                 "samplecheck: FAIL: %s loader parity "
-                                 "(header %d bytes %d)\n",
-                                 cases[i].name, int(headerOk), int(bytesOk));
-                    reporter.noteFailure();
-                }
-            }
-            voicegroup_free(vg);
-        }
-        if (reporter.failureCount() == before)
-            std::printf("samplecheck: parity matrix OK\n");
-    }
-    return DspFixture{std::move(hiRes), hiResWav};
+    SampleDocument midLoop(source);
+    midLoop.setParams(SampleDocument::defaultParams(source));
+    QVERIFY(midLoop.processed().seam.valid);
+    QVERIFY(midLoop.processed().seam.nccValid);
+    SampleEditParams fromZero = SampleDocument::defaultParams(source);
+    fromZero.loopStart = 0;
+    SampleDocument zeroLoop(source);
+    zeroLoop.setParams(fromZero);
+    QVERIFY(zeroLoop.processed().seam.valid);
+    QVERIFY(!zeroLoop.processed().seam.nccValid);
+}
+
+void SampleProcessingTest::parityCases_data()
+{
+    QTest::addColumn<int>("profile");
+    QTest::addColumn<QString>("name");
+    QTest::newRow("pm_a") << int(ParityProfile::A) << QStringLiteral("pm_a");
+    QTest::newRow("pm_b") << int(ParityProfile::B) << QStringLiteral("pm_b");
+    QTest::newRow("pm_c") << int(ParityProfile::C) << QStringLiteral("pm_c");
+    QTest::newRow("pm_d") << int(ParityProfile::D) << QStringLiteral("pm_d");
+    QTest::newRow("pm_e") << int(ParityProfile::E) << QStringLiteral("pm_e");
+    QTest::newRow("pm_f") << int(ParityProfile::F) << QStringLiteral("pm_f");
+}
+
+void SampleProcessingTest::parityCases()
+{
+    QFETCH(int, profile);
+    QFETCH(QString, name);
+    QTemporaryDir scratch;
+    QVERIFY2(scratch.isValid(), "parity scratch directory is available");
+    const QString root = scratch.filePath(QStringLiteral("wavproj"));
+    QVERIFY2(createWav2AgbProject(root), "parity synthetic wav2agb project is created");
+
+    const ImportedHiRes imported = importHiRes();
+    QVERIFY2(imported.ok, qPrintable(imported.error));
+    const SampleEditParams params =
+        parityParams(static_cast<ParityProfile>(profile), imported.sample.sampleRate,
+                     SampleDocument::defaultParams(imported.sample));
+    SampleDocument document(imported.sample);
+    document.setParams(params);
+    const ProcessedSample &render = document.processed();
+    const QByteArray bytes = writeSampleWav(render);
+    QString error;
+    QVERIFY2(SampleRegistrar::registerSample(root, name, bytes, &error), qPrintable(error));
+
+    SampleWavInfo info;
+    QVERIFY2(SampleRegistrar::inspectSampleWav(bytes, &info, &error), qPrintable(error));
+    QVERIFY(info.agbPitch == render.freq && info.agbLoopEnd == render.size &&
+            info.numSamples == render.size && info.sampleRate == render.declaredRate &&
+            info.midiKey == quint32(render.unityNote) &&
+            info.pitchFraction == render.pitchFraction);
+    QVERIFY(info.loopEnabled == render.looped &&
+            (!render.looped ||
+             (info.loopStart == render.loopStart && info.loopEndIncl == render.size - 1)));
+    QVERIFY(info.waveFreq == render.freq && info.waveSize == render.size &&
+            info.waveLoopStart == render.loopStart);
+    const double fraction = double(info.pitchFraction) / 4294967296.0;
+    const double exactKey = double(params.baseKey) + params.fineTuneCents / 100.0;
+    QVERIFY(fraction >= 0.0 && fraction < 1.0 &&
+            std::abs((double(info.midiKey) + fraction) - exactKey) < 1e-6);
+
+    const QString voiceGroupText =
+        QStringLiteral("voicegroup_parity::\n"
+                       "\tvoice_directsound 60, 0, DirectSoundWaveData_%1, 255, 0, 255, 0\n")
+            .arg(name);
+    QVERIFY2(writeFile(root + QStringLiteral("/sound/voicegroups/voicegroup_parity.inc"),
+                       voiceGroupText.toUtf8()),
+             "parity voicegroup source is written");
+    const QByteArray rootUtf8 = root.toLocal8Bit();
+    const std::unique_ptr<LoadedVoiceGroup, decltype(&voicegroup_free)> voiceGroup{
+        voicegroup_load(rootUtf8.constData(), "voicegroup_parity", nullptr), voicegroup_free};
+    QVERIFY2(voiceGroup, "parity voicegroup resolves");
+    const WaveData *wave = voiceGroup->voices[0].wav;
+    QVERIFY2(wave && wave->data, "parity voice resolves sample bytes");
+    QCOMPARE(wave->freq, render.freq);
+    QCOMPARE(wave->loopStart, render.loopStart);
+    QCOMPARE(wave->size, render.size);
+    QCOMPARE(wave->status, render.looped ? 0x4000 : 0);
+    QCOMPARE(QByteArrayView(reinterpret_cast<const char *>(wave->data), render.size),
+             QByteArrayView(render.s8));
+}
+
+void SampleProcessingTest::parityLoopGeometry()
+{
+    const ImportedHiRes imported = importHiRes();
+    QVERIFY2(imported.ok, qPrintable(imported.error));
+    SampleDocument document(imported.sample);
+    document.setParams(parityParams(ParityProfile::A, imported.sample.sampleRate,
+                                    SampleDocument::defaultParams(imported.sample)));
+    const ProcessedSample &render = document.processed();
+    QVERIFY(render.looped);
+    QCOMPARE(render.loopStart, quint32(607));
+    QCOMPARE(render.size, quint32(3034));
+    QCOMPARE(render.declaredRate, 13379.0);
+}
+
+void SampleProcessingTest::parityRiffPadding()
+{
+    const ImportedHiRes imported = importHiRes();
+    QVERIFY2(imported.ok, qPrintable(imported.error));
+    SampleDocument document(imported.sample);
+    document.setParams(parityParams(ParityProfile::F, imported.sample.sampleRate,
+                                    SampleDocument::defaultParams(imported.sample)));
+    const ProcessedSample &render = document.processed();
+    QCOMPARE(render.size, quint32(7281));
+
+    const QByteArray bytes = writeSampleWav(render);
+    const qsizetype dataAt = 12 + 8 + 16;
+    QCOMPARE(bytes.mid(12, 4), QByteArray("fmt "));
+    QCOMPARE(bytes.mid(dataAt, 4), QByteArray("data"));
+    QCOMPARE(getU32(bytes, dataAt + 4), quint32(7281));
+    QCOMPARE(bytes[dataAt + 8 + 7281], '\0');
+    QCOMPARE(bytes.mid(dataAt + 8 + 7281 + 1, 4), QByteArray("smpl"));
+    QCOMPARE(bytes.mid(dataAt + 8 + 7281 + 1 + 8 + 36, 4), QByteArray("agbp"));
+    QCOMPARE(bytes.mid(dataAt + 8 + 7281 + 1 + 8 + 36 + 12, 4), QByteArray("agbl"));
+}
+
+void SampleProcessingTest::retuneVectors_data()
+{
+    QTest::addColumn<double>("rate");
+    QTest::addColumn<int>("key");
+    QTest::addColumn<double>("cents");
+    QTest::addColumn<quint32>("agbp");
+    QTest::newRow("c4-source-rate") << 13379.0 << 60 << 0.0 << quint32(13700096);
+    QTest::newRow("c5-source-rate") << 13379.0 << 72 << 0.0 << quint32(6850048);
+    QTest::newRow("a3-source-rate") << 13379.0 << 57 << 0.0 << quint32(16292252);
+    QTest::newRow("a-sharp-plus-quarter") << 13379.0 << 58 << 25.0 << quint32(15157369);
+    QTest::newRow("quarter-rate") << 3344.75 << 60 << 0.0 << quint32(3425024);
+    QTest::newRow("a4-plus-half") << 44100.0 << 69 << 50.0 << quint32(26086940);
+    QTest::newRow("half-rate") << 6689.5 << 60 << 0.0 << quint32(6850048);
+}
+
+void SampleProcessingTest::retuneVectors()
+{
+    QFETCH(double, rate);
+    QFETCH(int, key);
+    QFETCH(double, cents);
+    QFETCH(quint32, agbp);
+
+    FixtureSpec flat;
+    flat.rate = 44100;
+    flat.withSmpl = false;
+    flat.samples = QByteArray(64, char(0x80));
+    ImportedSample source;
+    QString error;
+    QVERIFY2(importAudioBytes(fixtureWav(flat), QStringLiteral("f/flat.wav"), &source, &error),
+             qPrintable(error));
+
+    SampleDocument doc(source);
+    SampleEditParams params = doc.params();
+    params.targetRate = rate;
+    params.baseKey = key;
+    params.fineTuneCents = cents;
+    doc.setParams(params);
+    QCOMPARE(doc.processed().freq, agbp);
 }
 
 } // namespace samplecheck

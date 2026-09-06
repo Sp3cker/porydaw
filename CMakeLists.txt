@@ -323,6 +323,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/quick/timelinequickchrome.h
     src/ui/songview/quick/playheadquick.cpp
     src/ui/songview/quick/playheadquick.h
+    src/ui/songview/quick/timelinequicklayer.h
     src/ui/songview/quick/timelinequickscene.h
     src/ui/songview/quick/timelinequickview.cpp
     src/ui/songview/quick/timelinequickview.h
@@ -332,6 +333,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/pitchbendeditor.hpp
     src/ui/pitchbendgraph.cpp
     src/ui/pitchbendgraph.hpp
+    src/ui/pitchbendeditor_window.cpp
+    src/ui/pitchbendgraph_render.cpp
     src/ui/eventlistview.cpp
     src/ui/eventlistview.h
     src/ui/eventtablemodel.cpp
@@ -450,6 +453,14 @@ set_source_files_properties(
     src/ui/songview/quick/DrawerChromeLayer.qml
     PROPERTIES QT_RESOURCE_ALIAS DrawerChromeLayer.qml
 )
+set_source_files_properties(
+    src/ui/songview/quick/DragInput.qml
+    PROPERTIES QT_RESOURCE_ALIAS DragInput.qml
+)
+set_source_files_properties(
+    src/ui/songview/quick/PitchBendPopup.qml
+    PROPERTIES QT_RESOURCE_ALIAS PitchBendPopup.qml
+)
 qt_add_qml_module(porydaw_app
     URI Porydaw.Ui
     VERSION 1.0
@@ -464,6 +475,8 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/TrackHeaderBand.qml
         src/ui/songview/quick/TrackHeaderToolTip.qml
         src/ui/songview/quick/DrawerChromeLayer.qml
+        src/ui/songview/quick/DragInput.qml
+        src/ui/songview/quick/PitchBendPopup.qml
 )
 target_precompile_headers(porydaw_app PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
@@ -500,27 +513,40 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/support/songfixture.h
         src/checks/support/voicegroupbrowserdriver.cpp
         src/checks/support/voicegroupbrowserdriver.h
-        src/checks/selectioncheck.cpp
-        src/checks/clipmimecheck.cpp
-        src/checks/clipcheck.cpp
-        src/checks/laneselectioncheck.cpp
-        src/checks/selftest/harness.h
-        src/checks/selftest/harness.cpp
-        src/checks/selftest/timeline.cpp
-        src/checks/selftest/transport.cpp
-        src/checks/selftest/workspace.cpp
-        src/checks/tabcheck.cpp
-        src/checks/eventviewcheck.cpp
-        src/checks/pitchbendcheck.cpp
-        src/checks/pitchbendcheck.hpp
+        src/checks/clipboard/clipcheck_test.h
+        src/checks/clipboard/clipcheck_fixture.cpp
+        src/checks/clipboard/clipcheck_copy.cpp
+        src/checks/clipboard/clipcheck_merge.cpp
+        src/checks/clipboard/clipmime_test.cpp
+        src/checks/clipboard/selectioncheck_test.h
+        src/checks/clipboard/selectioncheck_core.cpp
+        src/checks/clipboard/selectioncheck_tracks.cpp
+        src/checks/clipboard/laneselection_test.cpp
+        src/checks/workspace/tst_workspacesessions.h
+        src/checks/workspace/tst_workspacesessions.cpp
+        src/checks/workspace/fixture.h
+        src/checks/workspace/fixture.cpp
+        src/checks/workspace/session.cpp
+        src/checks/workspace/tabs_lifecycle.cpp
+        src/checks/workspace/tabs_transport.cpp
+        src/checks/workspace/tabs_scale.cpp
+        src/checks/workspace/tabs_persistence.cpp
+        src/checks/workspace/selftest_timeline.cpp
+        src/checks/workspace/selftest_transport.cpp
+        src/checks/workspace/selftest_workspace.cpp
+        src/checks/pitchbend/tst_pitchbendediting.h
+        src/checks/pitchbend/fixture.cpp
+        src/checks/pitchbend/curve.cpp
+        src/checks/pitchbend/vertex.cpp
+        src/checks/pitchbend/controller.cpp
+        src/checks/pitchbend/lifecycle.cpp
+        src/checks/pitchbend/raster.cpp
         src/checks/rollcheck.cpp
         src/checks/rollcheck/rollcheck.h
         src/checks/rollcheck/harness.cpp
-        src/checks/rollcheck/loading_ruler.cpp
         src/checks/rollcheck/identity.cpp
         src/checks/rollcheck/remap.cpp
         src/checks/rollcheck/header_reconciliation.cpp
-        src/checks/rollcheck/camera.cpp
         src/checks/rollcheck/pencil.cpp
         src/checks/rollcheck/pencil_velocity.cpp
         src/checks/rollcheck/interlock.cpp
@@ -532,68 +558,132 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/rollcheck/scale_projection.cpp
         src/checks/rollcheck/scale_fold.cpp
         src/checks/rollcheck/scale_editing.cpp
-        src/checks/rollcheckwindowing.cpp
-        src/checks/timelinepancheck.cpp
-        src/checks/rollcheckplayhead.cpp
-        src/checks/rollcheckplayhead_quick.cpp
-        src/checks/rollcheckplayhead.h
-        src/checks/viewcheck.cpp
-        src/checks/roundtrip.cpp
-        src/checks/editcheck.cpp
-        src/checks/editcheck/support.h
-        src/checks/editcheck/support.cpp
-        src/checks/editcheck/documentcontracts.cpp
-        src/checks/editcheck/documentcontractfixtures.h
-        src/checks/editcheck/documentcontractbase.cpp
-        src/checks/editcheck/documentcontracttracks.cpp
-        src/checks/editcheck/documentcontractmoves.cpp
-        src/checks/editcheck/timerange.cpp
-        src/checks/editcheck/format0.cpp
-        src/checks/editcheck/foreignmetadata.cpp
-        src/checks/editcheck/songroundtrip.cpp
-        src/checks/editcheck/songrawevents.cpp
-        src/checks/editcheck/songnotes.cpp
-        src/checks/editcheck/songranges.cpp
-        src/checks/editcheck/songmoves.cpp
-        src/checks/editcheck/songtimeautomation.cpp
-        src/checks/editcheck/songtracks.cpp
-        src/checks/scalecheck.cpp
-        src/checks/savecheck.cpp
-        src/checks/onboardcheck.cpp
-        src/checks/onboardcheck/pipeline.h
+        src/checks/rollcheck/tst_pianoroll.h
+        src/checks/rollcheck/static/tst_pianorollstatic.h
+        src/checks/rollcheck/static/fixtures.h
+        src/checks/rollcheck/static/fixtures.cpp
+        src/checks/rollcheck/static/geometry.cpp
+        src/checks/rollcheck/static/gate.cpp
+        src/checks/rollcheck/static/camera.cpp
+        src/checks/rollcheck/static/tst_pianorollstatic.cpp
+        src/checks/timelinepan/timelinepanfixture.cpp
+        src/checks/timelinepan/tst_timelinepan.cpp
+        src/checks/timelinepan/tst_timelinepannative.cpp
+        src/checks/eventviews/eventview_fixture.h
+        src/checks/eventviews/eventview_fixture.cpp
+        src/checks/eventviews/tst_eventviews.h
+        src/checks/eventviews/chrome.cpp
+        src/checks/eventviews/edits.cpp
+        src/checks/eventviews/remap.cpp
+        src/checks/eventviews/playhead.cpp
+        src/checks/eventviews/viewbuckets_grid.cpp
+        src/checks/nativegraphics/nativegraphics_fixture.h
+        src/checks/nativegraphics/nativegraphics_fixture.cpp
+        src/checks/nativegraphics/tst_renderingplayhead.h
+        src/checks/nativegraphics/renderingplayhead_runner.cpp
+        src/checks/nativegraphics/tst_nativewindowing.cpp
+        src/checks/nativegraphics/tst_playhead_math.cpp
+        src/checks/nativegraphics/tst_playhead_guides.cpp
+        src/checks/nativegraphics/tst_playhead_autohover.cpp
+        src/checks/nativegraphics/tst_playhead_quick.cpp
+        src/checks/nativegraphics/tst_playhead_plots.cpp
+        src/checks/midi/tst_midismf.h
+        src/checks/midi/tst_midismf.cpp
+        src/checks/midi/tst_midiroundtrip.h
+        src/checks/midi/tst_midiroundtrip.cpp
+        src/checks/midi/tst_midiexport.h
+        src/checks/midi/tst_midiexport.cpp
+        src/checks/editcheck/tst_songdocument.h
+        src/checks/editcheck/tst_songdocument_support.h
+        src/checks/editcheck/tst_songdocument_support.cpp
+        src/checks/editcheck/tst_songdocument_runner.cpp
+        src/checks/editcheck/tst_songdocument_document.cpp
+        src/checks/editcheck/tst_songdocument_timerange.cpp
+        src/checks/editcheck/tst_songdocument_metadata.cpp
+        src/checks/editcheck/tst_songdocument_songraw.cpp
+        src/checks/editcheck/tst_songdocument_songnotes.cpp
+        src/checks/editcheck/tst_songdocument_songranges.cpp
+        src/checks/editcheck/tst_songdocument_songmoves.cpp
+        src/checks/editcheck/tst_songdocument_songtime.cpp
+        src/checks/editcheck/tst_songdocument_songtracks.cpp
+        src/checks/editcheck/tst_songdocument_logic.cpp
+        src/checks/onboardcheck/onboardingtest.h
+        src/checks/onboardcheck/support.cpp
+        src/checks/onboardcheck/action.cpp
         src/checks/onboardcheck/registration.cpp
         src/checks/onboardcheck/debuglayout.cpp
         src/checks/onboardcheck/regionedlayout.cpp
         src/checks/onboardcheck/import.cpp
         src/checks/onboardcheck/deletion.cpp
-        src/checks/vgcheck.cpp
-        src/checks/vgloadcheck.cpp
-        src/checks/vgbankcheck.cpp
-        src/checks/voicegroupviewcachecheck.cpp
-        src/checks/vgsavecheck.cpp
-        src/checks/exportcheck.cpp
-        src/checks/loopcheck.cpp
-        src/checks/clickcheck.cpp
-        src/checks/polycheck.cpp
-        src/checks/primecheck.cpp
-        src/checks/xcmdcheck.cpp
-        src/checks/smfcheck.cpp
-        src/checks/smfcheckfixtures.cpp
-        src/checks/smfcheckfixtures.h
-        src/checks/transportcheck.cpp
-        src/checks/trackactivitycheck.cpp
-        src/checks/trackactivitymetercheck.cpp
-        src/checks/trackheaderquickcheck.cpp
+        src/checks/voicegroup/voicegrouptestfixture.h
+        src/checks/voicegroup/voicegrouptestfixture.cpp
+        src/checks/voicegroup/voicegroupsourcecatalog.cpp
+        src/checks/voicegroup/voicegroupsourceediting.cpp
+        src/checks/voicegroup/tst_voicegroupsource.h
+        src/checks/voicegroup/tst_voicegroupbank.cpp
+        src/checks/voicegroup/voicegrouploadfixture.h
+        src/checks/voicegroup/voicegrouploadfixture.cpp
+        src/checks/voicegroup/tst_voicegrouploader.cpp
+        src/checks/voicegroup/tst_voicegroupviewcache.cpp
+        src/checks/voicegroupsave/tst_voicegroupsave.h
+        src/checks/voicegroupsave/fixture.cpp
+        src/checks/voicegroupsave/savecore.cpp
+        src/checks/voicegroupsave/switching.cpp
+        src/checks/voicegroupsave/editor.cpp
+        src/checks/voicegroupsave/synth.cpp
+        src/checks/voicegroupsave/picker.cpp
+        src/checks/voicegroupsave/presentation.cpp
+        src/checks/playback/tst_transport.h
+        src/checks/playback/tst_transport.cpp
+        src/checks/playback/transportfixture.h
+        src/checks/playback/transportfixture.cpp
+        src/checks/playback/publish.cpp
+        src/checks/playback/cgb.cpp
+        src/checks/playback/tails.cpp
+        src/checks/playback/settle.cpp
+        src/checks/playback/sustainvoicegroup.h
+        src/checks/playback/tst_loop.h
+        src/checks/playback/tst_loop.cpp
+        src/checks/playback/tst_prime.h
+        src/checks/playback/tst_prime.cpp
+        src/checks/playback/tst_xcmd.h
+        src/checks/playback/tst_xcmd.cpp
+        src/checks/playback/projection.cpp
+        src/checks/playback/rewrites.cpp
+        src/checks/playback/opaque.cpp
+        src/checks/playback/rawreconciliation.cpp
+        src/checks/playback/export.cpp
+        src/checks/audio/clickrig.h
+        src/checks/audio/clickrig.cpp
+        src/checks/audio/resonancefixture.h
+        src/checks/audio/resonancefixture.cpp
+        src/checks/audio/tst_audiotelemetry.h
+        src/checks/audio/tst_audiotelemetry.cpp
+        src/checks/audio/tst_audiobackend.h
+        src/checks/audio/tst_audiobackend.cpp
+        src/checks/audio/tst_clicktransport.h
+        src/checks/audio/tst_clicktransport.cpp
+        src/checks/audio/tst_resonancelaw.h
+        src/checks/audio/tst_resonancelaw.cpp
+        src/checks/audio/tst_resonancetiming.h
+        src/checks/audio/tst_resonancetiming.cpp
+        src/checks/audio/tst_trackactivity.h
+        src/checks/audio/tst_trackactivity.cpp
+        src/checks/trackheaders/tst_trackheaders.h
+        src/checks/trackheaders/tst_trackheaders.cpp
+        src/checks/trackheaders/trackheaderfixture.cpp
+        src/checks/trackheaders/trackheaderinput.cpp
+        src/checks/trackheaders/trackheaderraster.cpp
+        src/checks/trackheaders/trackheadermutations.cpp
+        src/checks/trackheaders/trackheaderoracles.h
+        src/checks/trackheaders/tst_trackactivitymeter.h
+        src/checks/trackheaders/tst_trackactivitymeter.cpp
         src/checks/scrollbar/tst_scrollbar.cpp
         src/checks/scrollbar/tst_scrollbar.h
         src/checks/scrollbar/control.cpp
         src/checks/scrollbar/input.cpp
         src/checks/scrollbar/geometry.cpp
         src/checks/scrollbar/drag.cpp
-        src/checks/audiocheck.cpp
-        src/checks/resonancecheck.cpp
-        src/checks/mkcheck.cpp
-        src/checks/ignorecheck.cpp
         src/checks/samplecheck.cpp
         src/checks/samplecheck/samplecheck.h
         src/checks/samplecheck/fixtures.h
@@ -605,22 +695,45 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/samplecheck/analysis.cpp
         src/checks/samplecheck/soundfont.cpp
         src/checks/samplecheck/integration.cpp
-        src/checks/projectiocheck.cpp
-        src/checks/projectworkspacecheck.cpp
-        src/checks/sessioncheck.cpp
-        src/checks/keymapcheck.cpp
-        src/checks/hostcheck.cpp
-        src/checks/mainwindowroutingcheck.cpp
-        src/checks/noteidcheck.cpp
+        src/checks/project/iofixture.h
+        src/checks/project/iofixture.cpp
+        src/checks/project/identity.cpp
+        src/checks/project/ioflow.cpp
+        src/checks/project/iomutations.cpp
+        src/checks/project/workspace.cpp
+        src/checks/project/save.cpp
+        src/checks/project/mk.cpp
+        src/checks/project/ignore.cpp
+        src/checks/host/tst_hostseams.cpp
+        src/checks/host/tst_hostadapter.cpp
+        src/checks/host/tst_hostintegration.cpp
+        src/checks/mainwindowrouting/mainwindowroutingfixture.h
+        src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp
+        src/checks/mainwindowrouting/tst_mainwindowrouting_state.cpp
+        src/checks/mainwindowrouting/tst_mainwindowrouting_lifecycle.cpp
+        src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp
+        src/checks/keyboard/tst_keymapcheck.h
+        src/checks/keyboard/keymapregistry.cpp
+        src/checks/keyboard/keyboardshortcuts.cpp
+        src/checks/keyboard/tst_velocitymodel.h
+        src/checks/keyboard/tst_velocitymodel.cpp
+        src/checks/keyboard/tst_settingsdialog.h
+        src/checks/keyboard/tst_settingsdialog.cpp
+        src/checks/polyphony/tst_polyphonycheck.h
+        src/checks/polyphony/polyphonyengine.cpp
+        src/checks/polyphony/polyphonypanel.cpp
+        src/checks/polyphony/polyphonygate.cpp
+        src/checks/automation/raster/tst_automationraster.h
         src/checks/automation/raster/painting.cpp
         src/checks/automation/raster/interaction.cpp
         src/checks/automation/raster/rasterfixture.cpp
         src/checks/automation/raster/rasterfixture.h
-        src/checks/rollcheckdrawer.cpp
-        src/checks/rollcheckvoicechange.cpp
-        src/checks/rollcheckvoicechange.h
-        src/checks/rollcheckpsgvelocity.cpp
-        src/checks/velocitymodelcheck.cpp
+        src/checks/drawerpresentation/tst_drawerpresentation.h
+        src/checks/drawerpresentation/fixtures.h
+        src/checks/drawerpresentation/fixtures.cpp
+        src/checks/drawerpresentation/drawer.cpp
+        src/checks/drawerpresentation/voice.cpp
+        src/checks/drawerpresentation/velocity.cpp
         src/checks/velocity/tst_velocityediting.cpp
         src/checks/velocity/tst_velocityediting.h
         src/checks/velocity/velocityselection.cpp
@@ -659,16 +772,18 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/automation/hover/tst_automationhover.cpp
         src/checks/automation/hover/hoverfixture.h
         src/checks/automation/hover/hoverfixture.cpp
-        src/checks/themechecks.cpp
-        src/checks/fontcheck.cpp
-        src/ui/theme/themecheck.cpp
-        src/ui/theme/themecheck.h
-        src/checks/editorlayoutcheck.cpp
+        src/checks/themelayout/tst_themelayout.h
+        src/checks/themelayout/themelayoutcheck.cpp
+        src/checks/themelayout/tst_themelayout_color.cpp
+        src/checks/themelayout/tst_themelayout_settings.cpp
+        src/checks/themelayout/tst_themelayout_chrome.cpp
+        src/checks/themelayout/tst_themelayout_font.cpp
+        src/checks/themelayout/tst_themelayout_scale.cpp
         resources/fonts.qrc
     )
     if(APPLE)
         target_sources(porydaw_checks PRIVATE
-            src/checks/rollcheckplayhead_macos.mm
+            src/checks/nativegraphics/tst_playhead_native_mac.mm
         )
     endif()
     if(APPLE)

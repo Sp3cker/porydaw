@@ -30,8 +30,26 @@ class ThemeController;
 class ThemeDialog;
 } // namespace themes
 
+class OnboardingTest;
+class WorkspaceSessionTest;
+class WorkspaceTabsTest;
+class WorkspaceTimelineSelfTest;
+class WorkspaceTransportSelfTest;
+class WorkspaceEditorCodecSelfTest;
+
 namespace checks {
-class SelfTestHarness;
+class VoicegroupSaveTest;
+class PolyphonyGateTest;
+namespace host {
+class HostIntegrationTest;
+} // namespace host
+namespace mainwindowrouting {
+class MainWindowRoutingFixture;
+class MainWindowRoutingInputTest;
+class MainWindowRoutingStateTest;
+class MainWindowRoutingLifecycleTest;
+class MainWindowRoutingNativeTest;
+} // namespace mainwindowrouting
 } // namespace checks
 
 // The application shell and audio root. MainWindow is the composition root
@@ -49,53 +67,26 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
-    friend int runHostIntegrationCheck(const QString &scratchProject, const QString &songA,
-                                       const QString &songB, const QString &screenshotPath);
-    friend class checks::SelfTestHarness;
+    // Qt Test classes own focused private-access seams; each exercises the
+    // production flows directly instead of dedicated check entry points.
+    friend class OnboardingTest;
+    friend class WorkspaceSessionTest;
+    friend class WorkspaceTabsTest;
+    friend class WorkspaceTimelineSelfTest;
+    friend class WorkspaceTransportSelfTest;
+    friend class WorkspaceEditorCodecSelfTest;
+    friend class checks::VoicegroupSaveTest;
+    friend class checks::PolyphonyGateTest;
+    friend class checks::host::HostIntegrationTest;
+    friend class checks::mainwindowrouting::MainWindowRoutingFixture;
+    friend class checks::mainwindowrouting::MainWindowRoutingInputTest;
+    friend class checks::mainwindowrouting::MainWindowRoutingStateTest;
+    friend class checks::mainwindowrouting::MainWindowRoutingLifecycleTest;
+    friend class checks::mainwindowrouting::MainWindowRoutingNativeTest;
 
   public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
-
-    // Unified song+voicegroup undo/save check (--vgsavecheck; vgsavecheck.cpp).
-    // Writes into the project: run against a scratch copy, with QSettings
-    // already redirected by the caller. A non-empty screenshotPath saves the
-    // sample picker's open popup for visual review.
-    bool runVgSaveCheck(const QString &projectRoot, const QString &songLabel,
-                        const QString &screenshotPath = QString());
-
-    // Multi-tab check (--tabcheck; tabcheck.cpp): per-tab documents and undo
-    // stacks, playback stopping on tab switches, tab close/replace, and
-    // multi-tab session persistence. QSettings must be redirected.
-    bool runTabCheck(const QString &projectRoot, const QString &songA, const QString &songB);
-
-    // Assert restored tab persistence through the WorkspaceUi session seam
-    // (--tabcheck; tabcheck.cpp).
-    bool checkTabRestore(const QString &songA, const QString &songB);
-
-    // Focused MainWindow-to-SongView drawer routing check
-    // (--check-mainwindow-routing; mainwindowroutingcheck.cpp).
-    bool runMainWindowRoutingCheck(const QString &projectRoot, const QString &songA,
-                                   const QString &songB);
-
-    // Register Song action wiring (part of --onboardcheck; onboardcheck.cpp):
-    // a partially registered song keeps the action enabled, and running it
-    // heals the registration. Writes into the project: scratch copy only,
-    // QSettings must be redirected. Failures count into onboardcheck's total.
-    bool runRegisterActionCheck(const QString &projectRoot, const QString &label);
-
-    // Delete Song action wiring (part of --onboardcheck; onboardcheck.cpp):
-    // deleting an open song closes its tab, drops it from the model and the
-    // browser, and moves its .mid to .porydaw/trash/. Writes into the
-    // project: scratch copy only, QSettings must be redirected. Failures
-    // count into onboardcheck's total.
-    bool runDeleteActionCheck(const QString &projectRoot, const QString &label);
-
-    // Solo-overflow visibility gate (--polycheck stage C; polycheck.cpp):
-    // the engine inverts only while the invert checkbox is checked AND the
-    // Polyphony dock is visible. No project needed; QSettings must be
-    // redirected.
-    bool runPolyGateCheck();
 
   signals:
     // Observable completion boundary for editor-view persistence: emitted

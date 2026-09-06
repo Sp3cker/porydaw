@@ -31,17 +31,18 @@ growth in the runs below. The original sequence remains unconfirmed.
 
 ## Regression check
 
-Run `deno task verify --filter timelinepancheck --verbose`.
+Run `deno task verify --no-windowing-checks --filter timelinepancheck --verbose`.
 
-The check loads the checked-in Route 101 fixture, exposes the real Quick
-window, and sends wheel input to the piano-roll input item. It verifies actual
-camera movement, unchanged gutter-model rows, and visible dash geometry against
-the former full-walk algorithm, including fractional origins and clip crossings.
+The current offscreen regression is `TimelinePanTest` in
+`src/checks/timelinepan/tst_timelinepan.cpp`. It loads the checked-in Route
+101 fixture, uses its offscreen Quick surface, and verifies actual camera
+movement, unchanged gutter-model rows, and visible dash geometry against the
+former full-walk algorithm, including fractional origins and clip crossings.
 
 For the performance stress case, it compares four beats with 65,536 beats at
 640 pixels per beat. This deliberately large selection exposes dependence on
-offscreen width; it does not represent a typical song length. The check permits
-generous timing slack and reports the raw durations.
+offscreen width; it does not represent a typical song length. The check
+permits generous timing slack and reports the raw durations.
 
 Before the fixes: short pan **7 ms**, long pan **424 ms**, with **104 row removals
 and 104 insertions** over the probe. Bounding dash generation alone changed
@@ -130,12 +131,15 @@ its QML labels on every pan. Valid rebuilds now publish once and the model's
 keyed reconciliation retains the rows; the invalid-output exits (empty band
 bounds or absent band geometry) still clear the model.
 
-An offscreen regression in `rollcheckpsgvelocity.cpp` covers it: unchanged
-rebuilds and camera-pan rebuilds must keep the axis rows with zero removals
-and insertions, and a hide/show cycle must leave the rows correct. Hidden
-bands defer publication, so the regression does not require a clear while
-hidden. `deno task verify --no-windowing-checks` passes all 57 offscreen checks,
-including `velocity-page`; the 8 window-system checks are skipped.
+An offscreen regression in `VelocityPageTest`
+(`src/checks/drawerpresentation/velocity.cpp`) covers it: unchanged rebuilds
+and camera-pan rebuilds must keep the axis rows with zero removals and
+insertions, and a hide/show cycle must leave the rows correct. Hidden bands
+defer publication, so the regression does not require a clear while hidden.
+At this 2026-09-04 follow-up, the mouse-safe lane passed 57 offscreen checks,
+including `velocity-page`, with 8 WindowSystem skips. That receipt is
+historical: the current lane passes 75 entries (74 Qt suites plus the
+production-startup process smoke) and skips 9 native entries.
 
 A negative control confirmed the coverage: temporarily reintroducing the old
 unconditional clear failed exactly the unchanged-rebuild and panned-rebuild
@@ -150,11 +154,17 @@ timed out at high zoom. Replacing its repeating timer with a single-shot
 timer did not eliminate the timeout. The probe was removed without producing
 before/after numbers. Desktop-interacting checks were prohibited at the time,
 so no native CPU or FPS before-after gain was verified for the velocity
-retention change; native checks and traces are allowed again now, and the
-Release pass below used them. A qualitative sample of the pan stall placed
+retention change. Native checks and traces were permitted for the separate
+Release pass below; that historical permission does not change the current
+migration's mouse-safe verification boundary. A qualitative pan-stall sample placed
 GUI-thread time in `TimelineQuickView::flushUpdate` → `syncVelocity` →
 `VelocityArea::rebuildQuickScene` QML delegate creation; no percentage
 attribution is claimed.
+
+The 65-check totals in the following date-stamped profile section are
+historical receipts for the measured branch state, not current suite totals.
+They do not establish native performance proof; the current count is 75
+passing offscreen entries with 9 native entries skipped by the mouse-safe lane.
 
 ## Release profile-driven pass (2026-09-05)
 

@@ -2,7 +2,6 @@
 
 #include <QColor>
 #include <QImage>
-#include <QMetaObject>
 #include <QPoint>
 #include <QRect>
 #include <QRectF>
@@ -16,9 +15,7 @@
 class MidiTimeline;
 class QQuickItem;
 
-namespace checks {
-class SongViewRig;
-}
+class SongTab;
 
 namespace songview {
 class PianoRoll;
@@ -29,16 +26,16 @@ namespace checks::rollcheck {
 
 struct Cell;
 
-// Stable ownership and geometry shared by the sequential SongView scenarios.
-// Individual topics keep their transient cells, notes, and event sequences local.
-class Harness final
+// Per-slot view fixture. SongTab owns the production documentChanged ->
+// timeline rebuild connection, so test code never installs a mirror refresh.
+class PianoRollFixture final
 {
   public:
-    Harness(SongViewRig &rig, const QString &songLabel);
-    ~Harness();
+    PianoRollFixture(SongTab &tab, const QString &songLabel);
+    ~PianoRollFixture() = default;
 
-    Harness(const Harness &) = delete;
-    Harness &operator=(const Harness &) = delete;
+    PianoRollFixture(const PianoRollFixture &) = delete;
+    PianoRollFixture &operator=(const PianoRollFixture &) = delete;
 
     bool prepare();
 
@@ -57,15 +54,12 @@ class Harness final
     int pianoKeyboardWidth() const noexcept;
     int pianoRollDefaultKeyHeight() const noexcept;
 
-    void fail(const char *what);
     const QString &songLabel() const noexcept;
-    void addFailures(int count) noexcept;
-    int failures() const noexcept;
     bool isOccupied(uint64_t tick, uint64_t dur, int key, bool checkAllTracks = false);
     Cell findFreeCell(int firstProbe = 8, bool checkAllTracks = false);
 
   private:
-    SongViewRig &m_rig;
+    SongTab &m_tab;
     QString m_songLabel;
     songview::PianoRoll *m_roll = nullptr;
     songview::TimelineInputItem *m_rollInput = nullptr;
@@ -73,8 +67,6 @@ class Harness final
     int m_track = -1;
     int m_pianoKeyboardWidth = 0;
     int m_pianoRollDefaultKeyHeight = 0;
-    int m_failures = 0;
-    QMetaObject::Connection m_documentChanged;
 };
 
 // Test-side mirror of the roll's vertical projection. It intentionally samples
@@ -103,11 +95,6 @@ struct Cell {
     QPoint center;
 };
 
-enum class ScenarioContinuation {
-    Continue,
-    Stop,
-};
-
 struct PencilPaintingFixture {
     Cell a;
     DocNote noteA;
@@ -125,32 +112,9 @@ struct ResizeFixture {
     uint64_t snapCell = 0;
 };
 
-ScenarioContinuation runLoadingRulerScenarios(Harness &check);
-ScenarioContinuation runIdentityScenarios(Harness &check, const SongInfo &song);
-ScenarioContinuation runRemapScenarios(Harness &check, const SongInfo &song);
-ScenarioContinuation runHeaderReconciliationScenarios(Harness &check, const SongInfo &song);
-ScenarioContinuation runCameraScenarios(Harness &check);
-std::optional<PencilPaintingFixture> runPencilPaintingScenarios(Harness &check);
-ScenarioContinuation runPencilNoteRenderingScenarios(Harness &check,
-                                                     const PencilPaintingFixture &fixture);
-std::optional<PencilVelocityFixture> runPencilVelocityScenarios(Harness &check,
-                                                                PencilPaintingFixture fixture);
-ScenarioContinuation runGestureInterlockScenarios(Harness &check,
-                                                  const PencilVelocityFixture &fixture);
-ScenarioContinuation runSelectionGestureScenarios(Harness &check,
-                                                  const PencilVelocityFixture &fixture);
-ScenarioContinuation runSelectionRasterScenarios(Harness &check,
-                                                 const PencilVelocityFixture &fixture);
-std::optional<ResizeFixture> runResizeScenarios(Harness &check,
-                                                const PencilVelocityFixture &fixture);
-ScenarioContinuation runKeyboardAndTimelineScenarios(Harness &check, const ResizeFixture &fixture);
-ScenarioContinuation runHeaderAndPresentationScenarios(Harness &check,
-                                                       const PencilVelocityFixture &fixture,
-                                                       const QString &screenshotPath);
-ScenarioContinuation runScaleProjectionScenarios(Harness &check);
-ScenarioContinuation runScaleFoldScenarios(Harness &check);
-ScenarioContinuation runScaleEditingScenarios(Harness &check);
-ScenarioContinuation runQuickLifecycleScenarios(Harness &check);
+std::optional<PencilPaintingFixture> makePaintingSeed(PianoRollFixture &fixture);
+std::optional<PencilVelocityFixture> makeVelocitySeed(PianoRollFixture &fixture);
+std::optional<ResizeFixture> makeResizeSeed(PianoRollFixture &fixture);
 
 void click(QQuickItem &item, QPoint position);
 void drawNote(QQuickItem &item, QPoint position);

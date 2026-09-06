@@ -1,106 +1,83 @@
-#include "rollcheck/rollcheck.h"
+#include "checks/fwd.hpp"
+#include "checks/rollcheck/tst_pianoroll.h"
 
-#include <QElapsedTimer>
-#include <QtGlobal>
-#include <cstdio>
+#include <QtTest>
+
+#include <optional>
 #include <utility>
 
+#include "checks/rollcheck/rollcheck.h"
 #include "checks/support/songfixture.h"
+#include "core/tracklimits.h"
+#include "project/projectidentity.h"
+#include "ui/songtab.h"
 
-// --rollcheck <projectRoot> <song> [shot.png]: piano-roll gesture check.
-// Topic implementations retain the original fixture order and assertions; this
-// runner owns startup, the production-like timeline refresh, and final rollback.
+PianoRollTest::PianoRollTest(const QString &projectRoot, const QString &songLabel)
+    : m_projectRoot(projectRoot)
+    , m_songLabel(songLabel)
+{}
 
-int runRollCheck(const QString &projectRoot, const QString &songLabel,
-                 const QString &screenshotPath)
+PianoRollTest::~PianoRollTest() = default;
+
+void PianoRollTest::init()
 {
     QString error;
-    QElapsedTimer timer;
-    timer.start();
-    auto loadedSong = checks::LoadedSong::load(projectRoot, songLabel, error);
-    if (!loadedSong) {
-        std::fprintf(stderr, "rollcheck: %s\n", qUtf8Printable(error));
-        return 1;
-    }
-    const SongInfo song = loadedSong->songInfo();
-    auto rig = checks::SongViewRig::create(std::move(loadedSong), 48000.0, error);
-    if (!rig) {
-        std::fprintf(stderr, "rollcheck: %s\n", qUtf8Printable(error));
-        return 1;
-    }
+    m_project = checks::ProjectFixture::copyOf(m_projectRoot, error);
+    QVERIFY2(m_project, qPrintable(error));
 
-    SongDocument &document = rig->document();
-    const QByteArray baseline = document.smf().write();
+    const std::unique_ptr<checks::LoadedSong> loaded =
+        checks::LoadedSong::load(m_project->root(), m_songLabel, error);
+    QVERIFY2(loaded, qPrintable(error));
 
-    checks::rollcheck::Harness check(*rig, songLabel);
-    if (!check.prepare())
-        return 1;
-    const auto earlyFailureStatus = [&] { return check.failures() ? check.failures() : 1; };
-    using checks::rollcheck::ScenarioContinuation;
-    // Loading-state coverage runs first: the bare-view ruler, the fallback
-    // axis, and the loading input gate are pinned before gesture suites run.
-    if (checks::rollcheck::runLoadingRulerScenarios(check) == ScenarioContinuation::Stop)
-        return earlyFailureStatus();
+    const std::optional<SongName> name = SongName::create(m_songLabel);
+    QVERIFY(name.has_value());
+    m_bank = std::make_unique<LoadedVoiceGroup>();
+    m_bank->voices[0].type = VOICE_DIRECTSOUND;
+    m_bank->voices[1].type = VOICE_SQUARE_1;
+    m_bank->voices[2].type = VOICE_PROGRAMMABLE_WAVE;
+    m_bank->voices[3].type = VOICE_NOISE;
 
-    if (checks::rollcheck::runIdentityScenarios(check, song) == ScenarioContinuation::Stop ||
-        checks::rollcheck::runRemapScenarios(check, song) == ScenarioContinuation::Stop ||
-        checks::rollcheck::runHeaderReconciliationScenarios(check, song) ==
-            ScenarioContinuation::Stop ||
-        checks::rollcheck::runCameraScenarios(check) == ScenarioContinuation::Stop)
-        return earlyFailureStatus();
+    m_tab = std::make_unique<SongTab>(std::move(*name));
+    m_tab->setSampleRate(48000.0);
+    m_tab->applyMidiStage(loaded->songInfo(), loaded->document().smf(),
+                          track_limits::kHardwareCapacity);
+    QVERIFY2(m_tab->presentationError().isEmpty(), qPrintable(m_tab->presentationError()));
 
-    auto paintingFixture = checks::rollcheck::runPencilPaintingScenarios(check);
-    if (!paintingFixture)
-        return earlyFailureStatus();
-    if (checks::rollcheck::runPencilNoteRenderingScenarios(check, *paintingFixture) ==
-        ScenarioContinuation::Stop)
-        return earlyFailureStatus();
-    auto velocityFixture =
-        checks::rollcheck::runPencilVelocityScenarios(check, std::move(*paintingFixture));
-    if (!velocityFixture)
-        return earlyFailureStatus();
-    if (checks::rollcheck::runGestureInterlockScenarios(check, *velocityFixture) ==
-        ScenarioContinuation::Stop)
-        return earlyFailureStatus();
-    if (checks::rollcheck::runSelectionGestureScenarios(check, *velocityFixture) ==
-            ScenarioContinuation::Stop ||
-        checks::rollcheck::runSelectionRasterScenarios(check, *velocityFixture) ==
-            ScenarioContinuation::Stop)
-        return earlyFailureStatus();
+    const std::optional<VoicegroupId> bankId =
+        VoicegroupId::create(QStringLiteral("sound/voicegroups/rollcheck.inc"), QString());
+    QVERIFY(bankId.has_value());
+    m_tab->applyBankView(LoadedBankView{*bankId, borrowVoicegroupLease(m_bank.get()), QString()});
+    m_tab->applyVoicegroupBound(*bankId);
+    QTRY_VERIFY(m_tab->isReady());
 
-    auto resizeFixture = checks::rollcheck::runResizeScenarios(check, *velocityFixture);
-    if (!resizeFixture)
-        return earlyFailureStatus();
-    if (checks::rollcheck::runKeyboardAndTimelineScenarios(check, *resizeFixture) ==
-            ScenarioContinuation::Stop ||
-        checks::rollcheck::runQuickLifecycleScenarios(check) == ScenarioContinuation::Stop ||
-        checks::rollcheck::runHeaderAndPresentationScenarios(
-            check, *velocityFixture, screenshotPath) == ScenarioContinuation::Stop)
-        return earlyFailureStatus();
+    m_fixture = std::make_unique<checks::rollcheck::PianoRollFixture>(*m_tab, m_songLabel);
+    QVERIFY(m_fixture->prepare());
+}
 
-    // Topic-local undo deltas above protect each gesture seam. The aggregate
-    // rollback still proves every retained document mutation restores bytes.
-    int undos = 0;
-    while (document.undoStack()->canUndo() && undos < 100) {
-        document.undoStack()->undo();
-        ++undos;
-    }
-    if (document.undoStack()->canUndo())
-        check.fail("gesture pass pushed an unexpected number of undo commands");
-    if (document.smf().write() != baseline)
-        check.fail("undoing every gesture did not restore the original bytes");
+void PianoRollTest::cleanup()
+{
+    m_fixture.reset();
+    m_tab.reset();
+    m_bank.reset();
+    m_project.reset();
+}
 
-    if (checks::rollcheck::runScaleProjectionScenarios(check) == ScenarioContinuation::Stop ||
-        checks::rollcheck::runScaleFoldScenarios(check) == ScenarioContinuation::Stop ||
-        checks::rollcheck::runScaleEditingScenarios(check) == ScenarioContinuation::Stop)
-        return earlyFailureStatus();
+// Aggregate rollback disposition: removed.  Each transactional row below owns
+// its post-seed undo baseline and proves byte-for-byte SMF restoration locally.
+// Identity/remap/header rows use isolated documents; interlock and selection
+// raster are explicitly undo-neutral; scale rows retain their own lifecycle
+// probes and now also restore their local byte baseline.  No slot depends on
+// another slot's mutations.
+// B3 disposition: retain the legacy device-pixel samples and their documented
+// tolerances in the raster rows.  They already use the captured image DPR;
+// no new theme or DPR permutation is added because it would be new coverage,
+// not a migration of a legacy contract.
 
-    SongView &view = rig->view();
-    view.setDocument(nullptr);
-    view.setSong(nullptr, nullptr);
-
-    if (check.failures() == 0)
-        std::printf("rollcheck: OK %s (%lld ms)\n", qUtf8Printable(songLabel),
-                    static_cast<long long>(timer.elapsed()));
-    return check.failures() ? 1 : 0;
+int runRollCheck(const QString &projectRoot, const QString &songLabel,
+                 const QStringList &qtArguments)
+{
+    PianoRollTest test(projectRoot, songLabel);
+    QStringList arguments{QStringLiteral("rollcheck")};
+    arguments.append(qtArguments);
+    return QTest::qExec(&test, arguments);
 }

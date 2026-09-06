@@ -22,9 +22,11 @@
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "core/miditimeline.h"
+#include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
+#include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
@@ -55,6 +57,7 @@ class RasterAutomationInputHost final : public songview::TimelineInputHost
     RasterAutomationInputHost &operator=(const RasterAutomationInputHost &) = delete;
 
     void setDevicePixelRatio(qreal dpr) noexcept { m_dpr = dpr; }
+
     void setGlobalOffset(QPointF offset) noexcept { m_globalOffset = offset; }
 
     QRectF bounds() const override
@@ -113,15 +116,7 @@ AutomationRasterFixture::create(const QString &project, const QString &song, QSt
 
 AutomationRasterFixture::~AutomationRasterFixture()
 {
-    if (m_page && m_inputHost) {
-        m_page->canvas()->detachInputHost(*m_inputHost);
-        if (m_automationPlotInput && m_productionInteraction)
-            m_automationPlotInput->setInteraction(m_productionInteraction);
-    }
-    if (m_view) {
-        m_view->setSong(nullptr, nullptr);
-        m_view->setDocument(nullptr);
-    }
+    shutdown();
 }
 
 SongDocument &AutomationRasterFixture::document() noexcept
@@ -137,6 +132,73 @@ SongView &AutomationRasterFixture::view() noexcept
 const SongView &AutomationRasterFixture::view() const noexcept
 {
     return *m_view;
+}
+
+void AutomationRasterFixture::configurePainting()
+{
+    SongDocument &songDocument = document();
+    songDocument.addLanePoint(0, LANE_CC_BEND, 72, 8191);
+    songDocument.addLanePoint(0, DOC_CC_VOICE, 24, 3);
+
+    EditorViewState state;
+    const EditorAutomationRowId volume{EditorAutomationRowKind::ControlChange, 0, 7};
+    const EditorAutomationRowId lfo{EditorAutomationRowKind::ControlChange, 0, 21};
+    state.hideLane(volume);
+    state.emptyLanes.insert(pan.row);
+    state.laneHeights[lfo] = layout::fontPx(4.0) + layout::space(layout::Space::One);
+    state.laneRanges[lfo] = 91;
+    m_view->applyEditorViewState(state);
+    m_view->setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
+    m_view->setDrawerActivePage(EditorDrawerPage::Automations);
+    m_view->setDrawerSectionVisible(EditorDrawerPage::Automations, true);
+    m_view->setDrawerSectionHeight(EditorDrawerPage::Automations, 360);
+    m_view->setEditorTimeZoom(96.0);
+    m_view->setEditorHorizontalScroll(0.0);
+    m_view->setEditCursorTick(24);
+    m_live.editCursorTick = 24;
+    m_live.timeZoom = m_view->camera().pxPerBeat();
+    m_live.horizontalScroll = m_view->camera().scrollX();
+    documentChanged();
+}
+
+void AutomationRasterFixture::configureInteraction()
+{
+    m_view->setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
+    m_view->setDrawerSectionHeight(EditorDrawerPage::VoiceChanges, 180);
+    m_view->setDrawerActivePage(EditorDrawerPage::Automations);
+    m_view->setDrawerSectionVisible(EditorDrawerPage::Automations, true);
+    m_view->setDrawerSectionHeight(EditorDrawerPage::Automations, 360);
+    m_view->setEditorTimeZoom(96.0);
+    m_view->setEditorHorizontalScroll(0.0);
+    m_view->setEditCursorTick(24);
+    m_live.editCursorTick = 24;
+    m_live.timeZoom = m_view->camera().pxPerBeat();
+    m_live.horizontalScroll = m_view->camera().scrollX();
+    setPersistentPencil(false);
+    refreshPage();
+    pump();
+}
+
+void AutomationRasterFixture::shutdown()
+{
+    if (m_shutdown)
+        return;
+    m_shutdown = true;
+
+    if (m_page && m_inputHost) {
+        m_page->canvas()->detachInputHost(*m_inputHost);
+        if (m_automationPlotInput && m_productionInteraction)
+            m_automationPlotInput->setInteraction(m_productionInteraction);
+    }
+    m_inputHost.reset();
+    m_productionInteraction = nullptr;
+
+    if (m_view) {
+        m_view->setSong(nullptr, nullptr);
+        m_view->setDocument(nullptr);
+    }
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents(QEventLoop::AllEvents);
 }
 
 AutomationPage &AutomationRasterFixture::page() noexcept
@@ -207,6 +269,16 @@ QRect AutomationRasterFixture::bodyFor(LaneHandle handle) const
 qreal AutomationRasterFixture::automationDpr() const noexcept
 {
     return m_inputHost->devicePixelRatio();
+}
+
+qreal AutomationRasterFixture::nativeAutomationDpr() const noexcept
+{
+    return m_automationPlotInput ? m_automationPlotInput->devicePixelRatio() : 0.0;
+}
+
+void AutomationRasterFixture::setAutomationDpr(qreal dpr) noexcept
+{
+    m_inputHost->setDevicePixelRatio(dpr);
 }
 
 QPointF AutomationRasterFixture::automationContentToViewport(const QPointF &position) const
@@ -337,6 +409,7 @@ bool AutomationRasterFixture::initialize(QString &error)
         return false;
     }
 
+    // Interaction's narrower seed intentionally differs from painting's seed.
     songDocument.addLanePoint(0, 7, 24, 32);
     songDocument.writeLanePoints(0, 21, 96, 96, {{96, 32}, {96, 96}});
     m_voicegroup = std::make_unique<LoadedVoiceGroup>();

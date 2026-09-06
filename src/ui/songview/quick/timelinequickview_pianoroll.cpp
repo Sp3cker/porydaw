@@ -57,14 +57,15 @@ int addFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &
     const qreal inset = insetPixels * pixel;
     const qreal thickness = thicknessPixels * pixel;
     const QRectF frame = rect.adjusted(inset, inset, -inset, -inset);
-    addRect(scene, layer, QRectF(frame.left(), frame.top(), frame.width(), thickness), color, clip);
-    addRect(scene, layer,
+    addRect(scene.layer(layer), QRectF(frame.left(), frame.top(), frame.width(), thickness), color,
+            clip);
+    addRect(scene.layer(layer),
             QRectF(frame.left(), frame.bottom() - thickness, frame.width(), thickness), color,
             clip);
     const qreal sideHeight = (std::max)(0.0, frame.height() - 2.0 * thickness);
-    addRect(scene, layer, QRectF(frame.left(), frame.top() + thickness, thickness, sideHeight),
-            color, clip);
-    addRect(scene, layer,
+    addRect(scene.layer(layer),
+            QRectF(frame.left(), frame.top() + thickness, thickness, sideHeight), color, clip);
+    addRect(scene.layer(layer),
             QRectF(frame.right() - thickness, frame.top() + thickness, thickness, sideHeight),
             color, clip);
     return thicknessPixels;
@@ -73,13 +74,13 @@ int addFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &
 void addDashedFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRectF &rect,
                     const QColor &color, qreal width, qreal dash, qreal gap, const QRectF &clip)
 {
-    addDashedHorizontal(scene, layer, rect.left(), rect.right(), rect.top(), width, dash, gap,
+    addDashedHorizontal(scene.layer(layer), rect.left(), rect.right(), rect.top(), width, dash, gap,
                         color, clip);
-    addDashedHorizontal(scene, layer, rect.left(), rect.right(), rect.bottom(), width, dash, gap,
-                        color, clip);
-    addDashedVertical(scene, layer, rect.left(), rect.top(), rect.bottom(), width, dash, gap, color,
-                      clip);
-    addDashedVertical(scene, layer, rect.right(), rect.top(), rect.bottom(), width, dash, gap,
+    addDashedHorizontal(scene.layer(layer), rect.left(), rect.right(), rect.bottom(), width, dash,
+                        gap, color, clip);
+    addDashedVertical(scene.layer(layer), rect.left(), rect.top(), rect.bottom(), width, dash, gap,
+                      color, clip);
+    addDashedVertical(scene.layer(layer), rect.right(), rect.top(), rect.bottom(), width, dash, gap,
                       color, clip);
 }
 
@@ -111,14 +112,15 @@ void addNoteBorder(TimelineQuickScene &scene, TimelineQuickLayer layer, const QR
     if (unterminated) {
         addDashedFrame(scene, layer, frame, color, pixel, dashLength, dashGap, clip);
     } else {
-        addRect(scene, layer, QRectF(frame.left(), frame.top(), frame.width(), pixel), color, clip);
-        addRect(scene, layer, QRectF(frame.left(), frame.bottom() - pixel, frame.width(), pixel),
-                color, clip);
-        addRect(scene, layer,
+        addRect(scene.layer(layer), QRectF(frame.left(), frame.top(), frame.width(), pixel), color,
+                clip);
+        addRect(scene.layer(layer),
+                QRectF(frame.left(), frame.bottom() - pixel, frame.width(), pixel), color, clip);
+        addRect(scene.layer(layer),
                 QRectF(frame.left(), frame.top() + pixel, pixel, frame.height() - 2.0 * pixel),
                 color, clip);
         addRect(
-            scene, layer,
+            scene.layer(layer),
             QRectF(frame.right() - pixel, frame.top() + pixel, pixel, frame.height() - 2.0 * pixel),
             color, clip);
     }
@@ -135,17 +137,17 @@ void addLoopGlow(TimelineQuickScene &scene, TimelineQuickLayer layer, const QRec
     clear.setAlpha(0);
     const qreal split = rect.left() + rect.width() * (fadesRight ? 0.2 : 0.8);
     if (fadesRight) {
-        addHorizontalGradient(scene, layer,
+        addHorizontalGradient(scene.layer(layer),
                               QRectF(rect.left(), rect.top(), split - rect.left(), rect.height()),
                               strong, weak, clip);
-        addHorizontalGradient(scene, layer,
+        addHorizontalGradient(scene.layer(layer),
                               QRectF(split, rect.top(), rect.right() - split, rect.height()), weak,
                               clear, clip);
     } else {
-        addHorizontalGradient(scene, layer,
+        addHorizontalGradient(scene.layer(layer),
                               QRectF(rect.left(), rect.top(), split - rect.left(), rect.height()),
                               clear, weak, clip);
-        addHorizontalGradient(scene, layer,
+        addHorizontalGradient(scene.layer(layer),
                               QRectF(split, rect.top(), rect.right() - split, rect.height()), weak,
                               strong, clip);
     }
@@ -191,8 +193,8 @@ void TimelineQuickView::rebuildGrid()
         if (!rowRect.intersects(plot))
             continue;
         if (isBlackKey(key))
-            addRect(scene, TimelineQuickLayer::PianoGrid, rowRect, accidental, plot);
-        addHorizontalLine(scene, TimelineQuickLayer::PianoGrid, plot.left(), plot.right(),
+            addRect(scene.layer(TimelineQuickLayer::PianoGrid), rowRect, accidental, plot);
+        addHorizontalLine(scene.layer(TimelineQuickLayer::PianoGrid), plot.left(), plot.right(),
                           rowRect.bottom(), pixel, key % 12 == 0 ? octave : gridLineColor(50),
                           plot);
     }
@@ -200,7 +202,7 @@ void TimelineQuickView::rebuildGrid()
         const QColor tint = detail::pianoRollScaleHighlightColor();
         for (int row = 0; row < projection.visibleRowCount(); ++row) {
             if (projection.isScalePitchRow(row)) {
-                addRect(scene, TimelineQuickLayer::PianoGrid,
+                addRect(scene.layer(TimelineQuickLayer::PianoGrid),
                         QRectF(plot.left(), edges[row], plot.width(), edges[row + 1] - edges[row]),
                         tint, plot);
             }
@@ -209,7 +211,7 @@ void TimelineQuickView::rebuildGrid()
 
     const qreal tickZero = roll.m_camera.displayX(0.0, 0.0, dpr);
     if (tickZero > plot.left()) {
-        addRect(scene, TimelineQuickLayer::PianoGrid,
+        addRect(scene.layer(TimelineQuickLayer::PianoGrid),
                 QRectF(plot.left(), plot.top(), tickZero - plot.left(), plot.height()),
                 mixTowardOklab(background, gridLineColor(), 0.15), plot);
     }
@@ -233,8 +235,8 @@ void TimelineQuickView::rebuildGrid()
     detail::forEachSubGridLine(
         grid, roll.m_camera, range, detailMinimumPixelsPerBeat, [&](uint64_t tick, int level) {
             const qreal x = roll.m_camera.displayX(double(tick), 0.0, dpr);
-            addVerticalLine(scene, TimelineQuickLayer::PianoGrid, x, plot.top(), plot.bottom(),
-                            gridWidth, gridColors[std::size_t(level - 1)], plot);
+            addVerticalLine(scene.layer(TimelineQuickLayer::PianoGrid), x, plot.top(),
+                            plot.bottom(), gridWidth, gridColors[std::size_t(level - 1)], plot);
         });
     const bool drawBeats = roll.m_camera.pxPerBeat() >= detailMinimumPixelsPerBeat;
     roll.m_sv->forEachGridLine(range.begin, range.end, [&](uint64_t tick, bool isBar, int, int) {
@@ -243,7 +245,7 @@ void TimelineQuickView::rebuildGrid()
         const bool finest = roll.m_sv->document() && grid.gridTicksAt(tick) == grid.fineGridTicks();
         const auto colorIndex = isBar ? 5u : finest ? 4u : 3u;
         const qreal x = roll.m_camera.displayX(double(tick), 0.0, dpr);
-        addVerticalLine(scene, TimelineQuickLayer::PianoGrid, x, plot.top(), plot.bottom(),
+        addVerticalLine(scene.layer(TimelineQuickLayer::PianoGrid), x, plot.top(), plot.bottom(),
                         gridWidth, gridColors[colorIndex], plot);
     });
 }
@@ -276,11 +278,11 @@ void TimelineQuickView::rebuildNoteFills()
             const QRectF box = roll.noteBox(noteRect);
             const int velocity = roll.m_sv->previewVelocity(note.noteId).value_or(note.velocity);
             if (ghost) {
-                addRect(scene, TimelineQuickLayer::PianoNoteFills, box,
+                addRect(scene.layer(TimelineQuickLayer::PianoNoteFills), box,
                         ghostNoteColor(note.track, isBlackKey(note.key)), plot);
                 continue;
             }
-            addRect(scene, TimelineQuickLayer::PianoNoteFills, box,
+            addRect(scene.layer(TimelineQuickLayer::PianoNoteFills), box,
                     roll.m_sv->noteFillColor(note.track, velocity), plot);
         }
     }
@@ -302,7 +304,7 @@ void TimelineQuickView::rebuildDrawPreviewFill()
     const QRectF previewRect = roll.noteRect(x0, x1, roll.m_drawKey);
     const QRectF box = roll.noteBox(previewRect);
     const QColor fill = roll.m_sv->noteFillColor(selectedTrack, roll.m_lastVelocity);
-    addRect(scene, TimelineQuickLayer::PianoDrawPreviewFill, box, fill, plot);
+    addRect(scene.layer(TimelineQuickLayer::PianoDrawPreviewFill), box, fill, plot);
 }
 
 void TimelineQuickView::rebuildNoteBordersAndSelection()
@@ -337,7 +339,7 @@ void TimelineQuickView::rebuildNoteBordersAndSelection()
                           note.unterminated, roll.m_geometry.noteBorderDashLength,
                           roll.m_geometry.noteBorderDashGap, ring, dpr, plot);
         } else {
-            addRect(scene, TimelineQuickLayer::PianoNoteBordersAndSelection, box,
+            addRect(scene.layer(TimelineQuickLayer::PianoNoteBordersAndSelection), box,
                     themes::color(themes::Role::item_selected_background), plot);
         }
     };
@@ -411,7 +413,7 @@ void TimelineQuickView::rebuildOverlay()
         const QRectF band = QRectF(roll.m_pressPos, roll.m_curPos).normalized().intersected(plot);
         QColor fill = themes::color(themes::Role::song_view_selection_fill);
         fill.setAlpha(30);
-        addRect(scene, TimelineQuickLayer::PianoOverlay, band, fill, plot);
+        addRect(scene.layer(TimelineQuickLayer::PianoOverlay), band, fill, plot);
         addDashedFrame(scene, TimelineQuickLayer::PianoOverlay, band,
                        themes::color(themes::Role::song_view_selection_edge), pixel,
                        lyt::space(Space::One), lyt::space(Space::One), plot);
@@ -422,12 +424,14 @@ void TimelineQuickView::rebuildOverlay()
         const qreal x1 = roll.m_camera.displayX(double(timeSelection.endTick), 0.0, dpr);
         QColor fill = themes::color(themes::Role::song_view_selection_fill);
         fill.setAlpha(30);
-        addRect(scene, TimelineQuickLayer::PianoOverlay,
+        addRect(scene.layer(TimelineQuickLayer::PianoOverlay),
                 QRectF(x0, plot.top(), x1 - x0, plot.height()), fill, plot);
-        addVerticalLine(scene, TimelineQuickLayer::PianoOverlay, x0, plot.top(), plot.bottom(),
-                        pixel, themes::color(themes::Role::song_view_selection_edge), plot);
-        addVerticalLine(scene, TimelineQuickLayer::PianoOverlay, x1, plot.top(), plot.bottom(),
-                        pixel, themes::color(themes::Role::song_view_selection_edge), plot);
+        addVerticalLine(scene.layer(TimelineQuickLayer::PianoOverlay), x0, plot.top(),
+                        plot.bottom(), pixel, themes::color(themes::Role::song_view_selection_edge),
+                        plot);
+        addVerticalLine(scene.layer(TimelineQuickLayer::PianoOverlay), x1, plot.top(),
+                        plot.bottom(), pixel, themes::color(themes::Role::song_view_selection_edge),
+                        plot);
     }
 
     const MidiTimeline *timeline = roll.m_sv->timeline();
@@ -449,10 +453,10 @@ void TimelineQuickView::rebuildOverlay()
                             QRectF(x1 - glowWidth, plot.top(), glowWidth, plot.height()), false,
                             plot);
             if (hasStart)
-                addVerticalLine(scene, TimelineQuickLayer::PianoOverlay, x0, plot.top(),
+                addVerticalLine(scene.layer(TimelineQuickLayer::PianoOverlay), x0, plot.top(),
                                 plot.bottom(), pixel, detail::loopEdge(), plot);
             if (hasEnd)
-                addVerticalLine(scene, TimelineQuickLayer::PianoOverlay, x1, plot.top(),
+                addVerticalLine(scene.layer(TimelineQuickLayer::PianoOverlay), x1, plot.top(),
                                 plot.bottom(), pixel, detail::loopEdge(), plot);
         }
     }
@@ -468,7 +472,7 @@ void TimelineQuickView::rebuildKeyboardKeys()
     const PitchProjection &projection = roll.m_sv->pitchProjection();
     const auto &edges = roll.rowEdges();
     if (projection.visibleRowCount() > 0) {
-        addRect(scene, TimelineQuickLayer::PianoKeyboardKeys,
+        addRect(scene.layer(TimelineQuickLayer::PianoKeyboardKeys),
                 QRectF(0, edges[0], keyboardWidth, edges[projection.visibleRowCount()] - edges[0]),
                 themes::color(themes::Role::song_view_piano_keyboard_natural_key), viewport);
     }
@@ -478,12 +482,13 @@ void TimelineQuickView::rebuildKeyboardKeys()
         if (!rowRect.intersects(viewport))
             continue;
         if (isBlackKey(key)) {
-            addRect(scene, TimelineQuickLayer::PianoKeyboardKeys, rowRect,
+            addRect(scene.layer(TimelineQuickLayer::PianoKeyboardKeys), rowRect,
                     themes::color(themes::Role::song_view_piano_keyboard_black_key), viewport);
         } else if (key % 12 == 0 || key % 12 == 5) {
-            addHorizontalLine(
-                scene, TimelineQuickLayer::PianoKeyboardKeys, 0, keyboardWidth, rowRect.bottom(),
-                pixel, themes::color(themes::Role::song_view_piano_keyboard_separator), viewport);
+            addHorizontalLine(scene.layer(TimelineQuickLayer::PianoKeyboardKeys), 0, keyboardWidth,
+                              rowRect.bottom(), pixel,
+                              themes::color(themes::Role::song_view_piano_keyboard_separator),
+                              viewport);
         }
     }
 }
@@ -504,10 +509,10 @@ void TimelineQuickView::rebuildKeyboardHighlights()
             continue;
         const bool sounding = key == roll.m_soundingKey;
         if (sounding) {
-            addRect(scene, TimelineQuickLayer::PianoKeyboardHighlights, rowRect,
+            addRect(scene.layer(TimelineQuickLayer::PianoKeyboardHighlights), rowRect,
                     themes::color(themes::Role::song_view_piano_keyboard_active_key), viewport);
             if (!isBlackKey(key) && (key % 12 == 0 || key % 12 == 5)) {
-                addHorizontalLine(scene, TimelineQuickLayer::PianoKeyboardHighlights, 0,
+                addHorizontalLine(scene.layer(TimelineQuickLayer::PianoKeyboardHighlights), 0,
                                   keyboardWidth, rowRect.bottom(), pixel,
                                   themes::color(themes::Role::song_view_piano_keyboard_separator),
                                   viewport);
@@ -516,11 +521,11 @@ void TimelineQuickView::rebuildKeyboardHighlights()
         if (key == roll.m_hoverKey && !sounding && hoverGeometry) {
             QColor highlight = roll.palette().color(QPalette::Highlight);
             highlight.setAlpha(80);
-            addRect(scene, TimelineQuickLayer::PianoKeyboardHighlights,
+            addRect(scene.layer(TimelineQuickLayer::PianoKeyboardHighlights),
                     hoverGeometry->highlightRect, highlight, viewport);
         }
     }
-    addVerticalLine(scene, TimelineQuickLayer::PianoKeyboardHighlights, 0, 0,
+    addVerticalLine(scene.layer(TimelineQuickLayer::PianoKeyboardHighlights), 0, 0,
                     roll.bounds().height(), pixel, themes::color(themes::Role::song_view_separator),
                     viewport);
 }
@@ -671,7 +676,7 @@ void TimelineQuickView::syncPianoRoll(PianoRollQuickDirtySet dirty)
                              void (TimelineQuickView::*builder)()) {
         if (!(dirty & flag))
             return;
-        resetLayer(scene, layer);
+        resetLayer(scene.layer(layer));
         (this->*builder)();
         if (TimelineQuickItem *item = m_items[static_cast<std::size_t>(layer)])
             item->update();

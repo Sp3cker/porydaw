@@ -2,8 +2,6 @@
 
 #include "fixturecatalog.hpp"
 #include "fwd.hpp"
-#include "mainwindow.h"
-#include "selftest/harness.h"
 
 #include <initializer_list>
 
@@ -22,14 +20,6 @@ QStringList strings(std::initializer_list<const char *> values)
 QString optional(const QStringList &arguments, qsizetype index)
 {
     return index < arguments.size() ? arguments[index] : QString{};
-}
-
-template <checks::SelfTestScenario Scenario>
-int runSelfTestScenario(QApplication &, const QStringList &args)
-{
-    auto window = MainWindow{};
-    window.show();
-    return checks::SelfTestHarness::run(window, Scenario, args[1], args[2]);
 }
 
 } // namespace
@@ -51,62 +41,74 @@ const std::vector<CheckDefinition> &catalog()
         const auto selfTestFiles = decompProjectFiles +
                                    strings({"sound/songs/midi/mus_littleroot_test.mid"}) +
                                    richVoicegroupFiles;
-        const auto selfTest = [&selfTestFiles](const char *name, const char *argument,
-                                               Handler handler) {
-            return CheckDefinition{
-                .name = name,
-                .argv = strings({argument, "{scratch}", "mus_littleroot_test"}),
-                .handler = handler,
-                .scratchKind = ScratchKind::ExistingDirectory,
-                .fixtureRootKind = FixtureRootKind::DecompProject,
-                .fixtureFiles = selfTestFiles,
-                .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}},
-            };
-        };
         return std::vector<CheckDefinition>{
             {.name = "production-startup",
              .argv = strings({"--version"}),
              .binary = BinaryKind::Application,
-             .startup = StartupKind::HandlerOwned},
+             .startup = StartupKind::HandlerOwned,
+             .framework = Framework::Process},
             {.name = "roundtrip",
              .argv = strings({"--roundtrip", "{scratch}", "{mid2agb}"}),
-             .handler = [](QApplication &,
-                           const QStringList &args) { return runRoundTrip(args[1], args[2]); },
+             .handler =
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runRoundTrip(args[1], args[2], qtArgs);
+                 },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = decompProjectFiles + decompMidiFiles},
             {.name = "editcheck",
              .argv = strings({"--editcheck", "{scratch}"}),
-             .handler = [](QApplication &,
-                           const QStringList &args) { return runEditCheck(args[1]); },
+             .handler = [](QApplication &, const QStringList &args,
+                           const QStringList &qtArgs) { return runEditCheck(args.mid(1), qtArgs); },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = decompProjectFiles + decompMidiFiles},
             {.name = "scalecheck",
              .argv = strings({"--scalecheck", "{scratch}"}),
-             .handler = [](QApplication &,
-                           const QStringList &args) { return runScaleCheck(args[1]); },
-             .scratchKind = ScratchKind::ExistingDirectory},
-            {.name = "viewcheck",
-             .argv = strings({"--viewcheck", "{scratch}"}),
              .handler =
-                 [](QApplication &, const QStringList &args) {
-                     return runViewCheck(args[1], optional(args, 2), optional(args, 3));
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runScaleCheck(args.mid(1), qtArgs);
+                 },
+             .scratchKind = ScratchKind::ExistingDirectory},
+            {.name = "eventviews-chrome",
+             .argv = strings({"--eventviews-chrome"}),
+             .handler = [](QApplication &, const QStringList &,
+                           const QStringList &qtArgs) { return runEventViewsChromeCheck(qtArgs); }},
+            {.name = "selftest-timeline",
+             .argv = strings({"--selftest-timeline", "{scratch}", "mus_littleroot_test"}),
+             .handler =
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runSelfTestTimelineCheck(args, qtArgs);
                  },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
-             .fixtureFiles = decompProjectFiles + decompMidiFiles},
-            selfTest("selftest-timeline", "--selftest-timeline",
-                     runSelfTestScenario<checks::SelfTestScenario::Timeline>),
-            selfTest("selftest-transport", "--selftest-transport",
-                     runSelfTestScenario<checks::SelfTestScenario::Transport>),
-            selfTest("selftest-workspace", "--selftest-workspace",
-                     runSelfTestScenario<checks::SelfTestScenario::Workspace>),
+             .fixtureFiles = selfTestFiles,
+             .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}}},
+            {.name = "selftest-transport",
+             .argv = strings({"--selftest-transport", "{scratch}", "mus_littleroot_test"}),
+             .handler =
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runSelfTestTransportCheck(args, qtArgs);
+                 },
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = selfTestFiles,
+             .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}}},
+            {.name = "selftest-workspace",
+             .argv = strings({"--selftest-workspace", "{scratch}", "mus_littleroot_test"}),
+             .handler =
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runSelfTestWorkspaceCheck(args, qtArgs);
+                 },
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = selfTestFiles,
+             .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}}},
             {.name = "savecheck",
              .argv = strings({"--savecheck", "{scratch}", "mus_route101", "{mid2agb}"}),
              .handler =
-                 [](QApplication &, const QStringList &args) {
-                     return runSaveCheck(args[1], args[2], optional(args, 3));
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runSaveCheck(args[1], args[2], optional(args, 3), qtArgs);
                  },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
@@ -114,8 +116,8 @@ const std::vector<CheckDefinition> &catalog()
             {.name = "onboardcheck",
              .argv = strings({"--onboardcheck", "{scratch}", "{mid2agb}"}),
              .handler =
-                 [](QApplication &, const QStringList &args) {
-                     return runOnboardCheck(args[1], optional(args, 2));
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runOnboardCheck(args[1], args.value(2), qtArgs);
                  },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
@@ -132,16 +134,20 @@ const std::vector<CheckDefinition> &catalog()
                                                   })},
             {.name = "vgcheck",
              .argv = strings({"--vgcheck", "{scratch}", "mus_gym"}),
-             .handler = [](QApplication &,
-                           const QStringList &args) { return runVgCheck(args[1], args[2]); },
+             .handler =
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runVgCheck(args[1], args[2], qtArgs);
+                 },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = decompProjectFiles + strings({"sound/songs/midi/mus_gym.mid"}) +
                              voicegroupEditorFiles},
             {.name = "vgbankcheck",
              .argv = strings({"--vgbankcheck", "{scratch}", "mus_gym"}),
-             .handler = [](QApplication &,
-                           const QStringList &args) { return runVgBankCheck(args[1], args[2]); },
+             .handler =
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runVgBankCheck(args[1], args[2], qtArgs);
+                 },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles =
@@ -151,17 +157,27 @@ const std::vector<CheckDefinition> &catalog()
             {.name = "vgloadcheck",
              .argv = strings({"--vgloadcheck", "{scratch}"}),
              .handler =
-                 [](QApplication &, const QStringList &args) {
-                     return runVgLoadCheck(args[1], args.value(2));
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runVgLoadCheck(args[1], args.value(2), qtArgs);
                  },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = decompProjectFiles + voicegroupEditorFiles},
+            {.name = "vgloadbench",
+             .argv = strings({"--vgloadbench", "{scratch}", "mus_gym"}),
+             .handler =
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runVgLoadCheck(args[1], args[2], qtArgs);
+                 },
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = decompProjectFiles + strings({"sound/songs/midi/mus_gym.mid"}) +
+                             voicegroupEditorFiles},
             {.name = "vgsavecheck",
              .argv = strings({"--vgsavecheck", "{scratch}", "mus_route101"}),
              .handler =
-                 [](QApplication &, const QStringList &args) {
-                     return runVgSaveCheck(args[1], args[2], optional(args, 3));
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runVoicegroupSaveCheck(args[1], args[2], optional(args, 3), qtArgs);
                  },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
@@ -169,24 +185,49 @@ const std::vector<CheckDefinition> &catalog()
                  route101Files + voicegroupEditorFiles + strings({"data/sound_data.s"})},
             {.name = "exportcheck-loop",
              .argv = strings({"--exportcheck", "{scratch}", "mus_route101"}),
-             .handler = [](QApplication &,
-                           const QStringList &args) { return runExportCheck(args[1], args[2]); },
+             .handler =
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runExportCheck(args[1], args[2], qtArgs);
+                 },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = route101RichFiles},
             {.name = "exportcheck-tail",
              .argv = strings({"--exportcheck", "{scratch}", "mus_route102"}),
-             .handler = [](QApplication &,
-                           const QStringList &args) { return runExportCheck(args[1], args[2]); },
+             .handler =
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runExportCheck(args[1], args[2], qtArgs);
+                 },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = decompProjectFiles + strings({"sound/songs/midi/mus_route102.mid"}) +
                              richVoicegroupFiles},
             {
-                .name = "projectiocheck",
-                .argv = strings({"--projectiocheck", "{scratch}"}),
-                .handler = [](QApplication &,
-                              const QStringList &args) { return runProjectIoCheck(args[1]); },
+                .name = "project-identity",
+                .argv = strings({"--project-identity"}),
+                .handler =
+                    [](QApplication &, const QStringList &, const QStringList &qtArgs) {
+                        return runProjectIdentityCheck(qtArgs);
+                    },
+            },
+            {
+                .name = "project-io-flow",
+                .argv = strings({"--project-io-flow", "{scratch}"}),
+                .handler =
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return runProjectIoFlowCheck(args[1], qtArgs);
+                    },
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = route101RichFiles + strings({"sound/music_player_table.inc"}),
+            },
+            {
+                .name = "project-io-mutations",
+                .argv = strings({"--project-io-mutations", "{scratch}"}),
+                .handler =
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return runProjectIoMutationsCheck(args[1], qtArgs);
+                    },
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = route101RichFiles + strings({"sound/music_player_table.inc"}),
@@ -195,8 +236,8 @@ const std::vector<CheckDefinition> &catalog()
                 .name = "projectworkspacecheck",
                 .argv = strings({"--projectworkspacecheck", "{scratch}"}),
                 .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runProjectWorkspaceCheck(args[1]);
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return runProjectWorkspaceCheck(args[1], qtArgs);
                     },
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
@@ -206,8 +247,8 @@ const std::vector<CheckDefinition> &catalog()
                 .name = "sessioncheck",
                 .argv = strings({"--sessioncheck", "{scratch}", "mus_route101"}),
                 .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runSessionCheck(args[1], args[2]);
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return runSessionCheck(args[1], args[2], qtArgs);
                     },
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
@@ -215,29 +256,24 @@ const std::vector<CheckDefinition> &catalog()
             },
             {
                 .name = "tabcheck",
-                .argv = strings({"--tabcheck", "{scratch}", "mus_route101", "mus_petalburg"}),
+                .argv = strings({"--tabcheck", "{scratch}", "mus_route101", "mus_route102"}),
                 .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runTabCheck(args[1], args[2], args[3]);
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return runTabCheck(args[1], args[2], args[3], qtArgs);
                     },
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
-                .fixtureFiles = twoSongRichFiles,
+                .fixtureFiles = route101RichFiles + strings({"sound/songs/midi/mus_route102.mid"}),
             },
-            {.name = "eventviewcheck",
-             .argv = strings({"--eventviewcheck", "{scratch}"}),
-             .handler =
-                 [](QApplication &, const QStringList &args) {
-                     return runEventViewCheck(args[1], optional(args, 2), optional(args, 3));
-                 },
-             .scratchKind = ScratchKind::ExistingDirectory,
-             .fixtureRootKind = FixtureRootKind::DecompProject,
-             .fixtureFiles = decompProjectFiles + decompMidiFiles},
+            {.name = "eventviews-edits",
+             .argv = strings({"--eventviews-edits"}),
+             .handler = [](QApplication &, const QStringList &,
+                           const QStringList &qtArgs) { return runEventViewsEditsCheck(qtArgs); }},
             {.name = "rollcheck",
              .argv = strings({"--rollcheck", "{scratch}", "mus_route101"}),
              .handler =
-                 [](QApplication &, const QStringList &args) {
-                     return runRollCheck(args[1], args[2], optional(args, 3));
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runRollCheck(args[1], args[2], qtArgs);
                  },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
@@ -246,18 +282,31 @@ const std::vector<CheckDefinition> &catalog()
             {.name = "trackheaderquickcheck",
              .argv = strings({"--trackheaderquickcheck", "{scratch}", "mus_route101"}),
              .handler =
-                 [](QApplication &, const QStringList &args) {
-                     return runTrackHeaderQuickCheck(args[1], args[2]);
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runTrackHeaderQuickCheck(args[1], args[2], qtArgs);
                  },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = route101Files,
              .windowing = Windowing::WindowSystem},
+            {.name = "trackactivitymetercheck",
+             .argv = strings({"--trackactivitymetercheck"}),
+             .handler =
+                 [](QApplication &, const QStringList &, const QStringList &qtArgs) {
+                     return runTrackActivityMeterCheck(qtArgs);
+                 }},
+            {.name = "trackactivitymetercheck-fractional-dpr",
+             .argv = strings({"--trackactivitymetercheck"}),
+             .handler =
+                 [](QApplication &, const QStringList &, const QStringList &qtArgs) {
+                     return runTrackActivityMeterCheck(qtArgs);
+                 },
+             .environment = {{QStringLiteral("QT_SCALE_FACTOR"), QStringLiteral("1.5")}}},
             {.name = "rollwindowingcheck",
              .argv = strings({"--rollwindowingcheck", "{scratch}", "mus_route101"}),
              .handler =
-                 [](QApplication &, const QStringList &args) {
-                     return runRollWindowingCheck(args[1], args[2]);
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runRollWindowingCheck(args[1], args[2], qtArgs);
                  },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
@@ -266,142 +315,187 @@ const std::vector<CheckDefinition> &catalog()
             {.name = "timelinepancheck",
              .argv = strings({"--timelinepancheck", "{scratch}", "mus_route101"}),
              .handler =
-                 [](QApplication &, const QStringList &args) {
-                     return runTimelinePanCheck(args[1], args[2]);
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runTimelinePanCheck(args[1], args[2], qtArgs);
+                 },
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = route101Files},
+            {.name = "timelinepan-native",
+             .argv = strings({"--timelinepan-native", "{scratch}", "mus_route101"}),
+             .handler =
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runTimelinePanNativeCheck(args[1], args[2], qtArgs);
                  },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = route101Files,
              .windowing = Windowing::WindowSystem},
+            {
+                .name = "rollcheck-static",
+                .argv = strings({"--rollcheck-static", "{scratch}", "mus_route101"}),
+                .handler =
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return checks::rollcheck::staticcheck::runPianoRollStaticCheck(
+                            args[1], args[2], qtArgs);
+                    },
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = route101Files,
+                .windowing = Windowing::WindowSystem,
+            },
             {.name = "mkcheck",
              .argv = strings({"--mkcheck", "{scratch}", "mus_aqua_magma_hideout"}),
-             .handler = [](QApplication &,
-                           const QStringList &args) { return runMkCheck(args[1], args[2]); },
+             .handler =
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runMkCheck(args[1], args[2], qtArgs);
+                 },
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::SongsMkProject,
              .fixtureFiles = strings({"sound/song_table.inc", "songs.mk"})},
             {.name = "loopcheck",
              .argv = strings({"--loopcheck"}),
-             .handler = [](QApplication &, const QStringList &) { return runLoopCheck(); }},
+             .handler = [](QApplication &, const QStringList &,
+                           const QStringList &qtArgs) { return runLoopCheck(qtArgs); }},
             {.name = "ignorecheck",
-             .argv = strings({"--ignorecheck", "{scratch}"}),
-             .handler = [](QApplication &,
-                           const QStringList &args) { return runIgnoreCheck(args[1]); },
-             .scratchKind = ScratchKind::MustNotExistPath},
+             .argv = strings({"--ignorecheck"}),
+             .handler = [](QApplication &, const QStringList &,
+                           const QStringList &qtArgs) { return runIgnoreCheck(qtArgs); },
+             .scratchKind = ScratchKind::Unused},
             {.name = "primecheck",
              .argv = strings({"--primecheck"}),
-             .handler = [](QApplication &, const QStringList &) { return runPrimeCheck(); }},
+             .handler = [](QApplication &, const QStringList &,
+                           const QStringList &qtArgs) { return runPrimeCheck(qtArgs); }},
             {.name = "xcmdcheck",
              .argv = strings({"--xcmdcheck"}),
-             .handler = [](QApplication &, const QStringList &) { return runXcmdCheck(); }},
+             .handler = [](QApplication &, const QStringList &,
+                           const QStringList &qtArgs) { return runXcmdCheck(qtArgs); }},
             {.name = "smfcheck",
              .argv = strings({"--smfcheck"}),
-             .handler = [](QApplication &, const QStringList &) { return runSmfCheck(); }},
+             .handler = [](QApplication &, const QStringList &,
+                           const QStringList &qtArgs) { return runSmfCheck(qtArgs); }},
             {.name = "transportcheck",
              .argv = strings({"--transportcheck"}),
-             .handler = [](QApplication &, const QStringList &) { return runTransportCheck(); }},
+             .handler = [](QApplication &, const QStringList &,
+                           const QStringList &qtArgs) { return runTransportCheck(qtArgs); }},
             {.name = "voicegroupviewcachecheck",
              .argv = strings({"--voicegroupviewcachecheck"}),
-             .handler = [](QApplication &,
-                           const QStringList &) { return runVoicegroupViewCacheCheck(); }},
+             .handler =
+                 [](QApplication &, const QStringList &, const QStringList &qtArgs) {
+                     return runVoicegroupViewCacheCheck(qtArgs);
+                 }},
             {
                 .name = "audiocheck",
                 .argv = strings({"--audiocheck"}),
-                .handler = [](QApplication &, const QStringList &) { return runAudioCheck(); },
+                .handler = [](QApplication &, const QStringList &,
+                              const QStringList &qtArgs) { return runAudioCheck(qtArgs); },
+            },
+            {
+                .name = "audiocheck-backend",
+                .argv = strings({"--audiocheck-backend"}),
+                .handler = [](QApplication &, const QStringList &,
+                              const QStringList &qtArgs) { return runAudioBackendCheck(qtArgs); },
+                .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}},
             },
             {
                 .name = "clickcheck",
                 .argv = strings({"--clickcheck"}),
-                .handler = [](QApplication &, const QStringList &) { return runClickCheck(); },
+                .handler = [](QApplication &, const QStringList &,
+                              const QStringList &qtArgs) { return runClickCheck(qtArgs); },
+                .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}},
             },
             {.name = "resonancecheck",
              .argv = strings({"--resonancecheck"}),
-             .handler = [](QApplication &, const QStringList &) { return runResonanceCheck(); }},
+             .handler = [](QApplication &, const QStringList &,
+                           const QStringList &qtArgs) { return runResonanceCheck(qtArgs); }},
+            {.name = "resonancecheck-timing",
+             .argv = strings({"--resonancecheck-timing"}),
+             .handler = [](QApplication &, const QStringList &,
+                           const QStringList &qtArgs) { return runResonanceTimingCheck(qtArgs); }},
             {.name = "trackactivitycheck",
              .argv = strings({"--trackactivitycheck"}),
-             .handler = [](QApplication &,
-                           const QStringList &) { return runTrackActivityCheck(); }},
-            {.name = "trackactivitymetercheck",
-             .argv = strings({"--trackactivitymetercheck"}),
-             .handler = [](QApplication &,
-                           const QStringList &) { return runTrackActivityMeterCheck(); }},
-            {.name = "trackactivitymetercheck-fractional-dpr",
-             .argv = strings({"--trackactivitymetercheck"}),
-             .handler = [](QApplication &,
-                           const QStringList &) { return runTrackActivityMeterCheck(); },
-             .environment = {{QStringLiteral("QT_SCALE_FACTOR"), QStringLiteral("1.5")}}},
+             .handler = [](QApplication &, const QStringList &,
+                           const QStringList &qtArgs) { return runTrackActivityCheck(qtArgs); }},
             {.name = "keymapcheck",
              .argv = strings({"--keymapcheck"}),
-             .handler = [](QApplication &, const QStringList &) { return runKeymapCheck(); }},
-            {
-                .name = "selectioncheck",
-                .argv = strings({"--selectioncheck"}),
-                .handler = [](QApplication &, const QStringList &) { return runSelectionCheck(); },
-            },
+             .handler = [](QApplication &, const QStringList &,
+                           const QStringList &qtArgs) { return runKeymapCheck(qtArgs); }},
+            {.name = "selectioncheck",
+             .argv = strings({"--selectioncheck"}),
+             .handler = [](QApplication &, const QStringList &,
+                           const QStringList &qtArgs) { return runSelectionCheck(qtArgs); }},
             {
                 .name = "laneselectioncheck",
                 .argv = strings({"--laneselectioncheck"}),
-                .handler = [](QApplication &,
-                              const QStringList &) { return runLaneSelectionCheck(); },
+                .handler = [](QApplication &, const QStringList &,
+                              const QStringList &qtArgs) { return runLaneSelectionCheck(qtArgs); },
             },
             {
                 .name = "clipmimecheck",
                 .argv = strings({"--clipmimecheck"}),
-                .handler = [](QApplication &, const QStringList &) { return runClipMimeCheck(); },
+                .handler = [](QApplication &, const QStringList &,
+                              const QStringList &qtArgs) { return runClipMimeCheck(qtArgs); },
             },
             {
                 .name = "clipcheck",
                 .argv = strings({"--clipcheck"}),
-                .handler = [](QApplication &, const QStringList &) { return runClipCheck(); },
+                .handler = [](QApplication &, const QStringList &,
+                              const QStringList &qtArgs) { return runClipCheck(qtArgs); },
             },
             {
                 .name = "polycheck",
                 .argv = strings({"--polycheck"}),
-                .handler = [](QApplication &,
-                              const QStringList &args) { return runPolyCheck(optional(args, 1)); },
+                .handler =
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return runPolyCheck(optional(args, 1), qtArgs);
+                    },
+            },
+            {
+                .name = "settings-dialog",
+                .argv = strings({"--settings-dialog"}),
+                .handler = [](QApplication &, const QStringList &,
+                              const QStringList &qtArgs) { return runSettingsDialogCheck(qtArgs); },
             },
             {.name = "samplecheck",
-             .argv = strings({"--samplecheck", "{scratch}", "{sample-corpus?}"}),
+             .argv = strings({"--samplecheck", "{sample-corpus?}"}),
              .handler =
-                 [](QApplication &, const QStringList &args) {
-                     return runSampleCheck(args[1], optional(args, 2), optional(args, 3));
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runSampleCheck(args.value(1), qtArgs);
                  },
-             .scratchKind = ScratchKind::MustNotExistPath,
+             .scratchKind = ScratchKind::Unused,
              .optionalArgumentEnvironment = {{QStringLiteral("{sample-corpus?}"),
                                               QStringLiteral("PORYDAW_SAMPLE_CORPUS")}}},
             {.name = "noteidcheck",
              .argv = strings({"--check-note-identity", "{scratch}"}),
-             .handler = [](QApplication &,
-                           const QStringList &args) { return runNoteIdentityCheck(args[1]); },
+             .handler =
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runNoteIdentityCheck(args.mid(1), qtArgs);
+                 },
              .scratchKind = ScratchKind::ExistingDirectory},
             {
                 .name = "host-seams",
                 .argv = strings({"--check-host-seams"}),
-                .handler = [](QApplication &, const QStringList &) { return runHostSeamsCheck(); },
+                .handler = [](QApplication &, const QStringList &,
+                              const QStringList &qtArgs) { return runHostSeamsCheck(qtArgs); },
             },
             {
                 .name = "velocity-model",
                 .argv = strings({"--check-velocity-model"}),
-                .handler = [](QApplication &,
-                              const QStringList &) { return runVelocityModelCheck(); },
+                .handler = [](QApplication &, const QStringList &,
+                              const QStringList &qtArgs) { return runVelocityModelCheck(qtArgs); },
             },
             {
                 .name = "editor-drawer",
                 .argv = strings({"--check-editor-drawer"}),
-                .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runEditorDrawerCheck(optional(args, 1));
-                    },
+                .handler = [](QApplication &, const QStringList &,
+                              const QStringList &qtArgs) { return runEditorDrawerCheck(qtArgs); },
             },
             {
                 .name = "automation-raster",
                 .argv = strings({"--check-automation-raster", "{scratch}", "mus_route101"}),
                 .handler =
-                    [](QApplication &, const QStringList &args) {
-                        const int painting = runAutomationPaintRasterCheck(args[1], args[2]);
-                        const int interaction =
-                            runAutomationInteractionRasterCheck(args[1], args[2]);
-                        return painting == 0 && interaction == 0 ? 0 : 1;
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return runAutomationRasterCheck(args[1], args[2], qtArgs);
                     },
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
@@ -412,8 +506,8 @@ const std::vector<CheckDefinition> &catalog()
                 .name = "velocity-page",
                 .argv = strings({"--check-velocity-page", "{scratch}", "mus_route101"}),
                 .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runVelocityPageCheck(args[1], args[2], optional(args, 3));
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return runVelocityPageCheck(args[1], args[2], qtArgs);
                     },
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
@@ -423,94 +517,124 @@ const std::vector<CheckDefinition> &catalog()
                 .name = "scrollbar",
                 .argv = strings({"--scrollbar", "{scratch}", "mus_route101"}),
                 .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runScrollbarCheck(args[1], args[2], args.mid(3));
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return runScrollbarCheck(args[1], args[2], qtArgs);
                     },
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = route101Files,
-                .windowing = Windowing::Offscreen,
-                .framework = Framework::QtTest,
             },
             {
                 .name = "velocity-editing",
                 .argv = strings({"--velocity-editing"}),
                 .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runVelocityEditingCheck(args.mid(1));
+                    [](QApplication &, const QStringList &, const QStringList &qtArgs) {
+                        return runVelocityEditingCheck(qtArgs);
                     },
-                .windowing = Windowing::Offscreen,
-                .framework = Framework::QtTest,
             },
             {
                 .name = "automation-editing",
                 .argv = strings({"--automation-editing"}),
                 .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runAutomationEditingCheck(args.mid(1));
+                    [](QApplication &, const QStringList &, const QStringList &qtArgs) {
+                        return runAutomationEditingCheck(qtArgs);
                     },
-                .windowing = Windowing::Offscreen,
-                .framework = Framework::QtTest,
             },
             {
                 .name = "automation-domain",
                 .argv = strings({"--automation-domain"}),
                 .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runAutomationDomainCheck(args.mid(1));
+                    [](QApplication &, const QStringList &, const QStringList &qtArgs) {
+                        return runAutomationDomainCheck(qtArgs);
                     },
-                .windowing = Windowing::Offscreen,
-                .framework = Framework::QtTest,
             },
             {
                 .name = "automation-presentation",
                 .argv = strings({"--automation-presentation"}),
                 .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runAutomationPresentationCheck(args.mid(1));
+                    [](QApplication &, const QStringList &, const QStringList &qtArgs) {
+                        return runAutomationPresentationCheck(qtArgs);
                     },
-                .windowing = Windowing::Offscreen,
-                .framework = Framework::QtTest,
             },
             {
                 .name = "automation-hover",
                 .argv = strings({"--automation-hover"}),
                 .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runAutomationHoverCheck(args.mid(1));
+                    [](QApplication &, const QStringList &, const QStringList &qtArgs) {
+                        return runAutomationHoverCheck(qtArgs);
                     },
-                .windowing = Windowing::Offscreen,
-                .framework = Framework::QtTest,
             },
             {
                 .name = "host-adapter",
                 .argv = strings({"--check-host-adapter", "{scratch}", "mus_route101"}),
                 .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runHostAdapterCheck(args[1], args[2]);
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return runHostAdapterCheck(args[1], args[2], qtArgs);
                     },
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = route101Files,
             },
             {
-                .name = "mainwindow-routing",
-                .argv = strings(
-                    {"--check-mainwindow-routing", "{scratch}", "mus_route101", "mus_petalburg"}),
+                .name = "mainwindow-routing-input",
+                .argv = strings({"--check-mainwindow-routing-input", "{scratch}", "mus_route101",
+                                 "mus_petalburg"}),
                 .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runMainWindowRoutingCheck(args[1], args[2], args[3]);
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return checks::mainwindowrouting::runMainWindowRoutingInputCheck(
+                            args[1], args[2], args[3], qtArgs);
                     },
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = twoSongRichFiles,
             },
             {
+                .name = "mainwindow-routing-state",
+                .argv = strings({"--check-mainwindow-routing-state", "{scratch}", "mus_route101",
+                                 "mus_petalburg"}),
+                .handler =
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return checks::mainwindowrouting::runMainWindowRoutingStateCheck(
+                            args[1], args[2], args[3], qtArgs);
+                    },
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = twoSongRichFiles,
+            },
+            {
+                .name = "mainwindow-routing-lifecycle",
+                .argv = strings({"--check-mainwindow-routing-lifecycle", "{scratch}",
+                                 "mus_route101", "mus_petalburg"}),
+                .handler =
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return checks::mainwindowrouting::runMainWindowRoutingLifecycleCheck(
+                            args[1], args[2], args[3], qtArgs);
+                    },
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = twoSongRichFiles,
+            },
+            {
+                .name = "mainwindow-routing-native",
+                .argv = strings({"--check-mainwindow-routing-native", "{scratch}", "mus_route101",
+                                 "mus_petalburg"}),
+                .handler =
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return checks::mainwindowrouting::runMainWindowRoutingNativeCheck(
+                            args[1], args[2], args[3], qtArgs);
+                    },
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = twoSongRichFiles,
+                .windowing = Windowing::WindowSystem,
+            },
+            {
                 .name = "rendering-playhead",
                 .argv = strings({"--check-rendering-playhead", "{scratch}", "mus_route101"}),
                 .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runRenderingPlayheadCheck(args[1], args[2], optional(args, 3));
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return runRenderingPlayheadCheck(args[1], args[2], optional(args, 3),
+                                                         qtArgs);
                     },
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
@@ -522,54 +646,87 @@ const std::vector<CheckDefinition> &catalog()
                 .argv = strings(
                     {"--check-host-integration", "{scratch}", "mus_route101", "mus_petalburg"}),
                 .handler =
-                    [](QApplication &, const QStringList &args) {
-                        return runHostIntegrationCheck(args[1], args[2], args[3],
-                                                       optional(args, 4));
+                    [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                        return runHostIntegrationCheck(args[1], args[2], args[3], optional(args, 4),
+                                                       qtArgs);
                     },
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = twoSongRichFiles,
             },
+            {
+                .name = "eventviews-remap",
+                .argv = strings({"--eventviews-remap"}),
+                .handler =
+                    [](QApplication &, const QStringList &, const QStringList &qtArgs) {
+                        return runEventViewsRemapCheck(qtArgs);
+                    },
+            },
+            {
+                .name = "eventviews-playhead",
+                .argv = strings({"--eventviews-playhead"}),
+                .handler =
+                    [](QApplication &, const QStringList &, const QStringList &qtArgs) {
+                        return runEventViewsPlayheadCheck(qtArgs);
+                    },
+            },
+            {
+                .name = "view-buckets-grid",
+                .argv = strings({"--view-buckets-grid"}),
+                .handler =
+                    [](QApplication &, const QStringList &, const QStringList &qtArgs) {
+                        return runViewBucketsGridCheck(qtArgs);
+                    },
+            },
+            {.name = "pitch-bend-editing",
+             .argv = strings({"--pitch-bend-editing"}),
+             .handler = [](QApplication &, const QStringList &,
+                           const QStringList &qtArgs) { return runPitchBendEditingCheck(qtArgs); }},
+            {.name = "pitch-bend-raster",
+             .argv = strings({"--pitch-bend-raster"}),
+             .handler = [](QApplication &, const QStringList &,
+                           const QStringList &qtArgs) { return runPitchBendRasterCheck(qtArgs); },
+             .windowing = Windowing::WindowSystem},
             {.name = "themecheck",
              .argv = strings({"--themecheck"}),
              .handler =
-                 [](QApplication &application, const QStringList &args) {
-                     return runThemeHarness(application, args[0]);
+                 [](QApplication &application, const QStringList &, const QStringList &qtArgs) {
+                     return runThemeLayoutThemeCheck(application, qtArgs);
                  },
              .startup = StartupKind::HandlerOwned},
             {.name = "fontcheck",
              .argv = strings({"--fontcheck"}),
              .handler =
-                 [](QApplication &application, const QStringList &args) {
-                     return runThemeHarness(application, args[0]);
+                 [](QApplication &application, const QStringList &, const QStringList &qtArgs) {
+                     return runThemeLayoutFontCheck(application, qtArgs);
                  },
              .startup = StartupKind::HandlerOwned},
             {.name = "darkbasecheck",
              .argv = strings({"--darkbasecheck"}),
              .handler =
-                 [](QApplication &application, const QStringList &args) {
-                     return runThemeHarness(application, args[0]);
+                 [](QApplication &application, const QStringList &, const QStringList &qtArgs) {
+                     return runThemeLayoutDarkBaseCheck(application, qtArgs);
                  },
              .startup = StartupKind::HandlerOwned},
             {.name = "editor-layout-12",
              .argv = strings({"--editor-layout-check", "12"}),
              .handler =
-                 [](QApplication &application, const QStringList &args) {
-                     return runEditorLayoutCheck(application, args[1].toInt());
+                 [](QApplication &application, const QStringList &args, const QStringList &qtArgs) {
+                     return runThemeLayoutScaleCheck(application, args[1].toInt(), qtArgs);
                  },
              .startup = StartupKind::HandlerOwned},
             {.name = "editor-layout-16",
              .argv = strings({"--editor-layout-check", "16"}),
              .handler =
-                 [](QApplication &application, const QStringList &args) {
-                     return runEditorLayoutCheck(application, args[1].toInt());
+                 [](QApplication &application, const QStringList &args, const QStringList &qtArgs) {
+                     return runThemeLayoutScaleCheck(application, args[1].toInt(), qtArgs);
                  },
              .startup = StartupKind::HandlerOwned},
             {.name = "editor-layout-18",
              .argv = strings({"--editor-layout-check", "18"}),
              .handler =
-                 [](QApplication &application, const QStringList &args) {
-                     return runEditorLayoutCheck(application, args[1].toInt());
+                 [](QApplication &application, const QStringList &args, const QStringList &qtArgs) {
+                     return runThemeLayoutScaleCheck(application, args[1].toInt(), qtArgs);
                  },
              .startup = StartupKind::HandlerOwned},
         };

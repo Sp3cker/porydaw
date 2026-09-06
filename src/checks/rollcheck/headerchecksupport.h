@@ -122,7 +122,7 @@ inline void click(songview::TimelineInputItem &headerInput, const QPointF &posit
                               Qt::NoButton, Qt::NoModifier);
 }
 
-inline QImage captureBand(Harness &check, SongView &view)
+inline QImage captureBand(PianoRollFixture &check, SongView &view)
 {
     const auto geometry = view.timelineBandLayout().geometry(songview::TimelineBand::TrackHeaders);
     return geometry ? check.captureQuickBand(geometry->rect) : QImage{};

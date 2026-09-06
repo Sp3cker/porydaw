@@ -1,292 +1,284 @@
+#include "checks/onboardcheck/onboardingtest.h"
+
 #include <QCheckBox>
 #include <QComboBox>
 #include <QLabel>
 #include <QLineEdit>
 
+#include "checks/support/songfixture.h"
 #include "core/midiimport.h"
 #include "core/songdocument.h"
-#include "pipeline.h"
 #include "ui/newsongwizard.h"
 #include "ui/songsettingsdialog.h"
 
-namespace OnboardCheck {
-
-void runImportChecks(const QString &projectRoot, const QString &midiDir, const QString &mid2agb,
-                     bool haveMid2agb, const QStringList &voicegroupArgs, DecompProject &project,
-                     const SongCfg &cfg, const SmfFile &externalImport,
-                     const SmfFile &duplicateSetters, CheckReporter &reporter)
+void OnboardingTest::importAnalysis_data()
 {
-    const auto check = [&](bool ok, const char *what) { reporter.check(ok, what); };
-    const QStringList &vgArgs = voicegroupArgs;
-    const SmfFile &external = externalImport;
-    QString error;
-    SmfFile imported;
-    ImportAnalysis analysis = analyzeForImport(external);
-    check(analysis.mappedTracks == 2, "import: mapped track count");
-    check(analysis.peakConcurrentNotes == 7, "import: peak polyphony");
-    check(analysis.sampleNoteLimit == 5, "import: sample note limit");
-    bool sawDivisionWarning = false, sawPolyWarning = false;
-    for (const QString &w : analysis.warnings) {
-        if (w.contains(QStringLiteral("note timing")))
-            sawDivisionWarning = true;
-        if (w.contains(QStringLiteral("same time")))
-            sawPolyWarning = true;
-    }
-    check(sawDivisionWarning, "import: no division warning for 480 ppqn");
-    check(sawPolyWarning, "import: no polyphony warning for 7-note chord");
-    bool sawMod = false, sawInert = false;
-    for (const ImportCcUsage &cc : analysis.ccs) {
-        if (cc.cc == 1)
-            sawMod = cc.audible;
-        if (cc.cc == 91)
-            sawInert = !cc.audible;
-    }
-    check(sawMod, "import: CC1 not classified audible");
-    check(sawInert, "import: CC91 not classified inert");
-    check(analysis.tracks.size() == 2 && analysis.tracks[1].programs.size() == 2,
-          "import: per-track program usage");
-    check(analysis.silentTracks == 0, "import: no budget warning at default 16");
-
-    // Track-budget warning: with a 1-track player, the second mapped track is
-    // silent in-game and the warning names the player and its allocation.
-    {
-        const ImportAnalysis tight =
-            analyzeForImport(external, 1, QStringLiteral("MUSIC_PLAYER_BGM"));
-        check(tight.silentTracks == 1, "import: silent track counted");
-        bool sawBudgetWarning = false;
-        for (const QString &w : tight.warnings) {
-            if (w.contains(QStringLiteral("MUSIC_PLAYER_BGM")) &&
-                w.contains(QStringLiteral("will not play")))
-                sawBudgetWarning = true;
-        }
-        check(sawBudgetWarning, "import: budget warning names the player");
-        check(analyzeForImport(external, -1).silentTracks == 0,
-              "import: unknown budget warns about nothing");
-    }
-
-    imported = external;
-
-    // Division rescale onto the 24-clock grid (the wizard's default for a
-    // non-multiple-of-24 file). Floor arithmetic matches mid2agb, so the
-    // chord's onset lands where an as-is import would have played it:
-    // 480 * 24 / 400 = 28.8 -> 28, offs 960 -> 57, EOT 3840 -> 230.
-    rescaleDivision(&imported, 24);
-    check(imported.division == 24, "rescale: division not rewritten");
-    check(imported.tracks[1].events[4].tick == 28, "rescale: note-on tick");
-    check(imported.tracks[1].events[11].tick == 57, "rescale: note-off tick");
-    check(imported.tracks[1].endTick == 230, "rescale: end-of-track tick");
-    check(imported.tracks[2].events[0].tick == 0, "rescale: tick-0 event moved");
-    for (const SmfTrack &track : imported.tracks) {
-        uint64_t prev = 0;
-        for (const SmfEvent &ev : track.events) {
-            check(ev.tick >= prev, "rescale: tick order regressed");
-            prev = ev.tick;
-        }
-    }
-
-    // The wizard end of the same option: the analysis page offers the rescale
-    // (default on) and songFile() applies it with the Sound page's clock base.
-    {
-        NewSongWizard wizard(&project, external, QStringLiteral("ext.mid"), vgArgs);
-        auto *rescale = wizard.page(0)->findChild<QCheckBox *>();
-        check(rescale && rescale->isChecked(),
-              "wizard: rescale checkbox missing or off for division 400");
-        check(wizard.songFile().division == 24, "wizard: songFile() not rescaled by default");
-        if (rescale) {
-            rescale->setChecked(false);
-            check(wizard.songFile().division == 400,
-                  "wizard: opting out of the rescale still rescaled");
-        }
-
-        // The name validator folds typed capitals (Shift, Caps Lock) into the
-        // lowercase convention instead of swallowing the keystroke; characters
-        // outside the label grammar are still rejected outright.
-        QLineEdit *nameEdit = nullptr;
-        for (QLineEdit *edit : wizard.findChildren<QLineEdit *>()) {
-            if (edit->placeholderText() == QStringLiteral("mus_my_song"))
-                nameEdit = edit;
-        }
-        check(nameEdit, "wizard: name field not found");
-        if (nameEdit) {
-            nameEdit->clear();
-            nameEdit->insert(QStringLiteral("MUS_Loud_3"));
-            check(nameEdit->text() == QStringLiteral("mus_loud_3"),
-                  "wizard: typed capitals not folded to lowercase");
-            nameEdit->clear();
-            nameEdit->insert(QStringLiteral("mus 3!"));
-            check(nameEdit->text().isEmpty(),
-                  "wizard: characters outside the label grammar accepted");
-        }
-
-        // Reverb is a plain value, not an optional override: the wizard emits
-        // an explicit -R at the vanilla STD_REVERB default.
-        check(wizard.cfg().reverb == SongCfg::kDefaultReverb,
-              "wizard: reverb does not default to 50");
-        check(wizard.cfg().rawFlags.contains(QStringLiteral("-R50")),
-              "wizard: default reverb not written as an explicit -R flag");
-
-        // Opening Song Settings without editing must preserve a missing -R;
-        // otherwise accepting another settings tab dirties the song by
-        // silently replacing the inherited default with an explicit flag.
-        SongCfg bare;
-        SongSettingsWidget widget(bare, vgArgs);
-        check(widget.cfg().reverb == bare.reverb,
-              "song settings: absent -R changed without a user edit");
-
-        // Role-aware analysis: the analysis page's player choice and the
-        // identity page's are one selection, kept in sync from either side,
-        // and the analysis text tracks the chosen player's track budget.
-        auto *analysisCombo = wizard.page(0)->findChild<QComboBox *>();
-        auto *identityCombo = wizard.page(1)->findChild<QComboBox *>();
-        check(analysisCombo && identityCombo, "wizard: player combos not found");
-        if (analysisCombo && identityCombo) {
-            bool synced = analysisCombo->currentData() == identityCombo->currentData();
-            for (int i = analysisCombo->count() - 1; i >= 0; i--) {
-                analysisCombo->setCurrentIndex(i);
-                synced = synced && identityCombo->currentData() == analysisCombo->currentData();
-            }
-            check(synced, "wizard: identity player does not follow the analysis page");
-            identityCombo->setCurrentIndex(identityCombo->count() - 1);
-            check(analysisCombo->currentIndex() == identityCombo->currentIndex(),
-                  "wizard: analysis player does not follow the identity page");
-            identityCombo->setCurrentIndex(0);
-
-            // A 1-track player mutes the external file's second track, and
-            // the page says so in the singular. The selection also decides
-            // what player() hands the song registration.
-            const QVector<MusicPlayer> players = SongRegistry::musicPlayers(projectRoot);
-            int tight = -1;
-            for (int i = 0; i < players.size(); i++)
-                if (players[i].trackCount == 1)
-                    tight = i;
-            if (tight >= 0) {
-                analysisCombo->setCurrentIndex(analysisCombo->findData(players[tight].name));
-                bool sawMute = false;
-                for (const QLabel *label : wizard.page(0)->findChildren<QLabel *>())
-                    if (label->text().contains(QStringLiteral("mute track 2")))
-                        sawMute = true;
-                check(sawMute, "wizard: 1-track player does not warn about muting track 2");
-                check(wizard.player() == players[tight].name,
-                      "wizard: player() does not return the engine symbol");
-                analysisCombo->setCurrentIndex(0);
-            }
-        }
-    }
-
-    // Same-tick duplicate setters: the import silently keeps only the last of
-    // each same-slot run (exporters love repeating the channel-init block),
-    // while events whose every occurrence acts — notes, text metas, MEMACC
-    // plumbing, the loop Label — survive untouched and in order.
-    {
-        // duplicateSetters
-        SmfFile direct = duplicateSetters;
-        // A tempo, 2 programs, CC7, bend, CC101, and polyAT(60) at tick 0,
-        // plus the CC7 at 96.
-        check(removeRedundantSetterEvents(&direct) == 8, "dedup: wrong removal count");
-        check(removeRedundantSetterEvents(&direct) == 0, "dedup: not idempotent");
-        const auto countEvents = [](const SmfTrack &track, uint8_t nibble, int cc) {
-            int n = 0;
-            for (const SmfEvent &ev : track.events) {
-                if (ev.isChannel() && ev.typeNibble() == nibble && (cc < 0 || ev.data0 == cc))
-                    n++;
-            }
-            return n;
-        };
-        int tempoCount = 0, textCount = 0;
-        for (const SmfEvent &ev : direct.tracks[0].events) {
-            if (!ev.isMeta())
-                continue;
-            if (ev.metaType == 0x51) {
-                tempoCount++;
-                check(ev.blob == QByteArray("\x07\xA1\x20", 3), "dedup: kept the wrong tempo");
-            }
-            textCount += ev.metaType == 0x01 ? 1 : 0;
-        }
-        check(tempoCount == 1, "dedup: same-tick tempo metas not collapsed");
-        check(textCount == 2, "dedup: text metas were touched");
-        const SmfTrack &lead = direct.tracks[1];
-        check(countEvents(lead, 0xC, -1) == 2, "dedup: program-change count");
-        check(countEvents(lead, 0xB, 7) == 3, "dedup: CC7 count");
-        check(countEvents(lead, 0xE, -1) == 1, "dedup: bend count");
-        check(countEvents(lead, 0xB, 101) == 1, "dedup: inert-CC count");
-        check(countEvents(lead, 0xB, 0x0D) == 2, "dedup: MEMACC CCs were touched");
-        check(countEvents(lead, 0xB, 0x11) == 2, "dedup: Label CCs were touched");
-        check(countEvents(lead, 0xA, 60) == 1 && countEvents(lead, 0xA, 61) == 1,
-              "dedup: poly-aftertouch not keyed per note");
-        check(countEvents(lead, 0x9, -1) == 2 && countEvents(lead, 0x8, -1) == 2,
-              "dedup: notes were touched");
-        // The kept run preserves values, positions, and relative order: the
-        // winners are the LAST of each run, still ahead of the tick's notes,
-        // and the Label pair keeps its 2-then-3 file order.
-        bool progOk = false, ccOk = false, bendOk = false, orderOk = true;
-        int lastLabel = 0, firstNoteIdx = -1, progIdx = -1;
-        for (size_t i = 0; i < lead.events.size(); i++) {
-            const SmfEvent &ev = lead.events[i];
-            if (ev.tick != 0)
-                break;
-            if (ev.typeNibble() == 0xC) {
-                progOk = ev.data0 == 12;
-                progIdx = int(i);
-            }
-            if (ev.typeNibble() == 0xB && ev.data0 == 7)
-                ccOk = ev.data1 == 80;
-            if (ev.typeNibble() == 0xE)
-                bendOk = ev.data1 == 0x40;
-            if (ev.typeNibble() == 0xB && ev.data0 == 0x11) {
-                orderOk = orderOk && ev.data1 > lastLabel;
-                lastLabel = ev.data1;
-            }
-            if (ev.typeNibble() == 0x9 && firstNoteIdx < 0)
-                firstNoteIdx = int(i);
-        }
-        check(progOk && ccOk && bendOk, "dedup: a run's survivor is not its last value");
-        check(orderOk && lastLabel == 3, "dedup: kept events lost their relative order");
-        check(progIdx >= 0 && firstNoteIdx > progIdx,
-              "dedup: setter drifted past the tick's notes");
-        for (const SmfTrack &track : direct.tracks) {
-            uint64_t prev = 0;
-            for (const SmfEvent &ev : track.events) {
-                check(ev.tick >= prev, "dedup: tick order regressed");
-                prev = ev.tick;
-            }
-        }
-
-        // The wizard end: songFile() applies the dedup silently on import.
-        NewSongWizard wizard(&project, duplicateSetters, QStringLiteral("dups.mid"), vgArgs);
-        const SmfFile cleaned = wizard.songFile();
-        check(cleaned.tracks.size() == 2 && countEvents(cleaned.tracks[1], 0xB, 7) == 3 &&
-                  countEvents(cleaned.tracks[1], 0xC, -1) == 2,
-              "wizard: songFile() did not dedup same-tick setters");
-    }
-
-    const QString importLabel = QStringLiteral("mus_onboardcheck_import");
-    const QString importMid = midiDir + QStringLiteral("/%1.mid").arg(importLabel);
-    check(imported.writeFile(importMid, &error), "write imported .mid");
-    check(SongRegistry::writeMidiCfgLine(midiDir, importLabel, cfg.rawFlags, &error),
-          "write imported midi.cfg line");
-
-    SmfFile reread;
-    check(SmfFile::readFile(importMid, &reread, &error) &&
-              reread.tracks.size() == imported.tracks.size() && reread.division == 24,
-          "imported .mid does not re-read cleanly");
-
-    check(project.reload(&error), "project reload after import");
-    const SongInfo *importedSong = nullptr;
-    for (const SongInfo &s : project.songs()) {
-        if (s.label == importLabel)
-            importedSong = &s;
-    }
-    check(importedSong && importedSong->isPlayable() && !importedSong->registered,
-          "imported song not discovered");
-    if (importedSong) {
-        SongDocument doc;
-        check(doc.load(*importedSong, &error), "imported song fails to open");
-        check(doc.engineTrackCount() == 2, "imported song engine track count");
-    }
-
-    if (haveMid2agb)
-        check(compilesThroughMid2agb(mid2agb, importMid, cfg.rawFlags),
-              "imported song does not compile through mid2agb");
+    QTest::addColumn<int>("budget");
+    QTest::newRow("default") << 16;
+    QTest::newRow("tight") << 1;
+    QTest::newRow("unknown") << -1;
 }
 
-} // namespace OnboardCheck
+void OnboardingTest::importAnalysis()
+{
+    QFETCH(int, budget);
+    QString error;
+    SmfFile external;
+    QVERIFY2(midiFixture(QStringLiteral("external_import.mid"), external, error),
+             qPrintable(error));
+    const ImportAnalysis analysis =
+        analyzeForImport(external, budget, QStringLiteral("MUSIC_PLAYER_BGM"));
+    QCOMPARE(analysis.mappedTracks, 2);
+    QCOMPARE(analysis.peakConcurrentNotes, 7);
+    QCOMPARE(analysis.sampleNoteLimit, 5);
+    bool divisionCategory = false;
+    bool polyphonyCategory = false;
+    bool budgetCategory = false;
+    for (const QString &warning : analysis.warnings) {
+        divisionCategory = divisionCategory || warning.contains(QStringLiteral("note timing"));
+        polyphonyCategory = polyphonyCategory || warning.contains(QStringLiteral("same time"));
+        budgetCategory = budgetCategory || (warning.contains(QStringLiteral("MUSIC_PLAYER_BGM")) &&
+                                            warning.contains(QStringLiteral("will not play")));
+    }
+    QVERIFY(divisionCategory);
+    QVERIFY(polyphonyCategory);
+    QCOMPARE(analysis.silentTracks, budget == 1 ? 1 : 0);
+    QCOMPARE(budgetCategory, budget == 1);
+    QCOMPARE(analysis.tracks.size(), qsizetype{2});
+    QCOMPARE(analysis.tracks[1].programs.size(), qsizetype{2});
+    bool modAudible = false;
+    bool reverbInert = false;
+    for (const ImportCcUsage &usage : analysis.ccs) {
+        modAudible = modAudible || (usage.cc == 1 && usage.audible);
+        reverbInert = reverbInert || (usage.cc == 91 && !usage.audible);
+    }
+    QVERIFY(modAudible);
+    QVERIFY(reverbInert);
+}
+
+void OnboardingTest::importRescale()
+{
+    QString error;
+    SmfFile imported;
+    QVERIFY2(midiFixture(QStringLiteral("external_import.mid"), imported, error),
+             qPrintable(error));
+    rescaleDivision(&imported, 24);
+    QCOMPARE(imported.division, 24);
+    QCOMPARE(imported.tracks[1].events[4].tick, uint64_t(28));
+    QCOMPARE(imported.tracks[1].events[11].tick, uint64_t(57));
+    QCOMPARE(imported.tracks[1].endTick, uint64_t(230));
+    QCOMPARE(imported.tracks[2].events[0].tick, uint64_t(0));
+    for (const SmfTrack &track : imported.tracks) {
+        uint64_t previous = 0;
+        for (const SmfEvent &event : track.events) {
+            QVERIFY(event.tick >= previous);
+            previous = event.tick;
+        }
+    }
+}
+
+void OnboardingTest::importDedup()
+{
+    QString error;
+    SmfFile midi;
+    QVERIFY2(midiFixture(QStringLiteral("duplicate_setters.mid"), midi, error), qPrintable(error));
+    QCOMPARE(removeRedundantSetterEvents(&midi), 8);
+    QCOMPARE(removeRedundantSetterEvents(&midi), 0);
+    const SmfTrack &lead = midi.tracks[1];
+    const auto count = [&lead](uint8_t type, int data0) {
+        int total = 0;
+        for (const SmfEvent &event : lead.events)
+            total += event.isChannel() && event.typeNibble() == type &&
+                     (data0 < 0 || event.data0 == data0);
+        return total;
+    };
+    QCOMPARE(count(0xc, -1), 2);
+    QCOMPARE(count(0xb, 7), 3);
+    QCOMPARE(count(0xe, -1), 1);
+    QCOMPARE(count(0xb, 101), 1);
+    QCOMPARE(count(0xb, 0x0d), 2);
+    QCOMPARE(count(0xb, 0x11), 2);
+    QCOMPARE(count(0xa, 60), 1);
+    QCOMPARE(count(0xa, 61), 1);
+    QCOMPARE(count(0x9, -1), 2);
+    QCOMPARE(count(0x8, -1), 2);
+    int tempo = 0;
+    int text = 0;
+    for (const SmfEvent &event : midi.tracks[0].events) {
+        if (event.isMeta() && event.metaType == 0x51) {
+            ++tempo;
+            QCOMPARE(event.blob, QByteArray("\x07\xA1\x20", 3));
+        }
+        text += event.isMeta() && event.metaType == 0x01;
+    }
+    QCOMPARE(tempo, 1);
+    QCOMPARE(text, 2);
+    int labelCount = 0;
+    int previousLabel = 0;
+    int programIndex = -1;
+    int firstNote = -1;
+    bool program = false;
+    bool cc7 = false;
+    bool bend = false;
+    for (int i = 0; i < int(lead.events.size()) && lead.events[i].tick == 0; ++i) {
+        const SmfEvent &event = lead.events[i];
+        program =
+            program || (event.typeNibble() == 0xc && event.data0 == 12 && (programIndex = i, true));
+        cc7 = cc7 || (event.typeNibble() == 0xb && event.data0 == 7 && event.data1 == 80);
+        bend = bend || (event.typeNibble() == 0xe && event.data1 == 0x40);
+        if (event.typeNibble() == 0xb && event.data0 == 0x11) {
+            QVERIFY(event.data1 > previousLabel);
+            previousLabel = event.data1;
+            ++labelCount;
+        }
+        if (event.typeNibble() == 0x9 && firstNote < 0)
+            firstNote = i;
+    }
+    QVERIFY(program && cc7 && bend);
+    QCOMPARE(labelCount, 2);
+    QCOMPARE(previousLabel, 3);
+    QVERIFY(programIndex >= 0 && firstNote > programIndex);
+}
+
+void OnboardingTest::importWizard()
+{
+    QString error;
+    std::unique_ptr<checks::ProjectFixture> fixture = copyProject(error);
+    QVERIFY2(fixture, qPrintable(error));
+    DecompProject project;
+    QVERIFY2(project.open(fixture->root(), &error), qPrintable(error));
+    SmfFile external;
+    QVERIFY2(midiFixture(QStringLiteral("external_import.mid"), external, error),
+             qPrintable(error));
+    const QStringList voicegroups = SongRegistry::voicegroupArgs(fixture->root());
+    QVERIFY(!voicegroups.isEmpty());
+    NewSongWizard wizard(&project, external, QStringLiteral("ext.mid"), voicegroups);
+    QCheckBox *rescale = wizard.page(0)->findChild<QCheckBox *>();
+    QVERIFY(rescale);
+    QVERIFY(rescale->isChecked());
+    QCOMPARE(wizard.songFile().division, 24);
+    rescale->setChecked(false);
+    QCOMPARE(wizard.songFile().division, 400);
+    QLineEdit *name = nullptr;
+    for (QLineEdit *edit : wizard.findChildren<QLineEdit *>())
+        if (edit->placeholderText() == QStringLiteral("mus_my_song"))
+            name = edit;
+    QVERIFY(name);
+    name->clear();
+    name->insert(QStringLiteral("MUS_Loud_3"));
+    QCOMPARE(name->text(), QStringLiteral("mus_loud_3"));
+    name->clear();
+    name->insert(QStringLiteral("mus 3!"));
+    QVERIFY(name->text().isEmpty());
+    QCOMPARE(wizard.cfg().reverb, SongCfg::kDefaultReverb);
+    QVERIFY(wizard.cfg().rawFlags.contains(QStringLiteral("-R50")));
+    SongCfg bare;
+    SongSettingsWidget settings(bare, voicegroups);
+    QCOMPARE(settings.cfg().reverb, bare.reverb);
+    QComboBox *analysis = wizard.page(0)->findChild<QComboBox *>();
+    QComboBox *identity = wizard.page(1)->findChild<QComboBox *>();
+    QVERIFY(analysis && identity);
+    for (int index = 0; index < analysis->count(); ++index) {
+        analysis->setCurrentIndex(index);
+        QCOMPARE(identity->currentData(), analysis->currentData());
+    }
+    const QVector<MusicPlayer> players = SongRegistry::musicPlayers(fixture->root());
+    for (const MusicPlayer &player : players) {
+        if (player.trackCount != 1)
+            continue;
+        analysis->setCurrentIndex(analysis->findData(player.name));
+        bool muteWarning = false;
+        for (const QLabel *notice : wizard.page(0)->findChildren<QLabel *>())
+            muteWarning = muteWarning || notice->text().contains(QStringLiteral("mute track 2"));
+        QVERIFY(muteWarning);
+        QCOMPARE(wizard.player(), player.name);
+        break;
+    }
+    SmfFile duplicateSetters;
+    QVERIFY2(midiFixture(QStringLiteral("duplicate_setters.mid"), duplicateSetters, error),
+             qPrintable(error));
+    NewSongWizard dedupWizard(&project, duplicateSetters, QStringLiteral("dups.mid"), voicegroups);
+    const SmfFile cleaned = dedupWizard.songFile();
+    QCOMPARE(cleaned.tracks.size(), qsizetype{2});
+    int cc7 = 0;
+    int programs = 0;
+    for (const SmfEvent &event : cleaned.tracks[1].events) {
+        cc7 += event.isChannel() && event.typeNibble() == 0xb && event.data0 == 7;
+        programs += event.isChannel() && event.typeNibble() == 0xc;
+    }
+    QCOMPARE(cc7, 3);
+    QCOMPARE(programs, 2);
+    identity->setCurrentIndex(0);
+    QCOMPARE(analysis->currentIndex(), identity->currentIndex());
+}
+
+void OnboardingTest::importRoundtrip()
+{
+    QString error;
+    std::unique_ptr<checks::ProjectFixture> fixture = copyProject(error);
+    QVERIFY2(fixture, qPrintable(error));
+    const QString root = fixture->root();
+    SmfFile imported;
+    QVERIFY2(midiFixture(QStringLiteral("external_import.mid"), imported, error),
+             qPrintable(error));
+    rescaleDivision(&imported, 24);
+    SongCfg cfg;
+    QVERIFY2(defaultCfg(root, cfg, error), qPrintable(error));
+    const QString label = QStringLiteral("mus_onboardcheck_import");
+    const QString mid = midiDirectory(root) + QStringLiteral("/") + label + QStringLiteral(".mid");
+    QVERIFY2(imported.writeFile(mid, &error), qPrintable(error));
+    QVERIFY2(SongRegistry::writeMidiCfgLine(midiDirectory(root), label, cfg.rawFlags, &error),
+             qPrintable(error));
+    const QByteArray serialized = readFile(mid, error);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    SmfFile reread;
+    QVERIFY2(SmfFile::readFile(mid, &reread, &error), qPrintable(error));
+    const QString repeatPath =
+        midiDirectory(root) + QStringLiteral("/") + label + QStringLiteral("_repeat.mid");
+    QVERIFY2(reread.writeFile(repeatPath, &error), qPrintable(error));
+    QCOMPARE(readFile(repeatPath, error), serialized);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+    QCOMPARE(reread.division, 24);
+    QCOMPARE(reread.tracks.size(), imported.tracks.size());
+    DecompProject project;
+    QVERIFY2(project.open(root, &error), qPrintable(error));
+    const SongInfo *song = nullptr;
+    for (const SongInfo &candidate : project.songs())
+        if (candidate.label == label)
+            song = &candidate;
+    QVERIFY(song);
+    QVERIFY(song->isPlayable() && !song->registered);
+    SongDocument document;
+    QVERIFY2(document.load(*song, &error), qPrintable(error));
+    QCOMPARE(document.engineTrackCount(), 2);
+}
+
+void OnboardingTest::compilesThroughMid2agb_data()
+{
+    QTest::addColumn<QString>("kind");
+    QTest::newRow("blank") << QStringLiteral("blank");
+    QTest::newRow("imported") << QStringLiteral("imported");
+}
+
+void OnboardingTest::compilesThroughMid2agb()
+{
+    QFETCH(QString, kind);
+    QString error;
+    std::unique_ptr<checks::ProjectFixture> fixture = copyProject(error);
+    QVERIFY2(fixture, qPrintable(error));
+    const QString root = fixture->root();
+    SongCfg cfg;
+    QVERIFY2(defaultCfg(root, cfg, error), qPrintable(error));
+    const QString label = QStringLiteral("mus_onboardcheck_compile_") + kind;
+    SmfFile midi;
+    if (kind == QStringLiteral("blank"))
+        midi = SongRegistry::blankSong();
+    else
+        QVERIFY2(midiFixture(QStringLiteral("external_import.mid"), midi, error),
+                 qPrintable(error));
+    if (kind == QStringLiteral("imported"))
+        rescaleDivision(&midi, 24);
+    const QString mid = midiDirectory(root) + QStringLiteral("/") + label + QStringLiteral(".mid");
+    QVERIFY2(midi.writeFile(mid, &error), qPrintable(error));
+    QVERIFY2(compile(root, mid, cfg.rawFlags, error), qPrintable(error));
+}

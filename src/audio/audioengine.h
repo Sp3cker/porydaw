@@ -26,6 +26,12 @@ static_assert(kMaxTracks == MAX_TRACKS, "track count mismatch");
 struct ma_device;
 struct ma_context;
 
+namespace checks {
+class AudioEngineTestAccess;
+class ClickTest;
+class TransportTest;
+} // namespace checks
+
 struct SongSettings {
     M4APcmMixerMode pcmMixer = M4A_PCM_MIXER_IPATIX;
     uint8_t songVolume = 127;    // mid2agb -V (0-127)
@@ -216,7 +222,11 @@ class AudioEngine
     void polySnapshot(PolySnapshot *out) const;
 
   private:
-    friend int runTransportCheck();
+    // Test seams: the transport and click Qt Test suites drive the parked
+    // null-device render path and read transport/cut-fade state directly.
+    friend class checks::ClickTest;
+    friend class checks::TransportTest;
+    friend class checks::AudioEngineTestAccess;
     static void dataCallback(ma_device *device, void *output, const void *input,
                              uint32_t frameCount);
     void process(float *interleavedOut, uint32_t frameCount);
@@ -319,10 +329,13 @@ class AudioEngine
 
     // Audio-thread-only transport cut-fade state (see beginOutputCut).
     // The settle hold covers all already-rendered pre-cut audio: the current
-    // device render block, the driver's two-VBlank DMA buffer, and poryaaaa's
-    // fixed hardware-frontend queue. The fade remains at zero through them.
+    // device render block, the driver's two-VBlank DMA buffer, poryaaaa's
+    // 1536-frame presentation FIFO, and HwResample's separate 1536-frame
+    // availability gate plus one admitted 2048-clock resampler batch. The
+    // fade remains at zero through this capacity-derived bound.
     static constexpr double kDriverQueueSettleSeconds = 2.0 / 59.7275;
     static constexpr uint32_t kFrontendQueueFrames = 1536;
+    static constexpr double kFrontendResamplerFrameSeconds = 1.0 / 8192.0;
     uint32_t m_cutFadeSettleSamples = 1;
     bool m_cutFadeActive = false;
     bool m_cutFadeRising = false;

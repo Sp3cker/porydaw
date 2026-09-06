@@ -1,36 +1,24 @@
-#include "ui/editordrawer/automationpage.h"
+#include "checks/automation/raster/tst_automationraster.h"
 
 #include <algorithm>
 #include <cmath>
-#include <cstddef>
 #include <cstdint>
-#include <cstdio>
-#include <cstring>
 #include <limits>
+#include <utility>
 #include <vector>
 
 #include <QColor>
-#include <QCoreApplication>
 #include <QEvent>
 #include <QImage>
-#include <QPoint>
-#include <QPointF>
-#include <QQuickItem>
-#include <QRect>
 #include <QRectF>
 
-extern "C" {
-#include "voicegroup_loader.h"
-}
+#include <QtTest>
 
 #include "checks/support/eventsynth.h"
-#include "checks/support/quickframebuffer.h"
-#include "checks/support/songfixture.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
-#include "ui/editordrawer/automationprojection.h"
+#include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/cclanes.h"
-#include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/tempolane.h"
 #include "ui/layout.h"
@@ -38,26 +26,12 @@ extern "C" {
 #include "ui/songview/editorselectionmodel.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
-#include "ui/songview/quick/timelinequickview.h"
-#include "ui/songview/timelinebandlayout.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/theme/trackidentitycolors.h"
 
 namespace {
 
-struct AutomationBandInput {
-    AutomationPage &page;
-    songview::TimelineInputItem &item;
-
-    void mouse(QEvent::Type type, const QPointF &contentPosition, Qt::MouseButton button,
-               Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers) const
-    {
-        checks::events::sendMouse(item, type, contentPosition - QPointF(0.0, page.verticalScroll()),
-                                  button, buttons, modifiers);
-    }
-
-    void leave() const { mouse(QEvent::Leave, {}, Qt::NoButton, Qt::NoButton, Qt::NoModifier); }
-};
+enum class LaneKind { Tempo, Cc };
 
 struct LaneGeometry {
     LaneHandle handle;
@@ -65,14 +39,6 @@ struct LaneGeometry {
     QColor curveColor;
 };
 
-enum class LaneKind { Tempo, Cc };
-
-struct LaneCase {
-    LaneKind kind;
-    const char *name;
-};
-
-constexpr LaneCase kLanes[] = {{LaneKind::Tempo, "Tempo"}, {LaneKind::Cc, "CC"}};
 constexpr uint64_t kHeldTick = 0;
 constexpr uint64_t kNodeTick = 96;
 constexpr uint64_t kSecondTick = 144;
@@ -83,75 +49,7 @@ constexpr int kCcHeld = 24;
 constexpr int kCcNode = 96;
 constexpr int kCcSecond = 72;
 
-songview::TimelineInputItem *automationInputItem(SongView &view, const QString &objectName)
-{
-    auto *quickCanvas =
-        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
-    return quickCanvas && quickCanvas->rootObject()
-               ? quickCanvas->rootObject()->findChild<songview::TimelineInputItem *>(objectName)
-               : nullptr;
-}
-
-void pumpQuickEvents()
-{
-    QCoreApplication::sendPostedEvents();
-    QCoreApplication::processEvents();
-    QCoreApplication::sendPostedEvents();
-    QCoreApplication::processEvents();
-}
-
-void refresh(AutomationPage &page, SongDocument &document, DrawerPageLiveState &live)
-{
-    live.documentRevision = document.revision();
-    page.documentChanged();
-    page.refreshLiveState(live);
-    pumpQuickEvents();
-}
-
-void leaveCanvas(const AutomationBandInput &band)
-{
-    band.leave();
-    pumpQuickEvents();
-}
-
-int panRowIndex(const AutomationPage &page)
-{
-    const auto &rows = page.canvas()->rows();
-    for (int index = 0; index < int(rows.size()); ++index) {
-        if (rows[std::size_t(index)].id.controller == 10)
-            return index;
-    }
-    return -1;
-}
-
-LaneGeometry laneGeometry(AutomationPage &page, LaneKind kind)
-{
-    LaneGeometry geometry;
-    if (kind == LaneKind::Tempo) {
-        geometry.handle = LaneHandle{0};
-        geometry.curveColor = themes::color(themes::Role::song_view_automation_tempo_curve);
-    } else {
-        const int panRow = panRowIndex(page);
-        if (panRow < 0)
-            return geometry;
-        geometry.handle = LaneHandle{panRow + 1};
-        geometry.curveColor = themes::trackIdentityColor(0);
-    }
-    geometry.body = page.canvas()->laneBody(geometry.handle);
-    return geometry;
-}
-
-QRect automationRowBody(const AutomationPage &page, const EditorAutomationRowId &id)
-{
-    const auto &rows = page.canvas()->rows();
-    for (int index = 0; index < int(rows.size()); ++index) {
-        if (rows[std::size_t(index)].id == id)
-            return page.canvas()->laneBody(LaneHandle{index + 1});
-    }
-    return {};
-}
-
-QRectF bounds(const songview::TimelineQuickTriangle &triangle)
+QRectF triangleBounds(const songview::TimelineQuickTriangle &triangle)
 {
     const qreal left = std::min({triangle.first.x(), triangle.second.x(), triangle.third.x()});
     const qreal right = std::max({triangle.first.x(), triangle.second.x(), triangle.third.x()});
@@ -172,7 +70,7 @@ bool layerHasColorIn(const songview::TimelineQuickLayerData &layer, const QRectF
         }
     }
     for (const songview::TimelineQuickTriangle &triangle : layer.triangles) {
-        if (bounds(triangle).intersects(probe) &&
+        if (triangleBounds(triangle).intersects(probe) &&
             (triangle.firstColor == color || triangle.secondColor == color ||
              triangle.thirdColor == color)) {
             return true;
@@ -194,13 +92,11 @@ QRectF lineProbe(qreal x, qreal y, qreal halfWidth, qreal halfHeight)
 bool framebufferHasColorNear(const QImage &framebuffer, const QPointF &point,
                              const QColor &expected)
 {
-    if (framebuffer.isNull())
-        return false;
-    const qreal dpr = framebuffer.devicePixelRatio();
-    if (dpr <= 0.0)
+    if (framebuffer.isNull() || framebuffer.devicePixelRatio() <= 0.0)
         return false;
 
     constexpr int kColorTolerance = 64;
+    const qreal dpr = framebuffer.devicePixelRatio();
     const int radius = qCeil(2 * dpr);
     const int centerX = qRound(point.x() * dpr);
     const int centerY = qRound(point.y() * dpr);
@@ -219,33 +115,52 @@ bool framebufferHasColorNear(const QImage &framebuffer, const QPointF &point,
     return false;
 }
 
-bool hasRenderedSelectionRing(const QImage &framebuffer, const QPoint &contentPoint,
-                              const AutomationPage &page, int automationGutterWidth,
-                              qreal ringRadius, qreal ringWidth, const QColor &selectionColor)
+bool layerHasSelectionRing(const songview::TimelineQuickLayerData &layer,
+                           const QPoint &contentPoint, int verticalScroll, qreal ringRadius,
+                           qreal ringWidth, const QColor &selectionColor)
 {
-    if (framebuffer.isNull())
-        return false;
-    const qreal framebufferDpr = framebuffer.devicePixelRatio();
-    if (framebufferDpr <= 0.0)
+    const QPointF center = QPointF(contentPoint) - QPointF(0.0, verticalScroll);
+    const qreal tolerance = layout::singlePixel();
+    const qreal inner = std::max<qreal>(0.0, ringRadius - ringWidth / 2.0 - tolerance);
+    const qreal outer = ringRadius + ringWidth / 2.0 + tolerance;
+    const qreal innerSquared = inner * inner;
+    const qreal outerSquared = outer * outer;
+    return std::count_if(
+               layer.triangles.cbegin(), layer.triangles.cend(),
+               [&](const songview::TimelineQuickTriangle &triangle) {
+                   const auto onRing = [&](const QPointF &point) {
+                       const QPointF delta = point - center;
+                       const qreal distanceSquared = delta.x() * delta.x() + delta.y() * delta.y();
+                       return distanceSquared >= innerSquared && distanceSquared <= outerSquared;
+                   };
+                   return triangle.firstColor == selectionColor &&
+                          triangle.secondColor == selectionColor &&
+                          triangle.thirdColor == selectionColor && onRing(triangle.first) &&
+                          onRing(triangle.second) && onRing(triangle.third);
+               }) >= 4;
+}
+
+bool framebufferHasSelectionRing(const QImage &framebuffer, const QPoint &contentPoint,
+                                 int verticalScroll, int gutterWidth, qreal ringRadius,
+                                 qreal ringWidth, const QColor &selectionColor)
+{
+    if (framebuffer.isNull() || framebuffer.devicePixelRatio() <= 0.0)
         return false;
 
-    const QPointF center =
-        QPointF(contentPoint) + QPointF(automationGutterWidth, -page.verticalScroll());
+    const qreal dpr = framebuffer.devicePixelRatio();
+    const QPointF center = QPointF(contentPoint) + QPointF(gutterWidth, -verticalScroll);
     const qreal tolerance = 2 * layout::singlePixel();
     const qreal inner = std::max<qreal>(0.0, ringRadius - ringWidth / 2.0 - tolerance);
     const qreal outer = ringRadius + ringWidth / 2.0 + tolerance;
     const qreal innerSquared = inner * inner;
     const qreal outerSquared = outer * outer;
-    const int left = std::max(0, qFloor((center.x() - outer) * framebufferDpr));
-    const int top = std::max(0, qFloor((center.y() - outer) * framebufferDpr));
-    const int right =
-        std::min(framebuffer.width() - 1, qCeil((center.x() + outer) * framebufferDpr));
-    const int bottom =
-        std::min(framebuffer.height() - 1, qCeil((center.y() + outer) * framebufferDpr));
+    const int left = std::max(0, qFloor((center.x() - outer) * dpr));
+    const int top = std::max(0, qFloor((center.y() - outer) * dpr));
+    const int right = std::min(framebuffer.width() - 1, qCeil((center.x() + outer) * dpr));
+    const int bottom = std::min(framebuffer.height() - 1, qCeil((center.y() + outer) * dpr));
     for (int y = top; y <= bottom; ++y) {
         for (int x = left; x <= right; ++x) {
-            const QPointF delta((x + 0.5) / framebufferDpr - center.x(),
-                                (y + 0.5) / framebufferDpr - center.y());
+            const QPointF delta((x + 0.5) / dpr - center.x(), (y + 0.5) / dpr - center.y());
             const qreal distanceSquared = delta.x() * delta.x() + delta.y() * delta.y();
             const QColor pixel = framebuffer.pixelColor(x, y);
             if (distanceSquared >= innerSquared && distanceSquared <= outerSquared &&
@@ -259,360 +174,280 @@ bool hasRenderedSelectionRing(const QImage &framebuffer, const QPoint &contentPo
     return false;
 }
 
-int runPaintRaster(const QString &project, const QString &song)
+LaneGeometry laneGeometry(const AutomationRasterFixture &fixture, LaneKind kind)
 {
-    QString error;
-    auto loadedSong = checks::LoadedSong::load(project, song, error);
-    if (!loadedSong) {
-        std::fprintf(stderr, "automation-raster: %s\n", qUtf8Printable(error));
-        return 1;
+    LaneGeometry geometry;
+    if (kind == LaneKind::Tempo) {
+        geometry.handle = AutomationRasterFixture::kTempoHandle;
+        geometry.curveColor = themes::color(themes::Role::song_view_automation_tempo_curve);
+    } else {
+        geometry.handle = fixture.handleFor(fixture.pan);
+        geometry.curveColor = themes::trackIdentityColor(0);
     }
-
-    SongDocument &document = loadedSong->document();
-    if (document.engineTrackCount() == 0) {
-        std::fprintf(stderr, "automation-raster: %s has no engine tracks\n", qUtf8Printable(song));
-        return 1;
-    }
-
-    document.addLanePoint(0, 7, 24, 32);
-    document.writeLanePoints(0, 21, 96, 96, {{96, 32}, {96, 96}});
-    document.addLanePoint(0, LANE_CC_BEND, 72, 8191);
-    document.addLanePoint(0, DOC_CC_VOICE, 24, 3);
-    auto timeline = document.buildTimeline(48000.0);
-    LoadedVoiceGroup voicegroup{};
-    voicegroup.voices[3].type = VOICE_NOISE;
-    std::strncpy(voicegroup.voiceNames[3], "automation-voice",
-                 sizeof(voicegroup.voiceNames[3]) - 1);
-
-    SongView view;
-    view.resize(960, 720);
-    view.setDocument(&document);
-    view.setSong(timeline.get(), &voicegroup);
-    const EditorAutomationRowId volume{EditorAutomationRowKind::ControlChange, 0, 7};
-    const EditorAutomationRowId pan{EditorAutomationRowKind::ControlChange, 0, 10};
-    const EditorAutomationRowId lfo{EditorAutomationRowKind::ControlChange, 0, 21};
-    EditorViewState state;
-    state.hideLane(volume);
-    state.emptyLanes.insert(pan);
-    state.laneHeights[lfo] = layout::fontPx(4.0) + 5;
-    state.laneRanges[lfo] = 91;
-    view.applyEditorViewState(state);
-    view.setDrawerActivePage(EditorDrawerPage::Automations);
-    view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
-    view.setDrawerSectionHeight(EditorDrawerPage::Automations, 360);
-    view.show();
-    pumpQuickEvents();
-
-    auto *drawer = view.editorDrawer();
-    auto *pagePtr = drawer ? drawer->automationPage() : nullptr;
-    if (!pagePtr) {
-        std::fprintf(stderr,
-                     "automation-raster: concrete SongView did not expose AutomationPage\n");
-        return 1;
-    }
-    AutomationPage &page = *pagePtr;
-    page.songChanged();
-    DrawerPageLiveState live;
-    live.documentRevision = document.revision();
-    live.timeZoom = 96.0;
-    view.setEditorTimeZoom(live.timeZoom);
-    live.horizontalScroll = view.camera().scrollX();
-    view.setEditCursorTick(24);
-    page.refreshLiveState(live);
-    pumpQuickEvents();
-
-    int failures = 0;
-    const auto check = [&](bool condition, const QString &message) {
-        if (condition)
-            return;
-        std::fprintf(stderr, "automation-raster: FAIL %s: %s\n", qUtf8Printable(song),
-                     qUtf8Printable(message));
-        ++failures;
-    };
-    const auto automationBandRect = [&] {
-        const auto band = view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
-        return band ? band->rect : QRect{};
-    };
-    const auto captureAutomationViewport = [&] {
-        pumpQuickEvents();
-        QString captureError;
-        const QImage image =
-            checks::support::captureQuickBand(view, automationBandRect(), &captureError);
-        check(
-            !image.isNull(),
-            QStringLiteral("automation viewport framebuffer capture failed: %1").arg(captureError));
-        return image;
-    };
-
-    auto *automationInput = automationInputItem(view, QStringLiteral("timelineAutomationInput"));
-    auto *automationGutterInput =
-        automationInputItem(view, QStringLiteral("timelineAutomationGutterInput"));
-    auto *quickScene = view.findChild<songview::TimelineQuickScene *>();
-    check(automationInput && automationGutterInput && quickScene,
-          QStringLiteral("automation page did not expose its native raster dependencies"));
-    if (!automationInput || !automationGutterInput || !quickScene)
-        return 1;
-
-    const AutomationBandInput band{page, *automationInput};
-    const AutomationBandInput gutterBand{page, *automationGutterInput};
-    const auto bandGeometry =
-        view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
-    const int automationGutterWidth =
-        bandGeometry ? std::max(0, bandGeometry->plotRect.x() - bandGeometry->rect.x()) : 0;
-    const qreal dpr = automationInput->devicePixelRatio();
-
-    // The row-resize boundary must clear both hover paths before its pixel baseline.
-    page.cancelInteraction();
-    band.leave();
-    gutterBand.leave();
-    QCoreApplication::processEvents();
-    const QRect lfoBody = automationRowBody(page, lfo);
-    const QPoint boundaryPoint(layout::space(layout::Space::One), lfoBody.top() + lfoBody.height());
-    const QImage boundaryBaseline = captureAutomationViewport();
-    gutterBand.mouse(QEvent::MouseMove, boundaryPoint, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
-    QCoreApplication::processEvents();
-    const QImage boundaryHover = captureAutomationViewport();
-    check(automationGutterInput->cursor().shape() == Qt::SplitVCursor,
-          QStringLiteral("automation row boundary did not advertise its resize action"));
-    check(!boundaryBaseline.isNull() && boundaryHover == boundaryBaseline,
-          QStringLiteral("automation row boundary painted an insertion preview"));
-
-    // Curves and nodes: retain the original Tempo/CC preparation, state clearing, and pixel probes.
-    view.setEditCursorTick(480);
-    live.timeZoom = 96.0;
-    live.horizontalScroll = 0.0;
-    view.setEditorTimeZoom(live.timeZoom);
-    view.setEditorHorizontalScroll(live.horizontalScroll);
-    view.selectionModel().clearTimeSelection();
-    refresh(page, document, live);
-    TempoLane tempoLane(document);
-    CCLaneAdapter ccLane(document, 0, uint8_t{10});
-    if (page.canvas()->laneBody(LaneHandle{0}).isEmpty()) {
-        const QRect tempo = page.canvas()->pinnedTempoRect();
-        const QPointF tempoHeaderPoint(layout::space(layout::Space::One), tempo.center().y());
-        gutterBand.mouse(QEvent::MouseButtonPress, tempoHeaderPoint, Qt::LeftButton, Qt::LeftButton,
-                         Qt::NoModifier);
-        gutterBand.mouse(QEvent::MouseButtonRelease, tempoHeaderPoint, Qt::LeftButton, Qt::NoButton,
-                         Qt::NoModifier);
-        pumpQuickEvents();
-    }
-    const bool tempoExpanded = !page.canvas()->laneBody(LaneHandle{0}).isEmpty();
-    check(tempoExpanded, QStringLiteral("Tempo header did not expose the expanded body"));
-    const AutomationGeometry geometry = AutomationGeometry::resolve();
-    const qreal radius = nodelane::hoverRingRadius(geometry);
-    const qreal lineHalf =
-        std::max(qreal(layout::singlePixel()), qreal(geometry.hoverPaintPadding + 1));
-    const QPoint plotContentOrigin(0, -page.verticalScroll());
-    const QPoint plotFramebufferOrigin = plotContentOrigin + QPoint(automationGutterWidth, 0);
-    const auto tickX = [&](uint64_t tick) {
-        return view.camera().displayX(double(tick), 0.0, dpr);
-    };
-    const auto layerRevision = [&](songview::TimelineQuickLayer layer) {
-        return quickScene->layer(layer).revision;
-    };
-    const auto layerHas = [&](songview::TimelineQuickLayer layer, const QRectF &contentProbe,
-                              const QColor &color) {
-        return layerHasColorIn(quickScene->layer(layer), contentProbe, plotContentOrigin, color);
-    };
-
-    for (const LaneCase &row : kLanes) {
-        const quint64 curvesRevision =
-            layerRevision(songview::TimelineQuickLayer::AutomationCurves);
-        const quint64 nodesRevision = layerRevision(songview::TimelineQuickLayer::AutomationNodes);
-        NodeLane &lane = row.kind == LaneKind::Tempo ? static_cast<NodeLane &>(tempoLane)
-                                                     : static_cast<NodeLane &>(ccLane);
-        if (row.kind == LaneKind::Tempo) {
-            TempoEdit edit;
-            edit.remove = document.tempoPoints();
-            edit.add = {
-                {kHeldTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoHeld)},
-                {kNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoNode)},
-                {kSecondTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoSecond)}};
-            document.applyTempoEdit(edit);
-        } else {
-            document.writeLanePoints(
-                0, uint8_t{10}, 0, std::numeric_limits<uint64_t>::max(),
-                {{kHeldTick, kCcHeld}, {kNodeTick, kCcNode}, {kSecondTick, kCcSecond}});
-        }
-        refresh(page, document, live);
-        const LaneGeometry geom = laneGeometry(page, row.kind);
-        if (!geom.handle.valid() || geom.body.isEmpty()) {
-            check(false, QStringLiteral("%1: lane body is missing from the canvas stack")
-                             .arg(QLatin1String(row.name)));
-            continue;
-        }
-        const int held = row.kind == LaneKind::Tempo ? kTempoHeld : kCcHeld;
-        const int node = row.kind == LaneKind::Tempo ? kTempoNode : kCcNode;
-        const qreal heldY = nodelane::valueY(lane, geom.body, geometry, held);
-        const qreal nodeY = nodelane::valueY(lane, geom.body, geometry, node);
-        const qreal nodeX = tickX(kNodeTick);
-        const qreal midX = tickX(48);
-        leaveCanvas(band);
-        check(layerRevision(songview::TimelineQuickLayer::AutomationCurves) > curvesRevision &&
-                  layerRevision(songview::TimelineQuickLayer::AutomationNodes) > nodesRevision,
-              QStringLiteral("%1: document refresh did not rebuild the Quick curves and nodes")
-                  .arg(QLatin1String(row.name)));
-        check(layerHas(songview::TimelineQuickLayer::AutomationCurves,
-                       lineProbe(midX, heldY, 8, lineHalf), geom.curveColor),
-              QStringLiteral("%1: normal step curve is missing from the retained Quick layer")
-                  .arg(QLatin1String(row.name)));
-        check(layerHas(songview::TimelineQuickLayer::AutomationNodes,
-                       nodeProbe(nodeX, nodeY, radius), geom.curveColor),
-              QStringLiteral("%1: normal node is missing from the retained Quick layer")
-                  .arg(QLatin1String(row.name)));
-        const QImage normalFramebuffer = captureAutomationViewport();
-        check(framebufferHasColorNear(normalFramebuffer,
-                                      QPointF(plotFramebufferOrigin) + QPointF(midX, heldY),
-                                      geom.curveColor) &&
-                  framebufferHasColorNear(normalFramebuffer,
-                                          QPointF(plotFramebufferOrigin) + QPointF(nodeX, nodeY),
-                                          geom.curveColor),
-              QStringLiteral("%1: normal step curve or node did not render at its Quick position")
-                  .arg(QLatin1String(row.name)));
-
-        const quint64 selectionRevision =
-            layerRevision(songview::TimelineQuickLayer::AutomationSelection);
-        const quint64 selectedNodesRevision =
-            layerRevision(songview::TimelineQuickLayer::AutomationNodes);
-        songview::EditorSelectionModel::TimeSelection selection;
-        selection.startTick = kNodeTick;
-        selection.endTick = kNodeTick + 1;
-        selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
-        if (row.kind == LaneKind::Tempo)
-            selection.tempo = true;
-        else
-            selection.lanes = {{0, 10}};
-        view.selectionModel().setTimeSelection(selection);
-        refresh(page, document, live);
-        leaveCanvas(band);
-        const qreal ringOuter = geometry.selectedNodeRingRadius + layout::singlePixel();
-        check(layerHas(songview::TimelineQuickLayer::AutomationNodes,
-                       nodeProbe(nodeX, nodeY, ringOuter), band.item.palette().highlight().color()),
-              QStringLiteral("%1: selected ring is missing from the retained Quick node layer")
-                  .arg(QLatin1String(row.name)));
-        const QImage selectedFramebuffer = captureAutomationViewport();
-        check(framebufferHasColorNear(selectedFramebuffer,
-                                      QPointF(plotFramebufferOrigin) +
-                                          QPointF(nodeX, nodeY - geometry.selectedNodeRingRadius),
-                                      band.item.palette().highlight().color()),
-              QStringLiteral("%1: selected ring did not render at its Quick node position")
-                  .arg(QLatin1String(row.name)));
-        check(layerRevision(songview::TimelineQuickLayer::AutomationSelection) >
-                      selectionRevision &&
-                  layerRevision(songview::TimelineQuickLayer::AutomationNodes) >
-                      selectedNodesRevision,
-              QStringLiteral("%1: selected-node change did not rebuild the retained Quick layers")
-                  .arg(QLatin1String(row.name)));
-        view.selectionModel().clearTimeSelection();
-        refresh(page, document, live);
-    }
-
-    // Half-open time selection: preserve layer guards and the legacy framebuffer ring probes.
-    page.cancelInteraction();
-    live.timeZoom = 96.0;
-    view.setEditorTimeZoom(live.timeZoom);
-    live.horizontalScroll = 0.0;
-    view.setEditorHorizontalScroll(live.horizontalScroll);
-    const uint64_t groupA = view.grid().snapTick(48.0, false);
-    const uint64_t groupB = view.grid().snapTick(72.0, false);
-    const uint64_t groupC = view.grid().snapTick(120.0, false);
-    constexpr int groupAValue = 40;
-    constexpr int groupBValue = 80;
-    constexpr int groupCValue = 55;
-    document.writeLanePoints(0, pan.controller, 0, timeline->lengthTicks,
-                             {{groupA, groupAValue}, {groupB, groupBValue}, {groupC, groupCValue}});
-    page.documentChanged();
-    live.documentRevision = document.revision();
-    page.refreshLiveState(live);
-    QCoreApplication::processEvents();
-    const QRect groupPanBody = automationRowBody(page, pan);
-    const int valuePlotPadding =
-        qRound(std::max(layout::fontPxF(7.0 / 24.0) * 0.75 + layout::fontPxF(1.0 / 12.0),
-                        layout::fontPxF(3.0 / 8.0) * 0.75 + layout::fontPxF(1.0 / 6.0) * 0.5));
-    const int groupPlotTop = groupPanBody.top() + valuePlotPadding;
-    const int groupPlotBottom = groupPanBody.bottom() + 1 - valuePlotPadding;
-    const auto groupPointAt = [&](uint64_t tick, int value) {
-        return QPoint(qRound(view.camera().displayX(double(tick), 0.0, dpr)),
-                      groupPlotBottom - value * (groupPlotBottom - groupPlotTop) / 127);
-    };
-    const QPoint groupAPoint = groupPointAt(groupA, groupAValue);
-    const QPoint groupBPoint = groupPointAt(groupB, groupBValue);
-    const QPoint groupCPoint = groupPointAt(groupC, groupCValue);
-    const auto setTrackRange = [&](uint64_t endTick) {
-        songview::EditorSelectionModel::TimeSelection selection;
-        selection.startTick = groupA;
-        selection.endTick = endTick;
-        view.selectionModel().setTimeSelection(selection);
-        live.horizontalScroll = 0.0;
-        view.setEditorHorizontalScroll(live.horizontalScroll);
-        page.refreshLiveState(live);
-        pumpQuickEvents();
-    };
-    const quint64 nodesRevisionBefore =
-        layerRevision(songview::TimelineQuickLayer::AutomationNodes);
-    setTrackRange(groupB);
-    const songview::TimelineQuickLayerData excludedNodes =
-        quickScene->layer(songview::TimelineQuickLayer::AutomationNodes);
-    const QImage excludedNodesFramebuffer = captureAutomationViewport();
-    setTrackRange(groupB + 1);
-    const songview::TimelineQuickLayerData includedNodes =
-        quickScene->layer(songview::TimelineQuickLayer::AutomationNodes);
-    const QImage includedNodesFramebuffer = captureAutomationViewport();
-    const QColor selectionColor = automationInput->palette().highlight().color();
-    const qreal ringRadius = geometry.selectedNodeRingRadius;
-    const qreal ringWidth = geometry.selectedNodeRingDipWidth;
-    const auto hasSelectionRing = [&](const songview::TimelineQuickLayerData &layer,
-                                      const QPoint &contentPoint) {
-        const QPointF center = QPointF(contentPoint) - QPointF(0.0, page.verticalScroll());
-        const qreal tolerance = layout::singlePixel();
-        const qreal inner = std::max<qreal>(0.0, ringRadius - ringWidth / 2.0 - tolerance);
-        const qreal outer = ringRadius + ringWidth / 2.0 + tolerance;
-        const qreal innerSquared = inner * inner;
-        const qreal outerSquared = outer * outer;
-        return std::count_if(layer.triangles.cbegin(), layer.triangles.cend(),
-                             [&](const songview::TimelineQuickTriangle &triangle) {
-                                 const auto onRing = [&](const QPointF &point) {
-                                     const QPointF delta = point - center;
-                                     const qreal distanceSquared =
-                                         delta.x() * delta.x() + delta.y() * delta.y();
-                                     return distanceSquared >= innerSquared &&
-                                            distanceSquared <= outerSquared;
-                                 };
-                                 return triangle.firstColor == selectionColor &&
-                                        triangle.secondColor == selectionColor &&
-                                        triangle.thirdColor == selectionColor &&
-                                        onRing(triangle.first) && onRing(triangle.second) &&
-                                        onRing(triangle.third);
-                             }) >= 4;
-    };
-    check(excludedNodes.revision > nodesRevisionBefore &&
-              includedNodes.revision > excludedNodes.revision &&
-              hasSelectionRing(excludedNodes, groupAPoint) &&
-              !hasSelectionRing(excludedNodes, groupBPoint) &&
-              !hasSelectionRing(excludedNodes, groupCPoint) &&
-              hasSelectionRing(includedNodes, groupAPoint) &&
-              hasSelectionRing(includedNodes, groupBPoint) &&
-              !hasSelectionRing(includedNodes, groupCPoint) &&
-              hasRenderedSelectionRing(excludedNodesFramebuffer, groupAPoint, page,
-                                       automationGutterWidth, ringRadius, ringWidth,
-                                       selectionColor) &&
-              hasRenderedSelectionRing(includedNodesFramebuffer, groupAPoint, page,
-                                       automationGutterWidth, ringRadius, ringWidth,
-                                       selectionColor) &&
-              hasRenderedSelectionRing(includedNodesFramebuffer, groupBPoint, page,
-                                       automationGutterWidth, ringRadius, ringWidth,
-                                       selectionColor),
-          QStringLiteral("track time selection did not retain or render half-open Quick node rings "
-                         "in the automation nodes layer"));
-
-    if (failures == 0)
-        std::printf("automation-raster: PASS %s\n", qUtf8Printable(song));
-    return failures == 0 ? 0 : 1;
+    geometry.body = fixture.bodyFor(geometry.handle);
+    return geometry;
 }
 
 } // namespace
 
-int runAutomationPaintRasterCheck(const QString &project, const QString &song)
+AutomationRasterTest::AutomationRasterTest(QString project, QString song)
+    : m_projectPath(std::move(project))
+    , m_song(std::move(song))
+{}
+
+void AutomationRasterTest::init()
 {
-    return runPaintRaster(project, song);
+    QString error;
+    m_project = checks::ProjectFixture::copyOf(m_projectPath, error);
+    QVERIFY2(m_project, qPrintable(error));
+    m_fixture = AutomationRasterFixture::create(m_project->root(), m_song, error);
+    QVERIFY2(m_fixture, qPrintable(error));
+}
+
+void AutomationRasterTest::cleanup()
+{
+    if (m_fixture) {
+        m_fixture->shutdown();
+        m_fixture.reset();
+    }
+    m_project.reset();
+}
+
+bool AutomationRasterTest::configurePainting()
+{
+    fixture().configurePainting();
+    return fixture().page().canvas() && !fixture().automationGutterInput().bounds().isEmpty();
+}
+
+bool AutomationRasterTest::configureInteraction()
+{
+    fixture().configureInteraction();
+    return fixture().page().canvas() && !fixture().voiceInput().bounds().isEmpty();
+}
+
+AutomationRasterFixture &AutomationRasterTest::fixture() noexcept
+{
+    return *m_fixture;
+}
+
+const AutomationRasterFixture &AutomationRasterTest::fixture() const noexcept
+{
+    return *m_fixture;
+}
+
+void AutomationRasterTest::resizeBoundaryShowsSplitCursorWithoutPreview()
+{
+    QVERIFY(configurePainting());
+    const EditorAutomationRowId lfo{EditorAutomationRowKind::ControlChange, 0, 21};
+    const LaneHandle lfoHandle = fixture().handleFor({lfo, 0, 21});
+    const QRect body = fixture().bodyFor(lfoHandle);
+    QVERIFY(lfoHandle.valid());
+    QVERIFY(!body.isEmpty());
+
+    fixture().canvas().cancelInteraction();
+    fixture().automationPointerLeave();
+    fixture().pump();
+    QString error;
+    const QImage baseline = fixture().renderAutomationViewport(&error);
+    QVERIFY2(error.isEmpty() && !baseline.isNull(), qPrintable(error));
+
+    const QPointF boundary(layout::space(layout::Space::One), body.bottom() + 1);
+    checks::events::sendMouse(fixture().automationGutterInput(), QEvent::MouseMove,
+                              fixture().automationContentToViewport(boundary), Qt::NoButton,
+                              Qt::NoButton, Qt::NoModifier);
+    fixture().pump();
+    const QImage hovered = fixture().renderAutomationViewport(&error);
+    QVERIFY2(error.isEmpty() && !hovered.isNull(), qPrintable(error));
+    QCOMPARE(fixture().automationGutterInput().cursor().shape(), Qt::SplitVCursor);
+    QVERIFY(hovered == baseline);
+}
+
+void AutomationRasterTest::curvesNodesAndSelectedRingsRender_data()
+{
+    QTest::addColumn<int>("laneKind");
+    QTest::addColumn<bool>("logicalDpr");
+    QTest::newRow("tempo-native-dpr") << int(LaneKind::Tempo) << false;
+    QTest::newRow("cc-native-dpr") << int(LaneKind::Cc) << false;
+    // This row exercises the logical-DPR projection path separately from the native window DPR.
+    QTest::newRow("tempo-one-dpr") << int(LaneKind::Tempo) << true;
+}
+
+void AutomationRasterTest::curvesNodesAndSelectedRingsRender()
+{
+    QFETCH(int, laneKind);
+    QFETCH(bool, logicalDpr);
+    QVERIFY(configurePainting());
+    if (logicalDpr)
+        fixture().setAutomationDpr(1.0);
+    else
+        fixture().setAutomationDpr(fixture().nativeAutomationDpr());
+    QVERIFY(fixture().automationDpr() > 0.0);
+
+    const auto kind = static_cast<LaneKind>(laneKind);
+    QVERIFY(fixture().expandTempo());
+    SongDocument &document = fixture().document();
+    TempoLane tempoLane(document);
+    CCLaneAdapter ccLane(document, 0, uint8_t{10});
+    NodeLane &lane = kind == LaneKind::Tempo ? static_cast<NodeLane &>(tempoLane)
+                                             : static_cast<NodeLane &>(ccLane);
+    if (kind == LaneKind::Tempo) {
+        TempoEdit edit;
+        edit.remove = document.tempoPoints();
+        edit.add = {
+            {kHeldTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoHeld)},
+            {kNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoNode)},
+            {kSecondTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoSecond)}};
+        document.applyTempoEdit(edit);
+    } else {
+        document.writeLanePoints(
+            0, uint8_t{10}, 0, std::numeric_limits<uint64_t>::max(),
+            {{kHeldTick, kCcHeld}, {kNodeTick, kCcNode}, {kSecondTick, kCcSecond}});
+    }
+
+    const quint64 curvesBefore =
+        fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationCurves).revision;
+    const quint64 nodesBefore =
+        fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationNodes).revision;
+    fixture().documentChanged();
+    fixture().automationPointerLeave();
+    fixture().pump();
+
+    const LaneGeometry geometry = laneGeometry(fixture(), kind);
+    QVERIFY(geometry.handle.valid());
+    QVERIFY(!geometry.body.isEmpty());
+    const int held = kind == LaneKind::Tempo ? kTempoHeld : kCcHeld;
+    const int node = kind == LaneKind::Tempo ? kTempoNode : kCcNode;
+    const qreal heldY = nodelane::valueY(lane, geometry.body, fixture().geometry(), held);
+    const qreal nodeY = nodelane::valueY(lane, geometry.body, fixture().geometry(), node);
+    const qreal nodeX = fixture().projection().displayX(kNodeTick, fixture().automationDpr());
+    const qreal midX = fixture().projection().displayX(48, fixture().automationDpr());
+    const QPoint origin(0, -fixture().page().verticalScroll());
+    const qreal nodeRadius = nodelane::hoverRingRadius(fixture().geometry());
+    const qreal lineHalf =
+        std::max(qreal(layout::singlePixel()), qreal(fixture().geometry().hoverPaintPadding + 1));
+    const auto &scene = fixture().quickScene();
+    QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationCurves).revision > curvesBefore);
+    QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationNodes).revision > nodesBefore);
+    QVERIFY(layerHasColorIn(scene.layer(songview::TimelineQuickLayer::AutomationCurves),
+                            lineProbe(midX, heldY, 8, lineHalf), origin, geometry.curveColor));
+    QVERIFY(layerHasColorIn(scene.layer(songview::TimelineQuickLayer::AutomationNodes),
+                            nodeProbe(nodeX, nodeY, nodeRadius), origin, geometry.curveColor));
+
+    QString error;
+    const QImage normal = fixture().renderAutomationViewport(&error);
+    QVERIFY2(error.isEmpty() && !normal.isNull(), qPrintable(error));
+    const QPointF framebufferOrigin(fixture().automationGutterInput().bounds().width(),
+                                    -fixture().page().verticalScroll());
+    QVERIFY(framebufferHasColorNear(normal, framebufferOrigin + QPointF(midX, heldY),
+                                    geometry.curveColor));
+    QVERIFY(framebufferHasColorNear(normal, framebufferOrigin + QPointF(nodeX, nodeY),
+                                    geometry.curveColor));
+
+    const quint64 selectionBefore =
+        scene.layer(songview::TimelineQuickLayer::AutomationSelection).revision;
+    const quint64 selectedNodesBefore =
+        scene.layer(songview::TimelineQuickLayer::AutomationNodes).revision;
+    songview::EditorSelectionModel::TimeSelection selection;
+    selection.startTick = kNodeTick;
+    selection.endTick = kNodeTick + 1;
+    selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
+    if (kind == LaneKind::Tempo)
+        selection.tempo = true;
+    else
+        selection.lanes = {{0, 10}};
+    fixture().view().selectionModel().setTimeSelection(selection);
+    fixture().documentChanged();
+    fixture().automationPointerLeave();
+    fixture().pump();
+
+    const QColor highlight = fixture().automationGutterInput().palette().highlight().color();
+    const qreal ringOuter = fixture().geometry().selectedNodeRingRadius + layout::singlePixel();
+    QVERIFY(layerHasColorIn(scene.layer(songview::TimelineQuickLayer::AutomationNodes),
+                            nodeProbe(nodeX, nodeY, ringOuter), origin, highlight));
+    const QImage selected = fixture().renderAutomationViewport(&error);
+    QVERIFY2(error.isEmpty() && !selected.isNull(), qPrintable(error));
+    QVERIFY(framebufferHasColorNear(
+        selected,
+        framebufferOrigin + QPointF(nodeX, nodeY - fixture().geometry().selectedNodeRingRadius),
+        highlight));
+    QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationSelection).revision >
+            selectionBefore);
+    QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationNodes).revision >
+            selectedNodesBefore);
+}
+
+void AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes_data()
+{
+    QTest::addColumn<bool>("includeEnd");
+    QTest::newRow("end-at-group-b-excludes-b") << false;
+    QTest::newRow("end-after-group-b-includes-b") << true;
+}
+
+void AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes()
+{
+    QFETCH(bool, includeEnd);
+    QVERIFY(configurePainting());
+    QVERIFY(fixture().expandTempo());
+    fixture().setAutomationDpr(fixture().nativeAutomationDpr());
+
+    SongView &view = fixture().view();
+    const uint64_t groupA = view.grid().snapTick(48.0, false);
+    const uint64_t groupB = view.grid().snapTick(72.0, false);
+    const uint64_t groupC = view.grid().snapTick(120.0, false);
+    constexpr int kGroupAValue = 40;
+    constexpr int kGroupBValue = 80;
+    constexpr int kGroupCValue = 55;
+    fixture().document().writeLanePoints(
+        0, fixture().pan.controller, 0, std::numeric_limits<uint64_t>::max(),
+        {{groupA, kGroupAValue}, {groupB, kGroupBValue}, {groupC, kGroupCValue}});
+    fixture().documentChanged();
+
+    const LaneHandle panHandle = fixture().handleFor(fixture().pan);
+    const QRect body = fixture().bodyFor(panHandle);
+    QVERIFY(panHandle.valid());
+    QVERIFY(!body.isEmpty());
+    CCLaneAdapter panLane(fixture().document(), fixture().pan.track, fixture().pan.controller);
+    const auto pointAt = [&](uint64_t tick, int value) {
+        return QPoint(qRound(fixture().projection().displayX(tick, fixture().automationDpr())),
+                      qRound(nodelane::valueY(panLane, body, fixture().geometry(), value)));
+    };
+    const QPoint groupAPoint = pointAt(groupA, kGroupAValue);
+    const QPoint groupBPoint = pointAt(groupB, kGroupBValue);
+    const QPoint groupCPoint = pointAt(groupC, kGroupCValue);
+
+    const quint64 nodesBefore =
+        fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationNodes).revision;
+    songview::EditorSelectionModel::TimeSelection selection;
+    selection.startTick = groupA;
+    selection.endTick = includeEnd ? groupB + 1 : groupB;
+    view.selectionModel().setTimeSelection(selection);
+    fixture().documentChanged();
+    fixture().pump();
+
+    const auto &nodes = fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationNodes);
+    const QColor selectionColor = fixture().automationGutterInput().palette().highlight().color();
+    const qreal ringRadius = fixture().geometry().selectedNodeRingRadius;
+    const qreal ringWidth = fixture().geometry().selectedNodeRingDipWidth;
+    QVERIFY(nodes.revision > nodesBefore);
+    QVERIFY(layerHasSelectionRing(nodes, groupAPoint, fixture().page().verticalScroll(), ringRadius,
+                                  ringWidth, selectionColor));
+    QCOMPARE(layerHasSelectionRing(nodes, groupBPoint, fixture().page().verticalScroll(),
+                                   ringRadius, ringWidth, selectionColor),
+             includeEnd);
+    QVERIFY(!layerHasSelectionRing(nodes, groupCPoint, fixture().page().verticalScroll(),
+                                   ringRadius, ringWidth, selectionColor));
+
+    QString error;
+    const QImage framebuffer = fixture().renderAutomationViewport(&error);
+    QVERIFY2(error.isEmpty() && !framebuffer.isNull(), qPrintable(error));
+    const int gutterWidth = qRound(fixture().automationGutterInput().bounds().width());
+    QVERIFY(framebufferHasSelectionRing(framebuffer, groupAPoint, fixture().page().verticalScroll(),
+                                        gutterWidth, ringRadius, ringWidth, selectionColor));
+    QCOMPARE(framebufferHasSelectionRing(framebuffer, groupBPoint,
+                                         fixture().page().verticalScroll(), gutterWidth, ringRadius,
+                                         ringWidth, selectionColor),
+             includeEnd);
+    QVERIFY(!framebufferHasSelectionRing(framebuffer, groupCPoint,
+                                         fixture().page().verticalScroll(), gutterWidth, ringRadius,
+                                         ringWidth, selectionColor));
 }
