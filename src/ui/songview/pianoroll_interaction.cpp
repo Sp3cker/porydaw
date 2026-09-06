@@ -264,6 +264,10 @@ void PianoRoll::inputCancelled(TimelineInputCancelReason reason)
     if (reason == TimelineInputCancelReason::Hidden ||
         reason == TimelineInputCancelReason::WindowDeactivated) {
         m_curPosValid = false;
+        // The keyboard command's release can never arrive once the window
+        // deactivates or the band hides; end its audition unless a live
+        // pointer drag owns the sounding preview.
+        finishKeyboardAudition();
     }
     // Mirrors the former event() rule for every cancellation cause: only a
     // pending or active velocity drag cancels. Song/tab/project cancellation

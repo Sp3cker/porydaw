@@ -409,7 +409,8 @@ class SongView : public QWidget
     // when a selection gesture commits.
     void announceTimeSelection();
 
-    // Canonical Copy command: an active time selection owns the command;
+    // Canonical Copy command (defined in src/ui/songview/editkeyrouting.cpp
+    // beside the dispatch): an active time selection owns the command;
     // otherwise the selected notes are copied.
     void copySelection();
     // Range operations on the time selection. Copy captures notes plus every
@@ -448,14 +449,23 @@ class SongView : public QWidget
     // ruler grid line and the covered contents (notes and automation
     // points) move with it; the band follows.
     void nudgeTimeSelection(bool right);
-    // Shared shortcut handling for the roll and the lanes area: range
-    // copy/cut/delete while a time selection is active, paste of range
-    // clips, and transpose/nudge of the selection (keymap commands).
-    // Returns true when consumed.
-    bool handleEditKey(const songview::TimelineKeyInput &input);
-    // Semitone step for the transpose command the input matches (0 if none);
-    // shared by the note- and time-selection key paths.
-    int transposeStepFor(const songview::TimelineKeyInput &input) const;
+    // Which surface routed the key to the shared policy: Timeline — the
+    // roll-page bands and Quick surfaces whose note canvas is the live
+    // editing target — or EventList, the QWidget fallback whose row-local
+    // table owns note-target commands.
+    enum class EditKeyOrigin { Timeline, EventList };
+    enum class SharedShortcutOwner { SongView, Window };
+    // Shared command policy entry (src/ui/songview/editkeyrouting.cpp):
+    // resolves shared keymap commands — note, range, and selection edits —
+    // against the live selection. Returns true only when a target consumes
+    // the command; unavailable targets deliberately decline it.
+    bool handleEditKey(const songview::TimelineKeyInput &input,
+                       EditKeyOrigin origin = EditKeyOrigin::Timeline);
+    // Release tail of the shared policy: finishes the keyboard transpose
+    // audition from whichever surface the chord came up on. It reports
+    // whether that release actually stopped an audition.
+    bool handleEditKeyRelease(const songview::TimelineKeyInput &input);
+    void setSharedShortcutOwner(SharedShortcutOwner owner);
     // Copy/Cut/Delete/Paste/Clear context menu on the active selection.
     void showTimeSelectionMenu(const QPoint &globalPos);
 
@@ -486,8 +496,8 @@ class SongView : public QWidget
     void requestDrawerPageRedo();
     DrawerPageLiveState drawerPageLiveState() const;
     void cancelActiveInteractions();
-    // A mouse gesture is live in the ruler, roll, or lanes (pan, drag,
-    // sweep); playhead follow-scroll pauses while one runs.
+    // Public observation of live pointer ownership. Follow-scroll state and
+    // popup focus deliberately remain separate from command ownership.
     bool userGestureActive() const;
     // Child-widget request to toggle transport from a specific song tick.
     void requestPlayPauseFrom(uint64_t tick) { emit playPauseFromRequested(tick); }
@@ -625,6 +635,10 @@ class SongView : public QWidget
     // Fold-relevant model change (song swap, track switch): rebuild now, or
     // defer while a pointer gesture holds the projection lock.
     void requestProjectionRebuild();
+    // Live pointer ownership across the QWidget ruler, roll interaction, and
+    // every Quick timeline surface. Popup editing and follow-scroll pauses
+    // deliberately are not pointer ownership.
+    bool timelinePointerGestureActive() const;
     void syncTimelineIndicators();
     // Guards construction and teardown windows around the SongView-owned host.
     void requestPianoRollQuickUpdate(songview::PianoRollQuickDirtySet dirty);
@@ -731,6 +745,7 @@ class SongView : public QWidget
 
     EditorViewState m_editorViewState;
     EditorDrawer *m_editorDrawer = nullptr;
+    SharedShortcutOwner m_sharedShortcutOwner = SharedShortcutOwner::SongView;
     bool m_followScrollPaused = false;
     VelocityGestureModel m_velocityGesture;
     std::unique_ptr<songview::TimeRuler> m_ruler;

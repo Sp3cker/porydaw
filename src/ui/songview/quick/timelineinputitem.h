@@ -2,12 +2,9 @@
 
 #include "ui/songview/quick/timelineinput.h"
 
-#include <QCursor>
-#include <QFont>
-#include <QPalette>
 #include <QQuickItem>
-#include <QRectF>
-#include <QString>
+
+#include <functional>
 
 class QEvent;
 class QFocusEvent;
@@ -17,6 +14,35 @@ class QMouseEvent;
 class QWheelEvent;
 
 namespace songview {
+// Typed root for the QML scrollbar control. Its QML implementation owns the
+// native MouseArea lifecycle and publishes only actual accepted-press state;
+// no reflected property lookup or QML callback bridge is needed. QML
+// registration creates a derived QQmlElement, so this type stays subclassable.
+class TimelineGestureScrollbar : public QQuickItem
+{
+    Q_OBJECT
+    Q_DISABLE_COPY_MOVE(TimelineGestureScrollbar)
+
+    Q_PROPERTY(bool gestureActive READ gestureActive WRITE setGestureActive NOTIFY
+                   gestureActiveChanged FINAL)
+
+  public:
+    explicit TimelineGestureScrollbar(QQuickItem *parent = nullptr);
+
+    bool gestureActive() const noexcept;
+    void setGestureActive(bool active);
+
+  signals:
+    void gestureActiveChanged();
+
+  private:
+    bool m_gestureActive = false;
+};
+
+struct TimelineKeyPolicy {
+    std::function<bool(const TimelineKeyInput &)> press;
+    std::function<bool(const TimelineKeyInput &)> release;
+};
 
 // The one production TimelineInputHost: a QQuickItem that fills a converted
 // band's TimelineSceneBand, normalizes raw Quick events into
@@ -45,6 +71,13 @@ class TimelineInputItem : public QQuickItem, public TimelineInputHost
                         TimelineInputSurface surface = TimelineInputSurface::Plot,
                         bool attachHost = true);
     TimelineBandInteraction *interaction() const noexcept;
+
+    // Shared song keyboard policy, installed fresh by the Quick host when it
+    // attaches this input and cleared before detach. Local interaction handling
+    // always gets the first claim; either phase returns true only when it
+    // actually consumes the normalized key event.
+    void setKeyPolicy(TimelineKeyPolicy policy);
+    void clearKeyPolicy();
     void notifyHostAppearanceChanged();
     void setHostAppearance(const QFont &font, const QPalette &palette);
     QString accessibilityDescription() const;
@@ -85,7 +118,7 @@ class TimelineInputItem : public QQuickItem, public TimelineInputHost
     TimelineInputSurface m_surface = TimelineInputSurface::Plot;
     bool m_attachHost = true;
     bool m_attachedInputHost = false;
-
+    TimelineKeyPolicy m_keyPolicy;
     QString m_accessibilityDescription;
     QFont m_hostFont;
     QPalette m_hostPalette;

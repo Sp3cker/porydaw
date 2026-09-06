@@ -47,7 +47,7 @@ class VelocityEditingTest final : public QObject
     void rollDragCommitsOnce();
     void controllerCancellationStopsRollDrag();
     void escapeStopsRollDrag();
-    void velocityFocusIgnoresPitchShortcut();
+    void velocityFocusOctaveShortcutMovesSelectedNotes();
     void rulerUnlockKeepsRawVelocity_data();
     void rulerUnlockKeepsRawVelocity();
     void lockedPaintUsesDetents_data();

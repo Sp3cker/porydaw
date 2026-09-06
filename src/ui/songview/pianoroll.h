@@ -97,13 +97,29 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
   public:
     explicit PianoRoll(SongView *songView);
 
-    bool gestureActive() const;
+    bool gestureActive() const override;
     void cancelPitchBendPopup();
-    // Aborts in-progress input without committing its document mutation.
+    // Strong lifecycle cleanup closes an editing popup without restoring focus.
+    void cancelPitchBendPopupWithoutFocus();
+    // Strong document/readiness cleanup: closes the pitch-bend popup without
+    // focus restoration, then aborts active pointer input.
     void cancelTransientInput();
+    // Canonical TimelineBandInteraction cancellation aborts pointer-owned
+    // state only; popup lifetime follows its explicit focus policy.
+    void cancelInteraction() override;
     void cancelVelocityInteraction();
     void refreshTextLayout();
     void copySelectedNotes();
+    void cutSelectedNotes();
+    void deleteSelectedNotes();
+    void selectAllNotes();
+    void transposeSelectedNotes(int semitones);
+    void nudgeSelectedNotes(bool right);
+    void openPitchBendEditor();
+    // Ends a keyboard-command audition from the shared key-release path;
+    // a chord can come up over another band or the Quick root. Returns true
+    // only when an existing keyboard audition was stopped.
+    bool finishKeyboardAudition();
     // Routes a semantic dirty union to SongView's retained Quick host.
     void requestQuickUpdate(PianoRollQuickDirtySet dirty);
 
@@ -168,6 +184,7 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     void endKbdAudition();
     void stopNoteAudition();
     void auditionKey(int key, int velocity);
+    void cancelPointerInteraction();
 
     bool dragLive() const;
     static bool isLiveDrag(LeftDrag drag);
@@ -228,13 +245,9 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     bool nearLeftEdge(const ViewNote &note, QPointF pos) const;
     void refreshHoverCursor(QPointF pos, Qt::KeyboardModifiers modifiers);
 
-    void openPitchBendEditor();
     std::vector<DocNote> resolveSelection() const;
     void transposeSelection(int dKey);
-    void nudgeSelection(bool right);
     void copyNotes(const std::vector<DocNote> &notes);
-    void pasteAtEditCursor();
-    void selectAllNotes();
 
     bool noteNameFits(const QRectF &noteRect, int key) const;
     QRectF displayedNoteRect(const ViewNote &note) const;

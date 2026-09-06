@@ -63,8 +63,8 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
     Q_INVOKABLE void openDivisionMenu(QPointF position);
     Q_INVOKABLE void openFeelMenu(QPointF position);
 
-    bool gestureActive() const noexcept;
-    void cancelInteraction();
+    bool gestureActive() const noexcept override;
+    void cancelInteraction() override;
 
     void attachInputHost(TimelineInputHost &host) override;
     void detachInputHost(TimelineInputHost &host) override;

@@ -26,6 +26,16 @@ docs/ docsrc/ — spec, plans, manual
 
 Harness root is `src/checks/` — never add a new `*check.cpp` to `src/` top-level.
 
+## Timeline keyboard routing
+
+Shared selection commands belong in `SongView::handleEditKey` in
+`src/ui/songview/editkeyrouting.cpp`; add bindings and dispatch there, not in each band.
+`quick/timelinequickview_keyrouting.cpp` connects band/chrome fallback and gesture
+cancellation. Text, popup, and advertised keyboard-control keys stay local.
+Keep semantic operations separate from key matching; do not add focus memory.
+Cross-surface regression scenarios live in `src/checks/selectionkey/`; run the
+four suites with `deno task verify --filter selectionkey --verbose`.
+
 ## Search discipline — REQUIRED
 
 **Never `grep` without `path`.** Root scans hit 56+ harnesses + `external/` + `build-*/` and time out.

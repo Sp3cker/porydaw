@@ -14,9 +14,12 @@ namespace keymap {
 
 // Where a command's shortcut is live. Global shortcuts are window-level and
 // stay active while a local context has focus, so conflict detection treats
-// Global as overlapping every other context.
+// Global as overlapping every other context. Timeline commands are delivered
+// from every timeline band, while PianoRoll, Velocity, and Automation remain
+// their respective local-tool scopes.
 enum class Context {
     Global,
+    Timeline,
     PianoRoll,
     Velocity,
     Automation,

@@ -338,6 +338,13 @@ bool VoiceChangeArea::voiceMarkerAt(qreal x, DocLanePoint *out) const
     return true;
 }
 
+bool VoiceChangeArea::gestureActive() const
+{
+    // A pending voice drag is a live gesture too: a marker press owns the
+    // pointer from press to release even before the drag distance activates.
+    return m_interaction != Interaction::None || m_voiceDrag.has_value();
+}
+
 bool VoiceChangeArea::voiceDragActive() const noexcept
 {
     return m_voiceDrag && m_voiceDrag->phase == VoiceDragState::Phase::Active;
@@ -493,11 +500,12 @@ bool VoiceChangeArea::wheel(const songview::TimelineWheelInput &input)
 
 bool VoiceChangeArea::keyPress(const songview::TimelineKeyInput &input)
 {
-    if (input.key == Qt::Key_Escape) {
-        cancelInteraction();
-        return true;
-    }
-    return false;
+    // Hover is local to this surface. A live pointer gesture deliberately
+    // declines Escape so SongView performs the canonical cancellation.
+    if (input.key != Qt::Key_Escape || gestureActive() || !m_hoverActive)
+        return false;
+    clearHover();
+    return true;
 }
 
 void VoiceChangeArea::showPicker(qreal plotX)

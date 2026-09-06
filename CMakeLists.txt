@@ -292,6 +292,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/timecamera.cpp
     src/ui/songview/timecamera.h
     src/ui/songview/rangeedit.cpp
+    src/ui/songview/editkeyrouting.cpp
     src/ui/songview/scalecontroller.cpp
     src/ui/songview/scalecontroller.h
     src/ui/songview/clipmime.cpp
@@ -328,6 +329,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/quick/timelinequickview.cpp
     src/ui/songview/quick/timelinequickview.h
     src/ui/songview/quick/timelinequickview_pianoroll.cpp
+    src/ui/songview/quick/timelinequickview_keyrouting.cpp
     src/ui/songview/quick/timerulerquick.cpp
     src/ui/pitchbendeditor.cpp
     src/ui/pitchbendeditor.hpp
@@ -624,6 +626,11 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/keymapcheck.cpp
         src/checks/hostcheck.cpp
         src/checks/mainwindowroutingcheck.cpp
+        src/checks/selectionkey/core.cpp
+        src/checks/selectionkey/gesture.cpp
+        src/checks/selectionkey/window.cpp
+        src/checks/selectionkey/localinput.cpp
+        src/checks/selectionkey/automationprobe.cpp
         src/checks/noteidcheck.cpp
         src/checks/automation/raster/painting.cpp
         src/checks/automation/raster/interaction.cpp

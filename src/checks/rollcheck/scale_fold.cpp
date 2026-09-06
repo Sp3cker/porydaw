@@ -115,33 +115,8 @@ ScenarioContinuation runScaleFoldScenarios(Harness &check)
             view.selectTrack(scaleTrack);
         }
 
-        // C3. A held pointer gesture (projection locked) keeps the row set
-        // stable until release, then rebuilds.
-        {
-            bool occ[128] = {};
-            for (const DocNote &n : doc.notesForTrack(scaleTrack))
-                occ[n.key] = true;
-            const int base = firstFreeOffScale(occ);
-            if (base >= 0) {
-                const int cmd0 = doc.undoStack()->index();
-                doc.addNote(scaleTrack, cTick, uint8_t(base), doc.ticksPerClock(), 100);
-                const int withNote = proj.visibleRowCount();
-                DocNote n;
-                if (doc.findNote(scaleTrack, cTick, uint8_t(base), &n)) {
-                    view.setProjectionLocked(true);
-                    doc.deleteNotes({n}); // rebuild deferred by the lock
-                    if (proj.visibleRowCount() != withNote)
-                        fail("Fold rebuilt its layout mid-gesture");
-                    view.setProjectionLocked(false);
-                    view.flushProjectionIfDirty();
-                    if (proj.visibleRowCount() >= withNote)
-                        fail("Fold did not rebuild its layout on gesture release");
-                }
-                while (doc.undoStack()->index() > cmd0)
-                    doc.undoStack()->undo();
-            }
-        }
-
+        // Held-drag stability is covered by the press/move/release sequence in
+        // scale_editing.cpp; document replacement here terminates interactions.
         // C4. Layout rebuilds after add, delete/undo, and redo.
         {
             bool occ[128] = {};

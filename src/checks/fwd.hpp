@@ -75,3 +75,8 @@ int runAutomationEditingCheck(const QStringList &qtArguments);
 int runAutomationDomainCheck(const QStringList &qtArguments);
 int runAutomationPresentationCheck(const QStringList &qtArguments);
 int runAutomationHoverCheck(const QStringList &qtArguments);
+int runSelectionKeyCoreCheck(const QString &projectRoot, const QString &songLabel);
+int runSelectionKeyGestureCheck(const QString &projectRoot, const QString &songLabel);
+int runSelectionKeyWindowCheck(const QString &projectRoot, const QString &songA,
+                               const QString &songB);
+int runSelectionKeyLocalInputCheck(const QString &projectRoot, const QString &songLabel);

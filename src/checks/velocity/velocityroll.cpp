@@ -341,6 +341,7 @@ void VelocityEditingTest::escapeStopsRollDrag()
     QTest::keyClick(m_quickWindow, Qt::Key_Escape);
     QTRY_VERIFY(!m_tab->view().previewVelocity(m_quietStacked.noteId).has_value());
     QTRY_VERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value());
+    QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}));
 
     mouseMove(rollPressWindow, velocityDragModifiers);
     mouseRelease(Qt::LeftButton, rollPressWindow, velocityDragModifiers);
@@ -357,18 +358,27 @@ void VelocityEditingTest::escapeStopsRollDrag()
     QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(m_quietStacked.velocity));
     QCOMPARE(timelineVelocity(m_later.noteId), int(m_later.velocity));
     QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity));
-    // Roll Escape is also the editor's selection-dismiss command; unlike
-    // controller cancellation, its documented terminal state is no selection.
-    QVERIFY(m_tab->view().selectionModel().noteSelection().empty());
+    QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}));
+
+    // The first Escape owns gesture cancellation. Once the gesture is idle,
+    // a second Escape reaches the editor's selection-dismiss command.
+    QTest::keyClick(m_quickWindow, Qt::Key_Escape);
+    QTRY_VERIFY(m_tab->view().selectionModel().noteSelection().empty());
+    QCOMPARE(m_tab->document().revision(), revisionBefore);
+    QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore);
+    QCOMPARE(documentChanged.count(), 0);
+    QCOMPARE(edited.count(), 0);
 }
 
-void VelocityEditingTest::velocityFocusIgnoresPitchShortcut()
+void VelocityEditingTest::velocityFocusOctaveShortcutMovesSelectedNotes()
 {
     selectDragPair();
 
     DocNote quietBefore;
+    DocNote loudBefore;
     DocNote laterBefore;
     QVERIFY(m_tab->document().findNote(m_quietStacked.noteId, &quietBefore));
+    QVERIFY(m_tab->document().findNote(m_loudStacked.noteId, &loudBefore));
     QVERIFY(m_tab->document().findNote(m_later.noteId, &laterBefore));
     const uint64_t revisionBefore = m_tab->document().revision();
     const int undoDepthBefore = m_tab->document().undoStack()->count();
@@ -384,17 +394,21 @@ void VelocityEditingTest::velocityFocusIgnoresPitchShortcut()
     QTest::keyClick(m_quickWindow, Qt::Key_Up, Qt::ShiftModifier);
 
     DocNote quietAfter;
+    DocNote loudAfter;
     DocNote laterAfter;
     QVERIFY(m_tab->document().findNote(m_quietStacked.noteId, &quietAfter));
+    QVERIFY(m_tab->document().findNote(m_loudStacked.noteId, &loudAfter));
     QVERIFY(m_tab->document().findNote(m_later.noteId, &laterAfter));
-    QCOMPARE(quietAfter.key, quietBefore.key);
-    QCOMPARE(laterAfter.key, laterBefore.key);
+    QCOMPARE(int(quietAfter.key), int(quietBefore.key) + 12);
+    QCOMPARE(int(laterAfter.key), int(laterBefore.key) + 12);
+    QCOMPARE(loudAfter.key, loudBefore.key);
     QCOMPARE(quietAfter.velocity, quietBefore.velocity);
+    QCOMPARE(loudAfter.velocity, loudBefore.velocity);
     QCOMPARE(laterAfter.velocity, laterBefore.velocity);
-    QCOMPARE(m_tab->document().revision(), revisionBefore);
-    QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore);
-    QCOMPARE(documentChanged.count(), 0);
-    QCOMPARE(edited.count(), 0);
+    QCOMPARE(m_tab->document().revision(), revisionBefore + 1);
+    QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore + 1);
+    QCOMPARE(documentChanged.count(), 1);
+    QCOMPARE(edited.count(), 1);
     QCOMPARE(documentVelocity(m_quietStacked.noteId), int(m_quietStacked.velocity));
     QCOMPARE(documentVelocity(m_later.noteId), int(m_later.velocity));
     QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity));

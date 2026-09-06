@@ -452,12 +452,16 @@ bool VelocityArea::wheel(const songview::TimelineWheelInput &input)
     return true;
 }
 
-bool VelocityArea::keyPress(const songview::TimelineKeyInput &input)
+bool VelocityArea::gestureActive() const
 {
-    if (input.key != Qt::Key_Escape)
-        return false;
-    cancelInteraction();
-    return true;
+    return m_interaction != Interaction::None;
+}
+
+bool VelocityArea::keyPress(const songview::TimelineKeyInput &)
+{
+    // Shared routing owns live-gesture Escape; this leaf has no other local
+    // keyboard action.
+    return false;
 }
 
 void VelocityArea::inputCancelled(songview::TimelineInputCancelReason)

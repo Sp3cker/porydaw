@@ -401,6 +401,8 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     // Constructor injection: the loaded global editor state seeds the hub
     // before any tab exists; no startup write or hub transaction happens.
     m_workspace = std::make_unique<WorkspaceUi>(*this, initialEditorViewState);
+    for (SongTab *tab : m_workspace->tabsInDisplayOrder())
+        tab->view().setSharedShortcutOwner(SongView::SharedShortcutOwner::Window);
 
     {
         QSettings settings;
@@ -726,6 +728,8 @@ void MainWindow::changeEvent(QEvent *event)
 
 void MainWindow::onSelectedTabChanged(SongTab *tab)
 {
+    if (tab)
+        tab->view().setSharedShortcutOwner(SongView::SharedShortcutOwner::Window);
     // Switching tabs stops playback in the tab being left.
     if (m_audioOk)
         m_audio.stop();

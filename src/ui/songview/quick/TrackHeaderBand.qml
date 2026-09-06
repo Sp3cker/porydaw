@@ -29,6 +29,7 @@ Item {
     readonly property color scrollbarHandleHover: appearance.scrollbarHandleHover
     readonly property color reorderIndicator: appearance.reorderIndicator
 
+
     function rowIndexForTrack(track) {
         if (track < 0)
             return -1

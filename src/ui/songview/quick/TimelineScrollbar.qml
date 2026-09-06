@@ -1,9 +1,9 @@
 import QtQuick
-
+import Porydaw.Ui
 // Shared scrollbar for timeline Quick surfaces, in either orientation. The
 // owning model stays authoritative: the control reports requested values and
 // renders thumb geometry from its inputs, never touching model state itself.
-Item {
+TimelineGestureScrollbar {
     id: scrollbar
 
     property int orientation: Qt.Vertical
@@ -40,7 +40,10 @@ Item {
                                                  Math.max(minimum, value)) - minimum)
                                        / span * thumbTravel
     property real dragStartValue: 0
-    property real dragBaseTranslation: 0
+    property real dragStartPosition: 0
+    property real dragLastPosition: 0
+    property bool dragThresholdReached: false
+    gestureActive: thumbMouse.pressed
 
     signal valueRequested(real value)
     signal wheelRequested(real pixelX, real pixelY, real angleX, real angleY, bool inverted)
@@ -56,11 +59,10 @@ Item {
     }
 
     function rebaseDrag() {
-        if (!thumbDrag || !thumbDrag.active)
+        if (!thumbMouse || !thumbMouse.pressed || !dragThresholdReached)
             return
         dragStartValue = clampedValue(value)
-        dragBaseTranslation = scrollbar.orientation === Qt.Vertical ? thumbDrag.translation.y
-                                                                    : thumbDrag.translation.x
+        dragStartPosition = dragLastPosition
     }
 
     function requestLine(direction) {
@@ -77,6 +79,10 @@ Item {
             requestLine(-1)
         } else if (event.key === (vertical ? Qt.Key_Down : Qt.Key_Right)) {
             requestLine(1)
+        } else if (event.key === (vertical ? Qt.Key_Left : Qt.Key_Up)
+                   || event.key === (vertical ? Qt.Key_Right : Qt.Key_Down)) {
+            // Cross-axis arrows: deliberate consumed no-ops, so a focused
+            // scrollbar never forwards unowned song-edit arrows.
         } else if (event.key === Qt.Key_PageUp) {
             requestPage(-1)
         } else if (event.key === Qt.Key_PageDown) {
@@ -109,14 +115,15 @@ Item {
     Accessible.onPreviousPageAction: scrollbar.requestPage(-1)
     Accessible.onNextPageAction: scrollbar.requestPage(1)
 
-    TapHandler {
-        gesturePolicy: TapHandler.ReleaseWithinBounds
+    // The track click surface sits behind the thumb's MouseArea. A thumb
+    // press therefore cannot fall through into a retained page-click grab if
+    // its native drag is canceled before the physical button release.
+    MouseArea {
+        anchors.fill: parent
+        enabled: scrollbar.scrollable
 
-        onTapped: (eventPoint) => {
-            if (!scrollbar.scrollable)
-                return
-            const position = scrollbar.orientation === Qt.Vertical
-                             ? eventPoint.position.y : eventPoint.position.x
+        onClicked: (mouse) => {
+            const position = scrollbar.orientation === Qt.Vertical ? mouse.y : mouse.x
             if (position >= scrollbar.thumbPos
                     && position < scrollbar.thumbPos + scrollbar.thumbLength)
                 return
@@ -160,37 +167,44 @@ Item {
         HoverHandler {
             id: thumbHover
         }
+    }
 
-        // target stays null: the model is authoritative, so dragging only maps
-        // gesture translation onto a requested value and the thumb position is
-        // a pure binding of value and geometry. A mid-gesture span or travel
-        // change rebases the gesture (onSpanChanged/onThumbTravelChanged), so
-        // deltas after the change map through the fresh geometry instead of
-        // reinterpreting the accumulated translation at a stale scale.
-        DragHandler {
-            id: thumbDrag
+    MouseArea {
+        id: thumbMouse
 
-            xAxis.enabled: scrollbar.orientation === Qt.Horizontal
-            yAxis.enabled: scrollbar.orientation === Qt.Vertical
-            target: null
-            enabled: scrollbar.scrollable && scrollbar.thumbTravel > 0
+        anchors.fill: parent
+        enabled: scrollbar.scrollable && scrollbar.thumbTravel > 0
+        hoverEnabled: false
+        z: 1
 
-            onActiveChanged: {
-                if (active) {
-                    scrollbar.dragStartValue = scrollbar.clampedValue(scrollbar.value)
-                    scrollbar.dragBaseTranslation = 0
-                }
+        onPressed: (mouse) => {
+            const position = scrollbar.orientation === Qt.Vertical ? mouse.y : mouse.x
+            if (position < scrollbar.thumbPos
+                    || position >= scrollbar.thumbPos + scrollbar.thumbLength) {
+                mouse.accepted = false
+                return
             }
-            onTranslationChanged: {
-                if (!active || scrollbar.thumbTravel <= 0)
+            scrollbar.dragStartValue = scrollbar.clampedValue(scrollbar.value)
+            scrollbar.dragStartPosition = position
+            scrollbar.dragLastPosition = position
+            scrollbar.dragThresholdReached = false
+        }
+        onPositionChanged: (mouse) => {
+            if (!pressed)
+                return
+            const position = scrollbar.orientation === Qt.Vertical ? mouse.y : mouse.x
+            scrollbar.dragLastPosition = position
+            if (!scrollbar.dragThresholdReached) {
+                if (Math.abs(position - scrollbar.dragStartPosition)
+                        < Qt.styleHints.startDragDistance)
                     return
-                const axisTranslation = (scrollbar.orientation === Qt.Vertical
-                                         ? translation.y : translation.x)
-                                        - scrollbar.dragBaseTranslation
-                scrollbar.requestScroll(scrollbar.dragStartValue
-                                        + axisTranslation / scrollbar.thumbTravel
-                                          * scrollbar.span)
+                scrollbar.dragThresholdReached = true
             }
+            if (scrollbar.thumbTravel <= 0)
+                return
+            scrollbar.requestScroll(scrollbar.dragStartValue
+                                    + (position - scrollbar.dragStartPosition)
+                                      / scrollbar.thumbTravel * scrollbar.span)
         }
     }
 }

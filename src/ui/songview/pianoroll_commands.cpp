@@ -7,7 +7,6 @@
 #include "ui/pitchbendeditor.hpp"
 #include "ui/songview.h"
 #include "ui/songview/clipmime.h"
-#include "ui/songview/detail.h"
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include <QApplication>
@@ -16,8 +15,6 @@
 #include <QObject>
 
 #include <algorithm>
-#include <climits>
-#include <cmath>
 #include <utility>
 #include <vector>
 
@@ -25,79 +22,15 @@ namespace lyt = ::layout;
 using Space = lyt::Space;
 
 namespace songview {
-using namespace songview::detail;
 using namespace songview::pianoroll_detail;
 
 bool PianoRoll::keyPress(const TimelineKeyInput &input)
 {
     if (!input.autoRepeat && keymap::Registry::isModifierKey(input.key))
         requestQuickUpdate(PianoRollQuickDirty::NoteText);
-    const auto &keys = keymap::Registry::instance();
-    const auto matches = [&keys, &input](const char *id) {
-        return keys.matches(input.key, input.modifiers, QLatin1String(id));
-    };
-    SongDocument *doc = m_sv->document();
-    if (doc && matches("roll.paste")) {
-        pasteAtEditCursor();
-        return true;
-    }
-    // Shared Copy dispatch runs first so time and note selections use the
-    // same command from every editor surface.
-    if (m_sv->handleEditKey(input))
-        return true;
-    if (doc && matches("roll.cut")) {
-        const std::vector<DocNote> notes = resolveSelection();
-        if (!notes.empty()) {
-            copyNotes(notes);
-            const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
-            doc->deleteNotes(notes);
-            m_sv->selectionModel().clearNoteSelection();
-        }
-        return true;
-    }
-    if (doc && matches("roll.select_all")) {
-        selectAllNotes();
-        return true;
-    }
-    if (doc && matches("roll.delete")) {
-        const std::vector<DocNote> notes = resolveSelection();
-        if (!notes.empty()) {
-            const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
-            doc->deleteNotes(notes);
-            m_sv->selectionModel().clearNoteSelection();
-        }
-        return true;
-    }
-    if (doc && matches("roll.pitch_bend")) {
-        if (!input.autoRepeat)
-            openPitchBendEditor();
-        return true;
-    }
-    if (doc) {
-        const int transpose = m_sv->transposeStepFor(input);
-        if (transpose != 0) {
-            if (m_sv->scaleFold() && (transpose == 1 || transpose == -1)) {
-                m_sv->foldTransposeSelection(transpose);
-            } else {
-                transposeSelection(transpose);
-            }
-            return true;
-        }
-    }
-    if (doc && (matches("roll.nudge_left") || matches("roll.nudge_right"))) {
-        nudgeSelection(matches("roll.nudge_right"));
-        return true;
-    }
-    if (input.key == Qt::Key_Escape) {
-        cancelVelocityInteraction();
-        m_leftDrag = LeftDrag::None;
-        m_rightDrag = RightDrag::None;
-        stopBandAuditions();
-        m_sv->selectionModel().clearNoteSelection();
-        m_sv->selectionModel().clearTimeSelection();
-        requestQuickUpdate(cDrawCommitDirty);
-        return true;
-    }
+    // Escape arbitration belongs to the shared command policy. The pitch-bend
+    // popup keeps its own local Escape behavior rather than being torn down
+    // through the parent band's pointer cancellation path.
     return false;
 }
 
@@ -106,13 +39,20 @@ bool PianoRoll::keyRelease(const TimelineKeyInput &input)
     if (!input.autoRepeat && keymap::Registry::isModifierKey(input.key)) {
         requestQuickUpdate(PianoRollQuickDirty::NoteText);
     }
-    // End the transpose audition when the shortcut's keys come up.
-    // Autorepeat releases are skipped so a held transpose key keeps sounding
-    // the moving pitch; the idle-state guard keeps a stray key release
-    // from cutting a mouse gesture's preview short.
-    if (!input.autoRepeat && !dragLive())
-        stopNoteAudition();
+    // The transpose audition ends through finishKeyboardAudition() on the
+    // shared release path, not here: the chord can come up while another
+    // band or the Quick root holds focus.
     return false;
+}
+
+bool PianoRoll::finishKeyboardAudition()
+{
+    // A release consumes only an actual keyboard-command audition; a pointer
+    // drag keeps its own preview, and stray releases propagate normally.
+    if (dragLive() || !m_auditioned)
+        return false;
+    stopNoteAudition();
+    return true;
 }
 
 void PianoRoll::openPitchBendEditor()
@@ -219,7 +159,16 @@ void PianoRoll::transposeSelection(int dKey)
     requestQuickUpdate(cNoteMutationDirty);
 }
 
-void PianoRoll::nudgeSelection(bool right)
+void PianoRoll::transposeSelectedNotes(int semitones)
+{
+    // Fold projection moves by scale degrees; plain transpose by semitones.
+    if (m_sv->scaleFold() && (semitones == 1 || semitones == -1))
+        m_sv->foldTransposeSelection(semitones);
+    else
+        transposeSelection(semitones);
+}
+
+void PianoRoll::nudgeSelectedNotes(bool right)
 {
     SongDocument *doc = m_sv->document();
     const std::vector<DocNote> notes = resolveSelection();
@@ -255,6 +204,29 @@ void PianoRoll::copySelectedNotes()
         copyNotes(notes);
 }
 
+void PianoRoll::cutSelectedNotes()
+{
+    const std::vector<DocNote> notes = resolveSelection();
+    SongDocument *doc = m_sv->document();
+    if (!doc || notes.empty())
+        return;
+    copyNotes(notes);
+    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+    doc->deleteNotes(notes);
+    m_sv->selectionModel().clearNoteSelection();
+}
+
+void PianoRoll::deleteSelectedNotes()
+{
+    const std::vector<DocNote> notes = resolveSelection();
+    SongDocument *doc = m_sv->document();
+    if (!doc || notes.empty())
+        return;
+    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+    doc->deleteNotes(notes);
+    m_sv->selectionModel().clearNoteSelection();
+}
+
 void PianoRoll::copyNotes(const std::vector<DocNote> &notes)
 {
     uint64_t base = UINT64_MAX;
@@ -269,14 +241,6 @@ void PianoRoll::copyNotes(const std::vector<DocNote> &notes)
     clip.tracks.push_back(std::move(ct));
     writeClipboard(clip, m_sv->timeline()->ticksPerBeat);
     m_sv->announce(SongView::tr("Copied %n note(s)", nullptr, int(notes.size())));
-}
-
-void PianoRoll::pasteAtEditCursor()
-{
-    // Every paste path (roll keys, drawer-canvas keys, the time-selection
-    // menu) shares the one entry on SongView, which owns the read, the
-    // span-0 vs span>0 dispatch, and the cursors-and-announce tail.
-    m_sv->pasteFromClipboard();
 }
 
 void PianoRoll::selectAllNotes()
@@ -351,13 +315,9 @@ void PianoRoll::handleNoteMenuChoice(NoteMenuChoice choice)
     case NoteMenuChoice::Copy:
         copyNotes(notes);
         break;
-    case NoteMenuChoice::Cut: {
-        copyNotes(notes);
-        const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
-        doc->deleteNotes(notes);
-        m_sv->selectionModel().clearNoteSelection();
+    case NoteMenuChoice::Cut:
+        cutSelectedNotes();
         break;
-    }
     case NoteMenuChoice::Velocity: {
         bool ok = false;
         const int velocity = QInputDialog::getInt(m_sv, SongView::tr("Note velocity"),
@@ -370,12 +330,9 @@ void PianoRoll::handleNoteMenuChoice(NoteMenuChoice choice)
         }
         break;
     }
-    case NoteMenuChoice::Delete: {
-        const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
-        doc->deleteNotes(notes);
-        m_sv->selectionModel().clearNoteSelection();
+    case NoteMenuChoice::Delete:
+        deleteSelectedNotes();
         break;
-    }
     case NoteMenuChoice::None:
         break;
     }

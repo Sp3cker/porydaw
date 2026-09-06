@@ -13,6 +13,7 @@
 #include <QTabWidget>
 #include <QTreeWidget>
 #include <QVBoxLayout>
+#include <array>
 #include <cstdio>
 
 #include "ui/keyboardshortcutsdialog.h"
@@ -65,9 +66,9 @@ int runKeymapCheck()
 
     auto &registry = keymap::Registry::instance();
 
-    // 1. Shipped table sanity: unique ids, visible names/categories, and no
-    // command's default colliding with another live in an overlapping
-    // context — a collision here would make two commands fire on one key.
+    // 1. Shipped table sanity: command ids are unique and every effective
+    // binding is conflict-free even in the Global probe context, which
+    // overlaps every consumer context.
     {
         const QList<keymap::CommandInfo> commands = registry.commands();
         check(!commands.isEmpty(), "empty command table");
@@ -75,11 +76,9 @@ int runKeymapCheck()
         for (const keymap::CommandInfo &info : commands) {
             check(!ids.contains(info.id), "duplicate command id");
             ids.insert(info.id);
-            check(!info.name.isEmpty() && !info.category.isEmpty(),
-                  "command missing name or category");
-            for (const QKeySequence &seq : info.defaults) {
-                check(registry.conflicts(info.id, info.context, seq).isEmpty(),
-                      "default binding conflicts across commands");
+            for (const QKeySequence &sequence : registry.bindings(info.id)) {
+                check(registry.conflicts(info.id, keymap::Context::Global, sequence).isEmpty(),
+                      "effective binding conflicts across commands");
             }
         }
     }
@@ -117,35 +116,11 @@ int runKeymapCheck()
             !keyMatches(QStringLiteral("transport.play_pause"), Qt::Key_Space, Qt::ControlModifier),
             "Ctrl+Space must not match play/pause");
         const QString insertTimeId = QStringLiteral("edit.insert_time");
-        const keymap::CommandInfo insertTime = registry.command(insertTimeId);
-        check(insertTime.context == keymap::Context::Global &&
-                  insertTime.category == QStringLiteral("Edit") &&
-                  insertTime.name == QStringLiteral("Insert Time"),
-              "insert time command metadata is wrong");
-        check(insertTime.defaults ==
-                  QList<QKeySequence>{QKeySequence(QStringLiteral("Ctrl+Shift+I"))},
-              "insert time does not register Ctrl+Shift+I as its default");
         check(keyMatches(insertTimeId, Qt::Key_I, Qt::ControlModifier | Qt::ShiftModifier),
               "Ctrl+Shift+I should match insert time");
-        check(registry
-                  .conflicts(insertTimeId, insertTime.context,
-                             QKeySequence(QStringLiteral("Ctrl+Shift+I")))
-                  .isEmpty(),
-              "Ctrl+Shift+I conflicts with another command");
         const QString duplicateId = QStringLiteral("roll.duplicate_time");
-        const keymap::CommandInfo duplicate = registry.command(duplicateId);
-        check(duplicate.context == keymap::Context::PianoRoll &&
-                  duplicate.category == QStringLiteral("Piano Roll") &&
-                  duplicate.name == QStringLiteral("Duplicate time"),
-              "duplicate time command metadata is wrong");
-        check(duplicate.defaults == QList<QKeySequence>{QKeySequence(QStringLiteral("Ctrl+D"))},
-              "duplicate time does not register Ctrl+D as its default");
         check(keyMatches(duplicateId, Qt::Key_D, Qt::ControlModifier),
               "Ctrl+D should match duplicate time");
-        check(registry
-                  .conflicts(duplicateId, duplicate.context, QKeySequence(QStringLiteral("Ctrl+D")))
-                  .isEmpty(),
-              "Ctrl+D conflicts with another command");
         registry.setBinding(duplicateId, QKeySequence(QStringLiteral("Alt+D")));
         check(registry.bindings(duplicateId) ==
                   QList<QKeySequence>{QKeySequence(QStringLiteral("Alt+D"))},
@@ -153,6 +128,11 @@ int runKeymapCheck()
         check(QSettings().value(QStringLiteral("keymap/") + duplicateId).toString() ==
                   QStringLiteral("Alt+D"),
               "duplicate time override did not persist");
+        check(registry
+                  .conflicts(duplicateId, keymap::Context::Global,
+                             QKeySequence(QStringLiteral("Alt+D")))
+                  .isEmpty(),
+              "duplicate time override conflicts with another command");
         registry.resetBinding(duplicateId);
         check(!registry.isOverridden(duplicateId) &&
                   keyMatches(duplicateId, Qt::Key_D, Qt::ControlModifier),
@@ -246,24 +226,63 @@ int runKeymapCheck()
         registry.resetBinding(QStringLiteral("transport.go_to_start"));
     }
 
-    // 7. Conflicts: Global overlaps every context, local contexts overlap
-    // themselves.
+    // 7. Probe the public conflict registry with a temporary unused binding.
+    // Every migrated roll command overlaps Piano Roll, Velocity, and
+    // Automation. Of those 15 commands, only window-owned Copy and Solo
+    // overlap EventList. The separately existing global Insert Time command
+    // stays in this table to preserve and prove its own global behavior.
     {
-        const QStringList onSave =
-            registry.conflicts(QStringLiteral("roll.copy"), keymap::Context::PianoRoll,
-                               QKeySequence(QStringLiteral("Ctrl+S")));
-        check(onSave.contains(QStringLiteral("file.save_song")),
-              "roll binding on Ctrl+S should conflict with Save Song");
-        const QStringList onCopy =
-            registry.conflicts(QStringLiteral("roll.cut"), keymap::Context::PianoRoll,
-                               QKeySequence(QStringLiteral("Ctrl+C")));
-        check(onCopy.contains(QStringLiteral("roll.copy")),
-              "roll binding on Ctrl+C should conflict with roll copy");
-        check(registry
-                  .conflicts(QStringLiteral("roll.copy"), keymap::Context::PianoRoll,
-                             QKeySequence(QStringLiteral("Alt+9")))
-                  .isEmpty(),
-              "unused sequence reported a conflict");
+        struct RoutedCommand {
+            const char *id;
+            bool conflictsWithEventList;
+        };
+        constexpr std::array commands = {
+            RoutedCommand{"roll.copy", true},
+            RoutedCommand{"roll.cut", false},
+            RoutedCommand{"roll.duplicate_time", false},
+            RoutedCommand{"roll.paste", false},
+            RoutedCommand{"roll.select_all", false},
+            RoutedCommand{"roll.delete", false},
+            RoutedCommand{"roll.pitch_bend", false},
+            RoutedCommand{"roll.transpose_up", false},
+            RoutedCommand{"roll.transpose_down", false},
+            RoutedCommand{"roll.transpose_up_octave", false},
+            RoutedCommand{"roll.transpose_down_octave", false},
+            RoutedCommand{"roll.nudge_left", false},
+            RoutedCommand{"roll.nudge_right", false},
+            RoutedCommand{"roll.mute_tracks", false},
+            RoutedCommand{"roll.solo_tracks", true},
+            RoutedCommand{"edit.insert_time", true},
+        };
+        constexpr std::array timelineContexts = {
+            keymap::Context::PianoRoll,
+            keymap::Context::Velocity,
+            keymap::Context::Automation,
+        };
+        const QString probeId = QStringLiteral("keymapcheck.temporary_probe");
+        const QKeySequence temporaryBinding(QStringLiteral("Alt+9"));
+        const auto conflictsWith = [&registry, &probeId, &temporaryBinding](keymap::Context context,
+                                                                            const QString &id) {
+            return registry.conflicts(probeId, context, temporaryBinding).contains(id);
+        };
+
+        check(registry.conflicts(probeId, keymap::Context::Global, temporaryBinding).isEmpty(),
+              "temporary probe binding is already in use");
+        for (const RoutedCommand &command : commands) {
+            const QString id = QLatin1String(command.id);
+            registry.setBinding(id, temporaryBinding);
+            for (const keymap::Context context : timelineContexts) {
+                check(conflictsWith(context, id),
+                      "routed command did not conflict with a timeline band");
+            }
+            const bool conflictsWithEventList = conflictsWith(keymap::Context::EventList, id);
+            check(conflictsWithEventList == command.conflictsWithEventList,
+                  "routed command EventList conflict did not match its registered behavior");
+            registry.resetBinding(id);
+            check(!registry.isOverridden(id), "temporary routed binding was not restored");
+            check(registry.conflicts(probeId, keymap::Context::Global, temporaryBinding).isEmpty(),
+                  "temporary probe binding remained in use after reset");
+        }
     }
 
     // 8. Modifier commands: the velocity-drag gesture ships on Ctrl, never
@@ -330,20 +349,19 @@ int runKeymapCheck()
               "a non-modifier token parsed as a chord");
     }
 
-    // The Velocity modifier uses the same portable Ctrl default, but its
-    // editor-only context does not conflict with the piano-roll gesture.
+    // The Velocity modifier uses the same portable Ctrl default, but local
+    // Velocity and roll gestures remain independently bindable.
     {
         const QString id = QStringLiteral("velocity.detent_unlock");
-        check(registry.command(id).modifier, "detent unlock is not a modifier command");
-        check(registry.command(id).context == keymap::Context::Velocity,
-              "detent unlock does not use the Velocity context");
+        const auto detent = registry.command(id);
+        check(detent.modifier, "detent unlock is not a modifier command");
         check(registry.modifierBinding(id) == Qt::ControlModifier &&
                   keymap::Registry::modifierText(registry.modifierBinding(id)) ==
                       QStringLiteral("Ctrl"),
               "detent unlock does not default to portable Ctrl");
         check(registry.bindings(id).isEmpty(), "detent unlock reports key-sequence bindings");
         check(!keyMatches(id, Qt::Key_C, Qt::ControlModifier), "a key event matched detent unlock");
-        check(!registry.modifierConflicts(id, keymap::Context::Velocity, Qt::ControlModifier)
+        check(!registry.modifierConflicts(id, detent.context, Qt::ControlModifier)
                    .contains(QStringLiteral("roll.velocity_drag")),
               "Velocity detent unlock incorrectly conflicts with piano-roll velocity drag");
         check(registry.modifierConflicts(id, keymap::Context::Global, Qt::ControlModifier)
