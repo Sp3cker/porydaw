@@ -264,17 +264,21 @@ export function deactivate() { porydaw.log("deactivated"); }
 )";
 
 // v2 (hot reload): keeps "hello", adds "hello2", drops the rest. Its
-// song.changed listener tries to open a transaction from inside the
-// notification (refused: the stack may be mid-undo) and records the error.
+// song.changed listener opens an (empty) transaction of its own from the
+// notification — allowed, since the event arrives after the change that
+// caused it has fully landed — and records the outcome.
 const char *kFixtureMainV2 = R"(
 export function activate(ctx) {
     porydaw.actions.register({ id: "hello", name: "Hello", context: "global",
         default: "Ctrl+Alt+Shift+F9", run: function () {} });
     porydaw.actions.register({ id: "hello2", name: "Hello Two", context: "global",
         run: function () {} });
-    porydaw.song.on("changed", function () {
-        try { porydaw.edit.transaction("Steal", function () {}); }
-        catch (e) { porydaw.storage.set("stealErr", String(e.message)); }
+    porydaw.song.on("changed", function (e) {
+        try {
+            porydaw.edit.transaction("Steal", function () {});
+            porydaw.storage.set("stealOk", (porydaw.storage.get("stealOk", 0) || 0) + 1);
+            porydaw.storage.set("stealOrigin", e.origin);
+        } catch (e) { porydaw.storage.set("stealErr", String(e.message)); }
     });
     // Phase 4: a dialog from an action — the harness disables the plugin
     // while it is up, which must wait for the call to unwind.
@@ -526,26 +530,158 @@ void runEditChecks(const Check &check, scripting::ScriptHost &host, SongSession 
         console->engine->globalObject().deleteProperty(QStringLiteral("harness"));
     }
 
-    // Re-entrancy: a song.changed listener editing back during the edit
-    // that woke it is refused (the transaction itself is fine), and one
-    // opening its own transaction from the notification is refused too.
-    run("var offRe = porydaw.song.on('changed', function () {"
-        "  porydaw.edit.addNotes(0, [{tick: 0, key: 70, len: 1, vel: 1}]); })");
+    // song.changed is delivered once the mutation's stack has unwound, so a
+    // listener may edit: its transaction lands as its own entry after the
+    // one that woke it. Another plugin (the fixture, v2) opening a
+    // transaction from the same event is fine too.
+    run("var offRe = porydaw.song.on('changed', function (e) {"
+        "  if (e.origin !== 'script') return;"
+        "  porydaw.edit.transaction('Listener', function () {"
+        "    porydaw.edit.addNotes(0, [{tick: 0, key: 70, len: 1, vel: 1}]); }); })");
     QSettings().remove(QStringLiteral("plugins/fixture/data/stealErr"));
+    QSettings().remove(QStringLiteral("plugins/fixture/data/stealOk"));
     run("porydaw.edit.transaction('Reenter', function () {"
         "  porydaw.edit.addNotes(0, [{tick: 0, key: 61, len: 24, vel: 100}]); })");
-    check(hasMessage(messages, QStringLiteral("console"), 2, QStringLiteral("re-entered")),
-          "a listener editing during an edit was not refused");
-    check(QSettings()
-              .value(QStringLiteral("plugins/fixture/data/stealErr"))
-              .toByteArray()
-              .contains("song.changed listener"),
-          "another plugin opening a transaction from song.changed was not refused");
-    check(run("porydaw.song.notes({track: 0, from: 0, to: 1}).some(function (n) { "
-              "return n.key === 70 && n.len === 1 && n.vel === 1; })") == QStringLiteral("false"),
-          "the refused listener edit landed anyway");
-    oneEntryThenUndo("Reenter", "the listener's refused edit disturbed the transaction");
+    check(undo.count() == index0 + 1 &&
+              run("porydaw.song.notes({track: 0, from: 0, to: 1}).some(function (n) { "
+                  "return n.key === 70; })") == QStringLiteral("false"),
+          "song.changed was delivered inside the transaction that caused it");
+    QApplication::processEvents();
+    check(undo.count() == index0 + 2 && undo.index() == index0 + 2 &&
+              undo.text(index0) == QLatin1String("Reenter") &&
+              undo.text(index0 + 1) == QLatin1String("Listener") &&
+              run("porydaw.song.notes({track: 0, from: 0, to: 1}).some(function (n) { "
+                  "return n.key === 70 && n.len === 1 && n.vel === 1; })") ==
+                  QStringLiteral("true"),
+          "a listener's transaction did not land as its own entry after the edit");
     run("offRe()");
+    // The listener's own edit fired song.changed again (origin "script"),
+    // which the listener ignored: exactly two entries, no third.
+    QApplication::processEvents();
+    check(undo.count() == index0 + 2, "a reactor ignoring origin 'script' still re-edited");
+    check(!QSettings().contains(QStringLiteral("plugins/fixture/data/stealErr")) &&
+              storedCounter(QStringLiteral("fixture"), QStringLiteral("stealOk")) >= 2 &&
+              QSettings()
+                  .value(QStringLiteral("plugins/fixture/data/stealOrigin"))
+                  .toByteArray()
+                  .contains("script"),
+          "another plugin's transaction from song.changed was refused");
+    undo.undo();
+    undo.undo();
+    check(doc.smf().write() == base && undo.index() == index0,
+          "undoing the listener's and the script's entries did not restore the SMF");
+    mark();
+    QApplication::processEvents();
+
+    // Coalescing and origins. One counter/origin recorder in the console.
+    run("var fires = 0, lastOrigin = null, lastRev = 0;"
+        "var offCo = porydaw.song.on('changed', function (e) {"
+        "  fires++; lastOrigin = e.origin; lastRev = e.revision; })");
+    const auto fired = [&](int count, const char *origin) {
+        QApplication::processEvents();
+        return run("fires") == QString::number(count) &&
+               run("lastOrigin") == QLatin1String(origin) &&
+               run("lastRev") == QString::number(doc.revision());
+    };
+    // Forty edits in one transaction: one event, origin "script".
+    run("porydaw.edit.transaction('Forty', function () {"
+        "  for (var i = 0; i < 40; i++)"
+        "    porydaw.edit.addNotes(0, [{tick: i * 96, key: 100, len: 12, vel: 100}]); })");
+    check(fired(1, "script"), "a forty-edit transaction did not coalesce into one 'script' event");
+    // Its undo (through the stack, as Edit → Undo does): one event, "history".
+    undo.undo();
+    check(fired(2, "history"), "undo did not report origin 'history'");
+    mark();
+    // A direct document edit outside any transaction: "user".
+    const int tempo0 = doc.startTempo();
+    doc.setStartTempo(tempo0 == 120 ? 121 : 120);
+    check(fired(3, "user"), "an interactive edit did not report origin 'user'");
+    // A user edit and a script edit in the same turn: "user" wins.
+    run("porydaw.edit.transaction('Mixed', function () {"
+        "  porydaw.edit.addNotes(0, [{tick: 0, key: 100, len: 12, vel: 100}]); })");
+    doc.setStartTempo(tempo0);
+    check(fired(4, "user"), "a turn mixing user and script edits did not report 'user'");
+    undo.undo();
+    undo.undo();
+    undo.undo();
+    check(fired(5, "history") && doc.smf().write() == base && undo.index() == index0,
+          "three undos did not coalesce into one 'history' event that restored the SMF");
+    mark();
+    // A rolled-back transaction: its pushes and their revert both happen
+    // while the transaction is open, so the one event reads "script".
+    run("porydaw.edit.transaction('Rollback', function () {"
+        "  porydaw.edit.addNotes(0, [{tick: 0, key: 100, len: 12, vel: 100}]);"
+        "  throw new Error('undo me'); })");
+    rolledBack("the rolled-back origin transaction left a trace");
+    check(fired(6, "script"), "a rolled-back transaction did not report one 'script' event");
+    // A song switch between the change and its delivery drops the event:
+    // song.activated covers it.
+    doc.setStartTempo(tempo0 == 120 ? 121 : 120);
+    host.setSession(nullptr);
+    host.setSession(&session);
+    QApplication::processEvents();
+    check(run("fires") == QStringLiteral("6"), "a pending song.changed survived a song switch");
+    undo.undo();
+    check(fired(7, "history") && doc.smf().write() == base, "the post-switch undo did not fire");
+    mark();
+    run("offCo()");
+
+    // Feedback loop: a reactor that edits on every event (its own included)
+    // is faulted past the streak cap; the entries it made undo clean.
+    messages.clear();
+    run("var offLoop = porydaw.song.on('changed', function (e) {"
+        "  porydaw.edit.transaction('Loop', function () {"
+        "    porydaw.edit.addNotes(0, [{tick: 0, key: 101, len: 1, vel: 1}]); }); })");
+    doc.setStartTempo(tempo0 == 120 ? 121 : 120);
+    check(waitFor(
+              [&] {
+                  return hasMessage(messages, QStringLiteral("console"), 2,
+                                    QStringLiteral("feedback loop"));
+              },
+              4000),
+          "a self-triggering song.changed reactor was not faulted");
+    check(waitFor([&] { return !console || !console->engine; }, 2000),
+          "the looping console engine was not torn down");
+    // The tempo edit, the reactor's answer to it (a "user" delivery, which
+    // does not count), then nine answers to its own "script" deliveries.
+    check(undo.count() == index0 + 11 && undo.index() == index0 + 11,
+          "the feedback loop did not stop at the streak cap");
+    while (undo.index() > index0)
+        undo.undo();
+    check(doc.smf().write() == base, "undoing the feedback loop's entries did not restore the SMF");
+    mark();
+    QApplication::processEvents();
+    check(run("porydaw.song.loaded") == QStringLiteral("true") && console &&
+              console->state == scripting::PluginState::Loaded,
+          "console did not come back after the feedback-loop fault");
+
+    // Bundled Scale Snap: the canonical reactor. Toggled on, a note the
+    // user paints outside C major (F#, key 102) snaps to G as its own entry.
+    if (haveExamples) {
+        const QString toggle = QStringLiteral("plugin.scale-snap.toggle");
+        check(host.runCommand(toggle), "scale-snap's toggle command is missing");
+        QApplication::processEvents();
+        doc.addNote(0, 7, 102, 12, 100);
+        QApplication::processEvents();
+        check(undo.count() == index0 + 2 && undo.index() == index0 + 2 &&
+                  undo.text(index0 + 1) == QLatin1String("Snap to scale") &&
+                  run("porydaw.song.notes({track: 0, from: 7, to: 8}).map(function (n) { "
+                      "return n.key; }).join()") == QStringLiteral("103"),
+              "scale-snap did not snap a freshly painted F# to G");
+        // Its own snap fired again (origin "script") and was ignored; an
+        // undo of the snap (origin "history") is left alone too.
+        undo.undo();
+        QApplication::processEvents();
+        check(undo.count() == index0 + 2 && undo.index() == index0 + 1 &&
+                  run("porydaw.song.notes({track: 0, from: 7, to: 8})[0].key") ==
+                      QStringLiteral("102"),
+              "scale-snap reacted to the undo of its own snap");
+        undo.undo();
+        check(doc.smf().write() == base, "undoing the snapped note did not restore the SMF");
+        mark();
+        check(host.runCommand(toggle), "scale-snap's toggle command did not run twice");
+        QApplication::processEvents();
+    }
 
     // Selection ops through the transaction; view/time-selection state.
     check(run("var sel = porydaw.song.notes({track: 0}).slice(0, 2);"
@@ -2720,6 +2856,7 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
         expectedIds.append(QStringLiteral("range-tools"));
         expectedIds.append(QStringLiteral("scale-guide"));
         expectedIds.append(QStringLiteral("project-tools"));
+        expectedIds.append(QStringLiteral("scale-snap"));
         expectedIds.sort();
         // The Phase 3 examples each open a dock in activate().
         for (const char *id : {"vu-meter", "spectrum", "dancer"}) {
@@ -2753,6 +2890,12 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
                       range->contextItems.size() == 3 && range->actions.size() == 1,
                   "range-tools did not load with three range-menu items and one command");
             exampleCommands += range ? int(range->actions.size()) : 0;
+            const scripting::Plugin *snap = host.plugin(QStringLiteral("scale-snap"));
+            check(snap && snap->state == scripting::PluginState::Loaded &&
+                      snap->actions.size() == 1 &&
+                      findChild<QMenu *>(QStringLiteral("plugin.scale-snap.menu")),
+                  "scale-snap did not load with its toggle command and menu");
+            exampleCommands += snap ? int(snap->actions.size()) : 0;
             const scripting::Plugin *scale = host.plugin(QStringLiteral("scale-guide"));
             check(scale && scale->state == scripting::PluginState::Loaded &&
                       scale->overlays.size() == 1 && scale->contextItems.size() == 1 &&
@@ -3007,17 +3150,28 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
         check(host.evalConsole(QStringLiteral("porydaw.cursor.grid(96).beatTicks")).toInt() > 0,
               "cursor.grid reports no beat ticks");
         host.evalConsole(QStringLiteral("porydaw.song.on('changed', function (e) { "
-                                        "porydaw.storage.set('rev', e.revision); })"));
+                                        "porydaw.storage.set('rev', e.revision); "
+                                        "porydaw.storage.set('origin', e.origin); })"));
         const uint64_t before = doc.revision();
         doc.setStartTempo(doc.startTempo() == 120 ? 121 : 120);
+        QApplication::processEvents(); // song.changed is delivered after the turn
         check(doc.revision() > before &&
                   storedCounter(QStringLiteral("console"), QStringLiteral("rev")) ==
-                      int(doc.revision()),
-              "song.changed listener did not see the new revision");
+                      int(doc.revision()) &&
+                  QSettings()
+                      .value(QStringLiteral("plugins/console/data/origin"))
+                      .toByteArray()
+                      .contains("user"),
+              "song.changed listener did not see the new revision as a 'user' change");
         doc.undoStack()->undo();
+        QApplication::processEvents();
         check(storedCounter(QStringLiteral("console"), QStringLiteral("rev")) ==
-                  int(doc.revision()),
-              "song.changed listener did not fire on undo");
+                      int(doc.revision()) &&
+                  QSettings()
+                      .value(QStringLiteral("plugins/console/data/origin"))
+                      .toByteArray()
+                      .contains("history"),
+              "song.changed listener did not fire on undo with origin 'history'");
         runEditChecks(check, host, *m_active, messages, haveExamples);
         // Transport through the bindings.
         if (m_audioOk) {

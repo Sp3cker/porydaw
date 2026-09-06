@@ -170,7 +170,8 @@ declare namespace porydaw {
         function notes(opts?: TickRange & { track?: number; selectedOnly?: boolean }): Note[];
         function note(id: number): Note | null;
         function lanePoints(track: number, cc: number, opts?: TickRange): LanePoint[];
-        function on(event: "changed", fn: (e: { revision: number }) => void): Unsubscribe;
+        /** Once per event-loop turn after the song changed; reactors that edit should return unless origin is "user". */
+        function on(event: "changed", fn: (e: { revision: number; origin: "user" | "script" | "history" }) => void): Unsubscribe;
         function on(event: "activated", fn: (e: { label: string } | null) => void): Unsubscribe;
         function off(event: string, fn: Function): void;
     }

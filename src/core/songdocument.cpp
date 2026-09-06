@@ -1073,8 +1073,11 @@ void SongDocument::moveNotes(const std::vector<DocNote> &notes, int64_t dTick, i
     // The command's push-time redo deferred publication (a merge can still
     // replace that provisional state, and an inverse merge just removed the
     // command while restoring live state). The stack has settled: publish
-    // the one mutation this call made.
+    // the one mutation this call made (still a fresh edit, not history).
+    const bool outer = m_pushing;
+    m_pushing = true;
     publishMutation(currentTrackRemap());
+    m_pushing = outer;
 }
 
 std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vector<DocNote> &notes,
@@ -2793,7 +2796,10 @@ void SongDocument::pushCommand(QUndoCommand *command)
         m_editGroupMacroOpen = true;
         m_undoStack.beginMacro(m_editGroupText);
     }
+    const bool outer = m_pushing;
+    m_pushing = true;
     m_undoStack.push(command);
+    m_pushing = outer;
 }
 
 void SongDocument::beginEditGroup(const QString &text)

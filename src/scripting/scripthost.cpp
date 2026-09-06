@@ -33,6 +33,13 @@ constexpr int kReloadDebounceMs = 250;
 constexpr int kRescanDebounceMs = 300;
 // 60 Hz is 16.6 ms; the main window's playhead timer uses the same figure.
 constexpr int kFrameIntervalMs = 17;
+// song.changed feedback loop: a listener that edits in reaction to more
+// than this many consecutive deliveries is faulted.
+constexpr int kChangedEditStreakCap = 8;
+// Bits of ScriptHost::m_pendingOrigins, in precedence order for the
+// delivered `origin`: a turn a user edit landed in is "user" even if
+// scripts or the undo stack also published.
+enum ChangeOrigin { OriginHistory = 1, OriginScript = 2, OriginUser = 4 };
 const QString kConsoleId = QStringLiteral("console");
 const QString kPluginsDirKey = QStringLiteral("pluginsDir");
 
@@ -146,6 +153,10 @@ ScriptHost::ScriptHost(QObject *parent) : QObject(parent), m_pluginsDir(resolveP
     m_frameTimer->setTimerType(Qt::PreciseTimer);
     m_frameTimer->setInterval(kFrameIntervalMs);
     connect(m_frameTimer, &QTimer::timeout, this, &ScriptHost::pumpFrame);
+    m_changedTimer = new QTimer(this);
+    m_changedTimer->setSingleShot(true);
+    m_changedTimer->setInterval(0);
+    connect(m_changedTimer, &QTimer::timeout, this, &ScriptHost::fireChanged);
 }
 
 ScriptHost::~ScriptHost()
@@ -233,6 +244,12 @@ void ScriptHost::scan()
         if (dirs.contains(QFileInfo(dir).fileName()) &&
             QFile::exists(dir + QStringLiteral("/plugin.json"))) {
             ++it;
+        } else if ((*it)->callDepth > 0) {
+            // A call has the engine on the stack (a listener's dialog, say):
+            // teardown defers to guarded()'s unwind, which then erases it.
+            teardown(**it);
+            (*it)->removePending = true;
+            ++it;
         } else {
             teardown(**it);
             unwatch(**it);
@@ -246,8 +263,10 @@ void ScriptHost::scan()
             continue;
         Plugin *plugin = nullptr;
         for (auto &p : m_plugins) {
-            if (p->dir == dir)
+            if (p->dir == dir) {
                 plugin = p.get();
+                plugin->removePending = false; // the folder is back
+            }
         }
         if (!plugin) {
             m_plugins.push_back(std::make_unique<Plugin>());
@@ -512,6 +531,7 @@ void ScriptHost::teardown(Plugin &plugin, bool callDeactivate)
     invalidateOverlays();
     plugin.images.clear();
     plugin.listeners.clear();
+    plugin.changedEditStreak = 0;
     auto &keys = keymap::Registry::instance();
     for (PluginAction &action : plugin.actions) {
         delete action.action.data();
@@ -551,6 +571,12 @@ QJSValue ScriptHost::guarded(Plugin &plugin, const std::function<QJSValue()> &fn
         teardown(plugin, deactivate && stateBefore == PluginState::Loaded);
         if (stateBefore == PluginState::Error)
             plugin.state = PluginState::Error;
+        if (plugin.removePending) {
+            // Deferred: the caller may still be walking m_plugins.
+            Plugin *p = &plugin;
+            QTimer::singleShot(0, this, [this, p] { erasePlugin(p); });
+            return QJSValue();
+        }
         if (plugin.reloadPending) {
             plugin.reloadPending = false;
             load(plugin);
@@ -604,18 +630,13 @@ void ScriptHost::fault(Plugin &plugin, const QString &why)
 bool ScriptHost::beginTransaction(Plugin &plugin, const QString &name, QString *error)
 {
     EditTransaction &tx = m_transaction;
-    if (m_inDocumentNotify) {
-        *error = tr("a transaction can't start inside a song.changed listener");
-        return false;
-    }
     if (tx.open()) {
         if (tx.owner != &plugin) {
             *error = tr("another plugin's transaction ('%1') is in progress").arg(tx.name);
             return false;
         }
         if (tx.inCall) {
-            *error = tr("porydaw.edit re-entered from a listener: a song.changed listener "
-                        "can't edit during the edit that woke it");
+            *error = tr("porydaw.edit re-entered while an edit call was in progress");
             return false;
         }
         if (tx.aborted) {
@@ -695,8 +716,7 @@ SongDocument *ScriptHost::transactionDocument(Plugin &plugin, QString *error)
         return nullptr;
     }
     if (tx.inCall) {
-        *error = tr("porydaw.edit re-entered from a listener: a song.changed listener can't "
-                    "edit during the edit that woke it");
+        *error = tr("porydaw.edit re-entered while an edit call was in progress");
         return nullptr;
     }
     if (!tx.aborted && !tx.doc)
@@ -782,24 +802,100 @@ void ScriptHost::setSession(SongSession *session)
     if (session == m_session && (!session || session->doc.label() == m_sessionLabel))
         return;
     disconnect(m_docConnection);
+    // A song.changed still pending for the old song is moot: song.activated
+    // tells the plugins everything changed.
+    m_pendingOrigins = 0;
+    m_changedTimer->stop();
     m_session = session;
     m_sessionLabel = session ? session->doc.label() : QString();
+    m_sessionGeneration++;
     m_lastBeat = -1; // the new song's first beat should fire
     if (session) {
-        m_docConnection = connect(&session->doc, &SongDocument::documentChanged, this, [this] {
-            if (!m_session)
-                return;
-            const bool outer = m_inDocumentNotify;
-            m_inDocumentNotify = true;
-            emitEventAll(
-                QStringLiteral("song.changed"),
-                QVariantMap{{QStringLiteral("revision"), double(m_session->doc.revision())}});
-            m_inDocumentNotify = outer;
-        });
+        m_docConnection = connect(&session->doc, &SongDocument::documentChanged, this,
+                                  &ScriptHost::onDocumentChanged);
     }
     emitEventAll(QStringLiteral("song.activated"),
                  session ? QVariant(QVariantMap{{QStringLiteral("label"), session->doc.label()}})
                          : QVariant());
+}
+
+void ScriptHost::onDocumentChanged()
+{
+    if (!m_session)
+        return;
+    // Every script mutation runs inside a transaction; every fresh user
+    // edit inside a push; what is left is the undo stack replaying history
+    // (Edit → Undo/Redo, or a transaction's rollback — which reads as
+    // "script", since its transaction is still open).
+    if (m_transaction.open())
+        m_pendingOrigins |= OriginScript;
+    else if (m_session->doc.pushing())
+        m_pendingOrigins |= OriginUser;
+    else
+        m_pendingOrigins |= OriginHistory;
+    // Inside the fan-out itself (a listener's dialog spun a nested loop in
+    // which the song changed) the pending bits are delivered by a fresh
+    // timer once the fan-out unwinds.
+    if (!m_inChangedFire && !m_changedTimer->isActive())
+        m_changedTimer->start();
+}
+
+void ScriptHost::fireChanged()
+{
+    if (m_inChangedFire)
+        return;
+    if (!m_pendingOrigins || !m_session || m_session->doc.label() != m_sessionLabel) {
+        m_pendingOrigins = 0;
+        return;
+    }
+    const int origins = m_pendingOrigins;
+    m_pendingOrigins = 0;
+    const char *origin = (origins & OriginUser)     ? "user"
+                         : (origins & OriginScript) ? "script"
+                                                    : "history";
+    // A listener's dialog can let the user open another song, into this
+    // tab or another: the rest of the fan-out is then about a song that
+    // is gone (song.activated told everyone), so it stops.
+    const uint64_t generation = m_sessionGeneration;
+    const auto sameSong = [&] { return m_session && m_sessionGeneration == generation; };
+    m_inChangedFire = true;
+    forEachPlugin([&](Plugin &plugin) {
+        if (!sameSong())
+            return;
+        SongDocument &doc = m_session->doc;
+        // The revision at delivery: an earlier listener in this fan-out
+        // may already have edited.
+        const QVariantMap payload{{QStringLiteral("revision"), double(doc.revision())},
+                                  {QStringLiteral("origin"), QLatin1String(origin)}};
+        const uint64_t serialBefore = m_transactionSerial;
+        const uint64_t revisionBefore = doc.revision();
+        emitEvent(plugin, QStringLiteral("song.changed"), plugin.engine->toScriptValue(payload));
+        if (!sameSong())
+            return;
+        // Feedback-loop detector: a listener that edits (a transaction of
+        // its own that moved the document) fires song.changed again. A loop
+        // can only feed itself through "script" deliveries, so only those
+        // count; a reactor answering a run of genuine user edits is fine.
+        // (Two plugins alternating, or a plugin editing from a frame
+        // listener instead, stay under this radar — a deliberate choice of
+        // a cheap detector over a complete one.)
+        const bool edited = m_transactionSerial != serialBefore && doc.revision() != revisionBefore;
+        if (!edited)
+            plugin.changedEditStreak = 0;
+        else if (!(origins & OriginUser))
+            plugin.changedEditStreak++;
+        if (plugin.changedEditStreak > kChangedEditStreakCap) {
+            plugin.changedEditStreak = 0;
+            fault(plugin, tr("song.changed feedback loop: the listener edited the song in "
+                             "reaction to %1 consecutive changes (its own edits included); "
+                             "reactors should ignore events whose origin is not \"user\". The "
+                             "plugin is disabled until it is reloaded")
+                              .arg(kChangedEditStreakCap + 1));
+        }
+    });
+    m_inChangedFire = false;
+    if (m_pendingOrigins && m_session)
+        m_changedTimer->start();
 }
 
 void ScriptHost::tick()
@@ -857,16 +953,11 @@ bool ScriptHost::frameTimerActive() const
 
 void ScriptHost::emitEventListening(const QString &event, const QVariant &payload)
 {
-    const auto send = [&](Plugin &plugin) {
-        if (plugin.state != PluginState::Loaded || !plugin.engine ||
-            plugin.listeners.value(event) <= 0)
+    forEachPlugin([&](Plugin &plugin) {
+        if (plugin.listeners.value(event) <= 0)
             return;
         emitEvent(plugin, event, plugin.engine->toScriptValue(payload));
-    };
-    for (auto &plugin : m_plugins)
-        send(*plugin);
-    if (m_console)
-        send(*m_console);
+    });
 }
 
 void ScriptHost::pumpFrame()
@@ -1072,10 +1163,6 @@ bool ScriptHost::dialogsAllowed(const Plugin &plugin, QString *error) const
         *error = tr("a dialog can't open inside a transaction (finish the edit first)");
         return false;
     }
-    if (m_inDocumentNotify) {
-        *error = tr("a dialog can't open from a song.changed listener");
-        return false;
-    }
     return true;
 }
 
@@ -1093,15 +1180,38 @@ void ScriptHost::emitEvent(Plugin &plugin, const QString &event, const QJSValue 
 
 void ScriptHost::emitEventAll(const QString &event, const QVariant &payload)
 {
-    const auto send = [&](Plugin &plugin) {
-        if (plugin.state != PluginState::Loaded || !plugin.engine)
+    forEachPlugin(
+        [&](Plugin &plugin) { emitEvent(plugin, event, plugin.engine->toScriptValue(payload)); });
+}
+
+void ScriptHost::forEachPlugin(const std::function<void(Plugin &)> &fn)
+{
+    QStringList ids;
+    for (const auto &plugin : m_plugins)
+        ids.append(plugin->manifest.id);
+    for (const QString &id : ids) {
+        Plugin *plugin = findPlugin(id);
+        if (plugin && plugin->state == PluginState::Loaded && plugin->engine)
+            fn(*plugin);
+    }
+    if (m_console && m_console->state == PluginState::Loaded && m_console->engine)
+        fn(*m_console);
+}
+
+void ScriptHost::erasePlugin(Plugin *plugin)
+{
+    for (auto it = m_plugins.begin(); it != m_plugins.end(); ++it) {
+        if (it->get() != plugin)
+            continue;
+        if (!plugin->removePending || plugin->callDepth > 0)
             return;
-        emitEvent(plugin, event, plugin.engine->toScriptValue(payload));
-    };
-    for (auto &plugin : m_plugins)
-        send(*plugin);
-    if (m_console)
-        send(*m_console);
+        teardown(*plugin, false);
+        unwatch(*plugin);
+        plugin->reloadTimer->deleteLater();
+        m_plugins.erase(it);
+        emit pluginsChanged();
+        return;
+    }
 }
 
 QVariantMap engineSettingsMap(const EngineSettings &settings)

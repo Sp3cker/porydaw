@@ -1,0 +1,8 @@
+{
+  "id": "scale-snap",
+  "name": "Scale Snap",
+  "version": "1.0.0",
+  "api": 1,
+  "main": "main.js",
+  "description": "A reactive plugin: while enabled, notes the user paints outside the chosen scale snap to the nearest scale degree. Shows the song.changed observer/reactor pattern."
+}

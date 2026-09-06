@@ -75,8 +75,8 @@ registration files still missing the song; `settings` is the song's
 `open(label, {newTab?})` → whether the song opened (in the active tab unless
 `newTab`; the song already active reports `true` and is left alone). Opening
 swaps the song under `porydaw.song` — `song.activated` fires with the new
-label even when the tab is reused — so it is refused inside a transaction,
-from a `song.changed` listener, and from a paint callback.
+label even when the tab is reused — so it is refused inside a transaction
+and from a paint callback.
 
 Project maintenance (the wizards' own steps without their dialogs; every
 write is byte-conservative for the lines it doesn't own):
@@ -92,8 +92,7 @@ write is byte-conservative for the lines it doesn't own):
 | `createVoicegroup(name, {copyFrom?})` | writes `sound/voicegroups/<name>.inc` (a copy of the voicegroup `copyFrom` names by arg, or the 128-slot dummy template) plus the hub's `.include` line; → the new arg. Per-file layouts only; an existing name throws |
 
 `registerSong`, `unregisterSong`, `reload` and `createVoicegroup` follow the
-dialog rules: not inside a transaction, a `song.changed` listener or a paint
-callback. Bundled example: `plugins/examples/project-tools` (a registration
+dialog rules: not inside a transaction or a paint callback. Bundled example: `plugins/examples/project-tools` (a registration
 audit).
 
 ### `porydaw.song` — the active tab, read-only
@@ -114,12 +113,27 @@ opaque numbers valid for the life of the document.
 | `note(id)` | one note or `null` |
 | `lanePoints(track, cc, {from?, to?})` | `[{tick, value}]`; `cc` is 0–127 or `song.CC.BEND` / `.TEMPO` / `.VOICE` |
 | `CC` | lane constants: the controllers porydaw draws as automation lanes, `MOD` (1), `VOLUME` (7), `PAN` (10), `BEND_RANGE` (20), `LFO_SPEED` (21), plus the pseudo-CCs for event-backed lanes, `BEND` (pitch bend), `TEMPO` (song-level, `track: -1`), `VOICE` (program changes). Anywhere a `cc` is accepted |
-| `on("changed", fn({revision}))` | after every edit, undo, redo |
+| `on("changed", fn({revision, origin}))` | the song changed: once per event-loop turn, after the change has fully landed (a transaction of forty edits, or the undo of one, is one event). `origin` is `"user"` (an interactive edit), `"script"` (an edit made inside any plugin's transaction, a rolled-back one included) or `"history"` (Edit → Undo/Redo); a turn that mixed several reports the highest of `"user"` > `"script"` > `"history"`. `revision` is the song's revision as the event reaches you (an earlier plugin's listener may already have edited). The listener runs like an action: it may read, open a transaction of its own and open dialogs. See below |
 | `on("activated", fn({label} \| null))` | the active tab changed |
 | `chunkCount`, `chunkTrack(chunk)`, `chunkEndTick(chunk)` | the file's MTrk chunks: the engine track a chunk is (-1 for the seq/tempo chunk and other trackless chunks) and its end-of-track tick |
 | `rawEvents(chunk, {from?, to?})` | the chunk's MIDI events as they are in the file: `[{index, tick, status, type, channel, data0, data1, metaType, blob, text}]`. `type` is `noteOn`, `noteOff` (a note-on with velocity 0 too), `cc`, `program`, `bend`, `aftertouch`, `pressure`, `meta` or `sysex`; `blob` (bytes) and `text` (text metas 1–7) only for metas/sysex. `index` is the position in the chunk right now — it shifts with every edit |
 
 Every `on()` returns a function that unsubscribes; `off(event, fn)` also works.
+
+`song.changed` listeners fall into two kinds. **Observers** (a panel showing a note count,
+a cached analysis) refresh on every event and ignore `origin`. **Reactors**
+edit the song in response to what the user did — snapping freshly painted
+notes to a scale, say — and should start with
+`if (e.origin !== "user") return;`: reacting to `"script"` loops on your
+own edits (the host faults a plugin that edits in reaction to more than 8
+consecutive non-`"user"` events), and reacting to `"history"` destroys the
+redo entry the user just made. A reactor's edit is its own undo entry, after the
+user's. Two timing notes: the event is delivered from a zero-length timer,
+so a `transport` `tick` listener can read the new document before
+`song.changed` arrives — cache derived data by `song.revision`, not by
+counting events; and an action that commits a transaction and then opens a
+dialog has its `song.changed` delivered while the dialog is up, so
+listeners may edit before the action's later reads.
 
 ### `porydaw.selection`
 
@@ -170,9 +184,9 @@ var ids = porydaw.edit.transaction("Insert chord", function () {
   calls. If anything else edits the song while it is open (a nested event
   loop, another plugin), the next edit call throws and the transaction
   rolls back at commit.
-- A `song.changed` listener can't edit during the edit that woke it, and
-  can't open a transaction of its own (the undo stack may be mid-undo);
-  both throw. Only one plugin can have a transaction open at a time.
+- Only one plugin can have a transaction open at a time. A `song.changed`
+  listener may open one: the event arrives after the change that caused
+  it has fully landed, never mid-undo.
 - Calling any edit outside a transaction throws. `edit.active` tells.
 - If the watchdog stops a script mid-transaction, the host rolls it back.
 - A transaction that never pushes an edit (nothing to do, or it threw
@@ -395,9 +409,9 @@ from inside a paint is fine; the roll repaints once more afterwards. Example: `p
 
 #### Dialogs
 
-All modal, all refused inside a transaction, from `song.changed` listeners
-and from paint callbacks (their nested event loop could edit the document
-under you, or repaint the surface being painted); the watchdog is paused
+All modal, all refused inside a transaction and from paint callbacks (their
+nested event loop could edit the document under you, or repaint the surface
+being painted); the watchdog is paused
 while one is open, and a reload or disable that arrives meanwhile waits for
 the dialog to close. `opts.title` defaults to the plugin
 name.

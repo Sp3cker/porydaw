@@ -198,7 +198,15 @@ struct Plugin {
     // for the call to unwind: its frames still use the engine.
     int callDepth = 0;
     bool teardownPending = false;
+    // Consecutive song.changed deliveries in which this plugin's listener
+    // edited the song (each edit fires song.changed again): a reactor that
+    // keeps editing in reaction to its own edits is a feedback loop, and
+    // the host faults it past kChangedEditStreakCap.
+    int changedEditStreak = 0;
     bool pendingDeactivate = false;
+    // scan() found the plugin's folder gone while a call had its engine on
+    // the stack: guarded() drops it from the host when the call unwinds.
+    bool removePending = false;
     bool reloadPending = false;
 };
 
@@ -210,9 +218,11 @@ struct Plugin {
 // to be exactly what its own last edit produced; a foreign mutation in
 // between (an undo from a nested event loop, say) aborts it, and an
 // aborted transaction refuses every further edit and rolls back on
-// commit. inCall is the re-entrancy guard: an edit fires song.changed
-// synchronously, so a listener that edits back would see a half-updated
-// revision — it is refused instead.
+// commit. inCall is a belt-and-braces re-entrancy guard: nothing spins an
+// event loop inside a document call today (song.changed is delivered
+// afterwards, dialogs are refused inside a transaction), but an edit call
+// that somehow re-entered porydaw.edit before returning would see a
+// half-updated revision — it is refused.
 struct EditTransaction {
     Plugin *owner = nullptr;
     QPointer<SongDocument> doc;
@@ -419,9 +429,19 @@ class ScriptHost : public QObject
     static bool enabledSetting(const QString &id);
     bool anyListener(const QString &event) const;
     void updateFrameTimer();
+    // song.changed: documentChanged arms a zero-length timer (coalescing a
+    // whole transaction, or a macro undo, into one event) and fireChanged
+    // delivers it once the mutation's stack has fully unwound.
+    void onDocumentChanged();
+    void fireChanged();
     // Emits to every plugin with a listener for `event` (payload converted
     // per engine, so the conversion is skipped for the rest).
     void emitEventListening(const QString &event, const QVariant &payload);
+    // Calls fn for every plugin (the console last). A call into a plugin
+    // can spin a nested event loop in which scan() adds or removes
+    // plugins, so this walks a snapshot of ids and re-resolves each.
+    void forEachPlugin(const std::function<void(Plugin &)> &fn);
+    void erasePlugin(Plugin *plugin);
 
     HostBindings m_bindings;
     QString m_pluginsDir;
@@ -433,6 +453,7 @@ class ScriptHost : public QObject
     QTimer *m_rescanTimer = nullptr;
     SongSession *m_session = nullptr;
     QString m_sessionLabel; // the song the session held when set (in-place swaps re-activate)
+    uint64_t m_sessionGeneration = 0; // bumped by every setSession that took effect
     QMetaObject::Connection m_docConnection;
     int m_paintDepth = 0;
     int m_lastTransport = -1;
@@ -442,10 +463,13 @@ class ScriptHost : public QObject
     bool m_inFrame = false;  // pumpFrame re-entrancy (a listener that pumps)
     EditTransaction m_transaction;
     uint64_t m_transactionSerial = 0;
-    // Inside the song.changed fan-out: a transaction begun there would push
-    // onto the undo stack while it is mid-undo/redo (the notification comes
-    // from inside QUndoStack::undo), so beginTransaction refuses.
-    bool m_inDocumentNotify = false;
+    // Pending song.changed: the origins (ChangeOrigin bits) of every
+    // documentChanged since the last delivery, and the timer that delivers
+    // them. m_inChangedFire guards the delivery against its own timer
+    // firing from a listener's nested event loop.
+    QTimer *m_changedTimer = nullptr;
+    int m_pendingOrigins = 0;
+    bool m_inChangedFire = false;
 };
 
 } // namespace scripting

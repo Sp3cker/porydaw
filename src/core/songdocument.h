@@ -422,6 +422,11 @@ class SongDocument : public QObject
     void beginEditGroup(const QString &text);
     bool endEditGroup(bool discard = false);
     int editGroupDepth() const { return m_editGroupDepth; }
+    // True while a fresh command is being pushed (its redo runs, or
+    // moveNotes publishes right after the push). A documentChanged that
+    // arrives with this clear came from the undo stack replaying history:
+    // an undo/redo, or an edit group's revert.
+    bool pushing() const { return m_pushing; }
     // The open edit group has pushed at least once: the QUndoStack macro
     // is open, sitting at undoStack()->command(index()) — applied but not
     // yet counted by index().
@@ -609,6 +614,7 @@ class SongDocument : public QObject
     QUndoStack m_undoStack;
     uint64_t m_revision = 0;
     int m_editGroupDepth = 0;
+    bool m_pushing = false;
     bool m_editGroupDiscard = false;
     bool m_editGroupMacroOpen = false;
     QString m_editGroupText;
