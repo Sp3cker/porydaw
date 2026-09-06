@@ -331,21 +331,13 @@ declare namespace porydaw {
     }
 
     // ---- actions ----
-    interface ActionContext {
-        song: typeof song;
-        selection: typeof selection;
-        cursor: typeof cursor;
-        transport: typeof transport;
-        edit: typeof edit;
-        view: typeof view;
-    }
     namespace actions {
         function register(spec: {
             id: string;
             name: string;
             context?: "global" | "roll" | "velocity" | "range";
             default?: string;
-            run: (api: ActionContext) => void;
+            run: () => void;
         }): string;
         function unregister(fullId: string): void;
     }
@@ -445,7 +437,7 @@ declare namespace porydaw {
     }
     interface MenuItemSpec {
         label: string;
-        run?: (api: ActionContext, checked: boolean) => void;
+        run?: (checked: boolean) => void;
         /** A full command id from actions.register: shows its binding, and runs it without `run`. */
         action?: string;
         checkable?: boolean;

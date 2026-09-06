@@ -9,18 +9,18 @@ export function activate(ctx) {
         name: "Select notes of the same pitch",
         context: "roll",
         default: "Ctrl+Shift+A",
-        run: function (api) {
-            var selected = api.selection.notes();
+        run: function () {
+            var selected = porydaw.selection.notes();
             if (!selected.length) {
                 porydaw.ui.statusMessage("Select a note first.");
                 return;
             }
             var keys = {};
             selected.forEach(function (n) { keys[n.key] = true; });
-            var matches = api.song.notes({ track: api.selection.track }).filter(function (n) {
+            var matches = porydaw.song.notes({ track: porydaw.selection.track }).filter(function (n) {
                 return keys[n.key];
             });
-            api.selection.setNotes(matches);
+            porydaw.selection.setNotes(matches);
             porydaw.ui.statusMessage("Selected " + matches.length + " notes across " +
                 Object.keys(keys).length + " pitch(es).");
         }

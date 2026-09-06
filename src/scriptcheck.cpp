@@ -1251,8 +1251,8 @@ void runReachChecks(const Check &check, scripting::ScriptHost &host, MainWindow 
         return;
     check(run(QStringLiteral(
               "var M = porydaw.ui.menu(); var MI = M.addItem({label: 'Hi there', tooltip: "
-              "'tip', run: function (api) { porydaw.storage.set('menuran', "
-              "porydaw.storage.get('menuran', 0) + 1 + (api.song.loaded ? 0 : 100)); }}); "
+              "'tip', run: function () { porydaw.storage.set('menuran', "
+              "porydaw.storage.get('menuran', 0) + 1 + (porydaw.song.loaded ? 0 : 100)); }}); "
               "MI.label")) == QStringLiteral("Hi there"),
           "ui.menu().addItem did not return a handle with the label");
     QPointer<QMenu> consoleMenu = window.findChild<QMenu *>(QStringLiteral("plugin.console.menu"));
@@ -1266,7 +1266,7 @@ void runReachChecks(const Check &check, scripting::ScriptHost &host, MainWindow 
     if (hi)
         hi->trigger();
     check(storedCounter(QStringLiteral("console"), QStringLiteral("menuran")) == 1,
-          "triggering a menu item did not run its callback with the action context");
+          "triggering a menu item did not run its callback");
     // Linked to a registered command: shows the binding, follows rebinds,
     // runs the command.
     check(run(QStringLiteral("var AID = porydaw.actions.register({id: 'mi', name: 'Menu Item "
@@ -1290,8 +1290,9 @@ void runReachChecks(const Check &check, scripting::ScriptHost &host, MainWindow 
           "triggering a linked item did not run the command");
     // Checkable items, submenus, separators, remove, enabled, clear.
     check(run(QStringLiteral("var CI = M.addItem({label: 'Check', checkable: true, checked: "
-                             "true, run: function (api, on) { porydaw.storage.set('checkon', on ? "
-                             "1 : 0); }}); var SUB = M.addMenu('Sub'); SUB.addItem({label: 'Deep', "
+                             "true, run: function (on) { porydaw.storage.set('checkon', on === "
+                             "true ? 1 : on === false ? 2 : 0); }}); var SUB = M.addMenu('Sub'); "
+                             "SUB.addItem({label: 'Deep', "
                              "run: function () { porydaw.storage.set('deep', 1); }}); "
                              "M.addSeparator(); CI.checked")) == QStringLiteral("true"),
           "checkable item / submenu / separator setup failed");
@@ -1299,12 +1300,14 @@ void runReachChecks(const Check &check, scripting::ScriptHost &host, MainWindow 
     check(checkA && checkA->isCheckable() && checkA->isChecked(), "checkable item not checkable");
     if (checkA)
         checkA->trigger();
-    check(storedCounter(QStringLiteral("console"), QStringLiteral("checkon")) == 0 &&
+    // 2 = the callback received an explicit false (0 would mean it got
+    // nothing at all).
+    check(storedCounter(QStringLiteral("console"), QStringLiteral("checkon")) == 2 &&
               run(QStringLiteral("CI.checked")) == QStringLiteral("false"),
           "toggling a checkable item did not pass the new state");
     run(QStringLiteral("CI.checked = true"));
     check(checkA && checkA->isChecked() &&
-              storedCounter(QStringLiteral("console"), QStringLiteral("checkon")) == 0,
+              storedCounter(QStringLiteral("console"), QStringLiteral("checkon")) == 2,
           "setting checked from the script fired the callback or did not apply");
     QMenu *sub = nullptr;
     for (QAction *a : consoleMenu->actions()) {
@@ -1348,7 +1351,7 @@ void runReachChecks(const Check &check, scripting::ScriptHost &host, MainWindow 
     }
     // The menu is rebuilt for the checks below.
     run(QStringLiteral("var CI = M.addItem({label: 'Check', checkable: true, checked: true, run: "
-                       "function (api, on) { porydaw.storage.set('checkon', on ? 1 : 0); }}); "
+                       "function (on) { porydaw.storage.set('checkon', on ? 1 : 0); }}); "
                        "var SUB = M.addMenu('Sub'); SUB.addItem({label: 'Deep', run: function () { "
                        "porydaw.storage.set('deep', 1); }}); M.addSeparator();"));
     QAction *checkA2 = actionNamed(consoleMenu->actions(), QStringLiteral("Check"));
@@ -1378,10 +1381,10 @@ void runReachChecks(const Check &check, scripting::ScriptHost &host, MainWindow 
     // --- context menus ---
     check(run(QStringLiteral(
               "var RC = porydaw.ui.contextMenu('range'); RC.addItem({label: 'Range plug', run: "
-              "function (api) { porydaw.storage.set('ctxrange', api.selection.time().end); "
+              "function () { porydaw.storage.set('ctxrange', porydaw.selection.time().end); "
               "}}); var NC = porydaw.ui.contextMenu('notes'); NC.addItem({label: 'Note plug', "
-              "run: function (api) { porydaw.storage.set('ctxnote', "
-              "api.selection.notes()[0].key); }}); 'ok'")) == QStringLiteral("ok"),
+              "run: function () { porydaw.storage.set('ctxnote', "
+              "porydaw.selection.notes()[0].key); }}); 'ok'")) == QStringLiteral("ok"),
           "contextMenu items could not be added");
     view.selectTrack(0);
     run(QStringLiteral("porydaw.selection.setTime({start: 0, end: 96})"));

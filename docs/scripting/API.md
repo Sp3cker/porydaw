@@ -42,7 +42,7 @@ export function activate(ctx) {           // ctx = {id, name, version, dir}
     porydaw.actions.register({
         id: "select", name: "Select notes of the same pitch",
         context: "roll", default: "Ctrl+Shift+A",
-        run(api) { /* api = {song, selection, cursor, transport, edit, view} */ }
+        run() { /* use porydaw.selection, porydaw.edit, … */ }
     });
 }
 export function deactivate() {}
@@ -356,7 +356,7 @@ Both give a menu handle:
 
 | Call | |
 |---|---|
-| `addItem({label, run(api, checked), action?, checkable?, checked?, enabled?, tooltip?})` | → item handle. `run` gets the same `api` object an action's `run` does. `action` links the item to a command from `actions.register` (its id): the item shows the command's current binding as a hint and, without `run`, triggers it |
+| `addItem({label, run(checked), action?, checkable?, checked?, enabled?, tooltip?})` | → item handle. `run` receives the item's checked state (checkable items). `action` links the item to a command from `actions.register` (its id): the item shows the command's current binding as a hint and, without `run`, triggers it |
 | `addSeparator()`, `addMenu(label)` → nested menu | menu-bar menus only |
 | `clear()` | removes every entry; handles stay alive but dead |
 | `label`, `enabled`, `visible` | read/write |

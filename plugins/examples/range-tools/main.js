@@ -10,20 +10,20 @@ function rangeScope(sel) {
     return { tracks: tracks };
 }
 
-function duplicateAfter(api) {
-    var sel = api.selection.time();
+function duplicateAfter() {
+    var sel = porydaw.selection.time();
     if (!sel) return;
     var span = sel.end - sel.start;
-    var n = api.edit.transaction("Duplicate range after itself", function () {
-        return api.edit.duplicateRange(sel.start, sel.end, rangeScope(sel), span);
+    var n = porydaw.edit.transaction("Duplicate range after itself", function () {
+        return porydaw.edit.duplicateRange(sel.start, sel.end, rangeScope(sel), span);
     });
-    api.selection.setTime({ start: sel.start + span, end: sel.end + span, scope: sel.scope,
+    porydaw.selection.setTime({ start: sel.start + span, end: sel.end + span, scope: sel.scope,
                             lanes: sel.lanes });
     porydaw.ui.statusMessage(n ? "Duplicated " + n + " events" : "Nothing to duplicate");
 }
 
-function echo(api) {
-    var sel = api.selection.time();
+function echo() {
+    var sel = porydaw.selection.time();
     if (!sel) return;
     var answers = porydaw.ui.dialog.form({
         title: "Echo range",
@@ -37,20 +37,20 @@ function echo(api) {
     });
     if (!answers) return;
     var span = sel.end - sel.start;
-    var gap = Math.round(answers.gap * api.song.ticksPerBeat);
+    var gap = Math.round(answers.gap * porydaw.song.ticksPerBeat);
     var scope = rangeScope(sel);
-    api.edit.transaction("Echo range", function () {
+    porydaw.edit.transaction("Echo range", function () {
         var vel = 1;
         for (var i = 1; i <= answers.copies; i++) {
             var offset = i * (span + gap);
-            api.edit.duplicateRange(sel.start, sel.end, scope, offset);
+            porydaw.edit.duplicateRange(sel.start, sel.end, scope, offset);
             vel *= answers.decay / 100;
             if (scope.tracks) {
                 scope.tracks.forEach(function (t) {
-                    var notes = api.song.notes({ track: t, from: sel.start + offset,
+                    var notes = porydaw.song.notes({ track: t, from: sel.start + offset,
                                                  to: sel.end + offset });
                     var scale = vel;
-                    api.edit.setVelocity(notes, function (n) {
+                    porydaw.edit.setVelocity(notes, function (n) {
                         return Math.max(1, Math.round(n.vel * scale));
                     });
                 });
@@ -59,17 +59,17 @@ function echo(api) {
     });
 }
 
-function reverse(api) {
-    var sel = api.selection.time();
+function reverse() {
+    var sel = porydaw.selection.time();
     if (!sel || sel.scope !== "tracks") return;
     var scope = rangeScope(sel);
-    api.edit.transaction("Reverse notes in range", function () {
+    porydaw.edit.transaction("Reverse notes in range", function () {
         scope.tracks.forEach(function (t) {
-            var notes = api.song.notes({ track: t, from: sel.start, to: sel.end });
+            var notes = porydaw.song.notes({ track: t, from: sel.start, to: sel.end });
             notes.forEach(function (n) {
                 var mirrored = sel.start + (sel.end - (n.tick + n.len));
                 if (mirrored < sel.start) mirrored = sel.start;
-                api.edit.moveNotes(n, mirrored - n.tick, 0);
+                porydaw.edit.moveNotes(n, mirrored - n.tick, 0);
             });
         });
     });

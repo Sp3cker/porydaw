@@ -84,14 +84,8 @@
         return out;
     }
 
-    // What an action's run(), a menu item's run() and a context-menu
-    // item's run() receive.
-    function actionContext() {
-        return { song: api.song, selection: api.selection, cursor: api.cursor,
-                 transport: api.transport, edit: api.edit, view: api.view };
-    }
-    // A menu handle (C++ MenuHandle) wrapped so items take {label, run(api,
-    // checked), action, checkable, checked, enabled, tooltip} specs.
+    // A menu handle (C++ MenuHandle) wrapped so items take {label,
+    // run(checked), action, checkable, checked, enabled, tooltip} specs.
     function wrapMenu(handle) {
         if (!handle) return handle;
         return {
@@ -110,7 +104,7 @@
                 });
                 if (opts.label !== undefined) opts.label = String(opts.label);
                 var run = typeof spec.run === "function"
-                    ? function (checked) { spec.run(actionContext(), checked); }
+                    ? function (checked) { spec.run(checked); }
                     : undefined;
                 return handle.addItem(opts, run);
             },
@@ -518,7 +512,7 @@
     function runAction(fullId) {
         var fn = runners[fullId];
         if (!fn) return false;
-        fn(actionContext());
+        fn();
         return true;
     }
 

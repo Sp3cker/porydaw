@@ -12,8 +12,8 @@ function sorted(notes) {
     });
 }
 
-function needSelection(api) {
-    var notes = api.selection.notes();
+function needSelection() {
+    var notes = porydaw.selection.notes();
     if (!notes.length)
         porydaw.ui.statusMessage("Select some notes first.");
     return notes;
@@ -22,81 +22,81 @@ function needSelection(api) {
 // Legato: every selected note is stretched (or trimmed) so it ends where
 // the next selected note starts. Notes that begin on the same tick keep
 // the same end, so chords stay chords. The last note is left alone.
-function legato(api) {
-    var notes = sorted(needSelection(api));
+function legato() {
+    var notes = sorted(needSelection());
     if (notes.length < 2) return;
     // Group notes by start tick; each group ends at the next group's start.
     var starts = [];
     notes.forEach(function (n) {
         if (!starts.length || starts[starts.length - 1] !== n.tick) starts.push(n.tick);
     });
-    var changed = api.edit.transaction("Legato", function () {
+    var changed = porydaw.edit.transaction("Legato", function () {
         var count = 0;
         notes.forEach(function (n) {
             var i = starts.indexOf(n.tick);
             if (i + 1 >= starts.length) return;
             var target = starts[i + 1] - n.tick;
             if (target > 0 && target !== n.len) {
-                api.edit.resizeNotes(n, target - n.len);
+                porydaw.edit.resizeNotes(n, target - n.len);
                 count++;
             }
         });
         return count;
     });
-    api.selection.setNotes(notes);
+    porydaw.selection.setNotes(notes);
     porydaw.ui.statusMessage("Legato: adjusted " + changed + " note(s).");
 }
 
 // Insert Chord: a major triad (root, +4, +7) at the edit cursor, one grid
 // cell long, on the selected track. The root is the selected note's key
 // when one note is selected, else middle C.
-function insertChord(api) {
-    if (!api.song.loaded) return;
-    var track = api.selection.track;
+function insertChord() {
+    if (!porydaw.song.loaded) return;
+    var track = porydaw.selection.track;
     if (track < 0) {
         porydaw.ui.statusMessage("Select a track first.");
         return;
     }
-    var selected = api.selection.notes();
+    var selected = porydaw.selection.notes();
     var root = selected.length === 1 ? selected[0].key : 60;
-    var tick = api.cursor.snap(api.cursor.tick, "down");
-    var grid = api.cursor.grid(tick);
+    var tick = porydaw.cursor.snap(porydaw.cursor.tick, "down");
+    var grid = porydaw.cursor.grid(tick);
     var len = grid.beatTicks;
     var vel = selected.length === 1 ? selected[0].vel : 100;
-    var ids = api.edit.transaction("Insert chord", function () {
-        return api.edit.addNotes(track, [0, 4, 7].map(function (interval) {
+    var ids = porydaw.edit.transaction("Insert chord", function () {
+        return porydaw.edit.addNotes(track, [0, 4, 7].map(function (interval) {
             return { tick: tick, key: root + interval, len: len, vel: vel };
         }));
     });
-    api.selection.setNotes(ids);
+    porydaw.selection.setNotes(ids);
     porydaw.ui.statusMessage("Inserted a triad on " + root + " at tick " + tick + ".");
 }
 
 // Humanize: nudges every selected velocity by a random amount within
 // ±(12% of 127). The seed comes from the plugin's storage so a re-run
 // gives a different pattern.
-function humanize(api) {
-    var notes = needSelection(api);
+function humanize() {
+    var notes = needSelection();
     if (!notes.length) return;
     var spread = 15;
-    api.edit.transaction("Humanize velocities", function () {
-        api.edit.setVelocity(notes, function (n) {
+    porydaw.edit.transaction("Humanize velocities", function () {
+        porydaw.edit.setVelocity(notes, function (n) {
             var delta = Math.round((Math.random() * 2 - 1) * spread);
             return Math.max(1, Math.min(127, n.vel + delta));
         });
     });
-    api.selection.setNotes(notes);
+    porydaw.selection.setNotes(notes);
     porydaw.ui.statusMessage("Humanized " + notes.length + " velocities (±" + spread + ").");
 }
 
 // Strum: notes that start together are staggered from low to high by a
 // fraction of the grid cell, and each keeps its original end so the chord
 // still releases together.
-function strum(api) {
-    var notes = sorted(needSelection(api));
+function strum() {
+    var notes = sorted(needSelection());
     if (notes.length < 2) return;
-    var step = Math.max(1, Math.floor(api.cursor.grid(notes[0].tick).beatTicks / 8));
-    var moved = api.edit.transaction("Strum", function () {
+    var step = Math.max(1, Math.floor(porydaw.cursor.grid(notes[0].tick).beatTicks / 8));
+    var moved = porydaw.edit.transaction("Strum", function () {
         var count = 0;
         var i = 0;
         while (i < notes.length) {
@@ -106,14 +106,14 @@ function strum(api) {
             chord.forEach(function (n, k) {
                 if (k === 0 || n.len <= k * step) return;
                 // Shorten from the left: the note-on moves right, the end stays.
-                api.edit.resizeNotes(n, -k * step, { fromLeft: true });
+                porydaw.edit.resizeNotes(n, -k * step, { fromLeft: true });
                 count++;
             });
             i = j;
         }
         return count;
     });
-    api.selection.setNotes(api.song.notes({ track: api.selection.track }).filter(function (n) {
+    porydaw.selection.setNotes(porydaw.song.notes({ track: porydaw.selection.track }).filter(function (n) {
         return notes.some(function (s) { return s.id === n.id; });
     }));
     porydaw.ui.statusMessage("Strummed " + moved + " note(s) by " + step + " ticks per voice.");
@@ -121,21 +121,21 @@ function strum(api) {
 
 // Quantize: every selected note's start snaps to the nearest grid line
 // (the roll's current grid). Lengths are preserved.
-function quantize(api) {
-    var notes = needSelection(api);
+function quantize() {
+    var notes = needSelection();
     if (!notes.length) return;
-    var moved = api.edit.transaction("Quantize to grid", function () {
+    var moved = porydaw.edit.transaction("Quantize to grid", function () {
         var count = 0;
         notes.forEach(function (n) {
-            var target = api.cursor.snap(n.tick, "nearest");
+            var target = porydaw.cursor.snap(n.tick, "nearest");
             if (target !== n.tick) {
-                api.edit.moveNotes(n, target - n.tick, 0);
+                porydaw.edit.moveNotes(n, target - n.tick, 0);
                 count++;
             }
         });
         return count;
     });
-    api.selection.setNotes(notes);
+    porydaw.selection.setNotes(notes);
     porydaw.ui.statusMessage("Quantized " + moved + " of " + notes.length + " note(s).");
 }
 

@@ -69,8 +69,8 @@ function chooseScale() {
     overlay.repaint();
 }
 
-function rootFromNote(api) {
-    var notes = api.selection.notes();
+function rootFromNote() {
+    var notes = porydaw.selection.notes();
     if (!notes.length) return;
     state.root = notes[0].key % 12;
     save();
@@ -83,7 +83,7 @@ export function activate() {
     var menu = porydaw.ui.menu();
     menu.addItem({ label: "Choose scale…", run: chooseScale });
     showItem = menu.addItem({ label: "Show scale guide", checkable: true, checked: true,
-                              run: function (api, checked) {
+                              run: function (checked) {
                                   state.show = checked;
                                   save();
                                   overlay.repaint();
