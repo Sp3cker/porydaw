@@ -3,13 +3,14 @@
 #include "ui/songview/timeruler.h"
 
 #include "core/songdocument.h"
-#include "ui/keymap.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/grid.h"
+#include "ui/songview/quick/quickmenumodel.h"
+#include "ui/songview/quick/quickpopupsession.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 #include <QApplication>
-#include <QMenu>
 
 #include <algorithm>
 #include <cstdint>
@@ -17,6 +18,22 @@
 
 namespace songview {
 using namespace songview::detail;
+
+namespace {
+
+QQuickWindow *quickWindowFor(SongView &owner)
+{
+    const TimelineQuickView *const quick = owner.quickView();
+    return quick ? quick->quickWindow() : nullptr;
+}
+
+QuickPopupSession *quickSessionFor(SongView &owner)
+{
+    const TimelineQuickView *const quick = owner.quickView();
+    return quick ? quick->popupSession() : nullptr;
+}
+
+} // namespace
 
 bool TimeRuler::pointerPress(const TimelinePointerInput &input)
 {
@@ -143,7 +160,9 @@ bool TimeRuler::pointerRelease(const TimelinePointerInput &input)
 
     if (input.button == Qt::RightButton && m_rightPress) {
         m_rightPress = false;
-        showRulerMenu(m_selAnchor, input.globalPosition.toPoint());
+        if (QQuickWindow *const window = quickWindowFor(m_owner))
+            showRulerMenu(m_selAnchor,
+                          window->mapFromGlobal(m_inputHost->mapToGlobal(input.position)));
         return true;
     }
     if (input.button == Qt::LeftButton && m_leftPress) {
@@ -235,97 +254,184 @@ bool TimeRuler::wheel(const TimelineWheelInput &input)
     return true;
 }
 
-void TimeRuler::inputCancelled(TimelineInputCancelReason)
+void TimeRuler::inputCancelled(TimelineInputCancelReason reason)
 {
-    closePopups();
+    // Gesture state is always cancelled below. The popup teardown is the
+    // only conditional part: opening this ruler's shared menu hands window
+    // focus to the menu panel (FocusLost on the band item), and the
+    // release's mouse ungrab lands right after the open (PointerUngrabbed).
+    // Exactly those two self-inflicted cancellations must not tear the
+    // menu back down while this ruler's menu host owns the open session —
+    // every other reason (Hidden, WindowDeactivated), and any session
+    // owned by a foreign popup, keeps the full teardown.
+    QuickPopupSession *const session = quickSessionFor(m_owner);
+    const bool menuOwnsSession =
+        m_menuHost && session && session->isOpen() && session->owns(m_menuHost);
+    const bool menuTookTheInput =
+        menuOwnsSession && (reason == TimelineInputCancelReason::FocusLost ||
+                            reason == TimelineInputCancelReason::PointerUngrabbed);
+    if (!menuTookTheInput)
+        closePopups();
     cancelInteraction();
 }
 
-void TimeRuler::showRulerMenu(uint64_t clickTick, const QPoint &globalPos)
+void TimeRuler::showRulerMenu(uint64_t clickTick, const QPointF &scenePos)
 {
     SongDocument *doc = m_owner.document();
     const MidiTimeline *timeline = m_owner.timeline();
-    if (!doc || !timeline)
+    QuickPopupSession *const session = quickSessionFor(m_owner);
+    if (!doc || !timeline || !session)
         return;
-    bool openTimeSig = false;
-    uint64_t timeSigPromptTick = 0;
-    int timeSigPromptNumerator = 0;
-    int timeSigPromptDenominatorPow2 = 0;
-    {
-        QMenu menu(&m_owner);
-        QAction *setStart = menu.addAction(SongView::tr("Set loop start here"));
-        QAction *setEnd = menu.addAction(SongView::tr("Set loop end here"));
-        QAction *remove = menu.addAction(SongView::tr("Remove loop markers"));
-        remove->setEnabled(timeline->loopStartTick != UINT64_MAX ||
-                           timeline->loopEndTick != UINT64_MAX);
-        QAction *loopFromSelection = nullptr;
-        QAction *insertBlank = nullptr;
-        QAction *duplicate = nullptr;
-        QAction *removeContents = nullptr;
-        QAction *clearSelection = nullptr;
-        const EditorSelectionModel::TimeSelection selection =
-            m_owner.selectionModel().timeSelection();
-        if (selection.active()) {
-            menu.addSeparator();
-            loopFromSelection = menu.addAction(SongView::tr("Set loop to selection"));
-            insertBlank = menu.addAction(SongView::tr("Insert blank time"));
-            duplicate = menu.addAction(SongView::tr("Duplicate time"));
-            duplicate->setShortcut(keymap::Registry::instance()
-                                       .bindings(QStringLiteral("roll.duplicate_time"))
-                                       .value(0));
-            removeContents = menu.addAction(SongView::tr("Remove contents (shift left)"));
-            clearSelection = menu.addAction(SongView::tr("Clear time selection"));
-        }
-        menu.addSeparator();
-        uint64_t sigTick = clickTick;
-        int sigNum, sigDen;
-        bool sigImplicit = true;
-        const bool onChip =
-            hitTimeSigChip(m_rightPressPos, &sigTick, &sigNum, &sigDen, &sigImplicit);
-        if (!onChip)
-            sigAtTick(clickTick, &sigNum, &sigDen);
-        QAction *editSig = menu.addAction(onChip ? SongView::tr("Edit time signature…")
-                                                 : SongView::tr("Set time signature here…"));
-        editSig->setObjectName(QStringLiteral("timeSignatureEditAction"));
-        QAction *removeSig = menu.addAction(SongView::tr("Remove time signature"));
-        removeSig->setEnabled(onChip && !sigImplicit);
-        m_openMenu = &menu;
-        QAction *chosen = menu.exec(globalPos);
-        if (m_openMenu.data() == &menu)
-            m_openMenu.clear();
-        if (chosen == setStart) {
-            doc->setLoopTick(false, int64_t(clickTick));
-        } else if (chosen == setEnd) {
-            doc->setLoopTick(true, int64_t(clickTick));
-        } else if (chosen == remove) {
-            // Two commands; undo restores them one at a time.
-            if (timeline->loopStartTick != UINT64_MAX)
-                doc->setLoopTick(false, -1);
-            if (m_owner.timeline()->loopEndTick != UINT64_MAX)
-                doc->setLoopTick(true, -1);
-        } else if (chosen && chosen == loopFromSelection) {
-            // Same two-command shape as "Remove loop markers".
-            doc->setLoopTick(false, int64_t(selection.startTick));
-            doc->setLoopTick(true, int64_t(selection.endTick));
-        } else if (chosen && chosen == insertBlank) {
-            m_owner.insertBlankTime();
-        } else if (chosen && chosen == duplicate) {
-            m_owner.duplicateTimeSelection();
-        } else if (chosen && chosen == removeContents) {
-            m_owner.removeTimeSelectionContents();
-        } else if (chosen && chosen == clearSelection) {
-            m_owner.selectionModel().clearTimeSelection();
-        } else if (chosen == editSig) {
-            openTimeSig = true;
-            timeSigPromptTick = sigTick;
-            timeSigPromptNumerator = sigNum;
-            timeSigPromptDenominatorPow2 = sigDen;
-        } else if (chosen == removeSig) {
-            doc->deleteTimeSig(sigTick);
-        }
+
+    // Chip hit snapshotted at open from the press position: it decides the
+    // Edit/Remove time-signature rows and the prompt's initial values.
+    uint64_t sigTick = clickTick;
+    int sigNum, sigDen;
+    bool sigImplicit = true;
+    const bool onChip = hitTimeSigChip(m_rightPressPos, &sigTick, &sigNum, &sigDen, &sigImplicit);
+    if (!onChip)
+        sigAtTick(clickTick, &sigNum, &sigDen);
+
+    // Same rows, order, labels, and enablement as the former native menu;
+    // ids carry the RulerMenuAction values the handler consumes.
+    std::vector<QuickMenuItem> rows;
+    rows.reserve(12);
+    const auto addRow = [&rows](RulerMenuAction action, QString text, bool enabled = true) {
+        QuickMenuItem item;
+        item.id = static_cast<int>(action);
+        item.text = std::move(text);
+        item.enabled = enabled;
+        rows.push_back(std::move(item));
+    };
+    addRow(RulerMenuAction::SetLoopStart, SongView::tr("Set loop start here"));
+    addRow(RulerMenuAction::SetLoopEnd, SongView::tr("Set loop end here"));
+    addRow(RulerMenuAction::RemoveLoop, SongView::tr("Remove loop markers"),
+           timeline->loopStartTick != UINT64_MAX || timeline->loopEndTick != UINT64_MAX);
+    const EditorSelectionModel::TimeSelection selection = m_owner.selectionModel().timeSelection();
+    if (selection.active()) {
+        rows.push_back(QuickMenuItem::makeSeparator());
+        addRow(RulerMenuAction::LoopFromSelection, SongView::tr("Set loop to selection"));
+        addRow(RulerMenuAction::InsertBlank, SongView::tr("Insert blank time"));
+        addRow(RulerMenuAction::Duplicate, SongView::tr("Duplicate time"));
+        rows.back().shortcutText = contextShortcutText(QStringLiteral("roll.duplicate_time"));
+        addRow(RulerMenuAction::RemoveContents, SongView::tr("Remove contents (shift left)"));
+        addRow(RulerMenuAction::ClearSelection, SongView::tr("Clear time selection"));
     }
-    if (openTimeSig)
-        openTimeSigPrompt(timeSigPromptTick, timeSigPromptNumerator, timeSigPromptDenominatorPow2);
+    rows.push_back(QuickMenuItem::makeSeparator());
+    addRow(RulerMenuAction::EditTimeSig, onChip ? SongView::tr("Edit time signature…")
+                                                : SongView::tr("Set time signature here…"));
+    addRow(RulerMenuAction::RemoveTimeSig, SongView::tr("Remove time signature"),
+           onChip && !sigImplicit);
+
+    ensureMenuAdapters();
+    m_menuHost->setPopupSession(session);
+    m_rulerMenuModel->setItems(std::move(rows));
+
+    // Snapshot the guarded open-time target first, but publish it only
+    // after open()'s implicit cancellation of a displaced session has
+    // completed: no callback can observe a half-published target, and an
+    // open failure publishes nothing. The snapshot travels through the
+    // session close until activation consumes it; cancellation clears it.
+    PendingRulerMenu target;
+    target.document = doc;
+    target.documentRevision = doc->revision();
+    target.clickTick = clickTick;
+    target.sigTick = sigTick;
+    target.sigNumerator = sigNum;
+    target.sigDenominatorPow2 = sigDen;
+    target.selection = selection;
+    target.trackScope = m_owner.selectionModel().storedTrackScope();
+
+    m_menuHost->open(m_rulerMenuModel, scenePos);
+    if (!m_menuHost->isOpen())
+        return;
+    m_pendingRulerMenu = std::move(target);
+}
+
+// Selection-scoped rows may only act on the selection the user saw when the
+// menu opened; a live selection that drifted or went inactive turns every
+// range command into a stale action.
+bool TimeRuler::menuSelectionStale(const PendingRulerMenu &target) const
+{
+    const EditorSelectionModel::TimeSelection &current = m_owner.selectionModel().timeSelection();
+    return !current.active() || current.startTick != target.selection.startTick ||
+           current.endTick != target.selection.endTick || current.scope != target.selection.scope ||
+           current.tempo != target.selection.tempo || current.lanes != target.selection.lanes ||
+           (current.scope == EditorSelectionModel::TimeSelection::Tracks &&
+            m_owner.selectionModel().storedTrackScope() != target.trackScope);
+}
+
+void TimeRuler::handleRulerMenuAction(int id)
+{
+    if (!m_pendingRulerMenu)
+        return;
+    // Consume before any command: the dispatch may open the time-signature
+    // form as a new session, and a target must never fire twice.
+    const PendingRulerMenu target = std::move(*m_pendingRulerMenu);
+    m_pendingRulerMenu.reset();
+    SongDocument *const doc = m_owner.document();
+    if (!doc || doc != target.document || doc->revision() != target.documentRevision)
+        return;
+    switch (static_cast<RulerMenuAction>(id)) {
+    case RulerMenuAction::SetLoopStart:
+        doc->setLoopTick(false, int64_t(target.clickTick));
+        break;
+    case RulerMenuAction::SetLoopEnd:
+        doc->setLoopTick(true, int64_t(target.clickTick));
+        break;
+    case RulerMenuAction::RemoveLoop:
+        // Two commands; undo restores them one at a time.
+        if (m_owner.timeline()->loopStartTick != UINT64_MAX)
+            doc->setLoopTick(false, -1);
+        if (m_owner.timeline()->loopEndTick != UINT64_MAX)
+            doc->setLoopTick(true, -1);
+        break;
+    case RulerMenuAction::LoopFromSelection:
+        if (menuSelectionStale(target))
+            return;
+        // Same two-command shape as "Remove loop markers".
+        doc->setLoopTick(false, int64_t(target.selection.startTick));
+        doc->setLoopTick(true, int64_t(target.selection.endTick));
+        break;
+    case RulerMenuAction::InsertBlank:
+        if (menuSelectionStale(target))
+            return;
+        m_owner.insertBlankTime();
+        break;
+    case RulerMenuAction::Duplicate:
+        if (menuSelectionStale(target))
+            return;
+        m_owner.duplicateTimeSelection();
+        break;
+    case RulerMenuAction::RemoveContents:
+        if (menuSelectionStale(target))
+            return;
+        m_owner.removeTimeSelectionContents();
+        break;
+    case RulerMenuAction::ClearSelection:
+        if (menuSelectionStale(target))
+            return;
+        m_owner.selectionModel().clearTimeSelection();
+        break;
+    case RulerMenuAction::EditTimeSig:
+        // The host closed the menu session before emitting activated(), so
+        // the already-landed prompt bridge opens into a settled canvas and
+        // owns focus until the user dismisses it.
+        openTimeSigPrompt(target.sigTick, target.sigNumerator, target.sigDenominatorPow2);
+        break;
+    case RulerMenuAction::RemoveTimeSig:
+        doc->deleteTimeSig(target.sigTick);
+        break;
+    default:
+        return; // Unknown id: no command ran, nothing to focus.
+    }
+    // Terminal focus return, after the command so announce and camera
+    // follow observe the focused surface — skipped when the dispatch itself
+    // opened a new shared popup session (the time-signature form owns focus
+    // until the user dismisses it).
+    if (QuickPopupSession *const session = quickSessionFor(m_owner); session && session->isOpen())
+        return;
+    restoreRulerFocus();
 }
 
 } // namespace songview

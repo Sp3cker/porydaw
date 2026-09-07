@@ -14,7 +14,6 @@
 #include "ui/typography.h"
 
 #include <QFontMetrics>
-#include <QMenu>
 #include <QUrl>
 #include <QVariant>
 
@@ -149,6 +148,38 @@ void TimeRuler::openFeelMenu(QPointF position)
     openGridMenu(position, false);
 }
 
+// Persistent typed-menu adapters over the shared canvas popup session;
+// created on first open and reused. The grid-control menus and the ruler
+// loop menu may each be first, so the host, all three row models, and
+// their activation/cancellation wiring are built together here.
+void TimeRuler::ensureMenuAdapters()
+{
+    if (m_menuHost)
+        return;
+    m_menuHost = new QuickMenuHost(this);
+    m_rulerMenuModel = new QuickMenuModel(this);
+    m_divisionModel = new QuickMenuModel(this);
+    m_feelModel = new QuickMenuModel(this);
+    // activated() arrives after the host closed the session, so the
+    // setters run against a settled view; the completion signal then
+    // hands focus back to the invoking control (notifyGridMenuChoice).
+    connect(m_divisionModel, &QuickMenuModel::activated, this, [this](int id) {
+        m_owner.setGridMinDenom(id);
+        notifyGridMenuChoice(true);
+    });
+    connect(m_feelModel, &QuickMenuModel::activated, this, [this](int id) {
+        m_owner.setGridFeel(static_cast<GridFeel>(id));
+        notifyGridMenuChoice(false);
+    });
+    // The host closes the session before emitting activated(), so the
+    // guarded open-time target survives until handleRulerMenuAction
+    // consumes it; every dismissal (Escape, outside press, foreign
+    // replacement, teardown) clears it.
+    connect(m_rulerMenuModel, &QuickMenuModel::activated, this,
+            [this](int id) { handleRulerMenuAction(id); });
+    connect(m_menuHost, &QuickMenuHost::cancelled, this, [this] { m_pendingRulerMenu.reset(); });
+}
+
 void TimeRuler::openGridMenu(QPointF position, bool division)
 {
     if (!m_inputHost || !m_gridControlsEnabled)
@@ -159,23 +190,9 @@ void TimeRuler::openGridMenu(QPointF position, bool division)
         return;
 
     // Persistent typed-menu adapters over the shared canvas popup session,
-    // created on first open and reused; the session binds once per view.
-    if (!m_menuHost) {
-        m_menuHost = new QuickMenuHost(this);
-        m_divisionModel = new QuickMenuModel(this);
-        m_feelModel = new QuickMenuModel(this);
-        // activated() arrives after the host closed the session, so the
-        // setters run against a settled view; the completion signal then
-        // hands focus back to the invoking control (notifyGridMenuChoice).
-        connect(m_divisionModel, &QuickMenuModel::activated, this, [this](int id) {
-            m_owner.setGridMinDenom(id);
-            notifyGridMenuChoice(true);
-        });
-        connect(m_feelModel, &QuickMenuModel::activated, this, [this](int id) {
-            m_owner.setGridFeel(static_cast<GridFeel>(id));
-            notifyGridMenuChoice(false);
-        });
-    }
+    // created on first open — from either menu entry — and reused; the
+    // session binds once per open.
+    ensureMenuAdapters();
     m_menuHost->setPopupSession(session);
 
     // Rows rebuilt at open so the check marks mirror the live grid; ids
@@ -329,7 +346,7 @@ void TimeRuler::acceptTimeSigPrompt(int numerator, int denominatorPow2)
          denominatorPow2 != pending.initialDenominatorPow2)) {
         document->setTimeSig(pending.tick, numerator, denominatorPow2);
     }
-    restoreTimeSigPromptFocus();
+    restoreRulerFocus();
 }
 
 void TimeRuler::cancelTimeSigPrompt()
@@ -366,10 +383,10 @@ void TimeRuler::clearTimeSigPrompt(bool restoreFocus)
     if (hadPending)
         emit timeSigPromptChanged();
     if (restoreFocus)
-        restoreTimeSigPromptFocus();
+        restoreRulerFocus();
 }
 
-void TimeRuler::restoreTimeSigPromptFocus()
+void TimeRuler::restoreRulerFocus()
 {
     m_owner.focusTimelineBand(TimelineBand::Ruler, Qt::OtherFocusReason);
 }
@@ -377,9 +394,9 @@ void TimeRuler::restoreTimeSigPromptFocus()
 void TimeRuler::closePopups()
 {
     // Readiness loss, document swap, and host teardown cancel the typed
-    // grid menu only when this ruler's host owns the session — and without
-    // handing focus back to a view that may be going away. The legacy ruler
-    // context menu keeps its native close.
+    // menus (grid controls, ruler loop menu) only when this ruler's host
+    // owns the session — and without handing focus back to a view that may
+    // be going away.
     if (m_menuHost) {
         if (TimelineQuickView *const quick = m_owner.quickView()) {
             if (QuickPopupSession *const session = quick->popupSession();
@@ -387,8 +404,6 @@ void TimeRuler::closePopups()
                 session->cancel(/*restoreFocus=*/false);
         }
     }
-    if (m_openMenu)
-        m_openMenu->close();
 }
 
 TimeRuler::TimeRuler(SongView &owner)

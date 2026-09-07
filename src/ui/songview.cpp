@@ -663,8 +663,10 @@ void SongView::prepareForSongReplacement()
         m_roll->cancelVelocityPromptWithoutFocus();
         m_roll->cancelPitchBendPopup();
     }
-    if (m_ruler)
+    if (m_ruler) {
         m_ruler->cancelTimeSigPromptWithoutFocus();
+        m_ruler->closePopups();
+    }
     cancelInsertTimePromptWithoutFocus();
     cancelTimeSelectionMenuWithoutFocus();
     cancelActiveInteractions();

@@ -14,20 +14,17 @@
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/timeaxis.h"
+#include "ui/songview/timeruler.h"
 
-#include <QAction>
-#include <QApplication>
 #include <QByteArray>
 #include <QCoreApplication>
 #include <QKeySequence>
-#include <QMenu>
 #include <QPoint>
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QSize>
 #include <QString>
-#include <QTimer>
 #include <QtGlobal>
 #include <QtTest>
 
@@ -106,13 +103,15 @@ QPoint windowPoint(const songview::TimelineInputItem &item, QPoint local)
 TimeSignaturePromptSession openedPrompt(SongView &view)
 {
     TimeSignaturePromptSession session;
-    songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
-    if (!popup || !popup->isOpen() || !popup->window()) {
+    const QPointer<songview::QuickPopupSession> live(quick_popup::popupSession(view));
+    // The prompt may replace a just-closed shared menu, so wait for the
+    // canvas session to publish before demanding form readiness.
+    if (!QTest::qWaitFor([&live] { return live && live->isOpen() && live->window(); })) {
         session.diagnostic = QStringLiteral("the ruler action did not open a canvas prompt");
         return session;
     }
-    session.popup = popup;
-    session.window = popup->window();
+    session.popup = live;
+    session.window = live->window();
     if (checks::async_wait::waitUntil([] { return true; },
                                       [&session] {
                                           return quick_popup::inputHasActiveFocus(
@@ -150,13 +149,11 @@ TimeSignaturePromptSession openFromChip(TimeSignatureFixture &fixture)
     return openedPrompt(fixture.view());
 }
 
-struct RulerMenuSelection {
-    bool foundAction = false;
-    bool closedMenu = false;
-};
-
-TimeSignaturePromptSession openFromRulerMenu(TimeSignatureFixture &fixture, bool onChip,
-                                             RulerMenuSelection &selection)
+// Right-clicks the live ruler and activates the shared menu's time-signature
+// row for real: the press opens the typed ruler menu, the click lands on the
+// rendered EditTimeSig row, and the readiness wait covers the prompt that is
+// published only after the menu session closed.
+TimeSignaturePromptSession openFromRulerMenu(TimeSignatureFixture &fixture, bool onChip)
 {
     TimeSignaturePromptSession session;
     QQuickWindow *const window = fixture.rulerInput->window();
@@ -169,32 +166,27 @@ TimeSignaturePromptSession openFromRulerMenu(TimeSignatureFixture &fixture, bool
         return session;
     }
 
-    QTimer::singleShot(10, [&selection] {
-        auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget());
-        if (!menu)
-            menu = qobject_cast<QMenu *>(QApplication::activeModalWidget());
-        if (!menu)
-            return;
-
-        QAction *action = nullptr;
-        for (QAction *const candidate : menu->actions()) {
-            if (candidate->objectName() == QLatin1String("timeSignatureEditAction")) {
-                action = candidate;
-                break;
-            }
-        }
-        if (!action)
-            return;
-        selection.foundAction = true;
-        QTest::mouseClick(menu, Qt::LeftButton, Qt::NoModifier,
-                          menu->actionGeometry(action).center());
-        selection.closedMenu = !menu->isVisible();
-    });
-
     const QPoint point = windowPoint(*fixture.rulerInput, local);
     QTest::mousePress(window, Qt::RightButton, Qt::NoModifier, point);
     QTest::mouseRelease(window, Qt::RightButton, Qt::NoModifier, point);
-    QCoreApplication::processEvents();
+    const QPointer<songview::QuickPopupSession> live(quick_popup::popupSession(fixture.view()));
+    if (!QTest::qWaitFor([&live] {
+            return live && live->isOpen() && quick_popup::menuPanel(*live) &&
+                   quick_popup::menuModel(*quick_popup::menuPanel(*live)) != nullptr;
+        })) {
+        session.diagnostic = QStringLiteral("the ruler right-click did not open the shared menu");
+        return session;
+    }
+    songview::QuickMenuModel *const model = quick_popup::menuModel(*quick_popup::menuPanel(*live));
+    const int editRow = model->rowForId(int(songview::RulerMenuAction::EditTimeSig));
+    if (editRow < 0) {
+        session.diagnostic = QStringLiteral("the shared ruler menu has no time-signature row");
+        return session;
+    }
+    if (!quick_popup::clickMenuRow(*live, editRow)) {
+        session.diagnostic = QStringLiteral("the time-signature menu row did not render a target");
+        return session;
+    }
     return openedPrompt(fixture.view());
 }
 
@@ -352,8 +344,8 @@ void PianoRollTest::timeSignaturePromptCancelStale()
 void PianoRollTest::timeSignaturePromptMenuEntries_data()
 {
     QTest::addColumn<bool>("onChip");
-    QTest::newRow("Edit time signature") << true;
-    QTest::newRow("Set time signature") << false;
+    QTest::newRow("on the signature chip") << true;
+    QTest::newRow("off the signature chip") << false;
 }
 
 void PianoRollTest::timeSignaturePromptMenuEntries()
@@ -364,19 +356,18 @@ void PianoRollTest::timeSignaturePromptMenuEntries()
         TimeSignatureFixture::create(m_project->root(), m_songLabel, error);
     QVERIFY2(fixture, qPrintable(error));
     const quick_popup::PromptGuard guard(fixture->view());
-    RulerMenuSelection selection;
-    const TimeSignaturePromptSession opened = openFromRulerMenu(*fixture, onChip, selection);
-    QVERIFY2(selection.foundAction,
-             "the ruler menu did not expose its semantic time-signature action identity");
-    QVERIFY2(selection.closedMenu,
-             "the ruler menu still owned input when the time-signature prompt opened");
+    const TimeSignaturePromptSession opened = openFromRulerMenu(*fixture, onChip);
     QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic));
+    songview::QuickPopupSession *const popup = quick_popup::popupSession(fixture->view());
+    QVERIFY2(popup && popup->isOpen() && !quick_popup::menuPanel(*popup),
+             "the shared ruler menu still owned the session when the time-signature prompt opened");
     QVERIFY2(quick_popup::promptItem(*opened.popup, QLatin1String("timeSignaturePrompt")),
              "the ruler menu action did not open the time-signature prompt surface");
 
     QTest::keyClick(opened.window, Qt::Key_Escape);
     QCoreApplication::processEvents();
-    songview::QuickPopupSession *const popup = quick_popup::popupSession(fixture->view());
     QVERIFY2(popup && !popup->isOpen(),
              "Escape did not close the ruler-menu time-signature prompt");
+    QTRY_VERIFY2(fixture->rulerInput->hasActiveFocus(),
+                 "closing the ruler-menu prompt did not return focus to the ruler input");
 }

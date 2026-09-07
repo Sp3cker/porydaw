@@ -1,12 +1,12 @@
 #pragma once
 
+#include "ui/songview/editorselectionmodel.h"
 #include "ui/songview/quick/timelineinput.h"
 
 #include <QFont>
 #include <QFontMetrics>
 #include <QMetaObject>
 #include <QObject>
-#include <QPoint>
 #include <QPointF>
 #include <QPointer>
 #include <QRect>
@@ -16,7 +16,6 @@
 #include <optional>
 #include <vector>
 
-class QMenu;
 class SongDocument;
 
 class SongView;
@@ -29,6 +28,22 @@ class QuickMenuModel;
 class TimelineQuickScene;
 class TimelineQuickView;
 class TimeCamera;
+
+// Typed ids for the ruler context menu rows. The model carries these raw
+// values; owners and checks resolve rows by id (QuickMenuModel::rowForId),
+// never by translated label.
+enum class RulerMenuAction : int {
+    SetLoopStart = 1,
+    SetLoopEnd = 2,
+    RemoveLoop = 3,
+    LoopFromSelection = 4,
+    InsertBlank = 5,
+    Duplicate = 6,
+    RemoveContents = 7,
+    ClearSelection = 8,
+    EditTimeSig = 9,
+    RemoveTimeSig = 10,
+};
 
 class TimeRuler final : public QObject, public TimelineBandInteraction
 {
@@ -168,7 +183,10 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
     // 0 = selection start edge, 1 = end edge, -1 = neither near pos.
     int hitSelEdge(QPointF pos) const;
 
-    void showRulerMenu(uint64_t clickTick, const QPoint &globalPos);
+    // Loop/selection/signature context menu over the shared canvas popup
+    // session. scenePos is a Quick-window scene position (the release
+    // point); the acted tick is the snapped press tick.
+    void showRulerMenu(uint64_t clickTick, const QPointF &scenePos);
 
     struct PendingTimeSigPrompt {
         QPointer<SongDocument> document;
@@ -178,9 +196,32 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
         int initialDenominatorPow2 = timeSigPromptMinimumDenominatorPow2();
     };
 
+    // Guarded open-time target for the loop menu: published only after the
+    // host successfully opened the shared session, consumed before any
+    // command, and dropped as stale when the document moved underneath.
+    struct PendingRulerMenu {
+        QPointer<SongDocument> document;
+        uint64_t documentRevision = 0;
+        uint64_t clickTick = 0;
+        uint64_t sigTick = 0;
+        int sigNumerator = 0;
+        int sigDenominatorPow2 = 0;
+        EditorSelectionModel::TimeSelection selection;
+        uint32_t trackScope = 0;
+    };
+
+    // Shared adapter factory for every ruler menu: the grid-control menus
+    // and the loop menu may each be first to create the host and models.
+    void ensureMenuAdapters();
+    // Consumes the guarded open-time target; clears it before any command.
+    void handleRulerMenuAction(int id);
+    // True when the live selection no longer matches the open-time
+    // snapshot; selection-scoped loop-menu actions must not run.
+    bool menuSelectionStale(const PendingRulerMenu &target) const;
+
     void openTimeSigPrompt(uint64_t tick, int numerator, int denominatorPow2);
     void clearTimeSigPrompt(bool restoreFocus);
-    void restoreTimeSigPromptFocus();
+    void restoreRulerFocus();
 
     QFont m_signatureFont;
     QFont m_rulerFont;
@@ -201,13 +242,15 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
     QString m_feelText;
     bool m_gridControlsEnabled = false;
     QVariantMap m_gridControlAppearance;
-    QPointer<QMenu> m_openMenu; // Ruler context menu during exec().
-    // Typed grid-control menus over the shared canvas popup session; the
-    // host and both row models are created on first open and reused.
+    // Typed menus over the shared canvas popup session; the host and all
+    // row models (grid controls, ruler loop menu) are created on first
+    // open — from either entry — and reused.
     QuickMenuHost *m_menuHost = nullptr;
     QuickMenuModel *m_divisionModel = nullptr;
     QuickMenuModel *m_feelModel = nullptr;
+    QuickMenuModel *m_rulerMenuModel = nullptr;
     std::optional<PendingTimeSigPrompt> m_pendingTimeSigPrompt;
+    std::optional<PendingRulerMenu> m_pendingRulerMenu;
     QMetaObject::Connection m_timeSigPromptCancellation;
     int m_markerHeight = 0;
     int m_dragMarker = -1;

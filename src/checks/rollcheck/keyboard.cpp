@@ -1,18 +1,17 @@
 #include "checks/rollcheck/tst_pianoroll.h"
 
+#include "checks/quickpopupguard.h"
 #include "checks/rollcheck/headerchecksupport.h"
 #include "checks/rollcheck/rollcheck.h"
 
-#include <QApplication>
 #include <QByteArray>
 #include <QColor>
 #include <QCoreApplication>
 #include <QEvent>
 #include <QImage>
-#include <QMenu>
 #include <QPoint>
+#include <QPointer>
 #include <QRectF>
-#include <QTimer>
 #include <QtTest>
 #include <algorithm>
 #include <cmath>
@@ -286,14 +285,17 @@ void PianoRollTest::timelineRulerScope()
                               Qt::NoModifier);
     QVERIFY2(!view.selectionModel().timeSelection().active(),
              "right-dragging the timeline ruler still created a time selection");
-    QTimer::singleShot(0, [] {
-        if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget()))
-            menu->close();
-        else if (auto *menu = qobject_cast<QMenu *>(QApplication::activeModalWidget()))
-            menu->close();
-    });
     checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, end, Qt::RightButton,
                               Qt::NoButton, Qt::NoModifier);
+    // The release publishes the shared ruler menu instead of a nested native
+    // exec, so the test continues linearly; a real Escape key dismisses it.
+    const QPointer<songview::QuickPopupSession> live(quick_popup::popupSession(view));
+    QVERIFY2(QTest::qWaitFor(
+                 [&live] { return live && live->isOpen() && quick_popup::menuPanel(*live); }),
+             "releasing the right-drag did not open the shared ruler menu");
+    QTest::keyClick(live->window(), Qt::Key_Escape);
+    QCoreApplication::processEvents();
+    QVERIFY2(live && !live->isOpen(), "Escape did not dismiss the right-drag ruler menu");
     while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
         doc.undoStack()->undo();
     QCOMPARE(doc.smf().write(), before);

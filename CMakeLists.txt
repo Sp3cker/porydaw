@@ -605,6 +605,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/rollcheck/resize.cpp
         src/checks/rollcheck/keyboard.cpp
         src/checks/rollcheck/timemenu.cpp
+        src/checks/rollcheck/ruler_loop_menu.cpp
         src/checks/rollcheck/presentation.cpp
         src/checks/rollcheck/scale_projection.cpp
         src/checks/rollcheck/scale_fold.cpp
