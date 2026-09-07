@@ -25,6 +25,8 @@ Item {
     property rect otherEventsBandPlotRect: Qt.rect(0, 0, 0, 0)
     property rect automationBandPlotRect: Qt.rect(0, 0, 0, 0)
     property rect trackHeadersBandPlotRect: Qt.rect(0, 0, 0, 0)
+    property rect eventListBandRect: Qt.rect(0, 0, 0, 0)
+    property bool eventListBandVisible: false
     property font fallbackRulerFont
     readonly property var rulerAppearance: timeRuler ? timeRuler.gridControlAppearance : null
     readonly property font rulerFont: rulerAppearance ? rulerAppearance.font : fallbackRulerFont
@@ -253,6 +255,37 @@ Item {
         PianoRollCanvas {
             gutterSide: rollBand.gutterSide
             plotSide: rollBand.plotSide
+        }
+    }
+
+    // EventList mode replaces the roll band in the same screen space: the
+    // host carries the published event-list rectangle, EventListPage renders
+    // the table surface, and the input item joins the shared key-policy
+    // chain. The input item ignores unhandled pointer events, so the page
+    // below keeps pointer ownership while it owns non-editor key focus.
+    Item {
+        id: eventListHost
+        objectName: "timelineEventListHost"
+
+        x: root.eventListBandRect.x
+        y: root.eventListBandRect.y
+        width: root.eventListBandRect.width
+        height: root.eventListBandRect.height
+        visible: root.eventListBandVisible
+        clip: true
+
+        EventListPage {
+            id: eventListPage
+            objectName: "eventListPage"
+            navigationInputActive: timelineEventListInput.activeFocus
+            onNavigationFocusRequested: timelineEventListInput.forceActiveFocus()
+        }
+
+        TimelineInputItem {
+            id: timelineEventListInput
+            objectName: "timelineEventListInput"
+            anchors.fill: parent
+            Accessible.description: qsTr("Event list")
         }
     }
 

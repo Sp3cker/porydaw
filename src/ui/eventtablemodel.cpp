@@ -1,5 +1,5 @@
 #include "eventtablemodel.h"
-#include "eventlistview.h"
+#include "ui/songview/quick/eventlistcontroller.h"
 
 #include <QApplication>
 #include <QColor>
@@ -41,6 +41,65 @@ QList<std::pair<QString, int>> EventTableModel::typeChoices(bool includeTempo)
             choices.append({typeKindName(kind), kind});
     }
     return choices;
+}
+
+int EventTableModel::qmlRawIndexForRow(int row) const
+{
+    const auto index = rawEventIndexForRow(row);
+    return index && *index <= size_t(std::numeric_limits<int>::max()) ? int(*index) : -1;
+}
+
+bool EventTableModel::qmlHasTempo(int row) const
+{
+    return tempoPointForRow(row).has_value();
+}
+
+QString EventTableModel::qmlTickString(int row) const
+{
+    if (const auto tick = exactTickForRow(row))
+        return QString::number(*tick);
+    const SmfTrack *tr = track();
+    return tr && row == int(m_rows.size()) ? QString::number(tr->endTick) : QString();
+}
+
+int EventTableModel::qmlRowForRawIndex(qulonglong eventIndex) const
+{
+    if (eventIndex > qulonglong(std::numeric_limits<size_t>::max()))
+        return -1;
+    return rowForRawEventIndex(size_t(eventIndex));
+}
+
+int EventTableModel::qmlTempoRowForTick(const QString &tickDigits) const
+{
+    bool ok = false;
+    const qulonglong tick = tickDigits.toULongLong(&ok);
+    return ok ? tempoRowForExactTick(uint64_t(tick)) : -1;
+}
+
+bool EventTableModel::qmlUsesNumericFont(int column)
+{
+    return usesNumericFont(column);
+}
+
+QHash<int, QByteArray> EventTableModel::roleNames() const
+{
+    return {
+        {Qt::DisplayRole, QByteArrayLiteral("display")},
+        {Qt::EditRole, QByteArrayLiteral("edit")},
+        {Qt::FontRole, QByteArrayLiteral("cellFont")},
+        {Qt::TextAlignmentRole, QByteArrayLiteral("alignment")},
+        {TickStringRole, QByteArrayLiteral("tickString")},
+        {TickValueRole, QByteArrayLiteral("tickValue")},
+        {TypeKindRole, QByteArrayLiteral("typeKind")},
+        {TypeNameRole, QByteArrayLiteral("typeName")},
+        {ChannelRole, QByteArrayLiteral("channel")},
+        {Data1Role, QByteArrayLiteral("data1")},
+        {Data2Role, QByteArrayLiteral("data2")},
+        {BlobRole, QByteArrayLiteral("blob")},
+        {BlobDisplayRole, QByteArrayLiteral("blobDisplay")},
+        {SummaryRole, QByteArrayLiteral("summary")},
+        {RowKindRole, QByteArrayLiteral("rowKind")},
+    };
 }
 
 EventTableModel::EventTableModel(SongView *sv, QObject *parent)
@@ -212,22 +271,27 @@ int EventTableModel::columnCount(const QModelIndex &parent) const
 
 QVariant EventTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
+    if (orientation == Qt::Horizontal && role == Qt::TextAlignmentRole) {
+        const Qt::Alignment alignment = usesNumericFont(section) ? Qt::AlignRight | Qt::AlignVCenter
+                                                                 : Qt::AlignLeft | Qt::AlignVCenter;
+        return int(alignment);
+    }
     if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
         switch (section) {
         case ColTick:
-            return EventListView::tr("Tick");
+            return EventListController::tr("Tick");
         case ColType:
-            return EventListView::tr("Type");
+            return EventListController::tr("Type");
         case ColChannel:
-            return EventListView::tr("Ch");
+            return EventListController::tr("Ch");
         case ColData1:
-            return EventListView::tr("Data 1");
+            return EventListController::tr("Data 1");
         case ColData2:
-            return EventListView::tr("Data 2");
+            return EventListController::tr("Data 2");
         case ColData:
-            return EventListView::tr("Data");
+            return EventListController::tr("Data");
         case ColSummary:
-            return EventListView::tr("Summary");
+            return EventListController::tr("Summary");
         }
     }
     return QAbstractTableModel::headerData(section, orientation, role);
@@ -238,12 +302,92 @@ QVariant EventTableModel::data(const QModelIndex &index, int role) const
     const SmfTrack *tr = track();
     if (!tr || !index.isValid())
         return {};
+
+    if (role >= TickStringRole && role <= RowKindRole) {
+        if (index.row() == int(m_rows.size())) {
+            switch (role) {
+            case TickStringRole:
+                return QString::number(tr->endTick);
+            case TickValueRole:
+                return qulonglong(tr->endTick);
+            case TypeKindRole:
+                return -1;
+            case TypeNameRole:
+                return EventListController::tr("End of track");
+            case RowKindRole:
+                return 2;
+            default:
+                return {};
+            }
+        }
+        if (index.row() < 0 || index.row() >= int(m_rows.size()))
+            return {};
+
+        const RowKey &key = m_rows[index.row()];
+        if (const auto *tempo = std::get_if<TempoRow>(&key)) {
+            const TempoPoint *point = tempoPoint(tempo->tick);
+            if (!point)
+                return {};
+            switch (role) {
+            case TickStringRole:
+                return QString::number(point->tick);
+            case TickValueRole:
+                return qulonglong(point->tick);
+            case TypeKindRole:
+                return TypeTempo;
+            case TypeNameRole:
+                return typeKindName(TypeTempo);
+            case SummaryRole:
+                return EventListController::tr("Tempo %1 BPM").arg(tempoBpmText(*point));
+            case RowKindRole:
+                return 1;
+            default:
+                return {};
+            }
+        }
+
+        const auto *raw = std::get_if<RawRow>(&key);
+        if (!raw || raw->eventIndex >= tr->events.size())
+            return {};
+        const SmfEvent &ev = tr->events[raw->eventIndex];
+        const int kind = typeKindOf(ev);
+        switch (role) {
+        case TickStringRole:
+            return QString::number(ev.tick);
+        case TickValueRole:
+            return qulonglong(ev.tick);
+        case TypeKindRole:
+            return kind;
+        case TypeNameRole:
+            return typeKindName(kind);
+        case ChannelRole:
+            return ev.isChannel() ? QVariant(ev.channel() + 1) : QVariant();
+        case Data1Role:
+            if (ev.isMeta())
+                return ev.metaType;
+            return ev.isChannel() ? QVariant(ev.data0) : QVariant();
+        case Data2Role:
+            return hasData2(kind) ? QVariant(ev.data1) : QVariant();
+        case BlobRole:
+            return ev.isMeta() || ev.isSysEx() ? QVariant(blobText(ev)) : QVariant();
+        case BlobDisplayRole:
+            return ev.isMeta() || ev.isSysEx() ? QVariant(blobDisplayText(ev)) : QVariant();
+        case SummaryRole:
+            return summaryText(ev, m_sv);
+        case RowKindRole:
+            return 0;
+        default:
+            return {};
+        }
+    }
+
     if (role == Qt::FontRole) {
+        // Every modeled cell needs a valid font: the QML delegate binds
+        // required font properties straight to this role.
         const bool numeric = usesNumericFont(index.column());
         if (index.row() == int(m_rows.size()))
             return numeric ? m_numericItalicFont : m_bodyItalicFont;
-        if (numeric)
-            return m_numericFont;
+        return numeric ? m_numericFont : m_bodyFont;
     }
     if (role == Qt::TextAlignmentRole) {
         if (index.column() == ColTick || index.column() == ColChannel ||
@@ -261,7 +405,7 @@ QVariant EventTableModel::data(const QModelIndex &index, int role) const
             if (index.column() == ColTick)
                 return qulonglong(tr->endTick);
             if (index.column() == ColType && role == Qt::DisplayRole)
-                return EventListView::tr("End of track");
+                return EventListController::tr("End of track");
         }
         return {};
     }
@@ -281,10 +425,10 @@ QVariant EventTableModel::data(const QModelIndex &index, int role) const
         case ColData:
             return role == Qt::EditRole
                        ? QVariant(tempoBpmText(*point))
-                       : QVariant(EventListView::tr("%1 BPM").arg(tempoBpmText(*point)));
+                       : QVariant(EventListController::tr("%1 BPM").arg(tempoBpmText(*point)));
         case ColSummary:
             return role == Qt::DisplayRole
-                       ? QVariant(EventListView::tr("Tempo %1 BPM").arg(tempoBpmText(*point)))
+                       ? QVariant(EventListController::tr("Tempo %1 BPM").arg(tempoBpmText(*point)))
                        : QVariant();
         default:
             return {};

@@ -6,11 +6,11 @@
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
-#include "ui/eventlistview.h"
 #include "ui/layout.h"
 #include "ui/playheadoverlay.h"
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timeruler.h"
@@ -190,6 +190,19 @@ QRect SongView::verticalScrollbarRect() const
     return {roll->rect.right() + 1, roll->rect.top(), lyt::space(Space::Two), roll->rect.height()};
 }
 
+// EventList mode replaces the roll band with the Quick event page in the same
+// screen space. TimelineQuickView unions this rectangle into the Quick window
+// envelope and republishes it Quick-root-local as the page host's geometry.
+QRect SongView::eventListRect() const
+{
+    if (!m_rollStack || m_rollStack->currentIndex() != 1)
+        return {};
+    const QWidget *const page = m_rollStack->widget(1);
+    if (!page)
+        return {};
+    return {page->mapTo(this, QPoint(0, 0)), page->size()};
+}
+
 // Fixed resolve → compare → store → push sequence for the canonical band
 // layout. A private, synchronous, SongView-owned handoff: no Qt signal, and
 // an unchanged value publishes nothing.
@@ -271,8 +284,10 @@ SongView::SongView(QWidget *parent)
     auto *rollPage = new QWidget(m_rollStack);
     m_roll = new PianoRoll(this);
     m_rollStack->addWidget(rollPage);
-    m_events = new EventListView(this);
-    m_rollStack->addWidget(m_events);
+    // The event list renders through the Quick host; its page is a
+    // nonpainting placeholder that only carries the stack rectangle.
+    auto *eventListPage = new QWidget(m_rollStack);
+    m_rollStack->addWidget(eventListPage);
     mid->addWidget(m_rollStack, 1);
     vbox->addWidget(rollPane, 1);
 
@@ -288,10 +303,15 @@ SongView::SongView(QWidget *parent)
     vbox->addSpacerItem(m_hbarSpacer);
 
     m_editorDrawer = new EditorDrawer(*this, m_editorViewState);
+    m_events = new EventListController(this, this);
+    // Event-list row interactions surface through SongView's continuations:
+    // status-bar announcements and jump-from-context voice reveal.
+    connect(m_events, &EventListController::announce, this, &SongView::announce);
+    connect(m_events, &EventListController::revealVoice, this, &SongView::revealVoice);
     m_quickView =
         new TimelineQuickView(*m_ruler, *m_roll, *m_strip, *m_editorDrawer->automationPage(),
                               *m_editorDrawer->velocityArea(), *m_editorDrawer->voiceChangeArea(),
-                              m_editorDrawer->chrome(), *m_headers, *this);
+                              m_editorDrawer->chrome(), *m_headers, *m_events, *this);
     // Reparenting converted interactions after the Quick host keeps them
     // alive while its destructor detaches their input items. The roll
     // interaction joins the same tail as a plain QObject attached to
@@ -335,6 +355,11 @@ SongView::~SongView()
 songview::TimelineQuickView *SongView::quickView() const noexcept
 {
     return m_quickView;
+}
+
+EventListController *SongView::eventListController() const noexcept
+{
+    return m_events;
 }
 
 bool SongView::advanceTrackActivity(const TrackActivityLevels &levels, float elapsedSeconds,
@@ -608,7 +633,6 @@ bool SongView::eventListVisible() const
 {
     return m_rollStack->currentIndex() == 1;
 }
-
 void SongView::setEventListVisible(bool visible)
 {
     if (eventListVisible() == visible)
@@ -617,11 +641,7 @@ void SongView::setEventListVisible(bool visible)
     // The roll band exists only on the roll page; resync immediately so the
     // index swap cannot leave a stale canonical Roll entry.
     synchronizeTimelineBandLayout();
-    if (visible) {
-        // The list skips refreshes while hidden; catch up when shown.
-        m_events->refresh();
-        m_events->syncTrackSelection();
-    }
+    m_events->setVisible(visible);
     if (isEnabled())
         focusContent();
     emit eventListVisibilityChanged(visible);
@@ -629,10 +649,14 @@ void SongView::setEventListVisible(bool visible)
 
 void SongView::focusContent()
 {
-    if (eventListVisible())
-        m_events->setFocus();
-    else
+    if (eventListVisible()) {
+        // The event list owns the roll band's screen space; its Quick input
+        // item is the editing surface and the row-command focus owner.
+        if (m_quickView)
+            m_quickView->focusEventListInput(Qt::OtherFocusReason);
+    } else {
         focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason);
+    }
 }
 void SongView::focusActiveSurface()
 {
@@ -650,6 +674,11 @@ bool SongView::focusTimelineBand(songview::TimelineBand band, Qt::FocusReason re
 std::optional<songview::TimelineBand> SongView::focusedTimelineBand() const
 {
     return m_quickView ? m_quickView->focusedBand() : std::nullopt;
+}
+
+bool SongView::eventListSurfaceFocused() const
+{
+    return m_quickView && m_quickView->eventListSurfaceFocused();
 }
 
 void SongView::setFollowScrollPaused(bool paused)
@@ -917,6 +946,9 @@ void SongView::syncTimelineQuickAppearance()
 {
     if (m_quickView)
         m_quickView->syncAppearance();
+    // The event page's theme map and menu-host styles ride the same
+    // appearance republish as every other Quick surface.
+    m_events->syncAppearance();
 }
 
 void SongView::publishTimelineQuickHover(songview::TimelineQuickHoverOwner owner, uint64_t tick)

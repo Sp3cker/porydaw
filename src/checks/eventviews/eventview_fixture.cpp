@@ -1,10 +1,10 @@
 #include "checks/eventviews/eventview_fixture.h"
 
-#include <QComboBox>
 #include <QCoreApplication>
-#include <QMenu>
-#include <QMetaObject>
-#include <QTableView>
+#include <QQuickItem>
+#include <QQuickWindow>
+#include <QRect>
+#include <QtTest>
 
 #include <algorithm>
 #include <optional>
@@ -13,8 +13,10 @@
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
 #include "project/voicegroupsource.h"
-#include "ui/eventlistview.h"
 #include "ui/songtab.h"
+#include "ui/songview.h"
+#include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 namespace checks::eventviews {
 namespace {
@@ -100,13 +102,28 @@ EventWidgets locateWidgets(SongView &view)
     QCoreApplication::processEvents();
 
     EventWidgets widgets;
-    widgets.events = view.findChild<EventListView *>();
-    widgets.table = view.findChild<QTableView *>(QStringLiteral("eventListTable"));
-    widgets.chunkCombo = view.findChild<QComboBox *>(QStringLiteral("eventListChunk"));
-    widgets.filterMenu = view.findChild<QMenu *>(QStringLiteral("eventListFilterMenu"));
-    widgets.model =
-        widgets.table ? static_cast<eventlist::EventTableModel *>(widgets.table->model()) : nullptr;
+    const bool ready = QTest::qWaitFor([&view, &widgets] {
+        widgets.controller = view.eventListController();
+        widgets.model = widgets.controller ? widgets.controller->model() : nullptr;
+        songview::TimelineQuickView *quick = view.quickView();
+        widgets.quickWindow = quick ? quick->quickWindow() : nullptr;
+        return bool(widgets);
+    });
+    if (!ready)
+        return {};
     return widgets;
+}
+
+QQuickItem *visualDescendant(QQuickItem *root, const QString &objectName)
+{
+    if (!root)
+        return nullptr;
+    if (root->objectName() == objectName)
+        return root;
+    for (QQuickItem *child : root->childItems())
+        if (QQuickItem *found = visualDescendant(child, objectName))
+            return found;
+    return nullptr;
 }
 
 } // namespace
@@ -144,6 +161,8 @@ EventWidgets EventViewRigFixture::openEventList()
 {
     return locateWidgets(view());
 }
+
+EventViewTabFixture::EventViewTabFixture() = default;
 
 std::unique_ptr<EventViewTabFixture> EventViewTabFixture::create(FixtureShape shape, QString &error)
 {
@@ -241,13 +260,109 @@ int chunkForTrack(const SongDocument &document, int engineTrack)
     return document.smfTrackFor(engineTrack);
 }
 
-bool selectChunk(QComboBox &combo, int chunk)
+bool selectChunk(EventListController &controller, int chunk)
 {
-    const int index = combo.findData(chunk);
-    if (index < 0)
+    controller.chunkPicked(chunk);
+    return controller.chunk() == chunk;
+}
+
+QQuickItem *visualItem(QQuickWindow &window, const QString &objectName)
+{
+    return visualDescendant(window.contentItem(), objectName);
+}
+
+QQuickItem *eventListTable(const EventWidgets &widgets)
+{
+    return widgets.quickWindow ? visualItem(*widgets.quickWindow, QStringLiteral("eventListTable"))
+                               : nullptr;
+}
+
+qreal eventListRowHeight(const EventWidgets &widgets)
+{
+    QQuickItem *table = eventListTable(widgets);
+    if (!table)
+        return 0;
+    const auto content = table->property("contentItem").value<QQuickItem *>();
+    if (!content)
+        return 0;
+    qreal height = 0;
+    QList<QQuickItem *> pending{content};
+    while (!pending.isEmpty()) {
+        QQuickItem *item = pending.takeLast();
+        const QVariant row = item->property("row");
+        const QVariant column = item->property("column");
+        if (row.isValid() && column.isValid() && item->isVisible() && item->height() > 0)
+            height = height == 0 ? item->height() : qMin(height, item->height());
+        pending.append(item->childItems());
+    }
+    return height;
+}
+
+namespace {
+QQuickItem *renderedCell(QQuickItem *root, int row, int column)
+{
+    if (!root)
+        return nullptr;
+    if (root->property("row").toInt() == row && root->property("row").isValid() &&
+        root->property("column").toInt() == column && root->property("column").isValid())
+        return root;
+    for (QQuickItem *child : root->childItems())
+        if (QQuickItem *found = renderedCell(child, row, column))
+            return found;
+    return nullptr;
+}
+} // namespace
+
+QPointF cellSceneCenter(const EventWidgets &widgets, int row, int column)
+{
+    QQuickItem *table = eventListTable(widgets);
+    const auto content = table ? table->property("contentItem").value<QQuickItem *>() : nullptr;
+    QQuickItem *cell = nullptr;
+    if (!content || !QTest::qWaitFor([&] {
+            cell = renderedCell(content, row, column);
+            return cell && cell->isVisible() && cell->width() > 0 && cell->height() > 0;
+        }))
+        return {};
+    return cell->mapToScene(QPointF(cell->width() / 2.0, cell->height() / 2.0));
+}
+
+bool openCellEditor(const EventWidgets &widgets, int row, int column, const QString &editorName,
+                    QQuickItem **editor)
+{
+    if (!widgets.quickWindow || !eventListTable(widgets))
         return false;
-    combo.setCurrentIndex(index);
-    return QMetaObject::invokeMethod(&combo, "activated", Qt::DirectConnection, Q_ARG(int, index));
+    const QPointF scene = cellSceneCenter(widgets, row, column);
+    if (scene.isNull() || !QRect(QPoint{}, widgets.quickWindow->size()).contains(scene.toPoint()))
+        return false;
+    QTest::mouseDClick(widgets.quickWindow, Qt::LeftButton, Qt::NoModifier, scene.toPoint());
+    QQuickItem *item = nullptr;
+    const bool opened = QTest::qWaitFor([&widgets, &editorName, &item] {
+        item = visualItem(*widgets.quickWindow, editorName);
+        return item && item->isVisible() && item->hasActiveFocus();
+    });
+    if (opened && editor)
+        *editor = item;
+    return opened;
+}
+
+void closeCellEditor(const EventWidgets &widgets)
+{
+    if (!widgets.quickWindow)
+        return;
+    QTest::keyClick(widgets.quickWindow, Qt::Key_Escape);
+    QCoreApplication::processEvents();
+}
+
+bool focusSurface(const EventWidgets &widgets, songview::TimelineInputItem &input)
+{
+    if (!widgets.quickWindow || input.bounds().isEmpty() || input.window() != widgets.quickWindow)
+        return false;
+    const QPointF center = input.mapToScene(input.bounds().center());
+    if (!QRect(QPoint{}, widgets.quickWindow->size()).contains(center.toPoint()))
+        return false;
+    QTest::mouseClick(widgets.quickWindow, Qt::LeftButton, Qt::NoModifier, center.toPoint());
+    QCoreApplication::processEvents();
+    return input.hasActiveFocus();
 }
 
 } // namespace checks::eventviews

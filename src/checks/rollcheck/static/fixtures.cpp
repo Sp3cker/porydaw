@@ -9,9 +9,9 @@
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
 #include "ui/editordrawer/editordrawer.h"
-#include "ui/eventlistview.h"
 #include "ui/songtab.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timeruler.h"
@@ -209,11 +209,11 @@ bool GateFixture::create(QString &error)
     m_headersInput = root ? root->findChild<songview::TimelineInputItem *>(
                                 QStringLiteral("timelineTrackHeadersInput"))
                           : nullptr;
-    m_eventList = view.findChild<EventListView *>();
+    m_eventListController = view.eventListController();
     m_drawer = view.editorDrawer();
     if (!m_rollInput || !m_rulerInput || !m_horizontalScrollbar || !m_controls ||
         !m_divisionControl || !m_feelControl || !m_toolTip || !m_ruler || !m_headers ||
-        !m_headersInput || !m_eventList || !m_drawer) {
+        !m_headersInput || !m_eventListController || !m_drawer) {
         error = QStringLiteral("loading probe has incomplete live coverage surfaces");
         return false;
     }
@@ -268,9 +268,9 @@ songview::TimelineInputItem *GateFixture::headersInput() const noexcept
 {
     return m_headersInput;
 }
-EventListView *GateFixture::eventList() const noexcept
+EventListController *GateFixture::eventListController() const noexcept
 {
-    return m_eventList;
+    return m_eventListController;
 }
 EditorDrawer *GateFixture::drawer() const noexcept
 {

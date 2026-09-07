@@ -1,7 +1,8 @@
-#include "eventlistview.h"
 #include "eventtablemodel.h"
+#include "ui/songview/quick/eventlistcontroller.h"
 
 #include <QMetaObject>
+#include <QPointer>
 #include <algorithm>
 #include <cmath>
 
@@ -20,6 +21,15 @@ TempoPoint tempoPointForBpm(uint64_t tick, int bpm)
 }
 
 } // namespace
+struct EventTableModel::PendingRawEdit {
+    QPointer<SongDocument> document;
+    int chunk = -1;
+    size_t index = 0;
+    SmfEvent projected;
+    SmfEvent applied;
+    uint64_t revision = 0;
+    size_t generation = 0;
+};
 
 bool EventTableModel::handleEndTick(const QVariant &value)
 {
@@ -71,8 +81,8 @@ bool EventTableModel::handleTempoTypeChange(const TempoPoint &point, const QVari
     QMetaObject::invokeMethod(
         this,
         [doc, chunk, point, raw, select] {
-            doc->replaceTempoPointWithRawEvent(EventListView::tr("convert tempo to event"), chunk,
-                                               point, raw);
+            doc->replaceTempoPointWithRawEvent(EventListController::tr("convert tempo to event"),
+                                               chunk, point, raw);
             if (select)
                 select(chunk, raw.tick);
         },
@@ -86,7 +96,8 @@ bool EventTableModel::handleTempoBpm(const TempoPoint &point, const QVariant &va
     const auto bpm = value.toString().trimmed().toInt(&ok);
     if (!ok || bpm < 20 || bpm > 255) {
         if (m_sv)
-            m_sv->announce(EventListView::tr("Tempo must be a whole BPM from 20 through 255"));
+            m_sv->announce(
+                EventListController::tr("Tempo must be a whole BPM from 20 through 255"));
         return false;
     }
     queueTempoEdit({{point}, {tempoPointForBpm(point.tick, bpm)}}, point.tick);
@@ -95,7 +106,7 @@ bool EventTableModel::handleTempoBpm(const TempoPoint &point, const QVariant &va
 
 bool EventTableModel::handleRawTick(size_t eventIndex, const SmfEvent &event, const QVariant &value)
 {
-    auto next = event;
+    auto next = pendingRawEvent(eventIndex, event);
     next.tick = value.toULongLong();
     return commitRawEdit(eventIndex, next);
 }
@@ -111,8 +122,8 @@ bool EventTableModel::handleRawTypeToTempo(size_t eventIndex, const SmfEvent &ev
     QMetaObject::invokeMethod(
         this,
         [doc, chunk, eventIndex, point, select] {
-            doc->removeRawEventsAndEditTempo(EventListView::tr("convert event to tempo"), chunk,
-                                             {eventIndex}, {{}, {point}});
+            doc->removeRawEventsAndEditTempo(EventListController::tr("convert event to tempo"),
+                                             chunk, {eventIndex}, {{}, {point}});
             if (select)
                 select(chunk, point.tick);
         },
@@ -128,15 +139,16 @@ bool EventTableModel::handleRawTypeChange(size_t eventIndex, const SmfEvent &eve
         return handleRawTypeToTempo(eventIndex, event);
     if (kind < 0 || kind >= TypeKindCount)
         return false;
-    return commitRawEdit(eventIndex, retyped(event, kind, fallbackChannel()));
+    return commitRawEdit(eventIndex,
+                         retyped(pendingRawEvent(eventIndex, event), kind, fallbackChannel()));
 }
 
 bool EventTableModel::handleRawChannel(size_t eventIndex, const SmfEvent &event,
                                        const QVariant &value)
 {
-    if (!event.isChannel())
+    auto next = pendingRawEvent(eventIndex, event);
+    if (!next.isChannel())
         return false;
-    auto next = event;
     next.status = uint8_t((next.status & 0xF0) | uint8_t(std::clamp(value.toInt() - 1, 0, 15)));
     return commitRawEdit(eventIndex, next);
 }
@@ -144,7 +156,7 @@ bool EventTableModel::handleRawChannel(size_t eventIndex, const SmfEvent &event,
 bool EventTableModel::handleRawData1(size_t eventIndex, const SmfEvent &event,
                                      const QVariant &value)
 {
-    auto next = event;
+    auto next = pendingRawEvent(eventIndex, event);
     if (next.isMeta())
         next.metaType = uint8_t(std::clamp(value.toInt(), 0, 127));
     else if (next.isChannel())
@@ -157,9 +169,9 @@ bool EventTableModel::handleRawData1(size_t eventIndex, const SmfEvent &event,
 bool EventTableModel::handleRawData2(size_t eventIndex, const SmfEvent &event,
                                      const QVariant &value)
 {
-    if (!hasData2(typeKindOf(event)))
+    auto next = pendingRawEvent(eventIndex, event);
+    if (!hasData2(typeKindOf(next)))
         return false;
-    auto next = event;
     next.data1 = uint8_t(std::clamp(value.toInt(), 0, 127));
     return commitRawEdit(eventIndex, next);
 }
@@ -169,21 +181,97 @@ bool EventTableModel::handleRawBlob(size_t eventIndex, const SmfEvent &event, co
     QByteArray blob;
     if (!parseBlob(value.toString(), &blob)) {
         if (m_sv)
-            m_sv->announce(
-                EventListView::tr("Data must be hex bytes (\"4F 12 ...\") or \"quoted text\""));
+            m_sv->announce(EventListController::tr(
+                "Data must be hex bytes (\"4F 12 ...\") or \"quoted text\""));
         return false;
     }
-    auto next = event;
+    auto next = pendingRawEvent(eventIndex, event);
     next.blob = blob;
     return commitRawEdit(eventIndex, next);
 }
 
+SmfEvent EventTableModel::pendingRawEvent(size_t eventIndex, const SmfEvent &fallback) const
+{
+    const auto pending = std::find_if(
+        m_pendingRawEdits.begin(), m_pendingRawEdits.end(),
+        [this, eventIndex](const std::shared_ptr<PendingRawEdit> &edit) {
+            return edit->document == m_doc && edit->chunk == m_chunk && edit->index == eventIndex;
+        });
+    return pending == m_pendingRawEdits.end() ? fallback : (*pending)->projected;
+}
+
 bool EventTableModel::commitRawEdit(size_t eventIndex, const SmfEvent &event)
 {
-    const auto doc = m_doc;
-    const auto chunk = m_chunk;
+    auto pending = std::find_if(m_pendingRawEdits.begin(), m_pendingRawEdits.end(),
+                                [this, eventIndex](const std::shared_ptr<PendingRawEdit> &edit) {
+                                    return edit->document == m_doc && edit->chunk == m_chunk &&
+                                           edit->index == eventIndex;
+                                });
+    std::shared_ptr<PendingRawEdit> state;
+    if (pending == m_pendingRawEdits.end()) {
+        const SmfTrack *currentTrack = track();
+        if (!currentTrack || eventIndex >= currentTrack->events.size())
+            return false;
+        state = std::make_shared<PendingRawEdit>();
+        state->document = m_doc;
+        state->chunk = m_chunk;
+        state->index = eventIndex;
+        state->revision = m_doc->revision();
+        state->projected = currentTrack->events[eventIndex];
+        state->applied = state->projected;
+        m_pendingRawEdits.push_back(state);
+    } else {
+        state = *pending;
+    }
+    state->projected = event;
+    const size_t generation = ++state->generation;
+
     QMetaObject::invokeMethod(
-        this, [doc, chunk, eventIndex, event] { doc->modifyRawEvent(chunk, eventIndex, event); },
+        this,
+        [this, state, event, generation] {
+            const auto removeState = [this, &state] { std::erase(m_pendingRawEdits, state); };
+            SongDocument *const document = state->document.data();
+            if (!document || m_doc != document || m_chunk != state->chunk || state->chunk < 0 ||
+                state->chunk >= int(document->smf().tracks.size()) ||
+                document->revision() != state->revision) {
+                removeState();
+                return;
+            }
+
+            const auto &before = document->smf().tracks[state->chunk].events;
+            const auto locate = [](const std::vector<SmfEvent> &events, const SmfEvent &target,
+                                   size_t preferred) -> std::optional<size_t> {
+                if (preferred < events.size() && events[preferred] == target)
+                    return preferred;
+                std::optional<size_t> found;
+                for (size_t index = 0; index < events.size(); ++index) {
+                    if (events[index] != target)
+                        continue;
+                    if (found)
+                        return std::nullopt;
+                    found = index;
+                }
+                return found;
+            };
+            const auto index = locate(before, state->applied, state->index);
+            if (!index) {
+                removeState();
+                return;
+            }
+
+            document->modifyRawEvent(state->chunk, *index, event);
+            const auto &after = document->smf().tracks[state->chunk].events;
+            const auto nextIndex = locate(after, event, *index);
+            if (!nextIndex) {
+                removeState();
+                return;
+            }
+            state->index = *nextIndex;
+            state->applied = event;
+            state->revision = document->revision();
+            if (state->generation == generation)
+                removeState();
+        },
         Qt::QueuedConnection);
     return true;
 }

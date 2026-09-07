@@ -18,12 +18,14 @@
 #include <array>
 #include <cstdint>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <vector>
 
 class AutomationPage;
 class DrawerChrome;
 class QQuickView;
+class EventListController;
 class SongView;
 class VelocityArea;
 class VoiceChangeArea;
@@ -33,6 +35,7 @@ namespace songview {
 class OtherStrip;
 class PianoRoll;
 class TimeCamera;
+class EventListInteraction;
 class TimelineInputItem;
 class TimelineGestureScrollbar;
 enum class TimelineQuickHoverOwner : quint8 {
@@ -122,7 +125,8 @@ class TimelineQuickView final : public QWidget
     TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStrip &otherEvents,
                       AutomationPage &automation, VelocityArea &velocity,
                       VoiceChangeArea &voiceChanges, DrawerChrome &drawerChrome,
-                      TrackHeaderModel &trackHeaders, SongView &songView);
+                      TrackHeaderModel &trackHeaders, EventListController &eventList,
+                      SongView &songView);
     ~TimelineQuickView() override;
 
     // Quick-root coordinates; guide publication arrives in SongView coordinates.
@@ -206,6 +210,15 @@ class TimelineQuickView final : public QWidget
     // focusedBand() reads live QQuick active focus, never a cached flag.
     bool focusBand(TimelineBand band, Qt::FocusReason reason);
     std::optional<TimelineBand> focusedBand() const;
+    // EventList mode: focuses the event page's input item (the row-command
+    // surface). Returns false only while the input item does not exist yet.
+    bool focusEventListInput(Qt::FocusReason reason);
+    // EventList mode companion to focusedBand(): true while the event page's
+    // input item holds live active focus. The event surface is not a
+    // TimelineBand, so focusedBand() deliberately reports nullopt for it —
+    // this query is how a caller distinguishes that state from "nothing
+    // focused".
+    bool eventListSurfaceFocused() const;
     // SongView calls this before destroying a direct-owned band interaction.
     void detachInputInteraction(TimelineBand band);
 
@@ -290,11 +303,16 @@ class TimelineQuickView final : public QWidget
     QPointer<VoiceChangeArea> m_voiceChanges;
     QPointer<DrawerChrome> m_drawerChrome;
     QPointer<SongView> m_songView;
+    QPointer<EventListController> m_eventList;
     const TimeCamera &m_camera;
     // Primary plot inputs own focus and their interaction host; gutter inputs
     // only forward their physical-side event coordinates to that same interaction.
     std::array<TimelineInputItem *, timelineBandIndex(TimelineBand::Count)> m_inputItems{};
     std::array<TimelineInputItem *, timelineBandIndex(TimelineBand::Count)> m_gutterInputItems{};
+    // EventList mode: the page's input item and its interaction; the
+    // interaction joins the shared key-policy chain like every band input.
+    TimelineInputItem *m_eventListInput = nullptr;
+    std::unique_ptr<EventListInteraction> m_eventListInteraction;
     std::array<TimelineInputItem *, 5> m_drawerChromeInputs{};
     // Typed QML scrollbar roots discovered once after scene construction.
     // QPointers survive teardown; destroyed connections erase identities as

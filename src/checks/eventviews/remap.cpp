@@ -1,11 +1,11 @@
 #include "checks/eventviews/eventview_fixture.h"
 #include "checks/eventviews/tst_eventviews.h"
 
-#include "ui/eventtabletypes.h"
-#include "ui/songview.h"
-#include <QComboBox>
 #include <QCoreApplication>
 #include <QtTest>
+
+#include "ui/eventtabletypes.h"
+#include "ui/songview.h"
 
 using checks::eventviews::EventWidgets;
 using checks::eventviews::FixtureShape;
@@ -21,11 +21,13 @@ bool signalsRespectRemapOrder(const QStringList &notifications, bool remaps)
     return remaps ? remap >= 0 && remap < changed : remap < 0;
 }
 
+// The chunk anchor is the controller's selected SMF chunk plus its mirrored
+// row count: an owner remap must land the list on the same musical content.
 bool anchorMatches(const EventWidgets &widgets, const SongDocument &document, int expectedChunk)
 {
     if (expectedChunk < 0)
-        return widgets.chunkCombo->currentIndex() == -1 && widgets.model->rowCount() == 0;
-    if (widgets.chunkCombo->currentData().toInt() != expectedChunk)
+        return widgets.controller->chunk() == -1 && widgets.model->rowCount() == 0;
+    if (widgets.controller->chunk() != expectedChunk)
         return false;
     const int tempoRows = expectedChunk == 0 ? int(document.tempoPoints().size()) : 0;
     return widgets.model->rowCount() ==
@@ -42,7 +44,7 @@ void EventViewsRemapTest::notifyOrder()
     QVERIFY(widgets);
     SongDocument &document = opened.fixture->document();
     opened.fixture->view().selectTrack(1);
-    QTRY_COMPARE(widgets.chunkCombo->currentData().toInt(), document.smfTrackFor(1));
+    QTRY_COMPARE(widgets.controller->chunk(), document.smfTrackFor(1));
 
     QStringList notifications;
     connect(&document, &SongDocument::tracksRemapped, this, [&notifications](const TrackRemap &) {
@@ -121,14 +123,11 @@ void EventViewsRemapTest::anchorFollowsMove()
     QCoreApplication::processEvents();
 
     QVERIFY(document.moveTrack(1, 0));
-    QTRY_COMPARE(widgets.chunkCombo->currentData().toInt(),
-                 checks::eventviews::chunkForTrack(document, 0));
+    QTRY_COMPARE(widgets.controller->chunk(), checks::eventviews::chunkForTrack(document, 0));
     document.undoStack()->undo();
-    QTRY_COMPARE(widgets.chunkCombo->currentData().toInt(),
-                 checks::eventviews::chunkForTrack(document, 1));
+    QTRY_COMPARE(widgets.controller->chunk(), checks::eventviews::chunkForTrack(document, 1));
     document.undoStack()->redo();
-    QTRY_COMPARE(widgets.chunkCombo->currentData().toInt(),
-                 checks::eventviews::chunkForTrack(document, 0));
+    QTRY_COMPARE(widgets.controller->chunk(), checks::eventviews::chunkForTrack(document, 0));
 }
 
 void EventViewsRemapTest::deletedChunkUnselects()
@@ -140,17 +139,13 @@ void EventViewsRemapTest::deletedChunkUnselects()
     SongDocument &document = opened.fixture->document();
     opened.fixture->view().selectTrack(1);
     QCoreApplication::processEvents();
-    const int removedChunk = widgets.chunkCombo->currentData().toInt();
 
     document.deleteTrack(1);
-    QTRY_VERIFY(widgets.chunkCombo->findData(removedChunk) < 0);
-    QVERIFY(anchorMatches(widgets, document, -1));
+    QTRY_VERIFY(anchorMatches(widgets, document, -1));
     document.undoStack()->undo();
-    QTRY_VERIFY(widgets.chunkCombo->findData(removedChunk) >= 0);
-    QVERIFY(anchorMatches(widgets, document, -1));
+    QTRY_VERIFY(anchorMatches(widgets, document, -1));
     document.undoStack()->redo();
-    QTRY_VERIFY(widgets.chunkCombo->findData(removedChunk) < 0);
-    QVERIFY(anchorMatches(widgets, document, -1));
+    QTRY_VERIFY(anchorMatches(widgets, document, -1));
 }
 
 void EventViewsRemapTest::metadataChunkTransition()
@@ -161,7 +156,7 @@ void EventViewsRemapTest::metadataChunkTransition()
     QVERIFY(widgets);
     SongDocument &document = opened.fixture->document();
     constexpr int metadataChunk = 1;
-    QVERIFY(checks::eventviews::selectChunk(*widgets.chunkCombo, metadataChunk));
+    QVERIFY(checks::eventviews::selectChunk(*widgets.controller, metadataChunk));
     QTRY_COMPARE(widgets.model->chunk(), metadataChunk);
 
     int freeChannel = -1;

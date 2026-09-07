@@ -2,12 +2,15 @@
 
 #include "core/tempo.h"
 #include <QAbstractTableModel>
+#include <QByteArray>
 #include <QFont>
+#include <QHash>
 #include <QList>
 #include <QString>
 #include <QStringList>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <variant>
 #include <vector>
@@ -23,6 +26,8 @@ namespace eventlist {
 
 class EventTableModel : public QAbstractTableModel
 {
+    Q_OBJECT
+
   public:
     enum Col { ColTick, ColType, ColChannel, ColData1, ColData2, ColData, ColSummary, ColCount };
     enum FilterBit {
@@ -35,9 +40,29 @@ class EventTableModel : public QAbstractTableModel
         FilterMeta = 1 << 6,
         FilterAll = (1 << 7) - 1
     };
+    enum EventRoles {
+        TickStringRole = Qt::UserRole + 1,
+        TickValueRole,
+        TypeKindRole,
+        TypeNameRole,
+        ChannelRole,
+        Data1Role,
+        Data2Role,
+        BlobRole,
+        BlobDisplayRole,
+        SummaryRole,
+        RowKindRole,
+    };
+    Q_ENUM(EventRoles)
 
     static bool usesNumericFont(int column);
     static QList<std::pair<QString, int>> typeChoices(bool includeTempo);
+    Q_INVOKABLE int qmlRawIndexForRow(int row) const;
+    Q_INVOKABLE bool qmlHasTempo(int row) const;
+    Q_INVOKABLE QString qmlTickString(int row) const;
+    Q_INVOKABLE int qmlRowForRawIndex(qulonglong eventIndex) const;
+    Q_INVOKABLE int qmlTempoRowForTick(const QString &tickDigits) const;
+    Q_INVOKABLE static bool qmlUsesNumericFont(int column);
 
     explicit EventTableModel(SongView *sv, QObject *parent);
     void setSource(SongDocument *doc, int chunk);
@@ -62,6 +87,7 @@ class EventTableModel : public QAbstractTableModel
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
     QVariant data(const QModelIndex &index, int role) const override;
+    QHash<int, QByteArray> roleNames() const override;
     Qt::ItemFlags flags(const QModelIndex &index) const override;
     bool setData(const QModelIndex &index, const QVariant &value, int role) override;
     Qt::DropActions supportedDropActions() const override;
@@ -74,6 +100,7 @@ class EventTableModel : public QAbstractTableModel
 
   private:
     enum class RowKind { Raw, Tempo };
+    struct PendingRawEdit;
     struct RawRow {
         size_t eventIndex;
     };
@@ -99,6 +126,7 @@ class EventTableModel : public QAbstractTableModel
     bool handleRawData1(size_t eventIndex, const SmfEvent &event, const QVariant &value);
     bool handleRawData2(size_t eventIndex, const SmfEvent &event, const QVariant &value);
     bool handleRawBlob(size_t eventIndex, const SmfEvent &event, const QVariant &value);
+    SmfEvent pendingRawEvent(size_t eventIndex, const SmfEvent &fallback) const;
     bool commitRawEdit(size_t eventIndex, const SmfEvent &event);
     void queueTempoEdit(const TempoEdit &edit, uint64_t selectTick);
     uint64_t rowTick(const RowKey &key) const;
@@ -115,6 +143,7 @@ class EventTableModel : public QAbstractTableModel
     int m_playRow = -1;
     std::vector<RowKey> m_rows;
     std::function<void(size_t, size_t)> m_reorder;
+    std::vector<std::shared_ptr<PendingRawEdit>> m_pendingRawEdits;
     std::function<void(int, uint64_t)> m_select;
 };
 

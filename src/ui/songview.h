@@ -42,7 +42,7 @@ extern "C" {
 #include "voicegroup_loader.h"
 }
 
-class EventListView;
+class EventListController;
 class QKeyEvent;
 class QEvent;
 class QSpacerItem;
@@ -168,6 +168,10 @@ class SongView : public QWidget
     // Out-of-line: TimelineQuickView is forward-declared here, so the
     // QPointer conversion needs the complete type in songview.cpp.
     songview::TimelineQuickView *quickView() const noexcept;
+    // The Quick event-list controller; created unconditionally in the
+    // constructor and registered on the timeline Quick window's root
+    // context as "eventListController".
+    EventListController *eventListController() const noexcept;
     // Canonical SongView-local timeline band geometry: one parent-owned
     // value drives Quick/QML band placement and native playhead clipping.
     // Hidden bands hold nullopt.
@@ -184,6 +188,10 @@ class SongView : public QWidget
     QRect horizontalScrollbarRect() const;
     QRect verticalScrollbarRect() const;
 
+    // EventList mode: the Quick event page replaces the roll band in the
+    // same screen space. This canonical SongView-local rectangle keeps the
+    // Quick window envelope covering the page; empty while hidden.
+    QRect eventListRect() const;
     // User-added automation lanes with no events yet (SPEC §6.1 "addable from
     // the m4a parameter list). They live in the application-wide editor
     // projection — the model derives lanes from events — and survive document
@@ -374,9 +382,13 @@ class SongView : public QWidget
     // Focus bridge to the shared Quick timeline input items. Only converted
     // bands accept focus; focusTimelineBand reports false while the band's
     // input item does not exist yet, and focusedTimelineBand reads the live
-    // active-focus band of those items.
+    // active-focus band of those items. The event page is deliberately not a
+    // TimelineBand: while it holds focus focusedTimelineBand reports
+    // nullopt, and eventListSurfaceFocused distinguishes that from "nothing
+    // focused".
     bool focusTimelineBand(songview::TimelineBand band, Qt::FocusReason reason);
     std::optional<songview::TimelineBand> focusedTimelineBand() const;
+    bool eventListSurfaceFocused() const;
 
     // Bar/beat grid over [tickBegin, tickEnd): calls fn(tick, isBarStart,
     // barNumber, beatNumber) for every beat, honoring the song's time
@@ -451,8 +463,8 @@ class SongView : public QWidget
     void nudgeTimeSelection(bool right);
     // Which surface routed the key to the shared policy: Timeline — the
     // roll-page bands and Quick surfaces whose note canvas is the live
-    // editing target — or EventList, the QWidget fallback whose row-local
-    // table owns note-target commands.
+    // editing target — or EventList, the Quick event page whose input item
+    // owns the row-local table commands.
     enum class EditKeyOrigin { Timeline, EventList };
     enum class SharedShortcutOwner { SongView, Window };
     // Shared command policy entry (src/ui/songview/editkeyrouting.cpp):
@@ -754,8 +766,10 @@ class SongView : public QWidget
     QPointer<songview::TimelineQuickView> m_quickView;
     songview::PlayheadOverlay *m_playheadOverlay = nullptr;
     songview::TimelineBandLayout m_timelineBandLayout;
-    QStackedWidget *m_rollStack = nullptr; // page 0: roll placeholder, page 1: event list
-    EventListView *m_events = nullptr;
+    QStackedWidget *m_rollStack = nullptr; // page 0: roll placeholder, page 1:
+                                           // event-list placeholder (the list
+                                           // renders through the Quick host)
+    EventListController *m_events = nullptr;
     songview::OtherStrip *m_strip = nullptr;
     QSpacerItem *m_rulerSpacer = nullptr;  // owns the ruler row height
     QSpacerItem *m_headerSpacer = nullptr; // reserves the Quick header column

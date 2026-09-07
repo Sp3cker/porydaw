@@ -16,9 +16,9 @@
 #include "core/smf.h"
 #include "core/tracklimits.h"
 #include "ui/editordrawer/editordrawer.h"
-#include "ui/eventlistview.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timeruler.h"
@@ -90,7 +90,7 @@ bool controlsMatchRuler(const GateFixture &fixture)
 bool allFixedSurfacesEnabled(const GateFixture &fixture)
 {
     if (!fixture.view() || !fixture.rollInput() || !fixture.rulerInput() ||
-        !fixture.horizontalScrollbar() || !fixture.eventList() || !fixture.drawer() ||
+        !fixture.horizontalScrollbar() || !fixture.eventListController() || !fixture.drawer() ||
         !fixture.headers() || !fixture.headersInput() || !fixture.controls() ||
         !fixture.divisionControl() || !fixture.feelControl())
         return false;
@@ -99,7 +99,7 @@ bool allFixedSurfacesEnabled(const GateFixture &fixture)
     QQuickItem *const root = quick ? quick->rootObject() : nullptr;
     if (!root || !fixture.view()->isEnabled() || !fixture.rollInput()->isEnabled() ||
         !fixture.rulerInput()->isEnabled() || !fixture.horizontalScrollbar()->isVisible() ||
-        !fixture.horizontalScrollbar()->isEnabled() || !fixture.eventList()->isEnabled() ||
+        !fixture.horizontalScrollbar()->isEnabled() ||
         fixture.headersInput()->interaction() != fixture.headers() ||
         !fixture.headersInput()->isEnabled() || !fixture.controls()->isEnabled() ||
         !fixture.divisionControl()->isEnabled() || !fixture.feelControl()->isEnabled())
@@ -108,8 +108,11 @@ bool allFixedSurfacesEnabled(const GateFixture &fixture)
         root->findChild<QQuickItem *>(QStringLiteral("timelineRollScrollBar"));
     const auto *otherEvents =
         root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineOtherEventsInput"));
+    const auto *eventListInput =
+        root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineEventListInput"));
     if (!verticalScrollbar || !verticalScrollbar->isVisible() || !verticalScrollbar->isEnabled() ||
-        !otherEvents || !otherEvents->isEnabled())
+        !otherEvents || !otherEvents->isEnabled() || !eventListInput ||
+        !eventListInput->isEnabled())
         return false;
     constexpr std::array drawerNames{
         "drawerVoiceChangesHandleInput",
@@ -193,7 +196,7 @@ void PianoRollStaticTest::freshTabStaysGated()
     QVERIFY(fixture.rulerInput()->isEnabled());
     QVERIFY(fixture.horizontalScrollbar()->isVisible());
     QVERIFY(fixture.horizontalScrollbar()->isEnabled());
-    QVERIFY(fixture.eventList()->isEnabled());
+    QVERIFY(fixture.eventListController());
     QVERIFY(fixture.drawer());
     QVERIFY(fixture.headersInput()->isEnabled());
     QCOMPARE(fixture.headersInput()->interaction(), fixture.headers());
@@ -209,11 +212,15 @@ void PianoRollStaticTest::freshTabStaysGated()
         root->findChild<QQuickItem *>(QStringLiteral("timelineRollScrollBar"));
     auto *const otherEvents =
         root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineOtherEventsInput"));
+    auto *const eventListInput =
+        root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineEventListInput"));
     QVERIFY(verticalScrollbar);
     QVERIFY(verticalScrollbar->isVisible());
     QVERIFY(verticalScrollbar->isEnabled());
     QVERIFY(otherEvents);
     QVERIFY(otherEvents->isEnabled());
+    QVERIFY(eventListInput);
+    QVERIFY(eventListInput->isEnabled());
     constexpr std::array drawerNames{
         "drawerVoiceChangesHandleInput",
         "drawerVelocityHandleInput",

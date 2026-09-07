@@ -1,6 +1,7 @@
 #include "ui/songview/quick/timelinequickview.h"
 
 #include "ui/songview.h"
+#include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/quick/timelineinput.h"
 #include "ui/songview/quick/timelineinputitem.h"
 
@@ -20,7 +21,17 @@ bool TimelineQuickView::dispatchSongKey(const TimelineKeyInput &input)
 {
     // QPointer guard: a destroyed SongView turns every key into a terminal
     // decline instead of a dangling call.
-    return m_songView && m_songView->handleEditKey(input);
+    if (!m_songView)
+        return false;
+    // The event page's input item routes with the EventList origin, so
+    // note-target commands stay timeline-only there. While the page reports
+    // an active cell editor, shared commands are declined entirely — the
+    // editors own the keyboard, bubbled unclaimed keys included.
+    const bool eventListFocused = m_eventListInput && m_eventListInput->hasActiveFocus();
+    if (m_eventList && m_eventList->isEditing())
+        return false;
+    return m_songView->handleEditKey(input, eventListFocused ? SongView::EditKeyOrigin::EventList
+                                                             : SongView::EditKeyOrigin::Timeline);
 }
 
 bool TimelineQuickView::dispatchSongKeyRelease(const TimelineKeyInput &input)
@@ -48,6 +59,8 @@ void TimelineQuickView::installKeyPolicyHandlers()
         if (item)
             item->setKeyPolicy(policy);
     }
+    if (m_eventListInput)
+        m_eventListInput->setKeyPolicy(policy);
 }
 
 void TimelineQuickView::clearKeyPolicyHandlers()
@@ -64,6 +77,8 @@ void TimelineQuickView::clearKeyPolicyHandlers()
         if (item)
             item->clearKeyPolicy();
     }
+    if (m_eventListInput)
+        m_eventListInput->clearKeyPolicy();
 }
 
 bool TimelineQuickView::gestureActive() const
@@ -125,6 +140,8 @@ void TimelineQuickView::cancelActiveGestures()
         if (item && item->interaction())
             item->interaction()->cancelInteraction();
     }
+    if (m_eventListInput && m_eventListInput->interaction())
+        m_eventListInput->interaction()->cancelInteraction();
     if (QQuickWindow *const window = quickWindow()) {
         // mouseGrabberItem() falls back to the primary pointing device's
         // exclusive grabber with no window filter, so this can observe a

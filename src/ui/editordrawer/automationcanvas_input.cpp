@@ -536,11 +536,11 @@ bool AutomationCanvas::keyPress(const songview::TimelineKeyInput &input)
         // no-op; a visible selection defers to the shared policy.
         auto &model = m_page.m_owner.selectionModel();
         if (model.noteSelection().empty() && !model.timeSelection().active()) {
-            NodePoint point;
-            if (nodePointHit(m_hoverState.hover.lane, m_hoverState.hover.pos, &point)) {
-                if (const auto *slot = resolveSlot(m_hoverState.hover.lane); slot && slot->lane) {
+            const NodeLaneHoverState::HoverState hover = m_hoverState.hover;
+            if (hover.hasPoint) {
+                if (const auto *slot = resolveSlot(hover.lane); slot && slot->lane) {
                     NodeLane *lane = slot->lane;
-                    const NodeDrag drag{m_hoverState.hover.lane, point, point, lane->minimumValue(),
+                    const NodeDrag drag{hover.lane, hover.point, hover.point, lane->minimumValue(),
                                         lane->maximumValue()};
                     commitNodePointDeletes(m_page.document()->revision(), {drag});
                     m_hoverState.clearHover();

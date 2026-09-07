@@ -17,6 +17,11 @@ class EventViewsChromeTest final : public QObject
     void rowMirrorPlusEot_data();
     void rowMirrorPlusEot();
     void monoTypography();
+    void columnResizeDrag();
+    void drawerFocusKeepsNavigation();
+    void scrollbarWheelClamps();
+    void filterMenuSession();
+    void rowMenuActivationCloses();
     void filterMatrix_data();
     void filterMatrix();
     void viewStateRoundTrip();
@@ -35,8 +40,12 @@ class EventViewsEditsTest final : public QObject
   private slots:
     void tickEditQueued();
     void tick64BitExact();
+    void tickHighBitExact();
+    void tickHighBitThroughEditor();
+    void channelAndDataConversions();
     void rawTempoAtomic();
     void insertCopy();
+    void drawerClickAfterEditOwnsDelete();
     void sameTickReorder();
     void deleteMatrix();
 };

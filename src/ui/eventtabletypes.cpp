@@ -1,5 +1,5 @@
 #include "eventtabletypes.h"
-#include "eventlistview.h"
+#include "ui/songview/quick/eventlistcontroller.h"
 
 #include <QRegularExpression>
 #include <algorithm>
@@ -18,37 +18,37 @@ QString metaName(uint8_t metaType)
 {
     switch (metaType) {
     case 0x00:
-        return EventListView::tr("Sequence number");
+        return EventListController::tr("Sequence number");
     case 0x01:
-        return EventListView::tr("Text");
+        return EventListController::tr("Text");
     case 0x02:
-        return EventListView::tr("Copyright");
+        return EventListController::tr("Copyright");
     case 0x03:
-        return EventListView::tr("Track name");
+        return EventListController::tr("Track name");
     case 0x04:
-        return EventListView::tr("Instrument");
+        return EventListController::tr("Instrument");
     case 0x05:
-        return EventListView::tr("Lyric");
+        return EventListController::tr("Lyric");
     case 0x06:
-        return EventListView::tr("Marker");
+        return EventListController::tr("Marker");
     case 0x07:
-        return EventListView::tr("Cue point");
+        return EventListController::tr("Cue point");
     case 0x20:
-        return EventListView::tr("Channel prefix");
+        return EventListController::tr("Channel prefix");
     case 0x21:
-        return EventListView::tr("MIDI port");
+        return EventListController::tr("MIDI port");
     case 0x51:
-        return EventListView::tr("Tempo");
+        return EventListController::tr("Tempo");
     case 0x54:
-        return EventListView::tr("SMPTE offset");
+        return EventListController::tr("SMPTE offset");
     case 0x58:
-        return EventListView::tr("Time signature");
+        return EventListController::tr("Time signature");
     case 0x59:
-        return EventListView::tr("Key signature");
+        return EventListController::tr("Key signature");
     case 0x7F:
-        return EventListView::tr("Sequencer-specific");
+        return EventListController::tr("Sequencer-specific");
     default:
-        return EventListView::tr("Meta 0x%1").arg(metaType, 2, 16, QLatin1Char('0'));
+        return EventListController::tr("Meta 0x%1").arg(metaType, 2, 16, QLatin1Char('0'));
     }
 }
 
@@ -56,15 +56,15 @@ QString metaSummary(const SmfEvent &ev)
 {
     const QString name = metaName(ev.metaType);
     if (ev.metaType == 0x58 && ev.blob.size() >= 2) {
-        return EventListView::tr("Time signature %1")
+        return EventListController::tr("Time signature %1")
             .arg(midiTimeSigLabel(uint8_t(ev.blob[0]), uint8_t(ev.blob[1])));
     }
     if (ev.metaType >= 0x01 && ev.metaType <= 0x07) {
         QString text = QStringLiteral("%1 %2").arg(name, blobDisplayText(ev));
         if (metaIsLoopMarker(ev, '['))
-            text += EventListView::tr(" — loop start");
+            text += EventListController::tr(" — loop start");
         else if (metaIsLoopMarker(ev, ']'))
-            text += EventListView::tr(" — loop end");
+            text += EventListController::tr(" — loop end");
         return text;
     }
     return name;
@@ -102,27 +102,27 @@ QString typeKindName(int kind)
 {
     switch (kind) {
     case TypeNoteOff:
-        return EventListView::tr("Note off");
+        return EventListController::tr("Note off");
     case TypeNoteOn:
-        return EventListView::tr("Note on");
+        return EventListController::tr("Note on");
     case TypePolyTouch:
-        return EventListView::tr("Poly aftertouch");
+        return EventListController::tr("Poly aftertouch");
     case TypeCc:
-        return EventListView::tr("Control change");
+        return EventListController::tr("Control change");
     case TypeProgram:
-        return EventListView::tr("Program change");
+        return EventListController::tr("Program change");
     case TypeChanTouch:
-        return EventListView::tr("Channel aftertouch");
+        return EventListController::tr("Channel aftertouch");
     case TypeBend:
-        return EventListView::tr("Pitch bend");
+        return EventListController::tr("Pitch bend");
     case TypeSysEx0:
         return QStringLiteral("SysEx (F0)");
     case TypeSysEx7:
         return QStringLiteral("SysEx (F7)");
     case TypeTempo:
-        return EventListView::tr("Tempo");
+        return EventListController::tr("Tempo");
     default:
-        return EventListView::tr("Meta");
+        return EventListController::tr("Meta");
     }
 }
 
@@ -156,7 +156,7 @@ QString blobDisplayText(const SmfEvent &ev)
 {
     if (ev.blob.size() <= kBlobDisplayBytes)
         return blobText(ev);
-    return EventListView::tr("%1 … (%2 bytes)")
+    return EventListController::tr("%1 … (%2 bytes)")
         .arg(QString::fromLatin1(ev.blob.left(kBlobDisplayBytes).toHex(' ')).toUpper())
         .arg(ev.blob.size());
 }
@@ -183,37 +183,38 @@ QString summaryText(const SmfEvent &ev, SongView *sv)
     switch (typeKindOf(ev)) {
     case TypeNoteOn:
         if (ev.data1 == 0)
-            return EventListView::tr("Note off %1 (velocity-0 note-on)").arg(midiKeyName(ev.data0));
-        return EventListView::tr("Note on %1, velocity %2")
+            return EventListController::tr("Note off %1 (velocity-0 note-on)")
+                .arg(midiKeyName(ev.data0));
+        return EventListController::tr("Note on %1, velocity %2")
             .arg(midiKeyName(ev.data0))
             .arg(ev.data1);
     case TypeNoteOff:
-        return EventListView::tr("Note off %1").arg(midiKeyName(ev.data0));
+        return EventListController::tr("Note off %1").arg(midiKeyName(ev.data0));
     case TypePolyTouch:
-        return EventListView::tr("Poly aftertouch %1 = %2")
+        return EventListController::tr("Poly aftertouch %1 = %2")
             .arg(midiKeyName(ev.data0))
             .arg(ev.data1);
     case TypeCc: {
         const M4aCcInfo info = m4aClassifyCc(ev.data0);
-        return EventListView::tr("CC %1 %2 = %3")
+        return EventListController::tr("CC %1 %2 = %3")
             .arg(ev.data0)
             .arg(QLatin1String(info.display), m4aFormatCcValue(ev.data0, ev.data1));
     }
     case TypeProgram: {
         QString name = sv ? sv->voiceShortName(ev.data0) : QString();
-        if (name == EventListView::tr("Voice"))
+        if (name == EventListController::tr("Voice"))
             name.clear();
-        return name.isEmpty() ? EventListView::tr("Voice %1").arg(ev.data0)
-                              : EventListView::tr("Voice %1 — %2").arg(ev.data0).arg(name);
+        return name.isEmpty() ? EventListController::tr("Voice %1").arg(ev.data0)
+                              : EventListController::tr("Voice %1 — %2").arg(ev.data0).arg(name);
     }
     case TypeChanTouch:
-        return EventListView::tr("Channel aftertouch = %1").arg(ev.data0);
+        return EventListController::tr("Channel aftertouch = %1").arg(ev.data0);
     case TypeBend:
-        return EventListView::tr("Pitch bend %1")
+        return EventListController::tr("Pitch bend %1")
             .arg(m4aFormatBend(int((ev.data1 << 7) | ev.data0) - 8192));
     case TypeSysEx0:
     case TypeSysEx7:
-        return EventListView::tr("%n payload byte(s)", nullptr, int(ev.blob.size()));
+        return EventListController::tr("%n payload byte(s)", nullptr, int(ev.blob.size()));
     default:
         return metaSummary(ev);
     }

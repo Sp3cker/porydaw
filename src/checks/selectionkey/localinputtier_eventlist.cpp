@@ -1,17 +1,17 @@
-// Selection keyboard routing, protected-local-input tier: the event list. The
-// QTableView keeps row-local navigation, Select All, and the registered Alt
-// reorder binding, Copy with event-list focus fires exactly once through its
-// one window owner, and Delete removes exactly the selected raw-event rows
-// while a note selected in the song — but not in the table — survives
-// untouched (plan 11). The destructive Delete runs last in the case.
-
+// Selection keyboard routing, protected-local-input tier: the event list page.
+// Row-local navigation, Select All, and the registered reorder binding stay
+// inside the page/controller, Copy with event-list focus fires exactly once
+// through its one window owner, and Delete removes exactly the selected
+// raw-event rows while a note selected in the song — but not in the page —
+// survives untouched (plan 11). Every key posts into the production Quick
+// window; the destructive Delete runs last in the case.
 #include "checks/selectionkey/tst_localinputtier.h"
 
 #include "ui/eventtablemodel.h"
+#include "ui/songview/quick/eventlistcontroller.h"
+#include "ui/songview/quick/timelinequickview.h"
 
-#include <QApplication>
-#include <QItemSelectionModel>
-#include <QTableView>
+#include <QQuickWindow>
 
 #include <QtTest>
 
@@ -50,30 +50,39 @@ void SelectionLocalInputTierTest::eventListKeepsRowLocalKeys()
     activateShellForCommands();
     view.setEventListVisible(true);
     selectionkey::settle();
-    auto *const table = view.findChild<QTableView *>(QStringLiteral("eventListTable"));
-    QVERIFY2(table && table->isVisible(), "the event list table is unavailable");
-    auto *const model = dynamic_cast<eventlist::EventTableModel *>(table->model());
+    auto *const controller = view.eventListController();
+    QVERIFY2(controller && controller->isVisible(), "the event list page is unavailable");
+    auto *const model = controller->model();
     QVERIFY2(model != nullptr, "the event list model is missing");
+    songview::TimelineQuickView *const quick = selectionkey::quickCanvas(view);
+    QVERIFY2(quick && quick->quickWindow(), "the tab Quick window is missing");
+    QQuickWindow *const quickWindow = quick->quickWindow();
     const int rows = model->rowCount();
     QVERIFY2(rows >= 4, "the event-list fixture has too few rows");
     const int copyBefore = m_counts.copy;
 
-    // Row navigation stays table-local.
-    table->setFocus(Qt::OtherFocusReason);
-    selectionkey::settle();
-    table->setCurrentIndex(model->index(0, 0));
-    selectionkey::settle();
-    QTest::keyClick(table, Qt::Key_Down);
-    selectionkey::settle();
-    QCOMPARE(table->currentIndex().row(), 1);
-    QTest::keyClick(table, Qt::Key_Up);
-    selectionkey::settle();
-    QCOMPARE(table->currentIndex().row(), 0);
+    // Production keeps timelineEventListInput focused while the list is the
+    // visible surface: page window-Shortcuts (nav keys, Select All) match at
+    // the window, and the interaction chain consumes its local commands.
+    const auto focusInput = [quick]() -> bool {
+        return quick->focusEventListInput(Qt::OtherFocusReason);
+    };
+    QVERIFY2(focusInput(), "the event list input did not take focus");
 
-    // Select All stays local to the table rows.
-    QTest::keyClick(table, Qt::Key_A, Qt::ControlModifier);
+    // Row navigation stays list-local.
+    controller->selectRow(0, Qt::NoModifier);
     selectionkey::settle();
-    QCOMPARE(table->selectionModel()->selectedRows().count(), rows);
+    QTest::keyClick(quickWindow, Qt::Key_Down);
+    selectionkey::settle();
+    QCOMPARE(controller->currentRow(), 1);
+    QTest::keyClick(quickWindow, Qt::Key_Up);
+    selectionkey::settle();
+    QCOMPARE(controller->currentRow(), 0);
+
+    // Select All stays local to the event rows.
+    QTest::keyClick(quickWindow, Qt::Key_A, Qt::ControlModifier);
+    selectionkey::settle();
+    QCOMPARE(controller->selectedRows().count(), rows);
 
     // The registered reorder binding swaps adjacent rows without changing the
     // event set.
@@ -82,9 +91,10 @@ void SelectionLocalInputTierTest::eventListKeepsRowLocalKeys()
     const int totalBefore = totalEvents(document);
     const QString row0Before = rowSummary(model, 0);
     const QString row1Before = rowSummary(model, 1);
-    table->setCurrentIndex(model->index(1, 0));
+    controller->selectRow(1, Qt::NoModifier);
     selectionkey::settle();
-    QTest::keyClick(table, moveUp->key(), moveUp->keyboardModifiers());
+    QVERIFY2(focusInput(), "the event list input did not take focus");
+    QTest::keyClick(quickWindow, moveUp->key(), moveUp->keyboardModifiers());
     selectionkey::settle();
     QVERIFY2(rowSummary(model, 0) == row1Before && rowSummary(model, 1) == row0Before,
              "the reorder key did not swap the first two rows");
@@ -96,7 +106,8 @@ void SelectionLocalInputTierTest::eventListKeepsRowLocalKeys()
     const auto copy = selectionkey::firstBinding(QStringLiteral("roll.copy"));
     QVERIFY2(copy.has_value(), "Copy has no single-key binding");
     activateShellForCommands();
-    QTest::keyClick(table, copy->key(), copy->keyboardModifiers());
+    QVERIFY2(focusInput(), "the event list input did not take focus for Copy");
+    QTest::keyClick(quickWindow, copy->key(), copy->keyboardModifiers());
     selectionkey::settle();
     QCOMPARE(m_counts.copy, copyBefore + 1);
 
@@ -121,7 +132,7 @@ void SelectionLocalInputTierTest::eventListKeepsRowLocalKeys()
     }
     QVERIFY2(!duplicateProtectedTick, "the protected tick is not unique in the fixture");
     QVERIFY2(protectedRow >= 0, "the protected note row is missing");
-    // Victims need a table-unique tick so the post-delete scan cannot be
+    // Victims need a list-unique tick so the post-delete scan cannot be
     // confused by a second event sharing their tick. Only raw-event rows
     // qualify: a tempo row's Delete is the tempo-map operation, not the
     // raw-event removal this scenario asserts, and the protected note's
@@ -147,23 +158,23 @@ void SelectionLocalInputTierTest::eventListKeepsRowLocalKeys()
         victimTicks.push_back(*tick);
     }
     QCOMPARE(int(victimRows.size()), 2);
-    // Select All ran earlier and every document refresh restores multi-row
-    // selections (EventListView::refresh re-selects captured rows after each
-    // model reset), so drop whatever selection survived before staging the
-    // two victims — otherwise Delete would remove every selected raw event.
-    table->selectionModel()->clearSelection();
+    // Select All ran earlier and every document refresh preserves valid row
+    // positions, so drop whatever selection survived before staging the two
+    // victims — otherwise Delete would remove every selected raw event.
+    controller->selectRow(-1, Qt::NoModifier);
     selectionkey::settle();
-    QItemSelection selection;
-    for (const int row : victimRows)
-        selection.select(model->index(row, 0), model->index(row, model->columnCount() - 1));
-    table->selectionModel()->select(selection,
-                                    QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    QVERIFY2(focusInput(), "the event list input did not take focus for Delete");
+    controller->selectRow(victimRows.front(), Qt::NoModifier);
+    controller->selectRow(victimRows.back(), Qt::ControlModifier);
     selectionkey::settle();
+    QVERIFY2(controller->selectedRows().contains(victimRows.front()) &&
+                 controller->selectedRows().contains(victimRows.back()),
+             "the two victim rows were not both selected");
     view.selectionModel().setNoteSelection({protectedNote->id});
 
     const int rowsBeforeDelete = model->rowCount();
     const int totalBeforeDelete = totalEvents(document);
-    QTest::keyClick(table, Qt::Key_Delete);
+    QTest::keyClick(quickWindow, Qt::Key_Delete);
     selectionkey::settle();
     QCOMPARE(model->rowCount(), rowsBeforeDelete - 2);
     QCOMPARE(totalEvents(document), totalBeforeDelete - 2);

@@ -27,7 +27,9 @@ OtherStrip::OtherStrip(SongView &owner, QObject *parent)
     , m_owner(owner)
     , m_camera(owner.camera())
     , m_geometry(Geometry::resolve())
-{}
+{
+    syncToolTipAppearance();
+}
 
 void OtherStrip::requestQuickUpdate()
 {

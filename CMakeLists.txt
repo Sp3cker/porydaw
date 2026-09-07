@@ -309,6 +309,13 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/pianoroll_gestures.cpp
     src/ui/songview/pianoroll_gestures_active.cpp
     src/ui/songview/pianoroll_commands.cpp
+    src/ui/songview/quick/eventlistcontroller.cpp
+    src/ui/songview/quick/eventlistcontroller.h
+    src/ui/songview/quick/quickmenumodel.cpp
+    src/ui/songview/quick/quickmenuhost.cpp
+    src/ui/songview/quick/quickmenulayout.cpp
+    src/ui/songview/quick/quickmenulayout.h
+    src/ui/songview/quick/quickmenumodel.h
     src/ui/songview/quick/otherstripquick.cpp
     src/ui/songview/quick/automationnodelanequick.cpp
     src/ui/songview/quick/automationnodelanequick.h
@@ -337,14 +344,11 @@ qt_add_library(porydaw_app STATIC
     src/ui/pitchbendgraph.hpp
     src/ui/pitchbendeditor_window.cpp
     src/ui/pitchbendgraph_render.cpp
-    src/ui/eventlistview.cpp
-    src/ui/eventlistview.h
     src/ui/eventtablemodel.cpp
     src/ui/eventtablemodeledit.cpp
     src/ui/eventtablemodel.h
     src/ui/eventtabletypes.cpp
     src/ui/eventtabletypes.h
-    src/ui/eventlistviewactions.cpp
     src/core/noteid.h
     src/core/velocitymodel.cpp
     src/core/velocitymodel.h
@@ -467,6 +471,14 @@ set_source_files_properties(
     src/ui/songview/quick/PitchBendPopup.qml
     PROPERTIES QT_RESOURCE_ALIAS PitchBendPopup.qml
 )
+set_source_files_properties(
+    src/ui/songview/quick/EventListPage.qml
+    PROPERTIES QT_RESOURCE_ALIAS EventListPage.qml
+)
+set_source_files_properties(
+    src/ui/songview/quick/QuickMenuPanel.qml
+    PROPERTIES QT_RESOURCE_ALIAS QuickMenuPanel.qml
+)
 qt_add_qml_module(porydaw_app
     URI Porydaw.Ui
     VERSION 1.0
@@ -482,6 +494,8 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/TrackHeaderToolTip.qml
         src/ui/songview/quick/DrawerChromeLayer.qml
         src/ui/songview/quick/OtherStripToolTip.qml
+        src/ui/songview/quick/QuickMenuPanel.qml
+        src/ui/songview/quick/EventListPage.qml
         src/ui/songview/quick/DragInput.qml
         src/ui/songview/quick/PitchBendPopup.qml
 )

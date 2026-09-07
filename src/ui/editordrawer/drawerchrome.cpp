@@ -152,7 +152,10 @@ void DrawerChromeInteraction::detachInputHost(songview::TimelineInputHost &host)
 
 bool DrawerChromeInteraction::pointerPress(const songview::TimelinePointerInput &input)
 {
-    return m_chrome.handlePress(m_target, input);
+    const bool handled = m_chrome.handlePress(m_target, input);
+    if (handled && m_host && m_target == DrawerChromeTarget::Bar)
+        m_host->requestFocus(Qt::MouseFocusReason);
+    return handled;
 }
 
 bool DrawerChromeInteraction::pointerMove(const songview::TimelinePointerInput &input)
@@ -383,12 +386,10 @@ bool DrawerChrome::handlePress(DrawerChromeTarget target,
     if (target == DrawerChromeTarget::Bar) {
         if (input.button != Qt::LeftButton)
             return false;
-        m_pressedToggle.reset();
-        const std::optional<EditorDrawerPage> page =
-            toggleAt(m_snapshot, m_snapshot.barRect.topLeft() + input.position);
-        if (!page)
-            return false;
-        m_pressedToggle = *page;
+        // The bar owns its complete visible surface, including padding between
+        // toggles. A blank-bar click still transfers keyboard ownership away
+        // from the editor without activating a command.
+        m_pressedToggle = toggleAt(m_snapshot, m_snapshot.barRect.topLeft() + input.position);
         return true;
     }
 
@@ -451,12 +452,13 @@ bool DrawerChrome::handleRelease(DrawerChromeTarget target,
     }
 
     if (target == DrawerChromeTarget::Bar) {
-        if (input.button != Qt::LeftButton || !m_pressedToggle)
+        if (input.button != Qt::LeftButton)
             return false;
-        const EditorDrawerPage page = *m_pressedToggle;
+        const std::optional<EditorDrawerPage> page = m_pressedToggle;
         m_pressedToggle.reset();
-        if (toggleRect(m_snapshot, page).contains(m_snapshot.barRect.topLeft() + input.position))
-            activateToggle(static_cast<int>(page));
+        if (page &&
+            toggleRect(m_snapshot, *page).contains(m_snapshot.barRect.topLeft() + input.position))
+            activateToggle(static_cast<int>(*page));
         return true;
     }
 

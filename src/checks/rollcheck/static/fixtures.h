@@ -8,6 +8,8 @@
 #include "project/voicegroupsource.h"
 
 #include <memory>
+class EventListController;
+class EditorDrawer;
 class SongTab;
 class SongView;
 class QQuickItem;
@@ -24,9 +26,6 @@ class TimelineInputItem;
 class TimelineQuickView;
 class TrackHeaderModel;
 } // namespace songview
-
-class EventListView;
-class EditorDrawer;
 
 namespace checks::rollcheck::staticcheck {
 
@@ -94,7 +93,7 @@ class GateFixture final
     [[nodiscard]] songview::TimeRuler *ruler() const noexcept;
     [[nodiscard]] songview::TrackHeaderModel *headers() const noexcept;
     [[nodiscard]] songview::TimelineInputItem *headersInput() const noexcept;
-    [[nodiscard]] EventListView *eventList() const noexcept;
+    [[nodiscard]] EventListController *eventListController() const noexcept;
     [[nodiscard]] EditorDrawer *drawer() const noexcept;
 
   private:
@@ -109,7 +108,7 @@ class GateFixture final
     QPointer<songview::TimeRuler> m_ruler;
     QPointer<songview::TrackHeaderModel> m_headers;
     QPointer<songview::TimelineInputItem> m_headersInput;
-    QPointer<EventListView> m_eventList;
+    QPointer<EventListController> m_eventListController;
     QPointer<EditorDrawer> m_drawer;
 };
 
