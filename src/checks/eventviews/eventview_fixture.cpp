@@ -10,6 +10,7 @@
 #include <optional>
 #include <utility>
 
+#include "checks/quickpopupguard.h"
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
 #include "project/voicegroupsource.h"
@@ -273,16 +274,9 @@ QQuickItem *visualItem(QQuickWindow &window, const QString &objectName)
     return visualDescendant(window.contentItem(), objectName);
 }
 
-QQuickItem *popupLayer(const EventWidgets &widgets)
-{
-    return widgets.popupSession ? widgets.popupSession->overlayRoot() : nullptr;
-}
-
 QQuickItem *activeMenuPanel(const EventWidgets &widgets)
 {
-    QQuickItem *const panel =
-        visualDescendant(popupLayer(widgets), QStringLiteral("quickMenuPanelRoot"));
-    return panel && panel->isVisible() ? panel : nullptr;
+    return widgets.popupSession ? quick_popup::menuPanel(*widgets.popupSession) : nullptr;
 }
 
 QQuickItem *eventListTable(const EventWidgets &widgets)

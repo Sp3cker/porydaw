@@ -7,7 +7,9 @@
 #include "ui/pitchbendeditor.hpp"
 #include "ui/songview.h"
 #include "ui/songview/clipmime.h"
+#include "ui/songview/detail.h"
 #include "ui/songview/quick/pianorollquick.h"
+#include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/theme/themeruntime.h"
@@ -15,6 +17,7 @@
 #include <QApplication>
 #include <QMetaObject>
 #include <QObject>
+#include <QQuickWindow>
 #include <QUrl>
 #include <QVariantMap>
 
@@ -26,6 +29,7 @@ namespace lyt = ::layout;
 using Space = lyt::Space;
 
 namespace songview {
+using namespace songview::detail;
 using namespace songview::pianoroll_detail;
 
 bool PianoRoll::keyPress(const TimelineKeyInput &input)
@@ -282,7 +286,53 @@ void PianoRoll::showNoteMenu(QPointF localPos)
     const std::vector<DocNote> notes = resolveSelection();
     if (notes.empty())
         return;
-    m_noteMenu->showMenuAt(m_inputHost->mapToGlobal(localPos).toPoint(), notes.front().velocity);
+    songview::TimelineQuickView *const quick = m_sv->quickView();
+    QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
+    if (!window || !m_inputHost)
+        return;
+
+    // Same four rows as the former native menu; shortcut display only —
+    // MainWindow's Edit menu owns the real Copy command.
+    std::vector<QuickMenuItem> rows;
+    rows.reserve(4);
+    QuickMenuItem velocity;
+    velocity.id = int(NoteMenuAction::Velocity);
+    velocity.text = SongView::tr("Set velocity… (%1)").arg(notes.front().velocity);
+    rows.push_back(std::move(velocity));
+    rows.push_back(QuickMenuItem::makeSeparator());
+    QuickMenuItem copy;
+    copy.id = int(NoteMenuAction::Copy);
+    copy.text = SongView::tr("Copy");
+    copy.shortcutText = contextShortcutText(QStringLiteral("roll.copy"));
+    rows.push_back(std::move(copy));
+    QuickMenuItem cut;
+    cut.id = int(NoteMenuAction::Cut);
+    cut.text = SongView::tr("Cut");
+    cut.shortcutText = contextShortcutText(QStringLiteral("roll.cut"));
+    rows.push_back(std::move(cut));
+    QuickMenuItem del;
+    del.id = int(NoteMenuAction::Delete);
+    del.text = SongView::tr("Delete");
+    rows.push_back(std::move(del));
+    m_noteMenuModel->setItems(std::move(rows));
+
+    // Snapshot the guarded open-time target first, but publish it only
+    // after open()'s implicit cancellation of a displaced session has
+    // completed: no callback can observe a half-published target, and an
+    // open failure publishes nothing. The snapshot travels through the
+    // session close until activation consumes it; cancellation clears it.
+    PendingNoteMenu target;
+    target.targets.reserve(notes.size());
+    for (const DocNote &note : notes)
+        target.targets.push_back(note.noteId);
+    target.document = doc;
+    target.documentRevision = doc->revision();
+
+    const QPointF scenePos = window->mapFromGlobal(m_inputHost->mapToGlobal(localPos));
+    m_noteMenuHost->open(m_noteMenuModel, scenePos);
+    if (!m_noteMenuHost->isOpen())
+        return;
+    m_pendingNoteMenu = std::move(target);
 }
 
 bool PianoRoll::focusNoteUnderCursor(QPointF globalPos)
@@ -299,36 +349,58 @@ bool PianoRoll::focusNoteUnderCursor(QPointF globalPos)
     return true;
 }
 
-bool PianoRoll::moveNoteMenu(QPointF globalPos)
+void PianoRoll::moveNoteMenu(QPointF globalPos)
 {
-    if (!focusNoteUnderCursor(globalPos))
-        return false;
-    showNoteMenu(m_inputHost->mapFromGlobal(globalPos));
-    return true;
+    if (focusNoteUnderCursor(globalPos))
+        showNoteMenu(m_inputHost->mapFromGlobal(globalPos));
 }
 
-void PianoRoll::handleNoteMenuChoice(NoteMenuChoice choice)
+void PianoRoll::retargetNoteMenu(QPointF scenePos)
 {
-    SongDocument *doc = m_sv->document();
-    if (!doc)
+    // The host forward already proved the canvas stayed idle. Map the press
+    // to global coordinates so the shared hit-test helpers stay unchanged.
+    songview::TimelineQuickView *const quick = m_sv->quickView();
+    QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
+    if (!window || !m_inputHost)
         return;
-    const std::vector<DocNote> notes = resolveSelection();
+    moveNoteMenu(window->mapToGlobal(scenePos));
+}
+
+void PianoRoll::handleNoteMenuAction(int action)
+{
+    if (!m_pendingNoteMenu)
+        return;
+    // Clear before command: the dispatch may open the velocity prompt as a
+    // new session, and a target must never fire twice.
+    const PendingNoteMenu target = std::move(*m_pendingNoteMenu);
+    m_pendingNoteMenu.reset();
+    SongDocument *const doc = m_sv->document();
+    if (!doc || doc != target.document || doc->revision() != target.documentRevision)
+        return;
+    std::vector<DocNote> notes;
+    notes.reserve(target.targets.size());
+    for (const NoteId &id : target.targets) {
+        DocNote note;
+        if (!doc->findNote(id, &note)) {
+            notes.clear();
+            break;
+        }
+        notes.push_back(std::move(note));
+    }
     if (notes.empty())
         return;
-    switch (choice) {
-    case NoteMenuChoice::Copy:
+    switch (static_cast<NoteMenuAction>(action)) {
+    case NoteMenuAction::Copy:
         copyNotes(notes);
         break;
-    case NoteMenuChoice::Cut:
+    case NoteMenuAction::Cut:
         cutSelectedNotes();
         break;
-    case NoteMenuChoice::Velocity:
+    case NoteMenuAction::Velocity:
         openVelocityPrompt(notes);
         break;
-    case NoteMenuChoice::Delete:
+    case NoteMenuAction::Delete:
         deleteSelectedNotes();
-        break;
-    case NoteMenuChoice::None:
         break;
     }
 }

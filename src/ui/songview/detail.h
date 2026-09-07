@@ -28,6 +28,9 @@ QString keyName(int key);
 // of the command (native text) when bound, the bare label otherwise. Shared
 // by the note and time-selection menus so a rebinding updates both.
 QString contextActionText(const QString &text, const QString &commandId);
+// The shortcut half of contextActionText, for typed menus that render the
+// label and the shortcut in separate columns.
+QString contextShortcutText(const QString &commandId);
 QString timeSigLabel(int numerator, int denomPow2);
 QColor loopEdge();
 QColor pianoRollAccidentalLaneColor();

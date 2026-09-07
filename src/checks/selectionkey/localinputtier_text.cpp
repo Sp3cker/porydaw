@@ -14,16 +14,15 @@
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timelinebandlayout.h"
 #include "ui/songview/trackheadermodel.h"
 
-#include <QAction>
 #include <QApplication>
 #include <QClipboard>
 #include <QLineEdit>
-#include <QMenu>
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
@@ -436,26 +435,17 @@ void SelectionLocalInputTierTest::velocityPromptOwnsKeys()
     selectionkey::sendMouseEvent(*quickWindow, QEvent::MouseButtonRelease, rollPress,
                                  Qt::RightButton);
     selectionkey::settle();
-    songview::pianoroll_detail::NoteContextMenu *noteMenu = nullptr;
-    for (QMenu *const menu : view.findChildren<QMenu *>(QString{}, Qt::FindDirectChildrenOnly)) {
-        auto *const candidate = dynamic_cast<songview::pianoroll_detail::NoteContextMenu *>(menu);
-        if (candidate && candidate->isVisible()) {
-            noteMenu = candidate;
-            break;
-        }
-    }
-    QVERIFY2(noteMenu, "right-click did not open the note menu");
-    QAction *velocityAction = nullptr;
-    for (QAction *const action : noteMenu->actions()) {
-        if (noteMenu->handleAction(action) ==
-            songview::pianoroll_detail::NoteMenuChoice::Velocity) {
-            velocityAction = action;
-            break;
-        }
-    }
-    QVERIFY2(velocityAction, "the note menu has no velocity action");
-    QTest::mouseClick(noteMenu, Qt::LeftButton, Qt::NoModifier,
-                      noteMenu->actionGeometry(velocityAction).center());
+    songview::QuickPopupSession *const menuSession = quick_popup::popupSession(view);
+    QVERIFY2(menuSession && menuSession->isOpen(), "right-click did not open the note menu");
+    QQuickItem *const panel = quick_popup::menuPanel(*menuSession);
+    QVERIFY2(panel, "the note menu did not render a panel");
+    songview::QuickMenuModel *const model = quick_popup::menuModel(*panel);
+    QVERIFY2(model, "the note menu has no typed model");
+    const int velocityRow =
+        model->rowForId(int(songview::pianoroll_detail::NoteMenuAction::Velocity));
+    QVERIFY2(velocityRow >= 0, "the note menu has no velocity action");
+    QVERIFY2(quick_popup::clickMenuRow(*menuSession, velocityRow),
+             "the velocity menu row did not receive a real click");
     selectionkey::settle();
 
     songview::QuickPopupSession *const popup = quick_popup::popupSession(view);

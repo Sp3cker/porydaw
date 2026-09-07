@@ -3,20 +3,22 @@
 #include <QCoreApplication>
 #include <QEvent>
 #include <QFocusEvent>
-#include <QMenu>
 #include <QMouseEvent>
 #include <QPoint>
+#include <QQuickItem>
 #include <QQuickWindow>
 #include <QtTest>
 #include <algorithm>
 #include <optional>
 #include <vector>
 
+#include "checks/quickpopupguard.h"
 #include "checks/rollcheck/rollcheck.h"
 #include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 
@@ -80,38 +82,119 @@ void PianoRollTest::velocityNoteMenuRetarget()
     auto &roll = check.rollInput();
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
+    const int undoCount = doc.undoStack()->count();
     const checks::rollcheck::SnappedRows rows{view, roll};
     checks::events::sendMouse(roll, QEvent::MouseButtonPress, seed->b.center, Qt::RightButton,
                               Qt::RightButton, Qt::NoModifier);
     checks::events::sendMouse(roll, QEvent::MouseButtonRelease, seed->b.center, Qt::RightButton,
                               Qt::NoButton, Qt::NoModifier);
     QCoreApplication::processEvents();
-    auto *noteMenu = view.findChild<QMenu *>(QString{}, Qt::FindDirectChildrenOnly);
-    QVERIFY2(noteMenu && noteMenu->isVisible(), "right-click did not open the note menu");
-    const QPoint aGlobal = roll.mapToGlobal(QPointF(seed->a.center)).toPoint();
-    checks::events::sendMouse(*noteMenu, QEvent::MouseButtonPress, noteMenu->mapFromGlobal(aGlobal),
-                              Qt::RightButton, Qt::RightButton, Qt::NoModifier);
-    checks::events::sendMouse(*noteMenu, QEvent::MouseButtonRelease,
-                              noteMenu->mapFromGlobal(aGlobal), Qt::RightButton, Qt::NoButton,
-                              Qt::NoModifier);
+    songview::QuickPopupSession *const menu = quick_popup::popupSession(view);
+    QVERIFY2(menu && menu->isOpen(), "right-click did not open the note menu");
+    QQuickItem *const frame = quick_popup::menuFrame(*menu);
+    QVERIFY2(frame, "the note menu rendered no frame");
+    const QPointF retargetLocal(seed->a.center);
+    QVERIFY2(!frame->contains(frame->mapFromScene(roll.mapToScene(retargetLocal))),
+             "the retarget note fell inside the open note menu");
+    QQuickWindow *const window = menu->window();
+    QVERIFY2(window, "the note menu has no canvas window");
+    const QPoint retargetPoint = roll.mapToScene(retargetLocal).toPoint();
+
+    // The outside right press retargets the selection to the note under the
+    // cursor and reopens the menu for it on the same owner.
+    QTest::mousePress(window, Qt::RightButton, Qt::NoModifier, retargetPoint);
+    QTRY_VERIFY2(menu->isOpen(), "retargeting hid the open note menu");
+    QTRY_COMPARE(view.selectionModel().noteSelection(), std::vector<NoteId>{seed->noteA.noteId});
+    QTest::mouseRelease(window, Qt::RightButton, Qt::NoModifier, retargetPoint);
     QCoreApplication::processEvents();
-    const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
-    QVERIFY2(noteMenu->isVisible(), "retargeting hid the open note menu");
-    QVERIFY2(selection.size() == 1 && selection.front() == seed->noteA.noteId,
-             "retargeting did not select the new note");
-    int clearKey = seed->a.key + 1;
-    while (clearKey <= 127 && check.isOccupied(seed->a.tick, seed->a.dur, clearKey))
-        ++clearKey;
-    const QPoint clearGlobal =
-        roll.mapToGlobal(QPointF(seed->a.center.x(), rows.centerY(clearKey))).toPoint();
-    checks::events::sendMouse(*noteMenu, QEvent::MouseButtonPress,
-                              noteMenu->mapFromGlobal(clearGlobal), Qt::RightButton,
+    QVERIFY2(menu->isOpen(), "the retarget release reached the timeline");
+    QCOMPARE(view.selectionModel().noteSelection(), std::vector<NoteId>{seed->noteA.noteId});
+    QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
+                 doc.undoStack()->count() == undoCount,
+             "the retarget press/release mutated the song");
+
+    // The reopened menu anchors on the retargeted note; an outside right
+    // press on a verified-empty visible row dismisses it without mutation.
+    QQuickItem *const reopened = quick_popup::menuFrame(*menu);
+    // The piano spans 0..127 in both directions from the anchor. Rows below
+    // the anchor sit lower on screen and may hold the only unoccupied visible
+    // area outside the reopened frame, so the scan is finite and
+    // bidirectional, ordered by distance from the anchor.
+    int clearKey = -1;
+    QPointF clearLocal;
+    for (int offset = 1; offset <= 127 && clearKey < 0; ++offset) {
+        for (const int key : {seed->a.key + offset, seed->a.key - offset}) {
+            if (key < 0 || key > 127)
+                continue;
+            const QPointF candidate(seed->a.center.x(), rows.centerY(key));
+            const bool visible = rows.top(key) >= 0.0 && rows.bottom(key) <= roll.bounds().height();
+            if (visible && !check.isOccupied(seed->a.tick, seed->a.dur, key) &&
+                !reopened->contains(reopened->mapFromScene(roll.mapToScene(candidate)))) {
+                clearKey = key;
+                clearLocal = candidate;
+                break;
+            }
+        }
+    }
+    QVERIFY2(clearKey >= 0, "no visible empty row outside the reopened note menu");
+    const QPoint clearPoint = roll.mapToScene(clearLocal).toPoint();
+    QTest::mousePress(window, Qt::RightButton, Qt::NoModifier, clearPoint);
+    QTRY_VERIFY2(!menu->isOpen(), "empty-space right-click did not dismiss the note menu");
+    QTest::mouseRelease(window, Qt::RightButton, Qt::NoModifier, clearPoint);
+    QCoreApplication::processEvents();
+    QVERIFY2(!menu->isOpen(), "the dismissed release reopened a popup");
+    QCOMPARE(view.selectionModel().noteSelection(), std::vector<NoteId>{seed->noteA.noteId});
+    while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
+        doc.undoStack()->undo();
+    QCOMPARE(doc.smf().write(), before);
+}
+
+// The menu's velocity target is guarded by document identity and revision.
+// The document may also end the session when it changes; whether the menu
+// survives the edit or not, a stale activation must never open the prompt on
+// the outdated target or write to the song.
+void PianoRollTest::velocityNoteMenuStaleActivation()
+{
+    auto &check = *m_fixture;
+    const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
+    QVERIFY(seed.has_value());
+    SongDocument &doc = check.document();
+    SongView &view = check.view();
+    auto &roll = check.rollInput();
+    const QByteArray before = doc.smf().write();
+    const int undo = doc.undoStack()->index();
+    const int undoCount = doc.undoStack()->count();
+    const uint64_t revision = doc.revision();
+    checks::events::sendMouse(roll, QEvent::MouseButtonPress, seed->b.center, Qt::RightButton,
                               Qt::RightButton, Qt::NoModifier);
-    checks::events::sendMouse(*noteMenu, QEvent::MouseButtonRelease,
-                              noteMenu->mapFromGlobal(clearGlobal), Qt::RightButton, Qt::NoButton,
-                              Qt::NoModifier);
+    checks::events::sendMouse(roll, QEvent::MouseButtonRelease, seed->b.center, Qt::RightButton,
+                              Qt::NoButton, Qt::NoModifier);
     QCoreApplication::processEvents();
-    QVERIFY2(!noteMenu->isVisible(), "empty-space right-click did not dismiss the note menu");
+    songview::QuickPopupSession *const menu = quick_popup::popupSession(view);
+    QVERIFY2(menu && menu->isOpen(), "right-click did not open the note menu");
+
+    doc.setNotesVelocity({seed->noteB}, 40);
+    QCoreApplication::processEvents();
+    QQuickItem *const survivor = quick_popup::menuPanel(*menu);
+    if (survivor) {
+        // The menu outlived the edit: activating its stale velocity row must
+        // close the session silently instead of opening the prompt.
+        songview::QuickMenuModel *const staleModel = quick_popup::menuModel(*survivor);
+        QVERIFY2(staleModel, "the surviving note menu has no typed model");
+        const int staleRow =
+            staleModel->rowForId(int(songview::pianoroll_detail::NoteMenuAction::Velocity));
+        QVERIFY2(staleRow >= 0, "the surviving note menu has no velocity action");
+        QVERIFY2(quick_popup::clickMenuRow(*menu, staleRow),
+                 "the stale note menu lost its rendered velocity row");
+        QCoreApplication::processEvents();
+    }
+    songview::QuickPopupSession *const after = quick_popup::popupSession(view);
+    QVERIFY2(after && !after->isOpen(), "the stale menu activation left a popup open");
+    DocNote stale;
+    QVERIFY2(doc.findNote(check.track(), seed->b.tick, uint8_t(seed->b.key), &stale) &&
+                 stale.velocity == 40 && doc.revision() == revision + 1 &&
+                 doc.undoStack()->count() == undoCount + 1 && doc.undoStack()->index() == undo + 1,
+             "the stale menu activation wrote to the song");
     while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
         doc.undoStack()->undo();
     QCOMPARE(doc.smf().write(), before);

@@ -95,9 +95,9 @@ int chunkForTrack(const SongDocument &document, int engineTrack);
 // Selects the given SMF chunk the way the page's chunk menu does.
 bool selectChunk(EventListController &controller, int chunk);
 
-// The shared popup layer and its menu panel are QQuickItem visual descendants,
-// rather than QObject-owned children of the canvas window.
-QQuickItem *popupLayer(const EventWidgets &widgets);
+// The menu panel is a QQuickItem visual descendant of the shared popup layer,
+// rather than a QObject-owned child of the canvas window. The lookup itself
+// lives on the shared quick_popup seam.
 QQuickItem *activeMenuPanel(const EventWidgets &widgets);
 
 // Finds a rendered item through QQuickItem's visual-parent tree. Dynamically

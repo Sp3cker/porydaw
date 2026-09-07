@@ -8,12 +8,9 @@
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/quick/pianorollquick.h"
+#include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/typography.h"
-
-#include <QAction>
-#include <QMenu>
-#include <QPointer>
 
 #include <QFontMetrics>
 #include <algorithm>
@@ -22,43 +19,6 @@
 
 namespace lyt = ::layout;
 using Space = lyt::Space;
-
-namespace songview::pianoroll_detail {
-using namespace songview::detail;
-
-NoteContextMenu::NoteContextMenu(QWidget *parent, std::function<bool(QPointF)> onOutsideRightClick)
-    : ui::ContextMenu(parent, std::move(onOutsideRightClick))
-{
-    m_velocityAction = addAction(QString());
-    addSeparator();
-    // The shortcut is text only: MainWindow's native Edit menu owns Copy.
-    m_copyAction = addAction(SongView::tr("Copy"));
-    m_cutAction = addAction(SongView::tr("Cut"));
-    m_deleteAction = addAction(SongView::tr("Delete"));
-}
-
-void NoteContextMenu::showMenuAt(QPoint globalPos, int velocity)
-{
-    m_velocityAction->setText(SongView::tr("Set velocity… (%1)").arg(velocity));
-    m_copyAction->setText(contextActionText(SongView::tr("Copy"), QStringLiteral("roll.copy")));
-    m_cutAction->setText(contextActionText(SongView::tr("Cut"), QStringLiteral("roll.cut")));
-    popup(globalPos);
-}
-
-NoteMenuChoice NoteContextMenu::handleAction(QAction *action) const
-{
-    if (action == m_velocityAction)
-        return NoteMenuChoice::Velocity;
-    if (action == m_copyAction)
-        return NoteMenuChoice::Copy;
-    if (action == m_cutAction)
-        return NoteMenuChoice::Cut;
-    if (action == m_deleteAction)
-        return NoteMenuChoice::Delete;
-    return NoteMenuChoice::None;
-}
-
-} // namespace songview::pianoroll_detail
 
 namespace songview {
 using namespace songview::detail;
@@ -85,17 +45,23 @@ PianoRoll::PianoRoll(SongView *sv)
         m_keyboardHoverNameWidths[std::size_t(key)] =
             hoverMetrics.horizontalAdvance(midiKeyName(key));
 
-    const QPointer<PianoRoll> guardedThis(this);
-    m_noteMenu = new NoteContextMenu(sv, [guardedThis](QPointF globalPos) {
-        return guardedThis && guardedThis->moveNoteMenu(globalPos);
-    });
-    connect(m_noteMenu, &QMenu::triggered, this, [this](QAction *action) {
-        const NoteMenuChoice choice = m_noteMenu->handleAction(action);
-        // Finish the native popup session before opening an application-modal
-        // window; otherwise the menu retains its nested input ownership.
-        m_noteMenu->hide();
-        handleNoteMenuChoice(choice);
-    });
+    // The note menu is a typed adapter over the shared canvas popup session;
+    // the session itself is assigned later by the Quick host view. The host
+    // closes the session before emitting activated(), so the guarded open-
+    // time target survives until handleNoteMenuAction consumes it — only a
+    // cancellation (Escape, outside press, foreign replacement) clears it.
+    m_noteMenuHost = new QuickMenuHost(this);
+    m_noteMenuModel = new QuickMenuModel(this);
+    connect(m_noteMenuModel, &QuickMenuModel::activated, this,
+            [this](int action) { handleNoteMenuAction(action); });
+    connect(m_noteMenuHost, &QuickMenuHost::cancelled, this, [this] { m_pendingNoteMenu.reset(); });
+    connect(m_noteMenuHost, &QuickMenuHost::outsideRightPressed, this,
+            [this](QPointF scenePos) { retargetNoteMenu(scenePos); });
+}
+
+void PianoRoll::setPopupSession(QuickPopupSession *session)
+{
+    m_noteMenuHost->setPopupSession(session);
 }
 
 void PianoRoll::requestQuickUpdate(PianoRollQuickDirtySet dirty)

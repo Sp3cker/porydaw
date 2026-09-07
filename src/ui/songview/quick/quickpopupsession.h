@@ -41,7 +41,7 @@ class QuickPopupSession final : public QObject
     void isOpenChanged();
     void cancelled(bool restoreFocus);
     void closed();
-    void outsideRightPressed(const QPointF &scenePos);
+    void outsideRightPressed(QObject *dismissedOwner, const QPointF &scenePos);
 
   protected:
     bool eventFilter(QObject *watched, QEvent *event) override;

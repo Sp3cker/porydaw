@@ -111,6 +111,8 @@ void QuickMenuHost::setPopupSession(QuickPopupSession *session)
                 [this](bool) { handleSessionCancelled(); });
         connect(m_popupSession, &QuickPopupSession::closed, this,
                 &QuickMenuHost::handleSessionClosed);
+        connect(m_popupSession, &QuickPopupSession::outsideRightPressed, this,
+                &QuickMenuHost::handleSessionOutsideRightPressed);
     }
     emit windowChanged();
 }
@@ -233,7 +235,8 @@ bool QuickMenuHost::eventFilter(QObject *watched, QEvent *event)
     return QObject::eventFilter(watched, event);
 }
 
-QQuickItem *QuickMenuHost::createPanel(QuickMenuModel *model, bool rootLevel)
+QQuickItem *QuickMenuHost::createPanel(QuickMenuModel *model, bool rootLevel,
+                                       const MenuMetrics &layout)
 {
     QQuickWindow *const popupWindow = window();
     QQuickItem *const overlay = m_popupSession ? m_popupSession->overlayRoot() : nullptr;
@@ -250,11 +253,25 @@ QQuickItem *QuickMenuHost::createPanel(QuickMenuModel *model, bool rootLevel)
             qWarning().noquote() << error.toString();
         return nullptr;
     }
+    // Delegates must instantiate with the final row metrics: a panel created
+    // at QML defaults collapses the list's contentHeight until the next
+    // polish pass, so a click dispatched before polish never reaches a row.
     const QVariantMap initialProperties{
         {QStringLiteral("host"), QVariant::fromValue(this)},
         {QStringLiteral("menuModel"), QVariant::fromValue(model)},
         {QStringLiteral("appearance"), m_appearance},
         {QStringLiteral("rootLevel"), rootLevel},
+        {QStringLiteral("rowHeight"), layout.rowHeight},
+        {QStringLiteral("separatorHeight"), layout.separatorHeight},
+        {QStringLiteral("checkX"), layout.checkX},
+        {QStringLiteral("checkWidth"), layout.checkWidth},
+        {QStringLiteral("textX"), layout.textX},
+        {QStringLiteral("textRight"), layout.textRight},
+        {QStringLiteral("shortcutRight"), layout.shortcutRight},
+        {QStringLiteral("arrowRight"), layout.arrowRight},
+        {QStringLiteral("arrowWidth"), layout.arrowWidth},
+        {QStringLiteral("menuWidth"), layout.menuWidth},
+        {QStringLiteral("menuHeight"), layout.menuHeight},
     };
     QObject *object =
         component.createWithInitialProperties(initialProperties, engine->rootContext());
@@ -283,7 +300,14 @@ QQuickItem *QuickMenuHost::createPanel(QuickMenuModel *model, bool rootLevel)
 
 void QuickMenuHost::pushLevel(QuickMenuModel *model, const QRectF &anchor, bool rootLevel)
 {
-    QQuickItem *const panel = createPanel(model, rootLevel);
+    QQuickWindow *const popupWindow = window();
+    if (!popupWindow)
+        return;
+    const QFont font = resolveMenuFont(m_appearance);
+    const QFontMetrics metrics(font);
+    const MenuMetrics layout =
+        measureMenu(*model, metrics, QSizeF(popupWindow->width(), popupWindow->height()));
+    QQuickItem *const panel = createPanel(model, rootLevel, layout);
     if (!panel)
         return;
     Level level;
@@ -299,7 +323,7 @@ void QuickMenuHost::pushLevel(QuickMenuModel *model, const QRectF &anchor, bool 
                 m_popupSession->cancel(false);
         });
     }
-    layoutLevel(stored, anchor, rootLevel);
+    applyLevel(stored, layout, anchor, rootLevel);
     setHighlight(stored, -1);
 }
 
@@ -357,6 +381,7 @@ void QuickMenuHost::handleSessionClosed()
     const bool wasActive = m_sessionActive;
     m_sessionActive = false;
     m_waitingForClosed = false;
+
     teardown(false);
     if (wasActive) {
         emit isOpenChanged();
@@ -364,6 +389,17 @@ void QuickMenuHost::handleSessionClosed()
         emit currentChanged();
     }
     emit closed();
+}
+
+void QuickMenuHost::handleSessionOutsideRightPressed(QObject *dismissedOwner,
+                                                     const QPointF &scenePos)
+{
+    // The session was already cancelled when this arrives. Only the owner of
+    // the dismissed menu may retarget, and only while the canvas stayed
+    // idle: a cancellation callback that already opened a new foreign
+    // session wins, and this retarget must not displace it.
+    if (dismissedOwner == this && m_popupSession && !m_popupSession->isOpen())
+        emit outsideRightPressed(scenePos);
 }
 
 void QuickMenuHost::handleLevelReset(QuickMenuModel *model)
@@ -397,15 +433,23 @@ void QuickMenuHost::handleLevelReset(QuickMenuModel *model)
 
 void QuickMenuHost::layoutLevel(Level &level, const QRectF &anchor, bool rootLevel)
 {
-    QQuickItem *const panel = level.panel.data();
-    QuickMenuModel *const model = level.model.data();
     QQuickWindow *const popupWindow = window();
-    if (!panel || !model || !popupWindow)
+    if (!popupWindow || !level.panel || !level.model)
         return;
     const QFont font = resolveMenuFont(m_appearance);
     const QFontMetrics metrics(font);
     const MenuMetrics layout =
-        measureMenu(*model, metrics, QSizeF(popupWindow->width(), popupWindow->height()));
+        measureMenu(*level.model, metrics, QSizeF(popupWindow->width(), popupWindow->height()));
+    applyLevel(level, layout, anchor, rootLevel);
+}
+
+void QuickMenuHost::applyLevel(Level &level, const MenuMetrics &layout, const QRectF &anchor,
+                               bool rootLevel)
+{
+    QQuickItem *const panel = level.panel.data();
+    QQuickWindow *const popupWindow = window();
+    if (!panel || !popupWindow)
+        return;
     panel->setProperty("rowHeight", layout.rowHeight);
     panel->setProperty("separatorHeight", layout.separatorHeight);
     panel->setProperty("checkX", layout.checkX);

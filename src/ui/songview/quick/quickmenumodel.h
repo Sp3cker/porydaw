@@ -20,6 +20,9 @@ class QQuickWindow;
 
 namespace songview {
 
+/// Measured row metrics for one menu level (defined in quickmenulayout.h).
+struct MenuMetrics;
+
 /// One typed menu row. Menus never carry QVariant command maps: owners build
 /// vectors of these values and hand them to a QuickMenuModel, and interpret
 /// the integer ids themselves when the model emits activated().
@@ -177,6 +180,11 @@ class QuickMenuHost : public QObject
     void appearanceChanged();
     void cancelled();
     void closed();
+    // Emitted when a right-press outside the canvas dismissed THIS host's
+    // menu session (never a foreign popup's). The scene position is the
+    // press point; owners retarget or stay dismissed from here. The paired
+    // release is swallowed by the shared session.
+    void outsideRightPressed(const QPointF &scenePos);
 
   protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
@@ -191,15 +199,17 @@ class QuickMenuHost : public QObject
         QMetaObject::Connection modelDestroyedConnection;
     };
 
-    QQuickItem *createPanel(QuickMenuModel *model, bool rootLevel);
+    QQuickItem *createPanel(QuickMenuModel *model, bool rootLevel, const MenuMetrics &layout);
     void pushLevel(QuickMenuModel *model, const QRectF &anchor, bool rootLevel);
     void popLevel(bool notifyState = true);
     void popToLevel(QQuickItem *panel);
     void teardown(bool notifyState = true);
     void handleSessionCancelled();
     void handleSessionClosed();
+    void handleSessionOutsideRightPressed(QObject *dismissedOwner, const QPointF &scenePos);
     void handleLevelReset(QuickMenuModel *model);
     void layoutLevel(Level &level, const QRectF &anchor, bool rootLevel);
+    void applyLevel(Level &level, const MenuMetrics &layout, const QRectF &anchor, bool rootLevel);
     void relayoutRoot();
     void setHighlight(Level &level, int row);
     void syncPanelHighlight(Level &level);

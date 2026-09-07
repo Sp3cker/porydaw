@@ -13,14 +13,13 @@
 #include "ui/songtab.h"
 #include "ui/songview.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/timelineinputitem.h"
-#include <QAction>
 #include <QCoreApplication>
 #include <QEvent>
-#include <QMenu>
+#include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
-#include <QResizeEvent>
 #include <QtTest>
 #include <optional>
 
@@ -39,9 +38,8 @@ struct VelocityPromptSession {
 };
 
 // Opens the velocity prompt through the production menu path: the right
-// press retargets the selection to the note under the cursor, clicking the
-// real "Set velocity…" action runs the genuine menu trigger, and the prompt
 // content takes focus in the already-exposed canvas.
+
 VelocityPromptSession openVelocityPrompt(checks::rollcheck::PianoRollFixture &check,
                                          const Cell &cell)
 {
@@ -52,32 +50,23 @@ VelocityPromptSession openVelocityPrompt(checks::rollcheck::PianoRollFixture &ch
     checks::events::sendMouse(check.rollInput(), QEvent::MouseButtonRelease, cell.center,
                               Qt::RightButton, Qt::NoButton, Qt::NoModifier);
     QCoreApplication::processEvents();
-    songview::pianoroll_detail::NoteContextMenu *noteMenu = nullptr;
-    for (QMenu *const menu : view.findChildren<QMenu *>(QString{}, Qt::FindDirectChildrenOnly)) {
-        auto *const candidate = dynamic_cast<songview::pianoroll_detail::NoteContextMenu *>(menu);
-        if (candidate && candidate->isVisible()) {
-            noteMenu = candidate;
-            break;
-        }
-    }
-    if (!noteMenu) {
+    songview::QuickPopupSession *const menu = quick_popup::popupSession(view);
+    if (!menu || !menu->isOpen()) {
         session.diagnostic = QStringLiteral("right-click did not open the note menu");
         return session;
     }
-    QAction *velocityAction = nullptr;
-    for (QAction *const action : noteMenu->actions()) {
-        if (noteMenu->handleAction(action) ==
-            songview::pianoroll_detail::NoteMenuChoice::Velocity) {
-            velocityAction = action;
-            break;
-        }
-    }
-    if (!velocityAction) {
+    QQuickItem *const panel = quick_popup::menuPanel(*menu);
+    songview::QuickMenuModel *const model = panel ? quick_popup::menuModel(*panel) : nullptr;
+    const int velocityRow =
+        model ? model->rowForId(int(songview::pianoroll_detail::NoteMenuAction::Velocity)) : -1;
+    if (velocityRow < 0) {
         session.diagnostic = QStringLiteral("the note menu has no velocity action");
         return session;
     }
-    QTest::mouseClick(noteMenu, Qt::LeftButton, Qt::NoModifier,
-                      noteMenu->actionGeometry(velocityAction).center());
+    if (!quick_popup::clickMenuRow(*menu, velocityRow)) {
+        session.diagnostic = QStringLiteral("the velocity menu row did not receive a real click");
+        return session;
+    }
     QCoreApplication::processEvents();
     songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
     if (!popup || !popup->isOpen() || !popup->window()) {
@@ -85,17 +74,28 @@ VelocityPromptSession openVelocityPrompt(checks::rollcheck::PianoRollFixture &ch
             QStringLiteral("the velocity menu action did not open the canvas prompt");
         return session;
     }
-    session.popup = popup;
-    session.window = popup->window();
-    if (checks::async_wait::waitUntil([] { return true; },
-                                      [&session] {
-                                          return quick_popup::inputHasActiveFocus(
-                                              *session.window, QLatin1String("noteVelocityInput"));
+    // The prompt exists only after the session transitions to Form content,
+    // and that transition is asynchronous. The wait therefore requires the
+    // live content slot plus the named input's active focus, and the session
+    // pointers stay null until the form is real: a failed open reaches the
+    // caller's guard with the diagnostic instead of a misleading downstream
+    // input failure.
+    const QPointer<songview::QuickPopupSession> livePopup(popup);
+    if (checks::async_wait::waitUntil([&livePopup] { return livePopup && livePopup->isOpen(); },
+                                      [&livePopup] {
+                                          return livePopup && livePopup->isOpen() &&
+                                                 livePopup->window() && livePopup->contentItem() &&
+                                                 quick_popup::inputHasActiveFocus(
+                                                     *livePopup->window(),
+                                                     QLatin1String("noteVelocityInput"));
                                       },
                                       5000, 10) != checks::async_wait::Result::Ready) {
-        session.diagnostic = QStringLiteral("the velocity prompt text input did not take focus");
+        session.diagnostic =
+            QStringLiteral("the velocity prompt form did not open with a focused text input");
         return session;
     }
+    session.popup = popup;
+    session.window = popup->window();
     session.diagnostic.clear();
     return session;
 }
@@ -417,6 +417,48 @@ void PianoRollTest::popupSessionDismissal()
              "small-viewport Insert Time Cancel did not close without writing");
     m_tab->resize(1280, 800);
     QCoreApplication::processEvents();
+}
+
+// An outside right press while the velocity prompt is open dismisses the
+// prompt as a foreign-session owner: no menu host may retarget through
+// another owner's dismissal, no note menu may open, and the paired release
+// stays swallowed by the session.
+void PianoRollTest::velocityPromptOutsideRightNoRetarget()
+{
+    auto &check = *m_fixture;
+    const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
+    QVERIFY(seed.has_value());
+    SongDocument &doc = check.document();
+    SongView &view = check.view();
+    auto &roll = check.rollInput();
+    const quick_popup::PromptGuard guard(view);
+    const QByteArray before = doc.smf().write();
+    const int undo = doc.undoStack()->index();
+    const int undoCount = doc.undoStack()->count();
+    const uint64_t revision = doc.revision();
+
+    const VelocityPromptSession outside = openVelocityPrompt(check, seed->b);
+    QVERIFY2(outside.window && outside.popup, qUtf8Printable(outside.diagnostic));
+    const std::vector<NoteId> selectionBefore = view.selectionModel().noteSelection();
+    const Cell outsideCell = check.findFreeCell(120);
+    QVERIFY2(outsideCell.key >= 0, "no timeline cell for the prompt outside-right dismissal");
+    const QPoint outsidePoint = roll.mapToScene(outsideCell.center).toPoint();
+    QQuickItem *const content = outside.popup->contentItem();
+    QVERIFY2(content && !content->contains(content->mapFromScene(QPointF(outsidePoint))),
+             "the dismissal point did not reach the popup underlay");
+
+    QTest::mousePress(outside.window, Qt::RightButton, Qt::NoModifier, outsidePoint);
+    QCoreApplication::processEvents();
+    QVERIFY2(!outside.popup->isOpen(), "an outside right press did not dismiss the prompt");
+    QTest::mouseRelease(outside.window, Qt::RightButton, Qt::NoModifier, outsidePoint);
+    QCoreApplication::processEvents();
+    songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
+    QVERIFY2(popup && !popup->isOpen(), "the swallowed outside right release opened a popup");
+    QCOMPARE(view.selectionModel().noteSelection(), selectionBefore);
+    QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
+                 doc.undoStack()->count() == undoCount && doc.revision() == revision,
+             "the outside right dismissal wrote to the song");
+    QTRY_VERIFY2(roll.hasFocus(), "outside right cancellation did not restore roll focus");
 }
 
 void PianoRollTest::velocityPromptBounds()

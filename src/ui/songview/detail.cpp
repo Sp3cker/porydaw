@@ -80,10 +80,14 @@ QString keyName(int key)
 
 QString contextActionText(const QString &text, const QString &commandId)
 {
+    const QString shortcut = contextShortcutText(commandId);
+    return shortcut.isEmpty() ? text : text + u'\t' + shortcut;
+}
+
+QString contextShortcutText(const QString &commandId)
+{
     const auto shortcut = keymap::Registry::instance().bindings(commandId).value(0);
-    if (shortcut.isEmpty())
-        return text;
-    return text + u'\t' + shortcut.toString(QKeySequence::NativeText);
+    return shortcut.isEmpty() ? QString() : shortcut.toString(QKeySequence::NativeText);
 }
 
 QString timeSigLabel(int numerator, int denomPow2)

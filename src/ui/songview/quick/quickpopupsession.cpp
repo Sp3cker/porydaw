@@ -161,9 +161,13 @@ void QuickPopupSession::outsidePressed(int button, QPointF scenePos)
         return;
     m_swallowedReleaseButton = mouseButton;
     const bool rightPressed = mouseButton == Qt::RightButton;
+    // Snapshot before cancel: end() clears the owner and a cancellation
+    // callback may even destroy it, yet right-press retargeting must still
+    // learn which owner was dismissed so it cannot steal a newer session.
+    const QPointer<QObject> dismissedOwner = m_owner;
     cancel(true);
-    if (rightPressed)
-        emit outsideRightPressed(scenePos);
+    if (rightPressed && dismissedOwner)
+        emit outsideRightPressed(dismissedOwner.data(), scenePos);
 }
 
 bool QuickPopupSession::eventFilter(QObject *watched, QEvent *event)

@@ -11,12 +11,10 @@
 #include <QVariantMap>
 #include <array>
 #include <cstdint>
-#include <functional>
 #include <optional>
 #include <vector>
 
 #include "core/songdocument.h"
-#include "ui/contextmenu.h"
 #include "ui/pitchprojection.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/pianorollquick.h"
@@ -24,38 +22,26 @@
 #include "ui/songview/timecamera.h"
 #include "ui/songviewmodel.h"
 
-class QAction;
 class QPixmap;
 
 namespace songview {
+class QuickMenuHost;
+class QuickMenuModel;
+class QuickPopupSession;
 class TimelineQuickView;
 class PitchBendEditor;
 } // namespace songview
 
 namespace songview::pianoroll_detail {
 
-enum class NoteMenuChoice {
-    None,
-    Velocity,
-    Copy,
-    Cut,
-    Delete,
-};
-
-// Retained native chrome, parented to the SongView (never to the interaction
-// module, which is a plain QObject now).
-class NoteContextMenu final : public ui::ContextMenu
-{
-  public:
-    explicit NoteContextMenu(QWidget *parent, std::function<bool(QPointF)> onOutsideRightClick);
-    void showMenuAt(QPoint globalPos, int velocity);
-    NoteMenuChoice handleAction(QAction *action) const;
-
-  private:
-    QAction *m_velocityAction = nullptr;
-    QAction *m_copyAction = nullptr;
-    QAction *m_cutAction = nullptr;
-    QAction *m_deleteAction = nullptr;
+// Typed row ids of the note context menu. The shared Quick menu adapter
+// carries plain ints; PianoRoll builds the rows and interprets these ids
+// when QuickMenuModel::activated() arrives.
+enum class NoteMenuAction : int {
+    Velocity = 1,
+    Copy = 2,
+    Cut = 3,
+    Delete = 4,
 };
 
 struct PianoRollGeometry {
@@ -131,6 +117,9 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     bool finishKeyboardAudition();
     // Routes a semantic dirty union to SongView's retained Quick host.
     void requestQuickUpdate(PianoRollQuickDirtySet dirty);
+    // Assigns the shared canvas popup session once the Quick view exists;
+    // the note context menu is a typed QuickMenuHost adapter over it.
+    void setPopupSession(QuickPopupSession *session);
     // Typed Quick-modal bridge for note-menu velocity. The pending snapshot
     // belongs to the roll, not to a generic dialog result object.
     Q_INVOKABLE void acceptVelocityPrompt(int velocity);
@@ -275,8 +264,20 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
 
     void showNoteMenu(QPointF localPos);
     bool focusNoteUnderCursor(QPointF globalPos);
-    bool moveNoteMenu(QPointF globalPos);
-    void handleNoteMenuChoice(pianoroll_detail::NoteMenuChoice choice);
+    void moveNoteMenu(QPointF globalPos);
+    // Outside-right sink from the menu host: retargets to the note under
+    // the press and reopens, or leaves the menu dismissed on a miss.
+    void retargetNoteMenu(QPointF scenePos);
+    // Consumes the guarded open-time target; clears it before any command.
+    void handleNoteMenuAction(int action);
+    // The selection at menu-open time, held through the session close until
+    // activation consumes it. Document identity plus revision make a stale
+    // target a silent no-write.
+    struct PendingNoteMenu {
+        std::vector<NoteId> targets;
+        SongDocument *document = nullptr;
+        uint64_t documentRevision = 0;
+    };
     struct PendingVelocityPrompt {
         std::vector<NoteId> targets;
         SongDocument *document = nullptr;
@@ -344,13 +345,16 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     int m_soundingKey = -1;    // auditioned key highlighted on the keyboard
     int m_hoverKey = -1;       // key row under the cursor; -1 = no mark
     bool m_auditioned = false; // a drag/draw preview note is sounding
+    // Typed note-menu adapter over the shared canvas popup session.
+    QuickMenuHost *m_noteMenuHost = nullptr;
+    QuickMenuModel *m_noteMenuModel = nullptr;
+    std::optional<PendingNoteMenu> m_pendingNoteMenu;
     std::optional<PendingVelocityPrompt> m_pendingVelocityPrompt;
     QMetaObject::Connection m_velocityPromptCancellation;
     uint8_t m_lastVelocity = 100; // latches to touched/velocity-edited notes
     bool m_panning = false;       // middle-drag pan
     QPointF m_panPos;             // last pan sample, global coords
     PitchBendEditor *m_bendPopup = nullptr;
-    pianoroll_detail::NoteContextMenu *m_noteMenu = nullptr;
 };
 
 } // namespace songview
