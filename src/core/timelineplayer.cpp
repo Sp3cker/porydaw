@@ -27,7 +27,10 @@ void TimelinePlayer::dispatchEvent(M4AEngine *engine, const TimelineEvent &ev, u
         }
         break;
     case 0xB:
-        m4a_engine_cc(engine, ev.track, ev.data0, ev.data1);
+        // mid2agb consumes channel-mode termination while deriving note
+        // gates; it does not emit an M4A command for either controller.
+        if (ev.data0 != 0x78 && ev.data0 != 0x7B)
+            m4a_engine_cc(engine, ev.track, ev.data0, ev.data1);
         break;
     case 0xC:
         m4a_engine_program_change(engine, ev.track, ev.data0);

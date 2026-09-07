@@ -21,14 +21,36 @@ The tasks configure `build/` as Release if needed, then compile. Prefer
 ## Run harnesses
 
 ```bash
-deno task verify                              # builds checks, then all harnesses
+# Normal source change: build checks, then run the affected harnesses.
 deno task verify --filter rollcheck --verbose
-deno task verify --no-build --filter vgcheck  # reuse an existing build/
+# Reuse build/ only after confirming it was built from the changed source.
+deno task verify --no-build --filter vgcheck
 ```
 
-`deno task verify` is the default. `deno task checks <binary>` is the raw
-runner; only use it when the binary is not `build/porydaw_checks` (CI's
-ASAN job does this).
+Choose the narrowest verification that proves the changed behavior. For a
+source change, identify the affected harness or harnesses and run them with
+`deno task verify --filter <name>`; it builds `porydaw_checks` first. Exercise
+the actual changed behavior too when a harness alone cannot establish it.
+
+Run unfiltered `deno task verify` only for a cross-cutting change, after a
+failure that makes broader fallout plausible, when targeted checks leave
+material unresolved risk, or when the user explicitly requests full coverage.
+Do not broaden or repeat checks merely by default.
+
+`--no-build` is an optimization, not the default: use it only when the
+existing `build/` demonstrably includes the changed source and configuration.
+Otherwise omit it so `deno task verify` rebuilds. `deno task checks <binary>`
+is the raw runner; only use it when the binary is not
+`build/porydaw_checks` (CI's ASAN job does this).
+
+### Instruction-only changes
+
+Do not build the app or run harnesses automatically for documentation,
+skill, or instruction-only edits. Instead, validate the relevant Markdown or
+front-matter syntax, metadata, and changed link targets using the
+repository-provided check where one exists; otherwise inspect those affected
+elements directly. Run application verification only if the edit changes an
+executable contract or introduces unresolved risk that requires it.
 
 Do not:
 

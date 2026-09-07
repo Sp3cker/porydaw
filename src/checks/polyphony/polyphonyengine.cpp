@@ -33,6 +33,10 @@ constexpr uint8_t kDropKey = 64;
 constexpr uint8_t kTailKey = 65;
 constexpr uint32_t kRenderChunk = 500;
 constexpr uint64_t kRenderSamples = 220000;
+constexpr uint64_t kGateModeTick = 24;
+constexpr uint64_t kGateOffTick = 96;
+constexpr uint64_t kGateRenderTicks = 49;
+constexpr uint8_t kGateKey = 60;
 
 SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data1)
 {
@@ -269,6 +273,46 @@ void PolyphonyGateTest::auditionRemainsAudibleWithInvert()
             peak = std::max({peak, std::fabs(left[index]), std::fabs(right[index])});
     }
     QVERIFY2(peak > 1e-4f, qPrintable(QString::number(peak)));
+}
+
+void PolyphonyGateTest::channelModeLeavesCompiledGateIntact_data()
+{
+    QTest::addColumn<int>("controller");
+
+    QTest::newRow("allNotesOff") << 0x7B;
+    QTest::newRow("allSoundOff") << 0x78;
+}
+
+void PolyphonyGateTest::channelModeLeavesCompiledGateIntact()
+{
+    QFETCH(int, controller);
+
+    SmfFile smf;
+    smf.format = 1;
+    smf.division = kDivision;
+    smf.tracks.resize(2);
+    smf.tracks[0].events.push_back(tempoEvent());
+    SmfTrack &track = smf.tracks[1];
+    track.events = {channelEvent(0, 0xC0, 0, 0), channelEvent(0, 0x90, kGateKey, 100),
+                    channelEvent(kGateModeTick, 0xB0, uint8_t(controller), 0),
+                    channelEvent(kGateOffTick, 0x80, kGateKey, 0)};
+    const std::unique_ptr<MidiTimeline> songTimeline = MidiTimeline::build(smf, kSampleRate);
+    QVERIFY(songTimeline);
+
+    EngineFixture fixture;
+    TimelinePlayer player;
+    player.reset();
+    std::array<float, kRenderChunk> left{};
+    std::array<float, kRenderChunk> right{};
+    for (uint64_t rendered = 0; rendered < kGateRenderTicks * kSamplesPerTick;
+         rendered += kRenderChunk)
+        player.render(&fixture.engine, songTimeline.get(), std::span(left), std::span(right), false,
+                      0);
+
+    float peak = 0.0f;
+    for (uint32_t index = 0; index < kRenderChunk; ++index)
+        peak = std::max({peak, std::fabs(left[index]), std::fabs(right[index])});
+    QVERIFY2(peak > 0.01f, qPrintable(QString::number(peak)));
 }
 
 } // namespace checks

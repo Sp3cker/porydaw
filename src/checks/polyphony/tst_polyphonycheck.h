@@ -27,6 +27,8 @@ class PolyphonyGateTest final : public QObject
     void normalPlaybackKeepsShadowPoolOff();
     void invertSilencesUntilOverflowAndClearsShadow();
     void auditionRemainsAudibleWithInvert();
+    void channelModeLeavesCompiledGateIntact_data();
+    void channelModeLeavesCompiledGateIntact();
 
     void logOrderAndFormatting();
     void positionedLogRowJumpsAndLiveDoesNot();
