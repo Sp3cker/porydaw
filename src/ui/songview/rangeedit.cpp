@@ -1,17 +1,14 @@
 #include "core/mid2agbtables.h"
 #include "core/songdocument.h"
-#include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/clipmime.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/quick/pianorollquick.h"
+#include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/theme/themeruntime.h"
-#include <QAction>
-#include <QMenu>
-#include <QPoint>
 #include <QUrl>
 #include <QVariantMap>
 
@@ -805,47 +802,156 @@ std::optional<Clip> SongView::readClipboardClip()
         announce(tr("Cannot paste: clipboard clip could not be decoded"));
     return std::nullopt;
 }
-void SongView::showTimeSelectionMenu(const QPoint &globalPos)
+std::vector<QuickMenuItem> SongView::buildTimeSelectionItems() const
+{
+    // Same rows, order, labels, and shortcut text as the former native
+    // menu; the typed renderer shows the shortcut in its own column.
+    auto row = [](TimeSelectionAction action, QString text, QString shortcut) {
+        QuickMenuItem item;
+        item.id = int(action);
+        item.text = std::move(text);
+        item.shortcutText = std::move(shortcut);
+        return item;
+    };
+    std::vector<QuickMenuItem> rows;
+    rows.reserve(9);
+    rows.push_back(row(TimeSelectionAction::Copy, tr("Copy range"),
+                       contextShortcutText(QStringLiteral("roll.copy"))));
+    rows.push_back(row(TimeSelectionAction::Cut, tr("Cut range"),
+                       contextShortcutText(QStringLiteral("roll.cut"))));
+    rows.push_back(row(TimeSelectionAction::Delete, tr("Delete range"), {}));
+    rows.push_back(row(TimeSelectionAction::InsertBlank, tr("Insert blank time"), {}));
+    rows.push_back(row(TimeSelectionAction::Duplicate, tr("Duplicate time"),
+                       contextShortcutText(QStringLiteral("roll.duplicate_time"))));
+    rows.push_back(
+        row(TimeSelectionAction::RemoveContents, tr("Remove contents (shift left)"), {}));
+    QuickMenuItem paste = row(TimeSelectionAction::Paste, tr("Paste at edit cursor"),
+                              contextShortcutText(QStringLiteral("roll.paste")));
+    // Build-time enablement only: the command re-reads the clipboard fresh
+    // at activation, so mid-menu clipboard swaps still apply.
+    const auto clipboard =
+        m_timeline ? readClipboard(m_timeline->ticksPerBeat) : std::optional<Clip>{};
+    paste.enabled = clipboard && !clipboard->empty();
+    rows.push_back(std::move(paste));
+    rows.push_back(QuickMenuItem::makeSeparator());
+    rows.push_back(row(TimeSelectionAction::Clear, tr("Clear time selection"), {}));
+    return rows;
+}
+
+void SongView::openTimeSelectionMenu(const QPointF &scenePos)
 {
     if (!m_document || !m_selectionModel.timeSelection().active())
         return;
-    QMenu menu(this);
-    // Copy is text only: MainWindow's native Edit menu owns its shortcut.
-    const auto &keys = keymap::Registry::instance();
-    QAction *copy =
-        menu.addAction(contextActionText(tr("Copy range"), QStringLiteral("roll.copy")));
-    QAction *cut = menu.addAction(tr("Cut range"));
-    cut->setShortcut(keys.bindings(QStringLiteral("roll.cut")).value(0));
-    QAction *del = menu.addAction(tr("Delete range"));
-    QAction *insertBlank = menu.addAction(tr("Insert blank time"));
-    QAction *duplicate = menu.addAction(tr("Duplicate time"));
-    duplicate->setShortcut(keys.bindings(QStringLiteral("roll.duplicate_time")).value(0));
-    QAction *removeContents = menu.addAction(tr("Remove contents (shift left)"));
-    QAction *paste = menu.addAction(tr("Paste at edit cursor"));
-    paste->setShortcut(keys.bindings(QStringLiteral("roll.paste")).value(0));
-    const auto clipboard =
-        m_timeline ? readClipboard(m_timeline->ticksPerBeat) : std::optional<Clip>{};
-    paste->setEnabled(clipboard && !clipboard->empty());
-    menu.addSeparator();
-    QAction *clear = menu.addAction(tr("Clear time selection"));
-    QAction *chosen = menu.exec(globalPos);
-    if (chosen == copy) {
+    songview::TimelineQuickView *const quick = quickView();
+    songview::QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
+    if (!session)
+        return;
+    bindTimeSelectionMenuSession(session);
+    m_timeSelectionMenuModel->setItems(buildTimeSelectionItems());
+
+    // Snapshot the guarded open-time target first, but publish it only
+    // after open()'s implicit cancellation of a displaced session has
+    // completed: no callback can observe a half-published target, and an
+    // open failure publishes nothing. The snapshot travels through the
+    // session close until activation consumes it; cancellation clears it.
+    PendingTimeSelectionMenu target;
+    target.document = m_document;
+    target.documentRevision = m_document->revision();
+    target.selection = m_selectionModel.timeSelection();
+    target.trackScope = m_selectionModel.storedTrackScope();
+
+    m_timeSelectionMenuHost->open(m_timeSelectionMenuModel, scenePos);
+    if (!m_timeSelectionMenuHost->isOpen())
+        return;
+    m_timeSelectionMenuOpen = true;
+    m_pendingTimeSelectionMenu = std::move(target);
+}
+
+void SongView::handleTimeSelectionAction(int actionId)
+{
+    if (!m_pendingTimeSelectionMenu)
+        return;
+    // Consume before any command: the dispatch may open a new session,
+    // and a target must never fire twice.
+    const PendingTimeSelectionMenu target = std::move(*m_pendingTimeSelectionMenu);
+    m_pendingTimeSelectionMenu.reset();
+    m_timeSelectionMenuOpen = false;
+    SongDocument *const doc = m_document;
+    const auto &current = m_selectionModel.timeSelection();
+    const bool stale =
+        !doc || doc != target.document || doc->revision() != target.documentRevision ||
+        !current.active() || current.startTick != target.selection.startTick ||
+        current.endTick != target.selection.endTick || current.scope != target.selection.scope ||
+        current.tempo != target.selection.tempo || current.lanes != target.selection.lanes ||
+        (current.scope == EditorSelectionModel::TimeSelection::Tracks &&
+         m_selectionModel.storedTrackScope() != target.trackScope);
+    if (stale)
+        return; // No edit, no undo push, no announce; session already closed.
+    switch (static_cast<TimeSelectionAction>(actionId)) {
+    case TimeSelectionAction::Copy:
         copyTimeSelection();
-    } else if (chosen == cut) {
+        break;
+    case TimeSelectionAction::Cut:
         copyTimeSelection();
         deleteTimeSelection();
-    } else if (chosen == del) {
+        break;
+    case TimeSelectionAction::Delete:
         deleteTimeSelection();
-    } else if (chosen == insertBlank) {
+        break;
+    case TimeSelectionAction::InsertBlank:
         insertBlankTime();
-    } else if (chosen == duplicate) {
+        break;
+    case TimeSelectionAction::Duplicate:
         duplicateTimeSelection();
-    } else if (chosen == removeContents) {
+        break;
+    case TimeSelectionAction::RemoveContents:
         removeTimeSelectionContents();
-    } else if (chosen == paste) {
+        break;
+    case TimeSelectionAction::Paste:
         pasteFromClipboard();
-    } else if (chosen == clear) {
+        break;
+    case TimeSelectionAction::Clear:
         m_selectionModel.clearTimeSelection();
+        break;
+    default:
+        return; // Unknown id: no command ran, nothing to focus.
+    }
+    // Terminal focus return, after the command so announce and camera
+    // follow observe the focused surface — skipped when the dispatch
+    // itself opened a new shared popup session (a reentrant prompt owns
+    // focus until the user dismisses it).
+    if (songview::QuickPopupSession *const session = m_timeSelectionMenuSession.data();
+        !session || !session->isOpen())
+        focusActiveSurface();
+}
+
+void SongView::bindTimeSelectionMenuSession(songview::QuickPopupSession *session)
+{
+    if (m_timeSelectionMenuSession == session)
+        return;
+    m_timeSelectionMenuSession = session;
+    // The host binds first so its teardown runs before the ownership flag
+    // is consumed by the sink below.
+    m_timeSelectionMenuHost->setPopupSession(session);
+    connect(session, &songview::QuickPopupSession::cancelled, this, [this](bool restoreFocus) {
+        if (!m_timeSelectionMenuOpen)
+            return; // A foreign popup was dismissed, not this menu.
+        m_timeSelectionMenuOpen = false;
+        // Outside press, Escape, and resize restore focus; foreign
+        // replacement and deactivation leave focus untouched.
+        if (restoreFocus)
+            focusActiveSurface();
+    });
+}
+
+void SongView::cancelTimeSelectionMenuWithoutFocus()
+{
+    m_pendingTimeSelectionMenu.reset();
+    m_timeSelectionMenuOpen = false;
+    if (songview::TimelineQuickView *const quick = quickView()) {
+        if (songview::QuickPopupSession *const session = quick->popupSession();
+            session && session->owns(m_timeSelectionMenuHost))
+            session->cancel(/*restoreFocus=*/false);
     }
 }
 void SongView::announceNote(const ViewNote &note)

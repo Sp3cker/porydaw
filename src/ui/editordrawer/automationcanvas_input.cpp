@@ -8,6 +8,7 @@
 #include "ui/editordrawer/automationpage.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 bool AutomationCanvas::isEditablePencilHit(const QPointF &position) const noexcept
 {
@@ -432,8 +433,17 @@ bool AutomationCanvas::pointerRelease(const songview::TimelinePointerInput &inpu
                     contextSlot &&
                     m_laneSelection.hitTest(contextSlot->id, position.x(), projection(),
                                             m_inputHost->devicePixelRatio());
-                if (selected)
-                    showTimeSelectionMenuFor(contextLane, input.globalPosition.toPoint());
+                if (selected) {
+                    if (songview::TimelineQuickView *const quick = m_page.m_owner.quickView();
+                        quick && quick->quickWindow()) {
+                        const songview::TimelineInputHost *const host =
+                            input.host ? input.host : m_inputHost;
+                        if (host)
+                            showTimeSelectionMenuFor(contextLane,
+                                                     quick->quickWindow()->mapFromGlobal(
+                                                         host->mapToGlobal(input.position)));
+                    }
+                }
             }
         }
         if (!m_hoverState.hover.highlightLocked)

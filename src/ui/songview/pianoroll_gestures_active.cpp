@@ -188,7 +188,10 @@ void PianoRoll::releasePendingMenu(const TimelinePointerInput &input, SongDocume
             m_sv->selectionModel().setNoteSelection({m_rightHitId});
         showNoteMenu(input.position);
     } else if (insideTimeSelection(input.position.x())) {
-        m_sv->showTimeSelectionMenu(input.globalPosition.toPoint());
+        if (songview::TimelineQuickView *const quick = m_sv->quickView();
+            quick && quick->quickWindow() && m_inputHost)
+            m_sv->openTimeSelectionMenu(
+                quick->quickWindow()->mapFromGlobal(m_inputHost->mapToGlobal(input.position)));
     } else {
         m_sv->selectionModel().clearNoteSelection();
         m_sv->selectionModel().clearTimeSelection();

@@ -78,12 +78,6 @@ QString keyName(int key)
     return QStringLiteral("%1%2").arg(QLatin1String(names[key % 12])).arg(key / 12 - 1);
 }
 
-QString contextActionText(const QString &text, const QString &commandId)
-{
-    const QString shortcut = contextShortcutText(commandId);
-    return shortcut.isEmpty() ? text : text + u'\t' + shortcut;
-}
-
 QString contextShortcutText(const QString &commandId)
 {
     const auto shortcut = keymap::Registry::instance().bindings(commandId).value(0);

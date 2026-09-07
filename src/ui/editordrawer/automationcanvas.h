@@ -198,7 +198,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     bool commitResolvedNodeLaneChanges(std::optional<uint64_t> expectedRevision,
                                        const std::vector<NodeLaneChange> &changes,
                                        const QString &undoLabel);
-    void showTimeSelectionMenuFor(LaneHandle contextLane, const QPoint &globalPosition);
+    void showTimeSelectionMenuFor(LaneHandle contextLane, const QPointF &scenePosition);
     void showLaneMenuFor(LaneHandle handle, const QPoint &globalPosition);
     void showAddLaneMenu(const QPoint &globalPosition);
     void layoutLaneStack();

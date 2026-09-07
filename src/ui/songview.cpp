@@ -12,6 +12,7 @@
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/quick/pianorollquick.h"
+#include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timeruler.h"
@@ -327,6 +328,16 @@ SongView::SongView(QWidget *parent)
     m_editorDrawer->chrome().setParent(this);
     m_strip->setParent(this);
     m_roll->setParent(this);
+    // Shared time-selection context menu (roll + drawer): a typed host over
+    // the canvas popup session, bound lazily on first open. Activation is a
+    // single model signal; dismissal focus is decided by the session's
+    // restoreFocus flag through bindTimeSelectionMenuSession.
+    m_timeSelectionMenuHost = new songview::QuickMenuHost(this);
+    m_timeSelectionMenuModel = new songview::QuickMenuModel(this);
+    connect(m_timeSelectionMenuModel, &songview::QuickMenuModel::activated, this,
+            &SongView::handleTimeSelectionAction);
+    connect(m_timeSelectionMenuHost, &songview::QuickMenuHost::cancelled, this,
+            [this] { m_pendingTimeSelectionMenu.reset(); });
     m_quickView->lower();
     m_playheadOverlay = new PlayheadOverlay(*this, timelineBandLayout());
     m_selectionModel.setObserver(
@@ -352,6 +363,7 @@ SongView::~SongView()
         m_ruler->cancelTimeSigPromptWithoutFocus();
     cancelVoicePicker(/*restoreFocus=*/false);
     cancelInsertTimePromptWithoutFocus();
+    cancelTimeSelectionMenuWithoutFocus();
     if (!m_quickView)
         return;
     m_quickView->detachInputInteraction(TimelineBand::Ruler);
@@ -654,6 +666,7 @@ void SongView::prepareForSongReplacement()
     if (m_ruler)
         m_ruler->cancelTimeSigPromptWithoutFocus();
     cancelInsertTimePromptWithoutFocus();
+    cancelTimeSelectionMenuWithoutFocus();
     cancelActiveInteractions();
     m_headers->cancelTransientState();
     disconnectDocument();
@@ -670,6 +683,7 @@ void SongView::cancelTransientInput()
         m_roll->cancelVelocityPromptWithoutFocus();
         m_roll->cancelPitchBendPopupWithoutFocus();
     }
+    cancelTimeSelectionMenuWithoutFocus();
     if (m_ruler) {
         m_ruler->cancelTimeSigPromptWithoutFocus();
         m_ruler->closePopups();

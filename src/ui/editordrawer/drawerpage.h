@@ -6,7 +6,7 @@
 #include <vector>
 
 #include <QColor>
-#include <QPoint>
+#include <QPointF>
 
 #include "core/noteid.h"
 
@@ -47,7 +47,9 @@ struct DrawerPageTimeSelectionMenuRequest {
     uint64_t endTick = 0;
     std::vector<std::pair<int, uint8_t>> lanes;
     bool tempo = false;
-    QPoint globalPosition;
+    // Quick-window scene position of the menu anchor (never screen-global:
+    // the shared popup layer is parented to the canvas window).
+    QPointF scenePosition;
 };
 
 struct DrawerPageNoteStatus {

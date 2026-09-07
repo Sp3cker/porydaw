@@ -118,7 +118,7 @@ void SongView::showDrawerPageTimeSelectionMenu(const DrawerPageTimeSelectionMenu
     selection.lanes = request.lanes;
     selection.tempo = request.tempo;
     m_selectionModel.setTimeSelection(selection);
-    showTimeSelectionMenu(request.globalPosition);
+    openTimeSelectionMenu(request.scenePosition);
 }
 
 void SongView::showDrawerPageNoteStatus(std::optional<DrawerPageNoteStatus> status)

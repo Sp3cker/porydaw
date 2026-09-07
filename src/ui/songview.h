@@ -65,6 +65,10 @@ class TimelineQuickView;
 class PlayheadOverlay;
 class OtherStrip;
 class VoicePicker;
+class QuickMenuHost;
+class QuickMenuModel;
+class QuickPopupSession;
+struct QuickMenuItem;
 enum class PianoRollQuickDirty : quint32;
 enum class TimelineQuickDirty : quint16;
 using TimelineQuickDirtySet = QFlags<TimelineQuickDirty>;
@@ -90,6 +94,20 @@ constexpr int kNoteNameMinKeyH = 12;
 // the same math the paint code uses.
 int noteBorderPixels(qreal dpr);
 int selectionRingPixels(qreal dpr);
+
+// Shared time-selection context menu actions (roll + drawer). The ints are
+// the stable ids the typed menu rows carry through QuickMenuModel::activated.
+enum class TimeSelectionAction : int {
+    Copy = 1,
+    Cut = 2,
+    Delete = 3,
+    InsertBlank = 4,
+    Duplicate = 5,
+    RemoveContents = 6,
+    Paste = 7,
+    Clear = 8,
+};
+
 } // namespace songview
 
 // Song view: time ruler, multi-track piano roll (selected track in full
@@ -518,8 +536,12 @@ class SongView : public QWidget
     // whether that release actually stopped an audition.
     bool handleEditKeyRelease(const songview::TimelineKeyInput &input);
     void setSharedShortcutOwner(SharedShortcutOwner owner);
-    // Copy/Cut/Delete/Paste/Clear context menu on the active selection.
-    void showTimeSelectionMenu(const QPoint &globalPos);
+    // Shared Copy/Cut/Delete/Insert-blank/Duplicate/Remove-contents/Paste/
+    // Clear context menu on the active selection, rendered through the
+    // timeline Quick popup session. scenePos is a Quick-window scene
+    // position; the menu is unavailable (silent no-op) while the Quick
+    // canvas is missing.
+    void openTimeSelectionMenu(const QPointF &scenePos);
 
     // "velocity 93 → plays 96 · length 25 → 24 clocks" for the status bar.
     void announceNote(const ViewNote &note);
@@ -797,6 +819,37 @@ class SongView : public QWidget
     QMetaObject::Connection m_voicePickerCancellation;
     songview::VoicePicker *m_voicePicker = nullptr;
     std::optional<songview::Clip> readClipboardClip();
+
+    // The selection snapshot taken when the shared time-selection menu
+    // opened, held through the session close until activation consumes it.
+    // Document identity plus revision and exact selection equality make a
+    // stale target a silent no-write.
+    struct PendingTimeSelectionMenu {
+        SongDocument *document = nullptr;
+        uint64_t documentRevision = 0;
+        songview::EditorSelectionModel::TimeSelection selection;
+        songview::TrackMask trackScope = 0;
+    };
+    // Pure builder: rows, order, shortcut text, and build-time paste
+    // enablement exactly as the former native menu.
+    std::vector<songview::QuickMenuItem> buildTimeSelectionItems() const;
+    // QuickMenuModel::activated() sink; consumes the pending target, runs
+    // the owner command after the session already closed, then returns
+    // focus to the active surface.
+    void handleTimeSelectionAction(int actionId);
+    // Binds the menu host and the dismissal-focus sink to the shared
+    // canvas popup session (one session per view lifetime).
+    void bindTimeSelectionMenuSession(songview::QuickPopupSession *session);
+    // Song swap / readiness loss / teardown: dismiss without focus return.
+    void cancelTimeSelectionMenuWithoutFocus();
+    songview::QuickMenuHost *m_timeSelectionMenuHost = nullptr;
+    songview::QuickMenuModel *m_timeSelectionMenuModel = nullptr;
+    QPointer<songview::QuickPopupSession> m_timeSelectionMenuSession;
+    std::optional<PendingTimeSelectionMenu> m_pendingTimeSelectionMenu;
+    // Open flag owned by SongView alone: the host tears down before the
+    // shared session's cancelled(restoreFocus) signal arrives, so ownership
+    // of a dismissed session cannot be re-derived at signal time.
+    bool m_timeSelectionMenuOpen = false;
 
     songview::TimeAxis m_timeAxis;            // musical time; fallback until a song binds
     const MidiTimeline *m_timeline = nullptr; // loaded content only

@@ -14,6 +14,7 @@
 
 #include "checks/automation/automationmodalguard.h"
 #include "checks/automation/automationvalueprompt.h"
+#include "checks/quickpopupguard.h"
 #include "core/timedefaults.h"
 #include "core/xcmd.h"
 #include "ui/editordrawer/automationcanvas.h"
@@ -453,20 +454,50 @@ void AutomationEditingTest::selectionContextMenuRoutesInsideActiveSelection()
     selection.lanes.push_back({0, kController});
     songTab.view().selectionModel().setTimeSelection(selection);
 
-    MenuResult result;
     const LaneHandle cc = findRow({EditorAutomationRowKind::ControlChange, 0, kController});
     QVERIFY(cc.valid());
-    {
-        const auto interaction = scheduleMenuInteraction(result, [](QMenu &menu) {
-            return findMenuAction(menu, QStringLiteral("Clear time selection"));
-        });
-        mousePress(Qt::RightButton, automationWindowPoint(inputPoint(cc, 72, 64)));
-        mouseRelease(Qt::RightButton, automationWindowPoint(inputPoint(cc, 72, 64)));
-    }
-    QVERIFY2(result.opened, qPrintable(result.diagnostic));
-    QCOMPARE(result.parentWidget, static_cast<QWidget *>(&songTab.view()));
-    QVERIFY2(result.actionFound, qPrintable(result.diagnostic));
-    QVERIFY2(result.actionEnabled, qPrintable(result.diagnostic));
-    QVERIFY2(result.actionClicked, qPrintable(result.diagnostic));
-    QVERIFY(!songTab.view().selectionModel().timeSelection().active());
+    DocLanePoint lanePointBefore;
+    QVERIFY2(songTab.document().findLanePoint(0, kController, kPointTick, &lanePointBefore),
+             "the drawer route fixture lost its lane point");
+    const QByteArray before = songTab.document().smf().write();
+    const int undoIndex = songTab.document().undoStack()->index();
+    const int undoCount = songTab.document().undoStack()->count();
+
+    // The drawer route opens the shared SongView canvas menu, so this
+    // interaction runs through the real Quick session surface: the panel lives
+    // under the canvas overlay root, not a widget modal parented to the view.
+    const quick_popup::PromptGuard guard(songTab.view());
+    mousePress(Qt::RightButton, automationWindowPoint(inputPoint(cc, 72, 64)));
+    mouseRelease(Qt::RightButton, automationWindowPoint(inputPoint(cc, 72, 64)));
+
+    songview::QuickPopupSession *const session = quick_popup::popupSession(songTab.view());
+    QTRY_VERIFY2(session && session->isOpen(),
+                 "right-click inside the active selection did not open the shared time menu");
+    QQuickItem *const panel = quick_popup::menuPanel(*session);
+    QVERIFY2(panel, "the shared time menu did not render a panel");
+    songview::QuickMenuModel *const model = quick_popup::menuModel(*panel);
+    QVERIFY2(model, "the shared time menu panel has no typed model");
+    const int clearRow = model->rowForId(int(songview::TimeSelectionAction::Clear));
+    QVERIFY2(clearRow >= 0, "the shared time menu has no Clear time selection row");
+    QVERIFY2(model->itemAt(clearRow) && model->itemAt(clearRow)->enabled,
+             "the Clear time selection row was disabled");
+    QVERIFY2(!QApplication::activePopupWidget(),
+             "the drawer time-selection route opened a widget modal");
+    QVERIFY2(quick_popup::clickMenuRow(*session, clearRow),
+             "the Clear time selection row did not receive a real click");
+    QCoreApplication::processEvents();
+
+    QVERIFY2(!songTab.view().selectionModel().timeSelection().active(),
+             "Clear left the time selection active");
+    QTRY_VERIFY2(session && !session->isOpen(), "activating Clear left the shared menu open");
+    DocLanePoint lanePointAfter;
+    QVERIFY2(songTab.document().findLanePoint(0, kController, kPointTick, &lanePointAfter) &&
+                 lanePointAfter.tick == lanePointBefore.tick &&
+                 lanePointAfter.value == lanePointBefore.value,
+             "Clear mutated the lane contents");
+    QCOMPARE(songTab.document().smf().write(), before);
+    QCOMPARE(songTab.document().undoStack()->index(), undoIndex);
+    QCOMPARE(songTab.document().undoStack()->count(), undoCount);
+    QTRY_VERIFY2(automationInput().hasActiveFocus(),
+                 "activating Clear did not return focus to the automation surface");
 }

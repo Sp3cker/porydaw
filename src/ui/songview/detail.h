@@ -24,12 +24,10 @@ uint32_t usedTrackMask(const MidiTimeline *timeline) noexcept;
 qreal edgeGripInnerReach(const QRectF &noteRect, qreal minimumMoveWidth, qreal edgeGripReach);
 bool isBlackKey(int key);
 QString keyName(int key);
-// "Label\tCtrl+C" for a context-menu entry: the registry's current binding
-// of the command (native text) when bound, the bare label otherwise. Shared
-// by the note and time-selection menus so a rebinding updates both.
-QString contextActionText(const QString &text, const QString &commandId);
-// The shortcut half of contextActionText, for typed menus that render the
-// label and the shortcut in separate columns.
+// The registry's current binding of a menu command (native text), empty
+// when unbound. Typed menus render the label and this shortcut in separate
+// columns; the note and time-selection menus share it so a rebinding
+// updates both.
 QString contextShortcutText(const QString &commandId);
 QString timeSigLabel(int numerator, int denomPow2);
 QColor loopEdge();

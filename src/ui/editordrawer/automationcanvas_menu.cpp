@@ -3,12 +3,14 @@
 #include <QAction>
 #include <QMenu>
 #include <QMessageBox>
+#include <QQuickWindow>
 #include <algorithm>
 #include <limits>
 #include <optional>
 #include <vector>
 
 #include "ui/editordrawer/automationpage.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 namespace {
 
@@ -32,7 +34,7 @@ struct LaneMenuKind {
 } // namespace
 
 void AutomationCanvas::showTimeSelectionMenuFor(LaneHandle contextLane,
-                                                const QPoint &globalPosition)
+                                                const QPointF &scenePosition)
 {
     const auto *slot = resolveSlot(contextLane);
     if (!slot)
@@ -43,17 +45,23 @@ void AutomationCanvas::showTimeSelectionMenuFor(LaneHandle contextLane,
         DrawerPageTimeSelectionMenuRequest request{.startTick = selection.startTick,
                                                    .endTick = selection.endTick,
                                                    .tempo = slot->isTempo(),
-                                                   .globalPosition = globalPosition};
+                                                   .scenePosition = scenePosition};
         if (!request.tempo)
             request.lanes = m_laneSelection.visibleLanes();
+        // Focus return lives in the owner's terminal menu paths.
         m_page.showTimeSelectionMenu(request);
-        if (m_inputHost)
-            m_inputHost->requestFocus(Qt::PopupFocusReason);
         return;
     }
+    // Retained native fallback (its migration belongs to the automation
+    // menus row): it still execs at a screen-global anchor, so map the
+    // scene position back. No Quick canvas means no input arrived; skip.
+    songview::TimelineQuickView *const quick = m_page.m_owner.quickView();
+    QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
+    if (!window)
+        return;
     QMenu menu(&m_page.m_owner);
     QAction *clear = menu.addAction(tr("Clear time selection"));
-    const QAction *chosen = menu.exec(globalPosition);
+    const QAction *chosen = menu.exec(window->mapToGlobal(scenePosition).toPoint());
     if (m_inputHost)
         m_inputHost->requestFocus(Qt::PopupFocusReason);
     if (chosen == clear && model.timeSelection().active()) {
