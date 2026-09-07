@@ -9,7 +9,6 @@
 #include <QMetaObject>
 #include <QObject>
 #include <QPointF>
-#include <QTimer>
 #include <QtTest>
 #include <algorithm>
 #include <cmath>
@@ -19,35 +18,12 @@
 
 #include "checks/rollcheck/headerchecksupport.h"
 #include "checks/support/eventsynth.h"
+#include "checks/voicepickerdriver.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/trackheadermodel.h"
-#include "ui/songview/voicepicker.h"
-
-namespace {
-
-class VoicePickerAccepter final : public QObject
-{
-  public:
-    bool opened = false;
-
-  protected:
-    bool eventFilter(QObject *watched, QEvent *event) override
-    {
-        if (event->type() != QEvent::Show)
-            return false;
-        auto *dialog = dynamic_cast<songview::VoicePickerDialog *>(watched);
-        if (!dialog)
-            return false;
-        opened = true;
-        QTimer::singleShot(0, dialog, [dialog] { dialog->accept(); });
-        return false;
-    }
-};
-
-} // namespace
 
 using namespace checks::rollcheck;
 
@@ -452,18 +428,20 @@ void PianoRollTest::headerAddTrack()
     QVERIFY2(addRow.has_value() && doc.canAddTrack(), "Quick add-track record was unavailable");
 
     const int tracksBefore = doc.engineTrackCount();
-    // Complete the actual modal picker without looking up widget internals,
-    // so the pointer route reaches the queued document mutation.
-    VoicePickerAccepter pickerAccepter;
-    QCoreApplication::instance()->installEventFilter(&pickerAccepter);
     click(*headerInputItem, titlePoint(*headers, *headerInputItem, *addRow));
-    QCoreApplication::processEvents();
-    QCoreApplication::processEvents();
-    QCoreApplication::instance()->removeEventFilter(&pickerAccepter);
-    QVERIFY2(pickerAccepter.opened && doc.engineTrackCount() == tracksBefore + 1 &&
-                 doc.undoStack()->index() == undo + 1 &&
+    QTRY_VERIFY(static_cast<bool>(checks::voicepicker::active(view)));
+    const checks::voicepicker::Picker picker = checks::voicepicker::active(view);
+    QTRY_VERIFY(picker.search->hasActiveFocus());
+    checks::voicepicker::filter(picker, QStringLiteral("127"));
+    QTRY_VERIFY(checks::voicepicker::row(picker, 127) &&
+                checks::voicepicker::row(picker, 127)->isVisible());
+    checks::voicepicker::accept(picker);
+    QTRY_VERIFY(!quick_popup::popupSession(view)->isOpen());
+    QTRY_VERIFY(doc.engineTrackCount() == tracksBefore + 1);
+    QVERIFY2(doc.undoStack()->index() == undo + 1 &&
                  recordsMatchTimeline(*headers, check.timeline(), doc.canAddTrack()),
-             "Quick add-track pointer input did not create a header track");
+             "Quick add-track picker acceptance did not create a header track");
+    QTRY_COMPARE(view.currentProgram(view.selectionModel().primaryTrack()), 127);
     if (doc.undoStack()->index() != undo)
         doc.undoStack()->setIndex(undo);
     QCoreApplication::processEvents();

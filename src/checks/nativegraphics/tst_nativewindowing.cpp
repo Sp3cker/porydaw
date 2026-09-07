@@ -2,14 +2,10 @@
 
 #include <QtTest>
 
-#include <QAbstractButton>
-#include <QDialog>
-#include <QDialogButtonBox>
+#include "checks/voicepickerdriver.h"
+
 #include <QImage>
-#include <QLineEdit>
-#include <QListWidget>
 #include <QPointer>
-#include <QPushButton>
 #include <QQuickItem>
 #include <QQuickWindow>
 
@@ -226,39 +222,30 @@ void NativeWindowingTest::headerSelectionAndVoicePicker()
                               Qt::NoButton, Qt::NoModifier);
     QTRY_COMPARE(view.selectionModel().primaryTrack(), targetTrack);
 
-    const int undoBefore = rig->song->document().undoStack()->count();
+    const int undoBefore = rig->song->document().undoStack()->index();
     checks::events::sendMouse(*headerInput, QEvent::MouseButtonDblClick, voice, Qt::LeftButton,
                               Qt::LeftButton, Qt::NoModifier);
     checks::events::sendMouse(*headerInput, QEvent::MouseButtonRelease, voice, Qt::LeftButton,
                               Qt::NoButton, Qt::NoModifier);
-    QTRY_VERIFY(view.findChild<QDialog *>());
-    QDialog *dialog = view.findChild<QDialog *>();
-    QVERIFY(dialog);
-    auto *search = dialog->findChild<QLineEdit *>();
-    auto *list = dialog->findChild<QListWidget *>();
-    auto *buttons = dialog->findChild<QDialogButtonBox *>();
-    QVERIFY(search);
-    QVERIFY(list);
-    QVERIFY(buttons);
-    QTRY_COMPARE(list->count(), 128);
+    QTRY_VERIFY(static_cast<bool>(checks::voicepicker::active(view)));
+    const checks::voicepicker::Picker picker = checks::voicepicker::active(view);
+    QVERIFY(picker.root->isVisible());
+    QVERIFY(picker.list->isVisible());
+    QTRY_VERIFY(picker.search->hasActiveFocus());
 
-    search->setText(QStringLiteral("127"));
-    QTRY_VERIFY(list->item(0)->isHidden() && !list->item(127)->isHidden());
-    search->clear();
-    QTRY_VERIFY(!list->item(0)->isHidden());
-    list->setCurrentRow(127);
-    search->setText(QStringLiteral("1"));
-    QTRY_COMPARE(list->currentRow(), 1);
-    QVERIFY(!list->item(1)->isHidden());
-    QVERIFY(!list->item(127)->isHidden());
-    QAbstractButton *accept = buttons->button(QDialogButtonBox::Ok);
-    QVERIFY(accept);
-    QVERIFY(accept->isEnabled());
-    search->clear();
-    QTRY_COMPARE(list->currentRow(), 0);
-    dialog->reject();
-    QTRY_VERIFY(!dialog->isVisible());
-    QCOMPARE(rig->song->document().undoStack()->count(), undoBefore);
+    checks::voicepicker::filter(picker, QStringLiteral("127"));
+    QTRY_VERIFY(checks::voicepicker::row(picker, 127) &&
+                checks::voicepicker::row(picker, 127)->isVisible());
+
+    checks::voicepicker::filter(picker, QStringLiteral("zz-no-such-voice"));
+    QTRY_VERIFY(!picker.accept->property("enabled").toBool());
+
+    checks::voicepicker::filter(picker, QString());
+    QTRY_VERIFY(checks::voicepicker::row(picker, 0) &&
+                checks::voicepicker::row(picker, 0)->isVisible());
+    QTest::keyClick(picker.window, Qt::Key_Escape);
+    QTRY_VERIFY(!quick_popup::popupSession(view)->isOpen());
+    QCOMPARE(rig->song->document().undoStack()->index(), undoBefore);
     const auto *rename =
         quick->rootObject()->findChild<QQuickItem *>(QStringLiteral("timelineTrackHeaderRename"));
     QVERIFY(!rename || !rename->isVisible());

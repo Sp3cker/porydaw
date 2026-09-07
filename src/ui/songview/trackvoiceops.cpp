@@ -6,13 +6,11 @@
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/trackheadermodel.h"
-#include "ui/songview/voicepicker.h"
 #include "ui/theme/color_math.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/theme/trackidentitycolors.h"
 
 #include <QColor>
-#include <QDialog>
 #include <QStringList>
 
 #include <algorithm>
@@ -278,16 +276,6 @@ QSet<int> SongView::usedVoices() const
         used.insert(vc.program);
     return used;
 }
-bool SongView::pickVoice(const QString &title, int initialVoice, int *outVoice)
-{
-    VoicePickerDialog dialog(this, title, initialVoice, [this](int voice, int velocity) {
-        emit auditionVoice(voice, kVoiceAuditionKey, velocity);
-    });
-    if (dialog.exec() != QDialog::Accepted)
-        return false;
-    *outVoice = dialog.selectedVoice();
-    return true;
-}
 void SongView::editTrackVoice(int track)
 {
     if (!m_document || track < 0 || track > 15)
@@ -303,13 +291,26 @@ void SongView::editTrackVoice(int track)
         target = &pt;
     }
     const int initial = target ? target->value : 0;
-    int voice = initial;
-    if (!pickVoice(tr("Track %1 voice").arg(track + 1), initial, &voice))
-        return;
-    if (!target)
-        m_document->addLanePoint(track, DOC_CC_VOICE, 0, voice);
-    else if (voice != initial)
-        m_document->moveLanePoints({{track, DOC_CC_VOICE, *target, target->tick, voice}});
+    requestVoicePicker(
+        tr("Track %1 voice").arg(track + 1), initial, this,
+        [this, track, initial](int voice) {
+            if (!m_document)
+                return;
+            const std::vector<DocLanePoint> current = m_document->lanePoints(track, DOC_CC_VOICE);
+            const DocLanePoint *currentTarget = nullptr;
+            for (const DocLanePoint &pt : current) {
+                if (currentTarget && pt.tick != currentTarget->tick)
+                    break;
+                currentTarget = &pt;
+            }
+            if (!currentTarget) {
+                m_document->addLanePoint(track, DOC_CC_VOICE, 0, voice);
+            } else if (voice != initial) {
+                m_document->moveLanePoints(
+                    {{track, DOC_CC_VOICE, *currentTarget, currentTarget->tick, voice}});
+            }
+        },
+        TimelineBand::TrackHeaders);
 }
 void SongView::renameTrack(int track)
 {
@@ -339,14 +340,18 @@ void SongView::addTrack()
 {
     if (!m_document || !m_document->canAddTrack())
         return;
-    int voice = 0;
-    if (!pickVoice(tr("New track voice"), 0, &voice))
-        return;
-    const int track = m_document->addTrack(voice); // rebuilds via documentChanged
-    if (track >= 0) {
-        selectTrack(track);
-        announce(tr("Added track %1").arg(track + 1));
-    }
+    requestVoicePicker(
+        tr("New track voice"), 0, this,
+        [this](int voice) {
+            if (!m_document || !m_document->canAddTrack())
+                return;
+            const int track = m_document->addTrack(voice); // rebuilds via documentChanged
+            if (track >= 0) {
+                selectTrack(track);
+                announce(tr("Added track %1").arg(track + 1));
+            }
+        },
+        TimelineBand::TrackHeaders);
 }
 void SongView::duplicateTrack(int track)
 {

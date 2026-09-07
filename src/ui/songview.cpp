@@ -12,9 +12,11 @@
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/quick/pianorollquick.h"
+#include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timeruler.h"
 #include "ui/songview/trackheadermodel.h"
+#include "ui/songview/voicepicker.h"
 #include "ui/typography.h"
 #include <QAbstractButton>
 #include <QAbstractSlider>
@@ -348,6 +350,7 @@ SongView::~SongView()
         m_roll->cancelVelocityPromptWithoutFocus();
     if (m_ruler)
         m_ruler->cancelTimeSigPromptWithoutFocus();
+    cancelVoicePicker(/*restoreFocus=*/false);
     cancelInsertTimePromptWithoutFocus();
     if (!m_quickView)
         return;
@@ -363,6 +366,97 @@ SongView::~SongView()
 songview::TimelineQuickView *SongView::quickView() const noexcept
 {
     return m_quickView;
+}
+
+void SongView::requestVoicePicker(const QString &title, int initialVoice, QObject *context,
+                                  std::function<void(int)> accepted, TimelineBand origin)
+{
+    songview::TimelineQuickView *const quick = quickView();
+    songview::QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
+    if (!m_document || !context || !accepted || !session)
+        return;
+
+    // Replacement ends its owner before this guarded callback becomes live.
+    // If this picker owns the session, cancellation synchronously clears its
+    // bridge; another form's owner receives the same cancellation contract.
+    if (m_pendingVoicePicker)
+        cancelVoicePicker(/*restoreFocus=*/false);
+    else
+        session->cancel(/*restoreFocus=*/false);
+
+    PendingVoicePicker pending;
+    pending.context = context;
+    pending.document = m_document;
+    pending.documentRevision = m_document->revision();
+    pending.accepted = std::move(accepted);
+    pending.origin = origin;
+    m_pendingVoicePicker = std::move(pending);
+
+    auto *picker = new songview::VoicePicker(*this, title, initialVoice, this);
+    m_voicePicker = picker;
+    QObject::disconnect(m_voicePickerCancellation);
+    m_voicePickerCancellation =
+        connect(session, &songview::QuickPopupSession::cancelled, this,
+                [this](bool restoreFocus) { clearVoicePicker(restoreFocus); });
+    connect(picker, &songview::VoicePicker::rejected, this, [this, picker] {
+        if (m_voicePicker == picker)
+            cancelVoicePicker(/*restoreFocus=*/true);
+    });
+    connect(picker, &songview::VoicePicker::accepted, this, [this, picker, session](int program) {
+        if (m_voicePicker != picker || !m_pendingVoicePicker)
+            return;
+
+        const PendingVoicePicker pending = std::move(*m_pendingVoicePicker);
+        const bool ownsSession = session && session->owns(picker);
+        clearVoicePicker(/*restoreFocus=*/false);
+        // Release and clear the bridge, then close only its own form before
+        // an accepted callback can synchronously mutate the document.
+        if (ownsSession)
+            session->close();
+        focusTimelineBand(pending.origin, Qt::OtherFocusReason);
+        if (m_document != pending.document || !pending.context ||
+            m_document->revision() != pending.documentRevision) {
+            return;
+        }
+        pending.accepted(program);
+    });
+    if (!session->openForm(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/VoicePickerPrompt.qml")),
+                           picker)) {
+        clearVoicePicker(/*restoreFocus=*/true);
+    }
+}
+
+void SongView::cancelVoicePicker(bool restoreFocus)
+{
+    if (!m_pendingVoicePicker)
+        return;
+
+    songview::TimelineQuickView *const quick = quickView();
+    songview::QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
+    songview::VoicePicker *const picker = m_voicePicker;
+    const bool ownsSession = session && picker && session->owns(picker);
+    if (ownsSession)
+        session->cancel(restoreFocus);
+    if (m_pendingVoicePicker)
+        clearVoicePicker(restoreFocus);
+}
+
+void SongView::clearVoicePicker(bool restoreFocus)
+{
+    if (!m_pendingVoicePicker)
+        return;
+
+    const TimelineBand origin = m_pendingVoicePicker->origin;
+    m_pendingVoicePicker.reset();
+    QObject::disconnect(m_voicePickerCancellation);
+    m_voicePickerCancellation = {};
+    if (m_voicePicker) {
+        m_voicePicker->releaseHeld();
+        m_voicePicker->deleteLater();
+        m_voicePicker = nullptr;
+    }
+    if (restoreFocus)
+        focusTimelineBand(origin, Qt::OtherFocusReason);
 }
 
 EventListController *SongView::eventListController() const noexcept

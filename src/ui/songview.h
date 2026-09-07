@@ -64,6 +64,7 @@ class PianoRoll;
 class TimelineQuickView;
 class PlayheadOverlay;
 class OtherStrip;
+class VoicePicker;
 enum class PianoRollQuickDirty : quint32;
 enum class TimelineQuickDirty : quint16;
 using TimelineQuickDirtySet = QFlags<TimelineQuickDirty>;
@@ -371,9 +372,12 @@ class SongView : public QWidget
     // all voice changes. Feeds the dock's used-row highlighting.
     QSet<int> usedVoices() const;
 
-    // Modal voicegroup-entry picker with press-and-hold audition. Returns
-    // false on cancel; otherwise *outVoice is the chosen entry (0-127).
-    bool pickVoice(const QString &title, int initialVoice, int *outVoice);
+    // Opens the shared canvas Quick popup asynchronously. The context,
+    // current document identity, and document revision must still match at
+    // acceptance; otherwise accepted is not called.
+    void requestVoicePicker(const QString &title, int initialVoice, QObject *context,
+                            std::function<void(int)> accepted, songview::TimelineBand origin);
+    void cancelVoicePicker(bool restoreFocus);
     // Track-header entry point: re-pick the voice governing the track (its
     // first program change), inserting one at tick 0 if the track has none.
     void editTrackVoice(int track);
@@ -634,6 +638,7 @@ class SongView : public QWidget
     friend class EditorDrawer;
     friend class songview::PianoRoll;
     friend class songview::TrackHeaderModel;
+    friend class songview::VoicePicker;
     struct Geometry {
         int trackHeaderWidth;
         int pianoKeyboardWidth;
@@ -776,6 +781,21 @@ class SongView : public QWidget
     void openInsertTimePrompt(uint64_t cursorTick, const songview::Grid::Segment &segment);
     void clearInsertTimePrompt(bool restoreFocus);
     void cancelInsertTimePromptWithoutFocus();
+    struct PendingVoicePicker {
+        QPointer<QObject> context;
+        QPointer<SongDocument> document;
+        uint64_t documentRevision = 0;
+        std::function<void(int)> accepted;
+        songview::TimelineBand origin = songview::TimelineBand::Roll;
+    };
+    void clearVoicePicker(bool restoreFocus);
+    bool isCurrentVoicePicker(const songview::VoicePicker *picker) const
+    {
+        return m_voicePicker == picker;
+    }
+    std::optional<PendingVoicePicker> m_pendingVoicePicker;
+    QMetaObject::Connection m_voicePickerCancellation;
+    songview::VoicePicker *m_voicePicker = nullptr;
     std::optional<songview::Clip> readClipboardClip();
 
     songview::TimeAxis m_timeAxis;            // musical time; fallback until a song binds

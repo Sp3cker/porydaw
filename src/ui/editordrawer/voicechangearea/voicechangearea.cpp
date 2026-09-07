@@ -519,25 +519,26 @@ void VoiceChangeArea::showPicker(qreal plotX)
     const double rawTick = std::max(0.0, m_camera.tickAtContentX(std::max<qreal>(0.0, plotX)));
     const uint64_t tick = marker ? marker->tick : m_grid.snapTick(rawTick, false);
     const int current = marker ? marker->value : voiceSlotAt(tick);
-    int selectedVoice = 0;
-    if (!m_owner.pickVoice(marker ? tr("Change voice") : tr("Insert voice change"),
-                           std::max(0, current), &selectedVoice))
-        return;
-    // Modal UI can outlive its initiating song or track. Only commit back to
-    // that still-current context, and re-resolve the point so undo/import
-    // activity while the picker was open cannot create a stale undo step.
-    SongDocument *document = m_owner.document();
-    if (document != sourceDocument || primaryTrack() != track)
-        return;
-    DocLanePoint existing;
-    if (document->findLanePoint(track, DOC_CC_VOICE, tick, &existing)) {
-        if (existing.value == selectedVoice)
-            return;
-        document->moveLanePoints({{track, DOC_CC_VOICE, existing, tick, selectedVoice}});
-    } else {
-        document->addLanePoint(track, DOC_CC_VOICE, tick, selectedVoice);
-    }
-    m_owner.refreshAllDrawerPages();
+    m_owner.requestVoicePicker(
+        marker ? tr("Change voice") : tr("Insert voice change"), std::max(0, current), this,
+        [this, sourceDocument, track, tick](int selectedVoice) {
+            // The picker only invokes an accepted callback for its opening document
+            // revision. Keep the drawer-specific primary-track guard and re-resolve
+            // the marker so the target remains the one the user opened.
+            SongDocument *const document = m_owner.document();
+            if (document != sourceDocument || primaryTrack() != track)
+                return;
+            DocLanePoint existing;
+            if (document->findLanePoint(track, DOC_CC_VOICE, tick, &existing)) {
+                if (existing.value == selectedVoice)
+                    return;
+                document->moveLanePoints({{track, DOC_CC_VOICE, existing, tick, selectedVoice}});
+            } else {
+                document->addLanePoint(track, DOC_CC_VOICE, tick, selectedVoice);
+            }
+            m_owner.refreshAllDrawerPages();
+        },
+        songview::TimelineBand::VoiceChanges);
 }
 
 void VoiceChangeArea::showContextMenu(qreal plotX, const QPoint &globalPosition)

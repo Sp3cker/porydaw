@@ -108,7 +108,6 @@ class AutomationPage final : public QObject
                               bool tempo = false) const;
     DrawerPageVoiceContext voiceContext(uint64_t tick) const;
     void showTimeSelectionMenu(const DrawerPageTimeSelectionMenuRequest &request) const;
-    bool pickVoice(const QString &title, int initialVoice, int *outVoice) const;
     void requestRefresh() const;
     void requestQuickUpdate(songview::AutomationRefreshSet dirty) const;
     void commitEditCursor(uint64_t tick) const;

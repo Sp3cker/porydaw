@@ -179,6 +179,7 @@ void SongView::cancelActiveInteractions()
     // it only if the semantic traversal did not already do so.
     if (m_velocityGesture.active())
         cancelVelocityGesture();
+    cancelVoicePicker(/*restoreFocus=*/true);
 }
 
 void SongView::notifyDrawerSongChanged()

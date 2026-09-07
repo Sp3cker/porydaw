@@ -261,3 +261,9 @@ Final integrated fork-main runs the full check suite. Source inventory must conf
 all listed widget surfaces and widget-only dependencies are gone; the external
 SongTab embedding adapter is documented explicitly. Any failing assertion is a
 blocker to handoff, not an accepted baseline.
+
+## Voice picker completion evidence
+
+- **Implementation**: Typed asynchronous voice picker (`songview::VoicePicker` and `VoicePickerPrompt.qml`) hosted on the shared `QuickPopupSession` via `openForm`. All live callers migrated (track header voice edit, track header add track, and drawer voice-change area). Dead `AutomationPage::pickVoice` forwarder removed. Audition retains key 60 and velocity 112 with guaranteed note-off (velocity 0) on release, rejection, cancellation, replacement, and destruction. Stale bridge guards (`picker != m_voicePicker`) reject out-of-order `accepted` and `rejected` signals from superseded sessions.
+- **Verification**: Build checks passed. Registered `editor-drawer` suite passed (`voicePickerTransactions` 3 passed, 56 ms). Forced-offscreen `trackheaderquickcheck` (`addTrackOpensPickerAndRebuildsHeader`) and roll check (`headerAddTrack`) passed twice each.
+- **Native coverage limits**: Native `headerSelectionAndVoicePicker` explicitly pending due to active user desktop; no native launch performed. Temporary diagnostic probes removed. No commit hash recorded prior to commit creation.

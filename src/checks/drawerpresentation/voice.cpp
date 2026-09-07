@@ -2,6 +2,21 @@
 
 #include <QtTest>
 
+#include "checks/voicepickerdriver.h"
+
+#include <QAction>
+#include <QApplication>
+#include <QImage>
+#include <QMenu>
+#include <QQuickItem>
+#include <QScopeGuard>
+#include <QTimer>
+#include <QWidget>
+
+#include <algorithm>
+#include <cmath>
+#include <cstring>
+
 #include "checks/drawerpresentation/fixtures.h"
 #include "checks/support/editorrig.h"
 #include "checks/support/eventsynth.h"
@@ -11,14 +26,6 @@
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
-#include <QApplication>
-#include <QDialog>
-#include <QImage>
-#include <QListWidget>
-#include <QMenu>
-#include <algorithm>
-#include <cmath>
-#include <cstring>
 
 using namespace checks::drawerpresentation;
 
@@ -46,45 +53,13 @@ void doubleClick(VoiceTransactionFixture &fixture, uint64_t tick)
     pump();
 }
 
-struct PickerAttempt {
-    bool opened = false;
-    bool listResolved = false;
-};
-
 struct MenuAttempt {
     bool opened = false;
     int actionCount = 0;
     bool actionFound = false;
     bool actionEnabled = false;
     bool actionResolved = false;
-    bool pickerOpened = false;
-    bool pickerListResolved = false;
 };
-
-void chooseVoice(int row, int &initialRow, bool detach, VoiceTransactionFixture &fixture,
-                 PickerAttempt &attempt)
-{
-    QTimer::singleShot(0, [&fixture, &initialRow, detach, row, &attempt] {
-        attempt.opened = QTest::qWaitFor(
-            [] { return qobject_cast<QDialog *>(QApplication::activeModalWidget()) != nullptr; });
-        if (!attempt.opened)
-            return;
-        auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
-        auto *list = dialog ? dialog->findChild<QListWidget *>() : nullptr;
-        attempt.listResolved = list != nullptr;
-        if (!list)
-            return;
-        initialRow = list->currentRow();
-        if (detach)
-            fixture.view().setDocument(nullptr);
-        if (row < 0)
-            dialog->reject();
-        else {
-            list->setCurrentRow(row);
-            dialog->accept();
-        }
-    });
-}
 
 QAction *findMenuAction(QMenu &menu, const QString &text)
 {
@@ -114,27 +89,10 @@ QMenu *openMenu()
     return nullptr;
 }
 
-void closeBlockingWidgets()
-{
-    if (QWidget *modal = QApplication::activeModalWidget())
-        modal->close();
-    if (QWidget *popup = QApplication::activePopupWidget())
-        popup->close();
-    for (QWidget *widget : QApplication::allWidgets()) {
-        auto *menu = qobject_cast<QMenu *>(widget);
-        if (menu && menu->isVisible())
-            menu->close();
-    }
-}
-
 void openMenuAndChoose(VoiceTransactionFixture &fixture, uint64_t tick, const QString &action,
-                       MenuAttempt &attempt, int pickerRow = -2)
+                       MenuAttempt &attempt)
 {
-    QTimer watchdog;
-    watchdog.setSingleShot(true);
-    QObject::connect(&watchdog, &QTimer::timeout, &watchdog, [] { closeBlockingWidgets(); });
-    watchdog.start(1000);
-    QTimer::singleShot(0, [action, pickerRow, &attempt] {
+    QTimer::singleShot(0, [action, &attempt] {
         QMenu *const menu = openMenu();
         attempt.opened = menu != nullptr;
         if (!menu)
@@ -144,27 +102,11 @@ void openMenuAndChoose(VoiceTransactionFixture &fixture, uint64_t tick, const QS
         attempt.actionFound = selected != nullptr;
         attempt.actionEnabled = selected && selected->isEnabled();
         attempt.actionResolved = attempt.actionEnabled && clickMenuAction(*menu, *selected);
-        if (!attempt.actionResolved || pickerRow < 0)
-            return;
-        // The menu's nested exec() cannot unwind into showPicker() until this
-        // callback returns. Arm the picker interaction after activating the
-        // menu action so it runs in the dialog's nested event loop.
-        QTimer::singleShot(0, [pickerRow, &attempt] {
-            auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
-            attempt.pickerOpened = dialog != nullptr;
-            auto *list = dialog ? dialog->findChild<QListWidget *>() : nullptr;
-            attempt.pickerListResolved = list != nullptr;
-            if (!list)
-                return;
-            list->setCurrentRow(pickerRow);
-            dialog->accept();
-        });
     });
     const QPointF point(fixture.xForTick(double(tick)), fixture.bandRect().height() / 2.0);
     sendMouse(fixture.input(), QEvent::MouseButtonPress, point, Qt::RightButton, Qt::RightButton);
     sendMouse(fixture.input(), QEvent::MouseButtonRelease, point, Qt::RightButton);
     pump();
-    watchdog.stop();
 }
 
 int changedPixels(const QImage &before, const QImage &after, const QRect &region)
@@ -385,14 +327,18 @@ void DrawerPresentationTest::voicePickerTransactions()
 {
     VoiceTransactionFixture fixture;
     createVoiceFixture(fixture);
+    quick_popup::PromptGuard guard(fixture.view());
     const Snapshot baseline = fixture.snapshot();
-    int initial = -1;
-    PickerAttempt change;
-    chooseVoice(5, initial, false, fixture, change);
+
     doubleClick(fixture, 48);
-    QVERIFY(change.opened);
-    QVERIFY(change.listResolved);
-    QCOMPARE(initial, 3);
+    checks::voicepicker::Picker picker;
+    QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())));
+    QTRY_VERIFY(picker.search->hasActiveFocus());
+    QCOMPARE(picker.list->property("currentIndex").toInt(), 3);
+    checks::voicepicker::filter(picker, QStringLiteral("005"));
+    QTRY_VERIFY(checks::voicepicker::row(picker, 5));
+    checks::voicepicker::accept(picker);
+    QTRY_VERIFY(!checks::voicepicker::active(fixture.view()));
     DocLanePoint point;
     QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, 48, &point));
     QCOMPARE(point.value, 5);
@@ -400,32 +346,96 @@ void DrawerPresentationTest::voicePickerTransactions()
     QCOMPARE(fixture.document().undoStack()->index(), baseline.undoIndex + 1);
 
     const Snapshot changed = fixture.snapshot();
-    PickerAttempt same;
-    chooseVoice(5, initial, false, fixture, same);
     doubleClick(fixture, 48);
-    QVERIFY(same.opened);
-    QVERIFY(same.listResolved);
-    QVERIFY(fixture.snapshot() == changed);
-    PickerAttempt cancelled;
-    chooseVoice(-1, initial, false, fixture, cancelled);
-    doubleClick(fixture, 48);
-    QVERIFY(cancelled.opened);
-    QVERIFY(cancelled.listResolved);
+    QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())));
+    checks::voicepicker::filter(picker, QStringLiteral("005"));
+    QTRY_VERIFY(checks::voicepicker::row(picker, 5));
+    checks::voicepicker::accept(picker);
+    QTRY_VERIFY(!checks::voicepicker::active(fixture.view()));
     QVERIFY(fixture.snapshot() == changed);
 
-    PickerAttempt detached;
-    chooseVoice(7, initial, true, fixture, detached);
     doubleClick(fixture, 48);
-    QVERIFY(detached.opened);
-    QVERIFY(detached.listResolved);
+    QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())));
+    checks::voicepicker::filter(picker, QStringLiteral("not-a-voice"));
+    QTRY_VERIFY(!picker.accept->isEnabled());
+    checks::voicepicker::filter(picker, QStringLiteral("007"));
+    QTRY_VERIFY(checks::voicepicker::row(picker, 7));
+    checks::voicepicker::cancel(picker);
+    QTRY_VERIFY(!checks::voicepicker::active(fixture.view()));
     QVERIFY(fixture.snapshot() == changed);
+
+    QSignalSpy audition(&fixture.view(), &SongView::auditionVoice);
+    QVERIFY(audition.isValid());
+    doubleClick(fixture, 48);
+    QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())));
+    checks::voicepicker::filter(picker, QStringLiteral("007"));
+    QQuickItem *const escapeHeldRow = checks::voicepicker::row(picker, 7);
+    QVERIFY(escapeHeldRow);
+    const QPoint escapeHeldPoint = checks::voicepicker::center(*escapeHeldRow);
+    bool escapePressHeld = true;
+    const auto releaseEscapePress =
+        qScopeGuard([window = picker.window, escapeHeldPoint, &escapePressHeld] {
+            if (escapePressHeld)
+                QTest::mouseRelease(window, Qt::LeftButton, Qt::NoModifier, escapeHeldPoint);
+        });
+    checks::voicepicker::hold(picker, 7);
+    QTRY_COMPARE(audition.count(), 1);
+    QTest::keyClick(picker.window, Qt::Key_Escape);
+    QTRY_VERIFY(!checks::voicepicker::active(fixture.view()));
+    QTRY_COMPARE(audition.count(), 2);
+    QCOMPARE(audition.at(1).at(0).toInt(), 7);
+    QCOMPARE(audition.at(1).at(1).toInt(), 60);
+    QCOMPARE(audition.at(1).at(2).toInt(), 0);
+    // Escape releases the picker audition but does not manufacture the
+    // physical release corresponding to the test's held mouse press.
+    QTest::mouseRelease(picker.window, Qt::LeftButton, Qt::NoModifier, escapeHeldPoint);
+    escapePressHeld = false;
+    QCOMPARE(audition.count(), 2);
+    QVERIFY(fixture.snapshot() == changed);
+
+    audition.clear();
+    doubleClick(fixture, 48);
+    QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())));
+    checks::voicepicker::filter(picker, QStringLiteral("007"));
+    QQuickItem *const outsideHeldRow = checks::voicepicker::row(picker, 7);
+    QVERIFY(outsideHeldRow);
+    const QPoint outsideHeldPoint = checks::voicepicker::center(*outsideHeldRow);
+    bool outsidePressHeld = true;
+    const auto releaseOutsidePress =
+        qScopeGuard([window = picker.window, outsideHeldPoint, &outsidePressHeld] {
+            if (outsidePressHeld)
+                QTest::mouseRelease(window, Qt::LeftButton, Qt::NoModifier, outsideHeldPoint);
+        });
+    checks::voicepicker::hold(picker, 7);
+    QTRY_COMPARE(audition.count(), 1);
+    QTest::mouseRelease(picker.window, Qt::LeftButton, Qt::NoModifier, outsideHeldPoint);
+    outsidePressHeld = false;
+    QTRY_COMPARE(audition.count(), 2);
+    QCOMPARE(audition.at(1).at(0).toInt(), 7);
+    QCOMPARE(audition.at(1).at(1).toInt(), 60);
+    QCOMPARE(audition.at(1).at(2).toInt(), 0);
+    QVERIFY(checks::voicepicker::dismissOutside(picker));
+    QTRY_VERIFY(!checks::voicepicker::active(fixture.view()));
+    QCOMPARE(audition.count(), 2);
+    QVERIFY(fixture.snapshot() == changed);
+
+    doubleClick(fixture, 48);
+    QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())));
+    checks::voicepicker::filter(picker, QStringLiteral("007"));
+    QTRY_VERIFY(checks::voicepicker::row(picker, 7));
+    const Snapshot frozen = fixture.snapshot();
+    fixture.view().setDocument(nullptr);
+    QTRY_VERIFY(!checks::voicepicker::active(fixture.view()));
+    QVERIFY(fixture.snapshot() == frozen);
     fixture.view().setDocument(&fixture.document());
-    PickerAttempt inserted;
-    chooseVoice(3, initial, false, fixture, inserted);
+
     doubleClick(fixture, 96);
-    QVERIFY(inserted.opened);
-    QVERIFY(inserted.listResolved);
-    QCOMPARE(initial, 5);
+    QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())));
+    QCOMPARE(picker.list->property("currentIndex").toInt(), 5);
+    checks::voicepicker::filter(picker, QStringLiteral("003"));
+    QTRY_VERIFY(checks::voicepicker::row(picker, 3));
+    checks::voicepicker::accept(picker);
+    QTRY_VERIFY(!checks::voicepicker::active(fixture.view()));
     QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, 96, &point));
     QCOMPARE(point.value, 3);
     fixture.document().undoStack()->undo();
@@ -438,23 +448,30 @@ void DrawerPresentationTest::voiceContextMenuTransactions()
 {
     VoiceTransactionFixture fixture;
     createVoiceFixture(fixture);
+    quick_popup::PromptGuard guard(fixture.view());
     const Snapshot before = fixture.snapshot();
     MenuAttempt inserted;
-    openMenuAndChoose(fixture, 144, QStringLiteral("Insert voice change"), inserted, 7);
+    openMenuAndChoose(fixture, 144, QStringLiteral("Insert voice change"), inserted);
     QVERIFY(inserted.opened);
     QVERIFY(inserted.actionResolved);
     QVERIFY(inserted.actionFound);
     QVERIFY(inserted.actionEnabled);
-    QVERIFY(inserted.pickerOpened);
-    QVERIFY(inserted.pickerListResolved);
     QCOMPARE(inserted.actionCount, 1);
+
+    checks::voicepicker::Picker picker;
+    QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())));
+    QVERIFY(!QApplication::activePopupWidget());
+    checks::voicepicker::filter(picker, QStringLiteral("007"));
+    QTRY_VERIFY(checks::voicepicker::row(picker, 7));
+    checks::voicepicker::accept(picker);
+    QTRY_VERIFY(!checks::voicepicker::active(fixture.view()));
+
     DocLanePoint point;
     QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, 144, &point));
     QCOMPARE(point.value, 7);
     QCOMPARE(fixture.document().revision(), before.revision + 1);
     QCOMPARE(fixture.document().undoStack()->index(), before.undoIndex + 1);
     QVERIFY(!QApplication::activePopupWidget());
-    QVERIFY(!QApplication::activeModalWidget());
 
     MenuAttempt deleted;
     openMenuAndChoose(fixture, 144, QStringLiteral("Delete"), deleted);
@@ -467,7 +484,6 @@ void DrawerPresentationTest::voiceContextMenuTransactions()
     QCOMPARE(fixture.document().undoStack()->index(), before.undoIndex + 2);
     QCOMPARE(fixture.document().revision(), before.revision + 2);
     QVERIFY(!QApplication::activePopupWidget());
-    QVERIFY(!QApplication::activeModalWidget());
 }
 
 void DrawerPresentationTest::voiceMarkerDragTransactions()
