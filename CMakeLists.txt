@@ -452,6 +452,10 @@ set_source_files_properties(
     PROPERTIES QT_RESOURCE_ALIAS TrackHeaderToolTip.qml
 )
 set_source_files_properties(
+    src/ui/songview/quick/OtherStripToolTip.qml
+    PROPERTIES QT_RESOURCE_ALIAS OtherStripToolTip.qml
+)
+set_source_files_properties(
     src/ui/songview/quick/DrawerChromeLayer.qml
     PROPERTIES QT_RESOURCE_ALIAS DrawerChromeLayer.qml
 )
@@ -477,6 +481,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/TrackHeaderBand.qml
         src/ui/songview/quick/TrackHeaderToolTip.qml
         src/ui/songview/quick/DrawerChromeLayer.qml
+        src/ui/songview/quick/OtherStripToolTip.qml
         src/ui/songview/quick/DragInput.qml
         src/ui/songview/quick/PitchBendPopup.qml
 )

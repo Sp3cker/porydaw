@@ -601,6 +601,15 @@ Item {
         z: 30
     }
 
+    OtherStripToolTip {
+        plotRect: root.otherEventsBandPlotRect
+        bandVisible: root.otherEventsBandVisible
+        overlayRoot: root
+        model: otherStrip
+        controlFont: root.rulerFont
+        z: 30
+    }
+
     // Canonical scrollbars. Both occupy quick-root-local rectangles supplied by
     // timelineQuickView (an empty rect means absent) and sit above the scene
     // bands (z <= 2) while staying under the playhead, tooltips and drawer

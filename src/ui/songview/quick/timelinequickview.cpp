@@ -186,6 +186,8 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     m_quickView->rootContext()->setContextProperty(QStringLiteral("trackHeaderModel"),
                                                    &trackHeaders);
     m_quickView->rootContext()->setContextProperty(QStringLiteral("timeRuler"), &ruler);
+    m_quickView->rootContext()->setContextProperty(QStringLiteral("otherStrip"),
+                                                   m_otherEvents.data());
     m_quickView->engine()->addImageProvider(QStringLiteral("drawerchrome"),
                                             drawerChrome.releaseIconProvider());
     m_quickView->setSource(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml")));

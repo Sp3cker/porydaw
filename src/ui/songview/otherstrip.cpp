@@ -5,9 +5,10 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/theme/themeruntime.h"
 
 #include <QStringList>
-#include <QToolTip>
+#include <QVariant>
 
 #include <cmath>
 
@@ -37,6 +38,7 @@ void OtherStrip::attachInputHost(TimelineInputHost &host)
 {
     Q_ASSERT(!m_inputHost || m_inputHost == &host);
     m_inputHost = &host;
+    syncToolTipAppearance();
 }
 
 void OtherStrip::detachInputHost(TimelineInputHost &host)
@@ -44,7 +46,7 @@ void OtherStrip::detachInputHost(TimelineInputHost &host)
     Q_ASSERT(m_inputHost == &host);
     if (m_inputHost != &host)
         return;
-    QToolTip::hideText();
+    clearToolTip();
     m_inputHost = nullptr;
 }
 
@@ -52,7 +54,7 @@ bool OtherStrip::pointerMove(const TimelinePointerInput &input)
 {
     const MidiTimeline *timeline = m_owner.timeline();
     if (!m_inputHost || !timeline || input.surface != TimelineInputSurface::Plot) {
-        QToolTip::hideText();
+        clearToolTip();
         return true;
     }
     QStringList lines;
@@ -73,21 +75,64 @@ bool OtherStrip::pointerMove(const TimelinePointerInput &input)
         }
     }
     if (lines.isEmpty())
-        QToolTip::hideText();
+        clearToolTip();
     else
-        QToolTip::showText(input.globalPosition.toPoint(), lines.join(QStringLiteral("\n")),
-                           &m_owner);
+        updateToolTip(lines.join(QStringLiteral("\n")), input.position);
     return true;
 }
 
 void OtherStrip::pointerLeave()
 {
-    QToolTip::hideText();
+    clearToolTip();
 }
 
 void OtherStrip::inputCancelled(TimelineInputCancelReason)
 {
-    QToolTip::hideText();
+    clearToolTip();
+}
+
+void OtherStrip::hostAppearanceChanged()
+{
+    if (!m_inputHost)
+        return;
+    syncToolTipAppearance();
+}
+
+void OtherStrip::updateToolTip(const QString &text, const QPointF &position)
+{
+    if (text.isEmpty()) {
+        clearToolTip();
+        return;
+    }
+    if (m_toolTipVisible && m_toolTipText == text && m_toolTipPosition == position)
+        return;
+    m_toolTipVisible = true;
+    m_toolTipText = text;
+    m_toolTipPosition = position;
+    emit toolTipChanged();
+}
+
+void OtherStrip::clearToolTip()
+{
+    if (!m_toolTipVisible && m_toolTipText.isEmpty() && m_toolTipPosition.isNull())
+        return;
+    m_toolTipVisible = false;
+    m_toolTipText.clear();
+    m_toolTipPosition = {};
+    emit toolTipChanged();
+}
+
+void OtherStrip::syncToolTipAppearance()
+{
+    QVariantMap next;
+    next.insert(QStringLiteral("toolTipBackground"),
+                themes::color(themes::Role::tooltip_background));
+    next.insert(QStringLiteral("toolTipText"), themes::color(themes::Role::tooltip_text));
+    next.insert(QStringLiteral("toolTipOutline"), themes::color(themes::Role::tooltip_outline));
+    if (next == m_toolTipAppearance)
+        return;
+    m_toolTipAppearance = std::move(next);
+    emit toolTipAppearanceChanged();
 }
 
 } // namespace songview

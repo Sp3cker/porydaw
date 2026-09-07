@@ -14,7 +14,6 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QTimer>
-#include <QToolTip>
 #include <QtTest>
 #include <algorithm>
 #include <array>
@@ -423,6 +422,10 @@ class HostAdapterTest final : public QObject
         const auto geometry =
             view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents);
         QVERIFY(input && geometry.has_value());
+        QQuickItem *toolTip =
+            root->findChild<QQuickItem *>(QStringLiteral("timelineOtherEventsToolTip"));
+        auto *otherStrip = dynamic_cast<songview::OtherStrip *>(input->interaction());
+        QVERIFY(toolTip && otherStrip && !toolTip->isVisible());
         QVERIFY(!view.model().strip.empty());
         const StripItem &marker = view.model().strip.front();
         const QPoint quickOrigin = quick->mapTo(&view, QPoint{});
@@ -431,7 +434,6 @@ class HostAdapterTest final : public QObject
         const QPointF inputPoint =
             input->mapFromScene(QPointF{x, qreal(geometry->rect.center().y())} - quickOrigin);
         QVERIFY(input->contains(inputPoint));
-        QToolTip::hideText();
         const QPointF windowPoint = input->mapToScene(inputPoint);
         QEnterEvent enter(windowPoint, windowPoint,
                           QPointF(quick->quickWindow()->mapToGlobal(windowPoint.toPoint())));
@@ -441,16 +443,34 @@ class HostAdapterTest final : public QObject
                          Qt::NoButton, Qt::NoModifier);
         QCoreApplication::sendEvent(quick->quickWindow(), &move);
         settle();
-        QVERIFY(QToolTip::text().contains(marker.label));
+        QVERIFY(otherStrip->toolTipVisible());
+        QVERIFY(otherStrip->toolTipText().contains(marker.label));
+        QCOMPARE(otherStrip->toolTipPosition(), inputPoint);
+        QVERIFY(toolTip->isVisible());
+        const auto renderedText = [](QQuickItem &item) {
+            for (QQuickItem *child : item.childItems())
+                if (QByteArray(child->metaObject()->className()).contains("QQuickText"))
+                    return child->property("text").toString();
+            return QString();
+        };
+        QVERIFY(renderedText(*toolTip).contains(marker.label));
         const QPointF outside = root->property("rulerBandRect").toRectF().center();
         QMouseEvent leave(QEvent::MouseMove, outside, outside,
                           quick->quickWindow()->mapToGlobal(outside.toPoint()), Qt::NoButton,
                           Qt::NoButton, Qt::NoModifier);
         QCoreApplication::sendEvent(quick->quickWindow(), &leave);
-        const auto hidden = checks::async_wait::waitUntil(
-            [] { return true; }, [] { return QToolTip::text().isEmpty(); }, 1000);
+        const auto hidden =
+            checks::async_wait::waitUntil([] { return true; },
+                                          [&] {
+                                              return !otherStrip->toolTipVisible() &&
+                                                     otherStrip->toolTipText().isEmpty() &&
+                                                     !toolTip->isVisible();
+                                          },
+                                          1000);
         QCOMPARE(hidden, checks::async_wait::Result::Ready);
-        QToolTip::hideText();
+        settle();
+        QVERIFY(!otherStrip->toolTipVisible() && otherStrip->toolTipText().isEmpty());
+        QVERIFY(!toolTip->isVisible());
     }
 
     void loopMarkersReachTimelineButNotTheOtherEventsRaster()
