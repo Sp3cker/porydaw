@@ -344,6 +344,8 @@ SongView::SongView(QWidget *parent)
 
 SongView::~SongView()
 {
+    if (m_roll)
+        m_roll->cancelVelocityPromptWithoutFocus();
     if (!m_quickView)
         return;
     m_quickView->detachInputInteraction(TimelineBand::Ruler);
@@ -375,8 +377,10 @@ bool SongView::advanceTrackActivity(const TrackActivityLevels &levels, float ela
 
 void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voicegroup)
 {
-    if (m_roll)
+    if (m_roll) {
+        m_roll->cancelVelocityPromptWithoutFocus();
         m_roll->cancelPitchBendPopup();
+    }
     cancelActiveInteractions();
     if (timeline)
         m_trackActivity.resetPaused();
@@ -543,8 +547,10 @@ void SongView::disconnectDocument()
 
 void SongView::prepareForSongReplacement()
 {
-    if (m_roll)
+    if (m_roll) {
+        m_roll->cancelVelocityPromptWithoutFocus();
         m_roll->cancelPitchBendPopup();
+    }
     cancelActiveInteractions();
     m_headers->cancelTransientState();
     disconnectDocument();
@@ -556,8 +562,10 @@ void SongView::cancelTransientInput()
     // First cancel pointer state through the canonical traversal. Strong
     // document/readiness cleanup then applies its separate popup policy.
     cancelActiveInteractions();
-    if (m_roll)
+    if (m_roll) {
+        m_roll->cancelVelocityPromptWithoutFocus();
         m_roll->cancelPitchBendPopupWithoutFocus();
+    }
     if (m_ruler)
         m_ruler->closePopups();
     if (m_headers)
@@ -607,8 +615,10 @@ void SongView::cancelTransientInput()
 void SongView::setDocument(SongDocument *document)
 {
     if (m_document != document) {
-        if (m_roll)
+        if (m_roll) {
+            m_roll->cancelVelocityPromptWithoutFocus();
             m_roll->cancelPitchBendPopup();
+        }
         cancelActiveInteractions();
         disconnectDocument();
         if (document) {

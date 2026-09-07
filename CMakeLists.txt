@@ -313,6 +313,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/quick/eventlistcontroller.h
     src/ui/songview/quick/quickmenumodel.cpp
     src/ui/songview/quick/quickmenuhost.cpp
+    src/ui/songview/quick/quickmodalhost.cpp
+    src/ui/songview/quick/quickmodalhost.h
     src/ui/songview/quick/quickmenulayout.cpp
     src/ui/songview/quick/quickmenulayout.h
     src/ui/songview/quick/quickmenumodel.h
@@ -472,6 +474,10 @@ set_source_files_properties(
     PROPERTIES QT_RESOURCE_ALIAS PitchBendPopup.qml
 )
 set_source_files_properties(
+    src/ui/songview/quick/VelocityPrompt.qml
+    PROPERTIES QT_RESOURCE_ALIAS VelocityPrompt.qml
+)
+set_source_files_properties(
     src/ui/songview/quick/EventListPage.qml
     PROPERTIES QT_RESOURCE_ALIAS EventListPage.qml
 )
@@ -498,6 +504,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/EventListPage.qml
         src/ui/songview/quick/DragInput.qml
         src/ui/songview/quick/PitchBendPopup.qml
+        src/ui/songview/quick/VelocityPrompt.qml
 )
 target_precompile_headers(porydaw_app PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
@@ -570,6 +577,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/rollcheck/header_reconciliation.cpp
         src/checks/rollcheck/pencil.cpp
         src/checks/rollcheck/pencil_velocity.cpp
+        src/checks/rollcheck/velocity_prompt.cpp
         src/checks/rollcheck/interlock.cpp
         src/checks/rollcheck/selection.cpp
         src/checks/rollcheck/note_rendering.cpp
@@ -832,9 +840,23 @@ if(PORYDAW_BUILD_CHECKS)
         target_sources(porydaw_checks PRIVATE
             src/checks/nativegraphics/tst_playhead_native_mac.mm
         )
-    endif()
-    if(APPLE)
-        set_target_properties(porydaw_checks PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
+        set_target_properties(porydaw_checks PROPERTIES
+            MACOSX_BUNDLE TRUE
+            MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+            MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+            MACOSX_BUNDLE_GUI_IDENTIFIER com.huderlem.porydaw.checks
+            NO_SYSTEM_FROM_IMPORTED ON
+        )
+        # Keep the cross-platform runner entry path while the resolved executable
+        # remains inside its Cocoa foreground-application bundle.
+        add_custom_command(TARGET porydaw_checks POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E rm -f
+                    "${CMAKE_CURRENT_BINARY_DIR}/porydaw_checks"
+            COMMAND ${CMAKE_COMMAND} -E create_symlink
+                    "$<TARGET_FILE:porydaw_checks>"
+                    "${CMAKE_CURRENT_BINARY_DIR}/porydaw_checks"
+            VERBATIM
+        )
     endif()
     target_link_libraries(porydaw_checks PRIVATE porydaw_app Qt6::QuickWidgets Qt6::Test)
     target_precompile_headers(porydaw_checks PRIVATE

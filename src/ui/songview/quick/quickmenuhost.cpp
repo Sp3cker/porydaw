@@ -1,3 +1,4 @@
+#include "ui/songview/quick/quickengine.h"
 #include "ui/songview/quick/quickmenumodel.h"
 
 #include "ui/songview/quick/quickmenulayout.h"
@@ -11,7 +12,6 @@
 #include <QQmlContext>
 #include <QQmlEngine>
 #include <QQmlError>
-#include <QQuickItem>
 #include <QQuickWindow>
 #include <QUrl>
 #include <QVariant>
@@ -24,20 +24,6 @@ namespace {
 
 constexpr int kPanelZ = 1000000;
 constexpr int kTypeAheadResetMs = 1000;
-
-QQmlEngine *resolveEngine(QQuickWindow *window)
-{
-    if (!window)
-        return nullptr;
-    if (QQmlEngine *engine = qmlEngine(window))
-        return engine;
-    const QList<QQuickItem *> children = window->contentItem()->childItems();
-    for (QQuickItem *child : children) {
-        if (QQmlEngine *engine = qmlEngine(child))
-            return engine;
-    }
-    return nullptr;
-}
 
 int firstActivatableRow(const QuickMenuModel &model)
 {
@@ -271,7 +257,7 @@ bool QuickMenuHost::eventFilter(QObject *watched, QEvent *event)
 
 QQuickItem *QuickMenuHost::createPanel(QuickMenuModel *model, bool rootLevel)
 {
-    QQmlEngine *engine = resolveEngine(m_window);
+    QQmlEngine *engine = quickEngine(m_window);
     if (!engine) {
         qWarning("QuickMenuHost: menu window has no QML engine");
         return nullptr;

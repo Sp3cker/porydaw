@@ -170,6 +170,7 @@ class NoteIdentityCheckTest final : public QObject
 
   private slots:
     void parsedMidiLeavesIdsUnassigned();
+    void adoptedSmfRemintsForeignIds();
     void identityDoesNotAffectEqualityOrSerialization();
     void timelineTransportsOnlyStampedNoteIds();
 };

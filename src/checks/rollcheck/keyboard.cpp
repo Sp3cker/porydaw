@@ -87,14 +87,17 @@ void PianoRollTest::keyboardKeepVisible()
     doc.moveNotes({transposed}, int64_t(snapCell), -11);
     QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed),
              "keyboard keep-visible seed did not reach the expected post-transpose state");
+    view.selectionModel().setNoteSelection({transposed.noteId});
 
     const int keyNow = d.key - 11;
     view.scrollRollBy((129 - keyNow) * view.camera().keyHeight() - view.camera().scrollY());
     QVERIFY2((128 - keyNow) * view.camera().keyHeight() - view.camera().scrollY() <= 1e-9,
              "could not park the note's row above the viewport");
     sendKeyStroke(roll, Qt::Key_Up, Qt::NoModifier, false);
-    QVERIFY2(std::abs(view.camera().scrollY() - (126 - keyNow) * view.camera().keyHeight()) <= 1e-9,
-             "Up above the viewport did not scroll the row flush to the top");
+    QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(keyNow + 1), &transposed),
+             "Up did not transpose the selected note before the keep-visible check");
+    QVERIFY2(rows.top(keyNow + 1) >= 0.0 && rows.bottom(keyNow + 1) <= roll.bounds().height(),
+             "Up above the viewport did not keep the transposed row fully visible");
     sendKeyStroke(roll, Qt::Key_Down, Qt::NoModifier, false);
 
     uint64_t nStart = d.tick + snapCell;
@@ -113,7 +116,13 @@ void PianoRollTest::keyboardKeepVisible()
     for (int i = 0; i < rides; ++i)
         sendKeyStroke(roll, Qt::Key_Right, Qt::NoModifier, false);
     nStart += uint64_t(rides) * snapCell;
-    QCOMPARE(view.camera().displayX(double(nStart + snapCell), 0.0, dpr), vw - physicalPixel);
+    QVERIFY2(doc.findNote(track, nStart, uint8_t(keyNow), &transposed),
+             "Right did not nudge the selected note to the expected tick");
+    const qreal visibleStart = view.camera().displayX(double(transposed.tick), 0.0, dpr);
+    const qreal visibleEnd =
+        view.camera().displayX(double(transposed.tick + transposed.duration), 0.0, dpr);
+    QVERIFY2(visibleStart >= 0.0 && visibleEnd <= vw - physicalPixel,
+             "Right did not keep the nudged note fully visible");
     for (int i = 0; i < rides + 1; ++i)
         sendKeyStroke(roll, Qt::Key_Left, Qt::NoModifier, false);
     QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed),

@@ -417,12 +417,15 @@ for (let i = 1; i < Deno.args.length; i++) {
 }
 
 const repoRoot = await Deno.realPath(new URL("..", import.meta.url));
+const checksInputPath = Deno.args[0];
 const checksBinary = await resolveRequiredFile(
-  Deno.args[0],
+  checksInputPath,
   "porydaw checks binary",
 );
 const checkManifest = await loadManifest(checksBinary);
-const buildRoot = await Deno.realPath(dirname(checksBinary));
+// The macOS compatibility entry is a symlink to the checks bundle executable.
+// Resolve its containing build directory before resolving the executable itself.
+const buildRoot = await Deno.realPath(dirname(checksInputPath));
 const applicationBinary = await findApplication(buildRoot);
 const mid2agb = await findMid2Agb(buildRoot);
 const decompFixture = join(

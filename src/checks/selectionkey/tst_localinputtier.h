@@ -7,11 +7,13 @@
 // exactly once after each surface closes.
 //
 // * the real QML track-rename TextInput, a real QWidget line edit (the song
-//   search field), the inline automation value prompt opened by an automation
-//   lane double click, and the pitch-bend overlay: keys delivered into the
-//   surface that visibly holds focus edit only that surface, Copy carries the
-//   surface's own text, and every window command that production routes out of
-//   a surface fires exactly once through its window owner (plan 9);
+//   search field), the inline automation value prompt opened by an
+//   automation lane double click, the application modal roll velocity prompt
+//   opened by the note menu, and the pitch-bend overlay: keys delivered into
+//   the surface that visibly holds focus edit only that surface, Copy
+//   carries the surface's own text, and every window command that production
+//   routes out of a surface fires exactly once through its window owner
+//   (plan 9);
 // * the event list keeps row-local navigation, Delete, Alt reorder and
 //   Select All, with no new selected-note Cut/Delete fallback and exactly one
 //   window Copy owner (plan 11).
@@ -53,6 +55,7 @@ class SelectionLocalInputTierTest final : public QObject
     void renameTextInputOwnsKeys();
     void songSearchLineEditOwnsKeys();
     void numericPromptOwnsKeys();
+    void velocityPromptOwnsKeys();
     void pitchBendOverlayOwnsKeys();
     // Plan 11: the event list keeps row-local keys.
     void eventListKeepsRowLocalKeys();

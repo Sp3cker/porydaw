@@ -15,6 +15,24 @@ Item {
     property string accessibleDescription: ""
 
     signal valueCommitted(int committed)
+    signal editingAccepted(int committed)
+
+    function selectAll() {
+        input.selectAll()
+    }
+    function focusInput(reason) {
+        input.forceActiveFocus(reason)
+    }
+
+
+
+    // Returns the displayed, validated integer. A null result leaves an
+    // intermediate draft corrected in place and must not accept a dialog.
+    function commitDisplayed() {
+        if (!state.finishEditing())
+            return null
+        return Number.parseInt(input.text, 10)
+    }
 
     implicitWidth: Math.max(fontMetrics.advanceWidth(String(minimumValue)),
                             fontMetrics.advanceWidth(String(maximumValue)))
@@ -93,6 +111,7 @@ Item {
             input.text = String(fixed)
             if (fixed !== control.value)
                 control.valueCommitted(fixed)
+            return acceptable
         }
     }
 
@@ -141,11 +160,15 @@ Item {
                 state.finishEditing()
         }
         Keys.onReturnPressed: (event) => {
-            state.finishEditing()
+            const committed = control.commitDisplayed()
+            if (committed !== null)
+                control.editingAccepted(committed)
             event.accepted = true
         }
         Keys.onEnterPressed: (event) => {
-            state.finishEditing()
+            const committed = control.commitDisplayed()
+            if (committed !== null)
+                control.editingAccepted(committed)
             event.accepted = true
         }
 

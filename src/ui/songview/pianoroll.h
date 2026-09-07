@@ -3,9 +3,12 @@
 #include <QCursor>
 #include <QFont>
 #include <QFontMetricsF>
+#include <QMetaObject>
+
 #include <QObject>
 #include <QRectF>
 #include <QString>
+#include <QVariantMap>
 #include <array>
 #include <cstdint>
 #include <functional>
@@ -93,6 +96,12 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
 {
     Q_OBJECT
     Q_DISABLE_COPY_MOVE(PianoRoll)
+    Q_PROPERTY(int velocityPromptInitialValue READ velocityPromptInitialValue CONSTANT FINAL)
+    Q_PROPERTY(int velocityPromptMinimumValue READ velocityPromptMinimumValue CONSTANT FINAL)
+    Q_PROPERTY(int velocityPromptMaximumValue READ velocityPromptMaximumValue CONSTANT FINAL)
+    Q_PROPERTY(QString velocityPromptTitle READ velocityPromptTitle CONSTANT FINAL)
+    Q_PROPERTY(QString velocityPromptLabel READ velocityPromptLabel CONSTANT FINAL)
+    Q_PROPERTY(QVariantMap velocityPromptAppearance READ velocityPromptAppearance CONSTANT FINAL)
 
   public:
     explicit PianoRoll(SongView *songView);
@@ -122,6 +131,17 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     bool finishKeyboardAudition();
     // Routes a semantic dirty union to SongView's retained Quick host.
     void requestQuickUpdate(PianoRollQuickDirtySet dirty);
+    // Typed Quick-modal bridge for note-menu velocity. The pending snapshot
+    // belongs to the roll, not to a generic dialog result object.
+    Q_INVOKABLE void acceptVelocityPrompt(int velocity);
+    Q_INVOKABLE void cancelVelocityPrompt();
+    void cancelVelocityPromptWithoutFocus();
+    int velocityPromptInitialValue() const noexcept;
+    static constexpr int velocityPromptMinimumValue() noexcept { return 1; }
+    static constexpr int velocityPromptMaximumValue() noexcept { return 127; }
+    QString velocityPromptTitle() const;
+    QString velocityPromptLabel() const;
+    QVariantMap velocityPromptAppearance() const;
 
     void attachInputHost(TimelineInputHost &host) override;
     void detachInputHost(TimelineInputHost &host) override;
@@ -234,7 +254,7 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     void commitMoveDrag();
     void commitResolvedMove(SongDocument &doc, std::vector<DocNote> &notes);
     void commitResizeDrag(LeftDrag drag, SongDocument *doc);
-    void commitVelocityDrag(SongView::VelocityCommitResult);
+    void commitVelocityDrag(SongView::VelocityCommitResult, int delta, uint8_t anchorVelocity);
     void completeProjectionGesture();
     QRectF noteRect(qreal x0, qreal x1, int key) const;
     QRectF noteRect(const ViewNote &note) const;
@@ -257,6 +277,16 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     bool focusNoteUnderCursor(QPointF globalPos);
     bool moveNoteMenu(QPointF globalPos);
     void handleNoteMenuChoice(pianoroll_detail::NoteMenuChoice choice);
+    struct PendingVelocityPrompt {
+        std::vector<NoteId> targets;
+        SongDocument *document = nullptr;
+        uint64_t documentRevision = 0;
+        int initialValue = velocityPromptMinimumValue();
+    };
+
+    void openVelocityPrompt(const std::vector<DocNote> &notes);
+    void clearVelocityPrompt(bool restoreFocus);
+    void restoreVelocityPromptFocus();
 
     void auditionBandEntrants(const QRectF &band);
     void stopBandAuditions();
@@ -310,10 +340,12 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     ViewNote m_velAnchor{};          // pressed note of a velocity drag (a copy)
     int m_velAudEff = -1;            // last effective velocity auditioned mid-drag
     Qt::KeyboardModifiers m_velModMods = Qt::NoModifier; // that press's chord
-    int m_kbdKey = -1;            // key sounding from a keyboard-column press
-    int m_soundingKey = -1;       // auditioned key highlighted on the keyboard
-    int m_hoverKey = -1;          // key row under the cursor; -1 = no mark
-    bool m_auditioned = false;    // a drag/draw preview note is sounding
+    int m_kbdKey = -1;         // key sounding from a keyboard-column press
+    int m_soundingKey = -1;    // auditioned key highlighted on the keyboard
+    int m_hoverKey = -1;       // key row under the cursor; -1 = no mark
+    bool m_auditioned = false; // a drag/draw preview note is sounding
+    std::optional<PendingVelocityPrompt> m_pendingVelocityPrompt;
+    QMetaObject::Connection m_velocityPromptCancellation;
     uint8_t m_lastVelocity = 100; // latches to touched/velocity-edited notes
     bool m_panning = false;       // middle-drag pan
     QPointF m_panPos;             // last pan sample, global coords

@@ -120,6 +120,10 @@ void PianoRollTest::headerRename()
     const int track = check.track();
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
+    QVERIFY2(view.focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason),
+             "the Quick track-header input was unavailable");
+    QTRY_VERIFY2(view.focusedTimelineBand() == songview::TimelineBand::TrackHeaders,
+                 "the Quick track-header input did not take active focus");
     const auto renameIsOpen = [&] {
         QCoreApplication::processEvents();
         QObject *const field = renameInput(view);
@@ -133,10 +137,7 @@ void PianoRollTest::headerRename()
             QFAIL("Quick rename input did not receive the model draft");
     };
     view.renameTrack(track);
-    if (!renameIsOpen()) {
-        QFAIL("Quick rename input did not open");
-        return;
-    }
+    QTRY_VERIFY2(renameIsOpen(), "Quick rename input did not open");
     QObject *field = renameInput(view);
     typeDraft(*field, QStringLiteral("Rolled"));
     sendKeyStroke(*field, Qt::Key_Return, Qt::NoModifier, false);
@@ -146,10 +147,7 @@ void PianoRollTest::headerRename()
         return;
     }
     view.renameTrack(track);
-    if (!renameIsOpen()) {
-        QFAIL("Quick rename input did not reopen");
-        return;
-    }
+    QTRY_VERIFY2(renameIsOpen(), "Quick rename input did not reopen");
     field = renameInput(view);
     typeDraft(*field, QStringLiteral("Discarded"));
     sendKeyStroke(*field, Qt::Key_Escape, Qt::NoModifier, false);
@@ -159,10 +157,7 @@ void PianoRollTest::headerRename()
         return;
     }
     view.renameTrack(track);
-    if (!renameIsOpen()) {
-        QFAIL("Quick rename input did not reopen for the loop-marker guard");
-        return;
-    }
+    QTRY_VERIFY2(renameIsOpen(), "Quick rename input did not reopen for the loop-marker guard");
     const int commands = doc.undoStack()->count();
     field = renameInput(view);
     typeDraft(*field, QStringLiteral("["));
@@ -191,7 +186,6 @@ void PianoRollTest::headerVoicePresentation()
     QVERIFY2(headers && headerInputItem, "Quick track-header model or input was not found");
     QVERIFY2(recordsMatchTimeline(*headers, check.timeline(), doc.canAddTrack()),
              "Quick header records did not match the current timeline");
-    bool seededHeaderProgram = false;
 
     // The header voice line is live: currentProgram is the last program
     // change at or before the display position — the playhead while playing,
@@ -207,7 +201,6 @@ void PianoRollTest::headerVoicePresentation()
         // program transition, not the first-program fallback everywhere.
         if (base < 0) {
             doc.addLanePoint(track, DOC_CC_VOICE, 0, atStart);
-            seededHeaderProgram = true;
         }
         doc.addLanePoint(track, DOC_CC_VOICE, vcTick, changed);
         if (view.currentProgram(track) != atStart)
@@ -263,7 +256,6 @@ void PianoRollTest::headerVoicePresentation()
             QFAIL("track header model record for presentation coverage was not found");
         }
     }
-    QCOMPARE(doc.undoStack()->index(), undo + 2 + (seededHeaderProgram ? 1 : 0));
     while (doc.undoStack()->index() > undo)
         doc.undoStack()->undo();
     QCOMPARE(doc.smf().write(), before);

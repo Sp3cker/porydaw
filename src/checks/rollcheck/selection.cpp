@@ -10,6 +10,7 @@
 #include <QObject>
 #include <QPoint>
 #include <QRectF>
+#include <QScopeGuard>
 #include <QtTest>
 #include <algorithm>
 #include <cstdint>
@@ -142,6 +143,19 @@ void PianoRollTest::selectionPressAudition()
     songview::TimelineInputItem *roll = &check.rollInput();
     const int track = check.track();
     const SnappedRows rows{view, *roll};
+    // This slot starts where the former combined scenario entered selection
+    // handling: note B has just been velocity-dragged from 73 to 93, and the
+    // committed value is the pencil's active velocity latch.
+    checks::events::sendMouse(*roll, QEvent::MouseButtonPress, fixture.b.center, Qt::LeftButton,
+                              Qt::LeftButton, Qt::ControlModifier);
+    checks::events::sendMouse(*roll, QEvent::MouseMove, fixture.b.center - QPoint(0, 20),
+                              Qt::NoButton, Qt::LeftButton, Qt::ControlModifier);
+    checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, fixture.b.center - QPoint(0, 20),
+                              Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+    DocNote latched;
+    QVERIFY2(doc.findNote(track, fixture.b.tick, uint8_t(fixture.b.key), &latched) &&
+                 latched.velocity == 93,
+             "selection audition fixture did not establish the velocity latch");
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
 
@@ -160,18 +174,30 @@ void PianoRollTest::selectionPressAudition()
         auto conn =
             QObject::connect(&view, &SongView::auditionNote, &view,
                              [&](int, int key, int velocity) { aud.push_back({key, velocity}); });
+        bool buttonHeld = false;
+        QPoint heldPosition = e.center;
+        const auto releasePress = qScopeGuard([&] {
+            if (buttonHeld) {
+                checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, heldPosition,
+                                          Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            }
+            QObject::disconnect(conn);
+        });
         const int preCount = doc.undoStack()->count();
         checks::events::sendMouse(*roll, QEvent::MouseButtonPress, e.center, Qt::LeftButton,
                                   Qt::LeftButton, Qt::NoModifier);
+        buttonHeld = true;
         if (aud != std::vector<std::pair<int, int>>{{e.key, 93}})
             QFAIL("empty-space press did not audition its row at the latched velocity");
         const QPoint gliss(e.center.x(), rows.centerY(e.key - 1));
+        heldPosition = gliss;
         checks::events::sendMouse(*roll, QEvent::MouseMove, gliss, Qt::NoButton, Qt::LeftButton,
                                   Qt::NoModifier);
         if (aud.empty() || aud.back() != std::make_pair(e.key - 1, 93))
             QFAIL("holding the press across a row did not gliss the preview");
         checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, gliss, Qt::LeftButton,
                                   Qt::NoButton, Qt::NoModifier);
+        buttonHeld = false;
         if (aud.empty() || aud.back().second != 0)
             QFAIL("releasing the press did not release the preview");
         if (doc.undoStack()->count() != preCount)
@@ -186,10 +212,13 @@ void PianoRollTest::selectionPressAudition()
         const QPoint pull = e.center + QPoint(QApplication::startDragDistance() + 8, 0);
         checks::events::sendMouse(*roll, QEvent::MouseButtonPress, e.center, Qt::LeftButton,
                                   Qt::LeftButton, Qt::NoModifier);
+        buttonHeld = true;
+        heldPosition = pull;
         checks::events::sendMouse(*roll, QEvent::MouseMove, pull, Qt::NoButton, Qt::LeftButton,
                                   Qt::NoModifier);
         checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, pull, Qt::LeftButton,
                                   Qt::NoButton, Qt::NoModifier);
+        buttonHeld = false;
         QObject::disconnect(conn);
         if (std::count(aud.begin(), aud.end(), std::make_pair(e.key, 93)) != 1)
             QFAIL("growing the press into a draw re-attacked the sounding key");
@@ -324,6 +353,17 @@ void PianoRollTest::selectionModifierVelocity()
     const int track = check.track();
     const Cell &a = fixture.a;
     const Cell &b = fixture.b;
+    // The former combined scenario entered this section after its preceding
+    // velocity drag had raised note B from 73 to 93.
+    checks::events::sendMouse(*roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
+                              Qt::LeftButton, Qt::ControlModifier);
+    checks::events::sendMouse(*roll, QEvent::MouseMove, b.center - QPoint(0, 20), Qt::NoButton,
+                              Qt::LeftButton, Qt::ControlModifier);
+    checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, b.center - QPoint(0, 20),
+                              Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+    DocNote raised;
+    QVERIFY2(doc.findNote(track, b.tick, uint8_t(b.key), &raised) && raised.velocity == 93,
+             "modifier velocity fixture did not establish note B at 93");
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
 
@@ -494,9 +534,6 @@ void PianoRollTest::selectionModifierVelocity()
 void PianoRollTest::selectionNonScaleMove()
 {
     PianoRollFixture &check = *m_fixture;
-    const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
-    QVERIFY(seed.has_value());
-    const PencilVelocityFixture &fixture = *seed;
     SongDocument &doc = check.document();
     SongView &view = check.view();
     songview::TimelineInputItem *roll = &check.rollInput();
@@ -527,9 +564,10 @@ void PianoRollTest::selectionNonScaleMove()
         const qreal cellPx = view.camera().displayX(double(cell.tick + snap), 0.0, dpr) -
                              view.camera().displayX(double(cell.tick), 0.0, dpr);
         uint64_t widthTicks = snap * 4;
-        while (view.camera().displayX(double(cell.tick + widthTicks), 0.0, dpr) >
-                   roll->width() - 4 &&
-               widthTicks > snap * 2)
+        while (
+            (view.camera().displayX(double(cell.tick + widthTicks), 0.0, dpr) > roll->width() - 4 ||
+             check.isOccupied(cell.tick, widthTicks, cell.key)) &&
+            widthTicks > snap * 2)
             widthTicks -= snap;
         if (check.isOccupied(cell.tick, widthTicks, cell.key)) {
             QFAIL("no free span for the non-Scale move");

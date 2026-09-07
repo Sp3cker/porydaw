@@ -371,6 +371,14 @@ bool SongDocument::adoptSmf(SmfFile smf, const SongInfo &song, QString *error)
     Q_UNUSED(error);
     const auto before = trackMapState();
     m_smf = std::move(smf);
+    // NoteId tokens belong to one SongDocument. An in-memory SmfFile can
+    // arrive from another document with stamped IDs, but adopting it is a
+    // document boundary: remint every note-on from this document's
+    // monotonically advancing token stream.
+    for (SmfTrack &track : m_smf.tracks) {
+        for (SmfEvent &event : track.events)
+            event.noteId = NoteId{};
+    }
     replaceTempoPoints(normalizeTempoPoints(tempoPointsFromSmf(m_smf)));
     song_document_tempo::removeTempoMetas(m_smf);
     m_cfg = song.cfg;

@@ -8,11 +8,15 @@
 #include "ui/songview.h"
 #include "ui/songview/clipmime.h"
 #include "ui/songview/quick/pianorollquick.h"
+#include "ui/songview/quick/quickmodalhost.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/theme/themeruntime.h"
+
 #include <QApplication>
-#include <QInputDialog>
 #include <QMetaObject>
 #include <QObject>
+#include <QUrl>
+#include <QVariantMap>
 
 #include <algorithm>
 #include <utility>
@@ -318,24 +322,159 @@ void PianoRoll::handleNoteMenuChoice(NoteMenuChoice choice)
     case NoteMenuChoice::Cut:
         cutSelectedNotes();
         break;
-    case NoteMenuChoice::Velocity: {
-        bool ok = false;
-        const int velocity = QInputDialog::getInt(m_sv, SongView::tr("Note velocity"),
-                                                  SongView::tr("Velocity (1-127):"),
-                                                  notes.front().velocity, 1, 127, 1, &ok);
-        if (ok) {
-            const SongView::DocumentSwapHintScope swapHint{*m_sv, cVelocityMutationDirty};
-            doc->setNotesVelocity(notes, uint8_t(velocity));
-            m_lastVelocity = uint8_t(velocity);
-        }
+    case NoteMenuChoice::Velocity:
+        openVelocityPrompt(notes);
         break;
-    }
     case NoteMenuChoice::Delete:
         deleteSelectedNotes();
         break;
     case NoteMenuChoice::None:
         break;
     }
+}
+
+int PianoRoll::velocityPromptInitialValue() const noexcept
+{
+    return m_pendingVelocityPrompt ? m_pendingVelocityPrompt->initialValue
+                                   : velocityPromptMinimumValue();
+}
+
+QString PianoRoll::velocityPromptTitle() const
+{
+    return SongView::tr("Note velocity");
+}
+
+QString PianoRoll::velocityPromptLabel() const
+{
+    return SongView::tr("Velocity (1-127):");
+}
+
+QVariantMap PianoRoll::velocityPromptAppearance() const
+{
+    QVariantMap appearance;
+    appearance.insert(QStringLiteral("font"), m_sv->font());
+    appearance.insert(QStringLiteral("background"), themes::color(themes::Role::window_background));
+    appearance.insert(QStringLiteral("outline"), themes::color(themes::Role::palette_outline));
+    appearance.insert(QStringLiteral("text"), themes::color(themes::Role::window_text));
+    appearance.insert(QStringLiteral("focus"), themes::color(themes::Role::focus_outline));
+    appearance.insert(QStringLiteral("buttonBackground"),
+                      themes::color(themes::Role::button_background));
+    appearance.insert(QStringLiteral("buttonText"), themes::color(themes::Role::button_text));
+    appearance.insert(QStringLiteral("pressedBackground"),
+                      themes::color(themes::Role::button_pressed_background));
+    appearance.insert(QStringLiteral("borderWidth"), lyt::singlePixel());
+    appearance.insert(QStringLiteral("radius"), lyt::space(Space::Half));
+    appearance.insert(QStringLiteral("dialogPadding"), lyt::space(Space::One));
+    appearance.insert(QStringLiteral("horizontalPadding"), lyt::space(Space::One));
+    appearance.insert(QStringLiteral("verticalPadding"), lyt::space(Space::Half));
+    appearance.insert(QStringLiteral("buttonPadding"), lyt::space(Space::One));
+    appearance.insert(QStringLiteral("spacing"), lyt::space(Space::One));
+    appearance.insert(QStringLiteral("dragThreshold"), lyt::fontPxF(1.0));
+    return appearance;
+}
+
+void PianoRoll::openVelocityPrompt(const std::vector<DocNote> &notes)
+{
+    SongDocument *const document = m_sv->document();
+    songview::TimelineQuickView *const quick = m_sv->quickView();
+    songview::QuickModalHost *const host = quick ? quick->modalHost() : nullptr;
+    if (!document || !host || notes.empty())
+        return;
+
+    // Shared-host replacement happens before this bridge publishes pending
+    // state. Owner-local cleanup must not later close another dialog type.
+    if (m_pendingVelocityPrompt)
+        cancelVelocityPromptWithoutFocus();
+    else
+        host->cancel();
+
+    PendingVelocityPrompt pending;
+    pending.targets.reserve(notes.size());
+    for (const DocNote &note : notes)
+        pending.targets.push_back(note.noteId);
+    pending.document = document;
+
+    pending.documentRevision = document->revision();
+    pending.initialValue = notes.front().velocity;
+    m_pendingVelocityPrompt = std::move(pending);
+    QObject::disconnect(m_velocityPromptCancellation);
+    m_velocityPromptCancellation = connect(host, &QuickModalHost::cancelled, this,
+                                           [this] { clearVelocityPrompt(/*restoreFocus=*/true); });
+    if (!host->open(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/VelocityPrompt.qml")), this,
+                    velocityPromptTitle())) {
+        clearVelocityPrompt(/*restoreFocus=*/true);
+    }
+}
+
+void PianoRoll::acceptVelocityPrompt(int velocity)
+{
+    if (velocity < velocityPromptMinimumValue() || velocity > velocityPromptMaximumValue() ||
+        !m_pendingVelocityPrompt)
+        return;
+
+    const PendingVelocityPrompt pending = std::move(*m_pendingVelocityPrompt);
+    m_pendingVelocityPrompt.reset(); // Never expose a pending target while mutating the document.
+    QObject::disconnect(m_velocityPromptCancellation);
+    m_velocityPromptCancellation = {};
+    SongDocument *const document = m_sv->document();
+    if (document == pending.document && document->revision() == pending.documentRevision) {
+        std::vector<DocNote> notes;
+        notes.reserve(pending.targets.size());
+        for (NoteId id : pending.targets) {
+            DocNote note;
+            if (!document->findNote(id, &note)) {
+                notes.clear();
+                break;
+            }
+            notes.push_back(note);
+        }
+        if (!notes.empty()) {
+            const SongView::DocumentSwapHintScope swapHint{*m_sv, cVelocityMutationDirty};
+            document->setNotesVelocity(notes, uint8_t(velocity));
+            // Latch the chosen value even when the document operation becomes
+            // a no-op so subsequent drawn notes retain the chosen velocity.
+            m_lastVelocity = uint8_t(velocity);
+        }
+    }
+    if (songview::TimelineQuickView *const quick = m_sv->quickView())
+        quick->modalHost()->close();
+    restoreVelocityPromptFocus();
+}
+
+void PianoRoll::cancelVelocityPrompt()
+{
+    if (!m_pendingVelocityPrompt)
+        return;
+    if (songview::TimelineQuickView *const quick = m_sv->quickView())
+        quick->modalHost()->cancel();
+    if (m_pendingVelocityPrompt)
+        clearVelocityPrompt(/*restoreFocus=*/true);
+}
+
+void PianoRoll::cancelVelocityPromptWithoutFocus()
+{
+    const bool ownsModal = m_pendingVelocityPrompt.has_value();
+    m_pendingVelocityPrompt.reset();
+    QObject::disconnect(m_velocityPromptCancellation);
+    m_velocityPromptCancellation = {};
+    if (ownsModal) {
+        if (songview::TimelineQuickView *const quick = m_sv->quickView())
+            quick->modalHost()->cancel();
+    }
+}
+
+void PianoRoll::clearVelocityPrompt(bool restoreFocus)
+{
+    m_pendingVelocityPrompt.reset();
+    QObject::disconnect(m_velocityPromptCancellation);
+    m_velocityPromptCancellation = {};
+    if (restoreFocus)
+        restoreVelocityPromptFocus();
+}
+
+void PianoRoll::restoreVelocityPromptFocus()
+{
+    m_sv->focusTimelineBand(TimelineBand::Roll, Qt::OtherFocusReason);
 }
 
 } // namespace songview

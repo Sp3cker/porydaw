@@ -10,6 +10,7 @@
 
 #include "core/miditimeline.h"
 #include "core/smf.h"
+#include "core/songdocument.h"
 #include "porydaw_scale.h"
 
 namespace {
@@ -210,6 +211,44 @@ void NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned()
     }
     QCOMPARE(noteOns, 2);
     QVERIFY(ordinaryUnassigned);
+}
+
+void NoteIdentityCheckTest::adoptedSmfRemintsForeignIds()
+{
+    SongDocument document;
+    SongInfo song;
+    song.label = QStringLiteral("note-identity");
+    QString error;
+    QVERIFY2(document.adoptSmf(duplicateNoteFile(), song, &error), qPrintable(error));
+
+    const auto noteOnIds = [](const SmfFile &smf) {
+        std::vector<NoteId> ids;
+        for (const SmfTrack &track : smf.tracks) {
+            for (const SmfEvent &event : track.events) {
+                if (event.isNoteOn())
+                    ids.push_back(event.noteId);
+            }
+        }
+        return ids;
+    };
+    const std::vector<NoteId> original = noteOnIds(document.smf());
+    QCOMPARE(original.size(), size_t(2));
+    QVERIFY(original[0].isAssigned());
+    QVERIFY(original[1].isAssigned());
+    QVERIFY(original[0] != original[1]);
+
+    QVERIFY2(document.adoptSmf(document.smf(), song, &error), qPrintable(error));
+    document.addNote(0, 96, 64, 24, 80);
+    const std::vector<NoteId> adopted = noteOnIds(document.smf());
+    QCOMPARE(adopted.size(), size_t(3));
+    for (const NoteId id : adopted) {
+        QVERIFY(id.isAssigned());
+        QVERIFY(std::find(original.begin(), original.end(), id) == original.end());
+    }
+    for (size_t left = 0; left < adopted.size(); ++left) {
+        for (size_t right = left + 1; right < adopted.size(); ++right)
+            QVERIFY(adopted[left] != adopted[right]);
+    }
 }
 
 void NoteIdentityCheckTest::identityDoesNotAffectEqualityOrSerialization()

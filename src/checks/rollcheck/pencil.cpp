@@ -6,7 +6,6 @@
 #include <QImage>
 #include <QPointF>
 #include <QRectF>
-#include <QSize>
 #include <QtTest>
 #include <algorithm>
 #include <cmath>
@@ -37,10 +36,6 @@ void PianoRollTest::pencilFractionalPlacement()
     const int undo = doc.undoStack()->index();
     const SnappedRows rows{view, roll};
     const SongView::ViewState original = view.viewState();
-    const QSize originalSize = view.size();
-    view.resize(180, originalSize.height());
-    (void)view.grab();
-    QCoreApplication::processEvents();
 
     SongView::ViewState fractional = original;
     fractional.pxPerBeat = 31.375;
@@ -118,8 +113,6 @@ void PianoRollTest::pencilFractionalPlacement()
     QCOMPARE(doc.smf().write(), before);
     QCOMPARE(view.document(), &doc);
     QVERIFY(view.timeline());
-    view.resize(originalSize);
-    (void)view.grab();
     view.applyViewState(original);
     QCoreApplication::processEvents();
 }

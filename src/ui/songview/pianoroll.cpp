@@ -89,8 +89,13 @@ PianoRoll::PianoRoll(SongView *sv)
     m_noteMenu = new NoteContextMenu(sv, [guardedThis](QPointF globalPos) {
         return guardedThis && guardedThis->moveNoteMenu(globalPos);
     });
-    connect(m_noteMenu, &QMenu::triggered, this,
-            [this](QAction *action) { handleNoteMenuChoice(m_noteMenu->handleAction(action)); });
+    connect(m_noteMenu, &QMenu::triggered, this, [this](QAction *action) {
+        const NoteMenuChoice choice = m_noteMenu->handleAction(action);
+        // Finish the native popup session before opening an application-modal
+        // window; otherwise the menu retains its nested input ownership.
+        m_noteMenu->hide();
+        handleNoteMenuChoice(choice);
+    });
 }
 
 void PianoRoll::requestQuickUpdate(PianoRollQuickDirtySet dirty)
@@ -201,6 +206,7 @@ void PianoRoll::cancelInteraction()
 
 void PianoRoll::cancelTransientInput()
 {
+    cancelVelocityPromptWithoutFocus();
     cancelPitchBendPopupWithoutFocus();
     cancelPointerInteraction();
 }

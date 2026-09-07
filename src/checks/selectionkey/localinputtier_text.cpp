@@ -1,29 +1,36 @@
 // Selection keyboard routing, protected-local-input tier: text surfaces. The
 // real QML track-rename TextInput, a real QWidget line edit (the song search
-// field), and the inline automation value prompt opened by an automation lane
-// double click each visibly own the keyboard: delivered command bindings edit
+// field), the inline automation value prompt opened by an automation lane
+// double click, and the application modal roll velocity prompt opened by the
+// note menu each visibly own the keyboard: delivered command bindings edit
 // only the focused surface, Copy carries the surface's own text, and window
 // commands resume exactly once after each surface closes (plan 9).
 
 #include "checks/selectionkey/tst_localinputtier.h"
 
 #include "checks/automation/automationvalueprompt.h"
+#include "checks/quickmodalguard.h"
 #include "checks/selectionkey/automationprobe.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timelinebandlayout.h"
 #include "ui/songview/trackheadermodel.h"
 
+#include <QAction>
 #include <QApplication>
 #include <QClipboard>
 #include <QLineEdit>
+#include <QMenu>
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QRect>
 #include <QValidator>
 #include <QWidget>
+#include <cmath>
 
 #include <QtTest>
 
@@ -369,6 +376,162 @@ void SelectionLocalInputTierTest::numericPromptOwnsKeys()
     selectionkey::deliverKey(m_quickWindow, solo->key(), solo->keyboardModifiers());
     QVERIFY2(m_counts.solo == soloBefore + 1 && view.trackSoloed(kTrack),
              "Solo did not resume after the value prompt closed");
+    selectionkey::deliverKey(m_quickWindow, solo->key(), solo->keyboardModifiers());
+    QVERIFY2(!view.trackSoloed(kTrack), "Solo did not untoggle after the prompt");
+}
+
+void SelectionLocalInputTierTest::velocityPromptOwnsKeys()
+{
+    SongView &view = this->view();
+    SongDocument &document = this->document();
+    const selectionkey::ScenarioRollback rollback(view, document);
+    activateShellForCommands();
+    const auto solo = selectionkey::firstBinding(QStringLiteral("roll.solo_tracks"));
+    const auto copy = selectionkey::firstBinding(QStringLiteral("roll.copy"));
+    QVERIFY2(solo.has_value() && copy.has_value(), "Solo/Copy have no single-key bindings");
+    const std::optional<QString> soloText = singleKeyText(*solo);
+
+    // A selected roll note anchors the shared-edit leak checks, and the note
+    // menu launches the prompt through the production retargeting path.
+    const auto note = addNote(kTrack, 24, 60, 24);
+    QVERIFY2(note.has_value(), "the fixture note was not created");
+    view.selectionModel().setNoteSelection({note->id});
+    selectionkey::settle();
+
+    songview::TimelineQuickView *const quick = selectionkey::quickCanvas(view);
+    QQuickWindow *const quickWindow = quick ? quick->quickWindow() : nullptr;
+    auto *const rollInput = quick && quick->rootObject()
+                                ? quick->rootObject()->findChild<songview::TimelineInputItem *>(
+                                      QStringLiteral("timelineRollInput"))
+                                : nullptr;
+    QVERIFY2(quickWindow && rollInput, "the roll surface is unavailable");
+
+    // Reveal through the production seams first, then read the live camera:
+    // computing coordinates from a stale camera misses the note.
+    view.ensureTickVisible(note->note.tick);
+    view.ensureKeyVisible(note->note.key);
+    selectionkey::settle();
+    const qreal rollDpr = rollInput->devicePixelRatio();
+    const qreal rollX = view.camera().displayX(
+        double(note->note.tick) + double(note->note.duration) / 2.0, 0.0, rollDpr);
+    const auto rollEdge = [&](int row) {
+        return std::round((row * view.camera().keyHeight() - view.camera().scrollY()) * rollDpr) /
+               rollDpr;
+    };
+    const QPointF rollPoint(
+        rollX, (rollEdge(127 - note->note.key) + rollEdge(128 - note->note.key)) / 2.0);
+    QVERIFY2(rollInput->bounds().contains(rollPoint),
+             "production roll geometry did not expose the fixture note");
+    const QPoint rollPress = rollInput->mapToScene(rollPoint).toPoint();
+    QVERIFY2(QRect(QPoint{}, quickWindow->size()).contains(rollPress),
+             "the note menu press left the Quick window");
+
+    const quick_modal::PromptGuard promptGuard(view);
+    const QByteArray before = document.smf().write();
+    const int copyBefore = m_counts.copy;
+    const int soloBefore = m_counts.solo;
+
+    selectionkey::sendMouseEvent(*quickWindow, QEvent::MouseButtonPress, rollPress,
+                                 Qt::RightButton);
+    selectionkey::sendMouseEvent(*quickWindow, QEvent::MouseButtonRelease, rollPress,
+                                 Qt::RightButton);
+    selectionkey::settle();
+    songview::pianoroll_detail::NoteContextMenu *noteMenu = nullptr;
+    for (QMenu *const menu : view.findChildren<QMenu *>(QString{}, Qt::FindDirectChildrenOnly)) {
+        auto *const candidate = dynamic_cast<songview::pianoroll_detail::NoteContextMenu *>(menu);
+        if (candidate && candidate->isVisible()) {
+            noteMenu = candidate;
+            break;
+        }
+    }
+    QVERIFY2(noteMenu, "right-click did not open the note menu");
+    QAction *velocityAction = nullptr;
+    for (QAction *const action : noteMenu->actions()) {
+        if (noteMenu->handleAction(action) ==
+            songview::pianoroll_detail::NoteMenuChoice::Velocity) {
+            velocityAction = action;
+            break;
+        }
+    }
+    QVERIFY2(velocityAction, "the note menu has no velocity action");
+    QTest::mouseClick(noteMenu, Qt::LeftButton, Qt::NoModifier,
+                      noteMenu->actionGeometry(velocityAction).center());
+    selectionkey::settle();
+
+    songview::QuickModalHost *const host = quick_modal::modalHost(view);
+    QQuickWindow *const modal = host ? host->modalWindow() : nullptr;
+    QVERIFY2(host && host->isOpen() && modal, "the velocity action did not open the modal prompt");
+    QVERIFY2(QTest::qWaitForWindowExposed(modal), "the modal prompt window did not become exposed");
+    QTRY_VERIFY2(quick_modal::inputHasActiveFocus(*modal, QLatin1String("noteVelocityInput")),
+                 "the velocity prompt text input did not take active focus");
+    QQuickItem *const input = quick_modal::promptItem(*modal, QLatin1String("noteVelocityInput"));
+    QVERIFY2(input, "the velocity prompt has no text input");
+    const QString initialText = QString::number(note->note.velocity);
+    QCOMPARE(input->property("text").toString(), initialText);
+    QCOMPARE(input->property("selectedText").toString(), initialText);
+
+    // Delivered digits replace the selected initial text inside the field.
+    QTest::keySequence(modal, QKeySequence(Qt::Key_1, Qt::Key_2));
+    selectionkey::settle();
+    QCOMPARE(input->property("text").toString(), QStringLiteral("12"));
+
+    // Copy with the field selection carries the field's own text; the window
+    // Copy owner never fires.
+    QApplication::clipboard()->clear();
+    QVERIFY(QMetaObject::invokeMethod(input, "selectAll"));
+    const QString copiedFrom = input->property("selectedText").toString();
+    QTest::keyClick(modal, copy->key(), copy->keyboardModifiers());
+    selectionkey::settle();
+    QVERIFY2(!copiedFrom.isEmpty() && QApplication::clipboard()->text() == copiedFrom &&
+                 m_counts.copy == copyBefore,
+             "Copy while the velocity prompt owns the keys did not stay local to the field");
+
+    // The validator consumes or rejects the Solo key locally; the track
+    // action must neither fire nor leave the field.
+    QVERIFY(QMetaObject::invokeMethod(input, "selectAll"));
+    QString expectedAfterSolo = QStringLiteral("12");
+    if (soloText) {
+        QString candidate = *soloText;
+        int cursorPosition = candidate.size();
+        const QVariant validatorValue = input->property("validator");
+        QValidator *const validator = validatorValue.value<QValidator *>();
+        if (!validator || validator->validate(candidate, cursorPosition) != QValidator::Invalid)
+            expectedAfterSolo = candidate;
+    }
+    QTest::keyClick(modal, solo->key(), solo->keyboardModifiers());
+    selectionkey::settle();
+    QVERIFY2(input->property("text").toString() == expectedAfterSolo &&
+                 m_counts.solo == soloBefore && !view.trackSoloed(kTrack),
+             "Solo escaped the velocity prompt");
+
+    // The prompt is genuinely application modal: the same Solo delivery aimed
+    // at the timeline window is dropped while the prompt is up.
+    selectionkey::deliverKey(m_quickWindow, solo->key(), solo->keyboardModifiers());
+    QVERIFY2(m_counts.solo == soloBefore && !view.trackSoloed(kTrack) && host->isOpen(),
+             "a window command fired while the modal velocity prompt was open");
+
+    // The field's step keys own the arrows locally: the draft steps and
+    // returns while the selection and the song stay frozen.
+    QTest::keyClick(modal, Qt::Key_Up);
+    selectionkey::settle();
+    QTest::keyClick(modal, Qt::Key_Down);
+    selectionkey::settle();
+    QVERIFY2(host && host->isOpen() && input->property("text").toString() == initialText &&
+                 view.selectionModel().noteSelection() == std::vector<NoteId>{note->id} &&
+                 document.smf().write() == before,
+             "arrow keys leaked out of the velocity prompt");
+
+    // Escape cancels without writing, and window commands resume on the roll
+    // band exactly once the prompt no longer owns the keys.
+    QTest::keyClick(modal, Qt::Key_Escape);
+    QTRY_VERIFY2(!host->isOpen(), "Escape did not close the velocity prompt");
+    QVERIFY2(document.smf().write() == before, "cancelling the velocity prompt mutated the song");
+    activateShellForCommands();
+    QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::MouseFocusReason),
+             "could not refocus the roll band after the prompt");
+    selectionkey::deliverKey(m_quickWindow, solo->key(), solo->keyboardModifiers());
+    QVERIFY2(m_counts.solo == soloBefore + 1 && view.trackSoloed(kTrack),
+             "Solo did not resume after the velocity prompt closed");
     selectionkey::deliverKey(m_quickWindow, solo->key(), solo->keyboardModifiers());
     QVERIFY2(!view.trackSoloed(kTrack), "Solo did not untoggle after the prompt");
 }

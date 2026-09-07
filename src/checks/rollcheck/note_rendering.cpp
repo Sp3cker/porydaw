@@ -72,6 +72,7 @@ void PianoRollTest::tinyNoteBorderRaster()
         tinyView.scrollY =
             std::max(0.0, (127.5 - double(noteA.key)) * tinyView.keyHeight - roll.height() / 2.0);
         view.applyViewState(tinyView);
+        doc.addNote(track, noteA.tick + noteA.duration, noteA.key, noteA.duration, 100);
         const SnappedRows tinyRows{view, roll};
         const QRectF tinyBox =
             tinyRows.noteBox(tinyRows.noteRect(noteRightX, abuttingRightX, noteA.key));
@@ -137,6 +138,8 @@ void PianoRollTest::selectedNoteFrameRaster()
     // bottom edge with the camera centered at a fractional scale.
     {
         const SongView::ViewState originalView = view.viewState();
+        const std::vector<NoteId> selectedNotes = view.selectionModel().noteSelection();
+        view.selectionModel().setNoteSelection({noteA.noteId});
         SongView::ViewState fractionalView = originalView;
         fractionalView.keyHeight = 16.375;
         fractionalView.scrollY = std::max(
@@ -197,6 +200,7 @@ void PianoRollTest::selectedNoteFrameRaster()
         if (QColor(unselectedNoteImage.pixel(centerPixelX, bottomPixel)) == expectedNoteColor) {
             QFAIL("unselected note face appears below its black bottom border");
         }
+        view.selectionModel().setNoteSelection(selectedNotes);
 
         view.applyViewState(originalView);
         QCoreApplication::processEvents();

@@ -11,6 +11,8 @@
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/quick/pianorollquick.h"
+#include "ui/songview/quick/quickmodalhost.h"
+
 #include "ui/songview/quick/playheadquick.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/timeruler.h"
@@ -201,6 +203,7 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
             qCritical().noquote() << error.toString();
         qFatal("Qt Quick timeline QML failed to load");
     }
+    m_modalHost = new QuickModalHost(*m_quickView, this);
 
     QObject *root = rootObject();
     if (!root)
@@ -376,6 +379,9 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
 
 TimelineQuickView::~TimelineQuickView()
 {
+    if (m_modalHost)
+        m_modalHost->cancel();
+
     clearKeyPolicyHandlers();
     m_gestureScrollbars.clear();
     for (TimelineInputItem *item : m_drawerChromeInputs) {
@@ -640,6 +646,10 @@ QQuickItem *TimelineQuickView::rootObject() const
 QQuickWindow *TimelineQuickView::quickWindow() const
 {
     return m_quickView;
+}
+QuickModalHost *TimelineQuickView::modalHost() const noexcept
+{
+    return m_modalHost;
 }
 
 void TimelineQuickView::clearHover(TimelineQuickHoverOwner owner)

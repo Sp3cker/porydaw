@@ -37,6 +37,8 @@ class PianoRoll;
 class TimeCamera;
 class EventListInteraction;
 class TimelineInputItem;
+class QuickModalHost;
+
 class TimelineGestureScrollbar;
 enum class TimelineQuickHoverOwner : quint8 {
     None,
@@ -165,6 +167,11 @@ class TimelineQuickView final : public QWidget
     void clearHover(TimelineQuickHoverOwner owner);
     QQuickItem *rootObject() const;
     QQuickWindow *quickWindow() const;
+    // Reusable native application-modal Quick window owner. Domain owners
+    // provide typed bridges; checks may reach the active native modal through
+    // modalHost()->modalWindow().
+    QuickModalHost *modalHost() const noexcept;
+
     void syncAppearance();
     void setBandLayout(TimelineBandLayout layout);
     // Republishes the stored band layout after Quick-window lifecycle events
@@ -321,6 +328,7 @@ class TimelineQuickView final : public QWidget
     TimelineQuickScene *m_scene = nullptr;
     QQuickView *m_quickView = nullptr;
     QWidget *m_quickContainer = nullptr;
+    QuickModalHost *m_modalHost = nullptr;
     std::array<TimelineQuickItem *, static_cast<std::size_t>(TimelineQuickLayer::Count)> m_items{};
     std::array<TimelineChromeItem *, 12> m_chromeItems{};
     TimelineBandLayout m_bandLayout;

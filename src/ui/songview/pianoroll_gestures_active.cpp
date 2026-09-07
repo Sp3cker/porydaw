@@ -280,18 +280,23 @@ void PianoRoll::commitResizeDrag(LeftDrag drag, SongDocument *doc)
     }
 }
 
-void PianoRoll::commitVelocityDrag(SongView::VelocityCommitResult result)
+void PianoRoll::commitVelocityDrag(SongView::VelocityCommitResult result, int delta,
+                                   uint8_t anchorVelocity)
 {
     const bool velocityCommitted = result == SongView::VelocityCommitResult::Committed ||
                                    result == SongView::VelocityCommitResult::Unchanged;
-    if (m_dVel != 0 && velocityCommitted)
-        m_lastVelocity = uint8_t(std::clamp(int(m_velAnchor.velocity) + m_dVel, 1, 127));
+    if (delta != 0 && velocityCommitted)
+        m_lastVelocity = uint8_t(std::clamp(int(anchorVelocity) + delta, 1, 127));
 }
 
 void PianoRoll::commitDrag()
 {
     const LeftDrag drag = m_leftDrag; // snapshot kind first
-    clearLiveDragToken();             // before any commit; kills either channel
+    // A successful velocity commit publishes documentChanged synchronously,
+    // which cancels the active interaction and clears its local drag fields.
+    const int velocityDelta = m_dVel;
+    const uint8_t velocityAnchor = m_velAnchor.velocity;
+    clearLiveDragToken(); // before any commit; kills either channel
     SongView::VelocityCommitResult velocityResult = SongView::VelocityCommitResult::NoGesture;
     if (drag == LeftDrag::Velocity)
         velocityResult = m_sv->commitVelocityGesture();
@@ -303,7 +308,7 @@ void PianoRoll::commitDrag()
     } else if (drag == LeftDrag::Resize || drag == LeftDrag::ResizeLeft) {
         commitResizeDrag(drag, doc);
     } else if (drag == LeftDrag::Velocity) {
-        commitVelocityDrag(velocityResult);
+        commitVelocityDrag(velocityResult, velocityDelta, velocityAnchor);
     }
     stopNoteAudition(); // shared tail verbatim
     m_dTick = 0;
