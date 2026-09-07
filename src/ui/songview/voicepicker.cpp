@@ -33,6 +33,8 @@ QVariantMap voicePickerAppearanceFor(const SongView &owner)
     appearance.insert(QStringLiteral("buttonText"), themes::color(themes::Role::button_text));
     appearance.insert(QStringLiteral("pressedBackground"),
                       themes::color(themes::Role::button_pressed_background));
+    appearance.insert(QStringLiteral("pressedText"),
+                      themes::color(themes::Role::button_pressed_text));
     appearance.insert(QStringLiteral("borderWidth"), lyt::singlePixel());
     appearance.insert(QStringLiteral("radius"), lyt::space(Space::Half));
     appearance.insert(QStringLiteral("dialogPadding"), lyt::space(Space::One));

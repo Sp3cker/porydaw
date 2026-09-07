@@ -162,6 +162,7 @@ Item {
             model: bridge.voicePickerModel
             boundsBehavior: Flickable.StopAtBounds
             highlightFollowsCurrentItem: true
+            highlightMoveDuration: 0
             Accessible.role: Accessible.List
             Accessible.name: qsTr("Voices")
             Accessible.description: qsTr("Click and hold to audition (middle C).")
@@ -225,7 +226,9 @@ Item {
                     anchors.right: parent.right
                     anchors.rightMargin: bridge.voicePickerAppearance.horizontalPadding
                     anchors.verticalCenter: parent.verticalCenter
-                    color: bridge.voicePickerAppearance.text
+                    color: row.ListView.isCurrentItem
+                           ? bridge.voicePickerAppearance.pressedText
+                           : bridge.voicePickerAppearance.text
                     font: bridge.voicePickerAppearance.font
                     text: label
                     elide: Text.ElideRight
