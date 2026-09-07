@@ -1,7 +1,7 @@
 // porydaw scripting API — type declarations (docs/scripting/API.md is the
-// reference; this file mirrors it for editors). Hand-maintained; API 1.x.
+// reference; this file mirrors it for editors and is hand-maintained; API 1.x.
 //
-// Usage in a plugin folder: a jsconfig.json with
+// To get autocomplete when writing code in a plugin folder, create a jsconfig.json with this content:
 //   { "compilerOptions": { "checkJs": true }, "include": ["*.js", "path/to/porydaw.d.ts"] }
 // or `/// <reference path="…/porydaw.d.ts" />` at the top of main.js.
 
@@ -24,7 +24,7 @@ declare namespace porydaw {
         /** Display form of the voicegroup, e.g. "abandoned_ship". */
         voicegroupName: string;
         masterVolume: number;
-        /** null while the -R flag is absent (the build then uses 50). */
+        /** null while the -R flag is absent (the build then uses the default, 50). */
         reverb: number | null;
         priority: number;
         exactGate: boolean;

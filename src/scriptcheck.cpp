@@ -2936,6 +2936,7 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
         expectedIds.append(QStringLiteral("scale-guide"));
         expectedIds.append(QStringLiteral("project-tools"));
         expectedIds.append(QStringLiteral("scale-snap"));
+        expectedIds.append(QStringLiteral("arpeggiate"));
         expectedIds.sort();
         // The Phase 3 examples each open a dock in activate().
         for (const char *id : {"vu-meter", "spectrum", "dancer"}) {
@@ -2980,6 +2981,16 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
                       scale->overlays.size() == 1 && scale->contextItems.size() == 1 &&
                       findChild<QMenu *>(QStringLiteral("plugin.scale-guide.menu")),
                   "scale-guide did not load with its overlay, note-menu item and menu");
+            // The manual's tutorial plugin: one roll command + one note-menu item.
+            const scripting::Plugin *arp = host.plugin(QStringLiteral("arpeggiate"));
+            check(arp && arp->state == scripting::PluginState::Loaded && arp->actions.size() == 1 &&
+                      arp->contextItems.size() == 1 &&
+                      keys.command(QStringLiteral("plugin.arpeggiate.arpeggiate")).context ==
+                          keymap::Context::PianoRoll,
+                  "arpeggiate did not load with its roll command and note-menu item");
+            check(!hasMessage(messages, QStringLiteral("arpeggiate"), 1, QStringLiteral("already")),
+                  "the arpeggiate default shortcut collides with a shipped binding");
+            exampleCommands += arp ? int(arp->actions.size()) : 0;
             QMenu *pluginsMenu = findChild<QMenu *>(QStringLiteral("pluginsMenu"));
             check(pluginsMenu && pluginsMenu->menuAction()->isVisible(),
                   "the Plugins menu is hidden although plugins filled it");

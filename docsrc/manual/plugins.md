@@ -1,70 +1,58 @@
 # Plugins
 
-Porydaw can be extended with small JavaScript plugins. A plugin can add
-commands with their own keyboard shortcuts, entries in the **Plugins** menu
-and in the piano roll's right-click menus, panels next to the Songs and
-Voicegroup docks, drawings over the piano roll, and dialogs of its own. It
-can read and edit the song (every edit is one Undo step), follow playback
-in real time, and render the song to a WAV file.
+Porydaw can be customized and extended with JavaScript plugins. A plugin can do many things, including but not limited to:
 
-## Installing a plugin
+- Define custom commands triggered by keyboard shortcuts
+- Add actions to the **Plugins** menu
+- Add actions when right clicking on piano roll notes
+- Add new visual and interactable panels
+- Read and edit every aspect of a song
+- React to audio playback in real time
+- Draw overlays onto the piano roll
+- Show custom dialogs
 
-1. Open **Edit → Settings… → Plugins**. The page shows the plugins folder
-   and a button to open it.
-2. Copy the plugin's folder into it. A plugin is one folder holding a
-   `plugin.json` and a `main.js` (the folder name must match the id in
-   `plugin.json`).
-3. The plugin loads right away and on every start. Untick it on the same
-   page to switch it off without deleting it; the page also shows why a
-   plugin failed to load, if it did.
+## Installing an existing plugin
 
-Plugins reload themselves when their files change, so editing one while
-Porydaw runs is fine.
+1. Open **Edit → Settings… → Plugins**.
+    - This page shows the plugins folder and a button to open it. Note, you can change the plugins folder to your liking.
+2. Copy the plugin's folder into the configured porydaw plugins folder.
+    - A plugin is one folder holding a `plugin.json` and a `main.js` (the folder name must exactly match the id in `plugin.json`).
+3. The plugin will immediately load. Uncheck it in the same settings page to disable it.  The page also shows why a plugin failed to load, if it did.
+
+Plugins automatically reload when their files are modified, so editing one while Porydaw runs is fine.
 
 !!! tip "Where the folder is"
-    By default the plugins folder lives in Porydaw's application-data
-    directory. **Change…** on the Settings page points Porydaw at any
-    folder you like (the choice is remembered, and plugins reload from the
-    new folder right away); **Use Default** goes back. Setting the
-    `PORYDAW_PLUGINS_DIR` environment variable overrides the saved folder
-    for that run only. The Settings page says when that is the case.
+    By default the plugins folder lives in Porydaw's application-data directory.  **Change…** on the Settings page points Porydaw at any folder you like. **Use Default** resets it to the application-data directory.
 
-## Bundled examples
+## Bundled plugin examples
 
-Porydaw ships example plugins in its `plugins/examples` folder. Copy any of
-them into your plugins folder to try them:
+Porydaw has a bunch of example plugins in its `plugins/examples` folderon GitHub. Copy any of them into your plugins folder to try them. They are decent references to see what the scripting API can do, as well as nice code references.
 
 | Plugin | What it adds |
 |---|---|
+| Arpeggiate | the plugin from the [tutorial](writing-plugins.md): a keyboard shortcut and right-click menu action that turns a selected chord into an arpeggio |
 | Select Same Pitch | a shortcut that selects every note with the selected note's pitch |
 | Note Tools | Legato, Insert chord, Humanize, Strum and Quantize commands |
-| VU Meter, Spectrum, Dancer | panels that follow the audio and the beat |
+| VU Meter, Spectrum, Dancer | Visualization panels that follow the audio and the beat |
 | Song Report | **Plugins → Song Report**: a text summary of the song, and a WAV render |
 | Range Tools | right-click a time selection: duplicate it after itself, echo it with fading copies, reverse its notes |
-| Scale Guide | shades the piano-roll rows outside a scale you pick per song |
+| Scale Guide | shades the piano-roll rows outside the selected scale |
 | Project Tools | **Plugins → Project Tools**: registers every song whose registration files miss a line, and applies one envelope to all sample voices of the song's voicegroup |
 
 ## Shortcuts, menus and panels
 
-- Plugin commands appear in **Settings → Keyboard Shortcuts** under the
-  plugin's name and can be rebound like any other command. A plugin's
-  default shortcut is dropped if it collides with an existing one.
-- Plugin panels are listed under **View → Plugin Panels**; closing one is
-  remembered.
-- **View → Script Console** shows what plugins print and any errors, and
-  offers a small console for trying API calls.
+- Plugin commands appear in **Settings → Keyboard Shortcuts** under the plugin's name and can be rebound to different keys, just like any other command.
+- Plugin panels are listed under **View → Plugin Panels**.
+- **View → Script Console** shows plugin output, including errors, and it offers a small interactive REPL for trying API calls.
 
 ## Safety
 
-Plugins run inside Porydaw with the same access to your project as Porydaw
-itself, so only install plugins you trust. A plugin that hangs is stopped
-after a few seconds and disabled until you reload it. File access from a
-plugin is limited to its own folder, the open project, and files you pick in
-a dialog it shows.
+Plugins run inside Porydaw with the same access to your project as Porydaw itself, so only install plugins you trust. A plugin that hangs (e.g. due to an infinite loop) is stopped after a few seconds and disabled until you reload it. File access from a plugin is sandboxed to:
 
-## Writing your own
+1. Its own folder
+2. The open project's directory
+3. Any files you have selected in a dialog presented by the plugin.
 
-The [Scripting API reference](../reference/scripting.md) documents
-everything a plugin can do; type declarations in
-[`docs/scripting/porydaw.d.ts`](https://github.com/huderlem/porydaw/blob/main/docs/scripting/porydaw.d.ts)
-give editor completion. The bundled examples are the quickest way in.
+## Writing your own plugin
+
+Start with the [tutorial](writing-plugins.md). It builds a working plugin in a few short steps. The [Scripting API reference](../reference/scripting.md) then documents everything a plugin can do. You can optionally use the type declarations in [`docs/scripting/porydaw.d.ts`](https://github.com/huderlem/porydaw/blob/main/docs/scripting/porydaw.d.ts) for editor autocomplete or even authoring plugins in TypeScript.

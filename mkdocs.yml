@@ -65,6 +65,7 @@ nav:
       - Themes & Appearance: manual/appearance.md
       - Keyboard Shortcuts: manual/shortcuts.md
       - Plugins: manual/plugins.md
+      - Writing Your First Plugin: manual/writing-plugins.md
       - Files Porydaw Reads & Writes: manual/project-files.md
   - Reference:
       - Scripting API: reference/scripting.md

@@ -1,0 +1,8 @@
+{
+  "id": "arpeggiate",
+  "name": "Arpeggiate",
+  "version": "1.0.0",
+  "api": 1,
+  "main": "main.js",
+  "description": "Turns each selected chord into an arpeggio: the chord's notes are played one after another, low to high, in sixteenth notes, for as long as the chord lasted. Ctrl+Shift+R in the piano roll, or right-click the notes."
+}
