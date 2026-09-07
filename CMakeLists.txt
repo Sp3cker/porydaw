@@ -756,6 +756,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/project/mk.cpp
         src/checks/project/ignore.cpp
         src/checks/host/tst_hostseams.cpp
+        src/checks/host/tst_rulergridmenu.cpp
         src/checks/host/tst_hostadapter.cpp
         src/checks/host/tst_hostintegration.cpp
         src/checks/mainwindowrouting/mainwindowroutingfixture.h

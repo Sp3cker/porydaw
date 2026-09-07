@@ -7,12 +7,12 @@
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/grid.h"
+#include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
 
-#include <QAction>
 #include <QFontMetrics>
 #include <QMenu>
 #include <QUrl>
@@ -153,36 +153,71 @@ void TimeRuler::openGridMenu(QPointF position, bool division)
 {
     if (!m_inputHost || !m_gridControlsEnabled)
         return;
-
-    QMenu menu(&m_owner);
-    if (division) {
-        for (const int denom : {0, 4, 8, 16, 32}) {
-            QAction *const action = menu.addAction(gridDivisionText(denom));
-            action->setData(denom);
-            action->setCheckable(true);
-            action->setChecked(m_grid.minDenom() == denom);
-        }
-    } else {
-        for (const GridFeel feel : {GridFeel::Straight, GridFeel::Triplet}) {
-            QAction *const action = menu.addAction(
-                feel == GridFeel::Triplet ? SongView::tr("Triplet") : SongView::tr("Straight"));
-            action->setData(static_cast<int>(feel));
-            action->setCheckable(true);
-            action->setChecked(m_grid.feel() == feel);
-        }
-    }
-
-    m_openMenu = &menu;
-    QAction *const action = menu.exec(m_inputHost->mapToGlobal(position).toPoint());
-    if (m_openMenu.data() == &menu)
-        m_openMenu.clear();
-    if (!action)
+    TimelineQuickView *const quick = m_owner.quickView();
+    QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
+    if (!session)
         return;
 
-    if (division)
-        m_owner.setGridMinDenom(action->data().toInt());
-    else
-        m_owner.setGridFeel(static_cast<GridFeel>(action->data().toInt()));
+    // Persistent typed-menu adapters over the shared canvas popup session,
+    // created on first open and reused; the session binds once per view.
+    if (!m_menuHost) {
+        m_menuHost = new QuickMenuHost(this);
+        m_divisionModel = new QuickMenuModel(this);
+        m_feelModel = new QuickMenuModel(this);
+        // activated() arrives after the host closed the session, so the
+        // setters run against a settled view; the completion signal then
+        // hands focus back to the invoking control (notifyGridMenuChoice).
+        connect(m_divisionModel, &QuickMenuModel::activated, this, [this](int id) {
+            m_owner.setGridMinDenom(id);
+            notifyGridMenuChoice(true);
+        });
+        connect(m_feelModel, &QuickMenuModel::activated, this, [this](int id) {
+            m_owner.setGridFeel(static_cast<GridFeel>(id));
+            notifyGridMenuChoice(false);
+        });
+    }
+    m_menuHost->setPopupSession(session);
+
+    // Rows rebuilt at open so the check marks mirror the live grid; ids
+    // carry the raw values the owner setters consume.
+    std::vector<QuickMenuItem> rows;
+    const auto addRow = [&rows](int id, QString text, bool checked) {
+        QuickMenuItem item;
+        item.id = id;
+        item.text = std::move(text);
+        item.checkable = true;
+        item.checked = checked;
+        rows.push_back(std::move(item));
+    };
+    if (division) {
+        rows.reserve(5);
+        for (const int denom : {0, 4, 8, 16, 32})
+            addRow(denom, gridDivisionText(denom), m_grid.minDenom() == denom);
+        m_divisionModel->setItems(std::move(rows));
+        m_menuHost->open(m_divisionModel, position);
+    } else {
+        rows.reserve(2);
+        for (const GridFeel feel : {GridFeel::Straight, GridFeel::Triplet})
+            addRow(static_cast<int>(feel),
+                   feel == GridFeel::Triplet ? SongView::tr("Triplet") : SongView::tr("Straight"),
+                   m_grid.feel() == feel);
+        m_feelModel->setItems(std::move(rows));
+        m_menuHost->open(m_feelModel, position);
+    }
+}
+
+// A plain ordinary close() cannot give back the focus the in-scene menu
+// displaced, so every successful choice reports which menu completed and
+// the matching QML control restores itself. Dismissal keeps the session's
+// own restoreFocus path; a command that opened a new popup keeps focus.
+void TimeRuler::notifyGridMenuChoice(bool division)
+{
+    if (const TimelineQuickView *const quick = m_owner.quickView()) {
+        if (const QuickPopupSession *const session = quick->popupSession();
+            session && session->isOpen())
+            return;
+    }
+    emit gridMenuActivated(division);
 }
 
 int TimeRuler::timeSigPromptInitialNumerator() const noexcept
@@ -341,6 +376,17 @@ void TimeRuler::restoreTimeSigPromptFocus()
 
 void TimeRuler::closePopups()
 {
+    // Readiness loss, document swap, and host teardown cancel the typed
+    // grid menu only when this ruler's host owns the session — and without
+    // handing focus back to a view that may be going away. The legacy ruler
+    // context menu keeps its native close.
+    if (m_menuHost) {
+        if (TimelineQuickView *const quick = m_owner.quickView()) {
+            if (QuickPopupSession *const session = quick->popupSession();
+                session && session->owns(m_menuHost))
+                session->cancel(/*restoreFocus=*/false);
+        }
+    }
     if (m_openMenu)
         m_openMenu->close();
 }

@@ -479,6 +479,12 @@ const std::vector<CheckDefinition> &catalog()
                               const QStringList &qtArgs) { return runHostSeamsCheck(qtArgs); },
             },
             {
+                .name = "ruler-grid-menu",
+                .argv = strings({"--check-ruler-grid-menu"}),
+                .handler = [](QApplication &, const QStringList &,
+                              const QStringList &qtArgs) { return runRulerGridMenuCheck(qtArgs); },
+            },
+            {
                 .name = "velocity-model",
                 .argv = strings({"--check-velocity-model"}),
                 .handler = [](QApplication &, const QStringList &,

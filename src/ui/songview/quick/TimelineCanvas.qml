@@ -228,14 +228,14 @@ Item {
             z: 2
         }
 
-        // Controls stay physically in the gutter; the menu anchor maps into
-        // the plot host, and the tooltip overlays the unclipped canvas root.
+        // Controls stay physically in the gutter; the menus open in the
+        // shared Quick popup overlay, and the tooltip overlays the
+        // unclipped canvas root.
         RulerControls {
             parent: rulerBand.gutterSide
             objectName: "timelineRulerControls"
             width: rulerBand.gutterSide.width
             height: parent.height
-            menuTarget: rulerBand.plotSide
             overlayRoot: root
             ruler: timeRuler
             z: 3

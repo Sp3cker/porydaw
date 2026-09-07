@@ -9,7 +9,6 @@
 #include <QFocusEvent>
 #include <QImage>
 #include <QKeyEvent>
-#include <QMenu>
 #include <QPalette>
 #include <QQuickItem>
 #include <QQuickWindow>
@@ -298,20 +297,6 @@ class HostAdapterTest final : public QObject
         QCOMPARE(headerScroll->width(), headers->scrollbarWidth());
         QCOMPARE(headerScroll->isVisible(), headers->maximumScrollY() > 0.0);
         QCOMPARE(headerThumb->isVisible(), headers->maximumScrollY() > 0.0);
-        auto *rulerControls =
-            root->findChild<QQuickItem *>(QStringLiteral("timelineRulerControls"));
-        auto *division =
-            root->findChild<QQuickItem *>(QStringLiteral("timelineRulerDivisionControl"));
-        auto *feel = root->findChild<QQuickItem *>(QStringLiteral("timelineRulerFeelControl"));
-        auto *ruler =
-            root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineRulerInput"));
-        QVERIFY(rulerControls && division && feel && ruler);
-        auto *timeRuler = dynamic_cast<songview::TimeRuler *>(ruler->interaction());
-        QVERIFY(timeRuler);
-        QCOMPARE(division->isEnabled(), timeRuler->gridControlsEnabled());
-        QCOMPARE(feel->isEnabled(), timeRuler->gridControlsEnabled());
-        QCOMPARE(division->property("controlText").toString(), timeRuler->divisionText());
-        QCOMPARE(feel->property("controlText").toString(), timeRuler->feelText());
         QVERIFY(std::abs(quick->hostX() + quick->rulerPlotOrigin() - view.timelineSplitX()) <=
                 layout::singlePixel());
         QVERIFY(quick->quickDevicePixelRatio() > 0.0);

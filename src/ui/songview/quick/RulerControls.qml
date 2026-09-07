@@ -3,7 +3,6 @@ import QtQuick
 Item {
     id: controls
 
-    required property Item menuTarget
     required property Item overlayRoot
     required property var ruler
     clip: true
@@ -61,11 +60,13 @@ Item {
         function openMenu(localPosition) {
             if (!controls.ruler)
                 return
-            const point = mapToItem(controls.menuTarget, localPosition.x, localPosition.y)
+            // Scene coordinates: the ruler opens its menus in the shared
+            // Quick popup overlay of this window.
+            const scenePoint = mapToItem(null, localPosition.x, localPosition.y)
             if (divisionControl)
-                controls.ruler.openDivisionMenu(point)
+                controls.ruler.openDivisionMenu(scenePoint)
             else
-                controls.ruler.openFeelMenu(point)
+                controls.ruler.openFeelMenu(scenePoint)
         }
 
         function activateFromKeyboard(event) {
@@ -176,6 +177,19 @@ Item {
         controlToolTip: controls.ruler ? controls.ruler.feelToolTip : ""
         divisionControl: false
         controlsEnabled: controls.ruler ? controls.ruler.gridControlsEnabled : false
+    }
+
+    // An ordinary choice displaced the control's focus into the in-scene
+    // menu; the ruler reports which menu completed and the matching control
+    // takes focus back (dismissal restores via the popup session itself).
+    Connections {
+        target: controls.ruler
+
+        function onGridMenuActivated(division) {
+            const control = division ? rulerDivisionControl : rulerFeelControl
+            if (control)
+                control.forceActiveFocus(Qt.OtherFocusReason)
+        }
     }
 
     RulerToolTip {

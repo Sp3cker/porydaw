@@ -24,6 +24,8 @@ class SongView;
 namespace songview {
 
 class Grid;
+class QuickMenuHost;
+class QuickMenuModel;
 class TimelineQuickScene;
 class TimelineQuickView;
 class TimeCamera;
@@ -111,6 +113,10 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
   signals:
     void gridControlsChanged();
     void gridControlAppearanceChanged();
+    // Ordinary grid-menu choice completed (never dismissal): the in-scene
+    // menu displaced the invoking control's focus, so QML returns it to the
+    // matching control itself.
+    void gridMenuActivated(bool division);
     void timeSigPromptChanged();
 
   private:
@@ -121,6 +127,8 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
     static int markerRowHeight(const QFontMetrics &metrics);
     void syncGridControlAppearance();
     void openGridMenu(QPointF position, bool division);
+    // Emits gridMenuActivated() unless the setter opened a new popup.
+    void notifyGridMenuChoice(bool division);
     QRect markerRow() const;
     QRect tickRow() const;
     int textBaseline(const QRect &row, const QFontMetrics &metrics) const;
@@ -193,7 +201,12 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
     QString m_feelText;
     bool m_gridControlsEnabled = false;
     QVariantMap m_gridControlAppearance;
-    QPointer<QMenu> m_openMenu; // Grid-control or ruler context menu during exec().
+    QPointer<QMenu> m_openMenu; // Ruler context menu during exec().
+    // Typed grid-control menus over the shared canvas popup session; the
+    // host and both row models are created on first open and reused.
+    QuickMenuHost *m_menuHost = nullptr;
+    QuickMenuModel *m_divisionModel = nullptr;
+    QuickMenuModel *m_feelModel = nullptr;
     std::optional<PendingTimeSigPrompt> m_pendingTimeSigPrompt;
     QMetaObject::Connection m_timeSigPromptCancellation;
     int m_markerHeight = 0;

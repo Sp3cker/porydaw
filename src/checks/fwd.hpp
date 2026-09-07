@@ -105,6 +105,7 @@ int runPitchBendRasterCheck(const QStringList &qtArguments);
 
 // Host integration (src/checks/host, src/checks/mainwindowrouting).
 int runHostSeamsCheck(const QStringList &qtArguments);
+int runRulerGridMenuCheck(const QStringList &qtArguments);
 int runHostAdapterCheck(const QString &projectRoot, const QString &songLabel,
                         const QStringList &qtArguments);
 int runHostIntegrationCheck(const QString &projectRoot, const QString &songA, const QString &songB,
