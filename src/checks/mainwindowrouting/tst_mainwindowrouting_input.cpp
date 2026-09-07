@@ -1,8 +1,70 @@
 #include "mainwindowroutingfixture.h"
 
 #include "checks/clipcheck_support.h"
-
+#include "checks/quickmodalguard.h"
 #include <QtTest>
+
+namespace {
+
+struct InsertTimePromptSession {
+    QQuickWindow *window = nullptr;
+    QString diagnostic = QStringLiteral("the Insert Time prompt did not open");
+};
+
+InsertTimePromptSession openedInsertTimePrompt(SongView &view)
+{
+    InsertTimePromptSession session;
+    songview::QuickModalHost *const host = quick_modal::modalHost(view);
+    if (!host || !host->isOpen() || !host->modalWindow()) {
+        session.diagnostic = QStringLiteral("the Insert Time action did not open its modal prompt");
+        return session;
+    }
+    session.window = host->modalWindow();
+    if (!QTest::qWaitForWindowExposed(session.window)) {
+        session.diagnostic = QStringLiteral("the Insert Time prompt window did not become exposed");
+        return session;
+    }
+    if (!quick_modal::promptItem(*session.window, QLatin1String("insertTimePrompt")) ||
+        !quick_modal::promptItem(*session.window, QLatin1String("insertTimeBars")) ||
+        !quick_modal::promptItem(*session.window, QLatin1String("insertTimeBeats")) ||
+        !quick_modal::promptItem(*session.window, QLatin1String("insertTimeBeatFractions"))) {
+        session.diagnostic = QStringLiteral("the Insert Time prompt visual tree is incomplete");
+        return session;
+    }
+    if (checks::async_wait::waitUntil([] { return true; },
+                                      [&session] {
+                                          return quick_modal::inputHasActiveFocus(
+                                              *session.window, QLatin1String("insertTimeBars"));
+                                      },
+                                      5000, 10) != checks::async_wait::Result::Ready) {
+        session.diagnostic = QStringLiteral("the Insert Time bars field did not take focus");
+        return session;
+    }
+    session.diagnostic.clear();
+    return session;
+}
+
+bool enterInsertTimeValues(QQuickWindow &window, const QKeySequence &bars,
+                           const QKeySequence &beats, const QKeySequence &fractions)
+{
+    QTest::keySequence(&window, bars);
+    QTest::keyClick(&window, Qt::Key_Tab);
+    QCoreApplication::processEvents();
+    if (!quick_modal::inputHasActiveFocus(window, QLatin1String("insertTimeBeats")))
+        return false;
+
+    QTest::keySequence(&window, beats);
+    QTest::keyClick(&window, Qt::Key_Tab);
+    QCoreApplication::processEvents();
+    if (!quick_modal::inputHasActiveFocus(window, QLatin1String("insertTimeBeatFractions")))
+        return false;
+
+    QTest::keySequence(&window, fractions);
+    QCoreApplication::processEvents();
+    return quick_modal::inputHasActiveFocus(window, QLatin1String("insertTimeBeatFractions"));
+}
+
+} // namespace
 
 namespace checks::mainwindowrouting {
 
@@ -190,55 +252,227 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         SongView &view = tab.view();
         const std::optional<DocNote> source = selectFirstNote(tab);
         QVERIFY(source.has_value());
+        const int sourceTrack = view.selectionModel().primaryTrack();
+        std::optional<DocNote> wholeSongNote;
+        for (int track = 0; track < tab.document().engineTrackCount() && !wholeSongNote; ++track) {
+            if (track == sourceTrack)
+                continue;
+            const std::vector<DocNote> notes = tab.document().notesForTrack(track);
+            if (!notes.empty())
+                wholeSongNote = notes.front();
+        }
+        QVERIFY(wholeSongNote.has_value());
         window.m_workspace->selectSongTab(&tab);
         QAction *action = window.m_insertTimeAction;
         QVERIFY(action);
-        const auto insert = [&](bool playing, int bars, int beats, int fractions,
-                                uint64_t expectedSpan) {
-            const QByteArray before = tab.document().smf().write();
-            const int undoIndex = tab.document().undoStack()->index();
-            const uint64_t cursor = playing ? source->tick : uint64_t{0};
-            view.setPlayheadSample(tab.timeline()->sampleForTick(cursor), playing);
-            if (!playing)
-                view.commitEditCursor(source->tick);
-            bool foundShape = false;
-            QTimer dialogWaiter;
-            QTimer::singleShot(0, &dialogWaiter, [&foundShape, bars, beats, fractions] {
-                auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
-                auto *barsSpin =
-                    dialog ? dialog->findChild<DragSpinBox *>(QStringLiteral("insertTimeBars"))
-                           : nullptr;
-                auto *beatsSpin =
-                    dialog ? dialog->findChild<DragSpinBox *>(QStringLiteral("insertTimeBeats"))
-                           : nullptr;
-                auto *fractionsSpin = dialog ? dialog->findChild<DragSpinBox *>(
-                                                   QStringLiteral("insertTimeBeatFractions"))
-                                             : nullptr;
-                foundShape = dialog && barsSpin && beatsSpin && fractionsSpin;
-                if (!foundShape) {
-                    if (dialog)
-                        dialog->reject();
-                    return;
-                }
-                barsSpin->setValue(bars);
-                beatsSpin->setValue(beats);
-                fractionsSpin->setValue(fractions);
-                dialog->accept();
-            });
-            action->trigger();
-            QVERIFY2(foundShape,
-                     "Insert Time dialog is missing its three required DragSpinBox fields");
-            DocNote shifted;
-            QVERIFY(tab.document().findNote(source->noteId, &shifted));
-            QCOMPARE(tab.document().undoStack()->index(), undoIndex + 1);
-            QCOMPARE(shifted.tick, source->tick + expectedSpan);
-            tab.document().undoStack()->undo();
-            QCOMPARE(tab.document().smf().write(), before);
-        };
+        for (const EditorDrawerPage page :
+             {EditorDrawerPage::Automations, EditorDrawerPage::Velocity,
+              EditorDrawerPage::VoiceChanges})
+            view.setDrawerSectionVisible(page, false);
+        view.setEventListVisible(false);
+        const quick_modal::PromptGuard guard(view);
+
+        // The fixture's 24 PPQN supports a denominator-scaled one-tick beat,
+        // so a nonzero quarter fraction must use ceiling rather than truncation.
+        tab.document().setTimeSig(0, 3, 6);
+        QTRY_VERIFY(view.grid().segmentAt(source->tick).beatTicks == uint64_t{1} &&
+                    view.grid().segmentAt(source->tick).beatsPerBar == uint64_t{3});
         const songview::Grid::Segment segment = view.grid().segmentAt(source->tick);
-        insert(false, 0, 2, 0, 2 * segment.beatTicks);
-        insert(true, 1, 0, 0, segment.beatTicks * segment.beatsPerBar);
-        insert(true, 0, 0, 2, (2 * segment.beatTicks + 3) / 4);
+
+        QString insertDiagnostic;
+        const auto insert = [&](bool playing, const QKeySequence &bars, const QKeySequence &beats,
+                                const QKeySequence &fractions, uint64_t expectedSpan,
+                                bool acceptWithReturn) {
+            const QByteArray before = tab.document().smf().write();
+            const QByteArray inactiveBefore = session->a->document().smf().write();
+            const int undoIndex = tab.document().undoStack()->index();
+            const uint64_t revision = tab.document().revision();
+            const auto rollback = [&tab, undoIndex] {
+                while (tab.document().undoStack()->index() > undoIndex &&
+                       tab.document().undoStack()->canUndo())
+                    tab.document().undoStack()->undo();
+            };
+            if (!view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason)) {
+                insertDiagnostic = QStringLiteral("the Roll input could not establish focus");
+                return false;
+            }
+            if (checks::async_wait::waitUntil(
+                    [] { return true; },
+                    [&view] { return view.focusedTimelineBand() == songview::TimelineBand::Roll; },
+                    5000, 10) != checks::async_wait::Result::Ready) {
+                insertDiagnostic =
+                    QStringLiteral("the Roll input did not retain focus before opening");
+                return false;
+            }
+            const std::optional<songview::TimelineBand> origin = view.focusedTimelineBand();
+            if (!origin) {
+                insertDiagnostic = QStringLiteral("Insert Time had no focused timeline origin");
+                return false;
+            }
+            if (playing)
+                view.setPlayheadSample(tab.timeline()->sampleForTick(source->tick), true);
+            else {
+                window.stopPlayback();
+                view.setPlayheadSample(tab.timeline()->sampleForTick(source->tick), false);
+                view.commitEditCursor(source->tick);
+            }
+
+            action->trigger();
+            const InsertTimePromptSession opened = openedInsertTimePrompt(view);
+            if (!opened.window) {
+                insertDiagnostic = opened.diagnostic;
+                return false;
+            }
+            QQuickItem *const barsInput =
+                quick_modal::promptItem(*opened.window, QLatin1String("insertTimeBars"));
+            QQuickItem *const beatsInput =
+                quick_modal::promptItem(*opened.window, QLatin1String("insertTimeBeats"));
+            QQuickItem *const fractionsInput =
+                quick_modal::promptItem(*opened.window, QLatin1String("insertTimeBeatFractions"));
+            if (!barsInput || !beatsInput || !fractionsInput ||
+                barsInput->property("text").toString() != QStringLiteral("1") ||
+                beatsInput->property("text").toString() != QStringLiteral("0") ||
+                fractionsInput->property("text").toString() != QStringLiteral("0")) {
+                insertDiagnostic = QStringLiteral("the Insert Time visual defaults are incorrect");
+                return false;
+            }
+            if (!enterInsertTimeValues(*opened.window, bars, beats, fractions)) {
+                insertDiagnostic =
+                    QStringLiteral("Tab did not keep Insert Time editing inside the modal");
+                return false;
+            }
+            if (acceptWithReturn)
+                QTest::keyClick(opened.window, Qt::Key_Return);
+            else if (!quick_modal::clickPromptButton(*opened.window,
+                                                     QLatin1String("insertTimeAccept"))) {
+                insertDiagnostic = QStringLiteral("the Insert Time prompt has no OK button");
+                return false;
+            }
+            QCoreApplication::processEvents();
+
+            songview::QuickModalHost *const host = quick_modal::modalHost(view);
+            DocNote shifted;
+            DocNote wholeSongShifted;
+            const bool sourceFound = tab.document().findNote(source->noteId, &shifted);
+            const bool wholeSongFound =
+                tab.document().findNote(wholeSongNote->noteId, &wholeSongShifted);
+            const int actualUndoIndex = tab.document().undoStack()->index();
+            const int actualUndoCount = tab.document().undoStack()->count();
+            const uint64_t actualRevision = tab.document().revision();
+            const bool committed = host && !host->isOpen() && sourceFound && wholeSongFound &&
+                                   actualUndoIndex == undoIndex + 1 &&
+                                   actualRevision == revision + 1 &&
+                                   shifted.tick == source->tick + expectedSpan &&
+                                   wholeSongShifted.tick == wholeSongNote->tick + expectedSpan &&
+                                   session->a->document().smf().write() == inactiveBefore;
+            if (!committed) {
+                rollback();
+                insertDiagnostic =
+                    QStringLiteral("Insert Time commit: source %1 expected %2, whole-song %3 "
+                                   "expected %4, undo index %5 expected %6, undo count %7, "
+                                   "revision %8 expected %9")
+                        .arg(sourceFound ? QString::number(shifted.tick)
+                                         : QStringLiteral("missing"))
+                        .arg(source->tick + expectedSpan)
+                        .arg(wholeSongFound ? QString::number(wholeSongShifted.tick)
+                                            : QStringLiteral("missing"))
+                        .arg(wholeSongNote->tick + expectedSpan)
+                        .arg(actualUndoIndex)
+                        .arg(undoIndex + 1)
+                        .arg(actualUndoCount)
+                        .arg(actualRevision)
+                        .arg(revision + 1);
+                return false;
+            }
+            const bool restored =
+                checks::async_wait::waitUntil(
+                    [] { return true; },
+                    [&view, origin] { return view.focusedTimelineBand() == origin; }, 5000,
+                    10) == checks::async_wait::Result::Ready;
+            rollback();
+            if (!restored || tab.document().smf().write() != before ||
+                tab.document().undoStack()->index() != undoIndex ||
+                session->a->document().smf().write() != inactiveBefore) {
+                insertDiagnostic = QStringLiteral(
+                    "Insert Time did not restore its timeline origin and undo bytes");
+                return false;
+            }
+            return true;
+        };
+
+        QVERIFY2(insert(false, QKeySequence(Qt::Key_0), QKeySequence(Qt::Key_2),
+                        QKeySequence(Qt::Key_0), 2 * segment.beatTicks, false),
+                 qUtf8Printable(insertDiagnostic));
+        QVERIFY2(insert(true, QKeySequence(Qt::Key_1), QKeySequence(Qt::Key_0),
+                        QKeySequence(Qt::Key_0), segment.beatTicks * segment.beatsPerBar, false),
+                 qUtf8Printable(insertDiagnostic));
+        QVERIFY2(insert(true, QKeySequence(Qt::Key_0), QKeySequence(Qt::Key_0),
+                        QKeySequence(Qt::Key_1), (segment.beatTicks + 3) / 4, true),
+                 qUtf8Printable(insertDiagnostic));
+
+        const QByteArray beforeZero = tab.document().smf().write();
+        const QByteArray inactiveBeforeZero = session->a->document().smf().write();
+        const int zeroUndo = tab.document().undoStack()->index();
+        const int zeroUndoCount = tab.document().undoStack()->count();
+        const uint64_t zeroRevision = tab.document().revision();
+        window.stopPlayback();
+        view.commitEditCursor(source->tick);
+        action->trigger();
+        const InsertTimePromptSession zero = openedInsertTimePrompt(view);
+        QVERIFY2(zero.window, qUtf8Printable(zero.diagnostic));
+        QVERIFY2(enterInsertTimeValues(*zero.window, QKeySequence(Qt::Key_0),
+                                       QKeySequence(Qt::Key_0), QKeySequence(Qt::Key_0)),
+                 "the zero-span Insert Time fields could not be edited");
+        QVERIFY2(quick_modal::clickPromptButton(*zero.window, QLatin1String("insertTimeAccept")),
+                 "the zero-span Insert Time prompt has no OK button");
+        QCoreApplication::processEvents();
+        songview::QuickModalHost *const host = quick_modal::modalHost(view);
+        QVERIFY(host && !host->isOpen());
+        QCOMPARE(tab.document().smf().write(), beforeZero);
+        QCOMPARE(tab.document().undoStack()->index(), zeroUndo);
+        QCOMPARE(tab.document().undoStack()->count(), zeroUndoCount);
+        QCOMPARE(tab.document().revision(), zeroRevision);
+        QCOMPARE(session->a->document().smf().write(), inactiveBeforeZero);
+
+        const QByteArray beforeCancel = tab.document().smf().write();
+        const int cancelUndo = tab.document().undoStack()->index();
+        const uint64_t cancelRevision = tab.document().revision();
+        action->trigger();
+        const InsertTimePromptSession cancelled = openedInsertTimePrompt(view);
+        QVERIFY2(cancelled.window, qUtf8Printable(cancelled.diagnostic));
+        QVERIFY2(enterInsertTimeValues(*cancelled.window, QKeySequence(Qt::Key_1),
+                                       QKeySequence(Qt::Key_0), QKeySequence(Qt::Key_0)),
+                 "the cancellation Insert Time fields could not be edited");
+        QVERIFY2(
+            quick_modal::clickPromptButton(*cancelled.window, QLatin1String("insertTimeCancel")),
+            "the Insert Time prompt has no Cancel button");
+        QCoreApplication::processEvents();
+        QVERIFY(host && !host->isOpen());
+        QCOMPARE(tab.document().smf().write(), beforeCancel);
+        QCOMPARE(tab.document().undoStack()->index(), cancelUndo);
+        QCOMPARE(tab.document().revision(), cancelRevision);
+
+        action->trigger();
+        const InsertTimePromptSession stale = openedInsertTimePrompt(view);
+        QVERIFY2(stale.window, qUtf8Printable(stale.diagnostic));
+        QVERIFY2(enterInsertTimeValues(*stale.window, QKeySequence(Qt::Key_1),
+                                       QKeySequence(Qt::Key_0), QKeySequence(Qt::Key_1)),
+                 "the stale Insert Time fields could not be edited");
+        tab.document().setTimeSig(source->tick + 1, 3, 5);
+        const QByteArray afterInterveningEdit = tab.document().smf().write();
+        const int staleUndo = tab.document().undoStack()->index();
+        const int staleUndoCount = tab.document().undoStack()->count();
+        const uint64_t staleRevision = tab.document().revision();
+        if (host->isOpen())
+            QVERIFY2(
+                quick_modal::clickPromptButton(*stale.window, QLatin1String("insertTimeAccept")),
+                "the stale Insert Time prompt has no OK button");
+        QCoreApplication::processEvents();
+        QVERIFY(host && !host->isOpen());
+        QCOMPARE(tab.document().smf().write(), afterInterveningEdit);
+        QCOMPARE(tab.document().undoStack()->index(), staleUndo);
+        QCOMPARE(tab.document().undoStack()->count(), staleUndoCount);
+        QCOMPARE(tab.document().revision(), staleRevision);
         view.setPlayheadSample(0, false);
     }
 

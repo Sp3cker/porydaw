@@ -482,6 +482,10 @@ set_source_files_properties(
     PROPERTIES QT_RESOURCE_ALIAS TimeSignaturePrompt.qml
 )
 set_source_files_properties(
+    src/ui/songview/quick/InsertTimePrompt.qml
+    PROPERTIES QT_RESOURCE_ALIAS InsertTimePrompt.qml
+)
+set_source_files_properties(
     src/ui/songview/quick/EventListPage.qml
     PROPERTIES QT_RESOURCE_ALIAS EventListPage.qml
 )
@@ -510,6 +514,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/PitchBendPopup.qml
         src/ui/songview/quick/VelocityPrompt.qml
         src/ui/songview/quick/TimeSignaturePrompt.qml
+        src/ui/songview/quick/InsertTimePrompt.qml
 )
 target_precompile_headers(porydaw_app PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")

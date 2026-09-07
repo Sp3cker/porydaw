@@ -8,6 +8,7 @@
 #include <QPointer>
 #include <QRectF>
 #include <QSet>
+#include <QVariantMap>
 #include <QWidget>
 #include <cstdint>
 #include <functional>
@@ -101,6 +102,26 @@ int selectionRingPixels(qreal dpr);
 class SongView : public QWidget
 {
     Q_OBJECT
+
+    Q_PROPERTY(int insertTimePromptInitialBars READ insertTimePromptInitialBars NOTIFY
+                   insertTimePromptChanged FINAL)
+    Q_PROPERTY(int insertTimePromptInitialBeats READ insertTimePromptInitialBeats NOTIFY
+                   insertTimePromptChanged FINAL)
+    Q_PROPERTY(int insertTimePromptInitialBeatFractions READ insertTimePromptInitialBeatFractions
+                   NOTIFY insertTimePromptChanged FINAL)
+    Q_PROPERTY(int insertTimePromptMinimumBars READ insertTimePromptMinimumBars CONSTANT FINAL)
+    Q_PROPERTY(int insertTimePromptMaximumBars READ insertTimePromptMaximumBars CONSTANT FINAL)
+    Q_PROPERTY(int insertTimePromptMinimumBeats READ insertTimePromptMinimumBeats CONSTANT FINAL)
+    Q_PROPERTY(int insertTimePromptMaximumBeats READ insertTimePromptMaximumBeats NOTIFY
+                   insertTimePromptChanged FINAL)
+    Q_PROPERTY(int insertTimePromptMinimumBeatFractions READ insertTimePromptMinimumBeatFractions
+                   CONSTANT FINAL)
+    Q_PROPERTY(int insertTimePromptMaximumBeatFractions READ insertTimePromptMaximumBeatFractions
+                   CONSTANT FINAL)
+    Q_PROPERTY(QString insertTimePromptTitle READ insertTimePromptTitle NOTIFY
+                   insertTimePromptChanged FINAL)
+    Q_PROPERTY(QVariantMap insertTimePromptAppearance READ insertTimePromptAppearance NOTIFY
+                   insertTimePromptChanged FINAL)
 
   public:
     explicit SongView(QWidget *parent = nullptr);
@@ -443,6 +464,21 @@ class SongView : public QWidget
     // fractions, then inserts that much whole-song time at the live playhead
     // or the edit cursor while stopped.
     void insertTimeAtPlaybackCursor();
+    // Typed Quick-modal bridge for Insert Time. The SongView retains the
+    // guarded document/cursor snapshot; QML owns only its numeric drafts.
+    Q_INVOKABLE void acceptInsertTimePrompt(int bars, int beats, int fractions);
+    Q_INVOKABLE void cancelInsertTimePrompt();
+    int insertTimePromptInitialBars() const noexcept;
+    int insertTimePromptInitialBeats() const noexcept;
+    int insertTimePromptInitialBeatFractions() const noexcept;
+    static constexpr int insertTimePromptMinimumBars() noexcept { return 0; }
+    static constexpr int insertTimePromptMaximumBars() noexcept { return 9999; }
+    static constexpr int insertTimePromptMinimumBeats() noexcept { return 0; }
+    int insertTimePromptMaximumBeats() const noexcept;
+    static constexpr int insertTimePromptMinimumBeatFractions() noexcept { return 0; }
+    static constexpr int insertTimePromptMaximumBeatFractions() noexcept { return 3; }
+    QString insertTimePromptTitle() const;
+    QVariantMap insertTimePromptAppearance() const;
     // Insert and duplicate operate only on an active half-open time selection.
     void insertBlankTime();
     void duplicateTimeSelection();
@@ -574,6 +610,7 @@ class SongView : public QWidget
     // AudioEngine::previewVoice like the voicegroup browser's signal.
     void auditionVoice(int voice, int key, int velocity);
     void statusMessage(const QString &text);
+    void insertTimePromptChanged();
     // Edit cursor committed to a new position (click released); the main
     // window seeks playback here when not stopped.
     void editCursorMoved(uint64_t tick);
@@ -726,6 +763,19 @@ class SongView : public QWidget
     // Nullopt when the selection resolves to nothing (no lanes/tempo, or no
     // document-mapped tracks).
     std::optional<SongDocument::TimeScope> timeSelectionScope() const;
+    struct PendingInsertTimePrompt {
+        QPointer<SongDocument> document;
+        uint64_t documentRevision = 0;
+        uint64_t cursorTick = 0;
+        uint64_t beatTicks = 1;
+        uint64_t beatsPerBar = 4;
+        int initialBars = 1;
+        int initialBeats = 0;
+        int initialBeatFractions = 0;
+    };
+    void openInsertTimePrompt(uint64_t cursorTick, const songview::Grid::Segment &segment);
+    void clearInsertTimePrompt(bool restoreFocus);
+    void cancelInsertTimePromptWithoutFocus();
     std::optional<songview::Clip> readClipboardClip();
 
     songview::TimeAxis m_timeAxis;            // musical time; fallback until a song binds
@@ -748,6 +798,8 @@ class SongView : public QWidget
     double m_playheadTick = 0.0;
     uint64_t m_editCursorTick = 0;
     bool m_playing = false;
+    std::optional<PendingInsertTimePrompt> m_pendingInsertTimePrompt;
+    QMetaObject::Connection m_insertTimePromptCancellation;
     uint32_t m_muteMask = 0;
     uint32_t m_soloMask = 0;
     bool m_velocityColorMode = false; // velocityNoteColor fills (View menu)

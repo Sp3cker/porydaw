@@ -1,18 +1,19 @@
 #include "core/mid2agbtables.h"
 #include "core/songdocument.h"
-#include "ui/dragspinbox.h"
 #include "ui/keymap.h"
+#include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/clipmime.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/quick/pianorollquick.h"
+#include "ui/songview/quick/quickmodalhost.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/theme/themeruntime.h"
 #include <QAction>
-#include <QDialog>
-#include <QDialogButtonBox>
-#include <QFormLayout>
 #include <QMenu>
 #include <QPoint>
+#include <QUrl>
+#include <QVariantMap>
 
 #include <algorithm>
 #include <cstdint>
@@ -21,6 +22,9 @@
 #include <span>
 #include <utility>
 #include <vector>
+
+namespace lyt = ::layout;
+using Space = lyt::Space;
 
 using namespace songview;
 using namespace songview::detail;
@@ -166,39 +170,191 @@ class DestinationMapper
     std::optional<int> m_singleSource;
 };
 
-std::optional<uint64_t> askInsertTimeSpan(QWidget *parent, const songview::Grid::Segment &segment)
+} // namespace
+
+int SongView::insertTimePromptInitialBars() const noexcept
 {
-    QDialog dialog(parent);
-    dialog.setObjectName(QStringLiteral("insertTimeDialog"));
-    dialog.setWindowTitle(SongView::tr("Insert Time"));
-    auto *form = new QFormLayout(&dialog);
-    auto *bars = new DragSpinBox(&dialog);
-    bars->setObjectName(QStringLiteral("insertTimeBars"));
-    bars->setRange(0, 9999);
-    bars->setValue(1);
-    auto *beats = new DragSpinBox(&dialog);
-    beats->setObjectName(QStringLiteral("insertTimeBeats"));
-    beats->setRange(0, (std::max)(0, int(segment.beatsPerBar) - 1));
-    auto *fractions = new DragSpinBox(&dialog);
-    fractions->setObjectName(QStringLiteral("insertTimeBeatFractions"));
-    fractions->setRange(0, 3);
-    form->addRow(SongView::tr("Bars:"), bars);
-    form->addRow(SongView::tr("Beats:"), beats);
-    form->addRow(SongView::tr("Beat fractions (¼ beat):"), fractions);
-    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
-    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-    form->addRow(buttons);
-    if (dialog.exec() != QDialog::Accepted)
-        return std::nullopt;
-    const uint64_t measureTicks = segment.beatTicks * segment.beatsPerBar;
-    const uint64_t wholeTicks =
-        uint64_t(bars->value()) * measureTicks + uint64_t(beats->value()) * segment.beatTicks;
-    const uint64_t fractionTicks = (uint64_t(fractions->value()) * segment.beatTicks + 3) / 4;
-    return wholeTicks + fractionTicks;
+    return m_pendingInsertTimePrompt ? m_pendingInsertTimePrompt->initialBars
+                                     : insertTimePromptMinimumBars();
 }
 
-} // namespace
+int SongView::insertTimePromptInitialBeats() const noexcept
+{
+    return m_pendingInsertTimePrompt ? m_pendingInsertTimePrompt->initialBeats
+                                     : insertTimePromptMinimumBeats();
+}
+
+int SongView::insertTimePromptInitialBeatFractions() const noexcept
+{
+    return m_pendingInsertTimePrompt ? m_pendingInsertTimePrompt->initialBeatFractions
+                                     : insertTimePromptMinimumBeatFractions();
+}
+
+int SongView::insertTimePromptMaximumBeats() const noexcept
+{
+    if (!m_pendingInsertTimePrompt || m_pendingInsertTimePrompt->beatsPerBar == 0)
+        return insertTimePromptMinimumBeats();
+    const uint64_t maximumBeats = m_pendingInsertTimePrompt->beatsPerBar - 1;
+    return maximumBeats > uint64_t((std::numeric_limits<int>::max)())
+               ? (std::numeric_limits<int>::max)()
+               : int(maximumBeats);
+}
+
+QString SongView::insertTimePromptTitle() const
+{
+    return tr("Insert Time");
+}
+
+QVariantMap SongView::insertTimePromptAppearance() const
+{
+    QVariantMap appearance;
+    appearance.insert(QStringLiteral("font"), font());
+    appearance.insert(QStringLiteral("background"), themes::color(themes::Role::window_background));
+    appearance.insert(QStringLiteral("outline"), themes::color(themes::Role::palette_outline));
+    appearance.insert(QStringLiteral("text"), themes::color(themes::Role::window_text));
+    appearance.insert(QStringLiteral("focus"), themes::color(themes::Role::focus_outline));
+    appearance.insert(QStringLiteral("buttonBackground"),
+                      themes::color(themes::Role::button_background));
+    appearance.insert(QStringLiteral("buttonText"), themes::color(themes::Role::button_text));
+    appearance.insert(QStringLiteral("pressedBackground"),
+                      themes::color(themes::Role::button_pressed_background));
+    appearance.insert(QStringLiteral("borderWidth"), lyt::singlePixel());
+    appearance.insert(QStringLiteral("radius"), lyt::space(Space::Half));
+    appearance.insert(QStringLiteral("dialogPadding"), lyt::space(Space::One));
+    appearance.insert(QStringLiteral("horizontalPadding"), lyt::space(Space::One));
+    appearance.insert(QStringLiteral("verticalPadding"), lyt::space(Space::Half));
+    appearance.insert(QStringLiteral("buttonPadding"), lyt::space(Space::One));
+    appearance.insert(QStringLiteral("spacing"), lyt::space(Space::One));
+    appearance.insert(QStringLiteral("dragThreshold"), lyt::fontPxF(1.0));
+    return appearance;
+}
+
+void SongView::openInsertTimePrompt(uint64_t cursorTick, const songview::Grid::Segment &segment)
+{
+    songview::TimelineQuickView *const quick = quickView();
+    songview::QuickModalHost *const host = quick ? quick->modalHost() : nullptr;
+    if (!m_document || !host)
+        return;
+
+    // End a previous Insert Time session before publishing this target. A
+    // different owner's active modal is replaced by the shared host instead.
+    if (m_pendingInsertTimePrompt)
+        cancelInsertTimePromptWithoutFocus();
+    else
+        host->cancel();
+
+    PendingInsertTimePrompt pending;
+    pending.document = m_document;
+    pending.documentRevision = m_document->revision();
+    pending.cursorTick = cursorTick;
+    pending.beatTicks = segment.beatTicks;
+    pending.beatsPerBar = segment.beatsPerBar;
+    pending.initialBars = 1;
+    pending.initialBeats = 0;
+    pending.initialBeatFractions = 0;
+    m_pendingInsertTimePrompt = pending;
+    emit insertTimePromptChanged();
+
+    QObject::disconnect(m_insertTimePromptCancellation);
+    m_insertTimePromptCancellation =
+        connect(host, &songview::QuickModalHost::cancelled, this,
+                [this] { clearInsertTimePrompt(/*restoreFocus=*/true); });
+    if (!host->open(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/InsertTimePrompt.qml")), this,
+                    insertTimePromptTitle())) {
+        clearInsertTimePrompt(/*restoreFocus=*/true);
+    }
+}
+
+void SongView::acceptInsertTimePrompt(int bars, int beats, int fractions)
+{
+    if (bars < insertTimePromptMinimumBars() || bars > insertTimePromptMaximumBars() ||
+        beats < insertTimePromptMinimumBeats() || beats > insertTimePromptMaximumBeats() ||
+        fractions < insertTimePromptMinimumBeatFractions() ||
+        fractions > insertTimePromptMaximumBeatFractions() || !m_pendingInsertTimePrompt) {
+        return;
+    }
+
+    const PendingInsertTimePrompt pending = std::move(*m_pendingInsertTimePrompt);
+    m_pendingInsertTimePrompt.reset(); // Never expose a pending target while mutating its document.
+    QObject::disconnect(m_insertTimePromptCancellation);
+    m_insertTimePromptCancellation = {};
+    emit insertTimePromptChanged();
+    if (songview::TimelineQuickView *const quick = quickView())
+        quick->modalHost()->close();
+
+    SongDocument *const document = m_document;
+    if (document == pending.document.data() && document->revision() == pending.documentRevision) {
+        const uint64_t maximum = (std::numeric_limits<uint64_t>::max)();
+        bool overflow =
+            pending.beatsPerBar != 0 && pending.beatTicks > maximum / pending.beatsPerBar;
+        const uint64_t measureTicks = overflow ? 0 : pending.beatTicks * pending.beatsPerBar;
+
+        const uint64_t barCount = uint64_t(bars);
+        const uint64_t beatCount = uint64_t(beats);
+        const uint64_t fractionCount = uint64_t(fractions);
+        overflow = overflow || (barCount != 0 && measureTicks > maximum / barCount);
+        const uint64_t barTicks = overflow ? 0 : barCount * measureTicks;
+        overflow = overflow || (beatCount != 0 && pending.beatTicks > maximum / beatCount);
+        const uint64_t beatTicks = overflow ? 0 : beatCount * pending.beatTicks;
+        const uint64_t fractionTicks = fractionCount * (pending.beatTicks / 4) +
+                                       (fractionCount * (pending.beatTicks % 4) + 3) / 4;
+
+        overflow = overflow || barTicks > maximum - beatTicks;
+        const uint64_t wholeTicks = overflow ? 0 : barTicks + beatTicks;
+        overflow = overflow || wholeTicks > maximum - fractionTicks;
+        const uint64_t span = overflow ? 0 : wholeTicks + fractionTicks;
+
+        if (overflow || span > maximum - pending.cursorTick) {
+            announce(tr("Cannot insert time at the cursor"));
+        } else {
+            SongDocument::TimeScope scope;
+            scope.wholeSong = true;
+            if (!document->insertBlankTime({pending.cursorTick, pending.cursorTick + span}, scope))
+                announce(tr("Nothing to insert at the cursor"));
+            else
+                announce(tr("Inserted time at the cursor"));
+        }
+    }
+    focusActiveSurface();
+}
+
+void SongView::cancelInsertTimePrompt()
+{
+    if (!m_pendingInsertTimePrompt)
+        return;
+    if (songview::TimelineQuickView *const quick = quickView())
+        quick->modalHost()->cancel();
+    if (m_pendingInsertTimePrompt)
+        clearInsertTimePrompt(/*restoreFocus=*/true);
+}
+
+void SongView::cancelInsertTimePromptWithoutFocus()
+{
+    const bool ownsModal = m_pendingInsertTimePrompt.has_value();
+    m_pendingInsertTimePrompt.reset();
+    // Disconnect before host cancellation so strong lifecycle cleanup never
+    // restores focus through the cancelled() callback.
+    QObject::disconnect(m_insertTimePromptCancellation);
+    m_insertTimePromptCancellation = {};
+    if (ownsModal) {
+        emit insertTimePromptChanged();
+        if (songview::TimelineQuickView *const quick = quickView())
+            quick->modalHost()->cancel();
+    }
+}
+
+void SongView::clearInsertTimePrompt(bool restoreFocus)
+{
+    const bool hadPending = m_pendingInsertTimePrompt.has_value();
+    m_pendingInsertTimePrompt.reset();
+    QObject::disconnect(m_insertTimePromptCancellation);
+    m_insertTimePromptCancellation = {};
+    if (hadPending)
+        emit insertTimePromptChanged();
+    if (hadPending && restoreFocus)
+        focusActiveSurface();
+}
+
 void SongView::announceTimeSelection()
 {
     const auto &selection = m_selectionModel.timeSelection();
@@ -497,20 +653,7 @@ void SongView::insertTimeAtPlaybackCursor()
     const uint64_t cursorTick =
         m_playing ? uint64_t(std::clamp(m_playheadTick, 0.0, double(m_timeline->lengthTicks)) + 0.5)
                   : m_editCursorTick;
-    const std::optional<uint64_t> span = askInsertTimeSpan(this, m_grid.segmentAt(cursorTick));
-    if (!span)
-        return;
-    if (*span > (std::numeric_limits<uint64_t>::max)() - cursorTick) {
-        announce(tr("Cannot insert time at the cursor"));
-        return;
-    }
-    SongDocument::TimeScope scope;
-    scope.wholeSong = true;
-    if (!m_document->insertBlankTime({cursorTick, cursorTick + *span}, scope)) {
-        announce(tr("Nothing to insert at the cursor"));
-        return;
-    }
-    announce(tr("Inserted time at the cursor"));
+    openInsertTimePrompt(cursorTick, m_grid.segmentAt(cursorTick));
 }
 void SongView::insertBlankTime()
 {

@@ -14,7 +14,6 @@
 #include <QApplication>
 #include <QClipboard>
 #include <QCoreApplication>
-#include <QDialog>
 #include <QDir>
 #include <QEvent>
 #include <QFile>
@@ -42,7 +41,6 @@
 #include "core/smf.h"
 #include "mainwindow.h"
 #include "project/sidecar.h"
-#include "ui/dragspinbox.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"

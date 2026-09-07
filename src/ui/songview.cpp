@@ -348,6 +348,7 @@ SongView::~SongView()
         m_roll->cancelVelocityPromptWithoutFocus();
     if (m_ruler)
         m_ruler->cancelTimeSigPromptWithoutFocus();
+    cancelInsertTimePromptWithoutFocus();
     if (!m_quickView)
         return;
     m_quickView->detachInputInteraction(TimelineBand::Ruler);
@@ -385,6 +386,7 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
     }
     if (m_ruler)
         m_ruler->cancelTimeSigPromptWithoutFocus();
+    cancelInsertTimePromptWithoutFocus();
     cancelActiveInteractions();
     if (timeline)
         m_trackActivity.resetPaused();
@@ -557,6 +559,7 @@ void SongView::prepareForSongReplacement()
     }
     if (m_ruler)
         m_ruler->cancelTimeSigPromptWithoutFocus();
+    cancelInsertTimePromptWithoutFocus();
     cancelActiveInteractions();
     m_headers->cancelTransientState();
     disconnectDocument();
@@ -568,6 +571,7 @@ void SongView::cancelTransientInput()
     // First cancel pointer state through the canonical traversal. Strong
     // document/readiness cleanup then applies its separate popup policy.
     cancelActiveInteractions();
+    cancelInsertTimePromptWithoutFocus();
     if (m_roll) {
         m_roll->cancelVelocityPromptWithoutFocus();
         m_roll->cancelPitchBendPopupWithoutFocus();
@@ -629,6 +633,7 @@ void SongView::setDocument(SongDocument *document)
         }
         if (m_ruler)
             m_ruler->cancelTimeSigPromptWithoutFocus();
+        cancelInsertTimePromptWithoutFocus();
         cancelActiveInteractions();
         disconnectDocument();
         if (document) {
@@ -637,6 +642,7 @@ void SongView::setDocument(SongDocument *document)
                 // Any document edit invalidates a preview captured at the
                 // previous revision before the normal page refresh.
                 cancelActiveInteractions();
+                cancelInsertTimePromptWithoutFocus();
                 if (m_ruler)
                     m_ruler->cancelTimeSigPromptWithoutFocus();
                 m_editorDrawer->automationPage()->documentChanged();
