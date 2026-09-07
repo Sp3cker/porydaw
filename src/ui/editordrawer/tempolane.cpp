@@ -3,7 +3,6 @@
 #include <algorithm>
 
 #include <QCoreApplication>
-#include <QInputDialog>
 
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationpage.h"
@@ -68,15 +67,12 @@ int TempoLane::bodyHeight(const AutomationGeometry &geometry) const
                       geometry.rowMaximumHeight);
 }
 
-bool TempoLane::promptValue(QWidget *parent, int currentValue, int *storedValue) const
+NodeValuePrompt TempoLane::valuePrompt(int storedValue) const
 {
-    bool accepted = false;
-    const int entered = QInputDialog::getInt(
-        parent, translated("Set tempo"), translated("BPM:"),
-        std::clamp(currentValue, CoreTimeDefaults::kMinTempoBpm, CoreTimeDefaults::kMaxTempoBpm),
-        CoreTimeDefaults::kMinTempoBpm, CoreTimeDefaults::kMaxTempoBpm, 1, &accepted);
-    if (!accepted)
-        return false;
-    *storedValue = entered;
-    return true;
+    return {translated("Set tempo"),
+            translated("BPM:"),
+            std::clamp(storedValue, CoreTimeDefaults::kMinTempoBpm, CoreTimeDefaults::kMaxTempoBpm),
+            CoreTimeDefaults::kMinTempoBpm,
+            CoreTimeDefaults::kMaxTempoBpm,
+            0};
 }

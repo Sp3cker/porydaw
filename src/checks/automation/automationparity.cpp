@@ -7,13 +7,14 @@
 #include <vector>
 
 #include <QCoreApplication>
-#include <QInputDialog>
 #include <QSignalSpy>
 #include <QtTest>
 
-#include "checks/automation/automationmodalguard.h"
+#include "checks/automation/automationvalueprompt.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/drawerchrome.h"
+#include "ui/editordrawer/editordrawer.h"
 #include "ui/songview/editorselectionmodel.h"
 #include "ui/songview/quick/timelinequickscene.h"
 
@@ -175,14 +176,14 @@ void AutomationEditingTest::stationaryNodeInteractions()
     QVERIFY(samePoints(pointsOf(m_tab->document(), adapter), fixture));
 }
 
-void AutomationEditingTest::independentDoubleClickAfterDeleteOpensValueDialog_data()
+void AutomationEditingTest::independentDoubleClickAfterDeleteOpensValuePrompt_data()
 {
     QTest::addColumn<int>("adapter");
     QTest::newRow("tempo") << kTempo;
     QTest::newRow("cc") << kCc;
 }
 
-void AutomationEditingTest::independentDoubleClickAfterDeleteOpensValueDialog()
+void AutomationEditingTest::independentDoubleClickAfterDeleteOpensValuePrompt()
 {
     QFETCH(int, adapter);
     const std::vector<NodePoint> fixture{
@@ -206,30 +207,27 @@ void AutomationEditingTest::independentDoubleClickAfterDeleteOpensValueDialog()
     QVERIFY(edited.isValid());
     const FrozenDocumentState afterDelete =
         frozenDocumentState(documentChanged.count(), edited.count());
-    bool dialogOpened = false;
-    QString dialogDiagnostic =
-        QStringLiteral("Independent double-click did not observe a QInputDialog");
-    {
-        const auto dialogInteraction = automation_modal::scheduleInputDialogInteraction(
-            dialogDiagnostic, [&](QInputDialog &dialog) {
-                dialogOpened = true;
-                dialog.reject();
-            });
-        mouseDClick(Qt::LeftButton, node, Qt::NoModifier);
-    }
 
-    QVERIFY2(dialogOpened, qPrintable(dialogDiagnostic));
+    // A double click away from the surviving nodes opens the inline value
+    // prompt; rejecting it with Escape must leave the document frozen.
+    DrawerChrome &chrome = m_tab->view().editorDrawer()->chrome();
+    mouseDClick(Qt::LeftButton, node, Qt::NoModifier);
+    QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
+    QQuickItem *const prompt = automation_valueprompt::focusedTextInput(quickWindow());
+    QVERIFY2(prompt, "the double-click insertion prompt did not take active focus");
+    QTest::keyClick(&quickWindow(), Qt::Key_Escape);
+    QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome));
     QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == afterDelete);
 }
 
-void AutomationEditingTest::doubleClickDeletesOnceWithoutValueDialog_data()
+void AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt_data()
 {
     QTest::addColumn<int>("adapter");
     QTest::newRow("tempo") << kTempo;
     QTest::newRow("cc") << kCc;
 }
 
-void AutomationEditingTest::doubleClickDeletesOnceWithoutValueDialog()
+void AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt()
 {
     QFETCH(int, adapter);
     const std::vector<NodePoint> fixture{
@@ -249,20 +247,12 @@ void AutomationEditingTest::doubleClickDeletesOnceWithoutValueDialog()
     const int undoCount = m_tab->document().undoStack()->count();
     const int undoIndex = m_tab->document().undoStack()->index();
 
-    bool dialogOpened = false;
-    QString dialogDiagnostic = QStringLiteral("Double-click opened an unexpected QInputDialog");
-    {
-        const auto dialogInteraction = automation_modal::scheduleInputDialogInteraction(
-            dialogDiagnostic, [&](QInputDialog &dialog) {
-                dialogOpened = true;
-                dialogDiagnostic =
-                    QStringLiteral("Double-click deletion opened a node value QInputDialog");
-                dialog.reject();
-            });
-        mouseDClick(Qt::LeftButton, node, Qt::NoModifier);
-    }
+    // The double click lands on an existing node, so it deletes exactly once
+    // and must not leave the inline value prompt behind.
+    DrawerChrome &chrome = m_tab->view().editorDrawer()->chrome();
+    mouseDClick(Qt::LeftButton, node, Qt::NoModifier);
 
-    QVERIFY2(!dialogOpened, qPrintable(dialogDiagnostic));
+    QVERIFY(!automation_valueprompt::promptVisible(chrome));
     QCOMPARE(documentChanged.count(), 1);
     QCOMPARE(edited.count(), 1);
     QCOMPARE(m_tab->document().revision(), revision + 1);

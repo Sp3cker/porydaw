@@ -312,6 +312,9 @@ SongView::SongView(QWidget *parent)
         new TimelineQuickView(*m_ruler, *m_roll, *m_strip, *m_editorDrawer->automationPage(),
                               *m_editorDrawer->velocityArea(), *m_editorDrawer->voiceChangeArea(),
                               m_editorDrawer->chrome(), *m_headers, *m_events, *this);
+    // The pencil-shortcut guard identifies Quick input targets through the
+    // shared host's window; injected before any timeline input can arrive.
+    m_editorDrawer->automationPage()->setInputWindow(m_quickView->quickWindow());
     // Reparenting converted interactions after the Quick host keeps them
     // alive while its destructor detaches their input items. The roll
     // interaction joins the same tail as a plain QObject attached to

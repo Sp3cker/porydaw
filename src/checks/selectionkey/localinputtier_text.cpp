@@ -1,13 +1,13 @@
 // Selection keyboard routing, protected-local-input tier: text surfaces. The
 // real QML track-rename TextInput, a real QWidget line edit (the song search
-// field), and the modal numeric-entry QInputDialog opened by an automation
-// lane double click each visibly own the keyboard: delivered command bindings
-// edit only the focused surface, Copy carries the surface's own text, and
-// window commands resume exactly once after each surface closes (plan 9).
+// field), and the inline automation value prompt opened by an automation lane
+// double click each visibly own the keyboard: delivered command bindings edit
+// only the focused surface, Copy carries the surface's own text, and window
+// commands resume exactly once after each surface closes (plan 9).
 
 #include "checks/selectionkey/tst_localinputtier.h"
 
-#include "checks/automation/automationmodalguard.h"
+#include "checks/automation/automationvalueprompt.h"
 #include "checks/selectionkey/automationprobe.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
@@ -18,7 +18,6 @@
 
 #include <QApplication>
 #include <QClipboard>
-#include <QInputDialog>
 #include <QLineEdit>
 #include <QPointer>
 #include <QQuickItem>
@@ -153,9 +152,15 @@ void SelectionLocalInputTierTest::renameTextInputOwnsKeys()
                                        "clipboard='%3' selectAll=%4")
                             .arg(draftAfter, selectedDraft, clipboardText)
                             .arg(selectedForCopy)));
+
+    // Regression guard for the Quick IME pencil guard: with the Automations
+    // drawer visible and the pencil shortcut armed, the bare pencil key must
+    // stay rename text and never toggle pencil mode.
     const auto pencil = selectionkey::firstBinding(QStringLiteral("automation.pencil_mode"));
     QVERIFY2(pencil.has_value() && renameGuard,
              "Pencil typing requires a live rename input and binding");
+    view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
+    selectionkey::settle();
     const QPointer<AutomationCanvas> canvas = view.editorDrawer()->automationPage()->canvas();
     const bool pencilBefore = canvas->pencilMode();
     QMetaObject::invokeMethod(renameGuard, "selectAll");
@@ -166,6 +171,14 @@ void SelectionLocalInputTierTest::renameTextInputOwnsKeys()
              "Pencil binding did not remain local rename text input");
     QVERIFY2(canvas && canvas->pencilMode() == pencilBefore,
              "Pencil mode toggled while typing into the rename TextInput");
+    QMetaObject::invokeMethod(renameGuard, "selectAll");
+    QTest::keyClick(quickWindow, pencil->key(), Qt::NoModifier);
+    selectionkey::settle();
+    QVERIFY2(renameGuard && renameGuard->property("text").toString() ==
+                                singleKeyText(*pencil).value_or(draftAfter),
+             "The bare pencil key did not remain rename text input");
+    QVERIFY2(canvas && canvas->pencilMode() == pencilBefore,
+             "The bare pencil key toggled pencil mode during rename");
     QTest::keyClick(quickWindow, Qt::Key_Escape);
     selectionkey::settle();
     const bool renameClosed = !renameGuard || !rename->isVisible();
@@ -230,7 +243,7 @@ void SelectionLocalInputTierTest::songSearchLineEditOwnsKeys()
     QVERIFY2(!view.trackSoloed(kTrack), "Solo did not untoggle after text entry");
 }
 
-void SelectionLocalInputTierTest::numericDialogOwnsKeys()
+void SelectionLocalInputTierTest::numericPromptOwnsKeys()
 {
     SongView &view = this->view();
     SongDocument &document = this->document();
@@ -256,104 +269,106 @@ void SelectionLocalInputTierTest::numericDialogOwnsKeys()
     const auto probe = selectionkey::AutomationProbe::locate(view, automation, kTrack, kController,
                                                              &coordinateDiagnostics);
     QVERIFY2(probe.has_value(), qUtf8Printable(coordinateDiagnostics));
-    // The dialog must come from an actual empty lane point rather than from a
+    // The prompt must come from an actual empty lane point rather than from a
     // hardcoded off-camera tick or an existing fixture node.
     QPoint scene;
     QVERIFY2(probe->emptyNodePoint(32, scene, &coordinateDiagnostics),
              qUtf8Printable(coordinateDiagnostics));
 
+    // A selected note makes a shared-edit leak observable: arrow keys with the
+    // prompt focused must stay local, so the selection anchors the contract.
+    const auto note = addNote(kTrack, 24, 60, 24);
+    QVERIFY2(note.has_value(), "the fixture note was not created");
+    view.selectionModel().setNoteSelection({note->id});
+    selectionkey::settle();
+    QVERIFY2(view.selectionModel().noteSelection() == std::vector<NoteId>{note->id},
+             "the fixture note selection did not settle");
+
     const QByteArray before = document.smf().write();
     const int soloBefore = m_counts.solo;
-    QString diagnostic = QStringLiteral("the double click did not observe a dialog");
-    bool dialogOpened = false;
-    bool digitsLanded = false;
-    bool numericEditorFocused = false;
-    bool fullTextSelectedForCopy = false;
-    bool soloMaskAfter = false;
-    QString copiedText;
-    QString copiedFrom;
-    QString numericTextBeforeSolo;
-    QString expectedTextAfterSolo;
-    QString textAfterSoloKey;
-    {
-        const auto interaction =
-            automation_modal::scheduleInputDialogInteraction(diagnostic, [&](QInputDialog &dialog) {
-                dialogOpened = true;
-                QLineEdit *const edit = dialog.findChild<QLineEdit *>();
-                if (!edit) {
-                    diagnostic = QStringLiteral("QInputDialog has no numeric QLineEdit");
-                    return;
-                }
-                numericEditorFocused = edit->hasFocus();
-                QTest::keyClick(edit, Qt::Key_A, Qt::ControlModifier);
-                QTest::keyClicks(edit, QStringLiteral("12"));
-                digitsLanded = edit->text() == QStringLiteral("12");
+    DrawerChrome &chrome = view.editorDrawer()->chrome();
 
-                // Copy owns only the selected numeric text. Inspect and save
-                // that selection before delivery; Ctrl+C with only a caret
-                // legitimately copies nothing.
-                QTest::keyClick(edit, Qt::Key_A, Qt::ControlModifier);
-                numericTextBeforeSolo = edit->text();
-                copiedFrom = edit->selectedText();
-                fullTextSelectedForCopy =
-                    !numericTextBeforeSolo.isEmpty() && copiedFrom == numericTextBeforeSolo;
-                QApplication::clipboard()->clear();
-                QTest::keyClick(edit, copy->key(), copy->keyboardModifiers());
-                copiedText = QApplication::clipboard()->text();
-
-                // A numeric validator legitimately rejects the default Solo
-                // letter. If a user rebinds Solo to a plain accepted digit,
-                // use the validator's actual replacement contract instead.
-                expectedTextAfterSolo = numericTextBeforeSolo;
-                if (soloText) {
-                    QString candidate = *soloText;
-                    int cursorPosition = candidate.size();
-                    const QValidator *const validator = edit->validator();
-                    if (!validator ||
-                        validator->validate(candidate, cursorPosition) != QValidator::Invalid) {
-                        expectedTextAfterSolo = candidate;
-                    }
-                }
-                QTest::keyClick(edit, solo->key(), solo->keyboardModifiers());
-                textAfterSoloKey = edit->text();
-                soloMaskAfter = view.trackSoloed(kTrack);
-            });
-        Q_UNUSED(interaction);
-        QTest::mouseDClick(quickWindow, Qt::LeftButton, Qt::NoModifier, scene);
-        selectionkey::settle();
-    }
+    QTest::mouseDClick(quickWindow, Qt::LeftButton, Qt::NoModifier, scene);
+    QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
+    QPointer<QQuickItem> prompt(automation_valueprompt::focusedTextInput(*quickWindow));
+    QVERIFY2(prompt, "the value prompt did not take active focus after the double click");
+    // The prompt opens with the plotted insertion value selected, so the
+    // delivered digits replace that selection.
+    QTest::keyClick(quickWindow, Qt::Key_1);
+    QTest::keyClick(quickWindow, Qt::Key_2);
     selectionkey::settle();
-    QVERIFY2(dialogOpened, "an automation double click did not open the numeric dialog");
-    QVERIFY2(digitsLanded,
-             qPrintable(QStringLiteral("numeric digit entry mismatch: text-before-Solo='%1'")
-                            .arg(numericTextBeforeSolo)));
-    QVERIFY2(fullTextSelectedForCopy && copiedFrom == QStringLiteral("12") &&
+    QVERIFY2(prompt && prompt->property("text").toString() == QStringLiteral("12"),
+             "the delivered digits did not land in the value prompt");
+
+    // Copy owns only the selected numeric text. Inspect and save that
+    // selection before delivery; Ctrl+C with only a caret legitimately copies
+    // nothing.
+    QApplication::clipboard()->clear();
+    QVERIFY(QMetaObject::invokeMethod(prompt, "selectAll"));
+    const QString numericText = prompt->property("text").toString();
+    const QString copiedFrom = prompt->property("selectedText").toString();
+    QTest::keyClick(quickWindow, copy->key(), copy->keyboardModifiers());
+    selectionkey::settle();
+    const QString copiedText = QApplication::clipboard()->text();
+    QVERIFY2(numericText == QStringLiteral("12") && copiedFrom == numericText &&
                  copiedText == copiedFrom,
              qPrintable(QStringLiteral("numeric Copy mismatch: field='%1' selected='%2' "
-                                       "clipboard='%3' full-selection=%4")
-                            .arg(numericTextBeforeSolo, copiedFrom, copiedText)
-                            .arg(fullTextSelectedForCopy)));
-    QVERIFY2(textAfterSoloKey == expectedTextAfterSolo,
-             qPrintable(QStringLiteral("numeric Solo-key contract mismatch: before='%1' "
-                                       "expected='%2' actual='%3' editor-focus=%4")
-                            .arg(numericTextBeforeSolo, expectedTextAfterSolo, textAfterSoloKey)
-                            .arg(numericEditorFocused)));
-    QVERIFY2(m_counts.solo == soloBefore && !soloMaskAfter,
-             qPrintable(QStringLiteral("Solo escaped the numeric dialog: action-delta=%1 "
+                                       "clipboard='%3'")
+                            .arg(numericText, copiedFrom, copiedText)));
+
+    // Arrow keys with the prompt focused must not leak shared edit commands:
+    // the selected note, the song, and the prompt itself all stay frozen.
+    QTest::keyClick(quickWindow, Qt::Key_Up);
+    selectionkey::settle();
+    QTest::keyClick(quickWindow, Qt::Key_Down);
+    selectionkey::settle();
+    QVERIFY2(automation_valueprompt::promptVisible(chrome),
+             "the value prompt closed while arrow keys were delivered");
+    QVERIFY2(view.selectionModel().noteSelection() == std::vector<NoteId>{note->id},
+             "prompt arrow keys leaked into the note selection");
+    QVERIFY2(document.smf().write() == before,
+             "prompt arrow keys leaked a shared edit command into the song");
+
+    // A numeric validator legitimately rejects the default Solo letter. If a
+    // user rebinds Solo to a plain accepted digit, use the validator's actual
+    // replacement contract instead; either way the binding must stay local to
+    // the prompt text and never fire the track action.
+    QVERIFY(QMetaObject::invokeMethod(prompt, "selectAll"));
+    QString expectedAfterSolo = numericText;
+    if (soloText) {
+        QString candidate = *soloText;
+        int cursorPosition = candidate.size();
+        const QVariant validatorValue = prompt->property("validator");
+        QValidator *const validator = validatorValue.value<QValidator *>();
+        if (!validator || validator->validate(candidate, cursorPosition) != QValidator::Invalid)
+            expectedAfterSolo = candidate;
+    }
+    QTest::keyClick(quickWindow, solo->key(), solo->keyboardModifiers());
+    selectionkey::settle();
+    QVERIFY2(prompt && prompt->property("text").toString() == expectedAfterSolo,
+             qPrintable(QStringLiteral("numeric Solo-key contract mismatch: expected='%1' "
+                                       "actual='%2'")
+                            .arg(expectedAfterSolo,
+                                 prompt ? prompt->property("text").toString() : QString())));
+    QVERIFY2(m_counts.solo == soloBefore && !view.trackSoloed(kTrack),
+             qPrintable(QStringLiteral("Solo escaped the value prompt: action-delta=%1 "
                                        "track-soloed=%2")
                             .arg(m_counts.solo - soloBefore)
-                            .arg(soloMaskAfter)));
-    QVERIFY2(diagnostic.isEmpty(), qUtf8Printable(diagnostic));
+                            .arg(view.trackSoloed(kTrack))));
     QVERIFY2(document.smf().write() == before,
-             "numeric dialog typing mutated the automation lane or the song");
+             "value prompt typing mutated the automation lane or the song");
 
-    // Commands resume after the dialog closed without accepting a value.
+    // Escape cancels the pending edit without writing, and window commands
+    // resume exactly once the prompt no longer owns the keys.
+    QTest::keyClick(quickWindow, Qt::Key_Escape);
+    QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome));
+    QVERIFY2(document.smf().write() == before, "cancelling the value prompt mutated the song");
     activateShellForCommands();
     QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Automation, Qt::MouseFocusReason),
-             "could not refocus the automation band after the dialog");
-    selectionkey::deliverKey(quickWindow, solo->key(), solo->keyboardModifiers());
+             "could not refocus the automation band after the prompt");
+    selectionkey::deliverKey(m_quickWindow, solo->key(), solo->keyboardModifiers());
     QVERIFY2(m_counts.solo == soloBefore + 1 && view.trackSoloed(kTrack),
-             "Solo did not resume after the numeric dialog closed");
-    selectionkey::deliverKey(quickWindow, solo->key(), solo->keyboardModifiers());
-    QVERIFY2(!view.trackSoloed(kTrack), "Solo did not untoggle after the dialog");
+             "Solo did not resume after the value prompt closed");
+    selectionkey::deliverKey(m_quickWindow, solo->key(), solo->keyboardModifiers());
+    QVERIFY2(!view.trackSoloed(kTrack), "Solo did not untoggle after the prompt");
 }

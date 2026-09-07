@@ -10,23 +10,23 @@
 #include <QAction>
 #include <QApplication>
 #include <QCoreApplication>
-#include <QInputDialog>
-#include <QKeySequence>
 #include <QMenu>
 
 #include "checks/automation/automationmodalguard.h"
+#include "checks/automation/automationvalueprompt.h"
 #include "core/timedefaults.h"
 #include "core/xcmd.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/cclanes.h"
+#include "ui/editordrawer/drawerchrome.h"
+#include "ui/editordrawer/editordrawer.h"
 #include "ui/songview/editorselectionmodel.h"
 
 namespace {
 using automation_modal::clickMenuAction;
 using automation_modal::findMenuAction;
 using automation_modal::MenuInteractionResult;
-using automation_modal::scheduleInputDialogInteraction;
 using automation_modal::scheduleMenuInteraction;
 using automation_modal::schedulePopupInteraction;
 
@@ -298,7 +298,7 @@ void AutomationEditingTest::pointMenuDeleteCommitsEdit()
     QCOMPARE(songTab.document().undoStack()->index(), undoIndex + 1);
 }
 
-void AutomationEditingTest::pointMenuNumericDialogUpdatesOneDuplicateOccurrence()
+void AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence()
 {
     SongTab &songTab = tab();
     songTab.document().writeLanePoints(0, kController, 0, std::numeric_limits<uint64_t>::max(),
@@ -310,33 +310,32 @@ void AutomationEditingTest::pointMenuNumericDialogUpdatesOneDuplicateOccurrence(
     const int undoIndex = songTab.document().undoStack()->index();
 
     MenuResult result;
-    bool dialogOpened = false;
-    bool dialogParentedToSongView = false;
-    QString dialogDiagnostic = QStringLiteral("QInputDialog interaction did not observe a dialog");
     {
-        const auto dialogInteraction =
-            scheduleInputDialogInteraction(dialogDiagnostic, [&](QInputDialog &dialog) {
-                dialogOpened = true;
-                dialogParentedToSongView =
-                    qobject_cast<SongView *>(dialog.parentWidget()) != nullptr;
-                QWidget *const input = dialog.focusWidget();
-                QTest::keySequence(input, QKeySequence(QKeySequence::SelectAll));
-                QTest::keyClicks(input, QStringLiteral("0"));
-                dialog.accept();
-            });
         const auto menuInteraction = scheduleMenuInteraction(
             result, [](QMenu &menu) { return findMenuAction(menu, QStringLiteral("Set Value")); });
         mousePress(Qt::RightButton, automationWindowPoint(inputPoint(cc, kPointTick, 96)));
         mouseRelease(Qt::RightButton, automationWindowPoint(inputPoint(cc, kPointTick, 96)));
     }
 
-    const auto points = songTab.document().lanePoints(0, kController);
+    // The Set Value action hands the edit to the inline Quick prompt instead of
+    // a modal dialog: the prompt takes active focus with the stored value
+    // selected (CC 10 displays stored-64, so the 96 node shows 32), typed
+    // digits replace the selection, and Enter commits through the canvas while
+    // only one duplicate occurrence moves.
+    DrawerChrome &chrome = songTab.view().editorDrawer()->chrome();
     QVERIFY2(result.opened, qPrintable(result.diagnostic));
     QCOMPARE(result.parentWidget, static_cast<QWidget *>(&songTab.view()));
     QVERIFY2(result.actionFound, qPrintable(result.diagnostic));
     QVERIFY2(result.actionClicked, qPrintable(result.diagnostic));
-    QVERIFY2(dialogOpened, qPrintable(dialogDiagnostic));
-    QVERIFY(dialogParentedToSongView);
+    QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
+    QQuickItem *const prompt = automation_valueprompt::focusedTextInput(quickWindow());
+    QVERIFY2(prompt, "the value prompt did not take active focus from the Set Value action");
+    QCOMPARE(prompt->property("selectedText").toString(), QStringLiteral("32"));
+    QTest::keyClick(&quickWindow(), Qt::Key_0);
+    QTest::keyClick(&quickWindow(), Qt::Key_Return);
+    QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome));
+
+    const auto points = songTab.document().lanePoints(0, kController);
     QCOMPARE(points.size(), std::size_t{2});
     QCOMPARE(points[0].tick, kPointTick);
     QCOMPARE(points[0].value, 32);
@@ -344,6 +343,38 @@ void AutomationEditingTest::pointMenuNumericDialogUpdatesOneDuplicateOccurrence(
     QCOMPARE(points[1].value, 64);
     QCOMPARE(songTab.document().revision(), revision + 1);
     QCOMPARE(songTab.document().undoStack()->index(), undoIndex + 1);
+    QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()));
+}
+
+void AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched()
+{
+    SongTab &songTab = tab();
+    songTab.document().writeLanePoints(0, kController, 0, std::numeric_limits<uint64_t>::max(),
+                                       {{kPointTick, 96}});
+    QCoreApplication::processEvents();
+    const LaneHandle cc = findRow({EditorAutomationRowKind::ControlChange, 0, kController});
+    QVERIFY(cc.valid());
+    const uint64_t revision = songTab.document().revision();
+    const int undoIndex = songTab.document().undoStack()->index();
+
+    MenuResult result;
+    {
+        const auto menuInteraction = scheduleMenuInteraction(
+            result, [](QMenu &menu) { return findMenuAction(menu, QStringLiteral("Set Value")); });
+        mousePress(Qt::RightButton, automationWindowPoint(inputPoint(cc, kPointTick, 96)));
+        mouseRelease(Qt::RightButton, automationWindowPoint(inputPoint(cc, kPointTick, 96)));
+    }
+
+    DrawerChrome &chrome = songTab.view().editorDrawer()->chrome();
+    QVERIFY2(result.actionClicked, qPrintable(result.diagnostic));
+    QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
+    QTest::keyClick(&quickWindow(), Qt::Key_Escape);
+    QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome));
+
+    QCOMPARE(songTab.document().revision(), revision);
+    QCOMPARE(songTab.document().undoStack()->index(), undoIndex);
+    QCOMPARE(songTab.document().lanePoints(0, kController).size(), std::size_t{1});
+    QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()));
 }
 
 void AutomationEditingTest::outsideRightClickDismissesPointMenu()

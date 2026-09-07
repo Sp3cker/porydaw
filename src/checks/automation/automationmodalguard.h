@@ -7,7 +7,6 @@
 #include <QAction>
 #include <QApplication>
 #include <QElapsedTimer>
-#include <QInputDialog>
 #include <QMenu>
 #include <QPointer>
 #include <QScopeGuard>
@@ -114,18 +113,6 @@ class ModalInteractionGuard final
     bool m_interacted = false;
 };
 
-inline QInputDialog *openInputDialog()
-{
-    if (auto *const dialog = qobject_cast<QInputDialog *>(QApplication::activeModalWidget()))
-        return dialog;
-    for (QWidget *widget : QApplication::allWidgets()) {
-        auto *const dialog = qobject_cast<QInputDialog *>(widget);
-        if (dialog && dialog->isVisible())
-            return dialog;
-    }
-    return nullptr;
-}
-
 struct MenuInteractionResult final {
     bool opened = false;
     QWidget *parentWidget = nullptr;
@@ -197,19 +184,6 @@ ModalInteractionGuard scheduleMenuInteraction(MenuInteractionResult &result, Sel
                 QStringLiteral("Selected context-menu action had no clickable geometry");
         }
     });
-}
-
-template <typename Interact>
-ModalInteractionGuard scheduleInputDialogInteraction(QString &diagnostic, Interact interact)
-{
-    return ModalInteractionGuard(
-        [] { return static_cast<QWidget *>(openInputDialog()); },
-        [interact = std::move(interact)](QWidget &widget) mutable {
-            interact(static_cast<QInputDialog &>(widget));
-        },
-        diagnostic,
-        QStringLiteral("Timed out waiting for QInputDialog; watchdog closed blocking widgets"),
-        false);
 }
 
 } // namespace automation_modal

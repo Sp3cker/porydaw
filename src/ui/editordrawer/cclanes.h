@@ -22,7 +22,7 @@ class CCLaneAdapter final : public NodeLane
     int minimumValue() const override;
     int maximumValue() const override;
     QString valueText(int value) const override;
-    bool promptValue(QWidget *parent, int currentValue, int *storedValue) const override;
+    NodeValuePrompt valuePrompt(int storedValue) const override;
     int neutralValue() const override;
     std::optional<NodePoint> leadIn() const override;
     void replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points) override;

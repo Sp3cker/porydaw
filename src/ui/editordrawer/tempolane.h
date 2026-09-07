@@ -37,7 +37,7 @@ class TempoLane final : public NodeLane
     bool containsHeader(const QPoint &position) const;
     void toggleExpanded();
     void cancel();
-    bool promptValue(QWidget *parent, int currentValue, int *storedValue) const override;
+    NodeValuePrompt valuePrompt(int storedValue) const override;
 
   private:
     int collapsedHeight(const AutomationGeometry &geometry) const;

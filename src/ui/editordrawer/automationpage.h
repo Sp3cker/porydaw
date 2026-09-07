@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include <QObject>
+#include <QPointer>
 #include <QSize>
 
 #include "ui/editordrawer/drawerpage.h"
@@ -19,6 +20,7 @@ struct NodeLaneHoverState;
 class MidiTimeline;
 class SongDocument;
 class SongView;
+class QWindow;
 struct AutomationGeometry;
 
 namespace songview {
@@ -46,6 +48,10 @@ class AutomationPage final : public QObject
     bool scrollVertically(const songview::TimelineWheelInput &input);
     void synchronizeAutomationViewport(QSize viewportSize);
     bool eventFilter(QObject *watched, QEvent *event) override;
+    // The Quick window that delivers this page's timeline input; the pencil
+    // shortcut guard identifies its targets through it. Injected by SongView
+    // after the shared Quick host is constructed.
+    void setInputWindow(QWindow *window) noexcept;
     const EditorViewState &automationViewState() const noexcept { return m_viewState; }
     const SongViewModel &model() const noexcept;
 
@@ -122,4 +128,5 @@ class AutomationPage final : public QObject
     int m_contentHeight = 0;
     QSize m_viewportSize;
     qreal m_verticalWheelRemainder = 0.0;
+    QPointer<QWindow> m_inputWindow;
 };

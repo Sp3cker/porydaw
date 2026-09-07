@@ -51,6 +51,29 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void rebuildRows();
     void updateTempoLayout();
     void cancelInteraction() override;
+    // Shared inline value prompt behind the Set Value menu action and the
+    // empty-plot double-click. Opening snapshots the document revision and
+    // never writes; acceptance revalidates lane identity and revision before
+    // taking the normal commit path, so a stale prompt edits nothing.
+    struct PendingValuePrompt {
+        LaneHandle lane;
+        NodePoint anchor; // existing node (Set Value) or insertion tick/value
+        uint64_t expectedRevision = 0;
+        NodeValuePrompt prompt;
+        bool forExistingNode = false;
+    };
+
+    bool openValuePromptForNode(LaneHandle handle, const NodePoint &point);
+    // displayedValue is prompt-domain; tick and storedValue are lane-domain.
+    bool openValuePromptForInsertion(LaneHandle handle, uint64_t tick, int storedValue);
+    void acceptNodeValuePrompt(int displayedValue);
+    void cancelNodeValuePrompt();
+    bool valuePromptVisible() const noexcept { return m_pendingValuePrompt.has_value(); }
+    NodeValuePrompt pendingValuePrompt() const
+    {
+        return m_pendingValuePrompt ? m_pendingValuePrompt->prompt : NodeValuePrompt{};
+    }
+
     void setPencilMode(bool enabled);
     bool pencilMode() const noexcept { return m_pencilMode; }
     bool isPanning() const noexcept;
@@ -71,6 +94,9 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     bool gestureActive() const override;
     void inputCancelled(songview::TimelineInputCancelReason reason) override;
     void hostAppearanceChanged() override;
+
+  signals:
+    void valuePromptChanged();
 
   private:
     friend class AutomationPage;
@@ -234,6 +260,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     qreal m_pencilCursorDpr = 0.0;
     QCursor m_pencilCursor;
     std::optional<ActiveGesture> m_activeGesture;
+    std::optional<PendingValuePrompt> m_pendingValuePrompt;
     NodeLaneHoverState m_hoverState;
     NodeDoubleClickGuard m_deletedNodeClick;
 };

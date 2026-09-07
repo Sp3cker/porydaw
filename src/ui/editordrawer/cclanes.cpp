@@ -3,9 +3,6 @@
 #include <algorithm>
 
 #include <QCoreApplication>
-#include <QInputDialog>
-
-#include <QCoreApplication>
 
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
@@ -166,27 +163,26 @@ QString CCLaneAdapter::valueText(int value) const
     return m4aFormatCcValue(m_controller, uint8_t(value));
 }
 
-bool CCLaneAdapter::promptValue(QWidget *parent, int currentValue, int *storedValue) const
+NodeValuePrompt CCLaneAdapter::valuePrompt(int storedValue) const
 {
-    int value = currentValue;
-    int minimum = CoreTimeDefaults::laneValueMinimum(m_controller);
-    int maximum = CoreTimeDefaults::laneValueMaximum(m_controller);
-    QString label = QCoreApplication::translate("AutomationCanvas", "Value:");
+    NodeValuePrompt prompt;
+    prompt.title = title();
+    prompt.label = QCoreApplication::translate("AutomationCanvas", "Value:");
+    prompt.minimum = CoreTimeDefaults::laneValueMinimum(m_controller);
+    prompt.maximum = CoreTimeDefaults::laneValueMaximum(m_controller);
+    prompt.initialValue = storedValue;
     if (m_controller == CCLanes::bendController()) {
-        label = QCoreApplication::translate("AutomationCanvas", "Bend (0 = none):");
+        prompt.label = QCoreApplication::translate("AutomationCanvas", "Bend (0 = none):");
     } else if (m_controller == 10 || m_controller == 24) {
-        minimum = -64;
-        maximum = 63;
-        value -= 64;
-        label = QCoreApplication::translate("AutomationCanvas", "c_v value (0 = center):");
+        // Pan-style controllers present a centered range and store the
+        // displayed value shifted by 64.
+        prompt.minimum = -64;
+        prompt.maximum = 63;
+        prompt.initialValue = storedValue - 64;
+        prompt.storedOffset = 64;
+        prompt.label = QCoreApplication::translate("AutomationCanvas", "c_v value (0 = center):");
     }
-    bool accepted = false;
-    const int entered =
-        QInputDialog::getInt(parent, title(), label, value, minimum, maximum, 1, &accepted);
-    if (!accepted)
-        return false;
-    *storedValue = (m_controller == 10 || m_controller == 24) ? entered + 64 : entered;
-    return true;
+    return prompt;
 }
 
 int CCLaneAdapter::neutralValue() const

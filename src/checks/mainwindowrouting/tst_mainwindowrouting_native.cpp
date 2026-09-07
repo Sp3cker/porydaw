@@ -105,14 +105,18 @@ class MainWindowRoutingNativeTest final : public QObject, private MainWindowRout
         const int selectedTrack = view.selectionModel().primaryTrack();
         view.setTrackSolo(selectedTrack, false);
         QSignalSpy soloTriggered(solo, &QAction::triggered);
-        window.menuBar()->setFocus();
+        // Cocoa owns the visible menu bar natively, so QWidget focus can remain on
+        // the line edit above. Use an explicit non-text child for the window route.
+        QWidget shortcutTarget(&window);
+        shortcutTarget.setFocusPolicy(Qt::StrongFocus);
+        shortcutTarget.show();
+        shortcutTarget.setFocus(Qt::OtherFocusReason);
         QCoreApplication::processEvents();
-        QWidget *menuTarget = QApplication::focusWidget();
-        QVERIFY(menuTarget && !(menuTarget == &view || view.isAncestorOf(menuTarget)));
-        sendShortcut(*menuTarget, soloBindings.front());
+        QCOMPARE(QApplication::focusWidget(), &shortcutTarget);
+        sendShortcut(shortcutTarget, soloBindings.front());
         QVERIFY(view.trackSoloed(selectedTrack));
         QCOMPARE(soloTriggered.count(), 1);
-        sendShortcut(*menuTarget, soloBindings.front());
+        sendShortcut(shortcutTarget, soloBindings.front());
         QVERIFY(!view.trackSoloed(selectedTrack));
         QCOMPARE(soloTriggered.count(), 2);
         view.focusActiveSurface();

@@ -11,6 +11,15 @@
 #include <QRectF>
 #include <QString>
 
+struct NodeValuePrompt {
+    QString title;
+    QString label;
+    int initialValue = 0;
+    int minimum = 0;
+    int maximum = 0;
+    int storedOffset = 0;
+};
+
 struct NodePoint {
     uint64_t tick = 0;
     int value = 0;
@@ -50,7 +59,6 @@ std::optional<OriginPhantom> originPhantomAt(std::span<const NodePoint> points, 
     return OriginPhantom{handle, *std::prev(firstVisible), minimumValue, maximumValue};
 }
 
-class QWidget;
 struct AutomationGeometry;
 class NodeLane
 {
@@ -62,7 +70,10 @@ class NodeLane
     virtual int minimumValue() const = 0;
     virtual int maximumValue() const = 0;
     virtual QString valueText(int value) const = 0;
-    virtual bool promptValue(QWidget *parent, int currentValue, int *storedValue) const = 0;
+    // Everything the shared inline value prompt needs to present one edit.
+    // initialValue/minimum/maximum are prompt-displayed values; storedOffset
+    // converts a displayed value back to the stored lane value on acceptance.
+    virtual NodeValuePrompt valuePrompt(int storedValue) const = 0;
     virtual int neutralValue() const { return -1; }
     // Implicit held tick-zero value outside points(); nullopt means no such
     // value. Tempo retains its 120-BPM default until an explicit tick-zero

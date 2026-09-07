@@ -105,7 +105,8 @@ class AutomationEditingTest final : public QObject
     void contextMenuActionsApplyEffects();
     void clipboardCrossLanePasteClamps();
     void pointMenuDeleteCommitsEdit();
-    void pointMenuNumericDialogUpdatesOneDuplicateOccurrence();
+    void pointMenuValuePromptUpdatesOneDuplicateOccurrence();
+    void pointMenuValuePromptEscapeLeavesDocumentUntouched();
     void outsideRightClickDismissesPointMenu();
     void selectionContextMenuRoutesInsideActiveSelection();
 
@@ -163,10 +164,10 @@ class AutomationEditingTest final : public QObject
     void hoverInsertionDoesNotMutateDocument();
     void stationaryNodeInteractions_data();
     void stationaryNodeInteractions();
-    void independentDoubleClickAfterDeleteOpensValueDialog_data();
-    void independentDoubleClickAfterDeleteOpensValueDialog();
-    void doubleClickDeletesOnceWithoutValueDialog_data();
-    void doubleClickDeletesOnceWithoutValueDialog();
+    void independentDoubleClickAfterDeleteOpensValuePrompt_data();
+    void independentDoubleClickAfterDeleteOpensValuePrompt();
+    void doubleClickDeletesOnceWithoutValuePrompt_data();
+    void doubleClickDeletesOnceWithoutValuePrompt();
     void sweepAndRampCommit_data();
     void sweepAndRampCommit();
     void pencilPreviewCommits_data();

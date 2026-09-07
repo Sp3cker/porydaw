@@ -778,6 +778,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/drawerpresentation/fixtures.h
         src/checks/drawerpresentation/fixtures.cpp
         src/checks/drawerpresentation/drawer.cpp
+        src/checks/drawerpresentation/valueprompt.cpp
         src/checks/drawerpresentation/voice.cpp
         src/checks/drawerpresentation/velocity.cpp
         src/checks/velocity/tst_velocityediting.cpp

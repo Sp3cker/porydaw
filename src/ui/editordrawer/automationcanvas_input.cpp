@@ -477,7 +477,6 @@ bool AutomationCanvas::pointerDoubleClick(const songview::TimelinePointerInput &
     const auto *laneSlot = resolveSlot(pointerLane);
     if (!laneSlot || m_deletedNodeClick.consume())
         return false;
-    const NodeLane *lane = laneSlot->lane;
     NodePoint hit;
     if (nodePointHit(pointerLane, position, &hit))
         return true;
@@ -495,22 +494,13 @@ bool AutomationCanvas::pointerDoubleClick(const songview::TimelinePointerInput &
     const AutomationProjection proj = projection();
     const uint64_t tick =
         m_page.snapTick(proj.rawTickAt(position.x()), input.modifiers & Qt::AltModifier);
-    int value = mappedForLane(pointerLane, position, false, false, proj).value;
-    const bool accepted = lane->promptValue(&m_page.m_owner, value, &value);
-    if (m_inputHost)
-        m_inputHost->requestFocus(Qt::PopupFocusReason);
-    if (!accepted)
-        return true;
-    NodeLane *target = laneSlot->lane;
-    if (!target)
-        return true;
-    const std::vector<NodePoint> existing = target->points();
-    for (const NodePoint &point : existing) {
-        if (point.tick == tick && point.value == value)
-            return true;
-    }
-    target->replaceSpan(tick, tick, {{tick, value}});
-    m_page.requestRefresh();
+    const int storedValue = mappedForLane(pointerLane, position, false, false, proj).value;
+    // End the double-click's implicit grab before publishing the prompt. The
+    // resulting PointerUngrabbed cancellation is synchronous; publishing
+    // first would immediately clear the new pending edit during focus handoff.
+    if (songview::TimelineInputHost *const host = input.host ? input.host : m_inputHost)
+        host->releasePointerGrab();
+    openValuePromptForInsertion(pointerLane, tick, storedValue);
     return true;
 }
 

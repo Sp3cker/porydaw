@@ -10,6 +10,7 @@
 #include <QColor>
 #include <QEvent>
 #include <QImage>
+#include <QQuickItem>
 #include <QRectF>
 
 #include <QtTest>
@@ -26,6 +27,7 @@
 #include "ui/songview/editorselectionmodel.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
+#include "ui/songview/quick/timelinequickview.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/theme/trackidentitycolors.h"
 
@@ -140,38 +142,51 @@ bool layerHasSelectionRing(const songview::TimelineQuickLayerData &layer,
                }) >= 4;
 }
 
-bool framebufferHasSelectionRing(const QImage &framebuffer, const QPoint &contentPoint,
-                                 int verticalScroll, int gutterWidth, qreal ringRadius,
-                                 qreal ringWidth, const QColor &selectionColor)
+bool framebufferHasSelectionRing(const QImage &baseline, const QImage &framebuffer,
+                                 const QPoint &contentPoint, int verticalScroll, int gutterWidth,
+                                 qreal nodeOuterRadius, qreal ringRadius, qreal ringWidth,
+                                 const QColor &selectionColor)
 {
-    if (framebuffer.isNull() || framebuffer.devicePixelRatio() <= 0.0)
+    if (baseline.isNull() || framebuffer.isNull() || baseline.size() != framebuffer.size() ||
+        framebuffer.devicePixelRatio() <= 0.0 ||
+        !qFuzzyCompare(baseline.devicePixelRatio(), framebuffer.devicePixelRatio())) {
         return false;
+    }
 
     const qreal dpr = framebuffer.devicePixelRatio();
     const QPointF center = QPointF(contentPoint) + QPointF(gutterWidth, -verticalScroll);
-    const qreal tolerance = 2 * layout::singlePixel();
-    const qreal inner = std::max<qreal>(0.0, ringRadius - ringWidth / 2.0 - tolerance);
-    const qreal outer = ringRadius + ringWidth / 2.0 + tolerance;
+    const qreal selectedOuterRadius = ringRadius + ringWidth / 2.0;
+    const qreal inner = (nodeOuterRadius + selectedOuterRadius) / 2.0;
+    const qreal outer = selectedOuterRadius + layout::singlePixel();
     const qreal innerSquared = inner * inner;
     const qreal outerSquared = outer * outer;
     const int left = std::max(0, qFloor((center.x() - outer) * dpr));
     const int top = std::max(0, qFloor((center.y() - outer) * dpr));
     const int right = std::min(framebuffer.width() - 1, qCeil((center.x() + outer) * dpr));
     const int bottom = std::min(framebuffer.height() - 1, qCeil((center.y() + outer) * dpr));
+    unsigned changedQuadrants = 0;
     for (int y = top; y <= bottom; ++y) {
         for (int x = left; x <= right; ++x) {
             const QPointF delta((x + 0.5) / dpr - center.x(), (y + 0.5) / dpr - center.y());
             const qreal distanceSquared = delta.x() * delta.x() + delta.y() * delta.y();
             const QColor pixel = framebuffer.pixelColor(x, y);
+            const QColor oldPixel = baseline.pixelColor(x, y);
+            const int difference = std::abs(pixel.alpha() - oldPixel.alpha()) +
+                                   std::abs(pixel.red() - oldPixel.red()) +
+                                   std::abs(pixel.green() - oldPixel.green()) +
+                                   std::abs(pixel.blue() - oldPixel.blue());
             if (distanceSquared >= innerSquared && distanceSquared <= outerSquared &&
-                pixel.alpha() >= 32 && std::abs(pixel.red() - selectionColor.red()) <= 64 &&
+                difference >= 32 && pixel.alpha() >= 32 &&
+                std::abs(pixel.red() - selectionColor.red()) <= 64 &&
                 std::abs(pixel.green() - selectionColor.green()) <= 64 &&
                 std::abs(pixel.blue() - selectionColor.blue()) <= 64) {
-                return true;
+                const unsigned quadrant =
+                    (delta.x() >= 0.0 ? 1U : 0U) | (delta.y() >= 0.0 ? 2U : 0U);
+                changedQuadrants |= 1U << quadrant;
             }
         }
     }
-    return false;
+    return changedQuadrants == 0xFU;
 }
 
 LaneGeometry laneGeometry(const AutomationRasterFixture &fixture, LaneKind kind)
@@ -415,6 +430,10 @@ void AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes()
     const QPoint groupBPoint = pointAt(groupB, kGroupBValue);
     const QPoint groupCPoint = pointAt(groupC, kGroupCValue);
 
+    QString error;
+    const QImage baseline = fixture().renderAutomationViewport(&error);
+    QVERIFY2(error.isEmpty() && !baseline.isNull(), qPrintable(error));
+
     const quint64 nodesBefore =
         fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationNodes).revision;
     songview::EditorSelectionModel::TimeSelection selection;
@@ -428,6 +447,9 @@ void AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes()
     const QColor selectionColor = fixture().automationGutterInput().palette().highlight().color();
     const qreal ringRadius = fixture().geometry().selectedNodeRingRadius;
     const qreal ringWidth = fixture().geometry().selectedNodeRingDipWidth;
+    const qreal nodeOuterRadius =
+        fixture().geometry().nodePaintRadius + fixture().geometry().nodeOutlineDipWidth;
+    QVERIFY(ringRadius + ringWidth / 2.0 > nodeOuterRadius);
     QVERIFY(nodes.revision > nodesBefore);
     QVERIFY(layerHasSelectionRing(nodes, groupAPoint, fixture().page().verticalScroll(), ringRadius,
                                   ringWidth, selectionColor));
@@ -437,17 +459,30 @@ void AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes()
     QVERIFY(!layerHasSelectionRing(nodes, groupCPoint, fixture().page().verticalScroll(),
                                    ringRadius, ringWidth, selectionColor));
 
-    QString error;
+    auto *quickCanvas =
+        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    QQuickItem *const quickRoot = quickCanvas ? quickCanvas->rootObject() : nullptr;
+    QQuickItem *const selectionLayer =
+        quickRoot
+            ? quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineQuickAutomationSelection"))
+            : nullptr;
+    QVERIFY(selectionLayer);
+    // A track-range selection also dims unselected nodes and paints a reticle up to the
+    // half-open endpoint. Hide the reticle so this framebuffer probe isolates the node layer;
+    // its outer annulus excludes the smaller normal/dimmed marker.
+    selectionLayer->setVisible(false);
+    fixture().pump();
     const QImage framebuffer = fixture().renderAutomationViewport(&error);
     QVERIFY2(error.isEmpty() && !framebuffer.isNull(), qPrintable(error));
     const int gutterWidth = qRound(fixture().automationGutterInput().bounds().width());
-    QVERIFY(framebufferHasSelectionRing(framebuffer, groupAPoint, fixture().page().verticalScroll(),
-                                        gutterWidth, ringRadius, ringWidth, selectionColor));
-    QCOMPARE(framebufferHasSelectionRing(framebuffer, groupBPoint,
-                                         fixture().page().verticalScroll(), gutterWidth, ringRadius,
-                                         ringWidth, selectionColor),
+    QVERIFY(framebufferHasSelectionRing(baseline, framebuffer, groupAPoint,
+                                        fixture().page().verticalScroll(), gutterWidth,
+                                        nodeOuterRadius, ringRadius, ringWidth, selectionColor));
+    QCOMPARE(framebufferHasSelectionRing(baseline, framebuffer, groupBPoint,
+                                         fixture().page().verticalScroll(), gutterWidth,
+                                         nodeOuterRadius, ringRadius, ringWidth, selectionColor),
              includeEnd);
-    QVERIFY(!framebufferHasSelectionRing(framebuffer, groupCPoint,
-                                         fixture().page().verticalScroll(), gutterWidth, ringRadius,
-                                         ringWidth, selectionColor));
+    QVERIFY(!framebufferHasSelectionRing(baseline, framebuffer, groupCPoint,
+                                         fixture().page().verticalScroll(), gutterWidth,
+                                         nodeOuterRadius, ringRadius, ringWidth, selectionColor));
 }

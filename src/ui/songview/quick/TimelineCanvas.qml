@@ -713,6 +713,9 @@ Item {
         anchors.fill: parent
         chrome: drawerChrome
         quickView: timelineQuickView
+        automationBandRect: root.automationBandRect
+        automationBandVisible: root.automationBandVisible
+        controlFont: root.rulerFont
         z: 20
     }
 }

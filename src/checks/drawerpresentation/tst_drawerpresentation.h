@@ -25,6 +25,13 @@ class DrawerPresentationTest final : public QObject
     void drawerFocusFallback();
     void drawerHostClampAndHeaderRouting();
 
+    // Inline Quick value prompt coverage (Cleanup phase 4).
+    void valuePromptTempoLimitsAcceptAndClamp();
+    void valuePromptCcCenterOffsetInsertionCommit();
+    void valuePromptEscapeCancelsAndReturnsFocus();
+    void valuePromptFocusLossDocumentChangeAndPageHideCancel();
+    void valuePromptCancelAndLateAcceptWriteNothing();
+
     void voiceSurfaceAndPaintLifecycle();
     void voiceHoverLifecycle();
     void voiceRefreshLifecycle();

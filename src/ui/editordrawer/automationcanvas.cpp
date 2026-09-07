@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <optional>
+#include <utility>
 #include <variant>
 
 #include <QCursor>
@@ -562,6 +563,12 @@ void AutomationCanvas::cancelInteraction()
     m_activeGesture.reset();
     m_band.clear();
     m_tempoLane.cancel();
+    if (m_pendingValuePrompt) {
+        // Shared cancellation policy (detach, hide, deactivation, document
+        // change) drops the prompt without stealing focus from whoever has it.
+        m_pendingValuePrompt.reset();
+        emit valuePromptChanged();
+    }
     m_hoverState.previewValueLabel = {};
     m_hoverState.hover.highlightLocked = false;
     refreshHoverAt(contentPositionFromGlobal(QCursor::pos()));
@@ -586,6 +593,89 @@ void AutomationCanvas::cancelNodeGestures()
         setGestureActive(false);
 }
 
+bool AutomationCanvas::openValuePromptForNode(LaneHandle handle, const NodePoint &point)
+{
+    SongDocument *document = m_page.document();
+    const NodeLaneSlot *slot = resolveSlot(handle);
+    if (!document || !slot || !slot->lane)
+        return false;
+    m_pendingValuePrompt = PendingValuePrompt{handle, point, document->revision(),
+                                              slot->lane->valuePrompt(point.value), true};
+    emit valuePromptChanged();
+    return true;
+}
+
+bool AutomationCanvas::openValuePromptForInsertion(LaneHandle handle, uint64_t tick,
+                                                   int storedValue)
+{
+    SongDocument *document = m_page.document();
+    const NodeLaneSlot *slot = resolveSlot(handle);
+    if (!document || !slot || !slot->lane)
+        return false;
+    m_pendingValuePrompt = PendingValuePrompt{handle,
+                                              {tick, storedValue},
+                                              document->revision(),
+                                              slot->lane->valuePrompt(storedValue),
+                                              false};
+    emit valuePromptChanged();
+    return true;
+}
+
+void AutomationCanvas::acceptNodeValuePrompt(int displayedValue)
+{
+    const std::optional<PendingValuePrompt> pending =
+        std::exchange(m_pendingValuePrompt, std::nullopt);
+    if (!pending)
+        return;
+    emit valuePromptChanged();
+    SongDocument *document = m_page.document();
+    const NodeLaneSlot *slot = resolveSlot(pending->lane);
+    NodeLane *lane = slot ? slot->lane : nullptr;
+    if (!document || !lane || document->revision() != pending->expectedRevision) {
+        // Stale prompt — replacement, lane removal, or a document change
+        // since it opened. No edit, no undo entry, only the focus return.
+        if (m_inputHost)
+            m_inputHost->requestFocus(Qt::PopupFocusReason);
+        return;
+    }
+    const int stored = std::clamp(displayedValue + pending->prompt.storedOffset,
+                                  lane->minimumValue(), lane->maximumValue());
+    if (pending->forExistingNode) {
+        if (stored != pending->anchor.value) {
+            const NodeDrag drag{pending->lane,
+                                pending->anchor,
+                                {pending->anchor.tick, stored},
+                                lane->minimumValue(),
+                                lane->maximumValue()};
+            commitNodePointMoves(pending->expectedRevision, {drag});
+            m_page.requestRefresh();
+        }
+    } else {
+        const std::vector<NodePoint> existing = lane->points();
+        const bool duplicate =
+            std::any_of(existing.cbegin(), existing.cend(), [&](const NodePoint &point) {
+                return point.tick == pending->anchor.tick && point.value == stored;
+            });
+        if (!duplicate) {
+            lane->replaceSpan(pending->anchor.tick, pending->anchor.tick,
+                              {{pending->anchor.tick, stored}});
+            m_page.requestRefresh();
+        }
+    }
+    if (m_inputHost)
+        m_inputHost->requestFocus(Qt::PopupFocusReason);
+}
+
+void AutomationCanvas::cancelNodeValuePrompt()
+{
+    if (!m_pendingValuePrompt)
+        return;
+    m_pendingValuePrompt.reset();
+    emit valuePromptChanged();
+    if (m_inputHost)
+        m_inputHost->requestFocus(Qt::PopupFocusReason);
+}
+
 bool AutomationCanvas::showPointMenuNear(LaneHandle handle, const QPoint &position,
                                          const QPoint &globalPosition)
 {
@@ -596,46 +686,56 @@ bool AutomationCanvas::showPointMenuNear(LaneHandle handle, const QPoint &positi
         return false;
     LaneHandle target = handle;
     NodePoint targetPoint = point;
-    ui::ContextMenu menu(&m_page.m_owner);
-    QAction *setValue = menu.addAction(tr("Set Value"));
-    QAction *deletePoint = menu.addAction(tr("Delete"));
-    menu.setOutsideRightClickHandler([this, &menu, &target, &targetPoint](QPointF globalPos) {
-        const QPoint localPosition = contentPositionFromGlobal(globalPos).toPoint();
-        const LaneHandle candidate = laneAt(localPosition.y());
-        NodePoint candidatePoint;
-        if (!nodePointHit(candidate, localPosition, &candidatePoint))
-            return false;
-        target = candidate;
-        targetPoint = candidatePoint;
-        highlightHoveredPoint(candidate, localPosition, candidatePoint);
-        menu.popup(globalPos.toPoint());
+    enum class Choice : uint8_t { None, SetValue, Delete };
+    Choice choice = Choice::None;
+    {
+        // Destroy the native popup before handing focus to the inline Quick
+        // editor. Native menu teardown can deliver ungrab/deactivation after
+        // exec() returns; publishing the prompt while the menu still exists
+        // would make that teardown cancel the new pending edit.
+        ui::ContextMenu menu(&m_page.m_owner);
+        QAction *setValue = menu.addAction(tr("Set Value"));
+        QAction *deletePoint = menu.addAction(tr("Delete"));
+        menu.setOutsideRightClickHandler([this, &menu, &target, &targetPoint](QPointF globalPos) {
+            const QPoint localPosition = contentPositionFromGlobal(globalPos).toPoint();
+            const LaneHandle candidate = laneAt(localPosition.y());
+            NodePoint candidatePoint;
+            if (!nodePointHit(candidate, localPosition, &candidatePoint))
+                return false;
+            target = candidate;
+            targetPoint = candidatePoint;
+            highlightHoveredPoint(candidate, localPosition, candidatePoint);
+            menu.popup(globalPos.toPoint());
+            return true;
+        });
+        QAction *const chosen = menu.exec(globalPosition);
+        if (chosen == setValue)
+            choice = Choice::SetValue;
+        else if (chosen == deletePoint)
+            choice = Choice::Delete;
+    }
+
+    if (!m_page.document() || !mutableLane(target)) {
+        if (m_inputHost)
+            m_inputHost->requestFocus(Qt::PopupFocusReason);
         return true;
-    });
-    QAction *chosen = menu.exec(globalPosition);
-    if (m_inputHost)
-        m_inputHost->requestFocus(Qt::PopupFocusReason);
-    if (!m_page.document() || !mutableLane(target))
-        return true;
+    }
     SongDocument *document = m_page.document();
-    if (chosen == setValue) {
-        int stored = targetPoint.value;
-        const NodeLane *lane = mutableLane(target);
-        const bool accepted = lane->promptValue(&m_page.m_owner, stored, &stored);
-        if (accepted && stored != targetPoint.value) {
-            const NodeDrag drag{target,
-                                targetPoint,
-                                {targetPoint.tick, stored},
-                                lane->minimumValue(),
+    if (choice == Choice::SetValue) {
+        if (m_inputHost)
+            m_inputHost->releasePointerGrab();
+        if (!openValuePromptForNode(target, targetPoint) && m_inputHost)
+            m_inputHost->requestFocus(Qt::PopupFocusReason);
+    } else {
+        if (m_inputHost)
+            m_inputHost->requestFocus(Qt::PopupFocusReason);
+        if (choice == Choice::Delete) {
+            const NodeLane *lane = mutableLane(target);
+            const NodeDrag drag{target, targetPoint, targetPoint, lane->minimumValue(),
                                 lane->maximumValue()};
-            commitNodePointMoves(document->revision(), {drag});
+            commitNodePointDeletes(document->revision(), {drag});
             m_page.requestRefresh();
         }
-    } else if (chosen == deletePoint) {
-        const NodeLane *lane = mutableLane(target);
-        const NodeDrag drag{target, targetPoint, targetPoint, lane->minimumValue(),
-                            lane->maximumValue()};
-        commitNodePointDeletes(document->revision(), {drag});
-        m_page.requestRefresh();
     }
     return true;
 }

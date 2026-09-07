@@ -10,11 +10,11 @@
 #include <cmath>
 #include <utility>
 
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/layout.h"
-#include "ui/songview.h"
 
 namespace {
 
@@ -212,6 +212,8 @@ DrawerChrome::DrawerChrome(AutomationPage &page, EditorDrawer *parent)
     , m_icons(new DrawerChromeIconProvider)
 {
     connect(&m_page, &AutomationPage::scrollStateChanged, this, &DrawerChrome::scrollChanged);
+    connect(m_page.canvas(), &AutomationCanvas::valuePromptChanged, this,
+            &DrawerChrome::valuePromptChanged);
 }
 
 DrawerChromeInteraction &DrawerChrome::interaction(DrawerChromeTarget target) noexcept
@@ -364,6 +366,46 @@ int DrawerChrome::hoveredHandle() const noexcept
     return m_hoveredHandle ? static_cast<int>(*m_hoveredHandle) : -1;
 }
 
+bool DrawerChrome::valuePromptVisible() const
+{
+    return m_page.canvas()->valuePromptVisible();
+}
+
+QString DrawerChrome::valuePromptTitle() const
+{
+    return m_page.canvas()->pendingValuePrompt().title;
+}
+
+QString DrawerChrome::valuePromptLabel() const
+{
+    return m_page.canvas()->pendingValuePrompt().label;
+}
+
+int DrawerChrome::valuePromptInitialValue() const
+{
+    return m_page.canvas()->pendingValuePrompt().initialValue;
+}
+
+int DrawerChrome::valuePromptMinimum() const
+{
+    return m_page.canvas()->pendingValuePrompt().minimum;
+}
+
+int DrawerChrome::valuePromptMaximum() const
+{
+    return m_page.canvas()->pendingValuePrompt().maximum;
+}
+
+void DrawerChrome::acceptNodeValuePrompt(int displayedValue)
+{
+    m_page.canvas()->acceptNodeValuePrompt(displayedValue);
+}
+
+void DrawerChrome::cancelNodeValuePrompt()
+{
+    m_page.canvas()->cancelNodeValuePrompt();
+}
+
 bool DrawerChrome::handlePress(DrawerChromeTarget target,
                                const songview::TimelinePointerInput &input)
 {
@@ -457,8 +499,14 @@ bool DrawerChrome::handleRelease(DrawerChromeTarget target,
         const std::optional<EditorDrawerPage> page = m_pressedToggle;
         m_pressedToggle.reset();
         if (page &&
-            toggleRect(m_snapshot, *page).contains(m_snapshot.barRect.topLeft() + input.position))
+            toggleRect(m_snapshot, *page).contains(m_snapshot.barRect.topLeft() + input.position)) {
+            // The bar input owns Quick focus during the click, but it is not a
+            // timeline band. Restore the currently visible drawer page before
+            // changing visibility so EditorDrawer can hand focus to the next
+            // visible page when the active section closes.
+            m_drawer.focusVisiblePage();
             activateToggle(static_cast<int>(*page));
+        }
         return true;
     }
 
