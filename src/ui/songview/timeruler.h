@@ -4,6 +4,7 @@
 
 #include <QFont>
 #include <QFontMetrics>
+#include <QMetaObject>
 #include <QObject>
 #include <QPoint>
 #include <QPointF>
@@ -12,9 +13,11 @@
 #include <QString>
 #include <QVariantMap>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 class QMenu;
+class SongDocument;
 
 class SongView;
 
@@ -36,6 +39,20 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
     Q_PROPERTY(bool gridControlsEnabled READ gridControlsEnabled NOTIFY gridControlsChanged FINAL)
     Q_PROPERTY(QVariantMap gridControlAppearance READ gridControlAppearance NOTIFY
                    gridControlAppearanceChanged FINAL)
+    Q_PROPERTY(int timeSigPromptInitialNumerator READ timeSigPromptInitialNumerator NOTIFY
+                   timeSigPromptChanged FINAL)
+    Q_PROPERTY(int timeSigPromptInitialDenominatorPow2 READ timeSigPromptInitialDenominatorPow2
+                   NOTIFY timeSigPromptChanged FINAL)
+    Q_PROPERTY(int timeSigPromptMinimumNumerator READ timeSigPromptMinimumNumerator CONSTANT FINAL)
+    Q_PROPERTY(int timeSigPromptMaximumNumerator READ timeSigPromptMaximumNumerator CONSTANT FINAL)
+    Q_PROPERTY(int timeSigPromptMinimumDenominatorPow2 READ timeSigPromptMinimumDenominatorPow2
+                   CONSTANT FINAL)
+    Q_PROPERTY(int timeSigPromptMaximumDenominatorPow2 READ timeSigPromptMaximumDenominatorPow2
+                   CONSTANT FINAL)
+    Q_PROPERTY(QString timeSigPromptTitle READ timeSigPromptTitle NOTIFY timeSigPromptChanged FINAL)
+    Q_PROPERTY(QString timeSigPromptLabel READ timeSigPromptLabel NOTIFY timeSigPromptChanged FINAL)
+    Q_PROPERTY(QVariantMap timeSigPromptAppearance READ timeSigPromptAppearance NOTIFY
+                   timeSigPromptChanged FINAL)
 
   private:
     struct Geometry {
@@ -63,6 +80,20 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
     Q_INVOKABLE void openDivisionMenu(QPointF position);
     Q_INVOKABLE void openFeelMenu(QPointF position);
 
+    // Typed Quick-modal bridge for time-signature editing. The guarded target
+    // remains with the ruler rather than a generic prompt result object.
+    Q_INVOKABLE void acceptTimeSigPrompt(int numerator, int denominatorPow2);
+    Q_INVOKABLE void cancelTimeSigPrompt();
+    void cancelTimeSigPromptWithoutFocus();
+    int timeSigPromptInitialNumerator() const noexcept;
+    int timeSigPromptInitialDenominatorPow2() const noexcept;
+    static constexpr int timeSigPromptMinimumNumerator() noexcept { return 1; }
+    static constexpr int timeSigPromptMaximumNumerator() noexcept { return 32; }
+    static constexpr int timeSigPromptMinimumDenominatorPow2() noexcept { return 0; }
+    static constexpr int timeSigPromptMaximumDenominatorPow2() noexcept { return 5; }
+    QString timeSigPromptTitle() const;
+    QString timeSigPromptLabel() const;
+    QVariantMap timeSigPromptAppearance() const;
     bool gestureActive() const noexcept override;
     void cancelInteraction() override;
 
@@ -80,6 +111,7 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
   signals:
     void gridControlsChanged();
     void gridControlAppearanceChanged();
+    void timeSigPromptChanged();
 
   private:
     friend class TimelineQuickView;
@@ -130,6 +162,18 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
 
     void showRulerMenu(uint64_t clickTick, const QPoint &globalPos);
 
+    struct PendingTimeSigPrompt {
+        QPointer<SongDocument> document;
+        uint64_t documentRevision = 0;
+        uint64_t tick = 0;
+        int initialNumerator = timeSigPromptMinimumNumerator();
+        int initialDenominatorPow2 = timeSigPromptMinimumDenominatorPow2();
+    };
+
+    void openTimeSigPrompt(uint64_t tick, int numerator, int denominatorPow2);
+    void clearTimeSigPrompt(bool restoreFocus);
+    void restoreTimeSigPromptFocus();
+
     QFont m_signatureFont;
     QFont m_rulerFont;
     QFont m_beatFont;
@@ -150,6 +194,8 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
     bool m_gridControlsEnabled = false;
     QVariantMap m_gridControlAppearance;
     QPointer<QMenu> m_openMenu; // Grid-control or ruler context menu during exec().
+    std::optional<PendingTimeSigPrompt> m_pendingTimeSigPrompt;
+    QMetaObject::Connection m_timeSigPromptCancellation;
     int m_markerHeight = 0;
     int m_dragMarker = -1;
     uint64_t m_dragTick = 0;

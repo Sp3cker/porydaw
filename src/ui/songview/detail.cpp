@@ -4,15 +4,6 @@
 #include "ui/theme/themeruntime.h"
 #include "ui/theme/trackidentitycolors.h"
 
-#include <QComboBox>
-#include <QDialog>
-#include <QDialogButtonBox>
-#include <QFontMetrics>
-#include <QHBoxLayout>
-#include <QKeySequence>
-#include <QLabel>
-#include <QSpinBox>
-#include <QVBoxLayout>
 #include <array>
 #include <climits>
 #include <cmath>
@@ -98,35 +89,6 @@ QString contextActionText(const QString &text, const QString &commandId)
 QString timeSigLabel(int numerator, int denomPow2)
 {
     return QStringLiteral("%1/%2").arg(numerator).arg(1 << std::min(denomPow2, 6));
-}
-
-// Modal numerator/denominator editor for a ruler time-signature marker.
-bool askTimeSignature(QWidget *parent, int *numerator, int *denomPow2)
-{
-    QDialog dlg(parent);
-    dlg.setWindowTitle(SongView::tr("Time Signature"));
-    auto *num = new QSpinBox(&dlg);
-    num->setRange(1, 32);
-    num->setValue(std::clamp(*numerator, 1, 32));
-    auto *den = new QComboBox(&dlg);
-    for (int p = 0; p <= 5; p++)
-        den->addItem(QString::number(1 << p), p);
-    den->setCurrentIndex(std::clamp(*denomPow2, 0, 5));
-    auto *row = new QHBoxLayout;
-    row->addWidget(num);
-    row->addWidget(new QLabel(QStringLiteral("/"), &dlg));
-    row->addWidget(den);
-    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
-    QObject::connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-    QObject::connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
-    auto *layout = new QVBoxLayout(&dlg);
-    layout->addLayout(row);
-    layout->addWidget(buttons);
-    if (dlg.exec() != QDialog::Accepted)
-        return false;
-    *numerator = num->value();
-    *denomPow2 = den->currentData().toInt();
-    return true;
 }
 
 QColor loopEdge()

@@ -478,6 +478,10 @@ set_source_files_properties(
     PROPERTIES QT_RESOURCE_ALIAS VelocityPrompt.qml
 )
 set_source_files_properties(
+    src/ui/songview/quick/TimeSignaturePrompt.qml
+    PROPERTIES QT_RESOURCE_ALIAS TimeSignaturePrompt.qml
+)
+set_source_files_properties(
     src/ui/songview/quick/EventListPage.qml
     PROPERTIES QT_RESOURCE_ALIAS EventListPage.qml
 )
@@ -505,6 +509,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/DragInput.qml
         src/ui/songview/quick/PitchBendPopup.qml
         src/ui/songview/quick/VelocityPrompt.qml
+        src/ui/songview/quick/TimeSignaturePrompt.qml
 )
 target_precompile_headers(porydaw_app PRIVATE
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
@@ -578,6 +583,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/rollcheck/pencil.cpp
         src/checks/rollcheck/pencil_velocity.cpp
         src/checks/rollcheck/velocity_prompt.cpp
+        src/checks/rollcheck/time_signature_prompt.cpp
         src/checks/rollcheck/interlock.cpp
         src/checks/rollcheck/selection.cpp
         src/checks/rollcheck/note_rendering.cpp

@@ -2,10 +2,12 @@
 
 #include "ui/songview/timeruler.h"
 
+#include "core/songdocument.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/grid.h"
+#include "ui/songview/quick/quickmodalhost.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
@@ -13,6 +15,7 @@
 #include <QAction>
 #include <QFontMetrics>
 #include <QMenu>
+#include <QUrl>
 #include <QVariant>
 
 #include <algorithm>
@@ -182,6 +185,154 @@ void TimeRuler::openGridMenu(QPointF position, bool division)
         m_owner.setGridFeel(static_cast<GridFeel>(action->data().toInt()));
 }
 
+int TimeRuler::timeSigPromptInitialNumerator() const noexcept
+{
+    return m_pendingTimeSigPrompt ? m_pendingTimeSigPrompt->initialNumerator
+                                  : timeSigPromptMinimumNumerator();
+}
+
+int TimeRuler::timeSigPromptInitialDenominatorPow2() const noexcept
+{
+    return m_pendingTimeSigPrompt ? m_pendingTimeSigPrompt->initialDenominatorPow2
+                                  : timeSigPromptMinimumDenominatorPow2();
+}
+
+QString TimeRuler::timeSigPromptTitle() const
+{
+    return SongView::tr("Time Signature");
+}
+
+QString TimeRuler::timeSigPromptLabel() const
+{
+    return SongView::tr("Numerator (1-32):");
+}
+
+QVariantMap TimeRuler::timeSigPromptAppearance() const
+{
+    QVariantMap appearance;
+    appearance.insert(QStringLiteral("font"), m_inputHost ? m_inputHost->font() : m_owner.font());
+    appearance.insert(QStringLiteral("background"), themes::color(themes::Role::window_background));
+    appearance.insert(QStringLiteral("outline"), themes::color(themes::Role::palette_outline));
+    appearance.insert(QStringLiteral("text"), themes::color(themes::Role::window_text));
+    appearance.insert(QStringLiteral("focus"), themes::color(themes::Role::focus_outline));
+    appearance.insert(QStringLiteral("buttonBackground"),
+                      themes::color(themes::Role::button_background));
+    appearance.insert(QStringLiteral("buttonText"), themes::color(themes::Role::button_text));
+    appearance.insert(QStringLiteral("pressedBackground"),
+                      themes::color(themes::Role::button_pressed_background));
+    appearance.insert(QStringLiteral("borderWidth"), lyt::singlePixel());
+    appearance.insert(QStringLiteral("radius"), lyt::space(Space::Half));
+    appearance.insert(QStringLiteral("dialogPadding"), lyt::space(Space::One));
+    appearance.insert(QStringLiteral("horizontalPadding"), lyt::space(Space::One));
+    appearance.insert(QStringLiteral("verticalPadding"), lyt::space(Space::Half));
+    appearance.insert(QStringLiteral("buttonPadding"), lyt::space(Space::One));
+    appearance.insert(QStringLiteral("spacing"), lyt::space(Space::One));
+    appearance.insert(QStringLiteral("dragThreshold"), lyt::fontPxF(1.0));
+    return appearance;
+}
+
+void TimeRuler::openTimeSigPrompt(uint64_t tick, int numerator, int denominatorPow2)
+{
+    SongDocument *const document = m_owner.document();
+    TimelineQuickView *const quick = m_owner.quickView();
+    QuickModalHost *const host = quick ? quick->modalHost() : nullptr;
+    if (!document || !host)
+        return;
+
+    // Replacement ends the former session before this ruler publishes a new
+    // guarded target. Owner-local cleanup cannot close another owner's modal.
+    if (m_pendingTimeSigPrompt)
+        cancelTimeSigPromptWithoutFocus();
+    else
+        host->cancel();
+
+    PendingTimeSigPrompt pending;
+    pending.document = document;
+    pending.documentRevision = document->revision();
+    pending.tick = tick;
+    pending.initialNumerator =
+        std::clamp(numerator, timeSigPromptMinimumNumerator(), timeSigPromptMaximumNumerator());
+    pending.initialDenominatorPow2 =
+        std::clamp(denominatorPow2, timeSigPromptMinimumDenominatorPow2(),
+                   timeSigPromptMaximumDenominatorPow2());
+    m_pendingTimeSigPrompt = std::move(pending);
+    emit timeSigPromptChanged();
+
+    QObject::disconnect(m_timeSigPromptCancellation);
+    m_timeSigPromptCancellation = connect(host, &QuickModalHost::cancelled, this,
+                                          [this] { clearTimeSigPrompt(/*restoreFocus=*/true); });
+    if (!host->open(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/TimeSignaturePrompt.qml")), this,
+                    timeSigPromptTitle())) {
+        clearTimeSigPrompt(/*restoreFocus=*/true);
+    }
+}
+
+void TimeRuler::acceptTimeSigPrompt(int numerator, int denominatorPow2)
+{
+    if (numerator < timeSigPromptMinimumNumerator() ||
+        numerator > timeSigPromptMaximumNumerator() ||
+        denominatorPow2 < timeSigPromptMinimumDenominatorPow2() ||
+        denominatorPow2 > timeSigPromptMaximumDenominatorPow2() || !m_pendingTimeSigPrompt) {
+        return;
+    }
+
+    const PendingTimeSigPrompt pending = std::move(*m_pendingTimeSigPrompt);
+    m_pendingTimeSigPrompt.reset(); // Never expose a target while mutating its document.
+    QObject::disconnect(m_timeSigPromptCancellation);
+    m_timeSigPromptCancellation = {};
+    emit timeSigPromptChanged();
+
+    SongDocument *const document = m_owner.document();
+    if (document == pending.document.data() && document->revision() == pending.documentRevision &&
+        (numerator != pending.initialNumerator ||
+         denominatorPow2 != pending.initialDenominatorPow2)) {
+        document->setTimeSig(pending.tick, numerator, denominatorPow2);
+    }
+    if (TimelineQuickView *const quick = m_owner.quickView())
+        quick->modalHost()->close();
+    restoreTimeSigPromptFocus();
+}
+
+void TimeRuler::cancelTimeSigPrompt()
+{
+    if (!m_pendingTimeSigPrompt)
+        return;
+    if (TimelineQuickView *const quick = m_owner.quickView())
+        quick->modalHost()->cancel();
+    if (m_pendingTimeSigPrompt)
+        clearTimeSigPrompt(/*restoreFocus=*/true);
+}
+
+void TimeRuler::cancelTimeSigPromptWithoutFocus()
+{
+    const bool ownsModal = m_pendingTimeSigPrompt.has_value();
+    m_pendingTimeSigPrompt.reset();
+    QObject::disconnect(m_timeSigPromptCancellation);
+    m_timeSigPromptCancellation = {};
+    if (ownsModal) {
+        emit timeSigPromptChanged();
+        if (TimelineQuickView *const quick = m_owner.quickView())
+            quick->modalHost()->cancel();
+    }
+}
+
+void TimeRuler::clearTimeSigPrompt(bool restoreFocus)
+{
+    const bool hadPending = m_pendingTimeSigPrompt.has_value();
+    m_pendingTimeSigPrompt.reset();
+    QObject::disconnect(m_timeSigPromptCancellation);
+    m_timeSigPromptCancellation = {};
+    if (hadPending)
+        emit timeSigPromptChanged();
+    if (restoreFocus)
+        restoreTimeSigPromptFocus();
+}
+
+void TimeRuler::restoreTimeSigPromptFocus()
+{
+    m_owner.focusTimelineBand(TimelineBand::Ruler, Qt::OtherFocusReason);
+}
+
 void TimeRuler::closePopups()
 {
     if (m_openMenu)
@@ -225,6 +376,7 @@ void TimeRuler::detachInputHost(TimelineInputHost &host)
     if (m_inputHost != &host)
         return;
     closePopups();
+    cancelTimeSigPromptWithoutFocus();
     cancelInteraction();
     m_inputHost = nullptr;
     syncGridControls();

@@ -346,6 +346,8 @@ SongView::~SongView()
 {
     if (m_roll)
         m_roll->cancelVelocityPromptWithoutFocus();
+    if (m_ruler)
+        m_ruler->cancelTimeSigPromptWithoutFocus();
     if (!m_quickView)
         return;
     m_quickView->detachInputInteraction(TimelineBand::Ruler);
@@ -381,6 +383,8 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
         m_roll->cancelVelocityPromptWithoutFocus();
         m_roll->cancelPitchBendPopup();
     }
+    if (m_ruler)
+        m_ruler->cancelTimeSigPromptWithoutFocus();
     cancelActiveInteractions();
     if (timeline)
         m_trackActivity.resetPaused();
@@ -551,6 +555,8 @@ void SongView::prepareForSongReplacement()
         m_roll->cancelVelocityPromptWithoutFocus();
         m_roll->cancelPitchBendPopup();
     }
+    if (m_ruler)
+        m_ruler->cancelTimeSigPromptWithoutFocus();
     cancelActiveInteractions();
     m_headers->cancelTransientState();
     disconnectDocument();
@@ -566,8 +572,10 @@ void SongView::cancelTransientInput()
         m_roll->cancelVelocityPromptWithoutFocus();
         m_roll->cancelPitchBendPopupWithoutFocus();
     }
-    if (m_ruler)
+    if (m_ruler) {
+        m_ruler->cancelTimeSigPromptWithoutFocus();
         m_ruler->closePopups();
+    }
     if (m_headers)
         m_headers->cancelTransientState();
     if (QWidget *mouseGrabber = QWidget::mouseGrabber();
@@ -619,6 +627,8 @@ void SongView::setDocument(SongDocument *document)
             m_roll->cancelVelocityPromptWithoutFocus();
             m_roll->cancelPitchBendPopup();
         }
+        if (m_ruler)
+            m_ruler->cancelTimeSigPromptWithoutFocus();
         cancelActiveInteractions();
         disconnectDocument();
         if (document) {
@@ -627,6 +637,8 @@ void SongView::setDocument(SongDocument *document)
                 // Any document edit invalidates a preview captured at the
                 // previous revision before the normal page refresh.
                 cancelActiveInteractions();
+                if (m_ruler)
+                    m_ruler->cancelTimeSigPromptWithoutFocus();
                 m_editorDrawer->automationPage()->documentChanged();
                 m_editorDrawer->velocityArea()->documentChanged();
                 m_editorDrawer->voiceChangeArea()->documentChanged();

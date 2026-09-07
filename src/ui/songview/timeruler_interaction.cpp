@@ -204,8 +204,7 @@ bool TimeRuler::pointerDoubleClick(const TimelinePointerInput &input)
     // The first press of the double-click armed a chip drag; cancel it
     // before the modal editor swallows the release.
     m_dragTimeSig = false;
-    if (askTimeSignature(&m_owner, &numerator, &denomPow2))
-        doc->setTimeSig(sigTick, numerator, denomPow2);
+    openTimeSigPrompt(sigTick, numerator, denomPow2);
     requestQuickUpdate();
     return true;
 }
@@ -245,71 +244,85 @@ void TimeRuler::showRulerMenu(uint64_t clickTick, const QPoint &globalPos)
     const MidiTimeline *timeline = m_owner.timeline();
     if (!doc || !timeline)
         return;
-    QMenu menu(&m_owner);
-    QAction *setStart = menu.addAction(SongView::tr("Set loop start here"));
-    QAction *setEnd = menu.addAction(SongView::tr("Set loop end here"));
-    QAction *remove = menu.addAction(SongView::tr("Remove loop markers"));
-    remove->setEnabled(timeline->loopStartTick != UINT64_MAX ||
-                       timeline->loopEndTick != UINT64_MAX);
-    QAction *loopFromSelection = nullptr;
-    QAction *insertBlank = nullptr;
-    QAction *duplicate = nullptr;
-    QAction *removeContents = nullptr;
-    QAction *clearSelection = nullptr;
-    const EditorSelectionModel::TimeSelection selection = m_owner.selectionModel().timeSelection();
-    if (selection.active()) {
+    bool openTimeSig = false;
+    uint64_t timeSigPromptTick = 0;
+    int timeSigPromptNumerator = 0;
+    int timeSigPromptDenominatorPow2 = 0;
+    {
+        QMenu menu(&m_owner);
+        QAction *setStart = menu.addAction(SongView::tr("Set loop start here"));
+        QAction *setEnd = menu.addAction(SongView::tr("Set loop end here"));
+        QAction *remove = menu.addAction(SongView::tr("Remove loop markers"));
+        remove->setEnabled(timeline->loopStartTick != UINT64_MAX ||
+                           timeline->loopEndTick != UINT64_MAX);
+        QAction *loopFromSelection = nullptr;
+        QAction *insertBlank = nullptr;
+        QAction *duplicate = nullptr;
+        QAction *removeContents = nullptr;
+        QAction *clearSelection = nullptr;
+        const EditorSelectionModel::TimeSelection selection =
+            m_owner.selectionModel().timeSelection();
+        if (selection.active()) {
+            menu.addSeparator();
+            loopFromSelection = menu.addAction(SongView::tr("Set loop to selection"));
+            insertBlank = menu.addAction(SongView::tr("Insert blank time"));
+            duplicate = menu.addAction(SongView::tr("Duplicate time"));
+            duplicate->setShortcut(keymap::Registry::instance()
+                                       .bindings(QStringLiteral("roll.duplicate_time"))
+                                       .value(0));
+            removeContents = menu.addAction(SongView::tr("Remove contents (shift left)"));
+            clearSelection = menu.addAction(SongView::tr("Clear time selection"));
+        }
         menu.addSeparator();
-        loopFromSelection = menu.addAction(SongView::tr("Set loop to selection"));
-        insertBlank = menu.addAction(SongView::tr("Insert blank time"));
-        duplicate = menu.addAction(SongView::tr("Duplicate time"));
-        duplicate->setShortcut(
-            keymap::Registry::instance().bindings(QStringLiteral("roll.duplicate_time")).value(0));
-        removeContents = menu.addAction(SongView::tr("Remove contents (shift left)"));
-        clearSelection = menu.addAction(SongView::tr("Clear time selection"));
+        uint64_t sigTick = clickTick;
+        int sigNum, sigDen;
+        bool sigImplicit = true;
+        const bool onChip =
+            hitTimeSigChip(m_rightPressPos, &sigTick, &sigNum, &sigDen, &sigImplicit);
+        if (!onChip)
+            sigAtTick(clickTick, &sigNum, &sigDen);
+        QAction *editSig = menu.addAction(onChip ? SongView::tr("Edit time signature…")
+                                                 : SongView::tr("Set time signature here…"));
+        editSig->setObjectName(QStringLiteral("timeSignatureEditAction"));
+        QAction *removeSig = menu.addAction(SongView::tr("Remove time signature"));
+        removeSig->setEnabled(onChip && !sigImplicit);
+        m_openMenu = &menu;
+        QAction *chosen = menu.exec(globalPos);
+        if (m_openMenu.data() == &menu)
+            m_openMenu.clear();
+        if (chosen == setStart) {
+            doc->setLoopTick(false, int64_t(clickTick));
+        } else if (chosen == setEnd) {
+            doc->setLoopTick(true, int64_t(clickTick));
+        } else if (chosen == remove) {
+            // Two commands; undo restores them one at a time.
+            if (timeline->loopStartTick != UINT64_MAX)
+                doc->setLoopTick(false, -1);
+            if (m_owner.timeline()->loopEndTick != UINT64_MAX)
+                doc->setLoopTick(true, -1);
+        } else if (chosen && chosen == loopFromSelection) {
+            // Same two-command shape as "Remove loop markers".
+            doc->setLoopTick(false, int64_t(selection.startTick));
+            doc->setLoopTick(true, int64_t(selection.endTick));
+        } else if (chosen && chosen == insertBlank) {
+            m_owner.insertBlankTime();
+        } else if (chosen && chosen == duplicate) {
+            m_owner.duplicateTimeSelection();
+        } else if (chosen && chosen == removeContents) {
+            m_owner.removeTimeSelectionContents();
+        } else if (chosen && chosen == clearSelection) {
+            m_owner.selectionModel().clearTimeSelection();
+        } else if (chosen == editSig) {
+            openTimeSig = true;
+            timeSigPromptTick = sigTick;
+            timeSigPromptNumerator = sigNum;
+            timeSigPromptDenominatorPow2 = sigDen;
+        } else if (chosen == removeSig) {
+            doc->deleteTimeSig(sigTick);
+        }
     }
-    menu.addSeparator();
-    uint64_t sigTick = clickTick;
-    int sigNum, sigDen;
-    bool sigImplicit = true;
-    const bool onChip = hitTimeSigChip(m_rightPressPos, &sigTick, &sigNum, &sigDen, &sigImplicit);
-    if (!onChip)
-        sigAtTick(clickTick, &sigNum, &sigDen);
-    QAction *editSig = menu.addAction(onChip ? SongView::tr("Edit time signature…")
-                                             : SongView::tr("Set time signature here…"));
-    QAction *removeSig = menu.addAction(SongView::tr("Remove time signature"));
-    removeSig->setEnabled(onChip && !sigImplicit);
-    m_openMenu = &menu;
-    QAction *chosen = menu.exec(globalPos);
-    if (m_openMenu.data() == &menu)
-        m_openMenu.clear();
-    if (chosen == setStart) {
-        doc->setLoopTick(false, int64_t(clickTick));
-    } else if (chosen == setEnd) {
-        doc->setLoopTick(true, int64_t(clickTick));
-    } else if (chosen == remove) {
-        // Two commands; undo restores them one at a time.
-        if (timeline->loopStartTick != UINT64_MAX)
-            doc->setLoopTick(false, -1);
-        if (m_owner.timeline()->loopEndTick != UINT64_MAX)
-            doc->setLoopTick(true, -1);
-    } else if (chosen && chosen == loopFromSelection) {
-        // Same two-command shape as "Remove loop markers".
-        doc->setLoopTick(false, int64_t(selection.startTick));
-        doc->setLoopTick(true, int64_t(selection.endTick));
-    } else if (chosen && chosen == insertBlank) {
-        m_owner.insertBlankTime();
-    } else if (chosen && chosen == duplicate) {
-        m_owner.duplicateTimeSelection();
-    } else if (chosen && chosen == removeContents) {
-        m_owner.removeTimeSelectionContents();
-    } else if (chosen && chosen == clearSelection) {
-        m_owner.selectionModel().clearTimeSelection();
-    } else if (chosen == editSig) {
-        if (askTimeSignature(&m_owner, &sigNum, &sigDen))
-            doc->setTimeSig(sigTick, sigNum, sigDen);
-    } else if (chosen == removeSig) {
-        doc->deleteTimeSig(sigTick);
-    }
+    if (openTimeSig)
+        openTimeSigPrompt(timeSigPromptTick, timeSigPromptNumerator, timeSigPromptDenominatorPow2);
 }
 
 } // namespace songview

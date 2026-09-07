@@ -29,7 +29,6 @@ QString keyName(int key);
 // by the note and time-selection menus so a rebinding updates both.
 QString contextActionText(const QString &text, const QString &commandId);
 QString timeSigLabel(int numerator, int denomPow2);
-bool askTimeSignature(QWidget *parent, int *numerator, int *denomPow2);
 QColor loopEdge();
 QColor pianoRollAccidentalLaneColor();
 QColor pianoRollScaleHighlightColor();
