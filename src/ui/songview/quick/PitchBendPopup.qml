@@ -79,7 +79,7 @@ Rectangle {
 
             x: labels.canvas.x
             y: 0
-            width: Math.max(0, labels.canvas.width - liveValue.implicitWidth - root.controlGap)
+            width: Math.max(0, liveValue.width - liveValue.implicitWidth - root.controlGap)
             height: labels.canvas.y
             clip: true
             verticalAlignment: Text.AlignVCenter
@@ -96,7 +96,10 @@ Rectangle {
 
             x: labels.canvas.x
             y: 0
-            width: labels.canvas.width
+            // The lane's Reset button shares this band, vertically centered
+            // like this readout and right-aligned to the canvas edge; stop
+            // the readout one control gap short so it stays fully visible.
+            width: Math.max(0, labels.canvas.width - root.resetWidth - root.controlGap)
             height: labels.canvas.y
             clip: true
             horizontalAlignment: Text.AlignRight
