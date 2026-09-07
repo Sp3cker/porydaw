@@ -485,7 +485,7 @@ class HostIntegrationTest final : public QObject
         const bool clearsSelection = route == QStringLiteral("track-replace") ||
                                      route == QStringLiteral("song-null") ||
                                      route == QStringLiteral("document-null");
-        LoadedVoiceGroup replacement;
+        LoadedVoiceGroup replacement = {};
         if (route == QStringLiteral("page-switch")) {
             view.setDrawerActivePage(EditorDrawerPage::Automations);
         } else if (route == QStringLiteral("drawer-hide")) {

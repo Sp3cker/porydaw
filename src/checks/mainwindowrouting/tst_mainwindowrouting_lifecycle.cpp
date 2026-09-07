@@ -139,6 +139,7 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         SmfFile stage;
         QString error;
         QVERIFY(SmfFile::readFile(song->midPath, &stage, &error));
+        LoadedVoiceGroup bank = {};
         SongTab probe(name);
         const EditorViewState global = completeSeed();
         probe.view().applyEditorViewState(global);
@@ -153,7 +154,6 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         QCOMPARE(probe.view().editorViewState(), global);
         QVERIFY(hasCanonicalFreshViewState(probe.view(), *probe.timeline()));
         QCOMPARE(ready.count(), 0);
-        LoadedVoiceGroup bank;
         probe.applyBankView(
             LoadedBankView{*session->b->voicegroupId(), borrowVoicegroupLease(&bank), QString()});
         QCOMPARE(ready.count(), 0);
@@ -181,7 +181,7 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         QVERIFY(SmfFile::readFile(song->midPath, &initial, &error));
         QVERIFY(SmfFile::readFile(song->midPath, &replacement, &error));
         const VoicegroupId identity = *session->b->voicegroupId();
-        LoadedVoiceGroup bank;
+        LoadedVoiceGroup bank = {};
         SongTab probe(name);
         const int budget = workspace.projectState().snapshot.trackBudgetFor(*song);
         probe.applyMidiStage(*song, std::move(initial), budget);

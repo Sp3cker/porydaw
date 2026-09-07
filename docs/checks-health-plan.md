@@ -82,6 +82,12 @@ both harness/tooling and production gates with no blockers. Stale theme
 harness comments were corrected; the final safe rerun remained **75/88**
 with 13 native suites excluded.
 
+Post-landing verification exposed an uninitialized replacement voicegroup
+in the host lifecycle case. The macOS crash stack confirmed invalid
+ToneData access during drawer rebuild. Empty host and window lifecycle
+banks are now value-initialized, with borrowed banks outliving their views.
+The fixed host suite passed 30 repetitions; the full safe gate passed again.
+
 Slimming pass (2026-09-06): the incidental-band click now proves the
 eligible selection is preserved on every row, repairing outcome assertions
 that were vacuous outside the two staged click kinds; the search line-edit

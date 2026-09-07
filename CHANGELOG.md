@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Resonance suppression now uses a 150 ms default attack for faster response to ringing and whistles.
 
 ## Fixed
+- Initialize empty voicegroup fixtures before binding them in host and window lifecycle checks, preventing intermittent invalid-pointer crashes.
 - Prevent timeline cancellation from releasing a pitch-bend popup's mouse grab and corrupting undo history during an external document edit.
 - Cancel active timeline gestures with Escape without clearing their captured selection; an idle Escape clears the selection.
 - Keep automation pencil-hover Delete from overriding selected notes or a scoped time selection.
