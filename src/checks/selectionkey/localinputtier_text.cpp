@@ -1,15 +1,15 @@
 // Selection keyboard routing, protected-local-input tier: text surfaces. The
 // real QML track-rename TextInput, a real QWidget line edit (the song search
 // field), the inline automation value prompt opened by an automation lane
-// double click, and the application modal roll velocity prompt opened by the
-// note menu each visibly own the keyboard: delivered command bindings edit
-// only the focused surface, Copy carries the surface's own text, and window
-// commands resume exactly once after each surface closes (plan 9).
+// double click, and the in-canvas roll velocity prompt opened by the note menu
+// each visibly own the keyboard: delivered command bindings edit only the
+// focused surface, Copy carries the surface's own text, and window commands
+// resume exactly once after each surface closes (plan 9).
 
 #include "checks/selectionkey/tst_localinputtier.h"
 
 #include "checks/automation/automationvalueprompt.h"
-#include "checks/quickmodalguard.h"
+#include "checks/quickpopupguard.h"
 #include "checks/selectionkey/automationprobe.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
@@ -426,7 +426,7 @@ void SelectionLocalInputTierTest::velocityPromptOwnsKeys()
     QVERIFY2(QRect(QPoint{}, quickWindow->size()).contains(rollPress),
              "the note menu press left the Quick window");
 
-    const quick_modal::PromptGuard promptGuard(view);
+    const quick_popup::PromptGuard promptGuard(view);
     const QByteArray before = document.smf().write();
     const int copyBefore = m_counts.copy;
     const int soloBefore = m_counts.solo;
@@ -458,20 +458,20 @@ void SelectionLocalInputTierTest::velocityPromptOwnsKeys()
                       noteMenu->actionGeometry(velocityAction).center());
     selectionkey::settle();
 
-    songview::QuickModalHost *const host = quick_modal::modalHost(view);
-    QQuickWindow *const modal = host ? host->modalWindow() : nullptr;
-    QVERIFY2(host && host->isOpen() && modal, "the velocity action did not open the modal prompt");
-    QVERIFY2(QTest::qWaitForWindowExposed(modal), "the modal prompt window did not become exposed");
-    QTRY_VERIFY2(quick_modal::inputHasActiveFocus(*modal, QLatin1String("noteVelocityInput")),
+    songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
+    QQuickWindow *const canvas = popup ? popup->window() : nullptr;
+    QVERIFY2(popup && popup->isOpen() && canvas,
+             "the velocity action did not open the canvas prompt");
+    QTRY_VERIFY2(quick_popup::inputHasActiveFocus(*canvas, QLatin1String("noteVelocityInput")),
                  "the velocity prompt text input did not take active focus");
-    QQuickItem *const input = quick_modal::promptItem(*modal, QLatin1String("noteVelocityInput"));
+    QQuickItem *const input = quick_popup::promptItem(*popup, QLatin1String("noteVelocityInput"));
     QVERIFY2(input, "the velocity prompt has no text input");
     const QString initialText = QString::number(note->note.velocity);
     QCOMPARE(input->property("text").toString(), initialText);
     QCOMPARE(input->property("selectedText").toString(), initialText);
 
     // Delivered digits replace the selected initial text inside the field.
-    QTest::keySequence(modal, QKeySequence(Qt::Key_1, Qt::Key_2));
+    QTest::keySequence(canvas, QKeySequence(Qt::Key_1, Qt::Key_2));
     selectionkey::settle();
     QCOMPARE(input->property("text").toString(), QStringLiteral("12"));
 
@@ -480,11 +480,20 @@ void SelectionLocalInputTierTest::velocityPromptOwnsKeys()
     QApplication::clipboard()->clear();
     QVERIFY(QMetaObject::invokeMethod(input, "selectAll"));
     const QString copiedFrom = input->property("selectedText").toString();
-    QTest::keyClick(modal, copy->key(), copy->keyboardModifiers());
+    QTest::keyClick(canvas, copy->key(), copy->keyboardModifiers());
     selectionkey::settle();
     QVERIFY2(!copiedFrom.isEmpty() && QApplication::clipboard()->text() == copiedFrom &&
                  m_counts.copy == copyBefore,
              "Copy while the velocity prompt owns the keys did not stay local to the field");
+
+    // Standard Paste stays with the focused QML field on the same canvas.
+    QVERIFY(QMetaObject::invokeMethod(input, "selectAll"));
+    QApplication::clipboard()->setText(QStringLiteral("12"));
+    QTest::keySequence(canvas, QKeySequence(QKeySequence::Paste));
+    selectionkey::settle();
+    QVERIFY2(input->property("text").toString() == QStringLiteral("12") &&
+                 m_counts.copy == copyBefore && m_counts.solo == soloBefore,
+             "Paste while the velocity prompt owned focus leaked to a background command");
 
     // The validator consumes or rejects the Solo key locally; the track
     // action must neither fire nor leave the field.
@@ -498,33 +507,33 @@ void SelectionLocalInputTierTest::velocityPromptOwnsKeys()
         if (!validator || validator->validate(candidate, cursorPosition) != QValidator::Invalid)
             expectedAfterSolo = candidate;
     }
-    QTest::keyClick(modal, solo->key(), solo->keyboardModifiers());
+    QTest::keyClick(canvas, solo->key(), solo->keyboardModifiers());
     selectionkey::settle();
     QVERIFY2(input->property("text").toString() == expectedAfterSolo &&
                  m_counts.solo == soloBefore && !view.trackSoloed(kTrack),
              "Solo escaped the velocity prompt");
 
-    // The prompt is genuinely application modal: the same Solo delivery aimed
-    // at the timeline window is dropped while the prompt is up.
+    // The same canvas receives a global Solo delivery while the prompt is up,
+    // but the session's ShortcutOverride policy keeps the command inactive.
     selectionkey::deliverKey(m_quickWindow, solo->key(), solo->keyboardModifiers());
-    QVERIFY2(m_counts.solo == soloBefore && !view.trackSoloed(kTrack) && host->isOpen(),
-             "a window command fired while the modal velocity prompt was open");
+    QVERIFY2(m_counts.solo == soloBefore && !view.trackSoloed(kTrack) && popup->isOpen(),
+             "a window command fired while the velocity prompt was open");
 
     // The field's step keys own the arrows locally: the draft steps and
     // returns while the selection and the song stay frozen.
-    QTest::keyClick(modal, Qt::Key_Up);
+    QTest::keyClick(canvas, Qt::Key_Up);
     selectionkey::settle();
-    QTest::keyClick(modal, Qt::Key_Down);
+    QTest::keyClick(canvas, Qt::Key_Down);
     selectionkey::settle();
-    QVERIFY2(host && host->isOpen() && input->property("text").toString() == initialText &&
+    QVERIFY2(popup && popup->isOpen() && input->property("text").toString() == initialText &&
                  view.selectionModel().noteSelection() == std::vector<NoteId>{note->id} &&
                  document.smf().write() == before,
              "arrow keys leaked out of the velocity prompt");
 
     // Escape cancels without writing, and window commands resume on the roll
     // band exactly once the prompt no longer owns the keys.
-    QTest::keyClick(modal, Qt::Key_Escape);
-    QTRY_VERIFY2(!host->isOpen(), "Escape did not close the velocity prompt");
+    QTest::keyClick(canvas, Qt::Key_Escape);
+    QTRY_VERIFY2(!popup->isOpen(), "Escape did not close the velocity prompt");
     QVERIFY2(document.smf().write() == before, "cancelling the velocity prompt mutated the song");
     activateShellForCommands();
     QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::MouseFocusReason),

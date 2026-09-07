@@ -52,7 +52,7 @@ Item {
 
     // The focused DragInput receives normal numeric editing first. This
     // terminal sink claims declined keys so timeline commands never leak out
-    // of the native application-modal window.
+    // of the shared popup session.
     Keys.onPressed: (event) => {
         if (event.key === Qt.Key_Escape)
             cancelDisplayed()
@@ -81,6 +81,13 @@ Item {
         Text {
             color: bridge.timeSigPromptAppearance.text
             font: bridge.timeSigPromptAppearance.font
+            text: bridge.timeSigPromptTitle
+            renderType: Text.NativeRendering
+        }
+
+        Text {
+            color: bridge.timeSigPromptAppearance.text
+            font: bridge.timeSigPromptAppearance.font
             text: bridge.timeSigPromptLabel
             renderType: Text.NativeRendering
         }
@@ -97,6 +104,7 @@ Item {
             accessibleDescription: bridge.timeSigPromptTitle
             onValueCommitted: (committed) => prompt.draftNumerator = committed
             onEditingAccepted: (committed) => prompt.acceptCommitted(committed)
+            textInput.KeyNavigation.backtab: cancelButton
         }
 
         Text {
@@ -119,7 +127,7 @@ Item {
                     required property int modelData
 
                     objectName: "timeSignatureDenominator" + modelData
-                    activeFocusOnTab: true
+                    activeFocusOnTab: selected
                     readonly property bool selected: prompt.draftDenominatorPow2 === modelData
                     function select() {
                         prompt.draftDenominatorPow2 = modelData
@@ -250,6 +258,7 @@ Item {
 
                 objectName: "timeSignatureCancel"
                 activeFocusOnTab: true
+                KeyNavigation.tab: numeratorInput.textInput
                 Accessible.role: Accessible.Button
                 Accessible.name: cancelText.text
                 function activate() {

@@ -42,13 +42,16 @@ Item {
 
     // The focused DragInput receives accepted text-edit keys first. This
     // terminal sink claims only declined keys so timeline commands never leak
-    // out of the native modal window.
+    // out of the shared popup session.
     Keys.onPressed: (event) => {
         if (event.key === Qt.Key_Escape)
             cancelDisplayed()
         event.accepted = true
     }
     Keys.onReleased: (event) => event.accepted = true
+
+    Accessible.role: Accessible.Client
+    Accessible.name: bridge.velocityPromptTitle
 
     Rectangle {
         anchors.fill: parent
@@ -64,6 +67,13 @@ Item {
         x: bridge.velocityPromptAppearance.dialogPadding
         y: bridge.velocityPromptAppearance.dialogPadding
         spacing: bridge.velocityPromptAppearance.spacing
+
+        Text {
+            color: bridge.velocityPromptAppearance.text
+            font: bridge.velocityPromptAppearance.font
+            text: bridge.velocityPromptTitle
+            renderType: Text.NativeRendering
+        }
 
         Text {
             color: bridge.velocityPromptAppearance.text
@@ -84,6 +94,7 @@ Item {
             accessibleDescription: bridge.velocityPromptTitle
             onValueCommitted: (committed) => prompt.draft = committed
             onEditingAccepted: (committed) => prompt.acceptCommitted(committed)
+            textInput.KeyNavigation.backtab: cancelButton
 
         }
 
@@ -149,6 +160,7 @@ Item {
 
                 objectName: "noteVelocityCancel"
                 activeFocusOnTab: true
+                KeyNavigation.tab: velocityInput.textInput
                 Accessible.role: Accessible.Button
                 Accessible.name: cancelText.text
                 function activate() {

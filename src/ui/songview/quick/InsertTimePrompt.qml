@@ -65,7 +65,7 @@ Item {
 
     // The focused DragInput receives normal numeric editing first. This
     // terminal sink claims declined keys so timeline commands never leak out
-    // of the native application-modal window.
+    // of the shared popup session.
     Keys.onPressed: (event) => {
         if (event.key === Qt.Key_Escape)
             cancelDisplayed()
@@ -93,6 +93,13 @@ Item {
         y: bridge.insertTimePromptAppearance.dialogPadding
         spacing: bridge.insertTimePromptAppearance.spacing
 
+        Text {
+            color: bridge.insertTimePromptAppearance.text
+            font: bridge.insertTimePromptAppearance.font
+            text: bridge.insertTimePromptTitle
+            renderType: Text.NativeRendering
+        }
+
         Row {
             spacing: bridge.insertTimePromptAppearance.spacing
 
@@ -119,6 +126,7 @@ Item {
                 accessibleDescription: bridge.insertTimePromptTitle
                 onValueCommitted: (committed) => prompt.draftBars = committed
                 onEditingAccepted: (committed) => prompt.acceptFromEditing("bars", committed)
+                textInput.KeyNavigation.backtab: cancelButton
             }
         }
 
@@ -241,6 +249,7 @@ Item {
 
                 objectName: "insertTimeCancel"
                 activeFocusOnTab: true
+                KeyNavigation.tab: barsInput.textInput
                 Accessible.role: Accessible.Button
                 Accessible.name: cancelText.text
                 function activate() {

@@ -17,8 +17,9 @@ class SongTab;
 class SongView;
 
 namespace songview {
+class QuickPopupSession;
 class TimelineInputItem;
-}
+} // namespace songview
 
 namespace checks::eventviews {
 
@@ -31,8 +32,9 @@ struct EventWidgets {
     EventListController *controller = nullptr;
     eventlist::EventTableModel *model = nullptr;
     QQuickWindow *quickWindow = nullptr;
+    songview::QuickPopupSession *popupSession = nullptr;
 
-    explicit operator bool() const { return controller && model && quickWindow; }
+    explicit operator bool() const { return controller && model && quickWindow && popupSession; }
 };
 
 template <typename Fixture>
@@ -93,11 +95,15 @@ int chunkForTrack(const SongDocument &document, int engineTrack);
 // Selects the given SMF chunk the way the page's chunk menu does.
 bool selectChunk(EventListController &controller, int chunk);
 
+// The shared popup layer and its menu panel are QQuickItem visual descendants,
+// rather than QObject-owned children of the canvas window.
+QQuickItem *popupLayer(const EventWidgets &widgets);
+QQuickItem *activeMenuPanel(const EventWidgets &widgets);
+
 // Finds a rendered item through QQuickItem's visual-parent tree. Dynamically
 // instantiated delegates and host-owned panels need not be QObject children
 // of the window even though they render in its content item.
 QQuickItem *visualItem(QQuickWindow &window, const QString &objectName);
-
 // Scene-coordinate seam for real pointer injection into the page's table.
 QQuickItem *eventListTable(const EventWidgets &widgets);
 qreal eventListRowHeight(const EventWidgets &widgets);

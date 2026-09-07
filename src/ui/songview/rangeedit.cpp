@@ -6,7 +6,7 @@
 #include "ui/songview/clipmime.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/quick/pianorollquick.h"
-#include "ui/songview/quick/quickmodalhost.h"
+#include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/theme/themeruntime.h"
 #include <QAction>
@@ -232,16 +232,15 @@ QVariantMap SongView::insertTimePromptAppearance() const
 void SongView::openInsertTimePrompt(uint64_t cursorTick, const songview::Grid::Segment &segment)
 {
     songview::TimelineQuickView *const quick = quickView();
-    songview::QuickModalHost *const host = quick ? quick->modalHost() : nullptr;
-    if (!m_document || !host)
+    songview::QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
+    if (!m_document || !session)
         return;
 
-    // End a previous Insert Time session before publishing this target. A
-    // different owner's active modal is replaced by the shared host instead.
+    // Replacement ends the active shared-popup session before this bridge
+    // publishes a new guarded target.
+    session->cancel(/*restoreFocus=*/false);
     if (m_pendingInsertTimePrompt)
         cancelInsertTimePromptWithoutFocus();
-    else
-        host->cancel();
 
     PendingInsertTimePrompt pending;
     pending.document = m_document;
@@ -257,10 +256,10 @@ void SongView::openInsertTimePrompt(uint64_t cursorTick, const songview::Grid::S
 
     QObject::disconnect(m_insertTimePromptCancellation);
     m_insertTimePromptCancellation =
-        connect(host, &songview::QuickModalHost::cancelled, this,
-                [this] { clearInsertTimePrompt(/*restoreFocus=*/true); });
-    if (!host->open(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/InsertTimePrompt.qml")), this,
-                    insertTimePromptTitle())) {
+        connect(session, &songview::QuickPopupSession::cancelled, this,
+                [this](bool restoreFocus) { clearInsertTimePrompt(restoreFocus); });
+    if (!session->openForm(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/InsertTimePrompt.qml")),
+                           this)) {
         clearInsertTimePrompt(/*restoreFocus=*/true);
     }
 }
@@ -279,8 +278,12 @@ void SongView::acceptInsertTimePrompt(int bars, int beats, int fractions)
     QObject::disconnect(m_insertTimePromptCancellation);
     m_insertTimePromptCancellation = {};
     emit insertTimePromptChanged();
-    if (songview::TimelineQuickView *const quick = quickView())
-        quick->modalHost()->close();
+    if (songview::TimelineQuickView *const quick = quickView()) {
+        if (songview::QuickPopupSession *const session = quick->popupSession();
+            session && session->owns(this)) {
+            session->close();
+        }
+    }
 
     SongDocument *const document = m_document;
     if (document == pending.document.data() && document->revision() == pending.documentRevision) {
@@ -322,25 +325,27 @@ void SongView::cancelInsertTimePrompt()
 {
     if (!m_pendingInsertTimePrompt)
         return;
-    if (songview::TimelineQuickView *const quick = quickView())
-        quick->modalHost()->cancel();
+    songview::TimelineQuickView *const quick = quickView();
+    songview::QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
+    const bool ownsSession = session && session->owns(this);
+    if (ownsSession)
+        session->cancel();
     if (m_pendingInsertTimePrompt)
-        clearInsertTimePrompt(/*restoreFocus=*/true);
+        clearInsertTimePrompt(ownsSession);
 }
 
 void SongView::cancelInsertTimePromptWithoutFocus()
 {
-    const bool ownsModal = m_pendingInsertTimePrompt.has_value();
+    songview::TimelineQuickView *const quick = quickView();
+    songview::QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
+    const bool ownsSession = m_pendingInsertTimePrompt && session && session->owns(this);
     m_pendingInsertTimePrompt.reset();
-    // Disconnect before host cancellation so strong lifecycle cleanup never
-    // restores focus through the cancelled() callback.
+    // Disconnect before shared-session cancellation so teardown cannot
+    // restore focus through the cancelled() callback.
     QObject::disconnect(m_insertTimePromptCancellation);
     m_insertTimePromptCancellation = {};
-    if (ownsModal) {
-        emit insertTimePromptChanged();
-        if (songview::TimelineQuickView *const quick = quickView())
-            quick->modalHost()->cancel();
-    }
+    if (ownsSession)
+        session->cancel(/*restoreFocus=*/false);
 }
 
 void SongView::clearInsertTimePrompt(bool restoreFocus)

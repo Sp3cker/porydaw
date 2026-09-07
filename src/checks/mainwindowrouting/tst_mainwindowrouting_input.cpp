@@ -1,39 +1,38 @@
 #include "mainwindowroutingfixture.h"
 
 #include "checks/clipcheck_support.h"
-#include "checks/quickmodalguard.h"
+#include "checks/quickpopupguard.h"
 #include <QtTest>
 
 namespace {
 
 struct InsertTimePromptSession {
     QQuickWindow *window = nullptr;
+    songview::QuickPopupSession *popup = nullptr;
     QString diagnostic = QStringLiteral("the Insert Time prompt did not open");
 };
 
 InsertTimePromptSession openedInsertTimePrompt(SongView &view)
 {
     InsertTimePromptSession session;
-    songview::QuickModalHost *const host = quick_modal::modalHost(view);
-    if (!host || !host->isOpen() || !host->modalWindow()) {
-        session.diagnostic = QStringLiteral("the Insert Time action did not open its modal prompt");
+    songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
+    if (!popup || !popup->isOpen() || !popup->window()) {
+        session.diagnostic =
+            QStringLiteral("the Insert Time action did not open its canvas prompt");
         return session;
     }
-    session.window = host->modalWindow();
-    if (!QTest::qWaitForWindowExposed(session.window)) {
-        session.diagnostic = QStringLiteral("the Insert Time prompt window did not become exposed");
-        return session;
-    }
-    if (!quick_modal::promptItem(*session.window, QLatin1String("insertTimePrompt")) ||
-        !quick_modal::promptItem(*session.window, QLatin1String("insertTimeBars")) ||
-        !quick_modal::promptItem(*session.window, QLatin1String("insertTimeBeats")) ||
-        !quick_modal::promptItem(*session.window, QLatin1String("insertTimeBeatFractions"))) {
+    session.popup = popup;
+    session.window = popup->window();
+    if (!quick_popup::promptItem(*popup, QLatin1String("insertTimePrompt")) ||
+        !quick_popup::promptItem(*popup, QLatin1String("insertTimeBars")) ||
+        !quick_popup::promptItem(*popup, QLatin1String("insertTimeBeats")) ||
+        !quick_popup::promptItem(*popup, QLatin1String("insertTimeBeatFractions"))) {
         session.diagnostic = QStringLiteral("the Insert Time prompt visual tree is incomplete");
         return session;
     }
     if (checks::async_wait::waitUntil([] { return true; },
                                       [&session] {
-                                          return quick_modal::inputHasActiveFocus(
+                                          return quick_popup::inputHasActiveFocus(
                                               *session.window, QLatin1String("insertTimeBars"));
                                       },
                                       5000, 10) != checks::async_wait::Result::Ready) {
@@ -50,18 +49,18 @@ bool enterInsertTimeValues(QQuickWindow &window, const QKeySequence &bars,
     QTest::keySequence(&window, bars);
     QTest::keyClick(&window, Qt::Key_Tab);
     QCoreApplication::processEvents();
-    if (!quick_modal::inputHasActiveFocus(window, QLatin1String("insertTimeBeats")))
+    if (!quick_popup::inputHasActiveFocus(window, QLatin1String("insertTimeBeats")))
         return false;
 
     QTest::keySequence(&window, beats);
     QTest::keyClick(&window, Qt::Key_Tab);
     QCoreApplication::processEvents();
-    if (!quick_modal::inputHasActiveFocus(window, QLatin1String("insertTimeBeatFractions")))
+    if (!quick_popup::inputHasActiveFocus(window, QLatin1String("insertTimeBeatFractions")))
         return false;
 
     QTest::keySequence(&window, fractions);
     QCoreApplication::processEvents();
-    return quick_modal::inputHasActiveFocus(window, QLatin1String("insertTimeBeatFractions"));
+    return quick_popup::inputHasActiveFocus(window, QLatin1String("insertTimeBeatFractions"));
 }
 
 } // namespace
@@ -270,7 +269,7 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
               EditorDrawerPage::VoiceChanges})
             view.setDrawerSectionVisible(page, false);
         view.setEventListVisible(false);
-        const quick_modal::PromptGuard guard(view);
+        const quick_popup::PromptGuard guard(view);
 
         // The fixture's 24 PPQN supports a denominator-scaled one-tick beat,
         // so a nonzero quarter fraction must use ceiling rather than truncation.
@@ -324,11 +323,11 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
                 return false;
             }
             QQuickItem *const barsInput =
-                quick_modal::promptItem(*opened.window, QLatin1String("insertTimeBars"));
+                quick_popup::promptItem(*opened.popup, QLatin1String("insertTimeBars"));
             QQuickItem *const beatsInput =
-                quick_modal::promptItem(*opened.window, QLatin1String("insertTimeBeats"));
+                quick_popup::promptItem(*opened.popup, QLatin1String("insertTimeBeats"));
             QQuickItem *const fractionsInput =
-                quick_modal::promptItem(*opened.window, QLatin1String("insertTimeBeatFractions"));
+                quick_popup::promptItem(*opened.popup, QLatin1String("insertTimeBeatFractions"));
             if (!barsInput || !beatsInput || !fractionsInput ||
                 barsInput->property("text").toString() != QStringLiteral("1") ||
                 beatsInput->property("text").toString() != QStringLiteral("0") ||
@@ -338,19 +337,19 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
             }
             if (!enterInsertTimeValues(*opened.window, bars, beats, fractions)) {
                 insertDiagnostic =
-                    QStringLiteral("Tab did not keep Insert Time editing inside the modal");
+                    QStringLiteral("Tab did not keep Insert Time editing inside the popup");
                 return false;
             }
             if (acceptWithReturn)
                 QTest::keyClick(opened.window, Qt::Key_Return);
-            else if (!quick_modal::clickPromptButton(*opened.window,
+            else if (!quick_popup::clickPromptButton(*opened.popup,
                                                      QLatin1String("insertTimeAccept"))) {
                 insertDiagnostic = QStringLiteral("the Insert Time prompt has no OK button");
                 return false;
             }
             QCoreApplication::processEvents();
 
-            songview::QuickModalHost *const host = quick_modal::modalHost(view);
+            songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
             DocNote shifted;
             DocNote wholeSongShifted;
             const bool sourceFound = tab.document().findNote(source->noteId, &shifted);
@@ -359,7 +358,7 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
             const int actualUndoIndex = tab.document().undoStack()->index();
             const int actualUndoCount = tab.document().undoStack()->count();
             const uint64_t actualRevision = tab.document().revision();
-            const bool committed = host && !host->isOpen() && sourceFound && wholeSongFound &&
+            const bool committed = popup && !popup->isOpen() && sourceFound && wholeSongFound &&
                                    actualUndoIndex == undoIndex + 1 &&
                                    actualRevision == revision + 1 &&
                                    shifted.tick == source->tick + expectedSpan &&
@@ -419,15 +418,15 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         view.commitEditCursor(source->tick);
         action->trigger();
         const InsertTimePromptSession zero = openedInsertTimePrompt(view);
-        QVERIFY2(zero.window, qUtf8Printable(zero.diagnostic));
+        QVERIFY2(zero.window && zero.popup, qUtf8Printable(zero.diagnostic));
         QVERIFY2(enterInsertTimeValues(*zero.window, QKeySequence(Qt::Key_0),
                                        QKeySequence(Qt::Key_0), QKeySequence(Qt::Key_0)),
                  "the zero-span Insert Time fields could not be edited");
-        QVERIFY2(quick_modal::clickPromptButton(*zero.window, QLatin1String("insertTimeAccept")),
+        QVERIFY2(quick_popup::clickPromptButton(*zero.popup, QLatin1String("insertTimeAccept")),
                  "the zero-span Insert Time prompt has no OK button");
         QCoreApplication::processEvents();
-        songview::QuickModalHost *const host = quick_modal::modalHost(view);
-        QVERIFY(host && !host->isOpen());
+        songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
+        QVERIFY(popup && !popup->isOpen());
         QCOMPARE(tab.document().smf().write(), beforeZero);
         QCOMPARE(tab.document().undoStack()->index(), zeroUndo);
         QCOMPARE(tab.document().undoStack()->count(), zeroUndoCount);
@@ -439,22 +438,22 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         const uint64_t cancelRevision = tab.document().revision();
         action->trigger();
         const InsertTimePromptSession cancelled = openedInsertTimePrompt(view);
-        QVERIFY2(cancelled.window, qUtf8Printable(cancelled.diagnostic));
+        QVERIFY2(cancelled.window && cancelled.popup, qUtf8Printable(cancelled.diagnostic));
         QVERIFY2(enterInsertTimeValues(*cancelled.window, QKeySequence(Qt::Key_1),
                                        QKeySequence(Qt::Key_0), QKeySequence(Qt::Key_0)),
                  "the cancellation Insert Time fields could not be edited");
         QVERIFY2(
-            quick_modal::clickPromptButton(*cancelled.window, QLatin1String("insertTimeCancel")),
+            quick_popup::clickPromptButton(*cancelled.popup, QLatin1String("insertTimeCancel")),
             "the Insert Time prompt has no Cancel button");
         QCoreApplication::processEvents();
-        QVERIFY(host && !host->isOpen());
+        QVERIFY(popup && !popup->isOpen());
         QCOMPARE(tab.document().smf().write(), beforeCancel);
         QCOMPARE(tab.document().undoStack()->index(), cancelUndo);
         QCOMPARE(tab.document().revision(), cancelRevision);
 
         action->trigger();
         const InsertTimePromptSession stale = openedInsertTimePrompt(view);
-        QVERIFY2(stale.window, qUtf8Printable(stale.diagnostic));
+        QVERIFY2(stale.window && stale.popup, qUtf8Printable(stale.diagnostic));
         QVERIFY2(enterInsertTimeValues(*stale.window, QKeySequence(Qt::Key_1),
                                        QKeySequence(Qt::Key_0), QKeySequence(Qt::Key_1)),
                  "the stale Insert Time fields could not be edited");
@@ -463,12 +462,12 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         const int staleUndo = tab.document().undoStack()->index();
         const int staleUndoCount = tab.document().undoStack()->count();
         const uint64_t staleRevision = tab.document().revision();
-        if (host->isOpen())
+        if (popup->isOpen())
             QVERIFY2(
-                quick_modal::clickPromptButton(*stale.window, QLatin1String("insertTimeAccept")),
+                quick_popup::clickPromptButton(*stale.popup, QLatin1String("insertTimeAccept")),
                 "the stale Insert Time prompt has no OK button");
         QCoreApplication::processEvents();
-        QVERIFY(host && !host->isOpen());
+        QVERIFY(popup && !popup->isOpen());
         QCOMPARE(tab.document().smf().write(), afterInterveningEdit);
         QCOMPARE(tab.document().undoStack()->index(), staleUndo);
         QCOMPARE(tab.document().undoStack()->count(), staleUndoCount);

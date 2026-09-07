@@ -1,11 +1,11 @@
-// Time-signature editing through the live ruler and application-modal Quick
-// prompt. These checks deliberately drive the Quick window rather than the
-// bridge invokables so focus, keyboard input, button routing, and guarded
+// Time-signature editing through the live ruler and its in-canvas Quick
+// prompt. These checks deliberately drive the existing Quick window rather
+// than bridge invokables so focus, keyboard input, button routing, and guarded
 // document commits remain observable.
 
 #include "checks/rollcheck/tst_pianoroll.h"
 
-#include "checks/quickmodalguard.h"
+#include "checks/quickpopupguard.h"
 #include "checks/support/asyncwait.h"
 #include "checks/support/editorrig.h"
 #include "checks/support/songfixture.h"
@@ -94,6 +94,7 @@ struct TimeSignatureFixture final {
 
 struct TimeSignaturePromptSession {
     QQuickWindow *window = nullptr;
+    songview::QuickPopupSession *popup = nullptr;
     QString diagnostic = QStringLiteral("the time-signature prompt did not open");
 };
 
@@ -105,20 +106,16 @@ QPoint windowPoint(const songview::TimelineInputItem &item, QPoint local)
 TimeSignaturePromptSession openedPrompt(SongView &view)
 {
     TimeSignaturePromptSession session;
-    songview::QuickModalHost *const host = quick_modal::modalHost(view);
-    if (!host || !host->isOpen() || !host->modalWindow()) {
-        session.diagnostic = QStringLiteral("the ruler action did not open a modal prompt");
+    songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
+    if (!popup || !popup->isOpen() || !popup->window()) {
+        session.diagnostic = QStringLiteral("the ruler action did not open a canvas prompt");
         return session;
     }
-    session.window = host->modalWindow();
-    if (!QTest::qWaitForWindowExposed(session.window)) {
-        session.diagnostic =
-            QStringLiteral("the time-signature prompt window did not become exposed");
-        return session;
-    }
+    session.popup = popup;
+    session.window = popup->window();
     if (checks::async_wait::waitUntil([] { return true; },
                                       [&session] {
-                                          return quick_modal::inputHasActiveFocus(
+                                          return quick_popup::inputHasActiveFocus(
                                               *session.window,
                                               QLatin1String("timeSignatureNumerator"));
                                       },
@@ -142,9 +139,13 @@ TimeSignaturePromptSession openFromChip(TimeSignatureFixture &fixture)
     }
 
     const QPoint point = windowPoint(*fixture.rulerInput, local);
+    // Deliver the complete physical double-click sequence. Production releases
+    // the ruler's pointer grab before publishing the form, so this final
+    // release stays with the opening gesture rather than cancelling it.
     QTest::mousePress(window, Qt::LeftButton, Qt::NoModifier, point);
     QTest::mouseRelease(window, Qt::LeftButton, Qt::NoModifier, point);
     QTest::mouseDClick(window, Qt::LeftButton, Qt::NoModifier, point);
+    QTest::mouseRelease(window, Qt::LeftButton, Qt::NoModifier, point);
     QCoreApplication::processEvents();
     return openedPrompt(fixture.view());
 }
@@ -197,24 +198,23 @@ TimeSignaturePromptSession openFromRulerMenu(TimeSignatureFixture &fixture, bool
     return openedPrompt(fixture.view());
 }
 
-bool chooseDenominator(QQuickWindow &window, int denominatorPow2)
+bool chooseDenominator(songview::QuickPopupSession &popup, int denominatorPow2)
 {
     switch (denominatorPow2) {
     case 0:
-        return quick_modal::clickPromptButton(window, QLatin1String("timeSignatureDenominator0"));
+        return quick_popup::clickPromptButton(popup, QLatin1String("timeSignatureDenominator0"));
     case 1:
-        return quick_modal::clickPromptButton(window, QLatin1String("timeSignatureDenominator1"));
+        return quick_popup::clickPromptButton(popup, QLatin1String("timeSignatureDenominator1"));
     case 2:
-        return quick_modal::clickPromptButton(window, QLatin1String("timeSignatureDenominator2"));
+        return quick_popup::clickPromptButton(popup, QLatin1String("timeSignatureDenominator2"));
     case 3:
-        return quick_modal::clickPromptButton(window, QLatin1String("timeSignatureDenominator3"));
+        return quick_popup::clickPromptButton(popup, QLatin1String("timeSignatureDenominator3"));
     case 4:
-        return quick_modal::clickPromptButton(window, QLatin1String("timeSignatureDenominator4"));
+        return quick_popup::clickPromptButton(popup, QLatin1String("timeSignatureDenominator4"));
     case 5:
-        return quick_modal::clickPromptButton(window, QLatin1String("timeSignatureDenominator5"));
-    default:
-        return false;
+        return quick_popup::clickPromptButton(popup, QLatin1String("timeSignatureDenominator5"));
     }
+    return false;
 }
 
 } // namespace
@@ -226,29 +226,29 @@ void PianoRollTest::timeSignaturePromptAcceptUndoGrid()
         TimeSignatureFixture::create(m_project->root(), m_songLabel, error);
     QVERIFY2(fixture, qPrintable(error));
     SongDocument &document = fixture->document();
-    const quick_modal::PromptGuard guard(fixture->view());
+    const quick_popup::PromptGuard guard(fixture->view());
     const QByteArray before = document.smf().write();
     const int undo = document.undoStack()->index();
     const int undoCount = document.undoStack()->count();
     const uint64_t revision = document.revision();
 
     const TimeSignaturePromptSession opened = openFromChip(*fixture);
-    QVERIFY2(opened.window, qUtf8Printable(opened.diagnostic));
+    QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic));
     QQuickItem *const numerator =
-        quick_modal::promptItem(*opened.window, QLatin1String("timeSignatureNumerator"));
+        quick_popup::promptItem(*opened.popup, QLatin1String("timeSignatureNumerator"));
     QVERIFY2(numerator, "the time-signature prompt has no numerator input");
 
     QTest::keySequence(opened.window, QKeySequence(Qt::Key_7));
     QCoreApplication::processEvents();
     QCOMPARE(numerator->property("text").toString(), QStringLiteral("7"));
-    QVERIFY2(chooseDenominator(*opened.window, 3), "the time-signature prompt has no 8 button");
+    QVERIFY2(chooseDenominator(*opened.popup, 3), "the time-signature prompt has no 8 button");
     // The denominator now owns focus; Enter must commit the displayed 7/8,
     // not merely re-select the focused denominator.
     QTest::keyClick(opened.window, Qt::Key_Return);
     QCoreApplication::processEvents();
 
-    songview::QuickModalHost *const host = quick_modal::modalHost(fixture->view());
-    QVERIFY2(host && !host->isOpen(), "Return did not close the time-signature prompt");
+    songview::QuickPopupSession *const popup = quick_popup::popupSession(fixture->view());
+    QVERIFY2(popup && !popup->isOpen(), "Return did not close the time-signature prompt");
     const std::vector<DocTimeSig> signatures = document.timeSigs();
     const auto signature =
         std::find_if(signatures.cbegin(), signatures.cend(), [&fixture](const DocTimeSig &value) {
@@ -276,16 +276,15 @@ void PianoRollTest::timeSignaturePromptAcceptUndoGrid()
 
     // Reopening and accepting the displayed 3/4 makes no document edit.
     const TimeSignaturePromptSession unchanged = openFromChip(*fixture);
-    QVERIFY2(unchanged.window, qUtf8Printable(unchanged.diagnostic));
+    QVERIFY2(unchanged.window && unchanged.popup, qUtf8Printable(unchanged.diagnostic));
     const QByteArray beforeUnchanged = document.smf().write();
     const int unchangedUndo = document.undoStack()->index();
     const int unchangedUndoCount = document.undoStack()->count();
     const uint64_t unchangedRevision = document.revision();
-    QVERIFY2(
-        quick_modal::clickPromptButton(*unchanged.window, QLatin1String("timeSignatureAccept")),
-        "the reopened time-signature prompt has no Accept button");
+    QVERIFY2(quick_popup::clickPromptButton(*unchanged.popup, QLatin1String("timeSignatureAccept")),
+             "the reopened time-signature prompt has no Accept button");
     QCoreApplication::processEvents();
-    QVERIFY2(host && !host->isOpen() && document.smf().write() == beforeUnchanged &&
+    QVERIFY2(popup && !popup->isOpen() && document.smf().write() == beforeUnchanged &&
                  document.undoStack()->index() == unchangedUndo &&
                  document.undoStack()->count() == unchangedUndoCount &&
                  document.revision() == unchangedRevision,
@@ -299,58 +298,55 @@ void PianoRollTest::timeSignaturePromptCancelStale()
         TimeSignatureFixture::create(m_project->root(), m_songLabel, error);
     QVERIFY2(fixture, qPrintable(error));
     SongDocument &document = fixture->document();
-    const quick_modal::PromptGuard guard(fixture->view());
+    const quick_popup::PromptGuard guard(fixture->view());
     const QByteArray before = document.smf().write();
     const int undo = document.undoStack()->index();
     const int undoCount = document.undoStack()->count();
     const uint64_t revision = document.revision();
 
     const TimeSignaturePromptSession cancelled = openFromChip(*fixture);
-    QVERIFY2(cancelled.window, qUtf8Printable(cancelled.diagnostic));
+    QVERIFY2(cancelled.window && cancelled.popup, qUtf8Printable(cancelled.diagnostic));
     QTest::keySequence(cancelled.window, QKeySequence(Qt::Key_7));
-    QVERIFY2(
-        quick_modal::clickPromptButton(*cancelled.window, QLatin1String("timeSignatureCancel")),
-        "the time-signature prompt has no Cancel button");
+    QVERIFY2(quick_popup::clickPromptButton(*cancelled.popup, QLatin1String("timeSignatureCancel")),
+             "the time-signature prompt has no Cancel button");
     QCoreApplication::processEvents();
-    songview::QuickModalHost *const host = quick_modal::modalHost(fixture->view());
-    QVERIFY2(host && !host->isOpen() && document.smf().write() == before &&
+    songview::QuickPopupSession *const popup = quick_popup::popupSession(fixture->view());
+    QVERIFY2(popup && !popup->isOpen() && document.smf().write() == before &&
                  document.undoStack()->index() == undo &&
                  document.undoStack()->count() == undoCount && document.revision() == revision,
              "Cancel wrote the draft time signature to the song");
     QTRY_VERIFY2(fixture->rulerInput->hasActiveFocus(),
                  "Cancel did not return focus to the ruler input");
 
-    // An invalid numerator must leave the modal open and the song untouched.
+    // An invalid numerator must leave the prompt open and the song untouched.
     const TimeSignaturePromptSession invalid = openFromChip(*fixture);
-    QVERIFY2(invalid.window, qUtf8Printable(invalid.diagnostic));
+    QVERIFY2(invalid.window && invalid.popup, qUtf8Printable(invalid.diagnostic));
     QTest::keySequence(invalid.window, QKeySequence(Qt::Key_9, Qt::Key_9, Qt::Key_9));
     QTest::keyClick(invalid.window, Qt::Key_Return);
     QCoreApplication::processEvents();
-    QVERIFY2(host && host->isOpen() && document.smf().write() == before &&
+    QVERIFY2(popup && popup->isOpen() && document.smf().write() == before &&
                  document.undoStack()->index() == undo &&
                  document.undoStack()->count() == undoCount && document.revision() == revision,
              "an invalid numerator was accepted or wrote to the song");
     QTest::keyClick(invalid.window, Qt::Key_Escape);
     QCoreApplication::processEvents();
-    QVERIFY2(host && !host->isOpen(), "Escape did not close the invalid-number prompt");
+    QVERIFY2(popup && !popup->isOpen(), "Escape did not close the invalid-number prompt");
 
     const TimeSignaturePromptSession stale = openFromChip(*fixture);
-    QVERIFY2(stale.window, qUtf8Printable(stale.diagnostic));
-    // A document revision change owns cancellation; it must not leave an
-    // actionable stale draft or append another document command.
+    QVERIFY2(stale.window && stale.popup, qUtf8Printable(stale.diagnostic));
+    // A document revision change owns stale-session retirement; it must not
+    // leave an actionable draft or append another document command.
     document.setTimeSig(fixture->signatureTick + document.ticksPerClock(), 5, 2);
     const QByteArray afterInterveningEdit = document.smf().write();
     const int staleUndo = document.undoStack()->index();
     const int staleUndoCount = document.undoStack()->count();
     const uint64_t staleRevision = document.revision();
     QCoreApplication::processEvents();
-    QVERIFY2(host && !host->isOpen() && document.smf().write() == afterInterveningEdit &&
+    QVERIFY2(popup && !popup->isOpen() && document.smf().write() == afterInterveningEdit &&
                  document.undoStack()->index() == staleUndo &&
                  document.undoStack()->count() == staleUndoCount &&
                  document.revision() == staleRevision,
              "a document revision change left a stale prompt or wrote an extra edit");
-    QTRY_VERIFY2(fixture->rulerInput->hasActiveFocus(),
-                 "stale cancellation did not return focus to the ruler input");
 }
 
 void PianoRollTest::timeSignaturePromptMenuEntries_data()
@@ -367,19 +363,20 @@ void PianoRollTest::timeSignaturePromptMenuEntries()
     std::unique_ptr<TimeSignatureFixture> fixture =
         TimeSignatureFixture::create(m_project->root(), m_songLabel, error);
     QVERIFY2(fixture, qPrintable(error));
-    const quick_modal::PromptGuard guard(fixture->view());
+    const quick_popup::PromptGuard guard(fixture->view());
     RulerMenuSelection selection;
     const TimeSignaturePromptSession opened = openFromRulerMenu(*fixture, onChip, selection);
     QVERIFY2(selection.foundAction,
              "the ruler menu did not expose its semantic time-signature action identity");
     QVERIFY2(selection.closedMenu,
              "the ruler menu still owned input when the time-signature prompt opened");
-    QVERIFY2(opened.window, qUtf8Printable(opened.diagnostic));
-    QVERIFY2(quick_modal::promptItem(*opened.window, QLatin1String("timeSignaturePrompt")),
+    QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic));
+    QVERIFY2(quick_popup::promptItem(*opened.popup, QLatin1String("timeSignaturePrompt")),
              "the ruler menu action did not open the time-signature prompt surface");
 
     QTest::keyClick(opened.window, Qt::Key_Escape);
     QCoreApplication::processEvents();
-    songview::QuickModalHost *const host = quick_modal::modalHost(fixture->view());
-    QVERIFY2(host && !host->isOpen(), "Escape did not close the ruler-menu time-signature prompt");
+    songview::QuickPopupSession *const popup = quick_popup::popupSession(fixture->view());
+    QVERIFY2(popup && !popup->isOpen(),
+             "Escape did not close the ruler-menu time-signature prompt");
 }

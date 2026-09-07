@@ -64,6 +64,7 @@ class PianoRollTest final : public QObject
     void velocityPromptAcceptUndoLatch();
     void velocityPromptCancelStale();
     void velocityPromptBounds();
+    void popupSessionDismissal();
     void timeSignaturePromptAcceptUndoGrid();
     void timeSignaturePromptCancelStale();
     void timeSignaturePromptMenuEntries_data();

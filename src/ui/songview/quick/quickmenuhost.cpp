@@ -1,5 +1,6 @@
 #include "ui/songview/quick/quickengine.h"
 #include "ui/songview/quick/quickmenumodel.h"
+#include "ui/songview/quick/quickpopupsession.h"
 
 #include "ui/songview/quick/quickmenulayout.h"
 #include "ui/theme/themeruntime.h"
@@ -91,21 +92,26 @@ QuickMenuHost::QuickMenuHost(QObject *parent) : QObject(parent)
 
 QuickMenuHost::~QuickMenuHost()
 {
+    if (m_sessionActive && m_popupSession)
+        m_popupSession->cancel(false);
     teardown(false);
 }
 
-void QuickMenuHost::setWindow(QQuickWindow *window)
+void QuickMenuHost::setPopupSession(QuickPopupSession *session)
 {
-    if (m_window == window)
+    if (m_popupSession == session)
         return;
-    if (isOpen())
-        cancel();
-    if (m_filterInstalled) {
-        if (m_window)
-            m_window->removeEventFilter(this);
-        m_filterInstalled = false;
+    if (m_sessionActive && m_popupSession)
+        m_popupSession->cancel(false);
+    if (m_popupSession)
+        disconnect(m_popupSession, nullptr, this, nullptr);
+    m_popupSession = session;
+    if (m_popupSession) {
+        connect(m_popupSession, &QuickPopupSession::cancelled, this,
+                [this](bool) { handleSessionCancelled(); });
+        connect(m_popupSession, &QuickPopupSession::closed, this,
+                &QuickMenuHost::handleSessionClosed);
     }
-    m_window = window;
     emit windowChanged();
 }
 
@@ -130,53 +136,45 @@ QuickMenuModel *QuickMenuHost::currentModel() const
 
 QQuickWindow *QuickMenuHost::window() const
 {
-    return m_window.data();
+    return m_popupSession ? m_popupSession->window() : nullptr;
 }
 
 void QuickMenuHost::open(QuickMenuModel *model, const QPointF &scenePos)
 {
-    if (!model || !m_window || model->rowCount() == 0)
+    if (!model || !m_popupSession || model->rowCount() == 0)
         return;
-    const bool replacing = isOpen();
-    if (replacing)
-        // Replacement keeps the consumer-facing closed() contract, but the
-        // intermediate state signals are suppressed: the session never
-        // appears closed, so isOpen has no transient true->false bounce.
-        teardown(true, false);
+    if (!m_popupSession->beginMenu(this))
+        return;
+
+    m_sessionActive = true;
+    m_waitingForClosed = false;
     m_anchor = scenePos;
-    if (!m_filterInstalled) {
-        m_window->installEventFilter(this);
+    if (QQuickWindow *const popupWindow = window(); !m_filterInstalled && popupWindow) {
+        popupWindow->installEventFilter(this);
         m_filterInstalled = true;
     }
     pushLevel(model, QRectF(scenePos, QSizeF(0, 0)), true);
     if (!isOpen()) {
-        if (replacing) {
-            // The replacement failed to realize a panel: the old session did
-            // end, so observers must still see the state transitions.
-            emit isOpenChanged();
-            emit rootChanged();
-            emit currentChanged();
-        }
+        m_popupSession->close();
         return;
     }
+    if (QQuickItem *const rootPanel = m_levels.first().panel)
+        rootPanel->forceActiveFocus(Qt::PopupFocusReason);
     emit rootChanged();
     emit currentChanged();
-    if (!replacing)
-        emit isOpenChanged();
+    emit isOpenChanged();
 }
 
 void QuickMenuHost::close()
 {
-    teardown(true);
+    if (m_sessionActive && m_popupSession)
+        m_popupSession->close();
 }
 
 void QuickMenuHost::cancel()
 {
-    if (!isOpen())
-        return;
-    teardown(false);
-    emit cancelled();
-    emit closed();
+    if (m_sessionActive && m_popupSession)
+        m_popupSession->cancel();
 }
 
 void QuickMenuHost::hoverRow(QQuickItem *panel, int row)
@@ -209,45 +207,25 @@ void QuickMenuHost::activateRow(QQuickItem *panel, int row)
         return;
     QuickMenuModel *const source = level->model.data();
     if (item->checkable && item->stayOpen) {
-        // Persistent filter toggle: keep the session and navigation alive so a
-        // rebuild in the activated() handler cannot close the menu.
         source->setItemChecked(row, !item->checked);
         emit source->activated(item->id);
         return;
     }
     const int id = item->id;
-    teardown(true); // clear the session before the owner executes the command
+    if (m_popupSession)
+        m_popupSession->close(); // clear the session before owner command
     emit source->activated(id);
-}
-
-void QuickMenuHost::outsidePressed(int button, const QPointF &scenePos)
-{
-    if (!isOpen())
-        return;
-    cancel();
-    if (button == int(Qt::RightButton))
-        emit outsideRightPressed(scenePos);
 }
 
 bool QuickMenuHost::eventFilter(QObject *watched, QEvent *event)
 {
-    if (watched == m_window.data() && !m_levels.isEmpty()) {
+    if (watched == window() && m_sessionActive && !m_levels.isEmpty()) {
         switch (event->type()) {
-        case QEvent::ShortcutOverride:
-            // Accepting the override stands QML shortcuts down; the following
-            // KeyPress is consumed below, so only the menu sees the key.
-            static_cast<QKeyEvent *>(event)->accept();
-            return false;
         case QEvent::KeyPress:
             handleKeyPress(static_cast<QKeyEvent *>(event));
             return true;
         case QEvent::KeyRelease:
             return true;
-        case QEvent::WindowDeactivate:
-        case QEvent::Resize:
-        case QEvent::Close:
-            cancel();
-            break;
         default:
             break;
         }
@@ -257,9 +235,11 @@ bool QuickMenuHost::eventFilter(QObject *watched, QEvent *event)
 
 QQuickItem *QuickMenuHost::createPanel(QuickMenuModel *model, bool rootLevel)
 {
-    QQmlEngine *engine = quickEngine(m_window);
-    if (!engine) {
-        qWarning("QuickMenuHost: menu window has no QML engine");
+    QQuickWindow *const popupWindow = window();
+    QQuickItem *const overlay = m_popupSession ? m_popupSession->overlayRoot() : nullptr;
+    QQmlEngine *const engine = quickEngine(popupWindow);
+    if (!engine || !overlay) {
+        qWarning("QuickMenuHost: menu session has no canvas overlay");
         return nullptr;
     }
     QQmlComponent component(engine,
@@ -285,32 +265,18 @@ QQuickItem *QuickMenuHost::createPanel(QuickMenuModel *model, bool rootLevel)
         return nullptr;
     }
     panel->setParent(this);
-    panel->setParentItem(m_window->contentItem());
+    panel->setParentItem(overlay);
     panel->setZ(kPanelZ);
-    // The window dying destroys its child panels ahead of the host: end the
-    // session instead of keeping levels that point at dead panels.
     connect(panel, &QObject::destroyed, this, [this, panel] {
-        const bool wasOpen = !m_levels.isEmpty();
         for (int index = m_levels.size() - 1; index >= 0; --index) {
             if (m_levels[index].panel == panel) {
                 while (m_levels.size() > index)
-                    popLevel(); // the dead panel's level is guarded by QPointer
+                    popLevel(false);
                 break;
             }
         }
-        if (wasOpen && m_levels.isEmpty()) {
-            m_typeAhead.clear();
-            m_typeAheadReset.stop();
-            if (m_filterInstalled) {
-                if (m_window)
-                    m_window->removeEventFilter(this);
-                m_filterInstalled = false;
-            }
-            emit isOpenChanged();
-            emit rootChanged();
-            emit cancelled();
-            emit closed();
-        }
+        if (m_sessionActive && m_levels.isEmpty() && m_popupSession)
+            m_popupSession->cancel(false);
     });
     return panel;
 }
@@ -328,14 +294,9 @@ void QuickMenuHost::pushLevel(QuickMenuModel *model, const QRectF &anchor, bool 
     stored.resetConnection = connect(model, &QAbstractItemModel::modelReset, this,
                                      [this, model] { handleLevelReset(model); });
     if (rootLevel) {
-        // The whole session dies with the owner's root model; child submenu
-        // models are QObject children of it and are covered by this too.
         stored.modelDestroyedConnection = connect(model, &QObject::destroyed, this, [this] {
-            if (isOpen()) {
-                teardown(false);
-                emit cancelled();
-                emit closed();
-            }
+            if (m_sessionActive && m_popupSession)
+                m_popupSession->cancel(false);
         });
     }
     layoutLevel(stored, anchor, rootLevel);
@@ -363,26 +324,46 @@ void QuickMenuHost::popToLevel(QQuickItem *panel)
         popLevel();
 }
 
-void QuickMenuHost::teardown(bool emitClosed, bool notifyState)
+void QuickMenuHost::teardown(bool notifyState)
 {
-    const bool wasOpen = !m_levels.isEmpty();
     m_typeAhead.clear();
     m_typeAheadReset.stop();
     while (!m_levels.isEmpty())
         popLevel(notifyState);
     if (m_filterInstalled) {
-        if (m_window)
-            m_window->removeEventFilter(this);
+        if (QQuickWindow *const popupWindow = window())
+            popupWindow->removeEventFilter(this);
         m_filterInstalled = false;
     }
-    if (wasOpen) {
-        if (notifyState) {
-            emit isOpenChanged();
-            emit rootChanged();
-        }
-        if (emitClosed)
-            emit closed();
+}
+
+void QuickMenuHost::handleSessionCancelled()
+{
+    if (!m_sessionActive)
+        return;
+    m_sessionActive = false;
+    m_waitingForClosed = true;
+    teardown(false);
+    emit isOpenChanged();
+    emit rootChanged();
+    emit currentChanged();
+    emit cancelled();
+}
+
+void QuickMenuHost::handleSessionClosed()
+{
+    if (!m_sessionActive && !m_waitingForClosed)
+        return;
+    const bool wasActive = m_sessionActive;
+    m_sessionActive = false;
+    m_waitingForClosed = false;
+    teardown(false);
+    if (wasActive) {
+        emit isOpenChanged();
+        emit rootChanged();
+        emit currentChanged();
     }
+    emit closed();
 }
 
 void QuickMenuHost::handleLevelReset(QuickMenuModel *model)
@@ -418,12 +399,13 @@ void QuickMenuHost::layoutLevel(Level &level, const QRectF &anchor, bool rootLev
 {
     QQuickItem *const panel = level.panel.data();
     QuickMenuModel *const model = level.model.data();
-    if (!panel || !model || !m_window)
+    QQuickWindow *const popupWindow = window();
+    if (!panel || !model || !popupWindow)
         return;
     const QFont font = resolveMenuFont(m_appearance);
     const QFontMetrics metrics(font);
     const MenuMetrics layout =
-        measureMenu(*model, metrics, QSizeF(m_window->width(), m_window->height()));
+        measureMenu(*model, metrics, QSizeF(popupWindow->width(), popupWindow->height()));
     panel->setProperty("rowHeight", layout.rowHeight);
     panel->setProperty("separatorHeight", layout.separatorHeight);
     panel->setProperty("checkX", layout.checkX);
@@ -436,18 +418,16 @@ void QuickMenuHost::layoutLevel(Level &level, const QRectF &anchor, bool rootLev
     panel->setProperty("menuWidth", layout.menuWidth);
     panel->setProperty("menuHeight", layout.menuHeight);
     panel->setProperty("appearance", m_appearance);
-    panel->setWidth(m_window->width());
-    panel->setHeight(m_window->height());
+    panel->setWidth(popupWindow->width());
+    panel->setHeight(popupWindow->height());
 
-    const qreal windowWidth = m_window->width();
-    const qreal windowHeight = m_window->height();
+    const qreal windowWidth = popupWindow->width();
+    const qreal windowHeight = popupWindow->height();
     const qreal width = layout.menuWidth;
     const qreal height = layout.menuHeight;
     qreal x = 0;
     qreal y = 0;
     if (rootLevel) {
-        // Prefer opening down-right of the anchor; flip up/left when the menu
-        // would leave the window.
         x = anchor.x();
         y = anchor.y();
         if (y + height > windowHeight)
@@ -455,20 +435,19 @@ void QuickMenuHost::layoutLevel(Level &level, const QRectF &anchor, bool rootLev
         if (x + width > windowWidth)
             x = anchor.x() - width;
     } else {
-        // Submenus prefer the right of the anchor row and flip left of it.
         x = anchor.right();
         y = anchor.y();
         if (x + width > windowWidth)
             x = anchor.left() - width;
     }
-    x = qBound<qreal>(0.0, x, std::max<qreal>(0.0, windowWidth - width));
-    y = qBound<qreal>(0.0, y, std::max<qreal>(0.0, windowHeight - height));
+    x = std::clamp(x, qreal(0.0), std::max<qreal>(0.0, windowWidth - width));
+    y = std::clamp(y, qreal(0.0), std::max<qreal>(0.0, windowHeight - height));
     panel->setProperty("menuOrigin", QPointF(x, y));
 }
 
 void QuickMenuHost::relayoutRoot()
 {
-    if (m_levels.isEmpty() || !m_window)
+    if (m_levels.isEmpty() || !window())
         return;
     for (int index = 0; index < m_levels.size(); ++index) {
         Level &level = m_levels[index];

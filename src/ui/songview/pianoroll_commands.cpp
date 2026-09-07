@@ -8,7 +8,7 @@
 #include "ui/songview.h"
 #include "ui/songview/clipmime.h"
 #include "ui/songview/quick/pianorollquick.h"
-#include "ui/songview/quick/quickmodalhost.h"
+#include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/theme/themeruntime.h"
 
@@ -377,16 +377,15 @@ void PianoRoll::openVelocityPrompt(const std::vector<DocNote> &notes)
 {
     SongDocument *const document = m_sv->document();
     songview::TimelineQuickView *const quick = m_sv->quickView();
-    songview::QuickModalHost *const host = quick ? quick->modalHost() : nullptr;
-    if (!document || !host || notes.empty())
+    songview::QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
+    if (!document || !session || notes.empty())
         return;
 
-    // Shared-host replacement happens before this bridge publishes pending
-    // state. Owner-local cleanup must not later close another dialog type.
+    // Replacement ends the active shared-popup session before this bridge
+    // publishes a new guarded target.
+    session->cancel(/*restoreFocus=*/false);
     if (m_pendingVelocityPrompt)
         cancelVelocityPromptWithoutFocus();
-    else
-        host->cancel();
 
     PendingVelocityPrompt pending;
     pending.targets.reserve(notes.size());
@@ -398,10 +397,11 @@ void PianoRoll::openVelocityPrompt(const std::vector<DocNote> &notes)
     pending.initialValue = notes.front().velocity;
     m_pendingVelocityPrompt = std::move(pending);
     QObject::disconnect(m_velocityPromptCancellation);
-    m_velocityPromptCancellation = connect(host, &QuickModalHost::cancelled, this,
-                                           [this] { clearVelocityPrompt(/*restoreFocus=*/true); });
-    if (!host->open(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/VelocityPrompt.qml")), this,
-                    velocityPromptTitle())) {
+    m_velocityPromptCancellation =
+        connect(session, &QuickPopupSession::cancelled, this,
+                [this](bool restoreFocus) { clearVelocityPrompt(restoreFocus); });
+    if (!session->openForm(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/VelocityPrompt.qml")),
+                           this)) {
         clearVelocityPrompt(/*restoreFocus=*/true);
     }
 }
@@ -416,6 +416,12 @@ void PianoRoll::acceptVelocityPrompt(int velocity)
     m_pendingVelocityPrompt.reset(); // Never expose a pending target while mutating the document.
     QObject::disconnect(m_velocityPromptCancellation);
     m_velocityPromptCancellation = {};
+    if (songview::TimelineQuickView *const quick = m_sv->quickView()) {
+        if (songview::QuickPopupSession *const session = quick->popupSession();
+            session && session->owns(this)) {
+            session->close();
+        }
+    }
     SongDocument *const document = m_sv->document();
     if (document == pending.document && document->revision() == pending.documentRevision) {
         std::vector<DocNote> notes;
@@ -436,8 +442,6 @@ void PianoRoll::acceptVelocityPrompt(int velocity)
             m_lastVelocity = uint8_t(velocity);
         }
     }
-    if (songview::TimelineQuickView *const quick = m_sv->quickView())
-        quick->modalHost()->close();
     restoreVelocityPromptFocus();
 }
 
@@ -445,22 +449,25 @@ void PianoRoll::cancelVelocityPrompt()
 {
     if (!m_pendingVelocityPrompt)
         return;
-    if (songview::TimelineQuickView *const quick = m_sv->quickView())
-        quick->modalHost()->cancel();
+    songview::TimelineQuickView *const quick = m_sv->quickView();
+    songview::QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
+    const bool ownsSession = session && session->owns(this);
+    if (ownsSession)
+        session->cancel();
     if (m_pendingVelocityPrompt)
-        clearVelocityPrompt(/*restoreFocus=*/true);
+        clearVelocityPrompt(ownsSession);
 }
 
 void PianoRoll::cancelVelocityPromptWithoutFocus()
 {
-    const bool ownsModal = m_pendingVelocityPrompt.has_value();
+    songview::TimelineQuickView *const quick = m_sv->quickView();
+    songview::QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
+    const bool ownsSession = m_pendingVelocityPrompt && session && session->owns(this);
     m_pendingVelocityPrompt.reset();
     QObject::disconnect(m_velocityPromptCancellation);
     m_velocityPromptCancellation = {};
-    if (ownsModal) {
-        if (songview::TimelineQuickView *const quick = m_sv->quickView())
-            quick->modalHost()->cancel();
-    }
+    if (ownsSession)
+        session->cancel(/*restoreFocus=*/false);
 }
 
 void PianoRoll::clearVelocityPrompt(bool restoreFocus)

@@ -127,29 +127,22 @@ class QuickMenuModel : public QAbstractListModel
     std::vector<QPointer<QuickMenuModel>> m_submenus;
 };
 
-/// Modal typed-menu session driver for one QQuickWindow. Owns layout,
-/// navigation (keyboard, hover, type-ahead), dismissal and submenu stacking;
-/// enablement and effects stay with the owner that built the model.
+/// Typed-menu adapter for a QuickPopupSession. It owns menu measurement,
+/// navigation (keyboard, hover, type-ahead), submenu stacking and the typed
+/// model contract; the shared session owns outside presses and lifecycle.
 ///
-/// The host instantiates QuickMenuPanel.qml into the window's content item
-/// (expects the panel at `qrc:/qt/qml/Porydaw/Ui/QuickMenuPanel.qml`); the
-/// window must be set before open(). While a session is open the host filters
-/// the window's keys (Escape/arrows/Enter/type-ahead), so nothing else in the
-/// scene reacts, and dismisses on outside presses, focus loss, resize and
-/// owner destruction — the session never outlives its model.
-///
-/// Appearance defaults resolve the theme menu roles
-/// (themes::Role::menu_*) with the application body font; setAppearance()
-/// overrides keys wholesale (`font`, `background`, `outline`, `text`,
-/// `hoverBackground`, `hoverText`, `pressedBackground`, `pressedText`,
-/// `disabledText`, `separator`).
+/// QuickMenuPanel.qml instances are parented beneath the session overlay root.
+/// The adapter filters only KeyPress and KeyRelease while its own menu session
+/// is active. Forms never pass through this keyboard path.
+class QuickPopupSession;
+
 class QuickMenuHost : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(bool isOpen READ isOpen NOTIFY isOpenChanged FINAL)
     Q_PROPERTY(QuickMenuModel *rootModel READ rootModel NOTIFY rootChanged FINAL)
     Q_PROPERTY(QuickMenuModel *currentModel READ currentModel NOTIFY currentChanged FINAL)
-    Q_PROPERTY(QQuickWindow *window READ window WRITE setWindow NOTIFY windowChanged FINAL)
+    Q_PROPERTY(QQuickWindow *window READ window NOTIFY windowChanged FINAL)
     Q_PROPERTY(
         QVariantMap appearance READ appearance WRITE setAppearance NOTIFY appearanceChanged FINAL)
 
@@ -161,36 +154,20 @@ class QuickMenuHost : public QObject
     QuickMenuModel *rootModel() const;
     QuickMenuModel *currentModel() const;
     QQuickWindow *window() const;
-    void setWindow(QQuickWindow *window);
+    void setPopupSession(QuickPopupSession *session);
     const QVariantMap &appearance() const { return m_appearance; }
     void setAppearance(QVariantMap appearance);
 
-    /// Opens (or replaces) the session with `model` anchored at a scene
-    /// position in window coordinates; the panel is clamped and flipped to
-    /// stay inside the window. No-op without a window, model or rows.
-    /// Replacing an open session emits closed() for the previous one, but the
-    /// session never appears closed: isOpen stays true throughout, only
-    /// rootChanged()/currentChanged() announce the swap.
+    /// Opens (or replaces) this typed menu at a scene position. The shared
+    /// popup session ends any foreign owner before this adapter publishes its
+    /// menu panels.
     Q_INVOKABLE void open(QuickMenuModel *model, const QPointF &scenePos);
-    /// Programmatic close: emits closed() only, never cancelled().
     Q_INVOKABLE void close();
-    /// User dismissal: emits cancelled() followed by closed().
     Q_INVOKABLE void cancel();
 
-    // Panel-facing interaction (QuickMenuPanel.qml calls these). Consumers
-    // normally only connect to the model's activated() and the host's
-    // cancelled()/closed() signals.
-    /// Hover highlight; closes deeper submenu levels when the cursor returns
-    /// to an ancestor panel, auto-opens a row's submenu.
+    // Panel-facing interaction (QuickMenuPanel.qml calls these).
     Q_INVOKABLE void hoverRow(QQuickItem *panel, int row);
-    /// Activates a row on the given level: stayOpen toggles keep the session
-    /// and emit the model's activated(id); ordinary picks clear the session
-    /// first and then emit activated(id).
     Q_INVOKABLE void activateRow(QQuickItem *panel, int row);
-    /// Underlay press outside the menu frame; right presses additionally
-    /// emit outsideRightPressed() so consumers can retarget (e.g. open the
-    /// context menu of the row that was actually pressed).
-    Q_INVOKABLE void outsidePressed(int button, const QPointF &scenePos);
 
   signals:
     void isOpenChanged();
@@ -198,14 +175,8 @@ class QuickMenuHost : public QObject
     void currentChanged();
     void windowChanged();
     void appearanceChanged();
-    /// Dismissed without activation (Escape, outside press, focus loss,
-    /// resize, model/owner destruction).
     void cancelled();
-    /// The session fully ended; emitted after activation, cancellation,
-    /// programmatic close and open()-replacement.
     void closed();
-    /// Scene position of an outside right press, for retargeting consumers.
-    void outsideRightPressed(const QPointF &scenePos);
 
   protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
@@ -224,7 +195,9 @@ class QuickMenuHost : public QObject
     void pushLevel(QuickMenuModel *model, const QRectF &anchor, bool rootLevel);
     void popLevel(bool notifyState = true);
     void popToLevel(QQuickItem *panel);
-    void teardown(bool emitClosed, bool notifyState = true);
+    void teardown(bool notifyState = true);
+    void handleSessionCancelled();
+    void handleSessionClosed();
     void handleLevelReset(QuickMenuModel *model);
     void layoutLevel(Level &level, const QRectF &anchor, bool rootLevel);
     void relayoutRoot();
@@ -237,12 +210,14 @@ class QuickMenuHost : public QObject
     void typeAhead(const QString &text);
     Level *currentLevel();
     QVector<Level> m_levels;
-    QPointer<QQuickWindow> m_window;
+    QPointer<QuickPopupSession> m_popupSession;
     QVariantMap m_appearance;
     QString m_typeAhead;
     QTimer m_typeAheadReset;
     QPointF m_anchor;
     bool m_filterInstalled = false;
+    bool m_sessionActive = false;
+    bool m_waitingForClosed = false;
 };
 
 } // namespace songview

@@ -14,11 +14,11 @@
 #include <cstdint>
 
 class QKeyEvent;
-class QQuickWindow;
 class SongDocument;
 class SongView;
 namespace songview {
 class QuickMenuHost;
+class QuickPopupSession;
 class QuickMenuModel;
 class EventListInteraction;
 } // namespace songview
@@ -80,7 +80,7 @@ class EventListController : public QObject
     void setFollowPlayhead(bool on);
 
     Q_INVOKABLE void chunkPicked(int comboIndex);
-    void setMenuWindow(QQuickWindow *window);
+    void setPopupSession(songview::QuickPopupSession *session);
     Q_INVOKABLE void filterToggled(int bit);
     Q_INVOKABLE void addEvent();
     Q_INVOKABLE void insertCopyOfRow(int row);

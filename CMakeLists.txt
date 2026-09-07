@@ -313,8 +313,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/quick/eventlistcontroller.h
     src/ui/songview/quick/quickmenumodel.cpp
     src/ui/songview/quick/quickmenuhost.cpp
-    src/ui/songview/quick/quickmodalhost.cpp
-    src/ui/songview/quick/quickmodalhost.h
+    src/ui/songview/quick/quickpopupsession.cpp
+    src/ui/songview/quick/quickpopupsession.h
     src/ui/songview/quick/quickmenulayout.cpp
     src/ui/songview/quick/quickmenulayout.h
     src/ui/songview/quick/quickmenumodel.h
@@ -493,6 +493,10 @@ set_source_files_properties(
     src/ui/songview/quick/QuickMenuPanel.qml
     PROPERTIES QT_RESOURCE_ALIAS QuickMenuPanel.qml
 )
+set_source_files_properties(
+    src/ui/songview/quick/QuickPopupLayer.qml
+    PROPERTIES QT_RESOURCE_ALIAS QuickPopupLayer.qml
+)
 qt_add_qml_module(porydaw_app
     URI Porydaw.Ui
     VERSION 1.0
@@ -509,6 +513,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/DrawerChromeLayer.qml
         src/ui/songview/quick/OtherStripToolTip.qml
         src/ui/songview/quick/QuickMenuPanel.qml
+        src/ui/songview/quick/QuickPopupLayer.qml
         src/ui/songview/quick/EventListPage.qml
         src/ui/songview/quick/DragInput.qml
         src/ui/songview/quick/PitchBendPopup.qml

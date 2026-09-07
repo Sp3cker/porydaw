@@ -15,6 +15,7 @@
 #include "project/voicegroupsource.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 
@@ -107,6 +108,7 @@ EventWidgets locateWidgets(SongView &view)
         widgets.model = widgets.controller ? widgets.controller->model() : nullptr;
         songview::TimelineQuickView *quick = view.quickView();
         widgets.quickWindow = quick ? quick->quickWindow() : nullptr;
+        widgets.popupSession = quick ? quick->popupSession() : nullptr;
         return bool(widgets);
     });
     if (!ready)
@@ -269,6 +271,18 @@ bool selectChunk(EventListController &controller, int chunk)
 QQuickItem *visualItem(QQuickWindow &window, const QString &objectName)
 {
     return visualDescendant(window.contentItem(), objectName);
+}
+
+QQuickItem *popupLayer(const EventWidgets &widgets)
+{
+    return widgets.popupSession ? widgets.popupSession->overlayRoot() : nullptr;
+}
+
+QQuickItem *activeMenuPanel(const EventWidgets &widgets)
+{
+    QQuickItem *const panel =
+        visualDescendant(popupLayer(widgets), QStringLiteral("quickMenuPanelRoot"));
+    return panel && panel->isVisible() ? panel : nullptr;
 }
 
 QQuickItem *eventListTable(const EventWidgets &widgets)

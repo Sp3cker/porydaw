@@ -13,6 +13,7 @@ Item {
     property string inputObjectName: ""
     property string accessibleName: ""
     property string accessibleDescription: ""
+    property alias textInput: input
 
     signal valueCommitted(int committed)
     signal editingAccepted(int committed)

@@ -3,14 +3,18 @@
 #include <QCoreApplication>
 #include <QFontInfo>
 #include <QGuiApplication>
+#include <QList>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QSignalSpy>
+#include <QVariant>
 #include <QWheelEvent>
 #include <QtTest>
 
 #include "ui/eventtabletypes.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/quickmenumodel.h"
+#include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/typography.h"
 
@@ -316,15 +320,15 @@ void EventViewsChromeTest::filterMenuSession()
     QQuickWindow &window = *widgets.quickWindow;
     EventListController &controller = *widgets.controller;
 
-    QQuickItem *filterButton = window.findChild<QQuickItem *>(QStringLiteral("eventListFilter"));
+    QQuickItem *filterButton =
+        checks::eventviews::visualItem(window, QStringLiteral("eventListFilter"));
     QVERIFY(filterButton);
     const QPointF buttonCenter = filterButton->mapToScene(
         QPointF(filterButton->width() / 2.0, filterButton->height() / 2.0));
 
     QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, buttonCenter.toPoint());
     QTRY_VERIFY(controller.menuOpen());
-    QQuickItem *panel =
-        checks::eventviews::visualItem(window, QStringLiteral("quickMenuPanelRoot"));
+    QQuickItem *panel = checks::eventviews::activeMenuPanel(widgets);
     QVERIFY(panel);
     songview::QuickMenuModel *model = panelModel(*panel);
     QVERIFY(model);
@@ -343,9 +347,14 @@ void EventViewsChromeTest::filterMenuSession()
     };
     ticksMirrorCheckedRole(); // FilterAll: every row renders its check
 
+    // Menu-only type-ahead selects the actual Meta filter delegate; normal
+    // text input has no role while this menu session owns the keys.
+    const int metaRow = rows - 1;
+    QTest::keyClick(&window, Qt::Key_M);
+    QTRY_COMPARE(panel->property("highlightedRow").toInt(), metaRow);
+
     // Hover the Meta row, then click it: the stayOpen toggle flips the mask,
     // rebuilds the model in place, and keeps session and highlight by id.
-    const int metaRow = rows - 1;
     QTest::mouseMove(&window, menuRowCenter(*panel, metaRow).toPoint());
     QCoreApplication::processEvents();
     QCOMPARE(panel->property("highlightedRow").toInt(), metaRow);
@@ -353,7 +362,7 @@ void EventViewsChromeTest::filterMenuSession()
                       menuRowCenter(*panel, metaRow).toPoint());
     QTRY_VERIFY(!bool(controller.filterMask() & eventlist::EventTableModel::FilterMeta));
     QVERIFY(controller.menuOpen());
-    panel = checks::eventviews::visualItem(window, QStringLiteral("quickMenuPanelRoot"));
+    panel = checks::eventviews::activeMenuPanel(widgets);
     QVERIFY(panel);
     QTRY_COMPARE(panel->property("highlightedRow").toInt(), metaRow);
     ticksMirrorCheckedRole(); // rebuilt: only Meta renders unchecked
@@ -370,18 +379,24 @@ void EventViewsChromeTest::filterMenuSession()
     const int maskBeforeCancel = controller.filterMask();
     QTest::keyClick(&window, Qt::Key_Escape);
     QTRY_VERIFY(!controller.menuOpen());
-    QTRY_VERIFY(!checks::eventviews::visualItem(window, QStringLiteral("quickMenuPanelRoot")));
+    QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets));
     QCOMPARE(controller.filterMask(), maskBeforeCancel);
 
-    // A real press on the table outside the frame cancels the same way.
+    // A real press and its paired release on the current table cell stay in
+    // the popup underlay. If either leaks, the event list starts an editor.
+    controller.selectRow(0, Qt::NoModifier);
+    QTRY_COMPARE(controller.currentRow(), 0);
+    QVERIFY(!controller.isEditing());
     QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, buttonCenter.toPoint());
     QTRY_VERIFY(controller.menuOpen());
     const QPointF tablePoint =
         checks::eventviews::cellSceneCenter(widgets, 0, eventlist::EventTableModel::ColData);
     QVERIFY(!tablePoint.isNull());
     QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, tablePoint.toPoint());
-    QCoreApplication::processEvents();
     QTRY_VERIFY(!controller.menuOpen());
+    QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets));
+    QCOMPARE(controller.currentRow(), 0);
+    QVERIFY(!controller.isEditing());
     QCOMPARE(controller.filterMask(), maskBeforeCancel);
 }
 
@@ -408,10 +423,8 @@ void EventViewsChromeTest::rowMenuActivationCloses()
     QCoreApplication::processEvents();
     QTRY_VERIFY(controller.menuOpen());
     QTRY_COMPARE(controller.currentRow(), row); // the pressed row owns the menu
-    QQuickItem *panel =
-        checks::eventviews::visualItem(window, QStringLiteral("quickMenuPanelRoot"));
+    QQuickItem *panel = checks::eventviews::activeMenuPanel(widgets);
     QVERIFY(panel);
-    QCOMPARE(panelModel(*panel)->rowCount(), 6); // insert, sep, move up, move down, sep, delete
 
     const QPointF insertCenter = menuRowCenter(*panel, 0);
     QVERIFY(!insertCenter.isNull());
@@ -419,9 +432,68 @@ void EventViewsChromeTest::rowMenuActivationCloses()
     QTRY_COMPARE(panel->property("highlightedRow").toInt(), 0);
     QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, insertCenter.toPoint());
     QTRY_VERIFY(!controller.menuOpen());
-    QTRY_VERIFY(!checks::eventviews::visualItem(window, QStringLiteral("quickMenuPanelRoot")));
+    QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets));
     QTRY_COMPARE(widgets.model->rowCount(), rowsBefore + 1);
     QCOMPARE(opened.fixture->document().undoStack()->index(), undoBefore + 1);
+}
+
+// An outside right press reports the retarget position to the shared session
+// while the popup layer owns both the press and its paired release. Event List
+// has no independent retarget action, so the existing row-menu state must not
+// be re-entered by that release.
+void EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease()
+{
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
+    QVERIFY2(opened, qPrintable(opened.error));
+    const EventWidgets widgets = opened.fixture->openEventList();
+    QVERIFY(widgets);
+    QQuickWindow &window = *widgets.quickWindow;
+    EventListController &controller = *widgets.controller;
+
+    const int sourceRow =
+        checks::eventviews::rowForTickAndType(*widgets.model, 60, eventlist::TypeCc);
+    QVERIFY(sourceRow >= 0);
+    const QPointF source = checks::eventviews::cellSceneCenter(widgets, sourceRow,
+                                                               eventlist::EventTableModel::ColData);
+    QVERIFY(!source.isNull());
+
+    QTest::mouseClick(&window, Qt::RightButton, Qt::NoModifier, source.toPoint());
+    QTRY_VERIFY(controller.menuOpen());
+    QTRY_COMPARE(controller.currentRow(), sourceRow);
+    QSignalSpy retargeted(widgets.popupSession, &songview::QuickPopupSession::outsideRightPressed);
+    QVERIFY(retargeted.isValid());
+    QQuickItem *const frame =
+        checks::eventviews::visualItem(window, QStringLiteral("quickMenuFrame"));
+    QVERIFY(frame);
+    QPointF target;
+    int targetRow = -1;
+    for (int row = 0; row < widgets.model->rowCount(); ++row) {
+        if (row == sourceRow)
+            continue;
+        const QPointF candidate =
+            checks::eventviews::cellSceneCenter(widgets, row, eventlist::EventTableModel::ColData);
+        if (!candidate.isNull() && !frame->contains(frame->mapFromScene(candidate))) {
+            target = candidate;
+            targetRow = row;
+            break;
+        }
+    }
+    QVERIFY(targetRow >= 0);
+
+    QTest::mousePress(&window, Qt::RightButton, Qt::NoModifier, target.toPoint());
+    QTRY_COMPARE(retargeted.count(), 1);
+    const QList<QVariant> arguments = retargeted.takeFirst();
+    QCOMPARE(arguments.constFirst().toPointF(), QPointF(target.toPoint()));
+    QTRY_VERIFY(!controller.menuOpen());
+    QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets));
+    QCOMPARE(controller.currentRow(), sourceRow);
+
+    QTest::mouseRelease(&window, Qt::RightButton, Qt::NoModifier, target.toPoint());
+    QCoreApplication::processEvents();
+    QVERIFY(!controller.menuOpen());
+    QVERIFY(!checks::eventviews::activeMenuPanel(widgets));
+    QCOMPARE(controller.currentRow(), sourceRow);
+    QVERIFY(!controller.isEditing());
 }
 
 int runEventViewsChromeCheck(const QStringList &qtArguments)

@@ -22,6 +22,7 @@ class EventViewsChromeTest final : public QObject
     void scrollbarWheelClamps();
     void filterMenuSession();
     void rowMenuActivationCloses();
+    void outsideRightCancelsAndSwallowsRelease();
     void filterMatrix_data();
     void filterMatrix();
     void viewStateRoundTrip();

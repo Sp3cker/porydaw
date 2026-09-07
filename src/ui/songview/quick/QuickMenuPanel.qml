@@ -1,9 +1,10 @@
 // Typed menu renderer hosted by songview::QuickMenuHost. The host creates one
-// instance per open menu level into the window's content item; the root level
-// carries the window-sized outside-press underlay, submenu levels render only
-// their frame. All layout numbers (row height, column edges, clamped origin)
-// are measured by the host from the theme menu appearance and pushed in as
-// properties — this file owns painting, hover and press delivery only.
+// instance per open menu level beneath QuickPopupSession's shared canvas
+// overlay. The overlay supplies the single outside-press underlay; every
+// menu level renders only its frame. All layout numbers (row height, column
+// edges, clamped origin) are measured by the host from the theme menu
+// appearance and pushed in as properties — this file owns painting, hover and
+// press delivery only.
 // QtQuick only: no Controls, no nested command maps; rows come from
 // QuickMenuModel's explicit typed roles.
 import QtQuick
@@ -65,23 +66,9 @@ Item {
         return Qt.rect(scene.x, scene.y, rowItem.width, rowItem.height)
     }
 
-    // Outside-press underlay: left/middle presses dismiss the session, right
-    // presses dismiss and hand the scene position to the host so real
-    // consumers can retarget (e.g. open another row's context menu).
-    MouseArea {
-        id: underlay
-
-        anchors.fill: parent
-        visible: panel.rootLevel
-        enabled: panel.rootLevel
-        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-        hoverEnabled: true
-        onPressed: (mouse) =>
-            panel.host.outsidePressed(mouse.button, Qt.point(mouse.x, mouse.y))
-        onWheel: (wheel) => wheel.accepted = true
-    }
 
     Rectangle {
+        objectName: "quickMenuFrame"
         id: frame
 
         x: panel.menuOrigin.x

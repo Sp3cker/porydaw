@@ -201,9 +201,12 @@ bool TimeRuler::pointerDoubleClick(const TimelinePointerInput &input)
         !hitTimeSigChip(input.position, &sigTick, &numerator, &denomPow2, &implicit)) {
         return false;
     }
-    // The first press of the double-click armed a chip drag; cancel it
-    // before the modal editor swallows the release.
+    // End the double-click's implicit grab before publishing the form. The
+    // resulting PointerUngrabbed cancellation synchronously clears the old
+    // ruler gesture and popup state; publishing first would cancel this form.
     m_dragTimeSig = false;
+    if (TimelineInputHost *const host = input.host ? input.host : m_inputHost)
+        host->releasePointerGrab();
     openTimeSigPrompt(sigTick, numerator, denomPow2);
     requestQuickUpdate();
     return true;

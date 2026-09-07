@@ -44,13 +44,15 @@ The requested thermo audit is provided by `thermo-nuclear-reviewer`.
    model with explicit roles and action identifiers, not nested QVariantMap
    command descriptions. Menu enablement and action semantics stay with owners.
    Do not add one shallow presenter class per small dialog.
-4. Preserve popup focus, dismissal and modality deliberately. A QMenu nested
-   event loop is not application modality: do not turn menus into app-modal
-   dialogs. Existing app-modal dialogs can use an asynchronously opened modal
-   Quick window, with the existing native Quick popup precedent informing
-   ownership. Do not emulate application modality with scattered global filters.
-   The already approved inline Tempo/CC prompt design in the drawer plan remains
-   authoritative for those prompts, including cancellation on focus loss.
+4. User clarification supersedes the initial app-modal decision: transient forms
+   and pickers must be based on the custom Quick context menu's popup hosting and
+   quick dismissal. Share the actual overlay/input/lifecycle implementation,
+   not a second copy of its behavior. Outside press, Escape, focus loss, resize
+   and owner invalidation cancel unaccepted drafts; consume the dismissing press
+   and its paired release. Inside text/pointer controls retain their normal keys.
+   Keep typed form content separate from menu rows and document effects.
+   Inline Tempo/CC prompts remain inline with their existing cancellation policy;
+   passive tooltips must not acquire focus or intercept input.
 5. Async requests retain a guarded target and document revision; stale acceptance
    performs no edit. Clear pending state before applying or emitting completion.
    Use existing domain owners and named commit paths. Close on detach, replacement,
@@ -103,7 +105,8 @@ against that state before dispatch. No cleanup of unrelated work or old worktree
 | quick-note-velocity | Note velocity value entry | rollcheck, selectionkey-local-input; accept/cancel, bounds, undo, text shortcuts without timeline leakage. |
 | quick-time-signature | Ruler time-signature dialog and both callers | rollcheck; open through actual ruler input, choose 7/8, commit, cancel and undo. |
 | quick-insert-time | Bars/beats/fractions dialog and menu action continuation | mainwindow-routing-input, rollcheck; active-song routing, tick conversion/overflow, cancel, unchanged undo restoration. |
-| quick-voice-picker | Search, selection, 128 voices, press-hold audition, all four callers | editor-drawer, rollwindowingcheck, rollcheck, trackheaderquickcheck; filtering/no-match, accept/cancel, track addition, voice-node edits and guaranteed audition release. |
+| quick-popup-dismissal | User-directed correction: one shared custom-menu popup session for menus and transient form content; remove native application-modal form host | eventviews, rollcheck, selectionkey, mainwindow-routing; inside editing, outside/Escape/deactivation cancellation, swallowed dismissing clicks/releases, owner replacement, submenu navigation and no hidden document writes. |
+| quick-voice-picker | Search, selection, 128 voices, press-hold audition, all live callers | editor-drawer, native windowing, rollcheck, trackheaderquickcheck; filtering/no-match, accept/cancel, track addition, voice-change edits and guaranteed audition release. |
 | quick-note-menu | Note context actions and outside-right-click retarget | rollcheck; correct target/action, shortcut display, velocity entry, press-retarget and swallowed paired release. |
 | quick-time-selection-menu | Shared roll/drawer time-selection actions | rollcheck, automation-editing, selectionkey; span semantics, clipboard enablement, copy/paste/duplicate/delete outcomes. |
 | quick-ruler-grid-menu | Division and feel menus | rollcheck, host-adapter; checkmarks, division/triplet changes, keyboard navigation, cancellation. |
@@ -157,19 +160,48 @@ AutomationCanvas. Both Set Value and double-click open without writing. CC 10/24
 show -64..63 and store +64. Cancel on focus loss/hide/replacement/deactivation;
 accept only a matching document revision and restore automation input focus.
 
-Other dialog plans must explicitly preserve their current modal interaction while
-using Quick content, asynchronous completion and guarded target identities. Reuse
-existing DragInput for numerical fields and its keyboard, wheel and drag behavior.
+Velocity, time signature, Insert Time and the voice picker use the same in-scene
+popup mechanics as custom context menus, not application-modal native windows.
+Keep asynchronous completion and guarded target identities. Reuse DragInput for
+numerical fields; text editing must not inherit menu type-ahead/key interception.
+Outside press and Escape cancel drafts without applying them; dismissal must not
+also edit the underlying timeline. Verify actual popup content and input routing,
+not a separate-window identity or application-modality assertion.
 
-Voice picker preserves all four callers: edit track voice, add track, voice-change
-area and automation page. Build/filter a small typed model, select first match,
-disable acceptance for no match, and retain audition velocity. Note-off is mandatory
-on release, cancellation, reject, deactivation, replacement and destruction.
+Voice picker preserves every live caller: edit track voice, add track and the
+voice-change area. Source reconciliation found AutomationPage::pickVoice was an
+unused forwarder; remove it rather than invent a new automation entry point.
+Build/filter a small typed model, select the first match, disable acceptance for
+no match, and retain audition key 60 and velocity 112. Note-off is mandatory on
+release, cancellation, rejection, deactivation, replacement and destruction.
 
 Migrate the existing native-dialog watchdog tests to actual Quick input. Keep their
 observable document/undo assertions. Do not invoke accept directly as the only proof
 of a rendered editor or input ownership. Delete obsolete modal interception helpers
 only when their last consumer has migrated.
+
+## Shared popup implementation decision
+
+One QuickPopupSession belongs to each TimelineQuickView and its existing Quick
+window. QuickMenuHost borrows that session for menu panels; the same session loads
+typed form QML through openForm. Remove QuickModalHost and modalHost/modalWindow
+interfaces, rather than retain a compatibility wrapper or add a second form host.
+
+The session owns the actual shared scene overlay, outside-press underlay, window
+lifecycle filtering and paired-release suppression. Menu-only rows, submenu
+layout, type-ahead and keyboard navigation remain in QuickMenuHost. Forms receive
+normal Quick text-input dispatch and retain their terminal key handling.
+
+Cancellation reports whether restoring local focus is appropriate. Outside press
+and Escape can restore the owning band; deactivation, owner teardown and
+replacement must not reactivate the application or steal focus from the next
+popup. Cancel the old session before publishing a new owner's pending state.
+Keep suppression of an outside press's release alive even after the dismissed
+overlay is destroyed or a right-click retarget opens another menu.
+
+Existing pitch-bend editing and inline rename retain their established live-edit
+commit-on-dismiss semantics. They are not unaccepted numeric/picker drafts.
+Passive tooltips remain noninteractive; inline Tempo/CC remains lane-local.
 
 ## Menu implementation contract
 
@@ -209,6 +241,14 @@ Use deno tasks exclusively for builds/checks/formatting. Each component's local
 plan confirms filter names against the live registry before execution. Orchestrator
 runs `deno task verify --filter <filter> --verbose` with all relevant filters; verify
 builds the checks first. Never run redundant parallel format/build gates.
+
+Do not launch native GUI harnesses, activate windows, or inject desktop input while
+the user is using the machine. User interaction with the test windows invalidates
+focus/outside-click failure evidence. Use registered offscreen checks and explicitly
+offscreen/software Quick interaction probes instead; never report these as native
+window-system verification. Native-only coverage remains separately pending until
+it can run without interfering with the user. Do not weaken assertions or alter
+behavior to chase a user-interrupted native run.
 
 Each UI component needs real Quick event delivery and rendered-surface proof, using
 existing EditorRig/native window harnesses and a production-app smoke where needed.

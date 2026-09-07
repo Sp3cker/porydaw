@@ -11,7 +11,7 @@
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/quick/pianorollquick.h"
-#include "ui/songview/quick/quickmodalhost.h"
+#include "ui/songview/quick/quickpopupsession.h"
 
 #include "ui/songview/quick/playheadquick.h"
 #include "ui/songview/quick/timelineinputitem.h"
@@ -203,14 +203,13 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
             qCritical().noquote() << error.toString();
         qFatal("Qt Quick timeline QML failed to load");
     }
-    m_modalHost = new QuickModalHost(*m_quickView, this);
+    m_popupSession = new QuickPopupSession(*m_quickView, this);
 
     QObject *root = rootObject();
     if (!root)
         qFatal("Qt Quick timeline QML has no root object");
-    // The event page's menus open as Quick popups; the controller's host
-    // needs this window before its first open.
-    m_eventList->setMenuWindow(quickWindow());
+    // The event page's typed menus share the same canvas overlay as forms.
+    m_eventList->setPopupSession(m_popupSession);
     discoverGestureScrollbars(*root);
 
     static constexpr std::array layers = {
@@ -379,8 +378,8 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
 
 TimelineQuickView::~TimelineQuickView()
 {
-    if (m_modalHost)
-        m_modalHost->cancel();
+    if (m_popupSession)
+        m_popupSession->cancel(false);
 
     clearKeyPolicyHandlers();
     m_gestureScrollbars.clear();
@@ -647,9 +646,9 @@ QQuickWindow *TimelineQuickView::quickWindow() const
 {
     return m_quickView;
 }
-QuickModalHost *TimelineQuickView::modalHost() const noexcept
+QuickPopupSession *TimelineQuickView::popupSession() const noexcept
 {
-    return m_modalHost;
+    return m_popupSession;
 }
 
 void TimelineQuickView::clearHover(TimelineQuickHoverOwner owner)

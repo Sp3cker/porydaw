@@ -7,7 +7,7 @@
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/grid.h"
-#include "ui/songview/quick/quickmodalhost.h"
+#include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
@@ -235,16 +235,15 @@ void TimeRuler::openTimeSigPrompt(uint64_t tick, int numerator, int denominatorP
 {
     SongDocument *const document = m_owner.document();
     TimelineQuickView *const quick = m_owner.quickView();
-    QuickModalHost *const host = quick ? quick->modalHost() : nullptr;
-    if (!document || !host)
+    QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
+    if (!document || !session)
         return;
 
-    // Replacement ends the former session before this ruler publishes a new
-    // guarded target. Owner-local cleanup cannot close another owner's modal.
+    // Replacement ends the active shared-popup session before this bridge
+    // publishes a new guarded target.
+    session->cancel(/*restoreFocus=*/false);
     if (m_pendingTimeSigPrompt)
         cancelTimeSigPromptWithoutFocus();
-    else
-        host->cancel();
 
     PendingTimeSigPrompt pending;
     pending.document = document;
@@ -259,10 +258,11 @@ void TimeRuler::openTimeSigPrompt(uint64_t tick, int numerator, int denominatorP
     emit timeSigPromptChanged();
 
     QObject::disconnect(m_timeSigPromptCancellation);
-    m_timeSigPromptCancellation = connect(host, &QuickModalHost::cancelled, this,
-                                          [this] { clearTimeSigPrompt(/*restoreFocus=*/true); });
-    if (!host->open(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/TimeSignaturePrompt.qml")), this,
-                    timeSigPromptTitle())) {
+    m_timeSigPromptCancellation =
+        connect(session, &QuickPopupSession::cancelled, this,
+                [this](bool restoreFocus) { clearTimeSigPrompt(restoreFocus); });
+    if (!session->openForm(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/TimeSignaturePrompt.qml")),
+                           this)) {
         clearTimeSigPrompt(/*restoreFocus=*/true);
     }
 }
@@ -282,14 +282,18 @@ void TimeRuler::acceptTimeSigPrompt(int numerator, int denominatorPow2)
     m_timeSigPromptCancellation = {};
     emit timeSigPromptChanged();
 
+    if (TimelineQuickView *const quick = m_owner.quickView()) {
+        if (QuickPopupSession *const session = quick->popupSession();
+            session && session->owns(this)) {
+            session->close();
+        }
+    }
     SongDocument *const document = m_owner.document();
     if (document == pending.document.data() && document->revision() == pending.documentRevision &&
         (numerator != pending.initialNumerator ||
          denominatorPow2 != pending.initialDenominatorPow2)) {
         document->setTimeSig(pending.tick, numerator, denominatorPow2);
     }
-    if (TimelineQuickView *const quick = m_owner.quickView())
-        quick->modalHost()->close();
     restoreTimeSigPromptFocus();
 }
 
@@ -297,23 +301,25 @@ void TimeRuler::cancelTimeSigPrompt()
 {
     if (!m_pendingTimeSigPrompt)
         return;
-    if (TimelineQuickView *const quick = m_owner.quickView())
-        quick->modalHost()->cancel();
+    TimelineQuickView *const quick = m_owner.quickView();
+    QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
+    const bool ownsSession = session && session->owns(this);
+    if (ownsSession)
+        session->cancel();
     if (m_pendingTimeSigPrompt)
-        clearTimeSigPrompt(/*restoreFocus=*/true);
+        clearTimeSigPrompt(ownsSession);
 }
 
 void TimeRuler::cancelTimeSigPromptWithoutFocus()
 {
-    const bool ownsModal = m_pendingTimeSigPrompt.has_value();
+    TimelineQuickView *const quick = m_owner.quickView();
+    QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
+    const bool ownsSession = m_pendingTimeSigPrompt && session && session->owns(this);
     m_pendingTimeSigPrompt.reset();
     QObject::disconnect(m_timeSigPromptCancellation);
     m_timeSigPromptCancellation = {};
-    if (ownsModal) {
-        emit timeSigPromptChanged();
-        if (TimelineQuickView *const quick = m_owner.quickView())
-            quick->modalHost()->cancel();
-    }
+    if (ownsSession)
+        session->cancel(/*restoreFocus=*/false);
 }
 
 void TimeRuler::clearTimeSigPrompt(bool restoreFocus)

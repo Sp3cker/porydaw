@@ -6,6 +6,7 @@
 #include "ui/keymap.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/quickmenumodel.h"
+#include "ui/songview/quick/quickpopupsession.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
 
@@ -14,8 +15,6 @@
 #include <QEvent>
 #include <QFont>
 #include <QKeyEvent>
-#include <QQuickWindow>
-#include <QVariant>
 #include <algorithm>
 #include <cmath>
 #include <iterator>
@@ -997,9 +996,9 @@ void EventListController::resizeColumn(int column, double width)
     emit columnWidthsChanged();
 }
 
-void EventListController::setMenuWindow(QQuickWindow *window)
+void EventListController::setPopupSession(songview::QuickPopupSession *session)
 {
-    m_menuHost->setWindow(window);
+    m_menuHost->setPopupSession(session);
 }
 
 void EventListController::rebuildChunkMenu()
