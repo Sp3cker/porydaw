@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Route note keyboard commands by selection across timeline drawers, while text editors and keyboard-focused grips and scrollbars retain their local keys.
 - Render the main timeline and piano-roll scrollbars in the existing Qt Quick scene, using the shared scrollbar control and the camera's fractional scroll positions.
 - Resonance suppression now uses a 150 ms default attack for faster response to ringing and whistles.
+- Deleting a nonempty automation CC lane now asks for confirmation in an in-scene Quick form where `Cancel` starts with keyboard focus. Populated default Volume/Bend rows keep their default row and delete only written CC events; the prompt states the written-event count and that the default row remains, and ordinary document Undo restores the deleted events in that retained row.
 
 ## Fixed
 - Initialize empty voicegroup fixtures before binding them in host and window lifecycle checks, preventing intermittent invalid-pointer crashes.
@@ -25,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Typing in Qt Quick text inputs no longer toggles the automation Pencil tool.
 - Double-clicking a tempo or CC automation node now deletes it once without opening an unintended value dialog.
 - Keep automation and track-header scrollbar thumbs inside their tracks during dragging, including when the content reaches an endpoint.
+- Deleting a default automation lane that has no written CC events (engine-synthesized defaults only) no longer opens a no-op confirmation or counts projected default nodes as written events; it takes the plain empty-lane removal instead.
 - Keep velocity notes and PSG level bands aligned with the shared timeline camera during scrolling, zooming, and fractional display scaling.
 - Centralized safe grid tick-range conversion across the piano roll, banded grids, and time ruler. Pre-roll, non-finite, reversed, and out-of-range bounds produce empty grids without losing ruler chrome or markers.
 - Fixed audible click on transport transitions (pause/stop/play): the output now fades down, cuts, and fades back instead of hard-cutting sounding channels at full amplitude.

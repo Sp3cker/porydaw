@@ -1,6 +1,5 @@
 #include "ui/editordrawer/automationcanvas.h"
 
-#include <QMessageBox>
 #include <QQuickWindow>
 #include <algorithm>
 #include <limits>
@@ -100,6 +99,10 @@ void AutomationCanvas::setPopupSession(songview::QuickPopupSession *session)
 {
     if (m_menuSession == session)
         return;
+    // A replaced session must not carry this canvas's pending delete
+    // confirmation: drop it against the old session, ending only a form this
+    // canvas still owns, before the stored pointer follows.
+    cancelCcDeletePromptWithoutFocus();
     ensureMenuAdapters();
     // The host cancels its active menu on the displaced session first; the
     // stored pointer follows so a later open cannot target a dead session.
@@ -193,8 +196,18 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPointF &scenePo
     rows.push_back(std::move(clear));
     if (kind.hasLaneActions) {
         const uint8_t controller = slot->id.controller;
-        rows.push_back(menuRow(int(Action::RemoveLane),
-                               hasPoints ? tr("Delete CC lane") : tr("Remove empty CC lane")));
+        // The delete/remove split classifies on document-written events: the
+        // adapter projects a synthetic tick-0 engine node for Volume and Pan,
+        // so adapter emptiness cannot tell a written lane from a
+        // never-touched default row. Copy stays explicit about what remains.
+        QString removeLabel;
+        if (document->lanePoints(int(slot->id.track), controller).empty())
+            removeLabel = tr("Remove empty CC lane");
+        else if (CoreTimeDefaults::isDefaultVisibleController(controller))
+            removeLabel = tr("Delete CC events (default row remains)");
+        else
+            removeLabel = tr("Delete CC lane");
+        rows.push_back(menuRow(int(Action::RemoveLane), std::move(removeLabel)));
         rows.push_back(menuRow(int(Action::HideLane), tr("Hide CC lane")));
         if (CCLanes::rangeZoomable(controller)) {
             const auto range = m_page.m_viewState.laneRanges.find(slot->id);
@@ -392,60 +405,20 @@ void AutomationCanvas::handleMenuAction(int actionId)
     } else if (actionId == int(Action::RemoveLane)) {
         const int track = int(slot->id.track);
         const uint8_t controller = slot->id.controller;
-        const std::size_t pointCount = lane->points().size();
-        if (pointCount != 0) {
-            // The real delete question must open only after the panel's QML
-            // release handler fully unwound: a nested event loop inside that
-            // handler trips Qt's destroyed-while-handling fatal. Defer the
-            // question by one queued pass while activation stays synchronous.
-            // The continuation carries the immutable open-time snapshot by
-            // value - never slot or lane pointers, which a rebuild during the
-            // pump would invalidate - and revalidates the whole guard before
-            // showing and again after the answer. `this` as the context
-            // object drops the call if the canvas dies before delivery; the
-            // QPointer guard covers destruction during the dialog's own
-            // nested loop.
-            QMetaObject::invokeMethod(
-                this,
-                [this, guard = QPointer<AutomationCanvas>(this), snapshot = pending, pointCount] {
-                    // An old confirmation must never cover later ownership:
-                    // drop it if the session went away or a newer popup is
-                    // already open.
-                    if (!m_menuSession || m_menuSession->isOpen())
-                        return;
-                    SongDocument *const current = m_page.document();
-                    const auto *confirmed = resolveSlot(snapshot.lane);
-                    if (!snapshot.document || current != snapshot.document ||
-                        current->revision() != snapshot.documentRevision || !confirmed ||
-                        !confirmed->lane || confirmed->id != snapshot.rowId)
-                        return;
-                    const auto answer =
-                        QMessageBox::question(&m_page.m_owner, tr("Delete CC lane"),
-                                              tr("Delete the %1 CC lane and its %2 events?")
-                                                  .arg(snapshot.laneTitle)
-                                                  .arg(pointCount));
-                    if (!guard)
-                        return;
-                    // Same restoration gate as the dispatch head: the modal
-                    // loop is a re-entry point, so a popup opened meanwhile
-                    // keeps focus.
-                    if (!m_menuSession || !m_menuSession->isOpen()) {
-                        if (m_inputHost)
-                            m_inputHost->requestFocus(Qt::PopupFocusReason);
-                    }
-                    if (answer != QMessageBox::Yes)
-                        return;
-                    SongDocument *const answered = m_page.document();
-                    const auto *settled = resolveSlot(snapshot.lane);
-                    if (!answered || answered != snapshot.document ||
-                        answered->revision() != snapshot.documentRevision || !settled ||
-                        !settled->lane || settled->id != snapshot.rowId)
-                        return;
-                    settled->lane->replaceSpan(0, maxTick, {});
-                    m_page.removeEmptyLane(int(snapshot.rowId.track), snapshot.rowId.controller);
-                    m_page.requestRefresh();
-                },
-                Qt::QueuedConnection);
+        const std::size_t writtenEventCount = document->lanePoints(track, controller).size();
+        // A synthetic-only default row (engine-default node, no writes) takes
+        // the plain remove body below: a Delete confirmation there would
+        // count the projected node and then write nothing.
+        if (writtenEventCount != 0) {
+            // The QML confirmation opens on the shared canvas popup session;
+            // activateRow has already closed the menu before this dispatch,
+            // and openCcDeletePrompt pre-cancels any displaced session before
+            // it publishes its guarded open-time snapshot (document,
+            // revision, lane handle, exact row id, displayed title and event
+            // count). Acceptance revalidates the whole guard through
+            // immutable identity, so a rebuild landing meanwhile deletes
+            // nothing.
+            openCcDeletePrompt(pending.lane, writtenEventCount);
             return;
         }
         m_page.removeEmptyLane(track, controller);

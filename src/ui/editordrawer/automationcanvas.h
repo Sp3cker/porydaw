@@ -15,6 +15,7 @@
 #include <QRect>
 #include <QSize>
 #include <QString>
+#include <QVariant>
 
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/cclanes.h"
@@ -102,6 +103,36 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
         return m_pendingValuePrompt ? m_pendingValuePrompt->prompt : NodeValuePrompt{};
     }
 
+    // QML bridge for CcDeleteConfirm.qml, the shared-session confirmation
+    // behind the lane menu's Delete CC lane action on a lane that still
+    // carries events. The prompt lives on this canvas — never a DrawerChrome
+    // pass-through — and its guarded target is the snapshot below: document
+    // identity plus revision reject any document change since the open, and
+    // the lane handle plus exact row id reject a rebuild remap. No lane
+    // pointer crosses the prompt; the displayed title and event count are
+    // captured with it, because acceptance runs after the menu's close and
+    // the getters run during QML component creation.
+    struct PendingCcDeletePrompt {
+        QPointer<SongDocument> document;
+        uint64_t documentRevision = 0;
+        LaneHandle lane;
+        EditorAutomationRowId rowId = {};
+        QString laneTitle;
+        std::size_t eventCount = 0;
+    };
+
+    Q_PROPERTY(
+        QString ccDeletePromptTitle READ ccDeletePromptTitle NOTIFY ccDeletePromptChanged FINAL)
+    Q_PROPERTY(
+        QString ccDeletePromptMessage READ ccDeletePromptMessage NOTIFY ccDeletePromptChanged FINAL)
+    Q_PROPERTY(QVariantMap ccDeletePromptAppearance READ ccDeletePromptAppearance NOTIFY
+                   ccDeletePromptChanged FINAL)
+    Q_INVOKABLE void acceptCcDeletePrompt();
+    Q_INVOKABLE void cancelCcDeletePrompt();
+    QString ccDeletePromptTitle() const;
+    QString ccDeletePromptMessage() const;
+    QVariantMap ccDeletePromptAppearance() const;
+
     void setPencilMode(bool enabled);
     bool pencilMode() const noexcept { return m_pencilMode; }
     bool isPanning() const noexcept;
@@ -128,6 +159,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
 
   signals:
     void valuePromptChanged();
+    void ccDeletePromptChanged();
 
   private:
     friend class AutomationPage;
@@ -253,6 +285,18 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void handleMenuAction(int actionId);
     // Ends only a session this canvas still owns, without stealing focus.
     void cancelLaneMenuWithoutFocus();
+    // Shared-session Quick confirmation behind Delete CC lane on a nonempty
+    // lane; implemented in automationcanvas_deleteprompt.cpp. clear drops the
+    // pending target, optionally returning focus to the band; the
+    // without-focus variant serves the shared invalidation policy (document
+    // change, rebuild, hidden, detach, session replacement) and only ends a
+    // session this canvas still owns.
+    // writtenEventCount is resolved once at show time by the caller's
+    // document-written query; revision equality revalidated across the open's
+    // cancellation keeps that captured count truthful.
+    bool openCcDeletePrompt(LaneHandle handle, std::size_t writtenEventCount);
+    void clearCcDeletePrompt(bool restoreFocus);
+    void cancelCcDeletePromptWithoutFocus();
     void ensureMenuAdapters();
     void layoutLaneStack();
     int tempoTop() const;
@@ -318,6 +362,8 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     songview::QuickMenuModel *m_menuModel = nullptr;
     QPointer<songview::QuickPopupSession> m_menuSession;
     std::optional<PendingMenu> m_pendingMenu;
+    std::optional<PendingCcDeletePrompt> m_pendingCcDeletePrompt;
+    QMetaObject::Connection m_ccDeletePromptCancellation;
     NodeLaneHoverState m_hoverState;
     NodeDoubleClickGuard m_deletedNodeClick;
 };

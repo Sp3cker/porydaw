@@ -316,9 +316,10 @@ void AutomationEditingTest::laneMenuValueRangeSubmenuPickRescalesAndCloses()
     QVERIFY2(!rangeCenter.isNull(), "the value range row never rendered");
     QTest::mouseMove(menu.session->window(), rangeCenter.toPoint());
     QQuickItem *submenu = nullptr;
-    QTest::qWaitFor(
-        [&menu, &submenu] { return (submenu = menuSubmenuPanel(*menu.session)) != nullptr; });
-    QVERIFY2(submenu, "hovering the value range row did not open its submenu");
+    QVERIFY2(QTest::qWaitFor([&menu, &submenu] {
+                 return (submenu = menuSubmenuPanel(*menu.session)) != nullptr;
+             }),
+             "hovering the value range row did not open its submenu");
     songview::QuickMenuModel *const submenuModel = quick_popup::menuModel(*submenu);
     QVERIFY2(submenuModel, "the value range submenu rendered without a typed model");
 
@@ -354,10 +355,10 @@ void AutomationEditingTest::laneMenuValueRangeSubmenuPickRescalesAndCloses()
     QVERIFY2(!reopenedRangeCenter.isNull(), "the reopened value range row never rendered");
     QTest::mouseMove(reopened.session->window(), reopenedRangeCenter.toPoint());
     QQuickItem *reopenedSubmenu = nullptr;
-    QTest::qWaitFor([&reopened, &reopenedSubmenu] {
-        return (reopenedSubmenu = menuSubmenuPanel(*reopened.session)) != nullptr;
-    });
-    QVERIFY2(reopenedSubmenu, "reopening the value range submenu failed");
+    QVERIFY2(QTest::qWaitFor([&reopened, &reopenedSubmenu] {
+                 return (reopenedSubmenu = menuSubmenuPanel(*reopened.session)) != nullptr;
+             }),
+             "reopening the value range submenu failed");
     songview::QuickMenuModel *const reopenedSubmenuModel = quick_popup::menuModel(*reopenedSubmenu);
     QVERIFY2(reopenedSubmenuModel, "the reopened submenu rendered without a typed model");
     const songview::QuickMenuItem *const advertised =
