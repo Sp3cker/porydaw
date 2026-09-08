@@ -7,6 +7,7 @@
 #include <QHash>
 #include <QList>
 #include <QPointF>
+#include <QPointer>
 #include <QRect>
 #include <QRectF>
 #include <QString>
@@ -21,9 +22,15 @@
 #include "ui/layout.h"
 #include "ui/songview/quick/timelineinput.h"
 
+class SongDocument;
 class SongView;
 
 namespace songview {
+
+class QuickMenuHost;
+class QuickMenuModel;
+class QuickPopupSession;
+struct QuickMenuItem;
 
 class TrackHeaderModel final : public QAbstractListModel, public TimelineBandInteraction
 {
@@ -88,6 +95,16 @@ class TrackHeaderModel final : public QAbstractListModel, public TimelineBandInt
         ActivityRightHeightRole,
     };
 
+    // Typed rows of the header context menu; ids travel through
+    // QuickMenuModel::activated(int) and are interpreted only here.
+    enum class HeaderMenuAction : int {
+        ChangeVoice = 1,
+        ShowVoiceInVoicegroup = 2,
+        RenameTrack = 3,
+        DuplicateTrack = 4,
+        DeleteTrack = 5,
+    };
+
     explicit TrackHeaderModel(SongView &owner, QObject *parent = nullptr);
     ~TrackHeaderModel() override;
 
@@ -136,6 +153,9 @@ class TrackHeaderModel final : public QAbstractListModel, public TimelineBandInt
     QPointF toolTipPosition() const noexcept;
     QVariantMap appearance() const;
     void cancelTransientState();
+    // Binds the shared canvas popup session once TimelineQuickView exists;
+    // the header context menu is a typed QuickMenuHost adapter over it.
+    void setPopupSession(QuickPopupSession *session);
 
     void attachInputHost(TimelineInputHost &host) override;
     void detachInputHost(TimelineInputHost &host) override;
@@ -195,6 +215,17 @@ class TrackHeaderModel final : public QAbstractListModel, public TimelineBandInt
         bool dragging = false;
     };
 
+    // The raw engine track captured when the header menu opened, guarded by
+    // document identity plus revision. The index is only stable until the
+    // next remap or delete; any such mutation bumps the revision and the
+    // rebuild cancels the menu before the target could go stale.
+    struct PendingHeaderMenu {
+        // Guarded so a queued snapshot can outlive a document swap safely.
+        QPointer<SongDocument> document = nullptr;
+        uint64_t documentRevision = 0;
+        int track = -1;
+    };
+
     struct Geometry {
         int rowHeight;
         int activityWidth;
@@ -224,7 +255,15 @@ class TrackHeaderModel final : public QAbstractListModel, public TimelineBandInt
     void updatePointerVisuals(int row, HitTarget target, bool pressed);
     void clearPointerVisuals();
     bool scrollVertically(const TimelineWheelInput &input);
-    void showContextMenu(int track, const QPointF &globalPosition);
+    void showContextMenu(int track, const QPointF &scenePosition);
+    // Global→scene bridge for the pointer caller: the shared session's Quick
+    // window maps the header input host's global press position; null point
+    // when no session is bound.
+    QPointF headerMenuScenePosition(const QPointF &globalPosition) const;
+    void ensureHeaderMenuAdapters();
+    void cancelHeaderMenuWithoutFocus();
+    void handleHeaderMenuAction(int actionId);
+    std::vector<QuickMenuItem> buildHeaderMenuItems(const SongDocument &document) const;
     QString toolTipAt(const QPointF &bandPosition) const;
     void updateToolTip(const TimelinePointerInput &input);
     void clearToolTip();
@@ -272,6 +311,12 @@ class TrackHeaderModel final : public QAbstractListModel, public TimelineBandInt
     QString m_toolTipText;
     QPointF m_toolTipPosition;
     QVariantMap m_appearance;
+    // Persistent typed header-menu adapters; created in the constructor and
+    // bound to the shared canvas popup session by TimelineQuickView.
+    QuickMenuHost *m_headerMenuHost = nullptr;
+    QuickMenuModel *m_headerMenuModel = nullptr;
+    QPointer<QuickPopupSession> m_headerMenuSession;
+    std::optional<PendingHeaderMenu> m_pendingHeaderMenu;
 };
 
 } // namespace songview

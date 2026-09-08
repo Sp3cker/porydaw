@@ -120,6 +120,13 @@ class TrackHeadersTest final : public QObject
     void renameCommitsAndRebuildsHeader();
     void reorderCommitsAndRebuildsHeader();
     void addTrackOpensPickerAndRebuildsHeader();
+    void headerMenuOpensWithTypedRowsAndDismissesWithoutWrite();
+    void headerMenuChangeVoiceOpensPickerAfterMenuCloses();
+    void headerMenuRenameBeginsAfterCloseAndFocusesEditor();
+    void headerMenuRowsDispatchRevealDuplicateDelete();
+    void headerMenuStaleStructuralChangeCancelsWithoutWrite();
+    void headerMenuQueuedDestructiveMutationsDropAfterRemap();
+    void headerMenuOutsidePressDismissesWithoutClickThrough();
     void emptyTrackHeadersRejectInputWithoutMutation();
     void activityRasterMatchesRolesAndIsSilentWhenUnchanged();
 

@@ -5,15 +5,14 @@
 #include <QAbstractItemModel>
 #include <QApplication>
 #include <QCoreApplication>
-#include <QEvent>
 #include <QMenu>
-#include <QTimer>
+#include <QPointer>
 #include <algorithm>
 #include <memory>
 #include <optional>
 
+#include "checks/quickpopupguard.h"
 #include "checks/rollcheck/headerchecksupport.h"
-#include "checks/support/eventsynth.h"
 #include "checks/support/songfixture.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
@@ -93,20 +92,89 @@ void PianoRollTest::headerContextMenu()
     if (menuRow < 0)
         QFAIL("context-menu fixture lacks a secondary track header");
 
-    bool menuOpened = false;
-    QTimer::singleShot(0, [&menuOpened] {
-        if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget())) {
-            menuOpened = menu->actions().size() == 5;
-            menu->close();
+    const quick_popup::PromptGuard guard(view);
+    const QPointer<songview::QuickPopupSession> session{quick_popup::popupSession(view)};
+    if (!session || !session->window())
+        QFAIL("the Quick track-header canvas has no popup session");
+    const auto awaitMenu = [&session] {
+        return QTest::qWaitFor([&session] {
+            return session && session->isOpen() && quick_popup::menuPanel(*session) &&
+                   quick_popup::menuModel(*quick_popup::menuPanel(*session)) != nullptr;
+        });
+    };
+
+    const QPointF title = titlePoint(*headers, *input, menuRow);
+    QTest::mouseClick(session->window(), Qt::RightButton, Qt::NoModifier,
+                      input->mapToScene(title).toPoint());
+    if (!awaitMenu())
+        QFAIL("the header right-press did not open the shared Quick menu");
+    if (QApplication::activePopupWidget() || QApplication::activeModalWidget() ||
+        view.findChild<QMenu *>()) {
+        QFAIL("the header context menu opened a native QMenu fallback");
+    }
+    if (view.selectionModel().primaryTrack() != menuTrack)
+        QFAIL("right press did not select its track");
+
+    // Availability and typed addressing stay pinned; wording is incidental.
+    using HeaderMenuAction = songview::TrackHeaderModel::HeaderMenuAction;
+    static constexpr HeaderMenuAction kExpectedActions[] = {
+        HeaderMenuAction::ChangeVoice, HeaderMenuAction::ShowVoiceInVoicegroup,
+        HeaderMenuAction::RenameTrack, HeaderMenuAction::DuplicateTrack,
+        HeaderMenuAction::DeleteTrack,
+    };
+    songview::QuickMenuModel *const menu =
+        quick_popup::menuModel(*quick_popup::menuPanel(*session));
+    if (menu->rowCount() != 5)
+        QFAIL("the header menu did not render its five typed rows");
+    for (int row = 0; row < menu->rowCount(); ++row) {
+        const songview::QuickMenuItem *const item = menu->itemAt(row);
+        if (!item || item->id != static_cast<int>(kExpectedActions[row]) ||
+            menu->rowForId(item->id) != row) {
+            QFAIL("the header menu dropped its legacy typed row order");
         }
-    });
-    const QPointF position = titlePoint(*headers, *input, menuRow);
-    checks::events::sendMouse(*input, QEvent::MouseButtonPress, position, Qt::RightButton,
-                              Qt::RightButton, Qt::NoModifier);
-    checks::events::sendMouse(*input, QEvent::MouseButtonRelease, position, Qt::RightButton,
-                              Qt::NoButton, Qt::NoModifier);
-    if (!menuOpened || view.selectionModel().primaryTrack() != menuTrack)
-        QFAIL("right press did not select its track and open the context menu");
+    }
+    QTest::keyClick(session->window(), Qt::Key_Escape);
+    QCoreApplication::processEvents();
+    if (session->isOpen())
+        QFAIL("Escape did not dismiss the header menu");
+
+    // Duplicate stays disabled once the document sits at track capacity; a
+    // real click on the disabled row neither dispatches nor dismisses.
+    SongDocument &doc = m_fixture->document();
+    while (doc.canAddTrack()) {
+        if (doc.duplicateTrack(0) < 0)
+            QFAIL("capacity fixture could not fill the track slots");
+    }
+    QCoreApplication::processEvents();
+    if (!QTest::qWaitFor([&] { return headers->rowCount() == doc.engineTrackCount(); }))
+        QFAIL("capacity fixture header records did not settle after the fill");
+    headers->setScrollY(qreal(menuRow * headers->rowHeight()));
+    const QPointF capacityTitle = titlePoint(*headers, *input, menuRow);
+    QTest::mouseClick(session->window(), Qt::RightButton, Qt::NoModifier,
+                      input->mapToScene(capacityTitle).toPoint());
+    if (!awaitMenu())
+        QFAIL("the header right-press at capacity did not open the shared Quick menu");
+    songview::QuickMenuModel *const capacityMenu =
+        quick_popup::menuModel(*quick_popup::menuPanel(*session));
+    const int duplicateRow =
+        capacityMenu->rowForId(static_cast<int>(HeaderMenuAction::DuplicateTrack));
+    if (duplicateRow < 0 || !capacityMenu->itemAt(duplicateRow) ||
+        capacityMenu->itemAt(duplicateRow)->enabled) {
+        QFAIL("Duplicate track stayed enabled at track capacity");
+    }
+    const QByteArray capacityBytes = doc.smf().write();
+    const int capacityUndo = doc.undoStack()->index();
+    if (!quick_popup::clickMenuRow(*session, duplicateRow))
+        QFAIL("the disabled Duplicate row did not receive a real click");
+    QCoreApplication::processEvents();
+    if (!session->isOpen())
+        QFAIL("a click on the disabled Duplicate row dismissed the menu");
+    if (doc.undoStack()->index() != capacityUndo || doc.smf().write() != capacityBytes)
+        QFAIL("a disabled Duplicate row mutated the document");
+    QTest::keyClick(session->window(), Qt::Key_Escape);
+    QCoreApplication::processEvents();
+    if (session->isOpen())
+        QFAIL("Escape did not dismiss the header menu at capacity");
     view.selectTrack(originalTrack);
 }
 

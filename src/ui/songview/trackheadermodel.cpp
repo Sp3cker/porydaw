@@ -7,11 +7,9 @@
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
 
-#include <QAction>
 #include <QApplication>
 #include <QCursor>
 #include <QKeySequence>
-#include <QMenu>
 #include <QPalette>
 #include <QPointer>
 #include <QRect>
@@ -124,6 +122,7 @@ TrackHeaderModel::TrackHeaderModel(SongView &owner, QObject *parent)
         emit toolTipChanged();
     });
     syncAppearance();
+    ensureHeaderMenuAdapters();
 }
 
 TrackHeaderModel::~TrackHeaderModel() = default;
@@ -819,6 +818,9 @@ void TrackHeaderModel::cancelTransientState()
     clearPointerVisuals();
     cancelRename();
     clearToolTip();
+    // Structural change (rebuild/remap/document replacement/teardown) ends
+    // the header menu synchronously; a popup teardown must never steal focus.
+    cancelHeaderMenuWithoutFocus();
     if (m_inputHost)
         m_inputHost->releasePointerGrab();
 }
@@ -1026,7 +1028,7 @@ bool TrackHeaderModel::pointerPress(const TimelinePointerInput &input)
     const int track = m_rows[static_cast<std::size_t>(row)].track;
     if (input.button == Qt::RightButton) {
         m_owner.selectTrack(track);
-        showContextMenu(track, m_inputHost->mapToGlobal(input.position));
+        showContextMenu(track, headerMenuScenePosition(m_inputHost->mapToGlobal(input.position)));
         return true;
     }
 
@@ -1317,55 +1319,6 @@ void TrackHeaderModel::finishReorder(bool commit)
         if (owner)
             owner->moveTrack(fromTrack, target);
     });
-}
-
-void TrackHeaderModel::showContextMenu(int track, const QPointF &globalPosition)
-{
-    SongDocument *document = m_owner.document();
-    if (!document)
-        return;
-
-    QPointer<SongView> owner(&m_owner);
-    bool renameRequested = false;
-    QMenu menu(&m_owner);
-    QAction *changeVoice = menu.addAction(SongView::tr("Change voice..."));
-    QAction *showVoice = menu.addAction(SongView::tr("Show voice in voicegroup"));
-    QAction *rename = menu.addAction(SongView::tr("Rename track..."));
-    QAction *duplicate = menu.addAction(SongView::tr("Duplicate track"));
-    duplicate->setEnabled(document->canAddTrack());
-    QAction *remove = menu.addAction(SongView::tr("Delete track"));
-    connect(rename, &QAction::triggered, this, [&renameRequested] { renameRequested = true; });
-    connect(showVoice, &QAction::triggered, this, [owner, track] {
-        if (owner)
-            owner->revealTrackVoice(track);
-    });
-    connect(changeVoice, &QAction::triggered, this, [owner, track] {
-        if (!owner)
-            return;
-        owner->queueHeaderMutation([owner, track] {
-            if (owner)
-                owner->editTrackVoice(track);
-        });
-    });
-    connect(duplicate, &QAction::triggered, this, [owner, track] {
-        if (!owner)
-            return;
-        owner->queueHeaderMutation([owner, track] {
-            if (owner)
-                owner->duplicateTrack(track);
-        });
-    });
-    connect(remove, &QAction::triggered, this, [owner, track] {
-        if (!owner)
-            return;
-        owner->queueHeaderMutation([owner, track] {
-            if (owner)
-                owner->deleteTrack(track);
-        });
-    });
-    menu.exec(globalPosition.toPoint());
-    if (renameRequested)
-        beginRename(track);
 }
 
 void TrackHeaderModel::syncRecordGeometry()

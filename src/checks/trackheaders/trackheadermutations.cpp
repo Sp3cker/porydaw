@@ -1,9 +1,11 @@
 #include "checks/trackheaders/tst_trackheaders.h"
 
+#include "checks/quickpopupguard.h"
 #include "checks/voicepickerdriver.h"
 
 #include <QCoreApplication>
 #include <QQuickItem>
+#include <QQuickWindow>
 #include <QScopeGuard>
 
 #include <QtTest>
@@ -52,10 +54,52 @@ std::vector<int> modelTracks(const songview::TrackHeaderModel &model)
 
 void commitRename(TrackHeadersFixture &fixture, int track)
 {
-    songview::TrackHeaderModel &headers = fixture.headers();
-    headers.beginRename(track);
-    headers.setRenameDraft(QString::fromLatin1(kRenamedTitle));
-    headers.finishRename(true, false);
+    QVERIFY2(fixture.view().focusTimelineBand(songview::TimelineBand::TrackHeaders,
+                                              Qt::OtherFocusReason),
+             "the Quick track-header band could not take focus");
+    QTRY_VERIFY(fixture.input().hasActiveFocus());
+
+    const std::optional<int> row = fixture.rowForTrack(track);
+    QVERIFY2(row, "the rename target has no header row");
+    // Scrolling the target row to the top keeps the title point inside the
+    // live input for every track index.
+    fixture.headers().setScrollY(qreal(*row * fixture.rowHeight()));
+    checks::support::pumpQuick();
+    const std::optional<QPointF> title = fixture.titlePoint(*row);
+    QVERIFY2(title, "the header row title point is not visible");
+
+    songview::QuickPopupSession *const session = quick_popup::popupSession(fixture.view());
+    QVERIFY2(session && session->window(), "the timeline Quick canvas has no popup session");
+    const quick_popup::PromptGuard guard(fixture.view());
+    QTest::mouseClick(session->window(), Qt::RightButton, Qt::NoModifier,
+                      fixture.input().mapToScene(*title).toPoint());
+    QVERIFY2(QTest::qWaitFor([&session] {
+                 return session->isOpen() && quick_popup::menuPanel(*session) &&
+                        quick_popup::menuModel(*quick_popup::menuPanel(*session)) != nullptr;
+             }),
+             "the header right-press did not open the shared menu");
+    songview::QuickMenuModel *const model =
+        quick_popup::menuModel(*quick_popup::menuPanel(*session));
+    const int renameRow = model->rowForId(
+        static_cast<int>(songview::TrackHeaderModel::HeaderMenuAction::RenameTrack));
+    QVERIFY2(renameRow >= 0, "the header menu did not render the Rename track row");
+    QVERIFY2(quick_popup::clickMenuRow(*session, renameRow),
+             "the Rename track row did not receive a real click");
+    QCoreApplication::processEvents();
+    QVERIFY2(!session->isOpen(), "the Rename track pick left the header menu open");
+    QCOMPARE(fixture.headers().renamingTrack(), track);
+    QTRY_VERIFY(fixture.rename().isVisible());
+    // The fixture's rename() accessor already resolves the named TextInput.
+    QTRY_VERIFY2(fixture.rename().hasActiveFocus(),
+                 "the Quick rename input did not adopt the draft focus");
+    // QTest's QWindow char overload synthesizes the literal character as the
+    // event text (qtestkeyboard.h: keyEvent(Click, window, ascii) carries ascii
+    // as text), while the Qt::Key overload derives text from keyToAscii and
+    // drops case no ShiftModifier can restore. Every character therefore goes
+    // out verbatim, preserving HdrSrc exactly.
+    for (const char *ch = kRenamedTitle; *ch; ++ch)
+        QTest::keyClick(&fixture.window(), *ch);
+    QTest::keyClick(&fixture.window(), Qt::Key_Return);
 }
 
 } // namespace
@@ -100,8 +144,11 @@ void TrackHeadersTest::renameCommitsAndRebuildsHeader()
     QVERIFY(!fx.rename().isVisible());
 
     commitRename(fx, fx.sourceTrack());
-    QTRY_COMPARE(headers.renamingTrack(), -1);
-    QCOMPARE(fx.tab().document().trackName(fx.sourceTrack()), QString::fromLatin1(kRenamedTitle));
+    // finishRename clears renamingTrack synchronously while the document edit
+    // is queued: renamingTrack is a plain compare, the name drains the queue.
+    QCOMPARE(headers.renamingTrack(), -1);
+    QTRY_COMPARE(fx.tab().document().trackName(fx.sourceTrack()),
+                 QString::fromLatin1(kRenamedTitle));
     QString error;
     QVERIFY2(fx.rebuild(error), qPrintable(error));
     const std::optional<int> renamedRow = fx.rowForTrack(fx.sourceTrack());

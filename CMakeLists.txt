@@ -280,6 +280,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/voicepicker.h
     src/ui/songview/trackheadermodel.cpp
     src/ui/songview/trackheadermodel.h
+    src/ui/songview/trackheadermenu.cpp
     src/ui/songview/editorselectionmodel.cpp
     src/ui/songview/editorselectionmodel.h
     src/ui/songview/detail.cpp
@@ -727,6 +728,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/trackheaders/trackheaderinput.cpp
         src/checks/trackheaders/trackheaderraster.cpp
         src/checks/trackheaders/trackheadermutations.cpp
+        src/checks/trackheaders/trackheadermenu.cpp
         src/checks/trackheaders/trackheaderoracles.h
         src/checks/trackheaders/tst_trackactivitymeter.h
         src/checks/trackheaders/tst_trackactivitymeter.cpp
