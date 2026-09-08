@@ -370,6 +370,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/automationcanvas_gesture.cpp
     src/ui/editordrawer/automationcanvas_input.cpp
     src/ui/editordrawer/automationcanvas_menu.cpp
+    src/ui/editordrawer/automationcanvas_deleteprompt.cpp
     src/ui/editordrawer/laneselection.cpp
     src/ui/editordrawer/laneselection.h
     src/ui/editordrawer/nodelane/gesture.cpp
@@ -479,6 +480,10 @@ set_source_files_properties(
     PROPERTIES QT_RESOURCE_ALIAS VelocityPrompt.qml
 )
 set_source_files_properties(
+    src/ui/songview/quick/CcDeleteConfirm.qml
+    PROPERTIES QT_RESOURCE_ALIAS CcDeleteConfirm.qml
+)
+set_source_files_properties(
     src/ui/songview/quick/TimeSignaturePrompt.qml
     PROPERTIES QT_RESOURCE_ALIAS TimeSignaturePrompt.qml
 )
@@ -523,6 +528,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/DragInput.qml
         src/ui/songview/quick/PitchBendPopup.qml
         src/ui/songview/quick/VelocityPrompt.qml
+        src/ui/songview/quick/CcDeleteConfirm.qml
         src/ui/songview/quick/TimeSignaturePrompt.qml
         src/ui/songview/quick/InsertTimePrompt.qml
         src/ui/songview/quick/VoicePickerPrompt.qml
@@ -842,6 +848,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/automation/automationclipboard.cpp
         src/checks/automation/automationcanvaslayout.cpp
         src/checks/automation/automationcanvasediting.cpp
+        src/checks/automation/ccdeleteconfirmation.cpp
         src/checks/automation/domain/tst_automationdomain.h
         src/checks/automation/domain/tst_automationdomain.cpp
         src/checks/automation/domain/gestures.cpp

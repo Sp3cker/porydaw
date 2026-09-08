@@ -581,6 +581,10 @@ void AutomationCanvas::cancelInteraction()
         m_pendingValuePrompt.reset();
         emit valuePromptChanged();
     }
+    // Same shared policy for the CC-lane delete confirmation: rebuilds,
+    // hides, detaches, and document changes drop its pending target and end
+    // only a session this canvas still owns, without stealing focus.
+    cancelCcDeletePromptWithoutFocus();
     m_hoverState.previewValueLabel = {};
     m_hoverState.hover.highlightLocked = false;
     refreshHoverAt(contentPositionFromGlobal(QCursor::pos()));

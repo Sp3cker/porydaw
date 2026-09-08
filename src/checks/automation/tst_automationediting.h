@@ -14,6 +14,7 @@
 #include <QPointF>
 #include <QPointer>
 #include <QQuickWindow>
+#include <QString>
 
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/songtab.h"
@@ -21,10 +22,12 @@
 
 class QAction;
 class AutomationPage;
+class QQuickItem;
 
 namespace songview {
 class TimelineQuickScene;
-}
+class QuickPopupSession;
+} // namespace songview
 
 namespace automation_test {
 QPoint windowFromContent(const AutomationPage &page, const songview::TimelineInputItem &input,
@@ -191,6 +194,19 @@ class AutomationEditingTest final : public QObject
     void rebuildCancelsAdapterDragAndRecovers_data();
     void rebuildCancelsAdapterDragAndRecovers();
 
+    // CC-lane delete confirmation coverage: the Quick form that replaced the
+    // legacy QMessageBox for nonempty CC-lane deletes on the shared popup
+    // session.
+    void ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores();
+    void ccDeletePromptCancelButtonLeavesDocumentUntouched();
+    void ccDeletePromptEscapeLeavesDocumentUntouched();
+    void ccDeletePromptOutsideRightPressClosesWithoutRetarget();
+    void ccDeletePromptInitialReturnCancelsWithoutNavigation();
+    void ccDeletePromptStaleDocumentCannotDeleteTarget();
+    void ccDeletePromptInvalidationSparesForeignPopup();
+    void ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation();
+    void ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic();
+
   private:
     struct ArmedCcDrag final {
         QPoint dragEndWindow;
@@ -269,6 +285,20 @@ class AutomationEditingTest final : public QObject
     std::optional<ArmedCcDrag> armCcDrag(songview::TimelineQuickScene *quickScene);
     int laneValue(uint64_t tick) const;
     int timelineCcValue(uint64_t tick) const;
+
+    // One rendered delete confirmation: the live session content plus its
+    // named controls. The diagnostic explains why the form never appeared.
+    struct CcDeletePrompt final {
+        songview::QuickPopupSession *session = nullptr;
+        QQuickItem *root = nullptr;
+        QQuickItem *acceptButton = nullptr;
+        QQuickItem *cancelButton = nullptr;
+        QString diagnostic;
+    };
+
+    // Opens the confirmation through the real rendered gutter menu and a real
+    // RemoveLane row click, then waits for the form to render.
+    CcDeletePrompt openCcDeletePrompt(const EditorAutomationRowId &row, QString diagnostic);
 
     // The tab borrows this bank, so it must outlive m_tab.
     LoadedVoiceGroup m_bank = {};
