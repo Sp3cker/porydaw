@@ -257,6 +257,9 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
 
     AutomationProjection projection() const;
     NodeLaneHoverTarget hoverTarget() const;
+    // True consumes the node hit even when the open aborts (teardown,
+    // refused publish, a newer popup on the session, stale snapshot); false
+    // is only a genuine miss, which keeps the caller's fallback available.
     bool showNodeMenuNear(LaneHandle handle, const QPointF &position,
                           const QPointF &globalPosition);
 

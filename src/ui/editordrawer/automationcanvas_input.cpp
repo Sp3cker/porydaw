@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include <QCursor>
+#include <QPointer>
 
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationpage.h"
@@ -414,6 +415,9 @@ bool AutomationCanvas::pointerRelease(const songview::TimelinePointerInput &inpu
         const auto [laneFirst, laneLast] = m_band.laneRange();
         const LaneHandle contextLane = laneFirst;
         const auto selection = m_band.release();
+        // Publishing and both popup opens below run synchronous callbacks
+        // that can tear this canvas down; continuation re-checks this guard.
+        QPointer<AutomationCanvas> self(this);
         if (selection && selection->first < selection->second && laneFirst.valid() &&
             laneLast.valid()) {
             publishBandSelection(selection->first, selection->second, laneFirst, laneLast);
@@ -421,12 +425,17 @@ bool AutomationCanvas::pointerRelease(const songview::TimelinePointerInput &inpu
             auto &model = m_page.m_owner.selectionModel();
             if (model.timeSelection().active()) {
                 model.clearTimeSelection();
+                if (!self)
+                    return true;
                 requestSelectionQuickUpdate();
             }
         } else {
             m_hoverState.hover.highlightLocked = false;
             m_hoverState.clearHover();
+            // False is only a genuine miss; re-check self before the fallback.
             if (!showNodeMenuNear(contextLane, position, input.globalPosition)) {
+                if (!self)
+                    return true;
                 const auto *contextSlot = resolveSlot(contextLane);
                 const bool selected =
                     contextSlot &&
@@ -440,6 +449,9 @@ bool AutomationCanvas::pointerRelease(const songview::TimelinePointerInput &inpu
                 }
             }
         }
+        // A boundary above may have torn this canvas down.
+        if (!self)
+            return true;
         if (!m_hoverState.hover.highlightLocked)
             refreshHoverAt(position);
         setGestureActive(false);

@@ -117,6 +117,7 @@ class AutomationEditingTest final : public QObject
     void pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes();
     void pointMenuStaleDocumentCannotDeleteTarget();
     void pointMenuForeignTakeoverInvalidatesPendingTarget();
+    void pointMenuForeignPopupPublishedDuringOpenSurvives();
     void selectionContextMenuRoutesInsideActiveSelection();
 
     // Voice and routed physical-input coverage.

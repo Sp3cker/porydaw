@@ -64,8 +64,13 @@ void AutomationCanvas::cancelNodeMenuWithoutFocus()
 bool AutomationCanvas::showNodeMenuNear(LaneHandle handle, const QPointF &position,
                                         const QPointF &globalPosition)
 {
+    // The return is node-hit consumption, not "a menu stayed open": false is
+    // only a genuine miss, which keeps the caller's fallback alive; a hit
+    // whose open aborts — teardown, refused publish, displaced by a newer
+    // popup, stale snapshot — returns true and never opens a second menu.
     SongDocument *const document = m_page.document();
     songview::QuickPopupSession *const session = m_menuSession.data();
+    // No menu surface: nothing consumed; the miss fallback proceeds.
     if (!document || !session || !session->window())
         return false;
     const auto *slot = resolveSlot(handle);
@@ -110,25 +115,37 @@ bool AutomationCanvas::showNodeMenuNear(LaneHandle handle, const QPointF &positi
     del.enabled = writtenAtTick;
     rows.push_back(std::move(del));
     // The model reset, grab release, and open each run synchronous canvas
-    // callbacks, and any of them can tear this canvas down — the document can
-    // outlive it — so a self guard is checked at every callback boundary.
+    // callbacks: they can tear this canvas down — the document can outlive
+    // it — and rebind the canvas to another session or detach/replace its
+    // input host. Pin the press's surface; after every boundary, a failed
+    // self guard or a changed identity aborts the open as consumed.
     QPointer<AutomationCanvas> self(this);
+    const QPointer<songview::QuickPopupSession> boundSession = session;
+    songview::TimelineInputHost *const boundHost = m_inputHost;
     m_nodeMenuModel->setItems(std::move(rows));
     if (!self)
-        return false;
+        return true;
+    if (!boundSession || boundSession != m_menuSession || boundHost != m_inputHost)
+        return true;
 
     // End the press's implicit grab before the menu publishes: the panel must
     // receive the following clicks, and the synchronous PointerUngrabbed
     // cancellation lands before any pending target exists.
-    if (m_inputHost)
-        m_inputHost->releasePointerGrab();
+    if (boundHost)
+        boundHost->releasePointerGrab();
     if (!self)
-        return false;
+        return true;
+    if (!boundSession || boundSession != m_menuSession || boundHost != m_inputHost)
+        return true;
+    // A callback above may have published a newer popup on the shared
+    // session; it wins — never displace it, never fall back over the hit.
+    if (m_menuSession && m_menuSession->isOpen() && !m_menuSession->owns(m_nodeMenuHost))
+        return true;
     m_nodeMenuHost->open(m_nodeMenuModel, menuScenePosition(globalPosition));
     if (!self)
-        return false;
+        return true;
     if (!m_nodeMenuHost->isOpen())
-        return false;
+        return true;
     // Revalidate the snapshot across the open's synchronous callbacks (grab
     // release, displaced-owner cleanup, owner destruction — the QPointer
     // target and this re-read follow the CC-delete-prompt pattern): document
@@ -140,7 +157,7 @@ bool AutomationCanvas::showNodeMenuNear(LaneHandle handle, const QPointF &positi
     if (!settled || settled != target.document || settled->revision() != target.documentRevision ||
         !settledSlot || settledSlot->id != target.rowId) {
         cancelNodeMenuWithoutFocus();
-        return false;
+        return true;
     }
     m_pendingNodeMenu = std::move(target);
     return true;

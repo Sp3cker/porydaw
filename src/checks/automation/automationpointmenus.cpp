@@ -496,3 +496,88 @@ void AutomationEditingTest::pointMenuForeignTakeoverInvalidatesPendingTarget()
     QVERIFY(!automation_valueprompt::promptVisible(songTab.view().editorDrawer()->chrome()));
     QVERIFY(!quick_popup::popupSession(songTab.view())->isOpen());
 }
+
+// A foreign popup published synchronously from the node menu model's real
+// reset boundary — the exact callback the open path's own setItems runs —
+// wins the shared session: the node opener must not displace it, and the
+// consumed node hit must not surface a second menu. The ruler's real
+// production open method publishes the division menu, and a real row pick
+// proves the survivor still works.
+void AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives()
+{
+    SongTab &songTab = tab();
+    const quick_popup::PromptGuard guard(songTab.view());
+    const LaneHandle cc = findRow({EditorAutomationRowKind::ControlChange, 0, kController});
+    QVERIFY(cc.valid());
+
+    // The first open materializes the node menu model; Escape closes the
+    // menu so the release-path setItems below is the next reset observed.
+    const NodePointMenu menu =
+        openNodePointMenu(cc, kPointTick, kPointValue,
+                          QStringLiteral("the node right-press did not open the point menu"));
+    QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic));
+    songview::QuickMenuModel *const nodeModel =
+        quick_popup::menuModel(*quick_popup::menuPanel(*menu.session));
+    QVERIFY(nodeModel);
+    QTest::keyClick(menu.session->window(), Qt::Key_Escape);
+    QCoreApplication::processEvents();
+    QVERIFY2(!menu.session->isOpen(), "Escape did not dismiss the point menu");
+
+    QQuickItem *const root = songTab.view().quickView()->rootObject();
+    QVERIFY(root);
+    auto *const rulerInput =
+        root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineRulerInput"));
+    QVERIFY(rulerInput);
+    auto *const ruler = dynamic_cast<songview::TimeRuler *>(rulerInput->interaction());
+    QVERIFY(ruler);
+    QQuickItem *const division =
+        root->findChild<QQuickItem *>(QStringLiteral("timelineRulerDivisionControl"));
+    QVERIFY(division);
+
+    const QByteArray before = songTab.document().smf().write();
+    const uint64_t revision = songTab.document().revision();
+    const int undoIndex = songTab.document().undoStack()->index();
+    // Publish the real division menu from the model's reset boundary: what a
+    // callback re-entering the shared session during the open does.
+    const QMetaObject::Connection foreignPublication =
+        connect(nodeModel, &QAbstractItemModel::modelReset, nodeModel, [ruler, division] {
+            ruler->openDivisionMenu(
+                division->mapToScene(QPointF(division->width() / 2.0, division->height() / 2.0)));
+        });
+    QVERIFY(foreignPublication);
+
+    // A real node right-release runs setItems on that boundary.
+    const QPoint node = automationWindowPoint(inputPoint(cc, kPointTick, kPointValue));
+    mousePress(Qt::RightButton, node);
+    mouseRelease(Qt::RightButton, node);
+    QCoreApplication::processEvents();
+    checks::support::pumpQuick();
+    QObject::disconnect(foreignPublication);
+
+    // The division menu survived the open: the live session menu must still
+    // carry a usable denominator row — a displaced node menu has none — and
+    // no fallback menu appeared either.
+    const QPointer<songview::QuickPopupSession> live{quick_popup::popupSession(songTab.view())};
+    QVERIFY2(live && live->isOpen(),
+             "the callback-published division menu did not survive the open");
+    QQuickItem *const survivor = quick_popup::menuPanel(*live);
+    QVERIFY2(survivor, "the surviving division menu lost its rendered panel");
+
+    // The survivor still works: a real row pick changes the grid.
+    const int currentDenom = songTab.view().viewState().gridMinDenom;
+    const int targetDenom = currentDenom == 8 ? 16 : 8;
+    const int targetRow = quick_popup::menuModel(*survivor)->rowForId(targetDenom);
+    QVERIFY2(targetRow >= 0, "the surviving division menu omitted the chosen denominator");
+    QVERIFY2(quick_popup::clickMenuRow(*live, targetRow),
+             "the surviving division row did not receive a real click");
+    QCoreApplication::processEvents();
+    QVERIFY2(!live->isOpen(), "the division pick left the shared menu open");
+    QCOMPARE(songTab.view().viewState().gridMinDenom, targetDenom);
+
+    // The consumed node hit stayed consumed: nothing was written, and no
+    // late value prompt surfaced.
+    QCOMPARE(songTab.document().revision(), revision);
+    QCOMPARE(songTab.document().undoStack()->index(), undoIndex);
+    QCOMPARE(songTab.document().smf().write(), before);
+    QVERIFY(!automation_valueprompt::promptVisible(songTab.view().editorDrawer()->chrome()));
+}
