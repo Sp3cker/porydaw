@@ -144,6 +144,11 @@ struct VelocityFixture {
     void refresh(bool playing = false, double playheadTick = 0.0);
 };
 
+// Voice fixtures abort on a failed create: a broken environment is never a
+// scenario outcome.
+void createVoiceFixture(VoiceFixture &fixture);
+void createVoiceFixture(VoiceTransactionFixture &fixture);
+
 void pump();
 void sendMouse(songview::TimelineInputItem &input, QEvent::Type type, const QPointF &position,
                Qt::MouseButton button = Qt::NoButton, Qt::MouseButtons buttons = Qt::NoButton,

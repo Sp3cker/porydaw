@@ -37,6 +37,10 @@ class DrawerPresentationTest final : public QObject
     void voiceRefreshLifecycle();
     void voicePickerTransactions();
     void voiceContextMenuTransactions();
+    void voiceMenuTargetHoldsAcrossCameraScroll();
+    void voiceMenuStaleDocumentRejectsPick();
+    void voiceMenuOutsideRightDismissesWithoutRetarget();
+    void voiceMenuForeignTakeoverStaysUsable();
     void voiceMarkerDragTransactions();
     void voiceCameraTransactions();
 };

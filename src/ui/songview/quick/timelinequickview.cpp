@@ -214,6 +214,7 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     m_roll->setPopupSession(m_popupSession);
     m_trackHeaders->setPopupSession(m_popupSession);
     m_automation->canvas()->setPopupSession(m_popupSession);
+    m_voiceChanges->setPopupSession(m_popupSession);
     discoverGestureScrollbars(*root);
 
     static constexpr std::array layers = {

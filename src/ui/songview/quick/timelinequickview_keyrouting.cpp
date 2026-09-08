@@ -1,7 +1,8 @@
+#include "ui/songview.h"
 #include "ui/songview/quick/timelinequickview.h"
 
-#include "ui/songview.h"
 #include "ui/songview/quick/eventlistcontroller.h"
+#include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelineinput.h"
 #include "ui/songview/quick/timelineinputitem.h"
 
@@ -146,10 +147,15 @@ void TimelineQuickView::cancelActiveGestures()
         // mouseGrabberItem() falls back to the primary pointing device's
         // exclusive grabber with no window filter, so this can observe a
         // grab held inside another native window (e.g. the note-automation
-        // popup). Release only our own window's grabber; a foreign grab is
-        // owned by its window and must survive timeline cancellation.
+        // popup). Release only our own window's grabber, and never a grab
+        // owned by the active shared popup: the same-window voice menu
+        // delegate holds its pressed-row grab here, and ungrabs fire
+        // onCanceled which clears the row before release can activate it.
+        // A foreign grab is owned by its window; a popup-owned grab is
+        // owned by the session — both must survive timeline cancellation.
         if (QQuickItem *const mouseGrabber = window->mouseGrabberItem();
-            mouseGrabber && mouseGrabber->window() == window)
+            mouseGrabber && mouseGrabber->window() == window &&
+            !(m_popupSession && m_popupSession->owns(mouseGrabber)))
             mouseGrabber->ungrabMouse();
     }
 }

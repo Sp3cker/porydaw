@@ -388,6 +388,15 @@ void SongView::requestVoicePicker(const QString &title, int initialVoice, QObjec
     if (!m_document || !context || !accepted || !session)
         return;
 
+    // The replacement cancellation below cascades synchronously: it can swap
+    // the document, replace the quick view or its session, or end this
+    // SongView. Everything the gate after it judges is pinned first.
+    const QPointer<SongDocument> document = m_document;
+    const uint64_t documentRevision = document->revision();
+    const QPointer<songview::TimelineQuickView> liveQuick(quick);
+    const QPointer<songview::QuickPopupSession> liveSession(session);
+    const QPointer<QObject> liveContext(context);
+    QPointer<SongView> self(this);
     // Replacement ends its owner before this guarded callback becomes live.
     // If this picker owns the session, cancellation synchronously clears its
     // bridge; another form's owner receives the same cancellation contract.
@@ -395,11 +404,21 @@ void SongView::requestVoicePicker(const QString &title, int initialVoice, QObjec
         cancelVoicePicker(/*restoreFocus=*/false);
     else
         session->cancel(/*restoreFocus=*/false);
+    // The request stages only against the world it snapshotted: same quick
+    // view and session still current, document unchanged, no newer
+    // publication, and every pinned object alive.
+    if (!self || !liveQuick || !liveSession || !liveContext || !document ||
+        quickView() != liveQuick || liveQuick->popupSession() != liveSession ||
+        m_document != document || document->revision() != documentRevision ||
+        liveSession->isOpen()) {
+        return;
+    }
 
     PendingVoicePicker pending;
     pending.context = context;
-    pending.document = m_document;
-    pending.documentRevision = m_document->revision();
+    pending.session = session;
+    pending.document = document;
+    pending.documentRevision = documentRevision;
     pending.accepted = std::move(accepted);
     pending.origin = origin;
     m_pendingVoicePicker = std::move(pending);
@@ -414,28 +433,51 @@ void SongView::requestVoicePicker(const QString &title, int initialVoice, QObjec
         if (m_voicePicker == picker)
             cancelVoicePicker(/*restoreFocus=*/true);
     });
-    connect(picker, &songview::VoicePicker::accepted, this, [this, picker, session](int program) {
+    connect(picker, &songview::VoicePicker::accepted, this, [this, picker](int program) {
         if (m_voicePicker != picker || !m_pendingVoicePicker)
             return;
-
         const PendingVoicePicker pending = std::move(*m_pendingVoicePicker);
-        const bool ownsSession = session && session->owns(picker);
+        // Pinned before the clear: its release callbacks can rebind the
+        // bridge, republish the session, or end this SongView.
+        QPointer<SongView> self(this);
+        const QPointer<songview::VoicePicker> livePicker(picker);
+        const QPointer<songview::TimelineQuickView> liveQuick(quickView());
         clearVoicePicker(/*restoreFocus=*/false);
-        // Release and clear the bridge, then close only its own form before
-        // an accepted callback can synchronously mutate the document.
-        if (ownsSession)
-            session->close();
+        if (!self)
+            return;
+        // Re-judged after the clear: a dead picker, a dead session, or a
+        // displaced current session means the acceptance is stale.
+        if (!livePicker || !pending.session || !liveQuick || quickView() != liveQuick ||
+            liveQuick->popupSession() != pending.session)
+            return;
+        if (pending.session->owns(picker))
+            pending.session->close();
+        if (!self)
+            return;
+        // A newer publication wins: no focus theft.
+        if (!liveQuick || !pending.session || m_pendingVoicePicker || quickView() != liveQuick ||
+            liveQuick->popupSession() != pending.session || pending.session->isOpen())
+            return;
         focusTimelineBand(pending.origin, Qt::OtherFocusReason);
-        if (m_document != pending.document || !pending.context ||
-            m_document->revision() != pending.documentRevision) {
+        // Re-judged after the focus swap, before the callback.
+        if (!self || !liveQuick || !pending.session || m_pendingVoicePicker || !pending.context ||
+            !pending.document || quickView() != liveQuick ||
+            liveQuick->popupSession() != pending.session || pending.session->isOpen() ||
+            m_document != pending.document ||
+            pending.document->revision() != pending.documentRevision) {
             return;
         }
         pending.accepted(program);
     });
-    if (!session->openForm(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/VoicePickerPrompt.qml")),
-                           picker)) {
-        clearVoicePicker(/*restoreFocus=*/true);
-    }
+    const QPointer<songview::VoicePicker> livePicker(picker);
+    const bool opened = session->openForm(
+        QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/VoicePickerPrompt.qml")), picker);
+    // The open's synchronous callbacks can end this SongView or stage a
+    // newer publication; only the same picker/pending/session is cleared.
+    if (opened || !self || !m_pendingVoicePicker || m_voicePicker != livePicker ||
+        m_pendingVoicePicker->session != session)
+        return;
+    clearVoicePicker(/*restoreFocus=*/true);
 }
 
 void SongView::cancelVoicePicker(bool restoreFocus)
@@ -443,13 +485,22 @@ void SongView::cancelVoicePicker(bool restoreFocus)
     if (!m_pendingVoicePicker)
         return;
 
-    songview::TimelineQuickView *const quick = quickView();
-    songview::QuickPopupSession *const session = quick ? quick->popupSession() : nullptr;
-    songview::VoicePicker *const picker = m_voicePicker;
+    // Dispose against the pinned owner: a current-session lookup could
+    // already be a replacement and must never cancel this old form or touch
+    // a newer foreign form.
+    const QPointer<songview::QuickPopupSession> session = m_pendingVoicePicker->session;
+    const QPointer<songview::VoicePicker> picker = m_voicePicker;
     const bool ownsSession = session && picker && session->owns(picker);
-    if (ownsSession)
+    if (ownsSession) {
+        QPointer<SongView> self(this);
         session->cancel(restoreFocus);
-    if (m_pendingVoicePicker)
+        // The cascade can end this SongView; the continuation must not follow.
+        if (!self)
+            return;
+    }
+    // Consume only what was pinned: the cascade may already have cleared
+    // this pending or staged a newer publication that must survive.
+    if (m_pendingVoicePicker && m_voicePicker == picker && m_pendingVoicePicker->session == session)
         clearVoicePicker(restoreFocus);
 }
 
@@ -458,17 +509,44 @@ void SongView::clearVoicePicker(bool restoreFocus)
     if (!m_pendingVoicePicker)
         return;
 
+    // Pinned before any callback: the teardown judges the world it started
+    // with, never the one its release callbacks create.
     const TimelineBand origin = m_pendingVoicePicker->origin;
+    const QPointer<songview::QuickPopupSession> session = m_pendingVoicePicker->session;
     m_pendingVoicePicker.reset();
     QObject::disconnect(m_voicePickerCancellation);
     m_voicePickerCancellation = {};
+    QPointer<SongView> self(this);
     if (m_voicePicker) {
-        m_voicePicker->releaseHeld();
-        m_voicePicker->deleteLater();
+        // Consume the bridge slot before releaseHeld: its callbacks must
+        // observe an idle bridge, and a publication opened from within them
+        // must survive this teardown.
+        const QPointer<songview::VoicePicker> picker = m_voicePicker;
         m_voicePicker = nullptr;
+        picker->releaseHeld();
+        // A release callback can end this SongView — its destructor already
+        // deleted the picker.
+        if (self && picker)
+            picker->deleteLater();
     }
+    // A newer picker staged during the release callbacks owns the focus.
+    if (!self || m_pendingVoicePicker)
+        return;
+    // Focus returns only when the original surface is still current: the
+    // pinned session must be alive and still the quick view's session, and
+    // must not host a newer popup.
+    songview::TimelineQuickView *const currentQuick = quickView();
+    if (!session || !currentQuick || currentQuick->popupSession() != session || session->isOpen())
+        return;
     if (restoreFocus)
         focusTimelineBand(origin, Qt::OtherFocusReason);
+}
+
+void SongView::cancelVoicePickerFor(QObject &context)
+{
+    if (!m_pendingVoicePicker || m_pendingVoicePicker->context != &context)
+        return;
+    cancelVoicePicker(/*restoreFocus=*/false);
 }
 
 EventListController *SongView::eventListController() const noexcept

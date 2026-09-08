@@ -266,8 +266,6 @@ qt_add_library(porydaw_app STATIC
     src/ui/songtab.h
     src/ui/voicegroupviewcache.cpp
     src/ui/voicegroupviewcache.h
-    src/ui/contextmenu.cpp
-    src/ui/contextmenu.h
     src/ui/pitchprojection.cpp
     src/ui/pitchprojection.h
     src/ui/songview.cpp
@@ -382,6 +380,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/cclanes.h
     src/ui/editordrawer/voicechangearea/voicechangearea.cpp
     src/ui/editordrawer/voicechangearea/voicechangearea.h
+    src/ui/editordrawer/voicechangearea/voicechangemenu.cpp
     src/ui/editordrawer/nodelane/pencilgesture.cpp
     src/ui/editordrawer/nodelane/pencilgesture.h
     src/ui/editordrawer/automationprojection.cpp
@@ -821,6 +820,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/drawerpresentation/drawer.cpp
         src/checks/drawerpresentation/valueprompt.cpp
         src/checks/drawerpresentation/voice.cpp
+        src/checks/drawerpresentation/voicemenus.cpp
         src/checks/drawerpresentation/velocity.cpp
         src/checks/velocity/tst_velocityediting.cpp
         src/checks/velocity/tst_velocityediting.h

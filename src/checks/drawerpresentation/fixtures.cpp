@@ -6,6 +6,7 @@
 
 #include <QCoreApplication>
 #include <QQuickItem>
+#include <QtGlobal>
 
 #include "checks/support/editorrig.h"
 #include "checks/support/eventsynth.h"
@@ -103,6 +104,20 @@ int fixedSpan(const SongView &view, songview::TimelineBand which)
 } // namespace
 
 namespace checks::drawerpresentation {
+
+void createVoiceFixture(VoiceFixture &fixture)
+{
+    QString error;
+    if (!fixture.create(error))
+        qFatal("%s", qPrintable(error));
+}
+
+void createVoiceFixture(VoiceTransactionFixture &fixture)
+{
+    QString error;
+    if (!fixture.create(error))
+        qFatal("%s", qPrintable(error));
+}
 
 void pump()
 {

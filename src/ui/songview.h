@@ -396,6 +396,9 @@ class SongView : public QWidget
     void requestVoicePicker(const QString &title, int initialVoice, QObject *context,
                             std::function<void(int)> accepted, songview::TimelineBand origin);
     void cancelVoicePicker(bool restoreFocus);
+    // Context-scoped hard cancellation: ends only a picker whose staged
+    // context is this caller, leaving a foreign owner's picker untouched.
+    void cancelVoicePickerFor(QObject &context);
     // Track-header entry point: re-pick the voice governing the track (its
     // first program change), inserting one at tick 0 if the track has none.
     void editTrackVoice(int track);
@@ -805,6 +808,9 @@ class SongView : public QWidget
     void cancelInsertTimePromptWithoutFocus();
     struct PendingVoicePicker {
         QPointer<QObject> context;
+        // The session this picker's form lives on; disposal always targets
+        // this pinned owner, never the session current at dispose time.
+        QPointer<songview::QuickPopupSession> session;
         QPointer<SongDocument> document;
         uint64_t documentRevision = 0;
         std::function<void(int)> accepted;

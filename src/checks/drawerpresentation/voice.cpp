@@ -4,14 +4,9 @@
 
 #include "checks/voicepickerdriver.h"
 
-#include <QAction>
-#include <QApplication>
 #include <QImage>
-#include <QMenu>
 #include <QQuickItem>
 #include <QScopeGuard>
-#include <QTimer>
-#include <QWidget>
 
 #include <algorithm>
 #include <cmath>
@@ -22,7 +17,6 @@
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "ui/editordrawer/editordrawer.h"
-#include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
@@ -31,81 +25,11 @@ using namespace checks::drawerpresentation;
 
 namespace {
 
-void createVoiceFixture(VoiceFixture &fixture)
-{
-    QString error;
-    if (!fixture.create(error))
-        qFatal("%s", qPrintable(error));
-}
-
-void createVoiceFixture(VoiceTransactionFixture &fixture)
-{
-    QString error;
-    if (!fixture.create(error))
-        qFatal("%s", qPrintable(error));
-}
-
 void doubleClick(VoiceTransactionFixture &fixture, uint64_t tick)
 {
     const QPointF point(fixture.xForTick(double(tick)), fixture.bandRect().height() / 2.0);
     sendMouse(fixture.input(), QEvent::MouseButtonDblClick, point, Qt::LeftButton, Qt::LeftButton);
     sendMouse(fixture.input(), QEvent::MouseButtonRelease, point, Qt::LeftButton);
-    pump();
-}
-
-struct MenuAttempt {
-    bool opened = false;
-    int actionCount = 0;
-    bool actionFound = false;
-    bool actionEnabled = false;
-    bool actionResolved = false;
-};
-
-QAction *findMenuAction(QMenu &menu, const QString &text)
-{
-    const auto found =
-        std::find_if(menu.actions().cbegin(), menu.actions().cend(),
-                     [&text](const QAction *candidate) { return candidate->text() == text; });
-    return found == menu.actions().cend() ? nullptr : *found;
-}
-
-bool clickMenuAction(QMenu &menu, QAction &action)
-{
-    const QPoint point = menu.actionGeometry(&action).center();
-    QTest::mousePress(&menu, Qt::LeftButton, Qt::NoModifier, point);
-    QTest::mouseRelease(&menu, Qt::LeftButton, Qt::NoModifier, point);
-    return true;
-}
-
-QMenu *openMenu()
-{
-    if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget()))
-        return menu;
-    for (QWidget *widget : QApplication::allWidgets()) {
-        auto *menu = qobject_cast<QMenu *>(widget);
-        if (menu && menu->isVisible())
-            return menu;
-    }
-    return nullptr;
-}
-
-void openMenuAndChoose(VoiceTransactionFixture &fixture, uint64_t tick, const QString &action,
-                       MenuAttempt &attempt)
-{
-    QTimer::singleShot(0, [action, &attempt] {
-        QMenu *const menu = openMenu();
-        attempt.opened = menu != nullptr;
-        if (!menu)
-            return;
-        attempt.actionCount = menu->actions().size();
-        QAction *const selected = findMenuAction(*menu, action);
-        attempt.actionFound = selected != nullptr;
-        attempt.actionEnabled = selected && selected->isEnabled();
-        attempt.actionResolved = attempt.actionEnabled && clickMenuAction(*menu, *selected);
-    });
-    const QPointF point(fixture.xForTick(double(tick)), fixture.bandRect().height() / 2.0);
-    sendMouse(fixture.input(), QEvent::MouseButtonPress, point, Qt::RightButton, Qt::RightButton);
-    sendMouse(fixture.input(), QEvent::MouseButtonRelease, point, Qt::RightButton);
     pump();
 }
 
@@ -442,48 +366,6 @@ void DrawerPresentationTest::voicePickerTransactions()
     QVERIFY(!fixture.document().findLanePoint(0, DOC_CC_VOICE, 96, &point));
     fixture.document().undoStack()->redo();
     QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, 96, &point));
-}
-
-void DrawerPresentationTest::voiceContextMenuTransactions()
-{
-    VoiceTransactionFixture fixture;
-    createVoiceFixture(fixture);
-    quick_popup::PromptGuard guard(fixture.view());
-    const Snapshot before = fixture.snapshot();
-    MenuAttempt inserted;
-    openMenuAndChoose(fixture, 144, QStringLiteral("Insert voice change"), inserted);
-    QVERIFY(inserted.opened);
-    QVERIFY(inserted.actionResolved);
-    QVERIFY(inserted.actionFound);
-    QVERIFY(inserted.actionEnabled);
-    QCOMPARE(inserted.actionCount, 1);
-
-    checks::voicepicker::Picker picker;
-    QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())));
-    QVERIFY(!QApplication::activePopupWidget());
-    checks::voicepicker::filter(picker, QStringLiteral("007"));
-    QTRY_VERIFY(checks::voicepicker::row(picker, 7));
-    checks::voicepicker::accept(picker);
-    QTRY_VERIFY(!checks::voicepicker::active(fixture.view()));
-
-    DocLanePoint point;
-    QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, 144, &point));
-    QCOMPARE(point.value, 7);
-    QCOMPARE(fixture.document().revision(), before.revision + 1);
-    QCOMPARE(fixture.document().undoStack()->index(), before.undoIndex + 1);
-    QVERIFY(!QApplication::activePopupWidget());
-
-    MenuAttempt deleted;
-    openMenuAndChoose(fixture, 144, QStringLiteral("Delete"), deleted);
-    QVERIFY(deleted.opened);
-    QVERIFY(deleted.actionResolved);
-    QVERIFY(deleted.actionFound);
-    QVERIFY(deleted.actionEnabled);
-    QCOMPARE(deleted.actionCount, 2);
-    QVERIFY(!fixture.document().findLanePoint(0, DOC_CC_VOICE, 144, &point));
-    QCOMPARE(fixture.document().undoStack()->index(), before.undoIndex + 2);
-    QCOMPARE(fixture.document().revision(), before.revision + 2);
-    QVERIFY(!QApplication::activePopupWidget());
 }
 
 void DrawerPresentationTest::voiceMarkerDragTransactions()

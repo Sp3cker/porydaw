@@ -218,22 +218,61 @@ confirmation is a separate component/worktree from those menus.
 
 ## Shell implementation contract
 
-After every leaf has merged, replace spacer-derived layout with direct geometry
-from the existing metrics and drawer bounds. Preserve the canonical published band
-rectangles and input coordinate systems. The Quick window fills the external host;
-the root paints the editor background. No extra Quick window for the event list.
+After every leaf has merged, replace spacer-derived layout and roll-stack shells with
+direct coordinate geometry from the existing metrics and drawer bounds. SongView and
+TimelineQuickView transition to pure QObject coordinators; neither inherits QWidget nor
+provides QWidget geometry/focus shims, spacer/stack shells, or compatibility aliases.
 
-SongView remains the document/view coordinator, now QObject. TimelineQuickView owns
-or observes its Quick window with one explicit lifetime policy; the SongTab adapter
-must not double-delete a window owned by createWindowContainer. Move resize, focus,
-activation, DPR, readiness and cancellation responsibilities to the appropriate
-QWindow/embedding owner. Migrate every QWidget-assuming caller found by references,
-including automation filters, pitch-bend popup positioning, check rigs, screenshots
-and native playhead attachment. Do not add QWidget-shaped compatibility methods.
+The QQuickWindow is the full canonical viewport with origin `(0, 0)`. TimelineBandLayout
+remains authoritative for band and plot rects in canonical viewport coordinates; rects
+are published directly without envelope translations. Remove obsolete envelope offsets
+(`hostX`, `hostY`, `publishedHostRect`), while preserving legitimate column-local split
+semantics (`rulerPlotOrigin == timelineSplitX()`) and camera/column-local math.
 
-Retain both native and Quick playhead checks. Audit macOS attachment and clipping
-against the actual Quick NSView, not the old MainWindow view. Preserve tab teardown
-and engine/document lifetime ordering.
+TimelineQuickView initially sole-owns an unhosted `QQuickView` via `std::unique_ptr` plus
+a `QPointer` borrow. `std::unique_ptr<QQuickWindow> takeWindowForEmbedding()` provides an
+exactly-once, one-way ownership transfer: the external adapter releases the window into
+`QWidget::createWindowContainer`, and the container takes sole ownership. No manual
+reparent/reclaim is used to recover ownership, and the adapter retains no `unique_ptr`.
+
+The external embedding adapter `SongTabQuickHost` is a `QObject` beside `SongTab`:
+`SongTabQuickHost(TimelineQuickView &timelineQuickView, QWidget &parent)` creates the
+container with the supplied `QWidget` parent (not itself) and exposes `container()`.
+`SongTab` explicitly destroys the host and container before destroying `SongView` and
+before document members die, rather than relying on QObject child order.
+
+`TimelineQuickView::detachWindow()` is an idempotent final teardown method: it stops
+timers, cancels transient popup/gesture/key wiring, detaches interaction and session
+bindings, clears raw QML borrows, and unloads QML while owner context objects still live.
+It emits `windowAboutToDetach()` once while the original window remains valid (not during
+`takeWindowForEmbedding()`). Afterward, `quickWindow()`, `rootObject()`, and
+`popupSession()` return `nullptr`. In a hosted environment, detach unbinds while the
+container deletes the window; in an unhosted environment, detach synchronously destroys
+the owned window before `SongView` members die. The `SongView` destructor invokes detach
+first, and `TimelineQuickView::~TimelineQuickView()` repeats it safely.
+
+Window focus and input surveillance: `embeddingFocusRequested(Qt::FocusReason)` signals
+the host to set container focus, reusing the `TimelineInputHost` Quick focus path without
+a custom focus-memory framework. `SongTab::InputGate` monitors the container, the
+`QQuickWindow`, and the QML root via `QObject::eventFilter`, replacing surveillance of
+the legacy `SongView` widget hierarchy.
+
+Native playhead overlays (macOS `CALayer`) attach to the actual Quick `NSView` using
+Quick-local bounds (zero top-level QWidget offset) and effective DPR. Native attachment
+requires both the genuine Cocoa platform at runtime (compile-time `__APPLE__` alone is
+insufficient) and an already-created platform surface (never calling `winId()` to force
+creation). The overlay handles `PlatformSurface` destroy/recreate cycles, and
+`windowAboutToDetach()` clears native attachment. Standalone native test rigs may attach
+after genuine window creation without requiring container embedding.
+
+Concrete cutover inventories partition callsites into non-overlapping groups:
+- **Coordinator group**: `SongView`, `TimelineQuickView`, `TimelineCanvas.qml`, `DrawerChromeLayer.qml`.
+- **Host/CMake group**: `SongTabQuickHost`, `SongTab`, CMake targets.
+- **Native graphics**: `playheadrenderer_macos.mm`, `playheadoverlay`.
+- **Support rigs**: `SongViewRig`, `EditorRig`, `captureQuickBand` (viewport-local capture, no QWidget tree walking or embedded-window geometry/visibility driving), `physicalInputsMatchCanonical` (drops obsolete QWidget-offset parameter), removal of obsolete `canonicalVisibleQuickHostRect`.
+- **Remaining check callers**: all mapped check callers with QWidget calls or envelope math migrated to direct unhosted window framing or canonical viewport coordinates.
+
+No shell source edits begin until voice-change work merges cleanly into main.
 
 ## Verification and closure
 
@@ -243,15 +282,17 @@ runs `deno task verify --filter <filter> --verbose` with all relevant filters; v
 builds the checks first. Never run redundant parallel format/build gates.
 
 Do not launch native GUI harnesses, activate windows, or inject desktop input while
-the user is using the machine. User interaction with the test windows invalidates
+the user is using the machine. User interaction with test windows invalidates
 focus/outside-click failure evidence. Use registered offscreen checks and explicitly
-offscreen/software Quick interaction probes instead; never report these as native
-window-system verification. Native-only coverage remains separately pending until
-it can run without interfering with the user. Do not weaken assertions or alter
-behavior to chase a user-interrupted native run.
+offscreen/software Quick interaction probes for reachable behavioral proof; never
+report these as native window-system verification. Native-only coverage and custom-QSG
+vertex-color material rasterization remain separately pending until they can run
+against genuine native surfaces without user interference. The seven pending raster
+framebuffer probes under software Quick backend remain unresolved pending native/GPU
+coverage; do not weaken assertions or alter production behavior to bypass them.
 
 Each UI component needs real Quick event delivery and rendered-surface proof, using
-existing EditorRig/native window harnesses and a production-app smoke where needed.
+existing EditorRig/native window harnesses and production-app smoke where needed.
 Permanent regression coverage must defend a plausible behavioral failure. Do not
 add source-text tests or assert a new presenter merely exists.
 
@@ -259,8 +300,8 @@ After a component passes smoke, remove throwaway artifacts, update affected exis
 docs/changelog where applicable, finish thermo re-review, then commit and merge.
 Final integrated fork-main runs the full check suite. Source inventory must confirm
 all listed widget surfaces and widget-only dependencies are gone; the external
-SongTab embedding adapter is documented explicitly. Any failing assertion is a
-blocker to handoff, not an accepted baseline.
+`SongTabQuickHost` embedding adapter is documented explicitly. Any failing assertion is
+a blocker to handoff, not an accepted baseline.
 
 ## Voice picker completion evidence
 
@@ -315,3 +356,73 @@ blocker to handoff, not an accepted baseline.
 - **Implementation**: The node point menu (Set Value / Delete) is the canvas's second typed `QuickMenuModel`/`QuickMenuHost` pair (`automationcanvas_pointmenu.cpp`) on the shared `QuickPopupSession`, dispatched through its own `NodeMenuAction` enum and model — separate from the lane menu's, not one shared id space. Opening snapshots a guarded `PendingNodeMenu` (document identity, revision, row id, exact tick+value occurrence) and revalidates across the open's synchronous callbacks, so a stale open ends only a menu this canvas owns. Node hits keep press-path precedence over an active time selection; an outside right-press retargets or stays dismissed on a miss with the paired release swallowed; the pending target is consumed before dispatch, and stale revision, rebuild remap, or vanished occurrence writes nothing. Delete keeps the existing written tick-group deletion but is enabled only for a document-written point at the tick — projected engine defaults open Delete-disabled while Set Value promotes them into written events through the already-inline Quick value prompt. The shared `QuickMenuPanel` delegate now derives `Item.enabled` from its active state, the canonical accessibility state, with the frame absorbing the clicks disabled rows let fall through. A caller correction ensures `showNodeMenuNear` returns consumed-hit (`true`) whenever a node was hit even if the open subsequently aborts (teardown, rebind, stale snapshot, or newer popup), keeping background fallbacks suppressed; `false` is strictly a genuine miss. `pointerRelease` and the open path guard caller lifetime (`QPointer<AutomationCanvas> self`) at the guarded selection and popup callback boundaries, pinning original session and host identities, and a newer foreign popup published on the shared session during `modelReset` or grab callbacks wins without displacement.
 - **Verification**: Forced offscreen/software only, both deliberate RED probes then GREEN: enabling the unwritten Delete row and removing the delegate `Item.enabled` binding each fail their slot — the latter exactly at the accessibility disabled-state assertion — green on byte-exact restored source. Registered `automation-editing` passed 24/24 Qt totals (9 `ccDeletePrompt` + 7 `pointMenu` + 6 menu neighbors + init/cleanup): delete-undo, duplicate-tick prompt targeting, Escape/outside dismissal, synthetic-default disabled Delete with working Set Value promotion, stale/foreign no-writes. Shared-panel regressions reran green (`trackheaderquickcheck` 9, rollcheck `headerContextMenu` 3). Real-input smokes: disabled-row clicks stay menu-contained with bytes unchanged; a focus return that wrote externally during SetValue rejects the late prompt/edit; a visible origin proxy deletes the offscreen written source tick with undo restoring; pending-menu/prompt tab teardown and the earlier focused-prompt stale-write guard passed; in-process `QAccessible` proves the disabled bit, not a native screen reader. Temporary probes removed. Incremental caller correction regression (`pointMenuForeignPopupPublishedDuringOpenSurvives`) opens the ruler division menu from the real `modelReset` observer during a real node pointer release, asserting survivor survival, a working denominator row pick (`gridMinDenom` updated), no document mutation, and consumed-hit held without late prompts. Guard-only RED mutation (removing only the pre-open foreign-owner guard) failed meaningfully at 2 passed / 1 failed on `targetRow >= 0` (displaced survivor omitted denominator rows), restoring byte-exact to GREEN 3/0. Final full `automation-editing` harness passed 149/0 (isolated new slot 3/0); sibling suites passed green (automation-domain, automation-presentation, automation-hover, ruler-grid-menu). A temporary live-survivor cleanup teardown smoke passed 3/0 (verifying clean teardown with an open survivor during `cleanup()`, not destruction during callback) and was removed and rebuilt clean. `NodeCallerThermo` review passed.
 - **Native coverage limits**: Native verification deferred per desktop policy — forced `QT_QPA_PLATFORM=offscreen` plus software Quick backend only, no native window launch or desktop input; native/default-backend raster and window-manager focus coverage remain pending. Broad automation filtering ran `automation-raster` where 7 framebuffer probes failed under forced software due to unsupported QSG material/rendering limitations; these 7 probes remain pending unresolved native/default-backend coverage without source suppression.
+
+## Voice-change menu completion evidence
+
+- **Implementation**: The drawer voice-change context menu and its double-click
+  picker handoff are now `VoiceChangeArea`'s slice of the shared canvas
+  `QuickPopupSession` — a persistent typed `QuickMenuModel`/`QuickMenuHost`
+  pair in the new `voicechangemenu.cpp`; the last context-menu helper
+  (`src/ui/contextmenu.{cpp,h}`) is deleted. `captureTargetAt` fixes the
+  open-time target before any signal-producing step (document identity,
+  revision, engine track, and either the full marker occurrence or the
+  logically snapped tick), so a camera move after capture cannot drift it;
+  dispatch consumes the pending target exactly once through the existing
+  SongView/SongDocument primitives. An outside right-press dismisses and
+  swallows the paired release without retargeting.
+  The handed-off picker is fenced by an irreversible per-band serial —
+  hidden/window-deactivated cancellation and `detachInputHost` hard-cancel it,
+  so hide→show or detach→reattach cannot resurrect a captured pick — while the
+  open's self-inflicted FocusLost/PointerUngrabbed cancellations are tolerated
+  only while this band's host owns the session. Opens revalidate across every
+  synchronous callback: a newer foreign publication wins undisplaced and a
+  stale target writes nothing; SongView's picker staging gained the same
+  pinned-snapshot revalidation plus context-scoped `cancelVoicePickerFor`.
+  Common gesture cancellation now preserves a shared-popup-owned same-window
+  pointer grab beside the already preserved foreign-window grab.
+- **Verification**: Forced offscreen/software inside the wrapper; no native
+  window was launched and no runtime native claims are made. The registered
+  `editor-drawer` voice run passed 8 permanent slots, 10/0 totals including
+  init/cleanup (195 ms on the final build), with the held-Delete +
+  external-write grab regression RED before the shared-grab fix and GREEN
+  after: the held press survives the cancellation and exactly the rewrite
+  stands. Six strengthened temporary lifecycle scenarios (8/0 including
+  init/cleanup) proved the picker's actual QPointer contentItem visible while
+  open and gone/invisible after hide, detach, and session clear; reattach
+  supported; a foreign ruler usable after voice hide; held acceptance
+  rejecting an external rewrite; and teardown leaving the form null with a
+  balanced audition. The temporary tests were then removed and the touched
+  voice-menu source and header restored byte-exactly — all 322 original
+  recovered lines match. The registered `automation-editing` harness passed
+  (its Qt totals are not derived from source). Neighbors reran green
+  (`trackheaderquickcheck`'s two picker slots 4/0, rollcheck
+  `velocityCancelUngrab` 3/0), and the final proof after the 13-file
+  format/restored-source build passed `deno task build:checks` (17.92 s) with
+  the full `trackheaderquickcheck` harness green; the runner abbreviates
+  stdout and does not show the full Qt case count, so only the full-harness
+  pass is claimed. Strict thermo, GUI, and independent Qt source audits
+  passed with production unchanged.
+- **Remaining coverage and native limits**: Native verification deferred per
+  desktop policy (desktop in use). The 7 pending framebuffer probes are the
+  `automation-raster` assertions that failed under forced software due to
+  unsupported QSG material limitations; the default-backend
+  `timelineRulerScope` raster assertions and native popup/window/keyboard
+  coverage are separately deferred. No claim is made that no warnings remain
+  (the full runner's stdout is abbreviated).
+  The earlier `trackheaderquickcheck`
+  `emptyTrackHeadersRejectInputWithoutMutation` failure (stale QWidget-tree
+  lookup) is resolved by the Quick-root setup fix with the behavior
+  assertions unchanged. The intermittent `QQmlDelegateModel`
+  pending-incubator cancellation warning once seen on the passing two-slot
+  run (old pending 25 vs new 10) is explained by the Qt 6.11 model-reset
+  path: the delegate compositor updates before `emitChanges`, and
+  `DelegateModel::cancel` checks the retained requested index against the new
+  count, so a normal reset can warn — the picker's reset contract stands, no
+  suppression, filter, or cache workaround was applied, and no assertion
+  failed; the repeated exact two-slot sequence passed 4/0 with the warning
+  surfacing on a different open (header menu vs add-track picker).
+  References:
+  https://github.com/qt/qtdeclarative/blob/v6.11.0/src/qmlmodels/qqmldelegatemodel.cpp#L663
+  and
+  https://github.com/qt/qtdeclarative/blob/v6.11.0/src/quick/items/qquickitemview.cpp#L1860.
+  The shell implementation contract is unchanged.

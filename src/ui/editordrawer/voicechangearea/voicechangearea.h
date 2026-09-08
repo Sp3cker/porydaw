@@ -10,6 +10,7 @@
 #include <QObject>
 #include <QPoint>
 #include <QPointF>
+#include <QPointer>
 #include <QRect>
 #include <QRectF>
 #include <QString>
@@ -27,6 +28,9 @@ class SongView;
 
 namespace songview {
 class Grid;
+class QuickMenuHost;
+class QuickMenuModel;
+class QuickPopupSession;
 class TimeCamera;
 class TimelineQuickScene;
 class TimelineQuickView;
@@ -48,6 +52,18 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
 
   public:
     explicit VoiceChangeArea(SongView &owner, QObject *parent = nullptr);
+
+    // Typed rows of the voice context menu. Production dispatch and the
+    // checks that click rendered rows both read these.
+    enum class VoiceMenuAction : int {
+        ChangeVoice = 1,
+        InsertVoiceChange = 2,
+        DeleteMarker = 3,
+    };
+
+    // Binds the tab's shared Quick popup session; the typed voice menu in
+    // voicechangemenu.cpp opens on it like every other band's menu.
+    void setPopupSession(songview::QuickPopupSession *session);
     void songChanged();
     void refreshLiveState(const DrawerPageLiveState &liveState);
     void cancelInteraction() override;
@@ -129,7 +145,26 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
     bool voiceDragActive() const noexcept;
     void resetVoiceDrag();
     void showPicker(qreal plotX);
-    void showContextMenu(qreal plotX, const QPoint &globalPosition);
+    void showContextMenu(qreal plotX, const QPointF &globalPosition);
+    // Menu/picker seam, owned by voicechangemenu.cpp: guarded capture of the
+    // open-time target, typed menu rows, dispatch, and the shared
+    // captured-target picker path behind both the double-click and the menu.
+    struct PendingVoiceMenu {
+        QPointer<SongDocument> document;
+        uint64_t revision = 0;
+        int track = -1;
+        uint64_t tick = 0;
+        // Present when the press hit an existing marker; carries the full
+        // occurrence (tick and value) so a Change pick re-finds exactly it.
+        std::optional<DocLanePoint> marker;
+        int initialVoice = 0;
+    };
+    std::optional<PendingVoiceMenu> captureTargetAt(qreal plotX) const;
+    void openPickerForTarget(const PendingVoiceMenu &target);
+    void ensureMenuAdapters();
+    void cancelMenuWithoutFocus();
+    void handleMenuAction(int actionId);
+    QPointF menuScenePosition(const QPointF &globalPosition) const;
     SongView &m_owner;
     const songview::TimeCamera &m_camera;
     const songview::Grid &m_grid;
@@ -158,6 +193,18 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
     layout::TwoLineTextLayout m_textLayout;
     mutable std::array<VoicePaintText, VOICEGROUP_SIZE> m_paintTexts;
     mutable QString m_secondary;
+    // The shared canvas popup session and this band's typed menu adapter.
+    songview::QuickMenuHost *m_menuHost = nullptr;
+    songview::QuickMenuModel *m_menuModel = nullptr;
+    QPointer<songview::QuickPopupSession> m_menuSession;
+    std::optional<PendingVoiceMenu> m_pendingMenu;
+    // Irreversible picker invalidation: advanced at every hard cancellation
+    // boundary (hidden, window deactivated, detached, session replaced), so
+    // a picker handed off from this band is dead once the serial moves and a
+    // hide→show or detach→reattach cannot resurrect it. Self-inflicted
+    // FocusLost/PointerUngrabbed from the menu or picker opening must not
+    // advance it.
+    uint64_t m_pickerSerial = 0;
     mutable int m_changeCount = -1;
     std::optional<double> m_lastPresentedPlayheadTick;
 };

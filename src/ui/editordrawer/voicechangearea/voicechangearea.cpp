@@ -5,17 +5,17 @@
 #include <cstring>
 #include <utility>
 
-#include <QAction>
 #include <QApplication>
 #include <QCursor>
 #include <QRect>
 
 #include "core/miditimeline.h"
-#include "ui/contextmenu.h"
 #include "ui/layout.h"
 #include "ui/m4asemantics.h"
 #include "ui/songview.h"
 #include "ui/songview/editorselectionmodel.h"
+#include "ui/songview/quick/quickmenumodel.h"
+#include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timecamera.h"
 #include "ui/songview/timelinebandlayout.h"
@@ -54,14 +54,65 @@ void VoiceChangeArea::detachInputHost(songview::TimelineInputHost &host)
     Q_ASSERT(m_inputHost == &host);
     if (m_inputHost != &host)
         return;
+    // Detach is a hard cancellation: the handed-off picker closes now, and
+    // any acceptance already in flight dies with the serial even if the
+    // host is reattached first. Self and the serial advance before the
+    // visible scoped cancel: the cancellation callbacks can end this band,
+    // and the continuation must not run on a dead object.
+    QPointer<VoiceChangeArea> self(this);
+    ++m_pickerSerial;
+    m_owner.cancelVoicePickerFor(*this);
+    if (!self)
+        return;
+    cancelMenuWithoutFocus();
+    if (!self)
+        return;
     cancelInteraction();
-    m_inputHost = nullptr;
+    if (!self)
+        return;
+    // A callback above can reattach a host; this old detach continuation
+    // must only clear the host it was detaching.
+    if (m_inputHost == &host)
+        m_inputHost = nullptr;
 }
 
 void VoiceChangeArea::inputCancelled(songview::TimelineInputCancelReason reason)
 {
     // A Quick focus transition does not end its pointer delivery. Keep an
     // active Voice drag alive until its release or an actual pointer cancel.
+    // Opening this band's shared menu hands window focus to the menu panel
+    // (FocusLost), and the press's released grab lands right after the open
+    // (PointerUngrabbed): while this band's menu host owns the open session,
+    // exactly those two self-inflicted cancellations must not tear the menu
+    // back down. Every other reason — Hidden, WindowDeactivated — and any
+    // reason arriving while a foreign popup owns the session keeps the full
+    // teardown.
+    if (reason == songview::TimelineInputCancelReason::Hidden ||
+        reason == songview::TimelineInputCancelReason::WindowDeactivated) {
+        // Hard cancellation is visible too: the handed-off picker closes
+        // now instead of sitting Accept-enabled while its serial already
+        // killed acceptance. Self and the serial advance before the scoped
+        // cancel; the serial stays as the in-flight backstop.
+        QPointer<VoiceChangeArea> self(this);
+        ++m_pickerSerial;
+        m_owner.cancelVoicePickerFor(*this);
+        // The cancellation callbacks can end this band; nothing below may
+        // run on a dead object.
+        if (!self)
+            return;
+    }
+    const bool menuTookTheInput = m_menuSession && m_menuSession->isOpen() &&
+                                  m_menuSession->owns(m_menuHost) &&
+                                  (reason == songview::TimelineInputCancelReason::FocusLost ||
+                                   reason == songview::TimelineInputCancelReason::PointerUngrabbed);
+    if (!menuTookTheInput) {
+        QPointer<VoiceChangeArea> self(this);
+        cancelMenuWithoutFocus();
+        // The cancelled session's synchronous callbacks may have ended this
+        // band; the gesture teardown below must not run on a dead object.
+        if (!self)
+            return;
+    }
     if (reason != songview::TimelineInputCancelReason::FocusLost)
         cancelInteraction();
 }
@@ -374,8 +425,9 @@ bool VoiceChangeArea::pointerPress(const songview::TimelinePointerInput &input)
         return true;
     }
     if (input.button == Qt::RightButton) {
-        m_inputHost->requestFocus(Qt::MouseFocusReason);
-        showContextMenu(position.x(), input.globalPosition.toPoint());
+        // Capture before focus: a focus swap is signal-producing, so
+        // showContextMenu focuses the band only after its guarded capture.
+        showContextMenu(position.x(), input.globalPosition);
         return true;
     }
     if (input.button == Qt::LeftButton) {
@@ -506,69 +558,4 @@ bool VoiceChangeArea::keyPress(const songview::TimelineKeyInput &input)
         return false;
     clearHover();
     return true;
-}
-
-void VoiceChangeArea::showPicker(qreal plotX)
-{
-    SongDocument *const sourceDocument = m_owner.document();
-    if (!sourceDocument || m_engineTrack < 0)
-        return;
-    const int track = m_engineTrack;
-    DocLanePoint markerPoint;
-    const DocLanePoint *marker = voiceMarkerAt(plotX, &markerPoint) ? &markerPoint : nullptr;
-    const double rawTick = std::max(0.0, m_camera.tickAtContentX(std::max<qreal>(0.0, plotX)));
-    const uint64_t tick = marker ? marker->tick : m_grid.snapTick(rawTick, false);
-    const int current = marker ? marker->value : voiceSlotAt(tick);
-    m_owner.requestVoicePicker(
-        marker ? tr("Change voice") : tr("Insert voice change"), std::max(0, current), this,
-        [this, sourceDocument, track, tick](int selectedVoice) {
-            // The picker only invokes an accepted callback for its opening document
-            // revision. Keep the drawer-specific primary-track guard and re-resolve
-            // the marker so the target remains the one the user opened.
-            SongDocument *const document = m_owner.document();
-            if (document != sourceDocument || primaryTrack() != track)
-                return;
-            DocLanePoint existing;
-            if (document->findLanePoint(track, DOC_CC_VOICE, tick, &existing)) {
-                if (existing.value == selectedVoice)
-                    return;
-                document->moveLanePoints({{track, DOC_CC_VOICE, existing, tick, selectedVoice}});
-            } else {
-                document->addLanePoint(track, DOC_CC_VOICE, tick, selectedVoice);
-            }
-            m_owner.refreshAllDrawerPages();
-        },
-        songview::TimelineBand::VoiceChanges);
-}
-
-void VoiceChangeArea::showContextMenu(qreal plotX, const QPoint &globalPosition)
-{
-    SongDocument *const sourceDocument = m_owner.document();
-    if (!sourceDocument || m_engineTrack < 0)
-        return;
-    const int track = m_engineTrack;
-    DocLanePoint markerPoint;
-    const bool hasMarker = voiceMarkerAt(plotX, &markerPoint);
-    ui::ContextMenu menu(&m_owner);
-    QAction *change = nullptr;
-    QAction *insert = nullptr;
-    QAction *remove = nullptr;
-    if (hasMarker) {
-        change = menu.addAction(tr("Change voice"));
-        remove = menu.addAction(tr("Delete"));
-    } else {
-        insert = menu.addAction(tr("Insert voice change"));
-    }
-    QAction *chosen = menu.exec(globalPosition);
-    if (!chosen || m_owner.document() != sourceDocument || primaryTrack() != track)
-        return;
-    if (chosen == change || chosen == insert) {
-        showPicker(plotX);
-        return;
-    }
-    DocLanePoint currentMarker;
-    if (!sourceDocument->findLanePoint(track, DOC_CC_VOICE, markerPoint.tick, &currentMarker))
-        return;
-    sourceDocument->deleteLanePoints(track, DOC_CC_VOICE, {currentMarker});
-    m_owner.refreshAllDrawerPages();
 }
