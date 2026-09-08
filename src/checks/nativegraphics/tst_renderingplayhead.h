@@ -19,7 +19,6 @@ class RenderingPlayheadTest final : public QObject
     void followScroll();
     void automationHoverDecor();
     void positionOnlyDoesNotRebuild();
-    void quickUpdateRequestControl();
     void plotGeometryAndLifecycle();
 #ifdef __APPLE__
     void nativeLayerLifecycle();

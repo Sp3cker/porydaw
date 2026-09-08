@@ -2,6 +2,7 @@
 
 #include <QtTest>
 
+#include <QEnterEvent>
 #include <QImage>
 #include <QQuickItem>
 #include <QScopeGuard>
@@ -12,7 +13,6 @@
 #include <optional>
 
 #include "checks/nativegraphics/nativegraphics_fixture.h"
-#include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
 #include "core/timedefaults.h"
@@ -36,7 +36,8 @@ void RenderingPlayheadTest::automationHoverDecor()
     auto *quick = view.quickView();
     QVERIFY(page);
     QVERIFY(canvas);
-    QVERIFY(quick && quick->rootObject());
+    QVERIFY(quick && quick->rootObject() && quick->quickWindow());
+    auto *window = quick->quickWindow();
 
     const int track = view.selectionModel().primaryTrack();
     QVERIFY(track >= 0 && track < 16);
@@ -47,9 +48,9 @@ void RenderingPlayheadTest::automationHoverDecor()
         quick->rootObject()->findChild<songview::TimelineInputItem *>(
             QStringLiteral("timelineAutomationInput"));
     QVERIFY(input);
+    QPoint nativeLeavePoint;
     const auto restore = qScopeGuard([&] {
-        checks::events::sendMouse(*input, QEvent::Leave, QPointF{}, Qt::NoButton, Qt::NoButton,
-                                  Qt::NoModifier);
+        QTest::mouseEvent(QTest::MouseMove, window, Qt::NoButton, Qt::NoModifier, nativeLeavePoint);
         if (canvas->pencilMode() != originalPencil)
             canvas->setPencilMode(originalPencil);
         if (view.editorViewState() != originalState)
@@ -119,25 +120,33 @@ void RenderingPlayheadTest::automationHoverDecor()
     QVERIFY(inputBounds.contains(point));
     QVERIFY(liveBody.contains(point + QPoint{0, scroll}));
     QVERIFY(!tempo.contains(point));
+    const QPoint nativeHoverPoint = input->mapToScene(QPointF(point)).toPoint();
+    nativeLeavePoint = input->mapToScene(QPointF{-1.0, -1.0}).toPoint();
+    const QRect windowBounds{QPoint{}, window->size()};
+    QVERIFY(windowBounds.contains(nativeHoverPoint));
+    QVERIFY(windowBounds.contains(nativeLeavePoint));
+    QVERIFY(!input->contains(input->mapFromScene(QPointF(nativeLeavePoint))));
 
     canvas->cancelInteraction();
     canvas->setPencilMode(true);
-    checks::events::sendMouse(*input, QEvent::Leave, QPointF{}, Qt::NoButton, Qt::NoButton,
-                              Qt::NoModifier);
+    // QTest's window mouse delivery does not synthesize the platform Enter
+    // event that enables Quick's hover dispatch.
+    QEnterEvent enter(QPointF(nativeLeavePoint), QPointF(nativeLeavePoint),
+                      window->mapToGlobal(QPointF(nativeLeavePoint)));
+    QCoreApplication::sendEvent(window, &enter);
+    QTest::mouseEvent(QTest::MouseMove, window, Qt::NoButton, Qt::NoModifier, nativeLeavePoint);
     checks::support::pumpQuick();
     QString captureError;
     const QImage baseline = checks::support::captureQuickBand(view, band->rect, &captureError);
     QVERIFY2(!baseline.isNull(), qPrintable(captureError));
 
-    checks::events::sendMouse(*input, QEvent::MouseMove, QPointF(point), Qt::NoButton, Qt::NoButton,
-                              Qt::NoModifier);
+    QTest::mouseEvent(QTest::MouseMove, window, Qt::NoButton, Qt::NoModifier, nativeHoverPoint);
     checks::support::pumpQuick();
     const QImage hovered = checks::support::captureQuickBand(view, band->rect, &captureError);
     QVERIFY2(!hovered.isNull(), qPrintable(captureError));
     QVERIFY(hovered != baseline);
 
-    checks::events::sendMouse(*input, QEvent::Leave, QPointF{}, Qt::NoButton, Qt::NoButton,
-                              Qt::NoModifier);
+    QTest::mouseEvent(QTest::MouseMove, window, Qt::NoButton, Qt::NoModifier, nativeLeavePoint);
     checks::support::pumpQuick();
     const QImage cleared = checks::support::captureQuickBand(view, band->rect, &captureError);
     QVERIFY2(!cleared.isNull(), qPrintable(captureError));

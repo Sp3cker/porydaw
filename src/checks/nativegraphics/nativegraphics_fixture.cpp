@@ -2,6 +2,7 @@
 
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
+#include "ui/songview.h"
 
 namespace checks::nativegraphics {
 

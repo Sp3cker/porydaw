@@ -40,11 +40,8 @@ class PianoRollTest final : public QObject
     void trackRemapDelete();
     void trackRemapMetadata();
     void trackRemapEnginePromotion();
-    void headerContextMenu();
     void headerReconciliationUnchanged();
-    void headerReconciliationMute();
     void headerReconciliationStructural();
-    void headerRenameCancellation();
     void pencilFractionalPlacement();
     void pencilPlacement();
     void pencilAbuttingRaster();
@@ -99,12 +96,6 @@ class PianoRollTest final : public QObject
     void quickLifecycle();
     void headerPanFollow();
     void headerRename();
-    void headerVoicePresentation();
-    void headerSelectionPresentation();
-    void headerVoiceRouting();
-    void headerMuteSoloControls();
-    void headerAddTrack();
-    void headerReorder();
     void headerRevealNote();
     void headerKeyboardMuteSolo();
     void scaleProjectionInvariants();

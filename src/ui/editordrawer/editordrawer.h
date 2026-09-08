@@ -9,7 +9,6 @@
 #include "ui/editordrawer/drawerchrome.h"
 #include "ui/editorviewstate.h"
 
-class QAction;
 class QPalette;
 class AutomationPage;
 class SongView;
@@ -52,9 +51,6 @@ class EditorDrawer final : public QObject
     int plotWidth() const noexcept;
     std::optional<QRect> bodyRect(EditorDrawerPage page) const noexcept;
     bool pageVisible(EditorDrawerPage page) const noexcept;
-    QAction *automationAction() const noexcept { return m_automationAction; }
-    QAction *velocityAction() const noexcept { return m_velocityAction; }
-    QAction *voiceChangesAction() const noexcept { return m_voiceChangesAction; }
     AutomationPage *automationPage() noexcept { return m_automationPage; }
     const AutomationPage *automationPage() const noexcept { return m_automationPage; }
     VelocityArea *velocityArea() noexcept { return m_velocityArea; }
@@ -104,7 +100,4 @@ class EditorDrawer final : public QObject
     DrawerChrome *m_chrome = nullptr;
     DrawerChromeSnapshot m_chromeSnapshot;
     DrawerSections *m_sections = nullptr;
-    QAction *m_automationAction = nullptr;
-    QAction *m_velocityAction = nullptr;
-    QAction *m_voiceChangesAction = nullptr;
 };

@@ -108,6 +108,10 @@ void TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite()
     SongDocument &doc = fx.tab().document();
     const std::optional<int> row = fx.rowForTrack(fx.sourceTrack());
     QVERIFY(row);
+    // Prove right-press selection changes the primary track, not merely
+    // preserves a track that was already selected.
+    fx.view().selectTrack(fx.selectionTrack());
+    QVERIFY(fx.view().selectionModel().primaryTrack() != fx.sourceTrack());
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
     const quick_popup::PromptGuard guard(fx.view());
@@ -149,6 +153,33 @@ void TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite()
     QCOMPARE(doc.smf().write(), before);
     QCOMPARE(doc.undoStack()->index(), undo);
     QCOMPARE(fx.view().selectionModel().primaryTrack(), fx.sourceTrack());
+
+    // At track capacity the Duplicate row renders disabled: a real click on
+    // the disabled row neither dispatches nor dismisses.
+    while (doc.canAddTrack()) {
+        QVERIFY2(doc.duplicateTrack(0) >= 0, "the capacity fixture could not fill the track slots");
+    }
+    QCoreApplication::processEvents();
+    QTRY_COMPARE(fx.headers().rowCount(), doc.engineTrackCount());
+    const HeaderMenu capacity = openHeaderMenu(fx, *row);
+    QVERIFY2(capacity.session, qUtf8Printable(capacity.diagnostic));
+    const int duplicateRow = headerMenuRow(*capacity.model, HeaderMenuAction::DuplicateTrack);
+    const songview::QuickMenuItem *const duplicateItem =
+        duplicateRow >= 0 ? capacity.model->itemAt(duplicateRow) : nullptr;
+    QVERIFY2(duplicateItem && !duplicateItem->enabled,
+             "Duplicate track stayed enabled at track capacity");
+    const QByteArray capacityBytes = doc.smf().write();
+    const int capacityUndo = doc.undoStack()->index();
+    QVERIFY2(quick_popup::clickMenuRow(*capacity.session, duplicateRow),
+             "the disabled Duplicate row did not receive a real click");
+    QCoreApplication::processEvents();
+    QVERIFY2(capacity.session->isOpen(),
+             "a click on the disabled Duplicate row dismissed the menu");
+    QCOMPARE(doc.undoStack()->index(), capacityUndo);
+    QCOMPARE(doc.smf().write(), capacityBytes);
+    QTest::keyClick(capacity.session->window(), Qt::Key_Escape);
+    QCoreApplication::processEvents();
+    QVERIFY2(!capacity.session->isOpen(), "Escape did not dismiss the header menu at capacity");
 }
 
 void TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses()

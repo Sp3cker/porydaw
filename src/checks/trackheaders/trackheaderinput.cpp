@@ -3,6 +3,7 @@
 #include <QtTest>
 
 #include <QAbstractItemModel>
+#include <QColor>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QSize>
@@ -137,6 +138,19 @@ void TrackHeadersTest::selectionAndVoiceRouteThroughHeaders()
     const std::optional<int> selectionRow = fx.rowForTrack(fx.selectionTrack());
     const std::optional<int> voiceRow = fx.rowForTrack(fx.voiceTrack());
     QVERIFY(selectionRow && voiceRow);
+    SongDocument &doc = fx.tab().document();
+    const QByteArray before = doc.smf().write();
+    const int undo = doc.undoStack()->index();
+
+    // Selection is presentation too: flipping the primary track flips the
+    // record's BaseColorRole and alters the retained header raster.
+    view.selectTrack(fx.sourceTrack()); // guarantee the target starts unselected
+    checks::support::pumpQuick();
+    const QColor unselectedBase =
+        rowData(headers, *selectionRow, songview::TrackHeaderModel::BaseColorRole).value<QColor>();
+    QString error;
+    const QImage beforeSelection = fx.captureBand(error);
+    QVERIFY2(!beforeSelection.isNull(), qPrintable(error));
 
     headers.setScrollY(0.0);
     const std::optional<QPointF> selection = fx.titlePoint(*selectionRow);
@@ -146,6 +160,13 @@ void TrackHeadersTest::selectionAndVoiceRouteThroughHeaders()
     QVERIFY(
         headers.pointerRelease(pointerInput(fx.input(), *selection, Qt::LeftButton, Qt::NoButton)));
     QCOMPARE(view.selectionModel().primaryTrack(), fx.selectionTrack());
+    const QColor selectedBase =
+        rowData(headers, *selectionRow, songview::TrackHeaderModel::BaseColorRole).value<QColor>();
+    const QImage afterSelection = fx.captureBand(error);
+    QVERIFY2(selectedBase != unselectedBase,
+             "selecting a header record did not flip its base color role");
+    QVERIFY2(afterSelection.size() == beforeSelection.size() && afterSelection != beforeSelection,
+             "track selection did not alter the retained Quick header rendering");
 
     headers.setScrollY(qreal(*voiceRow * fx.rowHeight()));
     const std::optional<QPointF> voice = fx.voicePoint(*voiceRow);
@@ -167,7 +188,33 @@ void TrackHeadersTest::selectionAndVoiceRouteThroughHeaders()
     QCOMPARE(revealCount, 1);
     QCOMPARE(revealedProgram, view.currentProgram(fx.voiceTrack()));
     QVERIFY(!rowData(headers, *voiceRow, songview::TrackHeaderModel::VoicePressedRole).toBool());
+    checks::support::pumpQuick();
+
+    // A title-line click selects its track without requesting a voice reveal.
+    const std::optional<QPointF> voiceTitle = fx.titlePoint(*voiceRow);
+    QVERIFY(voiceTitle);
+    QVERIFY(headers.pointerPress(
+        pointerInput(fx.input(), *voiceTitle, Qt::LeftButton, Qt::LeftButton)));
+    QVERIFY(headers.pointerRelease(
+        pointerInput(fx.input(), *voiceTitle, Qt::LeftButton, Qt::NoButton)));
+    QCOMPARE(revealCount, 1);
+    QCOMPARE(view.selectionModel().primaryTrack(), fx.voiceTrack());
+
+    // A drag beginning on the voice line becomes an adjacent no-op reorder
+    // and must not reveal a voice on release.
+    const QPointF adjacentDrop{voice->x(), fx.rowHeight() * 1.2};
+    QVERIFY(headers.pointerPress(pointerInput(fx.input(), *voice, Qt::LeftButton, Qt::LeftButton)));
+    QVERIFY(
+        headers.pointerMove(pointerInput(fx.input(), adjacentDrop, Qt::NoButton, Qt::LeftButton)));
+    QVERIFY(headers.pointerRelease(
+        pointerInput(fx.input(), adjacentDrop, Qt::RightButton, Qt::LeftButton)));
+    headers.pointerRelease(pointerInput(fx.input(), adjacentDrop, Qt::LeftButton, Qt::NoButton));
+    checks::support::pumpQuick();
+    QCOMPARE(revealCount, 1);
+    QVERIFY(!headers.reorderIndicatorVisible());
     QObject::disconnect(reveal);
+    QCOMPARE(doc.undoStack()->index(), undo);
+    QCOMPARE(doc.smf().write(), before);
 }
 
 void TrackHeadersTest::muteAndSoloHonorCancellationAndButtons()
@@ -177,6 +224,22 @@ void TrackHeadersTest::muteAndSoloHonorCancellationAndButtons()
     SongView &view = fx.view();
     const std::optional<int> sourceRow = fx.rowForTrack(fx.sourceTrack());
     QVERIFY(sourceRow);
+    // Mask-only updates publish bounded dataChanged coverage for just the
+    // toggled row; the retained record structure never resets.
+    struct RowChange {
+        int first = -1;
+        int last = -1;
+        QList<int> roles;
+    };
+    std::vector<RowChange> changes;
+    int resets = 0;
+    const QMetaObject::Connection observed = QObject::connect(
+        &headers, &QAbstractItemModel::dataChanged, &headers,
+        [&changes](const QModelIndex &first, const QModelIndex &last, const QList<int> &roles) {
+            changes.push_back({first.row(), last.row(), roles});
+        });
+    const QMetaObject::Connection resetObserved = QObject::connect(
+        &headers, &QAbstractItemModel::modelReset, &headers, [&resets] { ++resets; });
     headers.setScrollY(0.0);
     view.selectTrack(fx.selectionTrack());
     view.setTrackMute(fx.sourceTrack(), false);
@@ -202,11 +265,25 @@ void TrackHeadersTest::muteAndSoloHonorCancellationAndButtons()
     QVERIFY(!rowData(headers, *sourceRow, songview::TrackHeaderModel::MutePressedRole).toBool());
     QVERIFY(!view.trackMuted(fx.sourceTrack()));
     QVERIFY(!headers.pointerRelease(pointerInput(fx.input(), *mute, Qt::LeftButton, Qt::NoButton)));
+    changes.clear();
     QVERIFY(headers.pointerPress(pointerInput(fx.input(), *mute, Qt::LeftButton, Qt::LeftButton)));
     QVERIFY(headers.pointerRelease(pointerInput(fx.input(), *mute, Qt::LeftButton, Qt::NoButton)));
     QVERIFY(view.trackMuted(fx.sourceTrack()));
     QVERIFY(rowData(headers, *sourceRow, songview::TrackHeaderModel::MuteCheckedRole).toBool());
     QCOMPARE(view.selectionModel().primaryTrack(), fx.selectionTrack());
+    const int mutedRow = *sourceRow;
+    QVERIFY2(!changes.empty() && std::all_of(changes.cbegin(), changes.cend(),
+                                             [mutedRow](const RowChange &change) {
+                                                 return change.first == mutedRow &&
+                                                        change.last == mutedRow;
+                                             }),
+             "the mute toggle churned records beyond the muted row");
+    QVERIFY2(std::any_of(changes.cbegin(), changes.cend(),
+                         [mutedRow](const RowChange &change) {
+                             return change.roles.contains(
+                                 songview::TrackHeaderModel::MuteCheckedRole);
+                         }),
+             "the mute toggle did not publish the checked role");
     headers.activateMute(fx.sourceTrack());
     QVERIFY(!view.trackMuted(fx.sourceTrack()));
 
@@ -221,6 +298,24 @@ void TrackHeadersTest::muteAndSoloHonorCancellationAndButtons()
     QVERIFY(rowData(headers, *sourceRow, songview::TrackHeaderModel::SoloCheckedRole).toBool());
     headers.activateSolo(fx.sourceTrack());
     QVERIFY(!view.trackSoloed(fx.sourceTrack()));
+    // Document-driven masks follow the same bounded row contract.
+    view.setTrackMute(fx.sourceTrack(), false);
+    changes.clear();
+    view.setTrackMute(fx.sourceTrack(), true);
+    QVERIFY2(!changes.empty() &&
+                 std::all_of(changes.cbegin(), changes.cend(),
+                             [row = *sourceRow](const RowChange &change) {
+                                 return change.first == row && change.last == row;
+                             }) &&
+                 std::any_of(changes.cbegin(), changes.cend(),
+                             [](const RowChange &change) {
+                                 return change.roles.contains(
+                                     songview::TrackHeaderModel::MuteCheckedRole);
+                             }),
+             "the mask-only update was not bounded mute-role coverage");
+    QCOMPARE(resets, 0);
+    QObject::disconnect(observed);
+    QObject::disconnect(resetObserved);
 }
 
 void TrackHeadersTest::scrollClampsAndRoutesKeyboardAndWheelInput()

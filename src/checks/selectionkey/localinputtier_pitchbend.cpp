@@ -12,6 +12,7 @@
 
 #include "ui/pitchbendeditor.hpp"
 #include "ui/pitchbendgraph.hpp"
+#include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timelinebandlayout.h"
 #include "ui/songviewmodel.h"
@@ -23,7 +24,6 @@
 #include <QMetaObject>
 #include <QPointer>
 #include <QQuickItem>
-#include <QQuickView>
 #include <QQuickWindow>
 #include <QRect>
 #include <QSignalSpy>
@@ -38,50 +38,59 @@ namespace {
 constexpr int kTrack = 0;
 constexpr uint8_t kBendController = DOC_CC_BEND;
 
-QQuickItem *findPopupItem(QQuickView *view, const QString &name)
+QQuickItem *findPopupItem(songview::QuickPopupSession *session, const QString &name)
 {
-    return view && view->rootObject() ? view->rootObject()->findChild<QQuickItem *>(name) : nullptr;
+    // Popup content is QObject-parented to the session (only visually under
+    // the window), so a window-subtree findChild cannot see it. Search the
+    // session's content instead: the same subtree the retired native view's
+    // rootObject() search covered.
+    QQuickItem *content = session ? session->contentItem() : nullptr;
+    if (!content)
+        return nullptr;
+    if (content->objectName() == name)
+        return content;
+    return content->findChild<QQuickItem *>(name);
 }
 
-bool hasCompletedQuickFocus(const QQuickView *view, const QQuickItem *item)
+bool hasCompletedQuickFocus(const QQuickWindow *window, const QQuickItem *item)
 {
-    return view && item && item->hasActiveFocus() && view->activeFocusItem() == item &&
-           QGuiApplication::focusObject() == item && QGuiApplication::focusWindow() == view;
+    return window && item && item->hasActiveFocus() && window->activeFocusItem() == item &&
+           QGuiApplication::focusObject() == item && QGuiApplication::focusWindow() == window;
 }
 
-checks::async_wait::Result requestCompletedQuickFocus(QQuickView *view, QQuickItem *item,
+checks::async_wait::Result requestCompletedQuickFocus(QQuickWindow *window, QQuickItem *item,
                                                       Qt::FocusReason reason)
 {
-    const QPointer<QQuickView> liveView(view);
+    const QPointer<QQuickWindow> liveWindow(window);
     const QPointer<QQuickItem> liveItem(item);
-    if (!liveView || !liveItem)
+    if (!liveWindow || !liveItem)
         return checks::async_wait::Result::Destroyed;
-    liveView->requestActivate();
+    liveWindow->requestActivate();
     liveItem->forceActiveFocus(reason);
-    return checks::async_wait::waitUntil([liveView, liveItem] { return liveView && liveItem; },
-                                         [liveView, liveItem] {
-                                             return liveView && liveItem &&
-                                                    hasCompletedQuickFocus(liveView, liveItem);
+    return checks::async_wait::waitUntil([liveWindow, liveItem] { return liveWindow && liveItem; },
+                                         [liveWindow, liveItem] {
+                                             return liveWindow && liveItem &&
+                                                    hasCompletedQuickFocus(liveWindow, liveItem);
                                          },
                                          5000, 10);
 }
 
-// Delivers the standard platform Undo shortcut through the popup surface, so
-// "the popup claimed Undo" means the real QKeySequence arbitration, not a
-// synthesized undo call.
-bool sendStandardUndo(QQuickView *view)
+// Delivers the standard platform Undo shortcut through the shared canvas
+// window, so "the popup claimed Undo" means the real QKeySequence
+// arbitration, not a synthesized undo call.
+bool sendStandardUndo(QQuickWindow *window)
 {
-    if (!view)
+    if (!window)
         return false;
     const auto bindings = QKeySequence::keyBindings(QKeySequence::Undo);
     if (bindings.empty())
         return false;
     const QKeyCombination binding = bindings.front()[0];
     QKeyEvent overrideEvent(QEvent::ShortcutOverride, binding.key(), binding.keyboardModifiers());
-    QCoreApplication::sendEvent(view, &overrideEvent);
+    QCoreApplication::sendEvent(window, &overrideEvent);
     if (!overrideEvent.isAccepted())
         return false;
-    return selectionkey::deliverKey(view, binding.key(), binding.keyboardModifiers());
+    return selectionkey::deliverKey(window, binding.key(), binding.keyboardModifiers());
 }
 
 void drainPopupDeletes()
@@ -163,17 +172,18 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
     const auto visiblePopup = [&]() -> songview::PitchBendEditor * {
         auto *popup = view.findChild<songview::PitchBendEditor *>(QStringLiteral("pitchBendPopup"),
                                                                   Qt::FindDirectChildrenOnly);
-        return popup && popup->isOpen() && popup->view() && popup->view()->isVisible() ? popup
-                                                                                       : nullptr;
+        return popup && popup->isOpen() ? popup : nullptr;
     };
     const auto popupState = [&] {
         songview::PitchBendEditor *const popup = visiblePopup();
-        QQuickView *const surface = popup ? popup->view() : nullptr;
-        return QStringLiteral("session=%1 surface=%2 active=%3 %4")
+        songview::QuickPopupSession *const session =
+            popup && view.quickView() ? view.quickView()->popupSession() : nullptr;
+        return QStringLiteral("session=%1 content=%2 active=%3 %4")
             .arg(popup != nullptr)
-            .arg(surface && surface->isVisible())
-            .arg(surface && surface->activeFocusItem() ? surface->activeFocusItem()->objectName()
-                                                       : QStringLiteral("none"),
+            .arg(session && session->isOpen() && session->contentItem() != nullptr)
+            .arg(session && session->window() && session->window()->activeFocusItem()
+                     ? session->window()->activeFocusItem()->objectName()
+                     : QStringLiteral("none"),
                  applicationFocusState());
     };
     const auto openPopup = [&]() -> songview::PitchBendEditor * {
@@ -183,7 +193,6 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
         selectionkey::settle();
         return visiblePopup();
     };
-
     const QByteArray before = document.smf().write();
     const int undoBefore = document.undoStack()->index();
     QPointer<songview::PitchBendEditor> popup = openPopup();
@@ -191,17 +200,17 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
         popup,
         qPrintable(
             QStringLiteral("pitch-bend opener did not reveal Quick popup: %1").arg(popupState())));
-    QPointer<QQuickView> surface = popup->view();
+    songview::QuickPopupSession *session =
+        view.quickView() ? view.quickView()->popupSession() : nullptr;
     QPointer<songview::PitchBendGraph> graph = qobject_cast<songview::PitchBendGraph *>(
-        findPopupItem(surface, QStringLiteral("pitchBendGraph")));
-    QPointer<QQuickItem> numericEdit = findPopupItem(surface, QStringLiteral("bendRangeInput"));
-    QVERIFY2(surface && graph && numericEdit,
-             "the Quick pitch-bend graph or numeric TextInput is missing");
+        findPopupItem(session, QStringLiteral("pitchBendGraph")));
+    QPointer<QQuickItem> numericEdit = findPopupItem(session, QStringLiteral("bendRangeInput"));
+    QVERIFY2(graph && numericEdit, "the Quick pitch-bend graph or numeric TextInput is missing");
 
     // Graph focus: Solo is intentionally owned by the popup session, not the
     // MainWindow QAction. One key press produces one mask change.
     const QString graphFocusBefore = applicationFocusState();
-    QVERIFY2(requestCompletedQuickFocus(surface, graph, Qt::OtherFocusReason) ==
+    QVERIFY2(requestCompletedQuickFocus(quickWindow, graph, Qt::OtherFocusReason) ==
                  checks::async_wait::Result::Ready,
              qPrintable(QStringLiteral("pitch-bend graph did not complete native Quick focus: "
                                        "before={%1} after={%2}")
@@ -209,7 +218,7 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
     const int actionSoloBefore = m_counts.solo;
     const uint32_t soloMaskBefore = view.soloMask();
     QSignalSpy soloChanges(&view, &SongView::soloMaskChanged);
-    selectionkey::deliverKey(surface, solo->key(), solo->keyboardModifiers());
+    selectionkey::deliverKey(quickWindow, solo->key(), solo->keyboardModifiers());
     QVERIFY2(soloChanges.count() == 1 && m_counts.solo == actionSoloBefore &&
                  view.soloMask() == (soloMaskBefore ^ (uint32_t{1} << kTrack)),
              qPrintable(QStringLiteral("graph-local Solo mismatch: signals=%1 "
@@ -225,7 +234,7 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
     const int graphCopyBefore = m_counts.copy;
     const QString clipboardSentinel = QStringLiteral("pitch-bend-graph-local");
     QApplication::clipboard()->setText(clipboardSentinel);
-    selectionkey::deliverKey(surface, copy->key(), copy->keyboardModifiers());
+    selectionkey::deliverKey(quickWindow, copy->key(), copy->keyboardModifiers());
     QVERIFY2(m_counts.copy == graphCopyBefore &&
                  QApplication::clipboard()->text() == clipboardSentinel &&
                  document.smf().write() == before,
@@ -242,7 +251,7 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
     const QMetaObject::Connection playbackConnection =
         QObject::connect(&view, &SongView::playPauseFromRequested,
                          [&playbackRequests](uint64_t) { ++playbackRequests; });
-    selectionkey::deliverKey(surface, mute->key(), mute->keyboardModifiers());
+    selectionkey::deliverKey(quickWindow, mute->key(), mute->keyboardModifiers());
     QObject::disconnect(playbackConnection);
     QVERIFY2(playbackRequests == 0 && view.muteMask() == muteMaskBefore &&
                  document.smf().write() == protectedDocument,
@@ -269,23 +278,24 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
     const QByteArray afterDraw = document.smf().write();
     const uint64_t selectedTick = interior->tick;
     graph->setSelectedTick(selectedTick);
-    selectionkey::deliverKey(surface, Qt::Key_Delete);
+    selectionkey::deliverKey(quickWindow, Qt::Key_Delete);
     selectionkey::settle();
     QVERIFY2(document.undoStack()->index() == undoBefore + 2 &&
                  !document.findLanePoint(kTrack, kBendController, selectedTick, nullptr),
              "graph-local Delete did not remove exactly one selected vertex");
-    QVERIFY2(sendStandardUndo(surface),
+    QVERIFY2(sendStandardUndo(quickWindow),
              "pitch-bend popup did not claim the standard Undo shortcut");
     selectionkey::settle();
     QVERIFY2(document.undoStack()->index() == undoBefore + 1 && document.smf().write() == afterDraw,
              "popup Undo did not restore the deleted bend vertex");
-    QVERIFY2(sendStandardUndo(surface), "pitch-bend popup did not claim Undo for the graph edit");
+    QVERIFY2(sendStandardUndo(quickWindow),
+             "pitch-bend popup did not claim Undo for the graph edit");
     selectionkey::settle();
     QVERIFY2(document.undoStack()->index() == undoBefore && document.smf().write() == before,
              "popup Undo did not restore the pre-edit document");
 
-    while (surface && popup && document.undoStack()->index() > undoBefore) {
-        if (!sendStandardUndo(surface))
+    while (popup && document.undoStack()->index() > undoBefore) {
+        if (!sendStandardUndo(quickWindow))
             break;
         selectionkey::settle();
     }
@@ -294,7 +304,7 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
     // routing proof never changes the stored BENDR value.
     const QString textBefore = numericEdit->property("text").toString();
     const QString numericFocusBefore = applicationFocusState();
-    QVERIFY2(requestCompletedQuickFocus(surface, numericEdit, Qt::OtherFocusReason) ==
+    QVERIFY2(requestCompletedQuickFocus(quickWindow, numericEdit, Qt::OtherFocusReason) ==
                  checks::async_wait::Result::Ready,
              qPrintable(QStringLiteral("pitch-bend numeric TextInput did not complete native "
                                        "Quick focus: before={%1} after={%2}")
@@ -303,8 +313,8 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
     const QString selectedText = numericEdit->property("selectedText").toString();
     const int copyBefore = m_counts.copy;
     QApplication::clipboard()->clear();
-    selectionkey::deliverKey(surface, copy->key(), copy->keyboardModifiers());
-    QVERIFY2(hasCompletedQuickFocus(surface, numericEdit) && selectedForCopy &&
+    selectionkey::deliverKey(quickWindow, copy->key(), copy->keyboardModifiers());
+    QVERIFY2(hasCompletedQuickFocus(quickWindow, numericEdit) && selectedForCopy &&
                  !selectedText.isEmpty() && m_counts.copy == copyBefore &&
                  QApplication::clipboard()->text() == selectedText,
              qPrintable(QStringLiteral("pitch-bend numeric Copy mismatch: delta=%1 "
@@ -316,7 +326,7 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
     QMetaObject::invokeMethod(numericEdit, "selectAll");
     const int numericSoloBefore = m_counts.solo;
     const uint32_t numericSoloMaskBefore = view.soloMask();
-    selectionkey::deliverKey(surface, solo->key(), solo->keyboardModifiers());
+    selectionkey::deliverKey(quickWindow, solo->key(), solo->keyboardModifiers());
     const QString soloText = singleKeyText(*solo).value_or(QString());
     const QString expectedText =
         soloText.size() == 1 && soloText.front().isDigit() ? soloText : textBefore;
@@ -332,8 +342,8 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
         numericEdit->setProperty("text", textBefore);
     QCOMPARE(popup->bendRange(), textBefore.toInt());
 
-    requestCompletedQuickFocus(surface, graph, Qt::OtherFocusReason);
-    selectionkey::deliverKey(surface, Qt::Key_Escape);
+    requestCompletedQuickFocus(quickWindow, graph, Qt::OtherFocusReason);
+    selectionkey::deliverKey(quickWindow, Qt::Key_Escape);
     selectionkey::settle();
     const bool popupClosedByEscape = !popup || !popup->isOpen();
     if (!popupClosedByEscape)

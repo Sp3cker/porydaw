@@ -569,9 +569,15 @@ void TimelineQuickView::publishHover(TimelineQuickHoverOwner owner, uint64_t tic
 {
     if (owner == TimelineQuickHoverOwner::None)
         return;
+    const std::optional<qreal> visibleContentX =
+        guideSongViewContentXAtOrAfterStart(songViewContentX);
+    if (!visibleContentX) {
+        clearHover(owner);
+        return;
+    }
     m_hoverOwner = owner;
     m_hoverTick = tick;
-    setHoverChrome(songViewContentX);
+    setHoverChrome(visibleContentX);
 }
 
 void TimelineQuickView::clearHover(TimelineQuickHoverOwner owner)

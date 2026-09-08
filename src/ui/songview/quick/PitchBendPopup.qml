@@ -1,8 +1,9 @@
-// Opaque note-automation popup shell. The session object (PitchBendEditor)
-// is injected before load and owns geometry/appearance resolution; the two
-// PitchBendGraph lanes own their canvases and all C++ input algorithms. This
-// file only hosts the chrome: labels aligned to each canvasRect, the reset
-// buttons, and the BENDR / LFO speed scrub fields. QtQuick only.
+// Opaque note-automation popup shell. QuickPopupSession injects the
+// PitchBendEditor bridge as a direct shared-overlay surface; the editor owns
+// its anchored geometry and cached chrome. The two PitchBendGraph lanes own
+// their canvases and all C++ input algorithms. This file only hosts the
+// chrome: labels aligned to each canvasRect, the reset buttons, and the BENDR
+// / LFO speed scrub fields. QtQuick only.
 import QtQuick
 
 Rectangle {
@@ -10,12 +11,12 @@ Rectangle {
 
     objectName: "pitchBendPopup"
 
-    required property var session
+    required property var bridge
 
     property font fallbackFont
 
-    readonly property var metrics: session ? session.metrics : null
-    readonly property var appearance: session ? session.appearance : null
+    readonly property var metrics: bridge ? bridge.metrics : null
+    readonly property var appearance: bridge ? bridge.appearance : null
 
     readonly property real outerInset: metrics ? metrics.outerInset : 0
     readonly property real headerHeight: metrics ? metrics.headerHeight : 0
@@ -46,24 +47,46 @@ Rectangle {
     readonly property font captionFont: appearance ? appearance.captionFont : fallbackFont
     readonly property font monospaceFont: appearance ? appearance.monospaceFont : fallbackFont
 
-    width: metrics ? metrics.popupWidth : 0
-    height: metrics ? metrics.popupHeight : 0
+    implicitWidth: metrics ? metrics.popupWidth : 0
+    implicitHeight: metrics ? metrics.popupHeight : 0
 
     color: windowBackgroundColor
     border.width: hairline
     border.color: outlineColor
 
+    // Root-level blank chrome must never hand clicks or wheel gestures to the
+    // roll. Interactive controls appear later and therefore sit above this
+    // shield.
+    MouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+        onWheel: (wheel) => wheel.accepted = true
+    }
+
+    // The focused graph or numeric field claims its own keys first; this
+    // terminal sink arbitrates what escapes — Escape dismisses, the single
+    // routed Solo command applies — and absorbs the rest so timeline
+    // commands never leak out of the shared popup session.
+    Keys.onPressed: (event) => {
+        if (event.key === Qt.Key_Escape)
+            bridge.cancelAndClose()
+        else
+            bridge.routeUnclaimedKey(event.key, event.modifiers, event.isAutoRepeat)
+        event.accepted = true
+    }
+    Keys.onReleased: (event) => event.accepted = true
+
     Accessible.role: Accessible.Client
     Accessible.name: qsTr("Note automation editor")
-    Accessible.description: session ? session.description : ""
+    Accessible.description: bridge ? bridge.description : ""
 
     function resetLane(graph) {
-        if (!session || !graph)
+        if (!bridge || !graph)
             return
         if (graph === pitchGraph)
-            session.resetPitchCurve()
+            bridge.resetPitchCurve()
         else
-            session.resetModCurve()
+            bridge.resetModCurve()
         graph.forceActiveFocus(Qt.OtherFocusReason)
     }
 
@@ -333,8 +356,7 @@ Rectangle {
         verticalAlignment: Text.AlignVCenter
         color: root.secondaryTextColor
         font: root.captionFont
-        text: session ? session.noteDescription : ""
-        textFormat: Text.PlainText
+        text: bridge ? bridge.noteDescription : ""
         renderType: Text.NativeRendering
         elide: Text.ElideRight
     }
@@ -359,7 +381,7 @@ Rectangle {
         objectName: "bendRangeSpin"
         inputObjectName: "bendRangeInput"
         accessibleName: qsTr("Pitch-bend range")
-        appearance: session.appearance.dragInput
+        appearance: bridge.appearance.dragInput
         minimumValue: 0
         maximumValue: 127
         accessibleDescription: qsTr("Pitch-bend range in semitones for this note")
@@ -368,10 +390,10 @@ Rectangle {
            + (root.controlsHeight - height) / 2
         width: root.fieldWidth
         height: root.fieldHeight
-        value: session ? session.bendRange : 0
+        value: bridge ? bridge.bendRange : 0
         onValueCommitted: (committed) => {
-            if (session)
-                session.setBendRange(committed)
+            if (bridge)
+                bridge.setBendRange(committed)
         }
     }
 
@@ -395,7 +417,7 @@ Rectangle {
         objectName: "lfoSpeedSpin"
         inputObjectName: "lfoSpeedInput"
         accessibleName: qsTr("LFO speed")
-        appearance: session.appearance.dragInput
+        appearance: bridge.appearance.dragInput
         minimumValue: 0
         maximumValue: 127
         accessibleDescription: qsTr("M4A LFO speed for this note")
@@ -403,10 +425,10 @@ Rectangle {
         y: bendRangeField.y
         width: root.fieldWidth
         height: root.fieldHeight
-        value: session ? session.lfoSpeed : 0
+        value: bridge ? bridge.lfoSpeed : 0
         onValueCommitted: (committed) => {
-            if (session)
-                session.setLfoSpeed(committed)
+            if (bridge)
+                bridge.setLfoSpeed(committed)
         }
     }
 }

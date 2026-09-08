@@ -1,14 +1,13 @@
 #include "core/mid2agbtables.h"
 #include "core/songdocument.h"
-#include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/clipmime.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/quick/pianorollquick.h"
+#include "ui/songview/quick/promptappearance.h"
 #include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
-#include "ui/theme/themeruntime.h"
 #include <QGuiApplication>
 #include <QUrl>
 #include <QVariantMap>
@@ -20,9 +19,6 @@
 #include <span>
 #include <utility>
 #include <vector>
-
-namespace lyt = ::layout;
-using Space = lyt::Space;
 
 using namespace songview;
 using namespace songview::detail;
@@ -205,26 +201,7 @@ QString SongView::insertTimePromptTitle() const
 
 QVariantMap SongView::insertTimePromptAppearance() const
 {
-    QVariantMap appearance;
-    appearance.insert(QStringLiteral("font"), QGuiApplication::font());
-    appearance.insert(QStringLiteral("background"), themes::color(themes::Role::window_background));
-    appearance.insert(QStringLiteral("outline"), themes::color(themes::Role::palette_outline));
-    appearance.insert(QStringLiteral("text"), themes::color(themes::Role::window_text));
-    appearance.insert(QStringLiteral("focus"), themes::color(themes::Role::focus_outline));
-    appearance.insert(QStringLiteral("buttonBackground"),
-                      themes::color(themes::Role::button_background));
-    appearance.insert(QStringLiteral("buttonText"), themes::color(themes::Role::button_text));
-    appearance.insert(QStringLiteral("pressedBackground"),
-                      themes::color(themes::Role::button_pressed_background));
-    appearance.insert(QStringLiteral("borderWidth"), lyt::singlePixel());
-    appearance.insert(QStringLiteral("radius"), lyt::space(Space::Half));
-    appearance.insert(QStringLiteral("dialogPadding"), lyt::space(Space::One));
-    appearance.insert(QStringLiteral("horizontalPadding"), lyt::space(Space::One));
-    appearance.insert(QStringLiteral("verticalPadding"), lyt::space(Space::Half));
-    appearance.insert(QStringLiteral("buttonPadding"), lyt::space(Space::One));
-    appearance.insert(QStringLiteral("spacing"), lyt::space(Space::One));
-    appearance.insert(QStringLiteral("dragThreshold"), lyt::fontPxF(1.0));
-    return appearance;
+    return promptDialogAppearance(QGuiApplication::font());
 }
 
 void SongView::openInsertTimePrompt(uint64_t cursorTick, const songview::Grid::Segment &segment)

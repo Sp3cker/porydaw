@@ -1,6 +1,5 @@
 #include "ui/editordrawer/editordrawer.h"
 
-#include <QAction>
 #include <QGuiApplication>
 #include <QIcon>
 #include <QImage>
@@ -48,16 +47,6 @@ EditorDrawer::EditorDrawer(SongView &owner, EditorViewState viewState)
         new DrawerSections(owner, this, m_automationPage, m_velocityArea, m_voiceChangeArea);
     connect(m_sections, &DrawerSections::geometryChanged, this, &EditorDrawer::arrange);
     connect(m_sections, &DrawerSections::statePublished, this, &EditorDrawer::publishViewState);
-
-    m_automationAction = new QAction(tr("Automations"), this);
-    connect(m_automationAction, &QAction::triggered, this,
-            [this] { activatePage(EditorDrawerPage::Automations); });
-    m_velocityAction = new QAction(tr("Velocity"), this);
-    connect(m_velocityAction, &QAction::triggered, this,
-            [this] { activatePage(EditorDrawerPage::Velocity); });
-    m_voiceChangesAction = new QAction(tr("Voice Changes"), this);
-    connect(m_voiceChangesAction, &QAction::triggered, this,
-            [this] { activatePage(EditorDrawerPage::VoiceChanges); });
 
     syncViewState(viewState);
     refreshAppearance(QGuiApplication::palette());

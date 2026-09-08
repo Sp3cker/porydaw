@@ -4,7 +4,6 @@
 
 #include <cmath>
 
-#include <QAction>
 #include <QApplication>
 #include <QMouseEvent>
 #include <QPalette>
@@ -118,9 +117,6 @@ void DrawerPresentationTest::drawerSurfaceAndChrome()
     QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::Velocity));
     QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::VoiceChanges));
     QCOMPARE(view.drawerActivePage(), EditorDrawerPage::Automations);
-    QVERIFY(drawer->automationAction()->shortcuts().isEmpty());
-    QVERIFY(drawer->velocityAction()->shortcuts().isEmpty());
-    QVERIFY(drawer->voiceChangesAction()->shortcuts().isEmpty());
 }
 
 void DrawerPresentationTest::drawerToggleTransactions_data()
@@ -159,7 +155,7 @@ void DrawerPresentationTest::drawerToggleTransactions()
     QCOMPARE(view.drawerSectionHeight(page), originalHeight);
 }
 
-void DrawerPresentationTest::drawerZeroHeightAndShortcuts()
+void DrawerPresentationTest::drawerZeroHeightKeyboardToggle()
 {
     DrawerFixture fixture = makeDrawerFixture();
     SongView &view = *fixture.view;
@@ -371,12 +367,12 @@ void DrawerPresentationTest::drawerFocusFallback()
     QVERIFY(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason));
     QTRY_VERIFY(view.focusedTimelineBand() &&
                 *view.focusedTimelineBand() == songview::TimelineBand::Roll);
-    view.editorDrawer()->automationAction()->trigger();
+    fixture.clickToggle(EditorDrawerPage::Automations);
+    QTRY_VERIFY(fixture.bar->hasActiveFocus());
+    QVERIFY(!view.focusedTimelineBand());
+    fixture.clickToggle(EditorDrawerPage::Velocity);
     QTRY_VERIFY(view.focusedTimelineBand() &&
-                *view.focusedTimelineBand() == songview::TimelineBand::Roll);
-    view.editorDrawer()->velocityAction()->trigger();
-    QTRY_VERIFY(view.focusedTimelineBand() &&
-                *view.focusedTimelineBand() == songview::TimelineBand::Roll);
+                *view.focusedTimelineBand() == songview::TimelineBand::Velocity);
     view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
     QVERIFY(view.focusTimelineBand(songview::TimelineBand::VoiceChanges, Qt::OtherFocusReason));
     QTRY_VERIFY(view.focusedTimelineBand() &&

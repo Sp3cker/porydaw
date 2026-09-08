@@ -80,15 +80,14 @@ void PitchBendEditingTest::controllerInputsAdvertiseScrubCursor()
     songview::PitchBendEditor &editor = *editorResult;
     QQuickItem *bend = m_fixture.item(QStringLiteral("bendRangeSpin"));
     QQuickItem *lfo = m_fixture.item(QStringLiteral("lfoSpeedSpin"));
-    QQuickWindow *view = editor.view();
+    QQuickWindow &view = m_fixture.timelineWindow();
     QVERIFY(bend);
     QVERIFY(lfo);
-    QVERIFY(view);
-    QVERIFY(QTest::qWaitFor([view] { return view->isVisible() && view->isExposed(); }));
-    QVERIFY(hover(*view, *bend));
-    QTRY_COMPARE(view->cursor().shape(), Qt::SizeVerCursor);
-    QVERIFY(hover(*view, *lfo));
-    QTRY_COMPARE(view->cursor().shape(), Qt::SizeVerCursor);
+    QVERIFY(QTest::qWaitFor([&view] { return view.isVisible() && view.isExposed(); }));
+    QVERIFY(hover(view, *bend));
+    QTRY_COMPARE(view.cursor().shape(), Qt::SizeVerCursor);
+    QVERIFY(hover(view, *lfo));
+    QTRY_COMPARE(view.cursor().shape(), Qt::SizeVerCursor);
 }
 
 void PitchBendEditingTest::bendRangeScrubWritesNoteBoundedCC14()
@@ -142,7 +141,7 @@ void PitchBendEditingTest::controllerStationaryClickFocusesAndSelectsText()
     QCOMPARE(m_fixture.document().undoStack()->index(), index);
     QCOMPARE(m_fixture.smf(), before);
     QCOMPARE(editor.lfoSpeed(), lfo);
-    QCOMPARE(editor.view()->activeFocusItem(), input);
+    QCOMPARE(m_fixture.timelineWindow().activeFocusItem(), input);
     QVERIFY(!input->property("selectedText").toString().isEmpty());
 }
 
@@ -204,9 +203,9 @@ void PitchBendEditingTest::spaceAuditionsNoteFromStartTick()
     QSignalSpy audition(&m_fixture.view(), &SongView::playPauseFromRequested);
     QVERIFY(audition.isValid());
     QKeyEvent overrideEvent(QEvent::ShortcutOverride, Qt::Key_Space, Qt::NoModifier);
-    QCoreApplication::sendEvent(editor.view(), &overrideEvent);
+    QCoreApplication::sendEvent(&m_fixture.timelineWindow(), &overrideEvent);
     QVERIFY(overrideEvent.isAccepted());
-    QTest::keyClick(editor.view(), Qt::Key_Space);
+    QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key_Space);
     QCOMPARE(audition.count(), 1);
     QCOMPARE(audition.front().front().toULongLong(), m_fixture.note().tick);
     QCOMPARE(m_fixture.document().undoStack()->index(), index);
@@ -223,11 +222,11 @@ void PitchBendEditingTest::soloAndMuteKeyArbitration()
     const int index = m_fixture.document().undoStack()->index();
     const uint32_t mute = m_fixture.view().muteMask();
     const uint32_t solo = m_fixture.view().soloMask();
-    QTest::keyClick(editor.view(), Qt::Key_M);
+    QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key_M);
     QCOMPARE(m_fixture.view().muteMask(), mute);
-    QTest::keyClick(editor.view(), Qt::Key_S);
+    QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key_S);
     QCOMPARE(m_fixture.view().soloMask(), solo ^ uint32_t{1});
-    QTest::keyClick(editor.view(), Qt::Key_S);
+    QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key_S);
     QCOMPARE(m_fixture.view().soloMask(), solo);
     QCOMPARE(m_fixture.document().undoStack()->index(), index);
     QCOMPARE(m_fixture.smf(), before);

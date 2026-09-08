@@ -1,12 +1,13 @@
 #include "checks/pitchbend/tst_pitchbendediting.h"
 
 #include <QCoreApplication>
+#include <QCursor>
 #include <QImage>
+#include <QQuickItem>
 #include <QtTest>
 
-#include "ui/theme/themeruntime.h"
-
 #include "checks/support/eventsynth.h"
+#include "ui/theme/themeruntime.h"
 
 namespace {
 QPoint canvasPoint(const songview::PitchBendGraph &graph, qreal xFraction, qreal yFraction)
@@ -60,23 +61,26 @@ void PitchBendRasterTest::cleanup()
 void PitchBendRasterTest::popupSurfaceIsOpaqueAndUsesWindowBackground()
 {
     songview::PitchBendEditor *editor = m_fixture.openPopup();
-    QVERIFY(editor && editor->view());
-    const QImage image = editor->view()->grabWindow();
+    QVERIFY(editor);
+    QQuickItem *content = m_fixture.formContent();
+    QVERIFY(content);
+    const QImage image = m_fixture.timelineWindow().grabWindow();
     QVERIFY(!image.isNull());
-    for (int y = 0; y < image.height(); ++y) {
-        for (int x = 0; x < image.width(); ++x)
-            QCOMPARE(image.pixelColor(x, y).alpha(), 255);
+    // Crop the shared canvas grab to the popup form before asserting opacity.
+    const QPointF contentScene = content->mapToScene(QPointF(0, 0));
+    const qreal dpr = image.devicePixelRatio();
+    const QRect surfaceRect((contentScene * dpr).toPoint(),
+                            QSize(qRound(content->width() * dpr), qRound(content->height() * dpr)));
+    const QImage surface = image.copy(surfaceRect.intersected(image.rect()));
+    QVERIFY(!surface.isNull());
+    for (int y = 0; y < surface.height(); ++y) {
+        for (int x = 0; x < surface.width(); ++x)
+            QCOMPARE(surface.pixelColor(x, y).alpha(), 255);
     }
     const QColor background = themes::color(themes::Role::window_background);
-    QCOMPARE(image.pixelColor(qRound(4 * image.devicePixelRatio()),
-                              qRound(24 * image.devicePixelRatio())),
-             background);
-    QCOMPARE(image.pixelColor(qRound(4 * image.devicePixelRatio()),
-                              qRound(80 * image.devicePixelRatio())),
-             background);
-    QCOMPARE(image.pixelColor(qRound(4 * image.devicePixelRatio()),
-                              image.height() - qRound(4 * image.devicePixelRatio())),
-             background);
+    QCOMPARE(surface.pixelColor(qRound(4 * dpr), qRound(24 * dpr)), background);
+    QCOMPARE(surface.pixelColor(qRound(4 * dpr), qRound(80 * dpr)), background);
+    QCOMPARE(surface.pixelColor(qRound(4 * dpr), surface.height() - qRound(4 * dpr)), background);
 }
 
 void PitchBendRasterTest::shiftCurvePaintsDiagonal()
@@ -93,7 +97,7 @@ void PitchBendRasterTest::shiftCurvePaintsDiagonal()
         QFAIL("pitch-bend popup was dismissed while rendering its Shift line");
         return;
     }
-    const QImage image = editor->view()->grabWindow();
+    const QImage image = m_fixture.timelineWindow().grabWindow();
     QVERIFY(!image.isNull());
     QVERIFY(coloredHits(image, *graph, start, finish) >= 4);
 }
@@ -112,7 +116,7 @@ void PitchBendRasterTest::altRampPaintsDiagonalAfterReopen()
     QVERIFY(editor);
     graph = m_fixture.graph(QStringLiteral("pitchBendGraph"));
     QVERIFY(graph);
-    const QImage image = editor->view()->grabWindow();
+    const QImage image = m_fixture.timelineWindow().grabWindow();
     QVERIFY(!image.isNull());
     QVERIFY(coloredHits(image, *graph, start, finish) >= 4);
 }

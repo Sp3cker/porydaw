@@ -6,6 +6,7 @@
 #include <QObject>
 #include <QPointF>
 #include <QPointer>
+#include <QQuickWindow>
 #include <QRectF>
 #include <QString>
 #include <QTimer>
@@ -16,7 +17,6 @@
 class QEvent;
 class QKeyEvent;
 class QQuickItem;
-class QQuickWindow;
 
 namespace songview {
 

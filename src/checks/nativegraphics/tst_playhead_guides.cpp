@@ -121,7 +121,6 @@ void RenderingPlayheadTest::guidesResizeScrollAndOwnership()
     quick->publishHover(songview::TimelineQuickHoverOwner::Automation, tick, songX(tick));
     checks::support::pumpQuick();
     QVERIFY(quick->hoverVisible());
-    QVERIFY(!quick->editVisible());
     QVERIFY(allVisible(true, false));
     QVERIFY(qAbs(quick->hoverRootContentX() - rootX(songX(tick))) <= kGuideTolerance);
     for (const ChromePair &pair : pairs) {

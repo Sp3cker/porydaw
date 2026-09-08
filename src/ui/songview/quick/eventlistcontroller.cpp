@@ -67,8 +67,6 @@ EventListController::EventListController(SongView *songView, QObject *parent)
 {
     m_model->setSelectionHandler(
         [this](int chunk, uint64_t tick) { selectRowAtTick(chunk, tick); });
-    m_model->setReorderHandler(
-        [this](size_t from, size_t destination) { reorderRawEvent(from, destination); });
     m_menuHost = new songview::QuickMenuHost(this);
     m_chunkMenu = new songview::QuickMenuModel(this);
     m_filterMenu = new songview::QuickMenuModel(this);

@@ -4,6 +4,7 @@
 
 #include "checks/voicepickerdriver.h"
 
+#include <QGuiApplication>
 #include <QImage>
 #include <QPointer>
 #include <QQuickItem>
@@ -174,6 +175,10 @@ void NativeWindowingTest::headerSelectionAndVoicePicker()
     QVERIFY(headers);
     QVERIFY(headerInput);
 
+    QVERIFY(view.focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason));
+    QTRY_VERIFY(QGuiApplication::focusWindow() == quick->quickWindow() &&
+                QGuiApplication::focusObject() == headerInput && headerInput->hasActiveFocus());
+
     const int selectedTrack = view.selectionModel().primaryTrack();
     int selectedRow = -1;
     int alternateRow = -1;
@@ -215,18 +220,15 @@ void NativeWindowingTest::headerSelectionAndVoicePicker()
     QVERIFY(headerInput->bounds().contains(body));
     QVERIFY(headerInput->bounds().contains(voice));
 
-    checks::events::sendMouse(*headerInput, QEvent::MouseButtonPress, body, Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    QVERIFY(quick->quickWindow()->mouseGrabberItem() == headerInput);
-    checks::events::sendMouse(*headerInput, QEvent::MouseButtonRelease, body, Qt::LeftButton,
-                              Qt::NoButton, Qt::NoModifier);
+    const QPoint bodyInWindow = headerInput->mapToScene(body).toPoint();
+    const QPoint voiceInWindow = headerInput->mapToScene(voice).toPoint();
+    QVERIFY(checks::events::primeMouseMove(*quick->quickWindow(), *headerInput, bodyInWindow));
+    QTest::mouseClick(quick->quickWindow(), Qt::LeftButton, Qt::NoModifier, bodyInWindow);
     QTRY_COMPARE(view.selectionModel().primaryTrack(), targetTrack);
 
     const int undoBefore = rig->song->document().undoStack()->index();
-    checks::events::sendMouse(*headerInput, QEvent::MouseButtonDblClick, voice, Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*headerInput, QEvent::MouseButtonRelease, voice, Qt::LeftButton,
-                              Qt::NoButton, Qt::NoModifier);
+    QVERIFY(checks::events::primeMouseMove(*quick->quickWindow(), *headerInput, voiceInWindow));
+    QTest::mouseDClick(quick->quickWindow(), Qt::LeftButton, Qt::NoModifier, voiceInWindow);
     QTRY_VERIFY(static_cast<bool>(checks::voicepicker::active(view)));
     const checks::voicepicker::Picker picker = checks::voicepicker::active(view);
     QVERIFY(picker.root->isVisible());

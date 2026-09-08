@@ -16,7 +16,7 @@ class DrawerPresentationTest final : public QObject
     void drawerSurfaceAndChrome();
     void drawerToggleTransactions_data();
     void drawerToggleTransactions();
-    void drawerZeroHeightAndShortcuts();
+    void drawerZeroHeightKeyboardToggle();
     void drawerKeyboardResizeAndHover();
     void drawerStackAndCanonicalInputs();
     void drawerResizeTransactions_data();

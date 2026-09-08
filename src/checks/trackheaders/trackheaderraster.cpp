@@ -3,13 +3,19 @@
 #include <QtTest>
 
 #include <QAbstractItemModel>
+#include <QCoreApplication>
 
+#include <algorithm>
 #include <cstring>
 #include <optional>
 #include <vector>
 
 #include "checks/support/quickframebuffer.h"
+#include "core/miditimeline.h"
+#include "core/songdocument.h"
 #include "ui/activity/trackactivity.h"
+#include "ui/songtab.h"
+#include "ui/songview.h"
 #include "ui/songview/trackheadermodel.h"
 
 namespace {
@@ -112,4 +118,67 @@ void TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged()
     headers.syncActivity(activity, true);
     QVERIFY(changes.empty());
     QObject::disconnect(observed);
+}
+
+void TrackHeadersTest::voiceSubtitleFollowsProgramPosition()
+{
+    TrackHeadersFixture &fx = fixture();
+    songview::TrackHeaderModel &headers = fx.headers();
+    SongView &view = fx.view();
+    SongDocument &doc = fx.tab().document();
+    const std::optional<int> row = fx.rowForTrack(fx.voiceTrack());
+    QVERIFY(row);
+
+    // The header voice line is live: currentProgram is the last program
+    // change at or before the display position — the playhead while playing,
+    // the edit cursor otherwise — falling back to the track's first program
+    // (which is what primes the engine before any change).
+    const int base = view.currentProgram(fx.voiceTrack());
+    const int atStart = base < 0 ? 4 : base;
+    const int changed = atStart == 5 ? 6 : 5;
+    const uint64_t vcTick = 480;
+    if (base < 0)
+        doc.addLanePoint(fx.voiceTrack(), DOC_CC_VOICE, 0, atStart);
+    doc.addLanePoint(fx.voiceTrack(), DOC_CC_VOICE, vcTick, changed);
+    QCoreApplication::processEvents();
+    QCOMPARE(view.currentProgram(fx.voiceTrack()), atStart);
+    view.setEditCursorTick(vcTick);
+    QCOMPARE(view.currentProgram(fx.voiceTrack()), changed);
+    view.setEditCursorTick(0);
+    view.setPlayheadSample(view.timeline()->sampleForTick(vcTick), true);
+    QCOMPARE(view.currentProgram(fx.voiceTrack()), changed);
+    view.setPlayheadSample(0, false); // stopped: back to the edit cursor
+    QCOMPARE(view.currentProgram(fx.voiceTrack()), atStart);
+
+    // Header program presentation is a model-to-Quick contract: a transition
+    // changes the subtitle role for just this record and the retained header
+    // framebuffer.
+    std::vector<DataChange> changes;
+    const QMetaObject::Connection observed = QObject::connect(
+        &headers, &QAbstractItemModel::dataChanged, &headers,
+        [&changes](const QModelIndex &first, const QModelIndex &last, const QList<int> &roles) {
+            changes.push_back({first.row(), last.row(), roles});
+        });
+    const QString beforeSubtitle =
+        rowData(headers, *row, songview::TrackHeaderModel::SubtitleRole).toString();
+    QString error;
+    const QImage beforeProgram = fx.captureBand(error);
+    QVERIFY2(!beforeProgram.isNull(), qPrintable(error));
+    view.setEditCursorTick(vcTick);
+    QCoreApplication::processEvents();
+    const QString afterSubtitle =
+        rowData(headers, *row, songview::TrackHeaderModel::SubtitleRole).toString();
+    const QImage afterProgram = fx.captureBand(error);
+    QVERIFY2(!afterProgram.isNull(), qPrintable(error));
+    QVERIFY2(std::any_of(changes.cbegin(), changes.cend(),
+                         [row = *row](const DataChange &change) {
+                             return change.first == row && change.last == row &&
+                                    change.roles.contains(songview::TrackHeaderModel::SubtitleRole);
+                         }),
+             "program change did not publish a bounded header subtitle role");
+    QVERIFY2(beforeSubtitle != afterSubtitle, "program change did not alter the header subtitle");
+    QVERIFY2(beforeProgram.size() == afterProgram.size() && beforeProgram != afterProgram,
+             "program change did not alter the retained Quick header rendering");
+    QObject::disconnect(observed);
+    view.setEditCursorTick(0);
 }

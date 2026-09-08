@@ -83,8 +83,8 @@ void showPreparedWindow(QWidget &window)
 {
 #ifdef Q_OS_WIN
     // Qt's Windows backend consumes WM_ERASEBKGND without painting it. Keep
-    // DWM from presenting that uninitialized native surface while QWidget and
-    // QQuickWidget prepare the first real backing-store frame.
+    // DWM from presenting that uninitialized native surface while Qt prepares
+    // the first real frame.
     constexpr DWORD kDwmwaCloak = 13;
     const HWND hwnd = reinterpret_cast<HWND>(window.winId());
     const BOOL cloak = TRUE;

@@ -3,16 +3,15 @@
 #include "ui/songview/pianoroll.h"
 
 #include "ui/keymap.h"
-#include "ui/layout.h"
 #include "ui/pitchbendeditor.hpp"
 #include "ui/songview.h"
 #include "ui/songview/clipmime.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/quick/pianorollquick.h"
+#include "ui/songview/quick/promptappearance.h"
 #include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
-#include "ui/theme/themeruntime.h"
 
 #include <QApplication>
 #include <QGuiApplication>
@@ -25,9 +24,6 @@
 #include <algorithm>
 #include <utility>
 #include <vector>
-
-namespace lyt = ::layout;
-using Space = lyt::Space;
 
 namespace songview {
 using namespace songview::detail;
@@ -75,22 +71,31 @@ void PianoRoll::openPitchBendEditor()
         m_bendPopup->cancelAndCloseWithoutFocus();
         m_bendPopup = nullptr;
     }
+    // Old close-controller rule: any note under an outside press consumes it
+    // once (retargeting selection) and commits the popup with focus restore;
+    // every other outside press passes through. Scene presses map through
+    // global coordinates so the shared hit-test helpers stay unchanged.
     auto *popup =
-        new PitchBendEditor(m_sv, m_sv->document(), notes.front(),
-                            [this](QPointF globalPos) { return focusNoteUnderCursor(globalPos); });
+        new PitchBendEditor(m_sv, m_sv->document(), notes.front(), [this](QPointF scenePos) {
+            TimelineQuickView *const quick = m_sv->quickView();
+            QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
+            if (!window || !m_inputHost)
+                return false;
+            return focusNoteUnderCursor(window->mapToGlobal(scenePos));
+        });
     if (!popup->hasEditableSpan()) {
         popup->deleteLater();
         m_sv->announce(SongView::tr("Select one note to edit pitch bend."));
         return;
     }
     double noteFraction = -1.0;
-    QRect noteGlobal;
+    QRectF noteScene;
     // Canonical anchor: the Quick window is the viewport (origin 0), so the
     // canonical roll plotRect origin plus the plot-local note rect is the
-    // window-local note rect. Never map through the live input item here: G
-    // is keyboard-driven and can arrive before the first band publication
-    // moves the item to the plot origin, and the anchor then misses by
-    // exactly the item origin.
+    // window-scene anchor rect handed to the shared popup session. Never map
+    // through the live input item here: G is keyboard-driven and can arrive
+    // before the first band publication moves the item to the plot origin,
+    // and the anchor then misses by exactly the item origin.
     QQuickWindow *const anchorWindow =
         m_sv->quickView() ? m_sv->quickView()->quickWindow() : nullptr;
     const TimelineBandGeometry rollGeometry =
@@ -101,12 +106,8 @@ void PianoRoll::openPitchBendEditor()
         if (!anchorWindow || rollGeometry.plotRect.isNull())
             break;
         const QRectF noteLocalRect = noteRect(viewNote);
-        const QPoint noteTopWindow =
-            rollGeometry.plotRect.topLeft() + noteLocalRect.topLeft().toPoint();
-        const QPoint noteBottomWindow =
-            rollGeometry.plotRect.topLeft() + noteLocalRect.bottomRight().toPoint();
-        noteGlobal = QRect(anchorWindow->mapToGlobal(noteTopWindow),
-                           anchorWindow->mapToGlobal(noteBottomWindow));
+        noteScene = QRect(rollGeometry.plotRect.topLeft() + noteLocalRect.topLeft().toPoint(),
+                          rollGeometry.plotRect.topLeft() + noteLocalRect.bottomRight().toPoint());
         // Fractional opening only when the retained pointer position sits
         // on the selected note; keyboard G without a known inside pointer
         // keeps the -1 fallback.
@@ -118,7 +119,7 @@ void PianoRoll::openPitchBendEditor()
         }
         break;
     }
-    if (noteGlobal.isEmpty()) {
+    if (noteScene.isNull()) {
         popup->deleteLater();
         m_sv->announce(SongView::tr("Select one note to edit pitch bend."));
         return;
@@ -138,7 +139,7 @@ void PianoRoll::openPitchBendEditor()
             },
             Qt::QueuedConnection);
     });
-    popup->openAt(noteGlobal, noteFraction);
+    popup->openAt(noteScene, noteFraction);
 }
 
 std::vector<DocNote> PianoRoll::resolveSelection() const
@@ -439,26 +440,7 @@ QString PianoRoll::velocityPromptLabel() const
 
 QVariantMap PianoRoll::velocityPromptAppearance() const
 {
-    QVariantMap appearance;
-    appearance.insert(QStringLiteral("font"), QGuiApplication::font());
-    appearance.insert(QStringLiteral("background"), themes::color(themes::Role::window_background));
-    appearance.insert(QStringLiteral("outline"), themes::color(themes::Role::palette_outline));
-    appearance.insert(QStringLiteral("text"), themes::color(themes::Role::window_text));
-    appearance.insert(QStringLiteral("focus"), themes::color(themes::Role::focus_outline));
-    appearance.insert(QStringLiteral("buttonBackground"),
-                      themes::color(themes::Role::button_background));
-    appearance.insert(QStringLiteral("buttonText"), themes::color(themes::Role::button_text));
-    appearance.insert(QStringLiteral("pressedBackground"),
-                      themes::color(themes::Role::button_pressed_background));
-    appearance.insert(QStringLiteral("borderWidth"), lyt::singlePixel());
-    appearance.insert(QStringLiteral("radius"), lyt::space(Space::Half));
-    appearance.insert(QStringLiteral("dialogPadding"), lyt::space(Space::One));
-    appearance.insert(QStringLiteral("horizontalPadding"), lyt::space(Space::One));
-    appearance.insert(QStringLiteral("verticalPadding"), lyt::space(Space::Half));
-    appearance.insert(QStringLiteral("buttonPadding"), lyt::space(Space::One));
-    appearance.insert(QStringLiteral("spacing"), lyt::space(Space::One));
-    appearance.insert(QStringLiteral("dragThreshold"), lyt::fontPxF(1.0));
-    return appearance;
+    return promptDialogAppearance(QGuiApplication::font());
 }
 
 void PianoRoll::openVelocityPrompt(const std::vector<DocNote> &notes)

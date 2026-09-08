@@ -16,6 +16,7 @@
 #include "project/projectidentity.h"
 #include "project/voicegroupsource.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
 
 namespace {
@@ -188,11 +189,16 @@ uint64_t PitchBendFixture::endTick() const
 
 QPoint PitchBendFixture::notePoint() const
 {
+    return notePoint(m_note);
+}
+
+QPoint PitchBendFixture::notePoint(const DocNote &note) const
+{
     const SongView &songView = view();
     const qreal dpr = rollInput().devicePixelRatio();
-    const int row = songView.pitchProjection().rowForPitch(m_note.key);
-    const qreal x0 = songView.camera().displayX(double(m_note.tick), 0.0, dpr);
-    const qreal x1 = songView.camera().displayX(double(m_endTick), 0.0, dpr);
+    const int row = songView.pitchProjection().rowForPitch(note.key);
+    const qreal x0 = songView.camera().displayX(double(note.tick), 0.0, dpr);
+    const qreal x1 = songView.camera().displayX(double(document().noteEndTick(note)), 0.0, dpr);
     const qreal y0 = songView.pitchProjection().rowTop(row, songView.camera().keyHeight(),
                                                        songView.camera().scrollY(), dpr);
     const qreal y1 = songView.pitchProjection().rowBottom(row, songView.camera().keyHeight(),
@@ -206,8 +212,8 @@ songview::PitchBendEditor *PitchBendFixture::openPopup()
     rollInput().forceActiveFocus(Qt::OtherFocusReason);
     if (!QTest::qWaitFor([this] { return rollInput().hasActiveFocus(); }))
         return nullptr;
-    // Direct item delivery does not establish native activation. Settle the
-    // host before opening a transient window that must receive input.
+    // The shared canvas window already hosts the popup; settle its exposure
+    // and activation before the opener delivers into the shared scene.
     if (!QTest::qWaitForWindowExposed(&timelineWindow()) ||
         !QTest::qWaitForWindowActive(&timelineWindow()))
         return nullptr;
@@ -218,21 +224,12 @@ songview::PitchBendEditor *PitchBendFixture::openPopup()
     QTest::keyClick(&timelineWindow(), Qt::Key_G);
     if (!QTest::qWaitFor([this] {
             songview::PitchBendEditor *editor = popup();
-            return editor && editor->isOpen() && editor->view() && editor->view()->isVisible() &&
-                   editor->view()->isExposed();
+            return editor && editor->isOpen() && formContent() != nullptr;
         })) {
         return nullptr;
     }
-    QPointer<songview::PitchBendEditor> editor = popup();
-    if (!editor || !editor->view())
-        return nullptr;
-    QPointer<QQuickWindow> surface = editor->view();
-    if (!QTest::qWaitForWindowActive(surface.data()))
-        return nullptr;
     QCoreApplication::processEvents();
-    if (!editor || !editor->isOpen() || !surface || !surface->isExposed() || !surface->isActive())
-        return nullptr;
-    return editor;
+    return popup();
 }
 
 songview::PitchBendEditor *PitchBendFixture::popup() const
@@ -242,25 +239,29 @@ songview::PitchBendEditor *PitchBendFixture::popup() const
 
 songview::PitchBendGraph *PitchBendFixture::graph(const QString &objectName) const
 {
-    songview::PitchBendEditor *editor = popup();
-    if (!editor || !editor->view() || !editor->view()->rootObject())
-        return nullptr;
-    return qobject_cast<songview::PitchBendGraph *>(
-        editor->view()->rootObject()->findChild<QQuickItem *>(objectName));
+    QQuickItem *content = formContent();
+    return content ? qobject_cast<songview::PitchBendGraph *>(
+                         content->findChild<QQuickItem *>(objectName))
+                   : nullptr;
 }
 
 QQuickItem *PitchBendFixture::item(const QString &objectName) const
 {
-    songview::PitchBendEditor *editor = popup();
-    return editor && editor->view() && editor->view()->rootObject()
-               ? editor->view()->rootObject()->findChild<QQuickItem *>(objectName)
-               : nullptr;
+    QQuickItem *content = formContent();
+    return content ? content->findChild<QQuickItem *>(objectName) : nullptr;
+}
+
+QQuickItem *PitchBendFixture::formContent() const
+{
+    songview::TimelineQuickView *quick = view().quickView();
+    songview::QuickPopupSession *session = quick ? quick->popupSession() : nullptr;
+    return session && session->isOpen() ? session->contentItem() : nullptr;
 }
 
 void PitchBendFixture::closePopupViaEscape()
 {
-    if (songview::PitchBendEditor *editor = popup(); editor && editor->view())
-        QTest::keyClick(editor->view(), Qt::Key_Escape);
+    if (popup())
+        QTest::keyClick(&timelineWindow(), Qt::Key_Escape);
     drainDeferredDeletes();
 }
 
@@ -280,76 +281,59 @@ QPoint PitchBendFixture::windowPoint(const QQuickItem &item, QPointF local) cons
 bool PitchBendFixture::stroke(songview::PitchBendGraph &target, QPoint start, QPoint finish,
                               Qt::KeyboardModifiers modifiers)
 {
-    QPointer<songview::PitchBendEditor> editor = popup();
-    if (!editor || !editor->view())
-        return false;
-    QPointer<QQuickWindow> window = editor->view();
-    QTest::mousePress(window.data(), Qt::LeftButton, modifiers, windowPoint(target, start));
-    if (!editor || !window)
-        return false;
-    QTest::mouseEvent(QTest::MouseMove, window.data(), Qt::NoButton, modifiers,
+    QQuickWindow &window = timelineWindow();
+    QTest::mousePress(&window, Qt::LeftButton, modifiers, windowPoint(target, start));
+    QTest::mouseEvent(QTest::MouseMove, &window, Qt::NoButton, modifiers,
                       windowPoint(target, finish));
-    if (!editor || !window)
-        return false;
-    QTest::mouseRelease(window.data(), Qt::LeftButton, modifiers, windowPoint(target, finish));
-    return editor && window;
+    QTest::mouseRelease(&window, Qt::LeftButton, modifiers, windowPoint(target, finish));
+    return popup() != nullptr;
 }
 
 bool PitchBendFixture::wheel(songview::PitchBendGraph &target, QPoint point, QPoint angleDelta)
 {
-    songview::PitchBendEditor *editor = popup();
-    if (!editor || !editor->view())
-        return false;
-    QQuickWindow *window = editor->view();
+    QQuickWindow &window = timelineWindow();
     const QPointF position = target.mapToScene(point);
-    QWheelEvent event(position, window->mapToGlobal(position.toPoint()), QPoint{}, angleDelta,
+    QWheelEvent event(position, window.mapToGlobal(position.toPoint()), QPoint{}, angleDelta,
                       Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
-    QCoreApplication::sendEvent(window, &event);
+    QCoreApplication::sendEvent(&window, &event);
     return true;
 }
 
 bool PitchBendFixture::scrub(QQuickItem &field, int steps, Qt::KeyboardModifiers modifiers)
 {
-    QPointer<songview::PitchBendEditor> editor = popup();
-    if (!editor || !editor->view())
+    songview::PitchBendEditor *editor = popup();
+    if (!editor)
         return false;
     const qreal threshold = editor->metrics().value(QStringLiteral("scrubThreshold")).toReal();
     const int extra = modifiers & Qt::ShiftModifier ? 5 : 2;
     const QPointF start = field.boundingRect().center();
     const int pixels = qRound(threshold) + extra;
     const QPointF finish = start + QPointF(0, steps > 0 ? -pixels : pixels);
-    QPointer<QQuickWindow> window = editor->view();
-    QTest::mousePress(window.data(), Qt::LeftButton, modifiers, windowPoint(field, start));
-    if (!editor || !window)
-        return false;
-    QTest::mouseEvent(QTest::MouseMove, window.data(), Qt::NoButton, modifiers,
+    QQuickWindow &window = timelineWindow();
+    QTest::mousePress(&window, Qt::LeftButton, modifiers, windowPoint(field, start));
+    QTest::mouseEvent(QTest::MouseMove, &window, Qt::NoButton, modifiers,
                       windowPoint(field, finish));
-    if (!editor || !window)
-        return false;
-    QTest::mouseRelease(window.data(), Qt::LeftButton, modifiers, windowPoint(field, finish));
-    return editor && window;
+    QTest::mouseRelease(&window, Qt::LeftButton, modifiers, windowPoint(field, finish));
+    return popup() != nullptr;
 }
 
 bool PitchBendFixture::click(QQuickItem &target)
 {
-    songview::PitchBendEditor *editor = popup();
-    if (!editor || !editor->view())
-        return false;
-    QTest::mouseClick(editor->view(), Qt::LeftButton, Qt::NoModifier,
+    QQuickWindow &window = timelineWindow();
+    QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier,
                       windowPoint(target, target.boundingRect().center()));
     return true;
 }
 
 bool PitchBendFixture::sendUndo()
 {
-    songview::PitchBendEditor *editor = popup();
-    if (!editor || !editor->view())
+    if (!popup())
         return false;
     const auto bindings = QKeySequence::keyBindings(QKeySequence::Undo);
     if (bindings.empty())
         return false;
     const QKeyCombination combination = bindings.front()[0];
-    QTest::keyClick(editor->view(), combination.key(), combination.keyboardModifiers());
+    QTest::keyClick(&timelineWindow(), combination.key(), combination.keyboardModifiers());
     return true;
 }
 

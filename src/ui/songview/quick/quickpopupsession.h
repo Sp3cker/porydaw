@@ -1,5 +1,4 @@
 #pragma once
-
 #include <QMetaObject>
 #include <QObject>
 #include <QPointF>
@@ -31,7 +30,12 @@ class QuickPopupSession final : public QObject
     QQuickItem *contentItem() const;
     bool owns(const QObject *object) const;
     bool beginMenu(QObject *owner);
+    // Loads a centered modal form. The QML root receives the bridge as its
+    // required `bridge` property.
     bool openForm(const QUrl &url, QObject *bridge);
+    // Loads owner-governed content into the shared overlay. The owner sets
+    // its geometry and handles its outside input.
+    bool openSurface(const QUrl &url, QObject *bridge);
     void close();
     void cancel(bool restoreFocus = true);
 
@@ -51,9 +55,11 @@ class QuickPopupSession final : public QObject
         None,
         Menu,
         Form,
+        Surface,
     };
 
     bool ensureLayer();
+    bool openContent(const QUrl &url, QObject *bridge, Kind kind);
     void end(bool wasCancelled, bool restoreFocus);
     void layoutContent();
     void scheduleFocusCheck();

@@ -1,15 +1,13 @@
 import QtQuick
 
-Item {
+PromptCard {
     id: prompt
 
     required property var bridge
 
     objectName: "voicePickerPrompt"
-    implicitWidth: Math.max(content.implicitWidth + 2 * bridge.voicePickerAppearance.dialogPadding,
-                            bridge.voicePickerAppearance.minimumWidth)
-    implicitHeight: content.implicitHeight + 2 * bridge.voicePickerAppearance.dialogPadding
-    focus: true
+    appearance: bridge.voicePickerAppearance
+    minimumWidth: bridge.voicePickerAppearance.minimumWidth
     property bool viewReady: false
 
     function acceptDisplayed() {
@@ -42,149 +40,76 @@ Item {
     Accessible.role: Accessible.Client
     Accessible.name: bridge.voicePickerTitle
 
-    Rectangle {
-        anchors.fill: parent
-        color: bridge.voicePickerAppearance.background
-        border.width: bridge.voicePickerAppearance.borderWidth
-        border.color: bridge.voicePickerAppearance.outline
-        radius: bridge.voicePickerAppearance.radius
+    Text {
+        color: appearance.text
+        font: appearance.font
+        text: bridge.voicePickerTitle
+        renderType: Text.NativeRendering
     }
 
-    Column {
-        id: content
+    Rectangle {
+        id: searchFrame
 
-        x: bridge.voicePickerAppearance.dialogPadding
-        y: bridge.voicePickerAppearance.dialogPadding
-        spacing: bridge.voicePickerAppearance.spacing
+        implicitWidth: Math.max(
+                           appearance.minimumWidth - 2 * appearance.dialogPadding,
+                           Math.max(titleMetrics.advanceWidth(bridge.voicePickerTitle),
+                                    searchMetrics.advanceWidth(searchHint.text))
+                           + 2 * (appearance.horizontalPadding + appearance.borderWidth))
+        implicitHeight: searchMetrics.height
+                        + 2 * (appearance.verticalPadding + appearance.borderWidth)
+        color: appearance.background
+        border.width: appearance.borderWidth
+        border.color: search.activeFocus ? appearance.focus : appearance.outline
+        radius: appearance.radius
+
+        FontMetrics {
+            id: titleMetrics
+            font: appearance.font
+        }
+        FontMetrics {
+            id: searchMetrics
+            font: appearance.font
+        }
 
         Text {
-            color: bridge.voicePickerAppearance.text
-            font: bridge.voicePickerAppearance.font
-            text: bridge.voicePickerTitle
+            id: searchHint
+
+            anchors.fill: parent
+            anchors.leftMargin: appearance.horizontalPadding + appearance.borderWidth
+            anchors.rightMargin: anchors.leftMargin
+            verticalAlignment: Text.AlignVCenter
+            color: appearance.outline
+            font: appearance.font
+            text: qsTr("Search voices...")
+            visible: search.text.length === 0
             renderType: Text.NativeRendering
         }
 
-        Rectangle {
-            id: searchFrame
+        TextInput {
+            id: search
 
-            implicitWidth: Math.max(
-                               bridge.voicePickerAppearance.minimumWidth
-                               - 2 * bridge.voicePickerAppearance.dialogPadding,
-                               Math.max(titleMetrics.advanceWidth(bridge.voicePickerTitle),
-                                        searchMetrics.advanceWidth(searchHint.text))
-                               + 2 * (bridge.voicePickerAppearance.horizontalPadding
-                                      + bridge.voicePickerAppearance.borderWidth))
-            implicitHeight: searchMetrics.height
-                            + 2 * (bridge.voicePickerAppearance.verticalPadding
-                                   + bridge.voicePickerAppearance.borderWidth)
-            color: bridge.voicePickerAppearance.background
-            border.width: bridge.voicePickerAppearance.borderWidth
-            border.color: search.activeFocus ? bridge.voicePickerAppearance.focus
-                                             : bridge.voicePickerAppearance.outline
-            radius: bridge.voicePickerAppearance.radius
-
-            FontMetrics {
-                id: titleMetrics
-                font: bridge.voicePickerAppearance.font
-            }
-            FontMetrics {
-                id: searchMetrics
-                font: bridge.voicePickerAppearance.font
-            }
-
-            Text {
-                id: searchHint
-
-                anchors.fill: parent
-                anchors.leftMargin: bridge.voicePickerAppearance.horizontalPadding
-                                    + bridge.voicePickerAppearance.borderWidth
-                anchors.rightMargin: anchors.leftMargin
-                verticalAlignment: Text.AlignVCenter
-                color: bridge.voicePickerAppearance.outline
-                font: bridge.voicePickerAppearance.font
-                text: qsTr("Search voices...")
-                visible: search.text.length === 0
-                renderType: Text.NativeRendering
-            }
-
-            TextInput {
-                id: search
-
-                objectName: "voicePickerSearch"
-                anchors.fill: parent
-                clip: true
-                color: bridge.voicePickerAppearance.text
-                font: bridge.voicePickerAppearance.font
-                padding: bridge.voicePickerAppearance.borderWidth
-                leftPadding: bridge.voicePickerAppearance.horizontalPadding
-                             + bridge.voicePickerAppearance.borderWidth
-                rightPadding: leftPadding
-                topPadding: bridge.voicePickerAppearance.verticalPadding
-                            + bridge.voicePickerAppearance.borderWidth
-                bottomPadding: topPadding
-                selectionColor: bridge.voicePickerAppearance.focus
-                selectedTextColor: bridge.voicePickerAppearance.text
-                renderType: TextInput.NativeRendering
-                activeFocusOnTab: true
-                Accessible.role: Accessible.EditableText
-                Accessible.name: searchHint.text
-                Accessible.description: bridge.voicePickerTitle
-                Accessible.editable: true
-                KeyNavigation.tab: list
-                KeyNavigation.backtab: cancelButton
-
-                onTextChanged: bridge.filter = text
-                Keys.onReturnPressed: (event) => {
-                    prompt.acceptDisplayed()
-                    event.accepted = true
-                }
-                Keys.onEnterPressed: (event) => {
-                    prompt.acceptDisplayed()
-                    event.accepted = true
-                }
-                Keys.onDownPressed: (event) => {
-                    if (bridge.hasMatch)
-                        list.forceActiveFocus(Qt.TabFocusReason)
-                    event.accepted = true
-                }
-            }
-        }
-
-        ListView {
-            id: list
-
-            objectName: "voicePickerList"
-            width: searchFrame.implicitWidth
-            height: bridge.voicePickerAppearance.listHeight
+            objectName: "voicePickerSearch"
+            anchors.fill: parent
             clip: true
-            focus: false
+            color: appearance.text
+            font: appearance.font
+            padding: appearance.borderWidth
+            leftPadding: appearance.horizontalPadding + appearance.borderWidth
+            rightPadding: leftPadding
+            topPadding: appearance.verticalPadding + appearance.borderWidth
+            bottomPadding: topPadding
+            selectionColor: appearance.focus
+            selectedTextColor: appearance.text
+            renderType: TextInput.NativeRendering
             activeFocusOnTab: true
-            model: bridge.voicePickerModel
-            boundsBehavior: Flickable.StopAtBounds
-            highlightFollowsCurrentItem: true
-            highlightMoveDuration: 0
-            Accessible.role: Accessible.List
-            Accessible.name: qsTr("Voices")
-            Accessible.description: qsTr("Click and hold to audition (middle C).")
-            KeyNavigation.tab: bridge.hasMatch ? acceptButton : cancelButton
-            KeyNavigation.backtab: search
+            Accessible.role: Accessible.EditableText
+            Accessible.name: searchHint.text
+            Accessible.description: bridge.voicePickerTitle
+            Accessible.editable: true
+            KeyNavigation.tab: list
+            KeyNavigation.backtab: cancelButton
 
-            Connections {
-                target: bridge
-                function onCurrentRowChanged() {
-                    list.currentIndex = bridge.currentRow
-                }
-                function onFilterChanged() {
-                    if (list.currentIndex >= 0)
-                        list.positionViewAtIndex(list.currentIndex, ListView.Center)
-                }
-            }
-
-            onCurrentIndexChanged: {
-                if (prompt.viewReady && currentIndex !== bridge.currentRow)
-                    bridge.selectRow(currentIndex)
-            }
-
+            onTextChanged: bridge.filter = text
             Keys.onReturnPressed: (event) => {
                 prompt.acceptDisplayed()
                 event.accepted = true
@@ -193,186 +118,147 @@ Item {
                 prompt.acceptDisplayed()
                 event.accepted = true
             }
-            Keys.onEscapePressed: (event) => {
-                prompt.cancelDisplayed()
+            Keys.onDownPressed: (event) => {
+                if (bridge.hasMatch)
+                    list.forceActiveFocus(Qt.TabFocusReason)
                 event.accepted = true
             }
+        }
+    }
 
-            highlight: Rectangle {
-                color: bridge.voicePickerAppearance.pressedBackground
-                radius: bridge.voicePickerAppearance.radius
+    ListView {
+        id: list
+
+        objectName: "voicePickerList"
+        width: searchFrame.implicitWidth
+        height: appearance.listHeight
+        clip: true
+        focus: false
+        activeFocusOnTab: true
+        model: bridge.voicePickerModel
+        boundsBehavior: Flickable.StopAtBounds
+        highlightFollowsCurrentItem: true
+        highlightMoveDuration: 0
+        Accessible.role: Accessible.List
+        Accessible.name: qsTr("Voices")
+        Accessible.description: qsTr("Click and hold to audition (middle C).")
+        KeyNavigation.tab: bridge.hasMatch ? acceptButton : cancelButton
+        KeyNavigation.backtab: search
+
+        Connections {
+            target: bridge
+            function onCurrentRowChanged() {
+                list.currentIndex = bridge.currentRow
             }
-
-            delegate: Item {
-                id: row
-
-                required property int index
-                required property int program
-                required property string label
-
-                objectName: "voicePickerRow_" + program
-                width: list.width
-                height: rowText.implicitHeight
-                        + 2 * bridge.voicePickerAppearance.verticalPadding
-                Accessible.role: Accessible.ListItem
-                Accessible.name: label
-                Accessible.selected: ListView.isCurrentItem
-
-                Text {
-                    id: rowText
-
-                    anchors.left: parent.left
-                    anchors.leftMargin: bridge.voicePickerAppearance.horizontalPadding
-                    anchors.right: parent.right
-                    anchors.rightMargin: bridge.voicePickerAppearance.horizontalPadding
-                    anchors.verticalCenter: parent.verticalCenter
-                    color: row.ListView.isCurrentItem
-                           ? bridge.voicePickerAppearance.pressedText
-                           : bridge.voicePickerAppearance.text
-                    font: bridge.voicePickerAppearance.font
-                    text: label
-                    elide: Text.ElideRight
-                    renderType: Text.NativeRendering
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    acceptedButtons: Qt.LeftButton
-                    onPressed: {
-                        list.currentIndex = row.index
-                        bridge.pressAndHold(row.program)
-                    }
-                    onReleased: bridge.releaseHeld()
-                    onCanceled: bridge.releaseHeld()
-                    onClicked: list.forceActiveFocus(Qt.MouseFocusReason)
-                    onDoubleClicked: prompt.acceptDisplayed()
-                }
-            }
-
-            Text {
-                anchors.centerIn: parent
-                color: bridge.voicePickerAppearance.text
-                font: bridge.voicePickerAppearance.font
-                text: qsTr("No matching voices")
-                visible: !bridge.hasMatch
-                renderType: Text.NativeRendering
+            function onFilterChanged() {
+                if (list.currentIndex >= 0)
+                    list.positionViewAtIndex(list.currentIndex, ListView.Center)
             }
         }
 
-        Row {
-            spacing: bridge.voicePickerAppearance.spacing
+        onCurrentIndexChanged: {
+            if (prompt.viewReady && currentIndex !== bridge.currentRow)
+                bridge.selectRow(currentIndex)
+        }
 
-            Rectangle {
-                id: acceptButton
+        Keys.onReturnPressed: (event) => {
+            prompt.acceptDisplayed()
+            event.accepted = true
+        }
+        Keys.onEnterPressed: (event) => {
+            prompt.acceptDisplayed()
+            event.accepted = true
+        }
+        Keys.onEscapePressed: (event) => {
+            prompt.cancelDisplayed()
+            event.accepted = true
+        }
 
-                objectName: "voicePickerAccept"
-                activeFocusOnTab: enabled
-                enabled: bridge.hasMatch
-                width: Math.max(acceptText.implicitWidth, cancelText.implicitWidth)
-                       + 2 * bridge.voicePickerAppearance.buttonPadding
-                height: acceptText.implicitHeight
-                        + 2 * bridge.voicePickerAppearance.buttonPadding
-                color: acceptTap.pressed ? bridge.voicePickerAppearance.pressedBackground
-                                         : bridge.voicePickerAppearance.buttonBackground
-                border.width: bridge.voicePickerAppearance.borderWidth
-                border.color: activeFocus ? bridge.voicePickerAppearance.focus
-                                          : bridge.voicePickerAppearance.outline
-                radius: bridge.voicePickerAppearance.radius
-                opacity: enabled ? 1 : 0.5
-                Accessible.role: Accessible.Button
-                Accessible.name: acceptText.text
-                Accessible.focusable: enabled
-                KeyNavigation.tab: cancelButton
-                KeyNavigation.backtab: list
-                Accessible.onPressAction: acceptButton.activate()
+        highlight: Rectangle {
+            color: appearance.pressedBackground
+            radius: appearance.radius
+        }
 
-                function activate() {
-                    if (enabled)
-                        prompt.acceptDisplayed()
-                }
+        delegate: Item {
+            id: row
 
-                Text {
-                    id: acceptText
+            required property int index
+            required property int program
+            required property string label
 
-                    anchors.centerIn: parent
-                    color: bridge.voicePickerAppearance.buttonText
-                    font: bridge.voicePickerAppearance.font
-                    text: qsTr("OK")
-                    renderType: Text.NativeRendering
-                }
+            objectName: "voicePickerRow_" + program
+            width: list.width
+            height: rowText.implicitHeight + 2 * appearance.verticalPadding
+            Accessible.role: Accessible.ListItem
+            Accessible.name: label
+            Accessible.selected: ListView.isCurrentItem
 
-                Keys.onReturnPressed: (event) => {
-                    acceptButton.activate()
-                    event.accepted = true
-                }
-                Keys.onEnterPressed: (event) => {
-                    acceptButton.activate()
-                    event.accepted = true
-                }
-                Keys.onSpacePressed: (event) => {
-                    acceptButton.activate()
-                    event.accepted = true
-                }
+            Text {
+                id: rowText
 
-                TapHandler {
-                    id: acceptTap
-                    onTapped: acceptButton.activate()
-                }
+                anchors.left: parent.left
+                anchors.leftMargin: appearance.horizontalPadding
+                anchors.right: parent.right
+                anchors.rightMargin: appearance.horizontalPadding
+                anchors.verticalCenter: parent.verticalCenter
+                color: row.ListView.isCurrentItem ? appearance.pressedText : appearance.text
+                font: appearance.font
+                text: label
+                elide: Text.ElideRight
+                renderType: Text.NativeRendering
             }
-
-            Rectangle {
-                id: cancelButton
-
-                objectName: "voicePickerCancel"
-                activeFocusOnTab: true
-                width: Math.max(acceptText.implicitWidth, cancelText.implicitWidth)
-                       + 2 * bridge.voicePickerAppearance.buttonPadding
-                height: cancelText.implicitHeight
-                        + 2 * bridge.voicePickerAppearance.buttonPadding
-                color: cancelTap.pressed ? bridge.voicePickerAppearance.pressedBackground
-                                         : bridge.voicePickerAppearance.buttonBackground
-                border.width: bridge.voicePickerAppearance.borderWidth
-                border.color: activeFocus ? bridge.voicePickerAppearance.focus
-                                          : bridge.voicePickerAppearance.outline
-                radius: bridge.voicePickerAppearance.radius
-                Accessible.role: Accessible.Button
-                Accessible.name: cancelText.text
-                Accessible.focusable: true
-                Accessible.onPressAction: cancelButton.activate()
-                KeyNavigation.tab: search
-                KeyNavigation.backtab: bridge.hasMatch ? acceptButton : list
-
-                function activate() {
-                    prompt.cancelDisplayed()
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton
+                onPressed: {
+                    list.currentIndex = row.index
+                    bridge.pressAndHold(row.program)
                 }
-
-                Text {
-                    id: cancelText
-
-                    anchors.centerIn: parent
-                    color: bridge.voicePickerAppearance.buttonText
-                    font: bridge.voicePickerAppearance.font
-                    text: qsTr("Cancel")
-                    renderType: Text.NativeRendering
-                }
-
-                Keys.onReturnPressed: (event) => {
-                    cancelButton.activate()
-                    event.accepted = true
-                }
-                Keys.onEnterPressed: (event) => {
-                    cancelButton.activate()
-                    event.accepted = true
-                }
-                Keys.onSpacePressed: (event) => {
-                    cancelButton.activate()
-                    event.accepted = true
-                }
-
-                TapHandler {
-                    id: cancelTap
-                    onTapped: cancelButton.activate()
-                }
+                onReleased: bridge.releaseHeld()
+                onCanceled: bridge.releaseHeld()
+                onClicked: list.forceActiveFocus(Qt.MouseFocusReason)
+                onDoubleClicked: prompt.acceptDisplayed()
             }
+        }
+
+        Text {
+            anchors.centerIn: parent
+            color: appearance.text
+            font: appearance.font
+            text: qsTr("No matching voices")
+            visible: !bridge.hasMatch
+            renderType: Text.NativeRendering
+        }
+    }
+
+    Row {
+        spacing: appearance.spacing
+
+        PromptButton {
+            id: acceptButton
+
+            objectName: "voicePickerAccept"
+            claimsShortcuts: false
+            appearance: prompt.appearance
+            text: qsTr("OK")
+            enabled: bridge.hasMatch
+            minimumWidth: cancelButton.labelWidth + 2 * appearance.buttonPadding
+            KeyNavigation.tab: cancelButton
+            KeyNavigation.backtab: list
+            onActivated: prompt.acceptDisplayed()
+        }
+
+        PromptButton {
+            id: cancelButton
+
+            objectName: "voicePickerCancel"
+            claimsShortcuts: false
+            appearance: prompt.appearance
+            text: qsTr("Cancel")
+            minimumWidth: acceptButton.labelWidth + 2 * appearance.buttonPadding
+            KeyNavigation.tab: search
+            KeyNavigation.backtab: bridge.hasMatch ? acceptButton : list
+            onActivated: prompt.cancelDisplayed()
         }
     }
 }

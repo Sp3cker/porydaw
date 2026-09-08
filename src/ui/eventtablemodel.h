@@ -7,7 +7,6 @@
 #include <QHash>
 #include <QList>
 #include <QString>
-#include <QStringList>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -15,7 +14,6 @@
 #include <variant>
 #include <vector>
 
-class QMimeData;
 class SongDocument;
 class SongView;
 struct SmfEvent;
@@ -80,7 +78,6 @@ class EventTableModel : public QAbstractTableModel
     int playRow() const { return m_playRow; }
     void setPlayRow(int row);
     uint8_t fallbackChannel() const;
-    void setReorderHandler(std::function<void(size_t, size_t)> handler);
     void setSelectionHandler(std::function<void(int, uint64_t)> handler);
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -90,13 +87,6 @@ class EventTableModel : public QAbstractTableModel
     QHash<int, QByteArray> roleNames() const override;
     Qt::ItemFlags flags(const QModelIndex &index) const override;
     bool setData(const QModelIndex &index, const QVariant &value, int role) override;
-    Qt::DropActions supportedDropActions() const override;
-    QStringList mimeTypes() const override;
-    QMimeData *mimeData(const QModelIndexList &indexes) const override;
-    bool canDropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column,
-                         const QModelIndex &parent) const override;
-    bool dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column,
-                      const QModelIndex &parent) override;
 
   private:
     enum class RowKind { Raw, Tempo };
@@ -113,8 +103,6 @@ class EventTableModel : public QAbstractTableModel
     const SmfTrack *track() const;
     static bool filterMatches(int mask, const SmfEvent &ev);
     const TempoPoint *tempoPoint(uint64_t tick) const;
-    bool dropTarget(const QMimeData *data, int row, const QModelIndex &parent, size_t *from,
-                    size_t *dest) const;
     bool handleEndTick(const QVariant &value);
     bool handleTempoTick(const TempoPoint &point, const QVariant &value);
     bool handleTempoTypeChange(const TempoPoint &point, const QVariant &value);
@@ -142,7 +130,6 @@ class EventTableModel : public QAbstractTableModel
     int m_filter = FilterAll;
     int m_playRow = -1;
     std::vector<RowKey> m_rows;
-    std::function<void(size_t, size_t)> m_reorder;
     std::vector<std::shared_ptr<PendingRawEdit>> m_pendingRawEdits;
     std::function<void(int, uint64_t)> m_select;
 };

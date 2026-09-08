@@ -193,6 +193,10 @@ lifecycle filtering and paired-release suppression. Menu-only rows, submenu
 layout, type-ahead and keyboard navigation remain in QuickMenuHost. Forms receive
 normal Quick text-input dispatch and retain their terminal key handling.
 
+Velocity, time-signature, insert-time, CC-delete and voice-picker forms share
+`promptDialogAppearance`, `PromptCard` and `PromptButton`. Their owners retain
+drafts, acceptance rules, initial focus and keyboard traversal.
+
 Cancellation reports whether restoring local focus is appropriate. Outside press
 and Escape can restore the owning band; deactivation, owner teardown and
 replacement must not reactivate the application or steal focus from the next
@@ -203,6 +207,17 @@ overlay is destroyed or a right-click retarget opens another menu.
 Existing pitch-bend editing and inline rename retain their established live-edit
 commit-on-dismiss semantics. They are not unaccepted numeric/picker drafts.
 Passive tooltips remain noninteractive; inline Tempo/CC remains lane-local.
+
+Pitch-bend editing borrows the session through `openSurface`: the session loads
+and retires the QML content on the existing canvas, without applying modal-form
+placement or dismissal rules. PitchBendEditor owns note anchoring, resize layout,
+the background input shield, and outside-press classification. It remains open
+when focus returns to the roll and commits on dismissal. A press on any note
+retargets selection and is consumed; other outside UI receives its press after
+dismissal without restoring the old input focus. Session-wide replacement,
+owner teardown and window deactivation still retire the shared surface.
+There is no separate native window, application-wide close filter, or configurable
+pitch policy in the shared session.
 
 ## Menu implementation contract
 

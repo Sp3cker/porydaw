@@ -383,8 +383,8 @@ void RenderingPlayheadTest::nativeLayerLifecycle()
         if (trianglePath)
             CGPathRelease(trianglePath);
     });
-    const CGRect bodyFrame = layers.body.frame;
-    const CGPoint bodyPosition = layers.body.position;
+    const CGRect bodyBounds = layers.body.bounds;
+    constexpr qreal finalMove = 128.0 / 3.0;
     for (int move = 1; move <= 128; ++move)
         overlay->setPlayhead(baseX + qreal(move) / 3.0, true, true);
     processLayers();
@@ -392,8 +392,9 @@ void RenderingPlayheadTest::nativeLayerLifecycle()
     QVERIFY([layers.leftGlow.colors isEqual:colorsBeforeMoves]);
     QVERIFY(CGPathEqualToPath(static_cast<CAShapeLayer *>(layers.bodyClip.mask).path, bodyPath));
     QVERIFY(CGPathEqualToPath(layers.triangle.path, trianglePath));
-    QVERIFY(CGRectEqualToRect(layers.body.frame, bodyFrame));
-    QVERIFY(!CGPointEqualToPoint(layers.body.position, bodyPosition));
+    QVERIFY(CGRectEqualToRect(layers.body.bounds, bodyBounds));
+    QVERIFY(qAbs(layers.body.position.x -
+                 (baseX + finalMove - songview::playheadGlowLeftExtent(true))) <= 0.01);
 
     CALayer *fakeQuick = [CALayer layer];
     fakeQuick.zPosition = 999'999.0;

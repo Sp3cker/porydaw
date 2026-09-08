@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Press `G` with one note selected to edit its channel-wide pitch bend: scroll the graph for a note-scoped BENDR range, hold `Option`/`Alt` for angled lines, reset to zero, and audition from note-on with `Space`. The popup stays open until click-away or `Escape`.
 
 ## Changed
+- Reuse the timeline's Quick popup session for note automation without a separate native window. The pitch editor owns its note anchoring, resize layout, live-edit dismissal, and click-away routing; the shared session owns hosting and lifetime rather than configurable pitch policies.
+- Share prompt appearance and card/button chrome; remove obsolete Event List MIME drag/drop, drawer QAction shims, and the unused QuickWidgets dependency. Consolidate header checks while retaining their distinct behavior coverage.
 - Expose selection-keyboard routing checks as independently selectable Qt Test cases with isolated fixtures.
 - Consolidate duplicated check coverage: the keymap conflict matrix runs one case per command across all four routed contexts, velocity roll-drag regressions share a staged setup, and vacuous or duplicated selection and cancellation assertions were repaired or removed.
 - Route note keyboard commands by selection across timeline drawers, while text editors and keyboard-focused grips and scrollbars retain their local keys.
@@ -22,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Host the timeline, ruler, event list, and editor drawers in one Qt Quick viewport. SongView and drawer layout no longer depend on hidden QWidget spacers; only the SongTab embedding boundary remains widget-based.
 
 ## Fixed
+- Do not revive a rejected pre-roll hover guide during later timeline synchronization.
 - Initialize empty voicegroup fixtures before binding them in host and window lifecycle checks, preventing intermittent invalid-pointer crashes.
 - Prevent timeline cancellation from releasing a pitch-bend popup's mouse grab and corrupting undo history during an external document edit.
 - Cancel active timeline gestures with Escape without clearing their captured selection; an idle Escape clears the selection.

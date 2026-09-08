@@ -1,14 +1,12 @@
 import QtQuick
 
-Item {
+PromptCard {
     id: prompt
 
     required property var bridge
 
     objectName: "ccDeleteConfirm"
-    implicitWidth: content.implicitWidth + 2 * bridge.ccDeletePromptAppearance.dialogPadding
-    implicitHeight: content.implicitHeight + 2 * bridge.ccDeletePromptAppearance.dialogPadding
-    focus: true
+    appearance: bridge.ccDeletePromptAppearance
 
     property bool finishing: false
 
@@ -46,144 +44,45 @@ Item {
     Accessible.role: Accessible.Client
     Accessible.name: bridge.ccDeletePromptTitle
 
-    Rectangle {
-        anchors.fill: parent
-        color: bridge.ccDeletePromptAppearance.background
-        border.width: bridge.ccDeletePromptAppearance.borderWidth
-        border.color: bridge.ccDeletePromptAppearance.outline
-        radius: bridge.ccDeletePromptAppearance.radius
+    Text {
+        color: appearance.text
+        font: appearance.font
+        text: bridge.ccDeletePromptTitle
+        renderType: Text.NativeRendering
     }
 
-    Column {
-        id: content
+    Text {
+        color: appearance.text
+        font: appearance.font
+        text: bridge.ccDeletePromptMessage
+        renderType: Text.NativeRendering
+    }
 
-        x: bridge.ccDeletePromptAppearance.dialogPadding
-        y: bridge.ccDeletePromptAppearance.dialogPadding
-        spacing: bridge.ccDeletePromptAppearance.spacing
+    Row {
+        spacing: appearance.spacing
 
-        Text {
-            color: bridge.ccDeletePromptAppearance.text
-            font: bridge.ccDeletePromptAppearance.font
-            text: bridge.ccDeletePromptTitle
-            renderType: Text.NativeRendering
+        PromptButton {
+            id: acceptButton
+
+            objectName: "acceptButton"
+            appearance: prompt.appearance
+            text: qsTr("Delete")
+            minimumWidth: cancelButton.labelWidth + 2 * appearance.buttonPadding
+            KeyNavigation.tab: cancelButton
+            KeyNavigation.backtab: cancelButton
+            onActivated: prompt.acceptDisplayed()
         }
 
-        Text {
-            color: bridge.ccDeletePromptAppearance.text
-            font: bridge.ccDeletePromptAppearance.font
-            text: bridge.ccDeletePromptMessage
-            renderType: Text.NativeRendering
-        }
+        PromptButton {
+            id: cancelButton
 
-        Row {
-            spacing: bridge.ccDeletePromptAppearance.spacing
-
-            Rectangle {
-                id: acceptButton
-
-                objectName: "acceptButton"
-                activeFocusOnTab: true
-                KeyNavigation.tab: cancelButton
-                KeyNavigation.backtab: cancelButton
-                Accessible.role: Accessible.Button
-                Accessible.name: acceptText.text
-                function activate() {
-                    prompt.acceptDisplayed()
-                }
-                function activateFromKeyboard(event) {
-                    activate()
-                    event.accepted = true
-                }
-
-                width: Math.max(acceptText.implicitWidth, cancelText.implicitWidth)
-                       + 2 * bridge.ccDeletePromptAppearance.buttonPadding
-                height: acceptText.implicitHeight
-                        + 2 * bridge.ccDeletePromptAppearance.buttonPadding
-                color: acceptTap.pressed ? bridge.ccDeletePromptAppearance.pressedBackground
-                                         : bridge.ccDeletePromptAppearance.buttonBackground
-                border.width: bridge.ccDeletePromptAppearance.borderWidth
-                border.color: activeFocus ? bridge.ccDeletePromptAppearance.focus
-                                          : bridge.ccDeletePromptAppearance.outline
-                radius: bridge.ccDeletePromptAppearance.radius
-
-                Text {
-                    id: acceptText
-
-                    anchors.centerIn: parent
-                    color: bridge.ccDeletePromptAppearance.buttonText
-                    font: bridge.ccDeletePromptAppearance.font
-                    text: qsTr("Delete")
-                    renderType: Text.NativeRendering
-                }
-                Keys.onReturnPressed: (event) => acceptButton.activateFromKeyboard(event)
-                Keys.onEnterPressed: (event) => acceptButton.activateFromKeyboard(event)
-                Keys.onSpacePressed: (event) => acceptButton.activateFromKeyboard(event)
-                Keys.onShortcutOverride: (event) => event.accepted =
-                    event.key === Qt.Key_Space || event.key === Qt.Key_Return
-                    || event.key === Qt.Key_Enter
-
-                Accessible.focusable: true
-                Accessible.onPressAction: acceptButton.activate()
-
-                TapHandler {
-                    id: acceptTap
-
-                    onTapped: acceptButton.activate()
-                }
-            }
-            Rectangle {
-                id: cancelButton
-
-                objectName: "cancelButton"
-                activeFocusOnTab: true
-                KeyNavigation.tab: acceptButton
-                KeyNavigation.backtab: acceptButton
-                Accessible.role: Accessible.Button
-                Accessible.name: cancelText.text
-                function activate() {
-                    prompt.cancelDisplayed()
-                }
-                function activateFromKeyboard(event) {
-                    activate()
-                    event.accepted = true
-                }
-
-                width: Math.max(acceptText.implicitWidth, cancelText.implicitWidth)
-                       + 2 * bridge.ccDeletePromptAppearance.buttonPadding
-                height: cancelText.implicitHeight
-                        + 2 * bridge.ccDeletePromptAppearance.buttonPadding
-                color: cancelTap.pressed ? bridge.ccDeletePromptAppearance.pressedBackground
-                                         : bridge.ccDeletePromptAppearance.buttonBackground
-                border.width: bridge.ccDeletePromptAppearance.borderWidth
-                border.color: activeFocus ? bridge.ccDeletePromptAppearance.focus
-                                          : bridge.ccDeletePromptAppearance.outline
-                radius: bridge.ccDeletePromptAppearance.radius
-
-                Text {
-                    id: cancelText
-
-                    anchors.centerIn: parent
-                    color: bridge.ccDeletePromptAppearance.buttonText
-                    font: bridge.ccDeletePromptAppearance.font
-                    text: qsTr("Cancel")
-                    renderType: Text.NativeRendering
-                }
-                Keys.onReturnPressed: (event) => cancelButton.activateFromKeyboard(event)
-                Keys.onEnterPressed: (event) => cancelButton.activateFromKeyboard(event)
-                Keys.onSpacePressed: (event) => cancelButton.activateFromKeyboard(event)
-                Keys.onShortcutOverride: (event) => event.accepted =
-                    event.key === Qt.Key_Space || event.key === Qt.Key_Return
-                    || event.key === Qt.Key_Enter
-
-                Accessible.focusable: true
-                Accessible.onPressAction: cancelButton.activate()
-
-                TapHandler {
-                    id: cancelTap
-
-                    onTapped: cancelButton.activate()
-                }
-            }
+            objectName: "cancelButton"
+            appearance: prompt.appearance
+            text: qsTr("Cancel")
+            minimumWidth: acceptButton.labelWidth + 2 * appearance.buttonPadding
+            KeyNavigation.tab: acceptButton
+            KeyNavigation.backtab: acceptButton
+            onActivated: prompt.cancelDisplayed()
         }
     }
 }

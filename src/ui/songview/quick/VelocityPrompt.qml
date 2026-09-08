@@ -1,14 +1,12 @@
 import QtQuick
 
-Item {
+PromptCard {
     id: prompt
 
     required property var bridge
 
     objectName: "noteVelocityPrompt"
-    implicitWidth: content.implicitWidth + 2 * bridge.velocityPromptAppearance.dialogPadding
-    implicitHeight: content.implicitHeight + 2 * bridge.velocityPromptAppearance.dialogPadding
-    focus: true
+    appearance: bridge.velocityPromptAppearance
 
     property int draft: bridge.velocityPromptInitialValue
     property bool finishing: false
@@ -38,8 +36,6 @@ Item {
     }
     Component.onCompleted: Qt.callLater(activateInitialFocus)
 
-
-
     // The focused DragInput receives accepted text-edit keys first. This
     // terminal sink claims only declined keys so timeline commands never leak
     // out of the shared popup session.
@@ -53,163 +49,61 @@ Item {
     Accessible.role: Accessible.Client
     Accessible.name: bridge.velocityPromptTitle
 
-    Rectangle {
-        anchors.fill: parent
-        color: bridge.velocityPromptAppearance.background
-        border.width: bridge.velocityPromptAppearance.borderWidth
-        border.color: bridge.velocityPromptAppearance.outline
-        radius: bridge.velocityPromptAppearance.radius
+    Text {
+        color: appearance.text
+        font: appearance.font
+        text: bridge.velocityPromptTitle
+        renderType: Text.NativeRendering
     }
 
-    Column {
-        id: content
+    Text {
+        color: appearance.text
+        font: appearance.font
+        text: bridge.velocityPromptLabel
+        renderType: Text.NativeRendering
+    }
 
-        x: bridge.velocityPromptAppearance.dialogPadding
-        y: bridge.velocityPromptAppearance.dialogPadding
-        spacing: bridge.velocityPromptAppearance.spacing
+    DragInput {
+        id: velocityInput
 
-        Text {
-            color: bridge.velocityPromptAppearance.text
-            font: bridge.velocityPromptAppearance.font
-            text: bridge.velocityPromptTitle
-            renderType: Text.NativeRendering
+        appearance: prompt.appearance
+        value: prompt.draft
+        minimumValue: bridge.velocityPromptMinimumValue
+        maximumValue: bridge.velocityPromptMaximumValue
+        inputObjectName: "noteVelocityInput"
+        accessibleName: bridge.velocityPromptLabel
+        accessibleDescription: bridge.velocityPromptTitle
+        onValueCommitted: (committed) => prompt.draft = committed
+        onEditingAccepted: (committed) => prompt.acceptCommitted(committed)
+        textInput.KeyNavigation.tab: acceptButton
+        textInput.KeyNavigation.backtab: cancelButton
+    }
+
+    Row {
+        spacing: appearance.spacing
+
+        PromptButton {
+            id: acceptButton
+
+            objectName: "noteVelocityAccept"
+            appearance: prompt.appearance
+            text: qsTr("OK")
+            minimumWidth: velocityInput.implicitWidth
+            onActivated: prompt.acceptDisplayed()
+            KeyNavigation.tab: cancelButton
+            KeyNavigation.backtab: velocityInput.textInput
         }
 
-        Text {
-            color: bridge.velocityPromptAppearance.text
-            font: bridge.velocityPromptAppearance.font
-            text: bridge.velocityPromptLabel
-            renderType: Text.NativeRendering
-        }
+        PromptButton {
+            id: cancelButton
 
-        DragInput {
-            id: velocityInput
-
-            appearance: bridge.velocityPromptAppearance
-            value: prompt.draft
-            minimumValue: bridge.velocityPromptMinimumValue
-            maximumValue: bridge.velocityPromptMaximumValue
-            inputObjectName: "noteVelocityInput"
-            accessibleName: bridge.velocityPromptLabel
-            accessibleDescription: bridge.velocityPromptTitle
-            onValueCommitted: (committed) => prompt.draft = committed
-            onEditingAccepted: (committed) => prompt.acceptCommitted(committed)
-            textInput.KeyNavigation.backtab: cancelButton
-
-        }
-
-        Row {
-            spacing: bridge.velocityPromptAppearance.spacing
-
-            Rectangle {
-                id: acceptButton
-
-                objectName: "noteVelocityAccept"
-                activeFocusOnTab: true
-                Accessible.role: Accessible.Button
-                Accessible.name: acceptText.text
-                function activate() {
-                    prompt.acceptDisplayed()
-                }
-                function activateFromKeyboard(event) {
-                    activate()
-                    event.accepted = true
-                }
-
-
-                width: Math.max(acceptText.implicitWidth
-                                + 2 * bridge.velocityPromptAppearance.buttonPadding,
-                                velocityInput.implicitWidth)
-                height: acceptText.implicitHeight
-                        + 2 * bridge.velocityPromptAppearance.buttonPadding
-                color: acceptTap.pressed ? bridge.velocityPromptAppearance.pressedBackground
-                                         : bridge.velocityPromptAppearance.buttonBackground
-                border.width: bridge.velocityPromptAppearance.borderWidth
-                border.color: activeFocus ? bridge.velocityPromptAppearance.focus
-                                          : bridge.velocityPromptAppearance.outline
-                radius: bridge.velocityPromptAppearance.radius
-
-                Text {
-                    id: acceptText
-
-                    anchors.centerIn: parent
-                    color: bridge.velocityPromptAppearance.buttonText
-                    font: bridge.velocityPromptAppearance.font
-                    text: qsTr("OK")
-                    renderType: Text.NativeRendering
-                }
-                Keys.onReturnPressed: (event) => acceptButton.activateFromKeyboard(event)
-                Keys.onEnterPressed: (event) => acceptButton.activateFromKeyboard(event)
-                Keys.onSpacePressed: (event) => acceptButton.activateFromKeyboard(event)
-                Keys.onShortcutOverride: (event) => event.accepted =
-                    event.key === Qt.Key_Space || event.key === Qt.Key_Return
-                    || event.key === Qt.Key_Enter
-
-                Accessible.focusable: true
-                Accessible.onPressAction: acceptButton.activate()
-
-
-                TapHandler {
-                    id: acceptTap
-
-                    onTapped: acceptButton.activate()
-                }
-            }
-            Rectangle {
-                id: cancelButton
-
-                objectName: "noteVelocityCancel"
-                activeFocusOnTab: true
-                KeyNavigation.tab: velocityInput.textInput
-                Accessible.role: Accessible.Button
-                Accessible.name: cancelText.text
-                function activate() {
-                    prompt.cancelDisplayed()
-                }
-                function activateFromKeyboard(event) {
-                    activate()
-                    event.accepted = true
-                }
-
-
-                width: Math.max(cancelText.implicitWidth
-                                + 2 * bridge.velocityPromptAppearance.buttonPadding,
-                                velocityInput.implicitWidth)
-                height: cancelText.implicitHeight
-                        + 2 * bridge.velocityPromptAppearance.buttonPadding
-                color: cancelTap.pressed ? bridge.velocityPromptAppearance.pressedBackground
-                                         : bridge.velocityPromptAppearance.buttonBackground
-                border.width: bridge.velocityPromptAppearance.borderWidth
-                border.color: activeFocus ? bridge.velocityPromptAppearance.focus
-                                          : bridge.velocityPromptAppearance.outline
-                radius: bridge.velocityPromptAppearance.radius
-
-                Text {
-                    id: cancelText
-
-                    anchors.centerIn: parent
-                    color: bridge.velocityPromptAppearance.buttonText
-                    font: bridge.velocityPromptAppearance.font
-                    text: qsTr("Cancel")
-                    renderType: Text.NativeRendering
-                }
-                Keys.onReturnPressed: (event) => cancelButton.activateFromKeyboard(event)
-                Keys.onEnterPressed: (event) => cancelButton.activateFromKeyboard(event)
-                Keys.onSpacePressed: (event) => cancelButton.activateFromKeyboard(event)
-                Keys.onShortcutOverride: (event) => event.accepted =
-                    event.key === Qt.Key_Space || event.key === Qt.Key_Return
-                    || event.key === Qt.Key_Enter
-
-                Accessible.focusable: true
-                Accessible.onPressAction: cancelButton.activate()
-
-
-                TapHandler {
-                    id: cancelTap
-
-                    onTapped: cancelButton.activate()
-                }
-            }
+            objectName: "noteVelocityCancel"
+            appearance: prompt.appearance
+            text: qsTr("Cancel")
+            minimumWidth: velocityInput.implicitWidth
+            KeyNavigation.tab: velocityInput.textInput
+            KeyNavigation.backtab: acceptButton
+            onActivated: prompt.cancelDisplayed()
         }
     }
 }

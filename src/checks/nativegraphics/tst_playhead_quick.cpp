@@ -2,13 +2,7 @@
 
 #include <QtTest>
 
-#include <QCoreApplication>
-#include <QDeadlineTimer>
-#include <QEvent>
-#include <QEventLoop>
 #include <QImage>
-#include <QQuickWindow>
-#include <QScopeGuard>
 
 #include <array>
 #include <memory>
@@ -18,9 +12,11 @@
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
 #include "core/miditimeline.h"
+#include "ui/editorviewstate.h"
 #include "ui/layout.h"
 #include "ui/playheadoverlay.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/playheadquick.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timelinebandlayout.h"
@@ -57,37 +53,6 @@ bool polarityMatches(bool present)
     return kQuickCarriesPlayhead ? present : !present;
 }
 
-class UpdateRequestProbe final : public QObject
-{
-    Q_OBJECT
-    Q_DISABLE_COPY_MOVE(UpdateRequestProbe)
-
-  public:
-    UpdateRequestProbe() = default;
-
-    int count() const noexcept { return m_count; }
-    void reset() noexcept { m_count = 0; }
-
-  protected:
-    bool eventFilter(QObject *, QEvent *event) override
-    {
-        if (event->type() == QEvent::UpdateRequest)
-            ++m_count;
-        return false;
-    }
-
-  private:
-    int m_count = 0;
-};
-
-void drainUpdateRequests(QQuickWindow &window, UpdateRequestProbe &probe)
-{
-    QCoreApplication::sendPostedEvents(&window, QEvent::UpdateRequest);
-    QCoreApplication::processEvents(QEventLoop::AllEvents);
-    QCoreApplication::sendPostedEvents(&window, QEvent::UpdateRequest);
-    probe.reset();
-}
-
 } // namespace
 
 void RenderingPlayheadTest::quickPolarityAndEdges_data()
@@ -108,6 +73,13 @@ void RenderingPlayheadTest::quickPolarityAndEdges()
     auto *overlay = view.findChild<songview::PlayheadOverlay *>();
     QVERIFY(quick && quick->rootObject() && quick->quickWindow());
     QVERIFY(overlay);
+    // This case exercises every plot; other cases retain their own drawer state.
+    for (const EditorDrawerPage page : {EditorDrawerPage::Automations, EditorDrawerPage::Velocity,
+                                        EditorDrawerPage::VoiceChanges}) {
+        view.setDrawerSectionVisible(page, true);
+        view.setDrawerSectionHeight(page, quick->quickWindow()->height() / 6);
+    }
+    checks::support::pumpQuick();
     const std::optional<songview::TimelineBandGeometry> &ruler =
         view.timelineBandLayout().geometry(songview::TimelineBand::Ruler);
     const std::optional<songview::TimelineBandGeometry> &roll =
@@ -135,6 +107,25 @@ void RenderingPlayheadTest::quickPolarityAndEdges()
     }
 
     QString captureError;
+    const qreal initialTimelineX = view.camera().contentX(0.0);
+    overlay->setPlayhead(initialTimelineX, false, playing);
+    checks::support::pumpQuick();
+    const std::optional<songview::TimelineBandGeometry> &headers =
+        view.timelineBandLayout().geometry(songview::TimelineBand::TrackHeaders);
+    QVERIFY(headers);
+    const QImage headerWithoutPlayhead =
+        checks::support::captureQuickBand(view, headers->rect, &captureError);
+    QVERIFY2(!headerWithoutPlayhead.isNull(), qPrintable(captureError));
+
+    overlay->setPlayhead(initialTimelineX, true, playing);
+    checks::support::pumpQuick();
+    const QImage headerFrame =
+        checks::support::captureQuickBand(view, headers->rect, &captureError);
+    QVERIFY2(!headerFrame.isNull(), qPrintable(captureError));
+    // Header content can legitimately use hues near the playhead color. Its
+    // pixels must nevertheless be unchanged when the playhead is shown.
+    QVERIFY(headerFrame == headerWithoutPlayhead);
+
     const QImage rollFrame = checks::support::captureQuickBand(view, roll->rect, &captureError);
     QVERIFY2(!rollFrame.isNull(), qPrintable(captureError));
     QVERIFY(polarityMatches(frameHasPlayhead(rollFrame, color)));
@@ -154,7 +145,16 @@ void RenderingPlayheadTest::quickPolarityAndEdges()
             QVERIFY(!checks::support::hasSolidPlayheadPixel(frame, gutter, color));
             QVERIFY(checks::support::hasSolidPlayheadPixel(frame, plot, color));
         } else {
-            QVERIFY(!frameHasPlayhead(frame, color));
+            // A lane's controls can use the same theme hue as the playhead.
+            // Native-only movement must leave its Quick pixels unchanged.
+            overlay->setPlayhead(initialTimelineX, false, playing);
+            checks::support::pumpQuick();
+            const QImage hiddenFrame =
+                checks::support::captureQuickBand(view, geometry->rect, &captureError);
+            QVERIFY2(!hiddenFrame.isNull(), qPrintable(captureError));
+            QVERIFY2(frame == hiddenFrame, name);
+            overlay->setPlayhead(initialTimelineX, true, playing);
+            checks::support::pumpQuick();
         }
     };
     assertBand(songview::TimelineBand::Roll, "roll");
@@ -179,13 +179,6 @@ void RenderingPlayheadTest::quickPolarityAndEdges()
     } else {
         QVERIFY(!frameHasPlayhead(rulerFrame, color));
     }
-    const std::optional<songview::TimelineBandGeometry> &headers =
-        view.timelineBandLayout().geometry(songview::TimelineBand::TrackHeaders);
-    QVERIFY(headers);
-    const QImage headerFrame =
-        checks::support::captureQuickBand(view, headers->rect, &captureError);
-    QVERIFY2(!headerFrame.isNull(), qPrintable(captureError));
-    QVERIFY(!frameHasPlayhead(headerFrame, color));
 
     const qreal columnWidth = (std::max)(0, quick->quickWindow()->width() - view.timelineSplitX());
     overlay->setPlayhead(columnWidth, true, playing);
@@ -242,7 +235,8 @@ void RenderingPlayheadTest::positionOnlyDoesNotRebuild()
     QQuickItem *body =
         quick->rootObject()->findChild<QQuickItem *>(QStringLiteral("timelineQuickRollPlayhead"));
     QVERIFY(body);
-    const QRectF staticSurface{body->x(), body->y(), body->width(), body->height()};
+    auto *playhead = qobject_cast<songview::TimelinePlayheadItem *>(body);
+    QVERIFY(playhead);
 
     view.setFollowPlayhead(false);
     view.setPlayheadSample(timeline.sampleForTick(0), false);
@@ -256,14 +250,12 @@ void RenderingPlayheadTest::positionOnlyDoesNotRebuild()
     const QColor color = themes::color(themes::Role::song_view_playhead);
     QVERIFY(polarityMatches(frameHasPlayhead(paused, color)));
     QVERIFY(polarityMatches(frameHasPlayhead(playing, color)));
-#ifdef __APPLE__
-    QQuickWindow *window = quick->quickWindow();
-    QVERIFY(window);
-    UpdateRequestProbe probe;
-    window->installEventFilter(&probe);
-    const auto removeProbe = qScopeGuard([window, &probe] { window->removeEventFilter(&probe); });
-    drainUpdateRequests(*window, probe);
-#endif
+    const QRectF staticSurface{body->x(), body->y(), body->width(), body->height()};
+    const qreal quickLocalXBefore = quick->playheadLocalX();
+    const bool quickVisibleBefore = quick->playheadVisible();
+    const bool quickPlayingBefore = quick->playheadPlaying();
+    const bool quickTrianglePointsUpBefore = quick->playheadTrianglePointsUp();
+    const qreal itemLocalXBefore = playhead->localX();
 
     const checks::support::TimelineQuickLayerRevisions before =
         checks::support::timelineQuickLayerRevisions(*scene);
@@ -273,29 +265,18 @@ void RenderingPlayheadTest::positionOnlyDoesNotRebuild()
     QCOMPARE(checks::support::timelineQuickLayerRevisions(*scene), before);
     const QRectF movedSurface{body->x(), body->y(), body->width(), body->height()};
     QCOMPARE(movedSurface, staticSurface);
-#ifdef __APPLE__
-    QCOMPARE(probe.count(), 0);
-#endif
-}
 
-void RenderingPlayheadTest::quickUpdateRequestControl()
-{
-    std::unique_ptr<checks::nativegraphics::Rig> rig = quickRig(m_projectRoot, m_songLabel);
-    QVERIFY(rig);
-    auto *quick = rig->song->view().quickView();
-    QVERIFY(quick && quick->quickWindow());
-    QQuickWindow &window = *quick->quickWindow();
-    UpdateRequestProbe probe;
-    window.installEventFilter(&probe);
-    const auto removeProbe = qScopeGuard([&window, &probe] { window.removeEventFilter(&probe); });
-    drainUpdateRequests(window, probe);
-    window.update();
-    QDeadlineTimer deadline{1'000};
-    while (probe.count() == 0 && !deadline.hasExpired()) {
-        QCoreApplication::sendPostedEvents(&window, QEvent::UpdateRequest);
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+    if (kQuickCarriesPlayhead) {
+        const qreal expectedLocalX = view.camera().contentX(view.playheadTick());
+        QCOMPARE(quick->playheadLocalX(), expectedLocalX);
+        QCOMPARE(playhead->localX(), expectedLocalX);
+    } else {
+        // Playback reaches the native Core Animation overlay on macOS; it
+        // must leave the Quick playhead model and its QML-bound item inert.
+        QCOMPARE(quick->playheadLocalX(), quickLocalXBefore);
+        QCOMPARE(quick->playheadVisible(), quickVisibleBefore);
+        QCOMPARE(quick->playheadPlaying(), quickPlayingBefore);
+        QCOMPARE(quick->playheadTrianglePointsUp(), quickTrianglePointsUpBefore);
+        QCOMPARE(playhead->localX(), itemLocalXBefore);
     }
-    QVERIFY(probe.count() > 0);
 }
-
-#include "tst_playhead_quick.moc"

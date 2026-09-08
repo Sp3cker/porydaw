@@ -1,14 +1,12 @@
 import QtQuick
 
-Item {
+PromptCard {
     id: prompt
 
     required property var bridge
 
     objectName: "insertTimePrompt"
-    implicitWidth: content.implicitWidth + 2 * bridge.insertTimePromptAppearance.dialogPadding
-    implicitHeight: content.implicitHeight + 2 * bridge.insertTimePromptAppearance.dialogPadding
-    focus: true
+    appearance: bridge.insertTimePromptAppearance
 
     property int draftBars: bridge.insertTimePromptInitialBars
     property int draftBeats: bridge.insertTimePromptInitialBeats
@@ -24,7 +22,7 @@ Item {
     FontMetrics {
         id: labelMetrics
 
-        font: bridge.insertTimePromptAppearance.font
+        font: prompt.appearance.font
     }
     function acceptDisplayed() {
         acceptCommittedDrafts(barsInput.commitDisplayed(), beatsInput.commitDisplayed(),
@@ -78,225 +76,123 @@ Item {
     Accessible.role: Accessible.Client
     Accessible.name: bridge.insertTimePromptTitle
 
-    Rectangle {
-        anchors.fill: parent
-        color: bridge.insertTimePromptAppearance.background
-        border.width: bridge.insertTimePromptAppearance.borderWidth
-        border.color: bridge.insertTimePromptAppearance.outline
-        radius: bridge.insertTimePromptAppearance.radius
+    Text {
+        color: appearance.text
+        font: appearance.font
+        text: bridge.insertTimePromptTitle
+        renderType: Text.NativeRendering
     }
 
-    Column {
-        id: content
-
-        x: bridge.insertTimePromptAppearance.dialogPadding
-        y: bridge.insertTimePromptAppearance.dialogPadding
-        spacing: bridge.insertTimePromptAppearance.spacing
+    Row {
+        spacing: appearance.spacing
 
         Text {
-            color: bridge.insertTimePromptAppearance.text
-            font: bridge.insertTimePromptAppearance.font
-            text: bridge.insertTimePromptTitle
+            anchors.verticalCenter: barsInput.verticalCenter
+            width: prompt.labelWidth
+            horizontalAlignment: Text.AlignRight
+            color: appearance.text
+            font: appearance.font
+            text: qsTr("Bars:")
             renderType: Text.NativeRendering
         }
 
-        Row {
-            spacing: bridge.insertTimePromptAppearance.spacing
+        DragInput {
+            id: barsInput
 
-            Text {
-                anchors.verticalCenter: barsInput.verticalCenter
-                width: prompt.labelWidth
-                horizontalAlignment: Text.AlignRight
-                color: bridge.insertTimePromptAppearance.text
-                font: bridge.insertTimePromptAppearance.font
-                text: qsTr("Bars:")
-                renderType: Text.NativeRendering
-            }
+            appearance: prompt.appearance
+            value: prompt.draftBars
+            width: prompt.inputWidth
+            minimumValue: bridge.insertTimePromptMinimumBars
+            maximumValue: bridge.insertTimePromptMaximumBars
+            inputObjectName: "insertTimeBars"
+            accessibleName: qsTr("Bars")
+            accessibleDescription: bridge.insertTimePromptTitle
+            onValueCommitted: (committed) => prompt.draftBars = committed
+            onEditingAccepted: (committed) => prompt.acceptFromEditing("bars", committed)
+            textInput.KeyNavigation.backtab: cancelButton
+        }
+    }
 
-            DragInput {
-                id: barsInput
+    Row {
+        spacing: appearance.spacing
 
-                appearance: bridge.insertTimePromptAppearance
-                value: prompt.draftBars
-                width: prompt.inputWidth
-                minimumValue: bridge.insertTimePromptMinimumBars
-                maximumValue: bridge.insertTimePromptMaximumBars
-                inputObjectName: "insertTimeBars"
-                accessibleName: qsTr("Bars")
-                accessibleDescription: bridge.insertTimePromptTitle
-                onValueCommitted: (committed) => prompt.draftBars = committed
-                onEditingAccepted: (committed) => prompt.acceptFromEditing("bars", committed)
-                textInput.KeyNavigation.backtab: cancelButton
-            }
+        Text {
+            anchors.verticalCenter: beatsInput.verticalCenter
+            width: prompt.labelWidth
+            horizontalAlignment: Text.AlignRight
+            color: appearance.text
+            font: appearance.font
+            text: qsTr("Beats:")
+            renderType: Text.NativeRendering
         }
 
-        Row {
-            spacing: bridge.insertTimePromptAppearance.spacing
+        DragInput {
+            id: beatsInput
 
-            Text {
-                anchors.verticalCenter: beatsInput.verticalCenter
-                width: prompt.labelWidth
-                horizontalAlignment: Text.AlignRight
-                color: bridge.insertTimePromptAppearance.text
-                font: bridge.insertTimePromptAppearance.font
-                text: qsTr("Beats:")
-                renderType: Text.NativeRendering
-            }
+            appearance: prompt.appearance
+            value: prompt.draftBeats
+            width: prompt.inputWidth
+            minimumValue: bridge.insertTimePromptMinimumBeats
+            maximumValue: bridge.insertTimePromptMaximumBeats
+            inputObjectName: "insertTimeBeats"
+            accessibleName: qsTr("Beats")
+            accessibleDescription: bridge.insertTimePromptTitle
+            onValueCommitted: (committed) => prompt.draftBeats = committed
+            onEditingAccepted: (committed) => prompt.acceptFromEditing("beats", committed)
+        }
+    }
 
-            DragInput {
-                id: beatsInput
+    Row {
+        spacing: appearance.spacing
 
-                appearance: bridge.insertTimePromptAppearance
-                value: prompt.draftBeats
-                width: prompt.inputWidth
-                minimumValue: bridge.insertTimePromptMinimumBeats
-                maximumValue: bridge.insertTimePromptMaximumBeats
-                inputObjectName: "insertTimeBeats"
-                accessibleName: qsTr("Beats")
-                accessibleDescription: bridge.insertTimePromptTitle
-                onValueCommitted: (committed) => prompt.draftBeats = committed
-                onEditingAccepted: (committed) => prompt.acceptFromEditing("beats", committed)
-            }
+        Text {
+            anchors.verticalCenter: fractionsInput.verticalCenter
+            width: prompt.labelWidth
+            horizontalAlignment: Text.AlignRight
+            color: appearance.text
+            font: appearance.font
+            text: qsTr("Beat fractions (¼ beat):")
+            renderType: Text.NativeRendering
         }
 
-        Row {
-            spacing: bridge.insertTimePromptAppearance.spacing
+        DragInput {
+            id: fractionsInput
 
-            Text {
-                anchors.verticalCenter: fractionsInput.verticalCenter
-                width: prompt.labelWidth
-                horizontalAlignment: Text.AlignRight
-                color: bridge.insertTimePromptAppearance.text
-                font: bridge.insertTimePromptAppearance.font
-                text: qsTr("Beat fractions (¼ beat):")
-                renderType: Text.NativeRendering
-            }
+            appearance: prompt.appearance
+            value: prompt.draftBeatFractions
+            width: prompt.inputWidth
+            minimumValue: bridge.insertTimePromptMinimumBeatFractions
+            maximumValue: bridge.insertTimePromptMaximumBeatFractions
+            inputObjectName: "insertTimeBeatFractions"
+            accessibleName: qsTr("Beat fractions")
+            accessibleDescription: bridge.insertTimePromptTitle
+            onValueCommitted: (committed) => prompt.draftBeatFractions = committed
+            onEditingAccepted: (committed) => prompt.acceptFromEditing("fractions", committed)
+        }
+    }
 
-            DragInput {
-                id: fractionsInput
+    Row {
+        spacing: appearance.spacing
 
-                appearance: bridge.insertTimePromptAppearance
-                value: prompt.draftBeatFractions
-                width: prompt.inputWidth
-                minimumValue: bridge.insertTimePromptMinimumBeatFractions
-                maximumValue: bridge.insertTimePromptMaximumBeatFractions
-                inputObjectName: "insertTimeBeatFractions"
-                accessibleName: qsTr("Beat fractions")
-                accessibleDescription: bridge.insertTimePromptTitle
-                onValueCommitted: (committed) => prompt.draftBeatFractions = committed
-                onEditingAccepted: (committed) => prompt.acceptFromEditing("fractions", committed)
-            }
+        PromptButton {
+            id: acceptButton
+
+            objectName: "insertTimeAccept"
+            appearance: prompt.appearance
+            text: qsTr("OK")
+            minimumWidth: barsInput.implicitWidth
+            onActivated: prompt.acceptDisplayed()
         }
 
-        Row {
-            spacing: bridge.insertTimePromptAppearance.spacing
+        PromptButton {
+            id: cancelButton
 
-            Rectangle {
-                id: acceptButton
-
-                objectName: "insertTimeAccept"
-                activeFocusOnTab: true
-                Accessible.role: Accessible.Button
-                Accessible.name: acceptText.text
-                function activate() {
-                    prompt.acceptDisplayed()
-                }
-                function activateFromKeyboard(event) {
-                    activate()
-                    event.accepted = true
-                }
-
-                width: Math.max(acceptText.implicitWidth
-                                + 2 * bridge.insertTimePromptAppearance.buttonPadding,
-                                barsInput.implicitWidth)
-                height: acceptText.implicitHeight
-                        + 2 * bridge.insertTimePromptAppearance.buttonPadding
-                color: acceptTap.pressed ? bridge.insertTimePromptAppearance.pressedBackground
-                                         : bridge.insertTimePromptAppearance.buttonBackground
-                border.width: bridge.insertTimePromptAppearance.borderWidth
-                border.color: activeFocus ? bridge.insertTimePromptAppearance.focus
-                                          : bridge.insertTimePromptAppearance.outline
-                radius: bridge.insertTimePromptAppearance.radius
-
-                Text {
-                    id: acceptText
-
-                    anchors.centerIn: parent
-                    color: bridge.insertTimePromptAppearance.buttonText
-                    font: bridge.insertTimePromptAppearance.font
-                    text: qsTr("OK")
-                    renderType: Text.NativeRendering
-                }
-                Keys.onReturnPressed: (event) => acceptButton.activateFromKeyboard(event)
-                Keys.onEnterPressed: (event) => acceptButton.activateFromKeyboard(event)
-                Keys.onSpacePressed: (event) => acceptButton.activateFromKeyboard(event)
-                Keys.onShortcutOverride: (event) => event.accepted =
-                    event.key === Qt.Key_Space || event.key === Qt.Key_Return
-                    || event.key === Qt.Key_Enter
-
-                Accessible.focusable: true
-                Accessible.onPressAction: acceptButton.activate()
-
-                TapHandler {
-                    id: acceptTap
-
-                    onTapped: acceptButton.activate()
-                }
-            }
-
-            Rectangle {
-                id: cancelButton
-
-                objectName: "insertTimeCancel"
-                activeFocusOnTab: true
-                KeyNavigation.tab: barsInput.textInput
-                Accessible.role: Accessible.Button
-                Accessible.name: cancelText.text
-                function activate() {
-                    prompt.cancelDisplayed()
-                }
-                function activateFromKeyboard(event) {
-                    activate()
-                    event.accepted = true
-                }
-
-                width: Math.max(cancelText.implicitWidth
-                                + 2 * bridge.insertTimePromptAppearance.buttonPadding,
-                                barsInput.implicitWidth)
-                height: cancelText.implicitHeight
-                        + 2 * bridge.insertTimePromptAppearance.buttonPadding
-                color: cancelTap.pressed ? bridge.insertTimePromptAppearance.pressedBackground
-                                         : bridge.insertTimePromptAppearance.buttonBackground
-                border.width: bridge.insertTimePromptAppearance.borderWidth
-                border.color: activeFocus ? bridge.insertTimePromptAppearance.focus
-                                          : bridge.insertTimePromptAppearance.outline
-                radius: bridge.insertTimePromptAppearance.radius
-
-                Text {
-                    id: cancelText
-
-                    anchors.centerIn: parent
-                    color: bridge.insertTimePromptAppearance.buttonText
-                    font: bridge.insertTimePromptAppearance.font
-                    text: qsTr("Cancel")
-                    renderType: Text.NativeRendering
-                }
-                Keys.onReturnPressed: (event) => cancelButton.activateFromKeyboard(event)
-                Keys.onEnterPressed: (event) => cancelButton.activateFromKeyboard(event)
-                Keys.onSpacePressed: (event) => cancelButton.activateFromKeyboard(event)
-                Keys.onShortcutOverride: (event) => event.accepted =
-                    event.key === Qt.Key_Space || event.key === Qt.Key_Return
-                    || event.key === Qt.Key_Enter
-
-                Accessible.focusable: true
-                Accessible.onPressAction: cancelButton.activate()
-
-                TapHandler {
-                    id: cancelTap
-
-                    onTapped: cancelButton.activate()
-                }
-            }
+            objectName: "insertTimeCancel"
+            appearance: prompt.appearance
+            text: qsTr("Cancel")
+            minimumWidth: barsInput.implicitWidth
+            KeyNavigation.tab: barsInput.textInput
+            onActivated: prompt.cancelDisplayed()
         }
     }
 }

@@ -57,7 +57,7 @@ QQuickItem *QuickPopupSession::overlayRoot() const
 
 QQuickItem *QuickPopupSession::contentItem() const
 {
-    return m_kind == Kind::Form ? m_content.data() : nullptr;
+    return isOpen() ? m_content.data() : nullptr;
 }
 
 bool QuickPopupSession::owns(const QObject *object) const
@@ -86,6 +86,7 @@ bool QuickPopupSession::beginMenu(QObject *owner)
     if (!ensureLayer())
         return false;
     m_layer->setProperty("formActive", false);
+    m_layer->setProperty("surfaceActive", false);
 
     m_kind = Kind::Menu;
     m_owner = owner;
@@ -97,11 +98,22 @@ bool QuickPopupSession::beginMenu(QObject *owner)
 
 bool QuickPopupSession::openForm(const QUrl &url, QObject *bridge)
 {
+    return openContent(url, bridge, Kind::Form);
+}
+
+bool QuickPopupSession::openSurface(const QUrl &url, QObject *bridge)
+{
+    return openContent(url, bridge, Kind::Surface);
+}
+
+bool QuickPopupSession::openContent(const QUrl &url, QObject *bridge, Kind kind)
+{
     if (!bridge || !m_window)
         return false;
     if (isOpen())
         cancel(false);
-    if (!ensureLayer() || !m_formContainer)
+    const bool form = kind == Kind::Form;
+    if (!ensureLayer() || (form && !m_formContainer))
         return false;
 
     QQmlEngine *const engine = quickEngine(m_window);
@@ -119,26 +131,30 @@ bool QuickPopupSession::openForm(const QUrl &url, QObject *bridge)
         {{QStringLiteral("bridge"), QVariant::fromValue(bridge)}}, engine->rootContext());
     QQuickItem *const content = qobject_cast<QQuickItem *>(object);
     if (!content) {
-        qWarning("QuickPopupSession: form QML did not produce a QQuickItem");
+        qWarning("QuickPopupSession: popup QML did not produce a QQuickItem");
         delete object;
         return false;
     }
 
-    m_layer->setProperty("formActive", true);
-    m_kind = Kind::Form;
+    m_layer->setProperty("formActive", form);
+    m_layer->setProperty("surfaceActive", kind == Kind::Surface);
+    m_kind = kind;
     m_owner = bridge;
     m_restoreFocus = m_window->activeFocusItem();
     m_content = content;
     content->setParent(this);
-    content->setParentItem(m_formContainer);
+    content->setParentItem(form ? m_formContainer : m_layer);
     m_ownerDestroyed = connect(bridge, &QObject::destroyed, this, [this] { cancel(false); });
-    m_contentWidthChanged = connect(content, &QQuickItem::implicitWidthChanged, this,
-                                    &QuickPopupSession::layoutContent);
-    m_contentHeightChanged = connect(content, &QQuickItem::implicitHeightChanged, this,
-                                     &QuickPopupSession::layoutContent);
-    layoutContent();
+    if (form) {
+        m_contentWidthChanged = connect(content, &QQuickItem::implicitWidthChanged, this,
+                                        &QuickPopupSession::layoutContent);
+        m_contentHeightChanged = connect(content, &QQuickItem::implicitHeightChanged, this,
+                                         &QuickPopupSession::layoutContent);
+        layoutContent();
+    }
     emit isOpenChanged();
-    scheduleFocusCheck();
+    if (form)
+        scheduleFocusCheck();
     return true;
 }
 
@@ -210,12 +226,13 @@ bool QuickPopupSession::eventFilter(QObject *watched, QEvent *event)
 
     switch (event->type()) {
     case QEvent::ShortcutOverride:
-        // Keep application shortcuts from stealing a popup chord. Returning
-        // false still delivers the following KeyPress to form TextInputs.
+        // An open popup owns shortcut arbitration. The following KeyPress is
+        // a separate event and still reaches the focused prompt control.
         static_cast<QKeyEvent *>(event)->accept();
-        return false;
+        return true;
     case QEvent::Resize:
-        cancel(true);
+        if (m_kind != Kind::Surface)
+            cancel(true);
         break;
     default:
         break;
@@ -309,28 +326,29 @@ void QuickPopupSession::end(bool wasCancelled, bool restoreFocus)
 
 void QuickPopupSession::layoutContent()
 {
-    if (!m_window || !m_content || !m_formContainer)
+    if (m_kind != Kind::Form || !m_window || !m_content || !m_formContainer)
         return;
     const qreal width = m_content->implicitWidth();
     const qreal height = m_content->implicitHeight();
     if (width <= 0.0 || height <= 0.0)
         return;
-    const qreal margin = layout::space(layout::Space::One);
-    const qreal availableWidth = std::max<qreal>(0.0, m_window->width() - 2.0 * margin);
-    const qreal availableHeight = std::max<qreal>(0.0, m_window->height() - 2.0 * margin);
-    const qreal scale =
-        availableWidth > 0.0 && availableHeight > 0.0
-            ? std::min<qreal>(1.0, std::min(availableWidth / width, availableHeight / height))
-            : 1.0;
     m_content->setWidth(width);
     m_content->setHeight(height);
     m_content->setScale(1.0);
     m_content->setPosition(QPointF{});
-    // Scale the panel container, not the full overlay. Its MouseArea shields
-    // only visible form interior; every outside point still reaches underlay.
     m_formContainer->setWidth(width);
     m_formContainer->setHeight(height);
     m_formContainer->setTransformOrigin(QQuickItem::TopLeft);
+    const qreal margin = layout::space(layout::Space::One);
+    // Scale the panel container, not the full overlay, so its MouseArea
+    // shield covers only the visible form and every outside point still
+    // reaches the underlay.
+    const qreal availableWidth = (std::max)(0.0, m_window->width() - 2.0 * margin);
+    const qreal availableHeight = (std::max)(0.0, m_window->height() - 2.0 * margin);
+    const qreal scale =
+        availableWidth > 0.0 && availableHeight > 0.0
+            ? (std::min)(1.0, (std::min)(availableWidth / width, availableHeight / height))
+            : 1.0;
     m_formContainer->setScale(scale);
     m_formContainer->setX((m_window->width() - width * scale) / 2.0);
     m_formContainer->setY((m_window->height() - height * scale) / 2.0);
@@ -338,7 +356,7 @@ void QuickPopupSession::layoutContent()
 
 void QuickPopupSession::scheduleFocusCheck()
 {
-    if (!isOpen() || m_focusCheckPending)
+    if (!isOpen() || m_kind == Kind::Surface || m_focusCheckPending)
         return;
     m_focusCheckPending = true;
     const quint64 epoch = ++m_focusEpoch;
@@ -351,7 +369,7 @@ void QuickPopupSession::scheduleFocusCheck()
 void QuickPopupSession::checkFocus()
 {
     m_focusCheckPending = false;
-    if (!isOpen() || !m_window)
+    if (!isOpen() || !m_window || m_kind == Kind::Surface)
         return;
     QQuickItem *const focused = m_window->activeFocusItem();
     if (itemBelongsToPopup(focused)) {

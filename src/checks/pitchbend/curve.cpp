@@ -79,7 +79,7 @@ void PitchBendEditingTest::freehandStrokePushesSingleUndoCommand()
     QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
     QPointer<songview::PitchBendEditor> alive = editorResult;
     QVERIFY(alive && alive->isOpen());
-    QTest::keyClick(alive->view(), Qt::Key_Enter);
+    QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key_Enter);
     QVERIFY(alive && alive->isOpen());
     QVERIFY(m_fixture.popup() == alive);
 }
@@ -129,7 +129,7 @@ void PitchBendEditingTest::navigationKeysDoNotModifyCurve()
     songview::PitchBendEditor &editor = *editorResult;
     const QByteArray before = m_fixture.smf();
     const int index = m_fixture.document().undoStack()->index();
-    QTest::keyClick(editor.view(), Qt::Key(key), Qt::KeyboardModifiers(modifiers));
+    QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key(key), Qt::KeyboardModifiers(modifiers));
     QCOMPARE(m_fixture.document().undoStack()->index(), index);
     QCOMPARE(m_fixture.smf(), before);
     QVERIFY(editor.isOpen());
@@ -251,7 +251,7 @@ void PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit()
     QVERIFY(graph);
     const QPoint start = canvasPoint(*graph, 0.25, 0.70);
     const QPoint finish = canvasPoint(*graph, 0.75, 0.30);
-    QTest::mousePress(editor->view(), Qt::LeftButton, Qt::NoModifier,
+    QTest::mousePress(&m_fixture.timelineWindow(), Qt::LeftButton, Qt::NoModifier,
                       m_fixture.windowPoint(*graph, start));
     checks::events::sendMouse(*graph, QEvent::MouseMove, finish, Qt::NoButton, Qt::LeftButton,
                               Qt::NoModifier);
@@ -278,7 +278,7 @@ void PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit()
     QVERIFY(m_fixture.smf() != beforeExternalEdit);
     QVERIFY(graph && sameLaneValues(graph->curvePoints(), preview));
     if (editor)
-        QTest::keyClick(editor->view(), Qt::Key_Escape);
+        QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key_Escape);
     m_fixture.drainDeferredDeletes();
     QVERIFY(!m_fixture.popup());
 }

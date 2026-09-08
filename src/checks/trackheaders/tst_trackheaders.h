@@ -119,6 +119,7 @@ class TrackHeadersTest final : public QObject
     void tooltipClearsOnScroll();
     void renameCommitsAndRebuildsHeader();
     void reorderCommitsAndRebuildsHeader();
+    void reorderSlotsResolveInsertionTargetsAndUndoRestores();
     void addTrackOpensPickerAndRebuildsHeader();
     void headerMenuOpensWithTypedRowsAndDismissesWithoutWrite();
     void headerMenuChangeVoiceOpensPickerAfterMenuCloses();
@@ -129,6 +130,7 @@ class TrackHeadersTest final : public QObject
     void headerMenuOutsidePressDismissesWithoutClickThrough();
     void emptyTrackHeadersRejectInputWithoutMutation();
     void activityRasterMatchesRolesAndIsSilentWhenUnchanged();
+    void voiceSubtitleFollowsProgramPosition();
 
   private:
     TrackHeadersFixture &fixture() noexcept;

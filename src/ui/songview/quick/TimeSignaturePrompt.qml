@@ -1,14 +1,12 @@
 import QtQuick
 
-Item {
+PromptCard {
     id: prompt
 
     required property var bridge
 
     objectName: "timeSignaturePrompt"
-    implicitWidth: content.implicitWidth + 2 * bridge.timeSigPromptAppearance.dialogPadding
-    implicitHeight: content.implicitHeight + 2 * bridge.timeSigPromptAppearance.dialogPadding
-    focus: true
+    appearance: bridge.timeSigPromptAppearance
 
     property int draftNumerator: bridge.timeSigPromptInitialNumerator
     property int draftDenominatorPow2: bridge.timeSigPromptInitialDenominatorPow2
@@ -63,250 +61,142 @@ Item {
     Accessible.role: Accessible.Client
     Accessible.name: bridge.timeSigPromptTitle
 
-    Rectangle {
-        anchors.fill: parent
-        color: bridge.timeSigPromptAppearance.background
-        border.width: bridge.timeSigPromptAppearance.borderWidth
-        border.color: bridge.timeSigPromptAppearance.outline
-        radius: bridge.timeSigPromptAppearance.radius
+    Text {
+        color: appearance.text
+        font: appearance.font
+        text: bridge.timeSigPromptTitle
+        renderType: Text.NativeRendering
     }
 
-    Column {
-        id: content
+    Text {
+        color: appearance.text
+        font: appearance.font
+        text: bridge.timeSigPromptLabel
+        renderType: Text.NativeRendering
+    }
 
-        x: bridge.timeSigPromptAppearance.dialogPadding
-        y: bridge.timeSigPromptAppearance.dialogPadding
-        spacing: bridge.timeSigPromptAppearance.spacing
+    DragInput {
+        id: numeratorInput
 
-        Text {
-            color: bridge.timeSigPromptAppearance.text
-            font: bridge.timeSigPromptAppearance.font
-            text: bridge.timeSigPromptTitle
-            renderType: Text.NativeRendering
-        }
+        appearance: prompt.appearance
+        value: prompt.draftNumerator
+        minimumValue: bridge.timeSigPromptMinimumNumerator
+        maximumValue: bridge.timeSigPromptMaximumNumerator
+        inputObjectName: "timeSignatureNumerator"
+        accessibleName: bridge.timeSigPromptLabel
+        accessibleDescription: bridge.timeSigPromptTitle
+        onValueCommitted: (committed) => prompt.draftNumerator = committed
+        onEditingAccepted: (committed) => prompt.acceptCommitted(committed)
+        textInput.KeyNavigation.backtab: cancelButton
+    }
 
-        Text {
-            color: bridge.timeSigPromptAppearance.text
-            font: bridge.timeSigPromptAppearance.font
-            text: bridge.timeSigPromptLabel
-            renderType: Text.NativeRendering
-        }
+    Text {
+        color: appearance.text
+        font: appearance.font
+        text: qsTr("Denominator:")
+        renderType: Text.NativeRendering
+    }
 
-        DragInput {
-            id: numeratorInput
+    Row {
+        spacing: appearance.spacing
 
-            appearance: bridge.timeSigPromptAppearance
-            value: prompt.draftNumerator
-            minimumValue: bridge.timeSigPromptMinimumNumerator
-            maximumValue: bridge.timeSigPromptMaximumNumerator
-            inputObjectName: "timeSignatureNumerator"
-            accessibleName: bridge.timeSigPromptLabel
-            accessibleDescription: bridge.timeSigPromptTitle
-            onValueCommitted: (committed) => prompt.draftNumerator = committed
-            onEditingAccepted: (committed) => prompt.acceptCommitted(committed)
-            textInput.KeyNavigation.backtab: cancelButton
-        }
+        Repeater {
+            id: denominatorRepeater
+            model: [0, 1, 2, 3, 4, 5]
 
-        Text {
-            color: bridge.timeSigPromptAppearance.text
-            font: bridge.timeSigPromptAppearance.font
-            text: qsTr("Denominator:")
-            renderType: Text.NativeRendering
-        }
+            delegate: Rectangle {
+                id: denominatorButton
 
-        Row {
-            spacing: bridge.timeSigPromptAppearance.spacing
+                required property int modelData
 
-            Repeater {
-                id: denominatorRepeater
-                model: [0, 1, 2, 3, 4, 5]
-
-                delegate: Rectangle {
-                    id: denominatorButton
-
-                    required property int modelData
-
-                    objectName: "timeSignatureDenominator" + modelData
-                    activeFocusOnTab: selected
-                    readonly property bool selected: prompt.draftDenominatorPow2 === modelData
-                    function select() {
-                        prompt.draftDenominatorPow2 = modelData
-                    }
-                    function activate() {
-                        select()
-                        forceActiveFocus(Qt.MouseFocusReason)
-                    }
-                    function selectFromKeyboard(event) {
-                        select()
-                        event.accepted = true
-                    }
-                    function acceptFromKeyboard(event) {
-                        select()
-                        prompt.acceptDisplayed()
-                        event.accepted = true
-                    }
-                    function moveBy(step, event) {
-                        prompt.moveDenominator(modelData, step)
-                        event.accepted = true
-                    }
-
-                    width: denominatorText.implicitWidth
-                           + 2 * bridge.timeSigPromptAppearance.buttonPadding
-                    height: denominatorText.implicitHeight
-                            + 2 * bridge.timeSigPromptAppearance.buttonPadding
-                    color: denominatorTap.pressed || selected
-                           ? bridge.timeSigPromptAppearance.pressedBackground
-                           : bridge.timeSigPromptAppearance.buttonBackground
-                    border.width: bridge.timeSigPromptAppearance.borderWidth
-                    border.color: activeFocus ? bridge.timeSigPromptAppearance.focus
-                                              : bridge.timeSigPromptAppearance.outline
-                    radius: bridge.timeSigPromptAppearance.radius
-
-                    Text {
-                        id: denominatorText
-
-                        anchors.centerIn: parent
-                        color: bridge.timeSigPromptAppearance.buttonText
-                        font: bridge.timeSigPromptAppearance.font
-                        text: String(1 << denominatorButton.modelData)
-                        renderType: Text.NativeRendering
-                    }
-
-                    Keys.onReturnPressed: (event) => denominatorButton.acceptFromKeyboard(event)
-                    Keys.onEnterPressed: (event) => denominatorButton.acceptFromKeyboard(event)
-                    Keys.onSpacePressed: (event) => denominatorButton.selectFromKeyboard(event)
-                    Keys.onLeftPressed: (event) => denominatorButton.moveBy(-1, event)
-                    Keys.onRightPressed: (event) => denominatorButton.moveBy(1, event)
-                    Keys.onShortcutOverride: (event) => event.accepted =
-                        event.key === Qt.Key_Space || event.key === Qt.Key_Return
-                        || event.key === Qt.Key_Enter
-
-                    Accessible.role: Accessible.RadioButton
-                    Accessible.name: denominatorText.text
-                    Accessible.checked: selected
-                    Accessible.focusable: true
-                    Accessible.onPressAction: denominatorButton.activate()
-
-                    TapHandler {
-                        id: denominatorTap
-
-                        onTapped: denominatorButton.activate()
-                    }
+                objectName: "timeSignatureDenominator" + modelData
+                activeFocusOnTab: selected
+                readonly property bool selected: prompt.draftDenominatorPow2 === modelData
+                function select() {
+                    prompt.draftDenominatorPow2 = modelData
                 }
-            }
-        }
-
-        Row {
-            spacing: bridge.timeSigPromptAppearance.spacing
-
-            Rectangle {
-                id: acceptButton
-
-                objectName: "timeSignatureAccept"
-                activeFocusOnTab: true
-                Accessible.role: Accessible.Button
-                Accessible.name: acceptText.text
                 function activate() {
+                    select()
+                    forceActiveFocus(Qt.MouseFocusReason)
+                }
+                function selectFromKeyboard(event) {
+                    select()
+                    event.accepted = true
+                }
+                function acceptFromKeyboard(event) {
+                    select()
                     prompt.acceptDisplayed()
+                    event.accepted = true
                 }
-                function activateFromKeyboard(event) {
-                    activate()
+                function moveBy(step, event) {
+                    prompt.moveDenominator(modelData, step)
                     event.accepted = true
                 }
 
-                width: Math.max(acceptText.implicitWidth
-                                + 2 * bridge.timeSigPromptAppearance.buttonPadding,
-                                numeratorInput.implicitWidth)
-                height: acceptText.implicitHeight
-                        + 2 * bridge.timeSigPromptAppearance.buttonPadding
-                color: acceptTap.pressed ? bridge.timeSigPromptAppearance.pressedBackground
-                                         : bridge.timeSigPromptAppearance.buttonBackground
-                border.width: bridge.timeSigPromptAppearance.borderWidth
-                border.color: activeFocus ? bridge.timeSigPromptAppearance.focus
-                                          : bridge.timeSigPromptAppearance.outline
-                radius: bridge.timeSigPromptAppearance.radius
+                width: denominatorText.implicitWidth + 2 * appearance.buttonPadding
+                height: denominatorText.implicitHeight + 2 * appearance.buttonPadding
+                color: denominatorTap.pressed || selected ? appearance.pressedBackground
+                                                          : appearance.buttonBackground
+                border.width: appearance.borderWidth
+                border.color: activeFocus ? appearance.focus : appearance.outline
+                radius: appearance.radius
 
                 Text {
-                    id: acceptText
+                    id: denominatorText
 
                     anchors.centerIn: parent
-                    color: bridge.timeSigPromptAppearance.buttonText
-                    font: bridge.timeSigPromptAppearance.font
-                    text: qsTr("OK")
+                    color: appearance.buttonText
+                    font: appearance.font
+                    text: String(1 << denominatorButton.modelData)
                     renderType: Text.NativeRendering
                 }
 
-                Keys.onReturnPressed: (event) => acceptButton.activateFromKeyboard(event)
-                Keys.onEnterPressed: (event) => acceptButton.activateFromKeyboard(event)
-                Keys.onSpacePressed: (event) => acceptButton.activateFromKeyboard(event)
+                Keys.onReturnPressed: (event) => denominatorButton.acceptFromKeyboard(event)
+                Keys.onEnterPressed: (event) => denominatorButton.acceptFromKeyboard(event)
+                Keys.onSpacePressed: (event) => denominatorButton.selectFromKeyboard(event)
+                Keys.onLeftPressed: (event) => denominatorButton.moveBy(-1, event)
+                Keys.onRightPressed: (event) => denominatorButton.moveBy(1, event)
                 Keys.onShortcutOverride: (event) => event.accepted =
                     event.key === Qt.Key_Space || event.key === Qt.Key_Return
                     || event.key === Qt.Key_Enter
 
+                Accessible.role: Accessible.RadioButton
+                Accessible.name: denominatorText.text
+                Accessible.checked: selected
                 Accessible.focusable: true
-                Accessible.onPressAction: acceptButton.activate()
+                Accessible.onPressAction: denominatorButton.activate()
 
                 TapHandler {
-                    id: acceptTap
+                    id: denominatorTap
 
-                    onTapped: acceptButton.activate()
+                    onTapped: denominatorButton.activate()
                 }
             }
+        }
+    }
 
-            Rectangle {
-                id: cancelButton
+    Row {
+        spacing: appearance.spacing
 
-                objectName: "timeSignatureCancel"
-                activeFocusOnTab: true
-                KeyNavigation.tab: numeratorInput.textInput
-                Accessible.role: Accessible.Button
-                Accessible.name: cancelText.text
-                function activate() {
-                    prompt.cancelDisplayed()
-                }
-                function activateFromKeyboard(event) {
-                    activate()
-                    event.accepted = true
-                }
+        PromptButton {
+            id: acceptButton
 
-                width: Math.max(cancelText.implicitWidth
-                                + 2 * bridge.timeSigPromptAppearance.buttonPadding,
-                                numeratorInput.implicitWidth)
-                height: cancelText.implicitHeight
-                        + 2 * bridge.timeSigPromptAppearance.buttonPadding
-                color: cancelTap.pressed ? bridge.timeSigPromptAppearance.pressedBackground
-                                         : bridge.timeSigPromptAppearance.buttonBackground
-                border.width: bridge.timeSigPromptAppearance.borderWidth
-                border.color: activeFocus ? bridge.timeSigPromptAppearance.focus
-                                          : bridge.timeSigPromptAppearance.outline
-                radius: bridge.timeSigPromptAppearance.radius
+            objectName: "timeSignatureAccept"
+            appearance: prompt.appearance
+            text: qsTr("OK")
+            minimumWidth: numeratorInput.implicitWidth
+            onActivated: prompt.acceptDisplayed()
+        }
 
-                Text {
-                    id: cancelText
+        PromptButton {
+            id: cancelButton
 
-                    anchors.centerIn: parent
-                    color: bridge.timeSigPromptAppearance.buttonText
-                    font: bridge.timeSigPromptAppearance.font
-                    text: qsTr("Cancel")
-                    renderType: Text.NativeRendering
-                }
-
-                Keys.onReturnPressed: (event) => cancelButton.activateFromKeyboard(event)
-                Keys.onEnterPressed: (event) => cancelButton.activateFromKeyboard(event)
-                Keys.onSpacePressed: (event) => cancelButton.activateFromKeyboard(event)
-                Keys.onShortcutOverride: (event) => event.accepted =
-                    event.key === Qt.Key_Space || event.key === Qt.Key_Return
-                    || event.key === Qt.Key_Enter
-
-                Accessible.focusable: true
-                Accessible.onPressAction: cancelButton.activate()
-
-                TapHandler {
-                    id: cancelTap
-
-                    onTapped: cancelButton.activate()
-                }
-            }
+            objectName: "timeSignatureCancel"
+            appearance: prompt.appearance
+            text: qsTr("Cancel")
+            minimumWidth: numeratorInput.implicitWidth
+            KeyNavigation.tab: numeratorInput.textInput
+            onActivated: prompt.cancelDisplayed()
         }
     }
 }

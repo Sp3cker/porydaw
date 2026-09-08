@@ -446,6 +446,10 @@ bool AutomationRasterFixture::initialize(QString &error)
     m_productionInteraction = m_automationPlotInput->interaction();
     if (m_productionInteraction)
         m_automationPlotInput->setInteraction(nullptr);
+    // Plot hover is driven by the synthetic host. Native gutter hover shares
+    // the same canvas and must not overwrite that state during frame capture.
+    // Keep gutter button delivery for tempo expansion.
+    m_automationGutterInput->setAcceptHoverEvents(false);
     m_page->canvas()->attachInputHost(*m_inputHost);
     m_page->canvas()->hostAppearanceChanged();
     m_page->songChanged();

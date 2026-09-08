@@ -15,6 +15,7 @@
 #include <optional>
 
 #include "checks/support/quickframebuffer.h"
+#include "core/songdocument.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
@@ -207,22 +208,145 @@ void TrackHeadersTest::reorderCommitsAndRebuildsHeader()
     QVERIFY(!headers.reorderIndicatorVisible());
     QCOMPARE(fx.tab().document().revision(), cancelRevision);
 
+    // The committing drag starts while a rename draft is still open: the
+    // queued rename lands first and the move then carries the committed
+    // name, the track's notes, and its mute mask to the bottom slot.
+    const std::vector<DocNote> draggedNotes = fx.tab().document().notesForTrack(fx.sourceTrack());
+    QVERIFY2(!draggedNotes.empty(), "the reorder fixture track carried no content to move");
+    fx.view().setTrackMute(fx.sourceTrack(), true);
     const uint64_t commitRevision = fx.tab().document().revision();
+    headers.beginRename(fx.sourceTrack());
+    headers.setRenameDraft(QStringLiteral("Dragged"));
     QVERIFY(headers.pointerPress(pointerInput(fx.input(), *start, Qt::LeftButton, Qt::LeftButton)));
     QVERIFY(
         headers.pointerMove(pointerInput(fx.input(), bottomDrop, Qt::NoButton, Qt::LeftButton)));
     QVERIFY(
         headers.pointerRelease(pointerInput(fx.input(), bottomDrop, Qt::LeftButton, Qt::NoButton)));
     QTRY_VERIFY(fx.tab().document().revision() > commitRevision);
-    QCOMPARE(fx.tab().document().trackName(fx.reorderTargetTrack()),
-             QString::fromLatin1(kRenamedTitle));
+    QCOMPARE(fx.tab().document().trackName(fx.reorderTargetTrack()), QStringLiteral("Dragged"));
+    const std::vector<DocNote> movedNotes =
+        fx.tab().document().notesForTrack(fx.reorderTargetTrack());
+    QCOMPARE(movedNotes.size(), draggedNotes.size());
+    for (size_t i = 0; i < movedNotes.size(); ++i) {
+        QCOMPARE(movedNotes[i].tick, draggedNotes[i].tick);
+        QCOMPARE(movedNotes[i].key, draggedNotes[i].key);
+    }
+    QVERIFY(fx.view().trackMuted(fx.reorderTargetTrack()));
+    QVERIFY(!fx.view().trackMuted(fx.sourceTrack()));
+    // The complete TrackRemap re-addresses view masks on undo and redo too.
+    fx.tab().document().undoStack()->undo();
+    QVERIFY(fx.view().trackMuted(fx.sourceTrack()));
+    QVERIFY(!fx.view().trackMuted(fx.reorderTargetTrack()));
+    fx.tab().document().undoStack()->redo();
+    QVERIFY(fx.view().trackMuted(fx.reorderTargetTrack()));
+    QVERIFY(!fx.view().trackMuted(fx.sourceTrack()));
+    fx.view().setTrackMute(fx.reorderTargetTrack(), false);
     QString error;
     QVERIFY2(fx.rebuild(error), qPrintable(error));
     const std::optional<int> movedRow = fx.rowForTrack(fx.reorderTargetTrack());
     QVERIFY(movedRow);
     QVERIFY(rowData(headers, *movedRow, songview::TrackHeaderModel::TitleRole)
                 .toString()
-                .contains(QString::fromLatin1(kRenamedTitle)));
+                .contains(QStringLiteral("Dragged")));
+}
+
+void TrackHeadersTest::reorderSlotsResolveInsertionTargetsAndUndoRestores()
+{
+    TrackHeadersFixture &fx = fixture();
+    songview::TrackHeaderModel &headers = fx.headers();
+    SongDocument &doc = fx.tab().document();
+
+    // Three-row insertion-slot arithmetic on a duplicated third track:
+    // dropping inside a target row's top quarter inserts above it, the
+    // bottom three quarters insert below it, and the adjacent slot leaves
+    // the row in place. Every probe undoes back to the duplicated baseline.
+    const int baselineUndo = doc.undoStack()->index();
+    const int duplicatedTrack = doc.duplicateTrack(fx.sourceTrack());
+    QVERIFY2(duplicatedTrack >= 0, "could not create the third track for slot arithmetic");
+    QCoreApplication::processEvents();
+    checks::support::pumpQuick();
+    QTRY_COMPARE(doc.engineTrackCount(), int(fx.tracks().size()) + 1);
+    const int fixtureTracks[] = {fx.tracks().front(), fx.tracks()[1], duplicatedTrack};
+    const uint8_t identities[] = {doc.channelFor(fixtureTracks[0]),
+                                  doc.channelFor(fixtureTracks[1]),
+                                  doc.channelFor(fixtureTracks[2])};
+    QVERIFY2(identities[0] != identities[1] && identities[0] != identities[2] &&
+                 identities[1] != identities[2],
+             "the three-track slot fixture channels are not distinct");
+    const auto hasTrackOrder = [&](int first, int second, int third) {
+        return doc.channelFor(fixtureTracks[0]) == identities[first] &&
+               doc.channelFor(fixtureTracks[1]) == identities[second] &&
+               doc.channelFor(fixtureTracks[2]) == identities[third];
+    };
+    const auto dragToSlot = [&](int fromTrack, int slot) {
+        const int targetTrack = fixtureTracks[slot < 3 ? slot : 2];
+        const std::optional<int> sourceRow = fx.rowForTrack(fromTrack);
+        const std::optional<int> targetRow = fx.rowForTrack(targetTrack);
+        QVERIFY(sourceRow && targetRow);
+        const qreal scroll = qreal(*sourceRow * fx.rowHeight());
+        headers.setScrollY(scroll);
+        checks::support::pumpQuick();
+        const std::optional<QPointF> start = fx.titlePoint(*sourceRow);
+        QVERIFY(start);
+        const QPointF drop{headers.voiceLineRect().center().x(),
+                           qreal(*targetRow) * fx.rowHeight() +
+                               fx.rowHeight() * (slot < 3 ? 0.25 : 0.75) - scroll};
+        QVERIFY(
+            headers.pointerPress(pointerInput(fx.input(), *start, Qt::LeftButton, Qt::LeftButton)));
+        QVERIFY(headers.pointerMove(pointerInput(fx.input(), drop, Qt::NoButton, Qt::LeftButton)));
+        QVERIFY(
+            headers.pointerRelease(pointerInput(fx.input(), drop, Qt::LeftButton, Qt::NoButton)));
+        QCoreApplication::processEvents();
+    };
+
+    fx.view().setTrackMute(fixtureTracks[0], false);
+    fx.view().setTrackMute(fixtureTracks[1], false);
+    fx.view().setTrackMute(duplicatedTrack, true);
+    const int upwardIndex = doc.undoStack()->index();
+    dragToSlot(duplicatedTrack, 0);
+    QCOMPARE(doc.undoStack()->index(), upwardIndex + 1);
+    QVERIFY(hasTrackOrder(2, 0, 1));
+    QVERIFY(fx.view().trackMuted(fixtureTracks[0]));
+    QVERIFY(!fx.view().trackMuted(fixtureTracks[1]));
+    QVERIFY(!fx.view().trackMuted(fixtureTracks[2]));
+    doc.undoStack()->setIndex(upwardIndex);
+    QVERIFY(hasTrackOrder(0, 1, 2));
+    QVERIFY(!fx.view().trackMuted(fixtureTracks[0]));
+    QVERIFY(!fx.view().trackMuted(fixtureTracks[1]));
+    QVERIFY(fx.view().trackMuted(fixtureTracks[2]));
+    fx.view().setTrackMute(duplicatedTrack, false);
+
+    fx.view().setTrackMute(fixtureTracks[0], true);
+    const int downwardIndex = doc.undoStack()->index();
+    dragToSlot(fixtureTracks[0], 3);
+    QCOMPARE(doc.undoStack()->index(), downwardIndex + 1);
+    QVERIFY(hasTrackOrder(1, 2, 0));
+    QVERIFY(!fx.view().trackMuted(fixtureTracks[0]));
+    QVERIFY(!fx.view().trackMuted(fixtureTracks[1]));
+    QVERIFY(fx.view().trackMuted(fixtureTracks[2]));
+    doc.undoStack()->setIndex(downwardIndex);
+    QVERIFY(hasTrackOrder(0, 1, 2));
+    QVERIFY(fx.view().trackMuted(fixtureTracks[0]));
+    QVERIFY(!fx.view().trackMuted(fixtureTracks[1]));
+    QVERIFY(!fx.view().trackMuted(fixtureTracks[2]));
+    fx.view().setTrackMute(fixtureTracks[0], false);
+
+    fx.view().setTrackMute(fixtureTracks[1], true);
+    const int adjacentIndex = doc.undoStack()->index();
+    dragToSlot(fixtureTracks[1], 2);
+    QCOMPARE(doc.undoStack()->index(), adjacentIndex);
+    QVERIFY(hasTrackOrder(0, 1, 2));
+    QVERIFY(!fx.view().trackMuted(fixtureTracks[0]));
+    QVERIFY(fx.view().trackMuted(fixtureTracks[1]));
+    QVERIFY(!fx.view().trackMuted(fixtureTracks[2]));
+    doc.undoStack()->setIndex(adjacentIndex);
+    fx.view().setTrackMute(fixtureTracks[1], false);
+
+    // Every probe returned to the duplicated baseline; undoing the
+    // duplicate restores the fixture's original track set.
+    doc.undoStack()->setIndex(baselineUndo);
+    QTRY_COMPARE(doc.engineTrackCount(), int(fx.tracks().size()));
+    checks::support::pumpQuick();
 }
 
 void TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader()
@@ -337,29 +461,23 @@ void TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader()
     checks::voicepicker::filter(picker, QStringLiteral("127"));
     QTRY_VERIFY(checks::voicepicker::row(picker, 127) &&
                 checks::voicepicker::row(picker, 127)->isVisible());
-    const QPoint pickerHeldPoint =
-        checks::voicepicker::center(*checks::voicepicker::row(picker, 127));
-    bool pickerPressHeld = true;
-    const auto releasePickerPress =
-        qScopeGuard([window = picker.window, pickerHeldPoint, &pickerPressHeld] {
-            if (pickerPressHeld)
-                QTest::mouseRelease(window, Qt::LeftButton, Qt::NoModifier, pickerHeldPoint);
-        });
     QSignalSpy audition(&fx.view(), &SongView::auditionVoice);
     checks::voicepicker::hold(picker, 127);
     QTRY_COMPARE(audition.count(), 1);
     QCOMPARE(audition.at(0).at(0).toInt(), 127);
     QCOMPARE(audition.at(0).at(1).toInt(), 60);
     QCOMPARE(audition.at(0).at(2).toInt(), 112);
-
-    QTest::keyClick(picker.window, Qt::Key_Return);
-    QTRY_VERIFY(!quick_popup::popupSession(fx.view())->isOpen());
-    QTest::mouseRelease(picker.window, Qt::LeftButton, Qt::NoModifier, pickerHeldPoint);
-    pickerPressHeld = false;
+    // Release while this picker still owns the input. Accepting tears down
+    // the form, so its physical mouse release must not carry into the later
+    // remap-picker interaction.
+    checks::voicepicker::release(picker, 127);
     QTRY_COMPARE(audition.count(), 2);
     QCOMPARE(audition.at(1).at(0).toInt(), 127);
     QCOMPARE(audition.at(1).at(1).toInt(), 60);
     QCOMPARE(audition.at(1).at(2).toInt(), 0);
+
+    QTest::keyClick(picker.window, Qt::Key_Return);
+    QTRY_VERIFY(!quick_popup::popupSession(fx.view())->isOpen());
     QCOMPARE(fx.tab().document().revision(), revision + 1);
     QCOMPARE(fx.tab().document().undoStack()->index(), undoIndex + 1);
     QTRY_COMPARE(fx.view().currentProgram(fx.view().selectionModel().primaryTrack()), 127);
@@ -373,6 +491,14 @@ void TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader()
     QVERIFY(std::includes(after.cbegin(), after.cend(), before.cbegin(), before.cend()));
     QVERIFY(std::adjacent_find(after.cbegin(), after.cend()) == after.cend());
     QVERIFY(afterRow && *afterRow == headers.rowCount() - 1);
+    // Undoing the accepted add restores the previous records and add row;
+    // redo brings the accepted state back for the remap phase below.
+    fx.tab().document().undoStack()->undo();
+    QTRY_COMPARE(fx.tab().document().engineTrackCount(), int(before.size()));
+    QTRY_VERIFY(fx.addTrackRow() && modelTracks(headers) == before);
+    fx.tab().document().undoStack()->redo();
+    QTRY_COMPARE(fx.tab().document().engineTrackCount(), int(before.size()) + 1);
+    QTRY_COMPARE(headers.rowCount(), rowCount + 1);
 
     const int remapUndoIndex = fx.tab().document().undoStack()->index();
     const std::optional<int> remapRow = fx.rowForTrack(0);
@@ -380,8 +506,11 @@ void TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader()
     headers.setScrollY(qreal(*remapRow * fx.rowHeight()));
     const std::optional<QPointF> remapVoice = fx.voicePoint(*remapRow);
     QVERIFY(remapVoice);
-    QVERIFY(headers.pointerDoubleClick(
-        pointerInput(fx.input(), *remapVoice, Qt::LeftButton, Qt::LeftButton)));
+    // Drive the opening gesture through the QQuickWindow. Calling the model
+    // directly skips the double-click's terminal release, which leaves the
+    // next QTest press eligible as the popup row's second click.
+    QTest::mouseDClick(&fx.window(), Qt::LeftButton, Qt::NoModifier,
+                       fx.input().mapToScene(*remapVoice).toPoint());
     QTRY_VERIFY(static_cast<bool>(checks::voicepicker::active(fx.view())));
     const checks::voicepicker::Picker remapped = checks::voicepicker::active(fx.view());
     QTRY_VERIFY(remapped.search->hasActiveFocus());
@@ -396,20 +525,23 @@ void TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader()
             if (remapPressHeld)
                 QTest::mouseRelease(window, Qt::LeftButton, Qt::NoModifier, remapHeldPoint);
         });
-    QSignalSpy remapAudition(&fx.view(), &SongView::auditionVoice);
-    checks::voicepicker::hold(remapped, 127);
-    QTRY_COMPARE(remapAudition.count(), 1);
-    QCOMPARE(remapAudition.at(0).at(0).toInt(), 127);
-    QCOMPARE(remapAudition.at(0).at(1).toInt(), 60);
-    QCOMPARE(remapAudition.at(0).at(2).toInt(), 112);
+    {
+        QSignalSpy remapHoldAudition(&fx.view(), &SongView::auditionVoice);
+        checks::voicepicker::hold(remapped, 127);
+        QTRY_COMPARE(remapHoldAudition.count(), 1);
+        QCOMPARE(remapHoldAudition.at(0).at(0).toInt(), 127);
+        QCOMPARE(remapHoldAudition.at(0).at(1).toInt(), 60);
+        QCOMPARE(remapHoldAudition.at(0).at(2).toInt(), 112);
+    }
 
+    QSignalSpy remapReleaseAudition(&fx.view(), &SongView::auditionVoice);
     fx.tab().document().moveTrack(0, 1);
     const QByteArray afterRemap = fx.tab().document().smf().write();
     QTRY_VERIFY(!quick_popup::popupSession(fx.view())->isOpen());
-    QTRY_COMPARE(remapAudition.count(), 2);
-    QCOMPARE(remapAudition.at(1).at(0).toInt(), 127);
-    QCOMPARE(remapAudition.at(1).at(1).toInt(), 60);
-    QCOMPARE(remapAudition.at(1).at(2).toInt(), 0);
+    QTRY_COMPARE(remapReleaseAudition.count(), 1);
+    QCOMPARE(remapReleaseAudition.at(0).at(0).toInt(), 127);
+    QCOMPARE(remapReleaseAudition.at(0).at(1).toInt(), 60);
+    QCOMPARE(remapReleaseAudition.at(0).at(2).toInt(), 0);
     QTest::mouseRelease(remapped.window, Qt::LeftButton, Qt::NoModifier, remapHeldPoint);
     remapPressHeld = false;
     QCOMPARE(fx.tab().document().undoStack()->index(), remapUndoIndex + 1);

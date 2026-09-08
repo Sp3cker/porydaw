@@ -76,7 +76,7 @@ if(PORYDAW_COVERAGE)
     add_link_options(-fprofile-instr-generate)
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Qml Quick QuickWidgets Svg Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Qml Quick Svg Widgets)
 
 # ---- poryaaaa engine core (MIT, statically linked) ----
 set(PORYAAAA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa/packages/poryaaaa"
@@ -318,6 +318,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/quick/quickpopupsession.h
     src/ui/songview/quick/quickmenulayout.cpp
     src/ui/songview/quick/quickmenulayout.h
+    src/ui/songview/quick/promptappearance.cpp
+    src/ui/songview/quick/promptappearance.h
     src/ui/songview/quick/quickmenumodel.h
     src/ui/songview/quick/otherstripquick.cpp
     src/ui/songview/quick/automationnodelanequick.cpp
@@ -346,7 +348,6 @@ qt_add_library(porydaw_app STATIC
     src/ui/pitchbendeditor.hpp
     src/ui/pitchbendgraph.cpp
     src/ui/pitchbendgraph.hpp
-    src/ui/pitchbendeditor_window.cpp
     src/ui/pitchbendgraph_render.cpp
     src/ui/eventtablemodel.cpp
     src/ui/eventtablemodeledit.cpp
@@ -429,7 +430,7 @@ target_include_directories(porydaw_app PUBLIC
 target_compile_definitions(porydaw_app PUBLIC
     PORYDAW_VERSION="${PROJECT_VERSION}")
 target_link_libraries(porydaw_app PUBLIC Qt6::Svg Qt6::Widgets poryaaaa_engine)
-target_link_libraries(porydaw_app PRIVATE Qt6::Qml Qt6::Quick Qt6::QuickWidgets)
+target_link_libraries(porydaw_app PRIVATE Qt6::Qml Qt6::Quick)
 if(APPLE)
     set_target_properties(porydaw_app PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
 endif()
@@ -473,6 +474,14 @@ set_source_files_properties(
 set_source_files_properties(
     src/ui/songview/quick/DragInput.qml
     PROPERTIES QT_RESOURCE_ALIAS DragInput.qml
+)
+set_source_files_properties(
+    src/ui/songview/quick/PromptCard.qml
+    PROPERTIES QT_RESOURCE_ALIAS PromptCard.qml
+)
+set_source_files_properties(
+    src/ui/songview/quick/PromptButton.qml
+    PROPERTIES QT_RESOURCE_ALIAS PromptButton.qml
 )
 set_source_files_properties(
     src/ui/songview/quick/PitchBendPopup.qml
@@ -529,6 +538,8 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/QuickPopupLayer.qml
         src/ui/songview/quick/EventListPage.qml
         src/ui/songview/quick/DragInput.qml
+        src/ui/songview/quick/PromptCard.qml
+        src/ui/songview/quick/PromptButton.qml
         src/ui/songview/quick/PitchBendPopup.qml
         src/ui/songview/quick/VelocityPrompt.qml
         src/ui/songview/quick/CcDeleteConfirm.qml
@@ -896,7 +907,7 @@ if(PORYDAW_BUILD_CHECKS)
             VERBATIM
         )
     endif()
-    target_link_libraries(porydaw_checks PRIVATE porydaw_app Qt6::QuickWidgets Qt6::Test)
+    target_link_libraries(porydaw_checks PRIVATE porydaw_app Qt6::Quick Qt6::Test)
     target_precompile_headers(porydaw_checks PRIVATE
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
     add_dependencies(porydaw_checks mid2agb)

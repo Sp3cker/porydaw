@@ -3,6 +3,7 @@
 #include <QtTest>
 
 #include <QCoreApplication>
+#include <QGuiApplication>
 #include <QQuickItem>
 #include <QQuickWindow>
 
@@ -129,7 +130,7 @@ bool TrackHeadersFixture::create(QString &error)
     candidate->show();
     if (!QTest::qWaitFor([this] {
             return m_window && m_window->isVisible() && m_window->isExposed() && m_input &&
-                   !m_input->bounds().isEmpty();
+                   m_input->window() == m_window && !m_input->bounds().isEmpty();
         })) {
         error =
             QStringLiteral("TrackHeaders Quick window did not become exposed with an input host");
@@ -154,6 +155,18 @@ bool TrackHeadersFixture::create(QString &error)
     TrackActivity activity;
     m_headers->rebuild(activity, true);
     checks::support::pumpQuick();
+
+    if (!songView.focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason)) {
+        error = QStringLiteral("TrackHeaders Quick input could not request focus");
+        return false;
+    }
+    if (!QTest::qWaitFor([this] {
+            return m_window && m_input && QGuiApplication::focusWindow() == m_window &&
+                   QGuiApplication::focusObject() == m_input && m_input->hasActiveFocus();
+        })) {
+        error = QStringLiteral("TrackHeaders Quick input did not receive native window focus");
+        return false;
+    }
 
     const std::shared_ptr<const MidiTimeline> timeline = candidate->timeline();
     if (!timeline) {

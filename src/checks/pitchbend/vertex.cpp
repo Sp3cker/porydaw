@@ -57,7 +57,7 @@ void PitchBendEditingTest::vertexHitTestAndSelection()
     const auto hit = graph->hitTest(position);
     QVERIFY(hit.has_value());
     QCOMPARE(hit->first, target.tick);
-    QTest::mouseClick(editor->view(), Qt::LeftButton, Qt::NoModifier,
+    QTest::mouseClick(&m_fixture.timelineWindow(), Qt::LeftButton, Qt::NoModifier,
                       m_fixture.windowPoint(*graph, position));
     QVERIFY(graph->selectedTick().has_value());
     QCOMPARE(*graph->selectedTick(), target.tick);
@@ -84,11 +84,11 @@ void PitchBendEditingTest::vertexAltDragMovesPoint()
     const QPoint destination(std::clamp(source.x() + 20, canvas.left() + 2, canvas.right() - 2),
                              std::clamp(source.y() - 10, canvas.top() + 2, canvas.bottom() - 2));
     const int index = m_fixture.document().undoStack()->index();
-    QTest::mousePress(editor->view(), Qt::LeftButton, Qt::AltModifier,
+    QTest::mousePress(&m_fixture.timelineWindow(), Qt::LeftButton, Qt::AltModifier,
                       m_fixture.windowPoint(*graph, source));
     checks::events::sendMouse(*graph, QEvent::MouseMove, destination, Qt::NoButton, Qt::LeftButton,
                               Qt::AltModifier);
-    QTest::mouseRelease(editor->view(), Qt::LeftButton, Qt::AltModifier,
+    QTest::mouseRelease(&m_fixture.timelineWindow(), Qt::LeftButton, Qt::AltModifier,
                         m_fixture.windowPoint(*graph, destination));
     QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
     QVERIFY(graph->selectedTick().has_value());
@@ -119,10 +119,10 @@ void PitchBendEditingTest::vertexDeleteRemovesInteriorPoint()
         m_fixture.stroke(*graph, canvasPoint(*graph, 0.20, 0.80), canvasPoint(*graph, 0.80, 0.20)));
     const DocLanePoint target = m_fixture.interiorPoints(cc).at(0);
     QTest::mouseClick(
-        editor->view(), Qt::LeftButton, Qt::NoModifier,
+        &m_fixture.timelineWindow(), Qt::LeftButton, Qt::NoModifier,
         m_fixture.windowPoint(*graph, graph->vertexPosition(target.tick, target.value)));
     const int index = m_fixture.document().undoStack()->index();
-    QTest::keyClick(editor->view(), Qt::Key(key));
+    QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key(key));
     QCOMPARE(m_fixture.document().undoStack()->index(), index + 1);
     QVERIFY(!m_fixture.document().findLanePoint(0, cc, target.tick, nullptr));
     QVERIFY(m_fixture.document().findLanePoint(0, cc, m_fixture.note().tick, nullptr));
@@ -162,13 +162,13 @@ void PitchBendEditingTest::vertexEndpointDeletionIsRejected()
     const int value = m_fixture.effectiveLaneValue(cc, tick, 0);
     QVERIFY(m_fixture.document().findLanePoint(0, cc, m_fixture.note().tick, nullptr));
     QVERIFY(m_fixture.document().findLanePoint(0, cc, m_fixture.endTick(), nullptr));
-    QTest::mouseClick(editor->view(), Qt::LeftButton, Qt::NoModifier,
+    QTest::mouseClick(&m_fixture.timelineWindow(), Qt::LeftButton, Qt::NoModifier,
                       m_fixture.windowPoint(*graph, graph->vertexPosition(tick, value)));
     QVERIFY(graph->selectedTick().has_value());
     QCOMPARE(*graph->selectedTick(), tick);
     const QByteArray before = m_fixture.smf();
     const int index = m_fixture.document().undoStack()->index();
-    QTest::keyClick(editor->view(), Qt::Key(key));
+    QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key(key));
     QCOMPARE(m_fixture.document().undoStack()->index(), index);
     QCOMPARE(m_fixture.smf(), before);
 }

@@ -13,12 +13,8 @@
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationpage.h"
-#include "ui/layout.h"
+#include "ui/songview/quick/promptappearance.h"
 #include "ui/songview/quick/quickpopupsession.h"
-#include "ui/theme/themeruntime.h"
-
-namespace lyt = ::layout;
-using Space = lyt::Space;
 
 // The lane menu's "Delete CC lane" command on a lane that still carries events
 // opens this confirmation on the shared canvas popup session instead of a
@@ -56,23 +52,7 @@ QString AutomationCanvas::ccDeletePromptMessage() const
 
 QVariantMap AutomationCanvas::ccDeletePromptAppearance() const
 {
-    QVariantMap appearance;
-    appearance.insert(QStringLiteral("font"), QGuiApplication::font());
-    appearance.insert(QStringLiteral("background"), themes::color(themes::Role::window_background));
-    appearance.insert(QStringLiteral("outline"), themes::color(themes::Role::palette_outline));
-    appearance.insert(QStringLiteral("text"), themes::color(themes::Role::window_text));
-    appearance.insert(QStringLiteral("focus"), themes::color(themes::Role::focus_outline));
-    appearance.insert(QStringLiteral("buttonBackground"),
-                      themes::color(themes::Role::button_background));
-    appearance.insert(QStringLiteral("buttonText"), themes::color(themes::Role::button_text));
-    appearance.insert(QStringLiteral("pressedBackground"),
-                      themes::color(themes::Role::button_pressed_background));
-    appearance.insert(QStringLiteral("borderWidth"), lyt::singlePixel());
-    appearance.insert(QStringLiteral("radius"), lyt::space(Space::Half));
-    appearance.insert(QStringLiteral("dialogPadding"), lyt::space(Space::One));
-    appearance.insert(QStringLiteral("buttonPadding"), lyt::space(Space::One));
-    appearance.insert(QStringLiteral("spacing"), lyt::space(Space::One));
-    return appearance;
+    return songview::promptDialogAppearance(QGuiApplication::font());
 }
 
 bool AutomationCanvas::openCcDeletePrompt(LaneHandle handle, std::size_t writtenEventCount)

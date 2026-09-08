@@ -7,6 +7,7 @@
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/songview/grid.h"
+#include "ui/songview/quick/promptappearance.h"
 #include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -263,27 +264,7 @@ QString TimeRuler::timeSigPromptLabel() const
 
 QVariantMap TimeRuler::timeSigPromptAppearance() const
 {
-    QVariantMap appearance;
-    appearance.insert(QStringLiteral("font"),
-                      m_inputHost ? m_inputHost->font() : QGuiApplication::font());
-    appearance.insert(QStringLiteral("background"), themes::color(themes::Role::window_background));
-    appearance.insert(QStringLiteral("outline"), themes::color(themes::Role::palette_outline));
-    appearance.insert(QStringLiteral("text"), themes::color(themes::Role::window_text));
-    appearance.insert(QStringLiteral("focus"), themes::color(themes::Role::focus_outline));
-    appearance.insert(QStringLiteral("buttonBackground"),
-                      themes::color(themes::Role::button_background));
-    appearance.insert(QStringLiteral("buttonText"), themes::color(themes::Role::button_text));
-    appearance.insert(QStringLiteral("pressedBackground"),
-                      themes::color(themes::Role::button_pressed_background));
-    appearance.insert(QStringLiteral("borderWidth"), lyt::singlePixel());
-    appearance.insert(QStringLiteral("radius"), lyt::space(Space::Half));
-    appearance.insert(QStringLiteral("dialogPadding"), lyt::space(Space::One));
-    appearance.insert(QStringLiteral("horizontalPadding"), lyt::space(Space::One));
-    appearance.insert(QStringLiteral("verticalPadding"), lyt::space(Space::Half));
-    appearance.insert(QStringLiteral("buttonPadding"), lyt::space(Space::One));
-    appearance.insert(QStringLiteral("spacing"), lyt::space(Space::One));
-    appearance.insert(QStringLiteral("dragThreshold"), lyt::fontPxF(1.0));
-    return appearance;
+    return promptDialogAppearance(m_inputHost ? m_inputHost->font() : QGuiApplication::font());
 }
 
 void TimeRuler::openTimeSigPrompt(uint64_t tick, int numerator, int denominatorPow2)

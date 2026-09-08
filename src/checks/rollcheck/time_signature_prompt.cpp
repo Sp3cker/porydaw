@@ -138,13 +138,10 @@ TimeSignaturePromptSession openFromChip(TimeSignatureFixture &fixture)
     }
 
     const QPoint point = windowPoint(*fixture.rulerInput, local);
-    // Deliver the complete physical double-click sequence. Production releases
-    // the ruler's pointer grab before publishing the form, so this final
-    // release stays with the opening gesture rather than cancelling it.
-    QTest::mousePress(window, Qt::LeftButton, Qt::NoModifier, point);
-    QTest::mouseRelease(window, Qt::LeftButton, Qt::NoModifier, point);
+    // QTest::mouseDClick(QWindow *) already delivers press/release/press/release.
+    // Adding another click would re-deliver a press to the just-opened prompt's
+    // outside layer, which correctly dismisses it as an independent gesture.
     QTest::mouseDClick(window, Qt::LeftButton, Qt::NoModifier, point);
-    QTest::mouseRelease(window, Qt::LeftButton, Qt::NoModifier, point);
     QCoreApplication::processEvents();
     return openedPrompt(fixture.view());
 }

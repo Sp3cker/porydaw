@@ -9,12 +9,11 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
-#include "ui/theme/themeruntime.h"
+#include "ui/songview/quick/promptappearance.h"
 
 #include <QGuiApplication>
 #include <algorithm>
 namespace lyt = ::layout;
-using Space = lyt::Space;
 
 namespace {
 
@@ -22,26 +21,8 @@ constexpr int cMaxVoiceProgram = int(songview::VoicePickerModel::cVoiceCount) - 
 
 QVariantMap voicePickerAppearanceFor()
 {
-    QVariantMap appearance;
-    appearance.insert(QStringLiteral("font"), QGuiApplication::font());
-    appearance.insert(QStringLiteral("background"), themes::color(themes::Role::window_background));
-    appearance.insert(QStringLiteral("outline"), themes::color(themes::Role::palette_outline));
-    appearance.insert(QStringLiteral("text"), themes::color(themes::Role::window_text));
-    appearance.insert(QStringLiteral("focus"), themes::color(themes::Role::focus_outline));
-    appearance.insert(QStringLiteral("buttonBackground"),
-                      themes::color(themes::Role::button_background));
-    appearance.insert(QStringLiteral("buttonText"), themes::color(themes::Role::button_text));
-    appearance.insert(QStringLiteral("pressedBackground"),
-                      themes::color(themes::Role::button_pressed_background));
-    appearance.insert(QStringLiteral("pressedText"),
-                      themes::color(themes::Role::button_pressed_text));
-    appearance.insert(QStringLiteral("borderWidth"), lyt::singlePixel());
-    appearance.insert(QStringLiteral("radius"), lyt::space(Space::Half));
-    appearance.insert(QStringLiteral("dialogPadding"), lyt::space(Space::One));
-    appearance.insert(QStringLiteral("horizontalPadding"), lyt::space(Space::One));
-    appearance.insert(QStringLiteral("verticalPadding"), lyt::space(Space::Half));
-    appearance.insert(QStringLiteral("buttonPadding"), lyt::space(Space::One));
-    appearance.insert(QStringLiteral("spacing"), lyt::space(Space::One));
+    QVariantMap appearance = songview::promptDialogAppearance(QGuiApplication::font());
+    // Picker-local sizing: the search-field floor and the list viewport.
     appearance.insert(QStringLiteral("minimumWidth"), lyt::fontPx(30.0));
     appearance.insert(QStringLiteral("listHeight"), lyt::fontPx(110.0 / 3.0));
     return appearance;

@@ -12,6 +12,7 @@
 #include <QString>
 #include <QStringList>
 
+#include <QQuickItem>
 #include <QQuickWindow>
 
 #include "core/songdocument.h"
@@ -34,11 +35,13 @@ class PitchBendFixture final
     const DocNote &note() const;
     uint64_t endTick() const;
     QPoint notePoint() const;
+    QPoint notePoint(const DocNote &note) const;
 
     songview::PitchBendEditor *openPopup();
     songview::PitchBendEditor *popup() const;
     songview::PitchBendGraph *graph(const QString &objectName) const;
     QQuickItem *item(const QString &objectName) const;
+    QQuickItem *formContent() const;
     void closePopupViaEscape();
     void drainDeferredDeletes();
 
@@ -125,7 +128,7 @@ class PitchBendEditingTest final : public QObject
     void dismissalRestoresRollEdgeCursor();
     void insideClickRetainedOutsideClickDismisses();
     void popupDismissalReturnsFocusToRollInputItem();
-    void applicationDeactivateCommitsWithoutFocusRestore();
+    void windowDeactivateCommitsWithoutFocusRestore();
     void unterminatedNoteSpanRejectsEditing();
 
   private:

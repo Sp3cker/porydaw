@@ -3,8 +3,6 @@
 
 #include <QApplication>
 #include <QColor>
-#include <QMetaObject>
-#include <QMimeData>
 #include <algorithm>
 #include <limits>
 
@@ -469,7 +467,7 @@ Qt::ItemFlags EventTableModel::flags(const QModelIndex &index) const
     if (!tr)
         return f;
     if (!index.isValid())
-        return f | Qt::ItemIsDropEnabled;
+        return f;
     if (index.row() == int(m_rows.size())) {
         if (index.column() == ColTick)
             f |= Qt::ItemIsEditable;
@@ -484,7 +482,6 @@ Qt::ItemFlags EventTableModel::flags(const QModelIndex &index) const
     const auto *raw = std::get_if<RawRow>(&key);
     if (!raw || raw->eventIndex >= tr->events.size())
         return f;
-    f |= Qt::ItemIsDragEnabled;
     const SmfEvent &ev = tr->events[raw->eventIndex];
     switch (index.column()) {
     case ColTick:
@@ -573,111 +570,9 @@ void EventTableModel::rebuildRows()
     }
 }
 
-namespace {
-
-constexpr char kEventRowMime[] = "application/x-porydaw-event-row";
-
-} // namespace
-
-void EventTableModel::setReorderHandler(std::function<void(size_t, size_t)> handler)
-{
-    m_reorder = std::move(handler);
-}
-
 void EventTableModel::setSelectionHandler(std::function<void(int, uint64_t)> handler)
 {
     m_select = std::move(handler);
 }
 
-Qt::DropActions EventTableModel::supportedDropActions() const
-{
-    return Qt::MoveAction;
-}
-
-QStringList EventTableModel::mimeTypes() const
-{
-    return {QString::fromLatin1(kEventRowMime)};
-}
-
-QMimeData *EventTableModel::mimeData(const QModelIndexList &indexes) const
-{
-    std::optional<size_t> src;
-    for (const QModelIndex &index : indexes) {
-        if (index.row() < 0 || index.row() >= int(m_rows.size()) ||
-            rowKind(m_rows[index.row()]) == RowKind::Tempo)
-            return nullptr;
-        const auto eventIndex = rawEventIndexForRow(index.row());
-        if (!eventIndex || (src && *eventIndex != *src))
-            return nullptr;
-        src = eventIndex;
-    }
-    if (!src)
-        return nullptr;
-    auto *mime = new QMimeData;
-    mime->setData(QString::fromLatin1(kEventRowMime), QByteArray::number(qulonglong(*src)));
-    return mime;
-}
-
-bool EventTableModel::dropTarget(const QMimeData *data, int row, const QModelIndex &parent,
-                                 size_t *from, size_t *dest) const
-{
-    const SmfTrack *tr = track();
-    if (!tr || !data->hasFormat(QString::fromLatin1(kEventRowMime)))
-        return false;
-    bool ok = false;
-    const qulonglong encodedSource =
-        data->data(QString::fromLatin1(kEventRowMime)).toULongLong(&ok);
-    if (!ok || encodedSource >= tr->events.size())
-        return false;
-    const size_t source = size_t(encodedSource);
-    int gap = parent.isValid() ? parent.row() : row;
-    if (gap < 0)
-        gap = int(m_rows.size());
-    size_t target;
-    if (gap < int(m_rows.size())) {
-        if (rowKind(m_rows[gap]) == RowKind::Tempo)
-            return false;
-        const auto rawTarget = rawEventIndexForRow(gap);
-        if (!rawTarget)
-            return false;
-        target = *rawTarget > source ? *rawTarget - 1 : *rawTarget;
-    } else {
-        const auto lastRow = int(m_rows.size()) - 1;
-        if (lastRow < 0 || rowKind(m_rows[lastRow]) == RowKind::Tempo)
-            return false;
-        const auto rawTarget = rawEventIndexForRow(lastRow);
-        if (!rawTarget)
-            return false;
-        target = *rawTarget > source ? *rawTarget : source;
-    }
-    *from = source;
-    *dest = target;
-    return true;
-}
-
-bool EventTableModel::canDropMimeData(const QMimeData *data, Qt::DropAction action, int row,
-                                      int column, const QModelIndex &parent) const
-{
-    Q_UNUSED(column);
-    const auto targetRow = parent.isValid() ? parent.row() : row;
-    if (targetRow >= 0 && targetRow < int(m_rows.size()) &&
-        rowKind(m_rows[targetRow]) == RowKind::Tempo)
-        return false;
-    size_t from, dest, first, last;
-    return action == Qt::MoveAction && m_doc && dropTarget(data, row, parent, &from, &dest) &&
-           m_doc->rawEventMoveBounds(m_chunk, from, &first, &last) && dest >= first &&
-           dest <= last && dest != from;
-}
-
-bool EventTableModel::dropMimeData(const QMimeData *data, Qt::DropAction action, int row,
-                                   int column, const QModelIndex &parent)
-{
-    if (!canDropMimeData(data, action, row, column, parent) || !m_reorder)
-        return false;
-    size_t from, dest;
-    dropTarget(data, row, parent, &from, &dest);
-    QMetaObject::invokeMethod(
-        this, [handler = m_reorder, from, dest] { handler(from, dest); }, Qt::QueuedConnection);
-    return true;
-}
 } // namespace eventlist
