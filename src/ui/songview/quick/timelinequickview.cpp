@@ -208,11 +208,12 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     QObject *root = rootObject();
     if (!root)
         qFatal("Qt Quick timeline QML has no root object");
-    // The event page's, the roll's, and the track headers' typed menus share
-    // the same canvas overlay as forms.
+    // The event page's, the roll's, the track headers', and the automation
+    // canvas' typed menus share the same canvas overlay as forms.
     m_eventList->setPopupSession(m_popupSession);
     m_roll->setPopupSession(m_popupSession);
     m_trackHeaders->setPopupSession(m_popupSession);
+    m_automation->canvas()->setPopupSession(m_popupSession);
     discoverGestureScrollbars(*root);
 
     static constexpr std::array layers = {

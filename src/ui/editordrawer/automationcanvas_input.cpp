@@ -8,7 +8,6 @@
 #include "ui/editordrawer/automationpage.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
-#include "ui/songview/quick/timelinequickview.h"
 
 bool AutomationCanvas::isEditablePencilHit(const QPointF &position) const noexcept
 {
@@ -184,7 +183,10 @@ bool AutomationCanvas::pointerPress(const songview::TimelinePointerInput &input)
                 m_tempoLane.toggleExpanded();
                 updateTempoLayout();
             } else if (input.button == Qt::RightButton && pointer.lane.valid()) {
-                showLaneMenuFor(pointer.lane, input.globalPosition.toPoint());
+                // The menu owns focus from here: the session restores it on
+                // Escape/outside, and dispatch returns it on activation.
+                showLaneMenuFor(pointer.lane, menuScenePosition(input.globalPosition));
+                return true;
             } else {
                 return false;
             }
@@ -210,13 +212,11 @@ bool AutomationCanvas::pointerPress(const songview::TimelinePointerInput &input)
                             m_geometry.addLaneStripHeight);
         if ((input.button == Qt::LeftButton || input.button == Qt::RightButton) &&
             addRect.contains(position.toPoint())) {
-            showAddLaneMenu(input.globalPosition.toPoint());
+            showAddLaneMenu(menuScenePosition(input.globalPosition));
             return true;
         }
         if (input.button == Qt::RightButton && pointerSlot) {
-            showLaneMenuFor(pointer.lane, input.globalPosition.toPoint());
-            if (m_inputHost)
-                m_inputHost->requestFocus(Qt::MouseFocusReason);
+            showLaneMenuFor(pointer.lane, menuScenePosition(input.globalPosition));
             return true;
         }
         return false;
@@ -434,15 +434,10 @@ bool AutomationCanvas::pointerRelease(const songview::TimelinePointerInput &inpu
                     m_laneSelection.hitTest(contextSlot->id, position.x(), projection(),
                                             m_inputHost->devicePixelRatio());
                 if (selected) {
-                    if (songview::TimelineQuickView *const quick = m_page.m_owner.quickView();
-                        quick && quick->quickWindow()) {
-                        const songview::TimelineInputHost *const host =
-                            input.host ? input.host : m_inputHost;
-                        if (host)
-                            showTimeSelectionMenuFor(contextLane,
-                                                     quick->quickWindow()->mapFromGlobal(
-                                                         host->mapToGlobal(input.position)));
-                    }
+                    if (const songview::TimelineInputHost *const host =
+                            input.host ? input.host : m_inputHost)
+                        showTimeSelectionMenuFor(
+                            contextLane, menuScenePosition(host->mapToGlobal(input.position)));
                 }
             }
         }
@@ -568,10 +563,18 @@ void AutomationCanvas::inputCancelled(songview::TimelineInputCancelReason reason
 {
     if (reason == songview::TimelineInputCancelReason::FocusLost)
         return;
+    // Gesture cleanup runs for every non-focus cancellation — including the
+    // PointerUngrabbed that ends this canvas's own grab while a just-opened
+    // menu publishes: the menu itself is never cancelled here. Its session
+    // ends only on band-level teardown (hidden/detached), without stealing
+    // focus; Escape, outside presses, and foreign replacement are the shared
+    // session's own cancellations.
     cancelInteraction();
     m_hoverState.clearHover();
     m_hoverState.previewValueLabel = {};
     if (m_inputHost)
         m_inputHost->clearCursor();
     requestGestureEndQuickUpdate();
+    if (reason == songview::TimelineInputCancelReason::Hidden)
+        cancelLaneMenuWithoutFocus();
 }

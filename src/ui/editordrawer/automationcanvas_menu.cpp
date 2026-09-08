@@ -1,16 +1,17 @@
 #include "ui/editordrawer/automationcanvas.h"
 
-#include <QAction>
-#include <QMenu>
 #include <QMessageBox>
 #include <QQuickWindow>
 #include <algorithm>
 #include <limits>
 #include <optional>
+#include <utility>
 #include <vector>
 
+#include "core/songdocument.h"
 #include "ui/editordrawer/automationpage.h"
-#include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/quick/quickmenumodel.h"
+#include "ui/songview/quick/quickpopupsession.h"
 
 namespace {
 
@@ -19,8 +20,27 @@ EditorAutomationRowId laneRow(int track, uint8_t controller)
     return {EditorAutomationRowKind::ControlChange, uint8_t(track), controller};
 }
 
-// Per-kind presentation for the unified lane menu; built once via the slot
-// visit so the menu body carries no tempo/CC branching.
+songview::QuickMenuItem menuRow(int id, QString text)
+{
+    songview::QuickMenuItem item;
+    item.id = id;
+    item.text = std::move(text);
+    return item;
+}
+
+songview::QuickMenuItem disabledRow(QString text)
+{
+    songview::QuickMenuItem item = menuRow(0, std::move(text));
+    item.enabled = false;
+    return item;
+}
+
+using Action = AutomationCanvas::CanvasMenuAction;
+
+// Per-kind presentation for the unified lane menu, keyed by the lane kind so
+// the menu body carries no tempo/CC branching. Labels feed the open-time
+// rows, messages feed the dispatch-time announcements; both rebuild from live
+// state, so nothing presentation-shaped crosses the popup.
 struct LaneMenuKind {
     QString copyLabel;
     QString pasteLabel;
@@ -31,7 +51,77 @@ struct LaneMenuKind {
     bool hasLaneActions = false;
 };
 
+LaneMenuKind laneMenuKind(bool tempo, const QString &laneTitle, std::size_t pointCount = 0)
+{
+    if (tempo) {
+        return LaneMenuKind{AutomationCanvas::tr("Copy"),
+                            AutomationCanvas::tr("Paste"),
+                            AutomationCanvas::tr("Clear Tempo"),
+                            AutomationCanvas::tr("Copied Tempo"),
+                            AutomationCanvas::tr("Pasted Tempo"),
+                            AutomationCanvas::tr("Cleared Tempo"),
+                            false};
+    }
+    return LaneMenuKind{
+        AutomationCanvas::tr("Copy CC lane"),
+        AutomationCanvas::tr("Paste CC lane (replace)"),
+        AutomationCanvas::tr("Clear events"),
+        AutomationCanvas::tr("Copied the %1 CC lane (%n point(s))", nullptr, int(pointCount))
+            .arg(laneTitle),
+        AutomationCanvas::tr("Replaced the %1 CC lane").arg(laneTitle),
+        std::nullopt,
+        true};
+}
+
 } // namespace
+
+// The automation menus are AutomationCanvas's slice of the shared canvas popup
+// session: one persistent typed QuickMenuHost/QuickMenuModel pair serves the
+// lane menu, the add-lane strip menu, and the inactive time-selection menu.
+// This file owns only the menu lifecycle — every command travels through the
+// existing AutomationPage/SongView primitives, re-resolved and revalidated at
+// dispatch, so a stale target writes nothing.
+
+void AutomationCanvas::ensureMenuAdapters()
+{
+    if (m_menuHost)
+        return;
+    m_menuHost = new songview::QuickMenuHost(this);
+    m_menuModel = new songview::QuickMenuModel(this);
+    connect(m_menuModel, &songview::QuickMenuModel::activated, this,
+            &AutomationCanvas::handleMenuAction);
+    // Any teardown of our session ownership (outside press, Escape, resize,
+    // foreign replacement, window deactivation) drops the pending target.
+    connect(m_menuHost, &songview::QuickMenuHost::cancelled, this,
+            [this] { m_pendingMenu.reset(); });
+}
+
+void AutomationCanvas::setPopupSession(songview::QuickPopupSession *session)
+{
+    if (m_menuSession == session)
+        return;
+    ensureMenuAdapters();
+    // The host cancels its active menu on the displaced session first; the
+    // stored pointer follows so a later open cannot target a dead session.
+    m_menuHost->setPopupSession(session);
+    m_menuSession = session;
+}
+
+QPointF AutomationCanvas::menuScenePosition(const QPointF &globalPosition) const
+{
+    songview::QuickPopupSession *const session = m_menuSession.data();
+    QQuickWindow *const window = session ? session->window() : nullptr;
+    return window ? window->mapFromGlobal(globalPosition) : QPointF();
+}
+
+void AutomationCanvas::cancelLaneMenuWithoutFocus()
+{
+    m_pendingMenu.reset();
+    // Only end a session this canvas still owns: a foreign popup (the value
+    // prompt, another band's menu) must survive canvas teardown.
+    if (m_menuSession && m_menuSession->owns(m_menuHost))
+        m_menuSession->cancel(/*restoreFocus=*/false);
+}
 
 void AutomationCanvas::showTimeSelectionMenuFor(LaneHandle contextLane,
                                                 const QPointF &scenePosition)
@@ -52,152 +142,125 @@ void AutomationCanvas::showTimeSelectionMenuFor(LaneHandle contextLane,
         m_page.showTimeSelectionMenu(request);
         return;
     }
-    // Retained native fallback (its migration belongs to the automation
-    // menus row): it still execs at a screen-global anchor, so map the
-    // scene position back. No Quick canvas means no input arrived; skip.
-    songview::TimelineQuickView *const quick = m_page.m_owner.quickView();
-    QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
-    if (!window)
+    SongDocument *const document = m_page.document();
+    songview::QuickPopupSession *const session = m_menuSession.data();
+    if (!document || !session || !session->window())
         return;
-    QMenu menu(&m_page.m_owner);
-    QAction *clear = menu.addAction(tr("Clear time selection"));
-    const QAction *chosen = menu.exec(window->mapToGlobal(scenePosition).toPoint());
-    if (m_inputHost)
-        m_inputHost->requestFocus(Qt::PopupFocusReason);
-    if (chosen == clear && model.timeSelection().active()) {
-        model.clearTimeSelection();
-        requestSelectionQuickUpdate();
-    }
+    // Inactive fallback: the same single clear row the native menu carried.
+    // Dispatch rechecks activation, exactly as the post-exec path did.
+    std::vector<songview::QuickMenuItem> rows;
+    rows.push_back(menuRow(int(Action::ClearTimeSelection), tr("Clear time selection")));
+    m_menuModel->setItems(std::move(rows));
+
+    PendingMenu target;
+    target.document = document;
+    target.documentRevision = document->revision();
+    target.lane = contextLane;
+    target.rowId = slot->id;
+
+    m_menuHost->open(m_menuModel, scenePosition);
+    if (!m_menuHost->isOpen())
+        return;
+    m_pendingMenu = std::move(target);
 }
 
-void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPoint &globalPosition)
+void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPointF &scenePosition)
 {
+    SongDocument *const document = m_page.document();
+    songview::QuickPopupSession *const session = m_menuSession.data();
+    if (!document || !session || !session->window())
+        return;
     const auto *slot = resolveSlot(handle);
     if (!slot || !slot->lane)
         return;
-    NodeLane *lane = slot->lane;
-    const auto rowId = slot->id;
-    const QString laneTitle = lane->title();
-    const auto points = lane->points();
-    const LaneMenuKind kind = slot->visit(
-        [&] {
-            return LaneMenuKind{tr("Copy"),
-                                tr("Paste"),
-                                tr("Clear Tempo"),
-                                tr("Copied Tempo"),
-                                tr("Pasted Tempo"),
-                                tr("Cleared Tempo"),
-                                false};
-        },
-        [&] {
-            return LaneMenuKind{
-                tr("Copy CC lane"),
-                tr("Paste CC lane (replace)"),
-                tr("Clear events"),
-                tr("Copied the %1 CC lane (%n point(s))", nullptr, int(points.size()))
-                    .arg(laneTitle),
-                tr("Replaced the %1 CC lane").arg(laneTitle),
-                std::nullopt,
-                true};
-        });
-    QMenu menu(&m_page.m_owner);
-    QAction *copy = menu.addAction(kind.copyLabel);
-    copy->setEnabled(!points.empty());
-    QAction *paste = menu.addAction(kind.pasteLabel);
-    paste->setEnabled(!m_clipboard.empty());
-    menu.addSeparator();
-    QAction *clear = menu.addAction(kind.clearLabel);
-    clear->setEnabled(!points.empty());
-    QAction *remove = nullptr;
-    QAction *hide = nullptr;
-    std::vector<std::pair<QAction *, uint8_t>> ranges;
+    const QString laneTitle = slot->lane->title();
+    // Enablement needs live data, not a snapshot: read emptiness now and let
+    // every command re-read what it mutates at dispatch.
+    const bool hasPoints = !slot->lane->points().empty();
+    const LaneMenuKind kind = laneMenuKind(slot->isTempo(), laneTitle);
+
+    std::vector<songview::QuickMenuItem> rows;
+    rows.reserve(kind.hasLaneActions ? 7u : 4u);
+    songview::QuickMenuItem copy = menuRow(int(Action::Copy), kind.copyLabel);
+    copy.enabled = hasPoints;
+    rows.push_back(std::move(copy));
+    songview::QuickMenuItem paste = menuRow(int(Action::Paste), kind.pasteLabel);
+    paste.enabled = !m_clipboard.empty();
+    rows.push_back(std::move(paste));
+    rows.push_back(songview::QuickMenuItem::makeSeparator());
+    songview::QuickMenuItem clear = menuRow(int(Action::Clear), kind.clearLabel);
+    clear.enabled = hasPoints;
+    rows.push_back(std::move(clear));
     if (kind.hasLaneActions) {
-        const uint8_t controller = rowId.controller;
-        const bool empty = points.empty();
-        remove = menu.addAction(empty ? tr("Remove empty CC lane") : tr("Delete CC lane"));
-        hide = menu.addAction(tr("Hide CC lane"));
+        const uint8_t controller = slot->id.controller;
+        rows.push_back(menuRow(int(Action::RemoveLane),
+                               hasPoints ? tr("Delete CC lane") : tr("Remove empty CC lane")));
+        rows.push_back(menuRow(int(Action::HideLane), tr("Hide CC lane")));
         if (CCLanes::rangeZoomable(controller)) {
-            auto *rangeMenu = menu.addMenu(tr("Value range"));
-            const auto range = m_page.m_viewState.laneRanges.find(rowId);
+            const auto range = m_page.m_viewState.laneRanges.find(slot->id);
             const uint8_t current = range == m_page.m_viewState.laneRanges.cend()
                                         ? CCLanes::defaultRange(controller)
                                         : range->second;
+            songview::QuickMenuItem ranges = menuRow(int(Action::ValueRange), tr("Value range"));
+            ranges.children.reserve(5);
             for (const uint8_t value :
                  {uint8_t(0), uint8_t(16), uint8_t(32), uint8_t(64), uint8_t(127)}) {
+                const Action action = value == 0    ? Action::RangeAuto
+                                      : value == 16 ? Action::Range16
+                                      : value == 32 ? Action::Range32
+                                      : value == 64 ? Action::Range64
+                                                    : Action::Range127;
                 const QString label = value == 0     ? tr("Auto (fit to data)")
                                       : value == 127 ? tr("0–127 (full)")
                                                      : QStringLiteral("0–%1").arg(value);
-                auto *action = rangeMenu->addAction(label);
-                action->setCheckable(true);
-                action->setChecked(value == current);
-                ranges.emplace_back(action, value);
+                songview::QuickMenuItem choice = menuRow(int(action), label);
+                choice.checkable = true;
+                choice.checked = value == current;
+                ranges.children.push_back(std::move(choice));
             }
+            rows.push_back(std::move(ranges));
         }
     }
-    QAction *chosen = menu.exec(globalPosition);
+    m_menuModel->setItems(std::move(rows));
+    // Submenu rows activate through the lazily created child model, not the
+    // root: bind this open's child before the panel can traverse into it.
+    // setItems() destroyed the previous child models, so the connection is
+    // re-established per open; rowForId misses on menus without the range
+    // submenu (tempo lanes, non-zoomable controllers).
+    if (const int rangeRow = m_menuModel->rowForId(int(Action::ValueRange)); rangeRow >= 0) {
+        if (songview::QuickMenuModel *const rangesModel = m_menuModel->submenuForRow(rangeRow))
+            connect(rangesModel, &songview::QuickMenuModel::activated, this,
+                    &AutomationCanvas::handleMenuAction);
+    }
+
+    // Snapshot the guarded open-time target first, but publish it only after
+    // open()'s implicit cancellation of a displaced session has completed: no
+    // callback can observe a half-published target, and an open failure
+    // publishes nothing. Cancellation clears it.
+    PendingMenu target;
+    target.document = document;
+    target.documentRevision = document->revision();
+    target.lane = handle;
+    target.rowId = slot->id;
+    target.laneTitle = laneTitle;
+
+    // End the press's implicit grab before the menu publishes: the panel must
+    // receive the following clicks, and the synchronous PointerUngrabbed
+    // cancellation lands while no pending target exists yet.
     if (m_inputHost)
-        m_inputHost->requestFocus(Qt::PopupFocusReason);
-    if (!chosen)
+        m_inputHost->releasePointerGrab();
+    m_menuHost->open(m_menuModel, scenePosition);
+    if (!m_menuHost->isOpen())
         return;
-    for (const auto &[action, range] : ranges) {
-        if (chosen == action) {
-            m_page.setLaneRange(rowId, range);
-            return;
-        }
-    }
-    const auto maxTick = std::numeric_limits<uint64_t>::max();
-    if (chosen == copy) {
-        m_clipboard = points;
-        m_page.announce(kind.copiedMessage);
-    } else if (chosen == paste) {
-        std::vector<NodePoint> replacement;
-        replacement.reserve(m_clipboard.size());
-        const int minimum = lane->minimumValue();
-        const int maximum = lane->maximumValue();
-        for (const auto &point : m_clipboard)
-            replacement.push_back({point.tick, std::clamp(point.value, minimum, maximum)});
-        lane->replaceSpan(0, maxTick, replacement);
-        m_page.requestRefresh();
-        m_page.announce(kind.pastedMessage);
-    } else if (chosen == clear) {
-        lane->replaceSpan(0, maxTick, {});
-        if (kind.hasLaneActions)
-            m_page.addEmptyLane(int(rowId.track), rowId.controller);
-        m_page.requestRefresh();
-        if (kind.clearedMessage)
-            m_page.announce(*kind.clearedMessage);
-    } else if (kind.hasLaneActions && chosen == remove) {
-        const int track = int(rowId.track);
-        const uint8_t controller = rowId.controller;
-        if (!points.empty()) {
-            const auto answer = QMessageBox::question(
-                &m_page.m_owner, tr("Delete CC lane"),
-                tr("Delete the %1 CC lane and its %2 events?").arg(laneTitle).arg(points.size()));
-            if (m_inputHost)
-                m_inputHost->requestFocus(Qt::PopupFocusReason);
-            if (answer != QMessageBox::Yes)
-                return;
-        }
-        if (!points.empty())
-            lane->replaceSpan(0, maxTick, {});
-        m_page.removeEmptyLane(track, controller);
-        if (points.empty() && CoreTimeDefaults::isDefaultVisibleController(controller) &&
-            m_page.m_viewState.hideLane(rowId)) {
-            m_page.publishViewState();
-            rebuildRows();
-        }
-        m_page.requestRefresh();
-    } else if (kind.hasLaneActions && chosen == hide) {
-        if (m_page.m_viewState.hideLane(rowId)) {
-            m_page.publishViewState();
-            rebuildRows();
-            m_page.announce(tr("Hid the %1 CC lane").arg(laneTitle));
-        }
-    }
+    m_pendingMenu = std::move(target);
 }
 
-void AutomationCanvas::showAddLaneMenu(const QPoint &globalPosition)
+void AutomationCanvas::showAddLaneMenu(const QPointF &scenePosition)
 {
+    SongDocument *const document = m_page.document();
+    songview::QuickPopupSession *const session = m_menuSession.data();
+    if (!document || !session || !session->window())
+        return;
     const int track = m_page.m_owner.selectionModel().primaryTrack();
     if (track < 0)
         return;
@@ -207,45 +270,206 @@ void AutomationCanvas::showAddLaneMenu(const QPoint &globalPosition)
     for (const xcmd::Descriptor &descriptor : xcmd::laneDescriptors())
         candidates.push_back(descriptor.laneController);
     candidates.push_back(CCLanes::bendController());
-    QMenu menu(&m_page.m_owner);
+    std::vector<songview::QuickMenuItem> rows;
     std::vector<EditorAutomationRowId> hidden;
     for (const uint8_t controller : candidates) {
         const auto row = laneRow(track, controller);
         if (m_page.m_viewState.isLaneHidden(row) || m_page.model().findLane(track, controller) ||
             m_page.m_viewState.emptyLanes.find(row) != m_page.m_viewState.emptyLanes.cend())
             continue;
-        auto *action = menu.addAction(CCLanes::laneLabel(controller));
-        action->setData(int(controller));
+        rows.push_back(
+            menuRow(int(Action::AddLaneBase) + controller, CCLanes::laneLabel(controller)));
     }
     for (const auto &row : m_page.m_viewState.hiddenLanes())
         if (row.kind == EditorAutomationRowKind::ControlChange && row.track == uint8_t(track))
             hidden.push_back(row);
-    if (menu.isEmpty())
-        menu.addAction(tr("All parameters already have CC lanes"))->setEnabled(false);
+    if (rows.empty())
+        rows.push_back(disabledRow(tr("All parameters already have CC lanes")));
     if (!hidden.empty()) {
-        menu.addSeparator();
-        menu.addAction(tr("Hidden CC lanes"))->setEnabled(false);
-        for (const auto &row : hidden) {
-            auto *action =
-                menu.addAction(tr("Show: %1 (hidden)").arg(CCLanes::laneLabel(row.controller)));
-            action->setData(256 + int(row.controller));
-        }
+        rows.push_back(songview::QuickMenuItem::makeSeparator());
+        rows.push_back(disabledRow(tr("Hidden CC lanes")));
+        for (const auto &row : hidden)
+            rows.push_back(
+                menuRow(int(Action::ShowLaneBase) + row.controller,
+                        tr("Show: %1 (hidden)").arg(CCLanes::laneLabel(row.controller))));
     }
-    QAction *chosen = menu.exec(globalPosition);
+    m_menuModel->setItems(std::move(rows));
+
+    PendingMenu target;
+    target.document = document;
+    target.documentRevision = document->revision();
+    target.track = track;
+
+    // Same grab/focus handoff contract as the lane menu above.
     if (m_inputHost)
-        m_inputHost->requestFocus(Qt::PopupFocusReason);
-    if (!chosen || !chosen->data().isValid())
+        m_inputHost->releasePointerGrab();
+    m_menuHost->open(m_menuModel, scenePosition);
+    if (!m_menuHost->isOpen())
         return;
-    const int value = chosen->data().toInt();
-    if (value >= 256) {
-        const auto row = laneRow(track, uint8_t(value - 256));
-        if (m_page.m_viewState.unhideLane(row)) {
+    m_pendingMenu = std::move(target);
+}
+
+void AutomationCanvas::handleMenuAction(int actionId)
+{
+    if (!m_pendingMenu)
+        return;
+    // Consume before any command: the dispatch may rebuild rows (hide,
+    // remove, add) and a target must never fire twice.
+    const PendingMenu pending = std::move(*m_pendingMenu);
+    m_pendingMenu.reset();
+    SongDocument *const document = m_page.document();
+    if (!document || document != pending.document ||
+        document->revision() != pending.documentRevision)
+        return; // Stale document: no mutation, no announcement.
+    // Keyboard continuity returns to the band before dispatch, but only when
+    // no subsequent popup already owns the session.
+    if (!m_menuSession || !m_menuSession->isOpen()) {
+        if (m_inputHost)
+            m_inputHost->requestFocus(Qt::PopupFocusReason);
+    }
+
+    if (actionId == int(Action::ClearTimeSelection)) {
+        auto &model = m_page.m_owner.selectionModel();
+        if (model.timeSelection().active()) {
+            model.clearTimeSelection();
+            requestSelectionQuickUpdate();
+        }
+        return;
+    }
+    if (actionId >= int(Action::ShowLaneBase)) {
+        const uint8_t controller = uint8_t(actionId - int(Action::ShowLaneBase));
+        const auto row = laneRow(pending.track, controller);
+        if (pending.track >= 0 && m_page.m_viewState.unhideLane(row)) {
             m_page.publishViewState();
             rebuildRows();
-            m_page.announce(tr("Showed the %1 CC lane").arg(CCLanes::laneLabel(row.controller)));
+            m_page.announce(tr("Showed the %1 CC lane").arg(CCLanes::laneLabel(controller)));
         }
-    } else {
-        m_page.addEmptyLane(track, uint8_t(value));
-        m_page.announce(tr("Added %1 CC lane").arg(CCLanes::laneLabel(uint8_t(value))));
+        return;
+    }
+    if (actionId >= int(Action::AddLaneBase)) {
+        const uint8_t controller = uint8_t(actionId - int(Action::AddLaneBase));
+        if (pending.track >= 0) {
+            m_page.addEmptyLane(pending.track, controller);
+            m_page.announce(tr("Added %1 CC lane").arg(CCLanes::laneLabel(controller)));
+        }
+        return;
+    }
+    // Lane-menu commands re-resolve the captured handle and require the same
+    // row: a remap landing between open and dispatch cannot mutate a
+    // different lane.
+    const auto *slot = resolveSlot(pending.lane);
+    if (!slot || !slot->lane || slot->id != pending.rowId)
+        return;
+    NodeLane *lane = slot->lane;
+    const auto maxTick = std::numeric_limits<uint64_t>::max();
+    if (actionId == int(Action::Copy)) {
+        m_clipboard = lane->points();
+        m_page.announce(
+            laneMenuKind(slot->isTempo(), pending.laneTitle, m_clipboard.size()).copiedMessage);
+    } else if (actionId == int(Action::Paste)) {
+        std::vector<NodePoint> replacement;
+        replacement.reserve(m_clipboard.size());
+        const int minimum = lane->minimumValue();
+        const int maximum = lane->maximumValue();
+        for (const auto &point : m_clipboard)
+            replacement.push_back({point.tick, std::clamp(point.value, minimum, maximum)});
+        lane->replaceSpan(0, maxTick, replacement);
+        m_page.requestRefresh();
+        m_page.announce(
+            laneMenuKind(pending.rowId.kind == EditorAutomationRowKind::Tempo, pending.laneTitle)
+                .pastedMessage);
+    } else if (actionId == int(Action::Clear)) {
+        lane->replaceSpan(0, maxTick, {});
+        // Read the snapshot row from here on: replaceSpan's documentChanged
+        // fan-out rebuilds m_nodeStack, invalidating slot pointers.
+        if (pending.rowId.kind == EditorAutomationRowKind::ControlChange)
+            m_page.addEmptyLane(int(pending.rowId.track), pending.rowId.controller);
+        m_page.requestRefresh();
+        if (const LaneMenuKind kind = laneMenuKind(
+                pending.rowId.kind == EditorAutomationRowKind::Tempo, pending.laneTitle);
+            kind.clearedMessage)
+            m_page.announce(*kind.clearedMessage);
+    } else if (actionId == int(Action::RemoveLane)) {
+        const int track = int(slot->id.track);
+        const uint8_t controller = slot->id.controller;
+        const std::size_t pointCount = lane->points().size();
+        if (pointCount != 0) {
+            // The real delete question must open only after the panel's QML
+            // release handler fully unwound: a nested event loop inside that
+            // handler trips Qt's destroyed-while-handling fatal. Defer the
+            // question by one queued pass while activation stays synchronous.
+            // The continuation carries the immutable open-time snapshot by
+            // value - never slot or lane pointers, which a rebuild during the
+            // pump would invalidate - and revalidates the whole guard before
+            // showing and again after the answer. `this` as the context
+            // object drops the call if the canvas dies before delivery; the
+            // QPointer guard covers destruction during the dialog's own
+            // nested loop.
+            QMetaObject::invokeMethod(
+                this,
+                [this, guard = QPointer<AutomationCanvas>(this), snapshot = pending, pointCount] {
+                    // An old confirmation must never cover later ownership:
+                    // drop it if the session went away or a newer popup is
+                    // already open.
+                    if (!m_menuSession || m_menuSession->isOpen())
+                        return;
+                    SongDocument *const current = m_page.document();
+                    const auto *confirmed = resolveSlot(snapshot.lane);
+                    if (!snapshot.document || current != snapshot.document ||
+                        current->revision() != snapshot.documentRevision || !confirmed ||
+                        !confirmed->lane || confirmed->id != snapshot.rowId)
+                        return;
+                    const auto answer =
+                        QMessageBox::question(&m_page.m_owner, tr("Delete CC lane"),
+                                              tr("Delete the %1 CC lane and its %2 events?")
+                                                  .arg(snapshot.laneTitle)
+                                                  .arg(pointCount));
+                    if (!guard)
+                        return;
+                    // Same restoration gate as the dispatch head: the modal
+                    // loop is a re-entry point, so a popup opened meanwhile
+                    // keeps focus.
+                    if (!m_menuSession || !m_menuSession->isOpen()) {
+                        if (m_inputHost)
+                            m_inputHost->requestFocus(Qt::PopupFocusReason);
+                    }
+                    if (answer != QMessageBox::Yes)
+                        return;
+                    SongDocument *const answered = m_page.document();
+                    const auto *settled = resolveSlot(snapshot.lane);
+                    if (!answered || answered != snapshot.document ||
+                        answered->revision() != snapshot.documentRevision || !settled ||
+                        !settled->lane || settled->id != snapshot.rowId)
+                        return;
+                    settled->lane->replaceSpan(0, maxTick, {});
+                    m_page.removeEmptyLane(int(snapshot.rowId.track), snapshot.rowId.controller);
+                    m_page.requestRefresh();
+                },
+                Qt::QueuedConnection);
+            return;
+        }
+        m_page.removeEmptyLane(track, controller);
+        if (CoreTimeDefaults::isDefaultVisibleController(controller) &&
+            m_page.m_viewState.hideLane(laneRow(track, controller))) {
+            m_page.publishViewState();
+            rebuildRows();
+        }
+        m_page.requestRefresh();
+    } else if (actionId == int(Action::HideLane)) {
+        if (m_page.m_viewState.hideLane(slot->id)) {
+            m_page.publishViewState();
+            rebuildRows();
+            m_page.announce(tr("Hid the %1 CC lane").arg(pending.laneTitle));
+        }
+    } else if (actionId == int(Action::RangeAuto)) {
+        m_page.setLaneRange(slot->id, 0);
+    } else if (actionId == int(Action::Range16)) {
+        m_page.setLaneRange(slot->id, 16);
+    } else if (actionId == int(Action::Range32)) {
+        m_page.setLaneRange(slot->id, 32);
+    } else if (actionId == int(Action::Range64)) {
+        m_page.setLaneRange(slot->id, 64);
+    } else if (actionId == int(Action::Range127)) {
+        m_page.setLaneRange(slot->id, 127);
     }
 }

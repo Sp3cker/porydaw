@@ -103,6 +103,8 @@ class AutomationEditingTest final : public QObject
     // Menu and clipboard coverage.
     void contextMenuRoutingAndAvailableLanes();
     void contextMenuActionsApplyEffects();
+    void laneMenuValueRangeSubmenuPickRescalesAndCloses();
+    void outsidePressDismissesLaneMenuWithoutSideEffects();
     void clipboardCrossLanePasteClamps();
     void pointMenuDeleteCommitsEdit();
     void pointMenuValuePromptUpdatesOneDuplicateOccurrence();

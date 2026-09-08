@@ -11,6 +11,7 @@
 #include <QFont>
 #include <QObject>
 #include <QPointF>
+#include <QPointer>
 #include <QRect>
 #include <QSize>
 #include <QString>
@@ -29,8 +30,12 @@
 #include "ui/songviewmodel.h"
 
 class AutomationPage;
+class SongDocument;
 
 namespace songview {
+class QuickMenuHost;
+class QuickMenuModel;
+class QuickPopupSession;
 class TimelineQuickScene;
 class TimelineQuickView;
 } // namespace songview
@@ -43,6 +48,29 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     Q_DISABLE_COPY_MOVE(AutomationCanvas)
 
   public:
+    // Stable typed selectors for the shared Quick canvas menus. Ordinary
+    // commands carry fixed ids; the lane menu's dynamic rows offset their
+    // controller by AddLaneBase (add a new lane) or ShowLaneBase (reveal a
+    // hidden lane). The value-range submenu's rows are the Range* ids proper
+    // (Auto, 16, 32, 64, 127). Checks and production dispatch both read
+    // these.
+    enum class CanvasMenuAction : int {
+        Copy = 1,
+        Paste = 2,
+        Clear = 3,
+        RemoveLane = 4,
+        HideLane = 5,
+        ClearTimeSelection = 6,
+        ValueRange = 7,
+        RangeAuto = 8,
+        Range16 = 9,
+        Range32 = 10,
+        Range64 = 11,
+        Range127 = 12,
+        AddLaneBase = 256,
+        ShowLaneBase = 512,
+    };
+
     explicit AutomationCanvas(AutomationPage &page);
     ~AutomationCanvas() override = default;
 
@@ -81,6 +109,9 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     QRect laneBody(LaneHandle handle) const;
     QRect pinnedTempoRect() const noexcept;
     int minimumContentHeight() const noexcept;
+    // Binds the shared canvas popup session once TimelineQuickView exists;
+    // the automation menus are typed QuickMenuHost adapters over it.
+    void setPopupSession(songview::QuickPopupSession *session);
 
     void attachInputHost(songview::TimelineInputHost &host) override;
     void detachInputHost(songview::TimelineInputHost &host) override;
@@ -142,6 +173,22 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
         std::vector<NodePointMove> moves;
         std::vector<uint64_t> deleteTicks;
     };
+    // The guarded open-time target for one automation canvas menu. Document
+    // identity plus revision reject any document change since the open; the
+    // lane menu additionally re-resolves the handle and requires the same
+    // row id, so a rebuild landing after the open cannot retarget a
+    // different lane. No lane pointer and no point vector crosses the popup:
+    // commands re-read live state at dispatch. `track` carries the captured
+    // add-menu track, `laneTitle` the presentation string for post-rebuild
+    // announcements.
+    struct PendingMenu {
+        QPointer<SongDocument> document;
+        uint64_t documentRevision = 0;
+        LaneHandle lane;
+        EditorAutomationRowId rowId = {};
+        int track = -1;
+        QString laneTitle;
+    };
     void viewportResized();
     void scrollStateChanged();
     void relayoutContent();
@@ -199,8 +246,14 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
                                        const std::vector<NodeLaneChange> &changes,
                                        const QString &undoLabel);
     void showTimeSelectionMenuFor(LaneHandle contextLane, const QPointF &scenePosition);
-    void showLaneMenuFor(LaneHandle handle, const QPoint &globalPosition);
-    void showAddLaneMenu(const QPoint &globalPosition);
+    void showLaneMenuFor(LaneHandle handle, const QPointF &scenePosition);
+    void showAddLaneMenu(const QPointF &scenePosition);
+    QPointF menuScenePosition(const QPointF &globalPosition) const;
+    // Consumes the guarded open-time target; clears it before any command.
+    void handleMenuAction(int actionId);
+    // Ends only a session this canvas still owns, without stealing focus.
+    void cancelLaneMenuWithoutFocus();
+    void ensureMenuAdapters();
     void layoutLaneStack();
     int tempoTop() const;
     void syncPinnedTempoLayout();
@@ -261,6 +314,10 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     QCursor m_pencilCursor;
     std::optional<ActiveGesture> m_activeGesture;
     std::optional<PendingValuePrompt> m_pendingValuePrompt;
+    songview::QuickMenuHost *m_menuHost = nullptr;
+    songview::QuickMenuModel *m_menuModel = nullptr;
+    QPointer<songview::QuickPopupSession> m_menuSession;
+    std::optional<PendingMenu> m_pendingMenu;
     NodeLaneHoverState m_hoverState;
     NodeDoubleClickGuard m_deletedNodeClick;
 };

@@ -62,6 +62,13 @@ AutomationCanvas::AutomationCanvas(AutomationPage &page)
     , m_hoverState(page.m_owner.font())
 {
     refreshGeometry();
+    // The lane menus are typed adapters over the shared canvas popup session;
+    // the session itself is assigned later by the Quick host view. The host
+    // closes the session before emitting activated(), so the guarded open-
+    // time target survives until handleMenuAction consumes it — only a
+    // cancellation (Escape, outside press, foreign replacement, window
+    // resize or deactivation) clears it.
+    ensureMenuAdapters();
 }
 
 void AutomationCanvas::attachInputHost(songview::TimelineInputHost &host)
@@ -305,6 +312,11 @@ const QCursor &AutomationCanvas::pencilCursor()
 void AutomationCanvas::rebuildRows()
 {
     cancelInteraction();
+    // A structural rebuild remaps every LaneHandle in m_nodeStack, so a menu
+    // opened earlier would mutate a different lane: end it synchronously,
+    // without stealing focus. Only an owned session ends here; a foreign
+    // popup (a prompt, another band's menu) survives.
+    cancelLaneMenuWithoutFocus();
     invalidateSelectedNodeMultiplicity();
     m_hoverState.invalidateCaches();
     m_hoverState.hoverValueLabel = {};

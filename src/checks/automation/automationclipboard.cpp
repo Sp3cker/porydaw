@@ -3,26 +3,25 @@
 #include <QtTest>
 
 #include <limits>
+#include <utility>
 
 #include <QCoreApplication>
-#include <QMenu>
 
-#include "checks/automation/automationmodalguard.h"
+#include "checks/quickpopupguard.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 
-namespace {
+#include "checks/automation/automationquickmenu.h"
 
+namespace {
 constexpr uint8_t kLfoController = 21;
 constexpr uint64_t kTempoCopyTick = 96;
 constexpr uint64_t kCcCopyTick = 144;
+using CanvasMenuAction = AutomationCanvas::CanvasMenuAction;
 
-using automation_modal::findMenuAction;
-using automation_modal::MenuInteractionResult;
-using automation_modal::scheduleMenuInteraction;
-
-using TriggerResult = MenuInteractionResult;
+using automation_quick::AutomationMenu;
+using automation_quick::waitForAutomationMenu;
 
 } // namespace
 
@@ -31,6 +30,7 @@ void AutomationEditingTest::clipboardCrossLanePasteClamps()
     SongTab &songTab = tab();
     AutomationPage &automationPage = page();
     QVERIFY(expandTempo());
+    const quick_popup::PromptGuard guard(songTab.view());
 
     songTab.document().applyTempoEdit(TempoEdit{
         .remove = songTab.document().tempoPoints(),
@@ -46,33 +46,30 @@ void AutomationEditingTest::clipboardCrossLanePasteClamps()
                               qreal(tempoHeader.center().y())};
     const QPointF lfoGutter{qreal(layout::space(layout::Space::One)),
                             qreal(laneBody(lfo).center().y())};
+    // Copy and Paste are typed rows; the pick closes the menu before action
+    // activation, and the clipboard command then dispatches synchronously.
+    const auto openLaneMenu = [&](const QPointF &gutter, QString why) {
+        mousePress(Qt::RightButton, automationGutterWindowPoint(gutter));
+        mouseRelease(Qt::RightButton, automationGutterWindowPoint(gutter));
+        return waitForAutomationMenu(songTab.view(), std::move(why));
+    };
+    const auto clickRow = [](const AutomationMenu &menu, CanvasMenuAction action) {
+        return quick_popup::clickMenuRow(*menu.session, menu.model->rowForId(int(action)));
+    };
 
-    TriggerResult copyTempo;
-    {
-        const auto interaction = scheduleMenuInteraction(
-            copyTempo, [](QMenu &menu) { return findMenuAction(menu, QStringLiteral("Copy")); });
-        mousePress(Qt::RightButton, automationGutterWindowPoint(tempoGutter));
-        mouseRelease(Qt::RightButton, automationGutterWindowPoint(tempoGutter));
-    }
-    QVERIFY2(copyTempo.opened, qPrintable(copyTempo.diagnostic));
-    QCOMPARE(copyTempo.parentWidget, static_cast<QWidget *>(&songTab.view()));
-    QVERIFY2(copyTempo.actionFound, qPrintable(copyTempo.diagnostic));
-    QVERIFY2(copyTempo.actionEnabled, qPrintable(copyTempo.diagnostic));
-    QVERIFY2(copyTempo.actionClicked, qPrintable(copyTempo.diagnostic));
+    const AutomationMenu copyTempo =
+        openLaneMenu(tempoGutter, "the tempo right-press did not open the shared menu");
+    QVERIFY2(copyTempo.session, qUtf8Printable(copyTempo.diagnostic));
+    QVERIFY2(clickRow(copyTempo, CanvasMenuAction::Copy), "the Copy tempo row was not clickable");
+    QCoreApplication::processEvents();
+    QVERIFY2(!copyTempo.session->isOpen(), "the Copy tempo pick left the shared menu open");
 
-    TriggerResult pasteCc;
-    {
-        const auto interaction = scheduleMenuInteraction(pasteCc, [](QMenu &menu) {
-            return findMenuAction(menu, QStringLiteral("Paste CC lane (replace)"));
-        });
-        mousePress(Qt::RightButton, automationGutterWindowPoint(lfoGutter));
-        mouseRelease(Qt::RightButton, automationGutterWindowPoint(lfoGutter));
-    }
-    QVERIFY2(pasteCc.opened, qPrintable(pasteCc.diagnostic));
-    QCOMPARE(pasteCc.parentWidget, static_cast<QWidget *>(&songTab.view()));
-    QVERIFY2(pasteCc.actionFound, qPrintable(pasteCc.diagnostic));
-    QVERIFY2(pasteCc.actionEnabled, qPrintable(pasteCc.diagnostic));
-    QVERIFY2(pasteCc.actionClicked, qPrintable(pasteCc.diagnostic));
+    const AutomationMenu pasteCc =
+        openLaneMenu(lfoGutter, "the CC lane right-press did not open the shared menu");
+    QVERIFY2(pasteCc.session, qUtf8Printable(pasteCc.diagnostic));
+    QVERIFY2(clickRow(pasteCc, CanvasMenuAction::Paste), "the Paste CC row was not clickable");
+    QCoreApplication::processEvents();
+    QVERIFY2(!pasteCc.session->isOpen(), "the Paste CC pick left the shared menu open");
     const auto clampedCc = songTab.document().lanePoints(0, kLfoController);
     QCOMPARE(clampedCc.size(), std::size_t{1});
     QCOMPARE(clampedCc.front().tick, kTempoCopyTick);
@@ -82,32 +79,20 @@ void AutomationEditingTest::clipboardCrossLanePasteClamps()
                                        {{kCcCopyTick, 0}});
     QCoreApplication::processEvents();
 
-    TriggerResult copyCc;
-    {
-        const auto interaction = scheduleMenuInteraction(copyCc, [](QMenu &menu) {
-            return findMenuAction(menu, QStringLiteral("Copy CC lane"));
-        });
-        mousePress(Qt::RightButton, automationGutterWindowPoint(lfoGutter));
-        mouseRelease(Qt::RightButton, automationGutterWindowPoint(lfoGutter));
-    }
-    QVERIFY2(copyCc.opened, qPrintable(copyCc.diagnostic));
-    QCOMPARE(copyCc.parentWidget, static_cast<QWidget *>(&songTab.view()));
-    QVERIFY2(copyCc.actionFound, qPrintable(copyCc.diagnostic));
-    QVERIFY2(copyCc.actionEnabled, qPrintable(copyCc.diagnostic));
-    QVERIFY2(copyCc.actionClicked, qPrintable(copyCc.diagnostic));
+    const AutomationMenu copyCc =
+        openLaneMenu(lfoGutter, "the CC lane right-press did not reopen the shared menu");
+    QVERIFY2(copyCc.session, qUtf8Printable(copyCc.diagnostic));
+    QVERIFY2(clickRow(copyCc, CanvasMenuAction::Copy), "the Copy CC row was not clickable");
+    QCoreApplication::processEvents();
+    QVERIFY2(!copyCc.session->isOpen(), "the Copy CC pick left the shared menu open");
 
-    TriggerResult pasteTempo;
-    {
-        const auto interaction = scheduleMenuInteraction(
-            pasteTempo, [](QMenu &menu) { return findMenuAction(menu, QStringLiteral("Paste")); });
-        mousePress(Qt::RightButton, automationGutterWindowPoint(tempoGutter));
-        mouseRelease(Qt::RightButton, automationGutterWindowPoint(tempoGutter));
-    }
-    QVERIFY2(pasteTempo.opened, qPrintable(pasteTempo.diagnostic));
-    QCOMPARE(pasteTempo.parentWidget, static_cast<QWidget *>(&songTab.view()));
-    QVERIFY2(pasteTempo.actionFound, qPrintable(pasteTempo.diagnostic));
-    QVERIFY2(pasteTempo.actionEnabled, qPrintable(pasteTempo.diagnostic));
-    QVERIFY2(pasteTempo.actionClicked, qPrintable(pasteTempo.diagnostic));
+    const AutomationMenu pasteTempo =
+        openLaneMenu(tempoGutter, "the tempo right-press did not reopen the shared menu");
+    QVERIFY2(pasteTempo.session, qUtf8Printable(pasteTempo.diagnostic));
+    QVERIFY2(clickRow(pasteTempo, CanvasMenuAction::Paste),
+             "the Paste tempo row was not clickable");
+    QCoreApplication::processEvents();
+    QVERIFY2(!pasteTempo.session->isOpen(), "the Paste tempo pick left the shared menu open");
     const auto clampedTempo = songTab.document().tempoPoints();
     QCOMPARE(clampedTempo.size(), std::size_t{1});
     QCOMPARE(clampedTempo.front().tick, kCcCopyTick);
