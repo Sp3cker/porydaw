@@ -156,18 +156,6 @@ bool TrackHeadersFixture::create(QString &error)
     m_headers->rebuild(activity, true);
     checks::support::pumpQuick();
 
-    if (!songView.focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason)) {
-        error = QStringLiteral("TrackHeaders Quick input could not request focus");
-        return false;
-    }
-    if (!QTest::qWaitFor([this] {
-            return m_window && m_input && QGuiApplication::focusWindow() == m_window &&
-                   QGuiApplication::focusObject() == m_input && m_input->hasActiveFocus();
-        })) {
-        error = QStringLiteral("TrackHeaders Quick input did not receive native window focus");
-        return false;
-    }
-
     const std::shared_ptr<const MidiTimeline> timeline = candidate->timeline();
     if (!timeline) {
         error = QStringLiteral("TrackHeaders SongTab lost its timeline");
@@ -193,6 +181,22 @@ bool TrackHeadersFixture::create(QString &error)
         return false;
     }
     m_tab = std::move(candidate);
+    return true;
+}
+
+bool TrackHeadersFixture::acquireInputFocus(QString &error)
+{
+    if (!view().focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason)) {
+        error = QStringLiteral("TrackHeaders Quick input could not request focus");
+        return false;
+    }
+    if (!QTest::qWaitFor([this] {
+            return m_window && m_input && QGuiApplication::focusWindow() == m_window &&
+                   QGuiApplication::focusObject() == m_input && m_input->hasActiveFocus();
+        })) {
+        error = QStringLiteral("TrackHeaders Quick input did not receive native window focus");
+        return false;
+    }
     return true;
 }
 
@@ -312,11 +316,7 @@ std::optional<int> TrackHeadersFixture::rowForTrack(int track) const
 
 std::optional<int> TrackHeadersFixture::addTrackRow() const
 {
-    for (int row = 0; row < m_headers->rowCount(); ++row) {
-        if (rowData(*m_headers, row, songview::TrackHeaderModel::IsAddTrackRole).toBool())
-            return row;
-    }
-    return std::nullopt;
+    return trackheaders_test::addTrackRow(*m_headers);
 }
 
 std::optional<QPointF> TrackHeadersFixture::pointForRow(int row, const QRectF &localRect) const

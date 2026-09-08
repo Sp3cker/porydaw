@@ -102,6 +102,7 @@ QJsonObject manifestEntry(const CheckDefinition &definition)
         {QStringLiteral("binary"), jsonName(definition.binary)},
         {QStringLiteral("windowing"), jsonName(definition.windowing)},
         {QStringLiteral("framework"), jsonName(definition.framework)},
+        {QStringLiteral("optIn"), definition.optIn},
     };
     if (!definition.environment.isEmpty())
         entry.insert(QStringLiteral("environment"), jsonObject(definition.environment));

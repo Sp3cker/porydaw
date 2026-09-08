@@ -210,9 +210,8 @@ void SelectionLocalInputTierTest::songSearchLineEditOwnsKeys()
 {
     SongView &view = this->view();
     const selectionkey::ScenarioRollback rollback(view, document());
-    // Earlier scenarios leave the Quick canvas owning application focus; the
-    // workspace can only redirect keyboard focus into the widget window once
-    // that window is active again.
+    // The Quick canvas can own application focus; activate the widget shell
+    // before redirecting keyboard focus into the song-search line edit.
     activateShellForCommands();
     m_session.workspace->focusSongSearch();
     selectionkey::settle();

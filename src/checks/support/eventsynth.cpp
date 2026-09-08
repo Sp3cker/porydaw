@@ -16,6 +16,12 @@
 
 namespace checks::events {
 
+songview::TimelinePointerInput pointerInput(const QQuickItem &input, QPointF position,
+                                            Qt::MouseButton button, Qt::MouseButtons buttons)
+{
+    return {position, input.mapToGlobal(position), button, buttons, Qt::NoModifier};
+}
+
 void sendMouse(QWidget &target, QEvent::Type type, const QPointF &localPosition,
                Qt::MouseButton button, Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers)
 {

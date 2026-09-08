@@ -3,6 +3,7 @@
 #include "checks/quickpopupguard.h"
 #include "checks/rollcheck/headerchecksupport.h"
 #include "checks/rollcheck/rollcheck.h"
+#include "checks/trackheaders/trackheaderoracles.h"
 
 #include <QByteArray>
 #include <QColor>
@@ -162,7 +163,7 @@ void PianoRollTest::timelineRulerScope()
         view.timelineBandLayout().geometry(songview::TimelineBand::Ruler);
     auto *headers = headercheck::model(view);
     QVERIFY2(headers, "could not find the Quick track-header model");
-    QVERIFY2(headercheck::recordsMatchTimeline(*headers, check.timeline(), doc.canAddTrack()),
+    QVERIFY2(trackheaders_test::recordsMatchTimeline(*headers, check.timeline(), doc.canAddTrack()),
              "Quick header records did not match the current timeline");
     QVERIFY2(rulerInput && rulerBand, "could not find the time ruler");
     const qreal rulerDpr = rulerInput->devicePixelRatio();
@@ -205,7 +206,7 @@ void PianoRollTest::timelineRulerScope()
         }
     }
     const std::optional<int> secondaryRecord =
-        scopedGhost ? headercheck::rowForTrack(*headers, scopedGhost->track) : std::nullopt;
+        scopedGhost ? trackheaders_test::rowForTrack(*headers, scopedGhost->track) : std::nullopt;
     const QColor plainOverlay = secondaryRecord
                                     ? headers
                                           ->data(headers->index(*secondaryRecord, 0),

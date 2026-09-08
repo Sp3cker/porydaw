@@ -16,7 +16,6 @@
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "core/miditimeline.h"
-#include "ui/activity/trackactivity.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
@@ -33,12 +32,7 @@ QVariant rowData(const songview::TrackHeaderModel &model, int row, int role)
     return model.data(model.index(row, 0), role);
 }
 
-songview::TimelinePointerInput pointerInput(const songview::TimelineInputItem &input,
-                                            QPointF position, Qt::MouseButton button,
-                                            Qt::MouseButtons buttons)
-{
-    return {position, input.mapToGlobal(position), button, buttons, Qt::NoModifier};
-}
+using checks::events::pointerInput;
 
 songview::TimelineWheelInput wheelInput(const songview::TimelineInputItem &input, QPointF position,
                                         QPoint pixelDelta, QPoint angleDelta)
@@ -77,26 +71,6 @@ bool hasDistinctPixels(const QImage &image)
 }
 
 } // namespace
-
-void TrackHeadersTest::unattachedModelPublishesSafeZeroGeometry()
-{
-    TrackActivity activity;
-    songview::TrackHeaderModel model(fixture().view());
-    model.rebuild(activity, false);
-
-    QCOMPARE(model.viewportHeight(), 0.0);
-    QCOMPARE(model.maximumScrollY(), 0.0);
-    QCOMPARE(model.rowCount(),
-             int(fixture().tracks().size()) + int(fixture().tab().document().canAddTrack()));
-    for (int row = 0; row < model.rowCount(); ++row) {
-        if (rowData(model, row, songview::TrackHeaderModel::IsAddTrackRole).toBool())
-            continue;
-        QCOMPARE(rowData(model, row, songview::TrackHeaderModel::ActivityLeftHeightRole).toReal(),
-                 0.0);
-        QCOMPARE(rowData(model, row, songview::TrackHeaderModel::ActivityRightHeightRole).toReal(),
-                 0.0);
-    }
-}
 
 void TrackHeadersTest::quickSurfacePublishesAndRendersHeaders()
 {

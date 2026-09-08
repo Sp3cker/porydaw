@@ -16,6 +16,7 @@ void TrackHeadersTest::init()
     m_fixture = std::make_unique<TrackHeadersFixture>(m_projectRoot, m_songLabel);
     QString error;
     QVERIFY2(m_fixture->create(error), qPrintable(error));
+    QVERIFY2(m_fixture->acquireInputFocus(error), qPrintable(error));
 }
 
 void TrackHeadersTest::cleanup()

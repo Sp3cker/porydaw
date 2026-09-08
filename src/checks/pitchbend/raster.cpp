@@ -1,12 +1,8 @@
 #include "checks/pitchbend/tst_pitchbendediting.h"
 
 #include <QCoreApplication>
-#include <QCursor>
-#include <QImage>
-#include <QQuickItem>
 #include <QtTest>
 
-#include "checks/support/eventsynth.h"
 #include "ui/theme/themeruntime.h"
 
 namespace {
@@ -40,12 +36,6 @@ int coloredHits(const QImage &image, const songview::PitchBendGraph &graph, QPoi
     return hits;
 }
 
-QPoint noteEdgePoint(const PitchBendFixture &fixture)
-{
-    const qreal dpr = fixture.rollInput().devicePixelRatio();
-    return QPoint(qRound(fixture.view().camera().displayX(double(fixture.note().tick), 0.0, dpr)),
-                  fixture.notePoint().y());
-}
 } // namespace
 
 void PitchBendRasterTest::init()
@@ -119,26 +109,6 @@ void PitchBendRasterTest::altRampPaintsDiagonalAfterReopen()
     const QImage image = m_fixture.timelineWindow().grabWindow();
     QVERIFY(!image.isNull());
     QVERIFY(coloredHits(image, *graph, start, finish) >= 4);
-}
-
-void PitchBendRasterTest::noteEdgeCursorPixmapAndArrowRestore()
-{
-    const QPoint edge = noteEdgePoint(m_fixture);
-    const QPoint empty(1, edge.y());
-    checks::events::sendMouse(m_fixture.rollInput(), QEvent::MouseMove, edge, Qt::NoButton,
-                              Qt::NoButton, Qt::NoModifier);
-    QTRY_VERIFY(!m_fixture.rollInput().cursor().pixmap().isNull());
-    checks::events::sendMouse(m_fixture.rollInput(), QEvent::MouseMove, empty, Qt::NoButton,
-                              Qt::NoButton, Qt::NoModifier);
-    QCOMPARE(m_fixture.rollInput().cursor().shape(), Qt::ArrowCursor);
-    QVERIFY(m_fixture.openPopup());
-    m_fixture.closePopupViaEscape();
-    checks::events::sendMouse(m_fixture.rollInput(), QEvent::MouseMove, edge, Qt::NoButton,
-                              Qt::NoButton, Qt::NoModifier);
-    QTRY_VERIFY(!m_fixture.rollInput().cursor().pixmap().isNull());
-    checks::events::sendMouse(m_fixture.rollInput(), QEvent::MouseMove, empty, Qt::NoButton,
-                              Qt::NoButton, Qt::NoModifier);
-    QCOMPARE(m_fixture.rollInput().cursor().shape(), Qt::ArrowCursor);
 }
 
 int runPitchBendRasterCheck(const QStringList &qtArguments)

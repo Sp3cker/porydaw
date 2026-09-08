@@ -32,6 +32,7 @@ struct CheckDefinition {
     StartupKind startup = StartupKind::Porydaw;
     Windowing windowing = Windowing::Offscreen;
     Framework framework = Framework::QtTest;
+    bool optIn = false;
 };
 
 const std::vector<CheckDefinition> &catalog();

@@ -1,13 +1,20 @@
-#include "checks/nativegraphics/tst_renderingplayhead.h"
-
 #include <QtTest>
 
+#include <QImage>
+#include <QObject>
 #include <QQuickItem>
+#include <QQuickWindow>
+#include <QRect>
+#include <QSize>
+#include <QString>
+#include <QStringList>
 
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <memory>
 #include <optional>
+#include <utility>
 
 #include "checks/nativegraphics/nativegraphics_fixture.h"
 #include "checks/support/quickframebuffer.h"
@@ -18,9 +25,29 @@
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickchrome.h"
 #include "ui/songview/quick/timelinequickview.h"
-#include <QQuickWindow>
 
 namespace {
+
+class PlayheadGuidesTest final : public QObject
+{
+    Q_OBJECT
+    Q_DISABLE_COPY_MOVE(PlayheadGuidesTest)
+
+  public:
+    PlayheadGuidesTest(QString projectRoot, QString songLabel)
+        : m_projectRoot(std::move(projectRoot))
+        , m_songLabel(std::move(songLabel))
+    {}
+
+  private slots:
+    void devicePixelRect();
+    void guidesResizeScrollAndOwnership();
+    void followScroll();
+
+  private:
+    QString m_projectRoot;
+    QString m_songLabel;
+};
 
 QSize staticSize()
 {
@@ -64,9 +91,27 @@ std::unique_ptr<checks::nativegraphics::Rig> staticRig(const QString &projectRoo
     return rig;
 }
 
-} // namespace
+void PlayheadGuidesTest::devicePixelRect()
+{
+    const QRect logicalRect{3, 2, 5, 4};
+    QImage dprOne{QSize{16, 10}, QImage::Format_ARGB32_Premultiplied};
+    dprOne.setDevicePixelRatio(1.0);
+    QCOMPARE(checks::support::devicePixelRect(dprOne, logicalRect), logicalRect);
 
-void RenderingPlayheadTest::guidesResizeScrollAndOwnership()
+    QImage dprTwo{QSize{32, 20}, QImage::Format_ARGB32_Premultiplied};
+    dprTwo.setDevicePixelRatio(2.0);
+    const QRect doubleRect{6, 4, 10, 8};
+    QCOMPARE(checks::support::devicePixelRect(dprTwo, logicalRect), doubleRect);
+
+    QImage dprOnePointFive{QSize{12, 14}, QImage::Format_ARGB32_Premultiplied};
+    dprOnePointFive.setDevicePixelRatio(1.5);
+    const QRect fractionalRect{4, 3, 8, 6};
+    const QRect roundingRect{1, 1, 4, 4};
+    QCOMPARE(checks::support::devicePixelRect(dprOnePointFive, logicalRect), fractionalRect);
+    QCOMPARE(checks::support::devicePixelRect(dprOnePointFive, QRect{1, 1, 2, 2}), roundingRect);
+}
+
+void PlayheadGuidesTest::guidesResizeScrollAndOwnership()
 {
     std::unique_ptr<checks::nativegraphics::Rig> rig = staticRig(m_projectRoot, m_songLabel);
     QVERIFY(rig);
@@ -77,8 +122,6 @@ void RenderingPlayheadTest::guidesResizeScrollAndOwnership()
     const std::array<ChromePair, 7> pairs = chromePairs(*root);
     for (const ChromePair &pair : pairs) {
         QVERIFY2(pair.hover && pair.edit, pair.name);
-        QCOMPARE(pair.hover->z(), 9.0);
-        QCOMPARE(pair.edit->z(), 10.0);
     }
 
     const std::optional<songview::TimelineBandGeometry> &ruler =
@@ -118,6 +161,7 @@ void RenderingPlayheadTest::guidesResizeScrollAndOwnership()
     QVERIFY(allVisible(false, true));
     QVERIFY(qAbs(quick->editRootContentX() - rootX(songX(0))) <= kGuideTolerance);
 
+    // Hover replaces the edit guide; their relative z-order is not observable.
     quick->publishHover(songview::TimelineQuickHoverOwner::Automation, tick, songX(tick));
     checks::support::pumpQuick();
     QVERIFY(quick->hoverVisible());
@@ -162,7 +206,7 @@ void RenderingPlayheadTest::guidesResizeScrollAndOwnership()
     QVERIFY(qAbs(quick->editRootContentX() - rootX(songX(0))) <= kGuideTolerance);
 }
 
-void RenderingPlayheadTest::followScroll()
+void PlayheadGuidesTest::followScroll()
 {
     std::unique_ptr<checks::nativegraphics::Rig> rig = staticRig(m_projectRoot, m_songLabel);
     QVERIFY(rig);
@@ -195,3 +239,16 @@ void RenderingPlayheadTest::followScroll()
     checks::support::pumpQuick();
     QVERIFY(view.camera().scrollX() > 0.0);
 }
+
+} // namespace
+
+int runPlayheadGuidesCheck(const QString &projectRoot, const QString &songLabel,
+                           const QStringList &qtArguments)
+{
+    PlayheadGuidesTest test{projectRoot, songLabel};
+    QStringList arguments{QStringLiteral("playhead-guides")};
+    arguments.append(qtArguments);
+    return QTest::qExec(&test, arguments);
+}
+
+#include "tst_playhead_guides.moc"

@@ -55,6 +55,9 @@ void SelectionLocalInputTierTest::activateShellForCommands()
 {
     QWidget *const shell = m_session.window.get();
     QVERIFY2(shell, "the view has no shell window for resumed commands");
+    // Cocoa activation alone selects a key window without foregrounding the app.
+    // A fresh shell must also reclaim the foreground after the prior case closes.
+    shell->raise();
     shell->activateWindow();
     checks::async_wait::waitUntil([] { return true; }, [shell] { return shell->isActiveWindow(); },
                                   5000, 10);

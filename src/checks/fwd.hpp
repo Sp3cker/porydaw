@@ -82,6 +82,8 @@ int runSettingsDialogCheck(const QStringList &qtArguments);
 // Track headers (src/checks/trackheaders).
 int runTrackHeaderQuickCheck(const QString &projectRoot, const QString &songLabel,
                              const QStringList &qtArguments);
+int runTrackHeaderModelCheck(const QString &projectRoot, const QString &songLabel,
+                             const QStringList &qtArguments);
 int runTrackActivityMeterCheck(const QStringList &qtArguments);
 
 // Native graphics (src/checks/nativegraphics).
@@ -89,6 +91,8 @@ int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel,
                           const QStringList &qtArguments);
 int runRenderingPlayheadCheck(const QString &scratchProject, const QString &songLabel,
                               const QString &screenshotPath, const QStringList &qtArguments);
+int runPlayheadGuidesCheck(const QString &projectRoot, const QString &songLabel,
+                           const QStringList &qtArguments);
 
 // Drawer presentation (src/checks/drawerpresentation).
 int runEditorDrawerCheck(const QStringList &qtArguments);

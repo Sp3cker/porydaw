@@ -6,12 +6,17 @@
 #include <QString>
 #include <QtGlobal>
 
+#include "ui/songview/quick/timelineinput.h"
+
 class QObject;
 class QWidget;
 class QQuickItem;
 class QQuickWindow;
 
 namespace checks::events {
+
+songview::TimelinePointerInput pointerInput(const QQuickItem &input, QPointF position,
+                                            Qt::MouseButton button, Qt::MouseButtons buttons);
 
 void sendMouse(QWidget &target, QEvent::Type type, const QPointF &localPosition,
                Qt::MouseButton button, Qt::MouseButtons buttons, Qt::KeyboardModifiers modifiers);

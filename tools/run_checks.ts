@@ -21,6 +21,7 @@ interface CheckManifestEntry {
   readonly binary: "application" | "checks";
   readonly windowing: Windowing;
   readonly framework: "qt-test" | "process";
+  readonly optIn: boolean;
 
   readonly environment?: Readonly<Record<string, string>>;
   readonly optionalArgumentEnvironment?: Readonly<Record<string, string>>;
@@ -48,13 +49,14 @@ function usage(): never {
   console.error(
     "usage: tools/run_checks.ts <porydaw-checks-binary> [--all|--no-windowing-checks] [--reporter=quiet|verbose] [--filter=<name>] [--exclude=<name>] [--qt <args...>] [--pool=<n>]",
   );
-  console.error("  --all (default): all checks");
+  console.error("  default: all checks except opt-in diagnostics");
+  console.error("  --all: include opt-in diagnostics");
   console.error(
     "  --no-windowing-checks: skip checks that require a window system",
   );
   console.error("  --reporter=quiet|verbose (default: quiet)");
   console.error(
-    "  --filter=<name>: only run harnesses whose name contains <name> (repeatable, substring)",
+    "  --filter=<name>: run matching harnesses, including opt-in diagnostics (repeatable, substring)",
   );
   console.error(
     "  --exclude=<name>: skip the harness with this exact name (repeatable)",
@@ -181,6 +183,10 @@ async function loadManifest(
     )
   ) {
     console.error("run_checks: manifest has an unsupported framework");
+    Deno.exit(2);
+  }
+  if (checks.some((check) => typeof check.optIn !== "boolean")) {
+    console.error("run_checks: manifest is missing the opt-in classification");
     Deno.exit(2);
   }
   return checks;
@@ -360,7 +366,7 @@ function lastNonemptyLine(output: string): string | undefined {
 if (Deno.args.length < 1) {
   usage();
 }
-let selection: string = "--all";
+let selection: string = "--default";
 let reporterMode: "quiet" | "verbose" = "quiet";
 const filters: string[] = [];
 const exclusions: string[] = [];
@@ -514,7 +520,9 @@ async function runParallel(
 
 const skipWindowSystem = selection === "--no-windowing-checks";
 let runnableChecks = checkManifest.filter(
-  (check) => !skipWindowSystem || check.windowing !== "window-system",
+  (check) =>
+    (!skipWindowSystem || check.windowing !== "window-system") &&
+    (!check.optIn || selection === "--all" || filters.length > 0),
 );
 if (filters.length > 0) {
   runnableChecks = runnableChecks.filter((check) =>

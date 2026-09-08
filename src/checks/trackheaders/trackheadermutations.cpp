@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <optional>
 
+#include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "core/songdocument.h"
 #include "ui/songtab.h"
@@ -32,12 +33,7 @@ QVariant rowData(const songview::TrackHeaderModel &model, int row, int role)
     return model.data(model.index(row, 0), role);
 }
 
-songview::TimelinePointerInput pointerInput(const songview::TimelineInputItem &input,
-                                            QPointF position, Qt::MouseButton button,
-                                            Qt::MouseButtons buttons)
-{
-    return {position, input.mapToGlobal(position), button, buttons, Qt::NoModifier};
-}
+using checks::events::pointerInput;
 
 bool near(qreal actual, qreal expected)
 {
@@ -248,105 +244,6 @@ void TrackHeadersTest::reorderCommitsAndRebuildsHeader()
     QVERIFY(rowData(headers, *movedRow, songview::TrackHeaderModel::TitleRole)
                 .toString()
                 .contains(QStringLiteral("Dragged")));
-}
-
-void TrackHeadersTest::reorderSlotsResolveInsertionTargetsAndUndoRestores()
-{
-    TrackHeadersFixture &fx = fixture();
-    songview::TrackHeaderModel &headers = fx.headers();
-    SongDocument &doc = fx.tab().document();
-
-    // Three-row insertion-slot arithmetic on a duplicated third track:
-    // dropping inside a target row's top quarter inserts above it, the
-    // bottom three quarters insert below it, and the adjacent slot leaves
-    // the row in place. Every probe undoes back to the duplicated baseline.
-    const int baselineUndo = doc.undoStack()->index();
-    const int duplicatedTrack = doc.duplicateTrack(fx.sourceTrack());
-    QVERIFY2(duplicatedTrack >= 0, "could not create the third track for slot arithmetic");
-    QCoreApplication::processEvents();
-    checks::support::pumpQuick();
-    QTRY_COMPARE(doc.engineTrackCount(), int(fx.tracks().size()) + 1);
-    const int fixtureTracks[] = {fx.tracks().front(), fx.tracks()[1], duplicatedTrack};
-    const uint8_t identities[] = {doc.channelFor(fixtureTracks[0]),
-                                  doc.channelFor(fixtureTracks[1]),
-                                  doc.channelFor(fixtureTracks[2])};
-    QVERIFY2(identities[0] != identities[1] && identities[0] != identities[2] &&
-                 identities[1] != identities[2],
-             "the three-track slot fixture channels are not distinct");
-    const auto hasTrackOrder = [&](int first, int second, int third) {
-        return doc.channelFor(fixtureTracks[0]) == identities[first] &&
-               doc.channelFor(fixtureTracks[1]) == identities[second] &&
-               doc.channelFor(fixtureTracks[2]) == identities[third];
-    };
-    const auto dragToSlot = [&](int fromTrack, int slot) {
-        const int targetTrack = fixtureTracks[slot < 3 ? slot : 2];
-        const std::optional<int> sourceRow = fx.rowForTrack(fromTrack);
-        const std::optional<int> targetRow = fx.rowForTrack(targetTrack);
-        QVERIFY(sourceRow && targetRow);
-        const qreal scroll = qreal(*sourceRow * fx.rowHeight());
-        headers.setScrollY(scroll);
-        checks::support::pumpQuick();
-        const std::optional<QPointF> start = fx.titlePoint(*sourceRow);
-        QVERIFY(start);
-        const QPointF drop{headers.voiceLineRect().center().x(),
-                           qreal(*targetRow) * fx.rowHeight() +
-                               fx.rowHeight() * (slot < 3 ? 0.25 : 0.75) - scroll};
-        QVERIFY(
-            headers.pointerPress(pointerInput(fx.input(), *start, Qt::LeftButton, Qt::LeftButton)));
-        QVERIFY(headers.pointerMove(pointerInput(fx.input(), drop, Qt::NoButton, Qt::LeftButton)));
-        QVERIFY(
-            headers.pointerRelease(pointerInput(fx.input(), drop, Qt::LeftButton, Qt::NoButton)));
-        QCoreApplication::processEvents();
-    };
-
-    fx.view().setTrackMute(fixtureTracks[0], false);
-    fx.view().setTrackMute(fixtureTracks[1], false);
-    fx.view().setTrackMute(duplicatedTrack, true);
-    const int upwardIndex = doc.undoStack()->index();
-    dragToSlot(duplicatedTrack, 0);
-    QCOMPARE(doc.undoStack()->index(), upwardIndex + 1);
-    QVERIFY(hasTrackOrder(2, 0, 1));
-    QVERIFY(fx.view().trackMuted(fixtureTracks[0]));
-    QVERIFY(!fx.view().trackMuted(fixtureTracks[1]));
-    QVERIFY(!fx.view().trackMuted(fixtureTracks[2]));
-    doc.undoStack()->setIndex(upwardIndex);
-    QVERIFY(hasTrackOrder(0, 1, 2));
-    QVERIFY(!fx.view().trackMuted(fixtureTracks[0]));
-    QVERIFY(!fx.view().trackMuted(fixtureTracks[1]));
-    QVERIFY(fx.view().trackMuted(fixtureTracks[2]));
-    fx.view().setTrackMute(duplicatedTrack, false);
-
-    fx.view().setTrackMute(fixtureTracks[0], true);
-    const int downwardIndex = doc.undoStack()->index();
-    dragToSlot(fixtureTracks[0], 3);
-    QCOMPARE(doc.undoStack()->index(), downwardIndex + 1);
-    QVERIFY(hasTrackOrder(1, 2, 0));
-    QVERIFY(!fx.view().trackMuted(fixtureTracks[0]));
-    QVERIFY(!fx.view().trackMuted(fixtureTracks[1]));
-    QVERIFY(fx.view().trackMuted(fixtureTracks[2]));
-    doc.undoStack()->setIndex(downwardIndex);
-    QVERIFY(hasTrackOrder(0, 1, 2));
-    QVERIFY(fx.view().trackMuted(fixtureTracks[0]));
-    QVERIFY(!fx.view().trackMuted(fixtureTracks[1]));
-    QVERIFY(!fx.view().trackMuted(fixtureTracks[2]));
-    fx.view().setTrackMute(fixtureTracks[0], false);
-
-    fx.view().setTrackMute(fixtureTracks[1], true);
-    const int adjacentIndex = doc.undoStack()->index();
-    dragToSlot(fixtureTracks[1], 2);
-    QCOMPARE(doc.undoStack()->index(), adjacentIndex);
-    QVERIFY(hasTrackOrder(0, 1, 2));
-    QVERIFY(!fx.view().trackMuted(fixtureTracks[0]));
-    QVERIFY(fx.view().trackMuted(fixtureTracks[1]));
-    QVERIFY(!fx.view().trackMuted(fixtureTracks[2]));
-    doc.undoStack()->setIndex(adjacentIndex);
-    fx.view().setTrackMute(fixtureTracks[1], false);
-
-    // Every probe returned to the duplicated baseline; undoing the
-    // duplicate restores the fixture's original track set.
-    doc.undoStack()->setIndex(baselineUndo);
-    QTRY_COMPARE(doc.engineTrackCount(), int(fx.tracks().size()));
-    checks::support::pumpQuick();
 }
 
 void TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader()

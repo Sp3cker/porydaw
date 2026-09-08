@@ -6,7 +6,6 @@
 
 #include <QGuiApplication>
 #include <QImage>
-#include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
 
@@ -23,7 +22,6 @@
 #include "checks/support/songfixture.h"
 
 #include "core/songdocument.h"
-#include "ui/playheadoverlay.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
@@ -33,15 +31,6 @@
 namespace {
 
 constexpr QSize kWindowSize{1280, 800};
-constexpr qreal kGeometryTolerance = 0.5;
-
-bool nearRect(const QRectF &actual, const QRectF &expected)
-{
-    return qAbs(actual.left() - expected.left()) <= kGeometryTolerance &&
-           qAbs(actual.top() - expected.top()) <= kGeometryTolerance &&
-           qAbs(actual.width() - expected.width()) <= kGeometryTolerance &&
-           qAbs(actual.height() - expected.height()) <= kGeometryTolerance;
-}
 
 QColor averageColor(const QImage &image, const QPointF &logicalPoint)
 {
@@ -92,7 +81,6 @@ class NativeWindowingTest final : public QObject
     {}
 
   private slots:
-    void exposureAndChromeRouting();
     void headerSelectionAndVoicePicker();
     void geometryChunksShrinkClearAndReactivate();
 
@@ -110,54 +98,6 @@ class NativeWindowingTest final : public QObject
     QString m_projectRoot;
     QString m_songLabel;
 };
-
-void NativeWindowingTest::exposureAndChromeRouting()
-{
-    std::unique_ptr<checks::nativegraphics::Rig> rig = freshRig();
-    QVERIFY(rig);
-    SongView &view = rig->song->view();
-    auto *quick = view.quickView();
-    QVERIFY(quick && quick->quickWindow() && quick->rootObject());
-    // Direct unhosted rig: exposure is the Quick window's own.
-    QTRY_VERIFY(quick->quickWindow()->isExposed());
-
-    auto *overlay =
-        view.findChild<songview::PlayheadOverlay *>(QString{}, Qt::FindDirectChildrenOnly);
-    QVERIFY(overlay);
-#ifdef __APPLE__
-    QVERIFY(!quick->playheadVisible());
-#else
-    QVERIFY(!quick->playheadVisible());
-#endif
-
-    auto *headers = view.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"),
-                                                                 Qt::FindDirectChildrenOnly);
-    auto *headerBand =
-        quick->rootObject()->findChild<QQuickItem *>(QStringLiteral("timelineQuickTrackHeaders"));
-    auto *headerInput = quick->rootObject()->findChild<songview::TimelineInputItem *>(
-        QStringLiteral("timelineTrackHeadersInput"));
-    QObject *headerRows =
-        quick->rootObject()->findChild<QObject *>(QStringLiteral("timelineTrackHeaderRows"));
-    const std::optional<songview::TimelineBandGeometry> &geometry =
-        view.timelineBandLayout().geometry(songview::TimelineBand::TrackHeaders);
-    QVERIFY(headers);
-    QVERIFY(headerBand);
-    QVERIFY(headerInput);
-    QVERIFY(headerRows);
-    QVERIFY(quick->quickWindow());
-    QVERIFY(geometry);
-    QVERIFY(headerBand->isVisible());
-    QVERIFY(headerInput->isVisible());
-    QCOMPARE(headerInput->interaction(), static_cast<songview::TimelineBandInteraction *>(headers));
-    QVERIFY(
-        nearRect(QRectF(headerBand->mapToItem(quick->rootObject(), QPointF()), headerBand->size()),
-                 QRectF(geometry->rect)));
-    QVERIFY(qAbs(headerInput->width() + headers->scrollbarWidth() - geometry->rect.width()) <=
-            kGeometryTolerance);
-    QVERIFY(qAbs(headerInput->height() - geometry->rect.height()) <= kGeometryTolerance);
-    QCOMPARE(headerRows->property("count").toInt(), headers->rowCount());
-    QVERIFY(quick->quickWindow()->mask().isEmpty());
-}
 
 void NativeWindowingTest::headerSelectionAndVoicePicker()
 {

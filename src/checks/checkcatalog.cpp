@@ -289,6 +289,15 @@ const std::vector<CheckDefinition> &catalog()
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = route101Files,
              .windowing = Windowing::WindowSystem},
+            {.name = "trackheader-model",
+             .argv = strings({"--trackheader-model", "{scratch}", "mus_route101"}),
+             .handler =
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runTrackHeaderModelCheck(args[1], args[2], qtArgs);
+                 },
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = route101Files},
             {.name = "trackactivitymetercheck",
              .argv = strings({"--trackactivitymetercheck"}),
              .handler =
@@ -330,7 +339,8 @@ const std::vector<CheckDefinition> &catalog()
              .scratchKind = ScratchKind::ExistingDirectory,
              .fixtureRootKind = FixtureRootKind::DecompProject,
              .fixtureFiles = route101Files,
-             .windowing = Windowing::WindowSystem},
+             .windowing = Windowing::WindowSystem,
+             .optIn = true},
             {
                 .name = "rollcheck-static",
                 .argv = strings({"--rollcheck-static", "{scratch}", "mus_route101"}),
@@ -644,7 +654,6 @@ const std::vector<CheckDefinition> &catalog()
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = route101RichFiles,
-                .windowing = Windowing::WindowSystem,
             },
             {
                 .name = "selectionkey-gesture",
@@ -683,6 +692,15 @@ const std::vector<CheckDefinition> &catalog()
                 .fixtureFiles = route101RichFiles,
                 .windowing = Windowing::WindowSystem,
             },
+            {.name = "playhead-guides",
+             .argv = strings({"--playhead-guides", "{scratch}", "mus_route101"}),
+             .handler =
+                 [](QApplication &, const QStringList &args, const QStringList &qtArgs) {
+                     return runPlayheadGuidesCheck(args[1], args[2], qtArgs);
+                 },
+             .scratchKind = ScratchKind::ExistingDirectory,
+             .fixtureRootKind = FixtureRootKind::DecompProject,
+             .fixtureFiles = route101Files},
             {
                 .name = "rendering-playhead",
                 .argv = strings({"--check-rendering-playhead", "{scratch}", "mus_route101"}),

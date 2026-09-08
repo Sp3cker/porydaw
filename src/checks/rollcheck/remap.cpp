@@ -11,13 +11,14 @@
 #include "checks/rollcheck/headerchecksupport.h"
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
+#include "checks/trackheaders/trackheaderoracles.h"
 #include "core/smf.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
 
 namespace {
 using checks::rollcheck::headercheck::model;
-using checks::rollcheck::headercheck::recordsMatchTimeline;
+using trackheaders_test::recordsMatchTimeline;
 
 struct RemapFixture {
     SongDocument document;

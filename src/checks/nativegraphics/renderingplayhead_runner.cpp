@@ -2,6 +2,13 @@
 
 #include <QtTest>
 
+#include <utility>
+
+RenderingPlayheadTest::RenderingPlayheadTest(QString projectRoot, QString songLabel)
+    : m_projectRoot(std::move(projectRoot))
+    , m_songLabel(std::move(songLabel))
+{}
+
 int runRenderingPlayheadCheck(const QString &projectRoot, const QString &songLabel,
                               const QString &screenshotPath, const QStringList &qtArguments)
 {

@@ -40,8 +40,6 @@ class PianoRollTest final : public QObject
     void trackRemapDelete();
     void trackRemapMetadata();
     void trackRemapEnginePromotion();
-    void headerReconciliationUnchanged();
-    void headerReconciliationStructural();
     void pencilFractionalPlacement();
     void pencilPlacement();
     void pencilAbuttingRaster();

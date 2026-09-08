@@ -18,26 +18,80 @@ boundaries; prefer one feature directory with a small public surface
 ## 1. Current Test Architecture & Safety Boundary
 
 ### Current partition
-`src/checks/checkcatalog.cpp` is the single catalog of 88 checks:
+`src/checks/checkcatalog.cpp` is the single catalog of 91 runnable entries:
 
-- **75 safe-lane rows:** 74 `Framework::QtTest` suites under
+- **79 safe-lane rows:** 78 `Framework::QtTest` suites under
   `Windowing::Offscreen`, plus the `production-startup` `Framework::Process`
   smoke (`--version`).
-- **13 native-only Qt Test suites:** `rollcheck`, `trackheaderquickcheck`,
-  `rollwindowingcheck`, `timelinepan-native`, `rollcheck-static`,
-  `automation-raster`, `mainwindow-routing-native`, `rendering-playhead`,
-  `pitch-bend-raster`, `selectionkey-core`, `selectionkey-gesture`,
-  `selectionkey-window`, and `selectionkey-local-input`, all
-  `Windowing::WindowSystem`.
+- **11 default native Qt Test suites:** `rollcheck`, `trackheaderquickcheck`,
+  `rollwindowingcheck`, `rollcheck-static`, `automation-raster`,
+  `mainwindow-routing-native`, `rendering-playhead`, `pitch-bend-raster`,
+  `selectionkey-gesture`, `selectionkey-window`, and `selectionkey-local-input`.
+- **One opt-in native diagnostic:** `timelinepan-native`, which reports pan
+  plus framebuffer-readback timings for short and large selections without a
+  machine-dependent timing assertion.
 
 The authoritative safe command is `deno task verify --no-windowing-checks`.
-It exercises the complete offscreen/process partition and intentionally skips
-the thirteen native-only rows. The native boundary is evidence, not a missing
-migration: offscreen Qt Quick uses a software scene-graph path that cannot
-establish raster equivalence for porydaw's custom `QSGGeometryNode` timeline
-layers. Offscreen nevertheless covers retained composition, document/undo,
-input, modal menu/dialog routing, and the injected deactivation/playhead
-seams; native rows retain only the window-system/raster contracts.
+It exercises all 79 offscreen/process rows without visible native windows.
+Default `deno task verify` runs 90 entries. Use
+`deno task verify --filter timelinepan-native --qt selectionExtentPanPerformance`
+for the timing report, or `deno task verify --all` to include opt-in diagnostics.
+Filters include matching opt-in entries; exclusions and `--no-windowing-checks`
+still apply. The catalog's `optIn` field is carried by the compiled manifest;
+the runner does not special-case diagnostic names.
+
+Offscreen Qt Quick uses a software scene-graph path that cannot establish
+raster equivalence for porydaw's custom `QSGGeometryNode` timeline layers.
+It nevertheless covers retained composition, document/undo, Quick input,
+modal menu/dialog routing, and injected deactivation/playhead seams.
+Mixed native suites must be audited case by case, not reclassified wholesale.
+
+The `trackheader-model` suite owns unattached geometry, reorder/undo, and the
+two song-replacement reconciliation cases formerly hosted by native header
+and roll suites. `playhead-guides` owns guide visibility/ownership/alignment,
+follow-scroll, and device-pixel rectangle math. `selectionkey-core` retains
+its real Quick input assertions but runs offscreen. Each case still constructs
+fresh state: no shared-window session or test-name-dependent setup was added.
+The native header fixture requests focus as an explicit step; model cases
+only assemble the layout-ready fixture.
+
+The duplicate native exposure/wiring case and pitch cursor-property case
+were removed. Actual pixel, native focus, and platform-layer scenarios remain.
+
+Header geometry coverage is owned by
+`TrackHeadersTest::quickSurfacePublishesAndRendersHeaders`
+(`src/checks/trackheaders/trackheaderinput.cpp`, native `trackheaderquickcheck`):
+it compares the published rectangle with the isolated canonical band and
+checks actual band position/size, input/scrollbar geometry, and row count.
+`HostAdapterTest::drawerChromeAndQuickHeadersFollowCanonicalGeometry`
+(`src/checks/host/tst_hostadapter.cpp`, offscreen `host-adapter`) retains
+whole-host header row-count and scrollbar-width/visibility checks.
+These owners replace the duplicated checks in `exposureAndChromeRouting`;
+they do not require restoring a separate native wiring case.
+
+The opt-in pan diagnostic retains native rendering and fresh hosts per extent;
+its single timing pair is descriptive, not a statistical performance benchmark.
+
+Native input cases explicitly foreground fresh shells before focus assertions.
+The hover-raster case uses the existing `primeMouseMove` helper: a first move
+can deliver only `HoverEnter`, so a second, distinct in-surface move must
+exercise `HoverMove`. These setup requirements preserve per-case isolation;
+they do not replace the existing shortcut, focus, or framebuffer assertions.
+
+`checks_main.cpp` anchors native top-level hosts at the bottom-right of their
+screen's available geometry on show and resize. Embedded windows and owned
+popups retain their placement relative to the host. Fixture sizes and the
+user's cursor position are unchanged; keep the cursor outside the test area
+during native runs. A fixture larger than the available screen cannot fit
+entirely within that corner without changing its geometry.
+
+Verification receipt (2026-09-08): `deno task verify --all --verbose` passed
+**91/91** in **41.62s**, after a separate **14.93s** build. The migrated
+header-model, guide, and keyboard-core suites passed normal and reversed
+slot order; local-input and rendering-playhead also passed reversed order.
+Native window placement was checked against both the actual macOS window
+bounds and a screenshot. These are correctness receipts, not a controlled
+performance comparison.
 
 The selection-keyboard routing integration adds four genuine Qt suites under
 `src/checks/selectionkey/`: 28 selectable slots and 56 case/data rows. Their

@@ -12,11 +12,8 @@ class RenderingPlayheadTest final : public QObject
     RenderingPlayheadTest(QString projectRoot, QString songLabel);
 
   private slots:
-    void devicePixelRect();
     void quickPolarityAndEdges_data();
     void quickPolarityAndEdges();
-    void guidesResizeScrollAndOwnership();
-    void followScroll();
     void automationHoverDecor();
     void positionOnlyDoesNotRebuild();
     void plotGeometryAndLifecycle();

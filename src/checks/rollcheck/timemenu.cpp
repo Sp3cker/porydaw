@@ -18,6 +18,7 @@
 #include <optional>
 
 #include "core/songdocument.h"
+#include "ui/songtab.h"
 #include "ui/songview/clipmime.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelineinputitem.h"
@@ -195,6 +196,7 @@ void PianoRollTest::timeSelectionMenuStaleAndCancelNoOp()
     // scenario exercises the no-drawer branch that returns focus to the roll
     // band, then establish the band focus a real editing press carries.
     view.setDrawerSectionVisible(EditorDrawerPage::Automations, false);
+    m_tab->raise();
     QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason),
              "the roll band could not take focus for the escape scenario");
     QCoreApplication::sendPostedEvents();

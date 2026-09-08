@@ -615,7 +615,6 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/rollcheck/harness.cpp
         src/checks/rollcheck/identity.cpp
         src/checks/rollcheck/remap.cpp
-        src/checks/rollcheck/header_reconciliation.cpp
         src/checks/rollcheck/pencil.cpp
         src/checks/rollcheck/pencil_velocity.cpp
         src/checks/rollcheck/velocity_prompt.cpp
@@ -655,7 +654,6 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/nativegraphics/tst_renderingplayhead.h
         src/checks/nativegraphics/renderingplayhead_runner.cpp
         src/checks/nativegraphics/tst_nativewindowing.cpp
-        src/checks/nativegraphics/tst_playhead_math.cpp
         src/checks/nativegraphics/tst_playhead_guides.cpp
         src/checks/nativegraphics/tst_playhead_autohover.cpp
         src/checks/nativegraphics/tst_playhead_quick.cpp
@@ -744,6 +742,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/audio/tst_trackactivity.cpp
         src/checks/trackheaders/tst_trackheaders.h
         src/checks/trackheaders/tst_trackheaders.cpp
+        src/checks/trackheaders/tst_trackheadermodel.cpp
         src/checks/trackheaders/trackheaderfixture.cpp
         src/checks/trackheaders/trackheaderinput.cpp
         src/checks/trackheaders/trackheaderraster.cpp

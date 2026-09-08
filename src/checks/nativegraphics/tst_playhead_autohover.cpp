@@ -13,6 +13,7 @@
 #include <optional>
 
 #include "checks/nativegraphics/nativegraphics_fixture.h"
+#include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
 #include "core/timedefaults.h"
@@ -140,6 +141,10 @@ void RenderingPlayheadTest::automationHoverDecor()
     const QImage baseline = checks::support::captureQuickBand(view, band->rect, &captureError);
     QVERIFY2(!baseline.isNull(), qPrintable(captureError));
 
+    // The first move into a fresh surface may deliver only HoverEnter.
+    // Move within the surface before the target so this exercises HoverMove.
+    QVERIFY2(checks::events::primeMouseMove(*window, *input, nativeHoverPoint),
+             "the automation surface has no interior mouse-move staging point");
     QTest::mouseEvent(QTest::MouseMove, window, Qt::NoButton, Qt::NoModifier, nativeHoverPoint);
     checks::support::pumpQuick();
     const QImage hovered = checks::support::captureQuickBand(view, band->rect, &captureError);

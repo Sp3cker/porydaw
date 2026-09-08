@@ -13,6 +13,7 @@
 
 #include "checks/rollcheck/headerchecksupport.h"
 #include "checks/support/eventsynth.h"
+#include "checks/trackheaders/trackheaderoracles.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
@@ -23,7 +24,7 @@ using namespace checks::rollcheck;
 
 using checks::rollcheck::headercheck::model;
 using checks::rollcheck::headercheck::renameInput;
-using checks::rollcheck::headercheck::rowForTrack;
+using trackheaders_test::rowForTrack;
 
 void PianoRollTest::headerPanFollow()
 {

@@ -40,6 +40,7 @@ class TrackHeadersFixture final
     TrackHeadersFixture &operator=(const TrackHeadersFixture &) = delete;
 
     bool create(QString &error);
+    bool acquireInputFocus(QString &error);
     void close();
 
     SongTab &tab() noexcept;
@@ -111,7 +112,6 @@ class TrackHeadersTest final : public QObject
   private slots:
     void init();
     void cleanup();
-    void unattachedModelPublishesSafeZeroGeometry();
     void quickSurfacePublishesAndRendersHeaders();
     void selectionAndVoiceRouteThroughHeaders();
     void muteAndSoloHonorCancellationAndButtons();
@@ -119,7 +119,6 @@ class TrackHeadersTest final : public QObject
     void tooltipClearsOnScroll();
     void renameCommitsAndRebuildsHeader();
     void reorderCommitsAndRebuildsHeader();
-    void reorderSlotsResolveInsertionTargetsAndUndoRestores();
     void addTrackOpensPickerAndRebuildsHeader();
     void headerMenuOpensWithTypedRowsAndDismissesWithoutWrite();
     void headerMenuChangeVoiceOpensPickerAfterMenuCloses();

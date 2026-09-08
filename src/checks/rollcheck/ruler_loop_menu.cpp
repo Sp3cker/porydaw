@@ -29,6 +29,7 @@
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
 #include "ui/editorviewstate.h"
+#include "ui/songtab.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -348,6 +349,7 @@ void PianoRollTest::rulerLoopMenuStaleCancelNoWrite()
     // the automations page so dismissal returns focus to the ruler band, then
     // establish the band focus a real press carries.
     view.setDrawerSectionVisible(EditorDrawerPage::Automations, false);
+    m_tab->raise();
     QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Ruler, Qt::OtherFocusReason),
              "the ruler band could not take focus for the escape scenario");
     QCoreApplication::sendPostedEvents();

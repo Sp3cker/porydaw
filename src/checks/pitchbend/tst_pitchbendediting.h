@@ -154,7 +154,6 @@ class PitchBendRasterTest final : public QObject
     void popupSurfaceIsOpaqueAndUsesWindowBackground();
     void shiftCurvePaintsDiagonal();
     void altRampPaintsDiagonalAfterReopen();
-    void noteEdgeCursorPixmapAndArrowRestore();
 
   private:
     PitchBendFixture m_fixture;
