@@ -109,11 +109,14 @@ void PitchBendGraph::buildGrid(const QRectF &plot)
 {
     const QColor gridColor = themes::color(themes::Role::song_view_grid);
     if (m_grid && m_endTick > m_startTick) {
+        // Guide density is a display-only query driven by this popup's pixel
+        // scale; the committed editing selection must not thicken it.
+        const double pixelsPerTick = plot.width() / double(m_endTick - m_startTick);
         uint64_t segmentTick = m_startTick;
         while (segmentTick < m_endTick) {
             const Grid::Segment segment = m_grid->segmentAt(segmentTick);
             const uint64_t segmentEnd = std::min(m_endTick, segment.next);
-            const uint64_t cell = normalCellTicksAt(segmentTick);
+            const uint64_t cell = m_grid->gridTicksAtScale(segmentTick, pixelsPerTick);
             const uint64_t anchor = segment.start;
             const uint64_t offset = segmentTick > anchor ? segmentTick - anchor : 0;
             const uint64_t quotient = offset / cell;

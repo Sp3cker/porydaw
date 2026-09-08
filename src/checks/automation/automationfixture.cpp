@@ -23,6 +23,7 @@
 #include "ui/editordrawer/cclanes.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/tempolane.h"
+#include "ui/songview/grid.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
 
@@ -378,6 +379,19 @@ bool AutomationEditingTest::expandTempo()
     mousePress(*m_automationGutterInput, Qt::LeftButton, headerPoint);
     mouseRelease(*m_automationGutterInput, Qt::LeftButton, headerPoint);
     return QTest::qWaitFor([this, tempo] { return !laneBody(tempo).isEmpty(); });
+}
+
+void AutomationEditingTest::selectEditingGrid(songview::GridSelection selection,
+                                              songview::GridFeel feel)
+{
+    QVERIFY(m_tab);
+    SongView &view = m_tab->view();
+    SongView::ViewState state = view.viewState();
+    state.gridSelection = selection;
+    state.gridTriplet = feel == songview::GridFeel::Triplet;
+    view.applyViewState(state);
+    QVERIFY(view.gridSelection() == selection);
+    QVERIFY(view.grid().feel() == feel);
 }
 
 void AutomationEditingTest::setRowMaximumHeight(const EditorAutomationRowId &row)

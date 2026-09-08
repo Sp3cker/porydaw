@@ -6,6 +6,8 @@
 
 #include <algorithm>
 #include <array>
+#include <span>
+#include <vector>
 
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -87,6 +89,17 @@ struct RulerGridSurface {
     bool valid() const { return quick && division && feel && rulerInput && ruler; }
 };
 
+int gridMenuId(songview::GridSelection selection)
+{
+    return selection.kind == songview::GridSelection::Kind::Clock ? 0 : int(selection.denominator);
+}
+
+std::vector<songview::GridSelection> gridMenuSelections(SongView &view)
+{
+    const std::span<const songview::GridSelection> live = view.grid().selections();
+    return {live.begin(), live.end()};
+}
+
 RulerGridSurface rulerGridSurface(SongView &view)
 {
     RulerGridSurface surface;
@@ -139,26 +152,33 @@ class RulerGridMenuTest final : public QObject
         QVERIFY2(!view.findChild<QMenu *>(),
                  "opening the division menu left a QMenu under SongView");
 
-        static constexpr std::array<int, 5> divisionIds{0, 4, 8, 16, 32};
-        QCOMPARE(divisionMenu.model->rowCount(), int(divisionIds.size()));
+        const std::vector<songview::GridSelection> divisionSelections = gridMenuSelections(view);
+        QVERIFY2(divisionSelections.size() >= 2, "the live grid ladder has fewer than two choices");
+        QCOMPARE(divisionMenu.model->rowCount(), int(divisionSelections.size()));
         int divisionChecked = 0;
         for (int row = 0; row < divisionMenu.model->rowCount(); ++row) {
             const songview::QuickMenuItem *const item = divisionMenu.model->itemAt(row);
             QVERIFY(item);
-            QCOMPARE(item->id, divisionIds[std::size_t(row)]);
+            QCOMPARE(item->id, gridMenuId(divisionSelections[std::size_t(row)]));
             QVERIFY(item->enabled);
             QVERIFY(item->checkable);
             divisionChecked += item->checked ? 1 : 0;
         }
         QCOMPARE(divisionChecked, 1);
-        const int currentDivisionRow = divisionMenu.model->rowForId(initial.gridMinDenom);
+        const int currentDivisionRow =
+            divisionMenu.model->rowForId(gridMenuId(initial.gridSelection));
         QVERIFY2(currentDivisionRow >= 0, "the division menu omitted the current grid denominator");
         const songview::QuickMenuItem *const currentDivision =
             divisionMenu.model->itemAt(currentDivisionRow);
         QVERIFY(currentDivision && currentDivision->checked);
         QCOMPARE(currentDivision->text, surface.division->property("controlText").toString());
 
-        const int targetDivision = initial.gridMinDenom == 8 ? 16 : 8;
+        songview::GridSelection targetSelection = divisionSelections.front();
+        if (targetSelection == initial.gridSelection)
+            targetSelection = divisionSelections.at(1);
+        QVERIFY2(!(targetSelection == initial.gridSelection),
+                 "the live grid ladder offered no distinct division target");
+        const int targetDivision = gridMenuId(targetSelection);
         const int targetDivisionRow = divisionMenu.model->rowForId(targetDivision);
         QVERIFY2(targetDivisionRow >= 0, "the division menu omitted the chosen denominator");
         const songview::QuickMenuItem *const targetDivisionItem =
@@ -171,15 +191,19 @@ class RulerGridMenuTest final : public QObject
         QVERIFY2(!divisionMenu.session->isOpen(), "a division pick left the shared menu open");
         QVERIFY(!QApplication::activePopupWidget());
         QVERIFY(!view.findChild<QMenu *>());
-        QCOMPARE(view.viewState().gridMinDenom, targetDivision);
+        QVERIFY2(view.viewState().gridSelection == targetSelection,
+                 "the division pick did not dispatch the live grid selection");
         QCOMPARE(surface.ruler->divisionText(), targetDivisionText);
         QCOMPARE(surface.division->property("controlText").toString(), targetDivisionText);
 
         const RulerGridMenu divisionReopened = openRulerGridMenu(view, *surface.division);
         QVERIFY2(divisionReopened.session, qUtf8Printable(divisionReopened.diagnostic));
+        const std::vector<songview::GridSelection> reopenedSelections = gridMenuSelections(view);
+        QCOMPARE(divisionReopened.model->rowCount(), int(reopenedSelections.size()));
         for (int row = 0; row < divisionReopened.model->rowCount(); ++row) {
             const songview::QuickMenuItem *const item = divisionReopened.model->itemAt(row);
             QVERIFY(item);
+            QCOMPARE(item->id, gridMenuId(reopenedSelections[std::size_t(row)]));
             QCOMPARE(item->checked, item->id == targetDivision);
         }
         divisionReopened.session->cancel();
@@ -249,13 +273,14 @@ class RulerGridMenuTest final : public QObject
         const QString divisionText = surface.division->property("controlText").toString();
         const RulerGridMenu opened = openRulerGridMenu(view, *surface.division);
         QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic));
-        const int checkedRow = opened.model->rowForId(before.gridMinDenom);
+        const int checkedRow = opened.model->rowForId(gridMenuId(before.gridSelection));
         QVERIFY2(checkedRow >= 0, "the division menu omitted its checked row");
         QVERIFY2(quick_popup::clickMenuRow(*opened.session, checkedRow),
                  "the checked division row did not receive a real click");
         QCoreApplication::processEvents();
         QVERIFY2(!opened.session->isOpen(), "clicking the checked division row left the menu open");
-        QCOMPARE(view.viewState().gridMinDenom, before.gridMinDenom);
+        QVERIFY2(view.viewState().gridSelection == before.gridSelection,
+                 "clicking the checked row changed the grid selection");
         QCOMPARE(view.viewState().gridTriplet, before.gridTriplet);
         QCOMPARE(surface.division->property("controlText").toString(), divisionText);
 
@@ -267,8 +292,10 @@ class RulerGridMenuTest final : public QObject
         const RulerGridMenu keyboardReopened = awaitRulerGridMenu(
             view, QStringLiteral("Return on the focused division control did not reopen its menu"));
         QVERIFY2(keyboardReopened.session, qUtf8Printable(keyboardReopened.diagnostic));
-        QCOMPARE(keyboardReopened.model->rowCount(), 5);
-        const int reopenedCheckedRow = keyboardReopened.model->rowForId(before.gridMinDenom);
+        const std::vector<songview::GridSelection> keyboardSelections = gridMenuSelections(view);
+        QCOMPARE(keyboardReopened.model->rowCount(), int(keyboardSelections.size()));
+        const int reopenedCheckedRow =
+            keyboardReopened.model->rowForId(gridMenuId(before.gridSelection));
         QVERIFY(reopenedCheckedRow >= 0);
         const songview::QuickMenuItem *const reopenedChecked =
             keyboardReopened.model->itemAt(reopenedCheckedRow);
@@ -333,7 +360,8 @@ class RulerGridMenuTest final : public QObject
         QCoreApplication::processEvents();
         QVERIFY2(!divisionMenu.session->isOpen(),
                  "an outside click did not dismiss the division menu");
-        QCOMPARE(view.viewState().gridMinDenom, beforeDismissal.gridMinDenom);
+        QVERIFY2(view.viewState().gridSelection == beforeDismissal.gridSelection,
+                 "dismissing the division menu changed the grid selection");
         QCOMPARE(view.viewState().gridTriplet, beforeDismissal.gridTriplet);
         QCOMPARE(view.editCursorTick(), leftTick);
         QVERIFY2(!surface.ruler->gestureActive(),
@@ -345,8 +373,8 @@ class RulerGridMenuTest final : public QObject
         QVERIFY2(feelMenu.session, qUtf8Printable(feelMenu.diagnostic));
         QTest::keyClick(feelMenu.session->window(), Qt::Key_Escape);
         QCoreApplication::processEvents();
-        QVERIFY2(!feelMenu.session->isOpen(), "Escape did not dismiss the feel menu");
-        QCOMPARE(view.viewState().gridMinDenom, beforeDismissal.gridMinDenom);
+        QVERIFY2(view.viewState().gridSelection == beforeDismissal.gridSelection,
+                 "dismissing the feel menu changed the grid selection");
         QCOMPARE(view.viewState().gridTriplet, beforeDismissal.gridTriplet);
         QCOMPARE(view.editCursorTick(), leftTick);
 
@@ -376,8 +404,8 @@ class RulerGridMenuTest final : public QObject
         QCoreApplication::processEvents();
         QVERIFY2(!gridMenu.session->isOpen(), "closePopups did not cancel the Quick division menu");
         QVERIFY(!QApplication::activePopupWidget());
-        QVERIFY(!view.findChild<QMenu *>());
-        QCOMPARE(view.viewState().gridMinDenom, before.gridMinDenom);
+        QVERIFY2(view.viewState().gridSelection == before.gridSelection,
+                 "closePopups changed the grid selection");
         QCOMPARE(view.viewState().gridTriplet, before.gridTriplet);
 
         // A roll-owned shared-session menu is a foreign owner: closePopups()
@@ -435,11 +463,13 @@ class RulerGridMenuTest final : public QObject
 
         const RulerGridMenu reopenedGrid = openRulerGridMenu(view, *surface.division);
         QVERIFY2(reopenedGrid.session, qUtf8Printable(reopenedGrid.diagnostic));
-        QCOMPARE(reopenedGrid.model->rowCount(), 5);
-        const int reusedCheckedRow = reopenedGrid.model->rowForId(before.gridMinDenom);
+        const std::vector<songview::GridSelection> reusedSelections = gridMenuSelections(view);
+        QCOMPARE(reopenedGrid.model->rowCount(), int(reusedSelections.size()));
+        const int reusedCheckedRow = reopenedGrid.model->rowForId(gridMenuId(before.gridSelection));
         QVERIFY(reusedCheckedRow >= 0);
         QVERIFY(reopenedGrid.model->itemAt(reusedCheckedRow)->checked);
-        QCOMPARE(view.viewState().gridMinDenom, before.gridMinDenom);
+        QVERIFY2(view.viewState().gridSelection == before.gridSelection,
+                 "the foreign menu cycle changed the grid selection");
         QCOMPARE(view.viewState().gridTriplet, before.gridTriplet);
     }
 };

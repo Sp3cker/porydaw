@@ -291,3 +291,61 @@ void NoteIdentityCheckTest::timelineTransportsOnlyStampedNoteIds()
     QVERIFY(secondSeen);
     QVERIFY(ordinaryUnassigned);
 }
+
+void NoteIdentityCheckTest::adoptedIdsDoNotCollideWithEdits()
+{
+    SongInfo song;
+    song.label = QStringLiteral("note-id-adopt");
+    QString error;
+
+    SongDocument source;
+    QVERIFY2(source.adoptSmf(duplicateNoteFile(), song, &error), qPrintable(error));
+    const auto foreignNotes = source.notesForTrack(0);
+    QCOMPARE(foreignNotes.size(), size_t(2));
+    QVERIFY(foreignNotes[0].noteId.isAssigned());
+    QVERIFY(foreignNotes[1].noteId.isAssigned());
+
+    SongDocument destination;
+    QVERIFY2(destination.adoptSmf(source.smf(), song, &error), qPrintable(error));
+    const auto donorNotesAfter = source.notesForTrack(0);
+    QCOMPARE(donorNotesAfter.size(), foreignNotes.size());
+    for (size_t index = 0; index < foreignNotes.size(); ++index) {
+        QCOMPARE(donorNotesAfter[index].noteId, foreignNotes[index].noteId);
+        QCOMPARE(donorNotesAfter[index].velocity, foreignNotes[index].velocity);
+    }
+    const auto imported = destination.notesForTrack(0);
+    QCOMPARE(imported.size(), size_t(2));
+    QVERIFY(imported[0].noteId != imported[1].noteId);
+    for (const DocNote &note : imported) {
+        QVERIFY(note.noteId.isAssigned());
+        DocNote resolved;
+        QVERIFY(destination.findNote(note.noteId, &resolved));
+        QCOMPARE(resolved.noteId, note.noteId);
+    }
+
+    destination.addNote(0, 72, 67, 12, 90);
+    DocNote added;
+    QVERIFY(destination.findNote(0, 72, 67, &added));
+    QVERIFY(added.noteId != imported[0].noteId);
+    QVERIFY(added.noteId != imported[1].noteId);
+
+    const auto changed =
+        destination.setNotesVelocities(destination.revision(), {{added.noteId, 77}});
+    QVERIFY(changed.has_value());
+    QVERIFY(destination.findNote(0, 72, 67, &added));
+    QCOMPARE(added.velocity, uint8_t(77));
+    for (const DocNote &note : imported) {
+        DocNote preserved;
+        QVERIFY(destination.findNote(note.noteId, &preserved));
+        QCOMPARE(preserved.velocity, note.velocity);
+    }
+
+    destination.undoStack()->undo();
+    QVERIFY(destination.findNote(0, 72, 67, &added));
+    QCOMPARE(added.velocity, uint8_t(90));
+    for (const DocNote &note : imported) {
+        DocNote preserved;
+        QVERIFY(destination.findNote(note.noteId, &preserved));
+        QCOMPARE(preserved.velocity, note.velocity);
+    }
+}

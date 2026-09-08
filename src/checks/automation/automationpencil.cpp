@@ -2,7 +2,7 @@
 
 #include <QtTest>
 #include <cmath>
-#include <cstddef>
+#include <optional>
 
 #include <variant>
 #include <vector>
@@ -15,9 +15,12 @@
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/cclanes.h"
 #include "ui/editordrawer/tempolane.h"
+#include "ui/layout.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include <algorithm>
 #include <limits>
+Q_DECLARE_METATYPE(songview::GridSelection)
+Q_DECLARE_METATYPE(std::optional<uint64_t>)
 
 namespace {
 
@@ -31,9 +34,13 @@ struct PencilPoint {
     AutomationProjection::PointerMapping mapping;
 };
 
-void resetPencilView(SongView &view)
+// Pencil endpoints commit against the editing grid, never the camera zoom;
+// kPencilTimeZoom keeps the historical view for callers that do not vary it.
+constexpr double kPencilTimeZoom = 96.0;
+
+void resetPencilView(SongView &view, double timeZoom = kPencilTimeZoom)
 {
-    view.setEditorTimeZoom(96.0);
+    view.setEditorTimeZoom(timeZoom);
     view.setEditorHorizontalScroll(0.0);
     QCoreApplication::processEvents();
 }
@@ -59,8 +66,30 @@ PencilPoint pencilPointInCell(SongView &view, AutomationPage &page,
 {
     const PencilPoint probe = pencilPoint(view, page, input, lane, handle, tick, value);
     const AutomationGridCell &cell = probe.mapping.cell;
-    const double midpoint = double(cell.tickBegin) + double(cell.tickEnd - cell.tickBegin) / 2.0;
-    return pencilPoint(view, page, input, lane, handle, midpoint, value);
+    if (cell.tickBegin <= tick && tick < cell.tickEnd)
+        return pencilPoint(view, page, input, lane, handle,
+                           double(cell.tickBegin) + double(cell.tickEnd - cell.tickBegin) / 2.0,
+                           value);
+    // Narrow zooms round neighbouring cell boundaries onto shared window
+    // pixels, so a boundary probe can land one cell early; scan a few window
+    // offsets for a delivery that reaches the cell containing the requested
+    // tick (the ownership detail-threshold test uses the same strategy).
+    const AutomationProjection projection(AutomationGeometry::resolve(), &page);
+    const QRect body = page.canvas() ? page.canvas()->laneBody(handle) : QRect{};
+    for (const int offset : {1, -1, 2, -2, 3, -3}) {
+        const QPoint candidate = probe.window + QPoint(offset, 0);
+        if (!input.bounds().contains(input.mapFromScene(QPointF(candidate))))
+            continue;
+        const QPointF content = automation_test::contentFromWindow(page, input, candidate);
+        const AutomationProjection::PointerMapping mapping =
+            projection.pointerMapping(lane, body, content.x(), content.y());
+        if (mapping.cell.tickBegin <= tick && tick < mapping.cell.tickEnd)
+            return pencilPoint(view, page, input, lane, handle,
+                               double(mapping.cell.tickBegin) +
+                                   double(mapping.cell.tickEnd - mapping.cell.tickBegin) / 2.0,
+                               value);
+    }
+    return probe;
 }
 
 PencilPoint nextCellPoint(SongView &view, AutomationPage &page, songview::TimelineInputItem &input,
@@ -99,12 +128,38 @@ int timelineControllerValue(const MidiTimeline &timeline, uint8_t controller, ui
 
 } // namespace
 
+void AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce_data()
+{
+    QTest::addColumn<songview::GridSelection>("selection");
+    QTest::addColumn<uint64_t>("paintedTick");
+    QTest::addColumn<uint64_t>("expectedEndTick");
+    QTest::addColumn<double>("timeZoom");
+    // The six-tick rows straddle the grid-guide detail threshold from the
+    // fixedEditingAndAdaptiveGuides oracle: below 4*cell the displayed guides
+    // merge to 12-tick spacing, at 4*cell they match the six-tick cells, and
+    // the pencil must still commit 48, 54 and 60 at both zooms.
+    const double cell = double(layout::fontPx(4.0 / 3.0));
+    QTest::newRow("fixed6/guides-coarse")
+        << songview::GridSelection::musical(16) << 48ULL << 60ULL << 4.0 * cell - 1.0;
+    QTest::newRow("fixed6/guides-fine")
+        << songview::GridSelection::musical(16) << 48ULL << 60ULL << 4.0 * cell;
+    QTest::newRow("clock") << songview::GridSelection::clock() << 48ULL << 50ULL << kPencilTimeZoom;
+}
+
 void AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce()
 {
+    QFETCH(songview::GridSelection, selection);
+    QFETCH(uint64_t, paintedTick);
+    QFETCH(double, timeZoom);
+    QFETCH(uint64_t, expectedEndTick);
+    // Independent editing-cell literals, not point.mapping.cell reads: at the
+    // selected six ticks the stroke paints the cells beginning at 48, 54 and
+    // 60; at Clock 48, 49 and 50.
+    selectEditingGrid(selection);
     AutomationPage &page = *m_page;
     AutomationCanvas &canvas = *page.canvas();
     SongDocument &document = m_tab->document();
-    resetPencilView(m_tab->view());
+    resetPencilView(m_tab->view(), timeZoom);
     page.addEmptyLane(kTrack, kExpressionController);
 
     const EditorAutomationRowId row{EditorAutomationRowKind::ControlChange, kTrack,
@@ -115,8 +170,8 @@ void AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce()
     QTRY_VERIFY(!canvas.laneBody(findRow(row)).isEmpty());
 
     CCLaneAdapter lane(document, kTrack, kExpressionController);
-    const PencilPoint start =
-        pencilPointInCell(m_tab->view(), page, *m_automationInput, lane, findRow(row), 48, 40);
+    const PencilPoint start = pencilPointInCell(m_tab->view(), page, *m_automationInput, lane,
+                                                findRow(row), paintedTick, 40);
     const PencilPoint middle =
         nextCellPoint(m_tab->view(), page, *m_automationInput, lane, findRow(row), start, 72);
     const PencilPoint end =
@@ -146,10 +201,10 @@ void AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce()
     QVERIFY(document.smf().write() != before.smf);
     const std::vector<DocLanePoint> committed = document.lanePoints(kTrack, kExpressionController);
     QVERIFY(!committed.empty());
-    QVERIFY(containsPoint(committed, start.mapping.cell.tickBegin, start.mapping.point.value));
-    QVERIFY(containsPointWithin(committed, end.mapping.cell.tickBegin, end.mapping.point.value, 1));
+    QVERIFY(containsPoint(committed, paintedTick, start.mapping.point.value));
+    QVERIFY(containsPointWithin(committed, expectedEndTick, end.mapping.point.value, 1));
     QTRY_VERIFY(std::abs(timelineControllerValue(*m_tab->timeline(), kExpressionController,
-                                                 end.mapping.cell.tickBegin) -
+                                                 expectedEndTick) -
                          end.mapping.point.value) <= 1);
 
     QVERIFY(std::holds_alternative<DocumentHistoryApplied>(m_tab->history().requestUndo()));
@@ -237,11 +292,41 @@ void AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue()
         baseline);
 }
 
+void AutomationEditingTest::pencilSingleClickOnTempoLaneRestoresDefaultTempoAtCellEnd_data()
+{
+    QTest::addColumn<songview::GridSelection>("selection");
+    QTest::addColumn<uint64_t>("paintedTick");
+    QTest::addColumn<uint64_t>("restoredTick");
+    QTest::addColumn<std::optional<uint64_t>>("signatureTick");
+    QTest::addColumn<double>("timeZoom");
+    // Same grid-guide straddle as the stroke table; the clock and signature
+    // cells stay single-zoom partial cases.
+    const double cell = double(layout::fontPx(4.0 / 3.0));
+    QTest::newRow("fixed6/guides-coarse") << songview::GridSelection::musical(16) << 48ULL << 54ULL
+                                          << std::optional<uint64_t>{} << 4.0 * cell - 1.0;
+    QTest::newRow("fixed6/guides-fine") << songview::GridSelection::musical(16) << 48ULL << 54ULL
+                                        << std::optional<uint64_t>{} << 4.0 * cell;
+    QTest::newRow("clock") << songview::GridSelection::clock() << 48ULL << 49ULL
+                           << std::optional<uint64_t>{} << kPencilTimeZoom;
+    QTest::newRow("signature61") << songview::GridSelection::musical(16) << 60ULL << 61ULL
+                                 << std::optional<uint64_t>{61} << kPencilTimeZoom;
+}
+
 void AutomationEditingTest::pencilSingleClickOnTempoLaneRestoresDefaultTempoAtCellEnd()
 {
+    QFETCH(songview::GridSelection, selection);
+    QFETCH(uint64_t, paintedTick);
+    QFETCH(uint64_t, restoredTick);
+    QFETCH(double, timeZoom);
+    QFETCH(std::optional<uint64_t>, signatureTick);
+    // Independent table oracles cover the fixed six-tick cell, the clock
+    // cell, and the cell split by the signature change at tick 61.
+    selectEditingGrid(selection);
     AutomationPage &page = *m_page;
     SongDocument &document = m_tab->document();
-    resetPencilView(m_tab->view());
+    if (signatureTick)
+        document.setTimeSig(*signatureTick, 4, 2);
+    resetPencilView(m_tab->view(), timeZoom);
     if (!document.tempoPoints().empty())
         document.applyTempoEdit({document.tempoPoints(), {}});
     QCoreApplication::processEvents();
@@ -251,23 +336,23 @@ void AutomationEditingTest::pencilSingleClickOnTempoLaneRestoresDefaultTempoAtCe
     QVERIFY(handle.valid());
     TempoLane lane(document);
     const PencilPoint point =
-        pencilPoint(m_tab->view(), page, *m_automationInput, lane, handle, 48, 200);
+        pencilPointInCell(m_tab->view(), page, *m_automationInput, lane, handle, paintedTick, 200);
     setPencilMode(true);
     const FrozenDocumentState before = frozenDocumentState(0, 0);
     mousePress(Qt::LeftButton, point.window, Qt::NoModifier);
     mouseRelease(Qt::LeftButton, point.window, Qt::NoModifier);
 
     const auto &points = document.tempoPoints();
-    const auto painted =
-        std::find_if(points.cbegin(), points.cend(), [&point](const TempoPoint &tempo) {
-            return tempo.tick == point.mapping.cell.tickBegin &&
+    const auto painted = std::find_if(
+        points.cbegin(), points.cend(), [&point, paintedTick](const TempoPoint &tempo) {
+            return tempo.tick == paintedTick &&
                    tempo.microsecondsPerQuarterNote ==
                        CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(
                            point.mapping.point.value);
         });
     const auto restored =
-        std::find_if(points.cbegin(), points.cend(), [&point](const TempoPoint &tempo) {
-            return tempo.tick == point.mapping.cell.tickEnd &&
+        std::find_if(points.cbegin(), points.cend(), [restoredTick](const TempoPoint &tempo) {
+            return tempo.tick == restoredTick &&
                    tempo.microsecondsPerQuarterNote ==
                        CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(
                            CoreTimeDefaults::kTempoBpm);
@@ -279,11 +364,34 @@ void AutomationEditingTest::pencilSingleClickOnTempoLaneRestoresDefaultTempoAtCe
     QCOMPARE(document.undoStack()->index(), before.undoIndex + 1);
 }
 
+void AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd_data()
+{
+    QTest::addColumn<songview::GridSelection>("selection");
+    QTest::addColumn<uint64_t>("paintedTick");
+    QTest::addColumn<uint64_t>("restoredTick");
+    QTest::addColumn<double>("timeZoom");
+    // Same grid-guide straddle as the stroke table; the clock cell stays a
+    // single-zoom partial case.
+    const double cell = double(layout::fontPx(4.0 / 3.0));
+    QTest::newRow("fixed6/guides-coarse")
+        << songview::GridSelection::musical(16) << 48ULL << 54ULL << 4.0 * cell - 1.0;
+    QTest::newRow("fixed6/guides-fine")
+        << songview::GridSelection::musical(16) << 48ULL << 54ULL << 4.0 * cell;
+    QTest::newRow("clock") << songview::GridSelection::clock() << 48ULL << 49ULL << kPencilTimeZoom;
+}
+
 void AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd()
 {
+    QFETCH(songview::GridSelection, selection);
+    QFETCH(uint64_t, paintedTick);
+    QFETCH(double, timeZoom);
+    QFETCH(uint64_t, restoredTick);
+    // Independent table oracles cover the fixed six-tick and clock cells.
+    selectEditingGrid(selection);
     AutomationPage &page = *m_page;
     AutomationCanvas &canvas = *page.canvas();
     SongDocument &document = m_tab->document();
+    resetPencilView(m_tab->view(), timeZoom);
     const EditorAutomationRowId row{EditorAutomationRowKind::ControlChange, kTrack, DOC_CC_BEND};
     document.writeLanePoints(kTrack, DOC_CC_BEND, 0, std::numeric_limits<uint64_t>::max(), {});
     const LaneHandle handle = findRow(row);
@@ -292,8 +400,8 @@ void AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCell
     QTRY_VERIFY(!canvas.laneBody(findRow(row)).isEmpty());
 
     CCLaneAdapter lane(document, kTrack, DOC_CC_BEND);
-    const PencilPoint point =
-        pencilPoint(m_tab->view(), page, *m_automationInput, lane, findRow(row), 48, 4096);
+    const PencilPoint point = pencilPointInCell(m_tab->view(), page, *m_automationInput, lane,
+                                                findRow(row), paintedTick, 4096);
     setPencilMode(true);
     const FrozenDocumentState before = frozenDocumentState(0, 0);
     mousePress(Qt::LeftButton, point.window, Qt::NoModifier);
@@ -301,8 +409,8 @@ void AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCell
 
     const std::vector<DocLanePoint> points = document.lanePoints(kTrack, DOC_CC_BEND);
     QCOMPARE(points.size(), std::size_t{2});
-    QVERIFY(containsPoint(points, point.mapping.cell.tickBegin, point.mapping.point.value));
-    QVERIFY(containsPoint(points, point.mapping.cell.tickEnd, 0));
+    QVERIFY(containsPoint(points, paintedTick, point.mapping.point.value));
+    QVERIFY(containsPoint(points, restoredTick, 0));
     QCOMPARE(document.revision(), before.revision + 1);
     QCOMPARE(document.undoStack()->index(), before.undoIndex + 1);
 }

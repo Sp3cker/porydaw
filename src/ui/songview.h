@@ -176,10 +176,10 @@ class SongView : public QWidget
         double scrollY = 0.0;
         int selectedTrack = 0;
         uint64_t editCursorTick = 0;
-        int gridMinDenom = 0;     // drawn-grid floor as a note denominator
-                                  // (4/8/16/32); 0 = down to the clock grid
-        bool gridTriplet = false; // triplet vs straight beat subdivisions
-        bool eventList = false;   // raw MIDI event list instead of the roll
+        songview::GridSelection gridSelection{}; // musical 1/denominator cell, or
+                                                 // the document's clock-grid floor
+        bool gridTriplet = false;                // triplet vs straight beat subdivisions
+        bool eventList = false;                  // raw MIDI event list instead of the roll
     };
     ViewState viewState() const;
     // Call after setSong (and setDocument); a default-constructed (invalid)
@@ -440,14 +440,24 @@ class SongView : public QWidget
                          const std::function<void(uint64_t, bool, int, int)> &fn) const;
 
     // --- editing support for the child widgets ---
-    // Grid feel and floor (the ruler's grid controls): the zoom-adaptive
-    // grid subdivides beats by powers of two (straight) or by threes
-    // (triplet), and the minimum subdivision — a note denominator, quarter =
-    // one beat — stops the DRAWN grid from refining past the note value the
-    // user cares about (display only; snapping still steps one rung finer).
-    // 0 keeps the default clock-grid floor. Per-song view state.
+    // The editing grid selection (the ruler's grid controls): an exact
+    // musical 1/denominator whole-note cell or the document's clock-grid
+    // floor, plus a straight/triplet feel. The selected cell fixes drawing
+    // and length-editing snapping at every zoom; drawn guides stay
+    // zoom-adaptive display detail. Every mutator validates against the
+    // bound document's resolution (unsupported selections canonicalize to
+    // Clock) and reports no result — read the state back through
+    // gridSelection() or grid(). Per-song view state.
+    songview::GridSelection gridSelection() const;
+    void setGridSelection(songview::GridSelection selection);
+    // Adjacent finer/coarser effective spacing and the feel toggle; no-ops
+    // at their bounds (terminal Clock, coarsest ladder entry).
+    void narrowGrid();
+    void widenGrid();
+    void toggleGridFeel();
+    // Explicit feel assignment (ruler menu, restore): canonicalizes the
+    // selection against the target feel's ladder — no toggle heuristics.
     void setGridFeel(songview::GridFeel feel);
-    void setGridMinDenom(int denom); // 4/8/16/32; anything else means 0
 
     DrawerPageVoiceContext voiceContext(uint64_t tick) const;
     // Shared deferred velocity gesture; document mutation happens only when
@@ -724,6 +734,10 @@ class SongView : public QWidget
     void notifyDrawerSongChanged();
     void notifyVelocityGestureChanged();
     void refreshDrawerPages();
+    // Updates controls and the pencil preview after an editing-cell size change.
+    void gridEditingSizeChanged();
+    // Extends an editing-cell update to every surface that draws grid guides.
+    void gridVisualGuidesChanged();
     void refreshAutomationPage();
     void refreshVelocityPage();
     void refreshVoiceChangePage();

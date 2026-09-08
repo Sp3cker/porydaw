@@ -11,6 +11,7 @@
 #include "ui/songview/editorselectionmodel.h"
 
 #include <QPoint>
+#include <QQuickItem>
 #include <QString>
 
 #include <array>
@@ -67,6 +68,7 @@ class CoreFixture final
     SongView &view() noexcept { return rigView(*m_world); }
     SongDocument &document() noexcept { return rigDocument(*m_world); }
     QQuickWindow *window() noexcept { return rigWindow(*m_world); }
+    QQuickItem *root() noexcept { return m_world->rig->quickRoot(); }
     songview::TimelineInputItem *input(const char *name) noexcept
     {
         return rigInput(*m_world, name);

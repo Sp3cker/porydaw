@@ -126,6 +126,55 @@ void SelectionWindowTierTest::windowCopySoloExecutesExactlyOnce()
     view.selectionModel().clearNoteSelection();
 }
 
+void SelectionWindowTierTest::chromeGridCommandsReachRootFallbackExactlyOnce()
+{
+    SongView &view = this->view();
+    SongDocument &document = this->document();
+    const selectionkey::ScenarioRollback rollback(view, document);
+    const FullControlTabTraversal fullControlTabTraversal;
+    view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
+    view.setDrawerSectionHeight(EditorDrawerPage::Automations, 200);
+    view.selectTrack(kTrack);
+    QVERIFY2(focusAutomationBand(view), "could not focus the automation band before traversal");
+
+    const QPointer<QQuickItem> toggle = tabTo(
+        quickWindow(), {QStringLiteral("drawerAutomationToggle")}, chromeTraversalBound(document));
+    QVERIFY2(toggle && toggle->hasActiveFocus(),
+             "Tab traversal did not give the drawer toggle live Quick focus");
+    const auto narrow = selectionkey::firstBinding(QStringLiteral("roll.grid_narrow"));
+    const auto widen = selectionkey::firstBinding(QStringLiteral("roll.grid_widen"));
+    const auto triplet = selectionkey::firstBinding(QStringLiteral("roll.grid_triplet"));
+    QVERIFY2(narrow.has_value() && widen.has_value() && triplet.has_value(),
+             "the three grid commands need single-key bindings");
+
+    const auto hasGridState = [&view](songview::GridSelection selection, songview::GridFeel feel,
+                                      uint64_t ticks) {
+        return view.gridSelection() == selection && view.grid().feel() == feel &&
+               view.grid().snapTicksAt(0) == ticks;
+    };
+    view.setGridFeel(songview::GridFeel::Straight);
+    view.setGridSelection(songview::GridSelection::musical(16));
+    QVERIFY2(hasGridState(songview::GridSelection::musical(16), songview::GridFeel::Straight, 6),
+             "the 24-PPQN window fixture did not stage a six-tick grid");
+
+    // The toggle has no local grid shortcut. Each QTest key reaches its live
+    // chrome focus item first, then the TimelineCanvas fallback exactly once.
+    selectionkey::deliverKey(quickWindow(), narrow->key(), narrow->keyboardModifiers());
+    QVERIFY2(
+        toggle && toggle->hasActiveFocus() &&
+            hasGridState(songview::GridSelection::musical(32), songview::GridFeel::Straight, 3),
+        "one chrome-delivered narrow chord did not make exactly the 6-to-3 step");
+    selectionkey::deliverKey(quickWindow(), widen->key(), widen->keyboardModifiers());
+    QVERIFY2(
+        toggle && toggle->hasActiveFocus() &&
+            hasGridState(songview::GridSelection::musical(16), songview::GridFeel::Straight, 6),
+        "one chrome-delivered widen chord did not make exactly the 3-to-6 step");
+    selectionkey::deliverKey(quickWindow(), triplet->key(), triplet->keyboardModifiers());
+    QVERIFY2(toggle && toggle->hasActiveFocus() &&
+                 hasGridState(songview::GridSelection::musical(16), songview::GridFeel::Triplet, 4),
+             "one chrome-delivered triplet chord did not toggle exactly once");
+}
+
 void SelectionWindowTierTest::chromeGripKeysStayLocal()
 {
     SongView &view = this->view();

@@ -4,6 +4,7 @@
 #include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/quick/timelineinput.h"
 #include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/trackheadermodel.h"
 
 #include <algorithm>
 
@@ -157,6 +158,12 @@ void TimelineQuickView::cancelActiveGestures()
 bool TimelineQuickView::forwardUnhandledKey(int key, int modifiers, const QString &text,
                                             bool autoRepeat)
 {
+    // A QML TextInput may decline a modified chord and let it reach the
+    // scene root. While the existing inline rename editor is live, retain
+    // its local ownership rather than letting that fallback mutate the grid.
+    if (m_trackHeaders && m_trackHeaders->renamingTrack() >= 0)
+        return true;
+
     // Scene-root fallback (TimelineCanvas Keys.onPressed) for keys unclaimed
     // by band, gutter, chrome and local-control items. Only unaccepted events
     // arrive here, so a command consumed on the band path can never run

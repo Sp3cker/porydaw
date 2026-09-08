@@ -28,9 +28,14 @@ constexpr uint64_t kNodeTick = 96;
 constexpr uint64_t kLateTick = 288;
 constexpr uint64_t kSweepStartTick = 48;
 constexpr uint64_t kSweepEndTick = 144;
+constexpr uint64_t kRampEndTick = 66;
+constexpr uint64_t kSignatureTick = 61;
+constexpr uint64_t kSignatureTailEndTick = 67;
 constexpr int kFirstValue = 80;
 constexpr int kNodeValue = 100;
 constexpr int kLateValue = 64;
+constexpr int kRampFromValue = 80;
+constexpr int kRampToValue = 110;
 
 EditorAutomationRowId rowId(int adapter)
 {
@@ -84,6 +89,27 @@ bool containsPoint(const std::vector<NodePoint> &points, uint64_t tick, int valu
     return std::any_of(points.cbegin(), points.cend(), [tick, value](const NodePoint &point) {
         return point.tick == tick && point.value == value;
     });
+}
+
+// The committed ramp must sample exactly the expected editing cells with
+// strictly increasing values: missing or extra intermediate samples and flat
+// strokes all fail.
+void assertRampSamples(const std::vector<NodePoint> &points, uint64_t from, uint64_t to,
+                       const std::vector<uint64_t> &expectedTicks)
+{
+    std::vector<uint64_t> sampled;
+    for (const NodePoint &point : points) {
+        if (point.tick >= from && point.tick <= to)
+            sampled.push_back(point.tick);
+    }
+    QCOMPARE(sampled, expectedTicks);
+    int previous = -1;
+    for (const NodePoint &point : points) {
+        if (point.tick < from || point.tick > to)
+            continue;
+        QVERIFY(point.value > previous);
+        previous = point.value;
+    }
 }
 
 bool samePoints(const std::vector<NodePoint> &actual, const std::vector<NodePoint> &expected)
@@ -272,6 +298,9 @@ void AutomationEditingTest::sweepAndRampCommit_data()
 void AutomationEditingTest::sweepAndRampCommit()
 {
     QFETCH(int, adapter);
+    // Explicitly selected fixed six-tick editing grid; the ramp oracles below
+    // are independent literals, not visible-guide boundaries.
+    selectEditingGrid(songview::GridSelection::musical(16));
     const std::vector<NodePoint> fixture{
         {kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}};
     setPoints(m_tab->document(), adapter, fixture);
@@ -279,22 +308,27 @@ void AutomationEditingTest::sweepAndRampCommit()
         QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
-    const QPoint start = automation_test::windowFromContent(page(), automationInput(),
-                                                            inputPoint(lane, kSweepStartTick, 80));
-    const QPoint target = automation_test::windowFromContent(page(), automationInput(),
-                                                             inputPoint(lane, kSweepEndTick, 110));
+    const QPoint start = automation_test::windowFromContent(
+        page(), automationInput(), inputPoint(lane, kSweepStartTick, kRampFromValue));
+    const QPoint sweepTarget = automation_test::windowFromContent(
+        page(), automationInput(), inputPoint(lane, kSweepEndTick, kRampToValue));
+    const QPoint rampTarget = automation_test::windowFromContent(
+        page(), automationInput(), inputPoint(lane, kRampEndTick, kRampToValue));
     const int activationDistance = AutomationGeometry::resolve().nodeDragActivationDistance;
     const QPoint activation = start + QPoint(activationDistance + 2, 0);
-    const QPoint activatedTarget = dragActivation(start, target, activationDistance);
+    const QPoint activatedTarget = dragActivation(start, sweepTarget, activationDistance);
     const auto deliveredStart =
         pointerMapping(lane, automation_test::contentFromWindow(page(), automationInput(), start));
-    const auto deliveredTarget =
-        pointerMapping(lane, automation_test::contentFromWindow(page(), automationInput(), target));
+    const auto deliveredSweepTarget = pointerMapping(
+        lane, automation_test::contentFromWindow(page(), automationInput(), sweepTarget));
+    const auto deliveredRampTarget = pointerMapping(
+        lane, automation_test::contentFromWindow(page(), automationInput(), rampTarget));
     const auto effectiveSweepTarget =
         pointerMapping(lane, automation_test::effectiveDragContent(page(), automationInput(), start,
                                                                    activation, activatedTarget));
     QCOMPARE(deliveredStart.point.tick, kSweepStartTick);
-    QCOMPARE(deliveredTarget.point.tick, kSweepEndTick);
+    QCOMPARE(deliveredSweepTarget.point.tick, kSweepEndTick);
+    QCOMPARE(deliveredRampTarget.point.tick, kRampEndTick);
     QCOMPARE(effectiveSweepTarget.point.tick, kSweepEndTick);
     QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
     QSignalSpy edited(&tab(), &SongTab::edited);
@@ -320,17 +354,73 @@ void AutomationEditingTest::sweepAndRampCommit()
     const FrozenDocumentState rampBefore =
         frozenDocumentState(documentChanged.count(), edited.count());
     mousePress(Qt::LeftButton, start, Qt::ShiftModifier);
-    mouseMove(target, Qt::ShiftModifier);
+    mouseMove(rampTarget, Qt::ShiftModifier);
     QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == rampBefore);
-    mouseRelease(Qt::LeftButton, target, Qt::ShiftModifier);
+    mouseRelease(Qt::LeftButton, rampTarget, Qt::ShiftModifier);
 
     QCOMPARE(m_tab->document().revision(), rampBefore.revision + 1);
     QCOMPARE(m_tab->document().undoStack()->index(), rampBefore.undoIndex + 1);
     const std::vector<NodePoint> ramp = pointsOf(m_tab->document(), adapter);
+    // Held and outside values stay put while the ramp samples exactly the
+    // selected-step cells 48, 54, 60, 66 with non-flat values.
     QVERIFY(containsPoint(ramp, kFirstTick, kFirstValue));
     QVERIFY(containsPoint(ramp, kSweepStartTick, deliveredStart.point.value));
-    QVERIFY(containsPoint(ramp, kSweepEndTick, deliveredTarget.point.value));
+    QVERIFY(containsPoint(ramp, kRampEndTick, deliveredRampTarget.point.value));
+    QVERIFY(containsPoint(ramp, kNodeTick, kNodeValue));
     QVERIFY(containsPoint(ramp, kLateTick, kLateValue));
+    assertRampSamples(ramp, kSweepStartTick, kRampEndTick, {kSweepStartTick, 54, 60, kRampEndTick});
+    QCOMPARE(int(ramp.size()), 7);
+}
+
+void AutomationEditingTest::rampSamplesPartialTailAtSignature()
+{
+    // One signature-tail case, not a matrix: with a signature change at 61,
+    // the six-tick ramp from 48 to 67 samples the partial cell 60->61 and the
+    // restarted cell 61->67, not a spacing-change search.
+    selectEditingGrid(songview::GridSelection::musical(16));
+    SongDocument &document = m_tab->document();
+    document.setTimeSig(kSignatureTick, 4, 2);
+    QCoreApplication::processEvents();
+    const std::vector<NodePoint> fixture{
+        {kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}};
+    setPoints(document, kCc, fixture);
+    const LaneHandle lane = findRow(rowId(kCc));
+    QVERIFY(lane.valid());
+    const QPoint start = automation_test::windowFromContent(
+        page(), automationInput(), inputPoint(lane, kSweepStartTick, kRampFromValue));
+    // The tick-67 boundary can round back into the 61->67 cell during the
+    // integer window round trip. Deliver from inside the next cell; snapping
+    // down still commits the literal tick-67 endpoint.
+    const QPoint target = automation_test::windowFromContent(
+        page(), automationInput(), inputPoint(lane, kSignatureTailEndTick + 3, kRampToValue));
+    const auto deliveredStart =
+        pointerMapping(lane, automation_test::contentFromWindow(page(), automationInput(), start));
+    const auto deliveredTarget =
+        pointerMapping(lane, automation_test::contentFromWindow(page(), automationInput(), target));
+    QCOMPARE(deliveredStart.point.tick, kSweepStartTick);
+    QCOMPARE(deliveredTarget.point.tick, kSignatureTailEndTick);
+    QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
+    QSignalSpy edited(&tab(), &SongTab::edited);
+    QVERIFY(documentChanged.isValid());
+    QVERIFY(edited.isValid());
+    const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
+
+    mousePress(Qt::LeftButton, start, Qt::ShiftModifier);
+    mouseMove(target, Qt::ShiftModifier);
+    QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
+    mouseRelease(Qt::LeftButton, target, Qt::ShiftModifier);
+
+    QCOMPARE(m_tab->document().revision(), before.revision + 1);
+    QCOMPARE(m_tab->document().undoStack()->index(), before.undoIndex + 1);
+    const std::vector<NodePoint> ramp = pointsOf(document, kCc);
+    QVERIFY(containsPoint(ramp, kFirstTick, kFirstValue));
+    QVERIFY(containsPoint(ramp, kSweepStartTick, deliveredStart.point.value));
+    QVERIFY(containsPoint(ramp, kSignatureTailEndTick, deliveredTarget.point.value));
+    QVERIFY(containsPoint(ramp, kNodeTick, kNodeValue));
+    QVERIFY(containsPoint(ramp, kLateTick, kLateValue));
+    assertRampSamples(ramp, kSweepStartTick, kSignatureTailEndTick,
+                      {kSweepStartTick, 54, 60, kSignatureTick, kSignatureTailEndTick});
+    QCOMPARE(int(ramp.size()), 8);
 }
 
 void AutomationEditingTest::pencilPreviewCommits_data()

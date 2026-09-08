@@ -141,6 +141,7 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
     static QFont resolveRulerFont(const Geometry &geometry);
     static int markerRowHeight(const QFontMetrics &metrics);
     void syncGridControlAppearance();
+    QString gridDivisionToolTip() const;
     void openGridMenu(QPointF position, bool division);
     // Emits gridMenuActivated() unless the setter opened a new popup.
     void notifyGridMenuChoice(bool division);
@@ -239,6 +240,7 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
     TimelineInputHost *m_inputHost = nullptr;
     Geometry m_geometry;
     QString m_divisionText;
+    QString m_divisionToolTip;
     QString m_feelText;
     bool m_gridControlsEnabled = false;
     QVariantMap m_gridControlAppearance;

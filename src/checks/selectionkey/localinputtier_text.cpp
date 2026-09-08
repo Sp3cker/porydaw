@@ -44,6 +44,8 @@ void SelectionLocalInputTierTest::renameTextInputOwnsKeys()
 {
     SongView &view = this->view();
     const selectionkey::ScenarioRollback rollback(view, document());
+    QVERIFY2(stageKnownNonterminalGrid(),
+             "the local-input fixture did not stage the supported six-tick 1/16 grid");
     // Shell first: activating after Quick focus would clear the rename
     // field's activeFocusItem, so the shell is raised before beginRename.
     activateShellForCommands();
@@ -53,6 +55,11 @@ void SelectionLocalInputTierTest::renameTextInputOwnsKeys()
     QQuickWindow *const quickWindow = quick ? quick->quickWindow() : nullptr;
     QQuickItem *const root = quick ? quick->rootObject() : nullptr;
     QVERIFY2(headers && quickWindow && root, "the rename surface is unavailable");
+    selectionkey::KeymapRestore gridKeymapRestore;
+    gridKeymapRestore.registry().setBinding(QStringLiteral("roll.grid_narrow"),
+                                            QKeySequence(QStringLiteral("Z")));
+    const auto gridNarrow = selectionkey::firstBinding(QStringLiteral("roll.grid_narrow"));
+    QVERIFY2(gridNarrow.has_value(), "the rebound narrow-grid command has no single-key binding");
     const auto solo = selectionkey::firstBinding(QStringLiteral("roll.solo_tracks"));
     const auto copy = selectionkey::firstBinding(QStringLiteral("roll.copy"));
     QVERIFY2(solo.has_value() && copy.has_value(), "Solo/Copy have no single-key bindings");
@@ -139,6 +146,20 @@ void SelectionLocalInputTierTest::renameTextInputOwnsKeys()
                             .arg(m_counts.solo - soloBefore)));
     QVERIFY2(!view.trackSoloed(kTrack), "Solo leaked into the rename TextInput");
     QVERIFY2(document().smf().write() == before, "rename typing mutated the song");
+    // A printable rebound grid key must remain real rename text, not merely
+    // leave the model unchanged because a modified chord was ignored.
+    const selectionkey::GridCommandState gridBeforeReboundText =
+        selectionkey::gridCommandState(view);
+    const bool selectedForGridText = QMetaObject::invokeMethod(renameGuard, "selectAll");
+    QTest::keyClick(quickWindow, gridNarrow->key(), gridNarrow->keyboardModifiers());
+    selectionkey::settle();
+    const QString draftAfterGridText =
+        renameGuard ? renameGuard->property("text").toString() : QString();
+    QVERIFY2(
+        renameGuard && selectedForGridText &&
+            draftAfterGridText == singleKeyText(*gridNarrow).value_or(QString()) &&
+            selectionkey::sameGridCommandState(view, gridBeforeReboundText),
+        "the rebound narrow-grid key escaped the rename TextInput or changed the timeline grid");
 
     // Copy with rename focus copies the selected draft itself; clear the
     // clipboard first so stale clipboard contents cannot satisfy the check.
@@ -152,11 +173,11 @@ void SelectionLocalInputTierTest::renameTextInputOwnsKeys()
              qPrintable(QStringLiteral("Copy with rename focus triggered the window action: "
                                        "copy-delta=%1")
                             .arg(m_counts.copy - copyBefore)));
-    QVERIFY2(selectedForCopy && !selectedDraft.isEmpty() && selectedDraft == draftAfter &&
+    QVERIFY2(selectedForCopy && !selectedDraft.isEmpty() && selectedDraft == draftAfterGridText &&
                  clipboardText == selectedDraft,
              qPrintable(QStringLiteral("rename Copy mismatch: text='%1' selected='%2' "
                                        "clipboard='%3' selectAll=%4")
-                            .arg(draftAfter, selectedDraft, clipboardText)
+                            .arg(draftAfterGridText, selectedDraft, clipboardText)
                             .arg(selectedForCopy)));
 
     // Regression guard for the Quick IME pencil guard: with the Automations
@@ -173,7 +194,7 @@ void SelectionLocalInputTierTest::renameTextInputOwnsKeys()
     QTest::keyClick(quickWindow, pencil->key(), pencil->keyboardModifiers());
     selectionkey::settle();
     QVERIFY2(renameGuard && renameGuard->property("text").toString() ==
-                                singleKeyText(*pencil).value_or(draftAfter),
+                                singleKeyText(*pencil).value_or(draftAfterGridText),
              "Pencil binding did not remain local rename text input");
     QVERIFY2(canvas && canvas->pencilMode() == pencilBefore,
              "Pencil mode toggled while typing into the rename TextInput");
@@ -254,10 +275,16 @@ void SelectionLocalInputTierTest::numericPromptOwnsKeys()
     SongView &view = this->view();
     SongDocument &document = this->document();
     const selectionkey::ScenarioRollback rollback(view, document);
+    QVERIFY2(stageKnownNonterminalGrid(),
+             "the local-input fixture did not stage the supported six-tick 1/16 grid");
     activateShellForCommands();
     const auto solo = selectionkey::firstBinding(QStringLiteral("roll.solo_tracks"));
     const auto copy = selectionkey::firstBinding(QStringLiteral("roll.copy"));
     QVERIFY2(solo.has_value() && copy.has_value(), "Solo/Copy have no single-key bindings");
+    const auto gridNarrow = selectionkey::firstBinding(QStringLiteral("roll.grid_narrow"));
+    QVERIFY2(solo.has_value() && copy.has_value() && gridNarrow.has_value(),
+             "Solo/Copy/narrow-grid have no single-key bindings");
+    const selectionkey::GridCommandState gridBeforePrompt = selectionkey::gridCommandState(view);
     const std::optional<QString> soloText = singleKeyText(*solo);
     document.addLanePoint(kTrack, kController, 48, 32);
     document.addLanePoint(kTrack, kController, 96, 64);
@@ -364,6 +391,15 @@ void SelectionLocalInputTierTest::numericPromptOwnsKeys()
     QVERIFY2(document.smf().write() == before,
              "value prompt typing mutated the automation lane or the song");
 
+    // The narrow-grid binding must stay local to the prompt too: the field
+    // keeps only its own text and the timeline grid must not move while the
+    // prompt owns the keys.
+    QTest::keyClick(quickWindow, gridNarrow->key(), gridNarrow->keyboardModifiers());
+    selectionkey::settle();
+    QVERIFY2(prompt && prompt->property("text").toString() == expectedAfterSolo &&
+                 selectionkey::sameGridCommandState(view, gridBeforePrompt),
+             "the value prompt leaked narrow-grid delivery to the timeline");
+
     // Escape cancels the pending edit without writing, and window commands
     // resume exactly once the prompt no longer owns the keys.
     QTest::keyClick(quickWindow, Qt::Key_Escape);
@@ -388,6 +424,10 @@ void SelectionLocalInputTierTest::velocityPromptOwnsKeys()
     const auto solo = selectionkey::firstBinding(QStringLiteral("roll.solo_tracks"));
     const auto copy = selectionkey::firstBinding(QStringLiteral("roll.copy"));
     QVERIFY2(solo.has_value() && copy.has_value(), "Solo/Copy have no single-key bindings");
+    const auto gridNarrow = selectionkey::firstBinding(QStringLiteral("roll.grid_narrow"));
+    QVERIFY2(solo.has_value() && copy.has_value() && gridNarrow.has_value(),
+             "Solo/Copy/narrow-grid have no single-key bindings");
+    const selectionkey::GridCommandState gridBeforePrompt = selectionkey::gridCommandState(view);
     const std::optional<QString> soloText = singleKeyText(*solo);
 
     // A selected roll note anchors the shared-edit leak checks, and the note
@@ -502,6 +542,15 @@ void SelectionLocalInputTierTest::velocityPromptOwnsKeys()
     QVERIFY2(input->property("text").toString() == expectedAfterSolo &&
                  m_counts.solo == soloBefore && !view.trackSoloed(kTrack),
              "Solo escaped the velocity prompt");
+
+    // The narrow-grid binding must stay local to the prompt too: the field
+    // keeps only its own text and the timeline grid must not move while the
+    // prompt owns the keys.
+    QTest::keyClick(canvas, gridNarrow->key(), gridNarrow->keyboardModifiers());
+    selectionkey::settle();
+    QVERIFY2(input->property("text").toString() == expectedAfterSolo &&
+                 selectionkey::sameGridCommandState(view, gridBeforePrompt) && popup->isOpen(),
+             "the velocity prompt leaked narrow-grid delivery to the timeline");
 
     // The same canvas receives a global Solo delivery while the prompt is up,
     // but the session's ShortcutOverride policy keeps the command inactive.

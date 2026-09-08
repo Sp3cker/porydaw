@@ -115,7 +115,7 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
     };
 
     void requestQuickUpdate();
-    void rebuildQuickScene(songview::TimelineQuickScene &scene);
+    void rebuildQuickScene(songview::TimelineQuickScene &scene, bool content, bool grid);
     void rebuildQuickChrome(songview::TimelineQuickScene &scene, const QRectF &plot,
                             const QRectF &gutter, qreal separatorX);
     void rebuildQuickAxis(songview::TimelineQuickScene &scene, const QRectF &gutter,

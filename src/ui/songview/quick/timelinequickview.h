@@ -56,7 +56,9 @@ enum class TimelineQuickDirty : quint16 {
     Velocity = 1u << 2,
     VoiceChanges = 1u << 3,
     VoiceChangesHover = 1u << 4,
-    All = (1u << 5) - 1,
+    VelocityGrid = 1u << 5,
+    VoiceChangesGrid = 1u << 6,
+    All = (1u << 7) - 1,
 };
 Q_DECLARE_FLAGS(TimelineQuickDirtySet, TimelineQuickDirty)
 Q_DECLARE_OPERATORS_FOR_FLAGS(TimelineQuickDirtySet)
@@ -64,6 +66,7 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(TimelineQuickDirtySet)
 // Producers OR independent refresh levels; one flush repaints each requested
 // level's layers. Levels are not supersets of one another:
 //   Content   — grid, curves, nodes, selection, primary text
+//   Grid      — grid layer only
 //   Transient — drag-preview layer + transient text
 //   Hover     — hover layer + hover text
 enum class AutomationRefresh : quint8 {
@@ -71,7 +74,8 @@ enum class AutomationRefresh : quint8 {
     Content = 1u << 0,
     Transient = 1u << 1,
     Hover = 1u << 2,
-    All = (1u << 3) - 1,
+    Grid = 1u << 3,
+    All = (1u << 4) - 1,
 };
 Q_DECLARE_FLAGS(AutomationRefreshSet, AutomationRefresh)
 Q_DECLARE_OPERATORS_FOR_FLAGS(AutomationRefreshSet)
@@ -282,7 +286,7 @@ class TimelineQuickView final : public QWidget
     void syncPianoRoll(PianoRollQuickDirtySet dirty);
     void syncRuler();
     void syncOtherEvents();
-    void syncVelocity();
+    void syncVelocity(TimelineQuickDirtySet dirty);
     void syncVoiceChanges(TimelineQuickDirtySet dirty);
     void syncAutomation(AutomationRefreshSet refresh);
     void updateLayer(TimelineQuickLayer layer);

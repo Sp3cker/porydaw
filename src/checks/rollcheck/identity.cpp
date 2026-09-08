@@ -150,6 +150,8 @@ void PianoRollTest::viewStateRoundTrip()
 
     view.setEditCursorTick(view.grid().snapTick(96.0));
     const SongView::ViewState snapshot = view.viewState();
+    if (snapshot.gridSelection != songview::GridSelection::musical(16) || snapshot.gridTriplet)
+        QFAIL("shared roll fixture did not explicitly select straight 1/16");
     SongView::ViewState perturbed = snapshot;
     perturbed.pxPerBeat = snapshot.pxPerBeat < 64.0 ? 64.0 : 16.0;
     perturbed.keyHeight = snapshot.keyHeight < 16.0 ? 16.0 : 8.0;
@@ -164,7 +166,9 @@ void PianoRollTest::viewStateRoundTrip()
     }
     perturbed.selectedTrack = alternateTrack;
     perturbed.editCursorTick = snapshot.editCursorTick == 0 ? 1 : 0;
-    perturbed.gridMinDenom = snapshot.gridMinDenom == 4 ? 8 : 4;
+    perturbed.gridSelection = snapshot.gridSelection == songview::GridSelection::musical(8)
+                                  ? songview::GridSelection::musical(16)
+                                  : songview::GridSelection::musical(8);
     perturbed.gridTriplet = !snapshot.gridTriplet;
     perturbed.eventList = !snapshot.eventList;
     SongView::ViewState expected = perturbed;
@@ -183,10 +187,7 @@ void PianoRollTest::viewStateRoundTrip()
         expected.selectedTrack = perturbed.selectedTrack;
     }
     expected.editCursorTick = std::min(perturbed.editCursorTick, m_fixture->timeline().lengthTicks);
-    expected.gridMinDenom = perturbed.gridMinDenom == 4 || perturbed.gridMinDenom == 8 ||
-                                    perturbed.gridMinDenom == 16 || perturbed.gridMinDenom == 32
-                                ? perturbed.gridMinDenom
-                                : 0;
+    expected.gridSelection = perturbed.gridSelection;
     view.applyViewState(perturbed);
     const SongView::ViewState applied = view.viewState();
     const auto sameViewState = [](const SongView::ViewState &lhs, const SongView::ViewState &rhs) {
@@ -195,7 +196,7 @@ void PianoRollTest::viewStateRoundTrip()
                std::abs(lhs.scrollPx - rhs.scrollPx) <= 1e-12 &&
                std::abs(lhs.scrollY - rhs.scrollY) <= 1e-12 &&
                lhs.selectedTrack == rhs.selectedTrack && lhs.editCursorTick == rhs.editCursorTick &&
-               lhs.gridMinDenom == rhs.gridMinDenom && lhs.gridTriplet == rhs.gridTriplet &&
+               lhs.gridSelection == rhs.gridSelection && lhs.gridTriplet == rhs.gridTriplet &&
                lhs.eventList == rhs.eventList;
     };
     const auto differs = [](double lhs, double rhs) { return std::abs(lhs - rhs) > 1e-12; };
@@ -205,7 +206,7 @@ void PianoRollTest::viewStateRoundTrip()
         !differs(expected.scrollY, snapshot.scrollY) ||
         expected.selectedTrack == snapshot.selectedTrack ||
         expected.editCursorTick == snapshot.editCursorTick ||
-        expected.gridMinDenom == snapshot.gridMinDenom ||
+        expected.gridSelection == snapshot.gridSelection ||
         expected.gridTriplet == snapshot.gridTriplet || expected.eventList == snapshot.eventList) {
         QFAIL("ViewState perturbation did not change every retained field");
     }
@@ -216,6 +217,10 @@ void PianoRollTest::viewStateRoundTrip()
     const SongView::ViewState restored = view.viewState();
     if (view.editorViewState() != cosmetics || !sameViewState(restored, snapshot))
         QFAIL("ViewState capture/apply did not restore runtime state without changing cosmetics");
+    if (view.gridSelection() != songview::GridSelection::musical(16) ||
+        view.grid().snapTicksAt(96) != 6) {
+        QFAIL("ViewState restoration did not restore the six-tick 1/16 editing grid");
+    }
 
     view.applyViewState(before);
 }

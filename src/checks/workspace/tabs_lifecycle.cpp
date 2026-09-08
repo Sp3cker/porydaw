@@ -30,8 +30,9 @@ bool sameViewState(const SongView::ViewState &left, const SongView::ViewState &r
     return left.valid == right.valid && left.pxPerBeat == right.pxPerBeat &&
            left.keyHeight == right.keyHeight && left.scrollPx == right.scrollPx &&
            left.scrollY == right.scrollY && left.selectedTrack == right.selectedTrack &&
-           left.editCursorTick == right.editCursorTick && left.gridMinDenom == right.gridMinDenom &&
-           left.gridTriplet == right.gridTriplet && left.eventList == right.eventList;
+           left.editCursorTick == right.editCursorTick &&
+           left.gridSelection == right.gridSelection && left.gridTriplet == right.gridTriplet &&
+           left.eventList == right.eventList;
 }
 
 void verifyFreshView(const SongView &view, const SongView::ViewState &canonical)
@@ -45,8 +46,8 @@ void verifyFreshView(const SongView &view, const SongView::ViewState &canonical)
     QCOMPARE(state.scrollY, canonical.scrollY);
     QCOMPARE(state.selectedTrack, canonical.selectedTrack);
     QCOMPARE(state.editCursorTick, uint64_t(0));
-    QCOMPARE(state.gridMinDenom, 0);
-    QVERIFY(!state.gridTriplet);
+    QVERIFY(state.gridSelection == canonical.gridSelection);
+    QCOMPARE(state.gridTriplet, canonical.gridTriplet);
     QVERIFY(!state.eventList);
     QVERIFY(!view.eventListVisible());
 }
@@ -259,8 +260,10 @@ void WorkspaceTabsTest::reloadRetainsCameraAndFreshOpenResetsIt()
     }
     QVERIFY(seeded.selectedTrack != canonical.selectedTrack);
     seeded.editCursorTick = oldTimeline->lengthTicks / 2;
-    seeded.gridMinDenom = 16;
-    seeded.gridTriplet = true;
+    const songview::GridSelection selectedGrid = songview::GridSelection::musical(32);
+    QVERIFY(selectedGrid != canonical.gridSelection);
+    seeded.gridSelection = selectedGrid;
+    seeded.gridTriplet = !canonical.gridTriplet;
     seeded.eventList = true;
     tab->view().applyViewState(seeded);
     const SongView::ViewState landed = tab->view().viewState();

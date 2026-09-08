@@ -24,6 +24,7 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
         QVERIFY(session.has_value());
         MainWindow &window = *session->window;
+        const SongView::ViewState freshBaseline = session->b->view().viewState();
         const EditorViewState state = completeSeed();
         session->b->view().setEditorViewState(state);
         const auto snapshot = porydawSnapshot(session->fixture->root());
@@ -39,7 +40,7 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         QVERIFY(waitForTabReady(*window.m_workspace, reopened));
         QCOMPARE(reopened->view().editorViewState(), state);
         QVERIFY(reopened->timeline());
-        QVERIFY(hasCanonicalFreshViewState(reopened->view(), *reopened->timeline()));
+        QVERIFY(hasCanonicalFreshViewState(reopened->view(), *reopened->timeline(), freshBaseline));
         QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot);
     }
 
@@ -68,8 +69,10 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         requested.selectedTrack = alternateTrack;
         requested.editCursorTick =
             before.editCursorTick == 0 ? reopened->timeline()->ticksPerBeat : 0;
-        requested.gridMinDenom = 16;
-        requested.gridTriplet = true;
+        const songview::GridSelection selectedGrid = songview::GridSelection::musical(32);
+        QVERIFY(selectedGrid != before.gridSelection);
+        requested.gridSelection = selectedGrid;
+        requested.gridTriplet = !before.gridTriplet;
         requested.eventList = true;
         view.applyViewState(requested);
         SongView::ViewState seeded = view.viewState();
@@ -84,8 +87,8 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         QVERIFY(seeded.scrollPx != before.scrollPx);
         QVERIFY(seeded.scrollY != before.scrollY);
         QCOMPARE(seeded.selectedTrack, alternateTrack);
-        QCOMPARE(seeded.gridMinDenom, 16);
-        QVERIFY(seeded.gridTriplet);
+        QVERIFY(seeded.gridSelection == selectedGrid);
+        QCOMPARE(seeded.gridTriplet, requested.gridTriplet);
         QVERIFY(seeded.eventList);
         QTabBar *tabBar = window.findChild<QTabBar *>();
         QVERIFY(tabBar);
@@ -136,6 +139,7 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         });
         QVERIFY(song != songs.cend());
         QVERIFY(session->b->voicegroupId());
+        const SongView::ViewState freshBaseline = session->b->view().viewState();
         SmfFile stage;
         QString error;
         QVERIFY(SmfFile::readFile(song->midPath, &stage, &error));
@@ -152,7 +156,7 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         QVERIFY(probe.timeline());
         QCOMPARE(probe.view().document(), &probe.document());
         QCOMPARE(probe.view().editorViewState(), global);
-        QVERIFY(hasCanonicalFreshViewState(probe.view(), *probe.timeline()));
+        QVERIFY(hasCanonicalFreshViewState(probe.view(), *probe.timeline(), freshBaseline));
         QCOMPARE(ready.count(), 0);
         probe.applyBankView(
             LoadedBankView{*session->b->voicegroupId(), borrowVoicegroupLease(&bank), QString()});
@@ -189,15 +193,20 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         probe.applyVoicegroupBound(identity);
         QVERIFY(probe.isReady());
         const MidiTimeline *bound = probe.timeline().get();
-        SongView::ViewState state = probe.view().viewState();
+        const SongView::ViewState freshBaseline = probe.view().viewState();
+        SongView::ViewState state = freshBaseline;
         state.valid = true;
         state.pxPerBeat *= 2.0;
         state.keyHeight *= 1.5;
         state.editCursorTick = probe.timeline()->ticksPerBeat * 4;
-        state.gridMinDenom = 16;
-        state.gridTriplet = true;
+        const songview::GridSelection selectedGrid = songview::GridSelection::musical(32);
+        QVERIFY(selectedGrid != freshBaseline.gridSelection);
+        state.gridSelection = selectedGrid;
+        state.gridTriplet = !freshBaseline.gridTriplet;
         probe.view().applyViewState(state);
         const SongView::ViewState retained = probe.view().viewState();
+        QVERIFY(retained.gridSelection == selectedGrid);
+        QCOMPARE(retained.gridTriplet, state.gridTriplet);
         QSignalSpy ready(&probe, &SongTab::readinessChanged);
         probe.beginMidiReload();
         QVERIFY(!probe.isReady());

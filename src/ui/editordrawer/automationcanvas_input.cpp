@@ -536,18 +536,24 @@ bool AutomationCanvas::keyPress(const songview::TimelineKeyInput &input)
         // no-op; a visible selection defers to the shared policy.
         auto &model = m_page.m_owner.selectionModel();
         if (model.noteSelection().empty() && !model.timeSelection().active()) {
+            // Re-hit the current lane at the published hover position. The
+            // drawer can rebuild its lane adapters while a Quick hover event
+            // is queued; using the cached point would then either miss a
+            // valid node or carry a point from the previous document revision.
             const NodeLaneHoverState::HoverState hover = m_hoverState.hover;
-            if (hover.hasPoint) {
-                if (const auto *slot = resolveSlot(hover.lane); slot && slot->lane) {
-                    NodeLane *lane = slot->lane;
-                    const NodeDrag drag{hover.lane, hover.point, hover.point, lane->minimumValue(),
-                                        lane->maximumValue()};
-                    commitNodePointDeletes(m_page.document()->revision(), {drag});
-                    m_hoverState.clearHover();
-                    requestHoverQuickUpdate();
-                    m_page.requestRefresh();
-                }
+            const auto *slot = resolveSlot(hover.lane);
+            NodePoint point;
+            if (slot && slot->lane && nodePointHit(hover.lane, hover.pos, &point)) {
+                NodeLane *lane = slot->lane;
+                const NodeDrag drag{hover.lane, point, point, lane->minimumValue(),
+                                    lane->maximumValue()};
+                commitNodePointDeletes(m_page.document()->revision(), {drag});
+                m_hoverState.clearHover();
+                requestHoverQuickUpdate();
+                m_page.requestRefresh();
             }
+            // A valid lane with no current point is still a consumed pencil
+            // tool no-op; it must not fall through to shared selection routing.
             return true;
         }
     }

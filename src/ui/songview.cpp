@@ -514,11 +514,14 @@ void SongView::setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voi
     // Fresh songs open at the camera's home position, pre-roll pad showing.
     m_events->setPlayheadTick(-1.0, false); // another song's ticks are stale
     // Song attachment resets transient grid controls; editor cosmetics remain
-    // global and are rebuilt above.
+    // global and are rebuilt above. The axis is already bound above, so this
+    // is the coherent revalidation point of a song swap: the clock plus the
+    // default state land atomically against the new timeline. The helper
+    // keeps controls and targeted grid layers coherent; the full rebuild
+    // below supersedes those targeted requests.
     m_grid.setTicksPerClock(m_document ? m_document->ticksPerClock() : 0);
-    m_grid.setFeel(GridFeel::Straight);
-    m_grid.setMinDenom(0);
-    m_ruler->syncGridControls();
+    m_grid.setState(GridSelection::musical(16), GridFeel::Straight);
+    gridVisualGuidesChanged();
 
     int firstUsedTrack = 0;
     if (timeline) {
@@ -653,7 +656,9 @@ void SongView::disconnectDocument()
         disconnect(m_document, &SongDocument::documentChanged, this, nullptr);
     }
     m_document = nullptr;
-    m_grid.setTicksPerClock(0);
+    // Grid state is untouched here: the axis still borrows the outgoing
+    // song, so the coherent clock revalidation lands in setSong (or in
+    // setDocument's own attach/detach revalidation).
     m_events->setDocument(nullptr);
 }
 
@@ -762,12 +767,19 @@ void SongView::setDocument(SongDocument *document)
             });
         }
     }
+    // Attach/detach revalidates against the current axis. During synchronous
+    // song replacement that axis still borrows the outgoing song: this pass
+    // may refresh controls, but setSong immediately binds and revalidates the
+    // incoming timeline before an event-loop repaint can observe the handoff.
     m_document = document;
     m_grid.setTicksPerClock(document ? document->ticksPerClock() : 0);
     m_events->setDocument(document);
     m_selectionModel.clearNoteSelection();
     m_headers->rebuild(m_trackActivity, m_playing);
     notifyDrawerSongChanged();
+    // Binding or rebinding can change PPQN, signatures, or clock ticks —
+    // all visual-guide inputs — even when the editing selection stays canonical.
+    gridVisualGuidesChanged();
 }
 
 bool SongView::eventListVisible() const
@@ -839,7 +851,7 @@ SongView::ViewState SongView::viewState() const
     state.scrollY = m_camera.scrollY();
     state.selectedTrack = m_selectionModel.primaryTrack();
     state.editCursorTick = m_editCursorTick;
-    state.gridMinDenom = m_grid.minDenom();
+    state.gridSelection = m_grid.selection();
     state.gridTriplet = m_grid.feel() == GridFeel::Triplet;
     state.eventList = eventListVisible();
     return state;
@@ -849,19 +861,26 @@ void SongView::applyViewState(const ViewState &state)
 {
     if (!state.valid || !m_timeline)
         return;
-    const int gridMinDenom = songview::Grid::normalizeMinDenom(state.gridMinDenom);
+    const GridSelection gridSelection = state.gridSelection;
     const GridFeel gridFeel = state.gridTriplet ? GridFeel::Triplet : GridFeel::Straight;
     const double pxPerBeat =
         std::clamp(state.pxPerBeat, double(m_geometry.timelineMinimumPixelsPerBeat),
                    double(m_geometry.timelineMaximumPixelsPerBeat));
     const bool zoomChanged = m_camera.setTimeZoom(pxPerBeat);
-    const bool gridChanged = gridMinDenom != m_grid.minDenom() || gridFeel != m_grid.feel();
-    if ((zoomChanged || gridChanged) && m_editorDrawer)
+    const bool gridFeelChanged = gridFeel != m_grid.feel();
+    // Atomic restore: the saved selection is validated against the saved
+    // feel's own ladder, never against the live feel being replaced.
+    const bool gridStateChanged = m_grid.setState(gridSelection, gridFeel);
+    if (zoomChanged && !gridStateChanged && m_editorDrawer)
         m_editorDrawer->cancelVisiblePageInteraction();
     (void)m_camera.setKeyHeight(state.keyHeight); // clamps internally
     m_roll->refreshTextLayout();
-    setGridMinDenom(gridMinDenom);
-    setGridFeel(state.gridTriplet ? GridFeel::Triplet : GridFeel::Straight);
+    if (gridStateChanged) {
+        if (gridFeelChanged)
+            gridVisualGuidesChanged();
+        else
+            gridEditingSizeChanged();
+    }
     if (state.selectedTrack >= 0 && state.selectedTrack < 16 &&
         m_timeline->tracks[state.selectedTrack].used)
         selectTrack(state.selectedTrack);
@@ -872,6 +891,71 @@ void SongView::applyViewState(const ViewState &state)
     m_editCursorTick = std::min<uint64_t>(state.editCursorTick, m_timeline->lengthTicks);
     // Whole view-state applied: every roll domain may differ.
     refreshTimelineViews(PianoRollQuickDirty::All);
+}
+
+songview::GridSelection SongView::gridSelection() const
+{
+    return m_grid.selection();
+}
+
+void SongView::setGridSelection(songview::GridSelection selection)
+{
+    if (m_grid.setSelection(selection))
+        gridEditingSizeChanged();
+}
+
+// Adjacent finer/coarser editing spacing and the straight/triplet toggle;
+// no-ops at their bounds (terminal Clock, coarsest ladder entry).
+void SongView::narrowGrid()
+{
+    if (m_grid.narrow())
+        gridEditingSizeChanged();
+}
+
+void SongView::widenGrid()
+{
+    if (m_grid.widen())
+        gridEditingSizeChanged();
+}
+
+void SongView::toggleGridFeel()
+{
+    if (m_grid.toggleFeel())
+        gridVisualGuidesChanged();
+}
+
+void SongView::setGridFeel(songview::GridFeel feel)
+{
+    if (m_grid.setFeel(feel))
+        gridVisualGuidesChanged();
+}
+
+// An editing-cell size change affects controls and the pencil preview, but
+// not the zoom-adaptive visual-guide policy.
+void SongView::gridEditingSizeChanged()
+{
+    if (m_editorDrawer)
+        m_editorDrawer->cancelVisiblePageInteraction();
+    m_ruler->syncGridControls();
+
+    // A live pencil preview is the only roll presentation derived from the
+    // selected editing step. Hover-chip geometry is key-based, not grid-based.
+    m_roll->requestQuickUpdate(PianoRollQuickDirty::DrawPreviewFill | PianoRollQuickDirty::Overlay);
+}
+
+void SongView::gridVisualGuidesChanged()
+{
+    gridEditingSizeChanged();
+    m_roll->requestQuickUpdate(PianoRollQuickDirty::Grid);
+    requestTimelineQuickUpdate(TimelineQuickDirty::Ruler | TimelineQuickDirty::VelocityGrid |
+                               TimelineQuickDirty::VoiceChangesGrid);
+    requestAutomationQuickUpdate(AutomationRefresh::Grid);
+}
+
+void SongView::forEachGridLine(uint64_t tickBegin, uint64_t tickEnd,
+                               const std::function<void(uint64_t, bool, int, int)> &fn) const
+{
+    m_timeAxis.forEachGridLine(tickBegin, tickEnd, fn);
 }
 
 void SongView::setVoicegroup(const LoadedVoiceGroup *voicegroup)

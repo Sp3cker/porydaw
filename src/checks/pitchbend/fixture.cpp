@@ -2,6 +2,7 @@
 
 #include <QCoreApplication>
 #include <QEvent>
+#include <QGuiApplication>
 #include <QKeySequence>
 #include <QWheelEvent>
 #include <QtTest>
@@ -33,11 +34,11 @@ SmfEvent noteEvent(uint8_t status, uint64_t tick, uint8_t key, uint8_t velocity)
     return event;
 }
 
-SmfFile pitchBendSmf(bool unterminated, bool duplicateNote)
+SmfFile pitchBendSmf(bool unterminated, bool duplicateNote, bool division48)
 {
     SmfFile smf;
     smf.format = 1;
-    smf.division = 24;
+    smf.division = division48 ? 48 : 24;
     SmfTrack track;
     track.events = {noteEvent(0xC0, 0, 0, 0), noteEvent(0x90, kNoteTick, kNoteKey, kNoteVelocity)};
     if (duplicateNote)
@@ -57,7 +58,7 @@ QPoint graphPoint(const songview::PitchBendGraph &graph, qreal xFraction, qreal 
 }
 } // namespace
 
-bool PitchBendFixture::setUp(bool unterminated, bool duplicateNote)
+bool PitchBendFixture::setUp(bool unterminated, bool duplicateNote, bool division48)
 {
     m_bank = {};
     m_bank.voices[0].type = VOICE_DIRECTSOUND;
@@ -79,7 +80,7 @@ bool PitchBendFixture::setUp(bool unterminated, bool duplicateNote)
     SongInfo song;
     song.label = QStringLiteral("pitch-bend-editing");
     song.hasMid = true;
-    m_tab->applyMidiStage(std::move(song), pitchBendSmf(unterminated, duplicateNote),
+    m_tab->applyMidiStage(std::move(song), pitchBendSmf(unterminated, duplicateNote, division48),
                           track_limits::kHardwareCapacity);
     if (!m_tab->presentationError().isEmpty())
         return false;
@@ -120,8 +121,20 @@ bool PitchBendFixture::setUp(bool unterminated, bool duplicateNote)
             [this] { return m_timelineWindow->isVisible() && m_timelineWindow->isExposed(); })) {
         return false;
     }
+    // Native activation must settle before Quick focus. Activating the QWidget
+    // shell after forceActiveFocus clears the scene's activeFocusItem on macOS.
+    m_tab->activateWindow();
+    if (!QTest::qWaitFor([this] { return m_tab->isActiveWindow(); }))
+        return false;
+    m_timelineWindow->requestActivate();
     m_rollInput->forceActiveFocus(Qt::OtherFocusReason);
-    return QTest::qWaitFor([this] { return m_rollInput->hasActiveFocus(); });
+    if (!QTest::qWaitFor([this] {
+            return m_timelineWindow->isActive() && m_rollInput->hasActiveFocus() &&
+                   QGuiApplication::focusWindow() == m_timelineWindow.data();
+        })) {
+        return false;
+    }
+    return true;
 }
 
 void PitchBendFixture::tearDown()

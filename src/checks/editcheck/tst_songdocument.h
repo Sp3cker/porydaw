@@ -173,6 +173,7 @@ class NoteIdentityCheckTest final : public QObject
     void adoptedSmfRemintsForeignIds();
     void identityDoesNotAffectEqualityOrSerialization();
     void timelineTransportsOnlyStampedNoteIds();
+    void adoptedIdsDoNotCollideWithEdits();
 };
 
 int runEditCheck(const QStringList &checkArguments, const QStringList &qtArguments);

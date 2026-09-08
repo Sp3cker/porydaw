@@ -3,15 +3,16 @@
 // Selection-keyboard routing, gesture tier, as a genuine Qt Test: five
 // independently selectable scenarios over standalone SongView rigs prove
 // that a live pointer gesture owns its surface — overlap hit priority in the
-// velocity plot, selected/unselected velocity transitions, roll note drags,
+// velocity plot, selected/unselected velocity transitions, roll note moves,
 // automation pans — and that shared edit commands (Delete resolved through
-// the live keymap) are consumed no-ops while a gesture is live, with the
-// first Escape cancelling only the gesture and the second clearing the
-// leftover selection. The discovered typed scrollbar thumbs (the root roll
-// bar and nested drawer automation bar) get the same guard proof end to end
-// as data rows: the live native MouseArea grab blocks Delete, Escape
-// ungrabs it, held-button movement stays inert, and a physically released
-// then newly pressed drag works normally.
+// the live keymap) are consumed no-ops while a gesture is live. Grid size is
+// the deliberate exception for a note move: Narrow/Widen update its live snap
+// without ending the native grab; grid feel stays guarded. The first Escape
+// cancels only the gesture and retains the captured selection. The discovered
+// typed scrollbar thumbs (the root roll bar and nested drawer automation bar)
+// get the same guard proof end to end as data rows: the live native MouseArea
+// grab blocks Delete, Escape ungrabs it, held-button movement stays inert, and
+// a physically released then newly pressed drag works normally.
 //
 // Every scenario stages a fresh world (song fixture + rig + Quick window), so
 // one scenario's failure can never skip or poison another's. Programmatic
@@ -70,14 +71,16 @@ class SelectionKeyGestureTest final : public QObject
     // transition.
     void velocityStemDragGuardsEdits();
 
-    // A roll note drag is a live surface owner — the shared Delete is a
-    // consumed no-op mid-drag, the first Escape cancels only the drag and
-    // restores the captured selection, and the idle Escape then clears it.
-    void rollNoteDragGuardsSharedCommands();
+    // Narrow and Widen stay available during a native roll note move. Each
+    // live size snaps the subsequent pointer movement and release, which
+    // preserves NoteId/selection and commits one undoable edit. Triplet and
+    // Delete stay blocked; Escape after an inverse size change cancels.
+    void rollNoteMoveGridChangesStayLive_data();
+    void rollNoteMoveGridChangesStayLive();
 
-    // The automation band's middle-button pan is a live surface owner with
-    // the same guard contract, preserving the staged time selection across
-    // the cancelling Escape.
+    // A real right-button automation range sweep publishes a lane time
+    // selection after release; its live phase and the following middle-button
+    // pan both retain that selection across their cancelling Escape.
     void automationPanGuardsSharedCommands();
 
     // A registered scrollbar thumb (root roll bar, nested drawer automation
@@ -133,7 +136,6 @@ class SelectionKeyGestureTest final : public QObject
 
     static std::vector<SongDocument::NewNote> gestureNoteSpecs();
     static void prepareGestureDocument(SongDocument &document);
-    static songview::EditorSelectionModel::TimeSelection automationSelection();
 
     // Fresh-rig staging. On failure these record the assertion themselves
     // and return false, so callers must early-return without touching the

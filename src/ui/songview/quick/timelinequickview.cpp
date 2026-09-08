@@ -1000,10 +1000,13 @@ void TimelineQuickView::flushUpdate()
         syncOtherEvents();
     if (automationRefresh != AutomationRefresh::None)
         syncAutomation(automationRefresh);
-    if (timelineDirty & TimelineQuickDirty::Velocity)
-        syncVelocity();
-    if (timelineDirty & (TimelineQuickDirty::VoiceChanges | TimelineQuickDirty::VoiceChangesHover))
+    if (timelineDirty & (TimelineQuickDirty::Velocity | TimelineQuickDirty::VelocityGrid)) {
+        syncVelocity(timelineDirty);
+    }
+    if (timelineDirty & (TimelineQuickDirty::VoiceChanges | TimelineQuickDirty::VoiceChangesGrid |
+                         TimelineQuickDirty::VoiceChangesHover)) {
         syncVoiceChanges(timelineDirty);
+    }
 }
 
 void TimelineQuickView::updateLayer(TimelineQuickLayer layer)
@@ -1032,27 +1035,35 @@ void TimelineQuickView::syncOtherEvents()
     updateLayer(TimelineQuickLayer::OtherEventsMarkers);
 }
 
-void TimelineQuickView::syncVelocity()
+void TimelineQuickView::syncVelocity(TimelineQuickDirtySet dirty)
 {
     if (!m_velocity)
         return;
-    m_velocity->rebuildQuickScene(*m_scene);
-    updateLayer(TimelineQuickLayer::VelocityGutterChrome);
-    updateLayer(TimelineQuickLayer::VelocityChrome);
-    updateLayer(TimelineQuickLayer::VelocityAxis);
-    updateLayer(TimelineQuickLayer::VelocityGrid);
-    updateLayer(TimelineQuickLayer::VelocityBands);
-    updateLayer(TimelineQuickLayer::VelocityStems);
-    updateLayer(TimelineQuickLayer::VelocityNodes);
-    updateLayer(TimelineQuickLayer::VelocityTransient);
+    const bool content = dirty.testFlag(TimelineQuickDirty::Velocity);
+    const bool grid = content || dirty.testFlag(TimelineQuickDirty::VelocityGrid);
+    m_velocity->rebuildQuickScene(*m_scene, content, grid);
+    if (content) {
+        updateLayer(TimelineQuickLayer::VelocityGutterChrome);
+        updateLayer(TimelineQuickLayer::VelocityChrome);
+        updateLayer(TimelineQuickLayer::VelocityAxis);
+        updateLayer(TimelineQuickLayer::VelocityGrid);
+        updateLayer(TimelineQuickLayer::VelocityBands);
+        updateLayer(TimelineQuickLayer::VelocityStems);
+        updateLayer(TimelineQuickLayer::VelocityNodes);
+        updateLayer(TimelineQuickLayer::VelocityTransient);
+    } else if (grid) {
+        updateLayer(TimelineQuickLayer::VelocityGrid);
+    }
 }
 
 void TimelineQuickView::syncVoiceChanges(TimelineQuickDirtySet dirty)
 {
     if (!m_voiceChanges)
         return;
-    if (dirty & TimelineQuickDirty::VoiceChanges) {
-        m_voiceChanges->rebuildQuickScene(*m_scene);
+    const bool content = dirty.testFlag(TimelineQuickDirty::VoiceChanges);
+    const bool grid = content || dirty.testFlag(TimelineQuickDirty::VoiceChangesGrid);
+    if (content) {
+        m_voiceChanges->rebuildQuickScene(*m_scene, content, grid);
         updateLayer(TimelineQuickLayer::VoiceChangesGutterChrome);
         updateLayer(TimelineQuickLayer::VoiceChangesChrome);
         updateLayer(TimelineQuickLayer::VoiceChangesGrid);
@@ -1062,9 +1073,15 @@ void TimelineQuickView::syncVoiceChanges(TimelineQuickDirtySet dirty)
         if (m_voiceChanges->m_hoverActive)
             m_voiceChanges->rebuildQuickHover(*m_scene);
         updateLayer(TimelineQuickLayer::VoiceChangesHover);
-    } else if (dirty & TimelineQuickDirty::VoiceChangesHover) {
-        m_voiceChanges->rebuildQuickHover(*m_scene);
-        updateLayer(TimelineQuickLayer::VoiceChangesHover);
+    } else {
+        if (grid) {
+            m_voiceChanges->rebuildQuickScene(*m_scene, false, true);
+            updateLayer(TimelineQuickLayer::VoiceChangesGrid);
+        }
+        if (dirty.testFlag(TimelineQuickDirty::VoiceChangesHover)) {
+            m_voiceChanges->rebuildQuickHover(*m_scene);
+            updateLayer(TimelineQuickLayer::VoiceChangesHover);
+        }
     }
 }
 
@@ -1072,13 +1089,17 @@ void TimelineQuickView::syncAutomation(AutomationRefreshSet refresh)
 {
     if (refresh == AutomationRefresh::None || !m_automation || !m_automation->canvas())
         return;
+    const bool content = refresh.testFlag(AutomationRefresh::Content);
+    const bool grid = content || refresh.testFlag(AutomationRefresh::Grid);
     m_automation->canvas()->rebuildQuickScene(*m_scene, refresh);
-    if (refresh.testFlag(AutomationRefresh::Content)) {
+    if (content) {
         updateLayer(TimelineQuickLayer::AutomationGutterChrome);
         updateLayer(TimelineQuickLayer::AutomationGrid);
         updateLayer(TimelineQuickLayer::AutomationCurves);
         updateLayer(TimelineQuickLayer::AutomationNodes);
         updateLayer(TimelineQuickLayer::AutomationSelection);
+    } else if (grid) {
+        updateLayer(TimelineQuickLayer::AutomationGrid);
     }
     if (refresh.testFlag(AutomationRefresh::Transient))
         updateLayer(TimelineQuickLayer::AutomationTransient);

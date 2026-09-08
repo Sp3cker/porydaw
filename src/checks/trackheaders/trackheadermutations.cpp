@@ -2,7 +2,10 @@
 
 #include "checks/voicepickerdriver.h"
 
+#include <QApplication>
 #include <QCoreApplication>
+#include <QGuiApplication>
+#include <QMetaObject>
 #include <QQuickItem>
 #include <QScopeGuard>
 
@@ -11,6 +14,7 @@
 #include <algorithm>
 #include <optional>
 
+#include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
@@ -22,6 +26,7 @@ namespace {
 constexpr qreal kGeometryTolerance = 0.01;
 constexpr qreal kProbeExtent = 2.0;
 constexpr auto kRenamedTitle = "HdrSrc";
+constexpr int kAddedVoice = 127;
 
 QVariant rowData(const songview::TrackHeaderModel &model, int row, int role)
 {
@@ -50,12 +55,54 @@ std::vector<int> modelTracks(const songview::TrackHeaderModel &model)
     return tracks;
 }
 
+void sendKey(QQuickItem &target, int key, Qt::KeyboardModifiers modifiers = Qt::NoModifier,
+             QString text = QString{})
+{
+    checks::events::sendKey(target, QEvent::KeyPress, key, modifiers, text, false, 1);
+    checks::events::sendKey(target, QEvent::KeyRelease, key, modifiers, text, false, 1);
+}
+
 void commitRename(TrackHeadersFixture &fixture, int track)
 {
     songview::TrackHeaderModel &headers = fixture.headers();
+    QVERIFY(fixture.view().focusTimelineBand(songview::TimelineBand::TrackHeaders,
+                                             Qt::OtherFocusReason));
+    QTRY_VERIFY(fixture.input().hasActiveFocus());
     headers.beginRename(track);
-    headers.setRenameDraft(QString::fromLatin1(kRenamedTitle));
-    headers.finishRename(true, false);
+    checks::support::pumpQuick();
+    QTRY_VERIFY(fixture.rename().isVisible());
+    QTRY_VERIFY(fixture.rename().hasActiveFocus());
+
+    for (const QChar character : QString::fromLatin1(kRenamedTitle))
+        sendKey(fixture.rename(), character.toUpper().unicode(), Qt::NoModifier,
+                QString{character});
+    QCOMPARE(headers.renameDraft(), QString::fromLatin1(kRenamedTitle));
+
+    sendKey(fixture.rename(), Qt::Key_Return);
+    QTRY_COMPARE(headers.renamingTrack(), -1);
+}
+
+bool ensurePickerSearchFocus(const checks::voicepicker::Picker &picker)
+{
+    // The prompt publishes search focus from activateInitialFocus() via
+    // Qt.callLater, which only owns scope-local focus. Window-level active
+    // focus additionally needs the canvas to be the Qt focus window; every
+    // header gesture here is synthetic, so the native song tab still owns Qt
+    // focus when the picker opens. Requesting our own already-visible canvas
+    // is local key-window ordering (the application itself stays as-is), not
+    // OS-global activation. Re-request both while waiting, bounded.
+    for (int attempt = 0; attempt < 100; ++attempt) {
+        if (picker.search && picker.search->hasActiveFocus())
+            return true;
+        if (picker.window && QGuiApplication::focusWindow() != picker.window)
+            picker.window->requestActivate();
+        if (picker.root)
+            QMetaObject::invokeMethod(picker.root, "activateInitialFocus");
+        if (QTest::qWaitFor([&picker] { return picker.search && picker.search->hasActiveFocus(); },
+                            50))
+            return true;
+    }
+    return picker.search && picker.search->hasActiveFocus();
 }
 
 } // namespace
@@ -100,8 +147,8 @@ void TrackHeadersTest::renameCommitsAndRebuildsHeader()
     QVERIFY(!fx.rename().isVisible());
 
     commitRename(fx, fx.sourceTrack());
-    QTRY_COMPARE(headers.renamingTrack(), -1);
-    QCOMPARE(fx.tab().document().trackName(fx.sourceTrack()), QString::fromLatin1(kRenamedTitle));
+    QTRY_COMPARE(fx.tab().document().trackName(fx.sourceTrack()),
+                 QString::fromLatin1(kRenamedTitle));
     QString error;
     QVERIFY2(fx.rebuild(error), qPrintable(error));
     const std::optional<int> renamedRow = fx.rowForTrack(fx.sourceTrack());
@@ -228,7 +275,7 @@ void TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader()
         headers.pointerRelease(pointerInput(fx.input(), *addPoint, Qt::LeftButton, Qt::NoButton)));
     QTRY_VERIFY(static_cast<bool>(checks::voicepicker::active(fx.view())));
     const checks::voicepicker::Picker cancelled = checks::voicepicker::active(fx.view());
-    QTRY_VERIFY(cancelled.search->hasActiveFocus());
+    QVERIFY2(ensurePickerSearchFocus(cancelled), "voice picker search never took local focus");
     checks::voicepicker::filter(cancelled, QStringLiteral("127"));
     QTRY_VERIFY(checks::voicepicker::row(cancelled, 127) &&
                 checks::voicepicker::row(cancelled, 127)->isVisible());
@@ -264,7 +311,7 @@ void TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader()
         headers.pointerRelease(pointerInput(fx.input(), *addPoint, Qt::LeftButton, Qt::NoButton)));
     QTRY_VERIFY(static_cast<bool>(checks::voicepicker::active(fx.view())));
     const checks::voicepicker::Picker picker = checks::voicepicker::active(fx.view());
-    QTRY_VERIFY(picker.search->hasActiveFocus());
+    QVERIFY2(ensurePickerSearchFocus(picker), "voice picker search never took local focus");
 
     checks::voicepicker::filter(picker, QStringLiteral("zz-no-such-voice"));
     QTRY_VERIFY(!picker.accept->property("enabled").toBool());
@@ -311,6 +358,11 @@ void TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader()
     QVERIFY(std::is_sorted(after.cbegin(), after.cend()));
     QVERIFY(std::includes(after.cbegin(), after.cend(), before.cbegin(), before.cend()));
     QVERIFY(std::adjacent_find(after.cbegin(), after.cend()) == after.cend());
+    const auto added = std::find_if(after.cbegin(), after.cend(), [&before](int track) {
+        return std::find(before.cbegin(), before.cend(), track) == before.cend();
+    });
+    QVERIFY(added != after.cend());
+    QCOMPARE(fx.view().currentProgram(*added), kAddedVoice);
     QVERIFY(afterRow && *afterRow == headers.rowCount() - 1);
 
     const int remapUndoIndex = fx.tab().document().undoStack()->index();
@@ -323,7 +375,7 @@ void TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader()
         pointerInput(fx.input(), *remapVoice, Qt::LeftButton, Qt::LeftButton)));
     QTRY_VERIFY(static_cast<bool>(checks::voicepicker::active(fx.view())));
     const checks::voicepicker::Picker remapped = checks::voicepicker::active(fx.view());
-    QTRY_VERIFY(remapped.search->hasActiveFocus());
+    QVERIFY2(ensurePickerSearchFocus(remapped), "voice picker search never took local focus");
     checks::voicepicker::filter(remapped, QStringLiteral("127"));
     QTRY_VERIFY(checks::voicepicker::row(remapped, 127) &&
                 checks::voicepicker::row(remapped, 127)->isVisible());
@@ -336,7 +388,14 @@ void TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader()
                 QTest::mouseRelease(window, Qt::LeftButton, Qt::NoModifier, remapHeldPoint);
         });
     QSignalSpy remapAudition(&fx.view(), &SongView::auditionVoice);
+    // Qt delivers MouseButtonDblClick instead of Press when this hold
+    // re-presses the same row point within the double-click interval of the
+    // previous session's release; the row would then accept instead of only
+    // auditioning. Suppress pairing for the press itself, then restore.
+    const int doubleClickInterval = QApplication::doubleClickInterval();
+    QApplication::setDoubleClickInterval(0);
     checks::voicepicker::hold(remapped, 127);
+    QApplication::setDoubleClickInterval(doubleClickInterval);
     QTRY_COMPARE(remapAudition.count(), 1);
     QCOMPARE(remapAudition.at(0).at(0).toInt(), 127);
     QCOMPARE(remapAudition.at(0).at(1).toInt(), 60);

@@ -94,8 +94,8 @@ Item {
             accessibleDescription: bridge.velocityPromptTitle
             onValueCommitted: (committed) => prompt.draft = committed
             onEditingAccepted: (committed) => prompt.acceptCommitted(committed)
+            textInput.KeyNavigation.tab: acceptButton
             textInput.KeyNavigation.backtab: cancelButton
-
         }
 
         Row {
@@ -106,6 +106,8 @@ Item {
 
                 objectName: "noteVelocityAccept"
                 activeFocusOnTab: true
+                KeyNavigation.tab: cancelButton
+                KeyNavigation.backtab: velocityInput.textInput
                 Accessible.role: Accessible.Button
                 Accessible.name: acceptText.text
                 function activate() {
@@ -161,6 +163,7 @@ Item {
                 objectName: "noteVelocityCancel"
                 activeFocusOnTab: true
                 KeyNavigation.tab: velocityInput.textInput
+                KeyNavigation.backtab: acceptButton
                 Accessible.role: Accessible.Button
                 Accessible.name: cancelText.text
                 function activate() {

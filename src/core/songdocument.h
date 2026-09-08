@@ -494,7 +494,9 @@ class SongDocument : public QObject
     void replaceTempoPoints(std::vector<TempoPoint> normalized);
     void mintNoteId(SmfEvent *event);
     bool noteAt(int engineTrack, size_t onIndex, DocNote *out) const;
-    void mintUnassignedNoteIds();
+    // Full SMF adoption replaces foreign tokens with fresh document-local NoteIds
+    // using the document's monotonically advancing allocator (without resetting it).
+    void remintNoteIds();
 
     int engineTrackForChunk(int chunk) const; // -1 = no engine slot
     // Lowest MIDI channel no existing engine track uses; -1 when all 16 are

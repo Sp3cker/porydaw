@@ -82,6 +82,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
 {
     using namespace songview;
     const bool content = refresh.testFlag(AutomationRefresh::Content);
+    const bool grid = content || refresh.testFlag(AutomationRefresh::Grid);
     const bool transient = refresh.testFlag(AutomationRefresh::Transient);
     const bool hover = refresh.testFlag(AutomationRefresh::Hover);
     // Publish each text model once below. Clearing first destroys its QML delegates.
@@ -91,6 +92,8 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         resetLayer(scene.layer(TimelineQuickLayer::AutomationCurves));
         resetLayer(scene.layer(TimelineQuickLayer::AutomationNodes));
         resetLayer(scene.layer(TimelineQuickLayer::AutomationSelection));
+    } else if (grid) {
+        resetLayer(scene.layer(TimelineQuickLayer::AutomationGrid));
     }
     if (transient) {
         resetLayer(scene.layer(TimelineQuickLayer::AutomationTransient));
@@ -244,7 +247,18 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
              .needsPoints =
                  tempoExpanded && (content || needsTransientPoints || needsHoverPoints)});
     }
-
+    const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
+    if (grid) {
+        addRect(scene.layer(TimelineQuickLayer::AutomationGrid), viewport, background, viewport);
+        for (const VisibleLane &lane : lanes) {
+            if (!lane.tempo || tempoExpanded) {
+                composeBandedGrid(scene, TimelineQuickLayer::AutomationGrid, m_page.m_owner,
+                                  lane.plot, 0.0, dpr);
+            }
+        }
+    }
+    if (!content && !transient && !hover)
+        return;
     for (VisibleLane &lane : lanes) {
         if (lane.needsPoints)
             lane.points = lane.slot->lane->points();
@@ -263,11 +277,9 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     // Gutter records use gutter-local label bounds; plot value labels retain
     // their pre-clip rectangles so clipping does not move centered glyphs.
     const NodeLaneQuickPaint::Outputs outputs;
-    const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
     const QColor primaryText = themes::color(themes::Role::song_view_primary_text);
     const QColor secondaryText = themes::color(themes::Role::song_view_secondary_text);
     if (content) {
-        addRect(scene.layer(TimelineQuickLayer::AutomationGrid), viewport, background, viewport);
         addRect(scene.layer(TimelineQuickLayer::AutomationGutterChrome), gutterViewport, background,
                 gutterViewport);
     }
@@ -275,8 +287,6 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     for (const VisibleLane &lane : lanes) {
         const QRectF gutterBand = gutterClipFor(lane.band);
         if (!lane.tempo && content) {
-            composeBandedGrid(scene, TimelineQuickLayer::AutomationGrid, m_page.m_owner, lane.plot,
-                              0.0, dpr);
             addHeaderChrome(scene, gutterBand, gutterBand, std::nullopt, true, true, gutterBand);
         }
         if (!lane.tempo && content && lane.slot->text) {
@@ -313,10 +323,6 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                                                       arrowSize)};
                 }(),
                 tempoExpanded, false, gutterBand);
-            if (tempoExpanded) {
-                composeBandedGrid(scene, TimelineQuickLayer::AutomationGrid, m_page.m_owner,
-                                  lane.plot, 0.0, dpr);
-            }
         }
         if (content) {
             const QRect strip(0, lane.band.top(), gutter.width(), m_geometry.addLaneStripHeight);

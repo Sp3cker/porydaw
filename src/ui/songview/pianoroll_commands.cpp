@@ -244,7 +244,7 @@ void PianoRoll::copyNotes(const std::vector<DocNote> &notes)
     ClipTrack ct{m_sv->selectionModel().primaryTrack(), {}};
     for (const DocNote &note : notes)
         ct.notes.push_back({uint32_t(note.tick - base), note.key,
-                            note.duration ? note.duration : uint32_t(m_grid.gridTicksAt(note.tick)),
+                            note.duration ? note.duration : uint32_t(m_grid.snapTicksAt(note.tick)),
                             note.velocity});
     clip.tracks.push_back(std::move(ct));
     writeClipboard(clip, m_sv->timeline()->ticksPerBeat);

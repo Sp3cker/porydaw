@@ -75,9 +75,9 @@ void PianoRollTest::keyboardKeepVisible()
     SongView &view = check.view();
     songview::TimelineInputItem &roll = check.rollInput();
     const int track = check.track();
-    const SnappedRows rows{view, roll};
     const Cell &d = seed->cell;
     const uint64_t snapCell = seed->snapCell;
+    constexpr uint64_t kNoteTicks = 12; // resize fixture's two six-tick cells
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
     DocNote transposed;
@@ -89,43 +89,55 @@ void PianoRollTest::keyboardKeepVisible()
     view.selectionModel().setNoteSelection({transposed.noteId});
 
     const int keyNow = d.key - 11;
-    view.scrollRollBy((129 - keyNow) * view.camera().keyHeight() - view.camera().scrollY());
-    QVERIFY2((128 - keyNow) * view.camera().keyHeight() - view.camera().scrollY() <= 1e-9,
-             "could not park the note's row above the viewport");
+    const int currentRow = view.pitchProjection().rowForPitch(keyNow);
+    const int upRow = view.pitchProjection().rowForPitch(keyNow + 1);
+    QVERIFY2(currentRow != songview::PitchProjection::cHiddenRow &&
+                 upRow != songview::PitchProjection::cHiddenRow,
+             "keyboard keep-visible pitches are not in the current projection");
+    view.selectionModel().setNoteSelection({transposed.noteId});
+    QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason),
+             "Quick roll input could not be focused before keyboard keep-visible");
+    QTRY_VERIFY(roll.hasActiveFocus());
+    const qreal rowDpr = roll.devicePixelRatio();
+    view.scrollRollBy((currentRow + 2) * view.camera().keyHeight() - view.camera().scrollY());
+    QVERIFY2(view.pitchProjection().rowBottom(currentRow, view.camera().keyHeight(),
+                                              view.camera().scrollY(), rowDpr) <= 0.0,
+             "could not park the note's projected row above the viewport");
     sendKeyStroke(roll, Qt::Key_Up, Qt::NoModifier, false);
-    QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(keyNow + 1), &transposed),
-             "Up did not transpose the selected note before the keep-visible check");
-    QVERIFY2(rows.top(keyNow + 1) >= 0.0 && rows.bottom(keyNow + 1) <= roll.bounds().height(),
-             "Up above the viewport did not keep the transposed row fully visible");
+    DocNote movedUp;
+    QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(keyNow + 1), &movedUp),
+             "Up was not delivered to the selected keep-visible note");
+    QCOMPARE(movedUp.duration, uint32_t(kNoteTicks));
+    const qreal displayedUpTop = view.pitchProjection().rowTop(upRow, view.camera().keyHeight(),
+                                                               view.camera().scrollY(), rowDpr);
+    QVERIFY2(std::abs(displayedUpTop) <= 1e-9,
+             "Up above the viewport did not scroll the projected row flush to the top");
     sendKeyStroke(roll, Qt::Key_Down, Qt::NoModifier, false);
 
     uint64_t nStart = d.tick + snapCell;
     const qreal dpr = roll.devicePixelRatio();
     const qreal physicalPixel = dpr > 0.0 ? 1.0 / dpr : 1.0;
-    view.scrollByPx(view.camera().contentX(double(nStart + snapCell)) + 40);
-    QVERIFY2(view.camera().displayX(double(nStart + snapCell), 0.0, dpr) < 0.0,
-             "could not park the note past the left edge");
+    view.scrollByPx(view.camera().contentX(double(nStart + kNoteTicks)) + 40);
+    QVERIFY2(view.camera().displayX(double(nStart + kNoteTicks), 0.0, dpr) < 0.0,
+             "could not park the full note past the left edge");
     sendKeyStroke(roll, Qt::Key_Right, Qt::NoModifier, false);
     nStart += snapCell;
     QCOMPARE(view.camera().displayX(double(nStart), 0.0, dpr), 0.0);
     const qreal vw = std::max<qreal>(50, roll.width());
     const qreal cellPx =
         view.camera().contentX(double(nStart + snapCell)) - view.camera().contentX(double(nStart));
-    const int rides = (vw - view.camera().contentX(double(nStart + snapCell))) / cellPx + 2;
+    const int rides = (vw - view.camera().contentX(double(nStart + kNoteTicks))) / cellPx + 2;
     for (int i = 0; i < rides; ++i)
         sendKeyStroke(roll, Qt::Key_Right, Qt::NoModifier, false);
     nStart += uint64_t(rides) * snapCell;
     QVERIFY2(doc.findNote(track, nStart, uint8_t(keyNow), &transposed),
              "Right did not nudge the selected note to the expected tick");
-    const qreal visibleStart = view.camera().displayX(double(transposed.tick), 0.0, dpr);
-    const qreal visibleEnd =
-        view.camera().displayX(double(transposed.tick + transposed.duration), 0.0, dpr);
-    QVERIFY2(visibleStart >= 0.0 && visibleEnd <= vw - physicalPixel,
-             "Right did not keep the nudged note fully visible");
+    QCOMPARE(view.camera().displayX(double(nStart + kNoteTicks), 0.0, dpr), vw - physicalPixel);
     for (int i = 0; i < rides + 1; ++i)
         sendKeyStroke(roll, Qt::Key_Left, Qt::NoModifier, false);
-    QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed),
-             "the ride right and back did not return the note home");
+    QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed) &&
+                 transposed.duration == kNoteTicks,
+             "the ride right and back did not return the full note home");
     while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
         doc.undoStack()->undo();
     QCOMPARE(doc.smf().write(), before);
@@ -142,15 +154,25 @@ void PianoRollTest::timelineRulerScope()
     const int track = check.track();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const Cell &d = seed->cell;
-    const uint64_t snapCell = seed->snapCell;
+    constexpr uint64_t kCellTicks = 6; // fixture's selected straight 1/16 at 24 PPQN
+    const uint64_t startTick = d.tick + kCellTicks;
+    const uint64_t endTick = d.tick + 2 * kCellTicks;
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
     DocNote transposed;
     QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &transposed),
              "timeline scope seed note was not found");
-    doc.moveNotes({transposed}, int64_t(snapCell), -11);
-    QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed),
+    doc.moveNotes({transposed}, int64_t(kCellTicks), -11);
+    QVERIFY2(doc.findNote(track, d.tick + kCellTicks, uint8_t(d.key - 11), &transposed),
              "timeline scope seed did not reach the expected post-transpose state");
+    QVERIFY2(doc.engineTrackCount() > 1,
+             "timeline scope fixture needs an independent secondary track");
+    const int secondaryTrack = track == 0 ? 1 : 0;
+    doc.addNote(secondaryTrack, startTick, uint8_t(d.key), uint32_t(kCellTicks), 100);
+    DocNote secondaryNote;
+    QVERIFY2(doc.findNote(secondaryTrack, startTick, uint8_t(d.key), &secondaryNote) &&
+                 secondaryNote.duration == kCellTicks,
+             "timeline scope fixture could not seed its overlapping secondary-track note");
 
     auto *quick =
         view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
@@ -166,27 +188,25 @@ void PianoRollTest::timelineRulerScope()
              "Quick header records did not match the current timeline");
     QVERIFY2(rulerInput && rulerBand, "could not find the time ruler");
     const qreal rulerDpr = rulerInput->devicePixelRatio();
-    const uint64_t startTick = d.tick + snapCell;
-    const uint64_t endTick = d.tick + 2 * snapCell;
     const QPointF start(view.camera().displayX(double(startTick), 0.0, rulerDpr),
                         rulerBand->rect.height() - 2.0);
     const QPointF end(view.camera().displayX(double(endTick), 0.0, rulerDpr),
                       rulerBand->rect.height() - 2.0);
+    const QPointF activate = start + QPointF(qreal(QApplication::startDragDistance() + 2), 0.0);
 
     view.selectionModel().clearTimeSelection();
     view.selectionModel().applyTrackScopeAdjustment(
         track, 0xffffu, songview::EditorSelectionModel::TrackScopeAction::Plain);
-    if (doc.engineTrackCount() > 1) {
-        const int priorSecondary = track == 0 ? 1 : 0;
-        view.selectionModel().applyTrackScopeAdjustment(
-            priorSecondary, 0xffffu, songview::EditorSelectionModel::TrackScopeAction::Toggle);
-    }
+    view.selectionModel().applyTrackScopeAdjustment(
+        secondaryTrack, 0xffffu, songview::EditorSelectionModel::TrackScopeAction::Toggle);
     checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, start, Qt::LeftButton,
                               Qt::LeftButton, Qt::NoModifier);
+    checks::events::sendMouse(*rulerInput, QEvent::MouseMove, activate, Qt::NoButton,
+                              Qt::LeftButton, Qt::NoModifier);
     checks::events::sendMouse(*rulerInput, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton,
-                              Qt::ControlModifier);
+                              Qt::NoModifier);
     checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, end, Qt::LeftButton,
-                              Qt::NoButton, Qt::ControlModifier);
+                              Qt::NoButton, Qt::NoModifier);
     QVERIFY2(view.selectionModel().timeSelection().active() &&
                  view.selectionModel().timeSelection().startTick == startTick &&
                  view.selectionModel().timeSelection().endTick == endTick &&
@@ -216,10 +236,12 @@ void PianoRollTest::timelineRulerScope()
         secondaryRecord ? headercheck::captureBand(check, view) : QImage{};
     checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, start, Qt::LeftButton,
                               Qt::LeftButton, Qt::ControlModifier);
+    checks::events::sendMouse(*rulerInput, QEvent::MouseMove, activate, Qt::NoButton,
+                              Qt::LeftButton, Qt::ControlModifier);
     checks::events::sendMouse(*rulerInput, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton,
-                              Qt::NoModifier);
+                              Qt::ControlModifier);
     checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, end, Qt::LeftButton,
-                              Qt::NoButton, Qt::NoModifier);
+                              Qt::NoButton, Qt::ControlModifier);
     QVERIFY2(view.selectionModel().timeSelection().startTick == startTick &&
                  view.selectionModel().timeSelection().endTick == endTick &&
                  view.selectionModel().storedTrackScope() == expectedScope,
@@ -270,7 +292,7 @@ void PianoRollTest::timelineRulerScope()
     }
 
     const QPointF outsideSelection(
-        view.camera().displayX(double(endTick + snapCell), 0.0, rulerDpr),
+        view.camera().displayX(double(endTick + kCellTicks), 0.0, rulerDpr),
         rulerBand->rect.height() - 2.0);
     checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, outsideSelection,
                               Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);

@@ -467,7 +467,7 @@ void SongView::copyTimeSelection()
         for (const DocNote &note : track.notes) {
             ct.notes.push_back(
                 {uint32_t(note.tick - range.startTick), note.key,
-                 note.duration ? note.duration : uint32_t(m_grid.gridTicksAt(note.tick)),
+                 note.duration ? note.duration : uint32_t(m_grid.snapTicksAt(note.tick)),
                  note.velocity});
         }
         noteCount += int(ct.notes.size());

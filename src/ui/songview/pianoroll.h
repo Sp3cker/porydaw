@@ -93,6 +93,9 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     explicit PianoRoll(SongView *songView);
 
     bool gestureActive() const override;
+    // A note-body drag may update its live snap step without replacing the
+    // captured move gesture.
+    bool noteMoveDragActive() const noexcept;
     void cancelPitchBendPopup();
     // Strong lifecycle cleanup closes an editing popup without restoring focus.
     void cancelPitchBendPopupWithoutFocus();

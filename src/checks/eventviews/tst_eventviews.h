@@ -102,9 +102,14 @@ class ViewBucketsGridTest final : public QObject
     void bucketSum_data();
     void bucketSum();
     void quirkProjection();
-    void snapLadder_data();
-    void snapLadder();
-    void gridLinesSnappable_data();
-    void gridLinesSnappable();
+    void fixedEditingAndAdaptiveGuides();
+    void signatureSnapAnchoring();
+    void fixedGridCommandLadders();
+    void gridResolutionRevalidation();
+    void viewStateRestorationAcrossLiveFeel();
+    void atomicGridStateAssignment();
+    void unboundStrideAndCoherentRebind();
+    void resolutionRebindOnSongReplacement();
+    void fineFloorUnderMusicalSelection();
     void paintSmoke();
 };

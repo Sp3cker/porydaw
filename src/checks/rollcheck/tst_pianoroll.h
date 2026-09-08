@@ -49,6 +49,10 @@ class PianoRollTest final : public QObject
     void pencilPlacement();
     void pencilAbuttingRaster();
     void pencilGutterSelection();
+    void pencilMinimumDrawDistance();
+    void pencilCreationAcrossZoom();
+    void pencilClockCreation();
+    void pencilExistingNoteInvariant();
     void tinyNoteBorderRaster();
     void selectedNoteFrameRaster();
     void ghostNoteRaster();
@@ -75,7 +79,6 @@ class PianoRollTest final : public QObject
     void selectionBandSweep();
     void selectionPressAudition();
     void selectionPendingDrawReadout();
-    void selectionMinimumDrawDistance();
     void selectionModifierVelocity();
     void selectionNonScaleMove();
     void resizeOffGrid();

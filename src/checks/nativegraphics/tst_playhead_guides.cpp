@@ -106,6 +106,7 @@ void RenderingPlayheadTest::guidesResizeScrollAndOwnership()
     QVERIFY(!quick->hoverVisible());
     QVERIFY(!quick->editVisible());
     QVERIFY(allVisible(false, false));
+    quick->clearHover(songview::TimelineQuickHoverOwner::Automation);
 
     const uint64_t tick = uint64_t((std::max)(0.0, view.camera().tickAtContentX(1.0)));
     view.setEditCursorTick(0);
@@ -119,7 +120,6 @@ void RenderingPlayheadTest::guidesResizeScrollAndOwnership()
     quick->publishHover(songview::TimelineQuickHoverOwner::Automation, tick, songX(tick));
     checks::support::pumpQuick();
     QVERIFY(quick->hoverVisible());
-    QVERIFY(!quick->editVisible());
     QVERIFY(allVisible(true, false));
     QVERIFY(qAbs(quick->hoverRootContentX() - rootX(songX(tick))) <= kGuideTolerance);
     for (const ChromePair &pair : pairs) {
@@ -139,6 +139,10 @@ void RenderingPlayheadTest::guidesResizeScrollAndOwnership()
     QVERIFY(!quick->hoverVisible());
     QVERIFY(quick->editVisible());
     QVERIFY(allVisible(false, true));
+    for (const ChromePair &pair : pairs) {
+        QVERIFY(qAbs(checks::support::quickRootX(*pair.edit, *root) - rootX(songX(0))) <=
+                kGuideTolerance);
+    }
 
     const QSize originalSize = view.size();
     const QRect hostBefore = quick->geometry();

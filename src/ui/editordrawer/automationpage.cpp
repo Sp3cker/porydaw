@@ -303,11 +303,7 @@ uint64_t AutomationPage::snapTick(double tick, bool fineMode) const noexcept
 }
 uint64_t AutomationPage::snapTickDown(double tick, bool fineMode) const noexcept
 {
-    tick = std::max(0.0, tick);
-    if (!fineMode)
-        return m_grid.snapTickDown(tick);
-    const uint64_t spacing = gridState(uint64_t(tick), true).snapTicks;
-    return uint64_t(tick / double(spacing)) * spacing;
+    return m_grid.snapTickDown(tick, fineMode);
 }
 
 DrawerPageGridState AutomationPage::gridState(uint64_t tick, bool fineMode) const noexcept
@@ -317,23 +313,7 @@ DrawerPageGridState AutomationPage::gridState(uint64_t tick, bool fineMode) cons
 
 uint64_t AutomationPage::nextGridTick(uint64_t tick, bool fineMode, uint64_t limit) const noexcept
 {
-    if (tick >= limit)
-        return limit;
-    const uint64_t spacing = gridState(tick, fineMode).snapTicks;
-    const uint64_t candidate = spacing >= limit - tick ? limit : tick + spacing;
-    if (gridState(candidate, fineMode).snapTicks == spacing)
-        return candidate;
-    uint64_t first = tick + 1;
-    uint64_t last = candidate;
-    while (first < last) {
-        const uint64_t probe = first + (last - first) / 2;
-        const uint64_t probeSpacing = gridState(probe, fineMode).snapTicks;
-        if (probeSpacing == spacing)
-            first = probe + 1;
-        else
-            last = probe;
-    }
-    return first;
+    return m_grid.nextEditingTick(tick, limit, fineMode);
 }
 
 double AutomationPage::tickAtContentX(double x) const noexcept

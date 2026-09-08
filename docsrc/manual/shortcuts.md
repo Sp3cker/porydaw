@@ -26,6 +26,9 @@ On macOS, `Ctrl` corresponds to the `Cmd` key (Command).
 | Transpose Down (Octave) | `Shift+Down` | Transposes selection down by 1 octave |
 | Nudge Left | `Left` | Nudges active time selection left by grid step |
 | Nudge Right | `Right` | Nudges active time selection right by grid step |
+| Narrow Grid | `Ctrl+2` | Steps the editing grid to the next finer supported subdivision, including during a note move |
+| Widen Grid | `Ctrl+1` | Steps the editing grid to the next coarser supported subdivision, including during a note move |
+| Toggle Triplet Grid | `Ctrl+3` | Switches the editing grid between straight and triplet subdivisions |
 | Mute Selected Tracks | `M` | Toggles mute on selected track(s) |
 | Solo Selected Tracks | `S` | Toggles solo on selected track(s) |
 | Adjust Velocity | `Ctrl` + vertical drag | Adjusts note velocity by holding modifier and dragging |

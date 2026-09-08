@@ -98,12 +98,16 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
     SongDocument &document = this->document();
     const selectionkey::ScenarioRollback rollback(view, document);
     activateShellForCommands();
+    QVERIFY2(stageKnownNonterminalGrid(),
+             "the pitch-bend fixture did not stage the supported six-tick 1/16 grid");
     const auto opener = selectionkey::firstBinding(QStringLiteral("roll.pitch_bend"));
     const auto solo = selectionkey::firstBinding(QStringLiteral("roll.solo_tracks"));
     const auto copy = selectionkey::firstBinding(QStringLiteral("roll.copy"));
     const auto mute = selectionkey::firstBinding(QStringLiteral("roll.mute_tracks"));
-    QVERIFY2(opener.has_value() && solo.has_value() && copy.has_value() && mute.has_value(),
-             "pitch-bend/Solo/Copy/Mute have no single-key bindings");
+    const auto gridNarrow = selectionkey::firstBinding(QStringLiteral("roll.grid_narrow"));
+    QVERIFY2(opener.has_value() && solo.has_value() && copy.has_value() && mute.has_value() &&
+                 gridNarrow.has_value(),
+             "pitch-bend/Solo/Copy/Mute/narrow-grid have no single-key bindings");
 
     view.selectTrack(kTrack);
     view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
@@ -206,6 +210,11 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
              qPrintable(QStringLiteral("pitch-bend graph did not complete native Quick focus: "
                                        "before={%1} after={%2}")
                             .arg(graphFocusBefore, applicationFocusState())));
+    const selectionkey::GridCommandState gridBeforeGraphCommand =
+        selectionkey::gridCommandState(view);
+    selectionkey::deliverKey(surface, gridNarrow->key(), gridNarrow->keyboardModifiers());
+    QVERIFY2(selectionkey::sameGridCommandState(view, gridBeforeGraphCommand),
+             "the pitch-bend graph leaked narrow-grid delivery to its parent timeline");
     const int actionSoloBefore = m_counts.solo;
     const uint32_t soloMaskBefore = view.soloMask();
     QSignalSpy soloChanges(&view, &SongView::soloMaskChanged);
@@ -299,6 +308,12 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
              qPrintable(QStringLiteral("pitch-bend numeric TextInput did not complete native "
                                        "Quick focus: before={%1} after={%2}")
                             .arg(numericFocusBefore, applicationFocusState())));
+    const selectionkey::GridCommandState gridBeforeNumericCommand =
+        selectionkey::gridCommandState(view);
+    selectionkey::deliverKey(surface, gridNarrow->key(), gridNarrow->keyboardModifiers());
+    QVERIFY2(hasCompletedQuickFocus(surface, numericEdit) &&
+                 selectionkey::sameGridCommandState(view, gridBeforeNumericCommand),
+             "the pitch-bend value input leaked narrow-grid delivery to its parent timeline");
     const bool selectedForCopy = QMetaObject::invokeMethod(numericEdit, "selectAll");
     const QString selectedText = numericEdit->property("selectedText").toString();
     const int copyBefore = m_counts.copy;

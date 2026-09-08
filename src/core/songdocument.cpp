@@ -371,14 +371,6 @@ bool SongDocument::adoptSmf(SmfFile smf, const SongInfo &song, QString *error)
     Q_UNUSED(error);
     const auto before = trackMapState();
     m_smf = std::move(smf);
-    // NoteId tokens belong to one SongDocument. An in-memory SmfFile can
-    // arrive from another document with stamped IDs, but adopting it is a
-    // document boundary: remint every note-on from this document's
-    // monotonically advancing token stream.
-    for (SmfTrack &track : m_smf.tracks) {
-        for (SmfEvent &event : track.events)
-            event.noteId = NoteId{};
-    }
     replaceTempoPoints(normalizeTempoPoints(tempoPointsFromSmf(m_smf)));
     song_document_tempo::removeTempoMetas(m_smf);
     m_cfg = song.cfg;
@@ -387,7 +379,7 @@ bool SongDocument::adoptSmf(SmfFile smf, const SongInfo &song, QString *error)
     m_label = song.label;
     m_hadCfgLine = song.hasCfg;
     m_history.clear();
-    mintUnassignedNoteIds();
+    remintNoteIds();
     rebuildTrackMap();
     TrackRemap remap;
     remap.smfTrackMap.assign(size_t(before.smfTrackCount), -1);
@@ -548,11 +540,15 @@ void SongDocument::mintNoteId(SmfEvent *event)
         m_nextNoteId++;
 }
 
-void SongDocument::mintUnassignedNoteIds()
+// Full SMF adoption replaces foreign tokens with fresh document-local NoteIds
+// while preserving the document's monotonically advancing allocator.
+void SongDocument::remintNoteIds()
 {
     for (SmfTrack &track : m_smf.tracks) {
-        for (SmfEvent &event : track.events)
+        for (SmfEvent &event : track.events) {
+            event.noteId = NoteId{};
             mintNoteId(&event);
+        }
     }
 }
 

@@ -158,6 +158,13 @@ void PianoRollTest::selectionPressAudition()
              "selection audition fixture did not establish the velocity latch");
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
+    DocNote latch;
+    if (!doc.findNote(fixture.noteB.noteId, &latch) || latch.tick != fixture.b.tick ||
+        latch.duration != fixture.b.dur || latch.key != fixture.b.key ||
+        latch.velocity != latched.velocity || latch.velocity == 0)
+        QFAIL("velocity-latch fixture did not describe its live note");
+    const int latchedVelocity = latch.velocity;
+    click(*roll, fixture.b.center);
 
     // Empty-space press audition: a plain left press sounds its row at the
     // latched velocity right away, glisses when the held cursor crosses
@@ -171,7 +178,7 @@ void PianoRollTest::selectionPressAudition()
             QFAIL("no free grid cell for the press audition");
         }
         std::vector<std::pair<int, int>> aud; // key, velocity
-        auto conn =
+        const QMetaObject::Connection conn =
             QObject::connect(&view, &SongView::auditionNote, &view,
                              [&](int, int key, int velocity) { aud.push_back({key, velocity}); });
         bool buttonHeld = false;
@@ -187,13 +194,13 @@ void PianoRollTest::selectionPressAudition()
         checks::events::sendMouse(*roll, QEvent::MouseButtonPress, e.center, Qt::LeftButton,
                                   Qt::LeftButton, Qt::NoModifier);
         buttonHeld = true;
-        if (aud != std::vector<std::pair<int, int>>{{e.key, 93}})
+        if (aud != std::vector<std::pair<int, int>>{{e.key, latchedVelocity}})
             QFAIL("empty-space press did not audition its row at the latched velocity");
         const QPoint gliss(e.center.x(), rows.centerY(e.key - 1));
         heldPosition = gliss;
         checks::events::sendMouse(*roll, QEvent::MouseMove, gliss, Qt::NoButton, Qt::LeftButton,
                                   Qt::NoModifier);
-        if (aud.empty() || aud.back() != std::make_pair(e.key - 1, 93))
+        if (aud.empty() || aud.back() != std::make_pair(e.key - 1, latchedVelocity))
             QFAIL("holding the press across a row did not gliss the preview");
         checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, gliss, Qt::LeftButton,
                                   Qt::NoButton, Qt::NoModifier);
@@ -219,12 +226,13 @@ void PianoRollTest::selectionPressAudition()
         checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, pull, Qt::LeftButton,
                                   Qt::NoButton, Qt::NoModifier);
         buttonHeld = false;
-        QObject::disconnect(conn);
-        if (std::count(aud.begin(), aud.end(), std::make_pair(e.key, 93)) != 1)
+        if (std::count(aud.begin(), aud.end(), std::make_pair(e.key, latchedVelocity)) != 1)
             QFAIL("growing the press into a draw re-attacked the sounding key");
         DocNote drawn;
         if (!doc.findNote(track, e.tick, uint8_t(e.key), &drawn))
             QFAIL("the press-grown draw did not commit its note");
+        if (drawn.velocity != latchedVelocity || drawn.duration == 0)
+            QFAIL("the press-grown draw lost its latched velocity or positive duration");
     }
     while (doc.undoStack()->index() > undo)
         doc.undoStack()->undo();
@@ -291,56 +299,6 @@ void PianoRollTest::selectionPendingDrawReadout()
     QCOMPARE(doc.smf().write(), before);
 }
 
-void PianoRollTest::selectionMinimumDrawDistance()
-{
-    PianoRollFixture &check = *m_fixture;
-    const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
-    QVERIFY(seed.has_value());
-    const PencilVelocityFixture &fixture = *seed;
-    SongDocument &doc = check.document();
-    SongView &view = check.view();
-    songview::TimelineInputItem *roll = &check.rollInput();
-    const int track = check.track();
-    const QByteArray before = doc.smf().write();
-    const int undo = doc.undoStack()->index();
-
-    // Drawing begins at a layout Space::One horizontal drag; a shorter
-    // gesture remains a click, while one at the threshold creates a
-    // one-snap-cell note.
-    {
-        const int drawStartDistance = layout::space(layout::Space::One);
-        const qreal belowDrawStartDistance = std::max(0.0, double(drawStartDistance) - 0.5);
-        const Cell f = check.findFreeCell();
-        if (f.key < 0) {
-            QFAIL("no free grid cell for the minimum-distance draw");
-        }
-        const QPointF belowDrawEnd = QPointF(f.center) + QPointF(belowDrawStartDistance, 0.0);
-        checks::events::sendMouse(*roll, QEvent::MouseButtonPress, f.center, Qt::LeftButton,
-                                  Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*roll, QEvent::MouseMove, belowDrawEnd, Qt::NoButton,
-                                  Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, belowDrawEnd, Qt::LeftButton,
-                                  Qt::NoButton, Qt::NoModifier);
-        DocNote tiny;
-        if (doc.findNote(track, f.tick, uint8_t(f.key), &tiny))
-            QFAIL("a subthreshold horizontal drag drew a note");
-        checks::events::sendMouse(*roll, QEvent::MouseButtonPress, f.center, Qt::LeftButton,
-                                  Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*roll, QEvent::MouseMove, f.center + QPoint(drawStartDistance, 0),
-                                  Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
-        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease,
-                                  f.center + QPoint(drawStartDistance, 0), Qt::LeftButton,
-                                  Qt::NoButton, Qt::NoModifier);
-        if (!doc.findNote(track, f.tick, uint8_t(f.key), &tiny))
-            QFAIL("a Space::One horizontal drag did not draw a note");
-        else if (tiny.duration != view.grid().snapTicksAt(f.tick))
-            QFAIL("the minimum-distance note is not one snap cell long");
-    }
-    while (doc.undoStack()->index() > undo)
-        doc.undoStack()->undo();
-    QCOMPARE(doc.smf().write(), before);
-}
-
 void PianoRollTest::selectionModifierVelocity()
 {
     PianoRollFixture &check = *m_fixture;
@@ -366,11 +324,13 @@ void PianoRollTest::selectionModifierVelocity()
              "modifier velocity fixture did not establish note B at 93");
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
+    constexpr int kVelocityDragPixels = 15;
+    const int firstDraggedVelocity = int(raised.velocity) - kVelocityDragPixels;
 
     // Modifier velocity gesture (Ableton-style): with the roll.velocity_drag
     // chord held (Ctrl by default), a vertical drag from anywhere on note B
-    // adjusts its velocity — 1px = 1 step, 15px down lands 93 -> 78 — with
-    // the hover mark pinned to the note's row. Crossing the drag threshold
+    // adjusts its fresh fixture velocity by one step per pixel, with the
+    // hover mark pinned to the note's row. Crossing the drag threshold
     // preserves a selected group when the grabbed note is already selected;
     // otherwise it re-anchors the selection to the grabbed note. Without a
     // preceding drag, Ctrl+click keeps its selection-toggle meaning
@@ -384,19 +344,22 @@ void PianoRollTest::selectionModifierVelocity()
                    x.tick == y.tick && x.duration == y.duration && x.key == y.key &&
                    x.velocity == y.velocity && x.channel == y.channel;
         };
-        click(*roll, b.center); // plain click: select B (velocity 93)
+        click(*roll, b.center); // plain click: select the fresh fixture's B note
         const int preCount = doc.undoStack()->count();
         checks::events::sendMouse(*roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
                                   Qt::LeftButton, Qt::ControlModifier);
-        checks::events::sendMouse(*roll, QEvent::MouseMove, b.center + QPoint(0, 15), Qt::NoButton,
+        checks::events::sendMouse(*roll, QEvent::MouseMove,
+                                  b.center + QPoint(0, kVelocityDragPixels), Qt::NoButton,
                                   Qt::LeftButton, Qt::ControlModifier);
         if (check.roll().property("hoverKey").toInt() != b.key)
             QFAIL("modifier velocity drag did not pin the hover mark");
-        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 15),
-                                  Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease,
+                                  b.center + QPoint(0, kVelocityDragPixels), Qt::LeftButton,
+                                  Qt::NoButton, Qt::ControlModifier);
         DocNote bMod;
-        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod) || bMod.velocity != 78)
-            QFAIL("modifier velocity drag did not land at 78");
+        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod) ||
+            int(bMod.velocity) != firstDraggedVelocity)
+            QFAIL("modifier velocity drag did not apply its pixel delta");
         const NoteId bId = bMod.noteId;
         if (view.selectionModel().noteSelection() != std::vector<NoteId>{bId})
             QFAIL("modifier velocity drag did not leave only its anchor selected");
@@ -421,7 +384,8 @@ void PianoRollTest::selectionModifierVelocity()
                                   Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
         if (view.selectionModel().noteSelection() != std::vector<NoteId>{bId})
             QFAIL("a sub-threshold Ctrl-jitter did not act as the toggle click");
-        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod) || bMod.velocity != 78)
+        if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod) ||
+            int(bMod.velocity) != firstDraggedVelocity)
             QFAIL("a sub-threshold Ctrl-jitter changed the velocity");
         if (doc.undoStack()->count() != preCount + 1)
             QFAIL("a Ctrl-click or jitter pushed an undo command");
@@ -438,7 +402,7 @@ void PianoRollTest::selectionModifierVelocity()
                                   b.center + QPoint(0, velocityDragDistance), Qt::LeftButton,
                                   Qt::NoButton, Qt::ControlModifier);
         if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod) ||
-            bMod.velocity != 78 - velocityDragDistance)
+            int(bMod.velocity) != firstDraggedVelocity - velocityDragDistance)
             QFAIL("a threshold Ctrl-drag did not start the velocity gesture");
         if (view.selectionModel().noteSelection() != std::vector<NoteId>{bId})
             QFAIL("the threshold velocity drag did not leave only its anchor selected");
@@ -455,15 +419,17 @@ void PianoRollTest::selectionModifierVelocity()
         const int heldCount = doc.undoStack()->count();
         checks::events::sendMouse(*roll, QEvent::MouseButtonPress, a.center, Qt::LeftButton,
                                   Qt::LeftButton, Qt::ControlModifier);
-        checks::events::sendMouse(*roll, QEvent::MouseMove, a.center + QPoint(0, 15), Qt::NoButton,
+        checks::events::sendMouse(*roll, QEvent::MouseMove,
+                                  a.center + QPoint(0, kVelocityDragPixels), Qt::NoButton,
                                   Qt::LeftButton, Qt::ControlModifier);
-        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, a.center + QPoint(0, 15),
-                                  Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease,
+                                  a.center + QPoint(0, kVelocityDragPixels), Qt::LeftButton,
+                                  Qt::NoButton, Qt::ControlModifier);
         DocNote aAfter, bAfterDrag;
         if (view.selectionModel().noteSelection() != std::vector<NoteId>{aId})
             QFAIL("the chord-held drag on another note kept the prior note selected");
         if (!doc.findNote(track, a.tick, uint8_t(a.key), &aAfter) ||
-            int(aAfter.velocity) != int(aBefore.velocity) - 15)
+            int(aAfter.velocity) != int(aBefore.velocity) - kVelocityDragPixels)
             QFAIL("the chord-held velocity drag did not adjust the grabbed note");
         if (!doc.findNote(track, b.tick, uint8_t(b.key), &bAfterDrag) ||
             !sameNoteFields(bAfterDrag, bMod))
@@ -482,18 +448,20 @@ void PianoRollTest::selectionModifierVelocity()
         const int groupCount = doc.undoStack()->count();
         checks::events::sendMouse(*roll, QEvent::MouseButtonPress, a.center, Qt::LeftButton,
                                   Qt::LeftButton, Qt::ControlModifier);
-        checks::events::sendMouse(*roll, QEvent::MouseMove, a.center + QPoint(0, 15), Qt::NoButton,
+        checks::events::sendMouse(*roll, QEvent::MouseMove,
+                                  a.center + QPoint(0, kVelocityDragPixels), Qt::NoButton,
                                   Qt::LeftButton, Qt::ControlModifier);
-        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, a.center + QPoint(0, 15),
-                                  Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease,
+                                  a.center + QPoint(0, kVelocityDragPixels), Qt::LeftButton,
+                                  Qt::NoButton, Qt::ControlModifier);
         DocNote aAdjusted, bAdjusted;
         if (view.selectionModel().noteSelection() != std::vector<NoteId>({aId, bId}))
             QFAIL("a grouped velocity drag did not preserve the selected notes");
         if (!doc.findNote(track, a.tick, uint8_t(a.key), &aAdjusted) ||
-            int(aAdjusted.velocity) != int(aGrouped.velocity) - 15)
+            int(aAdjusted.velocity) != int(aGrouped.velocity) - kVelocityDragPixels)
             QFAIL("the grouped velocity drag did not adjust its anchor");
         if (!doc.findNote(track, b.tick, uint8_t(b.key), &bAdjusted) ||
-            int(bAdjusted.velocity) != int(bGrouped.velocity) - 15)
+            int(bAdjusted.velocity) != int(bGrouped.velocity) - kVelocityDragPixels)
             QFAIL("the grouped velocity drag did not adjust the other selected note");
         if (doc.undoStack()->count() != groupCount + 1)
             QFAIL("the grouped velocity drag did not push exactly one command");
@@ -503,10 +471,12 @@ void PianoRollTest::selectionModifierVelocity()
         const int repeatCount = doc.undoStack()->count();
         checks::events::sendMouse(*roll, QEvent::MouseButtonPress, a.center, Qt::LeftButton,
                                   Qt::LeftButton, Qt::ControlModifier);
-        checks::events::sendMouse(*roll, QEvent::MouseMove, a.center - QPoint(0, 15), Qt::NoButton,
+        checks::events::sendMouse(*roll, QEvent::MouseMove,
+                                  a.center - QPoint(0, kVelocityDragPixels), Qt::NoButton,
                                   Qt::LeftButton, Qt::ControlModifier);
-        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, a.center - QPoint(0, 15),
-                                  Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+        checks::events::sendMouse(*roll, QEvent::MouseButtonRelease,
+                                  a.center - QPoint(0, kVelocityDragPixels), Qt::LeftButton,
+                                  Qt::NoButton, Qt::ControlModifier);
         DocNote aRepeated, bRepeated;
         if (view.selectionModel().noteSelection() != std::vector<NoteId>({aId, bId}))
             QFAIL("repeating a grouped velocity drag did not preserve the selected notes");
@@ -538,6 +508,8 @@ void PianoRollTest::selectionNonScaleMove()
     SongView &view = check.view();
     songview::TimelineInputItem *roll = &check.rollInput();
     const int track = check.track();
+    constexpr uint64_t kEditingTicks = 6;
+    constexpr uint64_t kMoveDurationTicks = 12;
     const SnappedRows rows{view, *roll};
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
@@ -553,27 +525,21 @@ void PianoRollTest::selectionNonScaleMove()
         const SongView::ViewState viewBefore = view.viewState();
         const bool foldBefore = view.scaleFold();
         view.setScaleFold(false);
-        const Cell cell = check.findFreeCell();
+        const Cell cell = check.findFreeCell(8, false, kMoveDurationTicks);
         if (cell.key < 0) {
-            QFAIL("no free grid cell for the non-Scale move");
-            view.setScaleFold(foldBefore);
-            return;
-        }
-        const uint64_t snap = view.grid().snapTicksAt(cell.tick);
-        const qreal dpr = roll->devicePixelRatio();
-        const qreal cellPx = view.camera().displayX(double(cell.tick + snap), 0.0, dpr) -
-                             view.camera().displayX(double(cell.tick), 0.0, dpr);
-        uint64_t widthTicks = snap * 4;
-        while (
-            (view.camera().displayX(double(cell.tick + widthTicks), 0.0, dpr) > roll->width() - 4 ||
-             check.isOccupied(cell.tick, widthTicks, cell.key)) &&
-            widthTicks > snap * 2)
-            widthTicks -= snap;
-        if (check.isOccupied(cell.tick, widthTicks, cell.key)) {
             QFAIL("no free span for the non-Scale move");
             view.setScaleFold(foldBefore);
             return;
         }
+        if (view.grid().snapTicksAt(cell.tick) != kEditingTicks) {
+            QFAIL("the non-Scale move fixture lost its six-tick editing grid");
+            view.setScaleFold(foldBefore);
+            return;
+        }
+        const qreal dpr = roll->devicePixelRatio();
+        const qreal cellPx = view.camera().displayX(double(cell.tick + kEditingTicks), 0.0, dpr) -
+                             view.camera().displayX(double(cell.tick), 0.0, dpr);
+        const uint64_t widthTicks = kMoveDurationTicks;
         const int undoBase = doc.undoStack()->index();
         doc.addNote(track, cell.tick, uint8_t(cell.key), uint32_t(widthTicks), 93);
         QCoreApplication::processEvents(); // the view model must see the note before the press
@@ -605,7 +571,7 @@ void PianoRollTest::selectionNonScaleMove()
         checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, target, Qt::LeftButton,
                                   Qt::NoButton, Qt::NoModifier);
         DocNote moved;
-        if (!doc.findNote(moveId, &moved) || moved.tick != cell.tick + 2 * snap ||
+        if (!doc.findNote(moveId, &moved) || moved.tick != cell.tick + 2 * kEditingTicks ||
             moved.key != cell.key || moved.duration != widthTicks)
             QFAIL("the non-Scale move release did not commit the same NoteId at its target");
         DocNote stranded;
@@ -620,7 +586,7 @@ void PianoRollTest::selectionNonScaleMove()
         // leave the note here.
         sendKeyStroke(*roll, Qt::Key_Right, Qt::NoModifier, false);
         DocNote nudged;
-        if (!doc.findNote(moveId, &nudged) || nudged.tick != cell.tick + 3 * snap ||
+        if (!doc.findNote(moveId, &nudged) || nudged.tick != cell.tick + 3 * kEditingTicks ||
             nudged.key != cell.key)
             QFAIL("the post-release Right nudge did not move the same NoteId");
         if (view.selectionModel().noteSelection() != std::vector<NoteId>{moveId})

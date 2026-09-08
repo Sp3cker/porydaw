@@ -125,8 +125,11 @@ preservation.
   is suite isolation and the explicitly exercised reversed selector/data order,
   not a claim that every data row receives a separate process.
 - The offscreen pool remains bounded to six workers; native checks remain
-  serialized to avoid Cocoa activation/focus races. `QSettings` is redirected
-  to each runner's temporary path before Porydaw startup.
+  serialized to avoid Cocoa activation/focus races. On macOS, the checks
+  bootstrap preserves or establishes AppKit's regular activation policy and
+  explicitly foregrounds the runner-launched process before native dispatch.
+  `QSettings` is redirected to each runner's temporary path before Porydaw
+  startup.
 
 ### Historical audit, not current measurement
 The LOC, white-box-coupling, and `MainWindow` member counts in the original

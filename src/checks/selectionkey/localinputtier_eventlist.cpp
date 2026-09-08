@@ -45,6 +45,8 @@ void SelectionLocalInputTierTest::eventListKeepsRowLocalKeys()
     SongView &view = this->view();
     SongDocument &document = this->document();
     const selectionkey::ScenarioRollback rollback(view, document);
+    QVERIFY2(stageKnownNonterminalGrid(),
+             "the Event List fixture did not stage the supported six-tick 1/16 grid");
     // The pitch-bend overlay self-activated on top of the shell; the window
     // Copy owner below only fires while the shell is the active window again.
     activateShellForCommands();
@@ -60,6 +62,17 @@ void SelectionLocalInputTierTest::eventListKeepsRowLocalKeys()
     const int rows = model->rowCount();
     QVERIFY2(rows >= 4, "the event-list fixture has too few rows");
     const int copyBefore = m_counts.copy;
+    QVERIFY2(quick->focusEventListInput(Qt::OtherFocusReason),
+             "the event list input did not take focus");
+    selectionkey::settle();
+    const auto gridNarrow = selectionkey::firstBinding(QStringLiteral("roll.grid_narrow"));
+    QVERIFY2(gridNarrow.has_value(), "narrow-grid has no single-key binding");
+    const selectionkey::GridCommandState gridBeforeEventList = selectionkey::gridCommandState(view);
+    QTest::keyClick(quickWindow, gridNarrow->key(), gridNarrow->keyboardModifiers());
+    selectionkey::settle();
+    QVERIFY2(
+        selectionkey::sameGridCommandState(view, gridBeforeEventList),
+        "Event List delivery leaked the Timeline narrow-grid command through context fallback");
 
     // Production keeps timelineEventListInput focused while the list is the
     // visible surface: page window-Shortcuts (nav keys, Select All) match at

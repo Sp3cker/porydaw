@@ -69,8 +69,32 @@ When a time selection is active, the following range commands are available via 
 All time editing operations are undoable as a single command on the undo stack (`Ctrl+Z`).
 ## Snapping and the grid
 
-<!-- TODO: Choosing the snap resolution; when to turn snapping off;
-the song's clock base and why some fine positions round. -->
+The editing grid is a fixed subdivision you pick — zooming never changes it.
+`Ctrl+1` widens and `Ctrl+2` narrows it (`Cmd` on macOS), and `Ctrl+3`
+switches between straight subdivisions (1/4, 1/8, 1/16, …) and triplet
+subdivisions (quarter-, eighth-, sixteenth-note triplets, …). The ruler's
+division and feel menus offer the same choices: every step the song's timing
+can represent exactly, ending at **Clock**, the song's smallest supported
+editing step. Narrowing keeps stepping while held and stops there rather
+than offering a fine division the song cannot represent exactly — a straight
+1/64 grid would need 1.5 ticks at the default 24 clocks per beat, so Clock
+(one tick there) is the honest floor. Widening ends at the quarter note.
+
+Narrow Grid and Widen Grid remain available while you move notes. Changing
+the size during the drag keeps the drag active and applies the new snap
+spacing to subsequent movement and the drop.
+
+The selected cell controls note creation, moving, and resizing at every zoom.
+A newly drawn note is at least one selected cell long. Guide lines appear and
+hide with zoom as display detail; their visibility does not change editing
+spacing. There is no Auto mode.
+
+Drawing works as before — double-click empty space, or drag past the draw
+threshold — except the result is never shorter than one selected cell, and
+drawing longer always works. Changing the grid never resizes existing notes:
+imported notes shorter than one cell keep their exact stored lengths.
+Musical placement restarts only at time-signature changes; Clock placement
+follows the song's absolute clock grid.
 
 ## Undo and redo
 

@@ -35,6 +35,9 @@ constexpr int kTempoSecond = 160;
 constexpr int kCcHeld = 24;
 constexpr int kCcNode = 96;
 constexpr int kCcSecond = 72;
+// Selected-step shift-ramp case: the six-tick editing cells 48, 54, 60, 66.
+constexpr uint64_t kRampPreviewStartTick = 48;
+constexpr uint64_t kRampPreviewEndTick = 66;
 
 enum class LaneKind { Tempo, Cc };
 
@@ -317,6 +320,9 @@ void AutomationEditingTest::shiftRampPreview_data()
 void AutomationEditingTest::shiftRampPreview()
 {
     QFETCH(int, laneKind);
+    // The preview must track the explicitly selected editing step: ramping
+    // across the six-tick cells 48..66, not the zoom-adaptive guides.
+    selectEditingGrid(songview::GridSelection::musical(16));
     const LaneKind kind = LaneKind(laneKind);
     QVERIFY(kind != LaneKind::Tempo || expandTempo());
     SongView &view = m_tab->view();
@@ -330,8 +336,8 @@ void AutomationEditingTest::shiftRampPreview()
     const PreviewLane lane = previewLane(*m_page, kind);
     const int held = kind == LaneKind::Tempo ? kTempoHeld : kCcHeld;
     const int node = kind == LaneKind::Tempo ? kTempoNode : kCcNode;
-    const QPointF start = pointForLane(view, *m_automationInput, lane, 48, held);
-    const QPointF end = pointForLane(view, *m_automationInput, lane, kSecondTick, node);
+    const QPointF start = pointForLane(view, *m_automationInput, lane, kRampPreviewStartTick, held);
+    const QPointF end = pointForLane(view, *m_automationInput, lane, kRampPreviewEndTick, node);
     const int activationTravel = AutomationGeometry::resolve().nodeDragActivationDistance + 8;
     const quint64 transientBefore =
         scene->layer(songview::TimelineQuickLayer::AutomationTransient).revision;

@@ -96,7 +96,8 @@ void PianoRollStaticTest::tickRangeWalksFractionalLattice()
     const SongView::ViewState original = view.viewState();
     SongView::ViewState zoomed = original;
     zoomed.pxPerBeat = 384.0;
-    zoomed.gridMinDenom = 0;
+    zoomed.gridSelection = songview::GridSelection::musical(16);
+    zoomed.gridTriplet = false;
     view.applyViewState(zoomed);
     const songview::Grid::Segment segment = view.grid().segmentAt(96);
     QVERIFY(segment.start <= 96);
@@ -272,7 +273,8 @@ void PianoRollStaticTest::affineCameraProjection()
     SongView::ViewState state = original;
     state.pxPerBeat = pxPerBeat;
     state.scrollPx = scrollPx;
-    state.gridMinDenom = 0;
+    state.gridSelection = songview::GridSelection::musical(16);
+    state.gridTriplet = false;
     view.applyViewState(state);
     const qreal visibleWidth = fixture.rollInput()->bounds().width();
     const double affineTick = view.camera().tickAtContentX(visibleWidth * 0.371) + 0.375;

@@ -6,9 +6,11 @@
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 
+#include <QCoreApplication>
 #include <QEvent>
+#include <QKeyEvent>
+#include <QQuickItem>
 #include <QQuickWindow>
-#include <QUndoStack>
 #include <QtTest>
 
 #include <optional>
@@ -44,6 +46,28 @@ bool deliverKeyEvent(QQuickWindow *window, QEvent::Type type, int key, bool auto
     checks::events::sendKey(*window, type, key, Qt::NoModifier, QString{}, autoRepeat, 1);
     selectionkey::settle();
     return true;
+}
+
+// QTest keyClick does not expose repeat state. This sends the same key event
+// through the live Quick window while retaining acceptance as the evidence
+// that a terminal grid no-op did not leak into another owner.
+bool deliverGridKeyEvent(QQuickWindow *window, QKeyCombination binding, bool autoRepeat)
+{
+    if (!window)
+        return false;
+    QKeyEvent event(QEvent::KeyPress, binding.key(), binding.keyboardModifiers(), QString{},
+                    autoRepeat, 1);
+    event.setAccepted(false);
+    QCoreApplication::sendEvent(window, &event);
+    selectionkey::settle();
+    return event.isAccepted();
+}
+
+bool gridHasState(const SongView &view, songview::GridSelection selection, songview::GridFeel feel,
+                  uint64_t ticks)
+{
+    return view.gridSelection() == selection && view.grid().feel() == feel &&
+           view.grid().snapTicksAt(0) == ticks;
 }
 
 enum class PencilScenario {
@@ -295,6 +319,207 @@ void SelectionKeyCoreTest::keyboardClipboardParity()
              "Quick window did not accept the keyboard Paste binding");
     QVERIFY2(noteExists(m_fixture->document(), kTrack, kPasteTick, 60),
              "keyboard Paste did not land the roll-copied note clip at the committed cursor");
+}
+
+void SelectionKeyCoreTest::gridCommandsFromBandAndRootFallback()
+{
+    const auto triplet = firstBinding(QStringLiteral("roll.grid_triplet"));
+    QVERIFY2(triplet.has_value(), "the triplet grid command needs a single-key binding");
+
+    m_fixture = createFixture(std::nullopt);
+    QVERIFY2(
+        m_fixture,
+        qPrintable(
+            QStringLiteral("could not create grid-input fixture: %1").arg(m_lastFixtureError)));
+    SongView &view = m_fixture->view();
+    QQuickWindow *const quick = m_fixture->window();
+    QQuickItem *const root = m_fixture->root();
+    songview::TimelineInputItem *const roll = m_fixture->input("timelineRollInput");
+    QVERIFY2(quick && root && roll, "the roll input or TimelineCanvas root is unavailable");
+
+    view.setGridFeel(songview::GridFeel::Straight);
+    view.setGridSelection(songview::GridSelection::musical(16));
+    QVERIFY2(
+        gridHasState(view, songview::GridSelection::musical(16), songview::GridFeel::Straight, 6),
+        "the 24-PPQN core fixture did not stage the independent six-tick grid");
+    QVERIFY2(focusTimelineInput(quick, roll), "could not focus the live roll input");
+    QVERIFY2(deliverKey(quick, Qt::Key_1, Qt::ControlModifier),
+             "literal Ctrl/Cmd+1 did not reach the live roll input");
+    QVERIFY2(
+        gridHasState(view, songview::GridSelection::musical(8), songview::GridFeel::Straight, 12),
+        "one band-delivered Ctrl/Cmd+1 did not widen the grid exactly from 6 to 12 ticks");
+
+    // The root owns unclaimed chrome keys. Give it focus explicitly, then
+    // deliver literal Ctrl/Cmd+2 through the same shown Quick window; this
+    // must be one semantic narrow, never a band-plus-root double delivery.
+    root->forceActiveFocus(Qt::OtherFocusReason);
+    selectionkey::settle();
+    QVERIFY2(root->hasActiveFocus(), "TimelineCanvas root did not acquire active focus");
+    QVERIFY2(deliverKey(quick, Qt::Key_2, Qt::ControlModifier),
+             "literal Ctrl/Cmd+2 did not reach TimelineCanvas root fallback");
+    QVERIFY2(
+        gridHasState(view, songview::GridSelection::musical(16), songview::GridFeel::Straight, 6),
+        "one root-fallback Ctrl/Cmd+2 did not narrow the grid exactly from 12 to 6 ticks");
+    QVERIFY2(deliverKey(quick, triplet->key(), triplet->keyboardModifiers()),
+             "the triplet-grid chord did not reach TimelineCanvas root fallback");
+    QVERIFY2(
+        gridHasState(view, songview::GridSelection::musical(16), songview::GridFeel::Triplet, 4),
+        "root-fallback triplet chord did not toggle the live grid exactly once");
+}
+
+void SelectionKeyCoreTest::gridCommandRepeatAndBoundsAreConsumed()
+{
+    const auto narrow = firstBinding(QStringLiteral("roll.grid_narrow"));
+    const auto widen = firstBinding(QStringLiteral("roll.grid_widen"));
+    const auto triplet = firstBinding(QStringLiteral("roll.grid_triplet"));
+    QVERIFY2(narrow.has_value() && widen.has_value() && triplet.has_value(),
+             "the three grid commands need single-key bindings");
+
+    m_fixture = createFixture(std::nullopt);
+    QVERIFY2(
+        m_fixture,
+        qPrintable(
+            QStringLiteral("could not create grid-repeat fixture: %1").arg(m_lastFixtureError)));
+    SongView &view = m_fixture->view();
+    QQuickWindow *const quick = m_fixture->window();
+    songview::TimelineInputItem *const roll = m_fixture->input("timelineRollInput");
+    QVERIFY2(focusTimelineInput(quick, roll), "could not focus the roll before grid repeats");
+
+    view.setGridFeel(songview::GridFeel::Straight);
+    view.setGridSelection(songview::GridSelection::musical(16));
+    QVERIFY2(deliverKey(quick, narrow->key(), narrow->keyboardModifiers()),
+             "initial narrow-grid key did not reach the roll");
+    QVERIFY2(
+        deliverGridKeyEvent(quick, *narrow, true) &&
+            gridHasState(view, songview::GridSelection::clock(), songview::GridFeel::Straight, 1),
+        "narrow-grid autorepeat was not a consumed 3-to-Clock step");
+
+    view.setGridSelection(songview::GridSelection::musical(32));
+    QVERIFY2(deliverKey(quick, widen->key(), widen->keyboardModifiers()),
+             "initial widen-grid key did not reach the roll");
+    QVERIFY2(deliverGridKeyEvent(quick, *widen, true) &&
+                 gridHasState(view, songview::GridSelection::musical(8),
+                              songview::GridFeel::Straight, 12),
+             "widen-grid autorepeat was not a consumed 6-to-12 step");
+
+    view.setGridSelection(songview::GridSelection::musical(16));
+    QVERIFY2(deliverKey(quick, triplet->key(), triplet->keyboardModifiers()),
+             "initial triplet-grid key did not reach the roll");
+    QVERIFY2(deliverGridKeyEvent(quick, *triplet, true) &&
+                 gridHasState(view, songview::GridSelection::musical(16),
+                              songview::GridFeel::Triplet, 4),
+             "triplet-grid autorepeat changed feel or leaked past its consumed key path");
+
+    view.setGridFeel(songview::GridFeel::Straight);
+    view.setGridSelection(songview::GridSelection::clock());
+    QVERIFY2(
+        deliverGridKeyEvent(quick, *narrow, false) &&
+            gridHasState(view, songview::GridSelection::clock(), songview::GridFeel::Straight, 1),
+        "bound narrow-grid no-op was not consumed at Clock");
+
+    view.setGridSelection(songview::GridSelection::musical(4));
+    QVERIFY2(deliverGridKeyEvent(quick, *widen, false) &&
+                 gridHasState(view, songview::GridSelection::musical(4),
+                              songview::GridFeel::Straight, 24),
+             "bound widen-grid no-op was not consumed at the coarse endpoint");
+}
+
+void SelectionKeyCoreTest::reboundGridCommandDeliversAndRestoresDefault()
+{
+    const auto originalNarrow = firstBinding(QStringLiteral("roll.grid_narrow"));
+    QVERIFY2(originalNarrow.has_value(), "Narrow Grid has no single-key default binding");
+
+    m_fixture = createFixture(std::nullopt);
+    QVERIFY2(
+        m_fixture,
+        qPrintable(
+            QStringLiteral("could not create grid-rebind fixture: %1").arg(m_lastFixtureError)));
+    SongView &view = m_fixture->view();
+    QQuickWindow *const quick = m_fixture->window();
+    songview::TimelineInputItem *const roll = m_fixture->input("timelineRollInput");
+    QVERIFY2(focusTimelineInput(quick, roll), "could not focus the roll before rebinding");
+
+    const QKeySequence reboundSequence(QStringLiteral("Alt+9"));
+    QVERIFY2(m_keymap->registry()
+                 .conflicts(QStringLiteral("roll.grid_narrow"), keymap::Context::Timeline,
+                            reboundSequence)
+                 .isEmpty(),
+             "Alt+9 is not an unused Timeline chord for the rebound delivery proof");
+    m_keymap->registry().setBinding(QStringLiteral("roll.grid_narrow"), reboundSequence);
+    const auto reboundNarrow = firstBinding(QStringLiteral("roll.grid_narrow"));
+    QVERIFY2(reboundNarrow.has_value() && *reboundNarrow == reboundSequence[0],
+             "Narrow Grid did not install the unused Alt+9 binding");
+
+    view.setGridFeel(songview::GridFeel::Straight);
+    view.setGridSelection(songview::GridSelection::musical(16));
+    QVERIFY2(deliverKey(quick, originalNarrow->key(), originalNarrow->keyboardModifiers()) &&
+                 gridHasState(view, songview::GridSelection::musical(16),
+                              songview::GridFeel::Straight, 6),
+             "the replaced Narrow Grid chord still delivered after rebinding");
+    QVERIFY2(deliverKey(quick, reboundNarrow->key(), reboundNarrow->keyboardModifiers()) &&
+                 gridHasState(view, songview::GridSelection::musical(32),
+                              songview::GridFeel::Straight, 3),
+             "the rebound Narrow Grid chord did not deliver through the roll");
+
+    m_keymap->registry().resetBinding(QStringLiteral("roll.grid_narrow"));
+    const auto restoredNarrow = firstBinding(QStringLiteral("roll.grid_narrow"));
+    QVERIFY2(restoredNarrow.has_value() && *restoredNarrow == *originalNarrow,
+             "resetBinding did not restore Narrow Grid's original chord");
+    view.setGridSelection(songview::GridSelection::musical(16));
+    QVERIFY2(deliverKey(quick, restoredNarrow->key(), restoredNarrow->keyboardModifiers()) &&
+                 gridHasState(view, songview::GridSelection::musical(32),
+                              songview::GridFeel::Straight, 3),
+             "the restored Narrow Grid chord did not deliver through the roll");
+}
+
+void SelectionKeyCoreTest::gridCommandIgnoredByRenameTextInput()
+{
+    const auto narrow = firstBinding(QStringLiteral("roll.grid_narrow"));
+    QVERIFY2(narrow.has_value(), "Narrow Grid has no single-key binding");
+
+    m_fixture = createFixture(std::nullopt);
+    QVERIFY2(
+        m_fixture,
+        qPrintable(
+            QStringLiteral("could not create rename-grid fixture: %1").arg(m_lastFixtureError)));
+    SongView &view = m_fixture->view();
+    QQuickWindow *const quick = m_fixture->window();
+    QQuickItem *const root = m_fixture->root();
+    QVERIFY2(quick && root, "the Quick rename surface is unavailable");
+    QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason),
+             "could not focus the Quick host before requesting track rename");
+
+    // The core rig is the focused offscreen Qt Quick probe. SongView owns the
+    // normal focus bridge; its QML delegate creates and focuses the TextInput.
+    view.renameTrack(kTrack);
+    selectionkey::settle();
+    const QString renameObjectName = QStringLiteral("timelineTrackHeaderRename");
+    QQuickItem *rename = quick->activeFocusItem();
+    const auto isLiveRename = [quick, &renameObjectName](const QQuickItem *item) {
+        return item && item->objectName() == renameObjectName && item->isVisible() &&
+               item->window() == quick;
+    };
+    if (!isLiveRename(rename)) {
+        const QList<QQuickItem *> candidates = root->findChildren<QQuickItem *>(renameObjectName);
+        if (candidates.size() == 1 && isLiveRename(candidates.front())) {
+            candidates.front()->forceActiveFocus(Qt::OtherFocusReason);
+            selectionkey::settle();
+            rename = quick->activeFocusItem();
+        }
+    }
+    QVERIFY2(isLiveRename(rename), "the QML track-rename TextInput did not acquire focus");
+
+    view.setGridFeel(songview::GridFeel::Straight);
+    view.setGridSelection(songview::GridSelection::musical(16));
+    QVERIFY2(deliverGridKeyEvent(quick, *narrow, false),
+             "the modified Narrow Grid chord was not accepted while rename owned focus");
+    QVERIFY2(view.gridSelection() == songview::GridSelection::musical(16),
+             "the focused rename TextInput changed the grid selection through root fallback");
+    QVERIFY2(view.grid().feel() == songview::GridFeel::Straight,
+             "the focused rename TextInput changed the grid feel through root fallback");
+    QCOMPARE(view.grid().snapTicksAt(0), uint64_t{6});
+    QTest::keyClick(quick, Qt::Key_Escape);
+    selectionkey::settle();
 }
 
 void SelectionKeyCoreTest::selectAllFromEmptySelection()

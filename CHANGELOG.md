@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Route note keyboard commands by selection across timeline drawers, while text editors and keyboard-focused grips and scrollbars retain their local keys.
 - Render the main timeline and piano-roll scrollbars in the existing Qt Quick scene, using the shared scrollbar control and the camera's fractional scroll positions.
 - Resonance suppression now uses a 150 ms default attack for faster response to ringing and whistles.
+- Rework the piano roll grid into a fixed editing selection: `Ctrl+1` widens and `Ctrl+2` narrows through the exact subdivisions the song's timing supports, ending at Clock — the song's smallest supported editing step — instead of finer musical divisions it cannot represent exactly, and `Ctrl+3` toggles straight/triplet feel. Narrow and widen remain available during a note move, with subsequent movement and the drop using the new spacing.
+- Remove the Auto grid mode: zooming now changes only which guide lines are visible, never the editing resolution, and new songs open at a fixed 1/16 straight grid.
+- Draw new notes with a minimum length of one selected grid cell instead of a zoom-dependent duration, so the shortest drawable note no longer changes with zoom; changing the grid leaves existing notes untouched.
 
 ## Fixed
 - Initialize empty voicegroup fixtures before binding them in host and window lifecycle checks, preventing intermittent invalid-pointer crashes.

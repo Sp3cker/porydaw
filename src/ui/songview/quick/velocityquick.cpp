@@ -261,40 +261,50 @@ void VelocityArea::rebuildQuickTransient(songview::TimelineQuickScene &scene, co
         addSelectionReticle(scene.layer(transientLayer), m_bandRect, plot);
 }
 
-void VelocityArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
+void VelocityArea::rebuildQuickScene(songview::TimelineQuickScene &scene, bool content, bool grid)
 {
+    using namespace songview;
+    if (!content && !grid)
+        return;
+    if (content) {
+        constexpr std::array layers = {
+            TimelineQuickLayer::VelocityGutterChrome, TimelineQuickLayer::VelocityChrome,
+            TimelineQuickLayer::VelocityAxis,         TimelineQuickLayer::VelocityGrid,
+            TimelineQuickLayer::VelocityBands,        TimelineQuickLayer::VelocityStems,
+            TimelineQuickLayer::VelocityNodes,        TimelineQuickLayer::VelocityTransient,
+        };
+        for (const TimelineQuickLayer layer : layers)
+            resetLayer(scene.layer(layer));
+        ++m_diagnostics.contentBuildCount;
+    } else {
+        resetLayer(scene.layer(TimelineQuickLayer::VelocityGrid));
+    }
     if (!m_inputHost)
         return;
-    using namespace songview;
-    constexpr std::array layers = {
-        TimelineQuickLayer::VelocityGutterChrome, TimelineQuickLayer::VelocityChrome,
-        TimelineQuickLayer::VelocityAxis,         TimelineQuickLayer::VelocityGrid,
-        TimelineQuickLayer::VelocityBands,        TimelineQuickLayer::VelocityStems,
-        TimelineQuickLayer::VelocityNodes,        TimelineQuickLayer::VelocityTransient,
-    };
-    for (const TimelineQuickLayer layer : layers)
-        resetLayer(scene.layer(layer));
-    ++m_diagnostics.contentBuildCount;
     const QRectF bounds = m_inputHost->bounds();
     const QRectF plot(QPointF{}, bounds.size());
     if (plot.width() <= 0.0 || plot.height() <= 0.0) {
-        scene.setVelocityTextRecords({});
+        if (content)
+            scene.setVelocityTextRecords({});
         return;
     }
     const std::optional<songview::TimelineBandGeometry> &band =
         m_owner.timelineBandLayout().geometry(songview::TimelineBand::Velocity);
     if (!band) {
-        scene.setVelocityTextRecords({});
+        if (content)
+            scene.setVelocityTextRecords({});
         return;
     }
     const QRect gutterRect = band->gutterRect();
     const QRectF gutter(0.0, 0.0, gutterRect.width(), gutterRect.height());
     const qreal dpr = m_inputHost->devicePixelRatio();
-    const qreal separatorX = gutter.right() - lyt::singlePixel();
-    rebuildQuickChrome(scene, plot, gutter, separatorX);
-    rebuildQuickAxis(scene, gutter, separatorX);
+    if (content) {
+        const qreal separatorX = gutter.right() - lyt::singlePixel();
+        rebuildQuickChrome(scene, plot, gutter, separatorX);
+        rebuildQuickAxis(scene, gutter, separatorX);
+        rebuildQuickPsgBands(scene, plot);
+        rebuildQuickNotes(scene, plot, dpr);
+        rebuildQuickTransient(scene, plot);
+    }
     rebuildQuickGrid(scene, plot, 0, dpr);
-    rebuildQuickPsgBands(scene, plot);
-    rebuildQuickNotes(scene, plot, dpr);
-    rebuildQuickTransient(scene, plot);
 }

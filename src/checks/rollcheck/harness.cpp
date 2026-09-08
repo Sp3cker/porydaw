@@ -29,7 +29,15 @@ bool PianoRollFixture::prepare()
     QCoreApplication::processEvents();
 
     SongView &songView = view();
-    songView.setGridMinDenom(4);
+    if (songView.timeAxis().ticksPerBeat() != 24)
+        return false;
+    songView.setGridSelection(songview::GridSelection::musical(16));
+    songView.setGridFeel(songview::GridFeel::Straight);
+    if (songView.gridSelection() != songview::GridSelection::musical(16) ||
+        songView.grid().feel() != songview::GridFeel::Straight ||
+        songView.grid().snapTicksAt(0) != 6) {
+        return false;
+    }
     m_pianoRollDefaultKeyHeight = layout::fontPx(1.0);
     auto *quick =
         songView.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
@@ -145,12 +153,13 @@ bool PianoRollFixture::isOccupied(uint64_t tick, uint64_t dur, int key, bool che
     return false;
 }
 
-Cell PianoRollFixture::findFreeCell(int firstProbe, bool checkAllTracks)
+Cell PianoRollFixture::findFreeCell(int firstProbe, bool checkAllTracks, uint64_t seedDuration)
 {
     const SongView &songView = view();
     const songview::TimelineInputItem &pianoRoll = rollInput();
     const SnappedRows rows{songView, pianoRoll};
-
+    if (seedDuration == 0)
+        return {};
     for (int key = 115; key >= 24; --key) {
         const qreal top = rows.top(key);
         const qreal bottom = rows.bottom(key);
@@ -159,22 +168,21 @@ Cell PianoRollFixture::findFreeCell(int firstProbe, bool checkAllTracks)
         for (int probe = firstProbe; probe < int(pianoRoll.bounds().width()) - 40; probe += 24) {
             const uint64_t tick =
                 songView.grid().snapTickDown(songView.camera().tickAtContentX(probe));
-            const uint64_t dur = songView.grid().gridTicksAt(tick);
             const int x0 = songView.camera().contentX(double(tick));
-            const int x1 = songView.camera().contentX(double(tick + dur));
+            const int x1 = songView.camera().contentX(double(tick + seedDuration));
             const int xs =
                 songView.camera().contentX(double(tick + songView.grid().snapTicksAt(tick)));
             if (x0 < 0 || x1 - x0 < 12 || xs - x0 < 8 || x1 >= int(pianoRoll.bounds().width()))
                 continue;
-            if (isOccupied(tick, dur, key, checkAllTracks))
+            if (isOccupied(tick, seedDuration, key, checkAllTracks))
                 continue;
             const auto markerInSpan = [&](uint64_t markerTick) {
                 return markerTick != UINT64_MAX && markerTick >= tick &&
-                       markerTick <= tick + 2 * dur;
+                       markerTick <= tick + 2 * seedDuration;
             };
             if (markerInSpan(timeline().loopStartTick) || markerInSpan(timeline().loopEndTick))
                 continue;
-            return {tick, dur, key, QPoint((x0 + xs) / 2, rows.centerY(key))};
+            return {tick, seedDuration, key, QPoint((x0 + xs) / 2, rows.centerY(key))};
         }
     }
     return {};
@@ -182,7 +190,7 @@ Cell PianoRollFixture::findFreeCell(int firstProbe, bool checkAllTracks)
 
 std::optional<PencilPaintingFixture> makePaintingSeed(PianoRollFixture &fixture)
 {
-    const Cell cell = fixture.findFreeCell(40, true);
+    const Cell cell = fixture.findFreeCell(40, true, 12);
     if (cell.key < 0)
         return std::nullopt;
     fixture.document().addNote(fixture.track(), cell.tick, uint8_t(cell.key), uint32_t(cell.dur),
@@ -198,7 +206,7 @@ std::optional<PencilVelocityFixture> makeVelocitySeed(PianoRollFixture &fixture)
     const std::optional<PencilPaintingFixture> painting = makePaintingSeed(fixture);
     if (!painting)
         return std::nullopt;
-    const Cell cell = fixture.findFreeCell(64, true);
+    const Cell cell = fixture.findFreeCell(64, true, 12);
     if (cell.key < 0)
         return std::nullopt;
     fixture.document().addNote(fixture.track(), cell.tick, uint8_t(cell.key), uint32_t(cell.dur),
@@ -211,7 +219,7 @@ std::optional<PencilVelocityFixture> makeVelocitySeed(PianoRollFixture &fixture)
 
 std::optional<ResizeFixture> makeResizeSeed(PianoRollFixture &fixture)
 {
-    const Cell cell = fixture.findFreeCell(88, true);
+    const Cell cell = fixture.findFreeCell(88, true, 12);
     if (cell.key < 0)
         return std::nullopt;
     fixture.document().addNote(fixture.track(), cell.tick, uint8_t(cell.key), uint32_t(cell.dur),
@@ -219,7 +227,7 @@ std::optional<ResizeFixture> makeResizeSeed(PianoRollFixture &fixture)
     DocNote note;
     if (!fixture.document().findNote(fixture.track(), cell.tick, uint8_t(cell.key), &note))
         return std::nullopt;
-    return ResizeFixture{cell, fixture.view().grid().snapTicksAt(cell.tick)};
+    return ResizeFixture{cell, 6};
 }
 
 qreal SnappedRows::dpr() const

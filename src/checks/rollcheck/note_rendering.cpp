@@ -44,7 +44,6 @@ void PianoRollTest::tinyNoteBorderRaster()
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
-    const SnappedRows rows{view, roll};
     const auto plotToBandX = [pianoKeyboardWidth](qreal x) {
         return qreal(pianoKeyboardWidth) + x;
     };
@@ -53,10 +52,7 @@ void PianoRollTest::tinyNoteBorderRaster()
     const qreal noteLeftX = view.camera().displayX(double(noteA.tick), 0, displayDpr);
     const qreal noteRightX =
         view.camera().displayX(double(noteA.tick + noteA.duration), 0, displayDpr);
-    const QRectF paintedNoteBox = rows.noteBox(rows.noteRect(noteLeftX, noteRightX, noteA.key));
     const QColor expectedNoteColor = SongView::noteColor(track, 100);
-    const qreal abuttingRightX =
-        view.camera().displayX(double(noteA.tick + 2 * noteA.duration), 0, displayDpr);
     const auto isBlackBorder = [](QRgb pixel) {
         return qRed(pixel) <= 16 && qGreen(pixel) <= 16 && qBlue(pixel) <= 16;
     };
@@ -72,10 +68,9 @@ void PianoRollTest::tinyNoteBorderRaster()
         tinyView.scrollY =
             std::max(0.0, (127.5 - double(noteA.key)) * tinyView.keyHeight - roll.height() / 2.0);
         view.applyViewState(tinyView);
-        doc.addNote(track, noteA.tick + noteA.duration, noteA.key, noteA.duration, 100);
         const SnappedRows tinyRows{view, roll};
         const QRectF tinyBox =
-            tinyRows.noteBox(tinyRows.noteRect(noteRightX, abuttingRightX, noteA.key));
+            tinyRows.noteBox(tinyRows.noteRect(noteLeftX, noteRightX, noteA.key));
         const QImage tinyImage = check.captureQuickFramebuffer();
         const qreal tinyDpr = tinyImage.devicePixelRatio();
         const auto toTinyPixel = [tinyDpr](qreal position) { return qRound(position * tinyDpr); };
@@ -200,9 +195,9 @@ void PianoRollTest::selectedNoteFrameRaster()
         if (QColor(unselectedNoteImage.pixel(centerPixelX, bottomPixel)) == expectedNoteColor) {
             QFAIL("unselected note face appears below its black bottom border");
         }
-        view.selectionModel().setNoteSelection(selectedNotes);
 
         view.applyViewState(originalView);
+        view.selectionModel().setNoteSelection(selectedNotes);
         QCoreApplication::processEvents();
     }
 

@@ -599,41 +599,11 @@ PitchBendGraph::Sampling PitchBendGraph::gestureSampling() const
     return isLineGesture() ? Sampling::Fine : Sampling::Normal;
 }
 
-uint64_t PitchBendGraph::normalCellTicksAt(uint64_t tick) const
-{
-    if (!m_grid)
-        return 1;
-    const uint64_t span = std::max<uint64_t>(1, m_endTick - m_startTick);
-    const double pixelsPerTick = double(canvasRect().width() - 1) / double(span);
-    return m_grid->gridTicksAtScale(tick, pixelsPerTick);
-}
-
-uint64_t PitchBendGraph::samplingCellTicksAt(uint64_t tick, Sampling sampling) const
-{
-    return sampling == Sampling::Fine ? (m_grid ? m_grid->fineGridTicks() : 1)
-                                      : normalCellTicksAt(tick);
-}
-
 uint64_t PitchBendGraph::nextSampleTick(uint64_t tick, Sampling sampling) const
 {
-    if (tick >= m_endTick)
-        return m_endTick;
-    const uint64_t cell = samplingCellTicksAt(tick, sampling);
-    uint64_t segmentEnd = m_endTick;
-    const uint64_t anchor =
-        sampling == Sampling::Fine ? 0 : (m_grid ? m_grid->segmentAt(tick).start : 0);
-    if (sampling == Sampling::Normal && m_grid)
-        segmentEnd = std::min(m_endTick, m_grid->segmentAt(tick).next);
-    const uint64_t offset = tick > anchor ? tick - anchor : 0;
-    const uint64_t quotient = offset / cell;
-    if (quotient >= UINT64_MAX / cell)
-        return segmentEnd;
-    const uint64_t aligned = anchor + (quotient + 1) * cell;
-    if (aligned > tick)
-        return std::min(aligned, segmentEnd);
-    if (tick == UINT64_MAX)
-        return segmentEnd;
-    return std::min(tick + 1, segmentEnd);
+    if (!m_grid)
+        return tick >= m_endTick ? m_endTick : std::min(tick + 1, m_endTick);
+    return m_grid->nextEditingTick(tick, m_endTick, sampling == Sampling::Fine);
 }
 
 uint64_t PitchBendGraph::lastEditableTick(Sampling sampling) const
@@ -641,11 +611,8 @@ uint64_t PitchBendGraph::lastEditableTick(Sampling sampling) const
     if (m_endTick <= m_startTick + 1)
         return m_startTick;
     const uint64_t lastRaw = m_endTick - 1;
-    const uint64_t cell = samplingCellTicksAt(lastRaw, sampling);
-    const uint64_t anchor =
-        sampling == Sampling::Fine ? 0 : (m_grid ? m_grid->segmentAt(lastRaw).start : 0);
-    const uint64_t tick =
-        lastRaw < anchor ? m_startTick : anchor + ((lastRaw - anchor) / cell) * cell;
+    const bool fine = sampling == Sampling::Fine;
+    const uint64_t tick = m_grid ? m_grid->snapTickDown(double(lastRaw), fine) : lastRaw;
     return std::clamp(tick, m_startTick, lastRaw);
 }
 uint64_t PitchBendGraph::tickAtFraction(double fraction, Sampling sampling) const
@@ -655,21 +622,11 @@ uint64_t PitchBendGraph::tickAtFraction(double fraction, Sampling sampling) cons
     if (fraction >= 1.0)
         return lastEditableTick(sampling);
     const double raw = double(m_startTick) + fraction * double(m_endTick - m_startTick);
-    const uint64_t rawTick =
-        std::clamp<uint64_t>(uint64_t(std::max(0.0, std::round(raw))), m_startTick, m_endTick);
-    const uint64_t cell = samplingCellTicksAt(rawTick, sampling);
-    const uint64_t anchor =
-        sampling == Sampling::Fine ? 0 : (m_grid ? m_grid->segmentAt(rawTick).start : 0);
-    const double snapped =
-        double(anchor) + std::round((raw - double(anchor)) / double(cell)) * cell;
-    if (snapped <= double(m_startTick))
+    const uint64_t snapped = m_grid ? m_grid->snapTick(raw, sampling == Sampling::Fine)
+                                    : uint64_t(std::max(0.0, std::round(raw)));
+    if (snapped <= m_startTick)
         return m_startTick;
-    if (sampling == Sampling::Normal && m_grid) {
-        const uint64_t segmentEnd = std::min(m_endTick, m_grid->segmentAt(rawTick).next);
-        if (snapped >= double(segmentEnd) && segmentEnd < m_endTick)
-            return segmentEnd;
-    }
-    return std::min<uint64_t>(uint64_t(snapped), lastEditableTick(sampling));
+    return std::min(snapped, lastEditableTick(sampling));
 }
 
 uint64_t PitchBendGraph::tickAtX(qreal x, Sampling sampling) const

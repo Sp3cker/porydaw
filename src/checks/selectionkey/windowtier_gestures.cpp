@@ -213,6 +213,8 @@ void SelectionWindowTierTest::resizeDragProtectsSelectedNotes()
                             .arg(actualHeightAfterDrag)
                             .arg(resizeGestureActive ? QStringLiteral("yes") : QStringLiteral("no"))
                             .arg(quickFocusState(quick))));
+    QVERIFY2(selectionkey::guardedGridCommandsLeaveStateUnchanged(quickWindow, view),
+             "a Timeline grid command mutated selection or feel during a live resize drag");
     QVERIFY2(document.smf().write() == beforeGrip && selectionKept(),
              "the live resize drag mutated the document or dropped the selection");
     selectionkey::deliverKey(quickWindow, nudge->key(), nudge->keyboardModifiers());
@@ -331,6 +333,8 @@ void SelectionWindowTierTest::scrollbarThumbDragProtectsSelectedNotes()
     if (!dragLive)
         releaseAt(thumbDragPoint);
     QVERIFY2(dragLive, "the pressed scrollbar thumb did not begin a live drag");
+    QVERIFY2(selectionkey::guardedGridCommandsLeaveStateUnchanged(quickWindow, view),
+             "a Timeline grid command mutated selection or feel during a live scrollbar drag");
     QVERIFY2(document.smf().write() == beforeThumb && selectionKept(),
              "the live scrollbar drag mutated the document or dropped the selection");
     selectionkey::deliverKey(quickWindow, nudge->key(), nudge->keyboardModifiers());

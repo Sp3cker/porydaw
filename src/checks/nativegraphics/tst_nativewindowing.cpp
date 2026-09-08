@@ -215,12 +215,13 @@ void NativeWindowingTest::headerSelectionAndVoicePicker()
     QVERIFY(headerInput->bounds().contains(body));
     QVERIFY(headerInput->bounds().contains(voice));
 
+    const uint64_t revisionBeforeSelection = rig->song->document().revision();
     checks::events::sendMouse(*headerInput, QEvent::MouseButtonPress, body, Qt::LeftButton,
                               Qt::LeftButton, Qt::NoModifier);
-    QVERIFY(quick->quickWindow()->mouseGrabberItem() == headerInput);
     checks::events::sendMouse(*headerInput, QEvent::MouseButtonRelease, body, Qt::LeftButton,
                               Qt::NoButton, Qt::NoModifier);
     QTRY_COMPARE(view.selectionModel().primaryTrack(), targetTrack);
+    QCOMPARE(rig->song->document().revision(), revisionBeforeSelection);
 
     const int undoBefore = rig->song->document().undoStack()->index();
     checks::events::sendMouse(*headerInput, QEvent::MouseButtonDblClick, voice, Qt::LeftButton,

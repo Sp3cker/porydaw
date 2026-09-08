@@ -6,24 +6,23 @@
 #include "checks/rollcheck/tst_pianoroll.h"
 
 #include "checks/quickpopupguard.h"
+#include "checks/rollcheck/rollcheck.h"
 #include "checks/support/asyncwait.h"
-#include "checks/support/editorrig.h"
-#include "checks/support/songfixture.h"
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timeaxis.h"
 #include "ui/songview/timeruler.h"
 
 #include <QByteArray>
 #include <QCoreApplication>
-#include <QKeySequence>
+
 #include <QPoint>
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
-#include <QSize>
 #include <QString>
 #include <QtGlobal>
 #include <QtTest>
@@ -38,20 +37,17 @@ namespace {
 constexpr double kSampleRate = 48000.0;
 
 struct TimeSignatureFixture final {
-    std::unique_ptr<checks::LoadedSong> song;
-    std::unique_ptr<checks::EditorRig> rig;
+    checks::rollcheck::PianoRollFixture *outer = nullptr;
     QPointer<songview::TimelineInputItem> rulerInput;
     uint64_t signatureTick = 0;
 
-    static std::unique_ptr<TimeSignatureFixture> create(const QString &projectRoot,
-                                                        const QString &songLabel, QString &error)
+    static std::unique_ptr<TimeSignatureFixture>
+    create(checks::rollcheck::PianoRollFixture &existing, QString &error)
     {
         auto fixture = std::make_unique<TimeSignatureFixture>();
-        fixture->song = checks::LoadedSong::load(projectRoot, songLabel, error);
-        if (!fixture->song)
-            return nullptr;
+        fixture->outer = &existing;
 
-        SongDocument &document = fixture->song->document();
+        SongDocument &document = fixture->outer->document();
         const uint64_t ticksPerBeat = document.ticksPerClock();
         if (ticksPerBeat == 0) {
             error = QStringLiteral("the loaded song has no tick resolution");
@@ -59,28 +55,51 @@ struct TimeSignatureFixture final {
         }
         fixture->signatureTick = ticksPerBeat * 4;
         document.setTimeSig(fixture->signatureTick, 3, 2);
+        QCoreApplication::processEvents();
 
-        checks::EditorRigConfig config;
-        config.viewSize = QSize(1280, 800);
-        config.timeZoom = 96.0;
-        config.show = true;
-        fixture->rig = checks::EditorRig::create(document, config, error);
-        if (!fixture->rig)
-            return nullptr;
-
-        QQuickItem *const root = fixture->rig->quickRoot();
+        SongView &view = fixture->outer->view();
+        auto *quick =
+            view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+        QQuickItem *const root = quick ? quick->rootObject() : nullptr;
         fixture->rulerInput = root ? root->findChild<songview::TimelineInputItem *>(
                                          QLatin1String("timelineRulerInput"))
                                    : nullptr;
         if (!fixture->rulerInput) {
-            error = QStringLiteral("the editor rig has no ruler Quick input");
+            error = QStringLiteral("the song view has no ruler Quick input");
+            return nullptr;
+        }
+        // Local Quick focus is sufficient: pointer and key input route through
+        // the scene once the ruler input owns active focus. Never depend on
+        // OS-global host or window activation here; late in a full rollcheck
+        // run the host can no longer become globally active.
+        QQuickWindow *const window = fixture->rulerInput->window();
+        if (!window) {
+            error = QStringLiteral("the song view has no ruler Quick window");
+            return nullptr;
+        }
+        if (!QTest::qWaitFor([window] { return window->isVisible() && window->isExposed(); })) {
+            error = QStringLiteral("the song view Quick window never exposed");
+            return nullptr;
+        }
+        // Re-force while waiting: the first show in a process can still settle
+        // window activation or initial scene focus after this call, which
+        // clears the forced item. This stays strictly local: no host or window
+        // activation, just the ruler input owning scene focus.
+        bool focused = false;
+        for (int attempt = 0; attempt < 100 && !focused; ++attempt) {
+            fixture->rulerInput->forceActiveFocus(Qt::OtherFocusReason);
+            focused =
+                QTest::qWaitFor([&fixture] { return fixture->rulerInput->hasActiveFocus(); }, 50);
+        }
+        if (!focused) {
+            error = QStringLiteral("the ruler Quick input never took local focus");
             return nullptr;
         }
         return fixture;
     }
 
-    SongDocument &document() const noexcept { return song->document(); }
-    SongView &view() const noexcept { return rig->view(); }
+    SongDocument &document() const noexcept { return outer->document(); }
+    SongView &view() const noexcept { return outer->view(); }
 
     QPoint rulerPoint(uint64_t tick) const
     {
@@ -112,14 +131,27 @@ TimeSignaturePromptSession openedPrompt(SongView &view)
     }
     session.popup = live;
     session.window = live->window();
-    if (checks::async_wait::waitUntil([] { return true; },
-                                      [&session] {
-                                          return quick_popup::inputHasActiveFocus(
-                                              *session.window,
-                                              QLatin1String("timeSignatureNumerator"));
-                                      },
-                                      5000, 10) != checks::async_wait::Result::Ready) {
-        session.diagnostic = QStringLiteral("the time-signature numerator did not take focus");
+    if (checks::async_wait::waitUntil(
+            [] { return true; },
+            [&session] {
+                if (!quick_popup::inputHasActiveFocus(*session.window,
+                                                      QLatin1String("timeSignatureNumerator")))
+                    return false;
+                QQuickItem *const numerator = quick_popup::promptItem(
+                    *session.popup, QLatin1String("timeSignatureNumerator"));
+                if (!numerator)
+                    return false;
+                const QString text = numerator->property("text").toString();
+                return !text.isEmpty() && numerator->property("selectedText").toString() == text;
+            },
+            5000, 10) != checks::async_wait::Result::Ready) {
+        if (!quick_popup::inputHasActiveFocus(*session.window,
+                                              QLatin1String("timeSignatureNumerator"))) {
+            session.diagnostic = QStringLiteral("the time-signature numerator did not take focus");
+        } else {
+            session.diagnostic =
+                QStringLiteral("the time-signature numerator did not select its initial text");
+        }
         return session;
     }
     session.diagnostic.clear();
@@ -209,13 +241,21 @@ bool chooseDenominator(songview::QuickPopupSession &popup, int denominatorPow2)
     return false;
 }
 
+QQuickItem *draftNumerator(songview::QuickPopupSession &popup, const QString &text)
+{
+    QQuickItem *const numerator =
+        quick_popup::promptItem(popup, QLatin1String("timeSignatureNumerator"));
+    if (numerator)
+        numerator->setProperty("text", text);
+    return numerator;
+}
+
 } // namespace
 
 void PianoRollTest::timeSignaturePromptAcceptUndoGrid()
 {
     QString error;
-    std::unique_ptr<TimeSignatureFixture> fixture =
-        TimeSignatureFixture::create(m_project->root(), m_songLabel, error);
+    std::unique_ptr<TimeSignatureFixture> fixture = TimeSignatureFixture::create(*m_fixture, error);
     QVERIFY2(fixture, qPrintable(error));
     SongDocument &document = fixture->document();
     const quick_popup::PromptGuard guard(fixture->view());
@@ -226,13 +266,9 @@ void PianoRollTest::timeSignaturePromptAcceptUndoGrid()
 
     const TimeSignaturePromptSession opened = openFromChip(*fixture);
     QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic));
-    QQuickItem *const numerator =
-        quick_popup::promptItem(*opened.popup, QLatin1String("timeSignatureNumerator"));
+    QQuickItem *const numerator = draftNumerator(*opened.popup, QStringLiteral("7"));
     QVERIFY2(numerator, "the time-signature prompt has no numerator input");
-
-    QTest::keySequence(opened.window, QKeySequence(Qt::Key_7));
-    QCoreApplication::processEvents();
-    QCOMPARE(numerator->property("text").toString(), QStringLiteral("7"));
+    QTRY_COMPARE(numerator->property("text").toString(), QStringLiteral("7"));
     QVERIFY2(chooseDenominator(*opened.popup, 3), "the time-signature prompt has no 8 button");
     // The denominator now owns focus; Enter must commit the displayed 7/8,
     // not merely re-select the focused denominator.
@@ -286,8 +322,7 @@ void PianoRollTest::timeSignaturePromptAcceptUndoGrid()
 void PianoRollTest::timeSignaturePromptCancelStale()
 {
     QString error;
-    std::unique_ptr<TimeSignatureFixture> fixture =
-        TimeSignatureFixture::create(m_project->root(), m_songLabel, error);
+    std::unique_ptr<TimeSignatureFixture> fixture = TimeSignatureFixture::create(*m_fixture, error);
     QVERIFY2(fixture, qPrintable(error));
     SongDocument &document = fixture->document();
     const quick_popup::PromptGuard guard(fixture->view());
@@ -298,7 +333,9 @@ void PianoRollTest::timeSignaturePromptCancelStale()
 
     const TimeSignaturePromptSession cancelled = openFromChip(*fixture);
     QVERIFY2(cancelled.window && cancelled.popup, qUtf8Printable(cancelled.diagnostic));
-    QTest::keySequence(cancelled.window, QKeySequence(Qt::Key_7));
+    QQuickItem *const cancelledNumerator = draftNumerator(*cancelled.popup, QStringLiteral("7"));
+    QVERIFY2(cancelledNumerator, "the time-signature prompt has no numerator input");
+    QTRY_COMPARE(cancelledNumerator->property("text").toString(), QStringLiteral("7"));
     QVERIFY2(quick_popup::clickPromptButton(*cancelled.popup, QLatin1String("timeSignatureCancel")),
              "the time-signature prompt has no Cancel button");
     QCoreApplication::processEvents();
@@ -313,7 +350,9 @@ void PianoRollTest::timeSignaturePromptCancelStale()
     // An invalid numerator must leave the prompt open and the song untouched.
     const TimeSignaturePromptSession invalid = openFromChip(*fixture);
     QVERIFY2(invalid.window && invalid.popup, qUtf8Printable(invalid.diagnostic));
-    QTest::keySequence(invalid.window, QKeySequence(Qt::Key_9, Qt::Key_9, Qt::Key_9));
+    QQuickItem *const invalidNumerator = draftNumerator(*invalid.popup, QStringLiteral("999"));
+    QVERIFY2(invalidNumerator, "the time-signature prompt has no numerator input");
+    QTRY_COMPARE(invalidNumerator->property("text").toString(), QStringLiteral("999"));
     QTest::keyClick(invalid.window, Qt::Key_Return);
     QCoreApplication::processEvents();
     QVERIFY2(popup && popup->isOpen() && document.smf().write() == before &&
@@ -352,8 +391,7 @@ void PianoRollTest::timeSignaturePromptMenuEntries()
 {
     QFETCH(bool, onChip);
     QString error;
-    std::unique_ptr<TimeSignatureFixture> fixture =
-        TimeSignatureFixture::create(m_project->root(), m_songLabel, error);
+    std::unique_ptr<TimeSignatureFixture> fixture = TimeSignatureFixture::create(*m_fixture, error);
     QVERIFY2(fixture, qPrintable(error));
     const quick_popup::PromptGuard guard(fixture->view());
     const TimeSignaturePromptSession opened = openFromRulerMenu(*fixture, onChip);

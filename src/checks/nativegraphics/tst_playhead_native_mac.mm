@@ -367,7 +367,7 @@ void RenderingPlayheadTest::nativeLayerLifecycle()
         if (trianglePath)
             CGPathRelease(trianglePath);
     });
-    const CGRect bodyFrame = layers.body.frame;
+    const CGRect bodyBounds = layers.body.bounds;
     const CGPoint bodyPosition = layers.body.position;
     for (int move = 1; move <= 128; ++move)
         overlay->setPlayhead(baseX + qreal(move) / 3.0, true, true);
@@ -376,7 +376,7 @@ void RenderingPlayheadTest::nativeLayerLifecycle()
     QVERIFY([layers.leftGlow.colors isEqual:colorsBeforeMoves]);
     QVERIFY(CGPathEqualToPath(static_cast<CAShapeLayer *>(layers.bodyClip.mask).path, bodyPath));
     QVERIFY(CGPathEqualToPath(layers.triangle.path, trianglePath));
-    QVERIFY(CGRectEqualToRect(layers.body.frame, bodyFrame));
+    QVERIFY(CGRectEqualToRect(layers.body.bounds, bodyBounds));
     QVERIFY(!CGPointEqualToPoint(layers.body.position, bodyPosition));
 
     CALayer *fakeQuick = [CALayer layer];

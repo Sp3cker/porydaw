@@ -2,6 +2,7 @@
 
 #include <QCoreApplication>
 #include <QImage>
+#include <QtMath>
 #include <QtTest>
 
 #include "ui/theme/themeruntime.h"
@@ -135,6 +136,58 @@ void PitchBendRasterTest::noteEdgeCursorPixmapAndArrowRestore()
     checks::events::sendMouse(m_fixture.rollInput(), QEvent::MouseMove, empty, Qt::NoButton,
                               Qt::NoButton, Qt::NoModifier);
     QCOMPARE(m_fixture.rollInput().cursor().shape(), Qt::ArrowCursor);
+}
+
+void PitchBendRasterTest::guideDensityIndependentOfEditingSelection()
+{
+    const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
+    int quarterGuides = 0;
+    int sixteenthGuides = 0;
+    int clockGuides = 0;
+    const auto countVerticalGuides = [&](int &runs) {
+        songview::PitchBendEditor *editor = m_fixture.openPopup();
+        QVERIFY(editor && editor->view());
+        songview::PitchBendGraph *graph = m_fixture.graph(QStringLiteral("pitchBendGraph"));
+        QVERIFY(graph);
+        QCoreApplication::processEvents();
+        const QImage image = editor->view()->grabWindow();
+        QVERIFY(!image.isNull());
+        const qreal dpr = image.devicePixelRatio();
+        const QRect canvas = graph->canvasRect();
+        const QPoint topLeft = graph->mapToScene(canvas.topLeft()).toPoint();
+        const int pixelY = qRound((topLeft.y() + canvas.height() * 0.25) * dpr);
+        const int edgeInset = qCeil(2.0 * dpr);
+        const int firstPixel = qRound(topLeft.x() * dpr) + edgeInset;
+        const int lastPixel =
+            qRound(graph->mapToScene(canvas.bottomRight()).toPoint().x() * dpr) - edgeInset;
+        runs = 0;
+        bool inRun = false;
+        for (int x = firstPixel; x <= lastPixel; ++x) {
+            // The translucent theme grid is composited into an opaque native
+            // framebuffer. At this clear scanline, every non-background run
+            // is a rendered vertical guide; comparing against the unblended
+            // theme grid color would only work on an uncomposited surface.
+            const bool guide = image.pixelColor(x, pixelY) != background;
+            if (guide && !inRun)
+                ++runs;
+            inRun = guide;
+        }
+        m_fixture.closePopupViaEscape();
+    };
+
+    // Popup guides are a display query driven by the popup pixel scale; the
+    // editing selection must never change their density. Counting rendered
+    // guide runs along a curve-free scanline must give the same nonzero guide
+    // count for a quarter, a sixteenth, and the Clock floor.
+    m_fixture.view().setGridSelection(songview::GridSelection::musical(4));
+    countVerticalGuides(quarterGuides);
+    m_fixture.view().setGridSelection(songview::GridSelection::musical(16));
+    countVerticalGuides(sixteenthGuides);
+    m_fixture.view().setGridSelection(songview::GridSelection::clock());
+    countVerticalGuides(clockGuides);
+    QVERIFY(quarterGuides > 0);
+    QCOMPARE(sixteenthGuides, quarterGuides);
+    QCOMPARE(clockGuides, quarterGuides);
 }
 
 int runPitchBendRasterCheck(const QStringList &qtArguments)

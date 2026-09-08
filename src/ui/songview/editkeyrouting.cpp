@@ -42,6 +42,9 @@ enum class EditCommand {
     NudgeRight,
     MuteTracks,
     SoloTracks,
+    GridNarrow,
+    GridWiden,
+    GridTriplet,
 };
 
 struct SharedBinding {
@@ -69,6 +72,9 @@ constexpr SharedBinding kSharedBindings[] = {
     {"roll.nudge_right", EditCommand::NudgeRight},
     {"roll.mute_tracks", EditCommand::MuteTracks},
     {"roll.solo_tracks", EditCommand::SoloTracks},
+    {"roll.grid_narrow", EditCommand::GridNarrow},
+    {"roll.grid_widen", EditCommand::GridWiden},
+    {"roll.grid_triplet", EditCommand::GridTriplet},
 };
 
 // The one registry pass per key event: first matching binding wins
@@ -166,9 +172,16 @@ bool SongView::handleEditKey(const songview::TimelineKeyInput &input, EditKeyOri
 
     const EditCommand command = resolveEditCommand(input);
 
+    // A note move retains its original capture and reads the selected grid on
+    // every pointer update, so its editing step may change in place. All other
+    // pointer gestures retain exclusive ownership below.
+    const bool gridSizeChangeDuringNoteMove =
+        origin == EditKeyOrigin::Timeline && m_roll->noteMoveDragActive() &&
+        (command == EditCommand::GridNarrow || command == EditCommand::GridWiden);
+
     // While a pointer gesture is live the surface is owned: recognized
     // shared commands are a consumed no-op, unknown keys are declined.
-    if (timelinePointerGestureActive())
+    if (timelinePointerGestureActive() && !gridSizeChangeDuringNoteMove)
         return command != EditCommand::None;
 
     const SelectionTarget target =
@@ -199,6 +212,24 @@ bool SongView::handleEditKey(const songview::TimelineKeyInput &input, EditKeyOri
         if (m_sharedShortcutOwner == SharedShortcutOwner::Window)
             return false;
         toggleSoloOnSelectedTracks();
+        return true;
+    case EditCommand::GridNarrow:
+        if (origin != EditKeyOrigin::Timeline)
+            return false;
+        narrowGrid();
+        return true;
+
+    case EditCommand::GridWiden:
+        if (origin != EditKeyOrigin::Timeline)
+            return false;
+        widenGrid();
+        return true;
+
+    case EditCommand::GridTriplet:
+        if (origin != EditKeyOrigin::Timeline)
+            return false;
+        if (!input.autoRepeat)
+            toggleGridFeel();
         return true;
 
     default:

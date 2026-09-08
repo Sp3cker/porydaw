@@ -223,11 +223,26 @@ bool TimeRuler::pointerDoubleClick(const TimelinePointerInput &input)
     // End the double-click's implicit grab before publishing the form. The
     // resulting PointerUngrabbed cancellation synchronously clears the old
     // ruler gesture and popup state; publishing first would cancel this form.
+    // Publication itself is deferred past this pointer dispatch: the opening
+    // double-click event would otherwise be re-delivered to the new popup
+    // underlay and cancel the form via outsidePressed in the same dispatch.
+    // The queued functor is bound to this, so destruction before delivery
+    // drops it.
     m_dragTimeSig = false;
     if (TimelineInputHost *const host = input.host ? input.host : m_inputHost)
         host->releasePointerGrab();
-    openTimeSigPrompt(sigTick, numerator, denomPow2);
-    requestQuickUpdate();
+    const QPointer<SongDocument> document(doc);
+    const uint64_t documentRevision = doc->revision();
+    QMetaObject::invokeMethod(
+        this,
+        [this, document, documentRevision, sigTick, numerator, denomPow2] {
+            if (document.isNull() || m_owner.document() != document.data() ||
+                document->revision() != documentRevision)
+                return;
+            openTimeSigPrompt(sigTick, numerator, denomPow2);
+            requestQuickUpdate();
+        },
+        Qt::QueuedConnection);
     return true;
 }
 

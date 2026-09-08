@@ -37,6 +37,7 @@
 #include "checks/selectionkey/session.h"
 #include "core/noteid.h"
 #include "core/songdocument.h"
+#include "ui/songview/grid.h"
 
 class SelectionLocalInputTierTest final : public QObject
 {
@@ -76,6 +77,15 @@ class SelectionLocalInputTierTest final : public QObject
     // honest ("text unchanged") instead of fabricating text from an arbitrary
     // nonprintable binding.
     static std::optional<QString> singleKeyText(const QKeyCombination &binding);
+
+    bool stageKnownNonterminalGrid()
+    {
+        view().setGridFeel(songview::GridFeel::Straight);
+        view().setGridSelection(songview::GridSelection::musical(16));
+        return selectionkey::sameGridCommandState(
+                   view(), {songview::GridSelection::musical(16), songview::GridFeel::Straight}) &&
+               view().grid().snapTicksAt(0) == 6;
+    }
 
     // Window-scoped shortcuts fire only while the shell is the active window;
     // modal dialogs and the pitch-bend overlay activate themselves, so the

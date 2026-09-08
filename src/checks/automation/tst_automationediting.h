@@ -17,6 +17,7 @@
 
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/songtab.h"
+#include "ui/songview/grid.h"
 #include "ui/songview/quick/timelineinputitem.h"
 
 class QAction;
@@ -53,10 +54,13 @@ class AutomationEditingTest final : public QObject
     void releaseWithoutActivationDoesNotCommit();
 
     // Pencil transaction and stroke coverage.
+    void pencilStrokeOnEmptyLaneCommitsOnce_data();
     void pencilStrokeOnEmptyLaneCommitsOnce();
     void pencilPreviewDoesNotMutateUntilRelease();
     void pencilStrokeRestoresHeldEndpointValue();
+    void pencilSingleClickOnTempoLaneRestoresDefaultTempoAtCellEnd_data();
     void pencilSingleClickOnTempoLaneRestoresDefaultTempoAtCellEnd();
+    void pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd_data();
     void pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd();
     void pencilFlatStrokeAndRedundantClickAreNoOps();
     void pencilClickOnExcursionNodeDeletesExcursion();
@@ -170,6 +174,7 @@ class AutomationEditingTest final : public QObject
     void doubleClickDeletesOnceWithoutValuePrompt();
     void sweepAndRampCommit_data();
     void sweepAndRampCommit();
+    void rampSamplesPartialTailAtSignature();
     void pencilPreviewCommits_data();
     void pencilPreviewCommits();
     void laneBandSelectsRange_data();
@@ -221,6 +226,8 @@ class AutomationEditingTest final : public QObject
     QPoint voiceWindowPoint(QPointF itemPoint) const;
     QPointF voicePoint(uint64_t tick) const;
     bool expandTempo();
+    void selectEditingGrid(songview::GridSelection selection,
+                           songview::GridFeel feel = songview::GridFeel::Straight);
     void setRowMaximumHeight(const EditorAutomationRowId &row);
     void setPencilMode(bool enabled);
     QAction *pencilModeAction() const;

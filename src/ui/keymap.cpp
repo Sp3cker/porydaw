@@ -116,6 +116,12 @@ const Def kDefs[] = {
      QKeySequence::UnknownKey, "Left"},
     {"roll.nudge_right", Context::Timeline, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Nudge Right"),
      QKeySequence::UnknownKey, "Right"},
+    {"roll.grid_narrow", Context::Timeline, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Narrow Grid"),
+     QKeySequence::UnknownKey, "Ctrl+2"},
+    {"roll.grid_widen", Context::Timeline, QT_TR_NOOP("Piano Roll"), QT_TR_NOOP("Widen Grid"),
+     QKeySequence::UnknownKey, "Ctrl+1"},
+    {"roll.grid_triplet", Context::Timeline, QT_TR_NOOP("Piano Roll"),
+     QT_TR_NOOP("Toggle Triplet Grid"), QKeySequence::UnknownKey, "Ctrl+3"},
     // Toggle the header buttons from the keyboard, over the whole
     // multi-track scope (the selected track plus Ctrl/Shift-scoped rows).
     {"roll.mute_tracks", Context::Timeline, QT_TR_NOOP("Piano Roll"),

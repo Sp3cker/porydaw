@@ -272,6 +272,9 @@ void KeymapCheckTest::routedCommandConflicts_data()
         RoutedCommand{"roll.nudge_left", false},
         RoutedCommand{"roll.nudge_right", false},
         RoutedCommand{"roll.mute_tracks", false},
+        RoutedCommand{"roll.grid_narrow", false},
+        RoutedCommand{"roll.grid_widen", false},
+        RoutedCommand{"roll.grid_triplet", false},
         RoutedCommand{"roll.solo_tracks", true},
         RoutedCommand{"edit.insert_time", true},
     };

@@ -75,8 +75,8 @@ void WorkspaceTabsTest::persistenceRestoresTabs()
         QCOMPARE(fresh.scrollY, firstCanonical.scrollY);
         QCOMPARE(fresh.selectedTrack, firstCanonical.selectedTrack);
         QCOMPARE(fresh.editCursorTick, uint64_t(0));
-        QCOMPARE(fresh.gridMinDenom, 0);
-        QVERIFY(!fresh.gridTriplet);
+        QVERIFY(fresh.gridSelection == firstCanonical.gridSelection);
+        QCOMPARE(fresh.gridTriplet, firstCanonical.gridTriplet);
         QVERIFY(!fresh.eventList);
         QVERIFY(!first->view().eventListVisible());
         QVERIFY(first->timeline());

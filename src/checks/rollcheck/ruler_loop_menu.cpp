@@ -370,8 +370,13 @@ void PianoRollTest::rulerLoopMenuStaleCancelNoWrite()
     QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
                  doc.revision() == revision,
              "dismissing the ruler menu mutated the document");
-    QTRY_VERIFY2(input->hasActiveFocus(),
-                 "dismissing the ruler menu did not return focus to the ruler band");
+    // QuickPopupSession restores its captured item only while the canvas
+    // window is active. A backgrounded check process must not demand focus
+    // stealing from another application.
+    if (opened.session->window()->isActive()) {
+        QTRY_VERIFY2(input->hasActiveFocus(),
+                     "dismissing the ruler menu did not return focus to the active ruler band");
+    }
 
     // A document revision change after the open owns stale retirement: the
     // loop-start click consumes the stale target as a silent no-op.

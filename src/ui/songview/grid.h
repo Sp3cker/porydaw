@@ -1,16 +1,33 @@
 #pragma once
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
+#include <span>
 
 #include "ui/songview/timeaxis.h"
 #include "ui/songview/timecamera.h"
 
 namespace songview {
 
-// Grid feel: which subdivision ladder the visible grid and the snap grid
-// walk. Straight fits two divisions per ladder step; triplet fits three
-// where straight fits two.
+// Grid feel controls the exact whole-note subdivision ladder used by fixed
+// editing selections. Visual guides may still adapt independently to zoom.
 enum class GridFeel : uint8_t { Straight, Triplet };
+
+struct GridSelection {
+    enum class Kind { Musical, Clock };
+
+    Kind kind = Kind::Musical;
+    uint32_t denominator = 16;
+
+    static constexpr GridSelection musical(uint32_t denominator) noexcept
+    {
+        return {Kind::Musical, denominator};
+    }
+    static constexpr GridSelection clock() noexcept { return {Kind::Clock, 0}; }
+
+    constexpr bool operator==(const GridSelection &) const noexcept = default;
+};
 
 // One painted visible-grid cell. Cells are half-open [start, end): a
 // tick exactly at an end belongs to the next cell.
@@ -19,78 +36,98 @@ struct GridCell {
     uint64_t end = 0;
 };
 
-// Pure zoom- and editor-dependent grid math for the song view: the visible
-// subdivision, the snap grid, and fine placement. It reads the camera scale
-// and the axis segments live and holds only scalar state — the grid feel,
-// the user's minimum note denominator, the document's clock floor, and the
-// two detail thresholds. No widgets, no document pointer, no notifications,
-// no allocations; the SongView host pushes state and owns every side
-// effect.
+// Pure grid math for the song view. Fixed selections determine editing
+// spacing; the camera determines visible guides only. The axis and camera are
+// stable SongView members, so Grid stores references and owns no allocations.
 class Grid final
 {
   public:
     using Segment = TimeAxis::GridSegment;
 
-    // axis and camera are stable SongView members; Grid holds references
-    // and never rebinds.
     Grid(const TimeAxis &axis, const TimeCamera &camera) noexcept;
 
     GridFeel feel() const noexcept { return m_feel; }
-    int minDenom() const noexcept { return m_minDenom; }
-    void setFeel(GridFeel feel) noexcept { m_feel = feel; }
-    // 4/8/16/32; anything else normalizes to 0.
-    static int normalizeMinDenom(int denom) noexcept;
-    void setMinDenom(int denom) noexcept; // normalizes
-    // The document's clock floor in ticks; 0 = no document (unbound).
+    GridSelection selection() const noexcept { return m_selection; }
+    // Bounded cached ladder for the current feel. It remains valid until the
+    // timing resolution or feel changes; it is empty while unbound.
+    std::span<const GridSelection> selections() const noexcept;
+    bool setSelection(GridSelection selection) noexcept;
+    // Explicit feel assignment (ruler menu, restored feel). Rebuilds the
+    // target feel's ladder and canonicalizes the current selection against
+    // it; a selection the new feel cannot represent becomes Clock. Runs no
+    // counterpart or nearest-cell heuristics — those are toggleFeel()'s.
+    bool setFeel(GridFeel feel) noexcept;
+    bool narrow() noexcept;
+    bool widen() noexcept;
+    // User counterpart command (Cmd+3): keeps the denominator when the
+    // switched ladder represents it, else takes the nearest representable
+    // cell in the expected direction (finer toward triplet, coarser toward
+    // straight), Clock as fallback. At Clock it keeps the spacing and only
+    // flips the feel preference.
+    bool toggleFeel() noexcept;
+    // Atomic programmatic assignment of the whole editing state: installs
+    // the feel, rebuilds that feel's ladder, then canonicalizes the
+    // selection against the new ladder — never against the live feel being
+    // replaced. View-state restoration and setSong defaults use this.
+    bool setState(GridSelection selection, GridFeel feel) noexcept;
+
+    // Rebuilds the ladder against the current axis with this clock floor
+    // (0 uses a one-tick floor). An unbound axis has an empty ladder and
+    // canonical Clock selection. During synchronous song replacement,
+    // setDocument may supply the incoming clock before setSong binds its
+    // axis; setSong must revalidate again before the handoff completes.
     void setTicksPerClock(uint32_t ticksPerClock) noexcept;
     void setThresholds(int timelineDetailMinimumPixelsPerBeat,
                        int automationGridMinimumCellWidth) noexcept;
 
     // Time-signature segment governing a tick (the axis's GridSegment).
-    // The grid — beats, snap positions, sub-beat lines — restarts at every
-    // signature change and scales the beat by the signature's denominator.
+    // Musical cells restart only at signature changes, never ordinary bars.
     Segment segmentAt(uint64_t tick) const;
     GridCell visibleGridCellContaining(uint64_t tick) const;
     uint64_t visibleGridTickDown(uint64_t tick) const;
     uint64_t visibleGridTickUp(uint64_t tick) const;
 
-    // Every tick-spacing accessor below returns a value >= 1 (floored at
-    // the clock base), so callers may divide by them or use them as loop
-    // strides without clamping.
-    // Zoom-adaptive subdivision selected for the grid before the retained
-    // scene suppresses sub-beat or beat lines at low detail.
-    // It is not the painted-cell spacing; use visibleGridCellContaining().
-    // The subdivision follows the governing segment's beat at the current
-    // feel, floored at the minimum and never finer than the clock base.
+    // Zoom-adaptive display-guide spacing. It deliberately ignores the fixed
+    // editing selection and retains no user-selected minimum cap.
     uint64_t gridTicksAt(uint64_t tick) const;
-    // Visible grid at an explicit pixels-per-tick scale, using the
-    // time-signature segment governing tick.
     uint64_t gridTicksAtScale(uint64_t tick, double pixelsPerTick) const;
-    // Snap grid in ticks at a position: one feel-ladder step finer than the
-    // visible grid, so edits can land halfway between drawn lines (thirds
-    // stepping from beats in triplet feel). The minimum subdivision is a
-    // display floor only — snapping steps past it too.
+
+    // Fixed editing spacing, independent of camera zoom. Clock selection and
+    // fine placement use the absolute clock lattice; musical placement is
+    // anchored at the governing signature segment.
     uint64_t snapTicksAt(uint64_t tick) const;
-    // Fine placement (Alt-drag in the lanes): the clock grid — the
-    // document's real resolution — regardless of the zoom-dependent grid.
-    // Unbound (no document), it falls back to the grid at tick 0.
     uint64_t fineGridTicks() const;
-    // Nearest / previous snap-grid position, anchored at the governing
-    // time-signature segment (fine snap stays on the absolute clock grid).
     uint64_t snapTick(double tick, bool fine = false) const;
-    uint64_t snapTickDown(double tick) const;
-    uint64_t snapTickUp(double tick) const;
+    // `fine` forces the absolute clock lattice regardless of the selection
+    // (pitch endpoint flooring); otherwise this is the selection's floor.
+    uint64_t snapTickDown(double tick, bool fine = false) const;
+    // Same contract mirrored upward: `fine` forces the absolute clock
+    // lattice; otherwise this is the selection's ceil.
+    uint64_t snapTickUp(double tick, bool fine = false) const;
+    // The first editing boundary strictly after tick, clamped to limit. It
+    // honors a signature boundary even if the fixed spacing is unchanged.
+    uint64_t nextEditingTick(uint64_t tick, uint64_t limit, bool fine = false) const;
 
   private:
-    // Both exits floor at the clock base: the result is >= 1 for any
-    // segment, so snap math may divide by it unchecked.
-    uint64_t gridTicksIn(const Segment &seg, double pixelsPerTick, bool snap = false) const;
+    static constexpr size_t kMaxSelections = 32;
+
+    uint64_t clockTicks() const noexcept;
+    uint64_t musicalTicks(GridSelection selection, GridFeel feel) const noexcept;
+    // Editing strides are always positive: the clock base floors a musical
+    // stride that a rebind could leave unrepresentable against the live axis.
+    uint64_t editingTicks() const noexcept;
+    uint64_t visualTicksIn(const Segment &seg, double pixelsPerTick) const;
+    void rebuildSelections() noexcept;
+    GridSelection canonicalSelection(GridSelection selection) const noexcept;
+    int selectionIndex(GridSelection selection) const noexcept;
 
     const TimeAxis &m_axis;
     const TimeCamera &m_camera;
     GridFeel m_feel = GridFeel::Straight;
-    int m_minDenom = 0;   // note denominator; 0 = clock-grid floor
-    uint32_t m_clock = 0; // clock floor in ticks; 0 = no document
+    GridSelection m_selection = GridSelection::clock(); // canonical Clock until the axis binds
+    uint32_t m_clock = 0;
+    std::array<GridSelection, kMaxSelections> m_selections = {};
+    size_t m_selectionCount = 0;
     int m_timelineDetailMinimumPixelsPerBeat = 0;
     int m_automationGridMinimumCellWidth = 0;
 };

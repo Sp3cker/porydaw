@@ -328,42 +328,174 @@ void PitchBendEditingTest::altDragCreatesFineGridRamp()
     QVERIFY(editor.isOpen());
 }
 
-void PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid()
+void PitchBendEditingTest::clockStrokeEndpointsMatchFineSampling()
+{
+    m_fixture.tearDown();
+    QVERIFY(m_fixture.setUp(false, false, true));
+    // A fresh MIDI stage resets the view to its musical 1/16 default after
+    // binding the 48-PPQN timeline. Select Clock only after that reset.
+    m_fixture.view().setGridSelection(songview::GridSelection::clock());
+    m_fixture.view().setGridFeel(songview::GridFeel::Straight);
+
+    // Fixture preconditions: a real 48-PPQN document under Clock has the
+    // two-tick editing floor, and the fixture note spans 48..144. Every
+    // expected tick below is a literal; no grid query supplies it.
+    QCOMPARE(m_fixture.view().grid().fineGridTicks(), uint64_t{2});
+    QCOMPARE(m_fixture.view().grid().snapTicksAt(m_fixture.note().tick), uint64_t{2});
+
+    // Off-lattice signature changes at 37 and 71; the popup span crosses the
+    // second one. Clock anchoring must ignore both instead of restarting the
+    // lattice on their odd ticks.
+    m_fixture.document().setTimeSig(37, 3, 4);
+    m_fixture.document().setTimeSig(71, 4, 4);
+
+    songview::PitchBendEditor *editorResult = popup();
+    QVERIFY(editorResult);
+    songview::PitchBendEditor &editor = *editorResult;
+    QCOMPARE(editor.endTick(), m_fixture.endTick());
+    songview::PitchBendGraph *graph = m_fixture.graph(QStringLiteral("pitchBendGraph"));
+    QVERIFY(graph);
+
+    // Aim the stroke endpoints at ticks 66 and 120 through the popup's own
+    // linear tick-to-pixel mapping (pure geometry). Interior Clock samples
+    // advance two absolute ticks 66,68,...,120; the odd signature at 71 is
+    // crossed between 70 and 72; and the committed endpoints share that same
+    // absolute lattice instead of the signature-anchored odd cells 67/121.
+    const QRect canvas = graph->canvasRect();
+    const auto strokePoint = [&](uint64_t tick, qreal yFraction) {
+        const double fraction = double(tick - m_fixture.note().tick) /
+                                double(m_fixture.endTick() - m_fixture.note().tick);
+        return QPoint(canvas.left() + qRound(fraction * double(canvas.width() - 1)),
+                      qRound(canvas.top() + canvas.height() * yFraction));
+    };
+
+    std::vector<uint64_t> expectedTicks;
+    for (uint64_t tick = 66; tick <= 120; tick += 2)
+        expectedTicks.push_back(tick);
+
+    const QByteArray before = m_fixture.smf();
+    int index = m_fixture.document().undoStack()->index();
+    std::vector<uint64_t> committedTicks;
+    std::vector<uint64_t> normalClockTicks;
+    const auto strokeAndAssert = [&](Qt::KeyboardModifiers modifiers) {
+        QVERIFY(m_fixture.stroke(*graph, strokePoint(66, 0.70), strokePoint(120, 0.30), modifiers));
+        ++index;
+        QCOMPARE(m_fixture.document().undoStack()->index(), index);
+        committedTicks.clear();
+        std::vector<int> committedValues;
+        for (const DocLanePoint &point : m_fixture.document().lanePoints(0, DOC_CC_BEND)) {
+            if (point.tick <= m_fixture.note().tick || point.tick >= m_fixture.endTick())
+                continue;
+            committedTicks.push_back(point.tick);
+            committedValues.push_back(point.value);
+        }
+        QCOMPARE(committedTicks.size(), expectedTicks.size());
+        for (size_t i = 0; i < committedTicks.size(); ++i)
+            QCOMPARE(committedTicks[i], expectedTicks[i]);
+        QCOMPARE(committedTicks.front(), uint64_t{66});
+        QCOMPARE(committedTicks.back(), uint64_t{120});
+        // The rising stroke changes value at every sample, so the two-tick
+        // spacing is actually exercised at each committed position.
+        QVERIFY(std::adjacent_find(committedValues.cbegin(), committedValues.cend(),
+                                   [](int a, int b) { return a >= b; }) == committedValues.cend());
+        if (modifiers == Qt::NoModifier)
+            normalClockTicks = committedTicks;
+        else
+            QVERIFY2(committedTicks == normalClockTicks,
+                     "Alt/fine sampling must land on the same absolute-clock "
+                     "positions as normal Clock sampling, endpoints included");
+        m_fixture.document().undoStack()->undo();
+        --index;
+        QCOMPARE(m_fixture.document().undoStack()->index(), index);
+        QCOMPARE(m_fixture.smf(), before);
+    };
+
+    strokeAndAssert(Qt::NoModifier);
+    strokeAndAssert(Qt::AltModifier);
+    QVERIFY(editor.isOpen());
+}
+
+void PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToSelectedGrid()
 {
     constexpr uint64_t start = 288;
     constexpr uint64_t duration = 384;
-    constexpr uint64_t boundary = start + duration / 2;
+    constexpr uint64_t end = start + duration;
+    // Off the six-tick lattice: the cell starting at 480 is cut short at the
+    // signature change and the 3/8 segment restarts the lattice at 482.
+    constexpr uint64_t boundary = 482;
     m_fixture.document().addNote(0, start, 61, uint32_t(duration), 100);
     m_fixture.document().setTimeSig(boundary, 8, 3);
     DocNote boundaryNote;
     QVERIFY(m_fixture.document().findNote(0, start, 61, &boundaryNote));
     m_fixture.view().selectionModel().setNoteSelection({boundaryNote.noteId});
+    // Fixture precondition, not an application-default assertion: normal
+    // sampling follows the explicit six-tick 1/16 editing selection.
+    m_fixture.view().setGridSelection(songview::GridSelection::musical(16));
+    m_fixture.view().setGridFeel(songview::GridFeel::Straight);
+    QCOMPARE(m_fixture.view().grid().snapTicksAt(start), uint64_t{6});
     m_fixture.rollInput().forceActiveFocus(Qt::OtherFocusReason);
     QTest::keyClick(&m_fixture.timelineWindow(), Qt::Key_G);
     QVERIFY(QTest::qWaitFor([this] { return m_fixture.popup() != nullptr; }));
     songview::PitchBendEditor *editor = m_fixture.popup();
     QVERIFY(editor);
-    QCOMPARE(editor->endTick(), start + duration);
+    QCOMPARE(editor->endTick(), end);
     songview::PitchBendGraph *graph = m_fixture.graph(QStringLiteral("pitchBendGraph"));
     QVERIFY(graph);
-    const QRect canvas = graph->canvasRect();
-    const double pixelsPerTick = double(canvas.width()) / double(duration);
-    QVERIFY(
-        m_fixture.stroke(*graph, canvasPoint(*graph, 0.10, 0.80), canvasPoint(*graph, 0.90, 0.20)));
-    bool before = false;
-    bool after = false;
-    for (const DocLanePoint &point : m_fixture.document().lanePoints(0, DOC_CC_BEND)) {
-        if (point.tick <= start || point.tick >= start + duration)
-            continue;
-        const songview::Grid::Segment segment = m_fixture.view().grid().segmentAt(point.tick);
-        const uint64_t cell = m_fixture.view().grid().gridTicksAtScale(point.tick, pixelsPerTick);
-        QVERIFY(cell > 0 && point.tick >= segment.start &&
-                (point.tick - segment.start) % cell == 0);
-        before |= point.tick < boundary;
-        after |= point.tick > boundary;
-    }
-    QVERIFY(before);
-    QVERIFY(after);
+
+    // Independent literal oracle: 0.25 and 0.80 of the 384-tick span sit
+    // mid-cell at every popup width, so the stroke endpoints commit at 384
+    // and 596. Interior normal sampling advances six ticks, clamps the cut
+    // cell to the signature boundary at 482, and restarts the 3/8 segment.
+    std::vector<uint64_t> expectedTicks;
+    for (uint64_t tick = 384; tick <= 480; tick += 6)
+        expectedTicks.push_back(tick);
+    expectedTicks.push_back(boundary);
+    for (uint64_t tick = 488; tick <= 596; tick += 6)
+        expectedTicks.push_back(tick);
+
+    const QByteArray before = m_fixture.smf();
+    int index = m_fixture.document().undoStack()->index();
+    const auto strokeAndAssert = [&] {
+        QVERIFY(m_fixture.stroke(*graph, canvasPoint(*graph, 0.25, 0.70),
+                                 canvasPoint(*graph, 0.80, 0.30)));
+        ++index;
+        QCOMPARE(m_fixture.document().undoStack()->index(), index);
+        std::vector<uint64_t> committedTicks;
+        std::vector<int> committedValues;
+        for (const DocLanePoint &point : m_fixture.document().lanePoints(0, DOC_CC_BEND)) {
+            if (point.tick <= start || point.tick >= end)
+                continue;
+            committedTicks.push_back(point.tick);
+            committedValues.push_back(point.value);
+        }
+        QCOMPARE(committedTicks.size(), expectedTicks.size());
+        for (size_t i = 0; i < committedTicks.size(); ++i)
+            QCOMPARE(committedTicks[i], expectedTicks[i]);
+        // Every committed sample of the ramp carries a changing value, so
+        // consecutive spacing is actually exercised at each position.
+        QVERIFY(std::adjacent_find(committedValues.cbegin(), committedValues.cend(),
+                                   [](int a, int b) { return a >= b; }) == committedValues.cend());
+        m_fixture.document().undoStack()->undo();
+        --index;
+        QCOMPARE(m_fixture.document().undoStack()->index(), index);
+        QCOMPARE(m_fixture.smf(), before);
+    };
+
+    strokeAndAssert();
+
+    // A narrower popup changes only the pixel scale; committed event
+    // resolution must not follow it. setMetrics is the production popup
+    // resize path (PitchBendEditor::refreshChrome).
+    QWidget &host = m_fixture.tab();
+    songview::PitchBendGeometry narrow = songview::PitchBendGeometry::resolve(
+        host.window()->font(), host.window()->windowHandle()->devicePixelRatio());
+    const int resolvedCanvasWidth = narrow.canvas.width();
+    QVERIFY(resolvedCanvasWidth > 0);
+    narrow.canvas.setWidth(std::max(64, resolvedCanvasWidth / 2));
+    graph->setMetrics(narrow);
+    QVERIFY(graph->canvasRect().width() < resolvedCanvasWidth);
+
+    strokeAndAssert();
 }
 
 void PitchBendEditingTest::modWheelResetZeroesLane()

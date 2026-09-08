@@ -56,7 +56,7 @@ class PianoRollFixture final
 
     const QString &songLabel() const noexcept;
     bool isOccupied(uint64_t tick, uint64_t dur, int key, bool checkAllTracks = false);
-    Cell findFreeCell(int firstProbe = 8, bool checkAllTracks = false);
+    Cell findFreeCell(int firstProbe = 8, bool checkAllTracks = false, uint64_t seedDuration = 12);
 
   private:
     SongTab &m_tab;

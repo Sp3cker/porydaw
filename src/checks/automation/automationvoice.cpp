@@ -21,12 +21,8 @@ namespace {
 constexpr uint64_t kSourceTick = 48;
 constexpr uint8_t kPanController = 10;
 constexpr uint64_t kTargetTick = 192;
-
-uint64_t snappedVoiceTick(const SongView &view, qreal x, bool fine)
-{
-    const double rawTick = view.camera().tickAtContentX(std::max<qreal>(0.0, x));
-    return view.grid().snapTick(std::max(0.0, rawTick), fine);
-}
+// Off-lattice target one clock tick beyond the six-tick boundary at 12.
+constexpr uint64_t kOffLatticeTick = 13;
 
 void writeVoicePoints(SongDocument &document,
                       const std::vector<SongDocument::LanePointValue> &points)
@@ -87,7 +83,7 @@ void AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes()
 
     const QPointF source = voicePoint(24);
     const QPointF target = voicePoint(72);
-    const uint64_t destination = snappedVoiceTick(tab().view(), target.x(), false);
+    const uint64_t destination = tab().view().grid().snapTick(72);
     QVERIFY(destination != 24);
     const auto markersBefore = scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers);
     QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
@@ -181,41 +177,71 @@ void AutomationEditingTest::voiceAltDragUsesFineSnap()
     QTRY_COMPARE(markerCountAt(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers),
                                voicePoint(kSourceTick).x()),
                  1);
+
+    // With the fixed six-tick editing grid, actual drags to the off-lattice
+    // target land on different document ticks: normal snaps to 12 and Alt
+    // keeps clock tick 13. At Clock both deliveries land on 13. Expected
+    // ticks are literals, not getter reads, and each commit undoes.
+    selectEditingGrid(songview::GridSelection::musical(16));
     const QPointF source = voicePoint(kSourceTick);
-    QPointF target;
-    uint64_t fineTick = 0;
-    uint64_t normalTick = 0;
-    for (int x = int(std::ceil(voiceChangeInput().bounds().left()));
-         x < int(std::floor(voiceChangeInput().bounds().right())); ++x) {
-        const uint64_t fine = snappedVoiceTick(tab().view(), x, true);
-        const uint64_t normal = snappedVoiceTick(tab().view(), x, false);
-        if (fine != normal && fine != kSourceTick &&
-            std::abs(qreal(x) - source.x()) >= QApplication::startDragDistance()) {
-            target = {qreal(x), voiceChangeInput().bounds().center().y()};
-            fineTick = fine;
-            normalTick = normal;
-            break;
-        }
-    }
-    QVERIFY(fineTick != normalTick);
+    // voicePoint is already device-pixel aligned. A further half-pixel offset
+    // rounds the delivered Quick event onto the tick-14 side of the clock
+    // boundary, so deliver the literal off-lattice tick itself.
+    const QPointF target = voicePoint(kOffLatticeTick);
     QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
     QSignalSpy edited(&tab(), &SongTab::edited);
     QVERIFY(documentChanged.isValid());
     QVERIFY(edited.isValid());
-    const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count(), edited.count());
+    const auto deliverDrag = [&](Qt::KeyboardModifiers modifiers) {
+        mousePress(voiceChangeInput(), Qt::LeftButton, source, modifiers);
+        mouseMove(voiceChangeInput(), target, modifiers);
+        mouseRelease(voiceChangeInput(), Qt::LeftButton, target, modifiers);
+    };
+    const auto commitAndUndoAt = [&](uint64_t tick, Qt::KeyboardModifiers modifiers) {
+        const FrozenDocumentState before =
+            frozenDocumentState(documentChanged.count(), edited.count());
+        deliverDrag(modifiers);
+        const int committedDocumentChanges = documentChanged.count();
+        const int committedEdits = edited.count();
+        const uint64_t committedRevision = tab().document().revision();
+        const int committedUndoCount = tab().document().undoStack()->count();
+        const int committedUndoIndex = tab().document().undoStack()->index();
+        const bool committedAtTarget = hasVoicePoint(tab().document(), tick, 8);
+        const bool removedAtSource = !hasVoicePoint(tab().document(), kSourceTick, 8);
+        const int committedPointCount = int(tab().document().lanePoints(0, DOC_CC_VOICE).size());
+        const bool gestureEnded = !tab().view().userGestureActive();
 
-    mousePress(voiceChangeInput(), Qt::LeftButton, source, Qt::AltModifier);
-    mouseMove(voiceChangeInput(), target, Qt::AltModifier);
-    mouseRelease(voiceChangeInput(), Qt::LeftButton, target, Qt::AltModifier);
+        bool undoApplied = false;
+        if (committedUndoIndex > before.undoIndex) {
+            undoApplied =
+                std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo());
+        }
+        const QByteArray undoneSmf = tab().document().smf().write();
+        const bool sourceRestored = hasVoicePoint(tab().document(), kSourceTick, 8);
 
-    QCOMPARE(documentChanged.count(), frozen.documentChanges + 1);
-    QCOMPARE(edited.count(), frozen.edits + 1);
-    QCOMPARE(tab().document().revision(), frozen.revision + 1);
-    QCOMPARE(tab().document().undoStack()->count(), frozen.undoCount + 1);
-    QCOMPARE(tab().document().undoStack()->index(), frozen.undoIndex + 1);
-    QVERIFY(hasVoicePoint(tab().document(), fineTick, 8));
-    QVERIFY(!hasVoicePoint(tab().document(), normalTick, 8));
-    QVERIFY(!tab().view().userGestureActive());
+        QCOMPARE(committedDocumentChanges, before.documentChanges + 1);
+        QCOMPARE(committedEdits, before.edits + 1);
+        QCOMPARE(committedRevision, before.revision + 1);
+        // Pushing after undo truncates the redo branch before appending the
+        // replacement command, so count follows the old index, not old count.
+        QCOMPARE(committedUndoCount, before.undoIndex + 1);
+        QCOMPARE(committedUndoIndex, before.undoIndex + 1);
+        QVERIFY(committedAtTarget);
+        QVERIFY(removedAtSource);
+        QCOMPARE(committedPointCount, 1);
+        QVERIFY(gestureEnded);
+        QVERIFY(undoApplied);
+        QCOMPARE(undoneSmf, before.smf);
+        QVERIFY(sourceRestored);
+    };
+
+    commitAndUndoAt(12, Qt::NoModifier);
+    commitAndUndoAt(13, Qt::AltModifier);
+
+    selectEditingGrid(songview::GridSelection::clock());
+    commitAndUndoAt(13, Qt::NoModifier);
+    commitAndUndoAt(13, Qt::AltModifier);
+
     QVERIFY(!page().canvas()->isPanning());
     QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 }
@@ -228,7 +254,7 @@ void AutomationEditingTest::voiceCollisionAndStaleRevision()
     QVERIFY(pan.valid());
     const QPointF source = voicePoint(kSourceTick);
     const QPointF target = voicePoint(kTargetTick);
-    const uint64_t destination = snappedVoiceTick(tab().view(), target.x(), false);
+    const uint64_t destination = tab().view().grid().snapTick(kTargetTick);
 
     writeVoicePoints(tab().document(), {{kSourceTick, 9}, {kTargetTick, 10}});
     songview::TimelineQuickScene *const scene = quickScene();
@@ -341,7 +367,7 @@ void AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity()
     QVERIFY(scene);
     const QPointF source = voicePoint(kSourceTick);
     const QPointF target = voicePoint(72);
-    const uint64_t destination = snappedVoiceTick(tab().view(), target.x(), false);
+    const uint64_t destination = tab().view().grid().snapTick(72);
     QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
     QSignalSpy edited(&tab(), &SongTab::edited);
     QTRY_COMPARE(markerCountAt(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers),

@@ -153,6 +153,11 @@ bool PianoRoll::gestureActive() const
            m_kbdKey >= 0;
 }
 
+bool PianoRoll::noteMoveDragActive() const noexcept
+{
+    return m_leftDrag == LeftDrag::Move;
+}
+
 void PianoRoll::cancelPitchBendPopup()
 {
     if (m_bendPopup && m_bendPopup->isOpen())

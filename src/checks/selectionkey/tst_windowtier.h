@@ -61,6 +61,9 @@ class SelectionWindowTierTest final : public QObject
     void chromeGripKeysStayLocal();
     void chromeScrollbarKeysStayLocal();
     void chromeToggleRoutesNoteArrows();
+    // A keyboard-focused Quick chrome control declines grid chords, so the
+    // TimelineCanvas root fallback must execute the semantic command once.
+    void chromeGridCommandsReachRootFallbackExactlyOnce();
     // Plan 6: live pointer gestures protect the selected notes.
     void resizeDragProtectsSelectedNotes();
     void scrollbarThumbDragProtectsSelectedNotes();

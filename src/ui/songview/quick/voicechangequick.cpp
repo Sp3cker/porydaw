@@ -53,30 +53,49 @@ void appendText(std::vector<songview::TimelineQuickTextModel::Record> &records, 
 
 } // namespace
 
-void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
+void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene, bool content,
+                                        bool grid)
 {
     using namespace songview;
-    constexpr std::array layers = {
-        TimelineQuickLayer::VoiceChangesGutterChrome, TimelineQuickLayer::VoiceChangesChrome,
-        TimelineQuickLayer::VoiceChangesGrid,         TimelineQuickLayer::VoiceChangesSpans,
-        TimelineQuickLayer::VoiceChangesMarkers,      TimelineQuickLayer::VoiceChangesTransient,
-        TimelineQuickLayer::VoiceChangesHover,
-    };
-    for (const TimelineQuickLayer layer : layers)
-        timeline_quick::resetLayer(scene.layer(layer));
-    // Reconcile text against the previous frame so panning retains QML delegates.
-    if (!m_hoverActive)
-        scene.setVoiceChangesHoverTextRecords({});
+    if (!content && !grid)
+        return;
+    if (content) {
+        constexpr std::array layers = {
+            TimelineQuickLayer::VoiceChangesGutterChrome, TimelineQuickLayer::VoiceChangesChrome,
+            TimelineQuickLayer::VoiceChangesGrid,         TimelineQuickLayer::VoiceChangesSpans,
+            TimelineQuickLayer::VoiceChangesMarkers,      TimelineQuickLayer::VoiceChangesTransient,
+            TimelineQuickLayer::VoiceChangesHover,
+        };
+        for (const TimelineQuickLayer layer : layers)
+            timeline_quick::resetLayer(scene.layer(layer));
+        // Reconcile text against the previous frame so panning retains QML delegates.
+        if (!m_hoverActive)
+            scene.setVoiceChangesHoverTextRecords({});
+    } else {
+        timeline_quick::resetLayer(scene.layer(TimelineQuickLayer::VoiceChangesGrid));
+    }
 
     const QRectF sceneBounds = bounds();
     const QRectF plot(QPointF(), sceneBounds.size());
     const QRectF gutter = gutterRect();
     if (plot.width() <= 0.0 || plot.height() <= 0.0) {
-        scene.setVoiceChangesGutterTextRecords({});
-        scene.setVoiceChangesTextRecords({});
-        scene.setVoiceChangesHoverTextRecords({});
+        if (content) {
+            scene.setVoiceChangesGutterTextRecords({});
+            scene.setVoiceChangesTextRecords({});
+            scene.setVoiceChangesHoverTextRecords({});
+        }
         return;
     }
+    SongDocument *document = m_owner.document();
+    const MidiTimeline *timeline = m_owner.timeline();
+    const QRect plotRect = plot.toRect();
+    if (document && timeline && m_engineTrack >= 0 && m_engineTrack < 16 && plotRect.width() > 0 &&
+        plotRect.height() > 0) {
+        timeline_quick::composeBandedGrid(scene, TimelineQuickLayer::VoiceChangesGrid, m_owner,
+                                          plot, 0, devicePixelRatio());
+    }
+    if (!content)
+        return;
 
     const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
     constexpr TimelineQuickLayer gutterChromeLayer = TimelineQuickLayer::VoiceChangesGutterChrome;
@@ -104,7 +123,6 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
     appendText(gutterTextRecords, kVoiceTitleTextKey, QRectF(textBoxes.primary), tr("Voice"),
                primaryText, m_titleFont, Qt::AlignLeft, Qt::AlignVCenter);
 
-    SongDocument *document = m_owner.document();
     if (document && m_engineTrack >= 0) {
         const int changeCount = int(m_voicePoints.size());
         if (m_changeCount != changeCount) {
@@ -119,7 +137,6 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
     scene.setVoiceChangesGutterTextRecords(gutterTextRecords);
 
     std::vector<TimelineQuickTextModel::Record> plotTextRecords;
-    const QRect plotRect = plot.toRect();
     if (!document) {
         appendText(plotTextRecords, kVoiceReadoutTextKey, plot, tr("Voice changes are read-only"),
                    secondaryText, m_captionFont, Qt::AlignCenter, Qt::AlignVCenter);
@@ -127,14 +144,9 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
         return;
     }
 
-    const MidiTimeline *timeline = m_owner.timeline();
     if (!timeline || m_engineTrack < 0 || m_engineTrack >= 16) {
         appendText(plotTextRecords, kVoiceReadoutTextKey, plot, tr("No track selected"),
                    secondaryText, m_captionFont, Qt::AlignCenter, Qt::AlignVCenter);
-        scene.setVoiceChangesTextRecords(plotTextRecords);
-        return;
-    }
-    if (plotRect.width() <= 0 || plotRect.height() <= 0) {
         scene.setVoiceChangesTextRecords(plotTextRecords);
         return;
     }
@@ -164,8 +176,6 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
         return VoicePaintEntry{point.tick, point.value};
     };
 
-    timeline_quick::composeBandedGrid(scene, TimelineQuickLayer::VoiceChangesGrid, m_owner, plot, 0,
-                                      dpr);
     const QColor trackColor =
         themes::trackIdentityColor(std::size_t(track % themes::trackIdentityColorCount));
     QColor heldColor = trackColor;

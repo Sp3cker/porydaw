@@ -279,8 +279,11 @@ void TrackHeadersTest::emptyTrackHeadersRejectInputWithoutMutation()
     checks::support::pumpQuick();
     auto *const model =
         emptyView.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"));
-    auto *const input = emptyView.findChild<songview::TimelineInputItem *>(
-        QStringLiteral("timelineTrackHeadersInput"));
+    songview::TimelineQuickView *const quick = emptyView.quickView();
+    QQuickItem *const root = quick ? quick->rootObject() : nullptr;
+    auto *const input = root ? root->findChild<songview::TimelineInputItem *>(
+                                   QStringLiteral("timelineTrackHeadersInput"))
+                             : nullptr;
     QVERIFY(model && input);
     QTRY_COMPARE(model->rowCount(), 0);
     QVERIFY(!model->pointerPress(pointerInput(*input, {1.0, 1.0}, Qt::LeftButton, Qt::LeftButton)));

@@ -1,10 +1,9 @@
-// Roll and automation gesture scenarios for the selection-keyboard-routing
-// Qt Test: a roll note drag and an automation middle-button pan are both
-// live surface owners — the shared Delete resolved through the live keymap
-// is a consumed no-op mid-gesture, and the first Escape cancels only the
-// gesture and restores or preserves the staged selection. The pan case keeps
-// its second idle Escape clearing the time selection; the canonical
-// note-selection idle clear lives in the velocity and window-resize cases.
+// Roll and automation gesture scenarios for the selection-keyboard-routing Qt
+// Test: grid size stays live through a roll note move while Delete and grid
+// feel remain guarded; automation range and pan gestures continue guarding
+// every Timeline grid command. Escape cancels without dropping the captured
+// selection. The canonical note-selection idle clear lives in the velocity
+// and window-resize cases.
 
 #include "checks/selectionkey/gesturecheck.h"
 
@@ -24,20 +23,39 @@
 #include <cmath>
 #include <optional>
 
-songview::EditorSelectionModel::TimeSelection SelectionKeyGestureTest::automationSelection()
+void SelectionKeyGestureTest::rollNoteMoveGridChangesStayLive_data()
 {
-    songview::EditorSelectionModel::TimeSelection selection;
-    selection.startTick = kFollowingTick;
-    selection.endTick = kFollowingTick + 24;
-    selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
-    selection.lanes = {{kTrack, kAutomationController}};
-    return selection;
+    QTest::addColumn<QString>("sizeCommand");
+    QTest::addColumn<QString>("inverseSizeCommand");
+    QTest::addColumn<uint>("expectedDenominator");
+    QTest::addColumn<qulonglong>("expectedGridTicks");
+    QTest::addColumn<qulonglong>("pointerTickDelta");
+    QTest::addColumn<qulonglong>("expectedMoveTickDelta");
+
+    QTest::newRow("narrow to three-tick snap")
+        << QStringLiteral("roll.grid_narrow") << QStringLiteral("roll.grid_widen") << uint{32}
+        << qulonglong{3} << qulonglong{9} << qulonglong{9};
+    QTest::newRow("widen to twelve-tick snap")
+        << QStringLiteral("roll.grid_widen") << QStringLiteral("roll.grid_narrow") << uint{8}
+        << qulonglong{12} << qulonglong{7} << qulonglong{12};
 }
 
-void SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands()
+void SelectionKeyGestureTest::rollNoteMoveGridChangesStayLive()
 {
+    QFETCH(QString, sizeCommand);
+    QFETCH(QString, inverseSizeCommand);
+    QFETCH(uint, expectedDenominator);
+    QFETCH(qulonglong, expectedGridTicks);
+    QFETCH(qulonglong, pointerTickDelta);
+    QFETCH(qulonglong, expectedMoveTickDelta);
+
+    const auto sizeKey = selectionkey::firstBinding(sizeCommand);
+    const auto inverseSizeKey = selectionkey::firstBinding(inverseSizeCommand);
+    const auto tripletKey = selectionkey::firstBinding(QStringLiteral("roll.grid_triplet"));
     const auto deleteKey = selectionkey::firstBinding(QStringLiteral("roll.delete"));
-    QVERIFY2(deleteKey.has_value(), "roll.delete has no single-key binding");
+    QVERIFY2(sizeKey.has_value() && inverseSizeKey.has_value() && tripletKey.has_value() &&
+                 deleteKey.has_value(),
+             "roll grid size, triplet, and Delete commands need single-key bindings");
     if (!stageWorld("roll-gesture", EditorDrawerPage::Automations, kAutomationSectionHeight))
         return;
     mRollInput = selectionkey::rigInput(*mWorld, "timelineRollInput");
@@ -45,17 +63,18 @@ void SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands()
     QVERIFY2(focusPointerSurface(mRollInput, songview::TimelineBand::Roll),
              "roll drag surface did not own live Quick and native focus");
 
-    // Reveal through the production SongView seams first (the camera mutators
-    // that wrap the shared camera state), then read camera().displayX —
-    // computing coordinates from a stale camera is what left the press
-    // missing the note. The roll hit-test reads the view model, so the
-    // fixture note must also be published there before the press.
+    view().setGridFeel(songview::GridFeel::Straight);
+    view().setGridSelection(songview::GridSelection::musical(16));
+    QVERIFY2(view().gridSelection() == songview::GridSelection::musical(16) &&
+                 view().grid().feel() == songview::GridFeel::Straight &&
+                 view().grid().snapTicksAt(0) == 6,
+             "the 24-PPQN gesture fixture did not stage the independent six-tick grid");
+
+    // Reveal through the production SongView seams first, then read camera
+    // geometry. The roll hit-test reads the published view model.
     view().ensureTickVisible(kEarlierTick);
     view().ensureKeyVisible(kEarlierKey);
     selectionkey::settle();
-    // Stage the selection before the press: the gesture captures the
-    // pre-press selection, so the cancel-restore assertion needs the same
-    // staging order as a user selecting, then dragging.
     view().selectionModel().setNoteSelection({mWorld->notes[0]});
     const NoteId routedNoteId = mWorld->notes[0];
     QTRY_VERIFY2(
@@ -67,10 +86,12 @@ void SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands()
                                });
         }(),
         "the roll view model never exposed the fixture note for the gesture");
+    const std::optional<DocNote> original = selectionkey::noteById(document(), routedNoteId);
+    QVERIFY2(original.has_value(), "the routed note vanished before the move");
 
     const qreal rollDpr = mRollInput->devicePixelRatio();
-    const qreal rollX = view().camera().displayX(
-        double(kEarlierTick) + double(kEarlierDuration) / 2.0, 0.0, rollDpr);
+    const double pressTick = double(kEarlierTick) + double(kEarlierDuration) / 2.0;
+    const qreal rollX = view().camera().displayX(pressTick, 0.0, rollDpr);
     const auto rollEdge = [&](int row) {
         return std::round((row * view().camera().keyHeight() - view().camera().scrollY()) *
                           rollDpr) /
@@ -81,20 +102,100 @@ void SelectionKeyGestureTest::rollNoteDragGuardsSharedCommands()
     QVERIFY2(mRollInput->bounds().contains(rollPoint),
              "production roll geometry did not expose the fixture note for the drag");
     const QPoint rollPress = windowPoint(*mRollInput, rollPoint);
+    const QPoint moveTarget = windowPoint(
+        *mRollInput,
+        QPointF(view().camera().displayX(pressTick + double(pointerTickDelta), 0.0, rollDpr),
+                rollY));
+    QVERIFY2(mRollInput->bounds().contains(mRollInput->mapFromScene(moveTarget)),
+             "live-grid move target is outside the production Quick input");
+
     const QByteArray rollBeforeGesture = document().smf().write();
     const uint64_t revisionBefore = document().revision();
-    const int undoDepthBefore = document().undoStack()->count();
+    const int undoCountBefore = document().undoStack()->count();
+    const int undoIndexBefore = document().undoStack()->index();
     mouseMove(rollPress);
     mousePress(Qt::LeftButton, rollPress);
     mouseMove(rollPress + QPoint(QApplication::startDragDistance() + 4, 0));
-    QTRY_VERIFY2(view().userGestureActive(), "roll note drag did not become a live gesture");
+    QTRY_VERIFY2(view().userGestureActive() && window()->mouseGrabberItem() == mRollInput,
+                 "roll note move did not retain its live native grab");
+
+    QVERIFY2(selectionkey::deliverKey(window(), sizeKey->key(), sizeKey->keyboardModifiers()),
+             "held-pointer grid size command did not reach the live roll input");
+    QVERIFY2(view().gridSelection() == songview::GridSelection::musical(expectedDenominator) &&
+                 view().grid().feel() == songview::GridFeel::Straight &&
+                 view().grid().snapTicksAt(0) == uint64_t(expectedGridTicks) &&
+                 view().userGestureActive() && window()->mouseGrabberItem() == mRollInput &&
+                 noteSelectionIs({routedNoteId}) && document().smf().write() == rollBeforeGesture,
+             "grid size delivery changed the move owner, selection, or document");
+
+    const selectionkey::GridCommandState sizedGrid = selectionkey::gridCommandState(view());
+    QVERIFY2(
+        selectionkey::deliverKey(window(), tripletKey->key(), tripletKey->keyboardModifiers()) &&
+            selectionkey::sameGridCommandState(view(), sizedGrid),
+        "triplet feel escaped the live note-move guard");
     selectionkey::deliverKey(window(), deleteKey->key(), deleteKey->keyboardModifiers());
+    QVERIFY2(document().smf().write() == rollBeforeGesture && noteSelectionIs({routedNoteId}) &&
+                 view().userGestureActive() && window()->mouseGrabberItem() == mRollInput,
+             "Delete mutated the note or disturbed its live move");
+
+    mouseMove(moveTarget);
+    QVERIFY2(view().userGestureActive() && window()->mouseGrabberItem() == mRollInput &&
+                 document().smf().write() == rollBeforeGesture,
+             "movement on the changed grid lost the grab or committed before release");
+    mouseRelease(Qt::LeftButton, moveTarget);
+
+    const std::optional<DocNote> moved = selectionkey::noteById(document(), routedNoteId);
+    QVERIFY2(moved.has_value() && moved->tick == original->tick + uint64_t(expectedMoveTickDelta) &&
+                 moved->key == original->key && moved->duration == original->duration &&
+                 moved->velocity == original->velocity && noteSelectionIs({routedNoteId}) &&
+                 !view().userGestureActive() && document().smf().write() != rollBeforeGesture &&
+                 document().revision() == revisionBefore + 1 &&
+                 document().undoStack()->count() == undoCountBefore + 1 &&
+                 document().undoStack()->index() == undoIndexBefore + 1,
+             "release did not commit the same selected note once at the literal live-grid snap");
+
+    document().undoStack()->undo();
+    selectionkey::settle();
+    const std::optional<DocNote> undone = selectionkey::noteById(document(), routedNoteId);
+    QVERIFY2(undone.has_value() && undone->tick == original->tick && undone->key == original->key &&
+                 undone->duration == original->duration && undone->velocity == original->velocity &&
+                 document().smf().write() == rollBeforeGesture && noteSelectionIs({routedNoteId}) &&
+                 document().undoStack()->index() == undoIndexBefore,
+             "one undo did not restore the original selected NoteId and document");
+
+    // Start a second native move on the restored note. The inverse size
+    // command must also stay live, while Escape cancels its changed-grid
+    // preview without a release-time commit.
+    const uint64_t cancelRevisionBefore = document().revision();
+    const int cancelUndoCountBefore = document().undoStack()->count();
+    mouseMove(rollPress);
+    mousePress(Qt::LeftButton, rollPress);
+    mouseMove(rollPress + QPoint(QApplication::startDragDistance() + 4, 0));
+    QTRY_VERIFY2(view().userGestureActive() && window()->mouseGrabberItem() == mRollInput,
+                 "cancel probe did not establish a second native note-move grab");
+    QVERIFY2(selectionkey::deliverKey(window(), inverseSizeKey->key(),
+                                      inverseSizeKey->keyboardModifiers()),
+             "inverse held-pointer grid size command did not reach the live roll input");
+    QVERIFY2(view().gridSelection() == songview::GridSelection::musical(16) &&
+                 view().grid().feel() == songview::GridFeel::Straight &&
+                 view().grid().snapTicksAt(0) == 6 && view().userGestureActive() &&
+                 window()->mouseGrabberItem() == mRollInput && noteSelectionIs({routedNoteId}),
+             "inverse grid size delivery changed the cancel probe's owner or selection");
+    mouseMove(moveTarget);
     QTest::keyClick(window(), Qt::Key_Escape);
-    mouseRelease(Qt::LeftButton, rollPress);
-    QVERIFY2(!view().userGestureActive() && document().smf().write() == rollBeforeGesture &&
-                 noteSelectionIs({mWorld->notes[0]}) && document().revision() == revisionBefore &&
-                 document().undoStack()->count() == undoDepthBefore,
-             "roll gesture did not block Delete and restore selection on Escape");
+    QVERIFY2(!view().userGestureActive() && noteSelectionIs({routedNoteId}),
+             "Escape did not cancel only the changed-grid note move");
+    mouseRelease(Qt::LeftButton, moveTarget);
+    const std::optional<DocNote> cancelled = selectionkey::noteById(document(), routedNoteId);
+    QVERIFY2(cancelled.has_value() && cancelled->tick == original->tick &&
+                 cancelled->key == original->key && cancelled->duration == original->duration &&
+                 cancelled->velocity == original->velocity &&
+                 document().smf().write() == rollBeforeGesture &&
+                 document().revision() == cancelRevisionBefore &&
+                 document().undoStack()->count() == cancelUndoCountBefore &&
+                 document().undoStack()->index() == undoIndexBefore &&
+                 noteSelectionIs({routedNoteId}),
+             "physical release after Escape committed or changed the restored note");
 }
 
 void SelectionKeyGestureTest::automationPanGuardsSharedCommands()
@@ -129,14 +230,40 @@ void SelectionKeyGestureTest::automationPanGuardsSharedCommands()
         body.center().y() - automation->verticalScroll());
     QVERIFY2(mAutomationInput->bounds().contains(automationPoint),
              "production automation geometry did not expose the gesture point");
-    view().selectionModel().setTimeSelection(automationSelection());
+    // A real right-button sweep establishes the lane time selection. The grid
+    // bindings are delivered while that drag still owns the surface, before
+    // release publishes its selection.
+    const QPoint automationPress = windowPoint(*mAutomationInput, automationPoint);
+    const QPointF rangeEndPoint =
+        automationPoint + QPointF(QApplication::startDragDistance() + 12.0, 0.0);
+    QVERIFY2(mAutomationInput->bounds().contains(rangeEndPoint),
+             "automation range endpoint is outside the production Quick input");
+    const QPoint rangeEnd = windowPoint(*mAutomationInput, rangeEndPoint);
+    const QByteArray rangeBefore = document().smf().write();
+    const uint64_t rangeRevisionBefore = document().revision();
+    const int rangeUndoDepthBefore = document().undoStack()->count();
+    mouseMove(automationPress);
+    mousePress(Qt::RightButton, automationPress);
+    mouseMove(rangeEnd);
+    QTRY_VERIFY2(view().userGestureActive(),
+                 "automation range sweep did not become a live gesture");
+    QVERIFY2(selectionkey::guardedGridCommandsLeaveStateUnchanged(window(), view()),
+             "a Timeline grid command mutated selection or feel during a live automation range");
+    mouseRelease(Qt::RightButton, rangeEnd);
+    QVERIFY2(!view().userGestureActive() && view().selectionModel().timeSelection().active() &&
+                 document().smf().write() == rangeBefore &&
+                 document().revision() == rangeRevisionBefore &&
+                 document().undoStack()->count() == rangeUndoDepthBefore,
+             "automation right-button range sweep did not publish only a time selection");
+
     const QByteArray automationBeforeGesture = document().smf().write();
     const uint64_t revisionBefore = document().revision();
     const int undoDepthBefore = document().undoStack()->count();
-    const QPoint automationPress = windowPoint(*mAutomationInput, automationPoint);
     mouseMove(automationPress);
     mousePress(Qt::MiddleButton, automationPress);
     QTRY_VERIFY2(view().userGestureActive(), "automation pan did not become a live gesture");
+    QVERIFY2(selectionkey::guardedGridCommandsLeaveStateUnchanged(window(), view()),
+             "a Timeline grid command mutated selection or feel during a live automation pan");
     selectionkey::deliverKey(window(), deleteKey->key(), deleteKey->keyboardModifiers());
     QTest::keyClick(window(), Qt::Key_Escape);
     mouseRelease(Qt::MiddleButton, automationPress);

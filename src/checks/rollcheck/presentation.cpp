@@ -93,6 +93,11 @@ void PianoRollTest::headerRename()
         QFAIL("Quick track-header model was not found");
         return;
     }
+    auto *const headerInputItem = input(view);
+    QVERIFY2(headerInputItem, "Quick track-header input was not found");
+    QVERIFY2(view.focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason),
+             "Quick track-header input could not be focused before rename");
+    QTRY_VERIFY(headerInputItem->hasActiveFocus());
     const int track = check.track();
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
@@ -162,6 +167,7 @@ void PianoRollTest::headerVoicePresentation()
     QVERIFY2(headers && headerInputItem, "Quick track-header model or input was not found");
     QVERIFY2(recordsMatchTimeline(*headers, check.timeline(), doc.canAddTrack()),
              "Quick header records did not match the current timeline");
+    int expectedVoiceEditIndex = undo;
 
     // The header voice line is live: currentProgram is the last program
     // change at or before the display position — the playhead while playing,
@@ -177,8 +183,12 @@ void PianoRollTest::headerVoicePresentation()
         // program transition, not the first-program fallback everywhere.
         if (base < 0) {
             doc.addLanePoint(track, DOC_CC_VOICE, 0, atStart);
+            ++expectedVoiceEditIndex;
+            QCOMPARE(doc.undoStack()->index(), expectedVoiceEditIndex);
         }
         doc.addLanePoint(track, DOC_CC_VOICE, vcTick, changed);
+        ++expectedVoiceEditIndex;
+        QCOMPARE(doc.undoStack()->index(), expectedVoiceEditIndex);
         if (view.currentProgram(track) != atStart)
             QFAIL("voice label at the start did not show the priming program");
         view.setEditCursorTick(vcTick);
@@ -232,6 +242,7 @@ void PianoRollTest::headerVoicePresentation()
             QFAIL("track header model record for presentation coverage was not found");
         }
     }
+    QCOMPARE(doc.undoStack()->index(), expectedVoiceEditIndex);
     while (doc.undoStack()->index() > undo)
         doc.undoStack()->undo();
     QCOMPARE(doc.smf().write(), before);

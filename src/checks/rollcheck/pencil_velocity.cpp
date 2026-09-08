@@ -1,5 +1,6 @@
 #include "checks/rollcheck/tst_pianoroll.h"
 
+#include <QApplication>
 #include <QCoreApplication>
 #include <QEvent>
 #include <QFocusEvent>
@@ -16,6 +17,7 @@
 #include "checks/rollcheck/rollcheck.h"
 #include "checks/support/eventsynth.h"
 #include "core/songdocument.h"
+#include "ui/keymap.h"
 #include "ui/songview.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/quickmenumodel.h"
@@ -332,46 +334,71 @@ void PianoRollTest::quickLifecycle()
     QVERIFY2(focused,
              "pressing the roll through the Quick window did not focus the roll input item");
     QCOMPARE(view.selectionModel().noteSelection(), std::vector<NoteId>{note.noteId});
+    auto *quick =
+        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
+    QVERIFY2(window, "no Quick window for lifecycle cancellation");
+    QVERIFY2(QTest::qWaitForWindowExposed(window),
+             "Quick window did not become exposed for lifecycle cancellation");
+
+    const Qt::KeyboardModifiers velocityDragModifiers =
+        keymap::Registry::instance().modifierBinding(QStringLiteral("roll.velocity_drag"));
+    QVERIFY2(velocityDragModifiers != Qt::NoModifier,
+             "velocity drag must have an active modifier binding");
+    const qreal dpr = rollInput.devicePixelRatio();
+    const checks::rollcheck::SnappedRows rows{view, rollInput};
+    const qreal noteLeft = view.camera().displayX(double(note.tick), 0.0, dpr);
+    const qreal noteRight = view.camera().displayX(double(note.tick + note.duration), 0.0, dpr);
+    const QRectF noteBody = rows.noteRect(noteLeft, noteRight, note.key);
+    const QPointF press = noteBody.center();
+    const bool noteInterior = press.x() > noteBody.left() && press.x() < noteBody.right() &&
+                              press.y() > noteBody.top() && press.y() < noteBody.bottom();
+    QVERIFY2(noteInterior, "velocity cancellation press must be inside the created note body");
 
     const auto cancellationLeavesNoMutation = [&](const auto &cancel) {
-        const qreal dpr = rollInput.devicePixelRatio();
-        const QPointF press(
-            view.camera().displayX(double(cell.tick) + double(cell.dur) / 2, 0.0, dpr),
-            cell.center.y());
         const uint64_t revision = doc.revision();
         const int index = doc.undoStack()->index();
         const int count = doc.undoStack()->count();
-        sendWindowMouse(view, rollInput, QEvent::MouseButtonPress, press, Qt::LeftButton,
-                        Qt::LeftButton, Qt::ControlModifier);
-        sendWindowMouse(view, rollInput, QEvent::MouseMove, press - QPointF(0, 10), Qt::NoButton,
-                        Qt::LeftButton, Qt::ControlModifier);
+        const QPoint windowPress = rollInput.mapToScene(press).toPoint();
+        const int dragDistance = QApplication::startDragDistance() + 1;
+        const QPoint windowDrag = rollInput.mapToScene(press - QPointF(0, dragDistance)).toPoint();
+        if (!checks::events::primeMouseMove(*window, rollInput, windowPress))
+            return false;
+        QTest::mousePress(window, Qt::LeftButton, velocityDragModifiers, windowPress);
+        QTest::mouseEvent(QTest::MouseMove, window, Qt::NoButton, velocityDragModifiers,
+                          windowDrag);
         QCoreApplication::processEvents();
         const auto staged = view.previewVelocity(note.noteId);
         if (!staged || *staged == note.velocity || doc.revision() != revision ||
-            doc.undoStack()->index() != index || doc.undoStack()->count() != count)
+            doc.undoStack()->index() != index || doc.undoStack()->count() != count) {
+            QTest::mouseRelease(window, Qt::LeftButton, velocityDragModifiers, windowDrag);
             return false;
-        cancel();
+        }
+        QQuickItem *const grabber = window->mouseGrabberItem();
+        if (!grabber || grabber->window() != window) {
+            QTest::mouseRelease(window, Qt::LeftButton, velocityDragModifiers, windowDrag);
+            return false;
+        }
+        cancel(*grabber);
         QCoreApplication::processEvents();
-        sendWindowMouse(view, rollInput, QEvent::MouseButtonRelease, press - QPointF(0, 10),
-                        Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+        const auto previewAfterCancel = view.previewVelocity(note.noteId);
+        QTest::mouseRelease(window, Qt::LeftButton, velocityDragModifiers, windowDrag);
         QCoreApplication::processEvents();
+        const auto previewAfterRelease = view.previewVelocity(note.noteId);
         DocNote after;
         return doc.revision() == revision && doc.undoStack()->index() == index &&
-               doc.undoStack()->count() == count && !view.previewVelocity(note.noteId) &&
-               doc.findNote(track, cell.tick, uint8_t(cell.key), &after) &&
+               doc.undoStack()->count() == count && !previewAfterCancel && !previewAfterRelease &&
+               doc.findNote(track, note.tick, note.key, &after) && after.noteId == note.noteId &&
                after.velocity == note.velocity;
     };
-    QVERIFY2(cancellationLeavesNoMutation([&] { rollInput.ungrabMouse(); }),
+    QVERIFY2(cancellationLeavesNoMutation([&](QQuickItem &grabber) { grabber.ungrabMouse(); }),
              "pointer ungrab must cancel the velocity drag without mutation");
-    QVERIFY2(cancellationLeavesNoMutation([&] {
+    QVERIFY2(cancellationLeavesNoMutation([&](QQuickItem &) {
                  QEvent deactivate(QEvent::WindowDeactivate);
-                 auto *quick = view.findChild<songview::TimelineQuickView *>(
-                     QStringLiteral("timelineQuickCanvas"));
-                 if (quick && quick->quickWindow())
-                     QCoreApplication::sendEvent(quick->quickWindow(), &deactivate);
+                 QCoreApplication::sendEvent(window, &deactivate);
              }),
              "window deactivation must cancel the velocity drag without mutation");
-    QVERIFY2(cancellationLeavesNoMutation([&] {
+    QVERIFY2(cancellationLeavesNoMutation([&](QQuickItem &) {
                  QFocusEvent focusOut(QEvent::FocusOut, Qt::OtherFocusReason);
                  QCoreApplication::sendEvent(&rollInput, &focusOut);
              }),

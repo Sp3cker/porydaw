@@ -863,6 +863,8 @@ if(PORYDAW_BUILD_CHECKS)
     if(APPLE)
         target_sources(porydaw_checks PRIVATE
             src/checks/nativegraphics/tst_playhead_native_mac.mm
+            src/checks/support/nativeapplication.h
+            src/checks/support/nativeapplication_macos.mm
         )
         set_target_properties(porydaw_checks PROPERTIES
             MACOSX_BUNDLE TRUE

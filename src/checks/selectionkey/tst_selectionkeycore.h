@@ -71,6 +71,15 @@ class SelectionKeyCoreTest final : public QObject
     void keyboardClipboardParity_data();
     void keyboardClipboardParity();
 
+    // Grid commands are delivered through the live band policy and the QML
+    // scene-root fallback; state steps prove each physical chord runs once.
+    void gridCommandsFromBandAndRootFallback();
+    void gridCommandRepeatAndBoundsAreConsumed();
+    void reboundGridCommandDeliversAndRestoresDefault();
+    // Narrow offscreen probe: an actual QML rename TextInput keeps a modified
+    // grid chord local, so it cannot leak through the root fallback.
+    void gridCommandIgnoredByRenameTextInput();
+
     // Select All works from an empty selection and replaces a track time
     // selection staged before an incidental ruler click.
     void selectAllFromEmptySelection();

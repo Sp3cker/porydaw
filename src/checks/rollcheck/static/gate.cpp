@@ -1,10 +1,12 @@
 #include "checks/rollcheck/static/tst_pianorollstatic.h"
 
 #include <QCoreApplication>
+#include <QCursor>
 #include <QEnterEvent>
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QScopeGuard>
 #include <QWheelEvent>
 #include <QWindow>
 #include <QtTest>
@@ -81,7 +83,8 @@ bool controlsMatchRuler(const GateFixture &fixture)
     const auto *ruler = fixture.ruler();
     const auto *division = fixture.divisionControl();
     const auto *feel = fixture.feelControl();
-    return ruler && division && feel && ruler->gridControlsEnabled() &&
+    return ruler && division && feel && division->isEnabled() == ruler->gridControlsEnabled() &&
+           feel->isEnabled() == ruler->gridControlsEnabled() &&
            division->property("controlText").toString() == ruler->divisionText() &&
            feel->property("controlText").toString() == ruler->feelText() &&
            division->property("controlToolTip").toString() == ruler->divisionToolTip() &&
@@ -201,8 +204,9 @@ void PianoRollStaticTest::freshTabStaysGated()
     QVERIFY(fixture.headersInput()->isEnabled());
     QCOMPARE(fixture.headersInput()->interaction(), fixture.headers());
     QVERIFY(fixture.controls()->isEnabled());
-    QVERIFY(fixture.divisionControl()->isEnabled());
-    QVERIFY(fixture.feelControl()->isEnabled());
+    QVERIFY(!fixture.divisionControl()->isEnabled());
+    QVERIFY(!fixture.feelControl()->isEnabled());
+    QVERIFY(!fixture.ruler()->gridControlsEnabled());
     QVERIFY(controlsMatchRuler(fixture));
     auto *const quick = fixture.view()->findChild<songview::TimelineQuickView *>(
         QStringLiteral("timelineQuickCanvas"));
@@ -352,6 +356,9 @@ void PianoRollStaticTest::tooltipFloatsBelowRuler_data()
 void PianoRollStaticTest::tooltipFloatsBelowRuler()
 {
     QFETCH(bool, division);
+    const QPoint originalCursorPosition = QCursor::pos();
+    const auto restoreCursor =
+        qScopeGuard([originalCursorPosition] { QCursor::setPos(originalCursorPosition); });
     GateFixture fixture;
     QString error;
     QVERIFY2(fixture.create(error), qPrintable(error));
@@ -402,6 +409,10 @@ void PianoRollStaticTest::tooltipFloatsBelowRuler()
                  : canvasRoot->mapToScene(
                        QPointF(canvasRoot->width() / 2.0, canvasRoot->height() / 2.0)))
                 .toPoint();
+        // QTest's QWindow overload injects a QPA event without moving the desktop cursor.
+        // Keep the native cursor at the same global point so Cocoa cannot reconcile the
+        // HoverHandler back to a different physical position while the event loop runs.
+        QCursor::setPos(quickWindow->mapToGlobal(windowPosition));
         if (entering) {
             if (!windowEntered) {
                 const QPointF point(windowPosition);

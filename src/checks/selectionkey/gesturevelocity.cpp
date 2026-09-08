@@ -205,6 +205,8 @@ void SelectionKeyGestureTest::velocityStemDragGuardsEdits()
     QTRY_VERIFY2(view().userGestureActive() &&
                      noteSelectionIs({mWorld->notes[0], mWorld->notes[2]}),
                  "selected velocity-stem drag did not retain its captured note selection");
+    QVERIFY2(selectionkey::guardedGridCommandsLeaveStateUnchanged(window(), view()),
+             "a Timeline grid command mutated selection or feel during a live velocity gesture");
     QTest::keyClick(window(), Qt::Key_Right);
     selectionkey::deliverKey(window(), deleteKey->key(), deleteKey->keyboardModifiers());
     QVERIFY2(document().smf().write() == velocityBeforeGesture &&

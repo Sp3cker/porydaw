@@ -1,6 +1,7 @@
 #include "checks/eventviews/eventview_fixture.h"
 #include "checks/eventviews/tst_eventviews.h"
 
+#include <QCoreApplication>
 #include <QImage>
 #include <QtTest>
 
@@ -9,7 +10,9 @@
 #include <vector>
 
 #include "core/miditimeline.h"
+#include "core/tracklimits.h"
 #include "ui/layout.h"
+#include "ui/songtab.h"
 #include "ui/songview.h"
 #include "ui/songviewmodel.h"
 
@@ -25,6 +28,17 @@ SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data
     event.data0 = data0;
     event.data1 = data1;
     return event;
+}
+
+SmfFile replacementSmf(uint16_t division, uint8_t key)
+{
+    SmfFile smf;
+    smf.format = 1;
+    smf.division = division;
+    smf.tracks.push_back(SmfTrack{{channelEvent(0, 0xc0, 0, 0), channelEvent(12, 0x90, key, 90),
+                                   channelEvent(30, 0x80, key, 0)},
+                                  120});
+    return smf;
 }
 
 void sortTrack(SmfTrack &track)
@@ -140,74 +154,373 @@ void ViewBucketsGridTest::quirkProjection()
     QCOMPARE(dropped->droppedTracks, 1);
 }
 
-void ViewBucketsGridTest::snapLadder_data()
+void ViewBucketsGridTest::fixedEditingAndAdaptiveGuides()
 {
-    QTest::addColumn<double>("pixelsPerBeat");
-    QTest::addColumn<int>("minimumDenom");
-    QTest::addColumn<int>("feel");
-    QTest::addColumn<uint64_t>("grid");
-    QTest::addColumn<uint64_t>("snap");
-    const double cell = layout::fontPx(4.0 / 3.0);
-    QTest::newRow("straight below")
-        << 4.0 * cell - 1.0 << 0 << int(songview::GridFeel::Straight) << 12ULL << 6ULL;
-    QTest::newRow("straight threshold")
-        << 4.0 * cell << 0 << int(songview::GridFeel::Straight) << 6ULL << 3ULL;
-    QTest::newRow("triplet") << 6.0 * cell << 0 << int(songview::GridFeel::Triplet) << 4ULL << 2ULL;
-    QTest::newRow("triplet eighth floor")
-        << 6.0 * cell << 8 << int(songview::GridFeel::Triplet) << 8ULL << 4ULL;
-    QTest::newRow("straight sixteenth floor")
-        << 4.0 * cell << 16 << int(songview::GridFeel::Straight) << 6ULL << 3ULL;
-    QTest::newRow("straight quarter floor")
-        << 4.0 * cell << 4 << int(songview::GridFeel::Straight) << 24ULL << 12ULL;
-}
-
-void ViewBucketsGridTest::snapLadder()
-{
-    QFETCH(double, pixelsPerBeat);
-    QFETCH(int, minimumDenom);
-    QFETCH(int, feel);
-    QFETCH(uint64_t, grid);
-    QFETCH(uint64_t, snap);
     const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
     QVERIFY2(opened, qPrintable(opened.error));
-    SongView::ViewState state = opened.fixture->view().viewState();
+    SongView &view = opened.fixture->view();
+    const double cell = layout::fontPx(4.0 / 3.0);
+
+    view.setGridFeel(songview::GridFeel::Straight);
+    view.setGridSelection(songview::GridSelection::musical(8));
+    SongView::ViewState state = view.viewState();
     state.valid = true;
-    state.pxPerBeat = pixelsPerBeat;
-    opened.fixture->view().applyViewState(state);
-    opened.fixture->view().setGridFeel(songview::GridFeel(feel));
-    opened.fixture->view().setGridMinDenom(minimumDenom);
-    QCOMPARE(opened.fixture->view().grid().gridTicksAt(0), grid);
-    QCOMPARE(opened.fixture->view().grid().snapTicksAt(0), snap);
+    state.pxPerBeat = 4.0 * cell - 1.0;
+    view.applyViewState(state);
+    QCOMPARE(view.grid().gridTicksAt(0), 12ULL);
+    QCOMPARE(view.grid().snapTicksAt(0), 12ULL);
+
+    state = view.viewState();
+    state.pxPerBeat = 4.0 * cell;
+    view.applyViewState(state);
+    QCOMPARE(view.grid().gridTicksAt(0), 6ULL);
+    QCOMPARE(view.grid().snapTicksAt(0), 12ULL);
+    QCOMPARE(view.grid().snapTickDown(6.0), 0ULL);
+    QCOMPARE(view.grid().snapTickUp(6.0), 12ULL);
+
+    view.setGridSelection(songview::GridSelection::musical(16));
+    QCOMPARE(view.grid().gridTicksAt(0), 6ULL);
+    QCOMPARE(view.grid().snapTicksAt(0), 6ULL);
+    state = view.viewState();
+    state.pxPerBeat = 4.0 * cell - 1.0;
+    view.applyViewState(state);
+    QCOMPARE(view.grid().gridTicksAt(0), 12ULL);
+    QCOMPARE(view.grid().snapTicksAt(0), 6ULL);
+    QCOMPARE(view.grid().snapTickDown(13.0), 12ULL);
+    QCOMPARE(view.grid().snapTickUp(13.0), 18ULL);
+
+    state = view.viewState();
+    state.pxPerBeat = 4.0 * cell;
+    view.applyViewState(state);
+    QCOMPARE(view.grid().snapTickDown(13.0), 12ULL);
+    QCOMPARE(view.grid().snapTickUp(13.0), 18ULL);
 }
 
-void ViewBucketsGridTest::gridLinesSnappable_data()
+void ViewBucketsGridTest::signatureSnapAnchoring()
 {
-    QTest::addColumn<int>("shape");
-    QTest::addColumn<int>("minimumDenom");
-    QTest::newRow("flat quarter grid") << int(FixtureShape::Basic) << 4;
-    QTest::newRow("mid-song signature restart") << int(FixtureShape::Signatures) << 4;
-    QTest::newRow("denominator rescale") << int(FixtureShape::Signatures) << 8;
+    const auto basic = checks::eventviews::openTabFixture(FixtureShape::Basic);
+    QVERIFY2(basic, qPrintable(basic.error));
+    basic.fixture->document().setTimeSig(0, 3, 2);
+    // Remove Basic's inherited signature so the triplet lattice stays anchored at zero until 85.
+    basic.fixture->document().deleteTimeSig(50);
+    basic.fixture->document().setTimeSig(85, 4, 2);
+    QCoreApplication::processEvents();
+    SongView &basicView = basic.fixture->view();
+    basicView.setGridFeel(songview::GridFeel::Triplet);
+    basicView.setGridSelection(songview::GridSelection::musical(4));
+    QCOMPARE(basicView.grid().snapTicksAt(0), 16ULL);
+    QCOMPARE(basicView.grid().nextEditingTick(64, 120), 80ULL);
+    QCOMPARE(basicView.grid().snapTickUp(84.0), 85ULL);
+    QCOMPARE(basicView.grid().nextEditingTick(80, 120), 85ULL);
+    QCOMPARE(basicView.grid().nextEditingTick(85, 120), 101ULL);
+
+    const auto signatures = checks::eventviews::openTabFixture(FixtureShape::Signatures);
+    QVERIFY2(signatures, qPrintable(signatures.error));
+    signatures.fixture->document().setTimeSig(37, 4, 2);
+    QCoreApplication::processEvents();
+    SongView &signatureView = signatures.fixture->view();
+    signatureView.setGridSelection(songview::GridSelection::clock());
+    QCOMPARE(signatureView.grid().snapTicksAt(37), 2ULL);
+    QCOMPARE(signatureView.grid().fineGridTicks(), 2ULL);
+    QCOMPARE(signatureView.grid().snapTickDown(37.0), 36ULL);
+    QCOMPARE(signatureView.grid().snapTickUp(37.0), 38ULL);
+    QCOMPARE(signatureView.grid().snapTick(37.0, true), 38ULL);
+    QCOMPARE(signatureView.grid().nextEditingTick(36, 50), 38ULL);
 }
 
-void ViewBucketsGridTest::gridLinesSnappable()
+void ViewBucketsGridTest::fixedGridCommandLadders()
 {
-    QFETCH(int, shape);
-    QFETCH(int, minimumDenom);
-    const auto opened = checks::eventviews::openRigFixture(FixtureShape(shape));
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
     QVERIFY2(opened, qPrintable(opened.error));
-    opened.fixture->view().setGridMinDenom(minimumDenom);
-    const MidiTimeline *timeline = opened.fixture->view().timeline();
-    QVERIFY(timeline);
-    int lines = 0;
-    std::vector<uint64_t> unsnappable;
-    opened.fixture->view().forEachGridLine(
-        0, timeline->lengthTicks, [&](uint64_t tick, bool, int, int) {
-            ++lines;
-            if (opened.fixture->view().grid().snapTick(double(tick)) != tick)
-                unsnappable.push_back(tick);
-        });
-    QVERIFY(lines > 0);
-    QCOMPARE(unsnappable.size(), size_t(0));
+    SongView &view = opened.fixture->view();
+    const songview::GridSelection straightSelections[] = {
+        songview::GridSelection::musical(4), songview::GridSelection::musical(8),
+        songview::GridSelection::musical(16), songview::GridSelection::musical(32),
+        songview::GridSelection::clock()};
+    const uint64_t straightTicks[] = {24, 12, 6, 3, 1};
+    const songview::GridSelection tripletSelections[] = {
+        songview::GridSelection::musical(4), songview::GridSelection::musical(8),
+        songview::GridSelection::musical(16), songview::GridSelection::musical(32),
+        songview::GridSelection::clock()};
+    const uint64_t tripletTicks[] = {16, 8, 4, 2, 1};
+
+    view.setGridFeel(songview::GridFeel::Straight);
+    view.setGridSelection(songview::GridSelection::musical(4));
+    for (size_t i = 0; i < std::size(straightTicks); ++i) {
+        QVERIFY(view.grid().selection() == straightSelections[i]);
+        QCOMPARE(view.grid().snapTicksAt(0), straightTicks[i]);
+        if (i + 1 < std::size(straightTicks))
+            view.narrowGrid();
+    }
+    view.narrowGrid();
+    QVERIFY(view.grid().selection() == songview::GridSelection::clock());
+    for (size_t i = std::size(straightTicks) - 1; i > 0; --i) {
+        view.widenGrid();
+        QVERIFY(view.grid().selection() == straightSelections[i - 1]);
+        QCOMPARE(view.grid().snapTicksAt(0), straightTicks[i - 1]);
+    }
+    view.widenGrid();
+    QVERIFY(view.grid().selection() == songview::GridSelection::musical(4));
+
+    view.setGridFeel(songview::GridFeel::Triplet);
+    view.setGridSelection(songview::GridSelection::musical(4));
+    for (size_t i = 0; i < std::size(tripletTicks); ++i) {
+        QVERIFY(view.grid().selection() == tripletSelections[i]);
+        QCOMPARE(view.grid().snapTicksAt(0), tripletTicks[i]);
+        if (i + 1 < std::size(tripletTicks))
+            view.narrowGrid();
+    }
+    view.narrowGrid();
+    QVERIFY(view.grid().selection() == songview::GridSelection::clock());
+    for (size_t i = std::size(tripletTicks) - 1; i > 0; --i) {
+        view.widenGrid();
+        QVERIFY(view.grid().selection() == tripletSelections[i - 1]);
+        QCOMPARE(view.grid().snapTicksAt(0), tripletTicks[i - 1]);
+    }
+    view.widenGrid();
+    QVERIFY(view.grid().selection() == songview::GridSelection::musical(4));
+
+    view.setGridFeel(songview::GridFeel::Straight);
+    view.setGridSelection(songview::GridSelection::musical(16));
+    QCOMPARE(view.grid().snapTicksAt(0), 6ULL);
+    view.toggleGridFeel();
+    QCOMPARE(view.grid().feel(), songview::GridFeel::Triplet);
+    QVERIFY(view.grid().selection() == songview::GridSelection::musical(16));
+    QCOMPARE(view.grid().snapTicksAt(0), 4ULL);
+    view.toggleGridFeel();
+    QCOMPARE(view.grid().feel(), songview::GridFeel::Straight);
+    QVERIFY(view.grid().selection() == songview::GridSelection::musical(16));
+    QCOMPARE(view.grid().snapTicksAt(0), 6ULL);
+
+    view.setGridSelection(songview::GridSelection::clock());
+    view.toggleGridFeel();
+    QCOMPARE(view.grid().feel(), songview::GridFeel::Triplet);
+    QVERIFY(view.grid().selection() == songview::GridSelection::clock());
+    QCOMPARE(view.grid().snapTicksAt(0), 1ULL);
+    view.widenGrid();
+    QVERIFY(view.grid().selection() == songview::GridSelection::musical(32));
+    QCOMPARE(view.grid().snapTicksAt(0), 2ULL);
+}
+
+void ViewBucketsGridTest::gridResolutionRevalidation()
+{
+    const auto at48 = checks::eventviews::openRigFixture(FixtureShape::Signatures);
+    QVERIFY2(at48, qPrintable(at48.error));
+    const auto at24 = checks::eventviews::openRigFixture(FixtureShape::Basic);
+    QVERIFY2(at24, qPrintable(at24.error));
+
+    songview::TimeAxis axis;
+    songview::PitchProjection projection;
+    songview::TimeCamera camera(axis, projection);
+    songview::Grid grid(axis, camera);
+    QVERIFY(grid.selections().empty());
+    QVERIFY(grid.snapTicksAt(0) > 0);
+    QVERIFY(grid.fineGridTicks() > 0);
+    QVERIFY(!grid.setSelection(songview::GridSelection::clock()));
+    QVERIFY(!grid.narrow());
+
+    axis.bind(at48.fixture->view().timeline());
+    grid.setTicksPerClock(1);
+    QVERIFY(grid.setSelection(songview::GridSelection::musical(32)));
+    QCOMPARE(grid.snapTicksAt(0), 6ULL);
+    axis.bind(at24.fixture->view().timeline());
+    grid.setTicksPerClock(1);
+    QVERIFY(grid.selection() == songview::GridSelection::musical(32));
+    QCOMPARE(grid.snapTicksAt(0), 3ULL);
+
+    axis.bind(at48.fixture->view().timeline());
+    grid.setTicksPerClock(1);
+    QVERIFY(grid.setSelection(songview::GridSelection::musical(64)));
+    QCOMPARE(grid.snapTicksAt(0), 3ULL);
+    axis.bind(at24.fixture->view().timeline());
+    grid.setTicksPerClock(1);
+    QVERIFY(grid.selection() == songview::GridSelection::clock());
+    QCOMPARE(grid.snapTicksAt(0), 1ULL);
+    grid.setFeel(songview::GridFeel::Triplet);
+    QVERIFY(!grid.setSelection(songview::GridSelection::musical(64)));
+    QVERIFY(grid.selection() == songview::GridSelection::clock());
+}
+
+void ViewBucketsGridTest::viewStateRestorationAcrossLiveFeel()
+{
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Signatures);
+    QVERIFY2(opened, qPrintable(opened.error));
+    SongView &view = opened.fixture->view();
+
+    view.toggleGridFeel();
+    view.setGridSelection(songview::GridSelection::musical(4));
+    QCOMPARE(view.grid().feel(), songview::GridFeel::Triplet);
+    QCOMPARE(view.grid().snapTicksAt(0), 32ULL);
+
+    // At 48 PPQN with the normal two-tick Clock floor, straight 1/64 is a
+    // valid three-tick saved cell, although its triplet counterpart collapses
+    // to Clock. Restoration must canonicalize against the saved feel, not the
+    // live Triplet ladder.
+    SongView::ViewState saved = view.viewState();
+    saved.gridSelection = songview::GridSelection::musical(64);
+    saved.gridTriplet = false;
+    view.applyViewState(saved);
+    QVERIFY(view.gridSelection() == songview::GridSelection::musical(64));
+    QCOMPARE(view.grid().feel(), songview::GridFeel::Straight);
+    QCOMPARE(view.grid().fineGridTicks(), 2ULL);
+    QCOMPARE(view.grid().snapTicksAt(0), 3ULL);
+    QCOMPARE(view.grid().snapTickUp(1.0), 3ULL);
+    // Musical midpoint ties remain lower while Clock/fine midpoint ties are
+    // rounded upward (the latter is covered by signatureSnapAnchoring).
+    QCOMPARE(view.grid().snapTick(1.5), 0ULL);
+
+    const SongView::ViewState recaptured = view.viewState();
+    QVERIFY(recaptured.gridSelection == songview::GridSelection::musical(64));
+    QVERIFY(!recaptured.gridTriplet);
+    view.applyViewState(recaptured);
+    QVERIFY(view.gridSelection() == songview::GridSelection::musical(64));
+    QCOMPARE(view.grid().snapTicksAt(0), 3ULL);
+}
+
+void ViewBucketsGridTest::atomicGridStateAssignment()
+{
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Signatures);
+    QVERIFY2(opened, qPrintable(opened.error));
+
+    songview::TimeAxis axis;
+    songview::PitchProjection projection;
+    songview::TimeCamera camera(axis, projection);
+    songview::Grid grid(axis, camera);
+
+    // An empty ladder cannot retain an unvalidated musical request. The feel
+    // itself remains an assignable preference before document binding.
+    (void)grid.setState(songview::GridSelection::musical(64), songview::GridFeel::Straight);
+    QVERIFY(grid.selections().empty());
+    QVERIFY(grid.selection() == songview::GridSelection::clock());
+    QCOMPARE(grid.feel(), songview::GridFeel::Straight);
+    QVERIFY(!grid.setState(songview::GridSelection::musical(64), songview::GridFeel::Straight));
+    QVERIFY(grid.setState(songview::GridSelection::musical(64), songview::GridFeel::Triplet));
+    QVERIFY(grid.selection() == songview::GridSelection::clock());
+    QCOMPARE(grid.feel(), songview::GridFeel::Triplet);
+
+    axis.bind(opened.fixture->view().timeline());
+    grid.setTicksPerClock(2);
+    QVERIFY(grid.setSelection(songview::GridSelection::musical(4)));
+    QCOMPARE(grid.snapTicksAt(0), 32ULL);
+
+    // Atomic programmatic assignment installs Straight and rebuilds that
+    // ladder before canonicalizing 1/64, preserving its three-tick cell.
+    QVERIFY(grid.setState(songview::GridSelection::musical(64), songview::GridFeel::Straight));
+    QCOMPARE(grid.feel(), songview::GridFeel::Straight);
+    QVERIFY(grid.selection() == songview::GridSelection::musical(64));
+    QCOMPARE(grid.fineGridTicks(), 2ULL);
+    QCOMPARE(grid.snapTicksAt(0), 3ULL);
+    QVERIFY(!grid.setState(songview::GridSelection::musical(64), songview::GridFeel::Straight));
+
+    // The requested triplet counterpart is exactly the floor, so it is the
+    // same Clock terminal rather than an invalid musical label.
+    QVERIFY(grid.setState(songview::GridSelection::musical(64), songview::GridFeel::Triplet));
+    QCOMPARE(grid.feel(), songview::GridFeel::Triplet);
+    QVERIFY(grid.selection() == songview::GridSelection::clock());
+    QCOMPARE(grid.snapTicksAt(0), 2ULL);
+    QVERIFY(grid.setState(songview::GridSelection::musical(8), songview::GridFeel::Triplet));
+    QVERIFY(grid.selection() == songview::GridSelection::musical(8));
+    QCOMPARE(grid.snapTicksAt(0), 16ULL);
+}
+
+void ViewBucketsGridTest::unboundStrideAndCoherentRebind()
+{
+    const auto at48 = checks::eventviews::openRigFixture(FixtureShape::Signatures);
+    QVERIFY2(at48, qPrintable(at48.error));
+
+    songview::TimeAxis axis;
+    songview::PitchProjection projection;
+    songview::TimeCamera camera(axis, projection);
+    songview::Grid grid(axis, camera);
+
+    // Before binding, document-dependent selection/menu commands are disabled
+    // but every snapping operation retains a positive one-tick stride.
+    QVERIFY(grid.selections().empty());
+    QVERIFY(!grid.setSelection(songview::GridSelection::musical(8)));
+    QVERIFY(!grid.narrow());
+    QVERIFY(!grid.widen());
+    QVERIFY(grid.toggleFeel());
+    QCOMPARE(grid.feel(), songview::GridFeel::Triplet);
+    QCOMPARE(grid.snapTickDown(5.5), 5ULL);
+    QCOMPARE(grid.snapTickUp(5.5), 6ULL);
+    QCOMPARE(grid.nextEditingTick(5, 100), 6ULL);
+    QCOMPARE(grid.nextEditingTick(5, 100, true), 6ULL);
+    QVERIFY(grid.setFeel(songview::GridFeel::Straight));
+
+    // Bind the matching 48-PPQN axis and its real normal-clock floor together.
+    // Straight 1/64 is then an exact three-tick selection.
+    axis.bind(at48.fixture->view().timeline());
+    grid.setTicksPerClock(2);
+    QVERIFY(grid.setSelection(songview::GridSelection::musical(64)));
+    QCOMPARE(grid.snapTicksAt(0), 3ULL);
+
+    // Rebinding a coherent resolution revalidates the selected cell and rebuilds
+    // the ladder walked by commands: a four-tick floor demotes 1/64 to Clock,
+    // whose next wider entry is 1/32 at six ticks.
+    grid.setTicksPerClock(4);
+    QVERIFY(grid.selection() == songview::GridSelection::clock());
+    QCOMPARE(grid.snapTicksAt(0), 4ULL);
+    QVERIFY(grid.widen());
+    QVERIFY(grid.selection() == songview::GridSelection::musical(32));
+    QCOMPARE(grid.snapTicksAt(0), 6ULL);
+    QVERIFY(grid.narrow());
+    QVERIFY(grid.selection() == songview::GridSelection::clock());
+}
+
+void ViewBucketsGridTest::resolutionRebindOnSongReplacement()
+{
+    const auto opened = checks::eventviews::openTabFixture(FixtureShape::Signatures);
+    QVERIFY2(opened, qPrintable(opened.error));
+    SongView &view = opened.fixture->view();
+    SongTab &tab = opened.fixture->tab();
+
+    view.setGridSelection(songview::GridSelection::musical(64));
+    QCOMPARE(view.grid().snapTicksAt(0), 3ULL);
+
+    SongInfo at24Info;
+    at24Info.label = QStringLiteral("eventviews-rebind-24");
+    at24Info.hasMid = true;
+    tab.beginMidiReload();
+    tab.applyMidiStage(at24Info, replacementSmf(24, 60), track_limits::kHardwareCapacity);
+    QVERIFY2(tab.presentationError().isEmpty(), qPrintable(tab.presentationError()));
+
+    // The saved straight 1/64 is 1.5 ticks at 24 PPQN. It must restore to the
+    // canonical Clock terminal, never persist as a plausible musical label.
+    QVERIFY(view.gridSelection() == songview::GridSelection::clock());
+    QCOMPARE(view.grid().feel(), songview::GridFeel::Straight);
+    QCOMPARE(view.grid().fineGridTicks(), 1ULL);
+    QCOMPARE(view.grid().snapTicksAt(0), 1ULL);
+
+    // A supported selection survives the same production replacement order.
+    view.setGridSelection(songview::GridSelection::musical(8));
+    QCOMPARE(view.grid().snapTicksAt(0), 12ULL);
+    SongInfo at48Info;
+    at48Info.label = QStringLiteral("eventviews-rebind-48");
+    at48Info.hasMid = true;
+    tab.beginMidiReload();
+    tab.applyMidiStage(at48Info, replacementSmf(48, 62), track_limits::kHardwareCapacity);
+    QVERIFY2(tab.presentationError().isEmpty(), qPrintable(tab.presentationError()));
+    QVERIFY(view.gridSelection() == songview::GridSelection::musical(8));
+    QCOMPARE(view.grid().feel(), songview::GridFeel::Straight);
+    QCOMPARE(view.grid().fineGridTicks(), 2ULL);
+    QCOMPARE(view.grid().snapTicksAt(0), 24ULL);
+}
+
+void ViewBucketsGridTest::fineFloorUnderMusicalSelection()
+{
+    const auto opened = checks::eventviews::openTabFixture(FixtureShape::Signatures);
+    QVERIFY2(opened, qPrintable(opened.error));
+    opened.fixture->document().setTimeSig(37, 4, 2);
+    QCoreApplication::processEvents();
+    SongView &view = opened.fixture->view();
+    view.setGridSelection(songview::GridSelection::musical(16));
+
+    QCOMPARE(view.grid().snapTicksAt(37), 12ULL);
+    QCOMPARE(view.grid().fineGridTicks(), 2ULL);
+    // Musical placement restarts at the signature change. Fine placement is
+    // the absolute two-tick Clock lattice used for precise pitch endpoints.
+    QCOMPARE(view.grid().snapTickDown(37.0), 37ULL);
+    QCOMPARE(view.grid().snapTickDown(37.0, true), 36ULL);
 }
 
 void ViewBucketsGridTest::paintSmoke()

@@ -58,9 +58,11 @@ int TimeRuler::rowHeight()
 
 namespace {
 
-QString gridDivisionText(int minDenom)
+QString gridDivisionText(const GridSelection &selection)
 {
-    return minDenom == 0 ? SongView::tr("Auto") : QStringLiteral("1/%1").arg(minDenom);
+    return selection.kind == GridSelection::Kind::Clock
+               ? SongView::tr("Clock")
+               : QStringLiteral("1/%1").arg(selection.denominator);
 }
 
 } // namespace
@@ -77,9 +79,39 @@ QString TimeRuler::feelText() const
 
 QString TimeRuler::divisionToolTip() const
 {
-    return SongView::tr("Finest drawn subdivision. Auto follows the zoom down to "
-                        "the mid2agb clock grid; edits snap one step finer than "
-                        "the drawn grid.");
+    return m_divisionToolTip;
+}
+
+// The division control's tooltip. Musical selections name the exact fixed
+// editing cell; Clock names the document's real tick floor, with a musical
+// equivalent only when the floor lands exactly on a whole-note fraction.
+QString TimeRuler::gridDivisionToolTip() const
+{
+    const GridSelection selection = m_grid.selection();
+    if (selection.kind == GridSelection::Kind::Musical) {
+        return SongView::tr("Fixed 1/%1 grid. Drawing and length edits snap "
+                            "exactly to this cell at every zoom; the drawn "
+                            "guides still follow the zoom.")
+            .arg(selection.denominator);
+    }
+    const SongDocument *document = m_owner.document();
+    if (!document)
+        return SongView::tr("Clock grid. The grid controls enable once a document is open.");
+    const uint32_t clock = document->ticksPerClock();
+    QString tip = SongView::tr("Clock grid: the document's real resolution, "
+                               "one editable step every %1 ticks.")
+                      .arg(clock);
+    const uint32_t ppqn = m_owner.timeAxis().ticksPerBeat();
+    QString equivalent;
+    if (ppqn > 0) {
+        if (4u * ppqn % clock == 0)
+            equivalent = SongView::tr("1/%1 straight").arg(4u * ppqn / clock);
+        else if (8u * ppqn % (3u * clock) == 0)
+            equivalent = SongView::tr("1/%1 triplet").arg(8u * ppqn / (3u * clock));
+    }
+    if (!equivalent.isEmpty())
+        tip += QLatin1String(" Equal to ") + equivalent + QLatin1Char('.');
+    return tip;
 }
 
 QString TimeRuler::feelToolTip() const
@@ -99,15 +131,20 @@ QVariantMap TimeRuler::gridControlAppearance() const
 
 void TimeRuler::syncGridControls()
 {
-    const QString division = gridDivisionText(m_grid.minDenom());
+    const QString division = gridDivisionText(m_grid.selection());
     const QString feel =
         m_grid.feel() == GridFeel::Triplet ? SongView::tr("Triplet") : SongView::tr("Straight");
-    const bool enabled = m_inputHost != nullptr;
-    if (m_divisionText == division && m_feelText == feel && m_gridControlsEnabled == enabled)
+    const QString divisionToolTipText = gridDivisionToolTip();
+    // The exact-denominator ladder and the Clock floor are document-dependent,
+    // so the controls enable only with the band's input and a bound document.
+    const bool enabled = m_inputHost != nullptr && m_owner.document() != nullptr;
+    if (m_divisionText == division && m_feelText == feel &&
+        m_divisionToolTip == divisionToolTipText && m_gridControlsEnabled == enabled)
         return;
 
     m_divisionText = division;
     m_feelText = feel;
+    m_divisionToolTip = divisionToolTipText;
     m_gridControlsEnabled = enabled;
     emit gridControlsChanged();
 }
@@ -164,7 +201,8 @@ void TimeRuler::ensureMenuAdapters()
     // setters run against a settled view; the completion signal then
     // hands focus back to the invoking control (notifyGridMenuChoice).
     connect(m_divisionModel, &QuickMenuModel::activated, this, [this](int id) {
-        m_owner.setGridMinDenom(id);
+        m_owner.setGridSelection(id == 0 ? GridSelection::clock()
+                                         : GridSelection::musical(uint32_t(id)));
         notifyGridMenuChoice(true);
     });
     connect(m_feelModel, &QuickMenuModel::activated, this, [this](int id) {
@@ -195,8 +233,8 @@ void TimeRuler::openGridMenu(QPointF position, bool division)
     ensureMenuAdapters();
     m_menuHost->setPopupSession(session);
 
-    // Rows rebuilt at open so the check marks mirror the live grid; ids
-    // carry the raw values the owner setters consume.
+    // Rows rebuilt at open so the check marks mirror the live grid. A zero
+    // id denotes Clock; musical ids carry their denominator directly.
     std::vector<QuickMenuItem> rows;
     const auto addRow = [&rows](int id, QString text, bool checked) {
         QuickMenuItem item;
@@ -207,9 +245,13 @@ void TimeRuler::openGridMenu(QPointF position, bool division)
         rows.push_back(std::move(item));
     };
     if (division) {
-        rows.reserve(5);
-        for (const int denom : {0, 4, 8, 16, 32})
-            addRow(denom, gridDivisionText(denom), m_grid.minDenom() == denom);
+        const std::span<const GridSelection> selections = m_grid.selections();
+        rows.reserve(selections.size());
+        for (const GridSelection selection : selections) {
+            const int id =
+                selection.kind == GridSelection::Kind::Clock ? 0 : int(selection.denominator);
+            addRow(id, gridDivisionText(selection), m_grid.selection() == selection);
+        }
         m_divisionModel->setItems(std::move(rows));
         m_menuHost->open(m_divisionModel, position);
     } else {

@@ -122,6 +122,43 @@ inline std::optional<QKeyCombination> firstBinding(const QString &id)
     return bindings.front()[0];
 }
 
+struct GridCommandState {
+    songview::GridSelection selection;
+    songview::GridFeel feel;
+};
+
+inline GridCommandState gridCommandState(const SongView &view)
+{
+    return {view.gridSelection(), view.grid().feel()};
+}
+
+inline bool sameGridCommandState(const SongView &view, GridCommandState expected)
+{
+    return view.gridSelection() == expected.selection && view.grid().feel() == expected.feel;
+}
+
+// Gestures other than a note move must consume every Timeline grid command
+// before its semantic operation. This runs the real bindings in the shown
+// Quick window and checks after every delivery, so a partial guard cannot
+// hide behind a later inverse command. The note-move regression delivers
+// size and feel commands separately because only size is allowed there.
+inline bool guardedGridCommandsLeaveStateUnchanged(QQuickWindow *window, const SongView &view)
+{
+    const GridCommandState before = gridCommandState(view);
+    constexpr const char *ids[] = {
+        "roll.grid_narrow",
+        "roll.grid_widen",
+        "roll.grid_triplet",
+    };
+    for (const char *id : ids) {
+        const auto binding = firstBinding(QLatin1String(id));
+        if (!binding || !deliverKey(window, binding->key(), binding->keyboardModifiers()) ||
+            !sameGridCommandState(view, before))
+            return false;
+    }
+    return true;
+}
+
 // --- document note lookups ---
 
 // SongDocument::findNote writes its out parameter whenever the note exists

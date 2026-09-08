@@ -20,6 +20,8 @@
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QSignalSpy>
+#include <QSize>
 #include <QtTest>
 #include <optional>
 
@@ -372,9 +374,21 @@ void PianoRollTest::popupSessionDismissal()
              "canvas resize accepted or wrote the velocity draft");
 
     // The owning fixture shell is shorter than the larger Insert Time form.
-    // Its real action buttons must remain clickable inside the canvas.
+    // Its real action buttons must remain clickable inside the canvas. The
+    // shell resize reaches the embedded canvas as a late spontaneous Cocoa
+    // geometry-change Resize some time after processEvents() returns, and
+    // that late Resize cancels any form opened meanwhile, so the form opens
+    // only after the canvas reports the resized geometry and renders a frame.
+    songview::TimelineQuickView *const canvasHost = view.quickView();
+    QQuickWindow *const canvasWindow = canvasHost ? canvasHost->quickWindow() : nullptr;
+    QVERIFY2(canvasWindow, "the canvas has no window for the small-viewport resize");
+    const QSize canvasBefore = canvasWindow->size();
     m_tab->resize(640, 96);
-    QCoreApplication::processEvents();
+    QTRY_VERIFY_WITH_TIMEOUT(canvasWindow->size() != canvasBefore, 5000);
+    QSignalSpy rendered(canvasWindow, &QQuickWindow::frameSwapped);
+    QVERIFY2(rendered.isValid(), "the canvas frameSwapped spy is invalid");
+    canvasWindow->update();
+    QTRY_VERIFY_WITH_TIMEOUT(!rendered.isEmpty(), 5000);
     view.insertTimeAtPlaybackCursor();
     QCoreApplication::processEvents();
     songview::QuickPopupSession *const smallViewport = quick_popup::popupSession(view);

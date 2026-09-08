@@ -23,7 +23,7 @@
 class PitchBendFixture final
 {
   public:
-    bool setUp(bool unterminated = false, bool duplicateNote = false);
+    bool setUp(bool unterminated = false, bool duplicateNote = false, bool division48 = false);
     void tearDown();
 
     SongTab &tab() const;
@@ -98,7 +98,8 @@ class PitchBendEditingTest final : public QObject
     void vertexEndpointDeletionIsRejected();
     void modWheelFreehandStrokeAndUndo();
     void altDragCreatesFineGridRamp();
-    void strokeAcrossSignatureBoundaryAlignsToDynamicGrid();
+    void clockStrokeEndpointsMatchFineSampling();
+    void strokeAcrossSignatureBoundaryAlignsToSelectedGrid();
     void modWheelResetZeroesLane();
 
     void wheelScrollConfinesBendRangeToNoteSpan_data();
@@ -152,6 +153,7 @@ class PitchBendRasterTest final : public QObject
     void shiftCurvePaintsDiagonal();
     void altRampPaintsDiagonalAfterReopen();
     void noteEdgeCursorPixmapAndArrowRestore();
+    void guideDensityIndependentOfEditingSelection();
 
   private:
     PitchBendFixture m_fixture;

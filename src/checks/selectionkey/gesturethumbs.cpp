@@ -97,6 +97,8 @@ void SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands()
     // must displace the proxy and request a model value.
     mouseMove(dragPosition);
     QTRY_VERIFY2(scrollValue() > scrollBefore, "thumb drag did not move its owning scroll model");
+    QVERIFY2(selectionkey::guardedGridCommandsLeaveStateUnchanged(window(), view()),
+             "a Timeline grid command mutated selection or feel during a live scrollbar drag");
     selectionkey::deliverKey(window(), deleteKey->key(), deleteKey->keyboardModifiers());
     QVERIFY2(document().smf().write() == beforeDrag && noteSelectionIs({victim}) &&
                  document().revision() == revisionBefore &&
