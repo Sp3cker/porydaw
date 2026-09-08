@@ -6,6 +6,7 @@
 #include <QImage>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QSize>
 
 #include <algorithm>
 #include <cmath>
@@ -89,14 +90,13 @@ void TrackActivityMeterTest::init()
     m_timeline = std::make_shared<MidiTimeline>();
     m_timeline->tracks[kTrack].used = true;
     m_timeline->usedTrackCount = 1;
-    m_view->resize(720, 520);
     m_view->setSong(m_timeline.get(), nullptr);
-    m_view->show();
-    checks::support::pumpQuick();
+    QVERIFY(checks::support::showQuickViewport(*m_view, QSize(720, 520)));
     m_quick = m_view->quickView();
-    m_model = m_view->findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"));
     m_window = m_quick ? m_quick->quickWindow() : nullptr;
-    QVERIFY(m_quick && m_model && m_window);
+    QVERIFY(m_quick && m_window);
+    m_model = m_view->findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"));
+    QVERIFY(m_model);
     QVERIFY(QTest::qWaitFor([this] {
         QQuickItem *const root = m_quick ? m_quick->rootObject() : nullptr;
         auto *const input = root ? root->findChild<songview::TimelineInputItem *>(
@@ -230,7 +230,7 @@ void TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr()
     const auto &band = m_view->timelineBandLayout().geometry(songview::TimelineBand::TrackHeaders);
     QVERIFY(band);
     const int y = band->rect.y() + qRound(row * m_model->rowHeight() - m_model->scrollY());
-    const QPoint origin = m_quick->mapFrom(m_view.get(), QPoint{band->rect.x(), y});
+    const QPoint origin{band->rect.x(), y};
     QCOMPARE(paused.width(),
              trackheaders_test::devicePixelSpan(origin.x(), m_model->activityWidth(), dpr));
     QCOMPARE(paused.height(), trackheaders_test::devicePixelSpan(origin.y(), meterHeight, dpr));

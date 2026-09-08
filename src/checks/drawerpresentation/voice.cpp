@@ -151,9 +151,11 @@ void DrawerPresentationTest::voiceHoverLifecycle()
     QAbstractItemModel *const hover = scene->voiceChangesHoverTextModel();
     QVERIFY(labels);
     QVERIFY(hover);
-    const int labelsBefore = labels->rowCount();
     const QPointF empty(fixture.xForTick(96), fixture.bandRect().height() / 2.0);
     const QImage idle = checks::support::captureQuickBand(view, fixture.bandRect());
+    // Text records publish on the Quick flush, so the baseline follows the
+    // first staged frame; hover itself only touches the hover model and layer.
+    const int labelsBefore = labels->rowCount();
     const qreal dpr = idle.devicePixelRatio();
     const qreal imagePlotOffset = fixture.fixedSpan();
     sendMouse(fixture.input(), QEvent::MouseMove, empty);

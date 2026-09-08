@@ -116,7 +116,9 @@ void AutomationEditingTest::scrollbarChromeTracksZeroRangeResize()
     QCOMPARE(initialRect.width(), qreal(layout::space(layout::Space::Two)));
     QVERIFY(initialItem);
     QVERIFY(initialItem->isVisible());
-    QVERIFY(quick->geometry().contains(initialRect.toAlignedRect()));
+    QQuickWindow *const quickWindow = quick->quickWindow();
+    QVERIFY(quickWindow);
+    QVERIFY(QRect(QPoint(0, 0), quickWindow->size()).contains(initialRect.toAlignedRect()));
     QVERIFY(m_quickWindow->mask().isEmpty());
 
     const std::optional<songview::TimelineBandGeometry> band =
@@ -181,15 +183,15 @@ void AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid()
     QVERIFY(!roll->plotRect.isEmpty());
 
     const QRect gutterRect = automation->gutterRect();
-    QVERIFY(quick->geometry().contains(gutterRect));
-    const QPoint hostOrigin = quick->geometry().topLeft();
+    QQuickWindow *const quickWindow = quick->quickWindow();
+    QVERIFY(quickWindow);
+    QVERIFY(QRect(QPoint(0, 0), quickWindow->size()).contains(gutterRect));
     QCOMPARE(automation->plotRect.left(), view.timelineSplitX());
     QCOMPARE(roll->plotRect.left(), view.timelineSplitX());
     QVERIFY(m_tab->view().editorDrawer()->chrome().automationScrollbarRect().right() <=
             automation->rect.left());
-    QCOMPARE(itemSceneRect(*m_automationInput),
-             QRectF(automation->plotRect.translated(-hostOrigin)));
-    QCOMPARE(itemSceneRect(*gutter), QRectF(gutterRect.translated(-hostOrigin)));
+    QCOMPARE(itemSceneRect(*m_automationInput), QRectF(automation->plotRect));
+    QCOMPARE(itemSceneRect(*gutter), QRectF(gutterRect));
     QCOMPARE(qRound(m_automationInput->width()), automation->plotRect.width());
     QCOMPARE(qRound(gutter->width()), gutterRect.width());
     QCOMPARE(qRound(gutter->height()), automation->rect.height());

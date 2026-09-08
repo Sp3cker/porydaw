@@ -14,11 +14,11 @@
 #include "checks/support/songfixture.h"
 #include "checks/support/timelinequickcheck.h"
 #include "core/miditimeline.h"
-#include "ui/editordrawer/drawerchrome.h"
-#include "ui/editordrawer/editordrawer.h"
 #include "ui/layout.h"
+#include "ui/songview.h"
 #include "ui/songview/quick/timelinequickchrome.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include <QQuickWindow>
 
 namespace {
 
@@ -58,7 +58,7 @@ std::unique_ptr<checks::nativegraphics::Rig> staticRig(const QString &projectRoo
 {
     QString error;
     std::unique_ptr<checks::nativegraphics::Rig> rig =
-        checks::nativegraphics::makeRig(projectRoot, songLabel, staticSize(), true, error);
+        checks::nativegraphics::makeRig(projectRoot, songLabel, staticSize(), error);
     if (!rig)
         QTest::qFail(qPrintable(error), __FILE__, __LINE__);
     return rig;
@@ -87,7 +87,9 @@ void RenderingPlayheadTest::guidesResizeScrollAndOwnership()
     const auto songX = [&view, &ruler](uint64_t tick) {
         return qreal(ruler->plotRect.x()) + view.camera().contentX(tick);
     };
-    const auto rootX = [&quick, &view](qreal x) { return x - quick->mapTo(&view, QPoint{}).x(); };
+    // The Quick window is the full canonical viewport, so song-view x and
+    // Quick-root x are the same coordinate; no host translation remains.
+    const auto rootX = [](qreal x) { return x; };
     const auto allVisible = [&pairs](bool hover, bool edit) {
         for (const ChromePair &pair : pairs) {
             const bool bandVisible = pair.hover->parentItem()->isVisible();
@@ -139,20 +141,18 @@ void RenderingPlayheadTest::guidesResizeScrollAndOwnership()
     QVERIFY(!quick->hoverVisible());
     QVERIFY(quick->editVisible());
     QVERIFY(allVisible(false, true));
-
-    const QSize originalSize = view.size();
-    const QRect hostBefore = quick->geometry();
-    view.resize(originalSize.width(),
-                originalSize.height() - 4 * layout::space(layout::Space::One));
+    // Window-level resize stands in for the widget envelope: the canonical
+    // viewport itself shrinks and restores, and guide alignment survives.
+    QQuickWindow *window = quick->quickWindow();
+    QVERIFY(window);
+    const QSize originalSize = window->size();
+    const QSize shrunkSize(originalSize.width(),
+                           originalSize.height() - 4 * layout::space(layout::Space::One));
+    window->resize(shrunkSize);
     checks::support::pumpQuick();
-    const QRect resizedHost = checks::support::canonicalVisibleQuickHostRect(
-        view, view.editorDrawer() ? &view.editorDrawer()->chrome() : nullptr);
-    QVERIFY(!resizedHost.isEmpty());
-    QCOMPARE(quick->geometry(), resizedHost);
     QVERIFY(qAbs(quick->editRootContentX() - rootX(songX(0))) <= kGuideTolerance);
-    view.resize(originalSize);
+    window->resize(originalSize);
     checks::support::pumpQuick();
-    QCOMPARE(quick->geometry(), hostBefore);
 
     const SongView::ViewState original = view.viewState();
     const qreal editBeforeScroll = quick->editRootContentX();
@@ -175,8 +175,11 @@ void RenderingPlayheadTest::followScroll()
     view.setFollowPlayhead(true);
     const uint64_t endTick = rig->song->timeline().lengthTicks;
     QVERIFY(endTick > 1);
+    auto *quick = view.quickView();
+    QVERIFY(quick && quick->quickWindow());
     const uint64_t farTick =
-        (std::min)(endTick - 1, uint64_t(view.width() * 4.0 / view.camera().pxPerTick()) + 1);
+        (std::min)(endTick - 1,
+                   uint64_t(quick->quickWindow()->width() * 4.0 / view.camera().pxPerTick()) + 1);
     QVERIFY(farTick > 0);
     const uint64_t sample = rig->song->timeline().sampleForTick(farTick);
     view.setPlayheadSample(sample, true);

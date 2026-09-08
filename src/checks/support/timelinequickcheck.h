@@ -1,8 +1,6 @@
 #pragma once
 
-#include "ui/editordrawer/drawerchrome.h"
 #include "ui/layout.h"
-#include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -29,10 +27,10 @@ inline bool quickWindowIsUnmasked(const songview::TimelineQuickView &quick)
     return window && window->mask().isEmpty();
 }
 
-// Compare independent physical plot and gutter surfaces against SongView-local
-// canonical band geometry after translating it into the Quick host.
+// Compare independent physical plot and gutter surfaces against canonical
+// band geometry: the unhosted Quick window is the full canonical viewport
+// with origin (0, 0), so window-local input frames equal the layout rects.
 inline bool physicalInputsMatchCanonical(const songview::TimelineBandLayout &bandLayout,
-                                         const songview::TimelineQuickView &quick,
                                          const QQuickItem &quickRoot, songview::TimelineBand band,
                                          const QString &plotInputObjectName,
                                          const QString &gutterInputObjectName)
@@ -54,46 +52,11 @@ inline bool physicalInputsMatchCanonical(const songview::TimelineBandLayout &ban
     const auto surfaceMatches = [&](const songview::TimelineInputItem &input,
                                     const QRect &surfaceRect) {
         return input.isVisible() && input.bounds() == QRectF(QPointF{}, surfaceRect.size()) &&
-               QRectF(input.mapToItem(&quickRoot, QPointF()), input.size()) ==
-                   QRectF(surfaceRect.translated(-quick.geometry().topLeft()));
+               QRectF(input.mapToItem(&quickRoot, QPointF()), input.size()) == QRectF(surfaceRect);
     };
     return plotInput->interaction() == gutterInput->interaction() &&
            surfaceMatches(*plotInput, geometry->plotRect) &&
            surfaceMatches(*gutterInput, gutterRect);
-}
-
-inline QRect canonicalVisibleQuickHostRect(const SongView &view, const DrawerChrome *chrome)
-{
-    std::optional<QRect> hostRect;
-    for (const std::optional<songview::TimelineBandGeometry> &band :
-         view.timelineBandLayout().bands) {
-        if (!band)
-            continue;
-        hostRect = hostRect ? hostRect->united(band->rect) : band->rect;
-    }
-
-    const auto addChrome = [&hostRect](const QRectF &rect, bool visible) {
-        if (!visible || rect.isEmpty())
-            return;
-        const QRect aligned = rect.toAlignedRect();
-        hostRect = hostRect ? hostRect->united(aligned) : aligned;
-    };
-    if (chrome) {
-        addChrome(chrome->voiceChangesHandleRect(), chrome->voiceChangesHandleVisible());
-        addChrome(chrome->velocityHandleRect(), chrome->velocityHandleVisible());
-        addChrome(chrome->automationHandleRect(), chrome->automationHandleVisible());
-        addChrome(chrome->barRect(), chrome->barVisible());
-        addChrome(chrome->voiceChangesToggleRect(), chrome->voiceChangesToggleVisible());
-        addChrome(chrome->automationToggleRect(), chrome->automationToggleVisible());
-        addChrome(chrome->velocityToggleRect(), chrome->velocityToggleVisible());
-        addChrome(chrome->detentRect(), chrome->detentVisible());
-        addChrome(chrome->automationScrollbarRect(), chrome->automationScrollbarVisible());
-    }
-    // The two QML scrollbar lanes extend the envelope; SongView resolves
-    // their canonical SongView-local rectangles (empty = absent lane).
-    addChrome(view.horizontalScrollbarRect(), true);
-    addChrome(view.verticalScrollbarRect(), true);
-    return hostRect.value_or(QRect{});
 }
 
 inline bool layerHasColorIn(const songview::TimelineQuickLayerData &layer, const QRectF &probe,

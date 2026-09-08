@@ -19,13 +19,14 @@
 #include "ui/songview/detail.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 namespace checks::rollcheck::staticcheck {
 namespace {
 
 int keyAt(const SongView &view, qreal y)
 {
-    const qreal dpr = view.devicePixelRatioF();
+    const qreal dpr = view.quickView() ? view.quickView()->quickDevicePixelRatio() : 1.0;
     for (int row = 0; row < 128; ++row) {
         const qreal edge =
             std::round((double(row + 1) * view.camera().keyHeight() - view.camera().scrollY()) *
@@ -39,7 +40,7 @@ int keyAt(const SongView &view, qreal y)
 
 qreal rowCenter(const SongView &view, int key)
 {
-    const qreal dpr = view.devicePixelRatioF();
+    const qreal dpr = view.quickView() ? view.quickView()->quickDevicePixelRatio() : 1.0;
     const auto edge = [&view, dpr](int row) {
         return std::round((double(row) * view.camera().keyHeight() - view.camera().scrollY()) *
                           dpr) /

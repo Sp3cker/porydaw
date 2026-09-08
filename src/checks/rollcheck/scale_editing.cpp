@@ -13,6 +13,7 @@
 #include <cstdint>
 
 #include "checks/support/eventsynth.h"
+#include "checks/support/quickframebuffer.h"
 #include "core/songdocument.h"
 #include "porydaw_scale.h"
 #include "ui/songview.h"
@@ -274,8 +275,7 @@ void PianoRollTest::scaleFoldExceptionDraw()
         d7.scrollY =
             double(std::max(0, r61 * pianoRollDefaultKeyHeight - 4 * pianoRollDefaultKeyHeight));
         view.applyViewState(d7);
-        (void)view.grab();
-        QCoreApplication::processEvents();
+        checks::support::pumpQuick();
         const size_t before = doc.notesForTrack(scaleTrack).size();
         drawNote(*roll, QPoint(40, foldCenterY(61)));
         QCoreApplication::processEvents();
@@ -342,8 +342,7 @@ void PianoRollTest::scaleFoldExceptionAudition()
         d8.scrollY =
             double(std::max(0, r61 * pianoRollDefaultKeyHeight - 4 * pianoRollDefaultKeyHeight));
         view.applyViewState(d8);
-        (void)view.grab();
-        QCoreApplication::processEvents();
+        checks::support::pumpQuick();
         int audKey = -1;
         auto conn = QObject::connect(&view, &SongView::auditionNote, &view,
                                      [&](int, int key, int velocity) {
@@ -416,8 +415,7 @@ void PianoRollTest::scaleFoldPointerDrag()
         view.setScaleFold(true);
         view.setScaleRoot(0);
         view.setScaleId(scaleMajor);
-        (void)view.grab();
-        QCoreApplication::processEvents();
+        checks::support::pumpQuick();
         bool occ[128] = {};
         for (const DocNote &dn : doc.notesForTrack(scaleTrack))
             occ[dn.key] = true;
@@ -453,8 +451,7 @@ void PianoRollTest::scaleFoldPointerDrag()
         d9.scrollY =
             double(std::max(0, rSrc * pianoRollDefaultKeyHeight - 4 * pianoRollDefaultKeyHeight));
         view.applyViewState(d9);
-        (void)view.grab();
-        QCoreApplication::processEvents();
+        checks::support::pumpQuick();
         // Press the note center for a Move drag: horizontally the center
         // avoids the 3px edge-grip zones on this 5px-wide, 4-tick note.
         const int x = int((view.camera().contentX(double(tBase)) +

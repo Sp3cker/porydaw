@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <optional>
 
-#include <QApplication>
 #include <QCoreApplication>
 
 #include "core/miditimeline.h"
@@ -109,8 +108,6 @@ void AutomationEditingTest::selectionClearingAndMultilaneReplacement()
     mousePress(Qt::RightButton, outside);
     QVERIFY(!view.selectionModel().timeSelection().active());
     mouseRelease(Qt::RightButton, outside);
-    if (QWidget *const popup = QApplication::activePopupWidget())
-        popup->close();
 
     view.selectionModel().setTimeSelection(selection);
     mousePress(automationGutterInput(), Qt::LeftButton, gutterPoint);

@@ -9,6 +9,7 @@
 #include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/theme/themeruntime.h"
+#include <QGuiApplication>
 #include <QUrl>
 #include <QVariantMap>
 
@@ -205,7 +206,7 @@ QString SongView::insertTimePromptTitle() const
 QVariantMap SongView::insertTimePromptAppearance() const
 {
     QVariantMap appearance;
-    appearance.insert(QStringLiteral("font"), font());
+    appearance.insert(QStringLiteral("font"), QGuiApplication::font());
     appearance.insert(QStringLiteral("background"), themes::color(themes::Role::window_background));
     appearance.insert(QStringLiteral("outline"), themes::color(themes::Role::palette_outline));
     appearance.insert(QStringLiteral("text"), themes::color(themes::Role::window_text));

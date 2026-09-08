@@ -40,9 +40,11 @@ bool SelectionKeyGestureTest::verifyNodePaintsAboveSelectedStem(
     const QColor expectedNodeColor = SongView::trackColor(kTrack);
     checks::support::pumpQuick();
     QString captureError;
-    const QImage frame = checks::support::captureQuickBand(view(), view().rect(), &captureError);
-    const QPoint sampleInView = view().quickView()->mapTo(
-        &view(), windowPoint(*mVelocityInput, overlapPoints.followingNode));
+    const QImage frame =
+        checks::support::captureQuickBand(view(), QRect(QPoint{}, window()->size()), &captureError);
+    // Canonical viewport: windowPoint is already Quick-window-local, so the
+    // sampled node pixel reads straight out of the captured frame.
+    const QPoint sampleInView = windowPoint(*mVelocityInput, overlapPoints.followingNode);
     const QRect sampleRect =
         checks::support::devicePixelRect(frame, QRect(sampleInView, QSize(1, 1)));
     const QColor nodePixel = frame.isNull() || !frame.rect().contains(sampleRect.center())

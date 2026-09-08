@@ -107,7 +107,6 @@ void VoicegroupLoaderTest::serialAndFourWideBatchAdaptersPreserveBankAndOwnershi
     QVERIFY(expected);
     const QByteArray path = targetPath(QStringLiteral("check_batch"));
     const VoicegroupTarget target{path.constData(), ""};
-    qint64 serialMs = 0;
     for (const int width : {1, 4}) {
         voicegroup_load_test::BatchAdapter adapter;
         adapter.width = width;
@@ -115,32 +114,18 @@ void VoicegroupLoaderTest::serialAndFourWideBatchAdaptersPreserveBankAndOwnershi
         VoicegroupProject *const project =
             voicegroup_load_test::openContext(m_copy->root(), adapter);
         QVERIFY(project);
-        QElapsedTimer timer;
-        timer.start();
         LoadedVoiceGroup *const loaded = voicegroup_project_load(project, &target);
-        const qint64 elapsedMs = timer.elapsed();
         QVERIFY(loaded);
         QVERIFY(voicegroup_load_test::sameBank(*loaded, *expected));
         // The adapter's start gate holds every reader of a slice in flight
         // until the whole slice has arrived, so the observed concurrency is
-        // deterministic: exactly `width` for the 16-asset batch.
+        // deterministic: exactly `width` for the 16-asset batch. A loader
+        // that serialized the batch into one-at-a-time transport reads would
+        // never have more than a single reader in flight, so the wide run
+        // trips this comparison with no wall-clock measurement involved.
         QCOMPARE(adapter.maxInFlight, width);
         QCOMPARE(adapter.populated, adapter.released);
         QVERIFY(adapter.requestedOnce());
-        if (width == 1) {
-            serialMs = elapsedMs;
-        } else {
-            // Legacy hard performance gate: with all four lanes actually
-            // running concurrently, the wide load must beat 35% of the
-            // serial elapsed time (16 x 5ms serial vs 4 x 5ms wide).
-            QVERIFY2(elapsedMs * 100 <= serialMs * 35,
-                     qPrintable(QStringLiteral("four-wide load took %1ms, over 35% of serial %2ms")
-                                    .arg(elapsedMs)
-                                    .arg(serialMs)));
-            qInfo("vgloadbench: serial=%lldms four-wide=%lldms (%lld%% of serial)",
-                  static_cast<long long>(serialMs), static_cast<long long>(elapsedMs),
-                  static_cast<long long>(serialMs ? elapsedMs * 100 / serialMs : 0));
-        }
         voicegroup_free(loaded);
         voicegroup_project_free(project);
     }

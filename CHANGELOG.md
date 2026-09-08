@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Deleting a nonempty automation CC lane now asks for confirmation in an in-scene Quick form where `Cancel` starts with keyboard focus. Populated default Volume/Bend rows keep their default row and delete only written CC events; the prompt states the written-event count and that the default row remains, and ordinary document Undo restores the deleted events in that retained row.
 - The automation node context menu (`Set Value`, `Delete`) now uses the shared in-scene Quick menu: Escape and outside clicks dismiss it, an outside right-press retargets it to another node, and stale or replaced targets can no longer write. `Set Value` opens the inline value prompt, and `Delete` is disabled while the clicked node is only an engine default with no written event at its tick (Set Value still creates one). Aborted opens treat the node hit as consumed to prevent unintended background fallbacks, and newer popups published during open callbacks are protected from displacement.
 - Moved the drawer voice-change menu to the shared in-scene Quick menu. Camera moves do not change its target; outside right-click dismisses without retargeting. Hiding or detaching the lane cancels its picker, and stale edits cannot overwrite newer changes or displace another popup.
+- Host the timeline, ruler, event list, and editor drawers in one Qt Quick viewport. SongView and drawer layout no longer depend on hidden QWidget spacers; only the SongTab embedding boundary remains widget-based.
 
 ## Fixed
 - Initialize empty voicegroup fixtures before binding them in host and window lifecycle checks, preventing intermittent invalid-pointer crashes.
@@ -44,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified Quick rectangle and triangle color packing to straight-line per-corner operations, removing nested color-comparison branches.
 - Disabled rows in the shared Quick menu now expose the correct disabled state to assistive technology while clicks on them remain menu-contained.
 - Keep a pressed popup row active when an external document edit cancels timeline gestures. Releasing the row still rejects its stale target rather than overwriting the newer edit.
+- Close shared timeline popups when their song surface is hidden or becomes unavailable, and detach the Quick scene before its document and controller objects are destroyed.
 
 ## [1.0.0] - 2026-08-01
 Initial release.

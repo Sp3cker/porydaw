@@ -118,7 +118,7 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         QCOMPARE(b.focusedTimelineBand(), songview::TimelineBand::Roll);
         QWidget *focus = QApplication::focusWidget();
         QVERIFY(focus);
-        QVERIFY(focus == &b || b.isAncestorOf(focus));
+        QVERIFY(focus == session->b || session->b->isAncestorOf(focus));
     }
 
     void hideRetains()
@@ -165,7 +165,7 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         QCOMPARE(a.focusedTimelineBand(), songview::TimelineBand::Roll);
         QWidget *focus = QApplication::focusWidget();
         QVERIFY(focus);
-        QVERIFY(focus == &a || a.isAncestorOf(focus));
+        QVERIFY(focus == session->a || session->a->isAncestorOf(focus));
 
         window.m_workspace->selectSongTab(session->b);
         QCOMPARE(window.m_workspace->selectedSongTab(), session->b);
@@ -175,7 +175,7 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         QCOMPARE(b.focusedTimelineBand(), songview::TimelineBand::Roll);
         focus = QApplication::focusWidget();
         QVERIFY(focus);
-        QVERIFY(focus == &b || b.isAncestorOf(focus));
+        QVERIFY(focus == session->b || session->b->isAncestorOf(focus));
     }
 
     void nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent()

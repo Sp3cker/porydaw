@@ -113,7 +113,6 @@ void WorkspaceTabsTest::lifecycle()
     QVERIFY(first);
     QCOMPARE(workspace->openTabCount(), qsizetype(1));
     QCOMPARE(window.m_selectedTab, first);
-    QVERIFY(!first->view().isHidden());
     QVERIFY(first->isReady());
     QCOMPARE(first->document().label(), firstLabel);
     QCOMPARE(window.m_audio.timeline(), first->timeline().get());
@@ -128,7 +127,6 @@ void WorkspaceTabsTest::lifecycle()
     QVERIFY(second != first);
     QCOMPARE(workspace->openTabCount(), qsizetype(2));
     QCOMPARE(window.m_selectedTab, second);
-    QVERIFY(!second->view().isHidden());
     QVERIFY(second->isReady());
     QCOMPARE(second->document().label(), secondLabel);
     QCOMPARE(window.m_audio.timeline(), second->timeline().get());

@@ -3,17 +3,15 @@
 // songview::TrackHeaderModel::HeaderMenuAction ids, and follow the two async
 // transitions (voice picker, in-band rename), so close-before-activate
 // ordering, guarded stale targets, and the dismissal contracts stay
-// observable end to end. The legacy native QMenu polling must not return:
-// every scenario also asserts no native popup/modal/QMenu fallback.
+// observable end to end.
 
 #include "checks/trackheaders/tst_trackheaders.h"
 
 #include "checks/quickpopupguard.h"
 #include "checks/voicepickerdriver.h"
 
-#include <QApplication>
 #include <QCoreApplication>
-#include <QMenu>
+#include <QGuiApplication>
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
@@ -84,13 +82,6 @@ int headerMenuRow(songview::QuickMenuModel &model, HeaderMenuAction action)
     return model.rowForId(static_cast<int>(action));
 }
 
-// True while no native popup, modal, or QMenu fallback exists under the view.
-bool noNativeMenuFallback(const SongView &view)
-{
-    return !QApplication::activePopupWidget() && !QApplication::activeModalWidget() &&
-           view.findChild<QMenu *>() == nullptr;
-}
-
 // An input-local header point the current menu frame does not cover, so the
 // dismissal press provably lands on the band rather than the popup surface.
 std::optional<QPointF> headerPointOutsideMenuFrame(TrackHeadersFixture &fx,
@@ -128,8 +119,6 @@ void TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite()
 
     const HeaderMenu opened = openHeaderMenu(fx, *row);
     QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic));
-    QVERIFY2(noNativeMenuFallback(fx.view()),
-             "opening the header menu created a native menu fallback");
     // The right-press selects its header before the menu opens and the
     // selection survives an ordinary dismissal.
     QCOMPARE(fx.view().selectionModel().primaryTrack(), fx.sourceTrack());
@@ -155,7 +144,6 @@ void TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite()
     QTest::keyClick(opened.session->window(), Qt::Key_Escape);
     QCoreApplication::processEvents();
     QVERIFY2(!opened.session->isOpen(), "Escape did not dismiss the header menu");
-    QVERIFY2(noNativeMenuFallback(fx.view()), "dismissing the header menu left a native fallback");
     QTRY_VERIFY2(fx.input().hasActiveFocus(),
                  "Escape did not restore the pre-menu header band focus");
     QCOMPARE(doc.smf().write(), before);
@@ -346,6 +334,19 @@ void TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite()
     const std::optional<int> voiceRow = fx.rowForTrack(fx.voiceTrack());
     QVERIFY(voiceRow);
     const quick_popup::PromptGuard guard(fx.view());
+    // Establish the pre-menu focus the session restores on dismissal, with
+    // live window activation (focusTimelineBand plus focusWindow/focusObject
+    // convergence), not just item-local focus.
+    QVERIFY2(
+        fx.view().focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason),
+        "the Quick track-header band could not take focus");
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents();
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents();
+    QTRY_VERIFY2(QGuiApplication::focusWindow() == &fx.window() &&
+                     QGuiApplication::focusObject() == &fx.input() && fx.input().hasActiveFocus(),
+                 "the Quick track-header band could not take focus");
 
     // A structural remap after the open cancels the menu synchronously
     // through the model's transient-state teardown: no focus theft into the

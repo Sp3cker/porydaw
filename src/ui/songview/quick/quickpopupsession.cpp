@@ -192,9 +192,12 @@ bool QuickPopupSession::eventFilter(QObject *watched, QEvent *event)
         break;
     }
     case QEvent::WindowDeactivate:
+    case QEvent::Hide:
     case QEvent::Close:
         // These can arrive after the underlay already tore down. Discard the
         // orphaned pair either way: the window will not receive its release.
+        // Hide covers tab switches that hide the embedded child while the
+        // top-level window stays active, so Deactivate may never fire.
         m_swallowedReleaseButton = Qt::NoButton;
         if (isOpen())
             cancel(false);

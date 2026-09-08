@@ -145,7 +145,6 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         probe.view().applyEditorViewState(global);
         QSignalSpy ready(&probe, &SongTab::readinessChanged);
         QVERIFY(!probe.isReady());
-        QVERIFY(probe.view().isEnabled());
         probe.applyMidiStage(*song, std::move(stage),
                              workspace.projectState().snapshot.trackBudgetFor(*song));
         QVERIFY(!probe.isReady());
@@ -159,7 +158,6 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         QCOMPARE(ready.count(), 0);
         probe.applyVoicegroupBound(*session->b->voicegroupId());
         QVERIFY(probe.isReady());
-        QVERIFY(probe.view().isEnabled());
         QCOMPARE(ready.count(), 1);
     }
 
@@ -285,7 +283,6 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot);
         QVERIFY(waitForTabReady(workspace, old));
         QCOMPARE(old->document().label(), label);
-        QVERIFY(old->view().isEnabled());
     }
 
     void projectSwitchAndQuitPreserveState()

@@ -2,8 +2,9 @@
 
 ## Status and authority
 
-Blueprint for the complete rewrite requested by the user. Implementation is not
-complete. Starting revision: `afcf179` on `fork-main`.
+Blueprint for the complete rewrite requested by the user. All listed editor surfaces
+now use Qt Quick; native/GPU acceptance remains pending under the desktop-use restriction.
+Starting revision: `afcf179` on `fork-main`.
 
 Inputs: evidence-plan-architect's SongView QWidget-Exodus plan, Reviewer critique,
 and Reviewer's OtherStrip implementation/check plan. This document resolves the
@@ -426,3 +427,63 @@ a blocker to handoff, not an accepted baseline.
   and
   https://github.com/qt/qtdeclarative/blob/v6.11.0/src/quick/items/qquickitemview.cpp#L1860.
   The shell implementation contract is unchanged.
+
+## Shell implementation and verification evidence
+
+- **Implementation**: `SongView`, `TimelineQuickView`, and `EditorDrawer` are
+  QObject coordinators. The existing Quick window owns the full zero-origin
+  viewport; band and plot geometry no longer translates a QWidget envelope.
+  `SongTabQuickHost` is the external, sole `createWindowContainer` adapter.
+  Ownership transfers once from the coordinator to that container, and final
+  detach is idempotent even when a detach listener re-enters it.
+- **Lifecycle and focus**: Detach removes the window event filter before window
+  destruction, avoiding gesture queries against a destroyed Quick delivery agent.
+  Hide and unavailable-song transitions cancel shared popups. Qt Quick restores
+  scoped focus on activation; the old band-retargeting FocusIn interception is
+  gone. Fixtures explicitly acquire application-level focus before opening editors,
+  rather than relying on the removed interception or a locally focused item alone.
+- **Behavioral proof**: Formatting and `deno task build:checks` passed.
+  Forced-offscreen/software verification passed 80 complete harnesses, including
+  production startup, workspace/tab lifecycle, transport, host seams, automation,
+  drawer editing, pitch-bend editing, clipboard, scrollbars, track headers, and
+  all three non-gesture selection-key suites.
+  The four mixed suites were also exercised with only the framebuffer cases
+  listed below omitted: `rollcheck` 85/0, `rollcheck-static` 26/0,
+  `pitch-bend-raster` 4/0, and `selectionkey-gesture` 7/0 Qt totals
+  (each includes init/cleanup). These are partial-suite results, not full-suite
+  passes.
+- **Fixture corrections**: Readiness checks now deliver pointer/wheel input
+  through the actual Quick window instead of bypassing its gate with direct
+  item events. Camera and chrome fixtures await asynchronous geometry publication;
+  all three affine-camera rows pass with their assertions unchanged. Clipboard
+  keys no longer target the now-nonvisual SongView QObject. The loader concurrency
+  check retains its deterministic four-in-flight, bank, and ownership assertions
+  without the scheduler-dependent elapsed-time ratio. Menu-type plumbing
+  assertions were removed while dismissal, focus return, and no-write behavior
+  remain covered. Temporary focus, geometry, and placement diagnostics were removed.
+- **Source inventory**: All 19 named surfaces are Quick-based; no QWidget
+  coordinator or native menu/dialog remains in those surfaces. `SongTab`,
+  surrounding application-shell widgets, and the explicit embedding container
+  remain intentionally outside this cutover.
+- **Unverified acceptance**: No native window or desktop input was used.
+  Native CALayer attachment/compositing and genuine window-manager focus remain
+  pending. Four native harnesses were not run: `mainwindow-routing-native`,
+  `rendering-playhead`, `timelinepan-native`, and `rollwindowingcheck`.
+  Twenty-five framebuffer cases fail under forced offscreen/software and remain
+  unresolved, with their assertions intact:
+
+  | Harness | Unresolved framebuffer cases |
+  | --- | --- |
+  | `automation-raster` | Seven previously recorded probes. |
+  | `rollcheck` | `pencilAbuttingRaster`, `tinyNoteBorderRaster`, `selectedNoteFrameRaster`, `velocityColorRaster`, `selectionBandSweep`, `resizeMinimum`, `timelineRulerScope`, `timelineOtherEventsStrip`, `keyboardTimeSelectionShortcuts`, `scaleHighlightRaster`. |
+  | `rollcheck-static` | `preRollRulerShade`, `fallbackRulerStemAndBars`, `ticksPerBeatKeepsGeometry`, `signatureGroupingKeepsBeatsAndMovesBars`, `cameraRangeAndPreRollRaster`. |
+  | `pitch-bend-raster` | `shiftCurvePaintsDiagonal`, `altRampPaintsDiagonalAfterReopen`. |
+  | `selectionkey-gesture` | `overlapNodeTargetsVisibleNode`. |
+
+  The latter eighteen cases also fail on freshly built pre-shell `fork-main`.
+  That baseline additionally aborted during teardown after `selectionBandSweep`;
+  the remaining roll cases were compared in separate invocations. This comparison
+  establishes that those framebuffer failures precede the shell cutover, not that
+  native/GPU rendering is correct. No failing case is counted as passing.
+  All five nonpixel gesture data rows passed separately (seven Qt totals including
+  init/cleanup), as did the velocity-editing input-precedence checks.

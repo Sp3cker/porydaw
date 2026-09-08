@@ -11,8 +11,8 @@
 #include "ui/songview/detail.h"
 #include "ui/theme/themeruntime.h"
 
+#include <QGuiApplication>
 #include <algorithm>
-
 namespace lyt = ::layout;
 using Space = lyt::Space;
 
@@ -20,10 +20,10 @@ namespace {
 
 constexpr int cMaxVoiceProgram = int(songview::VoicePickerModel::cVoiceCount) - 1;
 
-QVariantMap voicePickerAppearanceFor(const SongView &owner)
+QVariantMap voicePickerAppearanceFor()
 {
     QVariantMap appearance;
-    appearance.insert(QStringLiteral("font"), owner.font());
+    appearance.insert(QStringLiteral("font"), QGuiApplication::font());
     appearance.insert(QStringLiteral("background"), themes::color(themes::Role::window_background));
     appearance.insert(QStringLiteral("outline"), themes::color(themes::Role::palette_outline));
     appearance.insert(QStringLiteral("text"), themes::color(themes::Role::window_text));
@@ -132,7 +132,7 @@ VoicePicker::VoicePicker(SongView &owner, QString title, int initialVoice, QObje
     , m_owner(owner)
     , m_model(owner, this)
     , m_title(std::move(title))
-    , m_appearance(voicePickerAppearanceFor(owner))
+    , m_appearance(voicePickerAppearanceFor())
 {
     const int clampedInitial = std::clamp(initialVoice, 0, cMaxVoiceProgram);
     setCurrentProgram(m_model.rowForProgram(clampedInitial) >= 0 ? clampedInitial

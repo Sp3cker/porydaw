@@ -221,8 +221,13 @@ bool AutomationEditingTest::stageSong(SmfFile smf)
     }
 
     candidate->show();
-    if (!QTest::qWaitFor([candidateWindow] {
-            return candidateWindow->isVisible() && candidateWindow->isExposed();
+    // Staged contract mirrors the tail below plus exposure: only the
+    // Automations section is staged visible, so hidden bands (voice,
+    // velocity) legitimately keep empty bounds and must not gate staging.
+    if (!QTest::qWaitFor([candidateWindow, candidateAutomation] {
+            return candidateAutomation && candidateWindow->isVisible() &&
+                   candidateWindow->isExposed() && !candidateAutomation->bounds().isEmpty() &&
+                   candidateAutomation->window() == candidateWindow;
         })) {
         return false;
     }
@@ -399,11 +404,9 @@ QAction *AutomationEditingTest::pencilModeAction() const
 {
     if (!m_tab)
         return nullptr;
-    for (QAction *action : m_tab->view().actions()) {
-        if (action->text() == QStringLiteral("Pencil Mode"))
-            return action;
-    }
-    return nullptr;
+    EditorDrawer *const drawer = m_tab->view().editorDrawer();
+    AutomationPage *const page = drawer ? drawer->automationPage() : nullptr;
+    return page ? page->pencilModeAction() : nullptr;
 }
 
 songview::TimelineQuickScene *AutomationEditingTest::quickScene() const

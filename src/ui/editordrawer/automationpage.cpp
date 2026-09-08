@@ -138,7 +138,6 @@ AutomationPage::AutomationPage(SongView &owner, QObject *parent)
     m_pencilModeAction->setShortcutContext(Qt::WindowShortcut);
     keymap::Registry::instance().attach(QStringLiteral("automation.pencil_mode"),
                                         m_pencilModeAction);
-    m_owner.addAction(m_pencilModeAction);
     connect(m_pencilModeAction, &QAction::toggled, m_canvas, &AutomationCanvas::setPencilMode);
     qApp->installEventFilter(this);
 }

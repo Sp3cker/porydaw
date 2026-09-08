@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <QFontMetrics>
+#include <QGuiApplication>
 
 #include "ui/editordrawer/velocityarea/detail.h"
 #include "ui/keymap.h"
@@ -65,7 +66,7 @@ VelocityArea::VelocityArea(SongView &owner, QObject *parent)
     , m_owner(owner)
     , m_camera(owner.camera())
     , m_geometry()
-    , m_captionFont(typography::noteName(owner.font()))
+    , m_captionFont(typography::noteName(QGuiApplication::font()))
     , m_boldCaptionFont(typography::bold(m_captionFont))
     , m_captionFontHeight(QFontMetrics(m_captionFont).height())
 {

@@ -153,8 +153,8 @@ void ScrollbarTest::dragRebasesAfterResize()
     QTRY_VERIFY(near(songView.camera().scrollY(), initialSpan / 2.0));
 
     const QPointF dragPosition = beginDrag(Qt::Vertical);
-    const QSize beforeResize = songView.size();
-    songView.resize(beforeResize.width(), beforeResize.height() - 160);
+    const QSize beforeResize = window().size();
+    window().resize(beforeResize.width(), beforeResize.height() - 160);
     QTRY_VERIFY(!near(songView.camera().maxRollScroll(), initialSpan));
     QTRY_VERIFY(withinTrack(Qt::Vertical));
 

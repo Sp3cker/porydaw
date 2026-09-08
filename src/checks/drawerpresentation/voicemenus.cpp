@@ -276,6 +276,12 @@ void DrawerPresentationTest::voiceMenuOutsideRightDismissesWithoutRetarget()
     SongView &view = fixture.view();
     const Snapshot before = fixture.snapshot();
 
+    // The dismissal restores the pre-menu active-focus item: stage real
+    // voice-band focus first. The fixture only stages page visibility, and
+    // pointer presses never drive band focus, so without this the session
+    // captures the root item and restores that.
+    QVERIFY(view.focusTimelineBand(songview::TimelineBand::VoiceChanges, Qt::OtherFocusReason));
+    QTRY_VERIFY(view.focusedTimelineBand() == songview::TimelineBand::VoiceChanges);
     const VoiceMenu menu = openVoiceMenu(
         fixture, kMarkerTick, QStringLiteral("the marker right-press did not open the voice menu"));
     QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic));

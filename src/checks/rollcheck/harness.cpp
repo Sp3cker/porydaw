@@ -31,8 +31,7 @@ bool PianoRollFixture::prepare()
     SongView &songView = view();
     songView.setGridMinDenom(4);
     m_pianoRollDefaultKeyHeight = layout::fontPx(1.0);
-    auto *quick =
-        songView.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    auto *quick = songView.quickView();
     QQuickItem *const quickRoot = quick ? quick->rootObject() : nullptr;
     m_roll = songView.findChild<songview::PianoRoll *>();
     m_rollInput = quickRoot ? quickRoot->findChild<songview::TimelineInputItem *>(

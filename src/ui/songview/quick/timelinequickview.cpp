@@ -18,8 +18,8 @@
 #include "ui/songview/timeruler.h"
 #include "ui/songview/trackheadermodel.h"
 #include "ui/theme/themeruntime.h"
-#include <QApplication>
 #include <QColor>
+#include <QGuiApplication>
 #include <QQmlContext>
 #include <QQmlError>
 #include <QQuickImageProvider>
@@ -79,32 +79,6 @@ constexpr std::array kDrawerChromeInputQmlProperties{
 };
 static_assert(kDrawerChromeInputQmlProperties.size() == 5);
 
-struct DrawerChromeRect {
-    QRectF rect;
-    bool visible = false;
-};
-
-std::array<DrawerChromeRect, 9> visibleDrawerChromeRects(const DrawerChrome *chrome)
-{
-    if (!chrome)
-        return {};
-
-    // Enumerate every visible QML chrome surface so the host envelope is
-    // exactly the Quick-visible area, including the automation scrollbar only
-    // while the automation body owns it.
-    return {{
-        {chrome->voiceChangesHandleRect(), chrome->voiceChangesHandleVisible()},
-        {chrome->velocityHandleRect(), chrome->velocityHandleVisible()},
-        {chrome->automationHandleRect(), chrome->automationHandleVisible()},
-        {chrome->barRect(), chrome->barVisible()},
-        {chrome->voiceChangesToggleRect(), chrome->voiceChangesToggleVisible()},
-        {chrome->automationToggleRect(), chrome->automationToggleVisible()},
-        {chrome->velocityToggleRect(), chrome->velocityToggleVisible()},
-        {chrome->detentRect(), chrome->detentVisible()},
-        {chrome->automationScrollbarRect(), chrome->automationScrollbarVisible()},
-    }};
-}
-
 // Wheel deltas to a signed DIP scroll step for one scrollbar axis. Pixel
 // deltas are consumed one-to-one as DIPs; rotary notches convert at
 // QApplication::wheelScrollLines() lines of one DIP each — the legacy
@@ -131,7 +105,7 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
                                      VoiceChangeArea &voiceChanges, DrawerChrome &drawerChrome,
                                      TrackHeaderModel &trackHeaders, EventListController &eventList,
                                      SongView &songView)
-    : QWidget(&songView)
+    : QObject(&songView)
     , m_ruler(&ruler)
     , m_trackHeaders(&trackHeaders)
     , m_roll(&roll)
@@ -151,10 +125,8 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     m_flushTimer.setSingleShot(true);
     m_flushTimer.setInterval(std::chrono::milliseconds::zero());
     connect(&m_flushTimer, &QTimer::timeout, this, &TimelineQuickView::flushUpdate);
-    // Chrome snapshot changes re-envelope the Quick host; scroll changes only
-    // repaint the automation layers.
-    connect(m_drawerChrome, &DrawerChrome::chromeChanged, this,
-            [this] { scheduleTimelineBandLayoutPublication(); });
+    // Drawer chrome repaints through the QML bindings to the chrome context
+    // object directly; scroll changes only repaint the automation layers.
     connect(m_drawerChrome, &DrawerChrome::scrollChanged, this,
             [this] { requestAutomationUpdate(AutomationRefresh::All); });
 
@@ -171,18 +143,19 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     });
 
     setObjectName(QStringLiteral("timelineQuickCanvas"));
-    setFocusPolicy(Qt::NoFocus);
 
-    m_quickView = new QQuickView;
+    m_quickView = std::make_unique<QQuickView>();
     QSurfaceFormat surfaceFormat = m_quickView->format();
     surfaceFormat.setAlphaBufferSize(8);
     m_quickView->setFormat(surfaceFormat);
     m_quickView->setColor(Qt::transparent);
     m_quickView->setResizeMode(QQuickView::SizeRootObjectToView);
-    m_quickContainer = QWidget::createWindowContainer(m_quickView, this);
-    m_quickContainer->setFocusPolicy(Qt::NoFocus);
+    // The borrow tracks the window through takeWindowForEmbedding(): the
+    // external container becomes the sole owner while this coordinator keeps
+    // publishing into the same QML scene.
+    m_view = m_quickView.get();
     m_quickView->installEventFilter(this);
-    m_quickContainer->setGeometry(rect());
+    connect(m_view.data(), &QWindow::screenChanged, this, &TimelineQuickView::viewportChanged);
 
     m_scene = new TimelineQuickScene(this);
     m_quickView->rootContext()->setContextProperty(QStringLiteral("timelineQuickView"), this);
@@ -203,6 +176,7 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
             qCritical().noquote() << error.toString();
         qFatal("Qt Quick timeline QML failed to load");
     }
+    m_root = m_quickView->rootObject();
     m_popupSession = new QuickPopupSession(*m_quickView, this);
 
     QObject *root = rootObject();
@@ -215,7 +189,6 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     m_trackHeaders->setPopupSession(m_popupSession);
     m_automation->canvas()->setPopupSession(m_popupSession);
     m_voiceChanges->setPopupSession(m_popupSession);
-    discoverGestureScrollbars(*root);
 
     static constexpr std::array layers = {
         std::pair{TimelineQuickLayer::RulerGutterChrome, "timelineQuickRulerGutterChrome"},
@@ -307,7 +280,7 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
             qFatal("Qt Quick timeline QML has no band property '%s'", properties.plotRect);
     }
 
-    const auto bindInput = [&root](TimelineInputItem *&destination,
+    const auto bindInput = [&root](QPointer<TimelineInputItem> &destination,
                                    TimelineBandInteraction *interaction, const char *objectName,
                                    TimelineInputSurface surface, bool attachHost) {
         TimelineInputItem *const input =
@@ -381,33 +354,6 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     syncAppearance();
 }
 
-TimelineQuickView::~TimelineQuickView()
-{
-    if (m_popupSession)
-        m_popupSession->cancel(false);
-
-    clearKeyPolicyHandlers();
-    m_gestureScrollbars.clear();
-    for (TimelineInputItem *item : m_drawerChromeInputs) {
-        if (item)
-            item->setInteraction(nullptr);
-    }
-    for (TimelineInputItem *item : m_gutterInputItems) {
-        if (item)
-            item->setInteraction(nullptr);
-    }
-    for (TimelineInputItem *item : m_inputItems) {
-        if (item)
-            item->setInteraction(nullptr);
-    }
-    if (m_eventListInput) {
-        m_eventListInput->clearKeyPolicy();
-        m_eventListInput->setInteraction(nullptr);
-    }
-    m_eventListInteraction.reset();
-    m_quickView->setSource(QUrl{});
-}
-
 void TimelineQuickView::detachInputInteraction(TimelineBand band)
 {
     const std::size_t index = timelineBandIndex(band);
@@ -423,14 +369,9 @@ void TimelineQuickView::detachInputInteraction(TimelineBand band)
     }
 }
 
-qreal TimelineQuickView::quickDevicePixelRatio() const
-{
-    return m_quickView ? m_quickView->effectiveDevicePixelRatio() : devicePixelRatioF();
-}
-
 qreal TimelineQuickView::hoverRootContentX() const noexcept
 {
-    return m_hoverSongViewContentX ? quickRootXForSongViewX(*m_hoverSongViewContentX) : 0.0;
+    return m_hoverSongViewContentX.value_or(0.0);
 }
 
 bool TimelineQuickView::hoverVisible() const noexcept
@@ -440,7 +381,7 @@ bool TimelineQuickView::hoverVisible() const noexcept
 
 qreal TimelineQuickView::editRootContentX() const noexcept
 {
-    return m_editSongViewContentX ? quickRootXForSongViewX(*m_editSongViewContentX) : 0.0;
+    return m_editSongViewContentX.value_or(0.0);
 }
 
 bool TimelineQuickView::editVisible() const noexcept
@@ -530,15 +471,6 @@ void TimelineQuickView::setPlayheadColor(const QColor &color)
     emit playheadChanged();
 }
 
-qreal TimelineQuickView::hostX() const noexcept
-{
-    return m_publishedHostRect.x();
-}
-
-qreal TimelineQuickView::hostY() const noexcept
-{
-    return m_publishedHostRect.y();
-}
 qreal TimelineQuickView::rulerPlotOrigin() const noexcept
 {
     return m_publishedRulerPlotOrigin;
@@ -642,31 +574,12 @@ void TimelineQuickView::publishHover(TimelineQuickHoverOwner owner, uint64_t tic
     setHoverChrome(songViewContentX);
 }
 
-QQuickItem *TimelineQuickView::rootObject() const
-{
-    return m_quickView->rootObject();
-}
-
-QQuickWindow *TimelineQuickView::quickWindow() const
-{
-    return m_quickView;
-}
-QuickPopupSession *TimelineQuickView::popupSession() const noexcept
-{
-    return m_popupSession;
-}
-
 void TimelineQuickView::clearHover(TimelineQuickHoverOwner owner)
 {
     if (m_hoverOwner != owner)
         return;
     m_hoverOwner = TimelineQuickHoverOwner::None;
     setHoverChrome(std::nullopt);
-}
-
-qreal TimelineQuickView::quickRootXForSongViewX(qreal songViewX) const noexcept
-{
-    return songViewX - geometry().x();
 }
 
 std::optional<qreal> TimelineQuickView::guideSongViewContentXAtOrAfterStart(
@@ -694,37 +607,6 @@ void TimelineQuickView::setEditChrome(std::optional<qreal> songViewContentX)
         return;
     m_editSongViewContentX = songViewContentX;
     emit editChromeChanged();
-}
-
-bool TimelineQuickView::eventFilter(QObject *watched, QEvent *event)
-{
-    if (watched == m_quickView && event->type() == QEvent::Resize)
-        scheduleTimelineBandLayoutPublication();
-
-    if (watched == m_quickView && event->type() == QEvent::FocusIn) {
-        // QWindowContainer's internal filter retargets this focus onto the
-        // container widget, stealing it from native content. Only let it
-        // through when a converted input item actually holds the Quick focus
-        const auto itemHasFocus = [](const TimelineInputItem *item) {
-            return item && item->hasFocus();
-        };
-        if (std::any_of(m_inputItems.begin(), m_inputItems.end(), itemHasFocus) ||
-            (m_eventListInput && m_eventListInput->hasFocus()))
-            return QWidget::eventFilter(watched, event);
-        if (m_songView) {
-            m_songView->focusActiveSurface();
-            return true;
-        }
-    }
-    return QWidget::eventFilter(watched, event);
-}
-
-void TimelineQuickView::resizeEvent(QResizeEvent *event)
-{
-    QWidget::resizeEvent(event);
-    if (m_quickContainer)
-        m_quickContainer->setGeometry(rect());
-    scheduleTimelineBandLayoutPublication();
 }
 
 void TimelineQuickView::scheduleTimelineBandLayoutPublication()
@@ -782,7 +664,7 @@ void TimelineQuickView::setBandLayout(TimelineBandLayout layout)
 
 void TimelineQuickView::refreshBandLayout()
 {
-    // Quick-window lifecycle events (show, WinId, DPR) can drop published
+    // Quick-window lifecycle events (resize, screen, DPR) can drop published
     // QML geometry; republish the stored layout as-is, without changing the
     // canonical value or queueing dirty domains.
     scheduleTimelineBandLayoutPublication();
@@ -793,13 +675,12 @@ bool TimelineQuickView::focusBand(TimelineBand band, Qt::FocusReason reason)
     TimelineInputItem *const item = m_inputItems[timelineBandIndex(band)];
     if (!item)
         return false;
-    // The container is the QWidget focus bridge: focusing it lets
-    // QWindowContainer focus the embedded Quick window, after which the
-    // item's forced focus resolves into live active focus. That FocusIn can
-    // arrive asynchronously, so acceptance is not gated on hasActiveFocus();
-    // focusedBand() remains the live active-focus truth.
-    if (m_quickContainer)
-        m_quickContainer->setFocus(reason);
+    // The external embedding bridge focuses its container, which activates
+    // the Quick window; the item's forced focus then resolves into live
+    // active focus. That FocusIn can arrive asynchronously, so acceptance is
+    // not gated on hasActiveFocus(); focusedBand() remains the live
+    // active-focus truth. Unhosted windows have no bridge listener.
+    emit embeddingFocusRequested(reason);
     item->requestFocus(reason);
     return true;
 }
@@ -808,12 +689,97 @@ bool TimelineQuickView::focusEventListInput(Qt::FocusReason reason)
 {
     if (!m_eventListInput)
         return false;
-    // Same container bridge as focusBand(): the item's forced focus resolves
+    // Same embedding bridge as focusBand(): the item's forced focus resolves
     // into live active focus asynchronously after the window activates.
-    if (m_quickContainer)
-        m_quickContainer->setFocus(reason);
+    emit embeddingFocusRequested(reason);
     m_eventListInput->requestFocus(reason);
     return true;
+}
+
+void TimelineQuickView::publishTimelineBandLayout()
+{
+    if (!m_songView)
+        return;
+    QObject *root = rootObject();
+    if (!root)
+        return; // detached: borrows cleared, nothing left to publish to
+
+    // Band rects arrive already visible in canonical viewport coordinates,
+    // and the Quick window is that full viewport, so they publish directly.
+    for (const TimelineBandQmlProperties &properties : kTimelineBandQmlProperties) {
+        const std::optional<TimelineBandGeometry> &band = m_bandLayout.geometry(properties.band);
+        const QRectF bandRect = band ? QRectF{band->rect} : QRectF{};
+        // Empty plot rects (TrackHeaders) stay empty.
+        const QRectF bandPlotRect = band ? QRectF{band->plotRect} : QRectF{};
+        if (!root->setProperty(properties.rect, QVariant::fromValue(bandRect)) ||
+            !root->setProperty(properties.visible, QVariant::fromValue(band.has_value())) ||
+            !root->setProperty(properties.plotRect, QVariant::fromValue(bandPlotRect))) {
+            qFatal("Qt Quick timeline QML has incomplete band properties");
+        }
+    }
+
+    // The event page replaces the roll band in EventList mode; its canonical
+    // rectangle publishes like every band's.
+    const QRect eventListRect = m_songView->eventListRect();
+    const QRectF publishedEventListRect =
+        eventListRect.isEmpty() ? QRectF{} : QRectF{eventListRect};
+    if (!root->setProperty("eventListBandRect", QVariant::fromValue(publishedEventListRect)) ||
+        !root->setProperty("eventListBandVisible", QVariant::fromValue(!eventListRect.isEmpty()))) {
+        qFatal("Qt Quick timeline QML has incomplete event-list properties");
+    }
+
+    // Scrollbar lanes publish their canonical rectangles directly; empty
+    // lanes stay empty.
+    const QRect horizontalScrollbar = m_songView->horizontalScrollbarRect();
+    const QRect verticalScrollbar = m_songView->verticalScrollbarRect();
+    const QRectF publishedHorizontalScrollbar =
+        horizontalScrollbar.isEmpty() ? QRectF{} : QRectF{horizontalScrollbar};
+    const QRectF publishedVerticalScrollbar =
+        verticalScrollbar.isEmpty() ? QRectF{} : QRectF{verticalScrollbar};
+
+    const qreal publishedRulerPlotOrigin = m_songView->timelineSplitX();
+    if (std::exchange(m_publishedRulerPlotOrigin, publishedRulerPlotOrigin) !=
+        publishedRulerPlotOrigin)
+        emit rulerPlotOriginChanged();
+    const bool horizontalScrollbarChanged =
+        std::exchange(m_publishedHorizontalScrollbarRect, publishedHorizontalScrollbar) !=
+        publishedHorizontalScrollbar;
+    const bool verticalScrollbarChanged =
+        std::exchange(m_publishedVerticalScrollbarRect, publishedVerticalScrollbar) !=
+        publishedVerticalScrollbar;
+    if (horizontalScrollbarChanged || verticalScrollbarChanged)
+        emit scrollbarRectsChanged();
+}
+
+void TimelineQuickView::syncAppearance()
+{
+    // SongView is a pure coordinator now: the app-level font and palette
+    // every input item and chrome surface shares are the QGuiApplication
+    // values.
+    const QFont font = QGuiApplication::font();
+    const QPalette palette = QGuiApplication::palette();
+    for (TimelineInputItem *item : m_gutterInputItems) {
+        if (item)
+            item->setHostAppearance(font, palette);
+    }
+    for (TimelineInputItem *item : m_inputItems) {
+        if (!item)
+            continue;
+        item->setHostAppearance(font, palette);
+        if (item->interaction())
+            item->notifyHostAppearanceChanged();
+    }
+    if (m_eventListInput) {
+        m_eventListInput->setHostAppearance(font, palette);
+        m_eventListInput->notifyHostAppearanceChanged();
+    }
+    for (TimelineChromeItem *item : m_chromeItems) {
+        if (item)
+            item->update();
+    }
+    requestUpdate(PianoRollQuickDirty::All);
+    requestTimelineUpdate(TimelineQuickDirty::All);
+    requestAutomationUpdate(AutomationRefresh::All);
 }
 
 bool TimelineQuickView::eventListSurfaceFocused() const
@@ -828,132 +794,6 @@ std::optional<TimelineBand> TimelineQuickView::focusedBand() const
             return static_cast<TimelineBand>(index);
     }
     return std::nullopt;
-}
-
-void TimelineQuickView::publishTimelineBandLayout()
-{
-    if (!m_songView)
-        return;
-
-    // Band rects arrive already visible and SongView-local; consumers such as
-    // PlayheadOverlay intersect only their owner's rect. Here they are
-    // translated to this host's local origin for the QML scene.
-    std::optional<QRect> hostRect;
-    for (const std::optional<TimelineBandGeometry> &band : m_bandLayout.bands) {
-        if (!band)
-            continue;
-        hostRect = hostRect ? hostRect->united(band->rect) : band->rect;
-    }
-    const auto drawerChromeRects = visibleDrawerChromeRects(m_drawerChrome.data());
-    for (const DrawerChromeRect &chrome : drawerChromeRects) {
-        if (!chrome.visible || chrome.rect.isEmpty())
-            continue;
-        const QRect chromeRect = chrome.rect.toAlignedRect();
-        hostRect = hostRect ? hostRect->united(chromeRect) : chromeRect;
-    }
-    // The two QML scrollbar lanes extend the envelope so the Quick window
-    // covers the controls; SongView resolves their canonical SongView-local
-    // rectangles (empty = absent lane).
-    const std::array<QRect, 2> scrollbarRects = {m_songView->horizontalScrollbarRect(),
-                                                 m_songView->verticalScrollbarRect()};
-    // The event page replaces the roll band in EventList mode; its canonical
-    // rectangle extends the envelope the same way the scrollbar lanes do.
-    const QRect eventListRect = m_songView->eventListRect();
-    if (!eventListRect.isEmpty())
-        hostRect = hostRect ? hostRect->united(eventListRect) : eventListRect;
-    for (const QRect &rect : scrollbarRects) {
-        if (!rect.isEmpty())
-            hostRect = hostRect ? hostRect->united(rect) : rect;
-    }
-    const QRect publishedHostRect = hostRect.value_or(QRect{});
-    const qreal publishedRulerPlotOrigin = m_songView->timelineSplitX() - publishedHostRect.x();
-    const bool hostOriginChanged = m_publishedHostRect.topLeft() != publishedHostRect.topLeft();
-    if (geometry() != publishedHostRect)
-        setGeometry(publishedHostRect);
-    if (isVisible() != hostRect.has_value())
-        setVisible(hostRect.has_value());
-
-    QObject *root = rootObject();
-    if (!root)
-        qFatal("Qt Quick timeline QML has no root object");
-
-    for (const TimelineBandQmlProperties &properties : kTimelineBandQmlProperties) {
-        const std::optional<TimelineBandGeometry> &band = m_bandLayout.geometry(properties.band);
-        const QRectF localBandRect =
-            band ? QRectF{band->rect.translated(-publishedHostRect.topLeft())} : QRectF{};
-        // Plot rects are SongView-local like the band rect and share the
-        // same host translation; empty plot rects (TrackHeaders) stay empty.
-        const QRectF localBandPlotRect =
-            band ? QRectF{band->plotRect.translated(-publishedHostRect.topLeft())} : QRectF{};
-        if (!root->setProperty(properties.rect, QVariant::fromValue(localBandRect)) ||
-            !root->setProperty(properties.visible, QVariant::fromValue(band.has_value())) ||
-            !root->setProperty(properties.plotRect, QVariant::fromValue(localBandPlotRect))) {
-            qFatal("Qt Quick timeline QML has incomplete band properties");
-        }
-    }
-
-    // Scrollbar lanes share the host translation; empty lanes stay empty.
-    const auto toRootLocalScrollbar = [&publishedHostRect](const QRect &rect) {
-        return rect.isEmpty() ? QRectF{} : QRectF{rect.translated(-publishedHostRect.topLeft())};
-    };
-    const QRectF publishedHorizontalScrollbar = toRootLocalScrollbar(scrollbarRects[0]);
-    const QRectF publishedVerticalScrollbar = toRootLocalScrollbar(scrollbarRects[1]);
-
-    const bool publishedGeometryChanged =
-        std::exchange(m_publishedHostRect, publishedHostRect) != publishedHostRect ||
-        std::exchange(m_publishedRulerPlotOrigin, publishedRulerPlotOrigin) !=
-            publishedRulerPlotOrigin;
-    const QRectF publishedEventListRect =
-        eventListRect.isEmpty() ? QRectF{}
-                                : QRectF{eventListRect.translated(-publishedHostRect.topLeft())};
-    if (!root->setProperty("eventListBandRect", QVariant::fromValue(publishedEventListRect)) ||
-        !root->setProperty("eventListBandVisible", QVariant::fromValue(!eventListRect.isEmpty()))) {
-        qFatal("Qt Quick timeline QML has incomplete event-list properties");
-    }
-    const bool horizontalScrollbarChanged =
-        std::exchange(m_publishedHorizontalScrollbarRect, publishedHorizontalScrollbar) !=
-        publishedHorizontalScrollbar;
-    const bool verticalScrollbarChanged =
-        std::exchange(m_publishedVerticalScrollbarRect, publishedVerticalScrollbar) !=
-        publishedVerticalScrollbar;
-    if (publishedGeometryChanged)
-        emit hostGeometryChanged();
-    if (horizontalScrollbarChanged || verticalScrollbarChanged)
-        emit scrollbarRectsChanged();
-
-    if (hostOriginChanged) {
-        if (m_hoverSongViewContentX)
-            emit hoverChromeChanged();
-        if (m_editSongViewContentX)
-            emit editChromeChanged();
-    }
-}
-
-void TimelineQuickView::syncAppearance()
-{
-    for (TimelineInputItem *item : m_gutterInputItems) {
-        if (item && m_songView)
-            item->setHostAppearance(m_songView->font(), m_songView->palette());
-    }
-    for (TimelineInputItem *item : m_inputItems) {
-        if (!item)
-            continue;
-        if (m_songView)
-            item->setHostAppearance(m_songView->font(), m_songView->palette());
-        if (item->interaction())
-            item->notifyHostAppearanceChanged();
-    }
-    if (m_eventListInput && m_songView) {
-        m_eventListInput->setHostAppearance(m_songView->font(), m_songView->palette());
-        m_eventListInput->notifyHostAppearanceChanged();
-    }
-    for (TimelineChromeItem *item : m_chromeItems) {
-        if (item)
-            item->update();
-    }
-    requestUpdate(PianoRollQuickDirty::All);
-    requestTimelineUpdate(TimelineQuickDirty::All);
-    requestAutomationUpdate(AutomationRefresh::All);
 }
 
 void TimelineQuickView::requestUpdate(PianoRollQuickDirtySet dirty)
@@ -982,6 +822,9 @@ void TimelineQuickView::requestAutomationUpdate(AutomationRefreshSet dirty)
 
 void TimelineQuickView::flushUpdate()
 {
+    if (!m_view)
+        return; // detached: borrows cleared; no window left to sync into
+
     // A flush queued before the latest setBandLayout()/refreshBandLayout() must
     // not rebuild scenes ahead of geometry publication: publish first.
     if (m_layoutTimer.isActive()) {

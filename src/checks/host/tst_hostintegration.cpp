@@ -14,6 +14,7 @@
 #include <QQuickWindow>
 #include <QScopeGuard>
 #include <QSettings>
+#include <QStringList>
 #include <QVariant>
 #include <QtTest>
 #include <algorithm>
@@ -250,7 +251,9 @@ class HostIntegrationTest final : public QObject
         QVERIFY2(!deselectedFrame.isNull(), qPrintable(captureError));
         QVERIFY(velocity->diagnostics().contentBuildCount > selectionBefore.contentBuildCount);
         const auto zoomBefore = velocity->diagnostics();
-        view.zoomAroundContentX(1.1, qreal(view.width()) / 2.0);
+        auto *quick = view.quickView();
+        QVERIFY(quick && quick->quickWindow());
+        view.zoomAroundContentX(1.1, qreal(quick->quickWindow()->width()) / 2.0);
         const QImage zoomedFrame = renderVelocity();
         QVERIFY2(!zoomedFrame.isNull(), qPrintable(captureError));
         QVERIFY(velocity->diagnostics().contentBuildCount > zoomBefore.contentBuildCount);
@@ -426,11 +429,9 @@ class HostIntegrationTest final : public QObject
         QTest::newRow("document-null") << QStringLiteral("document-null");
         QTest::newRow("voice-replace") << QStringLiteral("voice-replace");
         QTest::newRow("voice-null") << QStringLiteral("voice-null");
-        QTest::newRow("ungrab") << QStringLiteral("ungrab");
         QTest::newRow("quick-ungrab") << QStringLiteral("quick-ungrab");
         QTest::newRow("quick-focus-loss") << QStringLiteral("quick-focus-loss");
         QTest::newRow("quick-deactivate") << QStringLiteral("quick-deactivate");
-        QTest::newRow("deactivate") << QStringLiteral("deactivate");
         QTest::newRow("escape") << QStringLiteral("escape");
     }
 
@@ -509,12 +510,6 @@ class HostIntegrationTest final : public QObject
         } else if (route == QStringLiteral("quick-deactivate")) {
             QEvent event(QEvent::WindowDeactivate);
             QApplication::sendEvent(quickWindow, &event);
-        } else if (route == QStringLiteral("ungrab")) {
-            QEvent event(QEvent::UngrabMouse);
-            QApplication::sendEvent(&view, &event);
-        } else if (route == QStringLiteral("deactivate")) {
-            QEvent event(QEvent::WindowDeactivate);
-            QApplication::sendEvent(&view, &event);
         } else {
             QTest::keyClick(quickWindow, Qt::Key_Escape);
         }
@@ -704,6 +699,36 @@ class HostIntegrationTest final : public QObject
         QCOMPARE(fileBytes(secondPath), beforeB);
         QCOMPARE(directoryFingerprint(session->fixture->root()), projectBefore);
         QCOMPARE(loadEditorViewState(settings), state);
+    }
+
+    // SongTab must tear the quick host (and thus the embedded window) down
+    // explicitly in its destructor body, before the SongView coordinator and
+    // the SongDocument members die.
+    void songTabTeardownDestroysQuickWindowBeforeDocument()
+    {
+        std::optional<Session> session = openSession();
+        QVERIFY(session.has_value());
+        SongView &view = session->active->view();
+        auto *quick = view.quickView();
+        QVERIFY(quick);
+        QQuickWindow *const window = quick->quickWindow();
+        QVERIFY(window);
+        SongDocument *const document = &session->active->document();
+        const auto order = std::make_shared<QStringList>();
+        QObject::connect(window, &QObject::destroyed, session->window.get(),
+                         [order, window](QObject *obj) {
+                             if (obj == window)
+                                 order->append(QStringLiteral("quickWindow"));
+                         });
+        QObject::connect(document, &QObject::destroyed, session->window.get(),
+                         [order, document](QObject *obj) {
+                             if (obj == document)
+                                 order->append(QStringLiteral("document"));
+                         });
+        session.reset();
+        QCOMPARE(order->value(0), QStringLiteral("quickWindow"));
+        QCOMPARE(order->value(1), QStringLiteral("document"));
+        QCOMPARE(order->size(), 2);
     }
 
   private:

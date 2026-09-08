@@ -14,12 +14,16 @@
 #include "project/voicegroupsource.h"
 #include "ui/songview.h"
 
+class SongTabQuickHost;
+
 // One open song page: the passive, keyed owner of everything a single song
 // edit needs. A SongTab is constructed for one SongName and permanently pairs
 // one SongDocument with one SongView and one shared MidiTimeline projection
-// of that document. Project operations never enter here: WorkspaceUi applies
-// copied stage values through the apply* methods below and reads loaded state
-// back through the narrow accessors; MainWindow reads the selected tab
+// of that document; a SongTabQuickHost beside the tab embeds the view's
+// Quick window into the page layout. Project operations never enter here:
+// WorkspaceUi applies copied stage values through the apply* methods below
+// and reads loaded state back through the narrow accessors; MainWindow
+// reads the selected tab
 // directly for audio handoff. History is the document's existing SongHistory
 // subobject, re-exported unchanged; shared-bank requests route through
 // WorkspaceUi's VoicegroupViewCache, never through a second stack.
@@ -122,10 +126,13 @@ class SongTab final : public QWidget
 
     // Member order is destruction order's reverse: the paired view's raw
     // borrows (timeline, document) must not outlive what they point at.
+    // The embedding host and the view are additionally torn down explicitly
+    // in the destructor body before these members die.
     SongName m_name;
     SongDocument m_document;
     std::shared_ptr<const MidiTimeline> m_timeline;
     SongView *m_view = nullptr;
+    SongTabQuickHost *m_host = nullptr;
     InputGate *m_inputGate = nullptr;
     std::optional<VoicegroupId> m_voicegroupId;
     VoicegroupLease m_voicegroup;

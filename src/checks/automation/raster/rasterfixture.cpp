@@ -16,7 +16,6 @@
 #include <QRectF>
 #include <QSize>
 #include <QTimer>
-#include <QWidget>
 #include <QWindow>
 
 #include "checks/support/eventsynth.h"
@@ -35,11 +34,6 @@
 
 namespace {
 constexpr double kCheckSampleRate = 48000.0;
-
-const QWidget *automationHostWidget(const AutomationPage &page)
-{
-    return qobject_cast<const SongView *>(page.parent());
-}
 
 } // namespace
 
@@ -69,19 +63,9 @@ class RasterAutomationInputHost final : public songview::TimelineInputHost
 
     qreal devicePixelRatio() const override { return m_dpr; }
 
-    QFont font() const override
-    {
-        if (const QWidget *view = automationHostWidget(m_page))
-            return view->font();
-        return qGuiApp->font();
-    }
+    QFont font() const override { return qGuiApp->font(); }
 
-    QPalette palette() const override
-    {
-        if (const QWidget *view = automationHostWidget(m_page))
-            return view->palette();
-        return qGuiApp->palette();
-    }
+    QPalette palette() const override { return qGuiApp->palette(); }
 
     QPointF mapFromGlobal(QPointF position) const override { return position - m_globalOffset; }
     QPointF mapToGlobal(QPointF position) const override { return position + m_globalOffset; }
@@ -325,12 +309,8 @@ void AutomationRasterFixture::setAutomationScroll(double scroll)
 
 void AutomationRasterFixture::setPersistentPencil(bool enabled)
 {
-    for (QAction *action : m_view->actions()) {
-        if (action->text() == QStringLiteral("Pencil Mode")) {
-            action->setChecked(enabled);
-            return;
-        }
-    }
+    if (QAction *const action = m_page->pencilModeAction())
+        action->setChecked(enabled);
 }
 
 void AutomationRasterFixture::documentChanged()
@@ -418,7 +398,11 @@ bool AutomationRasterFixture::initialize(QString &error)
                  sizeof(m_voicegroup->voiceNames[3]) - 1);
     m_timeline = songDocument.buildTimeline(kCheckSampleRate);
     m_view = std::make_unique<SongView>();
-    m_view->resize(960, 720);
+    songview::TimelineQuickView *const quick = m_view->quickView();
+    if (!quick) {
+        error = QStringLiteral("concrete SongView did not expose an unhosted Quick view");
+        return false;
+    }
     m_view->setDocument(&songDocument);
     m_view->setSong(m_timeline.get(), m_voicegroup.get());
 
@@ -430,15 +414,15 @@ bool AutomationRasterFixture::initialize(QString &error)
     m_view->setDrawerActivePage(EditorDrawerPage::Automations);
     m_view->setDrawerSectionVisible(EditorDrawerPage::Automations, true);
     m_view->setDrawerSectionHeight(EditorDrawerPage::Automations, 360);
-    m_view->show();
-    pump();
+    if (!checks::support::showQuickViewport(*m_view, QSize(960, 720))) {
+        error = QStringLiteral("concrete SongView did not expose an unhosted Quick window");
+        return false;
+    }
 
     auto *drawer = m_view->editorDrawer();
     m_page = drawer ? drawer->automationPage() : nullptr;
     m_quickScene = m_view->findChild<songview::TimelineQuickScene *>();
-    auto *quickCanvas =
-        m_view->findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
-    QQuickItem *const quickRoot = quickCanvas ? quickCanvas->rootObject() : nullptr;
+    QQuickItem *const quickRoot = quick ? quick->rootObject() : nullptr;
     m_automationPlotInput = quickRoot ? quickRoot->findChild<songview::TimelineInputItem *>(
                                             QStringLiteral("timelineAutomationInput"))
                                       : nullptr;

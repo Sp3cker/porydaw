@@ -59,6 +59,28 @@ void sendWindowMouse(songview::TimelineInputItem &input, QEvent::Type type, cons
     QCoreApplication::sendEvent(window, &event);
 }
 
+// The Quick window is the whole canonical viewport, so every visible
+// published chrome rectangle must land inside the window: clipping — not a
+// host envelope — is the only way chrome can go missing.
+QRectF publishedChromeRect(const DrawerChrome &chrome)
+{
+    QRectF published;
+    const auto add = [&published](const QRectF &rect, bool visible) {
+        if (visible && !rect.isEmpty())
+            published = published.isNull() ? rect : published.united(rect);
+    };
+    add(chrome.barRect(), true);
+    add(chrome.voiceChangesToggleRect(), true);
+    add(chrome.velocityToggleRect(), true);
+    add(chrome.automationToggleRect(), true);
+    add(chrome.voiceChangesHandleRect(), chrome.voiceChangesHandleVisible());
+    add(chrome.velocityHandleRect(), chrome.velocityHandleVisible());
+    add(chrome.automationHandleRect(), chrome.automationHandleVisible());
+    add(chrome.detentRect(), chrome.detentVisible());
+    add(chrome.automationScrollbarRect(), chrome.automationScrollbarVisible());
+    return published;
+}
+
 } // namespace
 
 void DrawerPresentationTest::drawerSurfaceAndChrome()
@@ -87,7 +109,8 @@ void DrawerPresentationTest::drawerSurfaceAndChrome()
     QVERIFY(!chrome.velocityToggleRect().isEmpty());
     QVERIFY(!chrome.automationToggleRect().isEmpty());
     QCOMPARE(chrome.barBorderWidth(), layout::singlePixel());
-    QCOMPARE(chrome.toggleCheckedBackground(), view.palette().color(QPalette::Highlight));
+    QCOMPARE(chrome.toggleCheckedBackground(),
+             QGuiApplication::palette().color(QPalette::Highlight));
     QCOMPARE(chrome.barBackground().alpha(), 255);
     QCOMPARE(chrome.barOutline().alpha(), 255);
     QVERIFY(chrome.iconRevision() > 0);
@@ -222,19 +245,18 @@ void DrawerPresentationTest::drawerStackAndCanonicalInputs()
                                                   chrome.automationToggleRect().width() +
                                                   layout::space(layout::Space::One));
     QVERIFY(checks::support::physicalInputsMatchCanonical(
-        view.timelineBandLayout(), *fixture.quick, *fixture.quickRoot, songview::TimelineBand::Roll,
+        view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::Roll,
         QStringLiteral("timelineRollInput"), QStringLiteral("timelineRollGutterInput")));
     QVERIFY(checks::support::physicalInputsMatchCanonical(
-        view.timelineBandLayout(), *fixture.quick, *fixture.quickRoot,
-        songview::TimelineBand::Velocity, QStringLiteral("timelineVelocityInput"),
-        QStringLiteral("timelineVelocityGutterInput")));
+        view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::Velocity,
+        QStringLiteral("timelineVelocityInput"), QStringLiteral("timelineVelocityGutterInput")));
     QVERIFY(checks::support::physicalInputsMatchCanonical(
-        view.timelineBandLayout(), *fixture.quick, *fixture.quickRoot,
-        songview::TimelineBand::VoiceChanges, QStringLiteral("timelineVoiceChangesInput"),
+        view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::VoiceChanges,
+        QStringLiteral("timelineVoiceChangesInput"),
         QStringLiteral("timelineVoiceChangesGutterInput")));
     QVERIFY(checks::support::physicalInputsMatchCanonical(
-        view.timelineBandLayout(), *fixture.quick, *fixture.quickRoot,
-        songview::TimelineBand::Automation, QStringLiteral("timelineAutomationInput"),
+        view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::Automation,
+        QStringLiteral("timelineAutomationInput"),
         QStringLiteral("timelineAutomationGutterInput")));
     for (const songview::TimelineBand band :
          {songview::TimelineBand::Roll, songview::TimelineBand::Velocity,
@@ -248,8 +270,11 @@ void DrawerPresentationTest::drawerStackAndCanonicalInputs()
     QVERIFY(fixture.chrome().automationScrollbarVisible());
     QCOMPARE(fixture.chrome().automationScrollbarRect().top(),
              fixture.bandRect(songview::TimelineBand::Automation).top());
-    QCOMPARE(fixture.quick->geometry(),
-             checks::support::canonicalVisibleQuickHostRect(view, &chrome));
+    const QQuickWindow *const quickWindow = fixture.quick->quickWindow();
+    QVERIFY(quickWindow);
+    const QRectF published = publishedChromeRect(fixture.chrome());
+    QVERIFY(!published.isEmpty());
+    QVERIFY(QRectF(QPointF{}, QSizeF(quickWindow->size())).contains(published));
 }
 
 void DrawerPresentationTest::drawerResizeTransactions_data()
@@ -384,7 +409,7 @@ void DrawerPresentationTest::drawerHostClampAndHeaderRouting()
     QCOMPARE(drawer->plotWidth(), 0);
     QCOMPARE(fixture.bandRect(songview::TimelineBand::Roll).top(), rollBefore.top());
     QCOMPARE(fixture.bandRect(songview::TimelineBand::Roll).height(), rollBefore.height());
-    drawer->useParentBounds();
+    drawer->setHostBounds(fixture.bandRect(songview::TimelineBand::Roll));
     view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
     view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
     view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
@@ -403,7 +428,7 @@ void DrawerPresentationTest::drawerHostClampAndHeaderRouting()
     QVERIFY(automation->height() >= 0);
     QVERIFY(voice->bottom() <= velocity->top());
     QVERIFY(velocity->bottom() <= automation->top());
-    drawer->useParentBounds();
+    drawer->setHostBounds(hostBounds);
 
     auto *const headers =
         view.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"));
@@ -427,6 +452,7 @@ void DrawerPresentationTest::drawerHostClampAndHeaderRouting()
     auto *const automationGutter = fixture.quickRoot->findChild<songview::TimelineInputItem *>(
         QStringLiteral("timelineAutomationGutterInput"));
     QVERIFY(automationGutter);
+    pump();
     const QRect automationBand = fixture.bandRect(songview::TimelineBand::Automation);
     QVERIFY(automationGutter->isVisible());
     QVERIFY(automationGutter->bounds().contains(automationGutter->bounds().center()));

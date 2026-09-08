@@ -11,6 +11,7 @@
 
 #include "checks/quickpopupguard.h"
 #include "checks/rollcheck/headerchecksupport.h"
+#include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
@@ -38,10 +39,10 @@ struct HeaderFixture {
             return false;
         documentLoaded = true;
         timeline = document.buildTimeline(48000.0);
-        view.resize(800, 480);
+        if (!checks::support::showQuickViewport(view, QSize(800, 480)))
+            return false;
         view.setSong(timeline.get(), nullptr);
         view.setDocument(&document);
-        (void)view.grab(); // realizes the attached Quick input
         headers = model(view);
         if (!headers)
             return false;

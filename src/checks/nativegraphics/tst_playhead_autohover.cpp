@@ -28,7 +28,7 @@ void RenderingPlayheadTest::automationHoverDecor()
 {
     QString error;
     std::unique_ptr<checks::nativegraphics::Rig> rig =
-        checks::nativegraphics::makeRig(m_projectRoot, m_songLabel, QSize{1280, 800}, true, error);
+        checks::nativegraphics::makeRig(m_projectRoot, m_songLabel, QSize{1280, 800}, error);
     QVERIFY2(rig, qPrintable(error));
     SongView &view = rig->song->view();
     auto *page = view.editorDrawer() ? view.editorDrawer()->automationPage() : nullptr;

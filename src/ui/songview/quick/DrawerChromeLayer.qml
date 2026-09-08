@@ -5,7 +5,6 @@ Item {
     id: layer
 
     required property var chrome
-    required property var quickView
     required property rect automationBandRect
     required property bool automationBandVisible
     required property font controlFont
@@ -30,11 +29,10 @@ Item {
         required property string inputObjectName
         required property string handleObjectName
         required property var controlChrome
-        required property var controlQuickView
 
         objectName: handleObjectName
-        x: controlRect.x - controlQuickView.hostX
-        y: controlRect.y - controlQuickView.hostY
+        x: controlRect.x
+        y: controlRect.y
         width: controlRect.width
         height: controlRect.height
         visible: controlVisible
@@ -82,7 +80,6 @@ Item {
         inputObjectName: "drawerVoiceChangesHandleInput"
         handleObjectName: "drawerVoiceChangesHandle"
         controlChrome: layer.chrome
-        controlQuickView: layer.quickView
     }
 
     ResizeHandle {
@@ -93,7 +90,6 @@ Item {
         inputObjectName: "drawerVelocityHandleInput"
         handleObjectName: "drawerVelocityHandle"
         controlChrome: layer.chrome
-        controlQuickView: layer.quickView
     }
 
     ResizeHandle {
@@ -104,14 +100,13 @@ Item {
         inputObjectName: "drawerAutomationHandleInput"
         handleObjectName: "drawerAutomationHandle"
         controlChrome: layer.chrome
-        controlQuickView: layer.quickView
     }
 
     Rectangle {
         id: drawerBar
 
-        x: layer.chrome.barRect.x - layer.quickView.hostX
-        y: layer.chrome.barRect.y - layer.quickView.hostY
+        x: layer.chrome.barRect.x
+        y: layer.chrome.barRect.y
         width: layer.chrome.barRect.width
         height: layer.chrome.barRect.height
         visible: layer.chrome.barVisible
@@ -131,11 +126,10 @@ Item {
         required property string iconName
         required property string toggleObjectName
         required property var controlChrome
-        required property var controlQuickView
 
         objectName: toggleObjectName
-        x: controlRect.x - controlQuickView.hostX
-        y: controlRect.y - controlQuickView.hostY
+        x: controlRect.x
+        y: controlRect.y
         width: controlRect.width
         height: controlRect.height
         visible: controlVisible
@@ -191,7 +185,6 @@ Item {
         iconName: "voiceChanges"
         toggleObjectName: "drawerVoiceChangesToggle"
         controlChrome: layer.chrome
-        controlQuickView: layer.quickView
     }
 
     DrawerToggle {
@@ -203,7 +196,6 @@ Item {
         iconName: "automation"
         toggleObjectName: "drawerAutomationToggle"
         controlChrome: layer.chrome
-        controlQuickView: layer.quickView
     }
 
     DrawerToggle {
@@ -215,13 +207,12 @@ Item {
         iconName: "velocity"
         toggleObjectName: "drawerVelocityToggle"
         controlChrome: layer.chrome
-        controlQuickView: layer.quickView
     }
 
     TimelineInputItem {
         objectName: "drawerBarInput"
-        x: layer.chrome.barRect.x - layer.quickView.hostX
-        y: layer.chrome.barRect.y - layer.quickView.hostY
+        x: layer.chrome.barRect.x
+        y: layer.chrome.barRect.y
         width: layer.chrome.barRect.width
         height: layer.chrome.barRect.height
         visible: drawerBar.visible
@@ -232,8 +223,8 @@ Item {
         id: drawerDetent
         objectName: "drawerDetent"
 
-        x: layer.chrome.detentRect.x - layer.quickView.hostX + layer.chrome.detentIconInset
-        y: layer.chrome.detentRect.y - layer.quickView.hostY + layer.chrome.detentIconInset
+        x: layer.chrome.detentRect.x + layer.chrome.detentIconInset
+        y: layer.chrome.detentRect.y + layer.chrome.detentIconInset
         width: layer.chrome.detentRect.width - 2 * layer.chrome.detentIconInset
         height: layer.chrome.detentRect.height - 2 * layer.chrome.detentIconInset
         visible: layer.chrome.detentVisible
@@ -273,8 +264,8 @@ Item {
 
     TimelineInputItem {
         objectName: "drawerDetentInput"
-        x: layer.chrome.detentRect.x - layer.quickView.hostX
-        y: layer.chrome.detentRect.y - layer.quickView.hostY
+        x: layer.chrome.detentRect.x
+        y: layer.chrome.detentRect.y
         width: layer.chrome.detentRect.width
         height: layer.chrome.detentRect.height
         visible: layer.chrome.detentVisible
@@ -283,8 +274,8 @@ Item {
     TimelineScrollbar {
         id: automationScrollBar
         objectName: "drawerAutomationScrollBar"
-        x: layer.chrome.automationScrollbarRect.x - layer.quickView.hostX
-        y: layer.chrome.automationScrollbarRect.y - layer.quickView.hostY
+        x: layer.chrome.automationScrollbarRect.x
+        y: layer.chrome.automationScrollbarRect.y
         width: layer.chrome.automationScrollbarRect.width
         height: layer.chrome.automationScrollbarRect.height
         orientation: Qt.Vertical
@@ -354,9 +345,8 @@ Item {
         border.width: layer.chrome.barBorderWidth
         border.color: layer.chrome.barOutline
 
-        // Published band rectangles are already host-local: the view
-        // translates them by the Quick envelope origin before QML sees
-        // them, so centering needs no hostX/hostY correction.
+        // Published band rectangles are canonical viewport coordinates:
+        // the Quick window is the full viewport, so centering is direct.
         x: layer.automationBandRect.x
            + Math.max(0, (layer.automationBandRect.width - width) / 2)
         y: layer.automationBandRect.y

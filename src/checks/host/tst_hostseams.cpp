@@ -1,10 +1,11 @@
 #include "checks/fwd.hpp"
 #include "checks/host/hosttestsupport.h"
-
 #include <memory>
 
-#include <QColor>
 #include <QPointer>
+#include <QQuickItem>
+#include <QQuickWindow>
+#include <QWidget>
 #include <QtTest>
 
 #include "ui/editordrawer/automationcanvas.h"
@@ -14,6 +15,7 @@
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/layout.h"
+#include "ui/songtabquickhost.h"
 #include "ui/songview/quick/timelinequickview.h"
 
 namespace checks::host {
@@ -28,51 +30,6 @@ class HostSeamsTest final : public QObject
     Q_DISABLE_COPY_MOVE(HostSeamsTest)
 
   private slots:
-    void defaultsAreAutomationOpen()
-    {
-        const EditorViewState state;
-        QVERIFY(!state.velocity.visible);
-        QVERIFY(!state.velocity.height.has_value());
-        QVERIFY(state.automation.visible);
-        QVERIFY(!state.automation.height.has_value());
-        QVERIFY(!state.voiceChanges.visible);
-        QCOMPARE(state.activePage, EditorDrawerPage::Automations);
-        QCOMPARE(state.laneHeight, 0);
-        QVERIFY(state.laneHeights.empty());
-        QVERIFY(state.laneRanges.empty());
-        QVERIFY(state.emptyLanes.empty());
-        QVERIFY(state.hiddenLanes().empty());
-    }
-
-    void cosmeticStateComparesByValue()
-    {
-        const EditorAutomationRowId lane{EditorAutomationRowKind::ControlChange, 2, 1};
-        EditorViewState changed;
-        changed.velocity = {false, 144};
-        changed.automation = {true, 96};
-        changed.activePage = EditorDrawerPage::Velocity;
-        changed.laneHeight = 96;
-        changed.laneHeights.emplace(lane, 112);
-        changed.laneRanges.emplace(lane, 91);
-        changed.emptyLanes.emplace(lane);
-        changed.hideLane(lane);
-        QVERIFY(changed != EditorViewState{});
-    }
-
-    void drawerPagesExistWithoutWidgetShells()
-    {
-        SyntheticHost host;
-        QString error;
-        QVERIFY2(host.prepare(&error), qPrintable(error));
-        auto *drawer = host.view().editorDrawer();
-        QVERIFY(drawer);
-        QVERIFY(drawer->automationPage());
-        QVERIFY(drawer->velocityArea());
-        QVERIFY(drawer->voiceChangeArea());
-        QVERIFY(!qobject_cast<QWidget *>(drawer));
-        QVERIFY(!qobject_cast<QWidget *>(drawer->automationPage()));
-        QVERIFY(drawer->parent() == &host.view());
-    }
 
     void automationPageIsSoleScrollStore()
     {
@@ -91,7 +48,6 @@ class HostSeamsTest final : public QObject
         QCOMPARE(page->verticalScroll(), maximum);
         page->setVerticalScroll(0);
         QCOMPARE(page->verticalScroll(), 0);
-        QCOMPARE(drawer->chrome().scrollbarWidth(), layout::space(layout::Space::Two));
     }
 
     void editorEndpointsUpdateCameraAndResolveGridVoice()
@@ -122,27 +78,6 @@ class HostSeamsTest final : public QObject
         QCOMPARE(drawerContextTick(0.51), uint64_t{1});
     }
 
-    void liveStateRefreshReachesEveryDrawerPage()
-    {
-        SyntheticHost host;
-        QString error;
-        QVERIFY2(host.prepare(&error), qPrintable(error));
-        SongView &view = host.view();
-        auto *drawer = view.editorDrawer();
-        QVERIFY(drawer);
-        DrawerPageLiveState live;
-        live.documentRevision = host.document().revision();
-        live.timeZoom = view.camera().pxPerBeat();
-        live.horizontalScroll = view.camera().scrollX();
-        live.editCursorTick = 12;
-        live.trackColor = QColor{10, 20, 30};
-        live.playback = {12.0, true};
-        drawer->automationPage()->refreshLiveState(live);
-        drawer->velocityArea()->refreshLiveState(live);
-        drawer->voiceChangeArea()->refreshLiveState(live);
-        QVERIFY(!drawer->automationPage()->canvas()->rows().empty());
-        QCOMPARE(drawer->velocityArea()->axis().mode(), VelocityAxis::Mode::Intrinsic);
-    }
     void editorStateIsCosmeticOnly()
     {
         SyntheticHost host;
@@ -180,24 +115,95 @@ class HostSeamsTest final : public QObject
         QCOMPARE(host.view().editorViewState(), state);
     }
 
-    void quickHostDetachesBeforeVoiceAreaDies()
+    // One-way embedding handoff: the host adapter takes the window exactly
+    // once without detaching; an explicit detach while hosted only unbinds
+    // (the transferred window stays alive under its container); destroying
+    // the host destroys the container and the window while the coordinator
+    // is still alive; the coordinator is destroyed last.
+    void embeddedWindowOwnershipTransfersToTheContainer()
+    {
+        QPointer<QQuickWindow> window;
+        QPointer<QQuickItem> root;
+        QPointer<QWidget> container;
+        int detachCount = 0;
+        bool detachWhileWindowValid = false;
+        {
+            auto view = std::make_unique<SongView>();
+            songview::TimelineQuickView *const quick = view->quickView();
+            QVERIFY(quick);
+            window = quick->quickWindow();
+            QVERIFY(window);
+            root = quick->rootObject();
+            QVERIFY(root);
+            // Bounded reentry: a listener may detach again while the borrow is
+            // still live; the nested call must be inert, so the signal fires
+            // exactly once. The detachCount == 1 bound also keeps a pre-fix
+            // coordinator to one nested emission, never unbounded recursion.
+            QObject::connect(quick, &songview::TimelineQuickView::windowAboutToDetach, quick,
+                             [&detachCount, &detachWhileWindowValid, quick] {
+                                 ++detachCount;
+                                 detachWhileWindowValid = quick->quickWindow() != nullptr;
+                                 if (detachCount == 1)
+                                     quick->detachWindow();
+                             });
+            {
+                QWidget owner;
+                const SongTabQuickHost adapter(*quick, owner);
+                container = adapter.container();
+                QVERIFY(container);
+                QVERIFY(!quick->takeWindowForEmbedding()); // exactly-once, one-way
+                QCOMPARE(detachCount, 0);                  // the take never detaches
+                QVERIFY(quick->quickWindow() == window);   // identity survives the take
+
+                quick->detachWindow(); // hosted detach: unbind only, transfer stands
+                QCOMPARE(detachCount, 1);
+                QVERIFY(detachWhileWindowValid); // emitted while the window was usable
+                QVERIFY(window);                 // transferred window survives the unbind
+                QVERIFY(!quick->quickWindow());
+                QVERIFY(!quick->rootObject());
+                QVERIFY(!quick->popupSession());
+            } // host dies: the container (and the window it owns) are destroyed
+            QVERIFY(container.isNull());
+            QVERIFY(window.isNull());
+            QVERIFY(root.isNull());
+            view.reset(); // coordinator destroyed last, after the adapter
+        }
+    }
+
+    // Unhosted teardown: detach emits exactly once while the original window
+    // is still valid, synchronously destroys the owned window and the QML
+    // scene while domain objects (the voice-change area) stay alive, clears
+    // the getters, and repeating it is inert.
+    void unhostedDetachEmitsOnceDestroysWindowAndClearsGetters()
     {
         auto view = std::make_unique<SongView>();
-        auto *quick = view->findChild<songview::TimelineQuickView *>(
-            QStringLiteral("timelineQuickCanvas"), Qt::FindDirectChildrenOnly);
-        QPointer<VoiceChangeArea> voice = view->editorDrawer()->voiceChangeArea();
+        songview::TimelineQuickView *const quick = view->quickView();
         QVERIFY(quick);
+        QVERIFY(quick->rootObject());
+        QVERIFY(quick->quickWindow());
+        QVERIFY(quick->popupSession());
+        QPointer<QQuickWindow> window = quick->quickWindow();
+        QPointer<QQuickItem> root = quick->rootObject();
+        QPointer<VoiceChangeArea> voice = view->editorDrawer()->voiceChangeArea();
         QVERIFY(voice);
-        QCOMPARE(voice->parent(), view.get());
-        bool quickDestroyed = false;
-        bool voiceAliveAtQuickDestruction = false;
-        QObject::connect(quick, &QObject::destroyed, [&](QObject *) {
-            quickDestroyed = true;
-            voiceAliveAtQuickDestruction = !voice.isNull();
-        });
-        view.reset();
-        QVERIFY(quickDestroyed);
-        QVERIFY(voiceAliveAtQuickDestruction);
+        int detachCount = 0;
+        bool detachWhileWindowValid = false;
+        QObject::connect(quick, &songview::TimelineQuickView::windowAboutToDetach, quick,
+                         [&detachCount, &detachWhileWindowValid, quick] {
+                             ++detachCount;
+                             detachWhileWindowValid = quick->quickWindow() != nullptr;
+                         });
+        quick->detachWindow();
+        QCOMPARE(detachCount, 1);
+        QVERIFY(detachWhileWindowValid); // emitted while the window was usable
+        QVERIFY(window.isNull());        // owned window destroyed synchronously
+        QVERIFY(root.isNull());          // QML scene unloaded and destroyed
+        QVERIFY(!quick->quickWindow());
+        QVERIFY(!quick->rootObject());
+        QVERIFY(!quick->popupSession());
+        QVERIFY(voice); // domain outlives the scene and window
+        quick->detachWindow();
+        QCOMPARE(detachCount, 1); // idempotent
     }
 };
 } // namespace

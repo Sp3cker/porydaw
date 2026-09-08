@@ -4,6 +4,8 @@
 
 #include <QAbstractItemModel>
 #include <QQuickItem>
+#include <QQuickWindow>
+#include <QSize>
 
 #include <algorithm>
 #include <cmath>
@@ -98,10 +100,11 @@ void TrackHeadersTest::unattachedModelPublishesSafeZeroGeometry()
 void TrackHeadersTest::quickSurfacePublishesAndRendersHeaders()
 {
     TrackHeadersFixture &fx = fixture();
-    const QRect hostRect = fx.quick().geometry();
-    const QRectF localRect(fx.isolatedBandRect().translated(-hostRect.topLeft()));
-
-    QVERIFY(hostRect.contains(fx.isolatedBandRect()));
+    const QRect viewport(QPoint{}, fx.window().size());
+    QVERIFY(viewport.contains(fx.isolatedBandRect()));
+    // Band rects are published canonical viewport-local, so the QML-published
+    // rect compares directly against the isolated band rect.
+    const QRectF localRect(fx.isolatedBandRect());
     QVERIFY(fx.root().property("trackHeadersBandVisible").toBool());
     QVERIFY(sameRect(fx.root().property("trackHeadersBandRect").toRectF(), localRect));
     QVERIFY(fx.band().isVisible());
@@ -273,13 +276,11 @@ void TrackHeadersTest::emptyTrackHeadersRejectInputWithoutMutation()
 {
     MidiTimeline timeline;
     SongView emptyView;
-    emptyView.resize(320, 180);
     emptyView.setSong(&timeline, nullptr);
-    emptyView.show();
-    checks::support::pumpQuick();
+    QVERIFY(checks::support::showQuickViewport(emptyView, QSize(320, 180)));
+    auto *const quick = emptyView.quickView();
     auto *const model =
         emptyView.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"));
-    auto *const quick = emptyView.quickView();
     QQuickItem *const root = quick ? quick->rootObject() : nullptr;
     auto *const input = root ? root->findChild<songview::TimelineInputItem *>(
                                    QStringLiteral("timelineTrackHeadersInput"))

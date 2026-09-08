@@ -5,6 +5,7 @@
 #include <QCoreApplication>
 #include <QEvent>
 #include <QQuickItem>
+#include <QQuickWindow>
 
 #include <memory>
 #include <optional>
@@ -13,8 +14,6 @@
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
 #include "checks/support/timelinequickcheck.h"
-#include "ui/editordrawer/drawerchrome.h"
-#include "ui/editordrawer/editordrawer.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
@@ -28,7 +27,7 @@ std::unique_ptr<checks::nativegraphics::Rig> plotRig(const QString &projectRoot,
 {
     QString error;
     std::unique_ptr<checks::nativegraphics::Rig> rig =
-        checks::nativegraphics::makeRig(projectRoot, songLabel, QSize{1280, 800}, true, error);
+        checks::nativegraphics::makeRig(projectRoot, songLabel, QSize{1280, 800}, error);
     if (!rig)
         QTest::qFail(qPrintable(error), __FILE__, __LINE__);
     return rig;
@@ -50,9 +49,7 @@ void RenderingPlayheadTest::plotGeometryAndLifecycle()
     QVERIFY(rig);
     SongView &view = rig->song->view();
     auto *quick = view.quickView();
-    auto *drawer = view.editorDrawer();
     QVERIFY(quick && quick->rootObject() && quick->quickWindow());
-    QVERIFY(drawer);
     QQuickItem *root = quick->rootObject();
     auto *rollInput =
         root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineRollInput"));
@@ -67,53 +64,46 @@ void RenderingPlayheadTest::plotGeometryAndLifecycle()
     const auto quickRect = [quick, root](const QQuickItem &item) {
         return QRectF(item.mapToItem(root, QPointF{}), item.size());
     };
-    const auto canonicalQuickRect = [quick](const QRect &rect) {
-        return QRectF(rect.translated(-quick->geometry().topLeft()));
-    };
+    // Canonical band rects are already Quick-window-local; no host offset
+    // translation remains.
+    const auto canonicalQuickRect = [](const QRect &rect) { return QRectF(rect); };
     QVERIFY(rollBand->isVisible());
     QVERIFY(rollInput->isVisible());
     QVERIFY(sameRect(quickRect(*rollBand), canonicalQuickRect(roll->rect)));
     QVERIFY(sameRect(quickRect(*rollInput), canonicalQuickRect(roll->plotRect)));
-    const QSize originalSize = view.size();
-    view.resize(originalSize.width(),
-                originalSize.height() - 4 * layout::space(layout::Space::One));
+    QQuickWindow *window = quick->quickWindow();
+    QVERIFY(window);
+    const QSize originalSize = window->size();
+    const QSize shrunkSize(originalSize.width(),
+                           originalSize.height() - 4 * layout::space(layout::Space::One));
+    window->resize(shrunkSize);
     checks::support::pumpQuick();
+    QCOMPARE(window->size(), shrunkSize);
     const std::optional<songview::TimelineBandGeometry> &resizedRoll =
         view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
     QVERIFY(resizedRoll);
-    const QRect resizedHost =
-        checks::support::canonicalVisibleQuickHostRect(view, &drawer->chrome());
-    QCOMPARE(quick->geometry(), resizedHost);
-    QVERIFY(sameRect(quickRect(*rollBand),
-                     QRectF(resizedRoll->rect.translated(-resizedHost.topLeft()))));
-    QVERIFY(sameRect(quickRect(*rollInput),
-                     QRectF(resizedRoll->plotRect.translated(-resizedHost.topLeft()))));
-    view.resize(originalSize);
+    QVERIFY(sameRect(quickRect(*rollBand), QRectF(resizedRoll->rect)));
+    QVERIFY(sameRect(quickRect(*rollInput), QRectF(resizedRoll->plotRect)));
+    window->resize(originalSize);
     checks::support::pumpQuick();
 
-    QEvent winIdChange{QEvent::WinIdChange};
-    QCoreApplication::sendEvent(&view, &winIdChange);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+    // Quick-window lifecycle: the DPR notification and a hide/show exposure
+    // cycle drive the same re-publication the widget-level WinId/DPR events
+    // used to. No platform-specific skips: this must hold under any QPA.
     QEvent densityChange{QEvent::DevicePixelRatioChange};
-#else
-    QEvent densityChange{QEvent::ScreenChangeInternal};
-#endif
-    QCoreApplication::sendEvent(&view, &densityChange);
-    view.hide();
+    QCoreApplication::sendEvent(window, &densityChange);
+    window->hide();
     checks::support::pumpQuick();
-    view.show();
-    QTRY_VERIFY(view.windowHandle() && view.windowHandle()->isExposed());
+    window->show();
+    QTRY_VERIFY(window->isExposed());
     checks::support::pumpQuick();
 
     QVERIFY(view.timelineBandLayout() == canonical);
-    const QRect expectedHost =
-        checks::support::canonicalVisibleQuickHostRect(view, &drawer->chrome());
-    QCOMPARE(quick->geometry(), expectedHost);
     const std::optional<songview::TimelineBandGeometry> &liveRoll =
         view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
     QVERIFY(liveRoll);
-    const QRectF expectedRoll = QRectF(liveRoll->rect.translated(-expectedHost.topLeft()));
-    const QRectF expectedPlot = QRectF(liveRoll->plotRect.translated(-expectedHost.topLeft()));
+    const QRectF expectedRoll = QRectF(liveRoll->rect);
+    const QRectF expectedPlot = QRectF(liveRoll->plotRect);
     QCOMPARE(root->property("rollBandVisible").toBool(), true);
     QVERIFY(sameRect(root->property("rollBandRect").toRectF(), expectedRoll));
     QVERIFY(sameRect(root->property("rollBandPlotRect").toRectF(), expectedPlot));

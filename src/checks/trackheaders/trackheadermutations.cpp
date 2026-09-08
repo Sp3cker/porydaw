@@ -4,6 +4,7 @@
 #include "checks/voicepickerdriver.h"
 
 #include <QCoreApplication>
+#include <QGuiApplication>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QScopeGuard>
@@ -227,6 +228,19 @@ void TrackHeadersTest::reorderCommitsAndRebuildsHeader()
 void TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader()
 {
     TrackHeadersFixture &fx = fixture();
+    // The voice picker search field keys off live window activation: stage
+    // real header-band focus (focusTimelineBand plus focusWindow/focusObject
+    // convergence), not just item-local focus.
+    QVERIFY2(
+        fx.view().focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason),
+        "the Quick track-header band could not take focus");
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents();
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents();
+    QTRY_VERIFY2(QGuiApplication::focusWindow() == &fx.window() &&
+                     QGuiApplication::focusObject() == &fx.input() && fx.input().hasActiveFocus(),
+                 "the Quick track-header band could not take focus");
     songview::TrackHeaderModel &headers = fx.headers();
     headers.setScrollY(headers.maximumScrollY());
     const std::optional<int> row = fx.addTrackRow();

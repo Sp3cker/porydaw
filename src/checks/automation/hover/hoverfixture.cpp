@@ -496,8 +496,7 @@ Topology topologyFor(Fixture &fixture, const PreparedLane &lane, QString &error)
     const HoverObservation insertion = observe(fixture);
     const auto &insertionLayer = scene->layer(songview::TimelineQuickLayer::AutomationHover);
     const qreal expectedGuideX = fixture.rig->view().camera().contentX(lane.insertionTick);
-    const qreal expectedRootX =
-        fixture.rig->view().timelineSplitX() + expectedGuideX - quick->geometry().x();
+    const qreal expectedRootX = fixture.rig->view().timelineSplitX() + expectedGuideX;
     topology.insertionGuide =
         insertion.chromeVisible && insertion.revision > idle.revision &&
         std::abs(insertion.guideRootX - expectedRootX) <= layout::singlePixel();

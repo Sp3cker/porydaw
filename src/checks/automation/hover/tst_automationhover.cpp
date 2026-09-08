@@ -32,7 +32,7 @@ constexpr uint64_t kProbeTick = 96;
 qreal expectedRootContentX(const automation_hover::Fixture &fixture, uint64_t tick)
 {
     const SongView &view = fixture.rig->view();
-    return view.timelineSplitX() + view.camera().contentX(tick) - view.quickView()->geometry().x();
+    return view.timelineSplitX() + view.camera().contentX(tick);
 }
 
 } // namespace

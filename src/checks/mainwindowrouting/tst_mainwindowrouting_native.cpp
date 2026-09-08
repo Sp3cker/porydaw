@@ -79,7 +79,7 @@ class MainWindowRoutingNativeTest final : public QObject, private MainWindowRout
         view.focusActiveSurface();
         QCoreApplication::processEvents();
         QWidget *target = QApplication::focusWidget();
-        QVERIFY(target && (target == &view || view.isAncestorOf(target)));
+        QVERIFY(target && (target == session->b || session->b->isAncestorOf(target)));
         const QList<QKeySequence> copyBindings = copy->shortcuts();
         QVERIFY(!copyBindings.isEmpty());
         QSignalSpy copyTriggered(copy, &QAction::triggered);
@@ -121,7 +121,7 @@ class MainWindowRoutingNativeTest final : public QObject, private MainWindowRout
         QCOMPARE(soloTriggered.count(), 2);
         view.focusActiveSurface();
         target = QApplication::focusWidget();
-        QVERIFY(target && (target == &view || view.isAncestorOf(target)));
+        QVERIFY(target && (target == session->b || session->b->isAncestorOf(target)));
         sendShortcut(*target, soloBindings.front());
         QVERIFY(view.trackSoloed(selectedTrack));
         QCOMPARE(soloTriggered.count(), 3);
@@ -166,7 +166,6 @@ class MainWindowRoutingNativeTest final : public QObject, private MainWindowRout
         QCOMPARE(window.m_workspace->projectState().snapshot.root(), session->fixture->root());
         QVERIFY(waitForTabReady(*window.m_workspace, old));
         QCOMPARE(old->document().label(), label);
-        QVERIFY(old->view().isEnabled());
     }
 
   private:

@@ -97,17 +97,15 @@ void VelocityPageTest::fixtureRoute101AndInputGeometry()
     for (ToneData &voice : voices.voices)
         voice.type = VOICE_DIRECTSOUND;
     SongView view;
-    view.resize(960, 480);
+    songview::TimelineQuickView *const quick = view.quickView();
+    QVERIFY(quick);
     view.setDocument(&song->document());
     view.setSong(timeline.get(), &voices);
     view.setDrawerActivePage(EditorDrawerPage::Velocity);
     view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
-    view.show();
-    pump();
+    QVERIFY(checks::support::showQuickViewport(view, QSize(960, 480)));
     auto *drawer = view.editorDrawer();
-    auto *quick =
-        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
-    auto *root = quick ? quick->rootObject() : nullptr;
+    auto *root = quick->rootObject();
     auto *input = root ? root->findChild<songview::TimelineInputItem *>(
                              QStringLiteral("timelineVelocityInput"))
                        : nullptr;
@@ -141,7 +139,6 @@ void VelocityPageTest::fixtureRoute101AndInputGeometry()
     QVERIFY(std::abs(drawer->velocityArea()->axis().markers()[0].y -
                      drawer->velocityArea()->axis().velocityToY(notes.front().velocity)) <=
             1.0 / input->devicePixelRatio());
-    view.hide();
 }
 
 void VelocityPageTest::chromeAndContinuousAxis()

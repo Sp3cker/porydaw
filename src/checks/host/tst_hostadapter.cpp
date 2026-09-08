@@ -10,6 +10,7 @@
 #include <QImage>
 #include <QKeyEvent>
 #include <QPalette>
+#include <QPoint>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QTimer>
@@ -32,6 +33,7 @@
 #include "ui/layout.h"
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timelinebandlayout.h"
@@ -62,7 +64,7 @@ class HostAdapterTest final : public QObject
         QVERIFY(host.view().timeline());
         QVERIFY(host.view().editorDrawer());
         QVERIFY(host.view().editorDrawer()->velocityArea());
-        QVERIFY(host.view().findChild<songview::TimelineQuickView *>());
+        QVERIFY(host.view().quickView());
         QCOMPARE(host.document().notesForTrack(0).size(), size_t{2});
     }
 
@@ -87,8 +89,7 @@ class HostAdapterTest final : public QObject
                                 return event.type == 0x9 && event.noteId == id;
                             }));
         SongView &view = rig->view();
-        view.resize(720, 520);
-        view.show();
+        QVERIFY(checks::support::showQuickViewport(view, QSize(720, 520)));
         view.selectTrack(fixtureNote->engineTrack);
         view.selectionModel().setNoteSelection({fixtureNote->noteId});
         view.setEditCursorTick(fixtureNote->tick);
@@ -111,7 +112,7 @@ class HostAdapterTest final : public QObject
         QString error;
         QVERIFY2(host.prepare(&error), qPrintable(error));
         SongView &view = host.view();
-        auto *quick = view.findChild<songview::TimelineQuickView *>();
+        auto *quick = view.quickView();
         QVERIFY(quick);
         QQuickItem *root = quick->rootObject();
         QVERIFY(root);
@@ -119,8 +120,10 @@ class HostAdapterTest final : public QObject
             QStringLiteral("trackHeaderModel"), Qt::FindDirectChildrenOnly);
         QVERIFY(headers);
         QString captureError;
+        QQuickWindow *const window = quick->quickWindow();
+        QVERIFY(window);
         const QImage publishedFrame =
-            checks::support::captureQuickBand(view, quick->geometry(), &captureError);
+            checks::support::captureQuickBand(view, QRect(QPoint{}, window->size()), &captureError);
         QVERIFY2(!publishedFrame.isNull(), qPrintable(captureError));
         const songview::TimelineBandLayout &layout = view.timelineBandLayout();
         const auto trackHeaders = layout.geometry(songview::TimelineBand::TrackHeaders);
@@ -160,29 +163,25 @@ class HostAdapterTest final : public QObject
         }};
         for (const BandProperties &entry : properties) {
             const auto geometry = layout.geometry(entry.band);
-            const QRectF expectedRect =
-                geometry ? QRectF(geometry->rect.translated(-quick->geometry().topLeft()))
-                         : QRectF{};
+            const QRectF expectedRect = geometry ? QRectF(geometry->rect) : QRectF{};
             const QRectF expectedPlot =
-                geometry && !geometry->plotRect.isEmpty()
-                    ? QRectF(geometry->plotRect.translated(-quick->geometry().topLeft()))
-                    : QRectF{};
+                geometry && !geometry->plotRect.isEmpty() ? QRectF(geometry->plotRect) : QRectF{};
             QCOMPARE(root->property(entry.rect).toRectF(), expectedRect);
             QCOMPARE(root->property(entry.plot).toRectF(), expectedPlot);
             QCOMPARE(root->property(entry.visible).toBool(), geometry.has_value());
         }
         QVERIFY(checks::support::physicalInputsMatchCanonical(
-            layout, *quick, *root, songview::TimelineBand::Ruler,
-            QStringLiteral("timelineRulerInput"), QStringLiteral("timelineRulerGutterInput")));
+            layout, *root, songview::TimelineBand::Ruler, QStringLiteral("timelineRulerInput"),
+            QStringLiteral("timelineRulerGutterInput")));
         QVERIFY(checks::support::physicalInputsMatchCanonical(
-            layout, *quick, *root, songview::TimelineBand::Roll,
-            QStringLiteral("timelineRollInput"), QStringLiteral("timelineRollGutterInput")));
+            layout, *root, songview::TimelineBand::Roll, QStringLiteral("timelineRollInput"),
+            QStringLiteral("timelineRollGutterInput")));
         QVERIFY(checks::support::physicalInputsMatchCanonical(
-            layout, *quick, *root, songview::TimelineBand::OtherEvents,
+            layout, *root, songview::TimelineBand::OtherEvents,
             QStringLiteral("timelineOtherEventsInput"),
             QStringLiteral("timelineOtherEventsGutterInput")));
         QVERIFY(checks::support::physicalInputsMatchCanonical(
-            layout, *quick, *root, songview::TimelineBand::Velocity,
+            layout, *root, songview::TimelineBand::Velocity,
             QStringLiteral("timelineVelocityInput"),
             QStringLiteral("timelineVelocityGutterInput")));
         const auto velocity = layout.geometry(songview::TimelineBand::Velocity);
@@ -204,7 +203,7 @@ class HostAdapterTest final : public QObject
         QString error;
         QVERIFY2(host.prepare(&error), qPrintable(error));
         SongView &view = host.view();
-        auto *quick = view.findChild<songview::TimelineQuickView *>();
+        auto *quick = view.quickView();
         QVERIFY(quick);
         QQuickItem *root = quick->rootObject();
         QVERIFY(root);
@@ -237,8 +236,6 @@ class HostAdapterTest final : public QObject
         QCOMPARE(velocity->interaction(), view.editorDrawer()->velocityArea());
         QCOMPARE(voice->interaction(), voiceGutter->interaction());
         QCOMPARE(voice->interaction(), view.editorDrawer()->voiceChangeArea());
-        QVERIFY(!view.findChild<QWidget *>(QStringLiteral("timeRulerControls"),
-                                           Qt::FindDirectChildrenOnly));
     }
 
     void drawerChromeAndQuickHeadersFollowCanonicalGeometry()
@@ -247,7 +244,7 @@ class HostAdapterTest final : public QObject
         QString error;
         QVERIFY2(host.prepare(&error), qPrintable(error));
         SongView &view = host.view();
-        auto *quick = view.findChild<songview::TimelineQuickView *>();
+        auto *quick = view.quickView();
         QVERIFY(quick);
         QQuickItem *root = quick->rootObject();
         QVERIFY(root);
@@ -297,9 +294,9 @@ class HostAdapterTest final : public QObject
         QCOMPARE(headerScroll->width(), headers->scrollbarWidth());
         QCOMPARE(headerScroll->isVisible(), headers->maximumScrollY() > 0.0);
         QCOMPARE(headerThumb->isVisible(), headers->maximumScrollY() > 0.0);
-        QVERIFY(std::abs(quick->hostX() + quick->rulerPlotOrigin() - view.timelineSplitX()) <=
+        QVERIFY(std::abs(quick->rulerPlotOrigin() - view.timelineSplitX()) <=
                 layout::singlePixel());
-        QVERIFY(quick->quickDevicePixelRatio() > 0.0);
+        QVERIFY(quick->quickWindow()->devicePixelRatio() > 0.0);
     }
 
     void hiddenBandsClearEveryProjection_data()
@@ -330,7 +327,7 @@ class HostAdapterTest final : public QObject
         QString error;
         QVERIFY2(host.prepare(&error), qPrintable(error));
         SongView &view = host.view();
-        auto *quick = view.findChild<songview::TimelineQuickView *>();
+        auto *quick = view.quickView();
         QVERIFY(quick);
         QQuickItem *root = quick->rootObject();
         QVERIFY(root);
@@ -339,8 +336,6 @@ class HostAdapterTest final : public QObject
         QVERIFY(!view.timelineBandLayout().geometry(band).has_value());
         QVERIFY(!root->property(qPrintable(visibleProperty)).toBool());
         QVERIFY(root->property(qPrintable(rectProperty)).toRectF().isEmpty());
-        QCOMPARE(quick->geometry(), checks::support::canonicalVisibleQuickHostRect(
-                                        view, &view.editorDrawer()->chrome()));
         QString inputName;
         QString gutterName;
         if (band == songview::TimelineBand::Velocity) {
@@ -362,8 +357,8 @@ class HostAdapterTest final : public QObject
         settle();
         QVERIFY(view.timelineBandLayout().geometry(band).has_value());
         QVERIFY(root->property(qPrintable(visibleProperty)).toBool());
-        QVERIFY(checks::support::physicalInputsMatchCanonical(view.timelineBandLayout(), *quick,
-                                                              *root, band, inputName, gutterName));
+        QVERIFY(checks::support::physicalInputsMatchCanonical(view.timelineBandLayout(), *root,
+                                                              band, inputName, gutterName));
     }
 
     void eventListHidesOnlyRollProjection()
@@ -372,7 +367,7 @@ class HostAdapterTest final : public QObject
         QString error;
         QVERIFY2(host.prepare(&error), qPrintable(error));
         SongView &view = host.view();
-        auto *quick = view.findChild<songview::TimelineQuickView *>();
+        auto *quick = view.quickView();
         QVERIFY(quick);
         QQuickItem *root = quick->rootObject();
         QVERIFY(root);
@@ -398,7 +393,7 @@ class HostAdapterTest final : public QObject
         QString error;
         QVERIFY2(host.prepare(&error), qPrintable(error));
         SongView &view = host.view();
-        auto *quick = view.findChild<songview::TimelineQuickView *>();
+        auto *quick = view.quickView();
         QVERIFY(quick);
         QQuickItem *root = quick->rootObject();
         QVERIFY(root);
@@ -413,11 +408,10 @@ class HostAdapterTest final : public QObject
         QVERIFY(toolTip && otherStrip && !toolTip->isVisible());
         QVERIFY(!view.model().strip.empty());
         const StripItem &marker = view.model().strip.front();
-        const QPoint quickOrigin = quick->mapTo(&view, QPoint{});
         const qreal x = view.camera().displayX(double(marker.tick), geometry->plotRect.x(),
                                                input->devicePixelRatio());
         const QPointF inputPoint =
-            input->mapFromScene(QPointF{x, qreal(geometry->rect.center().y())} - quickOrigin);
+            input->mapFromScene(QPointF{x, qreal(geometry->rect.center().y())});
         QVERIFY(input->contains(inputPoint));
         const QPointF windowPoint = input->mapToScene(inputPoint);
         QEnterEvent enter(windowPoint, windowPoint,
@@ -498,7 +492,7 @@ class HostAdapterTest final : public QObject
         view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
         view.setDrawerActivePage(EditorDrawerPage::Automations);
         settle();
-        auto *quick = view.findChild<songview::TimelineQuickView *>();
+        auto *quick = view.quickView();
         auto *page = view.editorDrawer()->automationPage();
         QVERIFY(quick && page);
         auto *canvas = page->canvas();
@@ -543,7 +537,7 @@ class HostAdapterTest final : public QObject
         view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
         view.setDrawerActivePage(EditorDrawerPage::Automations);
         settle();
-        auto *quick = view.findChild<songview::TimelineQuickView *>();
+        auto *quick = view.quickView();
         auto *automation = view.editorDrawer()->automationPage()->canvas();
         QVERIFY(quick && automation);
         auto *input = quick->rootObject()->findChild<songview::TimelineInputItem *>(
@@ -603,7 +597,7 @@ class HostAdapterTest final : public QObject
         QString error;
         QVERIFY2(host.prepare(&error), qPrintable(error));
         SongView &view = host.view();
-        auto *quick = view.findChild<songview::TimelineQuickView *>();
+        auto *quick = view.quickView();
         QVERIFY(quick);
         auto *velocity = quick->rootObject()->findChild<songview::TimelineInputItem *>(
             QStringLiteral("timelineVelocityInput"));
@@ -663,6 +657,33 @@ class HostAdapterTest final : public QObject
         // The image check is a retained negative control. The primary
         // assertion above proves Automation's model did not rebuild.
         QCOMPARE(automationAfter, automationBefore);
+    }
+
+    void sharedPopupDiesOnHideAndReadinessReset()
+    {
+        SyntheticHost host;
+        QString error;
+        QVERIFY2(host.prepare(&error), qPrintable(error));
+        SongView &view = host.view();
+        auto *quick = view.quickView();
+        QVERIFY(quick);
+        QVERIFY(quick->quickWindow());
+        auto *session = quick->popupSession();
+        QVERIFY(session);
+        QObject menuOwner;
+        QVERIFY(session->beginMenu(&menuOwner));
+        QVERIFY(session->isOpen());
+        // Tab switches hide the embedded child while the top level stays
+        // active, so Deactivate may never fire: Hide alone must dismiss.
+        QEvent hide(QEvent::Hide);
+        QCoreApplication::sendEvent(quick->quickWindow(), &hide);
+        QVERIFY(!session->isOpen());
+        // Readiness/document resets route through cancelTransientInput: any
+        // surviving menu or form dies before the gate eats new input.
+        QVERIFY(session->beginMenu(&menuOwner));
+        QVERIFY(session->isOpen());
+        view.cancelTransientInput();
+        QVERIFY(!session->isOpen());
     }
 
   private:

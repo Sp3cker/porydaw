@@ -4,13 +4,16 @@
 
 #include <QColor>
 #include <QObject>
+#include <QPointer>
 #include <QRect>
 #include <QRegion>
 #include <memory>
 
+class QQuickWindow;
 class SongView;
 
 namespace songview {
+class TimelineQuickView;
 
 // Shared playhead metrics: platform compositors and the Qt Quick renderer
 // resolve the same font-scaled geometry.
@@ -39,7 +42,17 @@ class PlayheadOverlay final : public QObject
     // Re-reads the themed playhead color and pushes it to the active renderer.
     void syncAppearance();
 
+    // Platform-surface lifecycle: teardown drops the native attachment before
+    // the surface dies; (re)creation or a show transition re-syncs geometry
+    // and re-attaches.
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
   private:
+    songview::TimelineQuickView *quickView() const;
+    QQuickWindow *quickWindow() const;
+    void ensureWindowTracking();
+    void clearNativeAttachment();
+
     QRect timelineColumnRect() const;
     bool effectiveVisible() const;
 
@@ -50,9 +63,10 @@ class PlayheadOverlay final : public QObject
         void operator()(Platform *platform) const;
     };
 
-    void initializePlatform(SongView &owner);
+    void initializePlatform();
     void setPlatformLayout();
     void setPlatformImages();
+    void detachPlatform();
     void setPlatformPosition();
 #endif
     void updatePlayhead();
@@ -60,6 +74,11 @@ class PlayheadOverlay final : public QObject
     SongView &m_owner;
     TimelineBandLayout m_layout;
     QColor m_color;
+
+    // Quick window the overlay is anchored to: watched for platform-surface
+    // teardown/recreate, and cleared via TimelineQuickView's detach signal.
+    QPointer<QQuickWindow> m_filteredWindow;
+    bool m_detachConnected = false;
 
 #ifdef __APPLE__
     std::unique_ptr<Platform, PlatformDeleter> m_platform;

@@ -8,6 +8,7 @@
 #include <variant>
 
 #include <QCursor>
+#include <QGuiApplication>
 #include <QIcon>
 #include <QPixmap>
 
@@ -50,15 +51,15 @@ const QString &AutomationCanvas::refreshCcSummaryText(CCLanes::RowTextCache &cac
 AutomationCanvas::AutomationCanvas(AutomationPage &page)
     : QObject(&page)
     , m_geometry(AutomationGeometry::resolve())
-    , m_laneTitleFont(typography::bold(typography::caption(page.m_owner.font())))
-    , m_laneCaptionFont(typography::regular(typography::caption(page.m_owner.font())))
+    , m_laneTitleFont(typography::bold(typography::caption(QGuiApplication::font())))
+    , m_laneCaptionFont(typography::regular(typography::caption(QGuiApplication::font())))
     , m_laneTextLayout(layout::twoLineText(m_laneTitleFont, m_laneTitleFont, m_laneCaptionFont,
                                            layout::Space::Zero))
     , m_page(page)
     , m_rowData(&page)
     , m_tempoLane(&page)
     , m_laneSelection(page.m_owner.selectionModel(), m_rowData.rows(), page.usedTrackMask())
-    , m_hoverState(page.m_owner.font())
+    , m_hoverState(QGuiApplication::font())
 {
     refreshGeometry();
     // The lane menus are typed adapters over the shared canvas popup session;

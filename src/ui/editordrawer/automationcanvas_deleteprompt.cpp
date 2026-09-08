@@ -5,6 +5,7 @@
 #include <limits>
 #include <utility>
 
+#include <QGuiApplication>
 #include <QMetaObject>
 #include <QUrl>
 #include <QVariantMap>
@@ -56,7 +57,7 @@ QString AutomationCanvas::ccDeletePromptMessage() const
 QVariantMap AutomationCanvas::ccDeletePromptAppearance() const
 {
     QVariantMap appearance;
-    appearance.insert(QStringLiteral("font"), m_page.m_owner.font());
+    appearance.insert(QStringLiteral("font"), QGuiApplication::font());
     appearance.insert(QStringLiteral("background"), themes::color(themes::Role::window_background));
     appearance.insert(QStringLiteral("outline"), themes::color(themes::Role::palette_outline));
     appearance.insert(QStringLiteral("text"), themes::color(themes::Role::window_text));

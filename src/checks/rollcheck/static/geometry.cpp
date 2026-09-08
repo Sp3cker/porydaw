@@ -1,7 +1,9 @@
 #include "checks/rollcheck/static/tst_pianorollstatic.h"
 
 #include <QCoreApplication>
+#include <QGuiApplication>
 #include <QPalette>
+#include <QSize>
 #include <QtTest>
 
 #include <array>
@@ -10,8 +12,10 @@
 #include <vector>
 
 #include "checks/rollcheck/static/fixtures.h"
+#include "checks/support/quickframebuffer.h"
 #include "core/miditimeline.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 namespace checks::rollcheck::staticcheck {
 namespace {
@@ -26,10 +30,8 @@ struct BareView {
 
     BareView()
     {
-        view.resize(1280, 800);
-        view.show();
-        view.ensurePolished();
-        QCoreApplication::processEvents();
+        if (!checks::support::showQuickViewport(view, QSize(1280, 800)))
+            qFatal("static geometry fixture could not expose the Quick window");
         default44 = {.ticksPerBeat = kTicksPerBeat,
                      .lengthTicks = 16 * kBeatsPerBar * kTicksPerBeat};
         t48 = {.ticksPerBeat = 48, .lengthTicks = 16 * kBeatsPerBar * 48};
@@ -41,7 +43,6 @@ struct BareView {
     ~BareView()
     {
         view.setSong(nullptr, nullptr);
-        view.hide();
         QCoreApplication::processEvents();
     }
 };
@@ -94,7 +95,8 @@ void PianoRollStaticTest::fallbackCamera()
 {
     QFETCH(int, width);
     BareView fixture;
-    fixture.view.resize(width, 800);
+    QVERIFY(fixture.view.quickView() && fixture.view.quickView()->quickWindow());
+    fixture.view.quickView()->quickWindow()->resize(QSize(width, 800));
     QCoreApplication::processEvents();
     const double leadPad = fixture.view.camera().leadPadPx();
     QVERIFY2(leadPad > 0.0, "fallback lead pad is not positive");
@@ -165,7 +167,7 @@ void PianoRollStaticTest::fallbackRulerStemAndBars()
     QVERIFY2(raster.valid(), "fresh ruler raster could not be captured");
     const qreal offset = rulerPlotOffset(fixture.view);
     const int tickZero = raster.deviceX(offset + fixture.view.camera().contentX(0.0));
-    const QRgb placeholder = fixture.view.palette().color(QPalette::PlaceholderText).rgb();
+    const QRgb placeholder = QGuiApplication::palette().color(QPalette::PlaceholderText).rgb();
     const int top = int(raster.image.height() * 0.05);
     const int bottom = int(raster.image.height() * 0.45);
     int longestStem = 0;

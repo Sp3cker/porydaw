@@ -67,9 +67,21 @@ void SelectionLocalInputTierTest::renameTextInputOwnsKeys()
     // real band before beginRename asks the QML delegate to take active focus.
     QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason),
              "could not focus the Quick host before track rename");
+    // Drain the shell-to-Quick activation switch before gating on it:
+    // qWaitFor returns immediately when the predicate starts true, so without
+    // this flush a still-queued Deactivate/Activate pair would land after
+    // beginRename and legitimately commit the editor on transient focus loss.
+    selectionkey::settle();
     const auto quickBandReady = [&] {
+        // Application-level convergence, not just window-local focus:
+        // forceActiveFocus resolves the band and activeFocusItem
+        // synchronously while the shell-to-Quick activation switch may
+        // still be queued; a stale Deactivate/Activate pair delivered after
+        // beginRename would legitimately commit the rename editor on
+        // transient focus loss (blur-commit is preserved by design).
         return view.focusedTimelineBand() == songview::TimelineBand::Roll &&
-               quickWindow->activeFocusItem() != nullptr;
+               quickWindow->activeFocusItem() != nullptr && quickWindow->isActive() &&
+               QGuiApplication::focusWindow() == quickWindow;
     };
     QVERIFY2(checks::async_wait::waitUntil([] { return true; }, quickBandReady, 5000, 10) ==
                  checks::async_wait::Result::Ready,

@@ -40,7 +40,7 @@ std::unique_ptr<checks::nativegraphics::Rig> quickRig(const QString &projectRoot
     QString error;
     std::unique_ptr<checks::nativegraphics::Rig> rig = checks::nativegraphics::makeRig(
         projectRoot, songLabel,
-        QSize{90 * layout::space(layout::Space::One), 65 * layout::space(layout::Space::One)}, true,
+        QSize{90 * layout::space(layout::Space::One), 65 * layout::space(layout::Space::One)},
         error);
     if (!rig)
         QTest::qFail(qPrintable(error), __FILE__, __LINE__);
@@ -187,7 +187,7 @@ void RenderingPlayheadTest::quickPolarityAndEdges()
     QVERIFY2(!headerFrame.isNull(), qPrintable(captureError));
     QVERIFY(!frameHasPlayhead(headerFrame, color));
 
-    const qreal columnWidth = (std::max)(0, view.width() - view.timelineSplitX());
+    const qreal columnWidth = (std::max)(0, quick->quickWindow()->width() - view.timelineSplitX());
     overlay->setPlayhead(columnWidth, true, playing);
     checks::support::pumpQuick();
     QVERIFY(!quick->playheadVisible());

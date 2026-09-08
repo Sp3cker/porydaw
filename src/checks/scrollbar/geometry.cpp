@@ -54,7 +54,7 @@ void ScrollbarTest::layoutFollowsCanonicalBands()
     QVERIFY(!horizontalRect.isEmpty());
     QVERIFY(!verticalRect.isEmpty());
     QVERIFY(near(horizontalRect.left(), songView.timelineSplitX()));
-    QVERIFY(near(horizontalRect.right(), songView.width()));
+    QVERIFY(near(horizontalRect.right(), window().width()));
     QVERIFY(near(horizontalRect.height(), layout::space(layout::Space::Two)));
     QVERIFY(near(horizontalRect.top(), otherEvents->rect.top() + otherEvents->rect.height()));
 
@@ -66,14 +66,10 @@ void ScrollbarTest::layoutFollowsCanonicalBands()
 
     QTRY_VERIFY(bar(Qt::Horizontal).isVisible() && thumb(Qt::Horizontal).isVisible());
     QTRY_VERIFY(bar(Qt::Vertical).isVisible() && thumb(Qt::Vertical).isVisible());
-    const auto actualVerticalRect = [&] {
-        return sceneRect(bar(Qt::Vertical))
-            .translated(songView.quickView()->geometry().topLeft())
-            .toAlignedRect();
-    };
+    const auto actualVerticalRect = [&] { return sceneRect(bar(Qt::Vertical)).toAlignedRect(); };
     QTRY_VERIFY(!actualVerticalRect().isEmpty());
     QTRY_COMPARE(actualVerticalRect().left(), roll->rect.right() + 1);
-    QTRY_COMPARE(actualVerticalRect().right(), songView.width() - 1);
+    QTRY_COMPARE(actualVerticalRect().right(), window().width() - 1);
     QVERIFY(actualVerticalRect().left() > roll->plotRect.right());
     QVERIFY(withinTrack(Qt::Horizontal));
     QVERIFY(withinTrack(Qt::Vertical));

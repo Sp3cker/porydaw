@@ -404,9 +404,10 @@ void AutomationEditingTest::pencilCancellationRoutesAbortGestureWithoutCommit()
     if (route == 0) {
         keyClick(Qt::Key_Escape);
     } else if (route == 1) {
-        m_tab->view().hide();
+        QVERIFY(m_quickWindow);
+        m_quickWindow->hide();
         QCoreApplication::processEvents();
-        m_tab->view().show();
+        m_quickWindow->show();
     } else if (route == 2) {
         sendWindowDeactivate();
     } else {

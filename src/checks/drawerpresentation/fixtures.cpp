@@ -5,7 +5,9 @@
 #include <optional>
 
 #include <QCoreApplication>
+#include <QGuiApplication>
 #include <QQuickItem>
+#include <QTest>
 #include <QtGlobal>
 
 #include "checks/support/editorrig.h"
@@ -218,6 +220,25 @@ bool DrawerFixture::create(QString &error)
         error = QStringLiteral("drawer fixture could not resolve chrome inputs");
         return false;
     }
+    // Popups and focus-loss cancel paths key off live window focus: stage
+    // real automation-band focus (requestFocus plus focusWindow/focusObject
+    // convergence), not just page visibility.
+    auto *automationInput = quickRoot->findChild<songview::TimelineInputItem *>(
+        QStringLiteral("timelineAutomationInput"));
+    QQuickWindow *const quickWindow = quick ? quick->quickWindow() : nullptr;
+    if (!automationInput || !quickWindow) {
+        error = QStringLiteral("drawer fixture could not resolve automation input");
+        return false;
+    }
+    view->focusTimelineBand(songview::TimelineBand::Automation, Qt::OtherFocusReason);
+    if (!QTest::qWaitFor([quickWindow, automationInput] {
+            return QGuiApplication::focusWindow() == quickWindow &&
+                   QGuiApplication::focusObject() == automationInput &&
+                   automationInput->hasActiveFocus();
+        })) {
+        error = QStringLiteral("drawer fixture could not stage automation focus");
+        return false;
+    }
     tab = std::move(candidate);
     return true;
 }
@@ -292,8 +313,6 @@ bool VoiceFixture::create(QString &error)
 
 void VoiceFixture::destroy()
 {
-    if (rig)
-        rig->view().hide();
     pump();
     rig.reset();
 }
@@ -368,14 +387,35 @@ bool VoiceTransactionFixture::create(QString &error)
     candidateView.setDrawerActivePage(EditorDrawerPage::VoiceChanges);
     candidateView.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
     candidateView.setDrawerSectionHeight(EditorDrawerPage::VoiceChanges, 160);
-    candidate->show();
-    pump();
-    auto *root = candidateView.quickView() ? candidateView.quickView()->rootObject() : nullptr;
+    songview::TimelineQuickView *const quick = candidateView.quickView();
+    auto *root = quick ? quick->rootObject() : nullptr;
     auto *voiceInput = root ? root->findChild<songview::TimelineInputItem *>(
                                   QStringLiteral("timelineVoiceChangesInput"))
                             : nullptr;
-    if (!voiceInput || voiceInput->bounds().isEmpty()) {
+    QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
+    if (!voiceInput || !window) {
         error = QStringLiteral("voice transaction fixture could not resolve input");
+        return false;
+    }
+    candidate->show();
+    // Hosted container path: exposure and band-geometry publication land
+    // after the external widget shows; wait for the staged contract.
+    if (!QTest::qWaitFor([window, voiceInput] {
+            return window->isVisible() && window->isExposed() && !voiceInput->bounds().isEmpty() &&
+                   voiceInput->window() == window;
+        })) {
+        error = QStringLiteral("voice transaction fixture could not resolve input");
+        return false;
+    }
+    // The picker and menu restore paths key off live window focus: stage
+    // real voice-band focus (requestFocus plus focusWindow/focusObject
+    // convergence), not just page visibility.
+    candidateView.focusTimelineBand(songview::TimelineBand::VoiceChanges, Qt::OtherFocusReason);
+    if (!QTest::qWaitFor([window, voiceInput] {
+            return QGuiApplication::focusWindow() == window &&
+                   QGuiApplication::focusObject() == voiceInput && voiceInput->hasActiveFocus();
+        })) {
+        error = QStringLiteral("voice transaction fixture could not stage voice focus");
         return false;
     }
     tab = std::move(candidate);
@@ -461,15 +501,29 @@ bool VelocityTransactionFixture::create(QString &error)
     candidateView.setDrawerActivePage(EditorDrawerPage::Velocity);
     candidateView.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
     candidateView.setDrawerSectionHeight(EditorDrawerPage::Velocity, 320);
-    candidate->show();
-    pump();
-    auto *root = candidateView.quickView() ? candidateView.quickView()->rootObject() : nullptr;
+    notes = candidate->document().notesForTrack(0);
+    if (notes.size() != 3) {
+        error = QStringLiteral("velocity transaction fixture did not resolve three notes");
+        return false;
+    }
+    songview::TimelineQuickView *const quick = candidateView.quickView();
+    auto *root = quick ? quick->rootObject() : nullptr;
     auto *velocityInput = root ? root->findChild<songview::TimelineInputItem *>(
                                      QStringLiteral("timelineVelocityInput"))
                                : nullptr;
-    notes = candidate->document().notesForTrack(0);
-    if (!velocityInput || velocityInput->bounds().isEmpty() || notes.size() != 3) {
-        error = QStringLiteral("velocity transaction fixture could not resolve input or notes");
+    QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
+    if (!velocityInput || !window) {
+        error = QStringLiteral("velocity transaction fixture could not resolve input");
+        return false;
+    }
+    candidate->show();
+    // Hosted container path: exposure and band-geometry publication land
+    // after the external widget shows; wait for the staged contract.
+    if (!QTest::qWaitFor([window, velocityInput] {
+            return window->isVisible() && window->isExposed() &&
+                   !velocityInput->bounds().isEmpty() && velocityInput->window() == window;
+        })) {
+        error = QStringLiteral("velocity transaction fixture could not resolve input");
         return false;
     }
     tab = std::move(candidate);
@@ -569,8 +623,6 @@ bool VelocityFixture::create(QString &error)
 
 void VelocityFixture::destroy()
 {
-    if (rig)
-        rig->view().hide();
     pump();
     rig.reset();
     area = nullptr;

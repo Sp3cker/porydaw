@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "checks/support/quickframebuffer.h"
 #include "core/songdocument.h"
 #include "porydaw_scale.h"
 #include "ui/songview.h"
@@ -242,8 +243,7 @@ void PianoRollTest::scaleHighlightRaster()
             st.keyHeight = kh;
             st.scrollY = scrollY;
             view.applyViewState(st);
-            (void)view.grab();
-            QCoreApplication::processEvents();
+            checks::support::pumpQuick();
 
             const QImage offPm = check.captureQuickFramebuffer();
             const QRgb offScale = pixelAt(offPm, bandLaneX, rows.centerY(scaleKey));
@@ -319,8 +319,7 @@ void PianoRollTest::scaleHighlightRaster()
                 folded.keyHeight = kh;
                 folded.scrollY = std::max(0.0, double(foldRow) * kh + kh / 2.0 - 100.0);
                 view.applyViewState(folded);
-                (void)view.grab();
-                QCoreApplication::processEvents();
+                checks::support::pumpQuick();
                 const int foldY = foldCenterY(foldTintKey);
                 if (foldY < 0 || foldY >= roll->height()) {
                     QFAIL("Fold did not make the occupied scale row visible for the Highlight tint "
@@ -357,8 +356,7 @@ void PianoRollTest::scaleHighlightRaster()
             view.setScaleHighlight(false);
             view.setScaleFold(false);
             view.ensureKeyVisible(scaleKey);
-            (void)view.grab();
-            QCoreApplication::processEvents();
+            checks::support::pumpQuick();
             const QPoint notePos(plotLaneX, rows.centerY(scaleKey));
             const int cmd0 = doc.undoStack()->index();
             drawNote(*roll, notePos); // commits a C-major-scale note (empty row)

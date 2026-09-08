@@ -112,8 +112,7 @@ class EventListController : public QObject
     Q_INVOKABLE void openTypeMenu(const QPointF &scenePosition);
     Q_INVOKABLE int headerAlignment(int column) const;
 
-    // Direct QWidget/event bridge retained for focused checks and the shared
-    // timeline input interaction.
+    // Direct key bridge retained for the shared timeline input interaction.
     bool handleKey(QKeyEvent *event);
 
   signals:

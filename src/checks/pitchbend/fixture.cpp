@@ -2,6 +2,7 @@
 
 #include <QCoreApplication>
 #include <QEvent>
+#include <QGuiApplication>
 #include <QKeySequence>
 #include <QWheelEvent>
 #include <QtTest>
@@ -120,8 +121,11 @@ bool PitchBendFixture::setUp(bool unterminated, bool duplicateNote)
             [this] { return m_timelineWindow->isVisible() && m_timelineWindow->isExposed(); })) {
         return false;
     }
-    m_rollInput->forceActiveFocus(Qt::OtherFocusReason);
-    return QTest::qWaitFor([this] { return m_rollInput->hasActiveFocus(); });
+    m_rollInput->requestFocus(Qt::OtherFocusReason);
+    return QTest::qWaitFor([this] {
+        return QGuiApplication::focusWindow() == m_timelineWindow &&
+               QGuiApplication::focusObject() == m_rollInput && m_rollInput->hasActiveFocus();
+    });
 }
 
 void PitchBendFixture::tearDown()

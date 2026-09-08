@@ -13,6 +13,7 @@
 #include "ui/typography.h"
 
 #include <QFontMetrics>
+#include <QGuiApplication>
 #include <algorithm>
 #include <cmath>
 #include <utility>
@@ -31,14 +32,14 @@ PianoRoll::PianoRoll(SongView *sv)
     , m_geometry(PianoRollGeometry::resolve(sv->pianoKeyboardWidth()))
 {
     setObjectName(QStringLiteral("pianoRoll")); // findChild for tests
-    m_fixedNoteNameFont = typography::noteName(sv->font());
+    m_fixedNoteNameFont = typography::noteName(QGuiApplication::font());
     m_fixedNoteNameFont.setPixelSize(
         std::max(lyt::singlePixel(), m_fixedNoteNameFont.pixelSize() - 2 * lyt::singlePixel()));
     m_fixedNoteNameMetrics = QFontMetricsF(m_fixedNoteNameFont);
     const QFontMetrics noteMetrics(m_fixedNoteNameFont);
     m_fixedNoteNameOccupiedHeight = noteMetrics.ascent() + noteMetrics.descent();
 
-    m_keyboardHoverChipFont = typography::caption(sv->font());
+    m_keyboardHoverChipFont = typography::caption(QGuiApplication::font());
     const QFontMetrics hoverMetrics(m_keyboardHoverChipFont);
     m_keyboardHoverChipHeight = hoverMetrics.height() + m_geometry.keyboardHoverChipVerticalPadding;
     for (int key = 0; key < int(m_keyboardHoverNameWidths.size()); ++key)

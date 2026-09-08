@@ -63,8 +63,8 @@ enum class TimelineInputCancelReason : uint8_t {
     WindowDeactivated,
 };
 
-// Services the six QWidget band surfaces used to inherit: geometry, DPR, font,
-// palette, coordinate mapping, focus, cursor, pointer grab, and accessibility.
+// Services the Quick band input items: geometry, DPR, font, palette,
+// coordinate mapping, focus, cursor, pointer grab, and accessibility.
 // The one production implementation is TimelineInputItem; checks use an
 // in-memory recorder. Bands store only this pointer and never a QQuickItem.
 class TimelineInputHost

@@ -1,8 +1,10 @@
 #include "checks/clipboard/clipcheck_test.h"
 
 #include <QCoreApplication>
+#include <QGuiApplication>
 #include <QKeyEvent>
 #include <QQuickItem>
+#include <QQuickWindow>
 #include <QTemporaryDir>
 #include <QtTest>
 
@@ -14,6 +16,7 @@ extern "C" {
 #include "voicegroup_loader.h"
 }
 
+#include "checks/support/quickframebuffer.h"
 #include "core/smf.h"
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
@@ -95,8 +98,8 @@ std::unique_ptr<ClipTabRig> ClipTabRig::create(uint16_t ticksPerBeat, QString &e
 
     rig->m_tab->show();
     QCoreApplication::processEvents();
+    checks::support::pumpQuick();
     SongView &view = rig->view();
-    (void)view.grab();
 
     songview::TimelineQuickView *const quick = view.quickView();
     if (!quick || !quick->rootObject()) {
@@ -107,6 +110,24 @@ std::unique_ptr<ClipTabRig> ClipTabRig::create(uint16_t ticksPerBeat, QString &e
         QStringLiteral("timelineRollInput"));
     if (!rig->m_roll) {
         error = QStringLiteral("song tab did not expose the timeline roll input");
+        return nullptr;
+    }
+    // Application-focus staging: view-level keys travel the Quick window, so the
+    // rig stages real roll-band focus (requestFocus plus focusWindow/focusObject
+    // convergence) instead of relying on window-local scope alone.
+    QQuickWindow *const quickWindow = quick->quickWindow();
+    if (!quickWindow) {
+        error = QStringLiteral("song tab did not expose the timeline Quick window");
+        return nullptr;
+    }
+    rig->m_roll->requestFocus(Qt::OtherFocusReason);
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents();
+    if (!QTest::qWaitFor([quickWindow, roll = rig->m_roll] {
+            return QGuiApplication::focusWindow() == quickWindow &&
+                   QGuiApplication::focusObject() == roll && roll->hasActiveFocus();
+        })) {
+        error = QStringLiteral("song tab roll input did not take application focus");
         return nullptr;
     }
 
@@ -138,10 +159,14 @@ bool ClipTabRig::sendViewKey(int key, Qt::KeyboardModifiers modifiers)
 {
     if (!m_tab)
         return false;
-    QKeyEvent press(QEvent::KeyPress, key, modifiers);
-    QCoreApplication::sendEvent(&view(), &press);
-    QKeyEvent release(QEvent::KeyRelease, key, modifiers);
-    QCoreApplication::sendEvent(&view(), &release);
+    // SongView is a QObject now, so view-level keys travel the normal Quick/host
+    // path: real QTest delivery into the active Quick window, where the focused
+    // band policy or the focus-less window route claims them.
+    songview::TimelineQuickView *const quick = view().quickView();
+    QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
+    if (!window)
+        return false;
+    QTest::keyClick(window, static_cast<Qt::Key>(key), modifiers);
     return true;
 }
 

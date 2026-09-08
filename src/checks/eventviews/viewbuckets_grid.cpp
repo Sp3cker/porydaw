@@ -2,6 +2,7 @@
 #include "checks/eventviews/tst_eventviews.h"
 
 #include <QImage>
+#include <QQuickWindow>
 #include <QtTest>
 
 #include <algorithm>
@@ -11,6 +12,7 @@
 #include "core/miditimeline.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelinequickview.h"
 #include "ui/songviewmodel.h"
 
 using checks::eventviews::FixtureShape;
@@ -221,7 +223,10 @@ void ViewBucketsGridTest::paintSmoke()
             opened.fixture->view().selectTrack(track);
     }
     opened.fixture->view().setPlayheadSample(timeline->lengthSamples / 2, true);
-    const QImage image = opened.fixture->view().grab().toImage();
+    songview::TimelineQuickView *const quick = opened.fixture->view().quickView();
+    QQuickWindow *const quickWindow = quick ? quick->quickWindow() : nullptr;
+    QVERIFY2(quickWindow, "the timeline Quick window is unavailable");
+    const QImage image = quickWindow->grabWindow();
     QVERIFY(!image.isNull());
 }
 

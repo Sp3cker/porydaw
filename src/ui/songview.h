@@ -5,11 +5,11 @@
 #include <QHash>
 #include <QList>
 #include <QMetaObject>
+#include <QObject>
 #include <QPointer>
 #include <QRectF>
 #include <QSet>
 #include <QVariantMap>
-#include <QWidget>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -44,10 +44,7 @@ extern "C" {
 }
 
 class EventListController;
-class QKeyEvent;
 class QEvent;
-class QSpacerItem;
-class QStackedWidget;
 class SongDocument;
 class AutomationPage;
 class EditorDrawer;
@@ -118,7 +115,7 @@ enum class TimeSelectionAction : int {
 // velocity/delete in the roll, point editing in the lanes, loop-marker
 // dragging in the ruler. The MidiTimeline and LoadedVoiceGroup must outlive
 // the view or be cleared with setSong(nullptr, nullptr) first.
-class SongView : public QWidget
+class SongView : public QObject
 {
     Q_OBJECT
 
@@ -143,7 +140,7 @@ class SongView : public QWidget
                    insertTimePromptChanged FINAL)
 
   public:
-    explicit SongView(QWidget *parent = nullptr);
+    explicit SongView(QObject *parent = nullptr);
     ~SongView() override;
 
     void setSong(const MidiTimeline *timeline, const LoadedVoiceGroup *voicegroup);
@@ -223,14 +220,14 @@ class SongView : public QWidget
     // Canonical SongView-local rectangles of the two QML scrollbar lanes:
     // the horizontal timeline row right of the split, and the column
     // directly right of the canonical roll band (drawer-clipped height;
-    // empty in EventList mode). TimelineQuickView unions them into the
-    // Quick window envelope and republishes them Quick-root-local.
+    // empty in EventList mode). TimelineQuickView publishes them directly
+    // into the canonical Quick window.
     QRect horizontalScrollbarRect() const;
     QRect verticalScrollbarRect() const;
 
     // EventList mode: the Quick event page replaces the roll band in the
-    // same screen space. This canonical SongView-local rectangle keeps the
-    // Quick window envelope covering the page; empty while hidden.
+    // same screen space. This canonical viewport rectangle covers the
+    // event page; empty while hidden.
     QRect eventListRect() const;
     // User-added automation lanes with no events yet (SPEC §6.1 "addable from
     // the m4a parameter list). They live in the application-wide editor
@@ -656,8 +653,11 @@ class SongView : public QWidget
     void editorViewStateChanged(const EditorViewState &state);
 
   protected:
-    void resizeEvent(QResizeEvent *event) override;
-    bool event(QEvent *event) override;
+    // Application-scoped appearance notifications (theme apply, application
+    // palette or font change) fan out to the drawer, the Quick timeline
+    // surfaces, and the native playhead overlay. Window input events belong
+    // to TimelineQuickView.
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
   private:
     friend class EditorDrawer;
@@ -688,6 +688,19 @@ class SongView : public QWidget
 
         static Geometry resolve();
     };
+    // Analytic canonical viewport layout: the former spacer/stack shell's
+    // rectangles, resolved from the live Quick window size and the fixed
+    // font-metric row heights. The roll pane is the stretch row between the
+    // ruler row (top) and the other-events row plus scrollbar lane (bottom).
+    struct ViewportGeometry {
+        int width = 0;
+        QRect ruler;       // ruler row, full width
+        QRect rollPane;    // stretch row; the EditorDrawer's host bounds
+        QRect rollStack;   // header column's right edge through full width
+        QRect otherEvents; // other-events row, full width
+        QRect hbarRow;     // bottom QML scrollbar lane, full width
+    };
+    ViewportGeometry resolveViewportGeometry() const;
 
     // Feeds the camera the geometry-derived zoom clamp bounds; call after
     // Geometry::resolve().
@@ -695,12 +708,19 @@ class SongView : public QWidget
     // Feeds the grid the geometry-derived visible-grid detail floors; call
     // after Geometry::resolve().
     void pushGridGeometryThresholds();
-    // Canonical band layout: resolve from parent-owned rectangles, compare,
-    // store, then push synchronously to the Quick host and playhead overlay.
+    // Canonical band layout: resolve from the analytic viewport geometry,
+    // compare, store, then push synchronously to the Quick host and playhead
+    // overlay.
     songview::TimelineBandLayout resolveTimelineBandLayout() const;
     void synchronizeTimelineBandLayout();
-    // Positions retained band chrome over parent-owned spacer rows.
-    void positionBandWidgets();
+    // Pushes the analytic roll-pane rectangle to the EditorDrawer; the
+    // drawer arranges its sections and re-synchronizes the band layout.
+    void layoutViewport();
+    // Full viewport choreography for Quick window resize/DPR/screen changes:
+    // drawer arrangement, scrollbar ranges, drawer page refresh, indicators,
+    // and an unconditional band-layout republication so equal values still
+    // land after a surface swap.
+    void refreshViewportLayout();
     // Document remap handler: re-addresses all SongView-owned track state
     // before the following documentChanged rebuild.
     void onTracksRemapped(const TrackRemap &remap);
@@ -714,8 +734,8 @@ class SongView : public QWidget
     // Fold-relevant model change (song swap, track switch): rebuild now, or
     // defer while a pointer gesture holds the projection lock.
     void requestProjectionRebuild();
-    // Live pointer ownership across the QWidget ruler, roll interaction, and
-    // every Quick timeline surface. Popup editing and follow-scroll pauses
+    // Live pointer ownership across the ruler, roll interaction, and every
+    // Quick timeline surface. Popup editing and follow-scroll pauses
     // deliberately are not pointer ownership.
     bool timelinePointerGestureActive() const;
     void syncTimelineIndicators();
@@ -897,13 +917,7 @@ class SongView : public QWidget
     QPointer<songview::TimelineQuickView> m_quickView;
     songview::PlayheadOverlay *m_playheadOverlay = nullptr;
     songview::TimelineBandLayout m_timelineBandLayout;
-    QStackedWidget *m_rollStack = nullptr; // page 0: roll placeholder, page 1:
-                                           // event-list placeholder (the list
-                                           // renders through the Quick host)
+    bool m_eventListVisible = false; // the Quick event page replaces the roll band
     EventListController *m_events = nullptr;
     songview::OtherStrip *m_strip = nullptr;
-    QSpacerItem *m_rulerSpacer = nullptr;  // owns the ruler row height
-    QSpacerItem *m_headerSpacer = nullptr; // reserves the Quick header column
-    QSpacerItem *m_stripSpacer = nullptr;  // owns the other-events row height
-    QSpacerItem *m_hbarSpacer = nullptr;   // owns the QML scrollbar row height
 };

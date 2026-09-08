@@ -15,6 +15,7 @@
 #include "ui/theme/themeruntime.h"
 
 #include <QApplication>
+#include <QGuiApplication>
 #include <QMetaObject>
 #include <QObject>
 #include <QQuickWindow>
@@ -84,13 +85,28 @@ void PianoRoll::openPitchBendEditor()
     }
     double noteFraction = -1.0;
     QRect noteGlobal;
+    // Canonical anchor: the Quick window is the viewport (origin 0), so the
+    // canonical roll plotRect origin plus the plot-local note rect is the
+    // window-local note rect. Never map through the live input item here: G
+    // is keyboard-driven and can arrive before the first band publication
+    // moves the item to the plot origin, and the anchor then misses by
+    // exactly the item origin.
+    QQuickWindow *const anchorWindow =
+        m_sv->quickView() ? m_sv->quickView()->quickWindow() : nullptr;
+    const TimelineBandGeometry rollGeometry =
+        m_sv->timelineBandLayout().geometry(TimelineBand::Roll).value_or(TimelineBandGeometry{});
     for (const ViewNote &viewNote : m_sv->model().notes) {
         if (viewNote.noteId != notes.front().noteId)
             continue;
+        if (!anchorWindow || rollGeometry.plotRect.isNull())
+            break;
         const QRectF noteLocalRect = noteRect(viewNote);
-        const QPointF noteTopGlobal = m_inputHost->mapToGlobal(noteLocalRect.topLeft());
-        const QPointF noteBottomGlobal = m_inputHost->mapToGlobal(noteLocalRect.bottomRight());
-        noteGlobal = QRect(noteTopGlobal.toPoint(), noteBottomGlobal.toPoint());
+        const QPoint noteTopWindow =
+            rollGeometry.plotRect.topLeft() + noteLocalRect.topLeft().toPoint();
+        const QPoint noteBottomWindow =
+            rollGeometry.plotRect.topLeft() + noteLocalRect.bottomRight().toPoint();
+        noteGlobal = QRect(anchorWindow->mapToGlobal(noteTopWindow),
+                           anchorWindow->mapToGlobal(noteBottomWindow));
         // Fractional opening only when the retained pointer position sits
         // on the selected note; keyboard G without a known inside pointer
         // keeps the -1 fallback.
@@ -424,7 +440,7 @@ QString PianoRoll::velocityPromptLabel() const
 QVariantMap PianoRoll::velocityPromptAppearance() const
 {
     QVariantMap appearance;
-    appearance.insert(QStringLiteral("font"), m_sv->font());
+    appearance.insert(QStringLiteral("font"), QGuiApplication::font());
     appearance.insert(QStringLiteral("background"), themes::color(themes::Role::window_background));
     appearance.insert(QStringLiteral("outline"), themes::color(themes::Role::palette_outline));
     appearance.insert(QStringLiteral("text"), themes::color(themes::Role::window_text));

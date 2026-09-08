@@ -89,8 +89,6 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         QVERIFY(session->a != session->b);
         QVERIFY(!session->a->isReady());
         QVERIFY(!session->b->isReady());
-        QVERIFY(session->a->view().isEnabled());
-        QVERIFY(session->b->view().isEnabled());
         QVERIFY(waitForTabReady(*window.m_workspace, session->a));
         QVERIFY(waitForTabReady(*window.m_workspace, session->b));
 
@@ -159,7 +157,7 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         QCOMPARE(session->b->view().focusedTimelineBand(), songview::TimelineBand::Roll);
         QWidget *surface = QApplication::focusWidget();
         QVERIFY(surface);
-        QVERIFY(surface == &session->b->view() || session->b->view().isAncestorOf(surface));
+        QVERIFY(surface == session->b || session->b->isAncestorOf(surface));
         QVERIFY(!bindings.isEmpty());
         QSignalSpy triggered(copy, &QAction::triggered);
         const QKeyCombination key = bindings.front()[0];
@@ -227,7 +225,7 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         session->b->view().focusActiveSurface();
         QWidget *surface = QApplication::focusWidget();
         QVERIFY(surface);
-        QVERIFY(surface == &session->b->view() || session->b->view().isAncestorOf(surface));
+        QVERIFY(surface == session->b || session->b->isAncestorOf(surface));
         sendKey(*surface, key.key(), key.keyboardModifiers());
         QVERIFY(session->b->view().trackSoloed(track));
         QCOMPARE(triggered.count(), 3);

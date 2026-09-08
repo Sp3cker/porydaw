@@ -2,6 +2,7 @@
 
 #include "songview.h"
 #include "ui/keymap.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 #include <QApplication>
 #include <QDebug>
@@ -15,7 +16,6 @@
 #include <QQuickItem>
 #include <QQuickView>
 #include <QRect>
-#include <QWidget>
 #include <QWindow>
 #include <algorithm>
 #include <mutex>
@@ -210,11 +210,28 @@ void PitchBendEditor::cancelAndCloseWithoutFocus()
     close(DismissAction::Cancel, CloseFocus::Discard);
 }
 
+// Top-level window hosting the timeline Quick surface: the Quick window
+// itself when unhosted, otherwise its top-level ancestor when the window is
+// embedded in a container. Popup framing and transient parenthood resolve
+// against it; a null result means no Quick surface to frame against.
+QWindow *quickTopLevelWindow(::SongView *songView)
+{
+    if (!songView || !songView->quickView())
+        return nullptr;
+    QQuickWindow *quick = songView->quickView()->quickWindow();
+    if (!quick)
+        return nullptr;
+    QWindow *topLevel = quick;
+    while (topLevel->parent())
+        topLevel = topLevel->parent();
+    return topLevel;
+}
+
 void PitchBendEditor::openAt(const QRect &noteGlobal, double noteFraction)
 {
     if (!isOpen() || !ensureView())
         return;
-    QWidget *host = m_songView ? m_songView->window() : nullptr;
+    QWindow *host = quickTopLevelWindow(m_songView);
     if (!host) {
         close(DismissAction::Cancel, CloseFocus::Discard);
         return;
@@ -226,7 +243,8 @@ void PitchBendEditor::openAt(const QRect &noteGlobal, double noteFraction)
         m_modGraph->setKeyboardFraction(fraction);
     const QRect noteHost(host->mapFromGlobal(noteGlobal.topLeft()),
                          host->mapFromGlobal(noteGlobal.bottomRight()));
-    const QPoint popupPos = hostClippedPopupPosition(noteHost, host->rect(), m_geometry.popupSize);
+    const QPoint popupPos =
+        hostClippedPopupPosition(noteHost, QRect(QPoint(0, 0), host->size()), m_geometry.popupSize);
     // Fixed global placement after opening; no follow-note behavior.
     m_view->setPosition(host->mapToGlobal(popupPos));
     m_view->show();
@@ -244,8 +262,8 @@ bool PitchBendEditor::ensureView()
 
     auto *view = new PitchBendPopupView(this);
     view->setFlags(Qt::Tool | Qt::FramelessWindowHint);
-    if (m_songView && m_songView->window() && m_songView->window()->windowHandle())
-        view->setTransientParent(m_songView->window()->windowHandle());
+    if (QWindow *topLevel = quickTopLevelWindow(m_songView))
+        view->setTransientParent(topLevel);
     view->setResizeMode(QQuickView::SizeRootObjectToView);
     view->setColor(m_appearance.value(QStringLiteral("windowBackground")).value<QColor>());
     view->resize(m_geometry.popupSize);

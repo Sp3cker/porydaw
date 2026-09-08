@@ -26,19 +26,19 @@ class TimelineQuickScene;
 namespace checks {
 
 // EditorRig is the one canonical document-driven assembly for checks: it
-// builds the timeline, wires the SongView in production order (SongTab does
-// setDocument then setSong), applies the drawer/zoom/cursor setup that each
-// check used to hand-roll, and resolves the Quick scene, root, and input
-// items once so checks never fish the object tree. The document and
-// voicegroup are borrowed and must outlive the rig; members destroy the
-// view before the borrowed state.
+// builds the timeline, sizes the real unhosted Quick window, wires the
+// SongView in production order (SongTab does setDocument then setSong),
+// applies the drawer/zoom/cursor setup that each check used to hand-roll,
+// and resolves the Quick scene, root, and input items once so checks never
+// fish the object tree. The document and voicegroup are borrowed and must
+// outlive the rig; members destroy the view before the borrowed state.
 struct EditorRigSection {
     EditorDrawerPage page;
     int height = 0;
 };
 
 struct EditorRigConfig {
-    QSize viewSize = QSize(1000, 640);
+    QSize viewSize = QSize(1000, 640); // Quick window (canonical viewport) size
     double sampleRate = 48000.0;
     LoadedVoiceGroup *voicegroup = nullptr;
     int track = -1; // -1 keeps the view's default track selection
@@ -47,7 +47,7 @@ struct EditorRigConfig {
     double timeZoom = 0.0; // 0 keeps the view's default zoom
     bool applyEditCursor = false;
     uint64_t editCursorTick = 0;
-    bool show = true;
+    bool show = true; // exposes the Quick window
 };
 
 class EditorRig final

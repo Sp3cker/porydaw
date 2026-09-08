@@ -108,11 +108,6 @@ std::unique_ptr<SongViewRig> SongViewRig::create(std::unique_ptr<LoadedSong> loa
 
     auto rig = std::unique_ptr<SongViewRig>(
         new SongViewRig(std::move(loadedSong), std::move(timeline), sampleRate));
-    if (rig->m_view->internalWinId() != 0 || rig->m_view->testAttribute(Qt::WA_NativeWindow)) {
-        error = QStringLiteral("SongView constructor forced native window creation");
-        return nullptr;
-    }
-
     rig->m_view->setSong(rig->m_timeline.get(), nullptr);
     rig->m_view->setDocument(&rig->m_song->document());
     return rig;

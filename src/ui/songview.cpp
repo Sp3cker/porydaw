@@ -19,21 +19,11 @@
 #include "ui/songview/trackheadermodel.h"
 #include "ui/songview/voicepicker.h"
 #include "ui/typography.h"
-#include <QAbstractButton>
-#include <QAbstractSlider>
-#include <QApplication>
-#include <QDialog>
 #include <QEvent>
 #include <QFontMetrics>
-#include <QHBoxLayout>
-#include <QKeyEvent>
-#include <QLayout>
+#include <QGuiApplication>
 #include <QPointer>
-#include <QResizeEvent>
-#include <QSizePolicy>
-#include <QSpacerItem>
-#include <QStackedWidget>
-#include <QVBoxLayout>
+#include <QQuickWindow>
 
 #include <algorithm>
 #include <cstdint>
@@ -53,6 +43,12 @@ int resolveOtherEventsRowHeight()
 {
     const QFont body = *typography::bodyFont();
     return QFontMetrics(body).height() + lyt::space(Space::Two);
+}
+
+// Fixed height of the QML horizontal scrollbar lane row.
+int hbarRowHeight()
+{
+    return lyt::space(Space::Two);
 }
 
 } // namespace
@@ -103,13 +99,16 @@ void SongView::pushGridGeometryThresholds()
                          m_geometry.automationGridMinimumCellWidth);
 }
 
-// Canonical band geometry, resolved only from parent-owned layout values:
-// every published rect is the visible SongView-local band rectangle, so
-// consumers (PlayheadOverlay) intersect SongView's rect alone and no ancestor
-// widget walking is needed. Hidden bands stay nullopt; no Quick-host
-// translation happens here — TimelineQuickView maps into its own coordinates.
+// Canonical band geometry, resolved only from the analytic viewport layout
+// and the EditorDrawer's body rectangles: every published rect is the
+// visible viewport-local band rectangle, so consumers (PlayheadOverlay)
+// intersect the viewport alone and no widget walking is needed. The Quick
+// window is the full canonical viewport, so no host translation happens
+// here — TimelineQuickView publishes the rects as-is. Hidden bands stay
+// nullopt.
 TimelineBandLayout SongView::resolveTimelineBandLayout() const
 {
+    const ViewportGeometry viewport = resolveViewportGeometry();
     TimelineBandLayout layout;
     const auto publishBand = [&layout](TimelineBand band, const QRect &rect,
                                        const QRect &plotRect) {
@@ -124,26 +123,18 @@ TimelineBandLayout SongView::resolveTimelineBandLayout() const
     };
     // Shared breadth of the Quick-drawn scrollbar rows and columns.
     const int scrollbarBreadth = lyt::space(Space::Two);
-    if (m_rulerSpacer && m_ruler) {
-        const QRect rect = m_rulerSpacer->geometry();
-        publishBand(TimelineBand::Ruler, rect, plotFromSplit(rect));
-    }
-    if (m_headerSpacer && m_rollStack) {
-        const QWidget *const rollPane = m_rollStack->parentWidget();
-        if (rollPane) {
-            QRect headerRect = m_headerSpacer->geometry();
-            headerRect.moveTopLeft(rollPane->mapTo(this, headerRect.topLeft()));
-            // Fixed chrome: track headers carry no time plot.
-            publishBand(TimelineBand::TrackHeaders, headerRect, QRect());
-        }
-    }
-    // The roll band is the retained roll page minus the Quick-drawn vertical
-    // scrollbar column and the drawer overlay. The overlay owns its body and
-    // chrome, so the canonical roll ends immediately above it. Nullopt while
-    // the event list replaces the roll page.
-    if (!eventListVisible()) {
-        const QWidget *rollPage = m_rollStack->widget(0);
-        QRect rollRect(rollPage->mapTo(this, QPoint(0, 0)), rollPage->size());
+    if (m_ruler)
+        publishBand(TimelineBand::Ruler, viewport.ruler, plotFromSplit(viewport.ruler));
+    // Fixed chrome: track headers carry no time plot.
+    const QRect headerRect(0, viewport.rollPane.y(), m_geometry.trackHeaderWidth,
+                           viewport.rollPane.height());
+    publishBand(TimelineBand::TrackHeaders, headerRect, QRect());
+    // The roll band is the roll pane's stack column minus the Quick-drawn
+    // vertical scrollbar column and the drawer overlay. The overlay owns its
+    // body and chrome, so the canonical roll ends immediately above it.
+    // Nullopt while the event list replaces the roll page.
+    if (!m_eventListVisible) {
+        QRect rollRect = viewport.rollStack;
         rollRect.setWidth(std::max(0, rollRect.width() - scrollbarBreadth));
         if (m_editorDrawer) {
             const QRect overlay = m_editorDrawer->overlayRect();
@@ -152,10 +143,8 @@ TimelineBandLayout SongView::resolveTimelineBandLayout() const
         }
         publishBand(TimelineBand::Roll, rollRect, plotFromSplit(rollRect));
     }
-    if (m_stripSpacer && m_strip) {
-        const QRect rect = m_stripSpacer->geometry();
-        publishBand(TimelineBand::OtherEvents, rect, plotFromSplit(rect));
-    }
+    publishBand(TimelineBand::OtherEvents, viewport.otherEvents,
+                plotFromSplit(viewport.otherEvents));
     if (const std::optional<QRect> body = m_editorDrawer->bodyRect(EditorDrawerPage::Automations)) {
         // The band is the lane viewport: the drawer body minus the left
         // scrollbar column; the canvas plot origin drops the same column, so
@@ -171,17 +160,15 @@ TimelineBandLayout SongView::resolveTimelineBandLayout() const
     return layout;
 }
 
-// Canonical SongView-local scrollbar lanes for the QML controls: the
-// horizontal row reserves the bottom spacer's font-metric height right of
-// the split, and the vertical column sits directly right of the canonical
-// (drawer-clipped) roll band. Empty means the lane is absent.
+// Canonical scrollbar lanes for the QML controls: the horizontal row is the
+// fixed bottom lane right of the split, and the vertical column sits
+// directly right of the canonical (drawer-clipped) roll band. Empty means
+// the lane is absent.
 QRect SongView::horizontalScrollbarRect() const
 {
-    if (!m_hbarSpacer)
-        return {};
-    const QRect row = m_hbarSpacer->geometry();
-    return {m_geometry.timelineSplitX, row.y(), std::max(0, width() - m_geometry.timelineSplitX),
-            row.height()};
+    const ViewportGeometry viewport = resolveViewportGeometry();
+    return {m_geometry.timelineSplitX, viewport.hbarRow.y(),
+            std::max(0, viewport.width - m_geometry.timelineSplitX), viewport.hbarRow.height()};
 }
 
 QRect SongView::verticalScrollbarRect() const
@@ -193,17 +180,14 @@ QRect SongView::verticalScrollbarRect() const
     return {roll->rect.right() + 1, roll->rect.top(), lyt::space(Space::Two), roll->rect.height()};
 }
 
-// EventList mode replaces the roll band with the Quick event page in the same
-// screen space. TimelineQuickView unions this rectangle into the Quick window
-// envelope and republishes it Quick-root-local as the page host's geometry.
+// EventList mode replaces the roll band with the Quick event page in the
+// same screen space. This canonical viewport rectangle is the roll pane's
+// stack column; empty while hidden.
 QRect SongView::eventListRect() const
 {
-    if (!m_rollStack || m_rollStack->currentIndex() != 1)
+    if (!m_eventListVisible)
         return {};
-    const QWidget *const page = m_rollStack->widget(1);
-    if (!page)
-        return {};
-    return {page->mapTo(this, QPoint(0, 0)), page->size()};
+    return resolveViewportGeometry().rollStack;
 }
 
 // Fixed resolve → compare → store → push sequence for the canonical band
@@ -221,27 +205,62 @@ void SongView::synchronizeTimelineBandLayout()
         m_playheadOverlay->updateBands(m_timelineBandLayout);
 }
 
-// Refreshes the parent-owned spacer rows before their geometry reaches Quick.
-void SongView::positionBandWidgets()
+// Analytic viewport layout: fixed font-metric rows pin the top and bottom
+// and the stretch roll pane fills the middle. The Quick window IS the
+// canonical viewport, so its live size resolves every former spacer/stack
+// rectangle directly; a not-yet-framed window yields empty rows and no
+// bands.
+SongView::ViewportGeometry SongView::resolveViewportGeometry() const
 {
-    if (layout())
-        layout()->activate();
-    if (m_headerSpacer && m_rollStack &&
-        m_headerSpacer->sizeHint().width() != m_geometry.trackHeaderWidth) {
-        m_headerSpacer->changeSize(m_geometry.trackHeaderWidth, 0, QSizePolicy::Fixed,
-                                   QSizePolicy::Expanding);
-        QWidget *const rollPane = m_rollStack->parentWidget();
-        if (QLayout *const rollLayout = rollPane ? rollPane->layout() : nullptr) {
-            rollLayout->invalidate();
-            rollLayout->activate();
-        }
-    }
-    if (m_editorDrawer)
-        m_editorDrawer->arrange();
+    ViewportGeometry viewport;
+    const QQuickWindow *window = m_quickView ? m_quickView->quickWindow() : nullptr;
+    if (!window)
+        return viewport;
+    const int viewportWidth = window->width();
+    const int viewportHeight = window->height();
+    const int hbarH = hbarRowHeight();
+    const int rollPaneTop = m_geometry.rulerHeight;
+    const int rollPaneHeight =
+        std::max(0, viewportHeight - rollPaneTop - m_geometry.otherEventsHeight - hbarH);
+    viewport.width = viewportWidth;
+    viewport.ruler = {0, 0, viewportWidth, rollPaneTop};
+    viewport.rollPane = {0, rollPaneTop, viewportWidth, rollPaneHeight};
+    viewport.rollStack = {m_geometry.trackHeaderWidth, rollPaneTop,
+                          std::max(0, viewportWidth - m_geometry.trackHeaderWidth), rollPaneHeight};
+    const int otherEventsTop = rollPaneTop + rollPaneHeight;
+    viewport.otherEvents = {0, otherEventsTop, viewportWidth, m_geometry.otherEventsHeight};
+    viewport.hbarRow = {0, otherEventsTop + m_geometry.otherEventsHeight, viewportWidth, hbarH};
+    return viewport;
 }
 
-SongView::SongView(QWidget *parent)
-    : QWidget(parent)
+// Pushes the analytic roll-pane rectangle to the drawer host bounds; the
+// drawer arranges its sections and re-synchronizes the band layout from it.
+void SongView::layoutViewport()
+{
+    if (m_editorDrawer)
+        m_editorDrawer->setHostBounds(resolveViewportGeometry().rollPane);
+}
+
+// One choreography for every Quick viewport change (resize, DPR, screen):
+// the former resizeEvent plus the former Show/WinIdChange/DPR republish.
+// The canonical refresh stays resolve/compare/store/push; both consumers
+// then republish unconditionally so equal values still land after a
+// surface swap.
+void SongView::refreshViewportLayout()
+{
+    layoutViewport();
+    updateScrollbars();
+    refreshDrawerPages();
+    syncTimelineIndicators();
+    synchronizeTimelineBandLayout();
+    if (m_quickView)
+        m_quickView->refreshBandLayout();
+    if (m_playheadOverlay)
+        m_playheadOverlay->updateBands(m_timelineBandLayout);
+}
+
+SongView::SongView(QObject *parent)
+    : QObject(parent)
     , m_geometry(Geometry::resolve())
     , m_camera(m_timeAxis, m_projection)
     , m_grid(m_timeAxis, m_camera)
@@ -252,58 +271,13 @@ SongView::SongView(QWidget *parent)
     m_camera.setKeyHeight(m_geometry.pianoRollDefaultKeyHeight);
 
     // Prime the default C-major classification (the previous controller
-    // constructor did this); touch no widgets.
+    // constructor did this); no UI exists yet.
     updateScaleProjection();
-
-    auto *vbox = new QVBoxLayout(this);
-    vbox->setContentsMargins(lyt::space(Space::Zero), lyt::space(Space::Zero),
-                             lyt::space(Space::Zero), lyt::space(Space::Zero));
-    vbox->setSpacing(lyt::space(Space::Zero));
 
     m_ruler = std::make_unique<TimeRuler>(*this);
     m_headers = new TrackHeaderModel(*this, this);
-    // Fixed-height spacer rows own the ruler and other-events rectangles.
-    m_rulerSpacer = new QSpacerItem(m_geometry.timelineSplitX, m_geometry.rulerHeight,
-                                    QSizePolicy::Minimum, QSizePolicy::Fixed);
-    vbox->addSpacerItem(m_rulerSpacer);
-
-    auto *rollPane = new QWidget(this);
-    auto *mid = new QHBoxLayout(rollPane);
-    mid->setContentsMargins(lyt::space(Space::Zero), lyt::space(Space::Zero),
-                            lyt::space(Space::Zero), lyt::space(Space::Zero));
-    mid->setSpacing(lyt::space(Space::Zero));
-    m_headerSpacer =
-        new QSpacerItem(m_geometry.trackHeaderWidth, 0, QSizePolicy::Fixed, QSizePolicy::Expanding);
-    mid->addSpacerItem(m_headerSpacer);
-
-    m_rollStack = new QStackedWidget(rollPane);
-    // The global theme stylesheet makes QStackedWidget opaque; this stack's
-    // nonpainting roll page must expose the lowered Quick host.
-    m_rollStack->setObjectName(QStringLiteral("songViewRollStack"));
-    m_rollStack->setStyleSheet(
-        QStringLiteral("QStackedWidget#songViewRollStack { background-color: transparent; }"));
-    // Geometry placeholder for the roll band: the roll paints through the
-    // Quick host, so the page only carries its rectangle.
-    auto *rollPage = new QWidget(m_rollStack);
     m_roll = new PianoRoll(this);
-    m_rollStack->addWidget(rollPage);
-    // The event list renders through the Quick host; its page is a
-    // nonpainting placeholder that only carries the stack rectangle.
-    auto *eventListPage = new QWidget(m_rollStack);
-    m_rollStack->addWidget(eventListPage);
-    mid->addWidget(m_rollStack, 1);
-    vbox->addWidget(rollPane, 1);
-
     m_strip = new OtherStrip(*this);
-    m_stripSpacer = new QSpacerItem(m_geometry.timelineSplitX, m_geometry.otherEventsHeight,
-                                    QSizePolicy::Minimum, QSizePolicy::Fixed);
-    vbox->addSpacerItem(m_stripSpacer);
-    // The QML horizontal timeline scrollbar lane: the font-metric spacer
-    // owns the row height, and the control spans [timelineSplitX, width]
-    // inside the Quick window envelope.
-    m_hbarSpacer = new QSpacerItem(m_geometry.timelineSplitX, lyt::space(Space::Two),
-                                   QSizePolicy::Minimum, QSizePolicy::Fixed);
-    vbox->addSpacerItem(m_hbarSpacer);
 
     m_editorDrawer = new EditorDrawer(*this, m_editorViewState);
     m_events = new EventListController(this, this);
@@ -338,16 +312,20 @@ SongView::SongView(QWidget *parent)
             &SongView::handleTimeSelectionAction);
     connect(m_timeSelectionMenuHost, &songview::QuickMenuHost::cancelled, this,
             [this] { m_pendingTimeSelectionMenu.reset(); });
-    m_quickView->lower();
     m_playheadOverlay = new PlayheadOverlay(*this, timelineBandLayout());
     m_selectionModel.setObserver(
         [this](const songview::EditorSelectionModel::SelectionTransition &transition) {
             coordinateSelectionChange(transition);
         });
 
-    positionBandWidgets();
-    // Both consumers exist: publish the first canonical layout handoff.
-    synchronizeTimelineBandLayout();
+    // Application-scoped appearance events drive the former QWidget
+    // palette/style/theme fan-out; the Quick window's own changes arrive as
+    // viewportChanged. Run the layout choreography once now so a
+    // pre-framed window publishes its first canonical layout immediately.
+    QGuiApplication::instance()->installEventFilter(this);
+    connect(m_quickView, &TimelineQuickView::viewportChanged, this,
+            &SongView::refreshViewportLayout);
+    refreshViewportLayout();
 
     // The unbound axis's provisional camera rests at the pre-roll home;
     // updateScrollbars() keeps re-homing it as resize resolves the lead pad
@@ -357,6 +335,16 @@ SongView::SongView(QWidget *parent)
 
 SongView::~SongView()
 {
+    if (QGuiApplication::instance())
+        QGuiApplication::instance()->removeEventFilter(this);
+    // Detach FIRST: unload QML and cancel window-level popup/gesture state
+    // while every model and QML context below is still alive. Essential on
+    // the unhosted rig path, where no host container tears the window down
+    // first. Every subsequent cleanup tolerates a detached Quick
+    // coordinator (null quickView()/popupSession()) — each gates the
+    // session through ownsSession and only resets domain state otherwise.
+    if (m_quickView)
+        m_quickView->detachWindow();
     if (m_roll)
         m_roll->cancelVelocityPromptWithoutFocus();
     if (m_ruler)
@@ -364,15 +352,6 @@ SongView::~SongView()
     cancelVoicePicker(/*restoreFocus=*/false);
     cancelInsertTimePromptWithoutFocus();
     cancelTimeSelectionMenuWithoutFocus();
-    if (!m_quickView)
-        return;
-    m_quickView->detachInputInteraction(TimelineBand::Ruler);
-    m_quickView->detachInputInteraction(TimelineBand::TrackHeaders);
-    m_quickView->detachInputInteraction(TimelineBand::Roll);
-    m_quickView->detachInputInteraction(TimelineBand::OtherEvents);
-    m_quickView->detachInputInteraction(TimelineBand::Automation);
-    m_quickView->detachInputInteraction(TimelineBand::Velocity);
-    m_quickView->detachInputInteraction(TimelineBand::VoiceChanges);
 }
 
 songview::TimelineQuickView *SongView::quickView() const noexcept
@@ -755,6 +734,14 @@ void SongView::prepareForSongReplacement()
 void SongView::cancelTransientInput()
 {
     ++m_transientInputGeneration;
+    // The shared Quick popup dies with every readiness/document reset: one
+    // blanket cancellation covers every menu/form owner with no per-owner
+    // list. Per-owner cleanup below then only resets domain state.
+    if (m_quickView) {
+        if (songview::QuickPopupSession *const session = m_quickView->popupSession();
+            session && session->isOpen())
+            session->cancel(/*restoreFocus=*/false);
+    }
     // First cancel pointer state through the canonical traversal. Strong
     // document/readiness cleanup then applies its separate popup policy.
     cancelActiveInteractions();
@@ -770,46 +757,6 @@ void SongView::cancelTransientInput()
     }
     if (m_headers)
         m_headers->cancelTransientState();
-    if (QWidget *mouseGrabber = QWidget::mouseGrabber();
-        mouseGrabber && (mouseGrabber == this || isAncestorOf(mouseGrabber))) {
-        mouseGrabber->releaseMouse();
-    }
-    for (QAbstractButton *button : findChildren<QAbstractButton *>())
-        button->setDown(false);
-    for (QAbstractSlider *slider : findChildren<QAbstractSlider *>())
-        slider->setSliderDown(false);
-    const auto isOwnedByView = [this](const QWidget *widget) {
-        for (const QObject *ancestor = widget; ancestor; ancestor = ancestor->parent()) {
-            if (ancestor == this)
-                return true;
-        }
-        return false;
-    };
-    // Draining popups/modals in loops because closing a submenu can reveal its parent as the next active popup.
-    for (;;) {
-        QWidget *popup = QApplication::activePopupWidget();
-        if (!isOwnedByView(popup))
-            break;
-        QPointer<QWidget> closedPopup = popup;
-        popup->close();
-        if (QApplication::activePopupWidget() == closedPopup.data())
-            break;
-    }
-    for (;;) {
-        QWidget *modal = QApplication::activeModalWidget();
-        if (!isOwnedByView(modal))
-            break;
-        QPointer<QWidget> closedModal = modal;
-        if (auto *dialog = qobject_cast<QDialog *>(modal))
-            dialog->reject();
-        else
-            modal->close();
-        if (QApplication::activeModalWidget() == closedModal.data())
-            break;
-    }
-    QWidget *focused = QApplication::focusWidget();
-    if (focused && (focused == this || isAncestorOf(focused)))
-        focused->clearFocus();
 }
 
 void SongView::setDocument(SongDocument *document)
@@ -850,19 +797,18 @@ void SongView::setDocument(SongDocument *document)
 
 bool SongView::eventListVisible() const
 {
-    return m_rollStack->currentIndex() == 1;
+    return m_eventListVisible;
 }
 void SongView::setEventListVisible(bool visible)
 {
-    if (eventListVisible() == visible)
+    if (m_eventListVisible == visible)
         return;
-    m_rollStack->setCurrentIndex(visible ? 1 : 0);
-    // The roll band exists only on the roll page; resync immediately so the
-    // index swap cannot leave a stale canonical Roll entry.
+    m_eventListVisible = visible;
+    // The roll band exists only while the event page is hidden; resync
+    // immediately so the swap cannot leave a stale canonical Roll entry.
     synchronizeTimelineBandLayout();
     m_events->setVisible(visible);
-    if (isEnabled())
-        focusContent();
+    focusContent();
     emit eventListVisibilityChanged(visible);
 }
 
@@ -1026,61 +972,29 @@ void SongView::coordinateSelectionChange(
         refreshDrawerPages();
 }
 
-bool SongView::event(QEvent *event)
+// Application-scoped appearance path (theme apply, palette or application
+// font/style change): the former QWidget palette/style/theme fan-out. DPR
+// and screen changes ride the Quick coordinator's viewportChanged instead.
+bool SongView::eventFilter(QObject *watched, QEvent *event)
 {
-    bool screenOrDprChanged = event->type() == QEvent::ScreenChangeInternal;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
-    screenOrDprChanged = screenOrDprChanged || event->type() == QEvent::DevicePixelRatioChange;
-#endif
-    const bool appearanceChanged = event->type() == QEvent::PaletteChange ||
-                                   event->type() == QEvent::ApplicationPaletteChange ||
-                                   event->type() == QEvent::StyleChange ||
-                                   event->type() == QEvent::ThemeChange || screenOrDprChanged;
-    const bool lifecycleRepublish =
-        event->type() == QEvent::Show || event->type() == QEvent::WinIdChange || screenOrDprChanged;
-    if (event->type() == QEvent::Hide || event->type() == QEvent::WindowDeactivate ||
-        event->type() == QEvent::UngrabMouse) {
-        cancelActiveInteractions();
-    } else if (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease) {
-        auto *keyEvent = static_cast<QKeyEvent *>(event);
-        // Event-list row commands stay local. Quick drawer/root inputs call
-        // the default policy entry directly, so EventList visibility never
-        // disables their note target.
-        const songview::TimelineKeyInput keyInput{
-            .key = keyEvent->key(),
-            .modifiers = keyEvent->modifiers(),
-            .text = keyEvent->text(),
-            .autoRepeat = keyEvent->isAutoRepeat(),
-        };
-        if (event->type() == QEvent::KeyPress) {
-            if (handleEditKey(keyInput, eventListVisible() ? EditKeyOrigin::EventList
-                                                           : EditKeyOrigin::Timeline))
-                return true;
-        } else if (handleEditKeyRelease(keyInput)) {
-            return true;
+    if (watched == QGuiApplication::instance()) {
+        switch (event->type()) {
+        case QEvent::ApplicationPaletteChange:
+        case QEvent::PaletteChange:
+        case QEvent::ApplicationFontChange:
+        case QEvent::StyleChange:
+        case QEvent::ThemeChange:
+            if (m_editorDrawer)
+                m_editorDrawer->refreshAppearance(QGuiApplication::palette());
+            syncTimelineQuickAppearance();
+            if (m_playheadOverlay)
+                m_playheadOverlay->syncAppearance();
+            break;
+        default:
+            break;
         }
     }
-    const bool handled = QWidget::event(event);
-    // After Show/WinIdChange the playhead's native window exists and its
-    // native renderer can attach; DPR and screen changes re-map the Quick
-    // host into its new surface. The canonical refresh stays
-    // resolve/compare/store/push, then both consumers republish
-    // unconditionally so equal values still land after a surface swap.
-    if (lifecycleRepublish) {
-        positionBandWidgets();
-        synchronizeTimelineBandLayout();
-        if (m_quickView)
-            m_quickView->refreshBandLayout();
-        if (m_playheadOverlay)
-            m_playheadOverlay->updateBands(m_timelineBandLayout);
-    }
-    if (appearanceChanged && m_editorDrawer)
-        m_editorDrawer->refreshAppearance(palette());
-    if (appearanceChanged)
-        syncTimelineQuickAppearance();
-    if (appearanceChanged && m_playheadOverlay)
-        m_playheadOverlay->syncAppearance();
-    return handled;
+    return QObject::eventFilter(watched, event);
 }
 
 void SongView::setPlayheadSample(uint64_t samplePos, bool playing)
@@ -1227,14 +1141,4 @@ void SongView::refreshTimelineViews(PianoRollQuickDirtySet dirty)
     requestAutomationQuickUpdate(songview::AutomationRefresh::All);
     m_roll->requestQuickUpdate(dirty);
     syncTimelineIndicators();
-}
-
-void SongView::resizeEvent(QResizeEvent *event)
-{
-    QWidget::resizeEvent(event);
-    positionBandWidgets();
-    updateScrollbars();
-    refreshDrawerPages();
-    syncTimelineIndicators();
-    synchronizeTimelineBandLayout();
 }

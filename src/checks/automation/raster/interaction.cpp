@@ -12,6 +12,7 @@
 #include <QAbstractItemModel>
 #include <QByteArray>
 #include <QColor>
+#include <QGuiApplication>
 #include <QImage>
 #include <QQuickItem>
 #include <QStringList>
@@ -252,7 +253,7 @@ PreparedLane prepareLane(AutomationRasterFixture &fixture, AdapterKind kind)
                               valueY(lane.body, geometry, minimum, maximum, cursor)};
     lane.heldY = valueY(lane.body, geometry, minimum, maximum, held);
     lane.nodeY = valueY(lane.body, geometry, minimum, maximum, node);
-    NodeLaneHoverState insertionProbe(fixture.view().font());
+    NodeLaneHoverState insertionProbe(QGuiApplication::font());
     insertionProbe.hover.lane = lane.handle;
     insertionProbe.hover.pos = lane.insertionPosition;
     lane.insertionTick = uint64_t(std::max(0.0, insertionProbe.insertionTick(projection, false)));

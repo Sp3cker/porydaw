@@ -5,10 +5,12 @@
 #include <QColor>
 #include <QCoreApplication>
 #include <QEvent>
+#include <QGuiApplication>
 #include <QImage>
 #include <QMetaObject>
 #include <QObject>
 #include <QPointF>
+#include <QQuickWindow>
 #include <QtTest>
 #include <algorithm>
 #include <cmath>
@@ -18,6 +20,7 @@
 
 #include "checks/rollcheck/headerchecksupport.h"
 #include "checks/support/eventsynth.h"
+#include "checks/support/quickframebuffer.h"
 #include "checks/voicepickerdriver.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
@@ -424,8 +427,21 @@ void PianoRollTest::headerAddTrack()
     auto *headers = model(view);
     auto *headerInputItem = input(view);
     QVERIFY2(headers && headerInputItem, "Quick track-header model or input was not found");
-    const std::optional<int> addRow = addTrackRow(*headers);
+    const auto addRow = addTrackRow(*headers);
     QVERIFY2(addRow.has_value() && doc.canAddTrack(), "Quick add-track record was unavailable");
+    // The voice picker and its search field key off live window activation:
+    // stage real header-band focus (focusTimelineBand plus
+    // focusWindow/focusObject convergence), not just item-local focus.
+    QVERIFY2(view.focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason),
+             "the Quick track-header input was unavailable");
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents();
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents();
+    QTRY_VERIFY2(QGuiApplication::focusWindow() == headerInputItem->window() &&
+                     QGuiApplication::focusObject() == headerInputItem &&
+                     headerInputItem->hasActiveFocus(),
+                 "the Quick track-header input did not take active focus");
 
     const int tracksBefore = doc.engineTrackCount();
     click(*headerInputItem, titlePoint(*headers, *headerInputItem, *addRow));
@@ -564,7 +580,7 @@ void PianoRollTest::headerReorder()
         QFAIL("duplicating the header reorder fixture did not create one three-track edit");
     } else {
         QCoreApplication::processEvents();
-        (void)view.grab(); // rebuild and lay out the added header row
+        checks::support::pumpQuick(); // rebuild and lay out the added header row
 
         const int fixtureIndex = doc.undoStack()->index();
         const int fixtureTracks[] = {0, 1, duplicatedTrack};
@@ -668,7 +684,7 @@ void PianoRollTest::headerReorder()
     QCoreApplication::processEvents();
     view.setTrackMute(0, firstMute);
     view.setTrackMute(1, secondMute);
-    (void)view.grab(); // consume the two-track restoration rebuild
+    checks::support::pumpQuick(); // consume the two-track restoration rebuild
     if (doc.undoStack()->index() != twoTrackIndex || doc.engineTrackCount() != 2 ||
         doc.channelFor(0) != firstChannel || doc.channelFor(1) != secondChannel ||
         view.trackMuted(0) != firstMute || view.trackMuted(1) != secondMute ||

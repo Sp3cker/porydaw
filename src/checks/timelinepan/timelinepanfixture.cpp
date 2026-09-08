@@ -154,12 +154,13 @@ QImage TimelinePanFixture::render() const
 QImage TimelinePanFixture::capture(QString *error) const
 {
     songview::TimelineQuickView *const quick = view().quickView();
-    if (!quick) {
+    QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
+    if (!window) {
         if (error)
-            *error = QStringLiteral("timeline Quick view is unavailable");
+            *error = QStringLiteral("timeline Quick window is unavailable");
         return {};
     }
-    return checks::support::captureQuickBand(view(), quick->geometry(), error);
+    return checks::support::captureQuickBand(view(), QRect(QPoint{}, window->size()), error);
 }
 
 bool TimelinePanFixture::setSelection(uint64_t endTick)

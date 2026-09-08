@@ -49,13 +49,11 @@ bool bindVoicegroup(GateFixture &fixture)
 void sendRulerClick(songview::TimelineInputItem &input, SongView &view)
 {
     const auto band = view.timelineBandLayout().geometry(songview::TimelineBand::Ruler);
-    if (!band)
+    QQuickWindow *const window = input.window();
+    if (!band || !window)
         return;
     const QPointF point(view.camera().leadPadPx() + 140.0, band->rect.height() * 3.0 / 4.0);
-    checks::events::sendMouse(input, QEvent::MouseButtonPress, point, Qt::LeftButton,
-                              Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(input, QEvent::MouseButtonRelease, point, Qt::LeftButton,
-                              Qt::NoButton, Qt::NoModifier);
+    QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, input.mapToScene(point).toPoint());
 }
 
 void sendScrollbarWheel(QQuickItem &bar)
@@ -72,8 +70,13 @@ void sendScrollbarWheel(QQuickItem &bar)
 
 void sendRollWheel(songview::TimelineInputItem &input)
 {
-    checks::events::sendWheel(input, QPointF(80.0, 100.0), QPoint(), QPoint(0, 120), Qt::NoButton,
-                              Qt::NoModifier, Qt::NoScrollPhase, false);
+    QQuickWindow *const window = input.window();
+    if (!window)
+        return;
+    const QPointF scene = input.mapToScene(QPointF(80.0, 100.0));
+    QWheelEvent event(scene, window->mapToGlobal(scene.toPoint()), QPoint(), QPoint(0, 120),
+                      Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+    QCoreApplication::sendEvent(window, &event);
 }
 
 bool controlsMatchRuler(const GateFixture &fixture)
@@ -97,8 +100,8 @@ bool allFixedSurfacesEnabled(const GateFixture &fixture)
     const auto *quick = fixture.view()->findChild<songview::TimelineQuickView *>(
         QStringLiteral("timelineQuickCanvas"));
     QQuickItem *const root = quick ? quick->rootObject() : nullptr;
-    if (!root || !fixture.view()->isEnabled() || !fixture.rollInput()->isEnabled() ||
-        !fixture.rulerInput()->isEnabled() || !fixture.horizontalScrollbar()->isVisible() ||
+    if (!root || !fixture.rollInput()->isEnabled() || !fixture.rulerInput()->isEnabled() ||
+        !fixture.horizontalScrollbar()->isVisible() ||
         !fixture.horizontalScrollbar()->isEnabled() ||
         fixture.headersInput()->interaction() != fixture.headers() ||
         !fixture.headersInput()->isEnabled() || !fixture.controls()->isEnabled() ||
@@ -191,7 +194,6 @@ void PianoRollStaticTest::freshTabStaysGated()
     QString error;
     QVERIFY2(fixture.create(error), qPrintable(error));
     QVERIFY(!fixture.tab()->isReady());
-    QVERIFY(fixture.view()->isEnabled());
     QVERIFY(fixture.rollInput()->isEnabled());
     QVERIFY(fixture.rulerInput()->isEnabled());
     QVERIFY(fixture.horizontalScrollbar()->isVisible());
@@ -254,9 +256,8 @@ void PianoRollStaticTest::midiStageStaysGated()
     QVERIFY(!fixture.tab()->isReady());
     QVERIFY(fixture.view()->timeline());
     QCOMPARE(fixture.view()->editCursorTick(), uint64_t(0));
-    QVERIFY(fixture.view()->isEnabled());
     QVERIFY(controlsMatchRuler(fixture));
-    QVERIFY(allFixedSurfacesEnabled(fixture));
+    QTRY_VERIFY(allFixedSurfacesEnabled(fixture));
     const uint64_t cursor = fixture.view()->editCursorTick();
     sendRulerClick(*fixture.rulerInput(), *fixture.view());
     QCOMPARE(fixture.view()->editCursorTick(), cursor);
@@ -276,9 +277,8 @@ void PianoRollStaticTest::voicegroupBoundReadiesTab()
     QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()));
     QVERIFY(bindVoicegroup(fixture));
     QVERIFY(fixture.tab()->isReady());
-    QVERIFY(fixture.view()->isEnabled());
     QVERIFY(controlsMatchRuler(fixture));
-    QVERIFY(allFixedSurfacesEnabled(fixture));
+    QTRY_VERIFY(allFixedSurfacesEnabled(fixture));
 }
 
 void PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness()

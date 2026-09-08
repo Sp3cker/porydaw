@@ -14,6 +14,7 @@
 #include "ui/typography.h"
 
 #include <QFontMetrics>
+#include <QGuiApplication>
 #include <QUrl>
 #include <QVariant>
 
@@ -129,8 +130,9 @@ void TimeRuler::syncGridControlAppearance()
     appearance.insert(
         QStringLiteral("buttonPressedBackground"),
         QVariant::fromValue(themes::color(themes::Role::combo_drop_down_pressed_background)));
-    appearance.insert(QStringLiteral("font"),
-                      QVariant::fromValue(m_inputHost ? m_inputHost->font() : m_owner.font()));
+    appearance.insert(
+        QStringLiteral("font"),
+        QVariant::fromValue(m_inputHost ? m_inputHost->font() : QGuiApplication::font()));
     if (m_gridControlAppearance == appearance)
         return;
 
@@ -262,7 +264,8 @@ QString TimeRuler::timeSigPromptLabel() const
 QVariantMap TimeRuler::timeSigPromptAppearance() const
 {
     QVariantMap appearance;
-    appearance.insert(QStringLiteral("font"), m_inputHost ? m_inputHost->font() : m_owner.font());
+    appearance.insert(QStringLiteral("font"),
+                      m_inputHost ? m_inputHost->font() : QGuiApplication::font());
     appearance.insert(QStringLiteral("background"), themes::color(themes::Role::window_background));
     appearance.insert(QStringLiteral("outline"), themes::color(themes::Role::palette_outline));
     appearance.insert(QStringLiteral("text"), themes::color(themes::Role::window_text));

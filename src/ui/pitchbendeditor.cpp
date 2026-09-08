@@ -6,29 +6,28 @@
 #include "songview.h"
 #include "theme/themeruntime.h"
 #include "typography.h"
+#include "ui/songview/quick/timelinequickview.h"
 
-#include <QApplication>
-#include <QFont>
+#include <QGuiApplication>
 #include <QUndoStack>
 #include <QVariant>
-#include <QWindow>
 #include <algorithm>
 #include <map>
 #include <utility>
 
 namespace {
-QFont chromeFont(const QPointer<::SongView> &songView)
+// Editor chrome takes the current application font; the coordinator no
+// longer carries widget fonts.
+QFont chromeFont()
 {
-    if (songView && songView->window())
-        return songView->window()->font();
-    return QApplication::font();
+    return QGuiApplication::font();
 }
 
+// Effective DPR of the actual Quick window; safe identity before the
+// window exists or after the coordinator detaches.
 qreal chromeDpr(const QPointer<::SongView> &songView)
 {
-    if (songView && songView->window() && songView->window()->windowHandle())
-        return songView->window()->windowHandle()->devicePixelRatio();
-    return qApp->devicePixelRatio();
+    return songView ? songView->quickView()->quickDevicePixelRatio() : 1.0;
 }
 
 struct CurveSnapshot {
@@ -280,7 +279,7 @@ bool PitchBendEditor::noteSpanStillPresent() const
 
 void PitchBendEditor::resolveChromeGeometry()
 {
-    m_geometry = PitchBendGeometry::resolve(chromeFont(m_songView), chromeDpr(m_songView));
+    m_geometry = PitchBendGeometry::resolve(chromeFont(), chromeDpr(m_songView));
 }
 
 void PitchBendEditor::rebuildCachedChrome()
@@ -302,7 +301,7 @@ void PitchBendEditor::rebuildCachedChrome()
     metrics.insert(QStringLiteral("scrubThreshold"), m_geometry.scrubThreshold);
     metrics.insert(QStringLiteral("hairline"), m_geometry.hairline);
 
-    const QFont base = chromeFont(m_songView);
+    const QFont base = chromeFont();
     QVariantMap appearance;
     appearance.insert(QStringLiteral("windowBackground"),
                       QVariant::fromValue(themes::color(themes::Role::window_background)));

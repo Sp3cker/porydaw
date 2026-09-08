@@ -2,10 +2,11 @@
 #include "layout.h"
 #include "songview.h"
 #include "theme/themeruntime.h"
-#ifndef __APPLE__
 #include "ui/songview/quick/timelinequickview.h"
-#endif
 
+#include <QGuiApplication>
+#include <QPlatformSurfaceEvent>
+#include <QQuickWindow>
 #include <QtGlobal>
 #include <algorithm>
 
@@ -96,17 +97,80 @@ void PlayheadOverlay::syncAppearance()
     updatePlayhead();
 }
 
+songview::TimelineQuickView *PlayheadOverlay::quickView() const
+{
+    return m_owner.quickView();
+}
+
+QQuickWindow *PlayheadOverlay::quickWindow() const
+{
+    songview::TimelineQuickView *quickView = m_owner.quickView();
+    return quickView ? quickView->quickWindow() : nullptr;
+}
+
+// The Quick window is the full canonical viewport with origin (0, 0); the
+// timeline column is its right portion past the split. Band rects in the
+// published layout share those canonical viewport coordinates.
 QRect PlayheadOverlay::timelineColumnRect() const
 {
+    QQuickWindow *window = quickWindow();
+    if (!window)
+        return {};
+    const QSize viewport = window->size();
     const int timelineSplitX = m_owner.timelineSplitX();
-    return QRect(timelineSplitX, 0, std::max(0, m_owner.width() - timelineSplitX),
-                 m_owner.height());
+    return QRect(timelineSplitX, 0, std::max(0, viewport.width() - timelineSplitX),
+                 viewport.height());
+}
+
+void PlayheadOverlay::ensureWindowTracking()
+{
+    songview::TimelineQuickView *quickView = m_owner.quickView();
+    if (quickView && !m_detachConnected) {
+        connect(quickView, &songview::TimelineQuickView::windowAboutToDetach, this,
+                &PlayheadOverlay::clearNativeAttachment);
+        m_detachConnected = true;
+    }
+
+    QQuickWindow *window = quickView ? quickView->quickWindow() : nullptr;
+    if (window && m_filteredWindow != window) {
+        if (m_filteredWindow)
+            m_filteredWindow->removeEventFilter(this);
+        window->installEventFilter(this);
+        m_filteredWindow = window;
+    }
+}
+
+bool PlayheadOverlay::eventFilter(QObject *watched, QEvent *event)
+{
+    // SurfaceCreated always arrives after the platform window exists, but a
+    // surface can also be created while the window is still hidden (deferred
+    // creation); QShowEvent is then the one authoritative show notification,
+    // so both re-run the attach gate. Neither forces surface creation.
+    if (event->type() == QEvent::PlatformSurface) {
+        const auto *surfaceEvent = static_cast<QPlatformSurfaceEvent *>(event);
+        if (surfaceEvent->surfaceEventType() == QPlatformSurfaceEvent::SurfaceAboutToBeDestroyed)
+            clearNativeAttachment();
+        else if (surfaceEvent->surfaceEventType() == QPlatformSurfaceEvent::SurfaceCreated)
+            synchronizeGeometry();
+    } else if (event->type() == QEvent::Show) {
+        synchronizeGeometry();
+    }
+    return QObject::eventFilter(watched, event);
+}
+
+void PlayheadOverlay::clearNativeAttachment()
+{
+#ifdef __APPLE__
+    if (m_platform)
+        detachPlatform();
+#endif
 }
 
 void PlayheadOverlay::synchronizeGeometry()
 {
+    ensureWindowTracking();
 #ifdef __APPLE__
-    SongView &owner = m_owner;
+    QQuickWindow *window = quickWindow();
     const QRect timelineColumn = timelineColumnRect();
     const QRect localTimelineColumn(0, 0, timelineColumn.width(), timelineColumn.height());
     const std::optional<TimelineBandGeometry> &rulerBand = m_layout.geometry(TimelineBand::Ruler);
@@ -124,8 +188,8 @@ void PlayheadOverlay::synchronizeGeometry()
 
         const QRect rulerVisible = visibleBandRect(*rulerBand);
         const int bodyTop = rulerVisible.top();
-        m_bodyGeometry =
-            QRect(0, bodyTop, timelineColumn.width(), std::max(0, owner.height() - bodyTop));
+        m_bodyGeometry = QRect(0, bodyTop, timelineColumn.width(),
+                               std::max(0, timelineColumn.height() - bodyTop));
 
         m_visibleSurfaceRegion = {};
         for (const std::optional<TimelineBandGeometry> &band : m_layout.bands) {
@@ -153,9 +217,12 @@ void PlayheadOverlay::synchronizeGeometry()
     m_trianglePointsUp = !m_layout.geometry(TimelineBand::Roll).has_value();
 
 #ifdef __APPLE__
-    m_devicePixelRatio = owner.devicePixelRatioF();
-    if (!m_platform && owner.isVisible())
-        initializePlatform(owner);
+    m_devicePixelRatio = window ? window->effectiveDevicePixelRatio() : 1.0;
+    // Attach only to an already-created platform surface of a visible window;
+    // surface creation is never forced here, and a later SurfaceCreated event
+    // re-syncs through the window filter.
+    if (!m_platform && window && window->handle() && window->isVisible())
+        initializePlatform();
     if (m_platform) {
         setPlatformImages();
         setPlatformLayout();

@@ -4,14 +4,12 @@
 #import <QuartzCore/QuartzCore.h>
 
 #include "nativelayerutils_macos_p.h"
-#include "songview.h"
 
 #include <QColor>
 #include <QGuiApplication>
-#include <QPoint>
+#include <QQuickWindow>
 #include <QRect>
 #include <QRegion>
-#include <QWidget>
 #include <algorithm>
 #include <array>
 #include <memory>
@@ -30,6 +28,19 @@ using native_layer::RetainedObject;
 using native_layer::setLayerRect;
 
 constexpr CGFloat kPlayheadOverlayZPosition = 1'000'000.0;
+
+// Resolves the Quick window's own NSView for attachment. Attachment requires
+// an already-created platform surface: a null handle means the window is not
+// created yet and native window creation is never forced for the overlay.
+NSView *resolveNativeView(QQuickWindow *window)
+{
+    if (!window || !window->handle())
+        return nullptr;
+    auto *nativeView = reinterpret_cast<NSView *>(window->winId());
+    if (!nativeView || ![nativeView isKindOfClass:[NSView class]])
+        return nullptr;
+    return nativeView;
+}
 
 void setLayerColor(CALayer *layer, const QColor &color)
 {
@@ -68,7 +79,7 @@ void setGradientColors(CAGradientLayer *left, CAGradientLayer *right, const QCol
 class PlayheadOverlay::Platform final
 {
   public:
-    explicit Platform(QWidget &owner) : m_owner(owner)
+    explicit Platform(QQuickWindow &window)
     {
         DisabledActionTransaction transaction;
 
@@ -118,7 +129,7 @@ class PlayheadOverlay::Platform final
         [m_rootLayer.get() addSublayer:m_bodyClipLayer.get()];
         [m_rootLayer.get() addSublayer:m_triangleClipLayer.get()];
 
-        attachToNativeView();
+        attachToNativeView(&window);
     }
 
     ~Platform() { [m_rootLayer.get() removeFromSuperlayer]; }
@@ -133,21 +144,19 @@ class PlayheadOverlay::Platform final
         updateColors();
     }
 
-    void setLayout(const QRect &timelineColumn, const QRegion &visibleSurfaces,
-                   const QRect &triangleClip, const QRect &bodyGeometry, qreal devicePixelRatio,
-                   bool playing, bool trianglePointsUp)
+    void setLayout(QQuickWindow *window, const QRect &timelineColumn,
+                   const QRegion &visibleSurfaces, const QRect &triangleClip,
+                   const QRect &bodyGeometry, qreal devicePixelRatio, bool playing,
+                   bool trianglePointsUp)
     {
-        attachToNativeView();
-        const QPoint overlayOffset = m_owner.mapTo(m_owner.window(), QPoint(0, 0));
+        attachToNativeView(window);
         const qreal dpr = std::max<qreal>(devicePixelRatio, 1.0);
         const bool clipLayoutChanged = !m_hasLayout || m_timelineColumn != timelineColumn ||
-                                       m_overlayOffset != overlayOffset ||
                                        m_visibleSurfaces != visibleSurfaces ||
                                        m_triangleClip != triangleClip;
         const bool playingChanged = m_playing != playing;
         m_timelineColumn = timelineColumn;
 
-        m_overlayOffset = overlayOffset;
         m_visibleSurfaces = visibleSurfaces;
         m_triangleClip = triangleClip;
         m_bodyTop = bodyGeometry.top();
@@ -159,8 +168,9 @@ class PlayheadOverlay::Platform final
 
         DisabledActionTransaction transaction;
         if (clipLayoutChanged) {
-            const auto rootRect = CGRectMake(overlayOffset.x() + timelineColumn.x(),
-                                             overlayOffset.y() + timelineColumn.y(),
+            // Canonical viewport placement: the column rect is Quick-window
+            // local already, with zero top-level offset to add.
+            const auto rootRect = CGRectMake(timelineColumn.x(), timelineColumn.y(),
                                              timelineColumn.width(), timelineColumn.height());
             const auto rootBounds =
                 CGRectMake(0.0, 0.0, timelineColumn.width(), timelineColumn.height());
@@ -191,9 +201,10 @@ class PlayheadOverlay::Platform final
         m_hasLayout = true;
     }
 
-    void setPosition(qreal localX, bool visible, bool playing, bool trianglePointsUp)
+    void setPosition(QQuickWindow *window, qreal localX, bool visible, bool playing,
+                     bool trianglePointsUp)
     {
-        attachToNativeView();
+        attachToNativeView(window);
         // With no attached native view the playhead silently renders nothing:
         // the position push is retried on the next frame and there is no
         // fallback renderer.
@@ -215,6 +226,11 @@ class PlayheadOverlay::Platform final
             CGPointMake(localX - playheadTriangleHalfWidth(), m_triangleTop);
         m_rootLayer.get().hidden = visible ? NO : YES;
     }
+
+    // Drops the attachment while keeping the layer tree: the platform surface
+    // is going away (or the Quick window detaches) and a later sync re-attaches
+    // to whatever surface exists then.
+    void detachFromNativeView() { attachToNativeView(nullptr); }
 
   private:
     void updateColors()
@@ -256,13 +272,9 @@ class PlayheadOverlay::Platform final
         m_triangleLayer.get().contentsScale = contentsScale;
     }
 
-    void attachToNativeView()
+    void attachToNativeView(QQuickWindow *window)
     {
-        QWidget *topLevel = m_owner.window();
-        WId topLevelWId = topLevel ? topLevel->internalWinId() : 0;
-        if (topLevelWId == 0 && topLevel && topLevel->isVisible())
-            topLevelWId = topLevel->winId();
-        auto *ownerView = topLevelWId ? reinterpret_cast<NSView *>(topLevelWId) : nullptr;
+        NSView *ownerView = resolveNativeView(window);
         CALayer *ownerLayer = ownerView ? ownerView.layer : nil;
         if (ownerView == m_attachedView &&
             (!ownerView || m_rootLayer.get().superlayer == ownerLayer)) {
@@ -280,7 +292,6 @@ class PlayheadOverlay::Platform final
         }
     }
 
-    QWidget &m_owner;
     NSView *m_attachedView = nullptr;
 
     RetainedObject<CALayer> m_rootLayer;
@@ -296,7 +307,6 @@ class PlayheadOverlay::Platform final
     RetainedObject<CAShapeLayer> m_triangleLayer;
 
     QRect m_timelineColumn;
-    QPoint m_overlayOffset;
     QRegion m_visibleSurfaces;
     QRect m_triangleClip;
     QColor m_color;
@@ -309,22 +319,28 @@ class PlayheadOverlay::Platform final
     bool m_hasLayout = false;
 };
 
-void PlayheadOverlay::initializePlatform(SongView &owner)
+void PlayheadOverlay::initializePlatform()
 {
     // No Platform off-cocoa (offscreen/CI): the overlay stays silent and
-    // retries next frame. Offscreen WIds are not NSViews, so construction —
-    // not a pointer check at attach time — is the correct gate.
+    // retries next frame. Construction additionally requires the Quick
+    // window's platform surface to already exist; the genuine NSView is
+    // resolved at attach time and a non-NSView id never attaches.
     if (QGuiApplication::platformName() != QLatin1String("cocoa"))
         return;
 
-    m_platform.reset(new Platform(owner));
+    QQuickWindow *window = quickWindow();
+    if (!window || !window->handle())
+        return;
+
+    m_platform.reset(new Platform(*window));
 }
 
 void PlayheadOverlay::setPlatformLayout()
 {
     Q_ASSERT(m_platform);
-    m_platform->setLayout(timelineColumnRect(), m_visibleSurfaceRegion, m_triangleClip,
-                          m_bodyGeometry, m_devicePixelRatio, m_playing, m_trianglePointsUp);
+    m_platform->setLayout(quickWindow(), timelineColumnRect(), m_visibleSurfaceRegion,
+                          m_triangleClip, m_bodyGeometry, m_devicePixelRatio, m_playing,
+                          m_trianglePointsUp);
 }
 
 void PlayheadOverlay::setPlatformImages()
@@ -336,7 +352,14 @@ void PlayheadOverlay::setPlatformImages()
 void PlayheadOverlay::setPlatformPosition()
 {
     Q_ASSERT(m_platform);
-    m_platform->setPosition(m_timelineX, effectiveVisible(), m_playing, m_trianglePointsUp);
+    m_platform->setPosition(quickWindow(), m_timelineX, effectiveVisible(), m_playing,
+                            m_trianglePointsUp);
+}
+
+void PlayheadOverlay::detachPlatform()
+{
+    Q_ASSERT(m_platform);
+    m_platform->detachFromNativeView();
 }
 
 void PlayheadOverlay::PlatformDeleter::operator()(Platform *platform) const

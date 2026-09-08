@@ -2,6 +2,7 @@
 
 #include <QAction>
 #include <QEvent>
+#include <QGuiApplication>
 
 #include <QKeySequence>
 #include <QLineEdit>
@@ -205,7 +206,7 @@ void AutomationEditingTest::projectionInsertionTiming()
     const AutomationGridCell mappedCell = projection.snapCellAt(rawTick);
     const double caretTick = double(tab().view().grid().snapTick(rawTick, true));
 
-    NodeLaneHoverState indicator(tab().view().font());
+    NodeLaneHoverState indicator(QGuiApplication::font());
     indicator.hover.lane = pan;
     indicator.hover.pos = input;
 

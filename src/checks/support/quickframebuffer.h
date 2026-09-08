@@ -4,7 +4,7 @@
 
 #include <QImage>
 #include <QRect>
-#include <QWidget>
+#include <QSize>
 #include <QtGlobal>
 
 #include <array>
@@ -17,19 +17,8 @@ class SongView;
 
 namespace checks::support {
 
-template <typename T>
-T *findWidgetDescendant(QWidget &root)
-{
-    for (QWidget *widget : root.findChildren<QWidget *>()) {
-        if (auto *typed = dynamic_cast<T *>(widget))
-            return typed;
-    }
-    return nullptr;
-}
-
 void pumpQuick();
 QRect devicePixelRect(const QImage &image, const QRect &logicalRect);
-QRect widgetRectIn(const QWidget &widget, const QWidget &owner);
 int playheadWidthAt(const QImage &image, int logicalY, qreal logicalX, const QColor &color);
 bool isPlayheadPixel(const QColor &actual, const QColor &expected);
 bool hasPlayheadPixel(const QImage &image, const QRect &logicalRect, const QColor &color);
@@ -40,6 +29,14 @@ using TimelineQuickLayerRevisions =
 
 TimelineQuickLayerRevisions timelineQuickLayerRevisions(const songview::TimelineQuickScene &scene);
 
-QImage captureQuickBand(SongView &view, const QRect &rectInSongView, QString *error = nullptr);
+// Sizes and exposes the real unhosted Quick window: SongView is a pure
+// QObject coordinator, so the QQuickWindow is the full canonical viewport.
+// Pumps the event loop once so window-driven layout settles. Returns false
+// when the production Quick canvas or its window is missing.
+bool showQuickViewport(SongView &view, const QSize &size);
+
+// Captures a viewport-local Quick framebuffer crop (the Quick window spans
+// the canonical viewport with origin (0, 0)); never walks the widget tree.
+QImage captureQuickBand(SongView &view, const QRect &viewportRect, QString *error = nullptr);
 
 } // namespace checks::support

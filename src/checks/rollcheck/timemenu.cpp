@@ -8,8 +8,10 @@
 #include <QByteArray>
 #include <QCoreApplication>
 #include <QEvent>
+#include <QGuiApplication>
 #include <QPoint>
 #include <QPointer>
+#include <QQuickWindow>
 #include <QString>
 #include <QtTest>
 #include <algorithm>
@@ -193,8 +195,15 @@ void PianoRollTest::timeSelectionMenuStaleAndCancelNoOp()
     // scenario exercises the no-drawer branch that returns focus to the roll
     // band, then establish the band focus a real editing press carries.
     view.setDrawerSectionVisible(EditorDrawerPage::Automations, false);
-    check.rollInput().forceActiveFocus(Qt::OtherFocusReason);
-    QTRY_VERIFY2(check.rollInput().hasActiveFocus(),
+    QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason),
+             "the roll band could not take focus for the escape scenario");
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents();
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents();
+    QTRY_VERIFY2(QGuiApplication::focusWindow() == check.rollInput().window() &&
+                     QGuiApplication::focusObject() == &check.rollInput() &&
+                     check.rollInput().hasActiveFocus(),
                  "the roll band could not take focus for the escape scenario");
     const std::optional<ResizeFixture> seed = makeResizeSeed(check);
     QVERIFY(seed.has_value());

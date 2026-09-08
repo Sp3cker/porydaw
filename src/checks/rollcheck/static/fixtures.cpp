@@ -3,6 +3,7 @@
 #include <QCoreApplication>
 #include <QQuickItem>
 #include <QtGlobal>
+#include <QtTest>
 
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
@@ -129,6 +130,11 @@ bool CameraFixture::create(QString &error)
         error = QStringLiteral("static camera probe has no live piano-roll surfaces");
         return false;
     }
+    // Embedded-window geometry reaches the Quick items asynchronously.
+    if (!QTest::qWaitFor([this] { return !m_rollInput->bounds().isEmpty(); })) {
+        error = QStringLiteral("static camera probe Quick roll geometry did not settle");
+        return false;
+    }
     return true;
 }
 
@@ -215,6 +221,13 @@ bool GateFixture::create(QString &error)
         !m_divisionControl || !m_feelControl || !m_toolTip || !m_ruler || !m_headers ||
         !m_headersInput || !m_eventListController || !m_drawer) {
         error = QStringLiteral("loading probe has incomplete live coverage surfaces");
+        return false;
+    }
+    const auto *vertical = root->findChild<QQuickItem *>(QStringLiteral("timelineRollScrollBar"));
+    if (!vertical || !QTest::qWaitFor([this, vertical] {
+            return m_horizontalScrollbar->isVisible() && vertical->isVisible();
+        })) {
+        error = QStringLiteral("loading probe Quick scrollbar geometry did not settle");
         return false;
     }
     return true;

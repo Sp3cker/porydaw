@@ -2,7 +2,7 @@
 //
 // Shared command policy for the timeline editor (plan:
 // docs/selection-keyboard-routing-plan.md, "Implementation seam"). Every
-// timeline band, the Quick root fallback, and the QWidget event path
+// timeline band, the Quick root fallback, and the Quick window key path
 // decline a key here after their restricted local handling, and this
 // module resolves each command's target from selection and editing origin.
 // A command is consumed when shared policy owns it; otherwise it declines

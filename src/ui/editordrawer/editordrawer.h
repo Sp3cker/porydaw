@@ -30,7 +30,6 @@ class EditorDrawer final : public QObject
     const DrawerChrome &chrome() const noexcept { return *m_chrome; }
 
     void setHostBounds(const QRect &songViewLocalRollPane);
-    void useParentBounds();
     void refreshAppearance(const QPalette &palette);
     void arrange();
 
@@ -89,7 +88,6 @@ class EditorDrawer final : public QObject
     void syncDetentChrome();
     void cancelPageInteraction(EditorDrawerPage page);
     bool ownsFocus() const;
-    QRect resolvedHostBounds() const noexcept;
 
     int resizeMinimumBodyHeight() const;
     int resizeBodyHeight(EditorDrawerPage page) const;
@@ -100,7 +98,6 @@ class EditorDrawer final : public QObject
 
     SongView &m_owner;
     QRect m_hostBounds;
-    bool m_usesParentBounds = true;
     AutomationPage *m_automationPage = nullptr;
     VelocityArea *m_velocityArea = nullptr;
     VoiceChangeArea *m_voiceChangeArea = nullptr;

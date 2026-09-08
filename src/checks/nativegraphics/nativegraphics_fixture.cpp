@@ -3,14 +3,12 @@
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
 
-#include "ui/songview.h"
-
 namespace checks::nativegraphics {
 
 Rig::~Rig() = default;
 
 std::unique_ptr<Rig> makeRig(const QString &projectRoot, const QString &songLabel,
-                             const QSize &size, bool shown, QString &error)
+                             const QSize &size, QString &error)
 {
     std::unique_ptr<ProjectFixture> project = ProjectFixture::copyOf(projectRoot, error);
     if (!project)
@@ -24,11 +22,12 @@ std::unique_ptr<Rig> makeRig(const QString &projectRoot, const QString &songLabe
     if (!song)
         return nullptr;
 
-    SongView &view = song->view();
-    view.resize(size);
-    if (shown)
-        view.show();
-    checks::support::pumpQuick();
+    // Shared direct unhosted framing: the real Quick window is resized,
+    // exposed, and pumped so window-driven layout settles.
+    if (!checks::support::showQuickViewport(song->view(), size)) {
+        error = QStringLiteral("SongView rig exposed no Quick window");
+        return nullptr;
+    }
     return std::make_unique<Rig>(std::move(project), std::move(song));
 }
 

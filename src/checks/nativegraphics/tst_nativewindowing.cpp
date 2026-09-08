@@ -100,7 +100,7 @@ class NativeWindowingTest final : public QObject
     {
         QString error;
         std::unique_ptr<checks::nativegraphics::Rig> rig =
-            checks::nativegraphics::makeRig(m_projectRoot, m_songLabel, kWindowSize, true, error);
+            checks::nativegraphics::makeRig(m_projectRoot, m_songLabel, kWindowSize, error);
         if (!rig)
             QTest::qFail(qPrintable(error), __FILE__, __LINE__);
         return rig;
@@ -115,14 +115,14 @@ void NativeWindowingTest::exposureAndChromeRouting()
     std::unique_ptr<checks::nativegraphics::Rig> rig = freshRig();
     QVERIFY(rig);
     SongView &view = rig->song->view();
-    QTRY_VERIFY(view.windowHandle() && view.windowHandle()->isExposed());
-
     auto *quick = view.quickView();
+    QVERIFY(quick && quick->quickWindow() && quick->rootObject());
+    // Direct unhosted rig: exposure is the Quick window's own.
+    QTRY_VERIFY(quick->quickWindow()->isExposed());
+
     auto *overlay =
         view.findChild<songview::PlayheadOverlay *>(QString{}, Qt::FindDirectChildrenOnly);
-    QVERIFY(quick);
     QVERIFY(overlay);
-    QVERIFY(quick->rootObject());
 #ifdef __APPLE__
     QVERIFY(!quick->playheadVisible());
 #else
@@ -150,7 +150,7 @@ void NativeWindowingTest::exposureAndChromeRouting()
     QCOMPARE(headerInput->interaction(), static_cast<songview::TimelineBandInteraction *>(headers));
     QVERIFY(
         nearRect(QRectF(headerBand->mapToItem(quick->rootObject(), QPointF()), headerBand->size()),
-                 QRectF(geometry->rect.translated(-quick->geometry().topLeft()))));
+                 QRectF(geometry->rect)));
     QVERIFY(qAbs(headerInput->width() + headers->scrollbarWidth() - geometry->rect.width()) <=
             kGeometryTolerance);
     QVERIFY(qAbs(headerInput->height() - geometry->rect.height()) <= kGeometryTolerance);
@@ -260,9 +260,8 @@ void NativeWindowingTest::geometryChunksShrinkClearAndReactivate()
     QVERIFY(quick && quick->rootObject());
     const std::optional<songview::TimelineBandGeometry> &roll =
         view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
-    QVERIFY(roll);
-    const QRectF band = QRectF(roll->rect.translated(-quick->geometry().topLeft()))
-                            .intersected(QRectF(QPointF{}, quick->rootObject()->size()));
+    const QRectF band =
+        QRectF(roll->rect).intersected(QRectF(QPointF{}, quick->rootObject()->size()));
     QVERIFY(band.width() >= 160.0 && band.height() >= 120.0);
 
     auto *item = new songview::TimelineQuickItem(quick->rootObject());

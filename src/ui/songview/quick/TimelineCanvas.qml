@@ -569,12 +569,13 @@ Item {
                 : visibleBandRects.reduce((bottom, rect) => Math.max(bottom, rect.y + rect.height),
                                           -Infinity) - y
 
-        // The host-local canonical split anchors this timeline-column surface.
+        // The canonical ruler/plot split anchors this timeline-column surface.
         x: timelineQuickView.rulerPlotOrigin
         width: Math.max(0, root.width - x)
 
-        // Published plot strips are host-local. Translate them by the canonical
-        // split into this item's timeline-column-local body-mask coordinates.
+        // Published plot strips are canonical viewport coordinates. The
+        // timeline-column body mask starts at the split, so strips translate
+        // into its local coordinates by the same split.
         bodyPlotRects: {
             const strips = []
             for (const band of sceneBands) {
@@ -712,7 +713,6 @@ Item {
         id: drawerChromeLayer
         anchors.fill: parent
         chrome: drawerChrome
-        quickView: timelineQuickView
         automationBandRect: root.automationBandRect
         automationBandVisible: root.automationBandVisible
         controlFont: root.rulerFont

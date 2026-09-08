@@ -1,6 +1,7 @@
 #include "ui/editordrawer/editordrawer.h"
 
 #include <QAction>
+#include <QGuiApplication>
 #include <QIcon>
 #include <QImage>
 #include <QPainter>
@@ -8,8 +9,6 @@
 #include <QPixmap>
 #include <QPointF>
 #include <QSize>
-#include <QStackedWidget>
-#include <QWidget>
 
 #include <algorithm>
 #include <optional>
@@ -61,7 +60,7 @@ EditorDrawer::EditorDrawer(SongView &owner, EditorViewState viewState)
             [this] { activatePage(EditorDrawerPage::VoiceChanges); });
 
     syncViewState(viewState);
-    refreshAppearance(m_owner.palette());
+    refreshAppearance(QGuiApplication::palette());
     arrange();
 }
 
@@ -117,14 +116,7 @@ void EditorDrawer::syncDetentChrome()
 
 void EditorDrawer::setHostBounds(const QRect &songViewLocalRollPane)
 {
-    m_usesParentBounds = false;
     m_hostBounds = songViewLocalRollPane;
-    arrange();
-}
-
-void EditorDrawer::useParentBounds()
-{
-    m_usesParentBounds = true;
     arrange();
 }
 
@@ -291,12 +283,12 @@ bool EditorDrawer::pageVisible(EditorDrawerPage page) const noexcept
 int EditorDrawer::minimumSectionHeight() const noexcept
 {
     // DrawerSections owns the font-relative metrics used to clamp this overlay.
-    return std::min(resolvedHostBounds().height(), m_sections->metrics().minBody);
+    return std::min(m_hostBounds.height(), m_sections->metrics().minBody);
 }
 
 int EditorDrawer::maximumSectionHeight() const noexcept
 {
-    const int hostHeight = resolvedHostBounds().height();
+    const int hostHeight = m_hostBounds.height();
     const DrawerMetrics &metrics = m_sections->metrics();
     const int reserve = minimumSectionHeight() + metrics.pianoRollReserve;
     return hostHeight >= reserve ? hostHeight - metrics.pianoRollReserve : hostHeight;
@@ -304,7 +296,7 @@ int EditorDrawer::maximumSectionHeight() const noexcept
 
 int EditorDrawer::defaultAutomationHeight() const noexcept
 {
-    const int hostHeight = resolvedHostBounds().height();
+    const int hostHeight = m_hostBounds.height();
     return std::clamp(hostHeight / 5, minimumSectionHeight(), maximumSectionHeight());
 }
 
@@ -315,8 +307,7 @@ int EditorDrawer::plotOrigin() const noexcept
 
 int EditorDrawer::plotWidth() const noexcept
 {
-    return std::max(layout::space(layout::Space::Zero),
-                    resolvedHostBounds().width() - plotOrigin());
+    return std::max(layout::space(layout::Space::Zero), m_hostBounds.width() - plotOrigin());
 }
 
 std::optional<QRect> EditorDrawer::bodyRect(EditorDrawerPage page) const noexcept
@@ -351,13 +342,7 @@ void EditorDrawer::activatePage(EditorDrawerPage page)
 
 void EditorDrawer::arrange()
 {
-    if (m_usesParentBounds) {
-        QWidget *const host = m_owner.m_rollStack->parentWidget();
-        Q_ASSERT(host);
-        m_hostBounds = QRect(host->mapTo(&m_owner, QPoint()), host->size());
-    }
-
-    const QRect bounds = resolvedHostBounds();
+    const QRect bounds = m_hostBounds;
     m_sections->updateHostContext(bounds.height(), defaultAutomationHeight());
     m_sections->syncDetentState();
     const bool detentEnabled = m_velocityArea->isPsgContext();
@@ -445,11 +430,6 @@ bool EditorDrawer::ownsFocus() const
         return true;
     }
     return false;
-}
-
-QRect EditorDrawer::resolvedHostBounds() const noexcept
-{
-    return m_hostBounds;
 }
 
 int EditorDrawer::resizeMinimumBodyHeight() const

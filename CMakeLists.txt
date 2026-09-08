@@ -264,6 +264,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/workspaceui.h
     src/ui/songtab.cpp
     src/ui/songtab.h
+    src/ui/songtabquickhost.cpp
+    src/ui/songtabquickhost.h
     src/ui/voicegroupviewcache.cpp
     src/ui/voicegroupviewcache.h
     src/ui/pitchprojection.cpp
@@ -338,6 +340,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/quick/timelinequickview.h
     src/ui/songview/quick/timelinequickview_pianoroll.cpp
     src/ui/songview/quick/timelinequickview_keyrouting.cpp
+    src/ui/songview/quick/timelinequickview_window.cpp
     src/ui/songview/quick/timerulerquick.cpp
     src/ui/pitchbendeditor.cpp
     src/ui/pitchbendeditor.hpp

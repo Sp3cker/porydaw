@@ -11,10 +11,8 @@
 #include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
-#include <QResizeEvent>
 #include <QString>
 #include <QTimer>
-#include <QWidget>
 #include <array>
 #include <cstdint>
 #include <limits>
@@ -78,7 +76,15 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(AutomationRefreshSet)
 
 static_assert(static_cast<quint32>(TimelineQuickDirty::All) <= std::numeric_limits<quint16>::max());
 
-class TimelineQuickView final : public QWidget
+// Quick coordinator over the canonical timeline viewport: it owns the one
+// QQuickWindow whose scene renders every migrated band. The window is the
+// full canonical viewport with origin (0, 0); SongView and
+// TimelineBandLayout stay authoritative for all band geometry, published
+// here without translation. The window starts sole-owned and unhosted;
+// SongTabQuickHost takes it for embedding exactly once via
+// takeWindowForEmbedding(), and detachWindow() is the idempotent final
+// teardown for both ownership paths.
+class TimelineQuickView final : public QObject
 {
     Q_OBJECT
     Q_DISABLE_COPY_MOVE(TimelineQuickView)
@@ -87,9 +93,9 @@ class TimelineQuickView final : public QWidget
     Q_PROPERTY(bool hoverVisible READ hoverVisible NOTIFY hoverChromeChanged FINAL)
     Q_PROPERTY(qreal editRootContentX READ editRootContentX NOTIFY editChromeChanged FINAL)
     Q_PROPERTY(bool editVisible READ editVisible NOTIFY editChromeChanged FINAL)
-    Q_PROPERTY(qreal hostX READ hostX NOTIFY hostGeometryChanged FINAL)
-    Q_PROPERTY(qreal hostY READ hostY NOTIFY hostGeometryChanged FINAL)
-    Q_PROPERTY(qreal rulerPlotOrigin READ rulerPlotOrigin NOTIFY hostGeometryChanged FINAL)
+    // Canonical timeline split: ruler gutter controls end before this
+    // coordinate, while ruler marks and the playhead column start at it.
+    Q_PROPERTY(qreal rulerPlotOrigin READ rulerPlotOrigin NOTIFY rulerPlotOriginChanged FINAL)
     Q_PROPERTY(qreal playheadLocalX READ playheadLocalX NOTIFY playheadXChanged FINAL)
     Q_PROPERTY(bool playheadVisible READ playheadVisible NOTIFY playheadChanged FINAL)
     Q_PROPERTY(bool playheadPlaying READ playheadPlaying NOTIFY playheadChanged FINAL)
@@ -131,17 +137,12 @@ class TimelineQuickView final : public QWidget
                       SongView &songView);
     ~TimelineQuickView() override;
 
-    // Quick-root coordinates; guide publication arrives in SongView coordinates.
+    // Canonical viewport x for the ruler guides; SongView-local content x
+    // publishes directly because the Quick window is the full viewport.
     qreal hoverRootContentX() const noexcept;
     bool hoverVisible() const noexcept;
     qreal editRootContentX() const noexcept;
     bool editVisible() const noexcept;
-    // SongView-local Quick-window envelope origin; QML chrome items subtract
-    // these from SongView-local chrome rects.
-    qreal hostX() const noexcept;
-    qreal hostY() const noexcept;
-    // Root-local canonical timeline split. Ruler gutter controls end before
-    // this coordinate, while ruler marks start at it.
     qreal rulerPlotOrigin() const noexcept;
     // Playhead state pushed by PlayheadOverlay's Quick forwarder (the
     // Windows/Linux playhead path). X is raw timeline-column-local
@@ -165,20 +166,44 @@ class TimelineQuickView final : public QWidget
     void synchronizeGuides(qreal songViewSplitX, std::optional<qreal> editSongViewContentX);
     void publishHover(TimelineQuickHoverOwner owner, uint64_t tick, qreal songViewContentX);
     void clearHover(TimelineQuickHoverOwner owner);
+    // Live QML borrows. rootObject() is the cached scene root; both return
+    // null after detachWindow() or once an external container destroyed a
+    // transferred window.
     QQuickItem *rootObject() const;
     QQuickWindow *quickWindow() const;
-    // Shared canvas popup owner for typed menus and forms.
+    // Shared canvas popup owner for typed menus and forms; null after
+    // detachWindow().
     QuickPopupSession *popupSession() const noexcept;
+
+    // One-way ownership transfer to the external embedding adapter
+    // (SongTabQuickHost): the sole-owned unhosted window moves out exactly
+    // once — later calls return null — and the adapter releases it into
+    // QWidget::createWindowContainer, whose container then sole-owns it.
+    // Never emits windowAboutToDetach(); detachWindow() later unbinds the
+    // window's content without deleting it.
+    std::unique_ptr<QQuickWindow> takeWindowForEmbedding();
+
+    // Idempotent final teardown: stops the layout/flush timers, cancels the
+    // popup and every live gesture, clears the key wiring, detaches all
+    // interaction and session bindings, clears the raw QML borrows, and
+    // unloads QML while the context properties still point at live models.
+    // Emits windowAboutToDetach() once per lifetime while the window is still
+    // valid (never during takeWindowForEmbedding()). Re-entry during the
+    // emission is inert. An unhosted window is destroyed synchronously; a
+    // transferred one is left to its container.
+    // Afterwards quickWindow(), rootObject(), and popupSession() return
+    // null, and the update entry points become inert.
+    void detachWindow();
 
     void syncAppearance();
     void setBandLayout(TimelineBandLayout layout);
     // Republishes the stored band layout after Quick-window lifecycle events
-    // (show, WinId, DPR); changes neither the canonical value nor dirty domains.
+    // (resize, screen, DPR); changes neither the canonical value nor dirty
+    // domains.
     void refreshBandLayout();
-    // Canonical scrollbar lanes, Quick-root-local; empty means the lane is
-    // absent (the roll bar hides in EventList mode). Published with the
-    // band layout and notified on geometry change even when the host
-    // origin stays put.
+    // Canonical scrollbar lanes in viewport coordinates; empty means the
+    // lane is absent (the roll bar hides in EventList mode). Published with
+    // the band layout and re-notified whenever either rectangle changes.
     QRectF horizontalScrollbarRect() const noexcept;
     QRectF verticalScrollbarRect() const noexcept;
     // Fractional-DIP camera scroll state for the QML scrollbar controls;
@@ -204,14 +229,14 @@ class TimelineQuickView final : public QWidget
     // any camera/viewport/range mutation, even a no-op one.
     void notifyScrollbarsChanged();
     // Live Quick-window device pixel ratio for camera and projection math;
-    // 1.0 only before the Quick window exists. Not named devicePixelRatio()
-    // — this QWidget already inherits that QPaintDevice method.
+    // 1.0 only before the Quick window exists.
     qreal quickDevicePixelRatio() const;
 
     // Focus bridge over the converted bands' input items. focusBand() returns
     // false only when a band's input item does not exist yet; otherwise it
-    // focuses the container, requests the item's focus, and returns true —
-    // the active-focus FocusIn may still be pending asynchronously.
+    // emits embeddingFocusRequested so the external host focuses its
+    // container, requests the item's focus, and returns true — the
+    // active-focus FocusIn may still be pending asynchronously.
     // focusedBand() reads live QQuick active focus, never a cached flag.
     bool focusBand(TimelineBand band, Qt::FocusReason reason);
     std::optional<TimelineBand> focusedBand() const;
@@ -250,18 +275,26 @@ class TimelineQuickView final : public QWidget
   signals:
     void hoverChromeChanged();
     void editChromeChanged();
-    void hostGeometryChanged();
+    void rulerPlotOriginChanged();
     void playheadChanged();
     void scrollbarRectsChanged();
     void scrollbarStateChanged();
     void playheadXChanged();
+    // Emitted once per detachWindow() while the original window is still
+    // valid; native attachments clear here.
+    void windowAboutToDetach();
+    // The Quick window resized, changed screens, or changed its device
+    // pixel ratio: SongView reruns its former resize/layout choreography.
+    void viewportChanged();
+    // A band or event-list focus bridge needs the embedding container
+    // focused so the Quick window activates; the external host listens
+    // here. Unhosted windows have no listener and focus directly.
+    void embeddingFocusRequested(Qt::FocusReason reason);
 
   protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
-    void resizeEvent(QResizeEvent *event) override;
 
   private:
-    qreal quickRootXForSongViewX(qreal songViewX) const noexcept;
     std::optional<qreal>
     guideSongViewContentXAtOrAfterStart(std::optional<qreal> songViewContentX) const noexcept;
     void setHoverChrome(std::optional<qreal> songViewContentX);
@@ -312,27 +345,40 @@ class TimelineQuickView final : public QWidget
     const TimeCamera &m_camera;
     // Primary plot inputs own focus and their interaction host; gutter inputs
     // only forward their physical-side event coordinates to that same interaction.
-    std::array<TimelineInputItem *, timelineBandIndex(TimelineBand::Count)> m_inputItems{};
-    std::array<TimelineInputItem *, timelineBandIndex(TimelineBand::Count)> m_gutterInputItems{};
+    std::array<QPointer<TimelineInputItem>, timelineBandIndex(TimelineBand::Count)> m_inputItems{};
+    std::array<QPointer<TimelineInputItem>, timelineBandIndex(TimelineBand::Count)>
+        m_gutterInputItems{};
     // EventList mode: the page's input item and its interaction; the
     // interaction joins the shared key-policy chain like every band input.
-    TimelineInputItem *m_eventListInput = nullptr;
+    QPointer<TimelineInputItem> m_eventListInput;
     std::unique_ptr<EventListInteraction> m_eventListInteraction;
-    std::array<TimelineInputItem *, 5> m_drawerChromeInputs{};
+    std::array<QPointer<TimelineInputItem>, 5> m_drawerChromeInputs{};
     // Typed QML scrollbar roots discovered once after scene construction.
     // QPointers survive teardown; destroyed connections erase identities as
     // soon as their QML object dies.
     std::vector<QPointer<TimelineGestureScrollbar>> m_gestureScrollbars;
+    // Every remaining QML borrow is a QPointer as well: detachWindow()
+    // clears them, and an external container destroying a transferred
+    // window nulls them on its own.
     TimelineQuickScene *m_scene = nullptr;
-    QQuickView *m_quickView = nullptr;
-    QWidget *m_quickContainer = nullptr;
+    // Sole window ownership while unhosted; null once takeWindowForEmbedding()
+    // transferred the window or detachWindow() destroyed it.
+    std::unique_ptr<QQuickView> m_quickView;
+    // The live window borrow; tracks the object through the ownership
+    // transfer and nulls out whenever the window dies.
+    QPointer<QQuickView> m_view;
+    // Final-teardown guard: detachWindow() runs once per lifetime. A
+    // windowAboutToDetach listener may re-enter while the borrow is still
+    // live; the nested call returns without re-emitting or re-running.
+    bool m_detachStarted = false;
+    // Cached QML scene root; cleared with the other borrows in detachWindow().
+    QPointer<QQuickItem> m_root;
     QuickPopupSession *m_popupSession = nullptr;
-    std::array<TimelineQuickItem *, static_cast<std::size_t>(TimelineQuickLayer::Count)> m_items{};
-    std::array<TimelineChromeItem *, 12> m_chromeItems{};
+    std::array<QPointer<TimelineQuickItem>, static_cast<std::size_t>(TimelineQuickLayer::Count)>
+        m_items{};
+    std::array<QPointer<TimelineChromeItem>, 12> m_chromeItems{};
     TimelineBandLayout m_bandLayout;
-    // SongView-local Quick-window envelope: visible band rects united with
-    // Quick-rendered drawer chrome; origin published to QML as hostX/hostY.
-    QRect m_publishedHostRect;
+    // Published canonical timeline split (SongView::timelineSplitX()).
     qreal m_publishedRulerPlotOrigin = 0.0;
     QRectF m_publishedHorizontalScrollbarRect;
     QRectF m_publishedVerticalScrollbarRect;

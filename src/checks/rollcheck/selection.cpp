@@ -632,8 +632,7 @@ void PianoRollTest::selectionNonScaleMove()
         view.selectionModel().clearNoteSelection();
         view.setScaleFold(foldBefore);
         view.applyViewState(viewBefore); // the nudge's keep-in-sight scroll must not leak
-        (void)view.grab();               // consume the restoration repaint before later probes
-        QCoreApplication::processEvents();
+        checks::support::pumpQuick();    // consume the restoration repaint before later probes
     }
     while (doc.undoStack()->index() > undo)
         doc.undoStack()->undo();

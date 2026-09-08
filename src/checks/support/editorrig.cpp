@@ -4,6 +4,7 @@
 
 #include <QCoreApplication>
 #include <QQuickItem>
+#include <QQuickWindow>
 
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
@@ -27,7 +28,13 @@ std::unique_ptr<EditorRig> EditorRig::create(SongDocument &document, const Edito
     auto rig = std::unique_ptr<EditorRig>(new EditorRig(document));
     rig->m_voicegroup = config.voicegroup;
     rig->m_timeline = std::move(timeline);
-    rig->m_view->resize(config.viewSize);
+    songview::TimelineQuickView *const quickCanvas = rig->m_view->quickView();
+    QQuickWindow *const quickWindow = quickCanvas ? quickCanvas->quickWindow() : nullptr;
+    if (!quickCanvas || !quickWindow) {
+        error = QStringLiteral("SongView did not expose the unhosted Quick window");
+        return nullptr;
+    }
+    quickWindow->resize(config.viewSize);
     // Production wiring order (SongTab): document first, then song.
     rig->m_view->setDocument(&document);
     rig->m_view->setSong(rig->m_timeline.get(), config.voicegroup);
@@ -39,12 +46,10 @@ std::unique_ptr<EditorRig> EditorRig::create(SongDocument &document, const Edito
         rig->m_view->setDrawerSectionHeight(section.page, section.height);
     }
     if (config.show) {
-        rig->m_view->show();
+        quickWindow->show();
         QCoreApplication::processEvents();
     }
-    auto *quickCanvas = rig->m_view->findChild<songview::TimelineQuickView *>(
-        QStringLiteral("timelineQuickCanvas"));
-    rig->m_quickRoot = quickCanvas ? quickCanvas->rootObject() : nullptr;
+    rig->m_quickRoot = quickCanvas->rootObject();
     rig->m_quickScene = rig->m_view->findChild<songview::TimelineQuickScene *>();
     rig->m_voiceInput = rig->inputItem(QStringLiteral("timelineVoiceChangesInput"));
     if (!rig->m_quickRoot || !rig->m_quickScene) {

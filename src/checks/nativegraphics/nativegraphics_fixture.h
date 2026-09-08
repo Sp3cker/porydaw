@@ -20,6 +20,6 @@ struct Rig final {
 };
 
 std::unique_ptr<Rig> makeRig(const QString &projectRoot, const QString &songLabel,
-                             const QSize &size, bool shown, QString &error);
+                             const QSize &size, QString &error);
 
 } // namespace checks::nativegraphics

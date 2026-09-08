@@ -1,7 +1,7 @@
 #include "ui/songtab.h"
+#include "ui/songtabquickhost.h"
 #include "ui/songview/quick/timelinequickview.h"
 
-#include <QChildEvent>
 #include <QEvent>
 #include <QObject>
 #include <QVBoxLayout>
@@ -13,12 +13,13 @@ class SongTab::InputGate final : public QObject
   public:
     explicit InputGate(SongTab *tab) : QObject(tab), m_tab(tab) {}
 
+    // Gate user input at the embedding and Quick delivery boundaries.
+    // QML items, including lazily created children, receive user input
+    // through the Quick window and need no individual filters.
     void watch(QObject *object)
     {
-        object->installEventFilter(this);
-        const auto children = object->children();
-        for (QObject *child : children)
-            watch(child);
+        if (object)
+            object->installEventFilter(this);
     }
     void onReadinessChanged()
     {
@@ -29,8 +30,6 @@ class SongTab::InputGate final : public QObject
   protected:
     bool eventFilter(QObject *, QEvent *event) override
     {
-        if (event->type() == QEvent::ChildAdded)
-            watch(static_cast<QChildEvent *>(event)->child());
         if (isUserInputEvent(event->type()) && !m_tab->isReady())
             return true;
         return false;
@@ -86,12 +85,15 @@ SongTab::SongTab(SongName name, QWidget *parent)
 {
     auto *pageLayout = new QVBoxLayout(this);
     pageLayout->setContentsMargins(0, 0, 0, 0);
-    pageLayout->addWidget(m_view);
+    // One embedding: the host transfers the view's window into a container
+    // owned by this tab and fills the page with it.
+    songview::TimelineQuickView *quick = m_view->quickView();
+    m_host = new SongTabQuickHost(*quick, *this);
+    pageLayout->addWidget(m_host->container());
     m_inputGate = new InputGate(this);
-    m_inputGate->watch(m_view);
-    if (auto *quick = m_view->findChild<songview::TimelineQuickView *>();
-        quick && quick->rootObject())
-        m_inputGate->watch(quick->rootObject());
+    m_inputGate->watch(m_host->container());
+    m_inputGate->watch(quick->quickWindow());
+    m_inputGate->watch(quick->rootObject());
     connect(this, &SongTab::readinessChanged, m_inputGate, &InputGate::onReadinessChanged);
 
     // Keep the timeline projection and its audio publication ordered after
@@ -115,6 +117,12 @@ SongTab::SongTab(SongName name, QWidget *parent)
 SongTab::~SongTab()
 {
     QObject::disconnect(m_document.undoStack(), nullptr, this, nullptr);
+    // Explicit embedding teardown before the coordinator and the document
+    // members die: the host detaches the Quick view while its window is
+    // still valid, then deletes the container and the window it sole-owns.
+    // The view's own destructor repeats detach as a safe no-op.
+    delete m_host;
+    m_host = nullptr;
     delete m_view;
     m_view = nullptr;
 }

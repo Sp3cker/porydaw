@@ -8,6 +8,8 @@
 #include <QCoreApplication>
 #include <QImage>
 #include <QPixmap>
+#include <QPlatformSurfaceEvent>
+#include <QQuickWindow>
 #include <QScopeGuard>
 
 #include <algorithm>
@@ -21,6 +23,7 @@
 #include "ui/layout.h"
 #include "ui/playheadoverlay.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timelinebandlayout.h"
 #include "ui/theme/themeruntime.h"
 
@@ -62,12 +65,13 @@ CALayer *findPlayheadRecursively(CALayer *layer)
     return nil;
 }
 
-CALayer *ownerLayer(SongView &view)
+CALayer *ownerLayer(QQuickWindow *window)
 {
-    QWidget *topLevel = view.window();
-    if (!topLevel)
+    // Reads the native view of an already-created platform surface only; the
+    // handle guard never forces window creation.
+    if (!window || !window->handle())
         return nil;
-    NSView *nativeView = reinterpret_cast<NSView *>(topLevel->winId());
+    NSView *nativeView = reinterpret_cast<NSView *>(window->winId());
     if (!nativeView || ![nativeView isKindOfClass:[NSView class]])
         return nil;
     return nativeView.layer;
@@ -179,7 +183,7 @@ std::unique_ptr<checks::nativegraphics::Rig> macRig(const QString &projectRoot,
 {
     QString error;
     std::unique_ptr<checks::nativegraphics::Rig> rig =
-        checks::nativegraphics::makeRig(projectRoot, songLabel, QSize{1280, 800}, true, error);
+        checks::nativegraphics::makeRig(projectRoot, songLabel, QSize{1280, 800}, error);
     if (!rig)
         QTest::qFail(qPrintable(error), __FILE__, __LINE__);
     return rig;
@@ -195,9 +199,12 @@ void RenderingPlayheadTest::nativeLayerLifecycle()
     SongView &view = rig->song->view();
     auto *overlay = view.findChild<songview::PlayheadOverlay *>();
     QVERIFY(overlay);
-    QTRY_VERIFY(view.windowHandle() && view.windowHandle()->isExposed());
+    auto *quick = view.quickView();
+    QVERIFY(quick && quick->rootObject() && quick->quickWindow());
+    QQuickWindow *quickWindow = quick->quickWindow();
+    QTRY_VERIFY(quickWindow->isExposed());
     processLayers();
-    CALayer *owner = ownerLayer(view);
+    CALayer *owner = ownerLayer(quickWindow);
     QVERIFY(owner);
     QVERIFY(findPlayheadRecursively(owner));
     QVERIFY(directPlayheadCount(owner) == 1);
@@ -207,9 +214,10 @@ void RenderingPlayheadTest::nativeLayerLifecycle()
     QVERIFY(layers.root.superlayer == owner);
     QVERIFY(layers.root.zPosition >= 1'000'000.0);
     const int split = view.timelineSplitX();
-    const QPoint rootOffset = view.mapTo(view.window(), QPoint{});
-    const CGRect expectedFrame =
-        CGRectMake(rootOffset.x() + split, rootOffset.y(), view.width() - split, view.height());
+    // Canonical zero-offset framing: the timeline column sits at (split, 0)
+    // in the Quick window's own NSView layer.
+    const QSize viewport = quickWindow->size();
+    const CGRect expectedFrame = CGRectMake(split, 0, viewport.width() - split, viewport.height());
     QVERIFY(CGRectEqualToRect(layers.root.frame, expectedFrame));
     QVERIFY([layers.bodyClip.mask isKindOfClass:[CAShapeLayer class]]);
     QVERIFY([layers.triangleClip.mask isKindOfClass:[CAShapeLayer class]]);
@@ -253,7 +261,7 @@ void RenderingPlayheadTest::nativeLayerLifecycle()
         layers.leftGlow.hidden = YES;
         layers.rightGlow.hidden = YES;
         layers.triangleClip.hidden = YES;
-        QImage image = renderLayer(layers.root, view.devicePixelRatioF());
+        QImage image = renderLayer(layers.root, quickWindow->effectiveDevicePixelRatio());
         layers.leftGlow.hidden = leftHidden;
         layers.rightGlow.hidden = rightHidden;
         layers.triangleClip.hidden = triangleHidden;
@@ -265,7 +273,7 @@ void RenderingPlayheadTest::nativeLayerLifecycle()
         [CATransaction begin];
         [CATransaction setDisableActions:YES];
         layers.bodyClip.hidden = YES;
-        QImage image = renderLayer(layers.root, view.devicePixelRatioF());
+        QImage image = renderLayer(layers.root, quickWindow->effectiveDevicePixelRatio());
         layers.bodyClip.hidden = bodyHidden;
         [CATransaction commit];
         return image;
@@ -303,7 +311,7 @@ void RenderingPlayheadTest::nativeLayerLifecycle()
         tickZeroTriangle, triangleTop + songview::playheadTriangleHeight() - layout::singlePixel(),
         0.0, playheadColor);
     QVERIFY(downTop > downBottom);
-    const qreal columnWidth = view.width() - split;
+    const qreal columnWidth = quickWindow->width() - split;
     overlay->setPlayhead(columnWidth, true, true);
     processLayers();
     QVERIFY(layers.root.hidden);
@@ -329,20 +337,28 @@ void RenderingPlayheadTest::nativeLayerLifecycle()
     view.setEventListVisible(false);
 
     const songview::TimelineBandLayout canonicalBeforeLifecycle = view.timelineBandLayout();
-    QEvent winIdChange{QEvent::WinIdChange};
-    QCoreApplication::sendEvent(&view, &winIdChange);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+    // Platform-surface teardown: the overlay must drop its layers while the
+    // surface goes away, then re-attach once it returns.
+    CALayer *attachedOwner = ownerLayer(quickWindow);
+    QVERIFY(attachedOwner);
+    QPlatformSurfaceEvent aboutToDetach{QPlatformSurfaceEvent::SurfaceAboutToBeDestroyed};
+    QCoreApplication::sendEvent(quickWindow, &aboutToDetach);
+    processLayers();
+    QVERIFY(directPlayheadCount(attachedOwner) == 0);
+    QPlatformSurfaceEvent recreated{QPlatformSurfaceEvent::SurfaceCreated};
+    QCoreApplication::sendEvent(quickWindow, &recreated);
+    processLayers();
+    QVERIFY(directPlayheadCount(attachedOwner) == 1);
+
     QEvent densityChange{QEvent::DevicePixelRatioChange};
-#else
-    QEvent densityChange{QEvent::ScreenChangeInternal};
-#endif
-    QCoreApplication::sendEvent(&view, &densityChange);
-    view.hide();
+    QCoreApplication::sendEvent(quickWindow, &densityChange);
     processLayers();
-    view.show();
-    QTRY_VERIFY(view.windowHandle() && view.windowHandle()->isExposed());
+    quickWindow->hide();
     processLayers();
-    owner = ownerLayer(view);
+    quickWindow->show();
+    QTRY_VERIFY(quickWindow->isExposed());
+    processLayers();
+    owner = ownerLayer(quickWindow);
     QVERIFY(owner);
     QVERIFY(layers.root.superlayer == owner);
     QVERIFY(directPlayheadCount(owner) == 1);
@@ -401,6 +417,24 @@ void RenderingPlayheadTest::nativeLayerLifecycle()
     QVERIFY(layers.root.hidden);
     overlay->setPlayhead(baseX, true, true);
     processLayers();
-    const QPixmap bitmap = QPixmap::fromImage(renderLayer(layers.root, view.devicePixelRatioF()));
+    const QPixmap bitmap =
+        QPixmap::fromImage(renderLayer(layers.root, quickWindow->effectiveDevicePixelRatio()));
     QVERIFY(!bitmap.isNull());
+
+    // windowAboutToDetach clears the native attachment while the original
+    // window is still valid; the teardown itself repeats safely afterwards.
+    CALayer *detachOwner = ownerLayer(quickWindow);
+    QVERIFY(detachOwner);
+    bool detachObserved = false;
+    QObject::connect(quick, &songview::TimelineQuickView::windowAboutToDetach, this, [&] {
+        detachObserved = true;
+        QVERIFY(quick->quickWindow() == quickWindow);
+        QCOMPARE(directPlayheadCount(detachOwner), 0);
+    });
+    quick->detachWindow();
+    QVERIFY(detachObserved);
+    QVERIFY(!quick->quickWindow());
+    // Post-detach pushes are silent no-ops: no crash, no stale-layer writes.
+    overlay->setPlayhead(baseX, true, true);
+    processLayers();
 }

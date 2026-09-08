@@ -1,5 +1,6 @@
 #include "checks/scrollbar/tst_scrollbar.h"
 
+#include <QCoreApplication>
 #include <QGuiApplication>
 #include <QPointingDevice>
 #include <QQmlComponent>
@@ -26,6 +27,7 @@
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 
 namespace {
@@ -196,6 +198,17 @@ void ScrollbarTest::init()
     QTRY_VERIFY(withinTrack(Qt::Horizontal) && withinTrack(Qt::Vertical));
     QTRY_VERIFY(m_horizontalBar->property("thumbTravel").toReal() > 0.0 &&
                 m_verticalBar->property("thumbTravel").toReal() > 0.0);
+    // Application-focus staging: bare forceActiveFocus only resolves window-local
+    // scope, so the keyboard rows need the Quick window active first. Stage real
+    // Roll-band focus through the normal host path before scrollbar work.
+    songview::TimelineInputItem *const rollInput =
+        m_root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineRollInput"));
+    QVERIFY(rollInput);
+    QVERIFY(songView.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason));
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents();
+    QTRY_VERIFY(QGuiApplication::focusWindow() == m_window &&
+                QGuiApplication::focusObject() == rollInput && rollInput->hasActiveFocus());
 }
 
 void ScrollbarTest::cleanup()

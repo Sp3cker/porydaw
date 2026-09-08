@@ -41,6 +41,10 @@ class AutomationPage final : public QObject
 
     AutomationCanvas *canvas() noexcept { return m_canvas; }
     const AutomationCanvas *canvas() const noexcept { return m_canvas; }
+    // Pencil-mode toggle; the shortcut dispatch lives in this page's
+    // application event filter, which triggers the action on the configured
+    // key. Exposed for settings-driven discovery beside the drawer actions.
+    QAction *pencilModeAction() const noexcept { return m_pencilModeAction; }
     QSize automationViewportSize() const noexcept;
     int automationContentHeight() const noexcept;
     int verticalScroll() const noexcept;

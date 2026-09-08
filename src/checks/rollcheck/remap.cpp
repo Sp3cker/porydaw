@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "checks/rollcheck/headerchecksupport.h"
+#include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
 #include "core/smf.h"
 #include "core/songdocument.h"
@@ -29,7 +30,8 @@ struct RemapFixture {
         if (!document.load(song, error))
             return false;
         timeline = document.buildTimeline(48000.0);
-        view.resize(800, 480);
+        if (!checks::support::showQuickViewport(view, QSize(800, 480)))
+            return false;
         view.setSong(timeline.get(), nullptr);
         view.setDocument(&document);
         QObject::connect(&document, &SongDocument::tracksRemapped, &view,

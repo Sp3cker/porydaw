@@ -7,6 +7,7 @@
 
 #include <QApplication>
 #include <QCursor>
+#include <QGuiApplication>
 #include <QRect>
 
 #include "core/miditimeline.h"
@@ -33,10 +34,10 @@ VoiceChangeArea::VoiceChangeArea(SongView &owner, QObject *parent)
     , m_owner(owner)
     , m_camera(owner.camera())
     , m_grid(owner.grid())
-    , m_titleFont(typography::bold(typography::caption(owner.font())))
-    , m_captionFont(typography::regular(typography::caption(owner.font())))
+    , m_titleFont(typography::bold(typography::caption(QGuiApplication::font())))
+    , m_captionFont(typography::regular(typography::caption(QGuiApplication::font())))
     , m_captionMetrics(m_captionFont)
-    , m_hoverLabelFont(typography::noteName(owner.font()))
+    , m_hoverLabelFont(typography::noteName(QGuiApplication::font()))
     , m_textLayout(
           layout::twoLineText(m_titleFont, m_titleFont, m_captionFont, layout::Space::Zero))
 {
