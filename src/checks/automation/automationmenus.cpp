@@ -3,24 +3,17 @@
 // addressed by AutomationCanvas::CanvasMenuAction ids: these checks drive the
 // real gutter right-press, click rendered rows (and value-range submenu
 // children), and observe document, view-state, selection, and focus outcomes.
-// The node point menu (Set Value / Delete) is still the transitional native
-// surface, so its scenarios keep the legacy modal-guard polling until its own
-// migration.
+// The node point menu scenarios live in automationpointmenus.cpp.
 #include "checks/automation/tst_automationediting.h"
 
 #include <QtTest>
 
 #include <algorithm>
-#include <cstddef>
 #include <limits>
-#include <vector>
 
-#include <QAction>
 #include <QApplication>
 #include <QCoreApplication>
-#include <QMenu>
 
-#include "checks/automation/automationmodalguard.h"
 #include "checks/automation/automationquickmenu.h"
 #include "checks/automation/automationvalueprompt.h"
 #include "checks/quickpopupguard.h"
@@ -35,13 +28,8 @@
 
 namespace {
 
-using automation_modal::clickMenuAction;
-using automation_modal::findMenuAction;
-using automation_modal::MenuInteractionResult;
-using automation_modal::scheduleMenuInteraction;
-using automation_modal::schedulePopupInteraction;
-
 using CanvasMenuAction = AutomationCanvas::CanvasMenuAction;
+using NodeMenuAction = AutomationCanvas::NodeMenuAction;
 
 constexpr int kAddLaneBase = int(CanvasMenuAction::AddLaneBase);
 constexpr int kShowLaneBase = int(CanvasMenuAction::ShowLaneBase);
@@ -50,8 +38,6 @@ constexpr uint8_t kController = 10;
 constexpr uint8_t kLfoController = 21;
 constexpr uint64_t kPointTick = 48;
 constexpr uint64_t kOtherPointTick = 96;
-
-using MenuResult = MenuInteractionResult;
 
 using automation_quick::AutomationMenu;
 using automation_quick::waitForAutomationMenu;
@@ -198,33 +184,56 @@ void AutomationEditingTest::contextMenuRoutingAndAvailableLanes()
     selection.lanes.push_back({0, kController});
     songTab.view().selectionModel().setTimeSelection(selection);
 
-    MenuResult tempoPointMenu;
+    // Right-pressing a node opens the shared point menu, not the selection
+    // fallback. The typed ids collide with the selection menu's (Copy/Cut are
+    // also 1/2), so the routing proof is behavioral: clicking SetValue hands
+    // the node to the inline value prompt, which no selection row does, and
+    // Escape cancels with the document frozen.
     const QPointF tempoPoint = inputPoint(LaneHandle{0}, kOtherPointTick, 120);
-    {
-        const auto interaction = scheduleMenuInteraction(
-            tempoPointMenu, [](QMenu &) { return static_cast<QAction *>(nullptr); });
-        mousePress(Qt::RightButton, automationWindowPoint(tempoPoint));
-        mouseRelease(Qt::RightButton, automationWindowPoint(tempoPoint));
-    }
-    QVERIFY2(tempoPointMenu.opened, qPrintable(tempoPointMenu.diagnostic));
-    QCOMPARE(tempoPointMenu.parentWidget, static_cast<QWidget *>(&songTab.view()));
-    QCOMPARE(tempoPointMenu.actionCount, 2);
+    mousePress(Qt::RightButton, automationWindowPoint(tempoPoint));
+    mouseRelease(Qt::RightButton, automationWindowPoint(tempoPoint));
+    const AutomationMenu tempoPointMenu = waitForAutomationMenu(
+        songTab.view(), QStringLiteral("the tempo node right-press did not open the point menu"));
+    QVERIFY2(tempoPointMenu.session, qUtf8Printable(tempoPointMenu.diagnostic));
+    const int tempoSetValueRow = tempoPointMenu.model->rowForId(int(NodeMenuAction::SetValue));
+    QVERIFY2(tempoSetValueRow >= 0, "the tempo point menu lost its SetValue row");
+    const uint64_t revisionBeforeTempo = songTab.document().revision();
+    const int undoIndexBeforeTempo = songTab.document().undoStack()->index();
+    QVERIFY2(quick_popup::clickMenuRow(*tempoPointMenu.session, tempoSetValueRow),
+             "the tempo SetValue row did not receive a real click");
+    DrawerChrome &tempoChrome = songTab.view().editorDrawer()->chrome();
+    QTRY_VERIFY2(automation_valueprompt::promptVisible(tempoChrome),
+                 "the tempo node pick did not open the inline value prompt");
+    QTest::keyClick(&quickWindow(), Qt::Key_Escape);
+    QTRY_VERIFY2(!automation_valueprompt::promptVisible(tempoChrome),
+                 "Escape did not cancel the tempo value prompt");
+    QCOMPARE(songTab.document().revision(), revisionBeforeTempo);
+    QCOMPARE(songTab.document().undoStack()->index(), undoIndexBeforeTempo);
 
     songTab.document().writeLanePoints(0, kLfoController, 0, std::numeric_limits<uint64_t>::max(),
                                        {{kOtherPointTick, 96}});
     QCoreApplication::processEvents();
     const LaneHandle lfo = findRow({EditorAutomationRowKind::ControlChange, 0, kLfoController});
     QVERIFY(lfo.valid());
-    MenuResult ccPointMenu;
-    {
-        const auto interaction = scheduleMenuInteraction(
-            ccPointMenu, [](QMenu &) { return static_cast<QAction *>(nullptr); });
-        mousePress(Qt::RightButton, automationWindowPoint(inputPoint(lfo, kOtherPointTick, 96)));
-        mouseRelease(Qt::RightButton, automationWindowPoint(inputPoint(lfo, kOtherPointTick, 96)));
-    }
-    QVERIFY2(ccPointMenu.opened, qPrintable(ccPointMenu.diagnostic));
-    QCOMPARE(ccPointMenu.parentWidget, static_cast<QWidget *>(&songTab.view()));
-    QCOMPARE(ccPointMenu.actionCount, 2);
+    mousePress(Qt::RightButton, automationWindowPoint(inputPoint(lfo, kOtherPointTick, 96)));
+    mouseRelease(Qt::RightButton, automationWindowPoint(inputPoint(lfo, kOtherPointTick, 96)));
+    const AutomationMenu ccPointMenu = waitForAutomationMenu(
+        songTab.view(), QStringLiteral("the CC node right-press did not open the point menu"));
+    QVERIFY2(ccPointMenu.session, qUtf8Printable(ccPointMenu.diagnostic));
+    const int ccSetValueRow = ccPointMenu.model->rowForId(int(NodeMenuAction::SetValue));
+    QVERIFY2(ccSetValueRow >= 0, "the CC point menu lost its SetValue row");
+    const uint64_t revisionBeforeCc = songTab.document().revision();
+    const int undoIndexBeforeCc = songTab.document().undoStack()->index();
+    QVERIFY2(quick_popup::clickMenuRow(*ccPointMenu.session, ccSetValueRow),
+             "the CC SetValue row did not receive a real click");
+    DrawerChrome &ccChrome = songTab.view().editorDrawer()->chrome();
+    QTRY_VERIFY2(automation_valueprompt::promptVisible(ccChrome),
+                 "the CC node pick did not open the inline value prompt");
+    QTest::keyClick(&quickWindow(), Qt::Key_Escape);
+    QTRY_VERIFY2(!automation_valueprompt::promptVisible(ccChrome),
+                 "Escape did not cancel the CC value prompt");
+    QCOMPARE(songTab.document().revision(), revisionBeforeCc);
+    QCOMPARE(songTab.document().undoStack()->index(), undoIndexBeforeCc);
 
     songTab.view().selectionModel().clearTimeSelection();
     mousePress(Qt::RightButton, automationGutterWindowPoint(ccMenuGutter));
@@ -425,177 +434,6 @@ void AutomationEditingTest::outsidePressDismissesLaneMenuWithoutSideEffects()
     QCOMPARE(songTab.document().undoStack()->index(), undoIndex);
     QTRY_VERIFY2(songTab.view().quickView()->focusedBand() == songview::TimelineBand::Automation,
                  "the outside dismissal did not restore the automation band focus");
-}
-
-void AutomationEditingTest::pointMenuDeleteCommitsEdit()
-{
-    SongTab &songTab = tab();
-    const LaneHandle cc = findRow({EditorAutomationRowKind::ControlChange, 0, kController});
-    QVERIFY(cc.valid());
-    const uint64_t revision = songTab.document().revision();
-    const int undoIndex = songTab.document().undoStack()->index();
-
-    MenuResult result;
-    {
-        const auto interaction = scheduleMenuInteraction(
-            result, [](QMenu &menu) { return findMenuAction(menu, QStringLiteral("Delete")); });
-        mousePress(Qt::RightButton, automationWindowPoint(inputPoint(cc, kPointTick, 40)));
-        mouseRelease(Qt::RightButton, automationWindowPoint(inputPoint(cc, kPointTick, 40)));
-    }
-
-    DocLanePoint point;
-    QVERIFY2(result.opened, qPrintable(result.diagnostic));
-    QCOMPARE(result.parentWidget, static_cast<QWidget *>(&songTab.view()));
-    QVERIFY2(result.actionFound, qPrintable(result.diagnostic));
-    QVERIFY2(result.actionClicked, qPrintable(result.diagnostic));
-    QVERIFY(!songTab.document().findLanePoint(0, kController, kPointTick, &point));
-    QCOMPARE(songTab.document().revision(), revision + 1);
-    QCOMPARE(songTab.document().undoStack()->index(), undoIndex + 1);
-}
-
-void AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence()
-{
-    SongTab &songTab = tab();
-    songTab.document().writeLanePoints(0, kController, 0, std::numeric_limits<uint64_t>::max(),
-                                       {{kPointTick, 32}, {kPointTick, 96}});
-    QCoreApplication::processEvents();
-    const LaneHandle cc = findRow({EditorAutomationRowKind::ControlChange, 0, kController});
-    QVERIFY(cc.valid());
-    const uint64_t revision = songTab.document().revision();
-    const int undoIndex = songTab.document().undoStack()->index();
-
-    MenuResult result;
-    {
-        const auto menuInteraction = scheduleMenuInteraction(
-            result, [](QMenu &menu) { return findMenuAction(menu, QStringLiteral("Set Value")); });
-        mousePress(Qt::RightButton, automationWindowPoint(inputPoint(cc, kPointTick, 96)));
-        mouseRelease(Qt::RightButton, automationWindowPoint(inputPoint(cc, kPointTick, 96)));
-    }
-
-    // The Set Value action hands the edit to the inline Quick prompt instead of
-    // a modal dialog: the prompt takes active focus with the stored value
-    // selected (CC 10 displays stored-64, so the 96 node shows 32), typed
-    // digits replace the selection, and Enter commits through the canvas while
-    // only one duplicate occurrence moves.
-    DrawerChrome &chrome = songTab.view().editorDrawer()->chrome();
-    QVERIFY2(result.opened, qPrintable(result.diagnostic));
-    QCOMPARE(result.parentWidget, static_cast<QWidget *>(&songTab.view()));
-    QVERIFY2(result.actionFound, qPrintable(result.diagnostic));
-    QVERIFY2(result.actionClicked, qPrintable(result.diagnostic));
-    QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
-    QQuickItem *const prompt = automation_valueprompt::focusedTextInput(quickWindow());
-    QVERIFY2(prompt, "the value prompt did not take active focus from the Set Value action");
-    QCOMPARE(prompt->property("selectedText").toString(), QStringLiteral("32"));
-    QTest::keyClick(&quickWindow(), Qt::Key_0);
-    QTest::keyClick(&quickWindow(), Qt::Key_Return);
-    QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome));
-
-    const auto points = songTab.document().lanePoints(0, kController);
-    QCOMPARE(points.size(), std::size_t{2});
-    QCOMPARE(points[0].tick, kPointTick);
-    QCOMPARE(points[0].value, 32);
-    QCOMPARE(points[1].tick, kPointTick);
-    QCOMPARE(points[1].value, 64);
-    QCOMPARE(songTab.document().revision(), revision + 1);
-    QCOMPARE(songTab.document().undoStack()->index(), undoIndex + 1);
-    QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()));
-}
-
-void AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched()
-{
-    SongTab &songTab = tab();
-    songTab.document().writeLanePoints(0, kController, 0, std::numeric_limits<uint64_t>::max(),
-                                       {{kPointTick, 96}});
-    QCoreApplication::processEvents();
-    const LaneHandle cc = findRow({EditorAutomationRowKind::ControlChange, 0, kController});
-    QVERIFY(cc.valid());
-    const uint64_t revision = songTab.document().revision();
-    const int undoIndex = songTab.document().undoStack()->index();
-
-    MenuResult result;
-    {
-        const auto menuInteraction = scheduleMenuInteraction(
-            result, [](QMenu &menu) { return findMenuAction(menu, QStringLiteral("Set Value")); });
-        mousePress(Qt::RightButton, automationWindowPoint(inputPoint(cc, kPointTick, 96)));
-        mouseRelease(Qt::RightButton, automationWindowPoint(inputPoint(cc, kPointTick, 96)));
-    }
-
-    DrawerChrome &chrome = songTab.view().editorDrawer()->chrome();
-    QVERIFY2(result.actionClicked, qPrintable(result.diagnostic));
-    QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
-    QTest::keyClick(&quickWindow(), Qt::Key_Escape);
-    QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome));
-
-    QCOMPARE(songTab.document().revision(), revision);
-    QCOMPARE(songTab.document().undoStack()->index(), undoIndex);
-    QCOMPARE(songTab.document().lanePoints(0, kController).size(), std::size_t{1});
-    QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()));
-}
-
-void AutomationEditingTest::outsideRightClickDismissesPointMenu()
-{
-    SongTab &songTab = tab();
-    const LaneHandle cc = findRow({EditorAutomationRowKind::ControlChange, 0, kController});
-    QVERIFY(cc.valid());
-    const QByteArray before = songTab.document().smf().write();
-
-    bool outsideClickSent = false;
-    QString outsideClickDiagnostic =
-        QStringLiteral("Outside-click interaction did not observe a point menu");
-    {
-        const auto interaction = schedulePopupInteraction(outsideClickDiagnostic, [&](QMenu &menu) {
-            const QPoint global =
-                quickWindow().mapToGlobal(automationWindowPoint(inputPoint(cc, 144, 64)));
-            outsideClickSent = true;
-            QTest::mouseClick(&menu, Qt::RightButton, Qt::NoModifier, menu.mapFromGlobal(global));
-        });
-        mousePress(Qt::RightButton, automationWindowPoint(inputPoint(cc, kPointTick, 40)));
-        mouseRelease(Qt::RightButton, automationWindowPoint(inputPoint(cc, kPointTick, 40)));
-    }
-    QVERIFY2(outsideClickSent, qPrintable(outsideClickDiagnostic));
-    QVERIFY(!QApplication::activePopupWidget());
-    QCOMPARE(songTab.document().smf().write(), before);
-
-    bool retargeted = false;
-    MenuResult deleteResult;
-    {
-        const auto interaction =
-            schedulePopupInteraction(deleteResult.diagnostic, [&](QMenu &menu) {
-                const QPoint global = quickWindow().mapToGlobal(
-                    automationWindowPoint(inputPoint(cc, kOtherPointTick, 100)));
-                QTest::mouseClick(&menu, Qt::RightButton, Qt::NoModifier,
-                                  menu.mapFromGlobal(global));
-                retargeted = QApplication::activePopupWidget() == &menu && menu.isVisible();
-                QAction *const action = findMenuAction(menu, QStringLiteral("Delete"));
-                deleteResult.opened = true;
-                deleteResult.parentWidget = menu.parentWidget();
-                deleteResult.actionFound = action != nullptr;
-                deleteResult.actionEnabled = action && action->isEnabled();
-                deleteResult.actionClicked =
-                    deleteResult.actionEnabled && clickMenuAction(menu, action);
-                if (!deleteResult.actionFound) {
-                    deleteResult.diagnostic =
-                        QStringLiteral("Retargeted point menu did not contain Delete");
-                } else if (!deleteResult.actionEnabled) {
-                    deleteResult.diagnostic =
-                        QStringLiteral("Retargeted point-menu Delete action was disabled");
-                } else if (!deleteResult.actionClicked) {
-                    deleteResult.diagnostic =
-                        QStringLiteral("Retargeted point-menu Delete action was not clickable");
-                }
-            });
-        mousePress(Qt::RightButton, automationWindowPoint(inputPoint(cc, kPointTick, 40)));
-        mouseRelease(Qt::RightButton, automationWindowPoint(inputPoint(cc, kPointTick, 40)));
-    }
-    DocLanePoint first;
-    DocLanePoint second;
-    QVERIFY(retargeted);
-    QVERIFY2(deleteResult.opened, qPrintable(deleteResult.diagnostic));
-    QCOMPARE(deleteResult.parentWidget, static_cast<QWidget *>(&songTab.view()));
-    QVERIFY2(deleteResult.actionFound, qPrintable(deleteResult.diagnostic));
-    QVERIFY2(deleteResult.actionClicked, qPrintable(deleteResult.diagnostic));
-    QVERIFY(songTab.document().findLanePoint(0, kController, kPointTick, &first));
-    QVERIFY(!songTab.document().findLanePoint(0, kController, kOtherPointTick, &second));
 }
 
 void AutomationEditingTest::selectionContextMenuRoutesInsideActiveSelection()

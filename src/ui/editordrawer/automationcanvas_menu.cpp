@@ -76,10 +76,11 @@ LaneMenuKind laneMenuKind(bool tempo, const QString &laneTitle, std::size_t poin
 
 // The automation menus are AutomationCanvas's slice of the shared canvas popup
 // session: one persistent typed QuickMenuHost/QuickMenuModel pair serves the
-// lane menu, the add-lane strip menu, and the inactive time-selection menu.
-// This file owns only the menu lifecycle — every command travels through the
-// existing AutomationPage/SongView primitives, re-resolved and revalidated at
-// dispatch, so a stale target writes nothing.
+// lane menu, the add-lane strip menu, and the inactive time-selection menu,
+// and a second pair in automationcanvas_pointmenu.cpp serves the node point
+// menu. This file owns only the menu lifecycle — every command travels through
+// the existing AutomationPage/SongView primitives, re-resolved and revalidated
+// at dispatch, so a stale target writes nothing.
 
 void AutomationCanvas::ensureMenuAdapters()
 {
@@ -104,9 +105,11 @@ void AutomationCanvas::setPopupSession(songview::QuickPopupSession *session)
     // canvas still owns, before the stored pointer follows.
     cancelCcDeletePromptWithoutFocus();
     ensureMenuAdapters();
+    ensureNodeMenuAdapters();
     // The host cancels its active menu on the displaced session first; the
     // stored pointer follows so a later open cannot target a dead session.
     m_menuHost->setPopupSession(session);
+    m_nodeMenuHost->setPopupSession(session);
     m_menuSession = session;
 }
 
@@ -330,16 +333,22 @@ void AutomationCanvas::handleMenuAction(int actionId)
     // remove, add) and a target must never fire twice.
     const PendingMenu pending = std::move(*m_pendingMenu);
     m_pendingMenu.reset();
-    SongDocument *const document = m_page.document();
-    if (!document || document != pending.document ||
-        document->revision() != pending.documentRevision)
-        return; // Stale document: no mutation, no announcement.
     // Keyboard continuity returns to the band before dispatch, but only when
-    // no subsequent popup already owns the session.
+    // no subsequent popup already owns the session. The focus return can
+    // synchronously swap surfaces and run editing handlers, so it happens
+    // BEFORE final validation: everything below judges the post-focus
+    // document state.
+    QPointer<AutomationCanvas> self(this);
     if (!m_menuSession || !m_menuSession->isOpen()) {
         if (m_inputHost)
             m_inputHost->requestFocus(Qt::PopupFocusReason);
     }
+    if (!self)
+        return; // The focus swap tore this canvas down.
+    SongDocument *const document = m_page.document();
+    if (!document || document != pending.document ||
+        document->revision() != pending.documentRevision)
+        return; // Stale document: no mutation, no announcement.
 
     if (actionId == int(Action::ClearTimeSelection)) {
         auto &model = m_page.m_owner.selectionModel();

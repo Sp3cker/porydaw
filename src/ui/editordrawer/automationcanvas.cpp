@@ -12,7 +12,6 @@
 #include <QPixmap>
 
 #include "core/songdocument.h"
-#include "ui/contextmenu.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/layout.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -317,6 +316,7 @@ void AutomationCanvas::rebuildRows()
     // without stealing focus. Only an owned session ends here; a foreign
     // popup (a prompt, another band's menu) survives.
     cancelLaneMenuWithoutFocus();
+    cancelNodeMenuWithoutFocus();
     invalidateSelectedNodeMultiplicity();
     m_hoverState.invalidateCaches();
     m_hoverState.hoverValueLabel = {};
@@ -690,70 +690,6 @@ void AutomationCanvas::cancelNodeValuePrompt()
     emit valuePromptChanged();
     if (m_inputHost)
         m_inputHost->requestFocus(Qt::PopupFocusReason);
-}
-
-bool AutomationCanvas::showPointMenuNear(LaneHandle handle, const QPoint &position,
-                                         const QPoint &globalPosition)
-{
-    if (!m_page.document())
-        return false;
-    NodePoint point;
-    if (!nodePointHit(handle, position, &point))
-        return false;
-    LaneHandle target = handle;
-    NodePoint targetPoint = point;
-    enum class Choice : uint8_t { None, SetValue, Delete };
-    Choice choice = Choice::None;
-    {
-        // Destroy the native popup before handing focus to the inline Quick
-        // editor. Native menu teardown can deliver ungrab/deactivation after
-        // exec() returns; publishing the prompt while the menu still exists
-        // would make that teardown cancel the new pending edit.
-        ui::ContextMenu menu(&m_page.m_owner);
-        QAction *setValue = menu.addAction(tr("Set Value"));
-        QAction *deletePoint = menu.addAction(tr("Delete"));
-        menu.setOutsideRightClickHandler([this, &menu, &target, &targetPoint](QPointF globalPos) {
-            const QPoint localPosition = contentPositionFromGlobal(globalPos).toPoint();
-            const LaneHandle candidate = laneAt(localPosition.y());
-            NodePoint candidatePoint;
-            if (!nodePointHit(candidate, localPosition, &candidatePoint))
-                return false;
-            target = candidate;
-            targetPoint = candidatePoint;
-            highlightHoveredPoint(candidate, localPosition, candidatePoint);
-            menu.popup(globalPos.toPoint());
-            return true;
-        });
-        QAction *const chosen = menu.exec(globalPosition);
-        if (chosen == setValue)
-            choice = Choice::SetValue;
-        else if (chosen == deletePoint)
-            choice = Choice::Delete;
-    }
-
-    if (!m_page.document() || !mutableLane(target)) {
-        if (m_inputHost)
-            m_inputHost->requestFocus(Qt::PopupFocusReason);
-        return true;
-    }
-    SongDocument *document = m_page.document();
-    if (choice == Choice::SetValue) {
-        if (m_inputHost)
-            m_inputHost->releasePointerGrab();
-        if (!openValuePromptForNode(target, targetPoint) && m_inputHost)
-            m_inputHost->requestFocus(Qt::PopupFocusReason);
-    } else {
-        if (m_inputHost)
-            m_inputHost->requestFocus(Qt::PopupFocusReason);
-        if (choice == Choice::Delete) {
-            const NodeLane *lane = mutableLane(target);
-            const NodeDrag drag{target, targetPoint, targetPoint, lane->minimumValue(),
-                                lane->maximumValue()};
-            commitNodePointDeletes(document->revision(), {drag});
-            m_page.requestRefresh();
-        }
-    }
-    return true;
 }
 
 void AutomationCanvas::setGestureActive(bool active)

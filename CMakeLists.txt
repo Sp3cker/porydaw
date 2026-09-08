@@ -370,6 +370,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/automationcanvas_gesture.cpp
     src/ui/editordrawer/automationcanvas_input.cpp
     src/ui/editordrawer/automationcanvas_menu.cpp
+    src/ui/editordrawer/automationcanvas_pointmenu.cpp
     src/ui/editordrawer/automationcanvas_deleteprompt.cpp
     src/ui/editordrawer/laneselection.cpp
     src/ui/editordrawer/laneselection.h
@@ -845,6 +846,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/automation/automationpainting.cpp
         src/checks/automation/automationpreviews.cpp
         src/checks/automation/automationmenus.cpp
+        src/checks/automation/automationpointmenus.cpp
         src/checks/automation/automationclipboard.cpp
         src/checks/automation/automationcanvaslayout.cpp
         src/checks/automation/automationcanvasediting.cpp

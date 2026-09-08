@@ -79,8 +79,10 @@ Item {
         border.color: panel.outlineColor
         border.width: 1
 
-        // Absorb presses and hover on the border ring so they never fall
-        // through to the underlay beneath the frame.
+        // Absorb presses and hover across the whole frame — the border ring,
+        // any area below the list content, and inactive rows (their disabled
+        // delegate lets events fall through) — so they never reach the
+        // underlay beneath the frame.
         MouseArea {
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
@@ -101,6 +103,10 @@ Item {
             delegate: Item {
                 id: row
 
+                // Canonical Qt state: Item.enabled drives accessibility, so
+                // a disabled row must be a disabled item, not a styling
+                // convention.
+                enabled: row.active
                 width: ListView.view.width
                 height: model.separator ? panel.separatorHeight : panel.rowHeight
 

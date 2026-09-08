@@ -426,8 +426,7 @@ bool AutomationCanvas::pointerRelease(const songview::TimelinePointerInput &inpu
         } else {
             m_hoverState.hover.highlightLocked = false;
             m_hoverState.clearHover();
-            if (!showPointMenuNear(contextLane, position.toPoint(),
-                                   input.globalPosition.toPoint())) {
+            if (!showNodeMenuNear(contextLane, position, input.globalPosition)) {
                 const auto *contextSlot = resolveSlot(contextLane);
                 const bool selected =
                     contextSlot &&
@@ -575,6 +574,8 @@ void AutomationCanvas::inputCancelled(songview::TimelineInputCancelReason reason
     if (m_inputHost)
         m_inputHost->clearCursor();
     requestGestureEndQuickUpdate();
-    if (reason == songview::TimelineInputCancelReason::Hidden)
+    if (reason == songview::TimelineInputCancelReason::Hidden) {
         cancelLaneMenuWithoutFocus();
+        cancelNodeMenuWithoutFocus();
+    }
 }

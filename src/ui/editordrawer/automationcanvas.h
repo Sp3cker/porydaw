@@ -71,6 +71,14 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
         AddLaneBase = 256,
         ShowLaneBase = 512,
     };
+    // Typed row ids of the node point context menu. The node menu carries
+    // its own QuickMenuModel over the shared popup session, so this id space
+    // is disjoint from CanvasMenuAction's. Production dispatch and the checks
+    // that click rendered rows both read these.
+    enum class NodeMenuAction : int {
+        SetValue = 1,
+        DeleteNode = 2,
+    };
 
     explicit AutomationCanvas(AutomationPage &page);
     ~AutomationCanvas() override = default;
@@ -221,6 +229,19 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
         int track = -1;
         QString laneTitle;
     };
+    // The guarded open-time target for the node point menu. Document identity
+    // plus revision reject any document change since the open; the lane
+    // handle plus exact row id reject a rebuild remap, and the full NodePoint
+    // (tick and value) is the occurrence identity — lanes can carry several
+    // points at one tick, so dispatch re-finds this exact point before any
+    // mutation. No lane pointer crosses the popup.
+    struct PendingNodeMenu {
+        QPointer<SongDocument> document;
+        uint64_t documentRevision = 0;
+        LaneHandle lane;
+        EditorAutomationRowId rowId = {};
+        NodePoint point = {};
+    };
     void viewportResized();
     void scrollStateChanged();
     void relayoutContent();
@@ -236,7 +257,8 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
 
     AutomationProjection projection() const;
     NodeLaneHoverTarget hoverTarget() const;
-    bool showPointMenuNear(LaneHandle handle, const QPoint &position, const QPoint &globalPosition);
+    bool showNodeMenuNear(LaneHandle handle, const QPointF &position,
+                          const QPointF &globalPosition);
 
     bool commitLaneEdit(const NodeLaneEdit::Completion &completion);
     bool nodePointHit(LaneHandle handle, const QPointF &position, NodePoint *point) const;
@@ -285,6 +307,13 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void handleMenuAction(int actionId);
     // Ends only a session this canvas still owns, without stealing focus.
     void cancelLaneMenuWithoutFocus();
+    // Consumes the guarded node-menu target; clears it before any command.
+    void handleNodeMenuAction(int actionId);
+    // Outside-right sink from the node menu host: retargets to the point
+    // under the press and reopens, or stays dismissed on a miss.
+    void retargetNodeMenu(const QPointF &scenePosition);
+    // Ends only the node menu's session ownership, without stealing focus.
+    void cancelNodeMenuWithoutFocus();
     // Shared-session Quick confirmation behind Delete CC lane on a nonempty
     // lane; implemented in automationcanvas_deleteprompt.cpp. clear drops the
     // pending target, optionally returning focus to the band; the
@@ -298,6 +327,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void clearCcDeletePrompt(bool restoreFocus);
     void cancelCcDeletePromptWithoutFocus();
     void ensureMenuAdapters();
+    void ensureNodeMenuAdapters();
     void layoutLaneStack();
     int tempoTop() const;
     void syncPinnedTempoLayout();
@@ -362,6 +392,10 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     songview::QuickMenuModel *m_menuModel = nullptr;
     QPointer<songview::QuickPopupSession> m_menuSession;
     std::optional<PendingMenu> m_pendingMenu;
+    // Typed node point menu adapter over the shared canvas popup session.
+    songview::QuickMenuHost *m_nodeMenuHost = nullptr;
+    songview::QuickMenuModel *m_nodeMenuModel = nullptr;
+    std::optional<PendingNodeMenu> m_pendingNodeMenu;
     std::optional<PendingCcDeletePrompt> m_pendingCcDeletePrompt;
     QMetaObject::Connection m_ccDeletePromptCancellation;
     NodeLaneHoverState m_hoverState;

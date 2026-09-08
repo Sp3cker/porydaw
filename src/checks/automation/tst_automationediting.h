@@ -26,6 +26,7 @@ class QQuickItem;
 
 namespace songview {
 class TimelineQuickScene;
+class QuickMenuModel;
 class QuickPopupSession;
 } // namespace songview
 
@@ -113,6 +114,9 @@ class AutomationEditingTest final : public QObject
     void pointMenuValuePromptUpdatesOneDuplicateOccurrence();
     void pointMenuValuePromptEscapeLeavesDocumentUntouched();
     void outsideRightClickDismissesPointMenu();
+    void pointMenuSyntheticDefaultDeleteDisabledAndSetValuePromotes();
+    void pointMenuStaleDocumentCannotDeleteTarget();
+    void pointMenuForeignTakeoverInvalidatesPendingTarget();
     void selectionContextMenuRoutesInsideActiveSelection();
 
     // Voice and routed physical-input coverage.
@@ -299,6 +303,21 @@ class AutomationEditingTest final : public QObject
     // Opens the confirmation through the real rendered gutter menu and a real
     // RemoveLane row click, then waits for the form to render.
     CcDeletePrompt openCcDeletePrompt(const EditorAutomationRowId &row, QString diagnostic);
+
+    // One rendered node point menu: the live session, its typed row model,
+    // and the located SetValue/DeleteNode rows. The diagnostic explains why
+    // the menu never opened with both typed rows.
+    struct NodePointMenu final {
+        songview::QuickPopupSession *session = nullptr;
+        songview::QuickMenuModel *model = nullptr;
+        int setValueRow = -1;
+        int deleteNodeRow = -1;
+        QString diagnostic;
+    };
+
+    // Opens the node point menu through the real node right-press, then
+    // waits for the shared Quick panel and locates both typed rows.
+    NodePointMenu openNodePointMenu(LaneHandle lane, uint64_t tick, int value, QString diagnostic);
 
     // The tab borrows this bank, so it must outlive m_tab.
     LoadedVoiceGroup m_bank = {};
