@@ -63,6 +63,27 @@ bool enterInsertTimeValues(QQuickWindow &window, const QKeySequence &bars,
     return quick_popup::inputHasActiveFocus(window, QLatin1String("insertTimeBeatFractions"));
 }
 
+// Menu-bar mode is read while a QMenuBar is constructed, so widget-menu
+// coverage builds its own MainWindow under the scoped attribute instead of
+// toggling an already-created native menu at runtime.
+class ScopedApplicationAttribute final
+{
+  public:
+    ScopedApplicationAttribute(Qt::ApplicationAttribute attribute, bool set)
+        : m_attribute(attribute)
+        , m_wasSet(QCoreApplication::testAttribute(attribute))
+    {
+        QCoreApplication::setAttribute(attribute, set);
+    }
+    ~ScopedApplicationAttribute() { QCoreApplication::setAttribute(m_attribute, m_wasSet); }
+    ScopedApplicationAttribute(const ScopedApplicationAttribute &) = delete;
+    ScopedApplicationAttribute &operator=(const ScopedApplicationAttribute &) = delete;
+
+  private:
+    Qt::ApplicationAttribute m_attribute;
+    bool m_wasSet;
+};
+
 } // namespace
 
 namespace checks::mainwindowrouting {
@@ -473,6 +494,414 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         QCOMPARE(tab.document().undoStack()->count(), staleUndoCount);
         QCOMPARE(tab.document().revision(), staleRevision);
         view.setPlayheadSample(0, false);
+    }
+
+    // 6.7.1-2: both adapters live in the Edit menu after Copy with their
+    // mnemonics, belong to the window, carry no shortcut, and enable only
+    // for a ready selected tab with a nonempty note selection — before any
+    // song exists, while readiness is pending, and the moment a selection
+    // appears or clears.
+    void noteLengthActionsExistAndEnableFromSelection()
+    {
+        {
+            SettingsGuard settings;
+            auto emptyWindow = std::make_unique<MainWindow>();
+            if (!emptyWindow->m_audioOk)
+                QSKIP("audio backend unavailable");
+            QAction *lengthen = emptyWindow->m_lengthenNoteAction;
+            QAction *shorten = emptyWindow->m_shortenNoteAction;
+            QVERIFY(lengthen && shorten);
+            QCOMPARE(editAction(*emptyWindow, QStringLiteral("lengthenNoteWindowAction")),
+                     lengthen);
+            QCOMPARE(editAction(*emptyWindow, QStringLiteral("shortenNoteWindowAction")), shorten);
+            QVERIFY(!lengthen->isEnabled());
+            QVERIFY(!shorten->isEnabled());
+            QVERIFY(lengthen->shortcuts().isEmpty());
+            QVERIFY(shorten->shortcuts().isEmpty());
+        }
+
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB, false);
+        QVERIFY(session.has_value());
+        MainWindow &window = *session->window;
+        QMenu *menu = editMenu(window);
+        QAction *lengthen = window.m_lengthenNoteAction;
+        QAction *shorten = window.m_shortenNoteAction;
+        QVERIFY(menu);
+        QVERIFY(lengthen && shorten);
+        QCOMPARE(lengthen->parent(), &window);
+        QCOMPARE(shorten->parent(), &window);
+        QVERIFY(menu->actions().contains(lengthen));
+        QVERIFY(menu->actions().contains(shorten));
+        QCOMPARE(editAction(window, QStringLiteral("lengthenNoteWindowAction")), lengthen);
+        QCOMPARE(editAction(window, QStringLiteral("shortenNoteWindowAction")), shorten);
+        const QList<QAction *> rows = menu->actions();
+        QVERIFY(rows.indexOf(window.m_copyAction) < rows.indexOf(lengthen));
+        QVERIFY(rows.indexOf(lengthen) < rows.indexOf(shorten));
+        QVERIFY(rows.indexOf(shorten) < rows.indexOf(window.m_insertTimeAction));
+        QVERIFY(lengthen->shortcuts().isEmpty());
+        QVERIFY(shorten->shortcuts().isEmpty());
+        QCOMPARE(bareTitle(lengthen), QStringLiteral("&Lengthen Note"));
+        QCOMPARE(bareTitle(shorten), QStringLiteral("Sho&rten Note"));
+        if (window.menuBar()->isNativeMenuBar()) {
+            QVERIFY(!lengthen->text().contains(u'\t'));
+            QVERIFY(!shorten->text().contains(u'\t'));
+        }
+
+        QVERIFY(!lengthen->isEnabled());
+        QVERIFY(!shorten->isEnabled());
+        QVERIFY(waitForTabReady(*window.m_workspace, session->a));
+        QVERIFY(waitForTabReady(*window.m_workspace, session->b));
+        window.m_workspace->selectSongTab(session->b);
+        QVERIFY(!lengthen->isEnabled());
+        QVERIFY(!shorten->isEnabled());
+
+        const std::optional<DocNote> note = selectFirstNote(*session->b);
+        QVERIFY(note.has_value());
+        QVERIFY(lengthen->isEnabled());
+        QVERIFY(shorten->isEnabled());
+        session->b->view().selectionModel().clearNoteSelection();
+        QVERIFY(!lengthen->isEnabled());
+        QVERIFY(!shorten->isEnabled());
+        session->b->view().selectionModel().setNoteSelection({note->noteId});
+        QVERIFY(lengthen->isEnabled());
+        QVERIFY(shorten->isEnabled());
+    }
+
+    // 6.7.3: direct menu activation moves the selected note's right edge by
+    // the live editing grid, including a grid change between triggers, and
+    // starts, pitches, and velocities stay put.
+    void noteLengthActionTriggersFollowLiveGrid()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        MainWindow &window = *session->window;
+        window.m_workspace->selectSongTab(session->b);
+        SongTab &tab = *session->b;
+        SongView &view = tab.view();
+        QAction *lengthen = window.m_lengthenNoteAction;
+        QAction *shorten = window.m_shortenNoteAction;
+        QVERIFY(lengthen && shorten);
+        const std::optional<DocNote> seeded = selectTerminatedNote(tab);
+        QVERIFY(seeded.has_value());
+        QVERIFY(lengthen->isEnabled());
+        QVERIFY(shorten->isEnabled());
+
+        view.setGridSelection(songview::GridSelection::musical(8));
+        QTRY_VERIFY(view.gridSelection() == songview::GridSelection::musical(8));
+        const QByteArray before = tab.document().smf().write();
+        const int undoIndex = tab.document().undoStack()->index();
+
+        lengthen->trigger();
+        DocNote resized = *seeded;
+        QVERIFY2(tab.document().findNote(seeded->noteId, &resized),
+                 "the lengthened note disappeared from the document");
+        QCOMPARE(uint64_t(resized.duration), expectedResizedDuration(view, *seeded, true));
+        QCOMPARE(resized.tick, seeded->tick);
+        QCOMPARE(resized.key, seeded->key);
+        QCOMPARE(resized.velocity, seeded->velocity);
+
+        view.setGridSelection(songview::GridSelection::musical(4));
+        QTRY_VERIFY(view.gridSelection() == songview::GridSelection::musical(4));
+        lengthen->trigger();
+        DocNote coarser = resized;
+        QVERIFY(tab.document().findNote(seeded->noteId, &coarser));
+        QCOMPARE(uint64_t(coarser.duration), expectedResizedDuration(view, resized, true));
+
+        shorten->trigger();
+        DocNote shortened = coarser;
+        QVERIFY(tab.document().findNote(seeded->noteId, &shortened));
+        QCOMPARE(uint64_t(shortened.duration), expectedResizedDuration(view, coarser, false));
+        QCOMPARE(shortened.tick, seeded->tick);
+
+        while (tab.document().undoStack()->index() > undoIndex &&
+               tab.document().undoStack()->canUndo())
+            tab.document().undoStack()->undo();
+        QCOMPARE(tab.document().smf().write(), before);
+    }
+
+    // 6.7.4: menu activation edits only the newly selected tab, and
+    // enablement follows the selected tab's note selection immediately
+    // through the replaced noteSelectionChanged connection — a deselected
+    // tab's selection churn never drives the actions.
+    void noteLengthActivationEditsSelectedTabOnly()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        MainWindow &window = *session->window;
+        window.m_workspace->selectSongTab(session->b);
+        QAction *lengthen = window.m_lengthenNoteAction;
+        QAction *shorten = window.m_shortenNoteAction;
+        QVERIFY(lengthen && shorten);
+        SongTab &tabB = *session->b;
+        SongTab &tabA = *session->a;
+        const std::optional<DocNote> seededB = selectTerminatedNote(tabB);
+        QVERIFY(seededB.has_value());
+        QVERIFY(lengthen->isEnabled());
+        QVERIFY(shorten->isEnabled());
+
+        const QByteArray aBefore = tabA.document().smf().write();
+        const QByteArray bBefore = tabB.document().smf().write();
+        const int undoB = tabB.document().undoStack()->index();
+
+        lengthen->trigger();
+        DocNote resizedB = *seededB;
+        QVERIFY(tabB.document().findNote(seededB->noteId, &resizedB));
+        QCOMPARE(uint64_t(resizedB.duration), expectedResizedDuration(tabB.view(), *seededB, true));
+        QCOMPARE(tabA.document().smf().write(), aBefore);
+        const QByteArray bResized = tabB.document().smf().write();
+
+        const std::optional<DocNote> seededA = selectTerminatedNote(tabA);
+        QVERIFY(seededA.has_value());
+        window.m_workspace->selectSongTab(session->a);
+        QVERIFY(lengthen->isEnabled());
+        QVERIFY(shorten->isEnabled());
+        const int undoA = tabA.document().undoStack()->index();
+
+        shorten->trigger();
+        DocNote resizedA = *seededA;
+        QVERIFY(tabA.document().findNote(seededA->noteId, &resizedA));
+        QCOMPARE(uint64_t(resizedA.duration),
+                 expectedResizedDuration(tabA.view(), *seededA, false));
+        QCOMPARE(tabA.document().undoStack()->index(), undoA + 1);
+        QCOMPARE(tabB.document().undoStack()->index(), undoB + 1);
+        QCOMPARE(tabB.document().smf().write(), bResized);
+        const QByteArray aResized = tabA.document().smf().write();
+
+        tabA.view().selectionModel().clearNoteSelection();
+        QVERIFY(!lengthen->isEnabled());
+        QVERIFY(!shorten->isEnabled());
+        tabB.view().selectionModel().clearNoteSelection();
+        QVERIFY(!lengthen->isEnabled());
+        tabB.view().selectionModel().setNoteSelection({seededB->noteId});
+        QVERIFY(!lengthen->isEnabled());
+        QVERIFY(!shorten->isEnabled());
+        tabA.view().selectionModel().setNoteSelection({seededA->noteId});
+        QVERIFY(lengthen->isEnabled());
+        QVERIFY(shorten->isEnabled());
+
+        window.m_workspace->selectSongTab(session->b);
+        QVERIFY(lengthen->isEnabled());
+        QVERIFY(shorten->isEnabled());
+        QCOMPARE(tabB.document().smf().write(), bResized);
+        QCOMPARE(tabA.document().smf().write(), aResized);
+
+        while (tabB.document().undoStack()->index() > undoB &&
+               tabB.document().undoStack()->canUndo())
+            tabB.document().undoStack()->undo();
+        while (tabA.document().undoStack()->index() > undoA &&
+               tabA.document().undoStack()->canUndo())
+            tabA.document().undoStack()->undo();
+        QCOMPARE(tabA.document().smf().write(), aBefore);
+        QCOMPARE(tabB.document().smf().write(), bBefore);
+    }
+
+    // 6.7.5: presentation follows the rebindable registry while the actions
+    // stay shortcut-free. A native menu bar keeps bare titles across any
+    // rebinding; a widget menu bar — a fresh MainWindow built under a scoped
+    // AA_DontUseNativeMenuBar — carries the binding after a tab and
+    // refreshes on bindingsChanged.
+    void noteLengthBindingPresentationTracksMenuBarMode()
+    {
+        keymap::Registry &keys = keymap::Registry::instance();
+        const QString lengthenId = QStringLiteral("roll.lengthen_note");
+        const QString shortenId = QStringLiteral("roll.shorten_note");
+        const QKeySequence reboundLengthen(QStringLiteral("Ctrl+Shift+Right"));
+        const QKeySequence reboundShorten(QStringLiteral("Ctrl+Shift+Left"));
+        const auto suffixed = [](const QString &title, const QKeySequence &binding) {
+            return binding.isEmpty() ? title
+                                     : title + u'\t' + binding.toString(QKeySequence::NativeText);
+        };
+
+        std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        MainWindow &window = *session->window;
+        QAction *lengthen = window.m_lengthenNoteAction;
+        QAction *shorten = window.m_shortenNoteAction;
+        QVERIFY(lengthen && shorten);
+        const QString lengthenTitle = bareTitle(lengthen);
+        const QString shortenTitle = bareTitle(shorten);
+        QCOMPARE(lengthenTitle, QStringLiteral("&Lengthen Note"));
+        QCOMPARE(shortenTitle, QStringLiteral("Sho&rten Note"));
+        const bool native = window.menuBar()->isNativeMenuBar();
+        const auto expectedLengthen = [&lengthenTitle, native,
+                                       suffixed](const QKeySequence &binding) {
+            return native ? lengthenTitle : suffixed(lengthenTitle, binding);
+        };
+        const auto expectedShorten = [&shortenTitle, native,
+                                      suffixed](const QKeySequence &binding) {
+            return native ? shortenTitle : suffixed(shortenTitle, binding);
+        };
+
+        const keymap::Registry::OverrideSnapshot snapshot = keys.snapshotOverrides();
+        keys.setBinding(lengthenId, reboundLengthen);
+        keys.setBinding(shortenId, reboundShorten);
+        QCOMPARE(lengthen->text(), expectedLengthen(reboundLengthen));
+        QCOMPARE(shorten->text(), expectedShorten(reboundShorten));
+        QVERIFY(lengthen->shortcuts().isEmpty());
+        QVERIFY(shorten->shortcuts().isEmpty());
+        keys.setBinding(lengthenId, QKeySequence());
+        QCOMPARE(lengthen->text(), expectedLengthen(QKeySequence()));
+        keys.restoreOverrides(snapshot);
+        QCOMPARE(lengthen->text(), expectedLengthen(keys.bindings(lengthenId).value(0)));
+        QCOMPARE(shorten->text(), expectedShorten(keys.bindings(shortenId).value(0)));
+        QVERIFY(lengthen->shortcuts().isEmpty());
+        QVERIFY(shorten->shortcuts().isEmpty());
+        session.reset();
+
+        ScopedApplicationAttribute scoped(Qt::AA_DontUseNativeMenuBar, true);
+        const std::optional<Session> widgetSession = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(widgetSession.has_value());
+        MainWindow &widgetWindow = *widgetSession->window;
+        QVERIFY(!widgetWindow.menuBar()->isNativeMenuBar());
+        QAction *widgetLengthen = widgetWindow.m_lengthenNoteAction;
+        QAction *widgetShorten = widgetWindow.m_shortenNoteAction;
+        QVERIFY(widgetLengthen && widgetShorten);
+        const QString widgetLengthenTitle = bareTitle(widgetLengthen);
+        const QString widgetShortenTitle = bareTitle(widgetShorten);
+        QCOMPARE(widgetLengthenTitle, QStringLiteral("&Lengthen Note"));
+        QCOMPARE(widgetShortenTitle, QStringLiteral("Sho&rten Note"));
+        QCOMPARE(widgetLengthen->text(),
+                 suffixed(widgetLengthenTitle, keys.bindings(lengthenId).value(0)));
+        QCOMPARE(widgetShorten->text(),
+                 suffixed(widgetShortenTitle, keys.bindings(shortenId).value(0)));
+
+        const keymap::Registry::OverrideSnapshot widgetSnapshot = keys.snapshotOverrides();
+        keys.setBinding(lengthenId, reboundLengthen);
+        QCOMPARE(widgetLengthen->text(), suffixed(widgetLengthenTitle, reboundLengthen));
+        keys.setBinding(shortenId, reboundShorten);
+        QCOMPARE(widgetShorten->text(), suffixed(widgetShortenTitle, reboundShorten));
+        QVERIFY(widgetLengthen->shortcuts().isEmpty());
+        QVERIFY(widgetShorten->shortcuts().isEmpty());
+        keys.setBinding(lengthenId, QKeySequence());
+        QCOMPARE(widgetLengthen->text(), widgetLengthenTitle);
+        keys.restoreOverrides(widgetSnapshot);
+        QCOMPARE(widgetLengthen->text(),
+                 suffixed(widgetLengthenTitle, keys.bindings(lengthenId).value(0)));
+        QCOMPARE(widgetShorten->text(),
+                 suffixed(widgetShortenTitle, keys.bindings(shortenId).value(0)));
+        QVERIFY(widgetLengthen->shortcuts().isEmpty());
+        QVERIFY(widgetShorten->shortcuts().isEmpty());
+    }
+
+    // 6.7.6: the production roll input surface resizes exactly once per
+    // keystroke — one grid step and one history entry per gesture — while
+    // neither shortcut-free menu action ever fires.
+    void noteLengthKeysRouteOnceWithoutMenuActions()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        MainWindow &window = *session->window;
+        window.m_workspace->selectSongTab(session->b);
+        SongTab &tab = *session->b;
+        SongView &view = tab.view();
+        QAction *lengthen = window.m_lengthenNoteAction;
+        QAction *shorten = window.m_shortenNoteAction;
+        QVERIFY(lengthen && shorten);
+        const std::optional<DocNote> seeded = selectTerminatedNote(tab);
+        QVERIFY(seeded.has_value());
+        view.setGridSelection(songview::GridSelection::musical(4));
+        QTRY_VERIFY(view.gridSelection() == songview::GridSelection::musical(4));
+
+        songview::TimelineQuickView *const quick = view.quickView();
+        QQuickWindow *const quickWindow = quick ? quick->quickWindow() : nullptr;
+        QVERIFY2(quickWindow && QTest::qWaitFor([&quickWindow] {
+                     return quickWindow->isVisible() && quickWindow->isExposed();
+                 }),
+                 "the roll Quick window never became visible for key delivery");
+        QVERIFY(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason));
+        QCOMPARE(checks::async_wait::waitUntil(
+                     [] { return true; },
+                     [&view] { return view.focusedTimelineBand() == songview::TimelineBand::Roll; },
+                     5000, 10),
+                 checks::async_wait::Result::Ready);
+        QCoreApplication::processEvents();
+        // Production band input is the live QQuickView window; the container
+        // widget holds focus only to bridge activation into the scene.
+        const auto deliver = [quickWindow](Qt::Key key, Qt::KeyboardModifiers modifiers) {
+            QTest::keyClick(quickWindow, key, modifiers);
+            QCoreApplication::sendPostedEvents();
+            QCoreApplication::processEvents();
+        };
+
+        keymap::Registry &keys = keymap::Registry::instance();
+        const QList<QKeySequence> lengthenKeys =
+            keys.bindings(QStringLiteral("roll.lengthen_note"));
+        QVERIFY(!lengthenKeys.isEmpty());
+        const QList<QKeySequence> shortenKeys = keys.bindings(QStringLiteral("roll.shorten_note"));
+        QVERIFY(!shortenKeys.isEmpty());
+        QSignalSpy lengthenTriggered(lengthen, &QAction::triggered);
+        QSignalSpy shortenTriggered(shorten, &QAction::triggered);
+
+        const QByteArray before = tab.document().smf().write();
+        const int undoIndex = tab.document().undoStack()->index();
+        const int undoCount = tab.document().undoStack()->count();
+
+        const QKeyCombination lengthenKey = lengthenKeys.front()[0];
+        deliver(lengthenKey.key(), lengthenKey.keyboardModifiers());
+        DocNote resized = *seeded;
+        QVERIFY(tab.document().findNote(seeded->noteId, &resized));
+        QCOMPARE(uint64_t(resized.duration), expectedResizedDuration(view, *seeded, true));
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex + 1);
+        QCOMPARE(tab.document().undoStack()->count(), undoCount + 1);
+        QCOMPARE(lengthenTriggered.count(), 0);
+        QCOMPARE(shortenTriggered.count(), 0);
+
+        const QKeyCombination shortenKey = shortenKeys.front()[0];
+        deliver(shortenKey.key(), shortenKey.keyboardModifiers());
+        DocNote paired = resized;
+        QVERIFY(tab.document().findNote(seeded->noteId, &paired));
+        QCOMPARE(uint64_t(paired.duration), expectedResizedDuration(view, resized, false));
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex + 1);
+        QCOMPARE(lengthenTriggered.count(), 0);
+        QCOMPARE(shortenTriggered.count(), 0);
+
+        while (tab.document().undoStack()->index() > undoIndex &&
+               tab.document().undoStack()->canUndo())
+            tab.document().undoStack()->undo();
+        QCOMPARE(tab.document().smf().write(), before);
+    }
+
+    // 6.7.7: protected text input keeps Shift+Arrow local — the text
+    // selection moves, neither menu action fires, and the song stays
+    // byte-identical with no history.
+    void noteLengthKeysStayLocalInTextInput()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        MainWindow &window = *session->window;
+        window.m_workspace->selectSongTab(session->b);
+        SongTab &tab = *session->b;
+        const std::optional<DocNote> seeded = selectTerminatedNote(tab);
+        QVERIFY(seeded.has_value());
+        QAction *lengthen = window.m_lengthenNoteAction;
+        QAction *shorten = window.m_shortenNoteAction;
+        QVERIFY(lengthen && shorten);
+
+        QLineEdit text(&window);
+        text.setText(QStringLiteral("shift"));
+        text.setCursorPosition(0);
+        text.show();
+        text.setFocus(Qt::OtherFocusReason);
+        QCoreApplication::processEvents();
+        QCOMPARE(QApplication::focusWidget(), &text);
+
+        const QByteArray before = tab.document().smf().write();
+        const int undoIndex = tab.document().undoStack()->index();
+        const int undoCount = tab.document().undoStack()->count();
+        QSignalSpy lengthenTriggered(lengthen, &QAction::triggered);
+        QSignalSpy shortenTriggered(shorten, &QAction::triggered);
+
+        sendKey(text, Qt::Key_Right, Qt::ShiftModifier);
+        QCOMPARE(text.selectedText(), QStringLiteral("s"));
+        QCOMPARE(text.cursorPosition(), 1);
+        sendKey(text, Qt::Key_Left, Qt::ShiftModifier);
+        QCOMPARE(text.cursorPosition(), 0);
+        QVERIFY(text.selectedText().isEmpty());
+        QCOMPARE(lengthenTriggered.count(), 0);
+        QCOMPARE(shortenTriggered.count(), 0);
+        QCOMPARE(tab.document().smf().write(), before);
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex);
+        QCOMPARE(tab.document().undoStack()->count(), undoCount);
     }
 
   private:

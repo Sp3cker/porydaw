@@ -9,12 +9,16 @@
 #include <QCoreApplication>
 #include <QEvent>
 #include <QImage>
+#include <QKeyEvent>
 #include <QPoint>
 #include <QPointer>
 #include <QRectF>
+#include <QScopeGuard>
 #include <QtTest>
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <limits>
 #include <optional>
 #include <vector>
 
@@ -141,6 +145,577 @@ void PianoRollTest::keyboardKeepVisible()
     while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
         doc.undoStack()->undo();
     QCOMPARE(doc.smf().write(), before);
+}
+
+namespace {
+
+// Every non-duration field a resize must preserve.
+bool sameButDuration(const DocNote &before, const DocNote &after)
+{
+    return before.noteId == after.noteId && before.engineTrack == after.engineTrack &&
+           before.smfTrack == after.smfTrack && before.tick == after.tick &&
+           before.key == after.key && before.velocity == after.velocity &&
+           before.channel == after.channel;
+}
+
+void undoToFixture(SongDocument &doc, const QByteArray &bytes, int baseIndex)
+{
+    while (doc.undoStack()->index() > baseIndex && doc.undoStack()->canUndo())
+        doc.undoStack()->undo();
+    QCOMPARE(doc.smf().write(), bytes);
+}
+
+void expectConsumedNoCommand(SongDocument &doc, const QByteArray &bytes, int baseIndex,
+                             int baseCount)
+{
+    QCOMPARE(doc.undoStack()->index(), baseIndex);
+    QCOMPARE(doc.undoStack()->count(), baseCount);
+    QCOMPARE(doc.smf().write(), bytes);
+}
+
+// One production Shift+Arrow keystroke into the roll's Quick input item.
+// The shared Timeline policy accepts a recognized command exactly once —
+// including a consumed no-op — and ignores unclaimed keys, so the press's
+// acceptance bit is asserted on every delivery; sendKeyStroke() hides it.
+void pressResizeKey(songview::TimelineInputItem &roll, bool longer)
+{
+    const int key = longer ? Qt::Key_Right : Qt::Key_Left;
+    QKeyEvent press(QEvent::KeyPress, key, Qt::ShiftModifier, QString(), false, 1);
+    QCoreApplication::sendEvent(&roll, &press);
+    const bool accepted = press.isAccepted();
+    QKeyEvent release(QEvent::KeyRelease, key, Qt::ShiftModifier, QString(), false, 1);
+    QCoreApplication::sendEvent(&roll, &release);
+    QVERIFY2(accepted, longer ? "the Shift+Right lengthen press was not accepted"
+                              : "the Shift+Left shorten press was not accepted");
+}
+
+// Highest piano key whose occupancy window is clear for the probe ticks
+// after tick; nullopt when every key is taken. The one free-key scan —
+// stageNote and the raw-event seeds below all share it.
+std::optional<int> findFreeKey(PianoRollFixture &check, uint64_t tick, uint64_t probe)
+{
+    for (int key = 115; key >= 24; --key) {
+        if (!check.isOccupied(tick, probe, key, true))
+            return key;
+    }
+    return std::nullopt;
+}
+
+// Seeds one note at an exact tick on a visibly free key. The occupancy probe
+// is capped so the one-cell resizes below cannot run into a neighbor the
+// scan did not see.
+std::optional<DocNote> stageNote(PianoRollFixture &check, uint64_t tick, uint32_t duration)
+{
+    const uint64_t probe = std::clamp<uint64_t>(duration, 24, 48);
+    const std::optional<int> key = findFreeKey(check, tick, probe);
+    if (!key.has_value())
+        return std::nullopt;
+    check.document().addNote(check.track(), tick, uint8_t(*key), duration, 100);
+    DocNote note;
+    if (check.document().findNote(check.track(), tick, uint8_t(*key), &note) &&
+        note.duration == duration)
+        return note;
+    return std::nullopt;
+}
+
+// Seeds a note whose start and end sit on an absolute cell boundary of the
+// given lattice, probing candidate cells near the fixture's working region.
+std::optional<DocNote> stageLatticeNote(PianoRollFixture &check, uint64_t lattice,
+                                        uint32_t duration, uint64_t nearTick)
+{
+    const uint64_t first = std::max<uint64_t>(lattice, (nearTick / lattice) * lattice);
+    for (uint64_t tick = first; tick < first + 4 * lattice; tick += lattice) {
+        if (auto note = stageNote(check, tick, duration))
+            return note;
+    }
+    return std::nullopt;
+}
+
+} // namespace
+
+// Semantic Lengthen/Shorten Note coverage (plan 6.2). Every press travels
+// the production route — a Shift+Arrow QKeyEvent into the focused roll
+// Quick input item, through the shared Timeline policy and its guarded
+// SongView seam — so route acceptance and document semantics are pinned
+// together. Each scenario closes by undoing back to a byte-identical
+// fixture state.
+void PianoRollTest::keyboardResize()
+{
+    PianoRollFixture &check = *m_fixture;
+    const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+    QVERIFY(seed.has_value());
+    const uint64_t kCell = seed->snapCell; // the fixture's canonical cell
+    SongDocument &doc = check.document();
+    SongView &view = check.view();
+    songview::TimelineInputItem &roll = check.rollInput();
+    // The presses below land on the roll's focused Quick input item, so the
+    // shared policy resolves them exactly as a real keystroke would.
+    QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason),
+             "Quick roll input could not be focused before keyboard resize");
+    QTRY_VERIFY(roll.hasActiveFocus());
+    const int track = check.track();
+    const uint64_t base = seed->cell.tick; // on the six-tick lattice
+    DocNote seedNote;
+    QVERIFY2(doc.findNote(track, base, uint8_t(seed->cell.key), &seedNote) &&
+                 seedNote.duration == 2 * kCell,
+             "the resize seed note was not found");
+
+    // Aligned end: lengthen advances one cell, shorten returns it (6.2.1).
+    {
+        view.selectionModel().setNoteSelection({seedNote.noteId});
+        const QByteArray bytes = doc.smf().write();
+        const int baseIndex = doc.undoStack()->index();
+        pressResizeKey(roll, true);
+        DocNote note;
+        QVERIFY2(doc.findNote(track, base, uint8_t(seed->cell.key), &note) &&
+                     note.duration == 3 * kCell,
+                 "lengthening an aligned end did not advance exactly one cell");
+        pressResizeKey(roll, false);
+        QVERIFY2(doc.findNote(track, base, uint8_t(seed->cell.key), &note) &&
+                     note.duration == 2 * kCell,
+                 "shortening the aligned end did not return it one cell");
+        undoToFixture(doc, bytes, baseIndex);
+    }
+
+    // Identity and selection: the start and every non-duration field stay
+    // put and the selected NoteIds stay selected in both directions (6.2.5).
+    {
+        const DocNote before = seedNote;
+        view.selectionModel().setNoteSelection({before.noteId});
+        const QByteArray bytes = doc.smf().write();
+        const int baseIndex = doc.undoStack()->index();
+        pressResizeKey(roll, true);
+        DocNote note;
+        QVERIFY2(doc.findNote(before.noteId, &note) && note.duration == 3 * kCell &&
+                     sameButDuration(before, note) &&
+                     view.selectionModel().noteSelection() == std::vector<NoteId>{before.noteId},
+                 "lengthening changed more than the duration or dropped the selection");
+        pressResizeKey(roll, false);
+        QVERIFY2(doc.findNote(before.noteId, &note) && note.duration == 2 * kCell &&
+                     sameButDuration(before, note) &&
+                     view.selectionModel().noteSelection() == std::vector<NoteId>{before.noteId},
+                 "shortening changed more than the duration or dropped the selection");
+        undoToFixture(doc, bytes, baseIndex);
+    }
+
+    // Off-grid ends: each direction reaches the adjacent grid boundary, not
+    // a fixed raw cell (6.2.2). The lengthen seed starts three ticks past a
+    // boundary and ends one tick past the next, so a boundary step is +5
+    // (raw cell +6); the shorten seed ends three ticks past a boundary, so a
+    // boundary step is -3 (raw cell -6).
+    {
+        const std::optional<DocNote> offEnd = stageNote(check, base + kCell / 2, 4);
+        const std::optional<DocNote> offShort = stageNote(check, base + 2 * kCell + 3, 12);
+        QVERIFY2(offEnd.has_value() && offShort.has_value(), "no free keys for the off-grid seeds");
+        view.selectionModel().setNoteSelection({offEnd->noteId});
+        const QByteArray bytes = doc.smf().write();
+        const int baseIndex = doc.undoStack()->index();
+        pressResizeKey(roll, true);
+        DocNote note;
+        QVERIFY2(doc.findNote(offEnd->noteId, &note) && note.duration == 9,
+                 "lengthening an off-grid end did not reach the next boundary");
+        view.selectionModel().setNoteSelection({offShort->noteId});
+        pressResizeKey(roll, false);
+        QVERIFY2(doc.findNote(offShort->noteId, &note) && note.duration == 9,
+                 "shortening an off-grid end did not reach the previous boundary");
+        undoToFixture(doc, bytes, baseIndex);
+    }
+
+    // One-tick floor: shortening a one-tick note is a consumed no-op — no
+    // mutation, no history entry, selection kept (6.2.3). Document inserts
+    // floor duration to one tick, so a terminated note cannot be staged
+    // shorter; this one-tick boundary is the smallest reachable shortening
+    // case, and the clamp must never turn shortening into growth here.
+    // Lengthening from the floor reaches the next live boundary: the floor
+    // seed starts on the lattice with a one-tick duration, so the adjacent
+    // boundary is exactly one live cell past its start, not three cells.
+    {
+        const std::optional<DocNote> floorNote = stageNote(check, base + 2 * kCell, 1);
+        QVERIFY2(floorNote.has_value(), "no free key for the floor seed");
+        view.selectionModel().setNoteSelection({floorNote->noteId});
+        const QByteArray bytes = doc.smf().write();
+        const int baseIndex = doc.undoStack()->index();
+        const int baseCount = doc.undoStack()->count();
+        pressResizeKey(roll, false);
+        DocNote note;
+        QVERIFY2(doc.findNote(floorNote->noteId, &note) && note.duration == 1 &&
+                     view.selectionModel().noteSelection() ==
+                         std::vector<NoteId>{floorNote->noteId},
+                 "shortening a one-tick note mutated the document or selection");
+        expectConsumedNoCommand(doc, bytes, baseIndex, baseCount);
+        pressResizeKey(roll, true);
+        // The live 1/16 cell, not the assumed constant: snapTicks determines
+        // the actual step at this division.
+        const uint64_t floorCell = view.grid().snapTicksAt(floorNote->tick);
+        const uint64_t floorBoundary = view.grid().nextEditingTick(
+            floorNote->tick + floorNote->duration, std::numeric_limits<uint64_t>::max());
+        QVERIFY2(floorCell > 0 && floorBoundary > floorNote->tick &&
+                     floorBoundary - floorNote->tick <= std::numeric_limits<uint32_t>::max(),
+                 "the live grid offered no reachable lengthen boundary for the floor seed");
+        QVERIFY2(doc.findNote(floorNote->noteId, &note) &&
+                     note.duration == floorBoundary - floorNote->tick,
+                 "lengthening the floor note did not reach the next boundary");
+        undoToFixture(doc, bytes, baseIndex);
+    }
+
+    // Mixed selection: one shared delta from the furthest end (6.2.4). The
+    // peers end at different alignments — a on the lattice, b three ticks
+    // past it — and the shortest note clamps the second shorten to -2.
+    {
+        const std::optional<DocNote> a = stageNote(check, base + 4 * kCell, uint32_t(2 * kCell));
+        const std::optional<DocNote> b = stageNote(check, base + 4 * kCell, 3);
+        QVERIFY2(a.has_value() && b.has_value(), "no free keys for the mixed seeds");
+        view.selectionModel().setNoteSelection({a->noteId, b->noteId});
+        const QByteArray bytes = doc.smf().write();
+        const int baseIndex = doc.undoStack()->index();
+        pressResizeKey(roll, true);
+        DocNote aNote;
+        DocNote bNote;
+        QVERIFY2(doc.findNote(a->noteId, &aNote) && aNote.duration == 3 * kCell &&
+                     doc.findNote(b->noteId, &bNote) && bNote.duration == 9,
+                 "lengthening did not move both mixed notes by the same boundary delta");
+        pressResizeKey(roll, false);
+        QVERIFY2(doc.findNote(a->noteId, &aNote) && aNote.duration == 2 * kCell &&
+                     doc.findNote(b->noteId, &bNote) && bNote.duration == 3,
+                 "shortening did not return both mixed notes by the same boundary delta");
+        pressResizeKey(roll, false);
+        QVERIFY2(doc.findNote(a->noteId, &aNote) && aNote.duration == 2 * kCell - 2 &&
+                     doc.findNote(b->noteId, &bNote) && bNote.duration == 1,
+                 "the shortest mixed note did not clamp the shared shortening delta");
+        undoToFixture(doc, bytes, baseIndex);
+    }
+
+    // Live grid: the step is read from the grid selected at call time
+    // (6.2.6); keyboard narrow/widen routing is covered by the grid suites.
+    {
+        const std::optional<DocNote> eighth =
+            stageLatticeNote(check, 2 * kCell, uint32_t(2 * kCell), base);
+        QVERIFY2(eighth.has_value(), "no free 1/8-lattice cell for the live-grid seed");
+        const SongView::ViewState gridScenarioView = view.viewState();
+        const auto restoreGrid =
+            qScopeGuard([&view, gridScenarioView] { view.applyViewState(gridScenarioView); });
+        view.setGridSelection(songview::GridSelection::musical(8));
+        QCOMPARE(view.gridSelection(), songview::GridSelection::musical(8));
+        view.selectionModel().setNoteSelection({eighth->noteId});
+        const QByteArray bytes = doc.smf().write();
+        const int baseIndex = doc.undoStack()->index();
+        pressResizeKey(roll, true);
+        DocNote note;
+        QVERIFY2(doc.findNote(eighth->noteId, &note) && note.duration == 4 * kCell,
+                 "the live 1/8 grid selection did not drive the lengthen step");
+        undoToFixture(doc, bytes, baseIndex);
+    }
+
+    // Clock terminal: one ticksPerClock boundary on the absolute clock
+    // lattice (6.2.7).
+    {
+        const uint32_t clockCell = doc.ticksPerClock();
+        const std::optional<DocNote> clocked = stageLatticeNote(check, clockCell, clockCell, base);
+        QVERIFY2(clocked.has_value(), "no free clock-lattice cell for the Clock seed");
+        const SongView::ViewState gridScenarioView = view.viewState();
+        const auto restoreGrid =
+            qScopeGuard([&view, gridScenarioView] { view.applyViewState(gridScenarioView); });
+        view.setGridSelection(songview::GridSelection::clock());
+        QCOMPARE(view.gridSelection(), songview::GridSelection::clock());
+        view.selectionModel().setNoteSelection({clocked->noteId});
+        const QByteArray bytes = doc.smf().write();
+        const int baseIndex = doc.undoStack()->index();
+        pressResizeKey(roll, true);
+        DocNote note;
+        QVERIFY2(doc.findNote(clocked->noteId, &note) && note.duration == 2 * uint64_t(clockCell),
+                 "the Clock grid did not lengthen by exactly one ticksPerClock boundary");
+        undoToFixture(doc, bytes, baseIndex);
+    }
+
+    // Signature boundary: the first press lands exactly on the signature
+    // boundary, the next press continues on the new segment's lattice
+    // (6.2.8). The boundary sits on the live lattice inside the working
+    // region with room for a note ending one tick before it: ticksPerClock
+    // is 1 at this division, so ticksPerClock()*4 cannot stage the
+    // thirteen-before/thirteen-after arithmetic the durations assert.
+    {
+        const QByteArray preSigBytes = doc.smf().write();
+        const int preSigIndex = doc.undoStack()->index();
+        const uint64_t signatureTick = base + 4 * kCell;
+        doc.setTimeSig(signatureTick, 3, 2);
+        QCoreApplication::processEvents(); // the timeline rebuilds the 3/4 segment
+        const std::optional<DocNote> boundaryNote = stageNote(check, signatureTick - 13, 12);
+        QVERIFY2(boundaryNote.has_value(), "no free key for the signature-boundary seed");
+        view.selectionModel().setNoteSelection({boundaryNote->noteId});
+        const QByteArray bytes = doc.smf().write();
+        const int baseIndex = doc.undoStack()->index();
+        pressResizeKey(roll, true);
+        DocNote note;
+        QVERIFY2(doc.findNote(boundaryNote->noteId, &note) && note.duration == 13,
+                 "the first press did not land exactly on the signature boundary");
+        pressResizeKey(roll, true);
+        QVERIFY2(doc.findNote(boundaryNote->noteId, &note) && note.duration == 19,
+                 "the next press did not follow the new segment's lattice");
+        undoToFixture(doc, bytes, baseIndex);
+        // setTimeSig and the boundary staging each pushed their own command
+        // after the pre-signature snapshot; remove both so later scenarios
+        // run under the opening 4/4 lattice again.
+        while (doc.undoStack()->index() > preSigIndex && doc.undoStack()->canUndo())
+            doc.undoStack()->undo();
+        QCoreApplication::processEvents(); // the timeline drops the undone 3/4 segment
+        QCOMPARE(doc.smf().write(), preSigBytes);
+    }
+
+    // Active time selection: the command is a terminal no-op (6.2.9). The
+    // selection model keeps the two selections exclusive in both directions:
+    // staging a time selection clears the note selection, and
+    // re-establishing a note selection clears the time selection — so the
+    // band is re-armed last and the no-op probe runs with notes empty.
+    {
+        view.selectionModel().setNoteSelection({seedNote.noteId});
+        songview::EditorSelectionModel::TimeSelection band;
+        band.startTick = base;
+        band.endTick = base + 4 * kCell;
+        band.scope = songview::EditorSelectionModel::TimeSelection::Tracks;
+        view.selectionModel().setTimeSelection(band);
+        QVERIFY2(view.selectionModel().timeSelection().active() &&
+                     view.selectionModel().noteSelection().empty(),
+                 "staging a time selection did not clear the note selection");
+        view.selectionModel().setNoteSelection({seedNote.noteId});
+        QVERIFY2(view.selectionModel().noteSelection() == std::vector<NoteId>{seedNote.noteId} &&
+                     !view.selectionModel().timeSelection().active(),
+                 "re-establishing the note selection did not clear the time selection");
+        view.selectionModel().setTimeSelection(band);
+        QVERIFY2(view.selectionModel().timeSelection().active() &&
+                     view.selectionModel().noteSelection().empty(),
+                 "re-arming the time selection did not clear the note selection");
+        const QByteArray bytes = doc.smf().write();
+        const int baseIndex = doc.undoStack()->index();
+        const int baseCount = doc.undoStack()->count();
+        pressResizeKey(roll, true);
+        pressResizeKey(roll, false);
+        DocNote note;
+        QVERIFY2(doc.findNote(seedNote.noteId, &note) && note.duration == 2 * kCell,
+                 "the time-selected note was resized anyway");
+        const songview::EditorSelectionModel::TimeSelection after =
+            view.selectionModel().timeSelection();
+        QVERIFY2(after.active() && after.startTick == band.startTick &&
+                     after.endTick == band.endTick,
+                 "the consumed resize command disturbed the time selection");
+        expectConsumedNoCommand(doc, bytes, baseIndex, baseCount);
+        view.selectionModel().clearTimeSelection();
+        undoToFixture(doc, bytes, baseIndex);
+    }
+
+    // Unterminated selected note: the whole command is a consumed no-op and
+    // the terminated peer stays byte-identical (6.2.10). The orphan note-on
+    // is staged through the raw event seam — inserts floor duration to one
+    // tick, so no staged note could fake an unterminated one.
+    {
+        const uint64_t orphanTick = base + 8 * kCell;
+        const std::optional<int> orphanKey = findFreeKey(check, orphanTick, 24);
+        QVERIFY2(orphanKey.has_value(), "no free key for the unterminated seed");
+        SmfEvent orphanOn;
+        orphanOn.tick = orphanTick;
+        orphanOn.status = uint8_t(0x90 | (doc.channelFor(track) & 0x0F));
+        orphanOn.data0 = uint8_t(*orphanKey);
+        orphanOn.data1 = 100;
+        doc.insertRawEvent(doc.smfTrackFor(track), orphanOn);
+        DocNote orphan;
+        QVERIFY2(doc.findNote(track, orphanTick, uint8_t(*orphanKey), &orphan) &&
+                     orphan.unterminated(),
+                 "the staged orphan note-on did not stay unterminated");
+        view.selectionModel().setNoteSelection({seedNote.noteId, orphan.noteId});
+        const QByteArray bytes = doc.smf().write();
+        const int baseIndex = doc.undoStack()->index();
+        const int baseCount = doc.undoStack()->count();
+        pressResizeKey(roll, true);
+        pressResizeKey(roll, false);
+        DocNote seedAfter;
+        DocNote orphanAfter;
+        const std::vector<NoteId> &kept = view.selectionModel().noteSelection();
+        const auto keeps = [&kept](NoteId id) {
+            return std::find(kept.cbegin(), kept.cend(), id) != kept.cend();
+        };
+        QVERIFY2(doc.findNote(seedNote.noteId, &seedAfter) && seedAfter.duration == 2 * kCell &&
+                     doc.findNote(orphan.noteId, &orphanAfter) && orphanAfter.unterminated() &&
+                     kept.size() == 2 && keeps(seedNote.noteId) && keeps(orphan.noteId),
+                 "an unterminated selected note did not consume the whole command");
+        expectConsumedNoCommand(doc, bytes, baseIndex, baseCount);
+    }
+    // Terminated zero-duration selected note: shortening is a consumed
+    // no-op and the whole selection stays byte-identical (thermoPhaseTwo
+    // B2). The zero note is staged through the raw event seam — addNote
+    // floors duration to one tick, so no staged note could fake a zero —
+    // as a same-tick note-on/off pair. Canonical placement pins a
+    // same-tick note-end ahead of its note-on, so the inserts land
+    // [off, on]; two same-tick modifyRawEvent edits keep vector position
+    // and flip the bytes to the file-faithful [on, off] order the
+    // lifecycle fixture preserves (note_lifecycle.mid tick 72). Without
+    // the non-positive shortening clamp this Shift+Left press would
+    // lengthen the selection by one tick (1 - minDuration with a zero
+    // shortest note); with it the shared delta is exactly zero.
+    {
+        const uint64_t zeroTick = base + 10 * kCell;
+        const std::optional<int> zeroKey = findFreeKey(check, zeroTick, 24);
+        QVERIFY2(zeroKey.has_value(), "no free key for the zero-duration seed");
+        const uint8_t channel = doc.channelFor(track);
+        SmfEvent zeroOn;
+        zeroOn.tick = zeroTick;
+        zeroOn.status = uint8_t(0x90 | (channel & 0x0F));
+        zeroOn.data0 = uint8_t(*zeroKey);
+        zeroOn.data1 = 100;
+        SmfEvent zeroOff;
+        zeroOff.tick = zeroTick;
+        zeroOff.status = uint8_t(0x80 | (channel & 0x0F));
+        zeroOff.data0 = uint8_t(*zeroKey);
+        zeroOff.data1 = 0;
+        const int smfTrack = doc.smfTrackFor(track);
+        doc.insertRawEvent(smfTrack, zeroOn);
+        doc.insertRawEvent(smfTrack, zeroOff);
+        std::optional<size_t> offIndex;
+        std::optional<size_t> onIndex;
+        for (size_t i = 0; i < doc.smf().tracks[size_t(smfTrack)].events.size(); ++i) {
+            const SmfEvent &event = doc.smf().tracks[size_t(smfTrack)].events[i];
+            if (event.tick != zeroTick || event.data0 != uint8_t(*zeroKey))
+                continue;
+            if (event.status == zeroOff.status && event.data1 == 0)
+                offIndex = i;
+            else if (event.status == zeroOn.status && event.data1 == 100)
+                onIndex = i;
+        }
+        QVERIFY2(offIndex.has_value() && onIndex.has_value(),
+                 "the staged zero-duration pair was not found");
+        doc.modifyRawEvent(smfTrack, *offIndex, zeroOn);
+        doc.modifyRawEvent(smfTrack, *onIndex, zeroOff);
+        DocNote zero;
+        QVERIFY2(doc.findNote(track, zeroTick, uint8_t(*zeroKey), &zero) && !zero.unterminated() &&
+                     zero.duration == 0,
+                 "the staged same-tick pair did not stay terminated duration0");
+        view.selectionModel().setNoteSelection({seedNote.noteId, zero.noteId});
+        const QByteArray bytes = doc.smf().write();
+        const int baseIndex = doc.undoStack()->index();
+        const int baseCount = doc.undoStack()->count();
+        pressResizeKey(roll, false);
+        DocNote seedAfter;
+        DocNote zeroAfter;
+        const std::vector<NoteId> &kept = view.selectionModel().noteSelection();
+        const auto keeps = [&kept](NoteId id) {
+            return std::find(kept.cbegin(), kept.cend(), id) != kept.cend();
+        };
+        QVERIFY2(doc.findNote(seedNote.noteId, &seedAfter) && seedAfter.duration == 2 * kCell &&
+                     sameButDuration(seedNote, seedAfter) &&
+                     doc.findNote(zero.noteId, &zeroAfter) && !zeroAfter.unterminated() &&
+                     zeroAfter.duration == 0 && sameButDuration(zero, zeroAfter) &&
+                     kept.size() == 2 && keeps(seedNote.noteId) && keeps(zero.noteId),
+                 "shortening a selection with a terminated zero-duration note was not a no-op");
+        expectConsumedNoCommand(doc, bytes, baseIndex, baseCount);
+    }
+
+    // uint32 duration ceiling: a lengthen that would push a terminated
+    // note's duration past 32 bits is consumed without touching the
+    // document or history (regression for the resize-boundary guard). The
+    // staged note exists only in memory; the SMF delta encoding would
+    // truncate it, and every comparison here is an in-memory write snapshot,
+    // so the staging stays faithful.
+    {
+        const std::optional<DocNote> ceiling =
+            stageNote(check, base + 6 * kCell, std::numeric_limits<uint32_t>::max());
+        QVERIFY2(ceiling.has_value(), "no free key for the duration-ceiling seed");
+        view.selectionModel().setNoteSelection({ceiling->noteId});
+        const QByteArray bytes = doc.smf().write();
+        const int baseIndex = doc.undoStack()->index();
+        const int baseCount = doc.undoStack()->count();
+        pressResizeKey(roll, true);
+        DocNote note;
+        QVERIFY2(doc.findNote(ceiling->noteId, &note) &&
+                     note.duration == std::numeric_limits<uint32_t>::max() &&
+                     view.selectionModel().noteSelection() == std::vector<NoteId>{ceiling->noteId},
+                 "lengthening past the uint32 duration ceiling was not rejected");
+        expectConsumedNoCommand(doc, bytes, baseIndex, baseCount);
+    }
+}
+
+// Keyboard merge behavior (plan 6.3): rapid Shift+Arrow presses — one
+// delivered as a production auto-repeat keystroke — form one undo entry;
+// a net-zero gesture leaves no entry; a selection change separates the
+// gestures instead of merging across targets.
+void PianoRollTest::keyboardResizeUndoMerge()
+{
+    PianoRollFixture &check = *m_fixture;
+    const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+    QVERIFY(seed.has_value());
+    const uint64_t kCell = seed->snapCell; // the fixture's canonical cell
+    SongDocument &doc = check.document();
+    SongView &view = check.view();
+    songview::TimelineInputItem &roll = check.rollInput();
+    QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason),
+             "Quick roll input could not be focused before the keyboard resize merge");
+    QTRY_VERIFY(roll.hasActiveFocus());
+    const uint64_t base = seed->cell.tick;
+    DocNote seedNote;
+    QVERIFY2(doc.findNote(check.track(), base, uint8_t(seed->cell.key), &seedNote) &&
+                 seedNote.duration == 2 * kCell,
+             "the merge seed note was not found");
+    // The peer joins before the merge baseline so only gesture presses move
+    // the undo counts below; selecting it later separates the gestures.
+    const std::optional<DocNote> peer = stageNote(check, base + 2 * kCell, uint32_t(2 * kCell));
+    QVERIFY2(peer.has_value(), "no free key for the merge peer seed");
+
+    view.selectionModel().setNoteSelection({seedNote.noteId});
+    const QByteArray bytes = doc.smf().write();
+    const int baseIndex = doc.undoStack()->index();
+    const int baseCount = doc.undoStack()->count();
+
+    // A two-Right/two-Left volley on one gesture lands net zero: every
+    // press still steps exactly one cell boundary en route, and the merged
+    // command turns obsolete and leaves no entry at all (6.3.5; the plan's
+    // smoke step 2, proven natively on this fixture).
+    DocNote note;
+    pressResizeKey(roll, true);
+    QVERIFY2(doc.findNote(seedNote.noteId, &note) && note.duration == 3 * kCell,
+             "the first lengthen press did not advance one cell");
+    pressResizeKey(roll, true);
+    QVERIFY2(doc.findNote(seedNote.noteId, &note) && note.duration == 4 * kCell,
+             "the second lengthen press did not advance one cell");
+    pressResizeKey(roll, false);
+    QVERIFY2(doc.findNote(seedNote.noteId, &note) && note.duration == 3 * kCell,
+             "the first shorten press did not return one cell");
+    pressResizeKey(roll, false);
+    QVERIFY2(doc.findNote(seedNote.noteId, &note) && note.duration == 2 * kCell,
+             "the net-zero gesture did not restore the seed duration");
+    expectConsumedNoCommand(doc, bytes, baseIndex, baseCount);
+
+    // Five lengthen presses — the middle one carrying the production
+    // auto-repeat flag through sendKeyStroke — merge into one entry
+    // (6.3.1-2).
+    pressResizeKey(roll, true);
+    pressResizeKey(roll, true);
+    sendKeyStroke(roll, Qt::Key_Right, Qt::ShiftModifier, true);
+    pressResizeKey(roll, true);
+    pressResizeKey(roll, true);
+    QVERIFY2(doc.findNote(seedNote.noteId, &note) && note.duration == 7 * kCell,
+             "five lengthen presses did not land five cells");
+    QCOMPARE(doc.undoStack()->count(), baseCount + 1);
+    QCOMPARE(doc.undoStack()->index(), baseIndex + 1);
+
+    // One undo restores the pre-sequence document (6.3.3) and redo restores
+    // the merged final duration (6.3.4).
+    doc.undoStack()->undo();
+    QCOMPARE(doc.smf().write(), bytes);
+    doc.undoStack()->redo();
+    QVERIFY2(doc.findNote(seedNote.noteId, &note) && note.duration == 7 * kCell,
+             "redo did not restore the merged final duration");
+
+    // Selecting a different note separates the gestures: the peer's press
+    // cannot merge into the seed's entry, and each gesture undoes alone
+    // (6.3.6).
+    view.selectionModel().setNoteSelection({peer->noteId});
+    pressResizeKey(roll, true);
+    QVERIFY2(doc.findNote(peer->noteId, &note) && note.duration == 3 * kCell,
+             "the peer lengthen press did not land one cell");
+    QCOMPARE(doc.undoStack()->count(), baseCount + 2);
+    QCOMPARE(doc.undoStack()->index(), baseIndex + 2);
+    doc.undoStack()->undo();
+    QVERIFY2(doc.findNote(peer->noteId, &note) && note.duration == 2 * kCell,
+             "the peer gesture did not undo alone");
+    doc.undoStack()->undo();
+    QCOMPARE(doc.smf().write(), bytes);
 }
 
 void PianoRollTest::timelineRulerScope()

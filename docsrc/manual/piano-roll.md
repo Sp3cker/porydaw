@@ -24,6 +24,33 @@ duplicate gestures. -->
 <!-- TODO: Grab an edge to lengthen/shorten; the effective (quantized)
 length shown inline — what the GBA will actually play. -->
 
+### Keyboard resize: Lengthen Note and Shorten Note
+
+Select notes and press `Shift+Right` to lengthen or `Shift+Left` to shorten.
+Each press moves every selected note's right edge by one boundary of the
+current editing grid — the same grid `Ctrl+1`/`Ctrl+2` control — read afresh
+at each press, so a grid change between presses changes the next step. Note
+starts, pitches, velocities, and selection membership never move.
+
+Both directions edit as one gesture: the grid boundary is measured from the
+selected note that ends furthest right, and every selected note receives that
+same duration delta, so differently sized notes keep their relative lengths
+and stop together. Shortening never takes a note below one tick; a selection
+containing an unterminated note (a note-on with no note-off, so no editable
+right edge) cannot be resized, and shortening is a no-op while a selected
+note already has zero length.
+
+The same commands sit in the top-level **Edit** menu as **Lengthen Note** /
+**Shorten Note**. Those menu items carry no shortcuts, so they never compete
+with the keys. Repeated presses — including held-key auto-repeat — merge
+into a single undo entry: one `Ctrl+Z` restores every length from before the
+sequence, and a net-zero sequence leaves no entry at all.
+
+The keys stay put elsewhere: text and value fields keep using Shift+Arrow
+for selection, the MIDI event list keeps its row navigation, and an active
+mouse gesture consumes the keys without mutating the song. The commands
+appear in no context menu.
+
 ## Selecting multiple notes
 
 <!-- TODO: Box select, Shift/Ctrl click to add, Ctrl+A, clear selection;

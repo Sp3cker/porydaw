@@ -981,7 +981,7 @@ void SongView::coordinateSelectionChange(
         changed(songview::EditorSelectionModel::SelectionChange::PrimaryTrack);
     const bool trackScopeChanged =
         changed(songview::EditorSelectionModel::SelectionChange::TrackScope);
-    const bool noteSelectionChanged =
+    const bool noteSelectionTransitioned =
         changed(songview::EditorSelectionModel::SelectionChange::NoteSelection);
     const bool timeSelectionChanged =
         changed(songview::EditorSelectionModel::SelectionChange::TimeSelection);
@@ -1015,9 +1015,10 @@ void SongView::coordinateSelectionChange(
         syncTimelineIndicators();
         timelineViewsRefreshed = true;
     }
-    if (noteSelectionChanged) {
+    if (noteSelectionTransitioned) {
         requestRoll(PianoRollQuickDirty::NoteBordersAndSelection);
         refreshVelocityPage();
+        emit noteSelectionChanged(!m_selectionModel.noteSelection().empty());
     }
     if (timeSelectionChanged) {
         if (!timelineViewsRefreshed) {

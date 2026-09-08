@@ -212,7 +212,17 @@ class SongDocument : public QObject
     bool moveNotesToPitches(const std::vector<DocNote> &notes,
                             const std::vector<uint8_t> &destPitches, int64_t dTick,
                             bool mergeable = false);
-    void resizeNotes(const std::vector<DocNote> &notes, int64_t dDuration);
+    // Stretch each note's right edge by dDuration ticks (start, key,
+    // velocity, channel and NoteId preserved; duration floored at one tick;
+    // same-key overlap resolution trims stationary neighbors). mergeable
+    // marks a keyboard lengthen/shorten press: consecutive mergeable
+    // resizes of the same notes collapse into one undo command that
+    // re-lands from the gesture's accumulated delta, so a neighbor trimmed
+    // by an intermediate duration comes back (only the final duration
+    // trims). An inverse merged press removes that command, but the public
+    // call still publishes the current-state mutation. Mouse gestures stay
+    // one command per drag (the mergeable default).
+    void resizeNotes(const std::vector<DocNote> &notes, int64_t dDuration, bool mergeable = false);
     // Left-edge resize: move the note-on by dTick with the note-off pinned
     // (tick and duration adjust together, at least 1 tick of note remains).
     void resizeNotesLeft(const std::vector<DocNote> &notes, int64_t dTick);
@@ -444,6 +454,7 @@ class SongDocument : public QObject
     friend class MoveNotesCommand;
     friend class MixedEditCommand;
     friend class MoveNotesToPitchesCommand;
+    friend class ResizeNotesCommand;
 
     struct EditOp {
         enum Type {
@@ -542,6 +553,10 @@ class SongDocument : public QObject
     std::vector<EditOp> buildMoveNotesToPitchesOps(const std::vector<DocNote> &notes,
                                                    const std::vector<uint8_t> &destPitches,
                                                    int64_t dTick) const;
+    // Note-resize op builder, split out so ResizeNotesCommand can rebuild
+    // the stretch with an accumulated delta when merging keyboard presses.
+    std::vector<EditOp> buildResizeNotesOps(const std::vector<DocNote> &notes,
+                                            int64_t dDuration) const;
     // Replace one event: modify in place when the tick is unchanged (the
     // event keeps its position within its tick group — mid2agb stable-sorts,
     // so same-tick order is significant), else remove + re-insert so ticks

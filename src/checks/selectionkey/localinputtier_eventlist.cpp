@@ -11,6 +11,7 @@
 #include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/quick/timelinequickview.h"
 
+#include <QQuickItem>
 #include <QQuickWindow>
 
 #include <QtTest>
@@ -92,6 +93,25 @@ void SelectionLocalInputTierTest::eventListKeepsRowLocalKeys()
     selectionkey::settle();
     QCOMPARE(controller->currentRow(), 0);
 
+    // Plain Left/Right stay the page's own column navigation: the focused
+    // input declines them, so the page's window Shortcuts move the current
+    // column within the table.
+    QQuickItem *const root = quick->rootObject();
+    QQuickItem *const page =
+        root ? root->findChild<QQuickItem *>(QStringLiteral("eventListPage")) : nullptr;
+    QVERIFY2(page, "the event list page item is missing");
+    const int columnCount = page->property("columnCount").toInt();
+    const int columnBefore = page->property("currentColumn").toInt();
+    QVERIFY2(columnCount >= 2 && columnBefore >= 0 && columnBefore < columnCount,
+             "the event list page did not report a navigable column geometry");
+    QTest::keyClick(quickWindow, Qt::Key_Right);
+    selectionkey::settle();
+    QCOMPARE(page->property("currentColumn").toInt(),
+             std::clamp(columnBefore + 1, 0, columnCount - 1));
+    QTest::keyClick(quickWindow, Qt::Key_Left);
+    selectionkey::settle();
+    QCOMPARE(page->property("currentColumn").toInt(), columnBefore);
+
     // Select All stays local to the event rows.
     QTest::keyClick(quickWindow, Qt::Key_A, Qt::ControlModifier);
     selectionkey::settle();
@@ -124,13 +144,39 @@ void SelectionLocalInputTierTest::eventListKeepsRowLocalKeys()
     selectionkey::settle();
     QCOMPARE(m_counts.copy, copyBefore + 1);
 
-    // Delete removes the selected rows; a note that is selected in the song
-    // but whose row is not selected must survive untouched.
+    // The new Shift+Arrow resize chords own note editing from the timeline,
+    // but the event list keeps them away from the song: a note selected in
+    // the song keeps its exact shape through both deliveries, and its
+    // selection survives.
     const std::optional<NoteRef> protectedNote = addNote(kTrack, kProtectedTick, 60, 48);
     QVERIFY2(protectedNote.has_value(),
              "the reserved tick-6720 protected note could not be inserted and resolved");
     selectionkey::settle();
     const uint64_t protectedEndTick = protectedNote->note.tick + protectedNote->note.duration;
+    const std::optional<DocNote> noteBeforeResize =
+        selectionkey::noteById(document, protectedNote->id);
+    const QByteArray songBeforeResize = document.smf().write();
+    view.selectionModel().setNoteSelection({protectedNote->id});
+    selectionkey::settle();
+    const auto lengthen = selectionkey::firstBinding(QStringLiteral("roll.lengthen_note"));
+    const auto shorten = selectionkey::firstBinding(QStringLiteral("roll.shorten_note"));
+    QVERIFY2(lengthen.has_value() && shorten.has_value(),
+             "Lengthen/Shorten Note have no single-key bindings");
+    QVERIFY2(focusInput(), "the event list input did not take focus for the resize chords");
+    QTest::keyClick(quickWindow, lengthen->key(), lengthen->keyboardModifiers());
+    selectionkey::settle();
+    QTest::keyClick(quickWindow, shorten->key(), shorten->keyboardModifiers());
+    selectionkey::settle();
+    const std::optional<DocNote> noteAfterResize =
+        selectionkey::noteById(document, protectedNote->id);
+    QVERIFY2(document.smf().write() == songBeforeResize && noteBeforeResize.has_value() &&
+                 noteAfterResize.has_value() && noteAfterResize->tick == noteBeforeResize->tick &&
+                 noteAfterResize->duration == noteBeforeResize->duration &&
+                 view.selectionModel().noteSelection() == std::vector<NoteId>{protectedNote->id},
+             "event-list Shift+Arrow resized, moved, or deselected the song note");
+
+    // Delete removes the selected rows; a note that is selected in the song
+    // but whose row is not selected must survive untouched.
     int protectedRow = -1;
     bool duplicateProtectedTick = false;
     for (int row = 0; row < model->rowCount(); ++row) {

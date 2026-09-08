@@ -114,6 +114,7 @@ class EditCheckTest final : public QObject
     void documentCrossingIdentities();
     void documentPublicationNetZero();
     void documentMergedOverlapPublication();
+    void resizeNotesMergeableHistory();
     void timeRangeNoOps();
     void timeRangeInsertScopeAndSplit();
     void timeRangeUnterminated();

@@ -1,6 +1,6 @@
 # Selection-driven keyboard routing
 
-Scope: shared keyboard routing only. Keyboard resizing and contextual Duplicate are separate features; the existing time-range Duplicate operation remains unchanged.
+Scope: shared keyboard routing only. Keyboard resizing is implemented as the separate keyboard note-length feature (`docs/keyboard-note-resize-plan.md`); contextual Duplicate remains a separate deferred feature, and the existing time-range Duplicate operation is unchanged.
 
 ## Goal and user contract
 
@@ -47,11 +47,11 @@ Precedence is protected local input, then active-gesture ownership, then shared 
 | No selection | No mutation of unselected notes | No destructive selection operation; qualified hover Delete below | Clear transient hover as appropriate; no song mutation |
 | Event-list table owns input | Row navigation/reorder remains local | Row Delete remains local; no new note-edit fallback | Preserve table-local behavior |
 
-The following future-feature rows extend, rather than override, that local-input and gesture precedence:
+The following feature rows extend, rather than override, that local-input and gesture precedence. The Shift+Left/Right row is implemented; the Cmd+D rows remain future work:
 
 | Command | Eligible context and selection | Outcome |
 |---|---|---|
-| Shift+Left/Right | Selected notes, including incidental drawer focus | Shorten/lengthen those notes; detailed resize rules remain a later-feature decision |
+| Shift+Left/Right | Selected notes, including incidental drawer focus | Shorten/lengthen those notes. Implemented: one live-grid boundary per press delivered as one shared delta anchored at the maximum end; one-tick floor; whole-selection no-op for an unterminated note; Edit-menu adapters, no context-menu entries |
 | Cmd+D | Note editing with selected notes | Duplicate notes; placement remains a later-feature decision |
 | Cmd+D | Automation lane with a scoped time selection | Duplicate the entire selected interval into the following interval, preserving node values, relative timing and empty gaps within that scope |
 | Cmd+D | Track-scoped time editing with a selected interval | Existing scoped time duplication |
@@ -59,9 +59,10 @@ The following future-feature rows extend, rather than override, that local-input
 
 ### Deferred feature decisions
 
-Before implementing keyboard resizing or contextual Duplicate, resolve these separately:
+Keyboard resize decisions are settled and implemented: one live-grid boundary per press with fixed starts, one shared delta anchored at the maximum selected end, a one-tick floor clamped against the shortest selected note, whole-selection no-ops for unterminated notes and for shortening a zero-duration terminated note, and rejection of steps outside `uint32_t` duration representability (no arbitrary cap). See `docs/keyboard-note-resize-plan.md`.
 
-- Resize: increment, minimum duration, anchoring, and mixed-length selection behavior.
+Before implementing contextual Duplicate, resolve these separately:
+
 - Note duplication: placement and post-duplicate selection.
 - Scoped time duplication: destination collisions, insertion versus overlay, shifting later content, post-duplicate selection, and empty-span behavior, grounded in the existing operation.
 - Contextual Duplicate: the precise mapping when incidental chrome has focus, when notes remain selected but an automation canvas is focused, and when a menu invokes Duplicate. The user has established that context matters, but not every context/selection combination. Do not invent persistent focus memory or infer that notes always win. This decision is required before adding contextual Duplicate, not before preserving existing range duplication during the routing refactor.
@@ -82,7 +83,7 @@ Copy/Cut/Delete agree on the selected-object target across the timeline editor. 
 
 ### Motivating commands: keyboard resize and note duplication
 
-The user identified two concrete reasons for this work: **Shift+Left/Right to shorten/lengthen selected notes**, and **Cmd+D to duplicate selected notes or a scoped time selection, including automation**. This routing plan is their prerequisite, not an assertion that these features have been implemented or fully specified.
+The user identified two concrete reasons for this work: **Shift+Left/Right to shorten/lengthen selected notes**, and **Cmd+D to duplicate selected notes or a scoped time selection, including automation**. This routing plan is their prerequisite. Keyboard resizing is now implemented as the keyboard note-length feature (`docs/keyboard-note-resize-plan.md`); contextual Duplicate is not implemented, and its remaining decisions stay deferred.
 
 Resize uses the selected-note target after incidental drawer/property interaction. Duplicate is contextual as specified below; do not impose the note-arrow targeting rule on every command. Both preserve text/local-control capture, execute once, and support undo. Adding them must require a binding plus semantic operations, not another focus workaround or a second dispatcher. Shift+Left/Right in text input continues to select text.
 
@@ -90,9 +91,9 @@ Resize uses the selected-note target after incidental drawer/property interactio
 
 **Automation duplication uses the selected time span, not the selected nodes' bounding extent.** For a selection `[start, end)`, duplicate contained automation events at `tick + (end - start)`, preserving values and each event's offset within the span. Selecting measures 1–4 (start of measure 1 through start of measure 5) duplicates the pattern into measures 5–8, including its leading/trailing empty time. Do not normalize the first node to the destination start or derive the repeat length from the first/last node. Existing lane-scoped time selection is the appropriate representation; no independent point-selection store or separate node-only duplication mode is required. Lane scope limits affected content; this does not imply duplicating all tracks.
 
-The later feature implementation must pin resize increment, minimum length, fixed-start versus other anchoring, and mixed-length selection behavior using existing resize conventions. Note duplication placement and all post-duplicate selection behavior likewise need existing conventions. Automation span length and relative event placement are fixed above; reconcile destination collisions, insertion versus overlay, and any shifting of later content with existing time-duplication semantics rather than inventing them here.
+Keyboard resize has pinned and implemented its increment, minimum length, fixed-start anchoring, and mixed-length selection behavior through `PianoRoll::resizeSelectedNotes` behind the guarded `SongView::resizeSelectedNotes` seam. Note duplication placement and all post-duplicate selection behavior still need existing conventions when Duplicate lands. Automation span length and relative event placement are fixed above; reconcile destination collisions, insertion versus overlay, and any shifting of later content with existing time-duplication semantics rather than inventing them here.
 
-Feature acceptance sequences: selected notes plus incidental drawer interaction → Shift+Right/Left changes only their lengths; note-editing context plus selected notes → Cmd+D duplicates notes once; automation context plus a four-measure lane time selection → Cmd+D duplicates that span into the next four measures, preserving relative node positions and leading/trailing gaps; track time selection → existing scoped time duplication. Cover a first node after the selection start and a last node before its end to catch accidental node-bounds duplication. Verify scope, exactly-once execution, undo and post-operation selection. Repeat with text input focused to prove no unintended song mutation. These checks become required when implementing the commands; they are not passing checks or extra feature scope claimed by routing-only work.
+Feature acceptance sequences: selected notes plus incidental drawer interaction → Shift+Right/Left changes only their lengths; note-editing context plus selected notes → Cmd+D duplicates notes once; automation context plus a four-measure lane time selection → Cmd+D duplicates that span into the next four measures, preserving relative node positions and leading/trailing gaps; track time selection → existing scoped time duplication. Cover a first node after the selection start and a last node before its end to catch accidental node-bounds duplication. Verify scope, exactly-once execution, undo and post-operation selection. Repeat with text input focused to prove no unintended song mutation. The resize sequence is covered by the permanent checks specified in `docs/keyboard-note-resize-plan.md`, whose final full-gate verification is still pending. The Cmd+D sequences become required when that command is implemented; they are not passing checks or extra feature scope claimed by routing-only work.
 
 ### Visual feedback
 
@@ -125,13 +126,13 @@ Future agents learn from executable examples more reliably than a plan. This cut
 2. **Remove competing shared-command implementations.** Delete migrated matching/selection branches from band handlers, redundant paste forwarding and stale QWidget-propagation comments. Keep genuinely local gesture/text/control behavior, with a short comment distinguishing it from song commands. A future source search for an existing command should reveal its definition and authoritative dispatch, not several independent edit implementations.
 3. **Keep the feature discoverable.** Command policy lives in the cohesive `src/ui/songview/editkeyrouting.cpp` module with a small declared interface; note/range mutations stay in their existing feature files. Do not create one tiny file per command or a plugin/provider framework.
 4. **Use honest names.** The semantic operation is `Duplicate Selection`, not `Duplicate Time` once it handles notes too. Preserve persisted custom bindings through an explicit settings migration when an identifier changes, rather than propagating a misleading runtime name or keeping a permanent alias path. UI grouping is not execution scope.
-5. **Provide real reference examples.** Existing note nudge demonstrates selected-note targeting independent of input surface. Existing time duplication demonstrates target-specific editing. Copy demonstrates native action activation entering the same semantic policy. After the later features land, Resize and Duplicate Selection become examples of extending the pattern, not exceptions.
+5. **Provide real reference examples.** Existing note nudge demonstrates selected-note targeting independent of input surface. Existing time duplication demonstrates target-specific editing. Copy demonstrates native action activation entering the same semantic policy. Resize has landed as an example of extending the pattern; Duplicate Selection should join it, not sit beside it as an exception, when implemented.
 6. **Keep tests discoverable by behavior.** Cross-focus checks should read as user sequences (select notes → click drawer → nudge; rename → key → text changes only). Mutation checks separately cover edit bounds and undo. Do not add source-text assertions that enforce where code is written.
 7. **Document only the seam.** During implementation, add a brief ownership comment at the common entry and a short pointer in the existing agent guide describing where to add a song editing command and which native regression covers it. Name real final symbols, not planned ones. Do not duplicate the full policy in several docs; the executable examples remain authoritative.
 
 **Future command recipe:** add/reuse its existing-registry binding; add one case in the common command policy; implement/reuse its semantic operation; prove the operation's observable contract and representative input delivery. Update effective activation/conflict metadata when needed. A new command must not need edits to AutomationCanvas, VelocityArea, VoiceChangeArea, QML input adapters, or focus restoration merely to work from those surfaces.
 
-**Extension acceptance:** perform a change-impact walkthrough using Shift+Left/Right resize and Cmd+D duplication of notes and scoped time selections, including automation spans. Without implementing those features prematurely, identify the exact binding, context/selection resolution and mutation seams they would touch. If adding a command requires a new event filter, per-drawer key forwarding, text-widget whitelist, or focus-restoration patch, the routing cutover is incomplete. Reuse existing lane-scoped range duplication where it meets the contract; do not add a node-only duplication operation. This is an ownership review, not a reason to add a generic abstraction or fake test command.
+**Extension acceptance:** the routing cutover's change-impact walkthrough used Shift+Left/Right resize and Cmd+D duplication of notes and scoped time selections, including automation spans, to identify the exact binding, context/selection resolution and mutation seams. Resize has since landed through exactly those seams. The Cmd+D portion stays open: when it lands, adding it must still require no new event filter, per-drawer key forwarding, text-widget whitelist, or focus-restoration patch, or the routing cutover is incomplete. Reuse existing lane-scoped range duplication where it meets the contract; do not add a node-only duplication operation. This is an ownership review, not a reason to add a generic abstraction or fake test command.
 
 ### Input integration
 

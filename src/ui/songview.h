@@ -478,6 +478,12 @@ class SongView : public QWidget
     // beside the dispatch): an active time selection owns the command;
     // otherwise the selected notes are copied.
     void copySelection();
+    // Canonical Lengthen/Shorten Note command (defined in
+    // src/ui/songview/editkeyrouting.cpp beside the dispatch): an active
+    // pointer gesture or time selection owns the command, and without a
+    // document or roll it is unavailable; otherwise the selected notes'
+    // right edges move by one editing-grid boundary.
+    void resizeSelectedNotes(bool longer);
     // Range operations on the time selection. Copy captures notes plus every
     // editable lane (including voice changes) of the scoped tracks — or just
     // the scoped lanes — with ticks relative to the range start. Paste
@@ -632,6 +638,9 @@ class SongView : public QWidget
     void muteMaskChanged(uint32_t mask);
     void soloMaskChanged(uint32_t mask);
     void selectedTrackChanged(int track);
+    // Note selection changed in this view; hasSelection reports whether any
+    // note is currently selected (Edit-menu enablement consumes this).
+    void noteSelectionChanged(bool hasSelection);
     void scaleHighlightChanged();
     void scaleFoldChanged();
     void scaleRootChanged();

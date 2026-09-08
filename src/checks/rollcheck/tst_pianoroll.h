@@ -87,6 +87,8 @@ class PianoRollTest final : public QObject
     void resizeAbutting();
     void keyboardTranspose();
     void keyboardKeepVisible();
+    void keyboardResize();
+    void keyboardResizeUndoMerge();
     void timelineRulerScope();
     void timelineOtherEventsStrip();
     void timelinePartialSelectionRepaint();

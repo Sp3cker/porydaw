@@ -41,6 +41,8 @@ enum class EditCommand {
     NudgeLeft,
     NudgeRight,
     MuteTracks,
+    LengthenNote,
+    ShortenNote,
     SoloTracks,
     GridNarrow,
     GridWiden,
@@ -70,6 +72,8 @@ constexpr SharedBinding kSharedBindings[] = {
     {"roll.transpose_down_octave", EditCommand::TransposeDownOctave},
     {"roll.nudge_left", EditCommand::NudgeLeft},
     {"roll.nudge_right", EditCommand::NudgeRight},
+    {"roll.lengthen_note", EditCommand::LengthenNote},
+    {"roll.shorten_note", EditCommand::ShortenNote},
     {"roll.mute_tracks", EditCommand::MuteTracks},
     {"roll.solo_tracks", EditCommand::SoloTracks},
     {"roll.grid_narrow", EditCommand::GridNarrow},
@@ -137,6 +141,8 @@ SelectionTarget resolveSelectionTarget(EditCommand command, bool timeSelectionAc
 
     case EditCommand::SelectAll:
     case EditCommand::PitchBend:
+    case EditCommand::LengthenNote:
+    case EditCommand::ShortenNote:
         return origin == SongView::EditKeyOrigin::Timeline ? SelectionTarget::Notes
                                                            : SelectionTarget::None;
 
@@ -301,6 +307,11 @@ bool SongView::handleEditKey(const songview::TimelineKeyInput &input, EditKeyOri
             m_roll->nudgeSelectedNotes(command == EditCommand::NudgeRight);
             return true;
 
+        case EditCommand::LengthenNote:
+        case EditCommand::ShortenNote:
+            resizeSelectedNotes(command == EditCommand::LengthenNote);
+            return true;
+
         default:
             return false;
         }
@@ -328,6 +339,26 @@ void SongView::copySelection()
         copyTimeSelection();
     else
         m_roll->copySelectedNotes();
+}
+
+// Canonical Lengthen/Shorten Note command, shared by the key route and the
+// MainWindow Edit action. Availability is guarded here so both entries share
+// one seam: an unavailable document or roll, a live pointer gesture, or an
+// active time selection is a terminal no-op — grid arithmetic and history
+// stay in pianoroll_commands.cpp.
+void SongView::resizeSelectedNotes(bool longer)
+{
+    if (!m_document || !m_roll)
+        return;
+    // Window-action entry shares the gesture rule with the key path: a
+    // live pointer gesture blocks competing commands — no focus heuristics.
+    if (timelinePointerGestureActive())
+        return;
+    // A time selection owns the timeline; resizing hidden/unselected notes
+    // or stretching the range is not this command's job.
+    if (m_selectionModel.timeSelection().active())
+        return;
+    m_roll->resizeSelectedNotes(longer);
 }
 
 void SongView::setSharedShortcutOwner(SharedShortcutOwner owner)

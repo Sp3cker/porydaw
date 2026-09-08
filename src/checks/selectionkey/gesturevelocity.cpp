@@ -181,7 +181,9 @@ void SelectionKeyGestureTest::overlapNodeTargetsVisibleNode()
 void SelectionKeyGestureTest::velocityStemDragGuardsEdits()
 {
     const auto deleteKey = selectionkey::firstBinding(QStringLiteral("roll.delete"));
-    QVERIFY2(deleteKey.has_value(), "roll.delete has no single-key binding");
+    const auto lengthenKey = selectionkey::firstBinding(QStringLiteral("roll.lengthen_note"));
+    QVERIFY2(deleteKey.has_value() && lengthenKey.has_value(),
+             "roll.delete and roll.lengthen_note have no single-key binding");
     if (!stageWorld("velocity-stem", EditorDrawerPage::Velocity, kVelocitySectionHeight))
         return;
     if (!stageVelocitySurface())
@@ -214,6 +216,13 @@ void SelectionKeyGestureTest::velocityStemDragGuardsEdits()
                  document().revision() == revisionBefore &&
                  document().undoStack()->count() == undoDepthBefore,
              "an edit key mutated selection or notes during a live velocity gesture");
+    QVERIFY2(
+        selectionkey::deliverKey(window(), lengthenKey->key(), lengthenKey->keyboardModifiers()) &&
+            view().userGestureActive() && document().smf().write() == velocityBeforeGesture &&
+            noteSelectionIs({mWorld->notes[0], mWorld->notes[2]}) &&
+            document().revision() == revisionBefore &&
+            document().undoStack()->count() == undoDepthBefore,
+        "a Shift resize did not stay a consumed no-op during the live velocity drag");
     QTest::keyClick(window(), Qt::Key_Escape);
     mouseRelease(Qt::LeftButton, earlierDrag);
     QVERIFY2(!view().userGestureActive() && noteSelectionIs({mWorld->notes[0], mWorld->notes[2]}) &&

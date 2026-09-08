@@ -52,6 +52,21 @@ void KeymapCheckTest::shippedTable()
                         .conflicts(command.id, keymap::Context::Global, sequence)
                         .isEmpty());
     }
+    // Note-length editing rides the shared timeline seam beside the nudges:
+    // Shift+Right lengthens, Shift+Left shortens. The conflict loop above
+    // already proves neither default collides with any other command.
+    const keymap::CommandInfo lengthenNote =
+        keymap::Registry::instance().command(QStringLiteral("roll.lengthen_note"));
+    QCOMPARE(int(lengthenNote.context), int(keymap::Context::Timeline));
+    QCOMPARE(lengthenNote.category, QStringLiteral("Piano Roll"));
+    QCOMPARE(lengthenNote.defaults,
+             QList<QKeySequence>{QKeySequence(QStringLiteral("Shift+Right"))});
+
+    const keymap::CommandInfo shortenNote =
+        keymap::Registry::instance().command(QStringLiteral("roll.shorten_note"));
+    QCOMPARE(int(shortenNote.context), int(keymap::Context::Timeline));
+    QCOMPARE(shortenNote.category, QStringLiteral("Piano Roll"));
+    QCOMPARE(shortenNote.defaults, QList<QKeySequence>{QKeySequence(QStringLiteral("Shift+Left"))});
 }
 
 void KeymapCheckTest::preferencesDefaultBinding()
@@ -105,6 +120,16 @@ void KeymapCheckTest::defaultMatching_data()
                                  << true;
     QTest::newRow("duplicate-time") << QStringLiteral("roll.duplicate_time") << int(Qt::Key_D)
                                     << Qt::KeyboardModifiers(Qt::ControlModifier) << true;
+    QTest::newRow("lengthen-note") << QStringLiteral("roll.lengthen_note") << int(Qt::Key_Right)
+                                   << Qt::KeyboardModifiers(Qt::ShiftModifier) << true;
+    QTest::newRow("plain-right-not-lengthen")
+        << QStringLiteral("roll.lengthen_note") << int(Qt::Key_Right)
+        << Qt::KeyboardModifiers(Qt::NoModifier) << false;
+    QTest::newRow("shorten-note") << QStringLiteral("roll.shorten_note") << int(Qt::Key_Left)
+                                  << Qt::KeyboardModifiers(Qt::ShiftModifier) << true;
+    QTest::newRow("plain-left-not-shorten")
+        << QStringLiteral("roll.shorten_note") << int(Qt::Key_Left)
+        << Qt::KeyboardModifiers(Qt::NoModifier) << false;
 }
 
 void KeymapCheckTest::defaultMatching()

@@ -1,9 +1,9 @@
 // Scrollbar-thumb guard matrix for the selection-keyboard-routing Qt Test.
 // Each data row is one registered thumb (the root roll bar, the nested
 // drawer automation bar) driven end to end: the live native MouseArea grab
-// blocks the shared Delete, Escape releases the grab, held-button movement
-// stays inert, and a physically released then newly pressed drag works
-// before the same binding deletes again.
+// blocks the shared Delete and Shift resize, Escape releases the grab,
+// held-button movement stays inert, and a physically released then newly
+// pressed drag works before the same binding deletes again.
 
 #include "checks/selectionkey/gesturecheck.h"
 
@@ -41,7 +41,9 @@ void SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands_data()
 void SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands()
 {
     const auto deleteKey = selectionkey::firstBinding(QStringLiteral("roll.delete"));
-    QVERIFY2(deleteKey.has_value(), "roll.delete has no single-key binding");
+    const auto lengthenKey = selectionkey::firstBinding(QStringLiteral("roll.lengthen_note"));
+    QVERIFY2(deleteKey.has_value() && lengthenKey.has_value(),
+             "roll.delete and roll.lengthen_note have no single-key bindings");
     if (!stageWorld("scrollbar-gesture", EditorDrawerPage::Automations,
                     kScrollbarAutomationSectionHeight))
         return;
@@ -104,6 +106,12 @@ void SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands()
                  document().revision() == revisionBefore &&
                  document().undoStack()->count() == undoDepthBefore,
              "the registered live gesture did not block the shared Delete");
+    QVERIFY2(
+        selectionkey::deliverKey(window(), lengthenKey->key(), lengthenKey->keyboardModifiers()) &&
+            view().userGestureActive() && document().smf().write() == beforeDrag &&
+            noteSelectionIs({victim}) && document().revision() == revisionBefore &&
+            document().undoStack()->count() == undoDepthBefore,
+        "note resize escaped the live scrollbar-thumb gesture");
     selectionkey::deliverKey(window(), Qt::Key_Escape);
     QVERIFY2(!view().userGestureActive(),
              "Escape did not cancel the registered thumb drag by releasing its "

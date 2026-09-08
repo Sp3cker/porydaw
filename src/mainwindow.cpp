@@ -276,6 +276,48 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     });
     editMenu->addAction(m_copyAction);
     m_copyAction->setEnabled(false);
+    // Lengthen/shorten move the selected notes' right edges by one editing
+    // grid boundary. Invocation adapters only: they call the selected view's
+    // guarded SongView::resizeSelectedNotes seam and duplicate no grid or
+    // document logic. No shortcut is attached — Shift+Left/Right stay owned
+    // by the roll's key routing, and an active shortcut would let Cocoa
+    // install a preempting NSMenuItem key equivalent.
+    m_lengthenNoteAction = new QAction(tr("&Lengthen Note"), this);
+    m_lengthenNoteAction->setObjectName(QStringLiteral("lengthenNoteWindowAction"));
+    connect(m_lengthenNoteAction, &QAction::triggered, this, [this] {
+        if (m_selectedTab)
+            m_selectedTab->view().resizeSelectedNotes(true);
+    });
+    editMenu->addAction(m_lengthenNoteAction);
+    m_lengthenNoteAction->setEnabled(false);
+    m_shortenNoteAction = new QAction(tr("Sho&rten Note"), this);
+    m_shortenNoteAction->setObjectName(QStringLiteral("shortenNoteWindowAction"));
+    connect(m_shortenNoteAction, &QAction::triggered, this, [this] {
+        if (m_selectedTab)
+            m_selectedTab->view().resizeSelectedNotes(false);
+    });
+    editMenu->addAction(m_shortenNoteAction);
+    m_shortenNoteAction->setEnabled(false);
+    // A widget menu bar has no shortcut to render, so the configurable
+    // binding rides in the title after a tab, refreshed on rebind. A native
+    // menu bar keeps the bare title: Cocoa prints a tab suffix as literal
+    // text, and the Keyboard Shortcuts dialog is the binding presentation
+    // there.
+    if (!menuBar()->isNativeMenuBar()) {
+        auto syncBindingLabels = [this] {
+            const auto labelFor = [this](QAction *action, const QString &id) {
+                const QString title = action->text().section(u'\t', 0, 0);
+                const QKeySequence binding = keymap::Registry::instance().bindings(id).value(0);
+                action->setText(binding.isEmpty()
+                                    ? title
+                                    : title + u'\t' + binding.toString(QKeySequence::NativeText));
+            };
+            labelFor(m_lengthenNoteAction, QStringLiteral("roll.lengthen_note"));
+            labelFor(m_shortenNoteAction, QStringLiteral("roll.shorten_note"));
+        };
+        syncBindingLabels();
+        connect(&keys, &keymap::Registry::bindingsChanged, this, syncBindingLabels);
+    }
     // S solos at window scope so it works with focus anywhere outside text
     // entry; the roll surface defers to this owner (see handleEditKey) so a
     // focused roll never toggles twice.
@@ -734,6 +776,16 @@ void MainWindow::onSelectedTabChanged(SongTab *tab)
     if (m_audioOk)
         m_audio.stop();
     m_selectedTab = tab;
+    // The note-length commands enable from the selected view's live note
+    // selection: replace the retained noteSelectionChanged connection with
+    // the incoming tab's view, then recompute chrome from its current state
+    // (every exit path here ends in updateChrome).
+    disconnect(m_noteSelectionConnection);
+    if (tab)
+        m_noteSelectionConnection =
+            connect(&tab->view(), &SongView::noteSelectionChanged, this, &MainWindow::updateChrome);
+    else
+        m_noteSelectionConnection = {};
 
     {
         // Reflect the incoming tab's roll/event-list state without the
@@ -972,6 +1024,11 @@ void MainWindow::updateChrome()
     m_exportWavAction->setEnabled(ready && m_audioOk && m_audio.songLoaded());
     m_settingsAction->setEnabled(ready);
     m_copyAction->setEnabled(ready);
+    // Live queries only: no cached selection, no focus tracking. The
+    // guarded seam re-checks gesture/time-selection state at invocation.
+    const bool noteSelection = ready && !tab->view().selectionModel().noteSelection().empty();
+    m_lengthenNoteAction->setEnabled(noteSelection);
+    m_shortenNoteAction->setEnabled(noteSelection);
     m_soloAction->setEnabled(ready);
     m_insertTimeAction->setEnabled(ready);
     m_registerAction->setEnabled(ready && selectedSongRegistrationPending());

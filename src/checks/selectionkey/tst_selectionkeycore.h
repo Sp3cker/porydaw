@@ -44,6 +44,18 @@ class SelectionKeyCoreTest final : public QObject
     void arrowsMoveSelectedNotesAcrossBands_data();
     void arrowsMoveSelectedNotesAcrossBands();
 
+    // Plan scenario resize half: Shift+Left/Right route the selected notes'
+    // right edges on every keyboard-eligible band — the 5-band x 2-direction
+    // matrix as named data rows. The verdicts are document deltas only: the
+    // outcome must be independent of incidental drawer focus.
+    void arrowsResizeSelectedNotesAcrossBands_data();
+    void arrowsResizeSelectedNotesAcrossBands();
+
+    // Routing resolves the live registry: under an explicit OverrideSnapshot
+    // scope a rebound Lengthen Note chord resizes by one grid step while the
+    // retired default chord mutates nothing.
+    void reboundResizeBindingReplacesDefaultChord();
+
     // The arrows route through the production mergeable-move history; one
     // transposing press proves increment/undo/redo preservation end to end.
     void mergeableMoveHistorySupportsUndoRedoRoundTrip();

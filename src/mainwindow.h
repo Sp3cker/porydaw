@@ -175,6 +175,9 @@ class MainWindow : public QMainWindow
     std::unique_ptr<ProjectWorkspace> m_projectWorkspace;
     AudioEngine m_audio;
     SongTab *m_selectedTab = nullptr;
+    // The selected tab's view drives the note-length commands' enablement;
+    // the connection is replaced on every selected-tab change.
+    QMetaObject::Connection m_noteSelectionConnection;
     VoicegroupLease m_selectedVoicegroup;
 
     // The selected-tab audio as last handed to the engine — the diff input
@@ -207,6 +210,8 @@ class MainWindow : public QMainWindow
     QAction *m_redoAction = nullptr;
     QAction *m_exportWavAction = nullptr;
     QAction *m_copyAction = nullptr;
+    QAction *m_lengthenNoteAction = nullptr;
+    QAction *m_shortenNoteAction = nullptr;
     QAction *m_soloAction = nullptr;
     QAction *m_insertTimeAction = nullptr;
     QAction *m_settingsAction = nullptr;

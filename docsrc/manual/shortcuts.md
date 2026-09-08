@@ -26,6 +26,8 @@ On macOS, `Ctrl` corresponds to the `Cmd` key (Command).
 | Transpose Down (Octave) | `Shift+Down` | Transposes selection down by 1 octave |
 | Nudge Left | `Left` | Nudges active time selection left by grid step |
 | Nudge Right | `Right` | Nudges active time selection right by grid step |
+| Lengthen Note | `Shift+Right` | Moves every selected note's right edge one editing-grid step right; starts stay fixed and all selected notes share one delta anchored at the furthest selected end. Also under Edit → Lengthen Note (the menu item carries no shortcut) |
+| Shorten Note | `Shift+Left` | Same shared grid step leftward, floored at one tick. A selection containing an unterminated note cannot be resized; a zero-length selected note blocks shortening. Also under Edit → Shorten Note (the menu item carries no shortcut) |
 | Narrow Grid | `Ctrl+2` | Steps the editing grid to the next finer supported subdivision, including during a note move |
 | Widen Grid | `Ctrl+1` | Steps the editing grid to the next coarser supported subdivision, including during a note move |
 | Toggle Triplet Grid | `Ctrl+3` | Switches the editing grid between straight and triplet subdivisions |

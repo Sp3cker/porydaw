@@ -1,9 +1,9 @@
 // Roll and automation gesture scenarios for the selection-keyboard-routing Qt
-// Test: grid size stays live through a roll note move while Delete and grid
-// feel remain guarded; automation range and pan gestures continue guarding
-// every Timeline grid command. Escape cancels without dropping the captured
-// selection. The canonical note-selection idle clear lives in the velocity
-// and window-resize cases.
+// Test: grid size stays live through a roll note move while Delete, Shift
+// resize, and grid feel remain guarded; automation range and pan gestures
+// continue guarding every Timeline grid command and Shift note resize.
+// Escape cancels without dropping the captured selection. The canonical
+// note-selection idle clear lives in the velocity and window-resize cases.
 
 #include "checks/selectionkey/gesturecheck.h"
 
@@ -53,9 +53,10 @@ void SelectionKeyGestureTest::rollNoteMoveGridChangesStayLive()
     const auto inverseSizeKey = selectionkey::firstBinding(inverseSizeCommand);
     const auto tripletKey = selectionkey::firstBinding(QStringLiteral("roll.grid_triplet"));
     const auto deleteKey = selectionkey::firstBinding(QStringLiteral("roll.delete"));
+    const auto lengthenKey = selectionkey::firstBinding(QStringLiteral("roll.lengthen_note"));
     QVERIFY2(sizeKey.has_value() && inverseSizeKey.has_value() && tripletKey.has_value() &&
-                 deleteKey.has_value(),
-             "roll grid size, triplet, and Delete commands need single-key bindings");
+                 deleteKey.has_value() && lengthenKey.has_value(),
+             "roll grid size, triplet, Delete, and resize commands need single-key bindings");
     if (!stageWorld("roll-gesture", EditorDrawerPage::Automations, kAutomationSectionHeight))
         return;
     mRollInput = selectionkey::rigInput(*mWorld, "timelineRollInput");
@@ -137,6 +138,11 @@ void SelectionKeyGestureTest::rollNoteMoveGridChangesStayLive()
     QVERIFY2(document().smf().write() == rollBeforeGesture && noteSelectionIs({routedNoteId}) &&
                  view().userGestureActive() && window()->mouseGrabberItem() == mRollInput,
              "Delete mutated the note or disturbed its live move");
+    QVERIFY2(
+        selectionkey::deliverKey(window(), lengthenKey->key(), lengthenKey->keyboardModifiers()) &&
+            view().userGestureActive() && window()->mouseGrabberItem() == mRollInput &&
+            document().smf().write() == rollBeforeGesture && noteSelectionIs({routedNoteId}),
+        "note resize escaped the live note-move guard");
 
     mouseMove(moveTarget);
     QVERIFY2(view().userGestureActive() && window()->mouseGrabberItem() == mRollInput &&
@@ -201,7 +207,10 @@ void SelectionKeyGestureTest::rollNoteMoveGridChangesStayLive()
 void SelectionKeyGestureTest::automationPanGuardsSharedCommands()
 {
     const auto deleteKey = selectionkey::firstBinding(QStringLiteral("roll.delete"));
-    QVERIFY2(deleteKey.has_value(), "roll.delete has no single-key binding");
+    const auto lengthenKey = selectionkey::firstBinding(QStringLiteral("roll.lengthen_note"));
+    const auto shortenKey = selectionkey::firstBinding(QStringLiteral("roll.shorten_note"));
+    QVERIFY2(deleteKey.has_value() && lengthenKey.has_value() && shortenKey.has_value(),
+             "roll delete and resize commands have no single-key bindings");
     if (!stageWorld("automation-gesture", EditorDrawerPage::Automations, kAutomationSectionHeight))
         return;
     mAutomationInput = selectionkey::rigInput(*mWorld, "timelineAutomationInput");
@@ -249,6 +258,12 @@ void SelectionKeyGestureTest::automationPanGuardsSharedCommands()
                  "automation range sweep did not become a live gesture");
     QVERIFY2(selectionkey::guardedGridCommandsLeaveStateUnchanged(window(), view()),
              "a Timeline grid command mutated selection or feel during a live automation range");
+    QVERIFY2(
+        selectionkey::deliverKey(window(), lengthenKey->key(), lengthenKey->keyboardModifiers()) &&
+            view().userGestureActive() && document().smf().write() == rangeBefore &&
+            document().revision() == rangeRevisionBefore &&
+            document().undoStack()->count() == rangeUndoDepthBefore,
+        "note resize mutated the song during a live automation range sweep");
     mouseRelease(Qt::RightButton, rangeEnd);
     QVERIFY2(!view().userGestureActive() && view().selectionModel().timeSelection().active() &&
                  document().smf().write() == rangeBefore &&
@@ -265,6 +280,12 @@ void SelectionKeyGestureTest::automationPanGuardsSharedCommands()
     QVERIFY2(selectionkey::guardedGridCommandsLeaveStateUnchanged(window(), view()),
              "a Timeline grid command mutated selection or feel during a live automation pan");
     selectionkey::deliverKey(window(), deleteKey->key(), deleteKey->keyboardModifiers());
+    QVERIFY2(
+        selectionkey::deliverKey(window(), shortenKey->key(), shortenKey->keyboardModifiers()) &&
+            view().userGestureActive() && document().smf().write() == automationBeforeGesture &&
+            document().revision() == revisionBefore &&
+            document().undoStack()->count() == undoDepthBefore,
+        "note resize mutated the song during a live automation pan");
     QTest::keyClick(window(), Qt::Key_Escape);
     mouseRelease(Qt::MiddleButton, automationPress);
     QVERIFY2(!view().userGestureActive() && document().smf().write() == automationBeforeGesture &&

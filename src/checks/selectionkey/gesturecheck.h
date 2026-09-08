@@ -4,8 +4,9 @@
 // independently selectable scenarios over standalone SongView rigs prove
 // that a live pointer gesture owns its surface — overlap hit priority in the
 // velocity plot, selected/unselected velocity transitions, roll note moves,
-// automation pans — and that shared edit commands (Delete resolved through
-// the live keymap) are consumed no-ops while a gesture is live. Grid size is
+// automation pans — and that shared edit commands (Delete and Shift note
+// resize, resolved through the live keymap) are consumed no-ops while a
+// gesture is live. Grid size is
 // the deliberate exception for a note move: Narrow/Widen update its live snap
 // without ending the native grab; grid feel stays guarded. The first Escape
 // cancels only the gesture and retains the captured selection. The discovered
@@ -67,28 +68,30 @@ class SelectionKeyGestureTest final : public QObject
     void overlapNodeTargetsVisibleNode();
 
     // A selected duration-stem drag retains the whole selection and blocks
-    // edit keys; an unselected stem is a real replacement selection
-    // transition.
+    // edit keys including Shift resize; an unselected stem is a real
+    // replacement selection transition.
     void velocityStemDragGuardsEdits();
 
     // Narrow and Widen stay available during a native roll note move. Each
     // live size snaps the subsequent pointer movement and release, which
-    // preserves NoteId/selection and commits one undoable edit. Triplet and
-    // Delete stay blocked; Escape after an inverse size change cancels.
+    // preserves NoteId/selection and commits one undoable edit. Triplet,
+    // Delete, and Shift resize stay blocked; Escape after an inverse size
+    // change cancels.
     void rollNoteMoveGridChangesStayLive_data();
     void rollNoteMoveGridChangesStayLive();
 
     // A real right-button automation range sweep publishes a lane time
     // selection after release; its live phase and the following middle-button
-    // pan both retain that selection across their cancelling Escape.
+    // pan both block Shift resize and retain that selection across their
+    // cancelling Escape.
     void automationPanGuardsSharedCommands();
 
     // A registered scrollbar thumb (root roll bar, nested drawer automation
     // bar) is a live gesture surface exactly like the bands — the shared
-    // Delete is a consumed no-op mid-drag, Escape releases the native
-    // MouseArea grab, the still-held button cannot move or page the model,
-    // and a physical release permits a fresh drag before the same binding
-    // deletes. Each row is one thumb, independently selectable.
+    // Delete and Shift resize are consumed no-ops mid-drag, Escape releases
+    // the native MouseArea grab, the still-held button cannot move or page
+    // the model, and a physical release permits a fresh drag before the same
+    // binding deletes. Each row is one thumb, independently selectable.
     void scrollbarThumbGuardsSharedCommands_data();
     void scrollbarThumbGuardsSharedCommands();
 

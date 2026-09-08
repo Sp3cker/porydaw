@@ -12,11 +12,13 @@
 //   opened by the note menu, and the pitch-bend overlay: keys delivered into
 //   the surface that visibly holds focus edit only that surface, Copy
 //   carries the surface's own text, and every window command that production
-//   routes out of a surface fires exactly once through its window owner
+//   routes out of a surface fires exactly once through its window owner;
+//   Shift+Arrow resize chords move only the surface's own text selection
 //   (plan 9);
 // * the event list keeps row-local navigation, Delete, Alt reorder and
 //   Select All, with no new selected-note Cut/Delete fallback and exactly one
-//   window Copy owner (plan 11).
+//   window Copy owner; Shift+Arrow leaves the selected note untouched and
+//   plain Left/Right stay column navigation (plan 11).
 //
 // All deliveries are QTest input into the real QQuickWindow or QWidget under
 // test; native OS key injection is unavailable to the harness and is not

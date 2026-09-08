@@ -161,6 +161,31 @@ void SelectionLocalInputTierTest::renameTextInputOwnsKeys()
             selectionkey::sameGridCommandState(view, gridBeforeReboundText),
         "the rebound narrow-grid key escaped the rename TextInput or changed the timeline grid");
 
+    // The new Shift+Arrow resize chords must stay rename-local: the field's
+    // own selection extends over the draft and collapses back, and the song
+    // neither mutates nor gains history.
+    const auto lengthen = selectionkey::firstBinding(QStringLiteral("roll.lengthen_note"));
+    const auto shorten = selectionkey::firstBinding(QStringLiteral("roll.shorten_note"));
+    QVERIFY2(lengthen.has_value() && shorten.has_value(),
+             "Lengthen/Shorten Note have no single-key bindings");
+    const int historyBeforeArrows = document().undoStack()->index();
+    QVERIFY2(renameGuard && renameGuard->setProperty("cursorPosition", 0),
+             "the rename input did not move its cursor to the draft start");
+    QTest::keyClick(quickWindow, lengthen->key(), lengthen->keyboardModifiers());
+    selectionkey::settle();
+    QVERIFY2(renameGuard && renameGuard->property("selectedText").toString() == draftAfterGridText,
+             "Shift+Right did not extend the rename selection over the draft");
+    QTest::keyClick(quickWindow, shorten->key(), shorten->keyboardModifiers());
+    selectionkey::settle();
+    QVERIFY2(renameGuard &&
+                 renameGuard->property("selectionStart").toInt() ==
+                     renameGuard->property("selectionEnd").toInt() &&
+                 renameGuard->property("text").toString() == draftAfterGridText &&
+                 document().smf().write() == before &&
+                 document().undoStack()->index() == historyBeforeArrows &&
+                 m_counts.copy == copyBefore && m_counts.solo == soloBefore,
+             "Shift+Arrow leaked out of the rename TextInput or mutated the song");
+
     // Copy with rename focus copies the selected draft itself; clear the
     // clipboard first so stale clipboard contents cannot satisfy the check.
     QApplication::clipboard()->clear();
@@ -250,6 +275,37 @@ void SelectionLocalInputTierTest::songSearchLineEditOwnsKeys()
     QTest::keyClick(search, copy->key(), copy->keyboardModifiers());
     selectionkey::settle();
     QCOMPARE(QApplication::clipboard()->text(), search->text());
+
+    // The new Shift+Arrow resize chords stay plain text selection in the
+    // line edit: the selection extends over the first character and
+    // collapses back, and the song neither mutates nor gains history.
+    const auto lengthen = selectionkey::firstBinding(QStringLiteral("roll.lengthen_note"));
+    const auto shorten = selectionkey::firstBinding(QStringLiteral("roll.shorten_note"));
+    QVERIFY2(lengthen.has_value() && shorten.has_value(),
+             "Lengthen/Shorten Note have no single-key bindings");
+    const QByteArray songBeforeArrows = document().smf().write();
+    const int historyBeforeArrows = document().undoStack()->index();
+    const int copyBeforeArrows = m_counts.copy;
+    search->setText(QStringLiteral("ab"));
+    search->setCursorPosition(0);
+    selectionkey::settle();
+    QTest::keyClick(search, lengthen->key(), lengthen->keyboardModifiers());
+    selectionkey::settle();
+    QVERIFY2(search->selectionStart() == 0 && search->selectionEnd() == 1 &&
+                 search->selectedText() == QStringLiteral("a"),
+             qPrintable(QStringLiteral("Shift+Right did not select the first character: "
+                                       "start=%1 end=%2 selected='%3'")
+                            .arg(search->selectionStart())
+                            .arg(search->selectionEnd())
+                            .arg(search->selectedText())));
+    QTest::keyClick(search, shorten->key(), shorten->keyboardModifiers());
+    selectionkey::settle();
+    QVERIFY2(search->selectionStart() == search->selectionEnd() &&
+                 search->text() == QStringLiteral("ab") &&
+                 document().smf().write() == songBeforeArrows &&
+                 document().undoStack()->index() == historyBeforeArrows &&
+                 m_counts.copy == copyBeforeArrows && m_counts.solo == soloBefore,
+             "Shift+Arrow leaked out of the song search line edit or mutated the song");
     search->clear();
     selectionkey::settle();
 

@@ -171,6 +171,23 @@ class MainWindowRoutingFixture
         return nullptr;
     }
 
+    static QAction *editAction(MainWindow &window, const QString &objectName)
+    {
+        const QMenu *menu = editMenu(window);
+        QAction *found = nullptr;
+        if (menu) {
+            for (QAction *action : menu->actions()) {
+                if (!found && action->objectName() == objectName)
+                    found = action;
+            }
+        }
+        return found;
+    }
+
+    // Shortcut-free Edit actions present their bare title on a native menu
+    // bar; a widget menu bar may carry the binding label after a tab.
+    static QString bareTitle(const QAction *action) { return action->text().section(u'\t', 0, 0); }
+
     static QByteArray fileContents(const QString &path)
     {
         QFile file(path);
@@ -268,6 +285,34 @@ class MainWindowRoutingFixture
             return notes.front();
         }
         return std::nullopt;
+    }
+
+    static std::optional<DocNote> selectTerminatedNote(SongTab &tab)
+    {
+        SongView &view = tab.view();
+        for (int track = 0; track < tab.document().engineTrackCount(); ++track) {
+            for (const DocNote &note : tab.document().notesForTrack(track)) {
+                if (note.unterminated())
+                    continue;
+                view.selectTrack(track);
+                view.selectionModel().setNoteSelection({note.noteId});
+                return note;
+            }
+        }
+        return std::nullopt;
+    }
+
+    // Duration of the single selected terminated note after one semantic
+    // lengthen/shorten step on the view's live editing grid: the adjacent
+    // grid boundary of the note's end, floored at one document tick when
+    // shortening (plan section 4).
+    static uint64_t expectedResizedDuration(const SongView &view, const DocNote &note, bool longer)
+    {
+        const uint64_t end = note.tick + note.duration;
+        const uint64_t target =
+            longer ? view.grid().nextEditingTick(end, std::numeric_limits<uint64_t>::max())
+                   : view.grid().snapTickDown(double(end) - 1.0);
+        return longer ? target - note.tick : std::max<uint64_t>(target - note.tick, 1);
     }
 };
 

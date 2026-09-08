@@ -113,6 +113,11 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     void selectAllNotes();
     void transposeSelectedNotes(int semitones);
     void nudgeSelectedNotes(bool right);
+    // Semantic Shift+Left/Right note-length operation: every selected
+    // note's right edge follows the shared maximum end by one live-grid
+    // boundary; starts and all other fields stay fixed. Mergeable so
+    // repeated presses form one undo entry.
+    void resizeSelectedNotes(bool longer);
     void openPitchBendEditor();
     // Ends a keyboard-command audition from the shared key-release path;
     // a chord can come up over another band or the Quick root. Returns true

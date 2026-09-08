@@ -22,6 +22,7 @@
 #include <QVariantMap>
 
 #include <algorithm>
+#include <limits>
 #include <utility>
 #include <vector>
 
@@ -200,6 +201,70 @@ void PianoRoll::nudgeSelectedNotes(bool right)
         hi = std::max(hi, tick + note.duration);
     }
     m_sv->ensureRangeVisible(lo, hi, right);
+    // Only note pixels changed here; the ensureRangeVisible reveal above
+    // queues its own camera request when it actually scrolls.
+    requestQuickUpdate(cNoteMutationDirty);
+}
+
+void PianoRoll::resizeSelectedNotes(bool longer)
+{
+    SongDocument *doc = m_sv->document();
+    const std::vector<DocNote> notes = resolveSelection();
+    if (!doc || notes.empty())
+        return;
+    // One pass over the selection: an unterminated note-on has no editable
+    // right edge, so it consumes the whole command and the selection stays
+    // byte-identical. Otherwise the furthest right edge anchors one shared
+    // grid step that every selected note follows with the same duration delta.
+    uint64_t maxEnd = 0;
+    uint32_t maxDuration = 0;
+    uint32_t minDuration = UINT32_MAX;
+    for (const DocNote &note : notes) {
+        if (note.unterminated())
+            return;
+        maxEnd =
+            std::max(maxEnd, note.tick > UINT64_MAX - note.duration ? UINT64_MAX
+                                                                    : note.tick + note.duration);
+        maxDuration = std::max(maxDuration, note.duration);
+        minDuration = std::min(minDuration, note.duration);
+    }
+    // Adjacent boundary of the live grid: nextEditingTick lands on a
+    // signature boundary even when the fixed spacing is unchanged, and the
+    // shortening direction keeps the established strictly-before operation.
+    const uint64_t boundary = longer ? m_grid.nextEditingTick(maxEnd, UINT64_MAX)
+                                     : m_grid.snapTickDown(double(maxEnd) - 1.0);
+    // Rounding above 2^53 can absorb the -1 and land the shortening
+    // boundary on or past the anchor; no-op rather than wrap the step below.
+    if (!longer && boundary >= maxEnd)
+        return;
+    const uint64_t step = longer ? boundary - maxEnd : maxEnd - boundary;
+    // Shared-delta representability: the step must stay exact as int64_t,
+    // and a lengthen must keep the widest note inside DocNote's uint32_t
+    // duration field; reject the whole command rather than narrow silently.
+    const uint64_t maxStep =
+        longer ? uint64_t(UINT32_MAX) - maxDuration : uint64_t(std::numeric_limits<int64_t>::max());
+    if (step > maxStep)
+        return;
+    // Shortening clamps once against the shortest selected note so the uniform
+    // delta keeps every note at or above the one-tick floor; the non-positive
+    // clamp makes zero- and one-tick selections no-ops instead of lengthening.
+    // Exact merged replay of the accumulated delta then matches sequential presses.
+    const int64_t dDuration =
+        longer ? int64_t(step)
+               : std::min<int64_t>(0, std::max(-int64_t(step), 1 - int64_t(minDuration)));
+    if (dDuration == 0)
+        return;
+    const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+    doc->resizeNotes(notes, dDuration, /*mergeable=*/true);
+    // Keep the resized notes in sight, scrolling just enough.
+    uint64_t lo = UINT64_MAX, hi = 0;
+    for (const DocNote &note : notes) {
+        const uint64_t duration = uint64_t(int64_t(note.duration) + dDuration);
+        const uint64_t end = note.tick > UINT64_MAX - duration ? UINT64_MAX : note.tick + duration;
+        lo = std::min(lo, note.tick);
+        hi = std::max(hi, end);
+    }
+    m_sv->ensureRangeVisible(lo, hi, longer);
     // Only note pixels changed here; the ensureRangeVisible reveal above
     // queues its own camera request when it actually scrolls.
     requestQuickUpdate(cNoteMutationDirty);
