@@ -116,9 +116,10 @@ the test-only C++ registry exposed by `porydaw_checks --manifest`.
 
 ## Conventions
 
-- C++20, Qt6, `clang-format`. Use C++20 library types. `std::span` is the
-  non-owning view; do not add pointer+length pairs or homemade span aliases.
+- C++20, Qt6, `clang-format`. 
 - All widget geometry is `layout::` font primitives. Size, pad, hit-test, and
   stroke with `layout::fontPx` / `layout::fontPxF`, `layout::space`, and
   `layout::singlePixel`. Hard-coded pixel constants in widgets are a bug.
 - Checks use fixture files locally from repo. All copying and setup is handled by `tools/run_checks.ts`
+
+Checks testing human input often fail because user uses desktop while testing. Do not stress-test checks repeatedly as troubleshooting.
