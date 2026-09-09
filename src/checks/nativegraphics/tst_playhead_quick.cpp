@@ -3,6 +3,7 @@
 #include <QtTest>
 
 #include <QImage>
+#include <QQuickWindow>
 
 #include <array>
 #include <memory>
@@ -257,6 +258,21 @@ void RenderingPlayheadTest::positionOnlyDoesNotRebuild()
     const bool quickTrianglePointsUpBefore = quick->playheadTrianglePointsUp();
     const qreal itemLocalXBefore = playhead->localX();
 
+#ifdef __APPLE__
+    QQuickWindow *window = quick->quickWindow();
+    QVERIFY(window);
+    int renderedFrames = 0;
+    QObject frameProbe;
+    QObject::connect(
+        window, &QQuickWindow::frameSwapped, &frameProbe, [&renderedFrames] { ++renderedFrames; },
+        Qt::QueuedConnection);
+    // Prove the probe observes a requested frame before testing silence.
+    window->update();
+    QTRY_VERIFY(renderedFrames > 0);
+    checks::support::pumpQuick();
+    renderedFrames = 0;
+#endif
+
     const checks::support::TimelineQuickLayerRevisions before =
         checks::support::timelineQuickLayerRevisions(*scene);
     for (uint64_t move = 1; move <= 128; ++move)
@@ -279,4 +295,8 @@ void RenderingPlayheadTest::positionOnlyDoesNotRebuild()
         QCOMPARE(quick->playheadTrianglePointsUp(), quickTrianglePointsUpBefore);
         QCOMPARE(playhead->localX(), itemLocalXBefore);
     }
+#ifdef __APPLE__
+    QVERIFY2(!QTest::qWaitFor([&renderedFrames] { return renderedFrames != 0; }, 100),
+             "Position-only native playhead movement rendered a Quick frame");
+#endif
 }
