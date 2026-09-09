@@ -9,7 +9,7 @@ This takes about fifteen minutes and only requires a text editor. By the end you
 - Read the currently note selection
 - Make an undoable edit to the song's notes
 
-The finished plugin is found in Porydaw's source code in `plugins/examples/arpeggiate`, so you can also grab that and read along.
+The finished plugin is found in Porydaw's source code in [`plugins/examples/arpeggiate`](https://github.com/huderlem/porydaw/blob/main/plugins/examples/arpeggiate), so you can also grab that and read along.
 
 ## 1. Make the plugin folder
 
