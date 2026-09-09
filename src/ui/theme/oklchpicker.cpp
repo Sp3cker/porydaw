@@ -13,6 +13,14 @@ namespace {
 constexpr double fullTurn = 360.0;
 constexpr double pi = 3.141592653589793238462643383279502884;
 constexpr double minimumPairContrast = 3.0;
+// Picker geometry and marker-stroke factors, expressed as em fractions of the
+// 12 px reference font so proportions survive font scaling.
+constexpr double planeInsetEm = 8.0 / 12.0;
+constexpr double hueBarWidthEm = 24.0 / 12.0;
+constexpr double planeHueGapEm = 10.0 / 12.0;
+constexpr double markerOuterRadiusEm = 6.0 / 12.0;
+constexpr double markerInnerRadiusEm = 5.0 / 12.0;
+constexpr double markerStrokeEm = 2.0 / 12.0;
 } // namespace
 
 OklchPicker::OklchPicker(QWidget *parent) : QWidget(parent)
@@ -46,54 +54,54 @@ void OklchPicker::paintEvent(QPaintEvent *)
     painter.setRenderHint(QPainter::Antialiasing, false);
     painter.fillRect(rect(), palette().brush(QPalette::Base));
 
-    const int hueWidth = 24;
-    const int gap = 10;
-    const QRect plane =
-        QRect(8, 8, std::max(1, width() - hueWidth - gap - 16), std::max(1, height() - 16));
-    const QRect hueBar(plane.right() + gap, plane.top(), hueWidth, plane.height());
+    const PickerRects rects = pickerRects();
+    const int hairline = ::layout::singlePixel();
+    const qreal markerStroke = ::layout::fontPxF(markerStrokeEm);
+    const qreal outerRadius = ::layout::fontPxF(markerOuterRadiusEm);
+    const qreal innerRadius = ::layout::fontPxF(markerInnerRadiusEm);
 
-    ensurePlane(plane.size());
-    painter.drawImage(plane.topLeft(), m_planeImage);
+    ensurePlane(rects.plane.size());
+    painter.drawImage(rects.plane.topLeft(), m_planeImage);
 
     // Close the cyclic gradient with hue zero. OKLCh uses [0, 360), so sampled
     // positions below stop just short of the otherwise equivalent 360 endpoint.
-    QLinearGradient hueGradient(hueBar.topLeft(), hueBar.bottomLeft());
+    QLinearGradient hueGradient(rects.hue.topLeft(), rects.hue.bottomLeft());
     for (int i = 0; i <= 12; ++i) {
         const double hue = i == 12 ? 0.0 : fullTurn * static_cast<double>(i) / 12.0;
         hueGradient.setColorAt(static_cast<double>(i) / 12.0, inGamutHueColor(hue));
     }
-    painter.fillRect(hueBar, hueGradient);
+    painter.fillRect(rects.hue, hueGradient);
     painter.save();
     painter.setPen(Qt::NoPen);
-    for (int y = 0; y < hueBar.height(); ++y) {
+    for (int y = 0; y < rects.hue.height(); ++y) {
         themes::Oklch candidate{m_oklch.lightness, m_oklch.chroma,
                                 (fullTurn - 1.0e-6) * static_cast<double>(y) /
-                                    std::max(1, hueBar.height() - 1)};
+                                    std::max(1, rects.hue.height() - 1)};
         if (!candidateAllowed(candidate))
-            painter.fillRect(hueBar.left(), hueBar.top() + y, hueBar.width(), 1,
+            painter.fillRect(rects.hue.left(), rects.hue.top() + y, rects.hue.width(), 1,
                              QColor(0, 0, 0, 120));
     }
     painter.restore();
-    painter.setPen(QPen(palette().color(QPalette::Mid), 1));
-    painter.drawRect(plane);
-    painter.drawRect(hueBar);
+    painter.setPen(QPen(palette().color(QPalette::Mid), hairline));
+    painter.drawRect(rects.plane);
+    painter.drawRect(rects.hue);
 
-    const double chroma = std::clamp(m_oklch.chroma, 0.0, maxChroma);
-    const double lightness = std::clamp(m_oklch.lightness, 0.0, 1.0);
-    const QPoint marker(plane.left() + qRound(chroma / maxChroma * (plane.width() - 1)),
-                        plane.top() + qRound((1.0 - lightness) * (plane.height() - 1)));
+    // selectionMarkerRect is the canonical marker position; its rect already
+    // spans the whole ring, so its center anchors both strokes here.
+    const QPointF marker = selectionMarkerRect(rects.plane).center();
     painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.setPen(QPen(Qt::black, 2));
-    painter.drawEllipse(marker, 6, 6);
-    painter.setPen(QPen(Qt::white, 1));
-    painter.drawEllipse(marker, 5, 5);
+    painter.setPen(QPen(Qt::black, markerStroke));
+    painter.drawEllipse(marker, outerRadius, outerRadius);
+    painter.setPen(QPen(Qt::white, hairline));
+    painter.drawEllipse(marker, innerRadius, innerRadius);
 
-    const int hueY = hueBar.top() + qRound(std::fmod(std::max(0.0, m_oklch.hue), fullTurn) /
-                                           fullTurn * (hueBar.height() - 1));
-    painter.setPen(QPen(Qt::black, 2));
-    painter.drawLine(hueBar.left() - 2, hueY, hueBar.right() + 2, hueY);
-    painter.setPen(QPen(Qt::white, 1));
-    painter.drawLine(hueBar.left(), hueY, hueBar.right(), hueY);
+    const int hueY = rects.hue.top() + qRound(std::fmod(std::max(0.0, m_oklch.hue), fullTurn) /
+                                              fullTurn * (rects.hue.height() - 1));
+    const int hueOverhang = ::layout::fontPx(markerStrokeEm);
+    painter.setPen(QPen(Qt::black, markerStroke));
+    painter.drawLine(rects.hue.left() - hueOverhang, hueY, rects.hue.right() + hueOverhang, hueY);
+    painter.setPen(QPen(Qt::white, hairline));
+    painter.drawLine(rects.hue.left(), hueY, rects.hue.right(), hueY);
 }
 
 void OklchPicker::mousePressEvent(QMouseEvent *event)
@@ -171,26 +179,31 @@ void OklchPicker::ensurePlane(const QSize &size)
     }
 }
 
-QRect OklchPicker::planeRect() const
+OklchPicker::PickerRects OklchPicker::pickerRects() const
 {
-    const int hueWidth = 24;
-    const int gap = 10;
-    return QRect(8, 8, std::max(1, width() - hueWidth - gap - 16), std::max(1, height() - 16));
-}
-
-QRect OklchPicker::hueRect() const
-{
-    const QRect plane = planeRect();
-    return QRect(plane.right() + 10, plane.top(), 24, plane.height());
+    const int inset = ::layout::fontPx(planeInsetEm);
+    const int hueWidth = ::layout::fontPx(hueBarWidthEm);
+    const int gap = ::layout::fontPx(planeHueGapEm);
+    const QRect plane(inset, inset, std::max(1, width() - hueWidth - gap - 2 * inset),
+                      std::max(1, height() - 2 * inset));
+    // Inclusive QRect edges: the hue bar starts one gap past the plane's
+    // right edge.
+    const QRect hue(plane.right() + gap, plane.top(), hueWidth, plane.height());
+    return {plane, hue};
 }
 
 QRect OklchPicker::selectionMarkerRect(const QRect &plane) const
 {
+    // Full repaint coverage: the outer radius plus half the black stroke and
+    // one logical pixel of antialias bleed, rounded outward.
+    const qreal coverage = ::layout::fontPxF(markerOuterRadiusEm) +
+                           ::layout::fontPxF(markerStrokeEm) / 2.0 + ::layout::singlePixel();
+    const int half = static_cast<int>(std::ceil(coverage));
     const double chroma = std::clamp(m_oklch.chroma, 0.0, maxChroma);
     const double lightness = std::clamp(m_oklch.lightness, 0.0, 1.0);
     const QPoint marker(plane.left() + qRound(chroma / maxChroma * (plane.width() - 1)),
                         plane.top() + qRound((1.0 - lightness) * (plane.height() - 1)));
-    return QRect(marker - QPoint(8, 8), QSize(17, 17));
+    return {marker.x() - half, marker.y() - half, 2 * half + 1, 2 * half + 1};
 }
 
 bool OklchPicker::candidateAllowed(const themes::Oklch &candidate, QColor *converted) const
@@ -207,23 +220,23 @@ bool OklchPicker::candidateAllowed(const themes::Oklch &candidate, QColor *conve
 
 void OklchPicker::chooseAt(const QPoint &point)
 {
-    const QRect plane = planeRect();
-    const QRect hue = hueRect();
-    const QRect previousMarker = selectionMarkerRect(plane);
+    const PickerRects rects = pickerRects();
+    const QRect previousMarker = selectionMarkerRect(rects.plane);
     themes::Oklch candidate = m_oklch;
-    if (plane.contains(point)) {
-        candidate.lightness = 1.0 - std::clamp(static_cast<double>(point.y() - plane.top()) /
-                                                   std::max(1, plane.height() - 1),
+    if (rects.plane.contains(point)) {
+        candidate.lightness = 1.0 - std::clamp(static_cast<double>(point.y() - rects.plane.top()) /
+                                                   std::max(1, rects.plane.height() - 1),
                                                0.0, 1.0);
-        candidate.chroma = 0.4 * std::clamp(static_cast<double>(point.x() - plane.left()) /
-                                                std::max(1, plane.width() - 1),
-                                            0.0, 1.0);
-    } else if (hue.contains(point)) {
+        candidate.chroma =
+            maxChroma * std::clamp(static_cast<double>(point.x() - rects.plane.left()) /
+                                       std::max(1, rects.plane.width() - 1),
+                                   0.0, 1.0);
+    } else if (rects.hue.contains(point)) {
         // Keep the bottom pixel inside the [0, 360) hue domain.
         candidate.hue =
-            (fullTurn - 1.0e-6) *
-            std::clamp(static_cast<double>(point.y() - hue.top()) / std::max(1, hue.height() - 1),
-                       0.0, 1.0);
+            (fullTurn - 1.0e-6) * std::clamp(static_cast<double>(point.y() - rects.hue.top()) /
+                                                 std::max(1, rects.hue.height() - 1),
+                                             0.0, 1.0);
     } else {
         return;
     }
@@ -238,7 +251,9 @@ void OklchPicker::chooseAt(const QPoint &point)
         m_planeImage = {};
         update();
     } else {
-        update(previousMarker.united(selectionMarkerRect(plane)).adjusted(-2, -2, 2, 2));
+        // selectionMarkerRect already spans ring, stroke and antialias bleed,
+        // so the union alone covers both marker positions.
+        update(previousMarker.united(selectionMarkerRect(rects.plane)));
     }
     emit colorSelected(color);
 }

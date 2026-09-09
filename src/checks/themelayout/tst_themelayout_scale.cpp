@@ -1,12 +1,17 @@
 #include "checks/themelayout/tst_themelayout.h"
 
 #include "ui/layout.h"
+#include "ui/theme/color_math.h"
+#include "ui/theme/oklchpicker.h"
 
 #include <QApplication>
+#include <QImage>
+#include <QPixmap>
 #include <QtGlobal>
 
 #include <QtTest>
 
+#include <cmath>
 #include <utility>
 
 namespace {
@@ -116,4 +121,29 @@ void ThemeLayoutScaleTest::layoutScale()
         QCOMPARE(layout::singlePixel(), 1);
         return;
     }
+}
+
+void ThemeLayoutScaleTest::pickerPaintingMatchesHitTesting()
+{
+    OklchPicker picker;
+    picker.setSelection(themes::colorFromOklch({0.7, 0.06, 30.0}), QColor{}, false);
+    picker.resize(layout::fontPx(30), layout::fontPx(20));
+    picker.show();
+    QCoreApplication::processEvents();
+
+    // Probe the painted hue strip near its left edge. A fixed-pixel hit
+    // region would instead treat this as a gap or the color plane at 16/18px.
+    const int inset = layout::fontPx(2.0 / 3.0);
+    const int hueWidth = layout::fontPx(2);
+    const QPoint point(picker.width() - inset - hueWidth - layout::singlePixel() +
+                           layout::fontPx(1.0 / 6.0),
+                       inset + qRound(0.75 * (picker.height() - 2 * inset - 1)));
+    const QImage paintedImage = picker.grab().toImage();
+    const auto painted = themes::oklchFromColor(paintedImage.pixelColor(point));
+    QVERIFY(painted.chroma > 0.04);
+    QSignalSpy selected(&picker, &OklchPicker::colorSelected);
+    QTest::mouseClick(&picker, Qt::LeftButton, Qt::NoModifier, point);
+    QCOMPARE(selected.count(), 1);
+    const auto chosen = themes::oklchFromColor(qvariant_cast<QColor>(selected.takeFirst().at(0)));
+    QVERIFY(std::abs(chosen.hue - painted.hue) < 5.0);
 }

@@ -30,10 +30,14 @@ class OklchPicker final : public QWidget
   private:
     static constexpr double maxChroma = 0.4;
 
+    struct PickerRects {
+        QRect plane;
+        QRect hue;
+    };
+
     static QColor inGamutHueColor(double hue);
     void ensurePlane(const QSize &size);
-    QRect planeRect() const;
-    QRect hueRect() const;
+    PickerRects pickerRects() const;
     QRect selectionMarkerRect(const QRect &plane) const;
     bool candidateAllowed(const themes::Oklch &candidate, QColor *converted = nullptr) const;
     void chooseAt(const QPoint &point);

@@ -83,6 +83,7 @@ class ThemeLayoutScaleTest final : public QObject
     void initializationIsProcessScoped();
 
     void layoutScale();
+    void pickerPaintingMatchesHitTesting();
 
   private:
     int m_baseFontPx;
