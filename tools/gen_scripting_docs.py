@@ -35,9 +35,8 @@ BANNER = (
 INTRO = """# Scripting API
 
 !!! note
-    This page is the plugin authors' reference. For installing plugins and
-    the bundled examples, see [Plugins](../manual/plugins.md). Type
-    declarations for editors: [`porydaw.d.ts`]({github}docs/scripting/porydaw.d.ts).
+    This page is for people writing their own plugins. For installing plugins and
+    porydaw's examples, see [Plugins](../manual/plugins.md). 
 """
 
 LINK = re.compile(r"(?<!!)\[([^\]]+)\]\(([^)\s]+)\)")
