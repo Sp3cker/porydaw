@@ -7,8 +7,10 @@
 #include <QPointF>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QSize>
 #include <QtTest>
 
+#include "checks/support/editorrig.h"
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
@@ -31,6 +33,7 @@ namespace {
 constexpr qreal kCameraTolerance = 0.01;
 constexpr uint8_t kVolumeController = 7;
 constexpr QPoint kLegacyPanPixelDelta{-8, 0};
+constexpr QSize kViewportSize{1280, 800};
 
 bool closeEnough(qreal actual, qreal expected)
 {
@@ -71,7 +74,7 @@ bool TimelinePanFixture::load(QString &error)
     m_bank.voices[3].type = VOICE_NOISE;
 
     m_tab = std::make_unique<SongTab>(*name);
-    m_tab->resize(1280, 800);
+    m_host = std::make_unique<checks::QuickSceneHost>(m_tab->view(), kViewportSize);
     m_tab->setSampleRate(48000.0);
 
     const std::optional<VoicegroupId> identity =
@@ -99,8 +102,7 @@ bool TimelinePanFixture::load(QString &error)
 
 void TimelinePanFixture::show()
 {
-    m_tab->show();
-    checks::support::pumpQuick();
+    checks::support::showQuickViewport(view(), kViewportSize);
 }
 
 bool TimelinePanFixture::isReady(bool requiresExposedWindow)
@@ -226,8 +228,7 @@ void TimelinePanFixture::cleanup()
             grabber->ungrabMouse();
     }
 
-    if (m_tab)
-        m_tab->close();
+    m_host.reset();
     m_input = nullptr;
     m_scene = nullptr;
     m_root.clear();

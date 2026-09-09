@@ -103,6 +103,8 @@ void VelocityPageTest::fixtureRoute101AndInputGeometry()
     view.setSong(timeline.get(), &voices);
     view.setDrawerActivePage(EditorDrawerPage::Velocity);
     view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
+    checks::QuickSceneHost sceneHost(view, QSize(960, 480));
+    QCOMPARE(quick->quickWindow(), &sceneHost.window());
     QVERIFY(checks::support::showQuickViewport(view, QSize(960, 480)));
     auto *drawer = view.editorDrawer();
     auto *root = quick->rootObject();

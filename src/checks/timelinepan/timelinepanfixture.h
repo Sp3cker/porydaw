@@ -18,6 +18,10 @@ class QQuickWindow;
 class SongTab;
 class SongView;
 
+namespace checks {
+class QuickSceneHost;
+}
+
 namespace songview {
 class TimelineInputItem;
 class TimelineQuickScene;
@@ -52,6 +56,7 @@ class TimelinePanFixture final
     QString m_songLabel;
     LoadedVoiceGroup m_bank = {};
     std::unique_ptr<SongTab> m_tab;
+    std::unique_ptr<checks::QuickSceneHost> m_host;
     QPointer<QQuickWindow> m_window;
     QPointer<QQuickItem> m_root;
     songview::TimelineInputItem *m_input = nullptr;

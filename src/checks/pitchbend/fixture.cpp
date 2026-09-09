@@ -11,6 +11,7 @@
 #include <optional>
 #include <utility>
 
+#include "checks/support/editorrig.h"
 #include "checks/support/eventsynth.h"
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
@@ -59,6 +60,9 @@ QPoint graphPoint(const songview::PitchBendGraph &graph, qreal xFraction, qreal 
 }
 } // namespace
 
+PitchBendFixture::PitchBendFixture() = default;
+PitchBendFixture::~PitchBendFixture() = default;
+
 bool PitchBendFixture::setUp(bool unterminated, bool duplicateNote)
 {
     m_bank = {};
@@ -71,7 +75,6 @@ bool PitchBendFixture::setUp(bool unterminated, bool duplicateNote)
     if (!name)
         return false;
     m_tab = std::make_unique<SongTab>(std::move(*name));
-    m_tab->resize(1280, 800);
     m_tab->setSampleRate(48000.0);
 
     const std::optional<VoicegroupId> identity =
@@ -108,23 +111,27 @@ bool PitchBendFixture::setUp(bool unterminated, bool duplicateNote)
     songview::TimelineQuickView *quick = songView.quickView();
     if (!quick)
         return false;
-    m_timelineWindow = quick->quickWindow();
+    // The standalone host owns the real Quick window; the windowless
+    // session is never resized, shown, or activated directly.
+    m_host = std::make_unique<checks::QuickSceneHost>(songView, QSize(1280, 800));
     QObject *root = quick->rootObject();
-    if (!m_timelineWindow || !root)
+    if (!root)
         return false;
     m_rollInput =
         root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineRollInput"));
     if (!m_rollInput)
         return false;
 
-    m_tab->show();
+    m_host->window().show();
+    QCoreApplication::processEvents();
+    m_host->window().requestActivate();
     if (!QTest::qWaitFor(
-            [this] { return m_timelineWindow->isVisible() && m_timelineWindow->isExposed(); })) {
+            [this] { return m_host->window().isVisible() && m_host->window().isExposed(); })) {
         return false;
     }
     m_rollInput->requestFocus(Qt::OtherFocusReason);
     return QTest::qWaitFor([this] {
-        return QGuiApplication::focusWindow() == m_timelineWindow &&
+        return QGuiApplication::focusWindow() == &m_host->window() &&
                QGuiApplication::focusObject() == m_rollInput && m_rollInput->hasActiveFocus();
     });
 }
@@ -133,19 +140,21 @@ void PitchBendFixture::tearDown()
 {
     if (!m_tab) {
         m_rollInput.clear();
-        m_timelineWindow.clear();
+        m_host.reset();
         return;
     }
     if (songview::PitchBendEditor *editor = popup(); editor && editor->isOpen())
         editor->cancelAndCloseWithoutFocus();
     drainDeferredDeletes();
-    if (m_timelineWindow) {
-        QTest::keyClick(m_timelineWindow, Qt::Key_Escape);
-        if (QQuickItem *grabber = m_timelineWindow->mouseGrabberItem())
+    if (m_host) {
+        QTest::keyClick(&m_host->window(), Qt::Key_Escape);
+        if (QQuickItem *grabber = m_host->window().mouseGrabberItem())
             grabber->ungrabMouse();
     }
     m_rollInput.clear();
-    m_timelineWindow.clear();
+    // The host detaches the canvas while the view still lives; only then
+    // does the borrowed session go away.
+    m_host.reset();
     m_tab.reset();
 }
 
@@ -167,8 +176,8 @@ SongDocument &PitchBendFixture::document() const
 
 QQuickWindow &PitchBendFixture::timelineWindow() const
 {
-    Q_ASSERT(m_timelineWindow);
-    return *m_timelineWindow;
+    Q_ASSERT(m_host);
+    return m_host->window();
 }
 
 songview::TimelineInputItem &PitchBendFixture::rollInput() const

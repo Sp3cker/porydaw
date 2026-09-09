@@ -23,7 +23,6 @@
 #include <QFontMetrics>
 #include <QGuiApplication>
 #include <QPointer>
-#include <QQuickWindow>
 
 #include <algorithm>
 #include <cstdint>
@@ -103,9 +102,8 @@ void SongView::pushGridGeometryThresholds()
 // and the EditorDrawer's body rectangles: every published rect is the
 // visible viewport-local band rectangle, so consumers (PlayheadOverlay)
 // intersect the viewport alone and no widget walking is needed. The Quick
-// window is the full canonical viewport, so no host translation happens
-// here — TimelineQuickView publishes the rects as-is. Hidden bands stay
-// nullopt.
+// canvas is the canonical viewport, so no host translation happens here —
+// TimelineQuickView publishes the rects as-is. Hidden bands stay nullopt.
 TimelineBandLayout SongView::resolveTimelineBandLayout() const
 {
     const ViewportGeometry viewport = resolveViewportGeometry();
@@ -206,18 +204,17 @@ void SongView::synchronizeTimelineBandLayout()
 }
 
 // Analytic viewport layout: fixed font-metric rows pin the top and bottom
-// and the stretch roll pane fills the middle. The Quick window IS the
+// and the stretch roll pane fills the middle. The Quick canvas item is the
 // canonical viewport, so its live size resolves every former spacer/stack
-// rectangle directly; a not-yet-framed window yields empty rows and no
-// bands.
+// rectangle directly, independently of the containing window.
 SongView::ViewportGeometry SongView::resolveViewportGeometry() const
 {
     ViewportGeometry viewport;
-    const QQuickWindow *window = m_quickView ? m_quickView->quickWindow() : nullptr;
-    if (!window)
+    const QQuickItem *canvas = m_quickView ? m_quickView->rootObject() : nullptr;
+    if (!canvas)
         return viewport;
-    const int viewportWidth = window->width();
-    const int viewportHeight = window->height();
+    const int viewportWidth = qRound(canvas->width());
+    const int viewportHeight = qRound(canvas->height());
     const int hbarH = hbarRowHeight();
     const int rollPaneTop = m_geometry.rulerHeight;
     const int rollPaneHeight =
@@ -289,12 +286,12 @@ SongView::SongView(QObject *parent)
         new TimelineQuickView(*m_ruler, *m_roll, *m_strip, *m_editorDrawer->automationPage(),
                               *m_editorDrawer->velocityArea(), *m_editorDrawer->voiceChangeArea(),
                               m_editorDrawer->chrome(), *m_headers, *m_events, *this);
-    // The pencil-shortcut guard identifies Quick input targets through the
-    // shared host's window; injected before any timeline input can arrive.
-    m_editorDrawer->automationPage()->setInputWindow(m_quickView->quickWindow());
-    // Reparenting converted interactions after the Quick host keeps them
-    // alive while its destructor detaches their input items. The roll
-    // interaction joins the same tail as a plain QObject attached to
+    // WorkspaceQuickHost (or a standalone fixture host) attaches the
+    // timeline scene later. SongView remains fully valid before then: its
+    // domain refreshes target the coordinator, which makes unattached
+    // publications inert until attach. Reparenting converted interactions
+    // keeps them alive while host teardown detaches their input items. The
+    // roll interaction joins the same tail as a plain QObject attached to
     // timelineRollInput; the automation page is its only scroll store.
     m_editorDrawer->automationPage()->setParent(this);
     m_editorDrawer->velocityArea()->setParent(this);
@@ -319,9 +316,11 @@ SongView::SongView(QObject *parent)
         });
 
     // Application-scoped appearance events drive the former QWidget
-    // palette/style/theme fan-out; the Quick window's own changes arrive as
-    // viewportChanged. Run the layout choreography once now so a
-    // pre-framed window publishes its first canonical layout immediately.
+    // palette/style/theme fan-out; canvas size and Quick window changes
+    // arrive as viewportChanged after an external host fully attaches the
+    // scene. Run the layout choreography now as well: it remains valid
+    // while unattached, and the attach notification republishes the complete
+    // state into the real viewport.
     QGuiApplication::instance()->installEventFilter(this);
     connect(m_quickView, &TimelineQuickView::viewportChanged, this,
             &SongView::refreshViewportLayout);
@@ -337,14 +336,15 @@ SongView::~SongView()
 {
     if (QGuiApplication::instance())
         QGuiApplication::instance()->removeEventFilter(this);
-    // Detach FIRST: unload QML and cancel window-level popup/gesture state
-    // while every model and QML context below is still alive. Essential on
-    // the unhosted rig path, where no host container tears the window down
-    // first. Every subsequent cleanup tolerates a detached Quick
-    // coordinator (null quickView()/popupSession()) — each gates the
-    // session through ownsSession and only resets domain state otherwise.
+    // Detach FIRST: unload an attached QML scene and cancel window-level
+    // popup/gesture state while every model and QML context below is still
+    // alive. SongTab and direct fixture hosts detach before their window
+    // dies; an unattached coordinator and a repeated detach are safe no-ops.
+    // Every subsequent cleanup tolerates null quickView()/popupSession():
+    // each gates the session through ownsSession and only resets domain state
+    // otherwise.
     if (m_quickView)
-        m_quickView->detachWindow();
+        m_quickView->detachScene();
     if (m_roll)
         m_roll->cancelVelocityPromptWithoutFocus();
     if (m_ruler)

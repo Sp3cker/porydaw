@@ -252,7 +252,18 @@ void SelectionLocalInputTierTest::songSearchLineEditOwnsKeys()
     selectionkey::settle();
     QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Automation, Qt::MouseFocusReason),
              "could not refocus the automation band after text entry");
-    QVERIFY2(m_quickWindow, "the Quick window is missing after text entry");
+    // Same convergence drain as the rename case: the search field keeps
+    // widget-level focus until the shell-to-Quick activation switch lands,
+    // and the window-scope Solo action declines text-owned focus.
+    selectionkey::settle();
+    const auto automationBandReady = [&] {
+        return view.focusedTimelineBand() == songview::TimelineBand::Automation &&
+               m_quickWindow->activeFocusItem() != nullptr && m_quickWindow->isActive() &&
+               QGuiApplication::focusWindow() == m_quickWindow;
+    };
+    QVERIFY2(checks::async_wait::waitUntil([] { return true; }, automationBandReady, 5000, 10) ==
+                 checks::async_wait::Result::Ready,
+             "the Quick host did not reacquire the automation band after text entry");
     selectionkey::deliverKey(m_quickWindow, solo->key(), solo->keyboardModifiers());
     QVERIFY2(m_counts.solo == soloBefore + 1 && view.trackSoloed(kTrack),
              "Solo did not resume after text entry");

@@ -29,6 +29,10 @@ class TimelineInputItem;
 class TimelineQuickScene;
 } // namespace songview
 
+namespace checks {
+class QuickSceneHost;
+} // namespace checks
+
 class RasterAutomationInputHost;
 
 class AutomationRasterFixture final
@@ -105,6 +109,8 @@ class AutomationRasterFixture final
     std::unique_ptr<LoadedVoiceGroup> m_voicegroup;
     std::unique_ptr<MidiTimeline> m_timeline;
     std::unique_ptr<SongView> m_view;
+    // This borrows m_view and must detach before the view and its model.
+    std::unique_ptr<checks::QuickSceneHost> m_sceneHost;
     AutomationPage *m_page = nullptr;
     std::unique_ptr<RasterAutomationInputHost> m_inputHost;
     songview::TimelineInputItem *m_automationPlotInput = nullptr;

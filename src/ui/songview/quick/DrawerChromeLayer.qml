@@ -171,7 +171,7 @@ Item {
             fillMode: Image.PreserveAspectFit
             sourceSize.width: width
             sourceSize.height: height
-            source: "image://drawerchrome/" + toggle.iconName
+            source: controlChrome.iconSourcePrefix + toggle.iconName
                     + (toggle.checked ? "On/" : "/") + controlChrome.iconRevision
         }
     }
@@ -231,7 +231,7 @@ Item {
         fillMode: Image.PreserveAspectFit
         sourceSize.width: width
         sourceSize.height: height
-        source: "image://drawerchrome/detent/" + layer.chrome.iconRevision
+        source: layer.chrome.iconSourcePrefix + "detent/" + layer.chrome.iconRevision
         z: 2
         activeFocusOnTab: layer.chrome.detentEnabled
 

@@ -116,9 +116,8 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         window.m_automationDrawerAction->trigger();
         QVERIFY(!b.hasVisibleDrawerSection());
         QCOMPARE(b.focusedTimelineBand(), songview::TimelineBand::Roll);
-        QWidget *focus = QApplication::focusWidget();
-        QVERIFY(focus);
-        QVERIFY(focus == session->b || session->b->isAncestorOf(focus));
+        QVERIFY(session->hostWindow);
+        QVERIFY(rollBandHoldsHostFocus(b));
     }
 
     void hideRetains()
@@ -163,9 +162,8 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         QCoreApplication::sendPostedEvents();
         QCoreApplication::processEvents();
         QCOMPARE(a.focusedTimelineBand(), songview::TimelineBand::Roll);
-        QWidget *focus = QApplication::focusWidget();
-        QVERIFY(focus);
-        QVERIFY(focus == session->a || session->a->isAncestorOf(focus));
+        QVERIFY(session->hostWindow);
+        QVERIFY(rollBandHoldsHostFocus(a));
 
         window.m_workspace->selectSongTab(session->b);
         QCOMPARE(window.m_workspace->selectedSongTab(), session->b);
@@ -173,9 +171,55 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         QCoreApplication::sendPostedEvents();
         QCoreApplication::processEvents();
         QCOMPARE(b.focusedTimelineBand(), songview::TimelineBand::Roll);
-        focus = QApplication::focusWidget();
-        QVERIFY(focus);
-        QVERIFY(focus == session->b || session->b->isAncestorOf(focus));
+        QVERIFY(session->hostWindow);
+        QVERIFY(rollBandHoldsHostFocus(b));
+    }
+
+    void queuedSelectionFocusTracksSelectionCloseAndLoadingReady()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        MainWindow &window = *session->window;
+        SongView &a = session->a->view();
+        SongView &b = session->b->view();
+        for (const EditorDrawerPage page :
+             {EditorDrawerPage::Automations, EditorDrawerPage::Velocity,
+              EditorDrawerPage::VoiceChanges})
+            b.setDrawerSectionVisible(page, false);
+        QVERIFY(session->hostWindow);
+        window.activateWindow();
+        window.raise();
+        const auto rollSettled = [this](SongView &view) {
+            return checks::async_wait::waitUntil(
+                       [] { return true; }, [this, &view] { return rollBandHoldsHostFocus(view); },
+                       5000, 10) == checks::async_wait::Result::Ready;
+        };
+        // No explicit focus call anywhere below: the selection's queued
+        // request must carry each already-ready page's surface into the
+        // shared host window on its own.
+        window.m_workspace->selectSongTab(session->a);
+        QCOMPARE(window.m_workspace->selectedSongTab(), session->a);
+        QVERIFY2(rollSettled(a), "the queued selection focus did not reach the ready page");
+        window.m_workspace->selectSongTab(session->b);
+        QCOMPARE(window.m_workspace->selectedSongTab(), session->b);
+        QVERIFY2(rollSettled(b), "the queued selection focus did not follow to the ready page");
+        const SongName closedName = session->b->name();
+        window.m_workspace->requestCloseSelectedTab();
+        QVERIFY(window.m_workspace->songTabFor(closedName) == nullptr);
+        QCOMPARE(window.m_workspace->selectedSongTab(), session->a);
+        QVERIFY2(rollSettled(a),
+                 "the queued focus returned to the closed page instead of the replacement");
+        // Loading-to-ready: reopening the closed song selects it while still
+        // loading, so the marker must carry focus to its surface at terminal
+        // ready with no explicit focus call.
+        const auto reopenedName = SongName::create(m_songB);
+        QVERIFY(reopenedName);
+        window.m_workspace->requestSongOpen(*reopenedName, true);
+        SongTab *reopened = window.m_workspace->selectedSongTab();
+        QVERIFY(reopened);
+        QVERIFY(waitForTabReady(*window.m_workspace, reopened));
+        QVERIFY2(rollSettled(reopened->view()),
+                 "the loading-to-ready focus did not reach the reopened page");
     }
 
     void nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent()

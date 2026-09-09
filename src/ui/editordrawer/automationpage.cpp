@@ -34,6 +34,19 @@ bool sameLiveState(const DrawerPageLiveState &a, const DrawerPageLiveState &b)
            a.playback.playing == b.playback.playing;
 }
 
+// Effective page interactivity: the page only owns keyboard input while its
+// whole ancestor chain is visible and enabled. QQuickItem::isVisible() is
+// already effective; the explicit enabled walk keeps the parent-to-child
+// accumulation independent of the Qt version.
+bool effectivelyInteractive(const QQuickItem &item)
+{
+    for (const QQuickItem *cursor = &item; cursor; cursor = cursor->parentItem()) {
+        if (!cursor->isVisible() || !cursor->isEnabled())
+            return false;
+    }
+    return true;
+}
+
 } // namespace
 AutomationPage::Geometry AutomationPage::Geometry::resolve()
 {
@@ -150,16 +163,20 @@ AutomationPage::~AutomationPage()
 bool AutomationPage::eventFilter(QObject *watched, QEvent *event)
 {
     const QEvent::Type type = event->type();
-    if (type == QEvent::WindowDeactivate && belongsToPageWindow(watched)) {
-        // Synthetic and native deactivation both terminate a pending draft.
-        // Do not request focus here: the foreground window now owns it.
-        if (m_canvas && m_canvas->valuePromptVisible())
-            m_canvas->cancelInteraction();
-        return QObject::eventFilter(watched, event);
+    if (type == QEvent::WindowDeactivate) {
+        const auto *window = qobject_cast<const QWindow *>(watched);
+        if (window && deliveredThroughWindow(*window)) {
+            // Synthetic and native deactivation both terminate a pending draft.
+            // Do not request focus here: the foreground window now owns it.
+            if (m_canvas && m_canvas->valuePromptVisible())
+                m_canvas->cancelInteraction();
+            return QObject::eventFilter(watched, event);
+        }
     }
     if (type != QEvent::ShortcutOverride && type != QEvent::KeyPress)
         return QObject::eventFilter(watched, event);
-    if (!belongsToPageWindow(watched) ||
+    const auto *quickWindow = qobject_cast<const QQuickWindow *>(watched);
+    if (!quickWindow || !ownsKeyboardTarget(*quickWindow) ||
         !m_owner.drawerSectionVisible(EditorDrawerPage::Automations) || !m_pencilModeAction ||
         !m_pencilModeAction->isEnabled()) {
         return QObject::eventFilter(watched, event);
@@ -171,16 +188,13 @@ bool AutomationPage::eventFilter(QObject *watched, QEvent *event)
     // shortcut must stay claimable by its editor and resume after it closes.
     if (m_canvas && m_canvas->valuePromptVisible())
         return QObject::eventFilter(watched, event);
-    // Any input-method surface in the Quick scene (the value prompt's editor,
-    // a rename field, future text items) owns its keys; identify it through
-    // the injected input window so the bare-letter shortcut never steals from
-    // an editing item.
-    const auto *quickWindow = qobject_cast<const QQuickWindow *>(m_inputWindow.data());
-    if (quickWindow) {
-        const QQuickItem *quickFocus = quickWindow->activeFocusItem();
-        if (quickFocus && quickFocus->flags().testFlag(QQuickItem::ItemAcceptsInputMethod))
-            return QObject::eventFilter(watched, event);
-    }
+    // Any input-method surface in the page subtree (the value prompt's
+    // editor, a rename field, future text items) owns its keys; identify it
+    // through the focused item so the bare-letter shortcut never steals from
+    // an editing item. Text and IME keep first refusal.
+    const QQuickItem *const quickFocus = quickWindow->activeFocusItem();
+    if (quickFocus && quickFocus->flags().testFlag(QQuickItem::ItemAcceptsInputMethod))
+        return QObject::eventFilter(watched, event);
     if (type == QEvent::ShortcutOverride) {
         event->accept();
         return true;
@@ -203,21 +217,35 @@ bool AutomationPage::matchesPencilShortcut(int key, Qt::KeyboardModifiers modifi
            shortcutModifiers(modifiers) == shortcutModifiers(combination.keyboardModifiers());
 }
 
-bool AutomationPage::belongsToPageWindow(const QObject *target) const noexcept
+bool AutomationPage::deliveredThroughWindow(const QWindow &window) const noexcept
 {
-    if (!m_inputWindow)
+    const QQuickItem *const page = m_inputPage.data();
+    const QWindow *const pageWindow = page ? page->window() : nullptr;
+    if (!pageWindow)
         return false;
-    for (const auto *window = qobject_cast<const QWindow *>(target); window;
-         window = qobject_cast<const QWindow *>(window->parent())) {
-        if (window == m_inputWindow)
+    for (const QWindow *cursor = &window; cursor; cursor = cursor->parent()) {
+        if (cursor == pageWindow)
             return true;
     }
     return false;
 }
 
-void AutomationPage::setInputWindow(QWindow *window) noexcept
+bool AutomationPage::ownsKeyboardTarget(const QQuickWindow &window) const noexcept
 {
-    m_inputWindow = window;
+    const QQuickItem *const page = m_inputPage.data();
+    if (!page || !effectivelyInteractive(*page) || !deliveredThroughWindow(window))
+        return false;
+    const QQuickItem *const focus = window.activeFocusItem();
+    for (const QQuickItem *cursor = focus; cursor; cursor = cursor->parentItem()) {
+        if (cursor == page)
+            return true;
+    }
+    return false;
+}
+
+void AutomationPage::setInputPage(QQuickItem *page) noexcept
+{
+    m_inputPage = page;
 }
 
 bool AutomationPage::ready() const noexcept

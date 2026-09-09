@@ -10,7 +10,8 @@
 #include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
 
-#include <QApplication>
+#include <QGuiApplication>
+#include <QStyleHints>
 
 #include <algorithm>
 #include <cstdint>
@@ -98,7 +99,7 @@ bool TimeRuler::pointerMove(const TimelinePointerInput &input)
     if (m_leftPress) {
         if (!m_selSweep &&
             (input.position.toPoint() - m_leftPressPos.toPoint()).manhattanLength() >=
-                QApplication::startDragDistance()) {
+                QGuiApplication::styleHints()->startDragDistance()) {
             m_selSweep = true;
         }
         if (m_selSweep) {

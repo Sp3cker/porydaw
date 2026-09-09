@@ -10,10 +10,10 @@
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
 
-#include <QApplication>
 #include <QColor>
 #include <QEvent>
 #include <QFont>
+#include <QGuiApplication>
 #include <QKeyEvent>
 #include <algorithm>
 #include <cmath>
@@ -126,7 +126,7 @@ EventListController::EventListController(SongView *songView, QObject *parent)
 
 void EventListController::rebuildAppearance()
 {
-    const QFont body = QApplication::font();
+    const QFont body = QGuiApplication::font();
     const QFont tableFont = typography::tableMono(body);
     QVariantMap next;
     next.insert(QStringLiteral("tableBackground"), themes::color(themes::Role::item_background));
@@ -451,7 +451,7 @@ void EventListController::updatePlayRow()
         emit playRowChanged(row);
     }
     if (!m_playing || row < 0 || !m_followPlayhead || m_pointerDown || isEditing() || m_menuOpen ||
-        QApplication::mouseButtons() != Qt::NoButton)
+        QGuiApplication::mouseButtons() != Qt::NoButton)
         return;
     emit scrollToRow(row);
 }

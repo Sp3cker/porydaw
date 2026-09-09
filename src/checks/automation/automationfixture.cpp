@@ -14,6 +14,8 @@
 #include <QQuickItem>
 #include <QWheelEvent>
 
+#include "checks/support/quickframebuffer.h"
+
 #include "core/timedefaults.h"
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
@@ -156,8 +158,8 @@ void AutomationEditingTest::cleanup()
     m_automationGutterInput.clear();
     m_voiceInput.clear();
     m_quickWindow.clear();
+    m_sceneHost.reset();
     m_tab.reset();
-
     QVERIFY(mouseGrabCleared);
 }
 
@@ -169,6 +171,7 @@ bool AutomationEditingTest::stage(SmfFile smf)
     m_automationGutterInput.clear();
     m_voiceInput.clear();
     m_quickWindow.clear();
+    m_sceneHost.reset();
     m_tab.reset();
     return inputCleared && stageSong(std::move(smf));
 }
@@ -182,8 +185,9 @@ bool AutomationEditingTest::stageSong(SmfFile smf)
         return false;
 
     auto candidate = std::make_unique<SongTab>(std::move(*name));
-    candidate->resize(960, 480);
     candidate->setSampleRate(kFixtureSampleRate);
+    auto candidateHost =
+        std::make_unique<checks::QuickSceneHost>(candidate->view(), QSize(960, 480));
 
     SongInfo song;
     song.label = QStringLiteral("automation-editing");
@@ -203,7 +207,7 @@ bool AutomationEditingTest::stageSong(SmfFile smf)
     AutomationPage *const candidatePage =
         view.editorDrawer() ? view.editorDrawer()->automationPage() : nullptr;
     songview::TimelineQuickView *const quick = view.quickView();
-    QQuickWindow *const candidateWindow = quick ? quick->quickWindow() : nullptr;
+    QQuickWindow *const candidateWindow = &candidateHost->window();
     QObject *const quickRoot = quick ? quick->rootObject() : nullptr;
     auto *const candidateAutomation = quickRoot
                                           ? quickRoot->findChild<songview::TimelineInputItem *>(
@@ -220,11 +224,10 @@ bool AutomationEditingTest::stageSong(SmfFile smf)
         return false;
     }
 
-    candidate->show();
-    // Staged contract mirrors the tail below plus exposure: only the
-    // Automations section is staged visible, so hidden bands (voice,
+    // Only the Automations section is staged visible, so hidden bands (voice,
     // velocity) legitimately keep empty bounds and must not gate staging.
-    if (!QTest::qWaitFor([candidateWindow, candidateAutomation] {
+    if (!checks::support::showQuickViewport(view, QSize(960, 480)) ||
+        !QTest::qWaitFor([candidateWindow, candidateAutomation] {
             return candidateAutomation && candidateWindow->isVisible() &&
                    candidateWindow->isExposed() && !candidateAutomation->bounds().isEmpty() &&
                    candidateAutomation->window() == candidateWindow;
@@ -239,6 +242,7 @@ bool AutomationEditingTest::stageSong(SmfFile smf)
     m_windowEntered = false;
     m_quickWindow = candidateWindow;
     m_tab = std::move(candidate);
+    m_sceneHost = std::move(candidateHost);
     return !m_automationInput->bounds().isEmpty() &&
            m_automationInput->window() == m_quickWindow.data();
 }
@@ -451,7 +455,7 @@ songview::TimelineInputItem &AutomationEditingTest::voiceChangeInput() noexcept
 
 QQuickWindow &AutomationEditingTest::quickWindow() noexcept
 {
-    return *m_quickWindow;
+    return m_sceneHost->window();
 }
 
 AutomationEditingTest::FrozenDocumentState
@@ -610,8 +614,12 @@ void AutomationEditingTest::keyClick(Qt::Key key, Qt::KeyboardModifiers modifier
 
 bool AutomationEditingTest::focusAutomationBand()
 {
-    if (!m_tab || !m_automationInput || !m_quickWindow)
+    if (!m_tab || !m_sceneHost || !m_automationInput || !m_quickWindow)
         return false;
+    // This is the explicit input-acquisition seam; showing the host only
+    // exposes it, so native activation remains local to the focus request.
+    m_sceneHost->window().raise();
+    m_sceneHost->window().requestActivate();
     if (!m_tab->view().quickView()->focusBand(songview::TimelineBand::Automation,
                                               Qt::OtherFocusReason)) {
         return false;

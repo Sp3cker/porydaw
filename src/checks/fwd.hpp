@@ -183,3 +183,11 @@ int runSelectionKeyWindowCheck(const QString &projectRoot, const QString &songA,
                                const QString &songB, const QStringList &qtArguments);
 int runSelectionKeyLocalInputCheck(const QString &projectRoot, const QString &songLabel,
                                    const QStringList &qtArguments);
+
+// Page popup seams (src/checks/host): headless qtOnly harness.
+int runPagePopupSeamsCheck(const QStringList &qtArguments);
+
+// Selection page ownership (src/checks/selectionkey): two real workspace
+// sessions hosted by the WindowSystem runner.
+int runSelectionPageOwnershipTests(const QString &projectRoot, const QString &songA,
+                                   const QString &songB, const QStringList &qtArguments);

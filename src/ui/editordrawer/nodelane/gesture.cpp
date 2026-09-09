@@ -3,7 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
-#include <QApplication>
+#include <QGuiApplication>
+#include <QStyleHints>
 
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/linearramp.h"
@@ -62,7 +63,8 @@ bool BandGesture::move(QPoint pos, uint64_t tick)
 {
     if (!pending)
         return false;
-    if (!active && (pos - pressPos).manhattanLength() >= QApplication::startDragDistance()) {
+    if (!active &&
+        (pos - pressPos).manhattanLength() >= QGuiApplication::styleHints()->startDragDistance()) {
         active = true;
         endTick = tick;
         return true;

@@ -28,13 +28,13 @@ class QDockWidget;
 class QMainWindow;
 class QMenu;
 class QMessageBox;
-class QTabWidget;
-class QWidget;
 class NewSongWizard;
 class SongListPanel;
 class SongTab;
+class SongTabsModel;
 class SongView;
 class TransportBar;
+class WorkspaceQuickHost;
 
 namespace keymap {
 class Registry;
@@ -272,15 +272,14 @@ class WorkspaceUi final : public QObject
     friend class checks::VoicegroupBrowserDriver;
 
     // ---- Tab lifecycle and placement (workspaceui_tabs.cpp) ----
-    static SongTab *tabForWidget(const QWidget *widget) noexcept;
-    SongTab *createTab(SongName name, const QString &title, bool activate);
+    SongTab *createTab(SongName name, bool activate);
     SongTab *createLoadTab(const SongName &name, bool activate);
     void openSongFromList(int songId, bool newTab);
     void destroyAllTabs();
     void removeTab(SongTab *tab);
     void selectTab(SongTab *tab);
-    void publishSelectedIfChanged();
-    void refreshTabTitle(SongTab *tab);
+    void publishSelection();
+    void moveTab(SongTab *tab, int destinationIndex);
     void persistTabs();
     void maybeSaveTab(SongTab *tab, const std::function<void(bool)> &continuation);
     // Gates: pending bank origin, in-flight save, dirty prompt; then close.
@@ -356,11 +355,15 @@ class WorkspaceUi final : public QObject
     QDockWidget *m_songsDock = nullptr;
     VoicegroupBrowser *m_voicegroupBrowser = nullptr;
     QDockWidget *m_voicegroupDock = nullptr;
-    QTabWidget *m_tabs = nullptr;
     QAction *m_findSongAction = nullptr;
 
+    // The vector is the sole session owner and display order. The model
+    // borrows both it and the selected slot; the Quick host borrows the
+    // model and owns only attached presentation pages.
     std::vector<std::unique_ptr<SongTab>> m_tabPages;
     SongTab *m_selectedTab = nullptr;
+    std::unique_ptr<SongTabsModel> m_tabModel;
+    std::unique_ptr<WorkspaceQuickHost> m_quickHost;
     EditorViewState m_editorViewState;
 
     ProjectState m_state;

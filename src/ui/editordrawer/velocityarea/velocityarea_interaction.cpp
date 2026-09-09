@@ -3,7 +3,8 @@
 #include <algorithm>
 #include <cmath>
 
-#include <QApplication>
+#include <QGuiApplication>
+#include <QStyleHints>
 
 #include "core/mid2agbtables.h"
 #include "ui/editordrawer/linearramp.h"
@@ -349,7 +350,7 @@ bool VelocityArea::pointerMove(const songview::TimelinePointerInput &input)
     else if (m_interaction == Interaction::PendingBand) {
         const double distance = std::abs(position.x() - m_pressPosition.x()) +
                                 std::abs(position.y() - m_pressPosition.y());
-        if (distance >= double(QApplication::startDragDistance()))
+        if (distance >= double(QGuiApplication::styleHints()->startDragDistance()))
             m_interaction = Interaction::Band;
     }
     if (m_interaction == Interaction::Band)

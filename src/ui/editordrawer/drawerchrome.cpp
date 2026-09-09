@@ -3,10 +3,12 @@
 #include <QCursor>
 #include <QImage>
 #include <QMetaObject>
+#include <QQmlEngine>
 #include <QQuickImageProvider>
 #include <QStringView>
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <utility>
 
@@ -73,6 +75,15 @@ std::optional<EditorDrawerPage> toggleAt(const DrawerChromeSnapshot &snapshot,
             return page;
     }
     return std::nullopt;
+}
+
+// Two drawers sharing one engine must register under different names, and a
+// re-attach must not reuse a name the engine still has registered.
+QString uniqueProviderId()
+{
+    static std::atomic<int> sequence{0};
+    return QStringLiteral("drawerchrome-%1")
+        .arg(sequence.fetch_add(1, std::memory_order_relaxed) + 1);
 }
 
 } // namespace
@@ -209,7 +220,6 @@ DrawerChrome::DrawerChrome(AutomationPage &page, EditorDrawer *parent)
                      DrawerChromeInteraction(*this, DrawerChromeTarget::AutomationHandle),
                      DrawerChromeInteraction(*this, DrawerChromeTarget::Bar),
                      DrawerChromeInteraction(*this, DrawerChromeTarget::Detent)}
-    , m_icons(new DrawerChromeIconProvider)
 {
     connect(&m_page, &AutomationPage::scrollStateChanged, this, &DrawerChrome::scrollChanged);
     connect(m_page.canvas(), &AutomationCanvas::valuePromptChanged, this,
@@ -227,12 +237,62 @@ void DrawerChrome::setSnapshot(const DrawerChromeSnapshot &snapshot)
     emit chromeChanged();
 }
 
-QQuickImageProvider *DrawerChrome::releaseIconProvider()
+DrawerChrome::~DrawerChrome()
 {
-    if (m_iconProviderReleased)
-        return nullptr;
-    m_iconProviderReleased = true;
-    return m_icons;
+    detachIconProvider();
+}
+
+void DrawerChrome::attachIconProvider(QQmlEngine &engine)
+{
+    detachIconProvider();
+    // A fresh provider per attach: registering it hands ownership to the
+    // engine, which deletes it on removal, so nothing is reused across scenes.
+    m_icons = new DrawerChromeIconProvider;
+    m_icons->setIcons(m_velocityIcon, m_velocityOnIcon, m_automationIcon, m_automationOnIcon,
+                      m_voiceChangesIcon, m_voiceChangesOnIcon, m_detentIcon);
+    m_providerId = uniqueProviderId();
+    m_engine = &engine;
+    // Engine destruction deletes the provider on its own; drop the borrow
+    // before anything can touch it again.
+    connect(&engine, &QObject::destroyed, this, [this, &engine] { handleEngineDestroyed(engine); });
+    engine.addImageProvider(m_providerId, m_icons);
+    setIconSourcePrefix(QStringLiteral("image://") + m_providerId + QLatin1Char('/'));
+}
+
+void DrawerChrome::detachIconProvider()
+{
+    if (!m_icons)
+        return;
+    QQmlEngine &engine = *m_engine;
+    const QString providerId = m_providerId;
+    // Clear the raw borrow first: removeImageProvider deletes the provider.
+    m_engine = nullptr;
+    m_icons = nullptr;
+    m_providerId.clear();
+    // Empty the prefix before removal so surviving Image bindings evaluate to
+    // a null source instead of requesting from a deleted provider.
+    setIconSourcePrefix(QString());
+    engine.removeImageProvider(providerId);
+}
+
+void DrawerChrome::setIconSourcePrefix(QString prefix)
+{
+    if (m_iconSourcePrefix == prefix)
+        return;
+    m_iconSourcePrefix = std::move(prefix);
+    emit iconSourcePrefixChanged();
+}
+
+void DrawerChrome::handleEngineDestroyed(const QQmlEngine &engine)
+{
+    if (m_engine != &engine)
+        return;
+    // The engine deleted the provider and the scene consuming the prefix died
+    // with it; clear state without notifying anyone.
+    m_engine = nullptr;
+    m_icons = nullptr;
+    m_providerId.clear();
+    m_iconSourcePrefix.clear();
 }
 
 void DrawerChrome::cancelInteraction()
@@ -550,7 +610,16 @@ void DrawerChrome::setIcons(QImage velocity, QImage velocityOn, QImage automatio
                             QImage automationOn, QImage voiceChanges, QImage voiceChangesOn,
                             QImage detent)
 {
-    m_icons->setIcons(std::move(velocity), std::move(velocityOn), std::move(automation),
-                      std::move(automationOn), std::move(voiceChanges), std::move(voiceChangesOn),
-                      std::move(detent));
+    // Chrome owns the authoritative images so attach can rebuild a provider
+    // from current state; updating them while unattached is safe.
+    m_velocityIcon = std::move(velocity);
+    m_velocityOnIcon = std::move(velocityOn);
+    m_automationIcon = std::move(automation);
+    m_automationOnIcon = std::move(automationOn);
+    m_voiceChangesIcon = std::move(voiceChanges);
+    m_voiceChangesOnIcon = std::move(voiceChangesOn);
+    m_detentIcon = std::move(detent);
+    if (m_icons)
+        m_icons->setIcons(m_velocityIcon, m_velocityOnIcon, m_automationIcon, m_automationOnIcon,
+                          m_voiceChangesIcon, m_voiceChangesOnIcon, m_detentIcon);
 }

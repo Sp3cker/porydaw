@@ -114,6 +114,10 @@ class TimelineInputItem : public QQuickItem, public TimelineInputHost
     void itemChange(ItemChange change, const ItemChangeData &data) override;
 
   private:
+    // Buttons this item accepted a press for and still holds the grab for:
+    // an involuntary ungrab arms the window owner's swallowed-release state
+    // for exactly these buttons before the grab actually transfers.
+    int m_grabbedButtons = 0;
     TimelineBandInteraction *m_interaction = nullptr;
     TimelineInputSurface m_surface = TimelineInputSurface::Plot;
     bool m_attachHost = true;

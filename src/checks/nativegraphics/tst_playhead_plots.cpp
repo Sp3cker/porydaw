@@ -6,6 +6,7 @@
 #include <QEvent>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QSizeF>
 
 #include <memory>
 #include <optional>
@@ -86,6 +87,25 @@ void RenderingPlayheadTest::plotGeometryAndLifecycle()
     QVERIFY(sameRect(quickRect(*rollInput), QRectF(resizedRoll->plotRect)));
     window->resize(originalSize);
     checks::support::pumpQuick();
+
+    // The composed canvas can resize while its shared Quick window remains
+    // fixed. Canonical bands and live items must follow that page viewport,
+    // not the unchanged outer surface.
+    const QSizeF originalCanvasSize = root->size();
+    const QSizeF viewportOnlySize{originalCanvasSize.width() - 37.0,
+                                  originalCanvasSize.height() - 29.0};
+    root->setSize(viewportOnlySize);
+    checks::support::pumpQuick();
+    QCOMPARE(window->size(), originalSize);
+    QCOMPARE(root->size(), viewportOnlySize);
+    const std::optional<songview::TimelineBandGeometry> &viewportOnlyRoll =
+        view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
+    QVERIFY(viewportOnlyRoll);
+    QVERIFY(sameRect(quickRect(*rollBand), QRectF(viewportOnlyRoll->rect)));
+    QVERIFY(sameRect(quickRect(*rollInput), QRectF(viewportOnlyRoll->plotRect)));
+    root->setSize(originalCanvasSize);
+    checks::support::pumpQuick();
+    QCOMPARE(root->size(), originalCanvasSize);
 
     // Quick-window lifecycle: the DPR notification and a hide/show exposure
     // cycle drive the same re-publication the widget-level WinId/DPR events

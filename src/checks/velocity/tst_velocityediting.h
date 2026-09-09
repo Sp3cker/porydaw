@@ -13,6 +13,8 @@
 #include <QQuickWindow>
 #include <QtTest>
 
+#include "checks/support/editorrig.h"
+
 #include "core/noteid.h"
 #include "core/songdocument.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
@@ -97,10 +99,11 @@ class VelocityEditingTest final : public QObject
     void beginStagedRollDrag(RollDragSession *session);
     void verifyCancelledRollDragIdle(const RollDragSession &session);
 
-    // Value-owned bank first: the tab borrows it, so declaration order must
-    // keep it alive past every tab reset below.
+    // Value-owned bank first: the tab borrows it, and the host borrows the
+    // tab's view, so destruction remains host, tab, then bank.
     LoadedVoiceGroup m_bank = {};
     std::unique_ptr<SongTab> m_tab;
+    std::unique_ptr<checks::QuickSceneHost> m_sceneHost;
     QPointer<VelocityArea> m_area;
     QPointer<songview::TimelineInputItem> m_velocityInput;
     QPointer<songview::TimelineInputItem> m_rollInput;

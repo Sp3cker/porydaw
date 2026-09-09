@@ -16,6 +16,7 @@
 
 #include <algorithm>
 
+#include "checks/support/asyncwait.h"
 #include "checks/support/eventsynth.h"
 #include "checks/support/songfixture.h"
 #include "checks/support/voicegroupbrowserdriver.h"
@@ -47,6 +48,19 @@ QPointF trackHeaderPoint(songview::TrackHeaderModel &model, songview::TimelineIn
     model.setScrollY(std::clamp(centered, qreal(0.0), model.maximumScrollY()));
     return QPointF(model.activityWidth() / 2.0,
                    row * model.rowHeight() - model.scrollY() + model.rowHeight() / 2.0);
+}
+
+// The composed workspace publishes the Quick page asynchronously: the canvas
+// root and the header input's interaction binding land on attach, while the
+// input geometry needs a polish pass on the shown host window.
+bool headerInputReady(songview::TimelineQuickView *quick, songview::TrackHeaderModel *headers)
+{
+    QQuickItem *const root = quick ? quick->rootObject() : nullptr;
+    const auto *const input = root ? root->findChild<songview::TimelineInputItem *>(
+                                         QStringLiteral("timelineTrackHeadersInput"))
+                                   : nullptr;
+    return input && input->width() > 0.0 && input->height() > 0.0 &&
+           input->interaction() == headers;
 }
 
 } // namespace
@@ -98,17 +112,23 @@ void VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild()
         view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
     auto *const headers =
         view.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"));
-    QQuickItem *const root = quick ? quick->rootObject() : nullptr;
-    auto *const input = root ? root->findChild<songview::TimelineInputItem *>(
-                                   QStringLiteral("timelineTrackHeadersInput"))
-                             : nullptr;
     int otherTrack = -1;
     const MidiTimeline *const timeline = view.timeline();
     for (int track = 0; timeline && track < 16 && otherTrack < 0; ++track) {
         if (track != view.selectionModel().primaryTrack() && timeline->tracks[track].used)
             otherTrack = track;
     }
+    // Show plus a single event pass cannot assume the composed page is
+    // polished: wait for the real host acquisition before pressing.
+    QVERIFY2(checks::async_wait::waitUntil([] { return true; },
+                                           [&] { return headerInputReady(quick, headers); }) ==
+                 checks::async_wait::Result::Ready,
+             "the composed Quick page did not publish usable track-header input");
     QVERIFY(selector && selector->lineEdit());
+    QQuickItem *const root = quick ? quick->rootObject() : nullptr;
+    auto *const input = root ? root->findChild<songview::TimelineInputItem *>(
+                                   QStringLiteral("timelineTrackHeadersInput"))
+                             : nullptr;
     QVERIFY(quick && headers && input);
     QVERIFY(input->width() > 0.0 && input->height() > 0.0 && input->interaction() == headers);
     QVERIFY(otherTrack >= 0);
@@ -130,7 +150,17 @@ void VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild()
     QVERIFY(!retainedInput.isNull());
     QVERIFY(!retainedModel.isNull());
     QCOMPARE(view.selectionModel().primaryTrack(), otherTrack);
-    QCOMPARE(m_document->cfg().voicegroupArg, other);
+    // The input's press focus path queues the Quick window's activation
+    // (TimelineInputItem::requestFocus), so the selector line edit loses
+    // focus — and commits — only after the queued activation converges.
+    // Observe that convergence while the press stays held.
+    QVERIFY2(checks::async_wait::waitUntil(
+                 [this, &retainedInput, &retainedModel] {
+                     return m_window && retainedInput && retainedModel;
+                 },
+                 [this, &other] { return m_document->cfg().voicegroupArg == other; }, 5000,
+                 10) == checks::async_wait::Result::Ready,
+             "held-press selector commit did not converge after host activation");
     events::sendMouse(*retainedInput, QEvent::MouseButtonRelease, point, Qt::LeftButton,
                       Qt::NoButton, Qt::NoModifier);
     QVERIFY2(settle([this, &other] {
@@ -140,6 +170,13 @@ void VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild()
              "mid-press -G commit did not complete voicegroup binding");
     QVERIFY(!retainedQuick.isNull());
     QVERIFY(!retainedModel.isNull());
+
+    QVERIFY2(checks::async_wait::waitUntil([] { return true; },
+                                           [&] {
+                                               return headerInputReady(retainedQuick,
+                                                                       retainedModel);
+                                           }) == checks::async_wait::Result::Ready,
+             "the rebuilt Quick page did not republish usable track-header input");
     QQuickItem *const rebuiltRoot = retainedQuick->rootObject();
     auto *const rebuiltInput = rebuiltRoot ? rebuiltRoot->findChild<songview::TimelineInputItem *>(
                                                  QStringLiteral("timelineTrackHeadersInput"))

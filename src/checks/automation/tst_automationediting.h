@@ -6,6 +6,8 @@
 #include <optional>
 #include <vector>
 
+#include "checks/support/editorrig.h"
+
 #include "ui/editordrawer/automationprojection.h"
 #include <QByteArray>
 #include <QEvent>
@@ -320,9 +322,12 @@ class AutomationEditingTest final : public QObject
     // waits for the shared Quick panel and locates both typed rows.
     NodePointMenu openNodePointMenu(LaneHandle lane, uint64_t tick, int value, QString diagnostic);
 
-    // The tab borrows this bank, so it must outlive m_tab.
+    // The tab borrows this bank, and the host borrows the tab's view: the
+    // declaration order keeps the bank alive past the tab and destroys the
+    // host before the session.
     LoadedVoiceGroup m_bank = {};
     std::unique_ptr<SongTab> m_tab;
+    std::unique_ptr<checks::QuickSceneHost> m_sceneHost;
     QPointer<AutomationPage> m_page;
     QPointer<songview::TimelineInputItem> m_automationInput;
     QPointer<songview::TimelineInputItem> m_automationGutterInput;

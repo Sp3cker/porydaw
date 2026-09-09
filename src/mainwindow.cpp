@@ -726,6 +726,7 @@ void MainWindow::onSelectedTabChanged(SongTab *tab)
     if (m_audioOk)
         m_audio.stop();
     m_selectedTab = tab;
+    m_focusWhenReady = tab && !tab->isReady() ? tab : nullptr;
 
     {
         // Reflect the incoming tab's roll/event-list state without the
@@ -756,20 +757,16 @@ void MainWindow::onSelectedTabChanged(SongTab *tab)
     }
 
     onSelectedTabReady(tab);
-    // A native QQuickView completes its tab-activation handoff after
-    // QTabWidget emits currentChanged. Restore content focus on the next
-    // turn, after that non-focusable overlay has settled.
-    const QPointer<SongTab> focusTab(tab);
-    QTimer::singleShot(0, this, [this, focusTab] {
-        if (focusTab && focusTab == m_selectedTab && focusTab->isReady())
-            focusTab->view().focusActiveSurface();
-    });
+    queueSelectedFocus(tab);
 }
 
 void MainWindow::onSelectedTabReady(SongTab *tab)
 {
     if (tab != m_selectedTab)
         return;
+    const bool focusWhenReady = m_focusWhenReady == tab;
+    if (focusWhenReady)
+        m_focusWhenReady = nullptr;
     // The selected tab's terminal VoicegroupBound just landed (or the
     // selection moved to an already-ready tab): bind the engine, then
     // refresh the chrome that reads loaded state.
@@ -783,6 +780,18 @@ void MainWindow::onSelectedTabReady(SongTab *tab)
     updateWindowTitle();
     updateChrome();
     updateTransportActions();
+
+    if (focusWhenReady)
+        queueSelectedFocus(tab);
+}
+
+void MainWindow::queueSelectedFocus(SongTab *tab)
+{
+    const QPointer<SongTab> focusTab(tab);
+    QTimer::singleShot(0, this, [this, focusTab] {
+        if (focusTab && focusTab == m_selectedTab && focusTab->isReady())
+            focusTab->view().focusActiveSurface();
+    });
 }
 
 void MainWindow::onSelectedSongStateChanged()

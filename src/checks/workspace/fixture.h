@@ -11,6 +11,11 @@
 #include "project/projectidentity.h"
 #include "ui/workspaceui.h"
 
+class MainWindow;
+class QQuickItem;
+class QQuickWindow;
+class QSize;
+class WorkspaceQuickHost;
 class SongTab;
 
 namespace workspace_test {
@@ -50,5 +55,12 @@ inline bool waitForProject(WorkspaceUi &workspace, int timeoutMs = 30000)
 SongTab *waitReady(WorkspaceUi &workspace, const SongName &name, int timeoutMs = 15000);
 SongTab *openReady(WorkspaceUi &workspace, const SongName &name, bool newTab = false,
                    int timeoutMs = 15000);
+
+WorkspaceQuickHost *quickHost(MainWindow &window);
+bool exposeWorkspaceHost(MainWindow &window, WorkspaceQuickHost &host, const QSize &size);
+QQuickItem *quickItem(QQuickWindow &window, const QString &objectName);
+void clickQuickItem(QQuickWindow &window, QQuickItem &item);
+void dragQuickItemHorizontally(QQuickWindow &window, QQuickItem &item, double targetSceneX);
+bool itemInsideViewport(const QQuickItem &item, const QQuickItem &viewport);
 
 } // namespace workspace_test

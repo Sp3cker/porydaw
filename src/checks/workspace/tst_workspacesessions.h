@@ -54,6 +54,11 @@ class WorkspaceTabsTest final : public QObject
     void scaleRouting();
     void dirtyCloseUsesProductionGate_data();
     void dirtyCloseUsesProductionGate();
+    void tabModelMovesPreservePersistentIdentity();
+    void tabModelRemovalKeepsSelection();
+    void quickTabStripSelectsWithoutStealingFocus();
+    void quickTabStripReorderPreservesPages();
+    void quickTabStripOverflowKeepsTabsReachable();
 
   private:
     SongTab *open(MainWindow &window, const QString &label, bool newTab = false);

@@ -12,6 +12,7 @@
 #include <optional>
 #include <utility>
 
+#include "checks/support/editorrig.h"
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
@@ -265,6 +266,9 @@ class TrackHeaderModelTest final : public QObject
         SongDocument document;
         std::unique_ptr<MidiTimeline> timeline;
         SongView view;
+        // Declared after the view so the host detaches and dies before the
+        // borrowed SongView.
+        std::unique_ptr<checks::QuickSceneHost> host;
         songview::TrackHeaderModel *headers = nullptr;
         int firstUsed = -1;
         bool documentLoaded = false;
@@ -276,6 +280,7 @@ class TrackHeaderModelTest final : public QObject
                 return false;
             documentLoaded = true;
             timeline = document.buildTimeline(48000.0);
+            host = std::make_unique<checks::QuickSceneHost>(view, QSize(800, 480));
             if (!checks::support::showQuickViewport(view, QSize(800, 480)))
                 return false;
             view.setSong(timeline.get(), nullptr);

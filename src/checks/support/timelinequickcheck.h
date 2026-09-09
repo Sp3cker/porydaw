@@ -28,8 +28,9 @@ inline bool quickWindowIsUnmasked(const songview::TimelineQuickView &quick)
 }
 
 // Compare independent physical plot and gutter surfaces against canonical
-// band geometry: the unhosted Quick window is the full canonical viewport
-// with origin (0, 0), so window-local input frames equal the layout rects.
+// band geometry: input frames map through the canvas root item, so the
+// comparison holds wherever a host places the translated viewport inside
+// its window (root-relative, never window-local).
 inline bool physicalInputsMatchCanonical(const songview::TimelineBandLayout &bandLayout,
                                          const QQuickItem &quickRoot, songview::TimelineBand band,
                                          const QString &plotInputObjectName,

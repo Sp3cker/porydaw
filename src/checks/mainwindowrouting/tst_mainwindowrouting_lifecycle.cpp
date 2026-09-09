@@ -87,14 +87,13 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         QCOMPARE(seeded.gridMinDenom, 16);
         QVERIFY(seeded.gridTriplet);
         QVERIFY(seeded.eventList);
-        QTabBar *tabBar = window.findChild<QTabBar *>();
-        QVERIFY(tabBar);
-        tabBar->setFocusPolicy(Qt::StrongFocus);
-        tabBar->setFocus(Qt::OtherFocusReason);
-        QCOMPARE(QApplication::focusWidget(), tabBar);
+        QLineEdit foreignFocus(&window);
+        foreignFocus.show();
+        foreignFocus.setFocus(Qt::OtherFocusReason);
+        QCOMPARE(QApplication::focusWidget(), &foreignFocus);
         QSignalSpy eventListTraffic(&view, &SongView::eventListVisibilityChanged);
         view.applyViewState(seeded);
-        QCOMPARE(QApplication::focusWidget(), tabBar);
+        QCOMPARE(QApplication::focusWidget(), &foreignFocus);
         eventListTraffic.clear();
         const MidiTimeline *beforeReload = reopened->timeline().get();
         const SongName name = reopened->name();
@@ -120,7 +119,7 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         QVERIFY(reopened->timeline().get() != beforeReload);
         QVERIFY(sameViewState(reopened->view().viewState(), seeded));
         QCOMPARE(eventListTraffic.count(), 0);
-        QCOMPARE(QApplication::focusWidget(), tabBar);
+        QCOMPARE(QApplication::focusWidget(), &foreignFocus);
         QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot);
     }
 
@@ -248,6 +247,44 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         QCOMPARE(probe.voicegroupLease().get(), &replacement);
         QVERIFY(sameViewState(probe.view().viewState(), state));
         QCOMPARE(ready.count(), 0);
+    }
+
+    void readyBankRefreshKeepsTextFocusAndReadiness()
+    {
+        // Declared before the session so the borrowed bank outlives the
+        // window, the shared host scene, and the tab that borrows it.
+        std::optional<LoadedVoiceGroup> replacement;
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        MainWindow &window = *session->window;
+        SongTab &tab = *session->b;
+        window.m_workspace->selectSongTab(&tab);
+        QVERIFY(tab.isReady());
+        QVERIFY(tab.voicegroupId());
+        QVERIFY(tab.voicegroupLease());
+        const VoicegroupId identity = *tab.voicegroupId();
+        const MidiTimeline *timeline = tab.timeline().get();
+        const SongView::ViewState state = tab.view().viewState();
+        QLineEdit text(&window);
+        text.show();
+        text.setFocus(Qt::OtherFocusReason);
+        QCOMPARE(QApplication::focusWidget(), &text);
+        // A same-identity refresh must swap in a valid bank: copy the live
+        // bank so the shared host scene rebuilds from real voice content.
+        // An empty bank's zeroed voices[] resolve through voiceContext /
+        // VelocityMap in the live velocity rebuild and fault the scene.
+        replacement.emplace(*tab.voicegroupLease().get());
+        QSignalSpy ready(&tab, &SongTab::readinessChanged);
+        tab.applyBankView(
+            LoadedBankView{identity, borrowVoicegroupLease(&*replacement), QString()});
+        tab.applyVoicegroupBound(identity);
+        QCoreApplication::processEvents();
+        QVERIFY(tab.isReady());
+        QCOMPARE(tab.timeline().get(), timeline);
+        QCOMPARE(tab.voicegroupLease().get(), &*replacement);
+        QVERIFY(sameViewState(tab.view().viewState(), state));
+        QCOMPARE(ready.count(), 0);
+        QCOMPARE(QApplication::focusWidget(), &text);
     }
 
     void failedOpenPreservesLiveTab()

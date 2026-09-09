@@ -160,7 +160,7 @@ void EventViewsChromeTest::drawerFocusKeepsNavigation()
     QVERIFY2(opened, qPrintable(opened.error));
     const EventWidgets widgets = opened.fixture->openEventList();
     QVERIFY(widgets);
-    auto *drawer = widgets.quickWindow->findChild<songview::TimelineInputItem *>(
+    auto *drawer = widgets.quickRoot->findChild<songview::TimelineInputItem *>(
         QStringLiteral("drawerBarInput"));
     QVERIFY(drawer);
     widgets.controller->selectRow(0, Qt::NoModifier);
@@ -187,7 +187,7 @@ void EventViewsChromeTest::scrollbarWheelClamps()
     const EventWidgets widgets = opened.fixture->openEventList();
     QVERIFY(widgets);
     auto *scrollbar =
-        widgets.quickWindow->findChild<QQuickItem *>(QStringLiteral("eventListVerticalScrollBar"));
+        widgets.quickRoot->findChild<QQuickItem *>(QStringLiteral("eventListVerticalScrollBar"));
     QVERIFY(scrollbar);
     QQuickItem *const table = checks::eventviews::eventListTable(widgets);
     QVERIFY(table);

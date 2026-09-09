@@ -9,8 +9,8 @@
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
 
-#include <QApplication>
 #include <QFontMetricsF>
+#include <QGuiApplication>
 #include <cstdint>
 #include <optional>
 
@@ -546,7 +546,7 @@ void TimelineQuickView::synchronizeNoteText()
     const int selectedTrack = roll.m_sv->selectionModel().primaryTrack();
     const auto &notes = roll.m_sv->model().notes;
     const bool velocityShortcut = keymap::Registry::instance().matchesModifier(
-        QApplication::queryKeyboardModifiers(), QStringLiteral("roll.velocity_drag"));
+        QGuiApplication::queryKeyboardModifiers(), QStringLiteral("roll.velocity_drag"));
     const bool showVelocityValues =
         roll.m_leftDrag == PianoRoll::LeftDrag::Velocity || velocityShortcut;
     const bool nameFontVisible =

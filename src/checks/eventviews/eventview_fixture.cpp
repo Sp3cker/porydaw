@@ -11,6 +11,8 @@
 #include <utility>
 
 #include "checks/quickpopupguard.h"
+#include "checks/support/quickframebuffer.h"
+
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
 #include "project/voicegroupsource.h"
@@ -109,6 +111,7 @@ EventWidgets locateWidgets(SongView &view)
         widgets.model = widgets.controller ? widgets.controller->model() : nullptr;
         songview::TimelineQuickView *quick = view.quickView();
         widgets.quickWindow = quick ? quick->quickWindow() : nullptr;
+        widgets.quickRoot = quick ? quick->rootObject() : nullptr;
         widgets.popupSession = quick ? quick->popupSession() : nullptr;
         return bool(widgets);
     });
@@ -184,8 +187,9 @@ std::unique_ptr<EventViewTabFixture> EventViewTabFixture::create(FixtureShape sh
     fixture->m_bank.voices[2].type = VOICE_PROGRAMMABLE_WAVE;
     fixture->m_bank.voices[3].type = VOICE_NOISE;
     fixture->m_tab = std::make_unique<SongTab>(std::move(*name));
-    fixture->m_tab->resize(1000, 640);
     fixture->m_tab->setSampleRate(48000.0);
+    fixture->m_sceneHost =
+        std::make_unique<QuickSceneHost>(fixture->m_tab->view(), QSize(1000, 640));
     fixture->m_tab->applyMidiStage(fixtureSong(), fixtureSmf(shape),
                                    track_limits::kHardwareCapacity);
     if (!fixture->m_tab->presentationError().isEmpty()) {
@@ -199,8 +203,10 @@ std::unique_ptr<EventViewTabFixture> EventViewTabFixture::create(FixtureShape sh
         error = QStringLiteral("SongTab did not become ready");
         return nullptr;
     }
-    fixture->m_tab->show();
-    QCoreApplication::processEvents();
+    if (!checks::support::showQuickViewport(fixture->m_tab->view(), QSize(1000, 640))) {
+        error = QStringLiteral("SongTab host did not expose the timeline Quick window");
+        return nullptr;
+    }
     return fixture;
 }
 

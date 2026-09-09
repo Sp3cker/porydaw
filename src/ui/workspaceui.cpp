@@ -8,8 +8,6 @@
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QStyle>
-#include <QTabBar>
-#include <QTabWidget>
 
 #include <algorithm>
 
@@ -19,6 +17,8 @@
 #include "ui/songtab.h"
 #include "ui/songview.h"
 #include "ui/transportbar.h"
+#include "ui/workspacequick/songtabsmodel.h"
+#include "ui/workspacequick/workspacequickhost.h"
 
 namespace {
 
@@ -44,7 +44,7 @@ WorkspaceUi::WorkspaceUi(QMainWindow &host, const EditorViewState &initial)
                                          settings.value(kLastSongLabelKey).toString());
     if (!m_startRecipe.projectPath.isEmpty()) {
         for (const SongName &name : m_startRecipe.orderedSongs) {
-            SongTab *tab = createTab(name, name.value(), /*activate=*/false);
+            SongTab *tab = createTab(name, /*activate=*/false);
             m_startupPlaceholders.insert(tab->name());
         }
         SongTab *toSelect = m_startRecipe.selected ? songTabFor(*m_startRecipe.selected) : nullptr;
@@ -63,9 +63,15 @@ WorkspaceUi::~WorkspaceUi()
     // The browser borrows the presentation copy; detach it before the
     // member dies.
     m_voicegroupBrowser->setSource(nullptr, {}, {}, {}, {});
-    m_tabs->blockSignals(true);
-    m_tabPages.clear();
+    // Frozen teardown: suppress selection/persistence publications, detach
+    // every page in the model's removal bracket while sessions are live,
+    // destroy the sessions, then release the host and its window/engine.
+    m_tearingDown = true;
     m_selectedTab = nullptr;
+    std::vector<std::unique_ptr<SongTab>> pages = m_tabModel->takeAll();
+    pages.clear();
+    m_quickHost.reset();
+    m_tabModel.reset();
 }
 
 void WorkspaceUi::buildUi()
@@ -143,21 +149,14 @@ void WorkspaceUi::buildUi()
     m_host.addDockWidget(Qt::LeftDockWidgetArea, m_voicegroupDock);
     wireBrowser();
 
-    m_tabs = new QTabWidget(&m_host);
-    m_tabs->setFocusPolicy(Qt::NoFocus);
-    m_tabs->setTabsClosable(true);
-    m_tabs->setMovable(true);
-    m_tabs->setDocumentMode(true);
-    m_tabs->tabBar()->setFixedHeight(chromeHeight);
-    m_tabs->tabBar()->setFocusPolicy(Qt::NoFocus);
-    connect(m_tabs, &QTabWidget::currentChanged, this, [this](int) { publishSelectedIfChanged(); });
-    connect(m_tabs, &QTabWidget::tabCloseRequested, this,
-            [this](int index) { requestCloseTab(tabForWidget(m_tabs->widget(index))); });
-    connect(m_tabs->tabBar(), &QTabBar::tabMoved, this, [this](int, int) {
-        emit sessionsReordered();
-        persistTabs();
-    });
-    m_host.setCentralWidget(m_tabs);
+    m_tabModel = std::make_unique<SongTabsModel>(m_tabPages, m_selectedTab);
+    m_quickHost = std::make_unique<WorkspaceQuickHost>(*m_tabModel, m_host);
+    connect(m_quickHost.get(), &WorkspaceQuickHost::selectRequested, this,
+            &WorkspaceUi::selectSongTab);
+    connect(m_quickHost.get(), &WorkspaceQuickHost::closeRequested, this,
+            &WorkspaceUi::requestCloseTab);
+    connect(m_quickHost.get(), &WorkspaceQuickHost::moveRequested, this, &WorkspaceUi::moveTab);
+    m_host.setCentralWidget(m_quickHost->container());
 }
 
 void WorkspaceUi::wireBrowser()

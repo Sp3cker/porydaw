@@ -1,12 +1,10 @@
 #include "ui/songview/quick/quickpopupsession.h"
 
 #include "ui/layout.h"
-#include "ui/songview/quick/quickengine.h"
+#include "ui/songview/quick/quickwindowinput.h"
 
 #include <QDebug>
 #include <QEvent>
-#include <QKeyEvent>
-#include <QMouseEvent>
 #include <QQmlComponent>
 #include <QQmlContext>
 #include <QQmlEngine>
@@ -19,12 +17,16 @@
 
 namespace songview {
 
-QuickPopupSession::QuickPopupSession(QQuickWindow &window, QObject *parent)
+QuickPopupSession::QuickPopupSession(QQuickWindow &window, QQmlContext &pageContext,
+                                     QObject *parent)
     : QObject(parent)
     , m_window(&window)
+    , m_pageContext(&pageContext)
 {
-    // This filter remains installed after a popup closes so an outside press
-    // cannot leak its matching release through a layer queued for deletion.
+    // This filter remains installed after a popup closes so a window
+    // deactivation, hide, or close still retires a lingering popup promptly.
+    // The swallowed outside-release sequence itself lives in the window's
+    // QuickWindowInput owner, never here.
     window.installEventFilter(this);
     connect(&window, &QQuickWindow::activeFocusItemChanged, this, [this] { scheduleFocusCheck(); });
     connect(&window, &QObject::destroyed, this, [this] {
@@ -60,6 +62,93 @@ QQuickItem *QuickPopupSession::contentItem() const
     return isOpen() ? m_content.data() : nullptr;
 }
 
+// The page root bounds the whole popup lifecycle. Entry is refused and a
+// live popup cancels without focus restoration while the page is disabled,
+// hidden, or detached.
+void QuickPopupSession::setPageRoot(QQuickItem *pageRoot)
+{
+    if (m_pageRoot.data() == pageRoot)
+        return;
+    for (const QMetaObject::Connection &connection : m_pageConnections)
+        QObject::disconnect(connection);
+    m_pageConnections.clear();
+    m_pageRoot = pageRoot;
+    if (m_pageRoot) {
+        QQuickItem *const root = m_pageRoot.data();
+        m_pageConnections = {
+            connect(root, &QQuickItem::xChanged, this,
+                    &QuickPopupSession::handlePageGeometryChanged),
+            connect(root, &QQuickItem::yChanged, this,
+                    &QuickPopupSession::handlePageGeometryChanged),
+            connect(root, &QQuickItem::widthChanged, this,
+                    &QuickPopupSession::handlePageGeometryChanged),
+            connect(root, &QQuickItem::heightChanged, this,
+                    &QuickPopupSession::handlePageGeometryChanged),
+            connect(root, &QQuickItem::enabledChanged, this,
+                    &QuickPopupSession::handlePageEligibilityChanged),
+            connect(root, &QQuickItem::visibleChanged, this,
+                    &QuickPopupSession::handlePageEligibilityChanged),
+            // A destroyed root strands any open popup over a dead page.
+            connect(root, &QObject::destroyed, this,
+                    &QuickPopupSession::handlePageEligibilityChanged),
+        };
+    }
+    updateLayerPageRect();
+    // A replacement or clear can strand a live popup over an ineligible
+    // page; eligibility loss never restores focus.
+    if (isOpen() && !pageEligible())
+        cancel(false);
+    emit geometryChanged();
+}
+
+// The actual visible page rectangle: the page root mapped into scene space
+// and intersected with every clipping ancestor and the window bounds. Empty
+// when the root is unset, detached, ineligible, or clipped away entirely —
+// there is deliberately no whole-window fallback.
+QRectF QuickPopupSession::pageRectInScene() const
+{
+    QQuickItem *const root = m_pageRoot.data();
+    if (!root || !m_window || root->window() != m_window.data() || !root->isEnabled() ||
+        !root->isVisible())
+        return {};
+    QRectF visible = root->mapRectToScene(QRectF(QPointF(0, 0), root->size()));
+    for (const QQuickItem *ancestor = root->parentItem(); ancestor;
+         ancestor = ancestor->parentItem()) {
+        if (ancestor->clip())
+            visible = visible.intersected(
+                ancestor->mapRectToScene(QRectF(QPointF(0, 0), ancestor->size())));
+    }
+    visible =
+        visible.intersected(QRectF(QPointF(0, 0), QSizeF(m_window->width(), m_window->height())));
+    return visible.isEmpty() ? QRectF() : visible;
+}
+
+// Scene-space union of every visible popup contributor under the overlay:
+// the form container, owner-governed surface content, and each active menu
+// panel's reported frame. The full-bleed underlay and full-window panel
+// items themselves never contribute.
+QRectF QuickPopupSession::contentRectInScene() const
+{
+    QRectF rect;
+    if (!isOpen() || !m_layer)
+        return rect;
+    for (QQuickItem *child : m_layer->childItems()) {
+        if (!child || child == m_underlay || !child->isVisible())
+            continue;
+        const QVariant frame = child->property("frameRect");
+        const QRectF local = frame.canConvert<QRectF>() ? frame.value<QRectF>()
+                                                        : QRectF(QPointF(0, 0), child->size());
+        if (!local.isEmpty())
+            rect = rect.united(child->mapRectToScene(local));
+    }
+    return rect;
+}
+
+void QuickPopupSession::notifyGeometryChanged()
+{
+    emit geometryChanged();
+}
+
 bool QuickPopupSession::owns(const QObject *object) const
 {
     if (!object)
@@ -77,7 +166,7 @@ bool QuickPopupSession::owns(const QObject *object) const
 
 bool QuickPopupSession::beginMenu(QObject *owner)
 {
-    if (!owner || !m_window)
+    if (!owner || !m_window || !pageEligible())
         return false;
     // A replacement ends the old owner before this owner is published. Its
     // cancellation callbacks cannot observe or affect the new session.
@@ -108,7 +197,7 @@ bool QuickPopupSession::openSurface(const QUrl &url, QObject *bridge)
 
 bool QuickPopupSession::openContent(const QUrl &url, QObject *bridge, Kind kind)
 {
-    if (!bridge || !m_window)
+    if (!bridge || !m_window || !pageEligible())
         return false;
     if (isOpen())
         cancel(false);
@@ -116,9 +205,12 @@ bool QuickPopupSession::openContent(const QUrl &url, QObject *bridge, Kind kind)
     if (!ensureLayer() || (form && !m_formContainer))
         return false;
 
-    QQmlEngine *const engine = quickEngine(m_window);
+    QQmlContext *const context = creationContext();
+    if (!context)
+        return false;
+    QQmlEngine *const engine = context->engine();
     if (!engine) {
-        qWarning("QuickPopupSession: canvas window has no QML engine");
+        qWarning("QuickPopupSession: page context has no QML engine");
         return false;
     }
     QQmlComponent component(engine, url, QQmlComponent::PreferSynchronous);
@@ -128,7 +220,7 @@ bool QuickPopupSession::openContent(const QUrl &url, QObject *bridge, Kind kind)
         return false;
     }
     QObject *const object = component.createWithInitialProperties(
-        {{QStringLiteral("bridge"), QVariant::fromValue(bridge)}}, engine->rootContext());
+        {{QStringLiteral("bridge"), QVariant::fromValue(bridge)}}, context);
     QQuickItem *const content = qobject_cast<QQuickItem *>(object);
     if (!content) {
         qWarning("QuickPopupSession: popup QML did not produce a QQuickItem");
@@ -155,6 +247,7 @@ bool QuickPopupSession::openContent(const QUrl &url, QObject *bridge, Kind kind)
     emit isOpenChanged();
     if (form)
         scheduleFocusCheck();
+    emit geometryChanged();
     return true;
 }
 
@@ -170,12 +263,16 @@ void QuickPopupSession::cancel(bool restoreFocus)
 
 void QuickPopupSession::outsidePressed(int button, QPointF scenePos)
 {
-    if (!isOpen())
+    if (!isOpen() || !m_window)
         return;
     const Qt::MouseButton mouseButton = static_cast<Qt::MouseButton>(button);
     if (mouseButton == Qt::NoButton)
         return;
-    m_swallowedReleaseButton = mouseButton;
+    // Record the press sequence in the window owner BEFORE retiring the
+    // popup: the paired release must stay swallowed even if this page is
+    // destroyed first, so a removed page cannot expose its release to a
+    // sibling scene.
+    QuickWindowInput::forWindow(*m_window).swallowRelease(mouseButton);
     const bool rightPressed = mouseButton == Qt::RightButton;
     // Snapshot before cancel: end() clears the owner and a cancellation
     // callback may even destroy it, yet right-press retargeting must still
@@ -188,43 +285,19 @@ void QuickPopupSession::outsidePressed(int button, QPointF scenePos)
 
 bool QuickPopupSession::eventFilter(QObject *watched, QEvent *event)
 {
-    if (watched != m_window.data())
+    if (watched != m_window.data() || !isOpen())
         return QObject::eventFilter(watched, event);
 
     switch (event->type()) {
-    case QEvent::MouseButtonPress: {
-        const auto *const mouseEvent = static_cast<QMouseEvent *>(event);
-        // A lost paired release must not consume a later independent gesture.
-        if (mouseEvent->button() == m_swallowedReleaseButton)
-            m_swallowedReleaseButton = Qt::NoButton;
-        break;
-    }
-    case QEvent::MouseButtonRelease: {
-        const auto *const mouseEvent = static_cast<QMouseEvent *>(event);
-        if (mouseEvent->button() == m_swallowedReleaseButton) {
-            m_swallowedReleaseButton = Qt::NoButton;
-            return true;
-        }
-        break;
-    }
     case QEvent::WindowDeactivate:
     case QEvent::Hide:
     case QEvent::Close:
-        // These can arrive after the underlay already tore down. Discard the
-        // orphaned pair either way: the window will not receive its release.
-        // Hide covers tab switches that hide the embedded child while the
-        // top-level window stays active, so Deactivate may never fire.
-        m_swallowedReleaseButton = Qt::NoButton;
-        if (isOpen())
-            cancel(false);
+        // These can arrive after the underlay already tore down; retire the
+        // popup either way. Hide covers tab switches that hide the embedded
+        // child while the top-level window stays active, so Deactivate may
+        // never fire.
+        cancel(false);
         return QObject::eventFilter(watched, event);
-    default:
-        break;
-    }
-    if (!isOpen())
-        return QObject::eventFilter(watched, event);
-
-    switch (event->type()) {
     case QEvent::ShortcutOverride:
         // An open popup owns shortcut arbitration. The following KeyPress is
         // a separate event and still reaches the focused prompt control.
@@ -246,9 +319,12 @@ bool QuickPopupSession::ensureLayer()
         return true;
     if (!m_window || !m_window->contentItem())
         return false;
-    QQmlEngine *const engine = quickEngine(m_window);
+    QQmlContext *const context = creationContext();
+    if (!context)
+        return false;
+    QQmlEngine *const engine = context->engine();
     if (!engine) {
-        qWarning("QuickPopupSession: canvas window has no QML engine");
+        qWarning("QuickPopupSession: page context has no QML engine");
         return false;
     }
     QQmlComponent component(engine,
@@ -260,7 +336,7 @@ bool QuickPopupSession::ensureLayer()
         return false;
     }
     QObject *const object = component.createWithInitialProperties(
-        {{QStringLiteral("session"), QVariant::fromValue(this)}}, engine->rootContext());
+        {{QStringLiteral("session"), QVariant::fromValue(this)}}, context);
     QQuickItem *const layer = qobject_cast<QQuickItem *>(object);
     if (!layer) {
         qWarning("QuickPopupSession: QuickPopupLayer.qml did not produce a QQuickItem");
@@ -273,11 +349,29 @@ bool QuickPopupSession::ensureLayer()
         delete layer;
         return false;
     }
+    QQuickItem *const underlay = layer->property("underlay").value<QQuickItem *>();
+    if (!underlay) {
+        qWarning("QuickPopupSession: QuickPopupLayer.qml has no underlay");
+        delete layer;
+        return false;
+    }
     m_layer = layer;
     m_formContainer = formContainer;
+    m_underlay = underlay;
     layer->setParent(this);
     layer->setParentItem(m_window->contentItem());
+    updateLayerPageRect();
     return true;
+}
+
+QQmlContext *QuickPopupSession::creationContext() const
+{
+    QQmlContext *const context = m_pageContext.data();
+    if (!context) {
+        qWarning("QuickPopupSession: page context is gone");
+        return nullptr;
+    }
+    return context;
 }
 
 void QuickPopupSession::end(bool wasCancelled, bool restoreFocus)
@@ -314,6 +408,7 @@ void QuickPopupSession::end(bool wasCancelled, bool restoreFocus)
     }
     m_layer = nullptr;
     m_formContainer = nullptr;
+    m_underlay = nullptr;
 
     if (restoreFocus && window && window->isActive() && focus)
         focus->forceActiveFocus(Qt::OtherFocusReason);
@@ -322,6 +417,7 @@ void QuickPopupSession::end(bool wasCancelled, bool restoreFocus)
     if (wasCancelled)
         emit cancelled(restoreFocus);
     emit closed();
+    emit geometryChanged();
 }
 
 void QuickPopupSession::layoutContent()
@@ -339,19 +435,23 @@ void QuickPopupSession::layoutContent()
     m_formContainer->setWidth(width);
     m_formContainer->setHeight(height);
     m_formContainer->setTransformOrigin(QQuickItem::TopLeft);
+    const QRectF page = pageRectInScene();
     const qreal margin = layout::space(layout::Space::One);
     // Scale the panel container, not the full overlay, so its MouseArea
     // shield covers only the visible form and every outside point still
-    // reaches the underlay.
-    const qreal availableWidth = (std::max)(0.0, m_window->width() - 2.0 * margin);
-    const qreal availableHeight = (std::max)(0.0, m_window->height() - 2.0 * margin);
+    // reaches the underlay. The center and scale budget come from the
+    // visible page rect, not the window, so prompts stay inside a
+    // translated or partial page slot.
+    const qreal availableWidth = (std::max)(0.0, page.width() - 2.0 * margin);
+    const qreal availableHeight = (std::max)(0.0, page.height() - 2.0 * margin);
     const qreal scale =
         availableWidth > 0.0 && availableHeight > 0.0
             ? (std::min)(1.0, (std::min)(availableWidth / width, availableHeight / height))
             : 1.0;
     m_formContainer->setScale(scale);
-    m_formContainer->setX((m_window->width() - width * scale) / 2.0);
-    m_formContainer->setY((m_window->height() - height * scale) / 2.0);
+    m_formContainer->setX(page.x() + (page.width() - width * scale) / 2.0);
+    m_formContainer->setY(page.y() + (page.height() - height * scale) / 2.0);
+    emit geometryChanged();
 }
 
 void QuickPopupSession::scheduleFocusCheck()
@@ -389,6 +489,48 @@ bool QuickPopupSession::itemBelongsToPopup(const QQuickItem *item) const
             return true;
     }
     return false;
+}
+
+bool QuickPopupSession::pageEligible() const
+{
+    // Detached, disabled, hidden, or fully clipped-away pages refuse popup
+    // entry; the visible-rect computation also rejects a stale root left
+    // over from a previous host via its window match.
+    return !pageRectInScene().isEmpty();
+}
+
+void QuickPopupSession::updateLayerPageRect()
+{
+    if (m_layer)
+        m_layer->setProperty("pageRect", pageRectInScene());
+}
+
+void QuickPopupSession::handlePageGeometryChanged()
+{
+    updateLayerPageRect();
+    if (!isOpen())
+        return;
+    if (pageRectInScene().isEmpty()) {
+        // The visible page vanished under the popup (clipped away or
+        // detached): retire it without restoring outgoing focus, matching
+        // eligibility-loss semantics.
+        cancel(false);
+        return;
+    }
+    // Geometry drift keeps the popup: forms re-center in the moved page and
+    // menu owners re-clamp via pageBoundsChanged. Content reporting stays
+    // owner-driven (notifyGeometryChanged), so no relayout recursion.
+    if (m_kind == Kind::Form)
+        layoutContent();
+    emit pageBoundsChanged();
+}
+
+void QuickPopupSession::handlePageEligibilityChanged()
+{
+    // Switching away from the page (disable/hide) retires the popup without
+    // restoring outgoing focus, matching detach semantics.
+    if (isOpen() && !pageEligible())
+        cancel(false);
 }
 
 } // namespace songview

@@ -4,13 +4,18 @@ import QtQuick
 // outside-press underlay for menus and modal forms, while the form
 // container's shield keeps frame gaps and labels from dismissing the active
 // form. Owner-governed surfaces supply their own shield and input policy.
+// The underlay covers only the session's visible page rect (published by the
+// session from its page root), so anything outside the page — a shared tab
+// strip, a sibling page slot — stays interactive while a popup is open.
 Item {
     id: layer
 
     required property var session
     property bool formActive: false
     property bool surfaceActive: false
+    property rect pageRect: Qt.rect(0, 0, 0, 0)
     property alias formContainer: formContent
+    property alias underlay: underlay
 
     objectName: "quickPopupLayer"
     anchors.fill: parent
@@ -20,11 +25,14 @@ Item {
         id: underlay
 
         objectName: "quickPopupUnderlay"
-        anchors.fill: parent
+        x: layer.pageRect.x
+        y: layer.pageRect.y
+        width: layer.pageRect.width
+        height: layer.pageRect.height
         enabled: !layer.surfaceActive
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-        onPressed: (mouse) => layer.session.outsidePressed(mouse.button,
-                                                            Qt.point(mouse.x, mouse.y))
+        onPressed: (mouse) => layer.session.outsidePressed(
+                       mouse.button, underlay.mapToItem(null, mouse.x, mouse.y))
         onWheel: (wheel) => wheel.accepted = true
     }
 

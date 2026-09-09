@@ -512,7 +512,7 @@ void AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers()
     activation = source + QPoint(AutomationGeometry::resolve().nodeDragActivationDistance + 2, 0);
     mousePress(Qt::LeftButton, source, Qt::NoModifier);
     mouseMove(activation, Qt::NoModifier);
-    m_tab->resize(m_tab->width() + 48, m_tab->height());
+    quickWindow().resize(quickWindow().width() + 48, quickWindow().height());
     QCoreApplication::processEvents();
     mouseRelease(Qt::LeftButton, activation, Qt::NoModifier);
     QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == rebuilt);

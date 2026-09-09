@@ -6,11 +6,12 @@
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
 
-#include <QApplication>
 #include <QCursor>
+#include <QGuiApplication>
 #include <QPalette>
 #include <QPointer>
 #include <QRect>
+#include <QStyleHints>
 
 #include <algorithm>
 #include <array>
@@ -1009,7 +1010,7 @@ bool TrackHeaderModel::pointerMove(const TimelinePointerInput &input)
     }
     if (m_pointer.dragArmed && (input.buttons & Qt::LeftButton) &&
         (input.position - m_pointer.pressPosition).manhattanLength() >=
-            QApplication::startDragDistance()) {
+            QGuiApplication::styleHints()->startDragDistance()) {
         beginReorder(m_pointer.pressedTrack, input.position);
         return m_pointer.dragging;
     }

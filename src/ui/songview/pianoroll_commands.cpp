@@ -13,7 +13,6 @@
 #include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
 
-#include <QApplication>
 #include <QGuiApplication>
 #include <QMetaObject>
 #include <QObject>
@@ -135,7 +134,7 @@ void PianoRoll::openPitchBendEditor()
             this,
             [this] {
                 if (m_curPosValid && m_inputHost && m_inputHost->bounds().contains(m_curPos))
-                    refreshHoverCursor(m_curPos, QApplication::keyboardModifiers());
+                    refreshHoverCursor(m_curPos, QGuiApplication::keyboardModifiers());
             },
             Qt::QueuedConnection);
     });

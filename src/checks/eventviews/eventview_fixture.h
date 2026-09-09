@@ -26,15 +26,22 @@ namespace checks::eventviews {
 enum class FixtureShape { Basic, Tempo, Empty, EotCoincident, Long, Signatures };
 
 // The live event-list surfaces a scenario drives: the controller that owns
-// chrome/selection/edit behavior, its Qt model, and the Quick window the page
-// renders in — the delivery target for every real key/pointer injection.
+// chrome/selection/edit behavior, its Qt model, the Quick window the page
+// renders in — the delivery target for every real key/pointer injection —
+// and the canvas scene root. TimelineQuickView owns the canvas QObject tree
+// (the host viewport only visually parents it), so QObject discovery roots
+// at quickRoot; a window-rooted findChild cannot see canvas controls.
 struct EventWidgets {
     EventListController *controller = nullptr;
     eventlist::EventTableModel *model = nullptr;
     QQuickWindow *quickWindow = nullptr;
+    QQuickItem *quickRoot = nullptr;
     songview::QuickPopupSession *popupSession = nullptr;
 
-    explicit operator bool() const { return controller && model && quickWindow && popupSession; }
+    explicit operator bool() const
+    {
+        return controller && model && quickWindow && quickRoot && popupSession;
+    }
 };
 
 template <typename Fixture>
@@ -84,6 +91,8 @@ class EventViewTabFixture final
 
     LoadedVoiceGroup m_bank = {};
     std::unique_ptr<SongTab> m_tab;
+    // Borrows m_tab->view(), so it dies before the session.
+    std::unique_ptr<QuickSceneHost> m_sceneHost;
 };
 
 FixtureOpen<EventViewRigFixture> openRigFixture(FixtureShape shape);

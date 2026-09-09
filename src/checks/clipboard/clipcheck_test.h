@@ -9,6 +9,8 @@
 #include <Qt>
 
 #include "checks/clipcheck_support.h"
+#include "checks/support/editorrig.h"
+
 #include "core/noteid.h"
 
 extern "C" {
@@ -69,6 +71,8 @@ class ClipTabRig final
     std::unique_ptr<QTemporaryDir> m_temporary;
     std::unique_ptr<LoadedVoiceGroup> m_bank;
     std::unique_ptr<SongTab> m_tab;
+    // Borrows m_tab->view(), so it must be released before the session.
+    std::unique_ptr<checks::QuickSceneHost> m_sceneHost;
     songview::TimelineInputItem *m_roll = nullptr;
 };
 

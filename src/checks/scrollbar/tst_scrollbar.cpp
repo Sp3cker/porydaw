@@ -7,6 +7,7 @@
 #include <QQmlEngine>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QSize>
 #include <QStyleHints>
 #include <QUrl>
 #include <QtTest>
@@ -18,6 +19,8 @@
 #include <utility>
 
 #include "checks/fwd.hpp"
+#include "checks/support/editorrig.h"
+#include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
@@ -149,7 +152,8 @@ void ScrollbarTest::init()
     m_bank.voices[3].type = VOICE_NOISE;
 
     m_tab = std::make_unique<SongTab>(std::move(*name));
-    m_tab->resize(kViewWidth, kViewHeight);
+    m_host =
+        std::make_unique<checks::QuickSceneHost>(m_tab->view(), QSize(kViewWidth, kViewHeight));
     m_tab->setSampleRate(48000.0);
 
     const std::optional<VoicegroupId> identity =
@@ -177,7 +181,9 @@ void ScrollbarTest::init()
     QVERIFY(quick);
     m_window = quick->quickWindow();
     QVERIFY(m_window);
-    m_tab->show();
+    QVERIFY2(checks::support::showQuickViewport(songView, QSize(kViewWidth, kViewHeight)),
+             "scrollbar Quick host did not expose its viewport");
+    m_window->requestActivate();
 
     QTRY_VERIFY(m_window && m_window->isVisible());
     QTRY_VERIFY((m_root = quick->rootObject()));
@@ -231,6 +237,7 @@ void ScrollbarTest::cleanup()
     m_root.clear();
     m_window.clear();
     m_touchpad.reset();
+    m_host.reset();
     m_tab.reset();
 }
 

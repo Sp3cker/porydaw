@@ -4,12 +4,14 @@
 #import <QuartzCore/QuartzCore.h>
 
 #include "nativelayerutils_macos_p.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 #include <QColor>
 #include <QGuiApplication>
+#include <QQuickItem>
 #include <QQuickWindow>
-#include <QRect>
-#include <QRegion>
+#include <QRectF>
+#include <QVector>
 #include <algorithm>
 #include <array>
 #include <memory>
@@ -144,32 +146,35 @@ class PlayheadOverlay::Platform final
         updateColors();
     }
 
-    void setLayout(QQuickWindow *window, const QRect &timelineColumn,
-                   const QRegion &visibleSurfaces, const QRect &triangleClip,
-                   const QRect &bodyGeometry, qreal devicePixelRatio, bool playing,
-                   bool trianglePointsUp)
+    void setLayout(QQuickWindow *window, const QRectF &timelineColumn,
+                   const QVector<QRectF> &visibleSurfaces, const QVector<QRectF> &triangleClips,
+                   const QRectF &bodyGeometry, qreal triangleTop, qreal devicePixelRatio,
+                   bool playing, bool trianglePointsUp)
     {
         attachToNativeView(window);
         const qreal dpr = std::max<qreal>(devicePixelRatio, 1.0);
-        const bool clipLayoutChanged = !m_hasLayout || m_timelineColumn != timelineColumn ||
-                                       m_visibleSurfaces != visibleSurfaces ||
-                                       m_triangleClip != triangleClip;
+        const bool rootFrameChanged = !m_hasLayout || m_timelineColumn != timelineColumn;
+        const bool clipLayoutChanged = !m_hasLayout || m_visibleSurfaces != visibleSurfaces ||
+                                       m_triangleClips != triangleClips ||
+                                       m_bodyGeometry != bodyGeometry ||
+                                       m_triangleTop != triangleTop;
         const bool playingChanged = m_playing != playing;
         m_timelineColumn = timelineColumn;
-
         m_visibleSurfaces = visibleSurfaces;
-        m_triangleClip = triangleClip;
+        m_triangleClips = triangleClips;
+        m_bodyGeometry = bodyGeometry;
         m_bodyTop = bodyGeometry.top();
         m_bodyHeight = bodyGeometry.height();
-        m_triangleTop = triangleClip.top();
+        m_triangleTop = triangleTop;
         m_devicePixelRatio = dpr;
         m_playing = playing;
         m_trianglePointsUp = trianglePointsUp;
 
         DisabledActionTransaction transaction;
-        if (clipLayoutChanged) {
-            // Canonical viewport placement: the column rect is Quick-window
-            // local already, with zero top-level offset to add.
+        if (rootFrameChanged) {
+            // The native root is placed in the owning Quick window's
+            // coordinates; all clipped vector geometry below stays relative
+            // to this mapped timeline column.
             const auto rootRect = CGRectMake(timelineColumn.x(), timelineColumn.y(),
                                              timelineColumn.width(), timelineColumn.height());
             const auto rootBounds =
@@ -179,18 +184,20 @@ class PlayheadOverlay::Platform final
             setLayerRect(m_bodyMaskLayer.get(), rootBounds);
             setLayerRect(m_triangleClipLayer.get(), rootBounds);
             setLayerRect(m_triangleMaskLayer.get(), rootBounds);
-
+        }
+        if (clipLayoutChanged) {
             auto surfacePath = RetainedCoreFoundation<CGPath>{CGPathCreateMutable()};
-            for (const QRect &rect : visibleSurfaces) {
+            for (const QRectF &rect : visibleSurfaces) {
                 CGPathAddRect(surfacePath.get(), nullptr,
                               CGRectMake(rect.x(), rect.y(), rect.width(), rect.height()));
             }
             m_bodyMaskLayer.get().path = surfacePath.get();
 
             auto trianglePath = RetainedCoreFoundation<CGPath>{CGPathCreateMutable()};
-            CGPathAddRect(trianglePath.get(), nullptr,
-                          CGRectMake(triangleClip.x(), triangleClip.y(), triangleClip.width(),
-                                     triangleClip.height()));
+            for (const QRectF &rect : triangleClips) {
+                CGPathAddRect(trianglePath.get(), nullptr,
+                              CGRectMake(rect.x(), rect.y(), rect.width(), rect.height()));
+            }
             m_triangleMaskLayer.get().path = trianglePath.get();
         }
         // Font-scaled metrics can change without changing the overlay's outer
@@ -306,13 +313,14 @@ class PlayheadOverlay::Platform final
     RetainedObject<CAShapeLayer> m_triangleMaskLayer;
     RetainedObject<CAShapeLayer> m_triangleLayer;
 
-    QRect m_timelineColumn;
-    QRegion m_visibleSurfaces;
-    QRect m_triangleClip;
+    QRectF m_timelineColumn;
+    QVector<QRectF> m_visibleSurfaces;
+    QVector<QRectF> m_triangleClips;
     QColor m_color;
-    int m_bodyTop = 0;
-    int m_bodyHeight = 0;
-    int m_triangleTop = 0;
+    QRectF m_bodyGeometry;
+    qreal m_bodyTop = 0.0;
+    qreal m_bodyHeight = 0.0;
+    qreal m_triangleTop = 0.0;
     qreal m_devicePixelRatio = 1.0;
     bool m_playing = false;
     bool m_trianglePointsUp = false;
@@ -338,9 +346,9 @@ void PlayheadOverlay::initializePlatform()
 void PlayheadOverlay::setPlatformLayout()
 {
     Q_ASSERT(m_platform);
-    m_platform->setLayout(quickWindow(), timelineColumnRect(), m_visibleSurfaceRegion,
-                          m_triangleClip, m_bodyGeometry, m_devicePixelRatio, m_playing,
-                          m_trianglePointsUp);
+    m_platform->setLayout(quickWindow(), timelineColumnRect(), m_visibleSurfaceRects,
+                          m_triangleClips, m_bodyGeometry, m_triangleTop, m_devicePixelRatio,
+                          m_playing, m_trianglePointsUp);
 }
 
 void PlayheadOverlay::setPlatformImages()
@@ -352,7 +360,20 @@ void PlayheadOverlay::setPlatformImages()
 void PlayheadOverlay::setPlatformPosition()
 {
     Q_ASSERT(m_platform);
-    m_platform->setPosition(quickWindow(), m_timelineX, effectiveVisible(), m_playing,
+    QQuickWindow *const window = quickWindow();
+    songview::TimelineQuickView *const quickCanvas = quickView();
+    QQuickItem *const root = quickCanvas ? quickCanvas->rootObject() : nullptr;
+    const QRectF canvasTimelineColumn = canvasTimelineColumnRect();
+    const QRectF timelineColumn = timelineColumnRect();
+    qreal nativeTimelineX = 0.0;
+    if (root && window && root->window() == window && !canvasTimelineColumn.isEmpty() &&
+        !timelineColumn.isEmpty()) {
+        nativeTimelineX = root->mapToScene(QPointF(canvasTimelineColumn.left() + m_timelineX,
+                                                   canvasTimelineColumn.top()))
+                              .x() -
+                          timelineColumn.left();
+    }
+    m_platform->setPosition(window, nativeTimelineX, effectiveVisible(), m_playing,
                             m_trianglePointsUp);
 }
 

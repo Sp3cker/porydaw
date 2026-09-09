@@ -40,7 +40,7 @@ void SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime()
     // turns the open into an unsaved-changes prompt). The clean bytes then
     // double as the cross-tab mutation baseline.
     QString error;
-    QVERIFY2(selectionkey::undoTabToClean(workspace, documentA,
+    QVERIFY2(selectionkey::undoTabToClean(documentA,
                                           QStringLiteral("the first tab stayed dirty before the "
                                                          "second-song open"),
                                           &error),
@@ -122,14 +122,14 @@ void SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime()
     // Return both tabs to their saved state so the close, the reopen, and the
     // final window close take production's genuine clean lifecycle instead of
     // blocking in an unsaved-changes prompt.
-    QVERIFY2(selectionkey::undoTabToClean(workspace, documentA,
+    QVERIFY2(selectionkey::undoTabToClean(documentA,
                                           QStringLiteral("the first tab stayed dirty before "
                                                          "closing the second tab"),
                                           &error),
              qUtf8Printable(error));
     workspace.selectSongTab(tabB);
     selectionkey::settle();
-    QVERIFY2(selectionkey::undoTabToClean(workspace, documentB,
+    QVERIFY2(selectionkey::undoTabToClean(documentB,
                                           QStringLiteral("the second tab stayed dirty before "
                                                          "its close"),
                                           &error),
@@ -166,7 +166,7 @@ void SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime()
     selectionkey::deliverKey(windowR, Qt::Key_Right);
     QVERIFY2(!notePairUnchanged(documentR, *pairR),
              "the reopened tab's routing is stale or dead after document replacement");
-    QVERIFY2(selectionkey::undoTabToClean(workspace, documentR,
+    QVERIFY2(selectionkey::undoTabToClean(documentR,
                                           QStringLiteral("the reopened tab stayed dirty before "
                                                          "the window close"),
                                           &error),

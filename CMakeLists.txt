@@ -264,8 +264,10 @@ qt_add_library(porydaw_app STATIC
     src/ui/workspaceui.h
     src/ui/songtab.cpp
     src/ui/songtab.h
-    src/ui/songtabquickhost.cpp
-    src/ui/songtabquickhost.h
+    src/ui/workspacequick/songtabsmodel.cpp
+    src/ui/workspacequick/songtabsmodel.h
+    src/ui/workspacequick/workspacequickhost.cpp
+    src/ui/workspacequick/workspacequickhost.h
     src/ui/voicegroupviewcache.cpp
     src/ui/voicegroupviewcache.h
     src/ui/pitchprojection.cpp
@@ -316,6 +318,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songview/quick/quickmenuhost.cpp
     src/ui/songview/quick/quickpopupsession.cpp
     src/ui/songview/quick/quickpopupsession.h
+    src/ui/songview/quick/quickwindowinput.cpp
+    src/ui/songview/quick/quickwindowinput.h
     src/ui/songview/quick/quickmenulayout.cpp
     src/ui/songview/quick/quickmenulayout.h
     src/ui/songview/quick/promptappearance.cpp
@@ -515,6 +519,14 @@ set_source_files_properties(
     src/ui/songview/quick/QuickPopupLayer.qml
     PROPERTIES QT_RESOURCE_ALIAS QuickPopupLayer.qml
 )
+set_source_files_properties(
+    src/ui/workspacequick/WorkspaceSongs.qml
+    PROPERTIES QT_RESOURCE_ALIAS WorkspaceSongs.qml
+)
+set_source_files_properties(
+    src/ui/workspacequick/SongTabStrip.qml
+    PROPERTIES QT_RESOURCE_ALIAS SongTabStrip.qml
+)
 qt_add_qml_module(porydaw_app
     URI Porydaw.Ui
     VERSION 1.0
@@ -539,6 +551,8 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/VelocityPrompt.qml
         src/ui/songview/quick/CcDeleteConfirm.qml
         src/ui/songview/quick/TimeSignaturePrompt.qml
+        src/ui/workspacequick/WorkspaceSongs.qml
+        src/ui/workspacequick/SongTabStrip.qml
         src/ui/songview/quick/InsertTimePrompt.qml
         src/ui/songview/quick/VoicePickerPrompt.qml
 )
@@ -595,6 +609,8 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/workspace/tabs_transport.cpp
         src/checks/workspace/tabs_scale.cpp
         src/checks/workspace/tabs_persistence.cpp
+        src/checks/workspace/tabs_model.cpp
+        src/checks/workspace/tabs_quickshell.cpp
         src/checks/workspace/selftest_timeline.cpp
         src/checks/workspace/selftest_transport.cpp
         src/checks/workspace/selftest_workspace.cpp
@@ -775,6 +791,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/host/tst_hostseams.cpp
         src/checks/host/tst_rulergridmenu.cpp
         src/checks/host/tst_hostadapter.cpp
+        src/checks/host/tst_pagepopups.cpp
         src/checks/host/tst_hostintegration.cpp
         src/checks/mainwindowrouting/mainwindowroutingfixture.h
         src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp
@@ -817,6 +834,7 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/selectionkey/localinputtier_text.cpp
         src/checks/selectionkey/localinputtier_pitchbend.cpp
         src/checks/selectionkey/localinputtier_eventlist.cpp
+        src/checks/selectionkey/pageownership.cpp
         src/checks/automation/raster/tst_automationraster.h
         src/checks/automation/raster/painting.cpp
         src/checks/automation/raster/interaction.cpp

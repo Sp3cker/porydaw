@@ -29,14 +29,18 @@ using TimelineQuickLayerRevisions =
 
 TimelineQuickLayerRevisions timelineQuickLayerRevisions(const songview::TimelineQuickScene &scene);
 
-// Sizes and exposes the real unhosted Quick window: SongView is a pure
-// QObject coordinator, so the QQuickWindow is the full canonical viewport.
+// Sizes and exposes the already attached borrowed Quick window: an
+// explicit scene host (canonical check host or fixture host) attaches the
+// canvas and owns the window, so this never constructs a hidden host.
 // Pumps the event loop once so window-driven layout settles. Returns false
-// when the production Quick canvas or its window is missing.
+// when the production Quick canvas is detached or its borrowed window is
+// missing.
 bool showQuickViewport(SongView &view, const QSize &size);
 
-// Captures a viewport-local Quick framebuffer crop (the Quick window spans
-// the canonical viewport with origin (0, 0)); never walks the widget tree.
+// Captures a canvas-local Quick framebuffer crop, mapped onto the window
+// framebuffer through the attached canvas root item (the translated
+// viewport may sit anywhere inside the host window); never walks the
+// widget tree.
 QImage captureQuickBand(SongView &view, const QRect &viewportRect, QString *error = nullptr);
 
 } // namespace checks::support

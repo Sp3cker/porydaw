@@ -3,30 +3,23 @@
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QSettings>
-#include <QSignalBlocker>
-#include <QTabWidget>
 
 #include <algorithm>
 #include <utility>
 
 #include "ui/songtab.h"
 #include "ui/songview.h"
+#include "ui/workspacequick/songtabsmodel.h"
+#include "ui/workspacequick/workspacequickhost.h"
 
 namespace {
 const QString kLastOpenSongsKey = QStringLiteral("lastOpenSongs");
 const QString kLastSongLabelKey = QStringLiteral("lastSongLabel");
 } // namespace
 
-// ---- Tab creation, selection, and removal -----------------------------------
+// ---- Tab creation, selection, removal, and order ----------------------------
 
-// The QTabWidget page pointer is the SongTab itself; the tab pages are owned
-// exclusively by m_tabPages.
-SongTab *WorkspaceUi::tabForWidget(const QWidget *widget) noexcept
-{
-    return widget ? const_cast<SongTab *>(qobject_cast<const SongTab *>(widget)) : nullptr;
-}
-
-SongTab *WorkspaceUi::createTab(SongName name, const QString &title, bool activate)
+SongTab *WorkspaceUi::createTab(SongName name, bool activate)
 {
     auto page = std::make_unique<SongTab>(std::move(name));
     SongTab *const tab = page.get();
@@ -36,23 +29,11 @@ SongTab *WorkspaceUi::createTab(SongName name, const QString &title, bool activa
     tab->view().setFollowPlayhead(m_followPlayhead);
     tab->view().applyEditorViewState(m_editorViewState);
     wireTab(tab);
-    m_tabPages.push_back(std::move(page));
-
-    // Keep the current selection stable unless the new tab activates; the
-    // per-selection work (browser rebuild, tab persistence) must not run
-    // once per restored tab.
-    QSignalBlocker blocker(m_tabs);
-    SongTab *const previous = tabForWidget(m_tabs->currentWidget());
-    const int index = m_tabs->addTab(tab, title);
-    m_tabs->setTabToolTip(index, QString());
+    // append() owns the structural notification and explicitly publishes
+    // CppOwnership; adding a row never changes the selection authority.
+    m_tabModel->append(std::move(page));
     if (activate)
-        m_tabs->setCurrentWidget(tab);
-    else if (previous)
-        m_tabs->setCurrentWidget(previous);
-    else
-        m_tabs->setCurrentIndex(-1);
-    blocker.unblock();
-    publishSelectedIfChanged();
+        selectTab(tab);
     return tab;
 }
 
@@ -60,49 +41,64 @@ void WorkspaceUi::removeTab(SongTab *tab)
 {
     if (!tab)
         return;
-    QSignalBlocker blocker(m_tabs);
-    const int index = m_tabs->indexOf(tab);
-    Q_ASSERT(index >= 0);
-    if (index >= 0)
-        m_tabs->removeTab(index); // ownership stays with m_tabPages
-    blocker.unblock();
-    // Destroys the tab after it has left the widget.
-    std::erase_if(m_tabPages,
-                  [tab](const std::unique_ptr<SongTab> &page) { return page.get() == tab; });
-    publishSelectedIfChanged();
+    const int row = m_tabModel->rowFor(tab);
+    if (row < 0)
+        return;
+    const bool wasSelected = tab == m_selectedTab;
+    if (wasSelected) {
+        // Keep routed note-off and gesture cancellation attached to the
+        // outgoing authority, then unload audio while the tab's bank lease
+        // remains alive. The host sees null before the removal bracket
+        // detaches the page; a final selection is published below.
+        m_quickHost->deactivateSelection();
+        m_selectedTab = nullptr;
+        emit selectedSongTabChanged(nullptr);
+        m_tabModel->notifySelectionChanged();
+    }
+
+    // take() brackets the authoritative vector mutation and lets the host
+    // detach the page while this session is still alive. Destroy only after
+    // the model's rows have settled.
+    std::unique_ptr<SongTab> removed = m_tabModel->take(*tab);
+    removed.reset();
+
+    if (!wasSelected || m_tabPages.empty())
+        return;
+    // Match the old next-or-previous close policy without another selection
+    // owner: the row that shifted into the removed slot wins, else the last.
+    selectTab(m_tabModel->songAt(std::min(row, int(m_tabPages.size()) - 1)));
 }
 
 void WorkspaceUi::destroyAllTabs()
 {
-    // MainWindow unloads the engine against the outgoing selection first.
+    // No intermediate selection/persistence publication escapes teardown.
+    // Cancel the outgoing page while it is still authoritative, unload audio
+    // before its lease can die, detach every page inside the model bracket,
+    // destroy the sessions, then leave the empty host for its later teardown.
+    m_tearingDown = true;
     if (m_selectedTab) {
+        m_quickHost->deactivateSelection();
         m_selectedTab = nullptr;
         emit selectedSongTabChanged(nullptr);
     }
-    m_tearingDown = true;
-    // Block QTabWidget signals before any page is detached or destroyed:
-    // currentChanged fired during teardown would republish a selection that
-    // no longer exists, after the engine-unload publication above.
-    QSignalBlocker blocker(m_tabs);
-    while (m_tabs->count() > 0)
-        m_tabs->removeTab(0);
-    m_tabs->setCurrentIndex(-1);
-    // Destroys the pages after they have left the widget, like removeTab().
-    m_tabPages.clear();
-    blocker.unblock();
+    std::vector<std::unique_ptr<SongTab>> removed = m_tabModel->takeAll();
+    removed.clear();
     m_tearingDown = false;
-    m_selectedTab = nullptr;
     rebuildVoicegroupPresentation();
 }
 
 void WorkspaceUi::selectTab(SongTab *tab)
 {
-    if (!tab || m_tabs->currentWidget() == tab) {
-        publishSelectedIfChanged();
+    if (!tab || tab == m_selectedTab || m_tabModel->rowFor(tab) < 0)
         return;
-    }
-    m_tabs->setCurrentWidget(tab);
-    publishSelectedIfChanged();
+    // Frozen handoff order: the outgoing scene first cancels while the old
+    // selection still owns routing; publish the new authority and audio
+    // handoff synchronously; only then let model signals reveal and enable
+    // the incoming page. MainWindow's queued focus runs after this call.
+    m_quickHost->deactivateSelection();
+    m_selectedTab = tab;
+    publishSelection();
+    m_tabModel->notifySelectionChanged();
 }
 
 void WorkspaceUi::selectSongTab(SongTab *tab)
@@ -111,24 +107,30 @@ void WorkspaceUi::selectSongTab(SongTab *tab)
         selectTab(tab);
 }
 
-void WorkspaceUi::publishSelectedIfChanged()
+void WorkspaceUi::publishSelection()
 {
-    SongTab *const selected = tabForWidget(m_tabs->currentWidget());
-    if (selected == m_selectedTab)
-        return;
-    m_selectedTab = selected;
     rebuildVoicegroupPresentation();
     persistTabs();
-    emit selectedSongTabChanged(selected);
+    emit selectedSongTabChanged(m_selectedTab);
     emit selectedSongStateChanged();
+}
+
+void WorkspaceUi::moveTab(SongTab *tab, int destinationIndex)
+{
+    if (!tab || !m_tabModel->move(*tab, destinationIndex))
+        return;
+    // move() preserves the selected session identity and emits only its
+    // derived index change. Persist the model's new authoritative order.
+    emit sessionsReordered();
+    persistTabs();
 }
 
 std::vector<SongTab *> WorkspaceUi::tabsInDisplayOrder() const
 {
     std::vector<SongTab *> tabs;
-    tabs.reserve(size_t(m_tabs->count()));
-    for (int index = 0; index < m_tabs->count(); ++index)
-        tabs.push_back(tabForWidget(m_tabs->widget(index)));
+    tabs.reserve(m_tabPages.size());
+    for (const auto &page : m_tabPages)
+        tabs.push_back(page.get());
     return tabs;
 }
 
@@ -141,21 +143,7 @@ SongTab *WorkspaceUi::songTabFor(const SongName &name) const noexcept
     return nullptr;
 }
 
-// ---- Titles, persistence, and dirty state -----------------------------------
-
-void WorkspaceUi::refreshTabTitle(SongTab *tab)
-{
-    if (!tab)
-        return;
-    const int index = m_tabs->indexOf(tab);
-    if (index < 0)
-        return;
-    QString label = tab->document().label();
-    if (label.isEmpty())
-        label = tab->name().value();
-    m_tabs->setTabText(index, tab->document().isDirty() ? label + QLatin1Char('*') : label);
-    m_tabs->setTabToolTip(index, tab->document().midPath());
-}
+// ---- Persistence and dirty state --------------------------------------------
 
 void WorkspaceUi::persistTabs()
 {
@@ -212,7 +200,6 @@ bool WorkspaceUi::hasPendingSaveWork() const noexcept
 
 void WorkspaceUi::onTabEdited(SongTab *tab)
 {
-    refreshTabTitle(tab);
     if (tab != m_selectedTab)
         return;
     // The -G switch (or its undo/redo) rebinds the tab's shared bank through
@@ -280,7 +267,7 @@ void WorkspaceUi::applyStagedUpdate(const SongName &name, VoicegroupBound &bound
     // that may enable the tab.
     tab->applyVoicegroupBound(std::move(bound.id));
     m_boundArgs.insert(name, tab->document().cfg().voicegroupArg);
-    refreshTabTitle(tab);
+    m_tabModel->refresh(*tab);
     m_startupPlaceholders.remove(name);
     persistTabs();
     emit songTabReady(tab);
@@ -297,7 +284,7 @@ void WorkspaceUi::applyStagedUpdate(const SongName &name, SongSaved &saved)
     if (tab) {
         tab->applySongSaved(saved.savedSnapshot, saved.flagsWritten);
         dropSavedPendingSynths(*tab);
-        refreshTabTitle(tab);
+        m_tabModel->refresh(*tab);
         showStatus(tr("Saved %1").arg(saved.savedSnapshot.midPath));
     }
     updateOpenGate();
@@ -410,7 +397,7 @@ void WorkspaceUi::openSongFromList(int songId, bool newTab)
 
 SongTab *WorkspaceUi::createLoadTab(const SongName &name, bool activate)
 {
-    SongTab *const tab = createTab(name, name.value(), activate);
+    SongTab *const tab = createTab(name, activate);
     m_inFlightLoads.insert(name);
     updateOpenGate();
     syncVoicegroupLoading();

@@ -245,7 +245,11 @@ const std::vector<CheckDefinition> &catalog()
                 .handler = qtWithThreeArguments<runTabCheck>,
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
-                .fixtureFiles = route101RichFiles + strings({"sound/songs/midi/mus_route102.mid"}),
+                .fixtureFiles =
+                    route101RichFiles +
+                    strings({"sound/songs/midi/mus_route102.mid",
+                             "sound/songs/midi/mus_littleroot_test.mid",
+                             "sound/songs/midi/mus_oldale.mid", "sound/songs/midi/mus_gym.mid"}),
             },
             {.name = "eventviews-edits",
              .argv = strings({"--eventviews-edits"}),
@@ -410,6 +414,11 @@ const std::vector<CheckDefinition> &catalog()
                 .handler = qtOnly<runHostSeamsCheck>,
             },
             {
+                .name = "page-popup-seams",
+                .argv = strings({"--page-popup-seams"}),
+                .handler = qtOnly<runPagePopupSeamsCheck>,
+            },
+            {
                 .name = "ruler-grid-menu",
                 .argv = strings({"--check-ruler-grid-menu"}),
                 .handler = qtOnly<runRulerGridMenuCheck>,
@@ -557,6 +566,16 @@ const std::vector<CheckDefinition> &catalog()
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
                 .fixtureFiles = route101RichFiles,
+                .windowing = Windowing::WindowSystem,
+            },
+            {
+                .name = "selectionkey-page-ownership",
+                .argv = strings({"--selectionkey-page-ownership", "{scratch}", "mus_route101",
+                                 "mus_petalburg"}),
+                .handler = qtWithThreeArguments<runSelectionPageOwnershipTests>,
+                .scratchKind = ScratchKind::ExistingDirectory,
+                .fixtureRootKind = FixtureRootKind::DecompProject,
+                .fixtureFiles = twoSongRichFiles,
                 .windowing = Windowing::WindowSystem,
             },
             {.name = "playhead-guides",

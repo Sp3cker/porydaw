@@ -30,7 +30,8 @@ class QObject;
 
 namespace checks {
 class EditorRig;
-}
+class QuickSceneHost;
+} // namespace checks
 namespace songview {
 class TimelineInputItem;
 class TimelineQuickView;
@@ -49,6 +50,8 @@ struct Snapshot {
 struct DrawerFixture {
     LoadedVoiceGroup voicegroup{};
     std::unique_ptr<SongTab> tab;
+    // Borrows tab->view(), so it must be released before the session.
+    std::unique_ptr<checks::QuickSceneHost> sceneHost;
     SongView *view = nullptr;
     songview::TimelineQuickView *quick = nullptr;
     QQuickItem *quickRoot = nullptr;
@@ -57,11 +60,14 @@ struct DrawerFixture {
     songview::TimelineInputItem *automationHandle = nullptr;
     songview::TimelineInputItem *bar = nullptr;
     songview::TimelineInputItem *detent = nullptr;
-
-    DrawerFixture() = default;
+    DrawerFixture();
     ~DrawerFixture();
-    DrawerFixture(DrawerFixture &&) noexcept = default;
-    DrawerFixture &operator=(DrawerFixture &&) noexcept = default;
+    // Defined out-of-line where checks::QuickSceneHost is complete: the
+    // inline default instantiated its unique_ptr cleanup against the forward
+    // declaration in every moving TU. Assignment releases the current host
+    // before the current session.
+    DrawerFixture(DrawerFixture &&) noexcept;
+    DrawerFixture &operator=(DrawerFixture &&) noexcept;
 
     DrawerFixture(const DrawerFixture &) = delete;
     DrawerFixture &operator=(const DrawerFixture &) = delete;
@@ -93,7 +99,9 @@ struct VoiceFixture {
 struct VoiceTransactionFixture {
     LoadedVoiceGroup voicegroup{};
     std::unique_ptr<SongTab> tab;
-
+    // Borrows tab->view(), so it must be released before the session.
+    std::unique_ptr<checks::QuickSceneHost> sceneHost;
+    VoiceTransactionFixture();
     ~VoiceTransactionFixture();
     bool create(QString &error);
     void destroy();
@@ -108,8 +116,11 @@ struct VoiceTransactionFixture {
 struct VelocityTransactionFixture {
     LoadedVoiceGroup voicegroup{};
     std::unique_ptr<SongTab> tab;
+    // Borrows tab->view(), so it must be released before the session.
+    std::unique_ptr<checks::QuickSceneHost> sceneHost;
     std::vector<DocNote> notes;
 
+    VelocityTransactionFixture();
     ~VelocityTransactionFixture();
     bool create(QString &error);
     void destroy();

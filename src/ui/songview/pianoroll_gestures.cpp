@@ -9,7 +9,8 @@
 #include "ui/songview.h"
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelinequickview.h"
-#include <QApplication>
+#include <QGuiApplication>
+#include <QStyleHints>
 
 #include <algorithm>
 #include <cmath>
@@ -213,7 +214,7 @@ void PianoRoll::beginPendingDraw()
 void PianoRoll::resolveRightPress(const TimelinePointerInput &input)
 {
     if (!dragLive() && (input.position.toPoint() - m_pressPos.toPoint()).manhattanLength() >=
-                           QApplication::startDragDistance()) {
+                           QGuiApplication::styleHints()->startDragDistance()) {
         m_rightDrag = m_rightShift ? RightDrag::TimeSel : RightDrag::Band;
         m_bandAud.clear();
     }
@@ -234,7 +235,7 @@ void PianoRoll::resolveDrawPress(const TimelinePointerInput &input)
 bool PianoRoll::resolveVelocityPress(const TimelinePointerInput &input)
 {
     if (std::abs(input.position.toPoint().y() - m_pressPos.toPoint().y()) <
-        QApplication::startDragDistance())
+        QGuiApplication::styleHints()->startDragDistance())
         return false; // consumes the entire event
     applyVelocityDragSelection();
     activateLeftDrag(LeftDrag::Velocity);

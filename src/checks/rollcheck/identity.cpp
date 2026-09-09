@@ -1,8 +1,6 @@
 #include "checks/rollcheck/rollcheck.h"
 #include "checks/rollcheck/tst_pianoroll.h"
 
-#include <QQuickWindow>
-#include <QSize>
 #include <QtTest>
 
 #include <algorithm>
@@ -15,7 +13,6 @@
 #include "core/songdocument.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
-#include "ui/songview/quick/timelinequickview.h"
 #include "ui/songviewmodel.h"
 
 void PianoRollTest::duplicateNoteIdentity()
@@ -54,11 +51,10 @@ void PianoRollTest::duplicateNoteIdentity()
         QFAIL("document did not mint distinct equal-visible duplicate note IDs");
     }
 
+    // Domain-only note-identity projection: the view stays valid detached,
+    // so no Quick scene is attached.
     SongView identityView;
     auto identityTimeline = projectionDoc.buildTimeline(48000.0);
-    songview::TimelineQuickView *const identityQuick = identityView.quickView();
-    QVERIFY(identityQuick && identityQuick->quickWindow());
-    identityQuick->quickWindow()->resize(QSize(800, 480));
     identityView.setSong(identityTimeline.get(), nullptr);
     identityView.setDocument(&projectionDoc);
     QObject::connect(&projectionDoc, &SongDocument::documentChanged, &identityView, [&] {

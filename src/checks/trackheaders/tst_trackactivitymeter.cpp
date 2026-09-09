@@ -13,6 +13,7 @@
 #include <memory>
 #include <optional>
 
+#include "checks/support/editorrig.h"
 #include "checks/support/quickframebuffer.h"
 #include "checks/trackheaders/trackheaderoracles.h"
 #include "core/miditimeline.h"
@@ -91,6 +92,9 @@ void TrackActivityMeterTest::init()
     m_timeline->tracks[kTrack].used = true;
     m_timeline->usedTrackCount = 1;
     m_view->setSong(m_timeline.get(), nullptr);
+    // Direct SongView fixture: the host is declared after the view (member
+    // order) and reset before it so detach precedes the borrowed view's death.
+    m_host = std::make_unique<checks::QuickSceneHost>(*m_view, QSize(720, 520));
     QVERIFY(checks::support::showQuickViewport(*m_view, QSize(720, 520)));
     m_quick = m_view->quickView();
     m_window = m_quick ? m_quick->quickWindow() : nullptr;
@@ -116,6 +120,7 @@ void TrackActivityMeterTest::cleanup()
     m_quick.clear();
     if (m_view)
         m_view->setSong(nullptr, nullptr);
+    m_host.reset();
     m_view.reset();
     m_timeline.reset();
 }

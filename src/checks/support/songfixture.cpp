@@ -3,9 +3,12 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QSize>
 #include <QTemporaryDir>
 #include <cmath>
 #include <utility>
+
+#include "checks/support/editorrig.h"
 
 #include "core/miditimeline.h"
 #include "ui/songview.h"
@@ -13,6 +16,8 @@
 namespace checks {
 
 namespace {
+constexpr QSize kSongViewRigViewportSize{1000, 640};
+
 bool copyTree(const QString &source, const QString &destination, QString &error)
 {
     if (!QFileInfo(source).isDir()) {
@@ -119,10 +124,12 @@ SongViewRig::SongViewRig(std::unique_ptr<LoadedSong> loadedSong,
     , m_song(std::move(loadedSong))
     , m_timeline(std::move(timeline))
     , m_view(std::make_unique<SongView>())
+    , m_quickHost(std::make_unique<QuickSceneHost>(*m_view, kSongViewRigViewportSize))
 {}
 
 SongViewRig::~SongViewRig()
 {
+    m_quickHost.reset();
     m_view->setSong(nullptr, nullptr);
     m_view->setDocument(nullptr);
 }

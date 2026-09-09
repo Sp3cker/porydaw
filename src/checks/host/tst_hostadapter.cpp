@@ -197,6 +197,116 @@ class HostAdapterTest final : public QObject
                  std::optional<QRect>{velocity->rect});
     }
 
+    // Canvas-only resize regression: the root Quick item is the canonical
+    // viewport, so translating it and shrinking it below the untouched
+    // window must reproject every band from the item alone, and real window
+    // pointer delivery must still reach the note through the moved canvas.
+    void canvasOnlyResizeDrivesBandLayoutAndPointerTarget()
+    {
+        SyntheticHost host;
+        QString error;
+        QVERIFY2(host.prepare(&error), qPrintable(error));
+        SongView &view = host.view();
+        auto *quick = view.quickView();
+        QVERIFY(quick);
+        QQuickItem *root = quick->rootObject();
+        QVERIFY(root);
+        QQuickWindow *const window = quick->quickWindow();
+        QVERIFY(window);
+        QVERIFY(checks::support::showQuickViewport(view, QSize(960, 640)));
+        QCOMPARE(root->position(), QPointF(0, 0));
+        QCOMPARE(root->size(), QSizeF(window->size()));
+        const std::vector<DocNote> notes = host.document().notesForTrack(0);
+        QCOMPARE(notes.size(), size_t{2});
+
+        const QPointF canvasOffset(24, 16);
+        const QSizeF canvasSize(window->width() - 160, window->height() - 120);
+        root->setPosition(canvasOffset);
+        root->setSize(canvasSize);
+        settle();
+        QCOMPARE(window->size(), QSize(960, 640));
+        QCOMPARE(root->position(), canvasOffset);
+        QCOMPARE(root->size(), canvasSize);
+        const QRectF canvasRect(QPointF{}, canvasSize);
+        auto canvasLocal = [&](const songview::TimelineBandLayout &bandLayout,
+                               const QRectF &expectedCanvas) {
+            const auto otherEvents = bandLayout.geometry(songview::TimelineBand::OtherEvents);
+            if (!otherEvents.has_value() ||
+                otherEvents->rect.width() != qRound(expectedCanvas.width()))
+                return false;
+            for (songview::TimelineBand band :
+                 {songview::TimelineBand::Ruler, songview::TimelineBand::Roll,
+                  songview::TimelineBand::OtherEvents, songview::TimelineBand::Velocity}) {
+                const auto geometry = bandLayout.geometry(band);
+                if (!geometry.has_value() || !expectedCanvas.contains(geometry->rect))
+                    return false;
+            }
+            return true;
+        };
+        QVERIFY2(canvasLocal(view.timelineBandLayout(), canvasRect),
+                 "every visible band must fit the translated, shrunken canvas item");
+        auto *rollInput =
+            root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineRollInput"));
+        auto *velocityInput =
+            root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineVelocityInput"));
+        QVERIFY(rollInput && velocityInput);
+        const auto canvasFrame = [root](const songview::TimelineInputItem *input) {
+            return QRectF(input->mapToItem(root, QPointF()), input->size());
+        };
+        QVERIFY(canvasRect.contains(canvasFrame(rollInput)));
+        QVERIFY(canvasRect.contains(canvasFrame(velocityInput)));
+
+        const QSizeF secondCanvasSize(canvasSize.width(), canvasSize.height() - 48);
+        const QRectF secondCanvasRect(QPointF{}, secondCanvasSize);
+        const int otherEventsBottomBefore =
+            view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents)->rect.bottom();
+        root->setSize(secondCanvasSize);
+        settle();
+        QCOMPARE(window->size(), QSize(960, 640));
+        QCOMPARE(root->size(), secondCanvasSize);
+        const auto otherEvents =
+            view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents);
+        QVERIFY(otherEvents.has_value());
+        QCOMPARE(otherEvents->rect.bottom(), otherEventsBottomBefore - 48);
+        QVERIFY2(canvasLocal(view.timelineBandLayout(), secondCanvasRect),
+                 "the second canvas-only resize must keep every band canvas-local");
+        QVERIFY(secondCanvasRect.contains(canvasFrame(rollInput)));
+        QVERIFY(secondCanvasRect.contains(canvasFrame(velocityInput)));
+
+        view.selectionModel().clearNoteSelection();
+        view.ensureTickVisible(notes.front().tick);
+        view.ensureKeyVisible(notes.front().key);
+        settle();
+        const qreal dpr = rollInput->devicePixelRatio();
+        const double keyHeight = view.camera().keyHeight();
+        const double scrollY = view.camera().scrollY();
+        const qreal noteLeft = view.camera().displayX(double(notes.front().tick), 0.0, dpr);
+        const qreal noteRight =
+            view.camera().displayX(double(notes.front().tick + notes.front().duration), 0.0, dpr);
+        const qreal rowTop =
+            std::round(((127 - notes.front().key) * keyHeight - scrollY) * dpr) / dpr;
+        const QPointF pressPoint((noteLeft + noteRight) / 2.0, rowTop + keyHeight / 2.0);
+        QVERIFY(rollInput->contains(pressPoint));
+        const QPointF scenePoint = rollInput->mapToScene(pressPoint);
+        QCOMPARE(scenePoint, root->mapToScene(rollInput->mapToItem(root, pressPoint)));
+        const QPoint globalPos = window->mapToGlobal(scenePoint.toPoint());
+        QMouseEvent press(QEvent::MouseButtonPress, scenePoint, scenePoint, globalPos,
+                          Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(window, &press);
+        QCOMPARE(window->mouseGrabberItem(), static_cast<QQuickItem *>(rollInput));
+        QMouseEvent release(QEvent::MouseButtonRelease, scenePoint, scenePoint, globalPos,
+                            Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        settle();
+        const std::vector<NoteId> selection = view.selectionModel().noteSelection();
+        QCOMPARE(selection.size(), size_t{1});
+        DocNote selected;
+        QVERIFY2(host.document().findNote(selection.front(), &selected),
+                 "the mapped press must select the note at the clicked canvas cell");
+        QCOMPARE(selected.engineTrack, 0);
+        QCOMPARE(selected.tick, notes.front().tick);
+        QCOMPARE(int(selected.key), int(notes.front().key));
+    }
+
     void quickInputsOwnTheirInteractions()
     {
         SyntheticHost host;

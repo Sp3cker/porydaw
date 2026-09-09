@@ -22,7 +22,8 @@ class SongView;
 
 namespace checks {
 class ProjectFixture;
-}
+class QuickSceneHost;
+} // namespace checks
 
 namespace songview {
 class TimelineInputItem;
@@ -79,6 +80,7 @@ class TrackHeadersFixture final
     std::unique_ptr<checks::ProjectFixture> m_fixture;
     std::unique_ptr<LoadedVoiceGroup> m_bank;
     std::unique_ptr<SongTab> m_tab;
+    std::unique_ptr<checks::QuickSceneHost> m_host;
     QPointer<songview::TrackHeaderModel> m_headers;
     QPointer<songview::TimelineQuickView> m_quick;
     QPointer<songview::TimelineInputItem> m_input;

@@ -1,4 +1,3 @@
-#include "ui/songview/quick/quickengine.h"
 #include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/quickpopupsession.h"
 
@@ -13,6 +12,7 @@
 #include <QQmlContext>
 #include <QQmlEngine>
 #include <QQmlError>
+#include <QQuickItem>
 #include <QQuickWindow>
 #include <QUrl>
 #include <QVariant>
@@ -113,6 +113,10 @@ void QuickMenuHost::setPopupSession(QuickPopupSession *session)
                 &QuickMenuHost::handleSessionClosed);
         connect(m_popupSession, &QuickPopupSession::outsideRightPressed, this,
                 &QuickMenuHost::handleSessionOutsideRightPressed);
+        // Page/ancestor geometry drift re-clamps every open level without a
+        // relayout cycle: applyLevel reports via notifyGeometryChanged().
+        connect(m_popupSession, &QuickPopupSession::pageBoundsChanged, this,
+                &QuickMenuHost::relayoutRoot);
     }
     emit windowChanged();
 }
@@ -139,6 +143,16 @@ QuickMenuModel *QuickMenuHost::currentModel() const
 QQuickWindow *QuickMenuHost::window() const
 {
     return m_popupSession ? m_popupSession->window() : nullptr;
+}
+
+QRectF QuickMenuHost::menuBounds() const
+{
+    // Menus clamp and scroll within the visible page rect; without a
+    // session there is no page. window() itself requires m_popupSession,
+    // so no whole-window fallback applies here.
+    if (m_popupSession)
+        return m_popupSession->pageRectInScene();
+    return {};
 }
 
 void QuickMenuHost::open(QuickMenuModel *model, const QPointF &scenePos)
@@ -238,9 +252,12 @@ bool QuickMenuHost::eventFilter(QObject *watched, QEvent *event)
 QQuickItem *QuickMenuHost::createPanel(QuickMenuModel *model, bool rootLevel,
                                        const MenuMetrics &layout)
 {
-    QQuickWindow *const popupWindow = window();
     QQuickItem *const overlay = m_popupSession ? m_popupSession->overlayRoot() : nullptr;
-    QQmlEngine *const engine = quickEngine(popupWindow);
+    // Menus instantiate in the page's borrowed QQmlContext (guarded by the
+    // session), exactly like forms and surfaces, so delegates resolve
+    // page-local state without any engine discovery fallback.
+    QQmlContext *const context = m_popupSession ? m_popupSession->creationContext() : nullptr;
+    QQmlEngine *const engine = context ? context->engine() : nullptr;
     if (!engine || !overlay) {
         qWarning("QuickMenuHost: menu session has no canvas overlay");
         return nullptr;
@@ -273,8 +290,7 @@ QQuickItem *QuickMenuHost::createPanel(QuickMenuModel *model, bool rootLevel,
         {QStringLiteral("menuWidth"), layout.menuWidth},
         {QStringLiteral("menuHeight"), layout.menuHeight},
     };
-    QObject *object =
-        component.createWithInitialProperties(initialProperties, engine->rootContext());
+    QObject *object = component.createWithInitialProperties(initialProperties, context);
     QQuickItem *panel = qobject_cast<QQuickItem *>(object);
     if (!panel) {
         qWarning("QuickMenuHost: QuickMenuPanel.qml did not produce an item");
@@ -305,8 +321,7 @@ void QuickMenuHost::pushLevel(QuickMenuModel *model, const QRectF &anchor, bool 
         return;
     const QFont font = resolveMenuFont(m_appearance);
     const QFontMetrics metrics(font);
-    const MenuMetrics layout =
-        measureMenu(*model, metrics, QSizeF(popupWindow->width(), popupWindow->height()));
+    const MenuMetrics layout = measureMenu(*model, metrics, menuBounds().size());
     QQuickItem *const panel = createPanel(model, rootLevel, layout);
     if (!panel)
         return;
@@ -335,11 +350,16 @@ void QuickMenuHost::popLevel(bool notifyState)
     QObject::disconnect(level.resetConnection);
     QObject::disconnect(level.modelDestroyedConnection);
     if (level.panel) {
+        // Hide before the deferred delete so the popped panel immediately
+        // stops contributing geometry or receiving clicks.
+        level.panel->setVisible(false);
         level.panel->setParentItem(nullptr);
         level.panel->deleteLater();
     }
     if (notifyState)
         emit currentChanged();
+    if (m_popupSession)
+        m_popupSession->notifyGeometryChanged();
 }
 
 void QuickMenuHost::popToLevel(QQuickItem *panel)
@@ -438,8 +458,7 @@ void QuickMenuHost::layoutLevel(Level &level, const QRectF &anchor, bool rootLev
         return;
     const QFont font = resolveMenuFont(m_appearance);
     const QFontMetrics metrics(font);
-    const MenuMetrics layout =
-        measureMenu(*level.model, metrics, QSizeF(popupWindow->width(), popupWindow->height()));
+    const MenuMetrics layout = measureMenu(*level.model, metrics, menuBounds().size());
     applyLevel(level, layout, anchor, rootLevel);
 }
 
@@ -465,8 +484,10 @@ void QuickMenuHost::applyLevel(Level &level, const MenuMetrics &layout, const QR
     panel->setWidth(popupWindow->width());
     panel->setHeight(popupWindow->height());
 
-    const qreal windowWidth = popupWindow->width();
-    const qreal windowHeight = popupWindow->height();
+    // Placement is bounded to the visible page rect (scene coordinates), so
+    // page-edge menus clamp inside their viewport and anything outside the
+    // page — the shared tab strip, sibling page slots — stays usable.
+    const QRectF page = menuBounds();
     const qreal width = layout.menuWidth;
     const qreal height = layout.menuHeight;
     qreal x = 0;
@@ -474,19 +495,24 @@ void QuickMenuHost::applyLevel(Level &level, const MenuMetrics &layout, const QR
     if (rootLevel) {
         x = anchor.x();
         y = anchor.y();
-        if (y + height > windowHeight)
+        if (y + height > page.bottom())
             y = anchor.y() - height;
-        if (x + width > windowWidth)
+        if (x + width > page.right())
             x = anchor.x() - width;
     } else {
         x = anchor.right();
         y = anchor.y();
-        if (x + width > windowWidth)
+        if (x + width > page.right())
             x = anchor.left() - width;
     }
-    x = std::clamp(x, qreal(0.0), std::max<qreal>(0.0, windowWidth - width));
-    y = std::clamp(y, qreal(0.0), std::max<qreal>(0.0, windowHeight - height));
+    x = std::clamp(x, page.left(), std::max(page.left(), page.right() - width));
+    y = std::clamp(y, page.top(), std::max(page.top(), page.bottom() - height));
     panel->setProperty("menuOrigin", QPointF(x, y));
+    // The frame — not the full-window panel item — is the geometry the
+    // session reports for occlusion.
+    panel->setProperty("frameRect", QRectF(x, y, width, height));
+    if (m_popupSession)
+        m_popupSession->notifyGeometryChanged();
 }
 
 void QuickMenuHost::relayoutRoot()

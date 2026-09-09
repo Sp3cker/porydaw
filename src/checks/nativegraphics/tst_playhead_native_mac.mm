@@ -9,8 +9,12 @@
 #include <QImage>
 #include <QPixmap>
 #include <QPlatformSurfaceEvent>
+#include <QPointer>
+#include <QQuickItem>
 #include <QQuickWindow>
+#include <QRectF>
 #include <QScopeGuard>
+#include <QSizeF>
 
 #include <algorithm>
 #include <array>
@@ -18,11 +22,14 @@
 #include <optional>
 
 #include "checks/nativegraphics/nativegraphics_fixture.h"
+#include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
 #include "ui/layout.h"
 #include "ui/playheadoverlay.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/quickpopupsession.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timelinebandlayout.h"
 #include "ui/theme/themeruntime.h"
@@ -33,6 +40,25 @@ void processLayers()
 {
     QCoreApplication::sendPostedEvents();
     QCoreApplication::processEvents();
+}
+
+bool layerFrameMatches(CALayer *layer, const QRectF &expected)
+{
+    if (!layer)
+        return false;
+    const CGRect actual = layer.frame;
+    return qAbs(actual.origin.x - expected.x()) <= 0.01 &&
+           qAbs(actual.origin.y - expected.y()) <= 0.01 &&
+           qAbs(actual.size.width - expected.width()) <= 0.01 &&
+           qAbs(actual.size.height - expected.height()) <= 0.01;
+}
+
+QRectF timelineColumnInScene(const SongView &view, QQuickItem &root)
+{
+    const qreal split = view.timelineSplitX();
+    const QRectF column{split, 0.0, std::max<qreal>(0.0, root.width() - split),
+                        std::max<qreal>(0.0, root.height())};
+    return root.mapRectToScene(column);
 }
 
 CALayer *directPlayheadLayer(CALayer *owner)
@@ -201,6 +227,7 @@ void RenderingPlayheadTest::nativeLayerLifecycle()
     QVERIFY(overlay);
     auto *quick = view.quickView();
     QVERIFY(quick && quick->rootObject() && quick->quickWindow());
+    QQuickItem *root = quick->rootObject();
     QQuickWindow *quickWindow = quick->quickWindow();
     QTRY_VERIFY(quickWindow->isExposed());
     processLayers();
@@ -214,11 +241,10 @@ void RenderingPlayheadTest::nativeLayerLifecycle()
     QVERIFY(layers.root.superlayer == owner);
     QVERIFY(layers.root.zPosition >= 1'000'000.0);
     const int split = view.timelineSplitX();
-    // Canonical zero-offset framing: the timeline column sits at (split, 0)
-    // in the Quick window's own NSView layer.
-    const QSize viewport = quickWindow->size();
-    const CGRect expectedFrame = CGRectMake(split, 0, viewport.width() - split, viewport.height());
-    QVERIFY(CGRectEqualToRect(layers.root.frame, expectedFrame));
+    // The baseline host fills the Quick window, but the expectation is
+    // deliberately mapped through the canvas root so composition offsets and
+    // fractional page extents use the same native coordinate contract.
+    QVERIFY(layerFrameMatches(layers.root, timelineColumnInScene(view, *root)));
     QVERIFY([layers.bodyClip.mask isKindOfClass:[CAShapeLayer class]]);
     QVERIFY([layers.triangleClip.mask isKindOfClass:[CAShapeLayer class]]);
     QVERIFY(![layers.core isKindOfClass:[CAGradientLayer class]]);
@@ -418,12 +444,142 @@ void RenderingPlayheadTest::nativeLayerLifecycle()
     QVERIFY(layers.root.hidden);
     overlay->setPlayhead(baseX, true, true);
     processLayers();
+
+    // Composition maps a page-sized canvas through its ancestors, rather
+    // than assuming the Quick window is the timeline viewport.
+    {
+        const QPointF originalRootPosition = root->position();
+        const QSizeF originalRootSize = root->size();
+        const QSize originalWindowSize = quickWindow->size();
+        root->setPosition(originalRootPosition + QPointF{31.5, 23.25});
+        root->setSize(QSizeF{originalRootSize.width() - 87.5, originalRootSize.height() - 61.25});
+        checks::support::pumpQuick();
+        processLayers();
+        // Moving the canvas republishes the transport's live playhead via
+        // viewportChanged/refreshViewportLayout/syncTimelineIndicators,
+        // overwriting the injected probe; re-assert the probe as the
+        // authoritative semantic input so the mapping below is verified
+        // against live state rather than a stale cache.
+        overlay->setPlayhead(baseX, true, true);
+        processLayers();
+        const QRectF translatedColumn = timelineColumnInScene(view, *root);
+        QCOMPARE(quickWindow->size(), originalWindowSize);
+        QTRY_VERIFY(layerFrameMatches(layers.root, translatedColumn));
+        const QPointF expectedNativePoint =
+            root->mapToScene(QPointF(view.timelineSplitX() + baseX, 0.0));
+        QVERIFY(qAbs(layers.root.frame.origin.x + layers.body.position.x +
+                     songview::playheadGlowLeftExtent(true) - expectedNativePoint.x()) <= 0.01);
+
+        // A hidden background page has no native content despite sharing its
+        // window with the selected canvas.
+        root->setVisible(false);
+        checks::support::pumpQuick();
+        QTRY_VERIFY(layers.root.hidden);
+        QVERIFY(!hasVisiblePixel(renderCore()));
+        root->setVisible(true);
+        checks::support::pumpQuick();
+        QTRY_VERIFY(!layers.root.hidden);
+
+        // The real shared ruler menu exposes a page-bounded content rectangle.
+        // Its native layer must cut the playhead out of that rectangle while
+        // leaving the same column visible again after close.
+        auto *rulerInput =
+            root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineRulerInput"));
+        QVERIFY(rulerInput);
+        QVERIFY(rulerInput->width() > 4.0 && rulerInput->height() > 4.0);
+        const QPointF menuPoint{std::clamp(baseX, 2.0, rulerInput->width() - 2.0),
+                                rulerInput->height() / 4.0};
+        checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, menuPoint, Qt::RightButton,
+                                  Qt::RightButton, Qt::NoModifier);
+        checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, menuPoint,
+                                  Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+        songview::QuickPopupSession *const popup = quick->popupSession();
+        QVERIFY(popup);
+        QTRY_VERIFY(popup->isOpen() && !popup->contentRectInScene().isEmpty());
+        // Menu layout can settle across frames after open; converge the
+        // snapshot with the mask's occlusion source before probing it.
+        checks::support::pumpQuick();
+        processLayers();
+        QVERIFY(popup->isOpen() && !popup->contentRectInScene().isEmpty());
+        const QRectF popupScene = popup->contentRectInScene();
+        QRectF occludedPlot;
+        for (songview::TimelineBand band : bodyBands) {
+            const std::optional<songview::TimelineBandGeometry> &geometry =
+                view.timelineBandLayout().geometry(band);
+            if (!geometry)
+                continue;
+            const QRectF overlap =
+                popupScene.intersected(root->mapRectToScene(QRectF(geometry->plotRect)));
+            if (!overlap.isEmpty()) {
+                occludedPlot = overlap;
+                break;
+            }
+        }
+        QVERIFY(!occludedPlot.isEmpty());
+        const QPointF occludedCanvasPoint = root->mapFromScene(occludedPlot.center());
+        const qreal occludedTimelineX = occludedCanvasPoint.x() - view.timelineSplitX();
+        QVERIFY(occludedTimelineX >= 0.0 &&
+                occludedTimelineX < root->width() - view.timelineSplitX());
+        overlay->setPlayhead(occludedTimelineX, true, true);
+        processLayers();
+        // The translated column sits on fractional offsets, so the enclosing
+        // integer rect would sweep legitimately visible fringe into the probe
+        // while the mask stays fractionally exact; test only pixels wholly
+        // inside the true occluded overlap (still containing the core, which
+        // sits at the overlap center, for both the absence and reappearance
+        // checks below).
+        const QRectF occludedLocal = occludedPlot.translated(-translatedColumn.topLeft());
+        const int probeLeft = qCeil(occludedLocal.left());
+        const int probeTop = qCeil(occludedLocal.top());
+        const QRect occludedProbe{probeLeft, probeTop,
+                                  std::max(0, qFloor(occludedLocal.right()) - probeLeft),
+                                  std::max(0, qFloor(occludedLocal.bottom()) - probeTop)};
+        QVERIFY(!occludedProbe.isEmpty());
+        QVERIFY(
+            !checks::support::hasSolidPlayheadPixel(renderCore(), occludedProbe, playheadColor));
+        popup->cancel(false);
+        QTRY_VERIFY(!popup->isOpen());
+        processLayers();
+        QVERIFY(checks::support::hasSolidPlayheadPixel(renderCore(), occludedProbe, playheadColor));
+
+        // Canvas-only resizing leaves the enclosing Quick window untouched
+        // while moving native layer geometry to the resized page extent.
+        overlay->setPlayhead(baseX, true, true);
+        const QSizeF viewportOnlySize{root->width() - 37.5, root->height() - 29.25};
+        root->setSize(viewportOnlySize);
+        checks::support::pumpQuick();
+        processLayers();
+        const QRectF viewportOnlyColumn = timelineColumnInScene(view, *root);
+        QCOMPARE(quickWindow->size(), originalWindowSize);
+        QTRY_VERIFY(layerFrameMatches(layers.root, viewportOnlyColumn));
+
+        // A surface loss drops the mapped attachment before native handles
+        // die; recreation reuses the existing layer tree at the page's live
+        // translated viewport without rebuilding the Quick scene.
+        QPlatformSurfaceEvent composedSurfaceLoss{QPlatformSurfaceEvent::SurfaceAboutToBeDestroyed};
+        QCoreApplication::sendEvent(quickWindow, &composedSurfaceLoss);
+        processLayers();
+        QCOMPARE(directPlayheadCount(owner), 0);
+        QPlatformSurfaceEvent composedSurfaceCreated{QPlatformSurfaceEvent::SurfaceCreated};
+        QCoreApplication::sendEvent(quickWindow, &composedSurfaceCreated);
+        processLayers();
+        QTRY_COMPARE(directPlayheadCount(owner), 1);
+        QVERIFY(layerFrameMatches(layers.root, viewportOnlyColumn));
+
+        root->setSize(originalRootSize);
+        root->setPosition(originalRootPosition);
+        checks::support::pumpQuick();
+        processLayers();
+        QTRY_VERIFY(layerFrameMatches(layers.root, timelineColumnInScene(view, *root)));
+    }
     const QPixmap bitmap =
         QPixmap::fromImage(renderLayer(layers.root, quickWindow->effectiveDevicePixelRatio()));
     QVERIFY(!bitmap.isNull());
 
-    // windowAboutToDetach clears the native attachment while the original
-    // window is still valid; the teardown itself repeats safely afterwards.
+    // windowAboutToDetach clears the native attachment while the borrowed
+    // host window is valid. Detaching the scene leaves that host window and
+    // its CALayer alive for sibling scenes.
+    QPointer<QQuickWindow> borrowedWindow = quickWindow;
     CALayer *detachOwner = ownerLayer(quickWindow);
     QVERIFY(detachOwner);
     bool detachObserved = false;
@@ -432,10 +588,14 @@ void RenderingPlayheadTest::nativeLayerLifecycle()
         QVERIFY(quick->quickWindow() == quickWindow);
         QCOMPARE(directPlayheadCount(detachOwner), 0);
     });
-    quick->detachWindow();
+    quick->detachScene();
     QVERIFY(detachObserved);
+    QVERIFY(borrowedWindow);
+    QCOMPARE(borrowedWindow.data(), quickWindow);
+    QCOMPARE(directPlayheadCount(detachOwner), 0);
     QVERIFY(!quick->quickWindow());
     // Post-detach pushes are silent no-ops: no crash, no stale-layer writes.
     overlay->setPlayhead(baseX, true, true);
     processLayers();
+    QCOMPARE(directPlayheadCount(detachOwner), 0);
 }

@@ -4,16 +4,71 @@
 
 #include <QCoreApplication>
 #include <QQuickItem>
+#include <QQuickView>
 #include <QQuickWindow>
+#include <QSurfaceFormat>
 
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/quickwindowinput.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
 
 namespace checks {
+
+QuickSceneHost::QuickSceneHost(SongView &view, const QSize &size) : m_view(&view)
+{
+    // Canvas component creation resolves the timeline QML types, so they
+    // must be registered before the window's engine builds the scene.
+    songview::TimelineQuickView::registerQuickTypes();
+    m_window = std::make_unique<QQuickView>();
+    // Production surface stanza (WorkspaceQuickHost / TimelineQuickView): an
+    // alpha8 transparent canvas the native layers composite over.
+    QSurfaceFormat surfaceFormat = m_window->format();
+    surfaceFormat.setAlphaBufferSize(8);
+    m_window->setFormat(surfaceFormat);
+    m_window->setColor(Qt::transparent);
+    m_window->setResizeMode(QQuickView::SizeRootObjectToView);
+    // Size the viewport (the window's content item) and the window up
+    // front so the canvas attaches with its canonical geometry already
+    // fixed.
+    m_window->resize(size);
+    m_window->contentItem()->setSize(size);
+    if (songview::TimelineQuickView *const canvas = view.quickView()) {
+        canvas->attachScene(*m_window->engine(), *m_window->contentItem());
+        // The standalone rig host selects its scene explicitly: one scene
+        // per window here, and standalone domain views default ready.
+        songview::QuickWindowInput::forWindow(*m_window).setSelectedScene(canvas);
+        canvas->setPageSelected(true);
+    }
+}
+
+QuickSceneHost::~QuickSceneHost()
+{
+    // Detach while the view, engine, and window are all alive; the canvas
+    // unbinds and unloads before its host window is destroyed.
+    if (SongView *const view = m_view.data()) {
+        if (songview::TimelineQuickView *const canvas = view->quickView())
+            canvas->detachScene();
+    }
+}
+
+QQuickWindow &QuickSceneHost::window() noexcept
+{
+    return *m_window;
+}
+
+QQmlEngine &QuickSceneHost::engine() noexcept
+{
+    return *m_window->engine();
+}
+
+QQuickItem &QuickSceneHost::viewport() noexcept
+{
+    return *m_window->contentItem();
+}
 
 std::unique_ptr<EditorRig> EditorRig::create(SongDocument &document, const EditorRigConfig &config,
                                              QString &error)
@@ -29,15 +84,16 @@ std::unique_ptr<EditorRig> EditorRig::create(SongDocument &document, const Edito
     rig->m_voicegroup = config.voicegroup;
     rig->m_timeline = std::move(timeline);
     songview::TimelineQuickView *const quickCanvas = rig->m_view->quickView();
-    QQuickWindow *const quickWindow = quickCanvas ? quickCanvas->quickWindow() : nullptr;
-    if (!quickCanvas || !quickWindow) {
-        error = QStringLiteral("SongView did not expose the unhosted Quick window");
+    if (!quickCanvas) {
+        error = QStringLiteral("SongView did not expose the Quick canvas");
         return nullptr;
     }
-    quickWindow->resize(config.viewSize);
-    // Production wiring order (SongTab): document first, then song.
+    // Production wiring order (SongTab): document first, then song; the
+    // explicit host then attaches the real canvas into the rig's window
+    // and engine with the canonical viewport geometry.
     rig->m_view->setDocument(&document);
     rig->m_view->setSong(rig->m_timeline.get(), config.voicegroup);
+    rig->m_host = std::make_unique<QuickSceneHost>(*rig->m_view, config.viewSize);
     if (config.track >= 0)
         rig->m_view->selectTrack(config.track);
     rig->m_view->setDrawerActivePage(config.activePage);
@@ -46,7 +102,7 @@ std::unique_ptr<EditorRig> EditorRig::create(SongDocument &document, const Edito
         rig->m_view->setDrawerSectionHeight(section.page, section.height);
     }
     if (config.show) {
-        quickWindow->show();
+        rig->m_host->window().show();
         QCoreApplication::processEvents();
     }
     rig->m_quickRoot = quickCanvas->rootObject();
@@ -75,6 +131,9 @@ EditorRig::EditorRig(SongDocument &document)
 
 EditorRig::~EditorRig()
 {
+    // Detach and tear down the hosted canvas while every bound model still
+    // lives, then unbind the borrowed song and document.
+    m_host.reset();
     m_view->setSong(nullptr, nullptr);
     m_view->setDocument(nullptr);
 }

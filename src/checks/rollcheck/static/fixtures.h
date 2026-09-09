@@ -13,10 +13,12 @@ class EditorDrawer;
 class SongTab;
 class SongView;
 class QQuickItem;
+class QQuickWindow;
 
 namespace checks {
 class ProjectFixture;
 class LoadedSong;
+class QuickSceneHost;
 } // namespace checks
 
 namespace songview {
@@ -65,6 +67,7 @@ class CameraFixture final
     std::unique_ptr<checks::ProjectFixture> m_project;
     std::unique_ptr<LoadedVoiceGroup> m_bank;
     std::unique_ptr<SongTab> m_tab;
+    std::unique_ptr<checks::QuickSceneHost> m_host;
     QPointer<songview::PianoRoll> m_roll;
     QPointer<songview::TimelineInputItem> m_rollInput;
     QPointer<songview::TimelineInputItem> m_gutterInput;
@@ -83,6 +86,7 @@ class GateFixture final
     [[nodiscard]] bool create(QString &error);
     [[nodiscard]] SongTab *tab() const noexcept;
     [[nodiscard]] SongView *view() const noexcept;
+    [[nodiscard]] QQuickWindow *window() const noexcept;
     [[nodiscard]] songview::TimelineInputItem *rollInput() const noexcept;
     [[nodiscard]] songview::TimelineInputItem *rulerInput() const noexcept;
     [[nodiscard]] QQuickItem *horizontalScrollbar() const noexcept;
@@ -98,6 +102,7 @@ class GateFixture final
 
   private:
     std::unique_ptr<SongTab> m_tab;
+    std::unique_ptr<checks::QuickSceneHost> m_host;
     QPointer<songview::TimelineInputItem> m_rollInput;
     QPointer<songview::TimelineInputItem> m_rulerInput;
     QPointer<QQuickItem> m_horizontalScrollbar;

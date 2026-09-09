@@ -6,7 +6,7 @@
 #include <QRect>
 #include <QRectF>
 #include <QString>
-#include <QtGlobal>
+#include <memory>
 #include <optional>
 
 #include "core/songdocument.h"
@@ -14,8 +14,12 @@
 
 class MidiTimeline;
 class QQuickItem;
-
+class QQuickWindow;
 class SongTab;
+
+namespace checks {
+class QuickSceneHost;
+}
 
 namespace songview {
 class PianoRoll;
@@ -32,7 +36,7 @@ class PianoRollFixture final
 {
   public:
     PianoRollFixture(SongTab &tab, const QString &songLabel);
-    ~PianoRollFixture() = default;
+    ~PianoRollFixture();
 
     PianoRollFixture(const PianoRollFixture &) = delete;
     PianoRollFixture &operator=(const PianoRollFixture &) = delete;
@@ -41,6 +45,7 @@ class PianoRollFixture final
 
     SongDocument &document() noexcept;
     SongView &view() noexcept;
+    QQuickWindow &window() noexcept;
     const MidiTimeline &timeline() const noexcept;
     // The roll interaction object (hover-key property, Quick update requests)
     // and the physically split Quick input items for the plot and key column.
@@ -60,6 +65,7 @@ class PianoRollFixture final
 
   private:
     SongTab &m_tab;
+    std::unique_ptr<checks::QuickSceneHost> m_host;
     QString m_songLabel;
     songview::PianoRoll *m_roll = nullptr;
     songview::TimelineInputItem *m_rollInput = nullptr;

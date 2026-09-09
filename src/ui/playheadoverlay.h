@@ -5,14 +5,15 @@
 #include <QColor>
 #include <QObject>
 #include <QPointer>
-#include <QRect>
-#include <QRegion>
+#include <QRectF>
+#include <QVector>
 #include <memory>
 
 class QQuickWindow;
 class SongView;
 
 namespace songview {
+class QuickPopupSession;
 class TimelineQuickView;
 
 // Shared playhead metrics: platform compositors and the Qt Quick renderer
@@ -53,7 +54,8 @@ class PlayheadOverlay final : public QObject
     void ensureWindowTracking();
     void clearNativeAttachment();
 
-    QRect timelineColumnRect() const;
+    QRectF canvasTimelineColumnRect() const;
+    QRectF timelineColumnRect() const;
     bool effectiveVisible() const;
 
     void synchronizeGeometry();
@@ -79,13 +81,20 @@ class PlayheadOverlay final : public QObject
     // teardown/recreate, and cleared via TimelineQuickView's detach signal.
     QPointer<QQuickWindow> m_filteredWindow;
     bool m_detachConnected = false;
+    bool m_inputEligibilityConnected = false;
+
+#ifdef __APPLE__
+    QPointer<QuickPopupSession> m_popupSession;
+#endif
 
 #ifdef __APPLE__
     std::unique_ptr<Platform, PlatformDeleter> m_platform;
-    QRegion m_visibleSurfaceRegion;
-    QRect m_bodyGeometry;
-    QRect m_triangleClip;
+    QVector<QRectF> m_visibleSurfaceRects;
+    QVector<QRectF> m_triangleClips;
+    qreal m_triangleTop = 0.0;
+    QRectF m_bodyGeometry;
 #endif
+
     qreal m_timelineX = 0.0;
     bool m_visible = false;
     bool m_playing = false;

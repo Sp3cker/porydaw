@@ -2,10 +2,12 @@
 #include "layout.h"
 #include "songview.h"
 #include "theme/themeruntime.h"
+#include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
 
 #include <QGuiApplication>
 #include <QPlatformSurfaceEvent>
+#include <QQuickItem>
 #include <QQuickWindow>
 #include <QtGlobal>
 #include <algorithm>
@@ -36,6 +38,32 @@ namespace {
 
 constexpr qreal kPlayheadPeakPlaying = 0.13;
 constexpr qreal kPlayheadPeakPaused = 0.06;
+
+#ifdef __APPLE__
+void appendNonEmpty(QVector<QRectF> &rects, const QRectF &rect)
+{
+    if (!rect.isEmpty())
+        rects.append(rect);
+}
+
+void appendWithoutOcclusion(QVector<QRectF> &rects, const QRectF &surface, const QRectF &occlusion)
+{
+    const QRectF intersection = surface.intersected(occlusion);
+    if (intersection.isEmpty()) {
+        appendNonEmpty(rects, surface);
+        return;
+    }
+
+    appendNonEmpty(rects, QRectF(surface.left(), surface.top(), surface.width(),
+                                 intersection.top() - surface.top()));
+    appendNonEmpty(rects, QRectF(surface.left(), intersection.bottom(), surface.width(),
+                                 surface.bottom() - intersection.bottom()));
+    appendNonEmpty(rects, QRectF(surface.left(), intersection.top(),
+                                 intersection.left() - surface.left(), intersection.height()));
+    appendNonEmpty(rects, QRectF(intersection.right(), intersection.top(),
+                                 surface.right() - intersection.right(), intersection.height()));
+}
+#endif
 
 } // namespace
 
@@ -108,18 +136,25 @@ QQuickWindow *PlayheadOverlay::quickWindow() const
     return quickView ? quickView->quickWindow() : nullptr;
 }
 
-// The Quick window is the full canonical viewport with origin (0, 0); the
-// timeline column is its right portion past the split. Band rects in the
-// published layout share those canonical viewport coordinates.
-QRect PlayheadOverlay::timelineColumnRect() const
+QRectF PlayheadOverlay::canvasTimelineColumnRect() const
 {
-    QQuickWindow *window = quickWindow();
-    if (!window)
+    songview::TimelineQuickView *const quickView = m_owner.quickView();
+    QQuickItem *const root = quickView ? quickView->rootObject() : nullptr;
+    QQuickWindow *const window = quickWindow();
+    if (!root || !window || root->window() != window)
         return {};
-    const QSize viewport = window->size();
-    const int timelineSplitX = m_owner.timelineSplitX();
-    return QRect(timelineSplitX, 0, std::max(0, viewport.width() - timelineSplitX),
-                 viewport.height());
+
+    const qreal split = m_owner.timelineSplitX();
+    return {split, 0.0, std::max<qreal>(0.0, root->width() - split),
+            std::max<qreal>(0.0, root->height())};
+}
+
+QRectF PlayheadOverlay::timelineColumnRect() const
+{
+    songview::TimelineQuickView *const quickView = m_owner.quickView();
+    QQuickItem *const root = quickView ? quickView->rootObject() : nullptr;
+    const QRectF localColumn = canvasTimelineColumnRect();
+    return root && !localColumn.isEmpty() ? root->mapRectToScene(localColumn) : QRectF{};
 }
 
 void PlayheadOverlay::ensureWindowTracking()
@@ -130,6 +165,26 @@ void PlayheadOverlay::ensureWindowTracking()
                 &PlayheadOverlay::clearNativeAttachment);
         m_detachConnected = true;
     }
+    if (quickView && !m_inputEligibilityConnected) {
+        connect(quickView, &songview::TimelineQuickView::inputEligibleChanged, this,
+                &PlayheadOverlay::synchronizeGeometry);
+        m_inputEligibilityConnected = true;
+    }
+
+#ifdef __APPLE__
+    QuickPopupSession *const popupSession = quickView ? quickView->popupSession() : nullptr;
+    if (m_popupSession != popupSession) {
+        if (m_popupSession)
+            disconnect(m_popupSession, nullptr, this, nullptr);
+        m_popupSession = popupSession;
+        if (m_popupSession) {
+            connect(m_popupSession, &QuickPopupSession::isOpenChanged, this,
+                    &PlayheadOverlay::synchronizeGeometry);
+            connect(m_popupSession, &QuickPopupSession::geometryChanged, this,
+                    &PlayheadOverlay::synchronizeGeometry);
+        }
+    }
+#endif
 
     QQuickWindow *window = quickView ? quickView->quickWindow() : nullptr;
     if (window && m_filteredWindow != window) {
@@ -170,47 +225,75 @@ void PlayheadOverlay::synchronizeGeometry()
 {
     ensureWindowTracking();
 #ifdef __APPLE__
-    QQuickWindow *window = quickWindow();
-    const QRect timelineColumn = timelineColumnRect();
-    const QRect localTimelineColumn(0, 0, timelineColumn.width(), timelineColumn.height());
+    QQuickWindow *const window = quickWindow();
+    songview::TimelineQuickView *const quickCanvas = quickView();
+    QQuickItem *const root = quickCanvas ? quickCanvas->rootObject() : nullptr;
+    const QRectF canvasTimelineColumn = canvasTimelineColumnRect();
+    const QRectF timelineColumn = timelineColumnRect();
     const std::optional<TimelineBandGeometry> &rulerBand = m_layout.geometry(TimelineBand::Ruler);
-    if (!rulerBand || rulerBand->plotRect.isEmpty()) {
-        // Without a ruler plot nothing can be clipped to a timeline column.
-        m_visibleSurfaceRegion = {};
-        m_bodyGeometry = {};
-        m_triangleClip = {};
-    } else {
-        const auto visibleBandRect = [&timelineColumn,
-                                      &localTimelineColumn](const TimelineBandGeometry &band) {
-            return band.plotRect.translated(-timelineColumn.x(), 0)
-                .intersected(localTimelineColumn);
+
+    m_visibleSurfaceRects.clear();
+    m_triangleClips.clear();
+    m_bodyGeometry = {};
+    m_triangleTop = 0.0;
+
+    if (root && window && root->window() == window && !canvasTimelineColumn.isEmpty() &&
+        !timelineColumn.isEmpty() && rulerBand && !rulerBand->plotRect.isEmpty()) {
+        const auto relativeToTimelineColumn = [&root, &timelineColumn](const QRectF &canvasRect) {
+            return root->mapRectToScene(canvasRect).translated(-timelineColumn.topLeft());
         };
+        const auto mapToVisibleScene = [root](const QRectF &canvasRect) {
+            QRectF sceneRect = root->mapRectToScene(canvasRect);
+            for (QQuickItem *ancestor = root; ancestor && !sceneRect.isEmpty();
+                 ancestor = ancestor->parentItem()) {
+                if (ancestor->clip())
+                    sceneRect =
+                        sceneRect.intersected(ancestor->mapRectToScene(ancestor->boundingRect()));
+            }
+            return sceneRect;
+        };
+        const auto visibleBandRect = [&canvasTimelineColumn](const TimelineBandGeometry &band) {
+            return QRectF(band.plotRect).intersected(canvasTimelineColumn);
+        };
+        const QRectF rulerVisible = visibleBandRect(*rulerBand);
+        if (!rulerVisible.isEmpty()) {
+            const QRectF bodyCanvasGeometry{
+                canvasTimelineColumn.left(), rulerVisible.top(), canvasTimelineColumn.width(),
+                std::max<qreal>(0.0, canvasTimelineColumn.bottom() - rulerVisible.top())};
+            m_bodyGeometry = relativeToTimelineColumn(bodyCanvasGeometry);
 
-        const QRect rulerVisible = visibleBandRect(*rulerBand);
-        const int bodyTop = rulerVisible.top();
-        m_bodyGeometry = QRect(0, bodyTop, timelineColumn.width(),
-                               std::max(0, timelineColumn.height() - bodyTop));
+            QRectF popupOcclusion;
+            if (m_popupSession && m_popupSession->isOpen())
+                popupOcclusion = m_popupSession->contentRectInScene();
 
-        m_visibleSurfaceRegion = {};
-        for (const std::optional<TimelineBandGeometry> &band : m_layout.bands) {
-            if (!band)
-                continue;
-            const QRect visible = visibleBandRect(*band);
-            if (!visible.isEmpty())
-                m_visibleSurfaceRegion += visible;
-        }
+            for (const std::optional<TimelineBandGeometry> &band : m_layout.bands) {
+                if (!band)
+                    continue;
+                const QRectF visible = visibleBandRect(*band);
+                if (visible.isEmpty())
+                    continue;
+                const QRectF sceneRect = mapToVisibleScene(visible);
+                const QRectF localRect = sceneRect.translated(-timelineColumn.topLeft());
+                const QRectF localOcclusion = popupOcclusion.translated(-timelineColumn.topLeft());
+                appendWithoutOcclusion(m_visibleSurfaceRects, localRect, localOcclusion);
+            }
 
-        if (rulerVisible.isEmpty()) {
-            m_triangleClip = {};
-        } else {
-            const int triangleHeight = playheadTriangleHeight();
-            const int triangleHalfWidth = playheadTriangleHalfWidth();
-            const int triangleTop = rulerVisible.bottom() - triangleHeight + layout::singlePixel();
-            const QRect triangleBounds(rulerVisible.left() - triangleHalfWidth, rulerVisible.top(),
-                                       rulerVisible.width() + triangleHalfWidth,
-                                       rulerVisible.height());
-            m_triangleClip = triangleBounds.intersected(
-                QRect(triangleBounds.x(), triangleTop, triangleBounds.width(), triangleHeight));
+            const qreal triangleHeight = playheadTriangleHeight();
+            const qreal triangleHalfWidth = playheadTriangleHalfWidth();
+            const qreal triangleTop = rulerVisible.top() + rulerVisible.height() - triangleHeight;
+            const QRectF triangleBounds{rulerVisible.left() - triangleHalfWidth, rulerVisible.top(),
+                                        rulerVisible.width() + triangleHalfWidth,
+                                        rulerVisible.height()};
+            const QRectF triangleCanvasClip = triangleBounds.intersected(
+                QRectF(triangleBounds.left(), triangleTop, triangleBounds.width(), triangleHeight));
+            if (!triangleCanvasClip.isEmpty()) {
+                const QRectF triangleSceneGeometry = root->mapRectToScene(triangleCanvasClip);
+                m_triangleTop = triangleSceneGeometry.translated(-timelineColumn.topLeft()).top();
+                appendWithoutOcclusion(
+                    m_triangleClips,
+                    mapToVisibleScene(triangleCanvasClip).translated(-timelineColumn.topLeft()),
+                    popupOcclusion.translated(-timelineColumn.topLeft()));
+            }
         }
     }
 #endif
@@ -233,9 +316,11 @@ void PlayheadOverlay::synchronizeGeometry()
 
 bool PlayheadOverlay::effectiveVisible() const
 {
+    songview::TimelineQuickView *const quickCanvas = quickView();
     const std::optional<TimelineBandGeometry> &rulerBand = m_layout.geometry(TimelineBand::Ruler);
-    return m_visible && rulerBand && !rulerBand->plotRect.isEmpty() && m_timelineX >= 0.0 &&
-           m_timelineX < timelineColumnRect().width();
+    return quickCanvas && quickCanvas->inputEligible() && m_visible && rulerBand &&
+           !rulerBand->plotRect.isEmpty() && m_timelineX >= 0.0 &&
+           m_timelineX < canvasTimelineColumnRect().width();
 }
 
 void PlayheadOverlay::updatePlayhead()

@@ -1,101 +1,20 @@
 #include "ui/songtab.h"
-#include "ui/songtabquickhost.h"
 #include "ui/songview/quick/timelinequickview.h"
-
-#include <QEvent>
-#include <QObject>
-#include <QVBoxLayout>
 
 #include <utility>
 
-class SongTab::InputGate final : public QObject
-{
-  public:
-    explicit InputGate(SongTab *tab) : QObject(tab), m_tab(tab) {}
-
-    // Gate user input at the embedding and Quick delivery boundaries.
-    // QML items, including lazily created children, receive user input
-    // through the Quick window and need no individual filters.
-    void watch(QObject *object)
-    {
-        if (object)
-            object->installEventFilter(this);
-    }
-    void onReadinessChanged()
-    {
-        if (!m_tab->isReady())
-            m_tab->view().cancelTransientInput();
-    }
-
-  protected:
-    bool eventFilter(QObject *, QEvent *event) override
-    {
-        if (isUserInputEvent(event->type()) && !m_tab->isReady())
-            return true;
-        return false;
-    }
-
-  private:
-    static bool isUserInputEvent(QEvent::Type type)
-    {
-        switch (type) {
-        case QEvent::MouseButtonPress:
-        case QEvent::MouseButtonRelease:
-        case QEvent::MouseButtonDblClick:
-        case QEvent::MouseMove:
-        case QEvent::Wheel:
-        case QEvent::ContextMenu:
-        case QEvent::KeyPress:
-        case QEvent::KeyRelease:
-        case QEvent::Shortcut:
-        case QEvent::ShortcutOverride:
-        case QEvent::InputMethod:
-        case QEvent::InputMethodQuery:
-        case QEvent::FocusIn:
-        case QEvent::TabletPress:
-        case QEvent::TabletMove:
-        case QEvent::TabletRelease:
-        case QEvent::TabletEnterProximity:
-        case QEvent::TabletLeaveProximity:
-        case QEvent::TouchBegin:
-        case QEvent::TouchUpdate:
-        case QEvent::TouchEnd:
-        case QEvent::TouchCancel:
-        case QEvent::Gesture:
-        case QEvent::GestureOverride:
-        case QEvent::NativeGesture:
-        case QEvent::DragEnter:
-        case QEvent::DragMove:
-        case QEvent::DragLeave:
-        case QEvent::Drop:
-            return true;
-        default:
-            return false;
-        }
-    }
-
-    SongTab *m_tab; // non-owning; SongTab owns this filter
-};
-
-SongTab::SongTab(SongName name, QWidget *parent)
-    : QWidget(parent)
+SongTab::SongTab(SongName name)
+    : QObject()
     , m_name(std::move(name))
     , m_document(this)
     , m_view(new SongView(this))
 {
-    auto *pageLayout = new QVBoxLayout(this);
-    pageLayout->setContentsMargins(0, 0, 0, 0);
-    // One embedding: the host transfers the view's window into a container
-    // owned by this tab and fills the page with it.
-    songview::TimelineQuickView *quick = m_view->quickView();
-    m_host = new SongTabQuickHost(*quick, *this);
-    pageLayout->addWidget(m_host->container());
-    m_inputGate = new InputGate(this);
-    m_inputGate->watch(m_host->container());
-    m_inputGate->watch(quick->quickWindow());
-    m_inputGate->watch(quick->rootObject());
-    connect(this, &SongTab::readinessChanged, m_inputGate, &InputGate::onReadinessChanged);
-
+    // Page-scoped readiness: the coordinator remains presentation-capable
+    // while loading, but accepts input only after both terminal load facts.
+    songview::TimelineQuickView *const quick = m_view->quickView();
+    quick->setInputReady(isReady());
+    connect(this, &SongTab::readinessChanged, this,
+            [this] { m_view->quickView()->setInputReady(isReady()); });
     // Keep the timeline projection and its audio publication ordered after
     // every real document mutation. Dirty-state publication stays on the
     // undo stack, whose index settles after command redo and merge handling.
@@ -109,20 +28,14 @@ SongTab::SongTab(SongName name, QWidget *parent)
         if (m_midiBound)
             emit edited();
     });
-
-    // Loading stages arrive asynchronously; the gate keeps presentation
-    // enabled while only user input waits for both terminal facts.
 }
 
 SongTab::~SongTab()
 {
     QObject::disconnect(m_document.undoStack(), nullptr, this, nullptr);
-    // Explicit embedding teardown before the coordinator and the document
-    // members die: the host detaches the Quick view while its window is
-    // still valid, then deletes the container and the window it sole-owns.
-    // The view's own destructor repeats detach as a safe no-op.
-    delete m_host;
-    m_host = nullptr;
+    // The external host detaches this session's scene before the model
+    // releases it. Delete the view now, while the document and timeline it
+    // borrows are still alive; QObject child destruction would be too late.
     delete m_view;
     m_view = nullptr;
 }

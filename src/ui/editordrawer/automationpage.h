@@ -20,6 +20,8 @@ struct NodeLaneHoverState;
 class MidiTimeline;
 class SongDocument;
 class SongView;
+class QQuickItem;
+class QQuickWindow;
 class QWindow;
 struct AutomationGeometry;
 
@@ -52,10 +54,13 @@ class AutomationPage final : public QObject
     bool scrollVertically(const songview::TimelineWheelInput &input);
     void synchronizeAutomationViewport(QSize viewportSize);
     bool eventFilter(QObject *watched, QEvent *event) override;
-    // The Quick window that delivers this page's timeline input; the pencil
-    // shortcut guard identifies its targets through it. Injected by SongView
-    // after the shared Quick host is constructed.
-    void setInputWindow(QWindow *window) noexcept;
+    // The Quick page item that delivers this page's timeline input; the
+    // pencil shortcut guard identifies its targets through the page's
+    // effective enabled/visible state and the window's focused-item
+    // ancestry, never through window identity alone. Injected by the Quick
+    // coordinator after the canvas exists and cleared before it is
+    // destroyed.
+    void setInputPage(QQuickItem *page) noexcept;
     const EditorViewState &automationViewState() const noexcept { return m_viewState; }
     const SongViewModel &model() const noexcept;
 
@@ -118,7 +123,16 @@ class AutomationPage final : public QObject
     void announce(const QString &message) const;
 
     bool matchesPencilShortcut(int key, Qt::KeyboardModifiers modifiers) const noexcept;
-    bool belongsToPageWindow(const QObject *target) const noexcept;
+    // Window identity only: does this event's delivery chain (a child window
+    // inherits through its QWindow parent) belong to the injected page's
+    // window?
+    bool deliveredThroughWindow(const QWindow &window) const noexcept;
+    // Keyboard ownership: the target must be this page's window while the
+    // page is effectively enabled and visible, and the window's focused item
+    // must live in the page subtree. A matching QWindow alone is not
+    // ownership: sibling pages share one window, and a hidden, disabled, or
+    // unfocused page never claims the pencil shortcut.
+    bool ownsKeyboardTarget(const QQuickWindow &window) const noexcept;
 
     Geometry m_geometry;
     SongView &m_owner;
@@ -131,5 +145,5 @@ class AutomationPage final : public QObject
     int m_contentHeight = 0;
     QSize m_viewportSize;
     qreal m_verticalWheelRemainder = 0.0;
-    QPointer<QWindow> m_inputWindow;
+    QPointer<QQuickItem> m_inputPage;
 };

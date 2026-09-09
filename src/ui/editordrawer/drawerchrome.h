@@ -6,6 +6,7 @@
 #include <optional>
 
 #include <QColor>
+#include <QImage>
 #include <QObject>
 #include <QRectF>
 
@@ -16,8 +17,7 @@ class AutomationPage;
 class DrawerChrome;
 class DrawerChromeIconProvider;
 class EditorDrawer;
-class QImage;
-class QQuickImageProvider;
+class QQmlEngine;
 
 // The five non-scrollbar controls owned by the drawer's Quick chrome.
 enum class DrawerChromeTarget : uint8_t {
@@ -131,6 +131,7 @@ class DrawerChrome final : public QObject
     Q_PROPERTY(qreal detentIconInset READ detentIconInset NOTIFY chromeChanged FINAL)
     Q_PROPERTY(int barBorderWidth READ barBorderWidth NOTIFY chromeChanged FINAL)
     Q_PROPERTY(int iconRevision READ iconRevision NOTIFY chromeChanged FINAL)
+    Q_PROPERTY(QString iconSourcePrefix READ iconSourcePrefix NOTIFY iconSourcePrefixChanged FINAL)
     Q_PROPERTY(QColor toggleBackground READ toggleBackground NOTIFY chromeChanged FINAL)
     Q_PROPERTY(
         QColor toggleCheckedBackground READ toggleCheckedBackground NOTIFY chromeChanged FINAL)
@@ -160,10 +161,12 @@ class DrawerChrome final : public QObject
 
   public:
     DrawerChrome(AutomationPage &page, EditorDrawer *parent);
+    ~DrawerChrome() override;
 
     DrawerChromeInteraction &interaction(DrawerChromeTarget target) noexcept;
     void setSnapshot(const DrawerChromeSnapshot &snapshot);
-    QQuickImageProvider *releaseIconProvider();
+    void attachIconProvider(QQmlEngine &engine);
+    void detachIconProvider();
     void cancelInteraction();
 
     Q_INVOKABLE void setAutomationScrollY(int value);
@@ -215,6 +218,7 @@ class DrawerChrome final : public QObject
     qreal toggleIconInset() const noexcept { return m_snapshot.toggleIconInset; }
     qreal detentIconInset() const noexcept { return m_snapshot.detentIconInset; }
     int iconRevision() const noexcept { return m_snapshot.iconRevision; }
+    QString iconSourcePrefix() const { return m_iconSourcePrefix; }
     QColor toggleBackground() const { return m_snapshot.toggleBackground; }
     QColor toggleCheckedBackground() const { return m_snapshot.toggleCheckedBackground; }
     QColor toggleOutline() const { return m_snapshot.toggleOutline; }
@@ -244,6 +248,7 @@ class DrawerChrome final : public QObject
     void chromeChanged();
     void scrollChanged();
     void valuePromptChanged();
+    void iconSourcePrefixChanged();
 
   private:
     friend class DrawerChromeInteraction;
@@ -256,6 +261,8 @@ class DrawerChrome final : public QObject
     void handleCancelled(DrawerChromeTarget target, songview::TimelineInputCancelReason reason);
     void setIcons(QImage velocity, QImage velocityOn, QImage automation, QImage automationOn,
                   QImage voiceChanges, QImage voiceChangesOn, QImage detent);
+    void setIconSourcePrefix(QString prefix);
+    void handleEngineDestroyed(const QQmlEngine &engine);
 
     AutomationPage &m_page;
     EditorDrawer &m_drawer;
@@ -268,6 +275,15 @@ class DrawerChrome final : public QObject
     std::optional<DrawerChromeTarget> m_hoveredHandle;
     std::optional<EditorDrawerPage> m_pressedToggle;
     bool m_pressedDetent = false;
-    DrawerChromeIconProvider *m_icons = nullptr;
-    bool m_iconProviderReleased = false;
+    DrawerChromeIconProvider *m_icons = nullptr; // Raw borrow; the engine owns it while attached.
+    QQmlEngine *m_engine = nullptr;
+    QString m_providerId;
+    QString m_iconSourcePrefix;
+    QImage m_velocityIcon;
+    QImage m_velocityOnIcon;
+    QImage m_automationIcon;
+    QImage m_automationOnIcon;
+    QImage m_voiceChangesIcon;
+    QImage m_voiceChangesOnIcon;
+    QImage m_detentIcon;
 };

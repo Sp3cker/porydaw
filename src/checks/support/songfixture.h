@@ -36,6 +36,8 @@ class LoadedSong final
     SongInfo m_song;
 };
 
+class QuickSceneHost;
+
 class SongViewRig final
 {
   public:
@@ -61,6 +63,7 @@ class SongViewRig final
     std::unique_ptr<LoadedSong> m_song;
     std::unique_ptr<MidiTimeline> m_timeline;
     std::unique_ptr<SongView> m_view;
+    std::unique_ptr<QuickSceneHost> m_quickHost;
 };
 
 class ProjectFixture final

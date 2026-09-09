@@ -5,10 +5,10 @@
 #include <cstring>
 #include <utility>
 
-#include <QApplication>
 #include <QCursor>
 #include <QGuiApplication>
 #include <QRect>
+#include <QStyleHints>
 
 #include "core/m4asemantics.h"
 #include "core/miditimeline.h"
@@ -470,7 +470,7 @@ bool VoiceChangeArea::pointerMove(const songview::TimelinePointerInput &input)
         if (m_voiceDrag->phase == VoiceDragState::Phase::Pending) {
             const qreal horizontalDistance =
                 std::abs(position.x() - m_voiceDrag->pressPosition.x());
-            if (horizontalDistance < QApplication::startDragDistance())
+            if (horizontalDistance < QGuiApplication::styleHints()->startDragDistance())
                 return true;
             m_voiceDrag->phase = VoiceDragState::Phase::Active;
             clearHover();

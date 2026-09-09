@@ -18,6 +18,10 @@ class QPointingDevice;
 class SongTab;
 class SongView;
 
+namespace checks {
+class QuickSceneHost;
+}
+
 class ScrollbarTest final : public QObject
 {
     Q_OBJECT
@@ -84,10 +88,11 @@ class ScrollbarTest final : public QObject
     QString m_projectRoot;
     QString m_songLabel;
 
-    // The tab borrows this value-owned bank, so it must outlive m_tab.
-    // Declaration order makes the tab die first during cleanup.
+    // The tab borrows this value-owned bank; the host borrows the tab's view.
+    // Reverse declaration order destroys the host, then the tab, before the bank.
     LoadedVoiceGroup m_bank = {};
     std::unique_ptr<SongTab> m_tab;
+    std::unique_ptr<checks::QuickSceneHost> m_host;
     QPointer<QQuickWindow> m_window;
     QPointer<QQuickItem> m_root;
     QPointer<QQuickItem> m_horizontalBar;

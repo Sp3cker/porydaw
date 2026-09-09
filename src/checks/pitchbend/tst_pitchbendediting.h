@@ -21,9 +21,15 @@
 #include "ui/songtab.h"
 #include "ui/songview/quick/timelineinputitem.h"
 
+namespace checks {
+class QuickSceneHost;
+}
+
 class PitchBendFixture final
 {
   public:
+    PitchBendFixture();
+    ~PitchBendFixture();
     bool setUp(bool unterminated = false, bool duplicateNote = false);
     void tearDown();
 
@@ -61,7 +67,7 @@ class PitchBendFixture final
   private:
     LoadedVoiceGroup m_bank = {};
     std::unique_ptr<SongTab> m_tab;
-    QPointer<QQuickWindow> m_timelineWindow;
+    std::unique_ptr<checks::QuickSceneHost> m_host;
     QPointer<songview::TimelineInputItem> m_rollInput;
     DocNote m_note;
     uint64_t m_endTick = 0;

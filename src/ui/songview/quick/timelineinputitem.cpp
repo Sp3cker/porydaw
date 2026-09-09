@@ -1,4 +1,5 @@
 #include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/quick/quickwindowinput.h"
 
 #include <QFocusEvent>
 #include <QGuiApplication>
@@ -225,6 +226,7 @@ void TimelineInputItem::mousePressEvent(QMouseEvent *event)
         event->ignore();
         return;
     }
+    m_grabbedButtons |= int(event->button());
     event->accept();
 }
 
@@ -249,6 +251,9 @@ void TimelineInputItem::mouseMoveEvent(QMouseEvent *event)
 
 void TimelineInputItem::mouseReleaseEvent(QMouseEvent *event)
 {
+    // The button's delivery completed: whatever the interaction decides, no
+    // swallow may consume this release and the grab ends with the delivery.
+    m_grabbedButtons &= ~int(event->button());
     if (!m_interaction || !m_interaction->pointerRelease(pointerInput(*event, m_surface, this))) {
         event->ignore();
         return;
@@ -317,9 +322,23 @@ void TimelineInputItem::focusOutEvent(QFocusEvent *event)
 
 void TimelineInputItem::mouseUngrabEvent()
 {
+    // Involuntary grab loss is the swallow-arming edge: the pending
+    // release(s) of the buttons we were grabbed for must never land as a
+    // fresh click elsewhere on this window once the grab transfers. The
+    // ungrab delivers synchronously inside the releasing call, so the arm
+    // precedes any later release event on this window.
+    if (m_grabbedButtons && window()) {
+        QuickWindowInput &owner = QuickWindowInput::forWindow(*window());
+        for (int buttonBit = 1; buttonBit <= int(Qt::MouseButtonMask); buttonBit <<= 1) {
+            if (m_grabbedButtons & buttonBit)
+                owner.swallowRelease(static_cast<Qt::MouseButton>(buttonBit));
+        }
+    }
+    m_grabbedButtons = 0;
     if (m_interaction)
         m_interaction->inputCancelled(TimelineInputCancelReason::PointerUngrabbed);
 }
+
 void TimelineInputItem::geometryChange(const QRectF &newGeometry, const QRectF &oldGeometry)
 {
     QQuickItem::geometryChange(newGeometry, oldGeometry);

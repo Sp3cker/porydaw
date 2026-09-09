@@ -586,7 +586,7 @@ void EventViewsEditsTest::drawerClickAfterEditOwnsDelete()
     typeDigits(*widgets.quickWindow, QStringLiteral("15"));
     const int undoBefore = opened.fixture->document().undoStack()->index();
 
-    auto *drawer = widgets.quickWindow->findChild<songview::TimelineInputItem *>(
+    auto *drawer = widgets.quickRoot->findChild<songview::TimelineInputItem *>(
         QStringLiteral("drawerBarInput"));
     QVERIFY(drawer);
     QVERIFY(checks::eventviews::focusSurface(widgets, *drawer));

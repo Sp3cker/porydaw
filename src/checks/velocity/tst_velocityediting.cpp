@@ -14,6 +14,8 @@
 #include <optional>
 #include <utility>
 
+#include "checks/support/quickframebuffer.h"
+
 #include "core/songdocument.h"
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
@@ -88,10 +90,10 @@ void VelocityEditingTest::init()
     const std::optional<SongName> name = SongName::create(QStringLiteral("velocity-editing"));
     QVERIFY(name.has_value());
     m_tab = std::make_unique<SongTab>(std::move(*name));
-    m_tab->resize(960, 480);
     // The sample rate must land before MidiStage: the stage builds the
     // timeline projection from it.
     m_tab->setSampleRate(48000.0);
+    m_sceneHost = std::make_unique<checks::QuickSceneHost>(m_tab->view(), QSize(960, 480));
 
     const std::optional<VoicegroupId> identity =
         VoicegroupId::create(QStringLiteral("velocity-editing-check"), QString());
@@ -130,7 +132,7 @@ void VelocityEditingTest::init()
     QVERIFY(m_area);
     songview::TimelineQuickView *quick = view.quickView();
     QVERIFY(quick);
-    m_quickWindow = quick->quickWindow();
+    m_quickWindow = &m_sceneHost->window();
     QVERIFY(m_quickWindow);
     QObject *const quickRoot = quick->rootObject();
     QVERIFY(quickRoot);
@@ -141,7 +143,7 @@ void VelocityEditingTest::init()
         quickRoot->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineRollInput"));
     QVERIFY(m_rollInput);
 
-    m_tab->show();
+    QVERIFY(checks::support::showQuickViewport(view, QSize(960, 480)));
     QTRY_VERIFY(m_quickWindow->isVisible() && m_quickWindow->isExposed());
     QTRY_VERIFY(!m_velocityInput->bounds().isEmpty());
     QTRY_COMPARE(m_velocityInput->window(), m_quickWindow.data());
@@ -175,7 +177,9 @@ void VelocityEditingTest::cleanup()
     m_velocityInput.clear();
     m_rollInput.clear();
     m_quickWindow.clear();
-    // The tab dies before the bank member it borrows.
+    m_sceneHost.reset();
+    // The host has released the tab's view before the tab dies before the
+    // bank member it borrows.
     m_tab.reset();
 
     QVERIFY(mouseGrabCleared);
@@ -411,10 +415,14 @@ void VelocityEditingTest::mouseRelease(Qt::MouseButton button, const QPoint &win
 
 void VelocityEditingTest::focusVelocityBand()
 {
+    // This is the explicit input-acquisition seam; exposing the host does
+    // not activate it.
+    m_sceneHost->window().raise();
+    m_sceneHost->window().requestActivate();
     QVERIFY(m_tab->view().quickView()->focusBand(songview::TimelineBand::Velocity,
                                                  Qt::OtherFocusReason));
-    // QTest targets the Quick window explicitly, so its live focus item is
-    // the delivery gate; the embedded window need not own OS foreground state.
+    // QTest targets the active host window explicitly, so its live focus item
+    // remains the delivery gate.
     QTRY_VERIFY(m_tab->view().quickView()->focusedBand() == songview::TimelineBand::Velocity);
     QTRY_COMPARE(m_quickWindow->activeFocusItem(),
                  static_cast<QQuickItem *>(m_velocityInput.data()));

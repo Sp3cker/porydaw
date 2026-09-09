@@ -12,6 +12,10 @@
 class QQuickWindow;
 class SongView;
 
+namespace checks {
+class QuickSceneHost;
+} // namespace checks
+
 namespace songview {
 class TimelineQuickView;
 class TrackHeaderModel;
@@ -38,6 +42,9 @@ class TrackActivityMeterTest final : public QObject
 
     std::shared_ptr<MidiTimeline> m_timeline;
     std::unique_ptr<SongView> m_view;
+    // Declared after the view so the host detaches and dies before the
+    // borrowed SongView.
+    std::unique_ptr<checks::QuickSceneHost> m_host;
     QPointer<songview::TimelineQuickView> m_quick;
     QPointer<songview::TrackHeaderModel> m_model;
     QPointer<QQuickWindow> m_window;

@@ -27,9 +27,10 @@
 #include <QMessageBox>
 #include <QObject>
 #include <QPointer>
+#include <QQuickItem>
+#include <QQuickWindow>
 #include <QSettings>
 #include <QSignalSpy>
-#include <QTabBar>
 #include <QTimer>
 #include <QVariant>
 #include <QWidget>
@@ -47,7 +48,9 @@
 #include "ui/playheadoverlay.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/workspacequick/workspacequickhost.h"
 #include "ui/workspaceui.h"
 
 namespace checks::mainwindowrouting {
@@ -82,6 +85,8 @@ struct Session final {
     std::unique_ptr<MainWindow> window;
     SongTab *a = nullptr;
     SongTab *b = nullptr;
+    WorkspaceQuickHost *host = nullptr;
+    QQuickWindow *hostWindow = nullptr;
 };
 
 class MainWindowRoutingFixture
@@ -123,7 +128,44 @@ class MainWindowRoutingFixture
         if (awaitReady && (!waitForTabReady(*window->m_workspace, a) ||
                            !waitForTabReady(*window->m_workspace, b)))
             return std::nullopt;
-        return Session{std::move(settings), std::move(fixture), std::move(window), a, b};
+        QCoreApplication::processEvents();
+        auto *host = window->findChild<WorkspaceQuickHost *>();
+        QQuickWindow *hostWindow = host ? host->window() : nullptr;
+        if (!host || !hostWindow)
+            return std::nullopt;
+        return Session{std::move(settings), std::move(fixture), std::move(window), a, b, host,
+                       hostWindow};
+    }
+
+    // Application-command key target: the production surface's widget
+    // inside MainWindow's own window, so delivered keys traverse the real
+    // window-shortcut map to the single action owner. Synthetic Quick-window
+    // delivery never crosses into this tier, so it is not used here.
+    static QWidget &surfaceKeyTarget(const Session &session)
+    {
+        if (session.host && session.host->container())
+            return *session.host->container();
+        return *session.window;
+    }
+
+    static songview::TimelineInputItem *rollInput(SongView &view)
+    {
+        auto *quick = view.quickView();
+        QQuickItem *root = quick ? quick->rootObject() : nullptr;
+        return root ? root->findChild<songview::TimelineInputItem *>(
+                          QStringLiteral("timelineRollInput"))
+                    : nullptr;
+    }
+
+    // The selected tab's roll band holds real input focus in the shared
+    // host: the view reports the live band and that band's actual canvas
+    // item holds Quick active focus.
+    static bool rollBandHoldsHostFocus(SongView &view)
+    {
+        if (view.focusedTimelineBand() != songview::TimelineBand::Roll)
+            return false;
+        const auto *input = rollInput(view);
+        return input && input->hasActiveFocus();
     }
 
     static bool waitForProjectReady(const WorkspaceUi &workspace)

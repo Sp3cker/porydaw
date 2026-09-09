@@ -18,6 +18,7 @@
 #include <QTimer>
 #include <QWindow>
 
+#include "checks/support/editorrig.h"
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "core/miditimeline.h"
@@ -176,6 +177,7 @@ void AutomationRasterFixture::shutdown()
     }
     m_inputHost.reset();
     m_productionInteraction = nullptr;
+    m_sceneHost.reset();
 
     if (m_view) {
         m_view->setSong(nullptr, nullptr);
@@ -414,8 +416,9 @@ bool AutomationRasterFixture::initialize(QString &error)
     m_view->setDrawerActivePage(EditorDrawerPage::Automations);
     m_view->setDrawerSectionVisible(EditorDrawerPage::Automations, true);
     m_view->setDrawerSectionHeight(EditorDrawerPage::Automations, 360);
+    m_sceneHost = std::make_unique<checks::QuickSceneHost>(*m_view, QSize(960, 720));
     if (!checks::support::showQuickViewport(*m_view, QSize(960, 720))) {
-        error = QStringLiteral("concrete SongView did not expose an unhosted Quick window");
+        error = QStringLiteral("concrete SongView did not expose the attached Quick window");
         return false;
     }
 

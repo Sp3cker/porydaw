@@ -70,7 +70,10 @@ void AutomationEditingTest::actionTextInputImmunity()
     QVERIFY(shortcut.key() != Qt::Key_unknown);
 
     action->setChecked(false);
-    QLineEdit editor(&tab());
+    // SongTab is a QObject session, never a QWidget: the text surface stands
+    // alone as a top-level widget, keeping real focus and key delivery while
+    // the pencil guard declines.
+    QLineEdit editor;
     editor.show();
     editor.setFocus(Qt::OtherFocusReason);
     QTRY_VERIFY(editor.hasFocus());

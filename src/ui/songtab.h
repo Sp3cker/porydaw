@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QWidget>
+#include <QObject>
 
 #include <QString>
 
@@ -14,19 +14,17 @@
 #include "project/voicegroupsource.h"
 #include "ui/songview.h"
 
-class SongTabQuickHost;
-
-// One open song page: the passive, keyed owner of everything a single song
-// edit needs. A SongTab is constructed for one SongName and permanently pairs
-// one SongDocument with one SongView and one shared MidiTimeline projection
-// of that document; a SongTabQuickHost beside the tab embeds the view's
-// Quick window into the page layout. Project operations never enter here:
-// WorkspaceUi applies copied stage values through the apply* methods below
-// and reads loaded state back through the narrow accessors; MainWindow
-// reads the selected tab
-// directly for audio handoff. History is the document's existing SongHistory
-// subobject, re-exported unchanged; shared-bank requests route through
-// WorkspaceUi's VoicegroupViewCache, never through a second stack.
+// One open song session: the passive, keyed owner of everything a single
+// song edit needs. A SongTab is constructed for one SongName and permanently
+// pairs one SongDocument with one SongView and one shared MidiTimeline
+// projection of that document. WorkspaceQuickHost attaches the view's
+// windowless Quick coordinator to the selected workspace page; this session
+// never owns a widget, layout, engine, window, or host. Project operations
+// never enter here: WorkspaceUi applies copied stage values through the
+// apply* methods below and reads loaded state through the narrow accessors;
+// MainWindow reads the selected tab directly for audio handoff. History is
+// the document's existing SongHistory subobject, re-exported unchanged;
+// shared-bank requests route through WorkspaceUi's VoicegroupViewCache.
 //
 // Load lifecycle: WorkspaceUi delivers MidiStage — which adopts the SMF and
 // rebinds the paired view in one swap — then terminal VoicegroupBound, whose
@@ -40,13 +38,13 @@ class SongTabQuickHost;
 // loaded tab. Document edits rebuild the timeline at the copied sample rate
 // and update the paired view, then emit edited() so the owner refreshes its
 // titles and dirty chrome.
-class SongTab final : public QWidget
+class SongTab final : public QObject
 {
     Q_OBJECT
     Q_DISABLE_COPY_MOVE(SongTab)
 
   public:
-    explicit SongTab(SongName name, QWidget *parent = nullptr);
+    explicit SongTab(SongName name);
     ~SongTab() override;
 
     const SongName &name() const { return m_name; }
@@ -114,7 +112,6 @@ class SongTab final : public QWidget
     void edited();
 
   private:
-    class InputGate;
     enum class LoadEvent {
         ReloadDispatched,
         MidiBound,
@@ -125,15 +122,13 @@ class SongTab final : public QWidget
     void applyLoadEvent(LoadEvent event);
 
     // Member order is destruction order's reverse: the paired view's raw
-    // borrows (timeline, document) must not outlive what they point at.
-    // The embedding host and the view are additionally torn down explicitly
-    // in the destructor body before these members die.
+    // borrows (timeline, document) must not outlive what they point at. The
+    // destructor deletes the view explicitly before the document members
+    // die; its external host has already detached the scene.
     SongName m_name;
     SongDocument m_document;
     std::shared_ptr<const MidiTimeline> m_timeline;
     SongView *m_view = nullptr;
-    SongTabQuickHost *m_host = nullptr;
-    InputGate *m_inputGate = nullptr;
     std::optional<VoicegroupId> m_voicegroupId;
     VoicegroupLease m_voicegroup;
     std::optional<SongView::ViewState> m_pendingReloadState;

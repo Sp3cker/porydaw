@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "checks/rollcheck/headerchecksupport.h"
-#include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
 #include "checks/trackheaders/trackheaderoracles.h"
 #include "core/smf.h"
@@ -31,8 +30,8 @@ struct RemapFixture {
         if (!document.load(song, error))
             return false;
         timeline = document.buildTimeline(48000.0);
-        if (!checks::support::showQuickViewport(view, QSize(800, 480)))
-            return false;
+        // Domain-only remap assertions: the view remains valid detached, so
+        // no Quick scene is attached.
         view.setSong(timeline.get(), nullptr);
         view.setDocument(&document);
         QObject::connect(&document, &SongDocument::tracksRemapped, &view,

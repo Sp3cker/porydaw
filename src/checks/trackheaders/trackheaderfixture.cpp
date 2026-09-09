@@ -2,15 +2,16 @@
 
 #include <QtTest>
 
-#include <QCoreApplication>
 #include <QGuiApplication>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QSize>
 
 #include <algorithm>
 #include <memory>
 #include <utility>
 
+#include "checks/support/editorrig.h"
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
 #include "checks/trackheaders/trackheaderoracles.h"
@@ -85,7 +86,8 @@ bool TrackHeadersFixture::create(QString &error)
     m_bank->voices[3].type = VOICE_NOISE;
 
     auto candidate = std::make_unique<SongTab>(std::move(*name));
-    candidate->resize(kViewWidth, kViewHeight);
+    auto candidateHost =
+        std::make_unique<checks::QuickSceneHost>(candidate->view(), QSize(kViewWidth, kViewHeight));
     candidate->setSampleRate(kSampleRate);
     candidate->applyMidiStage(loaded->songInfo(), loaded->document().smf(),
                               track_limits::kHardwareCapacity);
@@ -108,7 +110,7 @@ bool TrackHeadersFixture::create(QString &error)
     m_window = m_quick ? m_quick->quickWindow() : nullptr;
     m_root = m_quick ? m_quick->rootObject() : nullptr;
     if (!m_headers || !m_quick || !m_window || !m_root) {
-        error = QStringLiteral("SongTab did not expose the track-header Quick host");
+        error = QStringLiteral("TrackHeaders fixture did not expose its attached Quick host");
         return false;
     }
 
@@ -125,7 +127,10 @@ bool TrackHeadersFixture::create(QString &error)
         return false;
     }
 
-    candidate->show();
+    if (!checks::support::showQuickViewport(candidate->view(), QSize(kViewWidth, kViewHeight))) {
+        error = QStringLiteral("TrackHeaders Quick host could not expose its viewport");
+        return false;
+    }
     if (!QTest::qWaitFor([this] {
             return m_window && m_window->isVisible() && m_window->isExposed() && m_input &&
                    m_input->window() == m_window && !m_input->bounds().isEmpty();
@@ -178,12 +183,18 @@ bool TrackHeadersFixture::create(QString &error)
         error = QStringLiteral("Route 101 fixture lacks a track with a current program");
         return false;
     }
+    m_host = std::move(candidateHost);
     m_tab = std::move(candidate);
     return true;
 }
 
 bool TrackHeadersFixture::acquireInputFocus(QString &error)
 {
+    // A picker torn down in an earlier slot can leave the application with
+    // no active native window. Reassert the real host's raise and activation
+    // before the Quick focus request; the strict predicate below is unchanged.
+    m_host->window().raise();
+    m_host->window().requestActivate();
     if (!view().focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason)) {
         error = QStringLiteral("TrackHeaders Quick input could not request focus");
         return false;
@@ -192,7 +203,13 @@ bool TrackHeadersFixture::acquireInputFocus(QString &error)
             return m_window && m_input && QGuiApplication::focusWindow() == m_window &&
                    QGuiApplication::focusObject() == m_input && m_input->hasActiveFocus();
         })) {
-        error = QStringLiteral("TrackHeaders Quick input did not receive native window focus");
+        QWindow *const focusWindow = QGuiApplication::focusWindow();
+        QObject *const focusObject = QGuiApplication::focusObject();
+        error = QStringLiteral("TrackHeaders Quick input did not receive native window focus "
+                               "(windowActive=%1 focusWindowNull=%2 focusObjectNull=%3)")
+                    .arg(m_window && m_window->isActive() ? 1 : 0)
+                    .arg(focusWindow == nullptr ? 1 : 0)
+                    .arg(focusObject == nullptr ? 1 : 0);
         return false;
     }
     return true;
@@ -211,8 +228,8 @@ void TrackHeadersFixture::close()
     m_input.clear();
     m_quick.clear();
     m_headers.clear();
-    if (m_tab) {
-        m_tab->close();
+    if (m_host) {
+        m_host.reset();
         QCoreApplication::sendPostedEvents();
         QCoreApplication::processEvents();
     }

@@ -53,8 +53,12 @@ QRect devicePixelRect(const QImage &image, const QRect &logicalRect)
 bool showQuickViewport(SongView &view, const QSize &size)
 {
     songview::TimelineQuickView *const quickCanvas = view.quickView();
+    // A detached canvas has neither scene root nor borrowed window; the
+    // explicit scene host attaches both, and this helper never constructs
+    // a hidden host.
+    QQuickItem *const quickRoot = quickCanvas ? quickCanvas->rootObject() : nullptr;
     QQuickWindow *const quickWindow = quickCanvas ? quickCanvas->quickWindow() : nullptr;
-    if (!quickWindow)
+    if (!quickRoot || !quickWindow)
         return false;
     quickWindow->resize(size);
     quickWindow->show();
@@ -141,6 +145,12 @@ QImage captureQuickBand(SongView &view, const QRect &viewportRect, QString *erro
             *error = QStringLiteral("SongView has no Qt Quick timeline canvas");
         return {};
     }
+    QQuickItem *const quickRoot = quickCanvas->rootObject();
+    if (!quickRoot) {
+        if (error)
+            *error = QStringLiteral("Qt Quick timeline canvas has no attached scene root");
+        return {};
+    }
     QQuickWindow *const quickWindow = quickCanvas->quickWindow();
     if (!quickWindow) {
         if (error)
@@ -190,22 +200,27 @@ QImage captureQuickBand(SongView &view, const QRect &viewportRect, QString *erro
         return {};
     }
 
+    // Canvas-local crop mapped to window-local through the attached root
+    // item: the translated viewport may sit anywhere inside the host
+    // window, so never assume a zero origin.
+    const QRectF windowRect = quickRoot->mapRectToScene(QRectF(viewportRect));
     const qreal devicePixelRatio = quickWindow->devicePixelRatio();
     if (devicePixelRatio <= 0.0) {
         if (error)
             *error = QStringLiteral("Qt Quick window has no device pixel ratio");
         return {};
     }
-    const int left = qRound(viewportRect.x() * devicePixelRatio);
-    const int top = qRound(viewportRect.y() * devicePixelRatio);
-    const int right = qRound((viewportRect.x() + viewportRect.width()) * devicePixelRatio);
-    const int bottom = qRound((viewportRect.y() + viewportRect.height()) * devicePixelRatio);
+    const int left = qRound(windowRect.x() * devicePixelRatio);
+    const int top = qRound(windowRect.y() * devicePixelRatio);
+    const int right = qRound((windowRect.x() + windowRect.width()) * devicePixelRatio);
+    const int bottom = qRound((windowRect.y() + windowRect.height()) * devicePixelRatio);
     const QRect crop{left, top, right - left, bottom - top};
     if (crop.width() <= 0 || crop.height() <= 0 || !framebuffer.rect().contains(crop)) {
         if (error)
             *error = QStringLiteral("requested crop falls outside the Qt Quick framebuffer "
                                     "(framebuffer=%1x%2 crop=[%3,%4 %5x%6] requested-viewport="
-                                    "[%7,%8 %9x%10] Quick-window-size=%11x%12 dpr=%13)")
+                                    "[%7,%8 %9x%10] window-rect=[%11,%12 %13x%14] "
+                                    "Quick-window-size=%15x%16 dpr=%17)")
                          .arg(framebuffer.width())
                          .arg(framebuffer.height())
                          .arg(crop.x())
@@ -216,6 +231,10 @@ QImage captureQuickBand(SongView &view, const QRect &viewportRect, QString *erro
                          .arg(viewportRect.y())
                          .arg(viewportRect.width())
                          .arg(viewportRect.height())
+                         .arg(windowRect.x(), 0, 'f', 1)
+                         .arg(windowRect.y(), 0, 'f', 1)
+                         .arg(windowRect.width(), 0, 'f', 1)
+                         .arg(windowRect.height(), 0, 'f', 1)
                          .arg(quickWindow->width())
                          .arg(quickWindow->height())
                          .arg(devicePixelRatio, 0, 'f', 2);

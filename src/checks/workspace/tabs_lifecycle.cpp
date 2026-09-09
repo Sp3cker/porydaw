@@ -7,10 +7,13 @@
 #include <QComboBox>
 #include <QFile>
 #include <QMessageBox>
+#include <QQuickItem>
+#include <QQuickWindow>
 #include <QSettings>
-#include <QTabWidget>
+#include <QSize>
 #include <QTimer>
 #include <QToolButton>
+#include <QVariant>
 
 #include <algorithm>
 #include <cmath>
@@ -21,6 +24,7 @@
 #include "mainwindow.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
+#include "ui/workspacequick/workspacequickhost.h"
 #include "ui/workspaceui.h"
 
 namespace {
@@ -198,10 +202,20 @@ void WorkspaceTabsTest::editUndoIsPerTab()
     document.addNote(0, end + 96, 72, 24, 93);
     QVERIFY(first->document().isDirty());
     QVERIFY(!second->document().isDirty());
-    auto *tabs = window.findChild<QTabWidget *>();
-    QVERIFY(tabs);
-    QVERIFY(tabs->tabText(tabs->indexOf(first)).endsWith(QLatin1Char('*')));
-    QVERIFY(!tabs->tabText(tabs->indexOf(second)).endsWith(QLatin1Char('*')));
+    auto *host = workspace_test::quickHost(window);
+    QVERIFY(host);
+    QVERIFY2(workspace_test::exposeWorkspaceHost(window, *host, QSize(640, 480)),
+             "the production workspace host did not expose its embedded Quick window");
+    QQuickWindow *const quickWindow = host->window();
+    QVERIFY(quickWindow);
+    QQuickItem *firstStripTab = nullptr;
+    QQuickItem *secondStripTab = nullptr;
+    QTRY_VERIFY((firstStripTab = workspace_test::quickItem(
+                     *quickWindow, QStringLiteral("songTab:") + m_songA)) != nullptr);
+    QTRY_VERIFY((secondStripTab = workspace_test::quickItem(
+                     *quickWindow, QStringLiteral("songTab:") + m_songB)) != nullptr);
+    QTRY_COMPARE(firstStripTab->property("title").toString(), m_songA + QLatin1Char('*'));
+    QTRY_COMPARE(secondStripTab->property("title").toString(), m_songB);
 
     window.m_audio.play();
     QTRY_COMPARE(window.m_audio.transport(), Transport::Playing);

@@ -349,7 +349,7 @@ void PianoRollTest::rulerLoopMenuStaleCancelNoWrite()
     // the automations page so dismissal returns focus to the ruler band, then
     // establish the band focus a real press carries.
     view.setDrawerSectionVisible(EditorDrawerPage::Automations, false);
-    m_tab->raise();
+    check.window().raise();
     QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Ruler, Qt::OtherFocusReason),
              "the ruler band could not take focus for the escape scenario");
     QCoreApplication::sendPostedEvents();

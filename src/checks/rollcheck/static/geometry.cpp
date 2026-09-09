@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "checks/rollcheck/static/fixtures.h"
+#include "checks/support/editorrig.h"
 #include "checks/support/quickframebuffer.h"
 #include "core/miditimeline.h"
 #include "ui/songview.h"
@@ -27,6 +28,10 @@ struct BareView {
     MidiTimeline t48;
     MidiTimeline t34;
     SongView view;
+    // Raster-capturing slots need the real Quick window, so the scene is
+    // attached explicitly at construction. Declared after `view` so the
+    // host and its window die before the view they back.
+    checks::QuickSceneHost host{view, QSize(1280, 800)};
 
     BareView()
     {

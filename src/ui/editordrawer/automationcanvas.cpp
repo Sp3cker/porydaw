@@ -84,9 +84,17 @@ void AutomationCanvas::detachInputHost(songview::TimelineInputHost &host)
     Q_ASSERT(m_inputHost == &host);
     if (m_inputHost != &host)
         return;
+    // Sever first: inputCancelled() ends in cancelInteraction(), whose hover
+    // refresh maps the live cursor through the host (contentPositionFromGlobal
+    // -> mapFromGlobal -> QWindow::mapFromGlobal). During engine/window loss
+    // the host item is mid-destruction with its window half-torn-down, and
+    // that mapping dereferences the dead window (SIGSEGV access 0x8).
+    // Hostless cancellation still clears gestures, prompts, hover and note
+    // state while skipping every window contact; the item cursor reset below
+    // never maps.
+    m_inputHost = nullptr;
     inputCancelled(songview::TimelineInputCancelReason::Hidden);
     host.clearCursor();
-    m_inputHost = nullptr;
 }
 
 void AutomationCanvas::hostAppearanceChanged()

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QPointer>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -14,7 +15,10 @@ extern "C" {
 }
 
 class MidiTimeline;
+class QQmlEngine;
 class QQuickItem;
+class QQuickView;
+class QQuickWindow;
 class SongDocument;
 class SongView;
 
@@ -26,12 +30,13 @@ class TimelineQuickScene;
 namespace checks {
 
 // EditorRig is the one canonical document-driven assembly for checks: it
-// builds the timeline, sizes the real unhosted Quick window, wires the
-// SongView in production order (SongTab does setDocument then setSong),
-// applies the drawer/zoom/cursor setup that each check used to hand-roll,
-// and resolves the Quick scene, root, and input items once so checks never
-// fish the object tree. The document and voicegroup are borrowed and must
-// outlive the rig; members destroy the view before the borrowed state.
+// builds the timeline, hosts the real Quick window through QuickSceneHost
+// so SongView's windowless canvas renders into it, wires the SongView in
+// production order (SongTab does setDocument then setSong), applies the
+// drawer/zoom/cursor setup that each check used to hand-roll, and resolves
+// the Quick scene, root, and input items once so checks never fish the
+// object tree. The document and voicegroup are borrowed and must outlive
+// the rig; members destroy the host and the view before the borrowed state.
 struct EditorRigSection {
     EditorDrawerPage page;
     int height = 0;
@@ -48,6 +53,34 @@ struct EditorRigConfig {
     bool applyEditCursor = false;
     uint64_t editCursorTick = 0;
     bool show = true; // exposes the Quick window
+};
+
+// Canonical externally hosted Quick scene for checks: owns the one real
+// window — whose built-in engine hosts the scene — that SongView's
+// windowless TimelineQuickView canvas attaches into. The QQuickView loads
+// no root of its own — its contentItem is the canonical viewport the
+// canvas parents into. The host borrows the view through a QPointer and
+// must be destroyed before it; as an EditorRig member it is declared after
+// the view so it dies first. Construction registers the timeline QML types
+// before engine use, applies the production alpha8/transparent surface
+// format, sizes the viewport and window, and attaches the real canvas; the
+// destructor detaches the canvas before the window goes away.
+class QuickSceneHost final
+{
+  public:
+    QuickSceneHost(SongView &view, const QSize &size);
+    ~QuickSceneHost();
+
+    QuickSceneHost(const QuickSceneHost &) = delete;
+    QuickSceneHost &operator=(const QuickSceneHost &) = delete;
+
+    QQuickWindow &window() noexcept;
+    QQmlEngine &engine() noexcept;
+    QQuickItem &viewport() noexcept;
+
+  private:
+    QPointer<SongView> m_view;
+    std::unique_ptr<QQuickView> m_window;
 };
 
 class EditorRig final
@@ -79,6 +112,7 @@ class EditorRig final
     LoadedVoiceGroup *m_voicegroup = nullptr;
     std::unique_ptr<MidiTimeline> m_timeline;
     std::unique_ptr<SongView> m_view;
+    std::unique_ptr<QuickSceneHost> m_host;
     QQuickItem *m_quickRoot = nullptr;
     songview::TimelineQuickScene *m_quickScene = nullptr;
     songview::TimelineInputItem *m_voiceInput = nullptr;

@@ -22,7 +22,8 @@
 
 class AutomationPage;
 class DrawerChrome;
-class QQuickView;
+class QQmlContext;
+class QQmlEngine;
 class EventListController;
 class SongView;
 class VelocityArea;
@@ -76,14 +77,15 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(AutomationRefreshSet)
 
 static_assert(static_cast<quint32>(TimelineQuickDirty::All) <= std::numeric_limits<quint16>::max());
 
-// Quick coordinator over the canonical timeline viewport: it owns the one
-// QQuickWindow whose scene renders every migrated band. The window is the
-// full canonical viewport with origin (0, 0); SongView and
-// TimelineBandLayout stay authoritative for all band geometry, published
-// here without translation. The window starts sole-owned and unhosted;
-// SongTabQuickHost takes it for embedding exactly once via
-// takeWindowForEmbedding(), and detachWindow() is the idempotent final
-// teardown for both ownership paths.
+// Windowless Quick coordinator over the canonical timeline viewport: it
+// owns no window or engine. An external host (WorkspaceQuickHost or a fixture
+// host) constructs its own QQuickView, calls registerQuickTypes() before
+// that engine exists, then attaches the scene via attachScene(engine,
+// viewport). The root canvas item is the canonical viewport with origin
+// (0, 0); SongView and TimelineBandLayout stay authoritative for all band
+// geometry, published here without translation. While detached the
+// coordinator keeps every domain model and dirty domain alive; only the
+// QML borrows go null.
 class TimelineQuickView final : public QObject
 {
     Q_OBJECT
@@ -138,7 +140,7 @@ class TimelineQuickView final : public QObject
     ~TimelineQuickView() override;
 
     // Canonical viewport x for the ruler guides; SongView-local content x
-    // publishes directly because the Quick window is the full viewport.
+    // publishes directly in the Quick canvas item's coordinates.
     qreal hoverRootContentX() const noexcept;
     bool hoverVisible() const noexcept;
     qreal editRootContentX() const noexcept;
@@ -166,40 +168,68 @@ class TimelineQuickView final : public QObject
     void synchronizeGuides(qreal songViewSplitX, std::optional<qreal> editSongViewContentX);
     void publishHover(TimelineQuickHoverOwner owner, uint64_t tick, qreal songViewContentX);
     void clearHover(TimelineQuickHoverOwner owner);
-    // Live QML borrows. rootObject() is the cached scene root; both return
-    // null after detachWindow() or once an external container destroyed a
-    // transferred window.
+    // Registers the timeline QML types into the "Porydaw.Ui" module;
+    // idempotent. Hosts call this before constructing their QQuickView (the
+    // view constructs its engine); attachScene() re-asserts it defensively
+    // before creating the canvas component.
+    static void registerQuickTypes();
+
+    // Attaches the one coordinator scene to an external host: builds the
+    // per-scene QQmlContext on top of the engine root context (parented to
+    // this coordinator; no page data enters the engine root context), asks
+    // DrawerChrome for its icon provider, creates the existing TimelineCanvas
+    // QML in that context, parents it visually to the supplied viewport item
+    // (which the canvas fills and observes for size and window association)
+    // while keeping its QObject ownership here, and wires every interaction,
+    // popup, scrollbar, and layer binding. The host keeps sole ownership of
+    // the engine, window, and viewport — this coordinator only borrows them,
+    // observes engine destruction, and destroys the owned canvas there if a
+    // host drops its engine without detaching. One attached scene per
+    // coordinator: attaching while a scene is attached is a contract
+    // violation, and the viewport must already be associated with a
+    // QQuickWindow. Emits viewportChanged() once the scene is fully attached
+    // so SongView republishes its complete state into the real viewport.
+    void attachScene(QQmlEngine &engine, QQuickItem &viewport);
+
+    // Live QML borrows. rootObject() is the created canvas item whose
+    // dimensions define the canonical viewport; all three return null while
+    // detached or once an external host destroyed the borrowed window.
     QQuickItem *rootObject() const;
     QQuickWindow *quickWindow() const;
-    // Shared canvas popup owner for typed menus and forms; null after
-    // detachWindow().
+    // Shared canvas popup owner for typed menus and forms; null while
+    // detached.
     QuickPopupSession *popupSession() const noexcept;
 
-    // One-way ownership transfer to the external embedding adapter
-    // (SongTabQuickHost): the sole-owned unhosted window moves out exactly
-    // once — later calls return null — and the adapter releases it into
-    // QWidget::createWindowContainer, whose container then sole-owns it.
-    // Never emits windowAboutToDetach(); detachWindow() later unbinds the
-    // window's content without deleting it.
-    std::unique_ptr<QQuickWindow> takeWindowForEmbedding();
+    // Page-scoped input eligibility: the conjunction of explicit host page
+    // selection, projected readiness (SongTab projects its load facts and
+    // starts unready; standalone domain views default ready), a live
+    // attached scene, and the canvas's and window's effective visibility.
+    // Losing eligibility disables this page's canvas subtree — never the
+    // shared window or any sibling page — and cancels the page's outgoing
+    // pointer/key transients, popup, and audition without focus
+    // restoration; grab release stays bounded to this page's subtree.
+    bool inputEligible() const noexcept;
+    void setInputReady(bool ready);
+    void setPageSelected(bool selected);
 
-    // Idempotent final teardown: stops the layout/flush timers, cancels the
+    // Idempotent teardown: stops the layout/flush timers, cancels the
     // popup and every live gesture, clears the key wiring, detaches all
-    // interaction and session bindings, clears the raw QML borrows, and
-    // unloads QML while the context properties still point at live models.
-    // Emits windowAboutToDetach() once per lifetime while the window is still
-    // valid (never during takeWindowForEmbedding()). Re-entry during the
-    // emission is inert. An unhosted window is destroyed synchronously; a
-    // transferred one is left to its container.
-    // Afterwards quickWindow(), rootObject(), and popupSession() return
-    // null, and the update entry points become inert.
-    void detachWindow();
+    // interaction and session bindings, drops the window surveillance and
+    // native association, and destroys the QML root, popup session, scene
+    // context, and icon provider in dependency order — while every domain
+    // model is still alive and without ever destroying the host window or
+    // engine. Emits windowAboutToDetach() once per detach while the
+    // borrowed window is still valid; re-entry during the emission is
+    // inert. Afterwards quickWindow(), rootObject(), and popupSession()
+    // return null and the update entry points become inert; a later
+    // attachScene() rebuilds the whole scene.
+    void detachScene();
 
     void syncAppearance();
     void setBandLayout(TimelineBandLayout layout);
-    // Republishes the stored band layout after Quick-window lifecycle events
-    // (resize, screen, DPR); changes neither the canonical value nor dirty
-    // domains.
+    // Republishes the stored band layout after canvas resizes or Quick-window
+    // lifecycle events (screen, DPR); changes neither the canonical value nor
+    // dirty domains.
     void refreshBandLayout();
     // Canonical scrollbar lanes in viewport coordinates; empty means the
     // lane is absent (the roll bar hides in EventList mode). Published with
@@ -216,8 +246,11 @@ class TimelineQuickView final : public QObject
     qreal verticalScrollMaximum() const;
     qreal verticalScrollPageStep() const;
     // QML scrollbar input entry points: authoritative SongView camera
-    // updates. The SongTab InputGate filters the delivering wheel events,
-    // so no readiness flag lives here; wheel deltas keep the platform's
+    // updates. Page-scoped input eligibility disables the whole canvas
+    // subtree, so the scrollbar drag and wheel handlers that produce these
+    // calls cannot fire while ineligible — no readiness flag lives here,
+    // keeping C++ callers (drawer chrome, view-state restore) working as
+    // legitimate programmatic updates; wheel deltas keep the platform's
     // natural-scroll sign (never re-inverted).
     Q_INVOKABLE void setHorizontalScroll(qreal value);
     Q_INVOKABLE void setVerticalScroll(qreal value);
@@ -232,11 +265,9 @@ class TimelineQuickView final : public QObject
     // 1.0 only before the Quick window exists.
     qreal quickDevicePixelRatio() const;
 
-    // Focus bridge over the converted bands' input items. focusBand() returns
+    // Focus bridge over the converted Quick input items. focusBand() returns
     // false only when a band's input item does not exist yet; otherwise it
-    // emits embeddingFocusRequested so the external host focuses its
-    // container, requests the item's focus, and returns true — the
-    // active-focus FocusIn may still be pending asynchronously.
+    // requests focus through the shared window's ordinary Quick focus chain.
     // focusedBand() reads live QQuick active focus, never a cached flag.
     bool focusBand(TimelineBand band, Qt::FocusReason reason);
     std::optional<TimelineBand> focusedBand() const;
@@ -280,21 +311,24 @@ class TimelineQuickView final : public QObject
     void scrollbarRectsChanged();
     void scrollbarStateChanged();
     void playheadXChanged();
-    // Emitted once per detachWindow() while the original window is still
+    // Emitted once per detachScene() while the borrowed window is still
     // valid; native attachments clear here.
     void windowAboutToDetach();
-    // The Quick window resized, changed screens, or changed its device
-    // pixel ratio: SongView reruns its former resize/layout choreography.
+    // The canvas item resized, or its Quick window resized, changed screens,
+    // or changed DPR: SongView reruns its viewport layout choreography. The
+    // scene's window mapping (canvas rect through every ancestor), effective
+    // visibility, or effective ancestor clipping changing re-reports here
+    // too, so native overlays retarget without a window resize.
     void viewportChanged();
-    // A band or event-list focus bridge needs the embedding container
-    // focused so the Quick window activates; the external host listens
-    // here. Unhosted windows have no listener and focus directly.
-    void embeddingFocusRequested(Qt::FocusReason reason);
+    // Page-scoped input eligibility flipped; see inputEligible().
+    void inputEligibleChanged();
 
   protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
   private:
+    friend class QuickWindowInput;
+
     std::optional<qreal>
     guideSongViewContentXAtOrAfterStart(std::optional<qreal> songViewContentX) const noexcept;
     void setHoverChrome(std::optional<qreal> songViewContentX);
@@ -303,6 +337,22 @@ class TimelineQuickView final : public QObject
     void scheduleTimelineBandLayoutPublication();
     void publishTimelineBandLayout();
     void discoverGestureScrollbars(QObject &root);
+    void trackViewportWindow(QQuickWindow *window);
+    void retargetPopupSession(QQuickWindow *window);
+    void setPopupSessionBindings(QuickPopupSession *session);
+    void handleEngineDestroyed(const QQmlEngine &engine);
+    // One hostless input-unbinding path shared by detachScene() and the
+    // engine-loss observation: detaches every interaction, key policy, and
+    // session binding while the domain models are alive, then clears the
+    // raw QML borrows.
+    void unbindSceneInputs();
+    // Page input eligibility edges and the scene-mapping report behind
+    // viewportChanged; both live with the window lifecycle code.
+    void updateInputEligibility();
+    bool sceneEffectivelyVisible() const;
+    void watchSceneMapping();
+    void disconnectSceneMappingWatch();
+    bool isPageSubtreeItem(const QQuickItem &item) const;
     void registerGestureScrollbar(TimelineGestureScrollbar &scrollbar);
     void forgetGestureScrollbar(TimelineGestureScrollbar *scrollbar);
     void installKeyPolicyHandlers();
@@ -357,21 +407,32 @@ class TimelineQuickView final : public QObject
     // QPointers survive teardown; destroyed connections erase identities as
     // soon as their QML object dies.
     std::vector<QPointer<TimelineGestureScrollbar>> m_gestureScrollbars;
-    // Every remaining QML borrow is a QPointer as well: detachWindow()
-    // clears them, and an external container destroying a transferred
-    // window nulls them on its own.
+    // Every remaining QML borrow is a QPointer as well: detachScene()
+    // clears them, and an external host destroying the borrowed window or
+    // viewport nulls them on their own while the coordinator-owned canvas
+    // is destroyed by the engine-loss observation.
     TimelineQuickScene *m_scene = nullptr;
-    // Sole window ownership while unhosted; null once takeWindowForEmbedding()
-    // transferred the window or detachWindow() destroyed it.
-    std::unique_ptr<QQuickView> m_quickView;
-    // The live window borrow; tracks the object through the ownership
-    // transfer and nulls out whenever the window dies.
-    QPointer<QQuickView> m_view;
-    // Final-teardown guard: detachWindow() runs once per lifetime. A
-    // windowAboutToDetach listener may re-enter while the borrow is still
-    // live; the nested call returns without re-emitting or re-running.
-    bool m_detachStarted = false;
-    // Cached QML scene root; cleared with the other borrows in detachWindow().
+    // The borrowed host window, viewport, and engine; null while detached.
+    // The window borrow follows the viewport's live window association —
+    // reassociation retargets the window-bound collaborators — and nulls
+    // out whenever the window dies.
+    QPointer<QQuickWindow> m_view;
+    QPointer<QQuickItem> m_viewport;
+    QQmlEngine *m_engine = nullptr;
+    QMetaObject::Connection m_engineDestroyed;
+    // Per-scene QML context: parented to this coordinator, based on the
+    // host engine's root context. Created by attachScene(), destroyed by
+    // detachScene() after the canvas and popup session.
+    QQmlContext *m_sceneContext = nullptr;
+    // Detach-in-flight guard: a windowAboutToDetach listener may re-enter
+    // while the borrows are still live; the nested call returns without
+    // re-emitting or re-running. Cleared once teardown finishes so a later
+    // attachScene() can run.
+    bool m_detaching = false;
+    // Coordinator-owned QML canvas root: QObject-parented to this
+    // coordinator, visually parented to the host viewport. Deleted in
+    // detachScene() and by the engine-loss observation when a host drops
+    // its engine without detaching; never abandoned.
     QPointer<QQuickItem> m_root;
     QuickPopupSession *m_popupSession = nullptr;
     std::array<QPointer<TimelineQuickItem>, static_cast<std::size_t>(TimelineQuickLayer::Count)>
@@ -399,6 +460,24 @@ class TimelineQuickView final : public QObject
     std::vector<TimelineQuickTextModel::Record> m_noteTextRecords;
     std::vector<TimelineQuickTextModel::Record> m_loadingTextRecords;
     std::vector<TimelineQuickTextModel::Record> m_keyboardTextRecords;
+    // Page input eligibility state. Standalone domain views default ready;
+    // hosts select explicitly and SongTab projects its load-fact readiness.
+    bool m_inputReady = true;
+    bool m_pageSelected = false;
+    bool m_inputEligible = false;
+    // Last scene state reported through viewportChanged: the canvas rect in
+    // window scene coordinates, its effective visibility through every
+    // ancestor, whether any ancestor clips, and the canvas rect intersected
+    // with every clipping ancestor (so a clipping-ancestor resize that leaves
+    // the canvas rect and the clip flag unchanged still re-reports when the
+    // visible intersection moves). Ancestor x/y/width/height/visible/clip
+    // changes re-report through the watch installed by watchSceneMapping();
+    // the canvas's own size keeps its single canvasResized publisher.
+    QRectF m_reportedSceneRect;
+    bool m_reportedSceneVisible = false;
+    bool m_reportedSceneClipped = false;
+    QRectF m_reportedClipRect;
+    std::vector<QMetaObject::Connection> m_sceneMappingWatch;
 };
 
 } // namespace songview

@@ -81,7 +81,7 @@ void PitchBendEditingTest::keyGAnchorsPopupToSelectedNoteWithinWindowBounds()
     QPointer<songview::PitchBendEditor> editor = m_fixture.popup();
     QVERIFY(editor);
     const int heightBefore = m_fixture.timelineWindow().height();
-    m_fixture.tab().resize(m_fixture.tab().width(), heightBefore - 160);
+    m_fixture.timelineWindow().resize(m_fixture.timelineWindow().width(), heightBefore - 160);
     QTRY_VERIFY(m_fixture.timelineWindow().height() < heightBefore);
     QTRY_VERIFY(editor && editor->isOpen());
     QCoreApplication::processEvents();

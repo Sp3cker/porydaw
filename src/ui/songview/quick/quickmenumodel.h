@@ -200,6 +200,7 @@ class QuickMenuHost : public QObject
     };
 
     QQuickItem *createPanel(QuickMenuModel *model, bool rootLevel, const MenuMetrics &layout);
+    QRectF menuBounds() const;
     void pushLevel(QuickMenuModel *model, const QRectF &anchor, bool rootLevel);
     void popLevel(bool notifyState = true);
     void popToLevel(QQuickItem *panel);

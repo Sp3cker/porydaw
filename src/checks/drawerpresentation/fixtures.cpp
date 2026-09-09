@@ -12,6 +12,7 @@
 
 #include "checks/support/editorrig.h"
 #include "checks/support/eventsynth.h"
+#include "checks/support/quickframebuffer.h"
 #include "core/miditimeline.h"
 #include "core/smf.h"
 #include "core/tracklimits.h"
@@ -168,9 +169,65 @@ bool layerEmpty(const songview::TimelineQuickScene &scene, songview::TimelineQui
     return data.rects.empty() && data.triangles.empty();
 }
 
+DrawerFixture::DrawerFixture() = default;
+
 DrawerFixture::~DrawerFixture()
 {
     destroy();
+}
+
+DrawerFixture::DrawerFixture(DrawerFixture &&other) noexcept
+    : voicegroup(std::move(other.voicegroup))
+    , tab(std::move(other.tab))
+    , sceneHost(std::move(other.sceneHost))
+    , view(other.view)
+    , quick(other.quick)
+    , quickRoot(other.quickRoot)
+    , voiceHandle(other.voiceHandle)
+    , velocityHandle(other.velocityHandle)
+    , automationHandle(other.automationHandle)
+    , bar(other.bar)
+    , detent(other.detent)
+{
+    other.view = nullptr;
+    other.quick = nullptr;
+    other.quickRoot = nullptr;
+    other.voiceHandle = nullptr;
+    other.velocityHandle = nullptr;
+    other.automationHandle = nullptr;
+    other.bar = nullptr;
+    other.detent = nullptr;
+}
+
+DrawerFixture &DrawerFixture::operator=(DrawerFixture &&other) noexcept
+{
+    if (this == &other)
+        return *this;
+    // The host borrows the session view: release the current host before the
+    // current session, then transfer ownership and borrowed pointers, leaving
+    // the source empty. A defaulted assignment would destroy the session
+    // first and leave the source's raw pointers dangling.
+    destroy();
+    voicegroup = std::move(other.voicegroup);
+    tab = std::move(other.tab);
+    sceneHost = std::move(other.sceneHost);
+    view = other.view;
+    quick = other.quick;
+    quickRoot = other.quickRoot;
+    voiceHandle = other.voiceHandle;
+    velocityHandle = other.velocityHandle;
+    automationHandle = other.automationHandle;
+    bar = other.bar;
+    detent = other.detent;
+    other.view = nullptr;
+    other.quick = nullptr;
+    other.quickRoot = nullptr;
+    other.voiceHandle = nullptr;
+    other.velocityHandle = nullptr;
+    other.automationHandle = nullptr;
+    other.bar = nullptr;
+    other.detent = nullptr;
+    return *this;
 }
 
 bool DrawerFixture::create(QString &error)
@@ -185,8 +242,9 @@ bool DrawerFixture::create(QString &error)
     }
     voicegroup.voices[0].type = VOICE_DIRECTSOUND;
     auto candidate = std::make_unique<SongTab>(std::move(*name));
-    candidate->resize(960, 480);
     candidate->setSampleRate(48000.0);
+    auto candidateHost =
+        std::make_unique<checks::QuickSceneHost>(candidate->view(), QSize(960, 480));
     SongInfo info;
     info.label = QStringLiteral("drawer-transaction");
     info.hasMid = true;
@@ -198,9 +256,13 @@ bool DrawerFixture::create(QString &error)
         error = QStringLiteral("drawer fixture did not become ready");
         return false;
     }
-    candidate->show();
+    SongView &candidateView = candidate->view();
+    if (!checks::support::showQuickViewport(candidateView, QSize(960, 480))) {
+        error = QStringLiteral("drawer fixture host did not expose the Quick window");
+        return false;
+    }
     pump();
-    view = &candidate->view();
+    view = &candidateView;
     quick = view->quickView();
     quickRoot = quick ? quick->rootObject() : nullptr;
     if (!quickRoot) {
@@ -225,11 +287,13 @@ bool DrawerFixture::create(QString &error)
     // convergence), not just page visibility.
     auto *automationInput = quickRoot->findChild<songview::TimelineInputItem *>(
         QStringLiteral("timelineAutomationInput"));
-    QQuickWindow *const quickWindow = quick ? quick->quickWindow() : nullptr;
+    QQuickWindow *const quickWindow = &candidateHost->window();
     if (!automationInput || !quickWindow) {
         error = QStringLiteral("drawer fixture could not resolve automation input");
         return false;
     }
+    candidateHost->window().raise();
+    candidateHost->window().requestActivate();
     view->focusTimelineBand(songview::TimelineBand::Automation, Qt::OtherFocusReason);
     if (!QTest::qWaitFor([quickWindow, automationInput] {
             return QGuiApplication::focusWindow() == quickWindow &&
@@ -240,14 +304,16 @@ bool DrawerFixture::create(QString &error)
         return false;
     }
     tab = std::move(candidate);
+    sceneHost = std::move(candidateHost);
     return true;
 }
 
 void DrawerFixture::destroy()
 {
-    if (tab)
-        tab->hide();
+    if (sceneHost)
+        sceneHost->window().hide();
     pump();
+    sceneHost.reset();
     tab.reset();
     view = nullptr;
     quick = nullptr;
@@ -368,8 +434,9 @@ bool VoiceTransactionFixture::create(QString &error)
     std::strncpy(voicegroup.voiceNames[3], "voice-check", sizeof(voicegroup.voiceNames[3]) - 1);
     std::strncpy(voicegroup.voiceNames[5], "alt-voice", sizeof(voicegroup.voiceNames[5]) - 1);
     auto candidate = std::make_unique<SongTab>(std::move(*name));
-    candidate->resize(1000, 640);
     candidate->setSampleRate(48000.0);
+    auto candidateHost =
+        std::make_unique<checks::QuickSceneHost>(candidate->view(), QSize(1000, 640));
     SongInfo info;
     info.label = QStringLiteral("drawer-voice-transaction");
     info.hasMid = true;
@@ -392,14 +459,17 @@ bool VoiceTransactionFixture::create(QString &error)
     auto *voiceInput = root ? root->findChild<songview::TimelineInputItem *>(
                                   QStringLiteral("timelineVoiceChangesInput"))
                             : nullptr;
-    QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
+    QQuickWindow *const window = &candidateHost->window();
     if (!voiceInput || !window) {
         error = QStringLiteral("voice transaction fixture could not resolve input");
         return false;
     }
-    candidate->show();
-    // Hosted container path: exposure and band-geometry publication land
-    // after the external widget shows; wait for the staged contract.
+    if (!checks::support::showQuickViewport(candidateView, QSize(1000, 640))) {
+        error = QStringLiteral("voice transaction fixture host did not expose the Quick window");
+        return false;
+    }
+    // Hosted window exposure and band geometry publication must settle before
+    // the real input acquisition below.
     if (!QTest::qWaitFor([window, voiceInput] {
             return window->isVisible() && window->isExposed() && !voiceInput->bounds().isEmpty() &&
                    voiceInput->window() == window;
@@ -410,6 +480,8 @@ bool VoiceTransactionFixture::create(QString &error)
     // The picker and menu restore paths key off live window focus: stage
     // real voice-band focus (requestFocus plus focusWindow/focusObject
     // convergence), not just page visibility.
+    candidateHost->window().raise();
+    candidateHost->window().requestActivate();
     candidateView.focusTimelineBand(songview::TimelineBand::VoiceChanges, Qt::OtherFocusReason);
     if (!QTest::qWaitFor([window, voiceInput] {
             return QGuiApplication::focusWindow() == window &&
@@ -419,8 +491,11 @@ bool VoiceTransactionFixture::create(QString &error)
         return false;
     }
     tab = std::move(candidate);
+    sceneHost = std::move(candidateHost);
     return true;
 }
+
+VoiceTransactionFixture::VoiceTransactionFixture() = default;
 
 VoiceTransactionFixture::~VoiceTransactionFixture()
 {
@@ -429,9 +504,10 @@ VoiceTransactionFixture::~VoiceTransactionFixture()
 
 void VoiceTransactionFixture::destroy()
 {
-    if (tab)
-        tab->hide();
+    if (sceneHost)
+        sceneHost->window().hide();
     pump();
+    sceneHost.reset();
     tab.reset();
 }
 
@@ -465,6 +541,8 @@ songview::TimelineInputItem &VoiceTransactionFixture::input()
     return *tab->view().quickView()->rootObject()->findChild<songview::TimelineInputItem *>(
         QStringLiteral("timelineVoiceChangesInput"));
 }
+VelocityTransactionFixture::VelocityTransactionFixture() = default;
+
 VelocityTransactionFixture::~VelocityTransactionFixture()
 {
     destroy();
@@ -483,8 +561,9 @@ bool VelocityTransactionFixture::create(QString &error)
     }
     voicegroup.voices[0].type = VOICE_DIRECTSOUND;
     auto candidate = std::make_unique<SongTab>(std::move(*name));
-    candidate->resize(1000, 640);
     candidate->setSampleRate(48000.0);
+    auto candidateHost =
+        std::make_unique<checks::QuickSceneHost>(candidate->view(), QSize(1000, 640));
     SongInfo info;
     info.label = QStringLiteral("drawer-velocity-transaction");
     info.hasMid = true;
@@ -511,14 +590,17 @@ bool VelocityTransactionFixture::create(QString &error)
     auto *velocityInput = root ? root->findChild<songview::TimelineInputItem *>(
                                      QStringLiteral("timelineVelocityInput"))
                                : nullptr;
-    QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
+    QQuickWindow *const window = &candidateHost->window();
     if (!velocityInput || !window) {
         error = QStringLiteral("velocity transaction fixture could not resolve input");
         return false;
     }
-    candidate->show();
-    // Hosted container path: exposure and band-geometry publication land
-    // after the external widget shows; wait for the staged contract.
+    if (!checks::support::showQuickViewport(candidateView, QSize(1000, 640))) {
+        error = QStringLiteral("velocity transaction fixture host did not expose the Quick window");
+        return false;
+    }
+    // Hosted window exposure and band geometry publication must settle before
+    // real pointer delivery.
     if (!QTest::qWaitFor([window, velocityInput] {
             return window->isVisible() && window->isExposed() &&
                    !velocityInput->bounds().isEmpty() && velocityInput->window() == window;
@@ -527,14 +609,16 @@ bool VelocityTransactionFixture::create(QString &error)
         return false;
     }
     tab = std::move(candidate);
+    sceneHost = std::move(candidateHost);
     return true;
 }
 
 void VelocityTransactionFixture::destroy()
 {
-    if (tab)
-        tab->hide();
+    if (sceneHost)
+        sceneHost->window().hide();
     pump();
+    sceneHost.reset();
     tab.reset();
 }
 

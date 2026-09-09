@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QPointer>
 
 #include <cstdint>
 #include <memory>
@@ -117,6 +118,8 @@ class MainWindow : public QMainWindow
     void onSelectedTabChanged(SongTab *tab);
     // The selected tab reached its terminal VoicegroupBound: bind.
     void onSelectedTabReady(SongTab *tab);
+    // Posts the existing guarded focus request after selection or readiness.
+    void queueSelectedFocus(SongTab *tab);
     // The selected tab's document, bank, or registration state changed:
     // refresh the chrome that reads the loaded state.
     void onSelectedSongStateChanged();
@@ -172,6 +175,9 @@ class MainWindow : public QMainWindow
     std::unique_ptr<ProjectWorkspace> m_projectWorkspace;
     AudioEngine m_audio;
     SongTab *m_selectedTab = nullptr;
+    // Only a tab selected while still loading earns focus on terminal
+    // readiness; bank refreshes and in-place reloads leave this empty.
+    QPointer<SongTab> m_focusWhenReady;
     VoicegroupLease m_selectedVoicegroup;
 
     // The selected-tab audio as last handed to the engine — the diff input

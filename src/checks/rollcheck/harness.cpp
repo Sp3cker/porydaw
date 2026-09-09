@@ -2,12 +2,15 @@
 
 #include <QColor>
 #include <QCoreApplication>
+#include <QQuickWindow>
+#include <QSize>
 #include <algorithm>
 #include <cmath>
+#include <memory>
 
+#include "checks/support/editorrig.h"
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
-#include "ui/layout.h"
 #include "ui/songtab.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/timelineinputitem.h"
@@ -21,12 +24,14 @@ PianoRollFixture::PianoRollFixture(SongTab &tab, const QString &songLabel)
     , m_songLabel(songLabel)
 {}
 
+PianoRollFixture::~PianoRollFixture() = default;
+
 bool PianoRollFixture::prepare()
 {
-    m_tab.resize(1280, 800);
-    m_tab.show();
-    m_tab.ensurePolished();
-    QCoreApplication::processEvents();
+    m_host = std::make_unique<checks::QuickSceneHost>(m_tab.view(), QSize(1280, 800));
+    if (!checks::support::showQuickViewport(m_tab.view(), QSize(1280, 800)))
+        return false;
+    m_host->window().requestActivate();
 
     SongView &songView = view();
     songView.setGridMinDenom(4);
@@ -68,6 +73,11 @@ SongDocument &PianoRollFixture::document() noexcept
 SongView &PianoRollFixture::view() noexcept
 {
     return m_tab.view();
+}
+
+QQuickWindow &PianoRollFixture::window() noexcept
+{
+    return m_host->window();
 }
 
 const MidiTimeline &PianoRollFixture::timeline() const noexcept

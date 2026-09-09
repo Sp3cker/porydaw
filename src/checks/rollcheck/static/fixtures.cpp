@@ -2,9 +2,11 @@
 
 #include <QCoreApplication>
 #include <QQuickItem>
-#include <QtGlobal>
+#include <QQuickWindow>
+#include <QSize>
 #include <QtTest>
 
+#include "checks/support/editorrig.h"
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
 #include "core/tracklimits.h"
@@ -65,6 +67,7 @@ CameraFixture::CameraFixture(QString projectRoot, QString songLabel)
 
 CameraFixture::~CameraFixture()
 {
+    m_host.reset();
     m_tab.reset();
     m_bank.reset();
     m_project.reset();
@@ -105,10 +108,11 @@ bool CameraFixture::create(QString &error)
     }
     m_tab->applyBankView(LoadedBankView{*bankId, borrowVoicegroupLease(m_bank.get()), QString()});
     m_tab->applyVoicegroupBound(*bankId);
-    m_tab->resize(1280, 800);
-    m_tab->show();
-    m_tab->ensurePolished();
-    QCoreApplication::processEvents();
+    m_host = std::make_unique<checks::QuickSceneHost>(m_tab->view(), QSize(1280, 800));
+    if (!checks::support::showQuickViewport(m_tab->view(), QSize(1280, 800))) {
+        error = QStringLiteral("static camera probe could not expose the Quick viewport");
+        return false;
+    }
     if (!m_tab->isReady()) {
         error = QStringLiteral("static camera probe tab did not become ready");
         return false;
@@ -130,7 +134,7 @@ bool CameraFixture::create(QString &error)
         error = QStringLiteral("static camera probe has no live piano-roll surfaces");
         return false;
     }
-    // Embedded-window geometry reaches the Quick items asynchronously.
+    // Quick-window geometry reaches the canvas items asynchronously.
     if (!QTest::qWaitFor([this] { return !m_rollInput->bounds().isEmpty(); })) {
         error = QStringLiteral("static camera probe Quick roll geometry did not settle");
         return false;
@@ -167,8 +171,8 @@ GateFixture::GateFixture() = default;
 
 GateFixture::~GateFixture()
 {
-    if (m_tab) {
-        m_tab->hide();
+    if (m_host) {
+        m_host.reset();
         QCoreApplication::processEvents();
     }
 }
@@ -182,10 +186,11 @@ bool GateFixture::create(QString &error)
     }
     m_tab = std::make_unique<SongTab>(*name);
     m_tab->setSampleRate(48000.0);
-    m_tab->resize(1280, 800);
-    m_tab->show();
-    m_tab->ensurePolished();
-    QCoreApplication::processEvents();
+    m_host = std::make_unique<checks::QuickSceneHost>(m_tab->view(), QSize(1280, 800));
+    if (!checks::support::showQuickViewport(m_tab->view(), QSize(1280, 800))) {
+        error = QStringLiteral("loading probe could not expose the Quick viewport");
+        return false;
+    }
     SongView &view = m_tab->view();
     auto *quick =
         view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
@@ -240,6 +245,11 @@ SongTab *GateFixture::tab() const noexcept
 SongView *GateFixture::view() const noexcept
 {
     return m_tab ? &m_tab->view() : nullptr;
+}
+
+QQuickWindow *GateFixture::window() const noexcept
+{
+    return m_host ? &m_host->window() : nullptr;
 }
 songview::TimelineInputItem *GateFixture::rollInput() const noexcept
 {

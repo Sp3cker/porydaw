@@ -1,9 +1,9 @@
 #pragma once
 
-// Shared production-shell session for the selectionkey window-tier Qt Test
-// suites (tst_windowtier.h, tst_localinputtier.h): one shown MainWindow with a
-// scratch project and song opened through WorkspaceUi's non-dialog seams, plus
-// the readiness waits and Quick lookups both tiers share. Rig-agnostic
+// Shared production-shell session for the selectionkey window, local-input,
+// and page-ownership Qt Test tiers: one shown MainWindow with a scratch
+// project and song opened through WorkspaceUi's non-dialog seams, plus the
+// readiness waits and Quick lookups they share. Rig-agnostic
 // delivery primitives live in checks/selectionkey/primitives.h, which this
 // header includes; the sibling core/gesture suites drive standalone rigs and
 // share only that header. The check runner redirects QSettings to a per-run
@@ -18,6 +18,7 @@
 #include "ui/songtab.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/workspacequick/workspacequickhost.h"
 #include "ui/workspaceui.h"
 
 #include <QAction>
@@ -152,13 +153,12 @@ inline bool openWindowSession(WindowSession &session, const QString &projectRoot
     return true;
 }
 
-// Opens (or focuses) the song's tab and waits for its terminal payload. The
-// modal guard spans both the synchronous placement request and the asynchronous
-// readiness wait: requestSongOpen can ask about the selected tab before placing
-// a new one, and a failed load can publish a warning while the wait pumps
-// events.
-inline SongTab *openSongTab(WindowSession &session, const QString &songLabel, bool newTab,
-                            QString &error)
+// Submits the real browser-placement request and returns as soon as the tab
+// exists. Newly created tabs are deliberately still unready at this point, so
+// readiness-gating cases can observe the production load interval before
+// waiting for its terminal payload.
+inline SongTab *requestSongTab(WindowSession &session, const QString &songLabel, bool newTab,
+                               QString &error)
 {
     const std::optional<SongName> name = SongName::create(songLabel);
     if (!name) {
@@ -179,16 +179,27 @@ inline SongTab *openSongTab(WindowSession &session, const QString &songLabel, bo
                     .arg(songLabel);
         return nullptr;
     }
-    std::fprintf(stderr, "selectionkeycheck: phase: %s: waiting-for-song-ready\n",
-                 qUtf8Printable(stage));
+    return tab;
+}
+
+// Opens (or focuses) the song's tab and waits for its terminal payload. The
+// modal guard spans the asynchronous readiness wait, during which a failed
+// load can publish a warning.
+inline SongTab *openSongTab(WindowSession &session, const QString &songLabel, bool newTab,
+                            QString &error)
+{
+    SongTab *const tab = requestSongTab(session, songLabel, newTab, error);
+    if (!tab)
+        return nullptr;
+    const QString stage = QStringLiteral("waiting for song '%1'").arg(songLabel);
+    DeclineModalsWithin guard(stage);
+    std::fprintf(stderr, "selectionkeycheck: phase: %s\n", qUtf8Printable(stage));
     if (!waitForTabReady(*session.workspace, tab)) {
         error = QStringLiteral("the %1 tab never became ready").arg(songLabel);
         return nullptr;
     }
-    std::fprintf(stderr, "selectionkeycheck: phase: %s: song-ready\n", qUtf8Printable(stage));
     settle();
-    std::fprintf(stderr, "selectionkeycheck: phase: %s: song-open-complete\n",
-                 qUtf8Printable(stage));
+    std::fprintf(stderr, "selectionkeycheck: phase: %s: complete\n", qUtf8Printable(stage));
     return tab;
 }
 
@@ -197,6 +208,14 @@ inline songview::TimelineQuickView *quickCanvas(const SongView &view)
 {
     return view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"),
                                                          Qt::FindDirectChildrenOnly);
+}
+
+// Shell-tier input uses the one WorkspaceQuickHost already owned by the live
+// MainWindow. It is never a fixture-created host: all pages and their shared
+// window stay under the real WorkspaceUi lifecycle.
+inline WorkspaceQuickHost *workspaceQuickHost(const WindowSession &session)
+{
+    return session.window ? session.window->findChild<WorkspaceQuickHost *>() : nullptr;
 }
 
 // Rolls a shell scenario's document edits back through the real undo stack,
@@ -232,18 +251,20 @@ class ScenarioRollback final
 // Undo every document edit through the tab's real undo stack so production
 // clean-lifecycle paths (song open, tab close, window close) run their
 // genuine no-prompt branch. Returns false with a stage-labeled error when the
-// tab still counts as dirty afterwards.
-inline bool undoTabToClean(WorkspaceUi &workspace, SongDocument &document, const QString &stage,
-                           QString *error = nullptr)
+// supplied document itself still counts as dirty afterwards.
+inline bool undoTabToClean(SongDocument &document, const QString &stage, QString *error = nullptr)
 {
     while (document.undoStack()->index() > 0)
         document.undoStack()->undo();
     settle();
-    if (workspace.selectedSongDirty()) {
+    if (document.isDirty()) {
         if (error)
-            *error = stage.isEmpty() ? QStringLiteral("the selected tab stayed dirty after "
-                                                      "undoing its document edits")
-                                     : stage;
+            *error = QStringLiteral("%1 (processed document dirty=%2 undo-index=%3)")
+                         .arg(stage.isEmpty() ? QStringLiteral("the tab stayed dirty "
+                                                               "after undoing its document edits")
+                                              : stage)
+                         .arg(document.isDirty())
+                         .arg(document.undoStack()->index());
         return false;
     }
     return true;

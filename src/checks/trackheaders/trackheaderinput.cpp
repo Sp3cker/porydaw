@@ -13,6 +13,7 @@
 #include <cstring>
 #include <optional>
 
+#include "checks/support/editorrig.h"
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "core/miditimeline.h"
@@ -336,6 +337,9 @@ void TrackHeadersTest::emptyTrackHeadersRejectInputWithoutMutation()
     MidiTimeline timeline;
     SongView emptyView;
     emptyView.setSong(&timeline, nullptr);
+    // Direct SongView fixture: the canvas host is declared after the view so
+    // it detaches and dies before the borrowed SongView.
+    const checks::QuickSceneHost host(emptyView, QSize(320, 180));
     QVERIFY(checks::support::showQuickViewport(emptyView, QSize(320, 180)));
     auto *const quick = emptyView.quickView();
     auto *const model =

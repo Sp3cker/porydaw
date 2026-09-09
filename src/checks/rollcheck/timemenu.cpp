@@ -196,7 +196,7 @@ void PianoRollTest::timeSelectionMenuStaleAndCancelNoOp()
     // scenario exercises the no-drawer branch that returns focus to the roll
     // band, then establish the band focus a real editing press carries.
     view.setDrawerSectionVisible(EditorDrawerPage::Automations, false);
-    m_tab->raise();
+    check.window().raise();
     QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason),
              "the roll band could not take focus for the escape scenario");
     QCoreApplication::sendPostedEvents();

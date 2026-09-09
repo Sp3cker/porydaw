@@ -373,7 +373,7 @@ void PianoRollTest::popupSessionDismissal()
 
     // The owning fixture shell is shorter than the larger Insert Time form.
     // Its real action buttons must remain clickable inside the canvas.
-    m_tab->resize(640, 96);
+    check.window().resize(640, 96);
     QCoreApplication::processEvents();
     view.insertTimeAtPlaybackCursor();
     QCoreApplication::processEvents();
@@ -415,7 +415,7 @@ void PianoRollTest::popupSessionDismissal()
                  doc.undoStack()->count() == postInterruptionUndoCount &&
                  doc.revision() == postInterruptionRevision,
              "small-viewport Insert Time Cancel did not close without writing");
-    m_tab->resize(1280, 800);
+    check.window().resize(1280, 800);
     QCoreApplication::processEvents();
 }
 

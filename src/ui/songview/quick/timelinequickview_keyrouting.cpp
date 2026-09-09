@@ -20,9 +20,11 @@ namespace songview {
 
 bool TimelineQuickView::dispatchSongKey(const TimelineKeyInput &input)
 {
-    // QPointer guard: a destroyed SongView turns every key into a terminal
-    // decline instead of a dangling call.
-    if (!m_songView)
+    // An ineligible page never consumes shared policy keys: the disabled
+    // canvas subtree blocks focused delivery, so this gate blocks the policy
+    // routes (band policy, scene-root fallback, and the window owner's
+    // fallback) and the keys fall through to whoever else owns them.
+    if (!m_songView || !inputEligible())
         return false;
     // The event page's input item routes with the EventList origin, so
     // note-target commands stay timeline-only there. While the page reports
@@ -37,7 +39,9 @@ bool TimelineQuickView::dispatchSongKey(const TimelineKeyInput &input)
 
 bool TimelineQuickView::dispatchSongKeyRelease(const TimelineKeyInput &input)
 {
-    return m_songView && m_songView->handleEditKeyRelease(input);
+    if (!m_songView || !inputEligible())
+        return false;
+    return m_songView->handleEditKeyRelease(input);
 }
 
 void TimelineQuickView::installKeyPolicyHandlers()
@@ -147,14 +151,16 @@ void TimelineQuickView::cancelActiveGestures()
         // mouseGrabberItem() falls back to the primary pointing device's
         // exclusive grabber with no window filter, so this can observe a
         // grab held inside another native window (e.g. the note-automation
-        // popup). Release only our own window's grabber, and never a grab
-        // owned by the active shared popup: the same-window voice menu
-        // delegate holds its pressed-row grab here, and ungrabs fire
-        // onCanceled which clears the row before release can activate it.
-        // A foreign grab is owned by its window; a popup-owned grab is
-        // owned by the session — both must survive timeline cancellation.
+        // popup). Release only a grab held inside this page's canvas
+        // subtree — never a sibling page's, the shared popup's, or a
+        // host strip control's: the same-window voice menu delegate holds
+        // its pressed-row grab here, and ungrabs fire onCanceled which
+        // clears the row before release can activate it. A foreign grab is
+        // owned by its window, a popup-owned grab by the session, and a
+        // sibling's grab by that sibling — all must survive this page's
+        // cancellation.
         if (QQuickItem *const mouseGrabber = window->mouseGrabberItem();
-            mouseGrabber && mouseGrabber->window() == window &&
+            mouseGrabber && mouseGrabber->window() == window && isPageSubtreeItem(*mouseGrabber) &&
             !(m_popupSession && m_popupSession->owns(mouseGrabber)))
             mouseGrabber->ungrabMouse();
     }

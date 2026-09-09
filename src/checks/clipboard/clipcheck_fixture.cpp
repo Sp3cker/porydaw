@@ -42,6 +42,7 @@ ClipTabRig::ClipTabRig()
 
 ClipTabRig::~ClipTabRig()
 {
+    m_sceneHost.reset();
     m_tab.reset();
     m_bank.reset();
     m_temporary.reset();
@@ -73,8 +74,9 @@ std::unique_ptr<ClipTabRig> ClipTabRig::create(uint16_t ticksPerBeat, QString &e
     info.hasMid = true;
 
     rig->m_tab = std::make_unique<SongTab>(std::move(*name));
-    rig->m_tab->resize(kViewWidth, kViewHeight);
     rig->m_tab->setSampleRate(kSampleRate);
+    rig->m_sceneHost = std::make_unique<checks::QuickSceneHost>(rig->m_tab->view(),
+                                                                QSize(kViewWidth, kViewHeight));
     rig->m_tab->applyMidiStage(std::move(info), std::move(smf), track_limits::kHardwareCapacity);
     if (!rig->m_tab->presentationError().isEmpty()) {
         error = rig->m_tab->presentationError();
@@ -96,10 +98,13 @@ std::unique_ptr<ClipTabRig> ClipTabRig::create(uint16_t ticksPerBeat, QString &e
         return nullptr;
     }
 
-    rig->m_tab->show();
+    SongView &view = rig->view();
+    if (!checks::support::showQuickViewport(view, QSize(kViewWidth, kViewHeight))) {
+        error = QStringLiteral("song tab host did not expose the timeline Quick window");
+        return nullptr;
+    }
     QCoreApplication::processEvents();
     checks::support::pumpQuick();
-    SongView &view = rig->view();
 
     songview::TimelineQuickView *const quick = view.quickView();
     if (!quick || !quick->rootObject()) {
@@ -112,14 +117,13 @@ std::unique_ptr<ClipTabRig> ClipTabRig::create(uint16_t ticksPerBeat, QString &e
         error = QStringLiteral("song tab did not expose the timeline roll input");
         return nullptr;
     }
-    // Application-focus staging: view-level keys travel the Quick window, so the
-    // rig stages real roll-band focus (requestFocus plus focusWindow/focusObject
-    // convergence) instead of relying on window-local scope alone.
-    QQuickWindow *const quickWindow = quick->quickWindow();
-    if (!quickWindow) {
-        error = QStringLiteral("song tab did not expose the timeline Quick window");
-        return nullptr;
-    }
+    // Application-focus staging: view-level keys travel the host window, so
+    // the rig stages real roll-band focus (requestFocus plus
+    // focusWindow/focusObject convergence) instead of relying on window-local
+    // scope alone.
+    QQuickWindow *const quickWindow = &rig->m_sceneHost->window();
+    quickWindow->raise();
+    quickWindow->requestActivate();
     rig->m_roll->requestFocus(Qt::OtherFocusReason);
     QCoreApplication::sendPostedEvents();
     QCoreApplication::processEvents();
@@ -157,16 +161,12 @@ bool ClipTabRig::sendRollKey(int key, Qt::KeyboardModifiers modifiers)
 
 bool ClipTabRig::sendViewKey(int key, Qt::KeyboardModifiers modifiers)
 {
-    if (!m_tab)
+    if (!m_sceneHost)
         return false;
-    // SongView is a QObject now, so view-level keys travel the normal Quick/host
-    // path: real QTest delivery into the active Quick window, where the focused
-    // band policy or the focus-less window route claims them.
-    songview::TimelineQuickView *const quick = view().quickView();
-    QQuickWindow *const window = quick ? quick->quickWindow() : nullptr;
-    if (!window)
-        return false;
-    QTest::keyClick(window, static_cast<Qt::Key>(key), modifiers);
+    // View-level keys travel the normal Quick/host path: real QTest delivery
+    // into the active host window, where the focused band policy or the
+    // focus-less window route claims them.
+    QTest::keyClick(&m_sceneHost->window(), static_cast<Qt::Key>(key), modifiers);
     return true;
 }
 

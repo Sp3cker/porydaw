@@ -1,5 +1,6 @@
 #include "checks/fwd.hpp"
 
+#include <cmath>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -10,6 +11,7 @@
 #include <QCursor>
 #include <QDirIterator>
 #include <QFile>
+#include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QScopeGuard>
@@ -20,6 +22,7 @@
 #include <algorithm>
 
 #include "checks/host/hosttestsupport.h"
+#include "checks/quickpopupguard.h"
 #include "checks/support/asyncwait.h"
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
@@ -36,6 +39,7 @@
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
+#include "ui/workspacequick/workspacequickhost.h"
 #include "ui/workspaceui.h"
 namespace checks::host {
 
@@ -87,6 +91,66 @@ QPointF velocityNodePosition(const SongView &view, const VelocityArea &area,
     const qreal x = qreal(note.tick) * view.camera().pxPerBeat() / timeline.ticksPerBeat -
                     view.camera().scrollX();
     return {x, area.axis().velocityToY(note.velocity)};
+}
+
+std::optional<QPointF> emptyRollCell(const SongView &view, const SongDocument &document, int track,
+                                     const songview::TimelineInputItem &roll)
+{
+    const std::vector<DocNote> notes = document.notesForTrack(track);
+    const auto occupied = [&notes](uint64_t tick, uint64_t duration, int key) {
+        return std::any_of(notes.cbegin(), notes.cend(),
+                           [tick, duration, key](const DocNote &note) {
+                               return int(note.key) == key && note.tick < tick + duration &&
+                                      tick < note.tick + note.duration;
+                           });
+    };
+    const qreal dpr = roll.devicePixelRatio();
+    const qreal rightLimit = roll.width() - 4.0;
+    const double keyHeight = view.camera().keyHeight();
+    const double scrollY = view.camera().scrollY();
+    for (int key = 115; key >= 24; --key) {
+        const qreal top = std::round(((127 - key) * keyHeight - scrollY) * dpr) / dpr;
+        const qreal bottom = top + keyHeight;
+        if (top < 0.0 || bottom > roll.height())
+            continue;
+        uint64_t tick = view.grid().snapTickUp(std::max(0.0, view.camera().tickAtContentX(4.0)));
+        for (int guard = 0; guard < 1000; ++guard) {
+            const uint64_t next = view.grid().snapTickUp(double(tick) + 1.0);
+            if (next <= tick)
+                break;
+            const qreal left = view.camera().displayX(double(tick), 0.0, dpr);
+            const qreal right = view.camera().displayX(double(next), 0.0, dpr);
+            if (left > rightLimit)
+                break;
+            const uint64_t duration = view.grid().gridTicksAt(tick);
+            if (left >= 4.0 && right <= rightLimit && right - left >= 4.0 &&
+                !occupied(tick, duration, key))
+                return QPointF((left + right) / 2.0, (top + bottom) / 2.0);
+            tick = next;
+        }
+    }
+    return std::nullopt;
+}
+
+songview::QuickPopupSession *openRulerMenuThroughWindow(SongView &view, QQuickWindow &window)
+{
+    auto *const quick =
+        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    QQuickItem *const root = quick ? quick->rootObject() : nullptr;
+    auto *const ruler =
+        root ? root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineRulerInput"))
+             : nullptr;
+    if (!ruler || !ruler->bounds().contains(ruler->bounds().center()))
+        return nullptr;
+    QTest::mouseClick(&window, Qt::RightButton, Qt::NoModifier,
+                      ruler->mapToScene(ruler->bounds().center()).toPoint());
+    songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
+    if (!popup || !QTest::qWaitFor([popup] {
+            QQuickItem *const panel = quick_popup::menuPanel(*popup);
+            return popup->isOpen() && panel && quick_popup::menuModel(*panel);
+        }))
+        return nullptr;
+    return popup;
 }
 
 class SettingsGuard final
@@ -701,34 +765,193 @@ class HostIntegrationTest final : public QObject
         QCOMPARE(loadEditorViewState(settings), state);
     }
 
-    // SongTab must tear the quick host (and thus the embedded window) down
-    // explicitly in its destructor body, before the SongView coordinator and
-    // the SongDocument members die.
-    void songTabTeardownDestroysQuickWindowBeforeDocument()
+    // A live ruler popup is queued in the selected page's real scene. Closing
+    // that page must retire the popup before it can consume the shared window
+    // again: a window-delivered edit and undo on the replacement page are the
+    // consumer-visible proof. Project replacement then tears the last page
+    // down while the shell and audio root remain alive.
+    void selectedPageCloseCancelsPopupThenSiblingEditsAndProjectTeardown()
     {
         std::optional<Session> session = openSession();
         QVERIFY(session.has_value());
-        SongView &view = session->active->view();
-        auto *quick = view.quickView();
-        QVERIFY(quick);
-        QQuickWindow *const window = quick->quickWindow();
-        QVERIFY(window);
-        SongDocument *const document = &session->active->document();
-        const auto order = std::make_shared<QStringList>();
-        QObject::connect(window, &QObject::destroyed, session->window.get(),
-                         [order, window](QObject *obj) {
-                             if (obj == window)
-                                 order->append(QStringLiteral("quickWindow"));
-                         });
-        QObject::connect(document, &QObject::destroyed, session->window.get(),
-                         [order, document](QObject *obj) {
-                             if (obj == document)
-                                 order->append(QStringLiteral("document"));
-                         });
+        MainWindow &window = *session->window;
+        WorkspaceUi &workspace = *window.m_workspace;
+        SongTab *const sibling = session->first;
+        SongTab *const outgoing = session->active;
+        auto *const host = window.findChild<WorkspaceQuickHost *>();
+        QVERIFY(host);
+        QQuickWindow *const sharedWindow = host->window();
+        QVERIFY(sharedWindow);
+        QCOMPARE(workspace.selectedSongTab(), outgoing);
+        QCOMPARE(workspace.openTabCount(), qsizetype{2});
+        QCOMPARE(workspace.tabsInDisplayOrder(), (std::vector<SongTab *>{sibling, outgoing}));
+
+        SongView &outgoingView = outgoing->view();
+        auto *const outgoingQuick = outgoingView.findChild<songview::TimelineQuickView *>(
+            QStringLiteral("timelineQuickCanvas"));
+        QQuickItem *const outgoingRoot = outgoingQuick ? outgoingQuick->rootObject() : nullptr;
+        QVERIFY(outgoingQuick && outgoingRoot);
+        QCOMPARE(outgoingQuick->quickWindow(), sharedWindow);
+        songview::QuickPopupSession *const popup =
+            openRulerMenuThroughWindow(outgoingView, *sharedWindow);
+        QVERIFY2(popup, "the selected page did not open its ruler popup in the workspace window");
+        const QPointer<songview::QuickPopupSession> guardedPopup(popup);
+        const auto cancelPopupOnFailure = qScopeGuard([guardedPopup] {
+            if (guardedPopup && guardedPopup->isOpen())
+                guardedPopup->cancel();
+        });
+        std::vector<SongTab *> selectionPublications;
+        QObject::connect(
+            &workspace, &WorkspaceUi::selectedSongTabChanged, &workspace,
+            [&selectionPublications](SongTab *tab) { selectionPublications.push_back(tab); });
+
+        workspace.requestCloseSelectedTab();
+        QTRY_COMPARE(workspace.openTabCount(), qsizetype{1});
+        settle(); // drain the retired popup's deferred scene work before sibling input
+        QCOMPARE(selectionPublications, (std::vector<SongTab *>{nullptr, sibling}));
+        QCOMPARE(workspace.selectedSongTab(), sibling);
+        QCOMPARE(workspace.tabsInDisplayOrder(), (std::vector<SongTab *>{sibling}));
+        QCOMPARE(window.m_selectedTab, sibling);
+        QCOMPARE(window.m_appliedTimeline, sibling->timeline().get());
+        QVERIFY(window.m_audio.songLoaded());
+        QVERIFY(!sharedWindow->mouseGrabberItem());
+
+        SongView &siblingView = sibling->view();
+        auto *const siblingQuick = siblingView.findChild<songview::TimelineQuickView *>(
+            QStringLiteral("timelineQuickCanvas"));
+        QQuickItem *const siblingRoot = siblingQuick ? siblingQuick->rootObject() : nullptr;
+        auto *const roll = siblingRoot ? siblingRoot->findChild<songview::TimelineInputItem *>(
+                                             QStringLiteral("timelineRollInput"))
+                                       : nullptr;
+        QVERIFY(siblingQuick && siblingRoot && roll);
+        QCOMPARE(siblingQuick->quickWindow(), sharedWindow);
+        SongDocument &document = sibling->document();
+        const int track = twoNoteTrack(document);
+        QVERIFY(track >= 0);
+        const std::optional<QPointF> emptyCell = emptyRollCell(siblingView, document, track, *roll);
+        QVERIFY2(emptyCell.has_value(), "the selected sibling has no visible empty roll cell");
+        QVERIFY(roll->bounds().contains(*emptyCell));
+        const QByteArray beforeEdit = document.smf().write();
+        const int undoBefore = document.undoStack()->index();
+        QTest::mouseDClick(sharedWindow, Qt::LeftButton, Qt::NoModifier,
+                           roll->mapToScene(*emptyCell).toPoint());
+        settle();
+        QCOMPARE(document.undoStack()->index(), undoBefore + 1);
+        QVERIFY(document.smf().write() != beforeEdit);
+        workspace.requestUndo();
+        QTRY_COMPARE(document.undoStack()->index(), undoBefore);
+        QCOMPARE(document.smf().write(), beforeEdit);
+        QVERIFY(!document.isDirty());
+
+        workspace.requestProjectOpenAt(session->fixture->root());
+        QVERIFY(waitForProjectReady(workspace));
+        QTRY_COMPARE(workspace.openTabCount(), qsizetype{0});
+        settle();
+        QCOMPARE(workspace.selectedSongTab(), static_cast<SongTab *>(nullptr));
+        QVERIFY(workspace.tabsInDisplayOrder().empty());
+        QCOMPARE(window.m_selectedTab, static_cast<SongTab *>(nullptr));
+        QCOMPARE(window.m_appliedTimeline, static_cast<const MidiTimeline *>(nullptr));
+        QVERIFY(!window.m_audio.songLoaded());
+        QVERIFY(!sharedWindow->mouseGrabberItem());
+        QCloseEvent event;
+        QApplication::sendEvent(&window, &event);
+        QVERIFY(event.isAccepted());
+        QVERIFY(window.m_closeAccepted);
         session.reset();
-        QCOMPARE(order->value(0), QStringLiteral("quickWindow"));
-        QCOMPARE(order->value(1), QStringLiteral("document"));
-        QCOMPARE(order->size(), 2);
+    }
+
+    // WorkspaceUi routes a SongView note-off only while its source remains the
+    // selected authority. A held piano-key audition therefore has to cancel
+    // before clearing that authority on a selected-page close; otherwise the
+    // engine retains a sounding preview from the removed page.
+    void selectedPageCloseRoutesHeldAuditionBeforeSelectionHandoff()
+    {
+        const std::optional<Session> session = openSession();
+        QVERIFY(session.has_value());
+        MainWindow &window = *session->window;
+        WorkspaceUi &workspace = *window.m_workspace;
+        SongTab *const sibling = session->first;
+        SongTab *const outgoing = session->active;
+        auto *const host = window.findChild<WorkspaceQuickHost *>();
+        QVERIFY(host);
+        QQuickWindow *const sharedWindow = host->window();
+        QVERIFY(sharedWindow);
+        QCOMPARE(workspace.selectedSongTab(), outgoing);
+
+        SongView &outgoingView = outgoing->view();
+        auto *const outgoingQuick = outgoingView.findChild<songview::TimelineQuickView *>(
+            QStringLiteral("timelineQuickCanvas"));
+        QQuickItem *const outgoingRoot = outgoingQuick ? outgoingQuick->rootObject() : nullptr;
+        auto *const gutter = outgoingRoot ? outgoingRoot->findChild<songview::TimelineInputItem *>(
+                                                QStringLiteral("timelineRollGutterInput"))
+                                          : nullptr;
+        QVERIFY(outgoingQuick && outgoingRoot && gutter);
+        QCOMPARE(outgoingQuick->quickWindow(), sharedWindow);
+
+        enum class HandoffEvent {
+            NoteOn,
+            NoteOff,
+            SelectionCleared,
+            SiblingSelected,
+        };
+        std::vector<HandoffEvent> transitions;
+        int heldTrack = -1;
+        int heldKey = -1;
+        QObject::connect(
+            &workspace, &WorkspaceUi::auditionNoteRequested, &workspace,
+            [&transitions, &heldTrack, &heldKey](uint8_t track, uint8_t key, uint8_t velocity) {
+                if (velocity > 0 && heldKey < 0) {
+                    heldTrack = int(track);
+                    heldKey = int(key);
+                    transitions.push_back(HandoffEvent::NoteOn);
+                } else if (velocity == 0 && int(track) == heldTrack && int(key) == heldKey) {
+                    transitions.push_back(HandoffEvent::NoteOff);
+                }
+            });
+        QObject::connect(&workspace, &WorkspaceUi::selectedSongTabChanged, &workspace,
+                         [&transitions, sibling](SongTab *tab) {
+                             if (!tab)
+                                 transitions.push_back(HandoffEvent::SelectionCleared);
+                             else if (tab == sibling)
+                                 transitions.push_back(HandoffEvent::SiblingSelected);
+                         });
+
+        const QByteArray siblingBefore = sibling->document().smf().write();
+        const int siblingUndoBefore = sibling->document().undoStack()->index();
+        const QPoint heldPoint = gutter->mapToScene(gutter->bounds().center()).toPoint();
+        QTest::mousePress(sharedWindow, Qt::LeftButton, Qt::NoModifier, heldPoint);
+        QTRY_VERIFY(heldKey >= 0);
+        workspace.requestCloseSelectedTab();
+        QTRY_COMPARE(workspace.openTabCount(), qsizetype{1});
+        settle();
+
+        const auto noteOn =
+            std::find(transitions.cbegin(), transitions.cend(), HandoffEvent::NoteOn);
+        const auto noteOff =
+            std::find(transitions.cbegin(), transitions.cend(), HandoffEvent::NoteOff);
+        const auto selectionCleared =
+            std::find(transitions.cbegin(), transitions.cend(), HandoffEvent::SelectionCleared);
+        const auto siblingSelected =
+            std::find(transitions.cbegin(), transitions.cend(), HandoffEvent::SiblingSelected);
+        QVERIFY(noteOn != transitions.cend());
+        QVERIFY(noteOff != transitions.cend());
+        QVERIFY(selectionCleared != transitions.cend());
+        QVERIFY(siblingSelected != transitions.cend());
+        QVERIFY(noteOn < noteOff);
+        QVERIFY(noteOff < selectionCleared);
+        QVERIFY(selectionCleared < siblingSelected);
+        QCOMPARE(workspace.selectedSongTab(), sibling);
+        QCOMPARE(workspace.tabsInDisplayOrder(), (std::vector<SongTab *>{sibling}));
+        QCOMPARE(window.m_selectedTab, sibling);
+        QCOMPARE(window.m_appliedTimeline, sibling->timeline().get());
+        QVERIFY(window.m_audio.songLoaded());
+
+        QTest::mouseRelease(sharedWindow, Qt::LeftButton, Qt::NoModifier, heldPoint);
+        settle();
+        QCOMPARE(sibling->document().smf().write(), siblingBefore);
+        QCOMPARE(sibling->document().undoStack()->index(), siblingUndoBefore);
+        QVERIFY(!sibling->document().isDirty());
+        QVERIFY(!sharedWindow->mouseGrabberItem());
     }
 
   private:
