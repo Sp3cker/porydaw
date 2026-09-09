@@ -91,6 +91,11 @@ Agents MUST work only in the path printed by `worktree:create`. Committing,
 merging, removing the worktree, deleting the branch, and pushing remain
 separate operations that require the corresponding explicit user request.
 
+## Git synchronization
+
+Push every commit made on any Porydaw branch to its corresponding GitHub
+remote branch. Do not leave unpushed commits behind when handing off work.
+
 ## Build & verify
 
 Agents MUST use `deno task`. Do not invoke `cmake` / `cmake --build` directly;

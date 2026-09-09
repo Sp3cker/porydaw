@@ -248,6 +248,7 @@ TransportBar::TransportBar(QWidget *parent) : QToolBar(tr("Transport"), parent)
     auto &keys = keymap::Registry::instance();
     setObjectName(QStringLiteral("transportToolbar"));
     setMovable(false);
+    setContextMenuPolicy(Qt::PreventContextMenu);
     setToolButtonStyle(Qt::ToolButtonIconOnly);
     setIconSize(iconSize());
 
