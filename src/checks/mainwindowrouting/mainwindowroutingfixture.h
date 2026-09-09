@@ -133,6 +133,10 @@ class MainWindowRoutingFixture
         QQuickWindow *hostWindow = host ? host->window() : nullptr;
         if (!host || !hostWindow)
             return std::nullopt;
+        if (awaitReady) {
+            host->focusEditor(Qt::OtherFocusReason);
+            QCoreApplication::processEvents();
+        }
         return Session{std::move(settings), std::move(fixture), std::move(window), a, b, host,
                        hostWindow};
     }
@@ -157,15 +161,29 @@ class MainWindowRoutingFixture
                     : nullptr;
     }
 
-    // The selected tab's roll band holds real input focus in the shared
-    // host: the view reports the live band and that band's actual canvas
-    // item holds Quick active focus.
+    // Requires both semantic band focus and active focus on its Quick input.
+    static bool bandHoldsHostFocus(SongView &view, songview::TimelineBand band,
+                                   const QString &inputObjectName)
+    {
+        if (view.focusedTimelineBand() != band)
+            return false;
+        auto *quick = view.quickView();
+        QQuickItem *root = quick ? quick->rootObject() : nullptr;
+        const auto *input =
+            root ? root->findChild<songview::TimelineInputItem *>(inputObjectName) : nullptr;
+        return input && input->hasActiveFocus();
+    }
+
     static bool rollBandHoldsHostFocus(SongView &view)
     {
-        if (view.focusedTimelineBand() != songview::TimelineBand::Roll)
-            return false;
-        const auto *input = rollInput(view);
-        return input && input->hasActiveFocus();
+        return bandHoldsHostFocus(view, songview::TimelineBand::Roll,
+                                  QStringLiteral("timelineRollInput"));
+    }
+
+    static bool velocityBandHoldsHostFocus(SongView &view)
+    {
+        return bandHoldsHostFocus(view, songview::TimelineBand::Velocity,
+                                  QStringLiteral("timelineVelocityInput"));
     }
 
     static bool waitForProjectReady(const WorkspaceUi &workspace)

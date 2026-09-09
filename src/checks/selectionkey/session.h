@@ -199,6 +199,13 @@ inline SongTab *openSongTab(WindowSession &session, const QString &songLabel, bo
         return nullptr;
     }
     settle();
+    auto *const host = session.window ? session.window->findChild<WorkspaceQuickHost *>() : nullptr;
+    if (!host) {
+        error = QStringLiteral("the workspace Quick host is unavailable");
+        return nullptr;
+    }
+    host->focusEditor(Qt::OtherFocusReason);
+    settle();
     std::fprintf(stderr, "selectionkeycheck: phase: %s: complete\n", qUtf8Printable(stage));
     return tab;
 }

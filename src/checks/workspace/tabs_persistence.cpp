@@ -8,9 +8,6 @@
 #include <QDir>
 #include <QFile>
 #include <QMessageBox>
-#include <QPointF>
-#include <QQuickItem>
-#include <QQuickWindow>
 #include <QSettings>
 #include <QSize>
 #include <QStatusBar>
@@ -88,32 +85,13 @@ void WorkspaceTabsTest::persistenceRestoresTabs()
         QCOMPARE(window.m_audio.timeline(), first->timeline().get());
         QCOMPARE(window.m_audio.voicegroup(), first->voicegroupLease().get());
 
-        auto *host = workspace_test::quickHost(window);
-        QVERIFY(host);
-        QVERIFY2(workspace_test::exposeWorkspaceHost(window, *host, QSize(1280, 800)),
-                 "the production workspace host did not expose its embedded Quick window");
-        QQuickWindow *const quickWindow = host->window();
-        QVERIFY(quickWindow);
-        QQuickItem *tabA = nullptr;
-        QQuickItem *tabB = nullptr;
-        QTRY_VERIFY((tabA = workspace_test::quickItem(*quickWindow, QStringLiteral("songTab:") +
-                                                                        m_songA)) != nullptr);
-        QTRY_VERIFY((tabB = workspace_test::quickItem(*quickWindow, QStringLiteral("songTab:") +
-                                                                        m_songB)) != nullptr);
-        const double targetX =
-            tabA->mapToScene(QPointF(tabA->width() * 0.75, tabA->height() / 2)).x();
-        workspace_test::dragQuickItemHorizontally(*quickWindow, *tabB, targetX);
-        const std::vector<SongTab *> reordered = workspace->tabsInDisplayOrder();
-        QCOMPARE(reordered.size(), size_t(2));
-        QCOMPARE(reordered[0], first);
-        QCOMPARE(reordered[1], second);
         workspace->selectSongTab(second);
         QCOMPARE(workspace->selectedSongTab(), second);
         QCOMPARE(window.m_audio.timeline(), second->timeline().get());
         QCOMPARE(window.m_audio.voicegroup(), second->voicegroupLease().get());
 
         QSettings settings;
-        const QStringList expectedOpenSongs{m_songA, m_songB};
+        const QStringList expectedOpenSongs{m_songB, m_songA};
         QCOMPARE(settings.value(QStringLiteral("lastOpenSongs")).toStringList(), expectedOpenSongs);
         QCOMPARE(settings.value(QStringLiteral("lastSongLabel")).toString(), m_songB);
         auto *outputDial = window.findChild<QDial *>(QStringLiteral("transportOutputVolume"));
@@ -122,8 +100,8 @@ void WorkspaceTabsTest::persistenceRestoresTabs()
         QCOMPARE(window.m_audio.outputVolume(), 37);
         const std::vector<SongTab *> tabs = workspace->tabsInDisplayOrder();
         QCOMPARE(tabs.size(), size_t(2));
-        QCOMPARE(tabs[0], first);
-        QCOMPARE(tabs[1], second);
+        QCOMPARE(tabs[0], second);
+        QCOMPARE(tabs[1], first);
         QCOMPARE(workspace->selectedSongTab(), second);
         window.close();
     }
@@ -141,8 +119,8 @@ void WorkspaceTabsTest::persistenceRestoresTabs()
     QTRY_VERIFY(first && second && first->isReady() && second->isReady());
     const std::vector<SongTab *> tabs = workspace->tabsInDisplayOrder();
     QCOMPARE(tabs.size(), size_t(2));
-    QCOMPARE(tabs[0], first);
-    QCOMPARE(tabs[1], second);
+    QCOMPARE(tabs[0], second);
+    QCOMPARE(tabs[1], first);
     QCOMPARE(workspace->selectedSongTab(), second);
     QCOMPARE(restored.m_audio.timeline(), second->timeline().get());
     QCOMPARE(restored.m_audio.voicegroup(), second->voicegroupLease().get());

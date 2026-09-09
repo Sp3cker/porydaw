@@ -11,14 +11,13 @@
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
-#include "ui/songview/quick/quickwindowinput.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
 
 namespace checks {
 
-QuickSceneHost::QuickSceneHost(SongView &view, const QSize &size) : m_view(&view)
+QuickSceneHost::QuickSceneHost(SongView &view, const QSize &size, bool attachScene) : m_view(&view)
 {
     // Canvas component creation resolves the timeline QML types, so they
     // must be registered before the window's engine builds the scene.
@@ -31,16 +30,20 @@ QuickSceneHost::QuickSceneHost(SongView &view, const QSize &size) : m_view(&view
     m_window->setFormat(surfaceFormat);
     m_window->setColor(Qt::transparent);
     m_window->setResizeMode(QQuickView::SizeRootObjectToView);
-    // Size the viewport (the window's content item) and the window up
-    // front so the canvas attaches with its canonical geometry already
-    // fixed.
     m_window->resize(size);
-    m_window->contentItem()->setSize(size);
+    m_viewport = new QQuickItem(m_window->contentItem());
+    m_viewport->setSize(size);
+    QQuickView *const window = m_window.get();
+    QQuickItem *const viewport = m_viewport;
+    QObject::connect(window, &QQuickWindow::widthChanged, viewport,
+                     [window, viewport] { viewport->setWidth(window->width()); });
+    QObject::connect(window, &QQuickWindow::heightChanged, viewport,
+                     [window, viewport] { viewport->setHeight(window->height()); });
+    if (!attachScene)
+        return;
     if (songview::TimelineQuickView *const canvas = view.quickView()) {
-        canvas->attachScene(*m_window->engine(), *m_window->contentItem());
-        // The standalone rig host selects its scene explicitly: one scene
-        // per window here, and standalone domain views default ready.
-        songview::QuickWindowInput::forWindow(*m_window).setSelectedScene(canvas);
+        canvas->attachScene(*m_window->engine(), *m_viewport);
+        // Standalone checks explicitly select their only page.
         canvas->setPageSelected(true);
     }
 }
@@ -67,7 +70,7 @@ QQmlEngine &QuickSceneHost::engine() noexcept
 
 QQuickItem &QuickSceneHost::viewport() noexcept
 {
-    return *m_window->contentItem();
+    return *m_viewport;
 }
 
 std::unique_ptr<EditorRig> EditorRig::create(SongDocument &document, const EditorRigConfig &config,
@@ -88,12 +91,11 @@ std::unique_ptr<EditorRig> EditorRig::create(SongDocument &document, const Edito
         error = QStringLiteral("SongView did not expose the Quick canvas");
         return nullptr;
     }
-    // Production wiring order (SongTab): document first, then song; the
-    // explicit host then attaches the real canvas into the rig's window
-    // and engine with the canonical viewport geometry.
+    // Match SongTab wiring order before attaching the canvas.
     rig->m_view->setDocument(&document);
     rig->m_view->setSong(rig->m_timeline.get(), config.voicegroup);
-    rig->m_host = std::make_unique<QuickSceneHost>(*rig->m_view, config.viewSize);
+    rig->m_host =
+        std::make_unique<QuickSceneHost>(*rig->m_view, config.viewSize, config.attachScene);
     if (config.track >= 0)
         rig->m_view->selectTrack(config.track);
     rig->m_view->setDrawerActivePage(config.activePage);
@@ -105,16 +107,27 @@ std::unique_ptr<EditorRig> EditorRig::create(SongDocument &document, const Edito
         rig->m_host->window().show();
         QCoreApplication::processEvents();
     }
-    rig->m_quickRoot = quickCanvas->rootObject();
     rig->m_quickScene = rig->m_view->findChild<songview::TimelineQuickScene *>();
-    rig->m_voiceInput = rig->inputItem(QStringLiteral("timelineVoiceChangesInput"));
-    if (!rig->m_quickRoot || !rig->m_quickScene) {
+    if (!rig->m_quickScene) {
         error = QStringLiteral("concrete SongView did not expose the Quick canvas root or scene");
         return nullptr;
     }
-    if (!rig->m_voiceInput) {
-        error = QStringLiteral("concrete SongView did not expose the voice Quick input item");
-        return nullptr;
+    if (!config.attachScene) {
+        // Custom-viewport callers resolve QML items after their explicit attach.
+        rig->m_quickRoot = nullptr;
+        rig->m_voiceInput = nullptr;
+    } else {
+        rig->m_quickRoot = quickCanvas->rootObject();
+        rig->m_voiceInput = rig->inputItem(QStringLiteral("timelineVoiceChangesInput"));
+        if (!rig->m_quickRoot) {
+            error =
+                QStringLiteral("concrete SongView did not expose the Quick canvas root or scene");
+            return nullptr;
+        }
+        if (!rig->m_voiceInput) {
+            error = QStringLiteral("concrete SongView did not expose the voice Quick input item");
+            return nullptr;
+        }
     }
     if (config.timeZoom > 0.0)
         rig->m_view->setEditorTimeZoom(config.timeZoom);
@@ -146,6 +159,16 @@ SongDocument &EditorRig::document() noexcept
 SongView &EditorRig::view() noexcept
 {
     return *m_view;
+}
+
+QuickSceneHost &EditorRig::host() noexcept
+{
+    return *m_host;
+}
+
+const QuickSceneHost &EditorRig::host() const noexcept
+{
+    return *m_host;
 }
 
 const MidiTimeline &EditorRig::timeline() const noexcept

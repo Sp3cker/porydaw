@@ -1,6 +1,7 @@
 #include "ui/workspacequick/songtabsmodel.h"
 
 #include "ui/songtab.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 #include <QQmlEngine>
 
@@ -33,6 +34,7 @@ SongTabsModel::SongTabsModel(std::vector<std::unique_ptr<SongTab>> &pages,
         // in particular across Q_INVOKABLE returns, which default to
         // JavaScriptOwnership without this override.
         QQmlEngine::setObjectOwnership(page.get(), QQmlEngine::CppOwnership);
+        QQmlEngine::setObjectOwnership(page->view().quickView(), QQmlEngine::CppOwnership);
     }
 }
 
@@ -65,6 +67,7 @@ SongTab *SongTabsModel::append(std::unique_ptr<SongTab> page)
     endInsertRows();
     observeTab(*tab);
     QQmlEngine::setObjectOwnership(tab, QQmlEngine::CppOwnership);
+    QQmlEngine::setObjectOwnership(tab->view().quickView(), QQmlEngine::CppOwnership);
     return tab;
 }
 
@@ -102,29 +105,6 @@ std::vector<std::unique_ptr<SongTab>> SongTabsModel::takeAll()
     return removed;
 }
 
-bool SongTabsModel::move(SongTab &tab, int destinationIndex)
-{
-    const int source = rowFor(&tab);
-    const int count = int(m_pages.size());
-    if (source < 0 || destinationIndex < 0 || destinationIndex >= count ||
-        destinationIndex == source)
-        return false;
-    // beginMoveRows wants the position before which the row lands, so a
-    // final-index destination on a forward move is one past that.
-    const int destinationChild =
-        destinationIndex > source ? destinationIndex + 1 : destinationIndex;
-    const int previousSelectedIndex = selectedIndex();
-    if (!beginMoveRows(QModelIndex(), source, source, QModelIndex(), destinationChild))
-        return false;
-    std::unique_ptr<SongTab> page = std::move(m_pages[size_t(source)]);
-    m_pages.erase(m_pages.begin() + source);
-    m_pages.insert(m_pages.begin() + destinationIndex, std::move(page));
-    endMoveRows();
-    // The selection identity cannot change here; only its derived index can.
-    notifySelectedIndexIfChanged(previousSelectedIndex);
-    return true;
-}
-
 SongTab *SongTabsModel::songAt(int row) const
 {
     if (row < 0 || row >= int(m_pages.size()))
@@ -150,8 +130,8 @@ void SongTabsModel::refresh(SongTab &tab)
         return;
     const QModelIndex modelIndex = index(row);
     // Saved-state changes (label, path, dirty flags) arrive without a tab
-    // signal; every role re-reads the borrowed tab.
-    emit dataChanged(modelIndex, modelIndex);
+    // signal; title and tooltip re-read the borrowed tab.
+    emit dataChanged(modelIndex, modelIndex, {TitleRole, TooltipRole});
 }
 
 int SongTabsModel::rowCount(const QModelIndex &parent) const
@@ -178,19 +158,22 @@ QVariant SongTabsModel::data(const QModelIndex &index, int role) const
         return tab.name().value();
     case SessionRole:
         return QVariant::fromValue(static_cast<QObject *>(&tab));
+    case QuickViewRole:
+        return QVariant::fromValue(static_cast<QObject *>(tab.view().quickView()));
     case ReadyRole:
         return tab.isReady();
-    default:
-        return {};
     }
+    return {};
 }
 
 QHash<int, QByteArray> SongTabsModel::roleNames() const
 {
-    return {
+    static const QHash<int, QByteArray> roles{
         {Qt::DisplayRole, "display"}, {SongKeyRole, "songKey"}, {SessionRole, "session"},
-        {TitleRole, "title"},         {TooltipRole, "tooltip"}, {ReadyRole, "ready"},
+        {QuickViewRole, "quickView"}, {TitleRole, "title"},     {TooltipRole, "tooltip"},
+        {ReadyRole, "ready"},
     };
+    return roles;
 }
 
 void SongTabsModel::observeTab(SongTab &tab)

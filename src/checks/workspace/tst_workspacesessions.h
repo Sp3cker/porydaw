@@ -54,10 +54,8 @@ class WorkspaceTabsTest final : public QObject
     void scaleRouting();
     void dirtyCloseUsesProductionGate_data();
     void dirtyCloseUsesProductionGate();
-    void tabModelMovesPreservePersistentIdentity();
     void tabModelRemovalKeepsSelection();
     void quickTabStripSelectsWithoutStealingFocus();
-    void quickTabStripReorderPreservesPages();
     void quickTabStripOverflowKeepsTabsReachable();
 
   private:

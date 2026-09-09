@@ -88,23 +88,25 @@ void RenderingPlayheadTest::plotGeometryAndLifecycle()
     window->resize(originalSize);
     checks::support::pumpQuick();
 
-    // The composed canvas can resize while its shared Quick window remains
-    // fixed. Canonical bands and live items must follow that page viewport,
-    // not the unchanged outer surface.
-    const QSizeF originalCanvasSize = root->size();
+    // The canvas and canonical bands follow their page viewport, not the
+    // unchanged shared window.
+    QQuickItem &page = rig->song->viewport();
+    const QSizeF originalCanvasSize = page.size();
     const QSizeF viewportOnlySize{originalCanvasSize.width() - 37.0,
                                   originalCanvasSize.height() - 29.0};
-    root->setSize(viewportOnlySize);
+    page.setSize(viewportOnlySize);
     checks::support::pumpQuick();
     QCOMPARE(window->size(), originalSize);
+    QCOMPARE(page.size(), viewportOnlySize);
     QCOMPARE(root->size(), viewportOnlySize);
     const std::optional<songview::TimelineBandGeometry> &viewportOnlyRoll =
         view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
     QVERIFY(viewportOnlyRoll);
     QVERIFY(sameRect(quickRect(*rollBand), QRectF(viewportOnlyRoll->rect)));
     QVERIFY(sameRect(quickRect(*rollInput), QRectF(viewportOnlyRoll->plotRect)));
-    root->setSize(originalCanvasSize);
+    page.setSize(originalCanvasSize);
     checks::support::pumpQuick();
+    QCOMPARE(page.size(), originalCanvasSize);
     QCOMPARE(root->size(), originalCanvasSize);
 
     QEvent densityChange{QEvent::DevicePixelRatioChange};

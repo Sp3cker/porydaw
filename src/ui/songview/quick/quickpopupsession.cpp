@@ -24,11 +24,9 @@ QuickPopupSession::QuickPopupSession(QQuickWindow &window, QQmlContext &pageCont
     , m_window(&window)
     , m_pageContext(&pageContext)
 {
-    // This filter remains installed after a popup closes so a window
-    // deactivation, hide, or close still retires a lingering popup promptly.
-    // The swallowed outside-release sequence itself lives in the window's
+    // Window filtering is scoped to a live popup. The swallowed
+    // outside-release sequence itself lives in the window's
     // QuickWindowInput owner, never here.
-    window.installEventFilter(this);
     connect(&window, &QQuickWindow::activeFocusItemChanged, this, [this] { scheduleFocusCheck(); });
     connect(&window, &QObject::destroyed, this, [this] {
         m_window = nullptr;
@@ -38,8 +36,6 @@ QuickPopupSession::QuickPopupSession(QQuickWindow &window, QQmlContext &pageCont
 
 QuickPopupSession::~QuickPopupSession()
 {
-    if (m_window)
-        m_window->removeEventFilter(this);
     end(false, false);
 }
 
@@ -176,6 +172,7 @@ bool QuickPopupSession::beginMenu(QObject *owner)
     m_owner = owner;
     m_restoreFocus = m_window->activeFocusItem();
     m_ownerDestroyed = connect(owner, &QObject::destroyed, this, [this] { cancel(false); });
+    m_window->installEventFilter(this);
     emit isOpenChanged();
     return true;
 }
@@ -239,6 +236,7 @@ bool QuickPopupSession::openContent(const QUrl &url, QObject *bridge, Kind kind)
                                          &QuickPopupSession::layoutContent);
         layoutContent();
     }
+    m_window->installEventFilter(this);
     emit isOpenChanged();
     if (form)
         scheduleFocusCheck();
@@ -378,6 +376,8 @@ void QuickPopupSession::end(bool wasCancelled, bool restoreFocus)
     QPointer<QQuickItem> content = m_content;
     QPointer<QQuickItem> layer = m_layer;
     QPointer<QQuickItem> focus = m_restoreFocus;
+    if (window)
+        window->removeEventFilter(this);
     QObject::disconnect(m_ownerDestroyed);
     QObject::disconnect(m_contentWidthChanged);
     QObject::disconnect(m_contentHeightChanged);
@@ -474,7 +474,7 @@ void QuickPopupSession::checkFocus()
     // QML's Component.onCompleted/Qt.callLater initial focus runs after
     // creation. Only a later escape from an observed popup subtree cancels.
     if (m_seenPopupFocus)
-        cancel(true);
+        cancel(false);
 }
 
 bool QuickPopupSession::itemBelongsToPopup(const QQuickItem *item) const

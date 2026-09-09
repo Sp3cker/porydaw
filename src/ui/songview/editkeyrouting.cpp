@@ -16,6 +16,9 @@
 
 #include "ui/songview.h"
 
+#include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/editordrawer.h"
+
 #include "ui/keymap.h"
 #include "ui/songview/pianoroll.h"
 
@@ -148,6 +151,16 @@ bool SongView::handleEditKey(const songview::TimelineKeyInput &input, EditKeyOri
 {
     if (!m_document)
         return false;
+
+    // Pencil mode claims only through its automation-page shortcut predicate.
+    if (m_editorDrawer) {
+        AutomationPage *const automation = m_editorDrawer->automationPage();
+        if (automation && automation->acceptsPencilShortcut(input.key, input.modifiers)) {
+            if (!input.autoRepeat)
+                automation->triggerPencilMode();
+            return true;
+        }
+    }
 
     // Escape is the platform gesture-cancel key: with a pointer gesture
     // live it cancels only that gesture and preserves its captured
@@ -282,15 +295,10 @@ bool SongView::handleEditKey(const songview::TimelineKeyInput &input, EditKeyOri
     return false;
 }
 
-// Canonical Copy command, shared by the key route above and the MainWindow
-// Edit action — the window shortcut's physical activation owner. An active
-// time selection owns the command; otherwise the selected notes are copied.
-// Range/clipboard mechanics live in rangeedit.cpp, note copying in
-// pianoroll_commands.cpp.
+// Canonical copy command shared by key routing and the MainWindow action.
 void SongView::copySelection()
 {
-    // Window-action entry shares the gesture rule with the key path: a
-    // live pointer gesture blocks competing commands — no focus heuristics.
+    // Live pointer gestures block competing commands.
     if (timelinePointerGestureActive())
         return;
     if (m_selectionModel.timeSelection().active())

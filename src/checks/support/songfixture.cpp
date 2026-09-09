@@ -158,6 +158,10 @@ const SongView &SongViewRig::view() const noexcept
 {
     return *m_view;
 }
+QQuickItem &SongViewRig::viewport() noexcept
+{
+    return m_quickHost->viewport();
+}
 
 bool SongViewRig::rebuildTimeline(QString &error)
 {

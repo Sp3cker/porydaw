@@ -117,6 +117,14 @@ the test-only C++ registry exposed by `porydaw_checks --manifest`.
 ## Conventions
 
 - C++20, Qt6, `clang-format`. 
+- Qt Quick: always use a Qt QML type over implementing our own. If Controls,
+  Templates, or a primitive already does the job (`TabBar`, `TabButton`,
+  `Button`, `ToolTip`, `Flickable`, `Shortcut`, `StackLayout`, …), use it. A
+  custom `Item`/`MouseArea`/`ListView` control that duplicates one is a bug.
+  Song pages: `StackLayout` replaces host `fitPages`/`setSize`/`setVisible`;
+  the host still attaches scenes. Song strip: first-party (close, chrome,
+  host-owned selection). No tab `move()` / pointer reorder — `StackLayout`
+  and `TabBar` do not provide it, and we do not need it.
 - All widget geometry is `layout::` font primitives. Size, pad, hit-test, and
   stroke with `layout::fontPx` / `layout::fontPxF`, `layout::space`, and
   `layout::singlePixel`. Hard-coded pixel constants in widgets are a bug.

@@ -52,23 +52,16 @@ struct EditorRigConfig {
     double timeZoom = 0.0; // 0 keeps the view's default zoom
     bool applyEditCursor = false;
     uint64_t editCursorTick = 0;
-    bool show = true; // exposes the Quick window
+    bool show = true;        // exposes the Quick window
+    bool attachScene = true; // false leaves the canvas unattached for a custom viewport
 };
 
-// Canonical externally hosted Quick scene for checks: owns the one real
-// window — whose built-in engine hosts the scene — that SongView's
-// windowless TimelineQuickView canvas attaches into. The QQuickView loads
-// no root of its own — its contentItem is the canonical viewport the
-// canvas parents into. The host borrows the view through a QPointer and
-// must be destroyed before it; as an EditorRig member it is declared after
-// the view so it dies first. Construction registers the timeline QML types
-// before engine use, applies the production alpha8/transparent surface
-// format, sizes the viewport and window, and attaches the real canvas; the
-// destructor detaches the canvas before the window goes away.
+// Hosts one real Quick window plus a child page viewport, matching production.
+// The canvas detaches before its borrowed view, engine, or window dies.
 class QuickSceneHost final
 {
   public:
-    QuickSceneHost(SongView &view, const QSize &size);
+    QuickSceneHost(SongView &view, const QSize &size, bool attachScene = true);
     ~QuickSceneHost();
 
     QuickSceneHost(const QuickSceneHost &) = delete;
@@ -81,6 +74,7 @@ class QuickSceneHost final
   private:
     QPointer<SongView> m_view;
     std::unique_ptr<QQuickView> m_window;
+    QQuickItem *m_viewport = nullptr;
 };
 
 class EditorRig final
@@ -95,13 +89,18 @@ class EditorRig final
 
     SongDocument &document() noexcept;
     SongView &view() noexcept;
+    QuickSceneHost &host() noexcept;
+    const QuickSceneHost &host() const noexcept;
     const MidiTimeline &timeline() const noexcept;
     LoadedVoiceGroup *voicegroup() const noexcept;
     // The Quick voice-changes input item, resolved once during create().
+    // Unavailable when created with attachScene=false until the caller
+    // attaches (no input items exist before then); do not call before that.
     songview::TimelineInputItem &voiceInput() noexcept;
     // The Quick scene backing the timeline canvas, resolved once during create().
     songview::TimelineQuickScene *quickScene() noexcept;
     // The QML root of the timeline canvas, resolved once during create().
+    // Null when created with attachScene=false until the caller attaches.
     QQuickItem *quickRoot() noexcept;
 
   private:

@@ -17,7 +17,6 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPlainTextEdit>
-#include <QPointer>
 #include <QProgressDialog>
 #include <QSettings>
 #include <QSignalBlocker>
@@ -34,8 +33,6 @@
 #include <windows.h>
 #endif
 
-#include <utility>
-
 #include "audio/wavexport.h"
 #include "core/miditimeline.h"
 #include "porydaw_scale.h"
@@ -48,6 +45,7 @@
 #include "ui/theme/themedialog.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
+#include "ui/workspacequick/workspacequickhost.h"
 
 namespace {
 constexpr int kIdleUiIntervalMs = 500;
@@ -587,6 +585,7 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
                 view.revealNote(track, uint8_t(midiKey), tick);
                 view.commitEditCursor(tick);
                 view.ensureTickVisible(tick);
+                m_workspace->quickHost().focusEditor(Qt::MouseFocusReason);
             });
     m_polyDock->setWidget(m_polyPanel);
     addDockWidget(Qt::RightDockWidgetArea, m_polyDock);
@@ -726,7 +725,6 @@ void MainWindow::onSelectedTabChanged(SongTab *tab)
     if (m_audioOk)
         m_audio.stop();
     m_selectedTab = tab;
-    m_focusWhenReady = tab && !tab->isReady() ? tab : nullptr;
 
     {
         // Reflect the incoming tab's roll/event-list state without the
@@ -757,16 +755,12 @@ void MainWindow::onSelectedTabChanged(SongTab *tab)
     }
 
     onSelectedTabReady(tab);
-    queueSelectedFocus(tab);
 }
 
 void MainWindow::onSelectedTabReady(SongTab *tab)
 {
     if (tab != m_selectedTab)
         return;
-    const bool focusWhenReady = m_focusWhenReady == tab;
-    if (focusWhenReady)
-        m_focusWhenReady = nullptr;
     // The selected tab's terminal VoicegroupBound just landed (or the
     // selection moved to an already-ready tab): bind the engine, then
     // refresh the chrome that reads loaded state.
@@ -780,18 +774,6 @@ void MainWindow::onSelectedTabReady(SongTab *tab)
     updateWindowTitle();
     updateChrome();
     updateTransportActions();
-
-    if (focusWhenReady)
-        queueSelectedFocus(tab);
-}
-
-void MainWindow::queueSelectedFocus(SongTab *tab)
-{
-    const QPointer<SongTab> focusTab(tab);
-    QTimer::singleShot(0, this, [this, focusTab] {
-        if (focusTab && focusTab == m_selectedTab && focusTab->isReady())
-            focusTab->view().focusActiveSurface();
-    });
 }
 
 void MainWindow::onSelectedSongStateChanged()

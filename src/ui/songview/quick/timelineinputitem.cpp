@@ -193,6 +193,7 @@ void TimelineInputItem::requestFocus(Qt::FocusReason reason)
     QQuickWindow *const itemWindow = window();
     if (!itemWindow)
         return;
+    setFocus(true, reason);
     forceActiveFocus(reason);
     itemWindow->requestActivate();
 }
@@ -329,9 +330,11 @@ void TimelineInputItem::mouseUngrabEvent()
     // precedes any later release event on this window.
     if (m_grabbedButtons && window()) {
         QuickWindowInput &owner = QuickWindowInput::forWindow(*window());
-        for (int buttonBit = 1; buttonBit <= int(Qt::MouseButtonMask); buttonBit <<= 1) {
-            if (m_grabbedButtons & buttonBit)
-                owner.swallowRelease(static_cast<Qt::MouseButton>(buttonBit));
+        unsigned grabbedButtons = static_cast<unsigned>(m_grabbedButtons);
+        while (grabbedButtons != 0) {
+            const unsigned buttonBit = grabbedButtons & (~grabbedButtons + 1U);
+            grabbedButtons &= ~buttonBit;
+            owner.swallowRelease(static_cast<Qt::MouseButton>(buttonBit));
         }
     }
     m_grabbedButtons = 0;
@@ -350,13 +353,8 @@ void TimelineInputItem::itemChange(ItemChange change, const ItemChangeData &data
 {
     if (change == ItemDevicePixelRatioHasChanged && m_interaction)
         m_interaction->hostAppearanceChanged();
-    if (change == ItemVisibleHasChanged && !data.boolValue) {
-        if (m_interaction)
-            m_interaction->inputCancelled(TimelineInputCancelReason::Hidden);
-        // Drop our Quick focus selection so a hidden band cannot be handed
-        // active focus again when its host returns to the focus chain.
-        setFocus(false);
-    }
+    if (change == ItemVisibleHasChanged && !data.boolValue && m_interaction)
+        m_interaction->inputCancelled(TimelineInputCancelReason::Hidden);
     QQuickItem::itemChange(change, data);
 }
 

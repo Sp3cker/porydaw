@@ -256,14 +256,17 @@ void PlayheadGuidesTest::guidesTrackCanvasItemInsideWindow()
     QVERIFY(rulerPlotWidthBefore > canvasShrink.width());
     QVERIFY(rollPlotWidthBefore > canvasShrink.width());
     QVERIFY(rollPlotHeightBefore > canvasShrink.height());
-    root->setPosition(canvasOffset);
-    root->setSize(
-        QSizeF{root->width() - canvasShrink.width(), root->height() - canvasShrink.height()});
+    QQuickItem &page = rig->song->viewport();
+    page.setPosition(canvasOffset);
+    page.setSize(
+        QSizeF{page.width() - canvasShrink.width(), page.height() - canvasShrink.height()});
     checks::support::pumpQuick();
     QCOMPARE(window->size(), windowSize);
-    QCOMPARE(root->position(), canvasOffset);
+    QCOMPARE(page.position(), canvasOffset);
+    QCOMPARE(root->position(), QPointF());
     const QSizeF expectedCanvasSize{windowSize.width() - canvasShrink.width(),
                                     windowSize.height() - canvasShrink.height()};
+    QCOMPARE(page.size(), expectedCanvasSize);
     QCOMPARE(root->size(), expectedCanvasSize);
 
     view.clearTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation);

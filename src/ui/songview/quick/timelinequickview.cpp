@@ -433,10 +433,7 @@ bool TimelineQuickView::focusBand(TimelineBand band, Qt::FocusReason reason)
     TimelineInputItem *const item = m_inputItems[timelineBandIndex(band)];
     if (!item)
         return false;
-    // The shared workspace window resolves this request through its ordinary
-    // Quick focus chain. TimelineInputItem preserves native window activation
-    // at the actual input-acquisition seam; focusedBand() stays the live
-    // active-focus truth.
+    // Store focus locally; the owning page scope controls active focus.
     item->requestFocus(reason);
     return true;
 }

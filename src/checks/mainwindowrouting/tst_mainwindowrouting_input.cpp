@@ -152,6 +152,7 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         window.activateWindow();
         window.raise();
         window.m_workspace->selectSongTab(session->b);
+        session->host->focusEditor(Qt::OtherFocusReason);
         session->b->view().focusActiveSurface();
         QCoreApplication::processEvents();
         QCoreApplication::sendPostedEvents();
@@ -225,6 +226,7 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         QCOMPARE(triggered.count(), 2);
         window.activateWindow();
         window.raise();
+        session->host->focusEditor(Qt::OtherFocusReason);
         session->b->view().focusActiveSurface();
         QCoreApplication::processEvents();
         QVERIFY(session->b->view().focusedTimelineBand().has_value());
@@ -293,6 +295,7 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
                        tab.document().undoStack()->canUndo())
                     tab.document().undoStack()->undo();
             };
+            session->host->focusEditor(Qt::OtherFocusReason);
             if (!view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason)) {
                 insertDiagnostic = QStringLiteral("the Roll input could not establish focus");
                 return false;

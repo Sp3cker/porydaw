@@ -9,8 +9,8 @@
 
 #include "ui/songtab.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelinequickview.h"
 #include "ui/workspacequick/songtabsmodel.h"
-#include "ui/workspacequick/workspacequickhost.h"
 
 namespace {
 const QString kLastOpenSongsKey = QStringLiteral("lastOpenSongs");
@@ -48,17 +48,16 @@ void WorkspaceUi::removeTab(SongTab *tab)
     if (wasSelected) {
         // Keep routed note-off and gesture cancellation attached to the
         // outgoing authority, then unload audio while the tab's bank lease
-        // remains alive. The host sees null before the removal bracket
-        // detaches the page; a final selection is published below.
-        m_quickHost->deactivateSelection();
+        // remains alive. The model sees null before its row is removed.
+        tab->view().quickView()->setPageSelected(false);
         m_selectedTab = nullptr;
         emit selectedSongTabChanged(nullptr);
         m_tabModel->notifySelectionChanged();
     }
 
-    // take() brackets the authoritative vector mutation and lets the host
-    // detach the page while this session is still alive. Destroy only after
-    // the model's rows have settled.
+    // QML can destroy the empty viewport after take() begins, so the
+    // coordinator releases every page-local borrow first.
+    tab->view().quickView()->detachScene();
     std::unique_ptr<SongTab> removed = m_tabModel->take(*tab);
     removed.reset();
 
@@ -72,15 +71,17 @@ void WorkspaceUi::removeTab(SongTab *tab)
 void WorkspaceUi::destroyAllTabs()
 {
     // No intermediate selection/persistence publication escapes teardown.
-    // Cancel the outgoing page while it is still authoritative, unload audio
-    // before its lease can die, detach every page inside the model bracket,
-    // destroy the sessions, then leave the empty host for its later teardown.
+    // Cancel and unload the selected session while its lease is live, then
+    // release every page-local QML borrow before the removal bracket starts.
     m_tearingDown = true;
     if (m_selectedTab) {
-        m_quickHost->deactivateSelection();
+        m_selectedTab->view().quickView()->setPageSelected(false);
         m_selectedTab = nullptr;
         emit selectedSongTabChanged(nullptr);
+        m_tabModel->notifySelectionChanged();
     }
+    for (const auto &page : m_tabPages)
+        page->view().quickView()->detachScene();
     std::vector<std::unique_ptr<SongTab>> removed = m_tabModel->takeAll();
     removed.clear();
     m_tearingDown = false;
@@ -91,14 +92,13 @@ void WorkspaceUi::selectTab(SongTab *tab)
 {
     if (!tab || tab == m_selectedTab || m_tabModel->rowFor(tab) < 0)
         return;
-    // Frozen handoff order: the outgoing scene first cancels while the old
-    // selection still owns routing; publish the new authority and audio
-    // handoff synchronously; only then let model signals reveal and enable
-    // the incoming page. MainWindow's queued focus runs after this call.
-    m_quickHost->deactivateSelection();
+    // Cancel the outgoing page before publishing the new selection and audio handoff.
+    if (m_selectedTab)
+        m_selectedTab->view().quickView()->setPageSelected(false);
     m_selectedTab = tab;
     publishSelection();
     m_tabModel->notifySelectionChanged();
+    tab->view().quickView()->setPageSelected(true);
 }
 
 void WorkspaceUi::selectSongTab(SongTab *tab)
@@ -113,16 +113,6 @@ void WorkspaceUi::publishSelection()
     persistTabs();
     emit selectedSongTabChanged(m_selectedTab);
     emit selectedSongStateChanged();
-}
-
-void WorkspaceUi::moveTab(SongTab *tab, int destinationIndex)
-{
-    if (!tab || !m_tabModel->move(*tab, destinationIndex))
-        return;
-    // move() preserves the selected session identity and emits only its
-    // derived index change. Persist the model's new authoritative order.
-    emit sessionsReordered();
-    persistTabs();
 }
 
 std::vector<SongTab *> WorkspaceUi::tabsInDisplayOrder() const

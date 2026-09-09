@@ -18,7 +18,6 @@
 #include <vector>
 
 #include "ui/songview/quick/quickmenumodel.h"
-#include "ui/songview/quick/quickwindowinput.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timeruler.h"
@@ -166,13 +165,8 @@ class PagePopupSeamsTest final : public QObject
         firstView.reset();
         settle();
 
-        // Owner transition BEFORE the orphan release: A's selection died
-        // with its scene, and attaching another scene never broadcasts or
-        // selects it, so B is explicitly projected as the window owner's
-        // selected page. The swallow armed during A's dismissal must survive
-        // exactly this transition.
+        // The swallowed release must survive explicit ownership transfer to B.
         secondQuick->setPageSelected(true);
-        songview::QuickWindowInput::forWindow(sharedHost.window()).setSelectedScene(secondQuick);
         QVERIFY2(secondQuick->inputEligible(), "B did not become input-eligible after selection");
         auto *const bRollInput =
             secondQuick->rootObject()->findChild<songview::TimelineInputItem *>(
@@ -192,11 +186,7 @@ class PagePopupSeamsTest final : public QObject
         songview::QuickPopupSession *const bSession = secondQuick->popupSession();
         QVERIFY2(!bSession || !bSession->isOpen(), "the orphan release opened a B popup");
 
-        // A complete B click edits B for real: the swallowed orphan left no
-        // stuck gesture state behind. The roll center is the proven
-        // fixture-derived edit point from the existing host-seams
-        // reassociation check (same half-width viewport geometry, same
-        // seeded note), which passes once B is the selected page.
+        // The swallowed orphan must not block the next complete click on B.
         auto *const rollInput = secondQuick->rootObject()->findChild<songview::TimelineInputItem *>(
             QStringLiteral("timelineRollInput"));
         QVERIFY(rollInput);
@@ -216,26 +206,28 @@ class PagePopupSeamsTest final : public QObject
         QVERIFY(!secondQuick->popupSession());
     }
 
-    // A page placed as a translated smaller viewport bounds its popups: the
-    // page-edge ruler menu clamps inside the page rect instead of the window,
-    // the underlay shield covers only the page (a press in the window margin
-    // leaves the popup open; a press inside the page dismisses it), and a
-    // form prompt centers inside the page.
+    // A translated page bounds menus, shields, and prompts to its clipped viewport.
     void pageEdgePopupClampsInsideTranslatedViewport()
     {
         SyntheticHost host;
         QString error;
         QVERIFY2(host.prepare(&error), qPrintable(error));
-        SongView &view = host.view();
+
+        // Attach a fresh canvas once to a translated, clipped page viewport.
+        SongView pageView;
+        pageView.setDocument(&host.document());
+        pageView.setSong(&host.timeline(), &host.bank());
+        pageView.setDrawerActivePage(EditorDrawerPage::Velocity);
+        pageView.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
+        pageView.setDrawerSectionHeight(EditorDrawerPage::Velocity, 200);
+        pageView.setDrawerSectionVisible(EditorDrawerPage::Automations, false);
+        checks::QuickSceneHost pageHost(pageView, QSize(800, 600), false);
+        SongView &view = pageView;
         auto *quick = view.quickView();
         QVERIFY(quick);
-        quick->detachScene(); // release the rig's own host scene
 
-        QQuickView window;
-        window.resize(QSize(800, 600));
-        // A clipping ancestor frames the page slot: initially it matches
-        // the page exactly; the later dynamics shrink it while a popup is
-        // open, the way a workspace page slot can be reframed.
+        QQuickWindow &window = pageHost.window();
+        // This clipping ancestor models a page slot that can resize live.
         auto *const clipItem = new QQuickItem(window.contentItem());
         clipItem->setX(200);
         clipItem->setY(150);
@@ -244,8 +236,10 @@ class PagePopupSeamsTest final : public QObject
         auto *viewport = new QQuickItem(window.contentItem());
         viewport->setParentItem(clipItem);
         viewport->setSize(QSizeF(400, 300));
-        quick->attachScene(*window.engine(), *viewport);
+        quick->attachScene(pageHost.engine(), *viewport);
         SceneDetachGuard sceneDetach(*quick);
+        // Direct fixture attachment selects the page explicitly.
+        quick->setPageSelected(true);
         window.show();
         settle();
 

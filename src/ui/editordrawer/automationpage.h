@@ -43,10 +43,10 @@ class AutomationPage final : public QObject
 
     AutomationCanvas *canvas() noexcept { return m_canvas; }
     const AutomationCanvas *canvas() const noexcept { return m_canvas; }
-    // Pencil-mode toggle; the shortcut dispatch lives in this page's
-    // application event filter, which triggers the action on the configured
-    // key. Exposed for settings-driven discovery.
+    // Semantic operations share QAction ownership without a global key filter.
     QAction *pencilModeAction() const noexcept { return m_pencilModeAction; }
+    bool acceptsPencilShortcut(int key, Qt::KeyboardModifiers modifiers) const;
+    void triggerPencilMode();
     QSize automationViewportSize() const noexcept;
     int automationContentHeight() const noexcept;
     int verticalScroll() const noexcept;
@@ -123,15 +123,9 @@ class AutomationPage final : public QObject
     void announce(const QString &message) const;
 
     bool matchesPencilShortcut(int key, Qt::KeyboardModifiers modifiers) const noexcept;
-    // Window identity only: does this event's delivery chain (a child window
-    // inherits through its QWindow parent) belong to the injected page's
-    // window?
+    // True when the delivered event belongs to this page's window.
     bool deliveredThroughWindow(const QWindow &window) const noexcept;
-    // Keyboard ownership: the target must be this page's window while the
-    // page is effectively enabled and visible, and the window's focused item
-    // must live in the page subtree. A matching QWindow alone is not
-    // ownership: sibling pages share one window, and a hidden, disabled, or
-    // unfocused page never claims the pencil shortcut.
+    // Requires focused delivery inside this visible, enabled page subtree.
     bool ownsKeyboardTarget(const QQuickWindow &window) const noexcept;
 
     Geometry m_geometry;

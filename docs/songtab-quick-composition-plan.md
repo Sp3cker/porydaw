@@ -2,7 +2,11 @@
 
 ## Status and scope
 
-Planning deliverable; no production or check implementation is included. Source researched on 2026-09-08 by Main, evidence-plan-architect, and managed-scout in parallel. Proposed interfaces below are implementation contracts, not claims that those interfaces already exist.
+The bounded deletion pass completed on 2026-09-09. The application now uses the shared Quick composition described below; the original P1–P8 packets and check-generation guidance remain historical.
+
+Against pre-pass commit `06054ac8`, production changed by +504/−1040 lines (net −536) and checks by +278/−680 (net −402). Against `fork-main`, the branch still carries +2637/−1163 production lines (net +1474) and +2907/−1335 check lines (net +1572). The pass removed more code than it added, but the full branch is still not a “very few new lines” result.
+
+The required bounded matrix passed all 24 selected harnesses. Native application smoke verified visible shared pages and tab selection without blank or overlapping canvases.
 
 This plan extends the earlier [SongView cutover blueprint](songview-quick-cleanse-blueprint.md). That blueprint deliberately retained QWidget SongTab pages. Its rendering, editing, popup, and native-playhead behavior requirements remain applicable; its SongTab hosting end state is superseded here. Historical execution instructions are not new authorization to create worktrees, commit, merge, or push.
 
@@ -12,7 +16,41 @@ This is not a promise to remove QtWidgets linkage from the application. Shared l
 
 **Scope recommendation, not a technical necessity:** replace the song tab strip with Quick in this plan so the song-page module is Quick end to end. The architect identified a smaller alternative: retain a shell-owned QTabBar above the single workspace container while making SongTab QObject and its pages Quick. That alternative would still remove per-song QWidget pages/windows, but would leave song-tab chrome in Widgets. The chosen plan includes that chrome; it does not imply that all MainWindow chrome must migrate.
 
-## Current-source evidence
+## Page stacking and tab order
+
+**`StackLayout` and `Repeater` replace the host's hand-rolled page
+registry.** `WorkspaceQuickHost` now owns only one engine/window/container,
+appearance publication, and explicit widget-to-editor focus entry.
+
+`WorkspaceSongs.qml` owns the page hierarchy:
+
+- an editor-area `FocusScope`,
+- a `StackLayout` bound to `workspaceTabs.selectedIndex`,
+- a `Repeater` over the ordered session model, and
+- one direct child `FocusScope` per row.
+
+Each delegate receives the borrowed session, `TimelineQuickView`, readiness,
+and row index. It attaches its persistent scene once, when both component
+completion and a shared window are available. `StackLayout` owns page
+geometry and visibility. The delegate's `focus` and `enabled` bindings are
+true only for the ready current item, so Qt Quick retains each page's focused
+descendant without a C++ focus-history table.
+
+`TimelineQuickView::setPageSelected` remains the semantic eligibility gate
+used by input, popup, audition, and native-layer cleanup. It is not a page
+visibility or geometry mechanism. `QuickWindowInput` now owns only
+window-lifetime release swallowing; it has no selected-scene registry or key
+fallback.
+
+**`move()` is not needed.** `StackLayout` has no tab drag. The product does
+not need pointer reorder. Open order is append order and is persisted as
+such. `SongTabsModel::move`, `WorkspaceQuickHost::requestMove` /
+`moveRequested`, `WorkspaceUi::moveTab`, and `sessionsReordered` are gone.
+Without moves, model row equals `StackLayout` child index. Stock `TabBar`,
+`TabButton`, nested close `ToolButton`, and attached `ToolTip` own the strip;
+selection and close transactions call the authoritative `WorkspaceUi`.
+
+## Pre-cutover source evidence (historical)
 
 | Evidence | Architectural consequence |
 | --- | --- |
@@ -31,7 +69,7 @@ This is not a promise to remove QtWidgets linkage from the application. Shared l
 | `src/checks/support/editorrig.h:28-34`; `host/tst_hostseams.cpp:118-203`; `host/tst_hostintegration.cpp:704-731` assume a view-owned window and per-tab window destruction. | Migrate the real fixture host and lifetime scenarios with the production ownership change. Do not re-pin obsolete destruction ordering. |
 | `src/checks/scrollbar/tst_scrollbar.cpp:151-180`; `trackheaders/trackheaderfixture.cpp:87-128` call SongTab resize/show directly. | Existing behavioral assertions can survive, but even these otherwise-Quick suites require fixture migration. |
 
-## Target modules and ownership
+## Original target modules and ownership (historical)
 
 ```text
 MainWindow / WorkspaceUi                    existing QWidget application shell
@@ -97,7 +135,7 @@ Implement a small explicit attachment interface on TimelineQuickView, conceptual
 - Keep the macOS CALayer playhead. Map its canvas-local timeline column and clip regions into the shared window's native coordinate space. Include selected/effectively-visible page status in its visibility, not just window visibility. Suppress or clip it under page popups so the native layer cannot paint over a form; retain existing uncovered guide behavior.
 - Keep the Quick playhead renderer on its existing non-macOS path. No silent platform substitution or new renderer.
 
-## Ordered implementation work packets
+## Ordered implementation work packets (historical)
 
 Each packet requires source-current LSP references before exported-interface changes. Integrating owner freezes the stated interfaces before parallel implementation. Agents skip builds/tests/formatters while sibling edits are in flight; Main runs the union's validation after each integration checkpoint. Each packet updates its affected existing checks alongside production, not in a final catch-up phase.
 
@@ -151,9 +189,22 @@ Each packet requires source-current LSP references before exported-interface cha
 
 **Files:** proposed `src/ui/workspacequick/songtabsmodel.h/.cpp`, `WorkspaceSongs.qml` and a cohesive tab-strip QML file only if warranted, proposed workspace host, `workspaceui.h` model exposure under its integration owner, existing QML/build registration.
 
-**Change:** implement the collection/selection contract. Quick strip preserves selection, close buttons, pointer reorder, title/dirty marker, tooltip, overflow access, font-scaled chrome, and non-stealing editor focus. Page slots stay stable by SongTab identity across moves. Do not use a Repeater/model reset strategy that silently destroys and reconstructs song scenes on reorder. Preserve accessibility names, selected state, and the shell's existing keyboard access through semantic commands.
+**Change:** implement the collection/selection contract. Quick strip
+preserves selection, close buttons, title/dirty marker, tooltip, overflow
+access, font-scaled chrome, and non-stealing editor focus. No pointer
+reorder. `Repeater` creates one persistent `FocusScope` page slot per model
+row as a direct `StackLayout` child; it never resets a song scene. Preserve
+accessibility names, selected state, and the shell's existing keyboard
+access through semantic commands.
 
-**Acceptance/checks:** actual Quick strip click selects the correct session; closing a nonselected tab does not change the selected document; dirty-close cancellation leaves the page intact; dragging reorder preserves live per-page camera/selection and persisted display order; narrow width leaves every tab reachable; loading one tab never blocks selection/close of another. Extend `tabcheck` and `mainwindow-routing-input` with real strip input, plus focused model invariant checks only where invalid notifications/order would affect consumers.
+**Acceptance/checks:** actual Quick strip click selects the correct
+session; closing a nonselected tab does not change the selected document;
+dirty-close cancellation leaves the page intact; display order is open
+order; narrow width leaves every tab reachable; loading one tab never
+blocks selection/close of another. Extend `tabcheck` and
+`mainwindow-routing-input` with real strip input, plus focused model
+invariant checks only where invalid notifications/order would affect
+consumers.
 
 **Dependency:** may be implemented in parallel with P4/P5 after P3. WorkspaceUi shared mutations remain reserved for P7's owner. P6's host/model must be complete and exercised through the real check host, not merged as unused scaffolding.
 
@@ -175,7 +226,7 @@ Run the final matrix below and a bounded actual-application smoke. Resolve every
 
 After smoke proves the behavior, reconcile the existing blueprint/status notes with the implemented scope, remove temporary experiment files, and remove obsolete test helpers only after their last callers migrate. Do not perform unrelated architectural cleanup or create arbitrary file fragments to meet a line-count target.
 
-## Check migration ledger
+## Check migration ledger (historical)
 
 Harness names below are from `src/checks/checkcatalog.cpp`; directory names are not necessarily runnable suite names.
 
@@ -188,7 +239,7 @@ Harness names below are from `src/checks/checkcatalog.cpp`; directory names are 
 | `automation-editing`, `velocity-editing`, `clipcheck`, `eventviews-chrome`, `eventviews-edits`, `eventviews-remap`, `eventviews-playhead` | Migrate SongTab fixtures and popup coordinates; retain document/undo semantics and real Quick editor behavior. Add only cross-page failure cases absent from selection/host suites. |
 | `editor-drawer`, `automation-raster`, `velocity-page`, `automation-domain`, `automation-presentation`, `automation-hover` | Reuse changed EditorRig/presentation fixtures; retain domain behavior. Do not claim these files are untouched merely because their assertions are widget-independent. |
 | `selectionkey-core`, `selectionkey-gesture`, `selectionkey-window`, `selectionkey-local-input` | Preserve semantic core tests; window/local tiers exercise shared-window active-page ownership, text precedence, cancellation and press/release. MainWindow fixture windows remain valid QWidget shell hosts. |
-| `tabcheck`, `sessioncheck`, workspace selftests | Preserve load/save/reload/lease/undo/audio assertions; add actual strip select/close/reorder, persist-and-restore reordered tabs, and two-page readiness isolation. |
+| `tabcheck`, `sessioncheck`, workspace selftests | Preserve load/save/reload/lease/undo/audio assertions; add actual strip select/close, persist-and-restore open order, and two-page readiness isolation. |
 | `mainwindow-routing-input`, `mainwindow-routing-state`, `mainwindow-routing-lifecycle`, `mainwindow-routing-native` | Preserve app-action/audio semantics; replace obsolete per-tab native activation assumptions and any tab-widget drivers. Verify queued focus cannot return to a closed/background page. |
 | `rendering-playhead`, `playhead-guides`, `rollwindowingcheck` | Native offset, hidden-page and popup occlusion behavior; shared-window surface teardown/recreation. |
 
@@ -208,7 +259,7 @@ Before each interface cutover, run LSP references for SongTab, TimelineQuickView
 
 Keep these as consumer-visible behavior tests, not source scans, class-name checks, forwarding assertions, or default-value snapshots. Exact pixel comparisons belong only where the existing rendering contract requires them.
 
-## Verification commands and runtime policy
+## Verification commands and runtime policy (historical)
 
 The current runner builds before verification and accepts repeated filters (`tools/cli.ts:128-181`). It rejects `--no-build`. There is no `deno task check`.
 
@@ -231,9 +282,17 @@ deno task verify
 
 Check all other fixture-migrated suites from the ledger at their packet checkpoint; the command groups above are not a substitute for that inventory. Format the changed C/C++/Objective-C++ union through `deno task format`, once per settled integration wave. The repository formatter explicitly rejects QML (`tools/format.ts:9-12`); preserve its existing formatting conventions and validate it through real component loading and interaction.
 
-Native acceptance requires a real application window: two songs, tab selection/reorder/close, note and automation edits, popup/audition cancellation, readiness transitions, playback, panning, resize, and native playhead clipping. Run native/window-system checks sequentially so they do not steal focus from each other. If desktop use is unavailable at implementation time, report native acceptance as pending rather than treating offscreen checks as equivalent. Use bounded measurements and screenshots; do not collect Instruments trace archives for this migration.
+Native acceptance requires a real application window: two songs, tab
+selection/close, note and automation edits, popup/audition cancellation,
+readiness transitions, playback, panning, resize, and native playhead
+clipping. Run native/window-system checks sequentially so they do not
+steal focus from each other. If desktop use is unavailable at
+implementation time, report native acceptance as pending rather than
+treating offscreen checks as equivalent. Use bounded measurements and
+screenshots; do not collect Instruments trace archives for this
+migration.
 
-## Dispatch and completion criteria
+## Dispatch and completion criteria (historical)
 
 Dependency order: `P1 || P2` → `P3 + its disjoint fixture migrations` → `P4 || P5 || P6` → `P7` → `P8`. P1's edits in shared files go through the reserved owner. Parallel waves must define their header/QML contracts before spawning; only the integration owner edits shared lifecycle headers, WorkspaceUi, and build registration.
 

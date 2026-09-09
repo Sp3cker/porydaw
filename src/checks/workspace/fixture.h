@@ -60,7 +60,6 @@ WorkspaceQuickHost *quickHost(MainWindow &window);
 bool exposeWorkspaceHost(MainWindow &window, WorkspaceQuickHost &host, const QSize &size);
 QQuickItem *quickItem(QQuickWindow &window, const QString &objectName);
 void clickQuickItem(QQuickWindow &window, QQuickItem &item);
-void dragQuickItemHorizontally(QQuickWindow &window, QQuickItem &item, double targetSceneX);
 bool itemInsideViewport(const QQuickItem &item, const QQuickItem &viewport);
 
 } // namespace workspace_test

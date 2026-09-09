@@ -7,7 +7,6 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QSize>
-#include <QtMath>
 #include <QtTest>
 
 #include "mainwindow.h"
@@ -96,21 +95,6 @@ void clickQuickItem(QQuickWindow &window, QQuickItem &item)
 {
     const QPoint point = item.mapToScene(QPointF(item.width() / 2, item.height() / 2)).toPoint();
     QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, point);
-    settle();
-}
-
-void dragQuickItemHorizontally(QQuickWindow &window, QQuickItem &item, double targetSceneX)
-{
-    const QPointF startScene = item.mapToScene(QPointF(item.width() * 0.25, item.height() / 2));
-    const QPoint start = startScene.toPoint();
-    QTest::mousePress(&window, Qt::LeftButton, Qt::NoModifier, start);
-    constexpr int steps = 8;
-    for (int step = 1; step <= steps; ++step) {
-        const double x = startScene.x() + (targetSceneX - startScene.x()) * step / steps;
-        QTest::mouseMove(&window, QPoint(qRound(x), start.y()));
-    }
-    QTest::mouseRelease(&window, Qt::LeftButton, Qt::NoModifier,
-                        QPoint(qRound(targetSceneX), start.y()));
     settle();
 }
 

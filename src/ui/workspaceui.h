@@ -94,6 +94,8 @@ class WorkspaceUi final : public QObject
     std::vector<SongTab *> tabsInDisplayOrder() const;
     // The unique live tab carrying this song, or nullptr.
     SongTab *songTabFor(const SongName &name) const noexcept;
+    // The sole widget-to-workspace editor entry is on this embedding host.
+    WorkspaceQuickHost &quickHost() const noexcept;
 
     // ---- Standing project state and policy gates ----
 
@@ -130,7 +132,7 @@ class WorkspaceUi final : public QObject
     // Opens (or focuses) an explicit song through the browser placement
     // policy; a no-op when the name is absent from the project snapshot.
     void requestSongOpen(const SongName &name, bool newTab = false);
-    void selectSongTab(SongTab *tab);
+    Q_INVOKABLE void selectSongTab(SongTab *tab);
     // Reload Project action: re-reads the open project's data in place.
     void requestProjectReload();
     // Save action for the selected tab: one semantic SaveSongInput.
@@ -139,6 +141,8 @@ class WorkspaceUi final : public QObject
     void registerSelectedSong();
     void deleteSelectedSong();
     void requestCloseSelectedTab();
+    // QML close command; preserves the same close gate as the selected-tab action.
+    Q_INVOKABLE void requestCloseTab(SongTab *tab);
     // Undo/redo for the selected tab: document entries cross synchronously;
     // shared-bank entries route through VoicegroupViewCache and the worker.
     void requestUndo();
@@ -235,7 +239,6 @@ class WorkspaceUi final : public QObject
     void bankActionsChanged(bool enabled);
     void openProjectEnabledChanged(bool enabled);
     void statusMessageRequested(const QString &message, int timeout = 0);
-    void sessionsReordered();
 
     void goToStartRequested();
     void playRequested();
@@ -277,14 +280,11 @@ class WorkspaceUi final : public QObject
     void openSongFromList(int songId, bool newTab);
     void destroyAllTabs();
     void removeTab(SongTab *tab);
+    void closeTabNow(SongTab *tab);
     void selectTab(SongTab *tab);
     void publishSelection();
-    void moveTab(SongTab *tab, int destinationIndex);
     void persistTabs();
     void maybeSaveTab(SongTab *tab, const std::function<void(bool)> &continuation);
-    // Gates: pending bank origin, in-flight save, dirty prompt; then close.
-    void requestCloseTab(SongTab *tab);
-    void closeTabNow(SongTab *tab);
     void submitSaveForTab(SongTab *tab, const std::function<void(bool)> &continuation);
     bool bankDirty(const SongTab &tab) const noexcept;
     const LoadedBankView *bankViewFor(const SongTab &tab) const noexcept;

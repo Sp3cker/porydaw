@@ -170,6 +170,10 @@ void PlayheadOverlay::ensureWindowTracking()
                 &PlayheadOverlay::synchronizeGeometry);
         m_inputEligibilityConnected = true;
     }
+    if (quickView) {
+        connect(quickView, &songview::TimelineQuickView::viewportChanged, this,
+                &PlayheadOverlay::synchronizeGeometry, Qt::UniqueConnection);
+    }
 
 #ifdef __APPLE__
     QuickPopupSession *const popupSession = quickView ? quickView->popupSession() : nullptr;
@@ -291,10 +295,11 @@ void PlayheadOverlay::synchronizeGeometry()
 
 #ifdef __APPLE__
     m_devicePixelRatio = window ? window->effectiveDevicePixelRatio() : 1.0;
-    // Attach only to an already-created platform surface of a visible window;
-    // surface creation is never forced here, and a later SurfaceCreated event
-    // re-syncs through the window filter.
-    if (!m_platform && window && window->handle() && window->isVisible())
+    if (m_platform && (!quickCanvas || !quickCanvas->inputEligible()))
+        detachPlatform();
+    // Create the native layer only for an eligible page on an existing surface.
+    if (!m_platform && quickCanvas && quickCanvas->inputEligible() && window && window->handle() &&
+        window->isVisible())
         initializePlatform();
     if (m_platform) {
         setPlatformImages();

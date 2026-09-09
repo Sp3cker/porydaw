@@ -10,7 +10,6 @@
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/quick/quickpopupsession.h"
-#include "ui/songview/quick/quickwindowinput.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/timeruler.h"
 #include "ui/songview/trackheadermodel.h"
@@ -24,6 +23,7 @@
 #include <QQuickWindow>
 #include <QUrl>
 #include <QVariant>
+#include <qqml.h>
 #include <utility>
 
 namespace songview {
@@ -74,15 +74,6 @@ constexpr std::array kDrawerChromeInputQmlProperties{
     DrawerChromeInputQmlProperties{DrawerChromeTarget::Detent, "drawerDetentInput"},
 };
 static_assert(kDrawerChromeInputQmlProperties.size() == 5);
-
-// The window owner drops this scene's association only when this scene is
-// still the selected one; a sibling selected meanwhile keeps its selection.
-void forgetWindowInputOwner(QQuickWindow &window, const TimelineQuickView &scene)
-{
-    if (QuickWindowInput *const owner = window.findChild<QuickWindowInput *>())
-        if (owner->selectedScene() == &scene)
-            owner->setSelectedScene(nullptr);
-}
 
 // True when any ancestor of the item clips; QQuickItem exposes only the
 // local flag, so the effective clipping walks the chain.
@@ -170,25 +161,38 @@ void TimelineQuickView::publishTimelineBandLayout()
         emit scrollbarRectsChanged();
 }
 
+void TimelineQuickView::attachToPage(QQuickItem *viewport)
+{
+    if (!viewport)
+        qFatal("TimelineQuickView QML attachment requires a page viewport");
+    if (!viewport->window())
+        qFatal("TimelineQuickView QML attachment requires a window-associated page viewport");
+    QQmlEngine *const engine = qmlEngine(viewport);
+    if (!engine)
+        qFatal("TimelineQuickView QML attachment requires an engine-backed page viewport");
+    attachScene(*engine, *viewport);
+}
+
 void TimelineQuickView::attachScene(QQmlEngine &engine, QQuickItem &viewport)
 {
+    // Attachment is one-shot; every later call is a contract violation.
+    if (m_hasAttached)
+        qFatal("TimelineQuickView scene attached twice");
+    m_hasAttached = true;
     // Defensive re-assertion: hosts register before constructing their
     // engine; the once-flag makes the repeat free.
     registerQuickTypes();
     if (m_sceneContext || m_root)
         qFatal("TimelineQuickView scene attached twice");
-    // The popup session and the window event ports need a live window;
-    // deferred window association is unsupported.
+    // The popup session and the window event ports need a live window; the
+    // window identity binds here and never moves afterwards.
     QQuickWindow *const window = viewport.window();
     if (!window)
         qFatal("TimelineQuickView scene attached to a viewport with no window");
-
     m_viewport = &viewport;
     m_view = window;
     m_engine = &engine;
-    // Safe destruction observation: if the host drops its engine without a
-    // detach, the coordinator-owned canvas is destroyed here — never
-    // abandoned with cleared pointers, never deleted after its engine.
+    // Engine destruction terminally unbinds the coordinator.
     m_engineDestroyed = connect(&engine, &QObject::destroyed, this,
                                 [this, &engine] { handleEngineDestroyed(engine); });
 
@@ -210,9 +214,7 @@ void TimelineQuickView::attachScene(QQmlEngine &engine, QQuickItem &viewport)
 
     observeWindow(*window);
 
-    // The canvas is created in the scene context, visually parented
-    // to the supplied viewport (QObject ownership stays here), and kept
-    // filled to it for its whole lifetime.
+    // QML anchors the coordinator-owned canvas to this borrowed viewport.
     QQmlComponent component(&engine,
                             QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml")));
     QQuickItem *const root = qobject_cast<QQuickItem *>(component.create(m_sceneContext));
@@ -221,17 +223,11 @@ void TimelineQuickView::attachScene(QQmlEngine &engine, QQuickItem &viewport)
             qCritical().noquote() << error.toString();
         qFatal("Qt Quick timeline QML failed to load");
     }
-    // Visual parenting follows the viewport; QObject ownership stays with
-    // this coordinator so the QML subtree is destroyed by detachScene() or
-    // the engine-loss observation — never by a dying host viewport, and
-    // never abandoned.
+    // QObject ownership stays with the coordinator across viewport teardown.
     root->setParentItem(&viewport);
     root->setParent(this);
     m_root = root;
-    // Page-scoped borrows bind to the live canvas subtree, after it exists:
-    // the automation page resolves input-method queries and keyboard
-    // ownership through it, and the popup session bounds its placement to
-    // it. Both clear before the canvas dies in every teardown path.
+    // Bind page-scoped keyboard and popup borrows after canvas creation.
     if (m_automation)
         m_automation->setInputPage(root);
     retargetPopupSession(window);
@@ -244,18 +240,6 @@ void TimelineQuickView::attachScene(QQmlEngine &engine, QQuickItem &viewport)
     };
     connect(root, &QQuickItem::widthChanged, this, canvasResized);
     connect(root, &QQuickItem::heightChanged, this, canvasResized);
-    // The canvas fills the viewport: viewport resizes drive the canvas
-    // size, whose change notifications republish the band layout.
-    const auto fillViewport = [this] {
-        if (m_root && m_viewport)
-            m_root->setSize(QSizeF(m_viewport->width(), m_viewport->height()));
-    };
-    connect(&viewport, &QQuickItem::widthChanged, this, fillViewport);
-    connect(&viewport, &QQuickItem::heightChanged, this, fillViewport);
-    // Follow the viewport's window association: the surveillance moves with
-    // it, and SongView republishes so native update bands track the window.
-    connect(&viewport, &QQuickItem::windowChanged, this, &TimelineQuickView::trackViewportWindow);
-    fillViewport();
 
     static constexpr std::array layers = {
         std::pair{TimelineQuickLayer::RulerGutterChrome, "timelineQuickRulerGutterChrome"},
@@ -410,25 +394,49 @@ void TimelineQuickView::attachScene(QQmlEngine &engine, QQuickItem &viewport)
         input->setInteraction(&m_drawerChrome->interaction(properties.target));
         m_drawerChromeInputs[index] = input;
     }
-    // Typed gesture scrollbar roots are discovered from the live canvas:
-    // unbindSceneInputs() clears their registry, so every attach repopulates
-    // it for the publish and recovery paths.
+    // Discover typed scrollbars once from the live canvas.
     discoverGestureScrollbars(*root);
 
-    // The shared song-policy callback turns every band, gutter and
-    // drawer-chrome input into a route to SongView::handleEditKey once the
-    // interaction's restricted local handling declines; see
-    // timelinequickview_keyrouting.cpp.
+    // Route declined local input through SongView's shared key policy.
     installKeyPolicyHandlers();
-    // Scene-mapping reporting and page input eligibility start from the
-    // attached state; hosts then select explicitly to make the page
-    // interactive.
+
+    // Seed one local focus target; QML retains it when the page is reselected.
+    const auto drawerFocusTarget = [this](EditorDrawerPage page) -> TimelineInputItem * {
+        switch (page) {
+        case EditorDrawerPage::VoiceChanges:
+            return m_inputItems[timelineBandIndex(TimelineBand::VoiceChanges)];
+        case EditorDrawerPage::Velocity:
+            return m_inputItems[timelineBandIndex(TimelineBand::Velocity)];
+        case EditorDrawerPage::Automations:
+            return m_inputItems[timelineBandIndex(TimelineBand::Automation)];
+        }
+        Q_UNREACHABLE();
+        return nullptr;
+    };
+    TimelineInputItem *initialFocusTarget = nullptr;
+    if (m_songView && m_songView->hasVisibleDrawerSection()) {
+        const EditorDrawerPage activePage = m_songView->drawerActivePage();
+        if (m_songView->drawerSectionVisible(activePage))
+            initialFocusTarget = drawerFocusTarget(activePage);
+        for (const EditorDrawerPage page :
+             {EditorDrawerPage::VoiceChanges, EditorDrawerPage::Velocity,
+              EditorDrawerPage::Automations}) {
+            if (!initialFocusTarget && m_songView->drawerSectionVisible(page))
+                initialFocusTarget = drawerFocusTarget(page);
+        }
+    } else if (m_songView && m_songView->eventListVisible()) {
+        initialFocusTarget = m_eventListInput;
+    } else {
+        initialFocusTarget = m_inputItems[timelineBandIndex(TimelineBand::Roll)];
+    }
+    if (initialFocusTarget)
+        initialFocusTarget->setFocus(true);
+
+    // Begin mapping reports and page eligibility after attachment.
     watchSceneMapping();
     updateInputEligibility();
 
-    // Publish the full scene into the live viewport, then notify: SongView
-    // reruns the layout choreography and republishes the complete state
-    // (band layout, scrollbar lanes, native update bands) while attached.
+    // Publish the complete scene before notifying SongView.
     publishTimelineBandLayout();
     syncAppearance();
     emit viewportChanged();
@@ -445,41 +453,9 @@ void TimelineQuickView::observeWindow(QQuickWindow &window)
     });
 }
 
-void TimelineQuickView::trackViewportWindow(QQuickWindow *window)
-{
-    if (m_detaching || window == m_view.data())
-        return;
-    // The viewport reassociated: the old window's owner drops this scene
-    // (only this scene's association), the surveillance moves to the new
-    // window, and SongView republishes so native update bands track the
-    // move. Hosts select explicitly in the new window; reassociation alone
-    // never selects.
-    if (QQuickWindow *const previous = m_view.data()) {
-        forgetWindowInputOwner(*previous, *this);
-        previous->removeEventFilter(this);
-        disconnect(previous, nullptr, this, nullptr);
-    }
-    m_view = window;
-    if (window)
-        observeWindow(*window);
-    // Window-bound collaborators follow the association: the popup session
-    // — rebuilt for the live window so typed popup owners rebind instead of
-    // holding a stale-window borrow — and the scene-mapping watch, which
-    // follows the viewport's new ancestor chain.
-    retargetPopupSession(window);
-    watchSceneMapping();
-    updateInputEligibility();
-    emit viewportChanged();
-}
-
 void TimelineQuickView::retargetPopupSession(QQuickWindow *window)
 {
-    // Rebuild the one session for the live window: an open popup cancels
-    // against its old window first, then every typed popup owner rebinds to
-    // the fresh session. A null window (loss without reassociation) leaves
-    // the session unbound until the viewport reassociates or detachScene()
-    // runs; a canvas already destroyed by the engine-loss observation means
-    // the scene context is invalidated, so no session is rebuilt.
+    // Create the bound window's sole popup session once at attach time.
     if (m_popupSession) {
         m_popupSession->cancel(false);
         setPopupSessionBindings(nullptr);
@@ -513,20 +489,8 @@ void TimelineQuickView::handleEngineDestroyed(const QQmlEngine &engine)
 {
     if (m_detaching || m_engine != &engine)
         return;
-    // Unexpected engine loss: the host dropped its window/engine without a
-    // detach, and the borrowed window is already mid-destruction (children
-    // die inside ~QObject after the ~QWindow body freed the platform
-    // resources), so no cursor/window mapping may run here. Surveillance
-    // drops first so Hide/DPR callbacks cannot re-enter against the partial
-    // scene; every input then detaches hostlessly while the models live
-    // (AutomationCanvas severs its host before the cursor-hover refresh, so
-    // the QML tree deletion below finds inert item dtors instead of
-    // re-entering cancellation mid-teardown). The canvas is
-    // coordinator-owned, so it dies here — never abandoned with cleared
-    // pointers, never left for a later delete after its engine. The popup
-    // session and the invalidated context stay coordinator-owned and inert
-    // until the deferred detachScene() completes; the host window and
-    // engine are never destroyed here.
+    // Unexpected engine loss terminally unbinds borrowed scene objects.
+    // Remaining coordinator-owned inert objects finish teardown in detachScene().
     m_detaching = true;
     m_engine = nullptr;
     if (m_engineDestroyed)
@@ -550,12 +514,8 @@ void TimelineQuickView::handleEngineDestroyed(const QQmlEngine &engine)
 
 void TimelineQuickView::detachScene()
 {
-    // Idempotent teardown: a repeat call after teardown, a call before any
-    // attach, and a call after an external host destroyed the borrowed
-    // window are all inert no-ops — nothing host-owned is ever destroyed
-    // here. A windowAboutToDetach() listener may re-enter while the borrows
-    // are still live: the nested call returns without re-emitting or
-    // re-running teardown.
+    // Teardown is idempotent and never destroys host-owned objects.
+    // Re-entry during windowAboutToDetach is inert.
     if (m_detaching)
         return;
     if (!m_sceneContext && !m_popupSession)
@@ -576,18 +536,11 @@ void TimelineQuickView::detachScene()
         m_popupSession->cancel(false);
     cancelActiveGestures();
 
-    // Native attachments clear while the window is still valid, and the
-    // window owner drops this scene's selection — only this scene's; a
-    // sibling selected meanwhile keeps its own.
-    if (m_view) {
+    // Native attachments clear while the window is still valid.
+    if (m_view)
         emit windowAboutToDetach();
-        forgetWindowInputOwner(*m_view, *this);
-    }
 
-    // Surveillance drops before anything tears down: a dying window
-    // hides/destroys through setVisible(), which would otherwise re-enter
-    // eventFilter() against a partially destroyed scene, and a dying
-    // viewport must not call back into a detaching coordinator.
+    // Stop surveillance before destroying the scene subtree.
     if (m_view) {
         m_view->removeEventFilter(this);
         disconnect(m_view.data(), nullptr, this, nullptr);
@@ -599,10 +552,7 @@ void TimelineQuickView::detachScene()
 
     disconnectSceneMappingWatch();
 
-    // One hostless unbinding path detaches every interaction, key policy,
-    // and session binding while the models are alive and clears the raw QML
-    // borrows; the QML tree then dies while the context properties still
-    // point at live models.
+    // Unbind every interaction while its domain model remains alive.
     unbindSceneInputs();
     delete m_root.data();
     m_root.clear();
@@ -745,8 +695,8 @@ QRectF clippedSceneRect(const QQuickItem &item, const QRectF &localRect)
 // mapping (the canvas rect mapped through every ancestor), effective
 // visibility, effective ancestor clipping, and the clipped intersection —
 // native overlays and popups retarget from that signal without a window
-// resize. The watch is rebuilt whenever the scene attaches, reassociates,
-// or tears down.
+// resize. The watch is built when the scene attaches and torn down with
+// it.
 void TimelineQuickView::watchSceneMapping()
 {
     disconnectSceneMappingWatch();
@@ -858,7 +808,7 @@ bool TimelineQuickView::eventFilter(QObject *watched, QEvent *event)
         updateInputEligibility();
         break;
     case QEvent::Show:
-        // Reassociation or re-exposure: window visibility gates eligibility.
+        // Re-exposure: window visibility gates eligibility.
         updateInputEligibility();
         break;
     default:

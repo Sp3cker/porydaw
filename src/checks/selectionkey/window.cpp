@@ -109,14 +109,8 @@ void SelectionWindowTierTest::init()
     QVERIFY2(selectionkey::observeWindowActions(*m_session.window, m_counts),
              "the production shell is missing the window actions");
 
-    // Qt::WindowShortcut actions match only while the shell is QApplication's
-    // active window (the qWidgetShortcutContextMatcher prerequisite
-    // RoutingRuntimeRepair measured), and a gated background process can have
-    // macOS deny activation outright. Activate before any band focus —
-    // activating after focusing a Quick band clears the scene's
-    // activeFocusItem — then observe the prerequisite honestly so a denial is
-    // its own attributed failure instead of shortcut assertions masquerading
-    // as routing regressions.
+    // Window activation can clear the embedded Quick window's active focus.
+    // Re-enter the editor after the shell owns window shortcuts.
     m_session.window->activateWindow();
     QVERIFY2(
         checks::async_wait::waitUntil(
@@ -124,6 +118,10 @@ void SelectionWindowTierTest::init()
             [this] { return QApplication::activeWindow() == m_session.window.get(); }, 2000,
             10) == checks::async_wait::Result::Ready,
         "the production shell never became the active window, so window shortcuts cannot fire");
+    auto *const host = m_session.window->findChild<WorkspaceQuickHost *>();
+    QVERIFY2(host, "the workspace Quick host is unavailable");
+    host->focusEditor(Qt::OtherFocusReason);
+    selectionkey::settle();
 
     songview::TimelineQuickView *const quick = selectionkey::quickCanvas(view());
     QVERIFY2(quick, "the tab Quick surface is missing");

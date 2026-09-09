@@ -5,6 +5,7 @@
 
 #include "core/songdocument.h"
 #include "project/decompproject.h"
+class QQuickItem;
 
 class MidiTimeline;
 class SongView;
@@ -53,6 +54,7 @@ class SongViewRig final
     const MidiTimeline &timeline() const noexcept;
     SongView &view() noexcept;
     const SongView &view() const noexcept;
+    QQuickItem &viewport() noexcept;
     bool rebuildTimeline(QString &error);
 
   private:

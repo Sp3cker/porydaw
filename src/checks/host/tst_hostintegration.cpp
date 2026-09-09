@@ -1009,6 +1009,12 @@ class HostIntegrationTest final : public QObject
             return std::nullopt;
         window->resize(960, 680);
         window->show();
+        window->raise();
+        window->activateWindow();
+        if (checks::async_wait::waitUntil([] { return true; },
+                                          [&window] { return window->isActiveWindow(); }, 2000,
+                                          10) != checks::async_wait::Result::Ready)
+            return std::nullopt;
         window->m_workspace->requestSongOpen(*firstName);
         SongTab *first = window->m_workspace->songTabFor(*firstName);
         window->m_workspace->requestSongOpen(*secondName, true);
@@ -1027,6 +1033,11 @@ class HostIntegrationTest final : public QObject
             view.selectTrack(track);
             view.selectionModel().setNoteSelection({notes[0].noteId, notes[1].noteId});
         }
+        settle();
+        auto *const host = window->findChild<WorkspaceQuickHost *>();
+        if (!host)
+            return std::nullopt;
+        host->focusEditor(Qt::OtherFocusReason);
         settle();
         return Session{std::move(settings), std::move(fixture), std::move(window), first, active};
     }

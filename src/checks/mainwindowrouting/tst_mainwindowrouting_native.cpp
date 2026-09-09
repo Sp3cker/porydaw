@@ -120,6 +120,7 @@ class MainWindowRoutingNativeTest final : public QObject, private MainWindowRout
         sendShortcut(shortcutTarget, soloBindings.front());
         QVERIFY(!view.trackSoloed(selectedTrack));
         QCOMPARE(soloTriggered.count(), 2);
+        session->host->focusEditor(Qt::OtherFocusReason);
         view.focusActiveSurface();
         QCoreApplication::processEvents();
         QVERIFY(view.focusedTimelineBand().has_value());

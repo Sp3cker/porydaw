@@ -1,6 +1,8 @@
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickview.h"
 
+#include "ui/editordrawer/automationpage.h"
+
 #include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelineinput.h"
@@ -18,12 +20,15 @@ namespace songview {
 // as TimelineKeyInput values; semantic targeting lives in SongView's
 // shared policy, never here.
 
+bool TimelineQuickView::claimsPencilShortcut(int key, int modifiers) const
+{
+    return inputEligible() && m_automation &&
+           m_automation->acceptsPencilShortcut(key, static_cast<Qt::KeyboardModifiers>(modifiers));
+}
+
 bool TimelineQuickView::dispatchSongKey(const TimelineKeyInput &input)
 {
-    // An ineligible page never consumes shared policy keys: the disabled
-    // canvas subtree blocks focused delivery, so this gate blocks the policy
-    // routes (band policy, scene-root fallback, and the window owner's
-    // fallback) and the keys fall through to whoever else owns them.
+    // Ineligible pages decline shared policy keys.
     if (!m_songView || !inputEligible())
         return false;
     // The event page's input item routes with the EventList origin, so
@@ -135,8 +140,7 @@ void TimelineQuickView::forgetGestureScrollbar(TimelineGestureScrollbar *scrollb
 
 void TimelineQuickView::cancelActiveGestures()
 {
-    // Each attached interaction receives exactly one semantic pointer
-    // cancellation; PianoRoll deliberately leaves popup policy to its owner.
+    // Cancel each attached interaction once.
     for (TimelineInputItem *item : m_inputItems) {
         if (item && item->interaction())
             item->interaction()->cancelInteraction();

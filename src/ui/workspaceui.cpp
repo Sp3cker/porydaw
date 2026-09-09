@@ -16,6 +16,7 @@
 #include "ui/songlistpanel.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
+#include "ui/songview/quick/timelinequickview.h"
 #include "ui/transportbar.h"
 #include "ui/workspacequick/songtabsmodel.h"
 #include "ui/workspacequick/workspacequickhost.h"
@@ -63,15 +64,24 @@ WorkspaceUi::~WorkspaceUi()
     // The browser borrows the presentation copy; detach it before the
     // member dies.
     m_voicegroupBrowser->setSource(nullptr, {}, {}, {}, {});
-    // Frozen teardown: suppress selection/persistence publications, detach
-    // every page in the model's removal bracket while sessions are live,
-    // destroy the sessions, then release the host and its window/engine.
+    // Detach pages before rows, then release the host without publishing into
+    // MainWindow's already-stopped audio engine.
     m_tearingDown = true;
-    m_selectedTab = nullptr;
+    if (m_selectedTab) {
+        m_selectedTab->view().quickView()->setPageSelected(false);
+        m_selectedTab = nullptr;
+        m_tabModel->notifySelectionChanged();
+    }
+    for (const auto &page : m_tabPages)
+        page->view().quickView()->detachScene();
     std::vector<std::unique_ptr<SongTab>> pages = m_tabModel->takeAll();
     pages.clear();
     m_quickHost.reset();
     m_tabModel.reset();
+}
+WorkspaceQuickHost &WorkspaceUi::quickHost() const noexcept
+{
+    return *m_quickHost;
 }
 
 void WorkspaceUi::buildUi()
@@ -150,12 +160,7 @@ void WorkspaceUi::buildUi()
     wireBrowser();
 
     m_tabModel = std::make_unique<SongTabsModel>(m_tabPages, m_selectedTab);
-    m_quickHost = std::make_unique<WorkspaceQuickHost>(*m_tabModel, m_host);
-    connect(m_quickHost.get(), &WorkspaceQuickHost::selectRequested, this,
-            &WorkspaceUi::selectSongTab);
-    connect(m_quickHost.get(), &WorkspaceQuickHost::closeRequested, this,
-            &WorkspaceUi::requestCloseTab);
-    connect(m_quickHost.get(), &WorkspaceQuickHost::moveRequested, this, &WorkspaceUi::moveTab);
+    m_quickHost = std::make_unique<WorkspaceQuickHost>(*m_tabModel, *this, m_host);
     m_host.setCentralWidget(m_quickHost->container());
 }
 

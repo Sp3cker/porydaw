@@ -3,6 +3,8 @@ import Porydaw.Ui
 
 Item {
     id: root
+    anchors.fill: parent
+
 
     property rect rulerBandRect: Qt.rect(0, 0, 0, 0)
     property rect rollBandRect: Qt.rect(0, 0, 0, 0)
@@ -42,6 +44,11 @@ Item {
     Keys.onReleased: (event) => {
         event.accepted = timelineQuickView.forwardUnhandledKeyRelease(
             event.key, event.modifiers, event.text, event.isAutoRepeat)
+    }
+    // Claim the shared pencil shortcut only after local text/IME and popup
+    // handlers declined it. Claiming never executes the action.
+    Keys.onShortcutOverride: (event) => {
+        event.accepted = timelineQuickView.claimsPencilShortcut(event.key, event.modifiers)
     }
 
     Component {

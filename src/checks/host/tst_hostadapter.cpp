@@ -197,10 +197,8 @@ class HostAdapterTest final : public QObject
                  std::optional<QRect>{velocity->rect});
     }
 
-    // Canvas-only resize regression: the root Quick item is the canonical
-    // viewport, so translating it and shrinking it below the untouched
-    // window must reproject every band from the item alone, and real window
-    // pointer delivery must still reach the note through the moved canvas.
+    // Moving or resizing the page must reproject bands without resizing the
+    // shared window or breaking pointer delivery.
     void canvasOnlyResizeDrivesBandLayoutAndPointerTarget()
     {
         SyntheticHost host;
@@ -214,18 +212,23 @@ class HostAdapterTest final : public QObject
         QQuickWindow *const window = quick->quickWindow();
         QVERIFY(window);
         QVERIFY(checks::support::showQuickViewport(view, QSize(960, 640)));
+        QQuickItem &page = host.viewport();
+        QCOMPARE(page.position(), QPointF(0, 0));
         QCOMPARE(root->position(), QPointF(0, 0));
-        QCOMPARE(root->size(), QSizeF(window->size()));
+        QCOMPARE(page.size(), QSizeF(window->size()));
+        QCOMPARE(root->size(), page.size());
         const std::vector<DocNote> notes = host.document().notesForTrack(0);
         QCOMPARE(notes.size(), size_t{2});
 
         const QPointF canvasOffset(24, 16);
         const QSizeF canvasSize(window->width() - 160, window->height() - 120);
-        root->setPosition(canvasOffset);
-        root->setSize(canvasSize);
+        page.setPosition(canvasOffset);
+        page.setSize(canvasSize);
         settle();
         QCOMPARE(window->size(), QSize(960, 640));
-        QCOMPARE(root->position(), canvasOffset);
+        QCOMPARE(page.position(), canvasOffset);
+        QCOMPARE(root->position(), QPointF(0, 0));
+        QCOMPARE(page.size(), canvasSize);
         QCOMPARE(root->size(), canvasSize);
         const QRectF canvasRect(QPointF{}, canvasSize);
         auto canvasLocal = [&](const songview::TimelineBandLayout &bandLayout,
@@ -260,9 +263,10 @@ class HostAdapterTest final : public QObject
         const QRectF secondCanvasRect(QPointF{}, secondCanvasSize);
         const int otherEventsBottomBefore =
             view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents)->rect.bottom();
-        root->setSize(secondCanvasSize);
+        page.setSize(secondCanvasSize);
         settle();
         QCOMPARE(window->size(), QSize(960, 640));
+        QCOMPARE(page.size(), secondCanvasSize);
         QCOMPARE(root->size(), secondCanvasSize);
         const auto otherEvents =
             view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents);

@@ -243,110 +243,18 @@ void WorkspaceTabsTest::quickTabStripSelectsWithoutStealingFocus()
     focusItem = quickWindow->activeFocusItem();
     QVERIFY(!focusItem || !stripRoot->isAncestorOf(focusItem));
 
+    QQuickItem *stripBackground = nullptr;
+    QTRY_VERIFY((stripBackground = workspace_test::quickItem(
+                     *quickWindow, QStringLiteral("songTabStripBackground"))) != nullptr);
     auto *const application = static_cast<QApplication *>(QCoreApplication::instance());
     QVERIFY(application);
     const ScopedAppliedTheme baselineChrome(*application);
     themes::apply(*application, themes::darkNeutralHigh());
-    QTRY_COMPARE(stripRoot->property("color").value<QColor>(),
+    QTRY_COMPARE(stripBackground->property("color").value<QColor>(),
                  themes::color(themes::Role::tab_pane_background));
     themes::apply(*application, themes::vanilla());
-    QTRY_COMPARE(stripRoot->property("color").value<QColor>(),
+    QTRY_COMPARE(stripBackground->property("color").value<QColor>(),
                  themes::color(themes::Role::tab_pane_background));
-}
-
-void WorkspaceTabsTest::quickTabStripReorderPreservesPages()
-{
-    MainWindow window;
-    window.m_persistSession = false;
-    auto *workspace = window.m_workspace.get();
-    QVERIFY(workspace);
-    workspace->requestProjectOpenAt(m_project.root());
-    QVERIFY(workspace_test::waitForProject(*workspace));
-
-    SongTab *a = open(window, m_songA);
-    SongTab *b = open(window, m_songB, true);
-    SongTab *c = open(window, kStripSongC, true);
-    QVERIFY(a && b && c);
-    workspace->selectSongTab(a);
-    QCOMPARE(workspace->selectedSongTab(), a);
-
-    auto *host = workspace_test::quickHost(window);
-    QVERIFY(host);
-    QVERIFY2(workspace_test::exposeWorkspaceHost(window, *host, QSize(1280, 800)),
-             "the production workspace host did not expose its embedded Quick window");
-    QQuickWindow *const quickWindow = host->window();
-    QVERIFY(quickWindow);
-
-    const std::vector<SongTab *> initialOrder = workspace->tabsInDisplayOrder();
-    QCOMPARE(initialOrder.size(), size_t(3));
-    QCOMPARE(initialOrder[0], a);
-    QCOMPARE(initialOrder[1], b);
-    QCOMPARE(initialOrder[2], c);
-
-    uint64_t endTick = 0;
-    for (const SmfTrack &track : a->document().smf().tracks)
-        endTick = (std::max)(endTick, track.endTick);
-    a->document().addNote(0, endTick + 96, 72, 24, 93);
-    SongView::ViewState state = a->view().viewState();
-    state.valid = true;
-    state.pxPerBeat *= 2.0;
-    state.keyHeight += 6.0;
-    state.scrollPx += 48.0;
-    state.scrollY += 24.0;
-    state.eventList = true;
-    a->view().applyViewState(state);
-    const SongView::ViewState cameraBeforeMove = a->view().viewState();
-    QVERIFY(cameraBeforeMove.valid);
-    QVERIFY(a->view().eventListVisible());
-    QVERIFY(a->document().isDirty());
-    QVERIFY(!b->document().isDirty());
-    QVERIFY(!c->document().isDirty());
-
-    QQuickItem *tabA = nullptr;
-    QQuickItem *tabC = nullptr;
-    QTRY_VERIFY((tabA = workspace_test::quickItem(*quickWindow, QStringLiteral("songTab:") +
-                                                                    m_songA)) != nullptr);
-    QTRY_VERIFY((tabC = workspace_test::quickItem(*quickWindow, QStringLiteral("songTab:") +
-                                                                    kStripSongC)) != nullptr);
-    auto *const quickA = a->view().quickView();
-    QVERIFY(quickA);
-    int detachCount = 0;
-    QObject::connect(quickA, &songview::TimelineQuickView::windowAboutToDetach,
-                     [&detachCount] { ++detachCount; });
-
-    const double targetX = tabC->mapToScene(QPointF(tabC->width() * 0.75, tabC->height() / 2)).x();
-    workspace_test::dragQuickItemHorizontally(*quickWindow, *tabA, targetX);
-
-    QTRY_VERIFY([&] {
-        const std::vector<SongTab *> order = workspace->tabsInDisplayOrder();
-        return order.size() == size_t(3) && order[0] == b && order[1] == c && order[2] == a;
-    }());
-    QCOMPARE(detachCount, 0);
-    QCOMPARE(workspace->selectedSongTab(), a);
-    QCOMPARE(quickA->quickWindow(), quickWindow);
-    QQuickItem *const movedRoot = quickA->rootObject();
-    QVERIFY(movedRoot);
-    QTRY_VERIFY(movedRoot->isVisible());
-
-    const SongView::ViewState cameraAfterMove = a->view().viewState();
-    QCOMPARE(cameraAfterMove.pxPerBeat, cameraBeforeMove.pxPerBeat);
-    QCOMPARE(cameraAfterMove.keyHeight, cameraBeforeMove.keyHeight);
-    QCOMPARE(cameraAfterMove.scrollPx, cameraBeforeMove.scrollPx);
-    QCOMPARE(cameraAfterMove.scrollY, cameraBeforeMove.scrollY);
-    QVERIFY(cameraAfterMove.eventList);
-    QVERIFY(a->view().eventListVisible());
-    QVERIFY(!b->view().eventListVisible());
-    QVERIFY(!c->view().eventListVisible());
-    QVERIFY(a->document().isDirty());
-    QVERIFY(!b->document().isDirty());
-    QVERIFY(!c->document().isDirty());
-    QCOMPARE(a->document().undoStack()->count(), 1);
-    QCOMPARE(b->document().undoStack()->count(), 0);
-
-    QQuickItem *movedTabA = nullptr;
-    QTRY_VERIFY((movedTabA = workspace_test::quickItem(*quickWindow, QStringLiteral("songTab:") +
-                                                                         m_songA)) != nullptr);
-    QTRY_COMPARE(movedTabA->property("title").toString(), m_songA + QLatin1Char('*'));
 }
 
 void WorkspaceTabsTest::quickTabStripOverflowKeepsTabsReachable()
@@ -389,17 +297,29 @@ void WorkspaceTabsTest::quickTabStripOverflowKeepsTabsReachable()
     QCOMPARE(workspace->openTabCount(), qsizetype(5));
     workspace->selectSongTab(a);
     QCOMPARE(workspace->selectedSongTab(), a);
-
     QQuickItem *stripRoot = nullptr;
-    QQuickItem *tabListView = nullptr;
     QTRY_VERIFY((stripRoot = workspace_test::quickItem(*quickWindow,
                                                        QStringLiteral("songTabStrip"))) != nullptr);
-    QTRY_VERIFY((tabListView = workspace_test::quickItem(
-                     *quickWindow, QStringLiteral("songTabStripList"))) != nullptr);
-    QTRY_VERIFY(tabListView->property("contentWidth").toReal() > tabListView->width());
 
     const QStringList labels = {m_songA, m_songB, kStripSongC, kStripSongD, kStripSongE};
     const std::vector<SongTab *> tabs = {a, b, c, d, e};
+    // Establish real stock-TabBar overflow before testing reachability.
+    QTRY_VERIFY([&] {
+        qreal left = 0.0;
+        qreal right = 0.0;
+        for (qsizetype index = 0; index < labels.size(); ++index) {
+            QQuickItem *const tab = workspace_test::quickItem(
+                *quickWindow, QStringLiteral("songTab:") + labels.at(index));
+            if (!tab || tab->width() <= 0.0 || tab->height() <= 0.0)
+                return false;
+            if (index == 0)
+                left = tab->mapToItem(stripRoot, QPointF()).x();
+            if (index == labels.size() - 1)
+                right = tab->mapToItem(stripRoot, QPointF(tab->width(), 0.0)).x();
+        }
+        return right - left > stripRoot->width();
+    }());
+
     QVERIFY(!quickWindow->activeFocusItem() ||
             !stripRoot->isAncestorOf(quickWindow->activeFocusItem()));
     for (int step = 1; step < labels.size(); ++step) {
@@ -424,24 +344,19 @@ void WorkspaceTabsTest::quickTabStripOverflowKeepsTabsReachable()
         if (!QTest::qWaitFor(
                 [&] { return workspace_test::itemInsideViewport(*tabButton, *stripRoot); }, 5000)) {
             const QPointF mapped = tabButton->mapToItem(stripRoot, QPointF());
-            QWARN(qPrintable(
-                QStringLiteral("step %1 tab %2 not reachable: mapped(%3,%4) item %5x%6 "
-                               "strip %7x%8 list x=%9 w=%10 contentX=%11 contentWidth=%12 "
-                               "delegateVisible=%13 stripVisible=%14")
-                    .arg(step)
-                    .arg(labels.at(step))
-                    .arg(mapped.x())
-                    .arg(mapped.y())
-                    .arg(tabButton->width())
-                    .arg(tabButton->height())
-                    .arg(stripRoot->width())
-                    .arg(stripRoot->height())
-                    .arg(tabListView->property("x").toReal())
-                    .arg(tabListView->width())
-                    .arg(tabListView->property("contentX").toReal())
-                    .arg(tabListView->property("contentWidth").toReal())
-                    .arg(tabButton->isVisible())
-                    .arg(stripRoot->isVisible())));
+            QWARN(
+                qPrintable(QStringLiteral("step %1 tab %2 not reachable: mapped(%3,%4) item %5x%6 "
+                                          "strip %7x%8 tabVisible=%9 stripVisible=%10")
+                               .arg(step)
+                               .arg(labels.at(step))
+                               .arg(mapped.x())
+                               .arg(mapped.y())
+                               .arg(tabButton->width())
+                               .arg(tabButton->height())
+                               .arg(stripRoot->width())
+                               .arg(stripRoot->height())
+                               .arg(tabButton->isVisible())
+                               .arg(stripRoot->isVisible())));
             QFAIL("the selected tab did not become reachable inside the strip viewport");
         }
     }
@@ -455,7 +370,7 @@ void WorkspaceTabsTest::quickTabStripOverflowKeepsTabsReachable()
             [&] { return workspace_test::itemInsideViewport(*previousTab, *stripRoot); }, 5000)) {
         const QPointF mapped = previousTab->mapToItem(stripRoot, QPointF());
         QWARN(qPrintable(QStringLiteral("previous tab %1 not reachable: mapped(%2,%3) item %4x%5 "
-                                        "strip %6x%7 list x=%8 w=%9 contentX=%10 contentWidth=%11")
+                                        "strip %6x%7 tabVisible=%8 stripVisible=%9")
                              .arg(kStripSongD)
                              .arg(mapped.x())
                              .arg(mapped.y())
@@ -463,10 +378,8 @@ void WorkspaceTabsTest::quickTabStripOverflowKeepsTabsReachable()
                              .arg(previousTab->height())
                              .arg(stripRoot->width())
                              .arg(stripRoot->height())
-                             .arg(tabListView->property("x").toReal())
-                             .arg(tabListView->width())
-                             .arg(tabListView->property("contentX").toReal())
-                             .arg(tabListView->property("contentWidth").toReal())));
+                             .arg(previousTab->isVisible())
+                             .arg(stripRoot->isVisible())));
         QFAIL("the previous tab did not stay reachable inside the strip viewport");
     }
 }

@@ -104,6 +104,7 @@ class SyntheticHost final
 
     SongDocument &document() noexcept { return m_document; }
     SongView &view() noexcept { return m_rig->view(); }
+    QQuickItem &viewport() noexcept { return m_rig->host().viewport(); }
     const MidiTimeline &timeline() const noexcept { return m_rig->timeline(); }
     LoadedVoiceGroup &bank() noexcept { return m_bank; }
 

@@ -6,7 +6,6 @@
 #include <QAction>
 #include <QCoreApplication>
 #include <QEvent>
-#include <QKeyEvent>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QWindow>
@@ -162,47 +161,44 @@ AutomationPage::~AutomationPage()
 
 bool AutomationPage::eventFilter(QObject *watched, QEvent *event)
 {
-    const QEvent::Type type = event->type();
-    if (type == QEvent::WindowDeactivate) {
+    if (event->type() == QEvent::WindowDeactivate) {
         const auto *window = qobject_cast<const QWindow *>(watched);
         if (window && deliveredThroughWindow(*window)) {
             // Synthetic and native deactivation both terminate a pending draft.
             // Do not request focus here: the foreground window now owns it.
             if (m_canvas && m_canvas->valuePromptVisible())
                 m_canvas->cancelInteraction();
-            return QObject::eventFilter(watched, event);
         }
     }
-    if (type != QEvent::ShortcutOverride && type != QEvent::KeyPress)
-        return QObject::eventFilter(watched, event);
-    const auto *quickWindow = qobject_cast<const QQuickWindow *>(watched);
+    return QObject::eventFilter(watched, event);
+}
+
+bool AutomationPage::acceptsPencilShortcut(int key, Qt::KeyboardModifiers modifiers) const
+{
+    const QQuickItem *const page = m_inputPage.data();
+    const QQuickWindow *const quickWindow = page ? page->window() : nullptr;
     if (!quickWindow || !ownsKeyboardTarget(*quickWindow) ||
         !m_owner.drawerSectionVisible(EditorDrawerPage::Automations) || !m_pencilModeAction ||
         !m_pencilModeAction->isEnabled()) {
-        return QObject::eventFilter(watched, event);
+        return false;
     }
-    const auto *keyEvent = static_cast<QKeyEvent *>(event);
-    if (!matchesPencilShortcut(keyEvent->key(), keyEvent->modifiers()))
-        return QObject::eventFilter(watched, event);
+    if (!matchesPencilShortcut(key, modifiers))
+        return false;
     // The inline value prompt owns text input while it is open; the pencil
     // shortcut must stay claimable by its editor and resume after it closes.
     if (m_canvas && m_canvas->valuePromptVisible())
-        return QObject::eventFilter(watched, event);
+        return false;
     // Any input-method surface in the page subtree (the value prompt's
     // editor, a rename field, future text items) owns its keys; identify it
     // through the focused item so the bare-letter shortcut never steals from
     // an editing item. Text and IME keep first refusal.
     const QQuickItem *const quickFocus = quickWindow->activeFocusItem();
-    if (quickFocus && quickFocus->flags().testFlag(QQuickItem::ItemAcceptsInputMethod))
-        return QObject::eventFilter(watched, event);
-    if (type == QEvent::ShortcutOverride) {
-        event->accept();
-        return true;
-    }
-    if (keyEvent->isAutoRepeat())
-        return true;
+    return !quickFocus || !quickFocus->flags().testFlag(QQuickItem::ItemAcceptsInputMethod);
+}
+
+void AutomationPage::triggerPencilMode()
+{
     m_pencilModeAction->trigger();
-    return true;
 }
 
 bool AutomationPage::matchesPencilShortcut(int key, Qt::KeyboardModifiers modifiers) const noexcept

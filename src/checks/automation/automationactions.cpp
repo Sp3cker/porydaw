@@ -5,9 +5,9 @@
 #include <QGuiApplication>
 
 #include <QKeySequence>
-#include <QLineEdit>
 #include <QtTest>
 
+#include "checks/automation/automationvalueprompt.h"
 #include "core/miditimeline.h"
 
 #include "ui/editordrawer/automationcanvas.h"
@@ -69,19 +69,24 @@ void AutomationEditingTest::actionTextInputImmunity()
     const QKeyCombination shortcut = singleShortcut(*action);
     QVERIFY(shortcut.key() != Qt::Key_unknown);
 
+    const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
+    QVERIFY(pan.valid());
+    DrawerChrome &chrome = tab().view().editorDrawer()->chrome();
     action->setChecked(false);
-    // SongTab is a QObject session, never a QWidget: the text surface stands
-    // alone as a top-level widget, keeping real focus and key delivery while
-    // the pencil guard declines.
-    QLineEdit editor;
-    editor.show();
-    editor.setFocus(Qt::OtherFocusReason);
-    QTRY_VERIFY(editor.hasFocus());
+    QVERIFY(page().canvas()->openValuePromptForInsertion(pan, 144, 64));
+    QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
+    QQuickItem *prompt = nullptr;
+    QTRY_VERIFY((prompt = automation_valueprompt::focusedTextInput(quickWindow())) != nullptr);
 
-    QTest::keyClick(&editor, shortcut.key(), shortcut.keyboardModifiers());
-
-    QCOMPARE(editor.text(), QStringLiteral("b"));
+    // Exercise the real Quick-window semantic route. A focused text editor
+    // owns the key, so the pencil action must not toggle.
+    QTest::keyClick(&quickWindow(), shortcut.key(), shortcut.keyboardModifiers());
+    QVERIFY(automation_valueprompt::promptVisible(chrome));
+    QCOMPARE(quickWindow().activeFocusItem(), prompt);
     QVERIFY(!action->isChecked());
+
+    QTest::keyClick(&quickWindow(), Qt::Key_Escape);
+    QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome));
 }
 
 void AutomationEditingTest::actionRepeatImmunity()

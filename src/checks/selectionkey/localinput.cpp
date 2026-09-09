@@ -102,6 +102,17 @@ void SelectionLocalInputTierTest::init()
     m_tab = tab;
     QVERIFY2(selectionkey::observeWindowActions(*m_session.window, m_counts),
              "the production shell is missing the window actions");
+    m_session.window->activateWindow();
+    QVERIFY2(checks::async_wait::waitUntil(
+                 [] { return true; },
+                 [this] { return QApplication::activeWindow() == m_session.window.get(); }, 2000,
+                 10) == checks::async_wait::Result::Ready,
+             "the production shell never became active");
+    auto *const host = m_session.window->findChild<WorkspaceQuickHost *>();
+    QVERIFY2(host, "the workspace Quick host is unavailable");
+    view().focusActiveSurface();
+    host->focusEditor(Qt::OtherFocusReason);
+    selectionkey::settle();
 
     songview::TimelineQuickView *const quick = selectionkey::quickCanvas(view());
     QVERIFY2(quick, "the tab Quick surface is missing");
