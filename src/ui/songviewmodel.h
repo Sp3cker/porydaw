@@ -4,10 +4,10 @@
 #include <cstdint>
 #include <vector>
 
+#include "core/m4asemantics.h"
 #include "core/miditimeline.h"
 #include "core/noteid.h"
 #include "core/timedefaults.h"
-#include "ui/m4asemantics.h"
 
 // Presentation model derived from a MidiTimeline: notes paired from on/off
 // events, automation lane curves per (track, parameter), voice changes, and a

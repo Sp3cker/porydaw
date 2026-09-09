@@ -19,7 +19,7 @@
 #include "ui/dragspinbox.h"
 #include "ui/layout.h"
 
-#include "ui/m4asemantics.h"
+#include "core/m4asemantics.h"
 
 #include "ui/theme/themeruntime.h"
 

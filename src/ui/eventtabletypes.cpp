@@ -4,8 +4,8 @@
 #include <QRegularExpression>
 #include <algorithm>
 
+#include "core/m4asemantics.h"
 #include "core/smf.h"
-#include "ui/m4asemantics.h"
 #include "ui/songview.h"
 
 namespace eventlist {

@@ -7,12 +7,12 @@
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
 
+#include "core/m4asemantics.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/nodelane/batchcommit.h"
 #include "ui/editorviewstate.h"
 #include "ui/layout.h"
-#include "ui/m4asemantics.h"
 #include "ui/songviewmodel.h"
 
 namespace {

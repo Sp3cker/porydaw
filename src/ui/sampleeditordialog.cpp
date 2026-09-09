@@ -28,8 +28,8 @@
 
 #include "audio/audioengine.h"
 #include "audio/samplewav.h"
+#include "core/m4asemantics.h"
 #include "enginesettingsdialog.h"
-#include "m4asemantics.h"
 #include "project/samplereg.h"
 #include "waveformview.h"
 

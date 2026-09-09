@@ -18,8 +18,8 @@
 #include <QTableWidget>
 #include <QVBoxLayout>
 
+#include "core/m4asemantics.h"
 #include "core/miditimeline.h"
-#include "ui/m4asemantics.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
 

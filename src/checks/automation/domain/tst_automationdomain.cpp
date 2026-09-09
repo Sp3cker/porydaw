@@ -8,12 +8,12 @@
 #include <QCoreApplication>
 #include <QtTest>
 
+#include "core/m4asemantics.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/cclanes.h"
 #include "ui/editordrawer/laneselection.h"
 #include "ui/editordrawer/nodelane/batchcommit.h"
 #include "ui/editordrawer/tempolane.h"
-#include "ui/m4asemantics.h"
 #include "ui/songview/editorselectionmodel.h"
 
 namespace {

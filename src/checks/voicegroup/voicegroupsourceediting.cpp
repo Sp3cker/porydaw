@@ -9,8 +9,8 @@
 #include <QtTest>
 
 #include "checks/voicegroup/voicegrouptestfixture.h"
+#include "core/m4asemantics.h"
 #include "project/songregistry.h"
-#include "ui/m4asemantics.h"
 
 namespace {
 

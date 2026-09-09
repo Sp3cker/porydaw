@@ -1,7 +1,7 @@
 #include "pitchbendeditor.hpp"
 
+#include "core/m4asemantics.h"
 #include "layout.h"
-#include "m4asemantics.h"
 
 #include "songview.h"
 #include "theme/themeruntime.h"

@@ -8,7 +8,7 @@
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
-#include "m4asemantics.h"
+#include "core/m4asemantics.h"
 
 Sf2ZonePicker::Sf2ZonePicker(const Sf2File &file, QWidget *parent) : QDialog(parent), m_file(file)
 {

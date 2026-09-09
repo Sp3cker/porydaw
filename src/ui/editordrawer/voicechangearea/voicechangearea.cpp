@@ -10,9 +10,9 @@
 #include <QGuiApplication>
 #include <QRect>
 
+#include "core/m4asemantics.h"
 #include "core/miditimeline.h"
 #include "ui/layout.h"
-#include "ui/m4asemantics.h"
 #include "ui/songview.h"
 #include "ui/songview/editorselectionmodel.h"
 #include "ui/songview/quick/quickmenumodel.h"

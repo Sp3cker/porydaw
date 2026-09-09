@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <map>
 
-#include "ui/m4asemantics.h"
+#include "core/m4asemantics.h"
 
 namespace {
 

@@ -222,8 +222,8 @@ qt_add_library(porydaw_app STATIC
     src/project/voicegroupsource.h
     src/ui/dragspinbox.cpp
     src/ui/dragspinbox.h
-    src/ui/m4asemantics.cpp
-    src/ui/m4asemantics.h
+    src/core/m4asemantics.cpp
+    src/core/m4asemantics.h
     src/ui/applicationstartup.cpp
     src/ui/applicationstartup.h
     src/ui/newsongwizard.cpp
