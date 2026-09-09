@@ -67,6 +67,18 @@ bool metaIsTimeSig(const SmfEvent &ev)
 {
     return ev.isMeta() && ev.metaType == 0x58 && ev.blob.size() >= 2;
 }
+// The pinning relation, exactly the pair rules InsertEvent's canonical
+// placement enforces and raw-event reorder bounds preserve: a setup event
+// (CC, program, channel aftertouch, bend) stays ahead of a same-tick note,
+// a note-end ahead of a same-tick note-on. Metas and sysex are pinned
+// against nothing — their position within the tick group is freely the
+// user's.
+bool pinnedBefore(const SmfEvent &a, const SmfEvent &b)
+{
+    if (a.isChannel() && a.typeNibble() >= 0xB && b.isChannel() && b.typeNibble() <= 0x9)
+        return true;
+    return a.isChannel() && a.isNoteEnd() && b.isNoteOn();
+}
 
 // Move the chunk at `from` to index `to`, the chunks between shifting by one
 // toward the vacated slot. applyOps and revertOps share it with the endpoints
@@ -1426,16 +1438,6 @@ bool SongDocument::rawEventMoveBounds(int smfTrack, size_t index, size_t *first,
     if (index >= evs.size())
         return false;
     const SmfEvent &moved = evs[index];
-    // The pinning relation, exactly the pair rules InsertEvent's canonical
-    // placement enforces: a setup event (CC, program, channel aftertouch,
-    // bend) stays ahead of a same-tick note, a note-end ahead of a same-tick
-    // note-on. Metas and sysex are pinned against nothing — their position
-    // within the tick group is freely the user's.
-    const auto pinnedBefore = [](const SmfEvent &a, const SmfEvent &b) {
-        if (a.isChannel() && a.typeNibble() >= 0xB && b.isChannel() && b.typeNibble() <= 0x9)
-            return true;
-        return a.isChannel() && a.isNoteEnd() && b.isNoteOn();
-    };
     size_t lo = index;
     while (lo > 0 && evs[lo - 1].tick == moved.tick && !pinnedBefore(evs[lo - 1], moved))
         lo--;
@@ -1934,23 +1936,15 @@ size_t SongDocument::insertEventIntoTrack(SmfTrack &track, const SmfEvent &event
     auto it = std::upper_bound(
         events.begin(), events.end(), event.tick,
         [](uint64_t tick, const SmfEvent &candidate) { return tick < candidate.tick; });
-    if (event.isChannel() && event.typeNibble() >= 0xB) {
-        // Setup events stay ahead of same-tick note events.
-        while (it != events.begin()) {
-            const SmfEvent &previous = *std::prev(it);
-            if (previous.tick != event.tick || !previous.isChannel() || previous.typeNibble() > 0x9)
-                break;
-            --it;
-        }
-    }
-    if (event.isChannel() && event.isNoteEnd()) {
-        // Note ends stay ahead of same-tick note-ons.
-        while (it != events.begin()) {
-            const SmfEvent &previous = *std::prev(it);
-            if (previous.tick != event.tick || !previous.isNoteOn())
-                break;
-            --it;
-        }
+    // Canonical placement within the tick group: walk back over same-tick
+    // events the new one is pinned ahead of — a setup event over notes, a
+    // note-end over note-ons. Metas, sysex and unconstrained channel types
+    // are barriers the insertion never crosses.
+    while (it != events.begin()) {
+        const SmfEvent &previous = *std::prev(it);
+        if (previous.tick != event.tick || !pinnedBefore(event, previous))
+            break;
+        --it;
     }
     const size_t index = size_t(it - events.begin());
     events.insert(it, event);
