@@ -4,7 +4,7 @@
 
 The bounded deletion pass completed on 2026-09-09. The application now uses the shared Quick composition described below; the original P1–P8 packets and check-generation guidance remain historical.
 
-Against pre-pass commit `06054ac8`, production changed by +504/−1040 lines (net −536) and checks by +278/−680 (net −402). Against `fork-main`, the branch still carries +2637/−1163 production lines (net +1474) and +2907/−1335 check lines (net +1572). The pass removed more code than it added, but the full branch is still not a “very few new lines” result.
+Against pre-pass commit `06054ac8`, production changed by +504/−1040 lines (net −536) and checks by +277/−682 (net −405). Against `fork-main`, the branch still carries +2637/−1163 production lines (net +1474) and +2904/−1335 check lines (net +1569). The pass removed more code than it added, but the full branch is still not a “very few new lines” result.
 
 The required bounded matrix passed all 24 selected harnesses. Native application smoke verified visible shared pages and tab selection without blank or overlapping canvases.
 
