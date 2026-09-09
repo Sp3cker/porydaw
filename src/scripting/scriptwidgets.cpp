@@ -600,12 +600,27 @@ void CanvasWidget::mouseDoubleClickEvent(QMouseEvent *event)
 
 void CanvasWidget::wheelEvent(QWheelEvent *event)
 {
-    // Steps of ±1 per notch, like a browser's deltaY sign convention
-    // (positive = wheel down / away).
-    const QPoint deg = event->angleDelta();
-    sendMouse(QStringLiteral("wheel"), event->position(), Qt::NoButton, event->buttons(),
-              QPointF(-deg.x() / 120.0, -deg.y() / 120.0));
     event->accept();
+    // Steps of ±1 per notch, like a browser's deltaY sign convention
+    // (positive = wheel down / away). Trackpads and free-spin wheels
+    // deliver a stream of deltas well under one notch each, so accumulate
+    // to a notch before reporting one — the arithmetic the roll and the
+    // companion already use. Without it a macOS trackpad hands scripts an
+    // endless dribble of hundredths and every Math.round(ev.deltaY) is 0.
+    if (event->phase() == Qt::ScrollBegin)
+        m_wheelAccum = QPointF(); // a new gesture starts from nothing
+    if (event->phase() == Qt::ScrollMomentum)
+        return;
+    const QPoint pixel = event->pixelDelta();
+    m_wheelAccum += pixel.isNull() ? QPointF(event->angleDelta()) : QPointF(pixel) * 5.0;
+    constexpr double kNotch = 120.0;
+    const QPointF steps(std::trunc(m_wheelAccum.x() / kNotch),
+                        std::trunc(m_wheelAccum.y() / kNotch));
+    if (steps.isNull())
+        return;
+    m_wheelAccum -= steps * kNotch;
+    sendMouse(QStringLiteral("wheel"), event->position(), Qt::NoButton, event->buttons(),
+              QPointF(-steps.x(), -steps.y()));
 }
 
 void CanvasWidget::leaveEvent(QEvent *)

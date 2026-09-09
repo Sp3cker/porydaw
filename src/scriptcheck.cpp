@@ -1029,7 +1029,8 @@ void runDockChecks(const Check &check, scripting::ScriptHost &host, MainWindow &
                                 "+ 1); g.clear('#000000'); g.fillRect(0, 0, 10, 10, 'red'); "
                                 "g.text(2, 30, 'hi', 'white', {}); G = g; }, mouse: function (ev) "
                                 "{ porydaw.storage.set('mouse', ev.type + ':' + ev.x + ':' + "
-                                "ev.button); }}); meter.id"))
+                                "ev.button + (ev.type === 'wheel' ? ':' + ev.deltaY : '')); }}); "
+                                "meter.id"))
                .isNull(),
           "ui.dock with a paint callback threw");
     QPointer<QDockWidget> dock =
@@ -1066,8 +1067,30 @@ void runDockChecks(const Check &check, scripting::ScriptHost &host, MainWindow &
         check(QSettings()
                   .value(QStringLiteral("plugins/console/data/mouse"))
                   .toByteArray()
-                  .contains("wheel:3"),
+                  .contains("wheel:3:none:1"),
               "wheel events did not reach the script");
+    }
+    {
+        // A trackpad (and a free-spin wheel) delivers a stream of deltas
+        // far under one notch each. They must add up to whole steps
+        // rather than reaching scripts as unusable hundredths.
+        QSettings().remove(QStringLiteral("plugins/console/data/mouse"));
+        const auto sendPixels = [canvas](int dy) {
+            QWheelEvent ev(QPointF(3, 4), QPointF(canvas->mapToGlobal(QPoint(3, 4))), QPoint(0, dy),
+                           QPoint(0, dy * 2), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase,
+                           false);
+            QCoreApplication::sendEvent(canvas, &ev);
+        };
+        for (int i = 0; i < 11; ++i) // 11 * (2 px * 5) = 110: still short of a notch
+            sendPixels(-2);
+        check(QSettings().value(QStringLiteral("plugins/console/data/mouse")).isNull(),
+              "a sub-notch trackpad delta reached the script as a fraction of a step");
+        sendPixels(-2);
+        check(QSettings()
+                  .value(QStringLiteral("plugins/console/data/mouse"))
+                  .toByteArray()
+                  .contains("wheel:3:none:1"),
+              "accumulated trackpad deltas did not add up to one wheel step");
     }
     check(host.evalConsole(QStringLiteral("meter.visible")) == QStringLiteral("true"),
           "dock.visible did not read true");
@@ -1870,6 +1893,20 @@ void runReachChecks(const Check &check, scripting::ScriptHost &host, MainWindow 
     check(run(QStringLiteral("porydaw.io.readText('%1/missing.txt')").arg(ioDir)).isNull() &&
               errorLogged("could not open"),
           "reading a missing file did not throw");
+    // A path that reaches the project through a symlink names the same
+    // files: macOS resolves what its dialogs return (/private/tmp for
+    // /tmp), so comparing the spellings alone would say "outside".
+    {
+        const QString link = QDir::tempPath() + QStringLiteral("/porydaw-scriptcheck-root");
+        QFile::remove(link);
+        if (QFile::link(projectRoot, link) && QFileInfo(link).isSymLink()) {
+            check(run(QStringLiteral("porydaw.io.writeText('%1/.porydaw/reach/vialink.txt', 'x'); "
+                                     "porydaw.io.readText('%2/.porydaw/reach/vialink.txt')")
+                          .arg(link, projectRoot)) == QStringLiteral("x"),
+                  "a symlinked path into the project was refused");
+            QFile::remove(link);
+        }
+    }
 
     // --- per-song storage ---
     const QString sidecar = ViewSidecar::pathFor(projectRoot, songLabel);
@@ -2898,8 +2935,22 @@ bool MainWindow::runScriptHostCheck(const QString &pluginsDir, const QString &pr
     // from the source tree when the binary runs out of its build dir.
     bool haveExamples = false;
     {
-        const QDir examples(QCoreApplication::applicationDirPath() +
-                            QStringLiteral("/../plugins/examples"));
+        // Walk up from the binary rather than assuming one fixed depth:
+        // on macOS the executable sits three levels down inside
+        // porydaw.app/Contents/MacOS, and "../plugins/examples" there
+        // silently found nothing, skipping every example check below.
+        QString found;
+        QDir up(QCoreApplication::applicationDirPath());
+        for (int level = 0; found.isEmpty() && level < 6; ++level) {
+            const QString candidate = up.filePath(QStringLiteral("plugins/examples"));
+            if (QFileInfo(candidate).isDir())
+                found = candidate;
+            else if (!up.cdUp())
+                break;
+        }
+        check(!found.isEmpty(), "could not find plugins/examples above the binary; every "
+                                "example plugin check would have been skipped");
+        const QDir examples(found);
         for (const QString &name :
              examples.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name)) {
             const QDir src(examples.filePath(name));

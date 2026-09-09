@@ -1066,6 +1066,9 @@ MenuHandle *ScriptHost::pluginMenu(Plugin &plugin)
     // object tree (findChild, styling); the handle still owns its life.
     auto *menu = new QMenu(name, parent);
     menu->setObjectName(QStringLiteral("plugin.") + plugin.manifest.id + QStringLiteral(".menu"));
+    // Not the application menu on macOS, whatever the plugin is called
+    // (see MenuItemHandle's constructor).
+    menu->menuAction()->setMenuRole(QAction::NoRole);
     // The window shows Plugins while some plugin has a submenu in it;
     // deleting the submenu (teardown) removes its entry by itself.
     parent->addMenu(menu);

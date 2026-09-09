@@ -34,6 +34,11 @@ MenuItemHandle::MenuItemHandle(ScriptHost &host, Plugin &plugin, const QVariantM
     , m_run(run)
     , m_shouldShow(shouldShow.isCallable() ? shouldShow : QJSValue())
 {
+    // macOS's native menu bar relocates items whose text looks like
+    // "Settings", "About …" or "Quit" into the application menu (Qt's
+    // TextHeuristicRole default). A plugin's items belong where the
+    // plugin put them, on every platform.
+    m_action->setMenuRole(QAction::NoRole);
     m_action->setCheckable(spec.value(QStringLiteral("checkable")).toBool());
     if (m_action->isCheckable())
         m_action->setChecked(spec.value(QStringLiteral("checked")).toBool());
@@ -326,6 +331,7 @@ QObject *MenuHandle::addMenu(const QString &label)
         return nullptr;
     }
     QMenu *sub = m_menu->addMenu(label);
+    sub->menuAction()->setMenuRole(QAction::NoRole); // see MenuItemHandle's ctor
     auto *handle = new MenuHandle(m_host, m_plugin, sub, this);
     QJSEngine::setObjectOwnership(handle, QJSEngine::CppOwnership);
     return handle;

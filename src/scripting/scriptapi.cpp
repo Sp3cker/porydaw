@@ -142,6 +142,56 @@ struct WatchdogPause {
     ScriptHost &host;
 };
 
+// Windows and (by default) macOS match filenames without regard to case,
+// so two spellings of one folder must not read as two folders.
+#if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
+constexpr Qt::CaseSensitivity kPathCase = Qt::CaseInsensitive;
+#else
+constexpr Qt::CaseSensitivity kPathCase = Qt::CaseSensitive;
+#endif
+
+bool underRoot(const QString &root, const QString &path)
+{
+    if (root.isEmpty())
+        return false;
+    if (path.compare(root, kPathCase) == 0)
+        return true;
+    const QString prefix =
+        root.endsWith(QLatin1Char('/')) ? root : root + QLatin1Char('/'); // never "//" at the root
+    return path.startsWith(prefix, kPathCase);
+}
+
+// The same path spelled the way the filesystem itself spells it: symlinks
+// resolved and, on Apple's volumes, composed Unicode (APFS and HFS+ store
+// filenames decomposed, so a script's "Café" is not literally the "Café"
+// entryList() hands back). Only the part that exists can be resolved — a
+// file about to be written does not yet — so the deepest existing
+// ancestor is resolved and the rest re-appended.
+QString canonicalPath(const QString &path)
+{
+    QFileInfo info(QDir::cleanPath(path));
+    QStringList rest;
+    for (;;) {
+        const QString real = info.canonicalFilePath();
+        if (!real.isEmpty()) {
+            QString out = real;
+            for (auto it = rest.crbegin(); it != rest.crend(); ++it)
+                out = QDir(out).filePath(*it);
+#ifdef Q_OS_MACOS
+            return out.normalized(QString::NormalizationForm_C);
+#else
+            return out;
+#endif
+        }
+        // A root that does not resolve (a missing drive, an unmounted
+        // volume): nothing above it left to try.
+        if (info.fileName().isEmpty() || info.dir().path() == info.filePath())
+            return QDir::cleanPath(path);
+        rest.append(info.fileName());
+        info = QFileInfo(info.dir().path());
+    }
+}
+
 // porydaw.io's sandbox: the absolute path when `input` (relative paths
 // against the plugin folder) is inside the plugin folder, the open
 // project, or a path the user picked through a dialog; empty with *error
@@ -163,11 +213,22 @@ QString sandboxPath(const Plugin &plugin, const ScriptHost &host, const QString 
     const QString abs = QFileInfo(input).isAbsolute()
                             ? QDir::cleanPath(input)
                             : QDir::cleanPath(plugin.dir + QLatin1Char('/') + input);
-    const auto under = [&abs](const QString &root) {
+    // Two chances, so this only ever widens what already worked: the
+    // paths as written, and both sides resolved to what the filesystem
+    // calls them. The second catches the folder reached through a
+    // symlink (a plugin folder linked in from a checkout; macOS handing
+    // back /private/tmp for /tmp), a differently-cased spelling, and
+    // Apple's decomposed filenames.
+    QString key; // resolved on demand: a path already spelled the way it
+                 // is stored never touches the filesystem for this
+    const auto under = [&abs, &key](const QString &root) {
         if (root.isEmpty())
             return false;
-        const QString r = QDir::cleanPath(root);
-        return abs == r || abs.startsWith(r + QLatin1Char('/'));
+        if (underRoot(QDir::cleanPath(root), abs))
+            return true;
+        if (key.isNull())
+            key = canonicalPath(abs);
+        return underRoot(canonicalPath(root), key);
     };
     if (under(plugin.dir))
         return abs;

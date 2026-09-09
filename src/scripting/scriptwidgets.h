@@ -147,6 +147,7 @@ class CanvasWidget : public QWidget
     QJSValue m_gValue; // the JS wrapper of m_g, made once
     Painter *m_g;
     bool m_painting = false;
+    QPointF m_wheelAccum; // sub-notch wheel/trackpad deltas, in angle units
     int m_paintCount = 0;
     int m_errorCount = 0;
     QDeadlineTimer m_errorHold; // paints skipped until this expires
