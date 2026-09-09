@@ -38,24 +38,54 @@ bool textIsLoopMarker(const char *buf, uint32_t len, char marker)
     return (e - s == 1) && buf[s] == marker;
 }
 
-// Convert an absolute tick to an absolute sample index via the tempo map.
-// Default tempo: 500000 us/beat (120 BPM).
-uint64_t tickToSample(uint64_t tick, const std::vector<TempoPoint> &tempoPoints, uint32_t tpqn,
-                      double sampleRate)
+// The canonical tick <-> sample conversion table: built once, before any
+// sample position, and shared by every consumer (events, loop endpoints,
+// other-event positions, sampleForTick/tickForSample) so a position is
+// rounded exactly once. Segment origins accumulate unrounded in double; a
+// segment's length is
+//   double(deltaTicks) * double(uspqn) / double(tpqn) / 1000000.0 * sampleRate
+// with the exact FF 51 microseconds-per-quarter-note. Same-tick entries keep
+// file order; conversion is last-wins.
+std::vector<TempoMapPoint> buildTempoMap(const std::vector<TempoPoint> &tempoPoints, uint32_t tpqn,
+                                         double sampleRate)
 {
-    double samples = 0.0;
-    uint64_t prevTick = 0;
-    double prevTempo = 500000.0;
-
-    for (const TempoPoint &tc : tempoPoints) {
-        if (tc.tick >= tick)
-            break;
-        samples += double(tc.tick - prevTick) * prevTempo / double(tpqn) / 1000000.0 * sampleRate;
-        prevTick = tc.tick;
-        prevTempo = double(tc.microsecondsPerQuarterNote);
+    std::vector<TempoMapPoint> map;
+    map.reserve(tempoPoints.size() + 1);
+    if (tempoPoints.empty() || tempoPoints.front().tick != 0) {
+        // SMF default tempo at tick 0.
+        map.push_back({0, 0.0, 120.0, 500000});
     }
-    samples += double(tick - prevTick) * prevTempo / double(tpqn) / 1000000.0 * sampleRate;
-    return static_cast<uint64_t>(samples + 0.5);
+    double origin = 0.0;
+    for (const TempoPoint &tc : tempoPoints) {
+        if (!map.empty()) {
+            // Length of the segment the previous point closes: its own tempo.
+            const TempoMapPoint &prev = map.back();
+            origin = prev.samplePos + double(tc.tick - prev.tick) *
+                                          double(prev.microsecondsPerQuarterNote) / double(tpqn) /
+                                          1000000.0 * sampleRate;
+        }
+        map.push_back({tc.tick, origin, 60000000.0 / double(tc.microsecondsPerQuarterNote),
+                       tc.microsecondsPerQuarterNote});
+    }
+    return map;
+}
+
+// Round a tick through the canonical tempo map: unrounded origin of the
+// segment in effect plus that segment's exact length, rounded once — the
+// same rounding the scheduled events use.
+uint64_t quantizedSampleForTick(uint64_t tick, const std::vector<TempoMapPoint> &tempoMap,
+                                uint32_t tpqn, double sampleRate)
+{
+    // tempoMap always has an entry at tick 0.
+    const TempoMapPoint *tp = &tempoMap.front();
+    for (const TempoMapPoint &p : tempoMap) {
+        if (p.tick > tick)
+            break;
+        tp = &p;
+    }
+    const double segment = double(tick - tp->tick) * double(tp->microsecondsPerQuarterNote) /
+                           double(tpqn) / 1000000.0 * sampleRate;
+    return uint64_t(tp->samplePos + segment + 0.5);
 }
 
 TimelineEvent makeTempoEvent(uint64_t samplePos, uint64_t tick, double bpm)
@@ -113,7 +143,6 @@ buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, do
     std::vector<RawEvent> rawEvents;
     std::vector<TimeSigPoint> timeSigs;
     std::vector<RawOther> rawOthers;
-    std::vector<bool> trackHasChannelEvents(numTracks, false);
     std::vector<QString> trackNames(numTracks);
     uint64_t loopStartTick = UINT64_MAX;
     uint64_t loopEndTick = UINT64_MAX;
@@ -140,7 +169,6 @@ buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, do
                     ev.noteId = playType == 0x9 ? sev.noteId : NoteId{};
                     ev.origIndex = static_cast<int>(rawEvents.size());
                     rawEvents.push_back(ev);
-                    trackHasChannelEvents[t] = true;
                 };
                 switch (type) {
                 case 0x8:
@@ -228,25 +256,26 @@ buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, do
     timeline->sampleRate = sampleRate;
     timeline->ticksPerBeat = tpqn;
 
-    // Map SMF tracks to engine tracks: the first 16 chunks with channel
-    // events, in chunk order (loaders coerce format 0 away, so chunk order
-    // IS track order).
+    // Engine track mapping: the canonical chunk -> track assignment shared
+    // with document/import (mapSmfEngineTracks, smf.h). smfToEngine stays as
+    // the per-event lookup.
+    const SmfEngineTrackMapping mapping = mapSmfEngineTracks(smf);
     std::vector<int> smfToEngine(numTracks, -1);
-    int next = 0;
-    for (int t = 0; t < numTracks; t++) {
-        if (!trackHasChannelEvents[t])
-            continue;
-        if (next < 16) {
-            smfToEngine[t] = next;
-            timeline->tracks[next].name = trackNames[t];
-            next++;
-        } else {
-            timeline->droppedTracks++;
-        }
+    for (int engine = 0; engine < mapping.usedTrackCount; engine++) {
+        const int smfTrack = mapping.tracks[engine].smfTrack;
+        smfToEngine[smfTrack] = engine;
+        TimelineTrack &ti = timeline->tracks[engine];
+        ti.used = true;
+        ti.name = trackNames[smfTrack];
     }
-    timeline->usedTrackCount = next;
+    timeline->usedTrackCount = mapping.usedTrackCount;
+    timeline->droppedTracks = mapping.droppedTracks;
 
-    timeline->events.reserve(rawEvents.size() + tempoPoints.size() + 1);
+    // The one canonical tempo map, built before any sample position; every
+    // conversion below and the sampleForTick/tickForSample accessors read it.
+    timeline->tempoMap = buildTempoMap(tempoPoints, tpqn, sampleRate);
+
+    timeline->events.reserve(rawEvents.size() + timeline->tempoMap.size());
 
     std::vector<TimelineEvent> noteEvents;
     noteEvents.reserve(rawEvents.size());
@@ -256,7 +285,7 @@ buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, do
             continue; // beyond 16 usable tracks
 
         TimelineEvent ev;
-        ev.samplePos = tickToSample(re.tick, tempoPoints, tpqn, sampleRate);
+        ev.samplePos = quantizedSampleForTick(re.tick, timeline->tempoMap, tpqn, sampleRate);
         ev.tick = static_cast<uint32_t>(re.tick);
         ev.type = re.type;
         ev.track = static_cast<uint8_t>(engineTrack);
@@ -266,27 +295,21 @@ buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, do
         noteEvents.push_back(ev);
 
         TimelineTrack &ti = timeline->tracks[engineTrack];
-        ti.used = true;
         if (ev.type == 0x9)
             ti.noteCount++;
         if (ev.type == 0xC && ti.firstProgram < 0)
             ti.firstProgram = ev.data0;
     }
 
-    // Tempo events, with the SMF default of 120 BPM prepended when the song
-    // doesn't set a tempo at tick 0, so the engine (whose tempo drives LFO and
-    // vibrato rates) never runs on its unrelated init default. The same points
-    // form the viewer's tempo map.
+    // Tempo events straight from the canonical tempo map: it already carries
+    // the SMF default of 120 BPM at tick 0 when the song doesn't set a tempo
+    // there, so the engine (whose tempo drives LFO and vibrato rates) never
+    // runs on its unrelated init default.
     std::vector<TimelineEvent> tempoEvents;
-    if (tempoPoints.empty() || tempoPoints.front().tick != 0) {
-        tempoEvents.push_back(makeTempoEvent(0, 0, 120.0));
-        timeline->tempoMap.push_back({0, 0, 120.0});
-    }
-    for (const TempoPoint &tc : tempoPoints) {
-        const uint64_t sp = tickToSample(tc.tick, tempoPoints, tpqn, sampleRate);
-        const double bpm = 60000000.0 / double(tc.microsecondsPerQuarterNote);
-        tempoEvents.push_back(makeTempoEvent(sp, tc.tick, bpm));
-        timeline->tempoMap.push_back({tc.tick, sp, bpm});
+    tempoEvents.reserve(timeline->tempoMap.size());
+    for (const TempoMapPoint &tp : timeline->tempoMap) {
+        const uint64_t sp = uint64_t(tp.samplePos + 0.5); // delta 0: origin, rounded once
+        tempoEvents.push_back(makeTempoEvent(sp, tp.tick, tp.bpm));
     }
 
     // Merge, tempo first at equal positions so it takes effect before notes.
@@ -303,9 +326,11 @@ buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, do
     timeline->loopStartTick = loopStartTick;
     timeline->loopEndTick = loopEndTick;
     if (loopStartTick != UINT64_MAX)
-        timeline->loopStartSample = tickToSample(loopStartTick, tempoPoints, tpqn, sampleRate);
+        timeline->loopStartSample =
+            quantizedSampleForTick(loopStartTick, timeline->tempoMap, tpqn, sampleRate);
     if (loopEndTick != UINT64_MAX)
-        timeline->loopEndSample = tickToSample(loopEndTick, tempoPoints, tpqn, sampleRate);
+        timeline->loopEndSample =
+            quantizedSampleForTick(loopEndTick, timeline->tempoMap, tpqn, sampleRate);
     if (timeline->loopEndTick != UINT64_MAX)
         timeline->lengthTicks = std::max(timeline->lengthTicks, timeline->loopEndTick);
 
@@ -322,9 +347,9 @@ buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, do
     timeline->otherEvents.reserve(rawOthers.size());
     for (RawOther &ro : rawOthers) {
         const int engineTrack = smfToEngine[ro.smfTrack];
-        timeline->otherEvents.push_back({ro.tick,
-                                         tickToSample(ro.tick, tempoPoints, tpqn, sampleRate),
-                                         engineTrack, std::move(ro.label)});
+        timeline->otherEvents.push_back(
+            {ro.tick, quantizedSampleForTick(ro.tick, timeline->tempoMap, tpqn, sampleRate),
+             engineTrack, std::move(ro.label)});
         timeline->lengthTicks = std::max(timeline->lengthTicks, ro.tick);
     }
 
@@ -348,25 +373,20 @@ std::unique_ptr<MidiTimeline> MidiTimeline::build(const SmfFile &smf,
 
 uint64_t MidiTimeline::sampleForTick(uint64_t tick) const
 {
-    // tempoMap always has an entry at tick 0.
-    const TempoMapPoint *tp = &tempoMap.front();
-    for (const TempoMapPoint &p : tempoMap) {
-        if (p.tick > tick)
-            break;
-        tp = &p;
-    }
-    const double samplesPerTick = 60.0 / tp->bpm * sampleRate / double(ticksPerBeat);
-    return tp->samplePos + uint64_t(double(tick - tp->tick) * samplesPerTick + 0.5);
+    return quantizedSampleForTick(tick, tempoMap, ticksPerBeat, sampleRate);
 }
 
 double MidiTimeline::tickForSample(uint64_t samplePos) const
 {
+    // tempoMap always starts at tick 0. Use unrounded origins for both
+    // segment selection and inversion.
     const TempoMapPoint *tp = &tempoMap.front();
     for (const TempoMapPoint &p : tempoMap) {
-        if (p.samplePos > samplePos)
+        if (p.samplePos > double(samplePos))
             break;
         tp = &p;
     }
-    const double samplesPerTick = 60.0 / tp->bpm * sampleRate / double(ticksPerBeat);
-    return double(tp->tick) + double(samplePos - tp->samplePos) / samplesPerTick;
+    const double samplesPerTick =
+        double(tp->microsecondsPerQuarterNote) / double(ticksPerBeat) / 1000000.0 * sampleRate;
+    return double(tp->tick) + (double(samplePos) - tp->samplePos) / samplesPerTick;
 }

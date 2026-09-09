@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "core/smf.h"
+#include "core/tracklimits.h"
 
 // External-MIDI import analysis (SPEC.md §6.2): everything the import wizard
 // shows about an arbitrary .mid before it becomes a project song. The
@@ -47,7 +48,8 @@ struct ImportAnalysis {
 // (MusicPlayer::trackCount): mapped tracks at or beyond the budget never
 // start in-game, which is worth a warning of its own below the hard 16
 // ceiling. Budget 16 (or a negative unknown) disables that warning.
-ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget = 16,
+ImportAnalysis analyzeForImport(const SmfFile &smf,
+                                int trackBudget = track_limits::kHardwareCapacity,
                                 const QString &playerName = QString());
 
 // User-facing wording shared by the analysis warnings and the import wizard's

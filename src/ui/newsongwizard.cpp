@@ -18,6 +18,7 @@
 #include <functional>
 #include <utility>
 
+#include "core/tracklimits.h"
 #include "project/songregistry.h"
 #include "ui/layout.h"
 
@@ -405,7 +406,9 @@ class AnalysisPage : public QWizardPage
         if (index < 0 || index >= m_players.size())
             return;
         const MusicPlayer &player = m_players.at(index);
-        const int trackLimit = player.trackCount < 0 ? 16 : std::min(player.trackCount, 16);
+        const int trackLimit = player.trackCount < 0
+                                   ? track_limits::kHardwareCapacity
+                                   : std::min(player.trackCount, track_limits::kHardwareCapacity);
         m_analysis = analyzeForImport(m_smf, trackLimit, player.name);
         m_identity->selectPlayer(player.name);
 

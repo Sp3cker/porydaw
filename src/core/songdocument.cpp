@@ -456,16 +456,14 @@ uint32_t SongDocument::ticksPerClock() const
 
 void SongDocument::rebuildTrackMap()
 {
+    const SmfEngineTrackMapping mapping = mapSmfEngineTracks(m_smf);
     m_engineToSmf.clear();
     m_engineChannel.clear();
-    for (size_t t = 0; t < m_smf.tracks.size() && m_engineToSmf.size() < 16; t++) {
-        for (const SmfEvent &ev : m_smf.tracks[t].events) {
-            if (ev.isChannel()) {
-                m_engineToSmf.push_back(int(t));
-                m_engineChannel.push_back(ev.channel());
-                break;
-            }
-        }
+    m_engineToSmf.reserve(size_t(mapping.usedTrackCount));
+    m_engineChannel.reserve(size_t(mapping.usedTrackCount));
+    for (int i = 0; i < mapping.usedTrackCount; i++) {
+        m_engineToSmf.push_back(mapping.tracks[size_t(i)].smfTrack);
+        m_engineChannel.push_back(mapping.tracks[size_t(i)].channel);
     }
 }
 

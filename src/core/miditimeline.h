@@ -7,6 +7,7 @@
 
 #include "noteid.h"
 #include "tempo.h"
+#include "tracklimits.h"
 
 // Event type codes: MIDI status nibbles 0x8 (note off), 0x9 (note on),
 // 0xB (CC), 0xC (program change), 0xE (pitch bend), plus a synthetic tempo
@@ -27,17 +28,28 @@ struct TimelineEvent {
 
 struct TimelineTrack {
     QString name;      // from SMF track name meta event, if any
-    bool used = false; // has at least one channel event
+    bool used = false; // its SMF chunk carries channel events (aftertouch counts)
     int noteCount = 0;
     int firstProgram = -1; // first program change seen, -1 if none
 };
 
 // Tempo map entry (viewer data; playback uses the merged TIMELINE_EVT_TEMPO
 // events). The map always has an entry at tick 0.
+//
+// samplePos is the segment's UNROUNDED sample origin: exact segment lengths
+// (double(deltaTicks) * microsecondsPerQuarterNote / tpqn / 1000000.0 *
+// sampleRate, straight from the FF 51 payload) accumulated in double from
+// tick 0. Every consumer — events, loop endpoints, otherEvents,
+// sampleForTick — adds its own segment and rounds once
+// (uint64_t(total + 0.5)); rounding each boundary instead drifts by up to
+// half a sample per tempo change. bpm is the human-facing value for the UI;
+// the length math must use microsecondsPerQuarterNote, not a value derived
+// from bpm.
 struct TempoMapPoint {
     uint64_t tick;
-    uint64_t samplePos;
+    double samplePos; // unrounded; see above
     double bpm;
+    uint32_t microsecondsPerQuarterNote;
 };
 
 // Time signature change from SMF meta 0x58 (viewer grid data; 4/4 assumed
@@ -63,11 +75,13 @@ struct OtherEvent {
 // file's tempo map (following poryaaaa_render's approach). Once built, the
 // timeline is read-only and safe to hand to the audio thread.
 //
-// Engine track mapping: each MTrk chunk that contains channel events gets
-// its own engine track (0-15) in file order, so tracks sharing a MIDI
-// channel stay separate (mid2agb semantics). Chunks with no channel events
-// (e.g. a conductor track) don't consume a slot. Input is always format 1 —
-// SmfFile::read coerces format 0 at the parse layer.
+// Engine track mapping: the canonical chunk -> track assignment from
+// mapSmfEngineTracks (smf.h) — the first track_limits::kHardwareCapacity
+// chunks with channel voice events in file order (any status 0x8-0xE, so
+// pressure-only chunks claim a slot too; tracks sharing a MIDI channel stay
+// separate, mid2agb semantics). Metadata-only chunks (e.g. a conductor
+// track) don't consume a slot. Input is always format 1 — SmfFile::read
+// coerces format 0 at the parse layer.
 struct SmfFile;
 
 class MidiTimeline
@@ -85,7 +99,7 @@ class MidiTimeline
     build(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, double sampleRate);
 
     std::vector<TimelineEvent> events; // sorted by samplePos
-    TimelineTrack tracks[16];
+    TimelineTrack tracks[track_limits::kHardwareCapacity];
     int usedTrackCount = 0;
 
     double sampleRate = 0.0;
@@ -114,7 +128,10 @@ class MidiTimeline
                loopEndSample > loopStartSample;
     }
 
-    // Tick <-> sample conversion through the tempo map (viewer/UI thread).
+    // Tick <-> sample conversion through the canonical tempo map
+    // (viewer/UI thread). sampleForTick rounds once after the segment's
+    // unrounded origin plus its exact length; tickForSample is the inverse
+    // in fractional ticks against the same unrounded origins.
     uint64_t sampleForTick(uint64_t tick) const;
     double tickForSample(uint64_t samplePos) const;
 };

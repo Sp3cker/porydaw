@@ -23,6 +23,8 @@ class MidiSmfTest final : public QObject
     void unterminatedNotePairingStaysLinear();
     void programChangesRejectOutOfRangeValues();
     void noteOnsRejectOutOfRangeKeys();
+    void tempoConversionSchedulesExactSamples();
+    void engineTrackMappingAgreesAcrossProjections();
 };
 
 int runSmfCheck(const QStringList &qtArguments);

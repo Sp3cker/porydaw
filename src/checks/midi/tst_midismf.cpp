@@ -11,6 +11,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "core/midiimport.h"
+#include "core/miditimeline.h"
 #include "core/smf.h"
 #include "core/songdocument.h"
 
@@ -54,6 +56,16 @@ SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data
     event.status = status;
     event.data0 = data0;
     event.data1 = data1;
+    return event;
+}
+
+SmfEvent metaEvent(uint64_t tick, uint8_t metaType, const QByteArray &blob)
+{
+    auto event = SmfEvent{};
+    event.tick = tick;
+    event.status = 0xFF;
+    event.metaType = metaType;
+    event.blob = blob;
     return event;
 }
 
@@ -107,6 +119,56 @@ int engineTrackForChunk(const SongDocument &document, int chunk)
             return track;
     }
     return -1;
+}
+
+constexpr double kCheckSampleRate = 44100.0;
+
+// The last tempo at tick 1 wins: 229.6875 samples before it, then 275.625
+// samples/tick, with one final rounding. Raw builds retain both same-tick
+// tempo events; the document collapses them to the last value.
+void expectTempoProjection(const MidiTimeline &timeline, int expectedTick1Tempos)
+{
+    int noteOns = 0;
+    int tick1Tempos = 0;
+    for (const TimelineEvent &event : timeline.events) {
+        if (event.type == TIMELINE_EVT_TEMPO) {
+            if (event.tick != 1)
+                continue;
+            tick1Tempos++;
+            QCOMPARE(qulonglong(event.samplePos), qulonglong(230));
+            const int bpm = event.data0 | (event.data1 << 7);
+            QCOMPARE(bpm, expectedTick1Tempos == 2 && tick1Tempos == 1 ? 150 : 100);
+        } else if (event.type == 0x9) {
+            noteOns++;
+            QCOMPARE(qulonglong(event.samplePos), qulonglong(505));
+            QCOMPARE(event.tick, uint32_t(2));
+            QCOMPARE(int(event.track), 0);
+        } else {
+            QCOMPARE(event.type, uint8_t(0x8));
+            QCOMPARE(event.tick, uint32_t(4));
+            QCOMPARE(int(event.track), 0);
+        }
+    }
+    QCOMPARE(noteOns, 1);
+    QCOMPARE(tick1Tempos, expectedTick1Tempos);
+    const uint64_t expectedTicks[] = {0, 1, 2, 3, 9};
+    const uint64_t expectedSamples[] = {0, 230, 505, 781, 2435};
+    for (size_t i = 0; i < sizeof(expectedTicks) / sizeof(expectedTicks[0]); ++i) {
+        QCOMPARE(qulonglong(timeline.sampleForTick(expectedTicks[i])),
+                 qulonglong(expectedSamples[i]));
+        // Quantization contributes at most half a sample, not half a tick.
+        constexpr double tickTolerance = 0.5 / 229.6875 + 1e-12;
+        QVERIFY2(qAbs(timeline.tickForSample(expectedSamples[i]) - double(expectedTicks[i])) <=
+                     tickTolerance,
+                 qPrintable(QStringLiteral("sample for tick %1 does not invert")
+                                .arg(qlonglong(expectedTicks[i]))));
+    }
+
+    QVERIFY(timeline.hasLoop());
+    QCOMPARE(qulonglong(timeline.loopStartTick), qulonglong(3));
+    QCOMPARE(qulonglong(timeline.loopEndTick), qulonglong(9));
+    QCOMPARE(qulonglong(timeline.loopStartSample), qulonglong(781));
+    QCOMPARE(qulonglong(timeline.loopEndSample), qulonglong(2435));
 }
 
 class EngineFixture final
@@ -591,6 +653,182 @@ void MidiSmfTest::noteOnsRejectOutOfRangeKeys()
     m4a_engine_note_off(&fixture.engine(), 0, 255);
     for (int channel = 0; channel < TOTAL_PCM_CHANNELS; ++channel)
         QVERIFY((fixture.engine().pcmChannels[channel].status & CHN_ON) == 0);
+}
+
+void MidiSmfTest::tempoConversionSchedulesExactSamples()
+{
+    auto smf = SmfFile{};
+    smf.format = 1;
+    smf.division = 96;
+    smf.tracks.resize(2);
+    auto &conductor = smf.tracks[0];
+    conductor.events.push_back(metaEvent(1, 0x51, QByteArray::fromHex("061a80"))); // 150 BPM
+    // A different later value at the same tick must win.
+    conductor.events.push_back(metaEvent(1, 0x51, QByteArray::fromHex("0927c0")));
+    conductor.events.push_back(metaEvent(3, 0x01, QByteArray("[")));
+    conductor.events.push_back(metaEvent(9, 0x01, QByteArray("]")));
+    conductor.endTick = 9;
+    auto &voice = smf.tracks[1];
+    voice.events.push_back(channelEvent(2, 0x90, 60, 100));
+    voice.events.push_back(channelEvent(4, 0x80, 60, 0));
+    voice.endTick = 4;
+
+    auto error = QString{};
+    QVERIFY2(semanticReparseMatches(smf, error), qPrintable(error));
+    const auto sourceBytes = smf.write();
+
+    const auto raw = MidiTimeline::build(smf, kCheckSampleRate);
+    QVERIFY(raw);
+    // The raw read path schedules every same-tick FF 51 it parsed.
+    expectTempoProjection(*raw, 2);
+
+    auto scratch = QTemporaryDir{};
+    QVERIFY2(scratch.isValid(), "could not create tempo-conversion fixture directory");
+    auto document = SongDocument{};
+    QVERIFY2(loadDocumentFromSmf(smf, scratch.filePath(QStringLiteral("tempo-conversion.mid")),
+                                 document, error),
+             qPrintable(error));
+    QVERIFY2(document.tempoPoints().size() == 1,
+             "duplicate same-tick tempo events did not collapse last-wins");
+    QCOMPARE(qulonglong(document.tempoPoints().front().tick), qulonglong(1));
+    QCOMPARE(document.tempoPoints().front().microsecondsPerQuarterNote, uint32_t(600000));
+    QCOMPARE(document.smfTrackFor(0), 1);
+    QCOMPARE(qulonglong(document.loopTick(false)), qulonglong(3));
+    QCOMPARE(qulonglong(document.loopTick(true)), qulonglong(9));
+
+    const auto projected = document.buildTimeline(kCheckSampleRate);
+    QVERIFY(projected);
+    // Last-wins: the document's typed tempo stream schedules one.
+    expectTempoProjection(*projected, 1);
+    QCOMPARE(smf.write(), sourceBytes);
+}
+
+void MidiSmfTest::engineTrackMappingAgreesAcrossProjections()
+{
+    // Chunk layout (file order), division 24:
+    //   0 conductor, no channel events     -> no engine slot
+    //   1 name-only                        -> no engine slot
+    //   2 pressure/aftertouch-only, ch 0   -> engine 0, plays nothing
+    //   3 "Alpha" ch 1, 4 "Beta" ch 1      -> engines 1-2 (repeated channel)
+    //   5-17 "T<n>" ch 2-14                -> engines 3-15
+    //  18 "DroppedTail" ch 15              -> 17th channel chunk: dropped
+    //  19 name-only                        -> no engine slot
+    auto smf = SmfFile{};
+    smf.format = 1;
+    smf.division = 24;
+    smf.tracks.resize(20);
+
+    smf.tracks[0].endTick = 8;
+    smf.tracks[1].events.push_back(metaEvent(0, 0x03, QByteArray("SilentName")));
+
+    auto &pressure = smf.tracks[2];
+    pressure.events.push_back(channelEvent(0, 0xD0, 40, 0));
+    pressure.events.push_back(channelEvent(0, 0xA0, 60, 30));
+    pressure.endTick = 8;
+
+    const auto addPlayback = [&](size_t chunk, uint8_t channel, const char *name, uint8_t key,
+                                 uint8_t program) {
+        auto &track = smf.tracks[chunk];
+        track.events.push_back(metaEvent(0, 0x03, name));
+        track.events.push_back(channelEvent(0, uint8_t(0xC0 | channel), program, 0));
+        track.events.push_back(channelEvent(2, uint8_t(0x90 | channel), key, 100));
+        track.events.push_back(channelEvent(6, uint8_t(0x80 | channel), key, 0));
+        track.endTick = 8;
+    };
+    addPlayback(3, 1, "Alpha", 60, 7);
+    addPlayback(4, 1, "Beta", 61, 8);
+    for (size_t chunk = 5; chunk <= 17; ++chunk) {
+        const auto name = QStringLiteral("T%1").arg(int(chunk)).toLatin1();
+        addPlayback(chunk, uint8_t(chunk - 3), name.constData(), uint8_t(57 + chunk),
+                    uint8_t(chunk));
+    }
+    addPlayback(18, 15, "DroppedTail", 75, 18);
+    smf.tracks[19].events.push_back(metaEvent(0, 0x03, QByteArray("TrailingSilent")));
+
+    const auto sourceBytes = smf.write();
+
+    const auto playback = MidiTimeline::build(smf, kCheckSampleRate);
+    QVERIFY(playback);
+    QCOMPARE(playback->usedTrackCount, 16);
+    QCOMPARE(playback->droppedTracks, 1);
+    // The pressure-only chunk claims engine 0 while playing nothing, so
+    // Alpha lands on engine 1 — not shifted onto 0.
+    QVERIFY(playback->tracks[0].used);
+    QCOMPARE(playback->tracks[0].name, QString());
+    QCOMPARE(playback->tracks[0].noteCount, 0);
+    QCOMPARE(playback->tracks[1].name, QStringLiteral("Alpha"));
+    QCOMPARE(playback->tracks[1].noteCount, 1);
+    QCOMPARE(playback->tracks[2].name, QStringLiteral("Beta"));
+    QCOMPARE(playback->tracks[3].name, QStringLiteral("T5"));
+    QCOMPARE(playback->tracks[15].name, QStringLiteral("T17"));
+    for (int engine = 1; engine < 16; ++engine)
+        QVERIFY2(playback->tracks[engine].used,
+                 qPrintable(QStringLiteral("engine %1 unused").arg(engine)));
+
+    int noteOns = 0;
+    for (const TimelineEvent &event : playback->events) {
+        if (event.type == TIMELINE_EVT_TEMPO || event.type == 0xC)
+            continue;
+        if (event.type == 0x9)
+            noteOns++;
+        int expectedTrack = -1;
+        if (event.data0 == 60)
+            expectedTrack = 1;
+        else if (event.data0 == 61)
+            expectedTrack = 2;
+        else if (event.data0 >= 62 && event.data0 <= 74)
+            expectedTrack = event.data0 - 59;
+        QVERIFY2(expectedTrack >= 0,
+                 qPrintable(QStringLiteral("unexpected note key %1").arg(int(event.data0))));
+        QCOMPARE(int(event.track), expectedTrack);
+    }
+    QCOMPARE(noteOns, 15);
+
+    QVERIFY2(playback->otherEvents.size() == 2, "pressure chunk visibility changed");
+    for (const OtherEvent &event : playback->otherEvents)
+        QCOMPARE(event.track, 0);
+
+    auto scratch = QTemporaryDir{};
+    QVERIFY2(scratch.isValid(), "could not create engine-mapping fixture directory");
+    auto document = SongDocument{};
+    auto error = QString{};
+    QVERIFY2(loadDocumentFromSmf(smf, scratch.filePath(QStringLiteral("engine-mapping.mid")),
+                                 document, error),
+             qPrintable(error));
+    QCOMPARE(document.engineTrackCount(), 16);
+    for (int engine = 0; engine < 16; ++engine) {
+        QCOMPARE(document.smfTrackFor(engine), engine + 2);
+        const int expectedChannel = engine == 0 ? 0 : engine <= 2 ? 1 : engine - 1;
+        QCOMPARE(int(document.channelFor(engine)), expectedChannel);
+        QCOMPARE(document.trackName(engine), playback->tracks[engine].name);
+    }
+
+    const auto projected = document.buildTimeline(kCheckSampleRate);
+    QVERIFY(projected);
+    QCOMPARE(projected->usedTrackCount, 16);
+    QCOMPARE(projected->droppedTracks, 1);
+    for (int engine = 0; engine < 16; ++engine) {
+        QCOMPARE(projected->tracks[engine].name, playback->tracks[engine].name);
+        QCOMPARE(projected->tracks[engine].used, playback->tracks[engine].used);
+        QCOMPARE(projected->tracks[engine].noteCount, playback->tracks[engine].noteCount);
+    }
+
+    const auto analysis = analyzeForImport(smf);
+    QCOMPARE(analysis.mappedTracks, 16);
+    QCOMPARE(analysis.droppedTracks, 1);
+    QVERIFY2(analysis.tracks.size() == 16, "analysis mapped-track count changed");
+    QCOMPARE(analysis.peakConcurrentNotes, 15);
+    for (int engine = 0; engine < 16; ++engine) {
+        const auto &info = analysis.tracks[size_t(engine)];
+        QCOMPARE(info.smfTrack, document.smfTrackFor(engine));
+        QCOMPARE(info.name, document.trackName(engine));
+        QCOMPARE(info.noteCount, engine == 0 ? 0 : 1);
+    }
+
+    // Every projection above is read-only over the source bytes.
+    QCOMPARE(smf.write(), sourceBytes);
+    QVERIFY2(semanticReparseMatches(smf, error), qPrintable(error));
+    QVERIFY(sameSmf(document.smf(), smf));
 }
 
 int runSmfCheck(const QStringList &qtArguments)

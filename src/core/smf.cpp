@@ -414,3 +414,20 @@ void convertToFormat1(SmfFile *smf)
         smf->tracks.push_back(std::move(channels[c]));
     }
 }
+
+SmfEngineTrackMapping mapSmfEngineTracks(const SmfFile &smf)
+{
+    SmfEngineTrackMapping map;
+    for (size_t t = 0; t < smf.tracks.size(); t++) {
+        for (const SmfEvent &ev : smf.tracks[t].events) {
+            if (!ev.isChannel())
+                continue;
+            if (map.usedTrackCount < int(map.tracks.size()))
+                map.tracks[map.usedTrackCount++] = {int(t), ev.channel()};
+            else
+                map.droppedTracks++;
+            break;
+        }
+    }
+    return map;
+}

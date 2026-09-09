@@ -6,31 +6,11 @@
 #include <map>
 
 #include "core/m4asemantics.h"
+#include "core/tracklimits.h"
 
 namespace {
 
-constexpr int kMaxEngineTracks = 16; // m4a MAX_TRACKS
 constexpr int kDefaultPcmBudget = 5; // pokeemerald m4aSoundInit maxChans
-
-// Mirrors SongDocument::rebuildTrackMap / MidiTimeline::build: the first 16
-// channel-bearing chunks, as chunk indices in file order.
-std::vector<int> engineTrackMap(const SmfFile &smf, int *dropped)
-{
-    std::vector<int> map;
-    *dropped = 0;
-    for (size_t t = 0; t < smf.tracks.size(); t++) {
-        for (const SmfEvent &ev : smf.tracks[t].events) {
-            if (!ev.isChannel())
-                continue;
-            if (int(map.size()) < kMaxEngineTracks)
-                map.push_back(int(t));
-            else
-                (*dropped)++;
-            break;
-        }
-    }
-    return map;
-}
 
 } // namespace
 
@@ -41,9 +21,10 @@ ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget, const QStri
     a.sampleNoteLimit = kDefaultPcmBudget;
     a.smfTrackCount = int(smf.tracks.size());
 
-    const auto map = engineTrackMap(smf, &a.droppedTracks);
-    a.mappedTracks = int(map.size());
-    if (trackBudget >= 0 && trackBudget < kMaxEngineTracks)
+    const SmfEngineTrackMapping map = mapSmfEngineTracks(smf);
+    a.droppedTracks = map.droppedTracks;
+    a.mappedTracks = map.usedTrackCount;
+    if (trackBudget >= 0 && trackBudget < track_limits::kHardwareCapacity)
         a.silentTracks = std::max(0, a.mappedTracks - trackBudget);
 
     QMap<uint8_t, int> ccCounts;
@@ -58,8 +39,8 @@ ImportAnalysis analyzeForImport(const SmfFile &smf, int trackBudget, const QStri
     };
     std::vector<NoteEdge> edges;
 
-    for (int et = 0; et < int(map.size()); et++) {
-        const int smfTrack = map[et];
+    for (int et = 0; et < map.usedTrackCount; et++) {
+        const int smfTrack = map.tracks[et].smfTrack;
         ImportTrackInfo info;
         info.smfTrack = smfTrack;
 

@@ -2,10 +2,12 @@
 
 #include <QByteArray>
 #include <QString>
+#include <array>
 #include <cstdint>
 #include <vector>
 
 #include "noteid.h"
+#include "tracklimits.h"
 
 // Full-fidelity Standard MIDI File model. Unlike MidiTimeline (a lossy,
 // playback-oriented view), this preserves every event and its in-file order
@@ -104,6 +106,26 @@ struct SmfFile {
     QByteArray write() const;
     bool writeFile(const QString &path, QString *error) const;
 };
+
+// Which chunk plays which m4a engine slot: SongDocument::rebuildTrackMap,
+// MidiTimeline::build, and the import analysis all derive the same mapping —
+// the first engine-capacity chunks carrying any channel-voice event
+// (pressure and aftertouch included), in file order, each represented by its
+// first event's channel. Meta/sysex-only chunks (conductors, name-only
+// chunks) occupy nothing; chunks beyond capacity land in droppedTracks.
+struct SmfEngineTrack {
+    int smfTrack = -1; // chunk index, or -1 when the slot is unused
+    uint8_t channel = 0;
+};
+
+struct SmfEngineTrackMapping {
+    std::array<SmfEngineTrack, track_limits::kHardwareCapacity> tracks{};
+    int usedTrackCount = 0;
+    int droppedTracks = 0;
+};
+
+// The one engine-track mapping every consumer shares. Heap-free.
+SmfEngineTrackMapping mapSmfEngineTracks(const SmfFile &smf);
 
 // Rewrites a format-0 file as format 1: a conductor chunk 0 carrying every
 // non-channel event (tempo, time signatures, loop markers — mid2agb reads
