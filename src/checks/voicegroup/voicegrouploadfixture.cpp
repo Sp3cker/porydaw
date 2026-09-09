@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <atomic>
 #include <barrier>
-#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -63,8 +62,6 @@ void slices(BatchAdapter &adapter, const char *const *paths, size_t count, Voice
                 std::lock_guard<std::mutex> lock(adapter.flightMutex);
                 --adapter.inFlight;
             }
-            if (adapter.delayMs)
-                std::this_thread::sleep_for(std::chrono::milliseconds(adapter.delayMs));
             VoicegroupFileBlob blob{};
             if (!readOne(adapter, paths[index], blob)) {
                 failed.store(true, std::memory_order_release);

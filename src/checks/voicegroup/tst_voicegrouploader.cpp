@@ -110,7 +110,6 @@ void VoicegroupLoaderTest::serialAndFourWideBatchAdaptersPreserveBankAndOwnershi
     for (const int width : {1, 4}) {
         voicegroup_load_test::BatchAdapter adapter;
         adapter.width = width;
-        adapter.delayMs = 5;
         VoicegroupProject *const project =
             voicegroup_load_test::openContext(m_copy->root(), adapter);
         QVERIFY(project);

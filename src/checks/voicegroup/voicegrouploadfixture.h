@@ -16,7 +16,6 @@ namespace voicegroup_load_test {
 struct BatchAdapter {
     QString root;
     int width = 1;
-    int delayMs = 0;
     const char *failureSuffix = nullptr;
     mutable QMutex mutex;
     int populated = 0;
@@ -25,8 +24,7 @@ struct BatchAdapter {
     std::map<std::string, int> requested;
 
     // Every reader in a slice reaches the start barrier before any reader
-    // begins its injected delay and file read. This makes maxInFlight
-    // deterministic and overlaps the injected latency across the full slice.
+    // begins its file read. This makes maxInFlight deterministic.
     std::mutex flightMutex;
     int inFlight = 0;
 
