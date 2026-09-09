@@ -6,6 +6,10 @@ Blueprint for the complete rewrite requested by the user. All listed editor surf
 now use Qt Quick; native/GPU acceptance remains pending under the desktop-use restriction.
 Starting revision: `afcf179` on `fork-main`.
 
+The next-stage [SongView composition and SongTab plan](songtab-quick-composition-plan.md)
+extends this scope to a QWidget-free SongTab and Quick song-tab shell. It is a
+planning document, not a claim that the new hosting architecture is implemented.
+
 Inputs: evidence-plan-architect's SongView QWidget-Exodus plan, Reviewer critique,
 and Reviewer's OtherStrip implementation/check plan. This document resolves the
 conflicts between them. Each component still requires a source-current local plan

@@ -1,8 +1,7 @@
 # SongView pan performance — 2026-09-04
 
 Investigated the Debug build at `e4a9b9b` on macOS after the
-`feature/songview-layout-refactor` merge. The changes remain uncommitted.
-
+`feature/songview-layout-refactor` merge. 
 ## Findings and changes
 
 - `timelinequickscene.cpp` generated every dash along an automation selection
