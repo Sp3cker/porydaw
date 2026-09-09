@@ -30,8 +30,8 @@ namespace {
 // Decoded-size backstop for compressed containers, whose headers can claim
 // (or whose streams can expand to) arbitrarily many frames. Counted over
 // interleaved samples (frames × channels) so channel count can't multiply
-// the allocation: 2^26 samples ≈ 512 MiB of double staging, ~50 minutes of
-// mono at 22 kHz — far beyond any plausible instrument sample.
+// the allocation: 2^26 interleaved samples ≈ 50 minutes of mono at 22 kHz —
+// far beyond any plausible instrument sample.
 constexpr qint64 kMaxImportSamples = qint64(1) << 26;
 
 bool fail(QString *error, const QString &message)
@@ -41,43 +41,52 @@ bool fail(QString *error, const QString &message)
     return false;
 }
 
-// Interleaved hi-res frames → mono canonical floats (DSP.md §2): arithmetic
-// channel mean, or channel 0 when leftOnly. Flags phase-cancelling stereo
-// (negative full-file L/R correlation) so the caller can offer left-only.
-void downmix(const std::vector<double> &interleaved, int channels, bool leftOnly,
-             ImportedSample *out)
+// Read each interleaved sample once, including ignored right channels so
+// source diagnostics still see them. Mean and stereo correlation stay in
+// double precision until the final mono float. Emit warnings separately
+// to preserve their ordering with container metadata warnings.
+template <typename ReadSample>
+void downmix(size_t sampleCount, int channels, bool leftOnly, ReadSample read, ImportedSample *out)
 {
-    const size_t frames = channels > 0 ? interleaved.size() / channels : 0;
+    const size_t frames = channels > 0 ? sampleCount / size_t(channels) : 0;
     out->buffer.resize(frames);
-    if (channels == 1 || leftOnly) {
-        for (size_t i = 0; i < frames; i++)
-            out->buffer[i] = float(interleaved[i * channels]);
-        if (leftOnly && channels > 1)
-            out->warnings += QStringLiteral("imported the left channel only.");
-        return;
-    }
+    double lr = 0.0, ll = 0.0, rr = 0.0;
     for (size_t i = 0; i < frames; i++) {
-        double sum = 0.0;
-        for (int c = 0; c < channels; c++)
-            sum += interleaved[i * channels + c];
+        const size_t base = i * size_t(channels);
+        const double first = read(base);
+        if (channels == 1 || leftOnly) {
+            for (int c = 1; c < channels; c++)
+                read(base + size_t(c)); // still read so diagnostics see them
+            out->buffer[i] = float(first);
+            continue;
+        }
+        double sum = 0.0 + first; // Preserve the original positive-zero accumulator.
+        if (channels == 2) {
+            const double second = read(base + 1);
+            sum += second;
+            lr += first * second;
+            ll += first * first;
+            rr += second * second;
+        } else {
+            for (int c = 1; c < channels; c++)
+                sum += read(base + size_t(c));
+        }
         out->buffer[i] = float(sum / channels);
     }
-    if (channels == 2) {
-        double lr = 0.0, ll = 0.0, rr = 0.0;
-        for (size_t i = 0; i < frames; i++) {
-            const double l = interleaved[i * 2], r = interleaved[i * 2 + 1];
-            lr += l * r;
-            ll += l * l;
-            rr += r * r;
-        }
-        if (ll > 0.0 && rr > 0.0 && lr / std::sqrt(ll * rr) < 0.0) {
-            out->phaseCancelStereo = true;
-            out->warnings +=
-                QStringLiteral("left and right channels are phase-cancelling — the mono mix "
-                               "may sound hollow; consider re-importing with the left "
-                               "channel only.");
-        }
-    }
+    if (channels == 2 && ll > 0.0 && rr > 0.0 && lr / std::sqrt(ll * rr) < 0.0)
+        out->phaseCancelStereo = true;
+}
+
+// Called at each decoder's original downmix-warning point.
+void appendDownmixWarnings(int channels, bool leftOnly, ImportedSample *out)
+{
+    if (leftOnly && channels > 1)
+        out->warnings += QStringLiteral("imported the left channel only.");
+    else if (out->phaseCancelStereo)
+        out->warnings +=
+            QStringLiteral("left and right channels are phase-cancelling — the mono mix "
+                           "may sound hollow; consider re-importing with the left "
+                           "channel only.");
 }
 
 void finishDiagnostics(ImportedSample *out)
@@ -180,41 +189,42 @@ bool decodeWav(const QByteArray &bytes, bool leftOnly, ImportedSample *out, QStr
     if (read < frames)
         return fail(error, QStringLiteral("the WAV file is corrupt or truncated."));
 
-    std::vector<double> interleaved(size_t(frames) * size_t(channels));
-    const quint8 *p = raw.data();
     qint64 clamped = 0;
-    for (size_t i = 0; i < interleaved.size(); i++) {
-        double v = 0.0;
-        if (tag == DR_WAVE_FORMAT_PCM && bits == 8) {
-            v = (double(p[0]) - 128.0) / 128.0;
-        } else if (tag == DR_WAVE_FORMAT_PCM && bits == 16) {
-            v = double(qint16(quint16(p[0]) | quint16(p[1]) << 8)) / 32768.0;
-        } else if (tag == DR_WAVE_FORMAT_PCM && bits == 24) {
-            qint32 s = qint32(quint32(p[0]) | quint32(p[1]) << 8 | quint32(p[2]) << 16);
-            if (s & 0x800000)
-                s -= 0x1000000;
-            v = double(s) / 8388608.0;
-        } else if (tag == DR_WAVE_FORMAT_PCM && bits == 32) {
-            qint32 s;
-            std::memcpy(&s, p, 4);
-            v = double(s) / 2147483648.0;
-        } else if (bits == 32) {
-            float f;
-            std::memcpy(&f, p, 4);
-            v = double(f);
-        } else {
-            std::memcpy(&v, p, 8);
-        }
-        if (v > 1.0) {
-            v = 1.0;
-            clamped++;
-        } else if (v < -1.0) {
-            v = -1.0;
-            clamped++;
-        }
-        interleaved[i] = v;
-        p += size_t(bits / 8);
-    }
+    downmix(
+        size_t(frames) * size_t(channels), channels, leftOnly,
+        [&](size_t index) {
+            const quint8 *p = raw.data() + index * size_t(bits / 8);
+            double v = 0.0;
+            if (tag == DR_WAVE_FORMAT_PCM && bits == 8) {
+                v = (double(p[0]) - 128.0) / 128.0;
+            } else if (tag == DR_WAVE_FORMAT_PCM && bits == 16) {
+                v = double(qint16(quint16(p[0]) | quint16(p[1]) << 8)) / 32768.0;
+            } else if (tag == DR_WAVE_FORMAT_PCM && bits == 24) {
+                qint32 s = qint32(quint32(p[0]) | quint32(p[1]) << 8 | quint32(p[2]) << 16);
+                if (s & 0x800000)
+                    s -= 0x1000000;
+                v = double(s) / 8388608.0;
+            } else if (tag == DR_WAVE_FORMAT_PCM && bits == 32) {
+                qint32 s;
+                std::memcpy(&s, p, 4);
+                v = double(s) / 2147483648.0;
+            } else if (bits == 32) {
+                float f;
+                std::memcpy(&f, p, 4);
+                v = double(f);
+            } else {
+                std::memcpy(&v, p, 8);
+            }
+            if (v > 1.0) {
+                v = 1.0;
+                clamped++;
+            } else if (v < -1.0) {
+                v = -1.0;
+                clamped++;
+            }
+            return v;
+        },
+        out);
     if (clamped > 0)
         out->warnings += QStringLiteral("%1 float samples beyond ±1.0 were clamped.").arg(clamped);
     if (hasLoop && loopType != 0) {
@@ -222,7 +232,7 @@ bool decodeWav(const QByteArray &bytes, bool leftOnly, ImportedSample *out, QStr
         hasLoop = false;
     }
 
-    downmix(interleaved, channels, leftOnly, out);
+    appendDownmixWarnings(channels, leftOnly, out);
     out->sourceKind = ImportedSample::Wav;
     out->sourceChannels = channels;
     out->sourceBits = bits;
@@ -364,17 +374,17 @@ bool decodeAif(const QByteArray &bytes, bool leftOnly, ImportedSample *out, QStr
         return fail(error, QStringLiteral("no audio data."));
 
     // AIFF samples are signed big-endian.
-    std::vector<double> interleaved(size_t(frames) * size_t(channels));
-    const quint8 *p = data + ssndDataStart;
-    for (size_t i = 0; i < interleaved.size(); i++) {
-        qint32 s = qint8(p[0]);
-        for (int b = 1; b < bytesPerSample; b++)
-            s = s << 8 | p[b];
-        interleaved[i] = std::ldexp(double(s), -(sampleSize - 1));
-        p += bytesPerSample;
-    }
-
-    downmix(interleaved, channels, leftOnly, out);
+    downmix(
+        size_t(frames) * size_t(channels), channels, leftOnly,
+        [&](size_t index) {
+            const quint8 *p = data + ssndDataStart + index * size_t(bytesPerSample);
+            qint32 s = qint8(p[0]);
+            for (int b = 1; b < bytesPerSample; b++)
+                s = s << 8 | p[b];
+            return std::ldexp(double(s), -(sampleSize - 1));
+        },
+        out);
+    appendDownmixWarnings(channels, leftOnly, out);
     out->sourceKind = ImportedSample::Aif;
     out->sourceChannels = channels;
     out->sourceBits = sampleSize;
@@ -423,7 +433,7 @@ bool decodeAif(const QByteArray &bytes, bool leftOnly, ImportedSample *out, QStr
 }
 
 // ---- Compressed formats (phase 4): decode-only, no pitch/loop metadata ----
-// All three decode to interleaved hi-res floats and run through the same
+// All three decode to interleaved hi-res samples and run through the same
 // downmix as the PCM containers; nothing downstream changes (PLAN.md §6).
 
 bool decodeMp3(const QByteArray &bytes, bool leftOnly, ImportedSample *out, QString *error)
@@ -453,11 +463,10 @@ bool decodeMp3(const QByteArray &bytes, bool leftOnly, ImportedSample *out, QStr
 
     // Lossy decoders can overshoot ±1.0 slightly; clamp to the canonical
     // scale without a warning (inherent to the codec, not source authoring).
-    std::vector<double> interleaved(pcm.size());
-    for (size_t i = 0; i < pcm.size(); i++)
-        interleaved[i] = qBound(-1.0, double(pcm[i]), 1.0);
-
-    downmix(interleaved, channels, leftOnly, out);
+    downmix(
+        pcm.size(), channels, leftOnly, [&](size_t i) { return qBound(-1.0, double(pcm[i]), 1.0); },
+        out);
+    appendDownmixWarnings(channels, leftOnly, out);
     out->sourceKind = ImportedSample::Mp3;
     out->sourceChannels = channels;
     out->sampleRate = double(rate);
@@ -491,11 +500,10 @@ bool decodeFlac(const QByteArray &bytes, bool leftOnly, ImportedSample *out, QSt
     if (read < frames)
         return fail(error, QStringLiteral("the FLAC file is corrupt or truncated."));
 
-    std::vector<double> interleaved(raw.size());
-    for (size_t i = 0; i < raw.size(); i++)
-        interleaved[i] = double(raw[i]) / 2147483648.0;
-
-    downmix(interleaved, channels, leftOnly, out);
+    downmix(
+        raw.size(), channels, leftOnly, [&](size_t i) { return double(raw[i]) / 2147483648.0; },
+        out);
+    appendDownmixWarnings(channels, leftOnly, out);
     out->sourceKind = ImportedSample::Flac;
     out->sourceChannels = channels;
     out->sourceBits = bits;
@@ -534,11 +542,10 @@ bool decodeOgg(const QByteArray &bytes, bool leftOnly, ImportedSample *out, QStr
     if (pcm.empty())
         return fail(error, QStringLiteral("no audio data."));
 
-    std::vector<double> interleaved(pcm.size());
-    for (size_t i = 0; i < pcm.size(); i++)
-        interleaved[i] = qBound(-1.0, double(pcm[i]), 1.0);
-
-    downmix(interleaved, channels, leftOnly, out);
+    downmix(
+        pcm.size(), channels, leftOnly, [&](size_t i) { return qBound(-1.0, double(pcm[i]), 1.0); },
+        out);
+    appendDownmixWarnings(channels, leftOnly, out);
     out->sourceKind = ImportedSample::Ogg;
     out->sourceChannels = channels;
     out->sampleRate = double(rate);

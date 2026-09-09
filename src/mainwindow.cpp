@@ -68,14 +68,6 @@ bool sameSongSettings(const SongSettings &a, const SongSettings &b)
            a.analogFilter == b.analogFilter;
 }
 
-// Symbol -> index into the sample set's parallel arrays (the set was loaded
-// from the catalog lists in this order), or -1.
-int sampleSetIndex(const QStringList &symbols, int limit, const QString &symbol)
-{
-    const int index = symbols.indexOf(symbol);
-    return index >= 0 && index < limit ? index : -1;
-}
-
 #ifdef Q_OS_WIN
 // These names and values come from the current Windows SDK. The bundled
 // MinGW header stops at DWMWA_PASSIVE_UPDATE_MODE, so keep the compatibility
@@ -545,12 +537,12 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
                 return;
             }
             if (kind == VgAuditionKind::Wave) {
-                if (const uint32_t *pw = progWaveFor(symbol))
+                if (const uint32_t *pw = m_workspace->progWaveFor(symbol))
                     m_audio.auditionWave(
                         QByteArray::fromRawData(reinterpret_cast<const char *>(pw), 16), 60, adsr);
                 return;
             }
-            const WaveData *wd = sampleWaveFor(symbol);
+            const WaveData *wd = m_workspace->sampleWaveFor(symbol);
             if (!wd || !wd->data || wd->size == 0)
                 return;
             m_audio.auditionSample(
@@ -886,42 +878,9 @@ SongSettings MainWindow::songSettingsFor(const SongTab &tab) const
 
 // ---- Browse auditions ---------------------------------------------------------
 
-const WaveData *MainWindow::sampleWaveFor(const QString &symbol) const
-{
-    const SampleSetLease &set = m_workspace->sampleSet();
-    if (!set)
-        return nullptr;
-    const int index =
-        sampleSetIndex(m_workspace->projectState().catalog.directSound, set->count, symbol);
-    return index < 0 ? nullptr : set->waves[index];
-}
-
-const uint32_t *MainWindow::progWaveFor(const QString &symbol) const
-{
-    const SampleSetLease &set = m_workspace->sampleSet();
-    if (!set)
-        return nullptr;
-    const int index =
-        sampleSetIndex(m_workspace->projectState().catalog.progWave, set->progWaveCount, symbol);
-    return index < 0 ? nullptr : set->progWaves[index];
-}
-
-const LoadedKeysplit *MainWindow::keysplitFor(const QString &symbol) const
-{
-    const SampleSetLease &set = m_workspace->sampleSet();
-    if (!set)
-        return nullptr;
-    const auto &pairs = m_workspace->projectState().catalog.keysplits;
-    for (int i = 0; i < pairs.size() && i < set->keysplitCount; i++) {
-        if (pairs.at(i).first == symbol && set->keysplits[i].subGroup && set->keysplits[i].table)
-            return &set->keysplits[i];
-    }
-    return nullptr;
-}
-
 void MainWindow::auditionKeysplit(const QString &symbol)
 {
-    const LoadedKeysplit *const keysplit = keysplitFor(symbol);
+    const LoadedKeysplit *const keysplit = m_workspace->keysplitFor(symbol);
     if (!keysplit)
         return;
     const uint8_t idx = keysplit->table[60];

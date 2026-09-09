@@ -134,9 +134,6 @@ class MainWindow : public QMainWindow
     SongSettings songSettingsFor(const SongTab &tab) const;
 
     // ---- Browse auditions (engine-owned; values resolved per call) ----
-    const WaveData *sampleWaveFor(const QString &symbol) const;
-    const uint32_t *progWaveFor(const QString &symbol) const;
-    const LoadedKeysplit *keysplitFor(const QString &symbol) const;
     // Browse-audition a keysplit instrument: play whatever sub-voice the
     // audition key (middle C) resolves to, with that sub-voice's own envelope
     // — the same resolution the engine does per note (resolve_voice).

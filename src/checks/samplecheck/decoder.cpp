@@ -170,6 +170,35 @@ void SampleProcessingTest::decodeStereoPolicy()
              "in-phase stereo imports");
     QVERIFY(!mean.phaseCancelStereo);
     QCOMPARE(mean.buffer[12], float((double(left[12]) + double(left[12] / 2)) / 2.0 / 32768.0));
+
+    // Keep sub-float source precision through the channel mean. The ignored
+    // right channel must still contribute to source clipping diagnostics.
+    FixtureSpec precise;
+    precise.formatTag = 3;
+    precise.bits = 64;
+    precise.channels = 2;
+    precise.withSmpl = false;
+    const double residual = std::ldexp(1.0, -30);
+    for (const double value : {0.5 + residual, -0.5 + residual, 0.125, 1.5}) {
+        quint64 bits;
+        std::memcpy(&bits, &value, sizeof(bits));
+        putU32(&precise.samples, quint32(bits));
+        putU32(&precise.samples, quint32(bits >> 32));
+    }
+    const QByteArray preciseBytes = fixtureWav(precise);
+    ImportedSample preciseMean;
+    QVERIFY2(importAudioBytes(preciseBytes, QStringLiteral("f/precise.wav"), &preciseMean, &error),
+             qPrintable(error));
+    QCOMPARE(preciseMean.buffer, (std::vector<float>{float(residual), 0.5625f}));
+
+    ImportedSample preciseLeft;
+    QVERIFY2(
+        importAudioBytes(preciseBytes, QStringLiteral("f/precise.wav"), &preciseLeft, &error, true),
+        qPrintable(error));
+    QCOMPARE(preciseLeft.buffer, (std::vector<float>{0.5f, 0.125f}));
+    // One source-clamping warning and one left-only warning; neither output
+    // contains full-scale samples that could add a post-mix clipping warning.
+    QCOMPARE(preciseLeft.warnings.size(), 2);
 }
 
 void SampleProcessingTest::decodeAiff()

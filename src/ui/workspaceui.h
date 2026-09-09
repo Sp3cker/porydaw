@@ -167,6 +167,16 @@ class WorkspaceUi final : public QObject
     void setSampleAuditionEngine(AudioEngine *engine) noexcept { m_sampleAuditionEngine = engine; }
     // The audition sample set for engine auditions; empty until loaded.
     SampleSetLease sampleSet() const noexcept { return m_sampleSet; }
+    // Borrowed lookups into the current sample set, resolved through the
+    // same published catalog lists the set was loaded from (directSound,
+    // progWave, keysplits). The returned pointers borrow from the retained
+    // current sample set: valid until the workspace replaces it, never to be
+    // cached across event-loop turns. Null when the set is empty, the symbol
+    // is absent, or the entry is out of range; keysplit lookups also skip
+    // entries without sub-voicegroup or table data.
+    const WaveData *sampleWaveFor(const QString &symbol) const;
+    const uint32_t *progWaveFor(const QString &symbol) const;
+    const LoadedKeysplit *keysplitFor(const QString &symbol) const;
 
     // ---- Chrome (preserved surface) ----
 
