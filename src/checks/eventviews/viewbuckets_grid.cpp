@@ -150,17 +150,18 @@ void ViewBucketsGridTest::snapLadder_data()
     QTest::addColumn<uint64_t>("grid");
     QTest::addColumn<uint64_t>("snap");
     const double cell = layout::fontPx(4.0 / 3.0);
-    QTest::newRow("straight below")
-        << 4.0 * cell - 1.0 << 0 << int(songview::GridFeel::Straight) << 12ULL << 6ULL;
+    QTest::newRow("straight below") << 4.0 * cell - 1.0 << 0 << int(songview::GridFeel::Straight)
+                                    << uint64_t{12} << uint64_t{6};
     QTest::newRow("straight threshold")
-        << 4.0 * cell << 0 << int(songview::GridFeel::Straight) << 6ULL << 3ULL;
-    QTest::newRow("triplet") << 6.0 * cell << 0 << int(songview::GridFeel::Triplet) << 4ULL << 2ULL;
+        << 4.0 * cell << 0 << int(songview::GridFeel::Straight) << uint64_t{6} << uint64_t{3};
+    QTest::newRow("triplet") << 6.0 * cell << 0 << int(songview::GridFeel::Triplet) << uint64_t{4}
+                             << uint64_t{2};
     QTest::newRow("triplet eighth floor")
-        << 6.0 * cell << 8 << int(songview::GridFeel::Triplet) << 8ULL << 4ULL;
+        << 6.0 * cell << 8 << int(songview::GridFeel::Triplet) << uint64_t{8} << uint64_t{4};
     QTest::newRow("straight sixteenth floor")
-        << 4.0 * cell << 16 << int(songview::GridFeel::Straight) << 6ULL << 3ULL;
+        << 4.0 * cell << 16 << int(songview::GridFeel::Straight) << uint64_t{6} << uint64_t{3};
     QTest::newRow("straight quarter floor")
-        << 4.0 * cell << 4 << int(songview::GridFeel::Straight) << 24ULL << 12ULL;
+        << 4.0 * cell << 4 << int(songview::GridFeel::Straight) << uint64_t{24} << uint64_t{12};
 }
 
 void ViewBucketsGridTest::snapLadder()

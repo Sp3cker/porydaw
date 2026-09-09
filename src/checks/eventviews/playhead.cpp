@@ -54,9 +54,9 @@ int onlyTintedRow(const eventlist::EventTableModel &model)
 void EventViewsPlayheadTest::tintLastOfRun_data()
 {
     QTest::addColumn<uint64_t>("tick");
-    QTest::newRow("before first event") << 1ULL;
-    QTest::newRow("same tick run") << 60ULL;
-    QTest::newRow("past end of track") << 130ULL;
+    QTest::newRow("before first event") << uint64_t{1};
+    QTest::newRow("same tick run") << uint64_t{60};
+    QTest::newRow("past end of track") << uint64_t{130};
 }
 
 void EventViewsPlayheadTest::tintLastOfRun()
