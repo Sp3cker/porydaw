@@ -626,14 +626,6 @@ Item {
         bandVisible: root.trackHeadersBandVisible
         bandName: "timelineQuickTrackHeaders"
     }
-    TrackHeaderToolTip {
-        bandRect: root.trackHeadersBandRect
-        bandVisible: root.trackHeadersBandVisible
-        overlayRoot: root
-        model: trackHeaderModel
-        controlFont: root.rulerFont
-        z: 30
-    }
 
     OtherStripToolTip {
         plotRect: root.otherEventsBandPlotRect

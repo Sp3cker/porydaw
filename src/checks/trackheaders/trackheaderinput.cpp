@@ -319,7 +319,7 @@ void TrackHeadersTest::scrollClampsAndRoutesKeyboardAndWheelInput()
     QVERIFY(headers.scrollY() > 0.0);
 }
 
-void TrackHeadersTest::tooltipClearsOnScroll()
+void TrackHeadersTest::hoveringHeadersDoesNotCreateTooltip()
 {
     TrackHeadersFixture &fx = fixture();
     const std::optional<int> sourceRow = fx.rowForTrack(fx.sourceTrack());
@@ -327,18 +327,8 @@ void TrackHeadersTest::tooltipClearsOnScroll()
     const std::optional<QPointF> point = fx.titlePoint(*sourceRow);
     QVERIFY(point);
     QVERIFY(fx.headers().pointerMove(pointerInput(fx.input(), *point, Qt::NoButton, Qt::NoButton)));
-    QVERIFY(fx.headers().toolTipVisible());
-    QVERIFY(!fx.headers().toolTipText().isEmpty());
-    QCOMPARE(fx.headers().toolTipPosition(), *point);
     checks::support::pumpQuick();
-    QVERIFY(fx.toolTip().isVisible());
-    QVERIFY(fx.toolTip().x() >= 0.0 && fx.toolTip().y() >= 0.0);
-    QVERIFY(fx.toolTip().x() + fx.toolTip().width() <= fx.root().width() + kGeometryTolerance);
-    QVERIFY(fx.toolTip().y() + fx.toolTip().height() <= fx.root().height() + kGeometryTolerance);
-    QVERIFY(fx.headers().wheel(wheelInput(fx.input(), *point, {}, {0, -kWheelNotch})));
-    checks::support::pumpQuick();
-    QVERIFY(!fx.headers().toolTipVisible());
-    QVERIFY(!fx.toolTip().isVisible());
+    QVERIFY(!fx.root().findChild<QQuickItem *>(QStringLiteral("timelineTrackHeaderToolTip")));
 }
 
 void TrackHeadersTest::emptyTrackHeadersRejectInputWithoutMutation()

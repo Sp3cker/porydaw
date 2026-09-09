@@ -1,7 +1,6 @@
 #include "ui/songview/trackheadermodel.h"
 
 #include "core/songdocument.h"
-#include "ui/keymap.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
 #include "ui/theme/themeruntime.h"
@@ -9,7 +8,6 @@
 
 #include <QApplication>
 #include <QCursor>
-#include <QKeySequence>
 #include <QPalette>
 #include <QPointer>
 #include <QRect>
@@ -34,7 +32,6 @@ const QHash<int, QByteArray> &trackHeaderRoleNames()
         result.insert(TrackHeaderModel::TrackRole, QByteArrayLiteral("track"));
         result.insert(TrackHeaderModel::TitleRole, QByteArrayLiteral("title"));
         result.insert(TrackHeaderModel::SubtitleRole, QByteArrayLiteral("subtitle"));
-        result.insert(TrackHeaderModel::ToolTipRole, QByteArrayLiteral("toolTip"));
         result.insert(TrackHeaderModel::TitleRectRole, QByteArrayLiteral("titleRect"));
         result.insert(TrackHeaderModel::SubtitleRectRole, QByteArrayLiteral("subtitleRect"));
         result.insert(TrackHeaderModel::SelectedTitleOffsetRole,
@@ -73,14 +70,6 @@ const QList<int> kActivityRoles{TrackHeaderModel::ActivityLeftHeightRole,
 const QList<int> kMuteCheckedRoles{TrackHeaderModel::MuteCheckedRole};
 const QList<int> kSoloCheckedRoles{TrackHeaderModel::SoloCheckedRole};
 
-QString shortcutHint(const QString &id, const QString &name)
-{
-    const QKeySequence sequence = keymap::Registry::instance().bindings(id).value(0);
-    return sequence.isEmpty()
-               ? name
-               : QStringLiteral("%1 (%2)").arg(name, sequence.toString(QKeySequence::NativeText));
-}
-
 } // namespace
 
 TrackHeaderModel::Geometry TrackHeaderModel::Geometry::resolve()
@@ -111,16 +100,6 @@ TrackHeaderModel::TrackHeaderModel(SongView &owner, QObject *parent)
     setObjectName(QStringLiteral("trackHeaderModel"));
     connect(&m_owner, &SongView::muteMaskChanged, this, &TrackHeaderModel::syncMuteMask);
     connect(&m_owner, &SongView::soloMaskChanged, this, &TrackHeaderModel::syncSoloMask);
-    connect(&keymap::Registry::instance(), &keymap::Registry::bindingsChanged, this, [this] {
-        if (!m_toolTipVisible)
-            return;
-        const QString text = toolTipAt(m_toolTipPosition);
-        if (text == m_toolTipText)
-            return;
-        m_toolTipText = text;
-        m_toolTipVisible = !text.isEmpty();
-        emit toolTipChanged();
-    });
     syncAppearance();
     ensureHeaderMenuAdapters();
 }
@@ -157,8 +136,6 @@ QVariant TrackHeaderModel::data(const QModelIndex &index, int role) const
         return record.title;
     case SubtitleRole:
         return record.subtitle;
-    case ToolTipRole:
-        return record.toolTip;
     case TitleRectRole:
         return record.titleRect;
     case SubtitleRectRole:
@@ -245,7 +222,6 @@ TrackHeaderModel::TrackHeaderRecord TrackHeaderModel::makeAddTrackRecord() const
     TrackHeaderRecord record;
     record.isAddTrack = true;
     record.title = SongView::tr("+ Add track");
-    record.toolTip = SongView::tr("Add a track (picks its voice first)");
     return record;
 }
 
@@ -324,41 +300,10 @@ void TrackHeaderModel::resolveRecordLabels(TrackHeaderRecord &record) const
     record.subtitleRect = QRectF(boxes.secondary);
 }
 
-void TrackHeaderModel::resolveRecordToolTip(TrackHeaderRecord &record) const
-{
-    if (record.isAddTrack)
-        return;
-
-    const MidiTimeline *timeline = m_owner.timeline();
-    if (!timeline) {
-        record.toolTip.clear();
-        return;
-    }
-    record.toolTip = SongView::tr("%1 notes · %2")
-                         .arg(timeline->tracks[record.track].noteCount)
-                         .arg(m_owner.instrumentLabel(record.track));
-    const SongDocument *document = m_owner.document();
-    if (document && record.track >= document->trackBudget()) {
-        record.toolTip +=
-            SongView::tr(
-                "\nPossibly incompatible in-game: this song's music player only allocates %1 "
-                "track(s) (sound/music_player_table.inc). The track stays audible here.")
-                .arg(document->trackBudget());
-    }
-    if (document) {
-        record.toolTip += SongView::tr(
-            "\nDouble-click to rename · right-click to change voice, duplicate, or delete"
-            " · drag to reorder"
-            "\nClick the voice name to show it in the voicegroup dock · double-click it to "
-            "change the voice");
-    }
-}
-
 void TrackHeaderModel::resolveRecordPresentation(TrackHeaderRecord &record) const
 {
     resolveRecordColors(record);
     resolveRecordLabels(record);
-    resolveRecordToolTip(record);
 }
 
 void TrackHeaderModel::rebuild(const TrackActivity &activity, bool playing)
@@ -419,7 +364,6 @@ void TrackHeaderModel::syncVoices()
             continue;
         TrackHeaderRecord before = m_rows[row];
         resolveRecordLabels(m_rows[row]);
-        resolveRecordToolTip(m_rows[row]);
         notifyRecordChange(static_cast<int>(row), before, m_rows[row]);
     }
 }
@@ -533,10 +477,6 @@ void TrackHeaderModel::syncAppearance()
     next.insert(QStringLiteral("scrollbarHandle"), themes::color(themes::Role::scrollbar_handle));
     next.insert(QStringLiteral("scrollbarHandleHover"),
                 themes::color(themes::Role::scrollbar_handle_hover_background));
-    next.insert(QStringLiteral("toolTipBackground"),
-                themes::color(themes::Role::tooltip_background));
-    next.insert(QStringLiteral("toolTipText"), themes::color(themes::Role::tooltip_text));
-    next.insert(QStringLiteral("toolTipOutline"), themes::color(themes::Role::tooltip_outline));
     next.insert(QStringLiteral("reorderIndicator"),
                 m_inputHost ? m_inputHost->palette().color(QPalette::Highlight)
                             : QColor(Qt::transparent));
@@ -761,7 +701,6 @@ qreal TrackHeaderModel::viewportHeight() const noexcept
 
 void TrackHeaderModel::clampScroll()
 {
-    clearToolTip();
     const qreal maximum = maximumScrollY();
     const qreal next = std::isfinite(m_scrollY) ? std::clamp(m_scrollY, qreal(0.0), maximum) : 0.0;
     if (next == m_scrollY)
@@ -772,7 +711,6 @@ void TrackHeaderModel::clampScroll()
 
 void TrackHeaderModel::setScrollY(qreal value)
 {
-    clearToolTip();
     if (!std::isfinite(value))
         value = 0.0;
     const qreal next = std::clamp(value, qreal(0.0), maximumScrollY());
@@ -792,21 +730,6 @@ qreal TrackHeaderModel::reorderIndicatorY() const noexcept
     return m_reorderIndicatorY;
 }
 
-bool TrackHeaderModel::toolTipVisible() const noexcept
-{
-    return m_toolTipVisible;
-}
-
-QString TrackHeaderModel::toolTipText() const
-{
-    return m_toolTipText;
-}
-
-QPointF TrackHeaderModel::toolTipPosition() const noexcept
-{
-    return m_toolTipPosition;
-}
-
 QVariantMap TrackHeaderModel::appearance() const
 {
     return m_appearance;
@@ -817,7 +740,6 @@ void TrackHeaderModel::cancelTransientState()
     finishReorder(false);
     clearPointerVisuals();
     cancelRename();
-    clearToolTip();
     // Structural change (rebuild/remap/document replacement/teardown) ends
     // the header menu synchronously; a popup teardown must never steal focus.
     cancelHeaderMenuWithoutFocus();
@@ -1000,7 +922,6 @@ bool TrackHeaderModel::pointerPress(const TimelinePointerInput &input)
     if (!m_inputHost)
         return false;
 
-    clearToolTip();
     const int row = rowAt(input.position.y());
     if (row < 0)
         return false;
@@ -1051,7 +972,6 @@ bool TrackHeaderModel::pointerDoubleClick(const TimelinePointerInput &input)
     if (!m_inputHost)
         return false;
 
-    clearToolTip();
     const int row = rowAt(input.position.y());
     if (row < 0)
         return false;
@@ -1085,7 +1005,6 @@ bool TrackHeaderModel::pointerMove(const TimelinePointerInput &input)
     updatePointerVisuals(row, target, false);
     if (m_pointer.dragging) {
         updateReorder(input.position);
-        clearToolTip();
         return true;
     }
     if (m_pointer.dragArmed && (input.buttons & Qt::LeftButton) &&
@@ -1094,10 +1013,6 @@ bool TrackHeaderModel::pointerMove(const TimelinePointerInput &input)
         beginReorder(m_pointer.pressedTrack, input.position);
         return m_pointer.dragging;
     }
-    if (row >= 0)
-        updateToolTip(input);
-    else
-        clearToolTip();
     return row >= 0 || m_pointer.pressedRow >= 0;
 }
 
@@ -1107,7 +1022,6 @@ bool TrackHeaderModel::pointerRelease(const TimelinePointerInput &input)
     if (!m_inputHost)
         return false;
 
-    clearToolTip();
     if (m_pointer.dragging) {
         finishReorder(input.button == Qt::LeftButton);
         clearPointerVisuals();
@@ -1159,7 +1073,6 @@ void TrackHeaderModel::pointerLeave()
     } else {
         clearPointerVisuals();
     }
-    clearToolTip();
 }
 
 bool TrackHeaderModel::scrollVertically(const TimelineWheelInput &input)
@@ -1182,7 +1095,6 @@ bool TrackHeaderModel::scrollVertically(const TimelineWheelInput &input)
 
 bool TrackHeaderModel::wheel(const TimelineWheelInput &input)
 {
-    clearToolTip();
     return scrollVertically(input);
 }
 
@@ -1190,53 +1102,6 @@ void TrackHeaderModel::inputCancelled(TimelineInputCancelReason)
 {
     finishReorder(false);
     clearPointerVisuals();
-    clearToolTip();
-}
-
-QString TrackHeaderModel::toolTipAt(const QPointF &bandPosition) const
-{
-    const int row = rowAt(bandPosition.y());
-    if (row < 0)
-        return {};
-    switch (hitTarget(row, bandPosition)) {
-    case HitTarget::Mute:
-        return shortcutHint(QStringLiteral("roll.mute_tracks"), SongView::tr("Mute"));
-    case HitTarget::Solo:
-        return shortcutHint(QStringLiteral("roll.solo_tracks"), SongView::tr("Solo"));
-    case HitTarget::AddTrack:
-        return SongView::tr("Add a track (picks its voice first)");
-    case HitTarget::None:
-        return {};
-    case HitTarget::Body:
-    case HitTarget::Voice:
-        return m_rows[static_cast<std::size_t>(row)].toolTip;
-    }
-    return {};
-}
-
-void TrackHeaderModel::updateToolTip(const TimelinePointerInput &input)
-{
-    const QString text = toolTipAt(input.position);
-    if (text.isEmpty()) {
-        clearToolTip();
-        return;
-    }
-    if (m_toolTipVisible && m_toolTipText == text && m_toolTipPosition == input.position)
-        return;
-    m_toolTipVisible = true;
-    m_toolTipText = text;
-    m_toolTipPosition = input.position;
-    emit toolTipChanged();
-}
-
-void TrackHeaderModel::clearToolTip()
-{
-    if (!m_toolTipVisible && m_toolTipText.isEmpty() && m_toolTipPosition.isNull())
-        return;
-    m_toolTipVisible = false;
-    m_toolTipText.clear();
-    m_toolTipPosition = {};
-    emit toolTipChanged();
 }
 
 void TrackHeaderModel::beginReorder(int track, const QPointF &position)
@@ -1354,8 +1219,6 @@ void TrackHeaderModel::notifyRecordChange(int row, const TrackHeaderRecord &befo
         roles.append(TitleRole);
     if (before.subtitle != after.subtitle)
         roles.append(SubtitleRole);
-    if (before.toolTip != after.toolTip)
-        roles.append(ToolTipRole);
     if (before.titleRect != after.titleRect)
         roles.append(TitleRectRole);
     if (before.subtitleRect != after.subtitleRect)

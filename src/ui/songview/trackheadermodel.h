@@ -58,9 +58,6 @@ class TrackHeaderModel final : public QAbstractListModel, public TimelineBandInt
     Q_PROPERTY(
         bool reorderIndicatorVisible READ reorderIndicatorVisible NOTIFY reorderChanged FINAL)
     Q_PROPERTY(qreal reorderIndicatorY READ reorderIndicatorY NOTIFY reorderChanged FINAL)
-    Q_PROPERTY(bool toolTipVisible READ toolTipVisible NOTIFY toolTipChanged FINAL)
-    Q_PROPERTY(QString toolTipText READ toolTipText NOTIFY toolTipChanged FINAL)
-    Q_PROPERTY(QPointF toolTipPosition READ toolTipPosition NOTIFY toolTipChanged FINAL)
     Q_PROPERTY(QVariantMap appearance READ appearance NOTIFY appearanceChanged FINAL)
 
   public:
@@ -69,7 +66,6 @@ class TrackHeaderModel final : public QAbstractListModel, public TimelineBandInt
         TrackRole,
         TitleRole,
         SubtitleRole,
-        ToolTipRole,
         TitleRectRole,
         SubtitleRectRole,
         SelectedTitleOffsetRole,
@@ -148,9 +144,6 @@ class TrackHeaderModel final : public QAbstractListModel, public TimelineBandInt
     void setScrollY(qreal value);
     bool reorderIndicatorVisible() const noexcept;
     qreal reorderIndicatorY() const noexcept;
-    bool toolTipVisible() const noexcept;
-    QString toolTipText() const;
-    QPointF toolTipPosition() const noexcept;
     QVariantMap appearance() const;
     void cancelTransientState();
     // Binds the shared canvas popup session once TimelineQuickView exists;
@@ -173,7 +166,6 @@ class TrackHeaderModel final : public QAbstractListModel, public TimelineBandInt
     void renameChanged();
     void scrollChanged();
     void reorderChanged();
-    void toolTipChanged();
     void appearanceChanged();
 
   private:
@@ -184,7 +176,6 @@ class TrackHeaderModel final : public QAbstractListModel, public TimelineBandInt
         int track = -1;
         QString title;
         QString subtitle;
-        QString toolTip;
         QRectF titleRect;
         QRectF subtitleRect;
         QPointF selectedTitleOffset;
@@ -264,9 +255,6 @@ class TrackHeaderModel final : public QAbstractListModel, public TimelineBandInt
     void cancelHeaderMenuWithoutFocus();
     void handleHeaderMenuAction(int actionId);
     std::vector<QuickMenuItem> buildHeaderMenuItems(const SongDocument &document) const;
-    QString toolTipAt(const QPointF &bandPosition) const;
-    void updateToolTip(const TimelinePointerInput &input);
-    void clearToolTip();
     void beginReorder(int track, const QPointF &position);
     void updateReorder(const QPointF &position);
     void finishReorder(bool commit);
@@ -277,7 +265,6 @@ class TrackHeaderModel final : public QAbstractListModel, public TimelineBandInt
     void resolveRecordPresentation(TrackHeaderRecord &record) const;
     void resolveRecordColors(TrackHeaderRecord &record) const;
     void resolveRecordLabels(TrackHeaderRecord &record) const;
-    void resolveRecordToolTip(TrackHeaderRecord &record) const;
     void syncCheckedMask(uint32_t mask, bool TrackHeaderRecord::*member, int role);
     void refreshActivityHeights(const TrackActivity *activity, bool playing);
     void syncStoredActivityHeights();
@@ -307,9 +294,6 @@ class TrackHeaderModel final : public QAbstractListModel, public TimelineBandInt
     qreal m_scrollY = 0.0;
     bool m_reorderIndicatorVisible = false;
     qreal m_reorderIndicatorY = 0.0;
-    bool m_toolTipVisible = false;
-    QString m_toolTipText;
-    QPointF m_toolTipPosition;
     QVariantMap m_appearance;
     // Persistent typed header-menu adapters; created in the constructor and
     // bound to the shared canvas popup session by TimelineQuickView.

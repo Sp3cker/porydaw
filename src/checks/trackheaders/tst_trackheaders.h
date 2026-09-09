@@ -55,7 +55,6 @@ class TrackHeadersFixture final
     QQuickItem &thumb() noexcept;
     QQuickItem &rename() noexcept;
     QQuickItem &marker() noexcept;
-    QQuickItem &toolTip() noexcept;
     QObject &rows() noexcept;
     const std::vector<int> &tracks() const noexcept;
     int sourceTrack() const noexcept;
@@ -90,7 +89,6 @@ class TrackHeadersFixture final
     QPointer<QQuickItem> m_thumb;
     QPointer<QQuickItem> m_rename;
     QPointer<QQuickItem> m_marker;
-    QPointer<QQuickItem> m_toolTip;
     QPointer<QObject> m_rows;
     std::vector<int> m_tracks;
     int m_sourceTrack = -1;
@@ -116,7 +114,7 @@ class TrackHeadersTest final : public QObject
     void selectionAndVoiceRouteThroughHeaders();
     void muteAndSoloHonorCancellationAndButtons();
     void scrollClampsAndRoutesKeyboardAndWheelInput();
-    void tooltipClearsOnScroll();
+    void hoveringHeadersDoesNotCreateTooltip();
     void renameCommitsAndRebuildsHeader();
     void reorderCommitsAndRebuildsHeader();
     void addTrackOpensPickerAndRebuildsHeader();

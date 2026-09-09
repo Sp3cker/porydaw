@@ -119,10 +119,8 @@ bool TrackHeadersFixture::create(QString &error)
     m_thumb = m_root->findChild<QQuickItem *>(QStringLiteral("timelineTrackHeaderScrollThumb"));
     m_rename = m_root->findChild<QQuickItem *>(QStringLiteral("timelineTrackHeaderRename"));
     m_marker = m_root->findChild<QQuickItem *>(QStringLiteral("timelineTrackHeaderReorderMarker"));
-    m_toolTip = m_root->findChild<QQuickItem *>(QStringLiteral("timelineTrackHeaderToolTip"));
     m_rows = m_root->findChild<QObject *>(QStringLiteral("timelineTrackHeaderRows"));
-    if (!m_input || !m_band || !m_scrollbar || !m_thumb || !m_rename || !m_marker || !m_toolTip ||
-        !m_rows) {
+    if (!m_input || !m_band || !m_scrollbar || !m_thumb || !m_rename || !m_marker || !m_rows) {
         error = QStringLiteral("track-header Quick surface lacks a required named object");
         return false;
     }
@@ -203,7 +201,6 @@ bool TrackHeadersFixture::acquireInputFocus(QString &error)
 void TrackHeadersFixture::close()
 {
     m_rows.clear();
-    m_toolTip.clear();
     m_marker.clear();
     m_rename.clear();
     m_thumb.clear();
@@ -271,10 +268,6 @@ QQuickItem &TrackHeadersFixture::rename() noexcept
 QQuickItem &TrackHeadersFixture::marker() noexcept
 {
     return *m_marker;
-}
-QQuickItem &TrackHeadersFixture::toolTip() noexcept
-{
-    return *m_toolTip;
 }
 QObject &TrackHeadersFixture::rows() noexcept
 {
