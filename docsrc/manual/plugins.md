@@ -26,7 +26,7 @@ Plugins automatically reload when their files are modified, so editing one while
 
 ## Bundled plugin examples
 
-Porydaw has a bunch of example plugins in its `plugins/examples` folderon GitHub. Copy any of them into your plugins folder to try them. They are decent references to see what the scripting API can do, as well as nice code references.
+Porydaw has a bunch of example plugins in its  [`plugins/examples`](https://github.com/huderlem/porydaw/blob/main/plugins/examples) folder on GitHub. Copy any of them into your plugins folder to try them. They are decent references to see what the scripting API can do, as well as nice code references.
 
 | Plugin | What it adds |
 |---|---|
