@@ -73,7 +73,7 @@ class PolyphonyPanel : public QWidget
     void refreshTable(const AudioEngine::PolySnapshot &snap);
     void clearRuntimeState();
     // Stacked sections when narrow, overflow table beside the channel grid
-    // when the panel is at least kWideLayoutMinWidth wide.
+    // when the panel is at least kWideLayoutMinEm em wide.
     void setWideLayout(bool wide);
 
     QCheckBox *m_invert = nullptr;

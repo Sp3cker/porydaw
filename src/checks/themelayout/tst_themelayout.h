@@ -84,6 +84,7 @@ class ThemeLayoutScaleTest final : public QObject
 
     void layoutScale();
     void pickerPaintingMatchesHitTesting();
+    void polyphonyLayoutScales();
 
   private:
     int m_baseFontPx;

@@ -3,7 +3,7 @@
 #include <QByteArray>
 #include <QCoreApplication>
 #include <QFileInfo>
-#include <QImage>
+#include <QPixmap>
 #include <QStringList>
 #include <QtTest>
 
@@ -197,8 +197,11 @@ void PolyphonyGateTest::logCapIs500()
 void PolyphonyGateTest::responsiveLayout()
 {
     PanelFixture fixture;
+    fixture.panel->updateSnapshot(snapshotWithEvents({}));
     fixture.panel->updateSnapshot(richSnapshot());
     fixture.showAndSettle();
+    if (!m_screenshotPath.isEmpty())
+        QVERIFY(fixture.panel->grab().save(m_screenshotPath));
 
     fixture.panel->resize(180, 980);
     QCoreApplication::processEvents();
@@ -214,49 +217,21 @@ void PolyphonyGateTest::responsiveLayout()
     QTRY_VERIFY(fixture.panel->overflowSectionRect().left() >=
                 fixture.panel->usageSectionRect().right());
     QTRY_VERIFY(fixture.panel->gridFullyVisible());
+    if (!m_screenshotPath.isEmpty())
+        QVERIFY(fixture.panel->grab().save(
+            derivedScreenshotPath(m_screenshotPath, QStringLiteral("-wide"))));
 
     fixture.panel->resize(380, 240);
     QCoreApplication::processEvents();
     QTRY_VERIFY(fixture.panel->gridFullyVisible());
     QTRY_VERIFY(fixture.panel->vScrollRange() > 0);
+    if (!m_screenshotPath.isEmpty())
+        QVERIFY(fixture.panel->grab().save(
+            derivedScreenshotPath(m_screenshotPath, QStringLiteral("-short"))));
 
     fixture.panel->resize(380, 980);
     QCoreApplication::processEvents();
     QTRY_COMPARE(fixture.panel->vScrollRange(), 0);
-}
-
-void PolyphonyGateTest::rasterSmoke()
-{
-    PanelFixture fixture;
-    fixture.panel->updateSnapshot(snapshotWithEvents({}));
-    fixture.panel->updateSnapshot(richSnapshot());
-    fixture.showAndSettle();
-
-    QTRY_VERIFY(fixture.panel->isVisible());
-    QImage initial(fixture.panel->size(), QImage::Format_ARGB32_Premultiplied);
-    initial.fill(Qt::white);
-    fixture.panel->render(&initial);
-    QVERIFY(!initial.isNull());
-    if (!m_screenshotPath.isEmpty())
-        QVERIFY(initial.save(m_screenshotPath));
-
-    fixture.panel->resize(900, 600);
-    QCoreApplication::processEvents();
-    QImage wide(fixture.panel->size(), QImage::Format_ARGB32_Premultiplied);
-    wide.fill(Qt::white);
-    fixture.panel->render(&wide);
-    QVERIFY(!wide.isNull());
-    if (!m_screenshotPath.isEmpty())
-        QVERIFY(wide.save(derivedScreenshotPath(m_screenshotPath, QStringLiteral("-wide"))));
-
-    fixture.panel->resize(380, 240);
-    QCoreApplication::processEvents();
-    QImage shortImage(fixture.panel->size(), QImage::Format_ARGB32_Premultiplied);
-    shortImage.fill(Qt::white);
-    fixture.panel->render(&shortImage);
-    QVERIFY(!shortImage.isNull());
-    if (!m_screenshotPath.isEmpty())
-        QVERIFY(shortImage.save(derivedScreenshotPath(m_screenshotPath, QStringLiteral("-short"))));
 }
 
 } // namespace checks

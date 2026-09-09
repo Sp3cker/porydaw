@@ -20,6 +20,7 @@
 
 #include "core/m4asemantics.h"
 #include "core/miditimeline.h"
+#include "ui/layout.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
 
@@ -30,9 +31,11 @@ constexpr qint64 kFlashMs = 1000; // row flash fade time
 
 // Panel width at which the overflow table moves to the right of the channel
 // grid (roughly the grid's five-per-row hint plus the table column) instead
-// of stretching, hilariously wide, across the whole dock.
-constexpr int kWideLayoutMinWidth = 600;
-constexpr int kOverflowColumnWidth = 320; // table column width in wide mode
+// of stretching, hilariously wide, across the whole dock. Font-relative em
+// multiples of the base-12 design; layout::fontPx() scales them at the use
+// sites so the breakpoint and column track the application font.
+constexpr double kWideLayoutMinEm = 50.0;
+constexpr double kOverflowColumnEm = 320.0 / 12.0; // table column width in wide mode
 
 // Cell states matching the CLAP plugin's channel_cell(): free, active
 // (green), releasing (amber), lost sound playing on a shadow channel (blue).
@@ -117,10 +120,13 @@ class PolyChannelGrid : public QWidget
     int heightForWidth(int width) const override { return layoutHeight(width); }
     QSize sizeHint() const override
     {
-        const int defaultW = kCellW * 5 + kGap * 4;
+        const int defaultW = m_dims.cellW * 5 + m_dims.gap * 4;
         return QSize(defaultW, layoutHeight(m_hintWidth > 0 ? m_hintWidth : defaultW));
     }
-    QSize minimumSizeHint() const override { return QSize(kCellW + kGap, kCellH); }
+    QSize minimumSizeHint() const override
+    {
+        return QSize(m_dims.cellW + m_dims.gap, m_dims.cellH);
+    }
 
   protected:
     void resizeEvent(QResizeEvent *event) override
@@ -157,17 +163,29 @@ class PolyChannelGrid : public QWidget
     }
 
   private:
-    static constexpr int kCellW = 46;
-    static constexpr int kCellH = 34;
-    static constexpr int kGap = 4;
-    static constexpr int kCaptionH = 18;
+    // Cell geometry resolved once from the application font, in em multiples
+    // of the base-12 design (46x34 cells, 4 gap, 18 caption, 3 corner
+    // radius). Hint, layout, and paint paths all read the same values.
+    struct Dims {
+        int cellW;
+        int cellH;
+        int gap;
+        int captionH;
+        qreal radius;
+    };
+    const Dims m_dims{::layout::fontPx(46.0 / 12.0), ::layout::fontPx(34.0 / 12.0),
+                      ::layout::fontPx(4.0 / 12.0), ::layout::fontPx(18.0 / 12.0),
+                      ::layout::fontPxF(3.0 / 12.0)};
 
-    int cellsPerRow(int width) const { return std::max(1, (width + kGap) / (kCellW + kGap)); }
+    int cellsPerRow(int width) const
+    {
+        return std::max(1, (width + m_dims.gap) / (m_dims.cellW + m_dims.gap));
+    }
 
     int groupHeight(int count, int width) const
     {
         const int rows = (count + cellsPerRow(width) - 1) / cellsPerRow(width);
-        return kCaptionH + rows * (kCellH + kGap);
+        return m_dims.captionH + rows * (m_dims.cellH + m_dims.gap);
     }
 
     int layoutHeight(int width) const
@@ -175,7 +193,7 @@ class PolyChannelGrid : public QWidget
         int h = groupHeight(std::max<int>(m_snap.maxPcmChannels, 1), width) +
                 groupHeight(MAX_CGB_CHANNELS, width);
         if (m_snap.invert) {
-            h += kCaptionH + groupHeight(MAX_PCM_CHANNELS, width) +
+            h += m_dims.captionH + groupHeight(MAX_PCM_CHANNELS, width) +
                  groupHeight(MAX_CGB_CHANNELS, width);
         }
         return h;
@@ -184,8 +202,8 @@ class PolyChannelGrid : public QWidget
     void paintCaption(QPainter *p, int &y, const QString &text)
     {
         p->setPen(palette().color(QPalette::Disabled, QPalette::Text));
-        p->drawText(QRect(0, y, width(), kCaptionH), Qt::AlignLeft | Qt::AlignVCenter, text);
-        y += kCaptionH;
+        p->drawText(QRect(0, y, width(), m_dims.captionH), Qt::AlignLeft | Qt::AlignVCenter, text);
+        y += m_dims.captionH;
     }
 
     void paintGroup(QPainter *p, int &y, const QString &caption,
@@ -199,8 +217,8 @@ class PolyChannelGrid : public QWidget
         const int perRow = cellsPerRow(width());
         for (int i = 0; i < count; i++) {
             const AudioEngine::PolyChannel &ch = channels[i];
-            const int x = (i % perRow) * (kCellW + kGap);
-            const int cy = y + (i / perRow) * (kCellH + kGap);
+            const int x = (i % perRow) * (m_dims.cellW + m_dims.gap);
+            const int cy = y + (i / perRow) * (m_dims.cellH + m_dims.gap);
             const int state = !ch.on ? 0 : shadow ? 3 : ch.releasing ? 2 : 1;
             QString label;
             if (isCgb) {
@@ -213,16 +231,16 @@ class PolyChannelGrid : public QWidget
                     ch.on ? QStringLiteral("T%1\n%2").arg(ch.track + 1).arg(midiKeyName(ch.midiKey))
                           : QStringLiteral("--");
             }
-            const QRect rect(x, cy, kCellW, kCellH);
+            const QRect rect(x, cy, m_dims.cellW, m_dims.cellH);
             p->setPen(Qt::NoPen);
             p->setBrush(cellColor(state));
-            p->drawRoundedRect(rect, 3, 3);
+            p->drawRoundedRect(QRectF(rect), m_dims.radius, m_dims.radius);
             p->setPen(themes::color(state == 0 ? themes::Role::polyphony_cell_free_text
                                                : themes::Role::polyphony_cell_text));
             p->drawText(rect, Qt::AlignCenter, label);
         }
         p->restore();
-        y += ((count + perRow - 1) / perRow) * (kCellH + kGap);
+        y += ((count + perRow - 1) / perRow) * (m_dims.cellH + m_dims.gap);
     }
 
     QFont m_cellFont;
@@ -247,8 +265,9 @@ PolyphonyPanel::PolyphonyPanel(QWidget *parent) : QWidget(parent)
     outer->addWidget(m_scroll);
     auto *content = new QWidget;
     auto *layout = new QVBoxLayout(content);
-    layout->setContentsMargins(8, 8, 8, 8);
-    layout->setSpacing(6);
+    const int outerMargin = ::layout::fontPx(8.0 / 12.0);
+    layout->setContentsMargins(outerMargin, outerMargin, outerMargin, outerMargin);
+    layout->setSpacing(::layout::space(::layout::Space::Two));
 
     m_invert = new QCheckBox(tr("Solo overflow (invert audio)"), content);
     m_invert->setToolTip(tr("Mutes normal playback and makes ONLY the sounds "
@@ -262,7 +281,7 @@ PolyphonyPanel::PolyphonyPanel(QWidget *parent) : QWidget(parent)
     m_usageBox = new QWidget(content);
     auto *usageLayout = new QVBoxLayout(m_usageBox);
     usageLayout->setContentsMargins(0, 0, 0, 0);
-    usageLayout->setSpacing(6);
+    usageLayout->setSpacing(::layout::space(::layout::Space::Two));
     m_usageLabel = new QLabel(tr("Channel usage"), m_usageBox);
     m_usageLabel->setFont(typography::bold(font()));
     usageLayout->addWidget(m_usageLabel);
@@ -273,7 +292,7 @@ PolyphonyPanel::PolyphonyPanel(QWidget *parent) : QWidget(parent)
     m_overflowBox = new QWidget(content);
     auto *overflowLayout = new QVBoxLayout(m_overflowBox);
     overflowLayout->setContentsMargins(0, 0, 0, 0);
-    overflowLayout->setSpacing(6);
+    overflowLayout->setSpacing(::layout::space(::layout::Space::Two));
     auto *tableHeader = new QHBoxLayout;
     m_tableLabel = new QLabel(tr("Overflow by track"), m_overflowBox);
     m_tableLabel->setFont(typography::bold(font()));
@@ -315,14 +334,14 @@ PolyphonyPanel::PolyphonyPanel(QWidget *parent) : QWidget(parent)
     m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_table->setSelectionMode(QAbstractItemView::NoSelection);
     m_table->setFocusPolicy(Qt::NoFocus);
-    m_table->setMinimumHeight(90);
+    m_table->setMinimumHeight(::layout::fontPx(90.0 / 12.0));
     overflowLayout->addWidget(m_table, 1);
     m_tableEmpty = new QLabel(tr("No overflow recorded"), m_overflowBox);
     m_tableEmpty->setEnabled(false);
     overflowLayout->addWidget(m_tableEmpty);
 
     m_bodyGrid = new QGridLayout;
-    m_bodyGrid->setSpacing(6);
+    m_bodyGrid->setSpacing(::layout::space(::layout::Space::Two));
     layout->addLayout(m_bodyGrid, 1);
     setWideLayout(false);
 
@@ -342,7 +361,7 @@ PolyphonyPanel::PolyphonyPanel(QWidget *parent) : QWidget(parent)
 void PolyphonyPanel::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
-    const bool wide = event->size().width() >= kWideLayoutMinWidth;
+    const bool wide = event->size().width() >= ::layout::fontPx(kWideLayoutMinEm);
     if (wide != m_wideLayout)
         setWideLayout(wide);
 }
@@ -357,7 +376,7 @@ void PolyphonyPanel::setWideLayout(bool wide)
     // the table keeps a sane fixed-ish width beside it. Stacked, the table
     // row takes the extra height instead, as before.
     m_bodyGrid->setColumnStretch(0, 1);
-    m_bodyGrid->setColumnMinimumWidth(1, wide ? kOverflowColumnWidth : 0);
+    m_bodyGrid->setColumnMinimumWidth(1, wide ? ::layout::fontPx(kOverflowColumnEm) : 0);
     m_bodyGrid->setRowStretch(0, wide ? 1 : 0);
     m_bodyGrid->setRowStretch(1, wide ? 0 : 1);
     m_wideLayout = wide;

@@ -35,7 +35,6 @@ class PolyphonyGateTest final : public QObject
     void resetRebasesLog();
     void logCapIs500();
     void responsiveLayout();
-    void rasterSmoke();
 
     void hiddenDockCheckboxIsInert();
     void visibleCheckedDockInverts();

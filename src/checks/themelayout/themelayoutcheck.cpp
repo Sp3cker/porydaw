@@ -131,7 +131,12 @@ int runThemeLayoutDarkBaseCheck(QApplication &application, const QStringList &qt
 int runThemeLayoutScaleCheck(QApplication &application, int baseFontPx,
                              const QStringList &qtArguments)
 {
-    if (!layout::initialize(application, baseFontPx))
+    if (baseFontPx <= 0)
+        return 1;
+    auto font = application.font();
+    font.setPixelSize(baseFontPx);
+    application.setFont(font);
+    if (!ui::initializeApplication(application))
         return 1;
     ThemeLayoutScaleTest test(baseFontPx);
     return QTest::qExec(&test, testArguments(QStringLiteral("themelayout-scale"), qtArguments));

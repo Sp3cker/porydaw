@@ -1,6 +1,7 @@
 #include "checks/themelayout/tst_themelayout.h"
 
 #include "ui/layout.h"
+#include "ui/polyphonypanel.h"
 #include "ui/theme/color_math.h"
 #include "ui/theme/oklchpicker.h"
 
@@ -146,4 +147,31 @@ void ThemeLayoutScaleTest::pickerPaintingMatchesHitTesting()
     QCOMPARE(selected.count(), 1);
     const auto chosen = themes::oklchFromColor(qvariant_cast<QColor>(selected.takeFirst().at(0)));
     QVERIFY(std::abs(chosen.hue - painted.hue) < 5.0);
+}
+
+void ThemeLayoutScaleTest::polyphonyLayoutScales()
+{
+    PolyphonyPanel panel;
+    panel.setInvertChecked(true);
+    AudioEngine::PolySnapshot snapshot;
+    snapshot.maxPcmChannels = 5;
+    snapshot.invert = true;
+    snapshot.pcm[0] = {true, false, 0, 60};
+    snapshot.pcm[MAX_PCM_CHANNELS] = {true, false, 1, 72};
+    panel.updateSnapshot(snapshot);
+    panel.resize(layout::fontPx(48), layout::fontPx(70));
+    panel.show();
+    QTRY_VERIFY(!panel.wideLayoutActive());
+    QTRY_VERIFY(panel.overflowSectionRect().top() >= panel.usageSectionRect().bottom());
+    QTRY_VERIFY(panel.gridFullyVisible());
+
+    panel.resize(layout::fontPx(75), layout::fontPx(50));
+    QTRY_VERIFY(panel.wideLayoutActive());
+    QTRY_VERIFY(panel.overflowSectionRect().left() >= panel.usageSectionRect().right());
+    QTRY_VERIFY(panel.gridFullyVisible());
+
+    panel.resize(layout::fontPx(32), layout::fontPx(20));
+    QTRY_VERIFY(!panel.wideLayoutActive());
+    QTRY_VERIFY(panel.gridFullyVisible());
+    QTRY_VERIFY(panel.vScrollRange() > 0);
 }
