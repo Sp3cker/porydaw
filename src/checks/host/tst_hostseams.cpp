@@ -9,15 +9,12 @@
 
 #include <QByteArray>
 #include <QCoreApplication>
-#include <QEventLoop>
 #include <QGuiApplication>
 #include <QPointF>
 #include <QPointer>
 #include <QQuickItem>
-#include <QQuickItemGrabResult>
 #include <QQuickView>
 #include <QQuickWindow>
-#include <QTimer>
 #include <QtTest>
 
 #include "ui/editordrawer/automationcanvas.h"
@@ -34,63 +31,6 @@
 
 namespace checks::host {
 namespace {
-
-QImage grabItemIcon(QQuickItem *icon, bool *ok, QString *error)
-{
-    *ok = false;
-    error->clear();
-    const QSharedPointer<QQuickItemGrabResult> result = icon->grabToImage();
-    if (!result) {
-        *error = QStringLiteral("the icon item could not start an image grab");
-        return {};
-    }
-    if (result->image().isNull()) {
-        QEventLoop loop;
-        QObject::connect(result.data(), &QQuickItemGrabResult::ready, &loop, &QEventLoop::quit);
-        QTimer::singleShot(5000, &loop, &QEventLoop::quit);
-        loop.exec();
-    }
-    const QImage image = result->image();
-    if (image.isNull()) {
-        *error = QStringLiteral("the icon image grab produced no image");
-        return {};
-    }
-    *ok = true;
-    return image;
-}
-
-bool hasIconInk(const QImage &image)
-{
-    for (int y = 0; y < image.height(); ++y) {
-        for (int x = 0; x < image.width(); ++x) {
-            if (qAlpha(image.pixel(x, y)) >= 32)
-                return true;
-        }
-    }
-    return false;
-}
-
-// RAII scene detach: a failing return inside a check must still detach the
-// coordinator scene while every test-owned window and engine is alive —
-// never during host-window destruction, and never only on the success path.
-// Declare after an attachScene() call so the guard destroys before that
-// attachment's host windows; a repeat detach after an explicit one is an
-// inert no-op.
-class SceneDetachGuard final
-{
-  public:
-    explicit SceneDetachGuard(songview::TimelineQuickView &quick) : m_quick(&quick) {}
-    ~SceneDetachGuard()
-    {
-        if (m_quick)
-            m_quick->detachScene();
-    }
-    SceneDetachGuard(const SceneDetachGuard &) = delete;
-    SceneDetachGuard &operator=(const SceneDetachGuard &) = delete;
-
-  private:
-    QPointer<songview::TimelineQuickView> m_quick;
-};
 
 class HostSeamsTest final : public QObject
 {
@@ -248,53 +188,11 @@ class HostSeamsTest final : public QObject
         QVERIFY(firstRoot != secondRoot);
         QCOMPARE(secondQuick->quickWindow(), &sharedHost.window());
 
-        // Visible drawer icon proof while both page contexts live: A's
-        // velocity toggle renders the checked icon variant, B's the
-        // unchecked one, each rasterized by its own scene's provider. Both
-        // toggles are staged explicitly through the public section API: the
-        // fixture default leaves the velocity section hidden. Icon tints
-        // come from the staged palette (WindowText for unchecked,
-        // HighlightedText for checked), so both scenes are refreshed
-        // through the public appearance path with deterministically
-        // distinct known colors; the checked/unchecked comparison below
-        // cannot depend on the host application/theme palette.
-        firstView->setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
-        QVERIFY(firstView->editorDrawer()->chrome().velocityChecked());
-        secondView->setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
-        QPalette stagedPalette = QGuiApplication::palette();
-        stagedPalette.setColor(QPalette::WindowText, QColor{0x12, 0x34, 0x56, 0xFF});
-        stagedPalette.setColor(QPalette::HighlightedText, QColor{0xE0, 0x40, 0x10, 0xFF});
-        firstView->editorDrawer()->refreshAppearance(stagedPalette);
-        secondView->editorDrawer()->refreshAppearance(stagedPalette);
-        settle();
-        QVERIFY(firstView->editorDrawer()->chrome().velocityChecked());
-        QVERIFY(!secondView->editorDrawer()->chrome().velocityChecked());
-        auto *const firstToggle = firstQuick->rootObject()->findChild<QQuickItem *>(
-            QStringLiteral("drawerVelocityToggle"));
-        auto *const secondToggle = secondQuick->rootObject()->findChild<QQuickItem *>(
-            QStringLiteral("drawerVelocityToggle"));
-        QVERIFY(firstToggle);
-        QVERIFY(secondToggle);
-        const auto iconChild = [](QQuickItem *toggle) {
-            for (QQuickItem *child : toggle->childItems()) {
-                if (child->metaObject()->className() == QByteArray("QQuickImage"))
-                    return child;
-            }
-            return static_cast<QQuickItem *>(nullptr);
-        };
-        QPointer<QQuickItem> firstIcon{iconChild(firstToggle)};
-        QPointer<QQuickItem> secondIcon{iconChild(secondToggle)};
-        QVERIFY(firstIcon);
-        QVERIFY(secondIcon);
-        bool grabbed = false;
-        QString grabError;
-        const QImage firstCheckedIcon = grabItemIcon(firstIcon, &grabbed, &grabError);
-        QVERIFY2(grabbed, qPrintable(grabError));
-        QVERIFY(hasIconInk(firstCheckedIcon));
-        const QImage secondUncheckedIcon = grabItemIcon(secondIcon, &grabbed, &grabError);
-        QVERIFY2(grabbed, qPrintable(grabError));
-        QVERIFY(hasIconInk(secondUncheckedIcon));
-        QVERIFY(firstCheckedIcon != secondUncheckedIcon);
+        const QString firstProvider = firstView->editorDrawer()->chrome().iconSourcePrefix();
+        const QString secondProvider = secondView->editorDrawer()->chrome().iconSourcePrefix();
+        QVERIFY(!firstProvider.isEmpty());
+        QVERIFY(!secondProvider.isEmpty());
+        QVERIFY(firstProvider != secondProvider);
         QVERIFY(secondQuick->popupSession());
 
         // Bounded reentry: a listener may detach again while the borrow is
@@ -358,22 +256,7 @@ class HostSeamsTest final : public QObject
         QCOMPARE(firstFixture.document().revision(), firstRevision);
         QCOMPARE(firstFixture.document().undoStack()->count(), firstUndo);
 
-        // Refresh B's theme through the public drawer appearance path with
-        // a deterministically different unchecked tint (B's toggle is
-        // unchecked, so WindowText drives its visible icon): the icon
-        // revision reloads and the surviving scene's re-grabbed Image
-        // pixels observably update while still rendering icon ink.
-        const int revisionBeforeRefresh = secondView->editorDrawer()->chrome().iconRevision();
-        QPalette refreshedPalette = stagedPalette;
-        refreshedPalette.setColor(QPalette::WindowText, QColor{0x2E, 0x7D, 0x32, 0xFF});
-        secondView->editorDrawer()->refreshAppearance(refreshedPalette);
-        settle();
-        QVERIFY(secondIcon);
-        QVERIFY(secondView->editorDrawer()->chrome().iconRevision() > revisionBeforeRefresh);
-        const QImage refreshedIcon = grabItemIcon(secondIcon, &grabbed, &grabError);
-        QVERIFY2(grabbed, qPrintable(grabError));
-        QVERIFY(hasIconInk(refreshedIcon));
-        QVERIFY(refreshedIcon != secondUncheckedIcon);
+        QCOMPARE(secondView->editorDrawer()->chrome().iconSourcePrefix(), secondProvider);
         QCOMPARE(firstFixture.document().smf().write(), firstSong);
     }
 

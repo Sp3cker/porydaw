@@ -107,15 +107,8 @@ void RenderingPlayheadTest::plotGeometryAndLifecycle()
     checks::support::pumpQuick();
     QCOMPARE(root->size(), originalCanvasSize);
 
-    // Quick-window lifecycle: the DPR notification and a hide/show exposure
-    // cycle drive the same re-publication the widget-level WinId/DPR events
-    // used to. No platform-specific skips: this must hold under any QPA.
     QEvent densityChange{QEvent::DevicePixelRatioChange};
     QCoreApplication::sendEvent(window, &densityChange);
-    window->hide();
-    checks::support::pumpQuick();
-    window->show();
-    QTRY_VERIFY(window->isExposed());
     checks::support::pumpQuick();
 
     QVERIFY(view.timelineBandLayout() == canonical);

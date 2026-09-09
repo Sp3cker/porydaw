@@ -66,6 +66,7 @@ class SelectionWindowTierTest final : public QObject
     void scrollbarThumbDragProtectsSelectedNotes();
     // Plan 10: routing stays bound to the live view across tab lifecycles.
     void tabsDocumentsAndPrimaryTrackLifetime();
+    void selectedAndUnreadyPagesRoutePencil();
 
   private:
     // The two isolated notes every routing scenario stages and observes.

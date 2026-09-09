@@ -31,6 +31,9 @@ class VoiceChangeArea;
 
 namespace songview {
 
+// Map an item-local rectangle and intersect it with item/ancestor clips.
+QRectF clippedSceneRect(const QQuickItem &item, const QRectF &localRect);
+
 class OtherStrip;
 class PianoRoll;
 class TimeCamera;
@@ -337,6 +340,7 @@ class TimelineQuickView final : public QObject
     void scheduleTimelineBandLayoutPublication();
     void publishTimelineBandLayout();
     void discoverGestureScrollbars(QObject &root);
+    void observeWindow(QQuickWindow &window);
     void trackViewportWindow(QQuickWindow *window);
     void retargetPopupSession(QQuickWindow *window);
     void setPopupSessionBindings(QuickPopupSession *session);

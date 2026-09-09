@@ -860,12 +860,17 @@ class HostIntegrationTest final : public QObject
         session.reset();
     }
 
-    // WorkspaceUi routes a SongView note-off only while its source remains the
-    // selected authority. A held piano-key audition therefore has to cancel
-    // before clearing that authority on a selected-page close; otherwise the
-    // engine retains a sounding preview from the removed page.
+    // Note-off must reach audio before the outgoing page loses selection authority.
+    void selectedPageCloseRoutesHeldAuditionBeforeSelectionHandoff_data()
+    {
+        QTest::addColumn<bool>("closePage");
+        QTest::newRow("close") << true;
+        QTest::newRow("selection-switch") << false;
+    }
+
     void selectedPageCloseRoutesHeldAuditionBeforeSelectionHandoff()
     {
+        QFETCH(bool, closePage);
         const std::optional<Session> session = openSession();
         QVERIFY(session.has_value());
         MainWindow &window = *session->window;
@@ -897,8 +902,9 @@ class HostIntegrationTest final : public QObject
         std::vector<HandoffEvent> transitions;
         int heldTrack = -1;
         int heldKey = -1;
+        QObject handoffMonitor;
         QObject::connect(
-            &workspace, &WorkspaceUi::auditionNoteRequested, &workspace,
+            &workspace, &WorkspaceUi::auditionNoteRequested, &handoffMonitor,
             [&transitions, &heldTrack, &heldKey](uint8_t track, uint8_t key, uint8_t velocity) {
                 if (velocity > 0 && heldKey < 0) {
                     heldTrack = int(track);
@@ -908,7 +914,7 @@ class HostIntegrationTest final : public QObject
                     transitions.push_back(HandoffEvent::NoteOff);
                 }
             });
-        QObject::connect(&workspace, &WorkspaceUi::selectedSongTabChanged, &workspace,
+        QObject::connect(&workspace, &WorkspaceUi::selectedSongTabChanged, &handoffMonitor,
                          [&transitions, sibling](SongTab *tab) {
                              if (!tab)
                                  transitions.push_back(HandoffEvent::SelectionCleared);
@@ -921,8 +927,13 @@ class HostIntegrationTest final : public QObject
         const QPoint heldPoint = gutter->mapToScene(gutter->bounds().center()).toPoint();
         QTest::mousePress(sharedWindow, Qt::LeftButton, Qt::NoModifier, heldPoint);
         QTRY_VERIFY(heldKey >= 0);
-        workspace.requestCloseSelectedTab();
-        QTRY_COMPARE(workspace.openTabCount(), qsizetype{1});
+        if (closePage) {
+            workspace.requestCloseSelectedTab();
+            QTRY_COMPARE(workspace.openTabCount(), qsizetype{1});
+        } else {
+            workspace.selectSongTab(sibling);
+            QCOMPARE(workspace.openTabCount(), qsizetype{2});
+        }
         settle();
 
         const auto noteOn =
@@ -935,23 +946,46 @@ class HostIntegrationTest final : public QObject
             std::find(transitions.cbegin(), transitions.cend(), HandoffEvent::SiblingSelected);
         QVERIFY(noteOn != transitions.cend());
         QVERIFY(noteOff != transitions.cend());
-        QVERIFY(selectionCleared != transitions.cend());
         QVERIFY(siblingSelected != transitions.cend());
         QVERIFY(noteOn < noteOff);
-        QVERIFY(noteOff < selectionCleared);
-        QVERIFY(selectionCleared < siblingSelected);
+        QVERIFY(noteOff < siblingSelected);
+        if (closePage) {
+            QVERIFY(selectionCleared != transitions.cend());
+            QVERIFY(noteOff < selectionCleared);
+            QVERIFY(selectionCleared < siblingSelected);
+        }
         QCOMPARE(workspace.selectedSongTab(), sibling);
-        QCOMPARE(workspace.tabsInDisplayOrder(), (std::vector<SongTab *>{sibling}));
+        if (closePage)
+            QCOMPARE(workspace.tabsInDisplayOrder(), (std::vector<SongTab *>{sibling}));
         QCOMPARE(window.m_selectedTab, sibling);
         QCOMPARE(window.m_appliedTimeline, sibling->timeline().get());
         QVERIFY(window.m_audio.songLoaded());
 
+        int siblingNoteOn = 0;
+        int siblingNoteOff = 0;
+        QObject auditionMonitor;
+        QObject::connect(
+            &sibling->view(), &SongView::auditionNote, &auditionMonitor,
+            [&](int, int, int velocity) { velocity > 0 ? ++siblingNoteOn : ++siblingNoteOff; });
         QTest::mouseRelease(sharedWindow, Qt::LeftButton, Qt::NoModifier, heldPoint);
         settle();
         QCOMPARE(sibling->document().smf().write(), siblingBefore);
         QCOMPARE(sibling->document().undoStack()->index(), siblingUndoBefore);
         QVERIFY(!sibling->document().isDirty());
         QVERIFY(!sharedWindow->mouseGrabberItem());
+        QCOMPARE(siblingNoteOn, 0);
+        QCOMPARE(siblingNoteOff, 0);
+        auto *const siblingRoot = sibling->view().quickView()->rootObject();
+        auto *const siblingGutter = siblingRoot->findChild<songview::TimelineInputItem *>(
+            QStringLiteral("timelineRollGutterInput"));
+        QVERIFY(siblingGutter);
+        QTest::mouseClick(sharedWindow, Qt::LeftButton, Qt::NoModifier,
+                          siblingGutter->mapToScene(siblingGutter->bounds().center()).toPoint());
+        settle();
+        QCOMPARE(siblingNoteOn, 1);
+        QCOMPARE(siblingNoteOff, 1);
+        QCOMPARE(sibling->document().smf().write(), siblingBefore);
+        QCOMPARE(sibling->document().undoStack()->index(), siblingUndoBefore);
     }
 
   private:

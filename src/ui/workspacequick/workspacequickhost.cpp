@@ -120,8 +120,6 @@ WorkspaceQuickHost::WorkspaceQuickHost(SongTabsModel &model, QWidget &parent)
             });
     connect(&m_model, &SongTabsModel::selectionChanged, this,
             &WorkspaceQuickHost::publishSelection);
-    connect(&m_model, &SongTabsModel::selectedIndexChanged, this,
-            &WorkspaceQuickHost::publishSelection);
     for (int row = 0; row < m_model.rowCount(); ++row)
         attachRow(row);
     publishSelection();
@@ -159,7 +157,6 @@ void WorkspaceQuickHost::deactivateSelection()
     // cancel and pageSelected clears, closing the eligibility seam before the
     // controller publishes audio and selection for the next session. The page
     // stays visible until the selection change itself hides it.
-    it->quick->cancelActiveGestures();
     it->quick->setPageSelected(false);
 }
 
@@ -256,8 +253,6 @@ void WorkspaceQuickHost::publishSelection()
     for (auto it = m_pages.constBegin(); it != m_pages.constEnd(); ++it) {
         if (it.key() == selected)
             continue;
-        if (it->item && it->item->isVisible())
-            it->quick->cancelActiveGestures();
         it->quick->setPageSelected(false);
         if (it->item)
             it->item->setVisible(false);

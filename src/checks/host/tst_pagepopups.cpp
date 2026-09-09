@@ -90,25 +90,6 @@ songview::QuickPopupSession *openTimeSignaturePrompt(SongView &view)
     return live.data();
 }
 
-// RAII scene detach: a failing return must still detach the coordinator scene
-// while every test-owned window and engine is alive. Declare after
-// attachScene() so the guard destroys before that attachment's host windows.
-class PageSceneDetachGuard final
-{
-  public:
-    explicit PageSceneDetachGuard(songview::TimelineQuickView &quick) : m_quick(&quick) {}
-    ~PageSceneDetachGuard()
-    {
-        if (m_quick)
-            m_quick->detachScene();
-    }
-    PageSceneDetachGuard(const PageSceneDetachGuard &) = delete;
-    PageSceneDetachGuard &operator=(const PageSceneDetachGuard &) = delete;
-
-  private:
-    QPointer<songview::TimelineQuickView> m_quick;
-};
-
 class PagePopupSeamsTest final : public QObject
 {
     Q_OBJECT
@@ -264,7 +245,7 @@ class PagePopupSeamsTest final : public QObject
         viewport->setParentItem(clipItem);
         viewport->setSize(QSizeF(400, 300));
         quick->attachScene(*window.engine(), *viewport);
-        PageSceneDetachGuard sceneDetach(*quick);
+        SceneDetachGuard sceneDetach(*quick);
         window.show();
         settle();
 

@@ -1,16 +1,3 @@
-// Window lifecycle for the windowless Quick timeline coordinator: scene
-// attachment to an external host (per-scene context, canvas creation,
-// viewport fill and window-association tracking), the band-layout
-// publication the canvas consumes, idempotent detach that never touches
-// host-owned resources, and the window event ports (resize/DPR/screen
-// publication, hide/deactivate cancellation, page input eligibility and
-// its cancellation edges). The window-level no-activeFocusItem key
-// fallback and swallowed-release state live in the single per-window
-// owner, QuickWindowInput. Dirty-domain syncing lives in
-// timelinequickview.cpp; the key-policy bridge in
-// timelinequickview_keyrouting.cpp; the roll scene builders in
-// timelinequickview_pianoroll.cpp.
-
 #include "ui/songview/quick/timelinequickview.h"
 
 #include "ui/editordrawer/automationcanvas.h"
@@ -191,7 +178,7 @@ void TimelineQuickView::attachScene(QQmlEngine &engine, QQuickItem &viewport)
     if (m_sceneContext || m_root)
         qFatal("TimelineQuickView scene attached twice");
     // The popup session and the window event ports need a live window;
-    // deferred window association is outside this checkpoint's contract.
+    // deferred window association is unsupported.
     QQuickWindow *const window = viewport.window();
     if (!window)
         qFatal("TimelineQuickView scene attached to a viewport with no window");
@@ -221,25 +208,9 @@ void TimelineQuickView::attachScene(QQmlEngine &engine, QQuickItem &viewport)
     if (m_drawerChrome)
         m_drawerChrome->attachIconProvider(engine);
 
-    // Window surveillance: surface resizes, DPR changes, and screen moves
-    // reframe the viewport; hide/deactivate cancels live interactions and
-    // retracts page input eligibility. Window visibility transitions
-    // re-evaluate eligibility through visibleChanged: Show/Hide event
-    // sampling alone goes stale when selection/readiness lands while the
-    // window is hidden, leaving an attached visible page disabled.
-    window->installEventFilter(this);
-    connect(window, &QWindow::screenChanged, this, &TimelineQuickView::viewportChanged);
-    connect(window, &QWindow::visibleChanged, this, [this](bool) {
-        if (!m_detaching)
-            updateInputEligibility();
-    });
+    observeWindow(*window);
 
-    // The event page's, the roll's, the track headers', and the automation
-    // canvas' typed menus share the same canvas overlay as forms.
-    m_popupSession = new QuickPopupSession(*window, *m_sceneContext, this);
-    setPopupSessionBindings(m_popupSession);
-
-    // The existing canvas: created in the scene context, visually parented
+    // The canvas is created in the scene context, visually parented
     // to the supplied viewport (QObject ownership stays here), and kept
     // filled to it for its whole lifetime.
     QQmlComponent component(&engine,
@@ -263,12 +234,7 @@ void TimelineQuickView::attachScene(QQmlEngine &engine, QQuickItem &viewport)
     // it. Both clear before the canvas dies in every teardown path.
     if (m_automation)
         m_automation->setInputPage(root);
-    m_popupSession->setPageRoot(root);
-    // The session recomputes the visible page rect (root ∩ clipping
-    // ancestors ∩ window) from this signal, so open popups stay contained
-    // and cancel without focus restoration when the page vanishes.
-    connect(this, &TimelineQuickView::viewportChanged, m_popupSession,
-            &QuickPopupSession::handlePageGeometryChanged);
+    retargetPopupSession(window);
 
     const auto canvasResized = [this] {
         if (m_detaching)
@@ -468,6 +434,17 @@ void TimelineQuickView::attachScene(QQmlEngine &engine, QQuickItem &viewport)
     emit viewportChanged();
 }
 
+void TimelineQuickView::observeWindow(QQuickWindow &window)
+{
+    window.installEventFilter(this);
+    connect(&window, &QWindow::screenChanged, this, &TimelineQuickView::viewportChanged);
+    // Visibility signals sample the final window state after Show/Hide events.
+    connect(&window, &QWindow::visibleChanged, this, [this](bool) {
+        if (!m_detaching)
+            updateInputEligibility();
+    });
+}
+
 void TimelineQuickView::trackViewportWindow(QQuickWindow *window)
 {
     if (m_detaching || window == m_view.data())
@@ -483,14 +460,8 @@ void TimelineQuickView::trackViewportWindow(QQuickWindow *window)
         disconnect(previous, nullptr, this, nullptr);
     }
     m_view = window;
-    if (window) {
-        window->installEventFilter(this);
-        connect(window, &QWindow::screenChanged, this, &TimelineQuickView::viewportChanged);
-        connect(window, &QWindow::visibleChanged, this, [this](bool) {
-            if (!m_detaching)
-                updateInputEligibility();
-        });
-    }
+    if (window)
+        observeWindow(*window);
     // Window-bound collaborators follow the association: the popup session
     // — rebuilt for the live window so typed popup owners rebind instead of
     // holding a stale-window borrow — and the scene-mapping watch, which
@@ -520,7 +491,6 @@ void TimelineQuickView::retargetPopupSession(QQuickWindow *window)
     m_popupSession = new QuickPopupSession(*window, *m_sceneContext, this);
     setPopupSessionBindings(m_popupSession);
     m_popupSession->setPageRoot(m_root.data());
-    // Same containment contract as the attach-time session binding.
     connect(this, &TimelineQuickView::viewportChanged, m_popupSession,
             &QuickPopupSession::handlePageGeometryChanged);
 }
@@ -760,6 +730,17 @@ void TimelineQuickView::setPageSelected(bool selected)
     updateInputEligibility();
 }
 
+QRectF clippedSceneRect(const QQuickItem &item, const QRectF &localRect)
+{
+    QRectF sceneRect = item.mapRectToScene(localRect);
+    for (const QQuickItem *ancestor = &item; ancestor && !sceneRect.isEmpty();
+         ancestor = ancestor->parentItem()) {
+        if (ancestor->clip())
+            sceneRect &= ancestor->mapRectToScene(ancestor->boundingRect());
+    }
+    return sceneRect;
+}
+
 // Watches the canvas's ancestor chain so viewportChanged also reports scene
 // mapping (the canvas rect mapped through every ancestor), effective
 // visibility, effective ancestor clipping, and the clipped intersection —
@@ -778,13 +759,7 @@ void TimelineQuickView::watchSceneMapping()
             m_root->mapRectToScene(QRectF{0.0, 0.0, m_root->width(), m_root->height()});
         const bool visible = sceneEffectivelyVisible();
         const bool clipped = ancestorClipActive(*m_root);
-        QRectF clipRect = sceneRect;
-        for (QQuickItem *ancestor = m_root->parentItem(); ancestor;
-             ancestor = ancestor->parentItem()) {
-            if (ancestor->clip())
-                clipRect &= ancestor->mapRectToScene(
-                    QRectF{0.0, 0.0, ancestor->width(), ancestor->height()});
-        }
+        const QRectF clipRect = clippedSceneRect(*m_root, m_root->boundingRect());
         if (sceneRect == m_reportedSceneRect && visible == m_reportedSceneVisible &&
             clipped == m_reportedSceneClipped && clipRect == m_reportedClipRect)
             return;
@@ -816,12 +791,7 @@ void TimelineQuickView::watchSceneMapping()
         m_root->mapRectToScene(QRectF{0.0, 0.0, m_root->width(), m_root->height()});
     m_reportedSceneVisible = sceneEffectivelyVisible();
     m_reportedSceneClipped = ancestorClipActive(*m_root);
-    m_reportedClipRect = m_reportedSceneRect;
-    for (QQuickItem *ancestor = m_root->parentItem(); ancestor; ancestor = ancestor->parentItem()) {
-        if (ancestor->clip())
-            m_reportedClipRect &=
-                ancestor->mapRectToScene(QRectF{0.0, 0.0, ancestor->width(), ancestor->height()});
-    }
+    m_reportedClipRect = clippedSceneRect(*m_root, m_root->boundingRect());
     updateInputEligibility();
 }
 
@@ -861,8 +831,8 @@ bool TimelineQuickView::eventFilter(QObject *watched, QEvent *event)
     switch (event->type()) {
     case QEvent::Resize:
         // The viewport is the canonical viewport: surface resizes reframe the
-        // camera and the band layout, so SongView reruns its former resize
-        // choreography while this view republishes its stored layout.
+        // camera and the band layout, so SongView updates its geometry
+        // while this view republishes its stored layout.
         emit viewportChanged();
         scheduleTimelineBandLayoutPublication();
         break;
@@ -880,7 +850,7 @@ bool TimelineQuickView::eventFilter(QObject *watched, QEvent *event)
     // focusActiveSurface() callers remain the only focus drivers.
     case QEvent::Hide:
     case QEvent::WindowDeactivate:
-        // Ported SongView widget semantics: a hidden or deactivated surface
+        // A hidden or deactivated surface
         // cancels every live Quick interaction exactly once. Per-item
         // mouseUngrabEvent() already covers window ungrabs, and the
         // eligibility edge cancels popups and auditions too.

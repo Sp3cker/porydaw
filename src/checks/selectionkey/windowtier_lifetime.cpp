@@ -9,7 +9,10 @@
 
 #include "checks/selectionkey/tst_windowtier.h"
 
+#include "ui/editordrawer/automationcanvas.h"
+#include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
+#include <QKeyEvent>
 
 #include <QPointer>
 #include <QQuickWindow>
@@ -171,4 +174,72 @@ void SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime()
                                                          "the window close"),
                                           &error),
              qUtf8Printable(error));
+}
+
+void SelectionWindowTierTest::selectedAndUnreadyPagesRoutePencil()
+{
+    SongTab *const tabA = m_tab.data();
+    QVERIFY(tabA);
+    auto &workspace = *m_session.workspace;
+    tabA->view().setDrawerSectionVisible(EditorDrawerPage::Automations, true);
+    tabA->view().selectTrack(kTrack);
+    QVERIFY(focusAutomationBand(tabA->view()));
+    auto *const canvasA = tabA->view().editorDrawer()->automationPage()->canvas();
+    QVERIFY(canvasA);
+    const auto pencil = selectionkey::firstBinding(QStringLiteral("automation.pencil_mode"));
+    QVERIFY(pencil.has_value());
+    const QByteArray beforeA = tabA->document().smf().write();
+    const int undoA = tabA->document().undoStack()->count();
+    QVERIFY(selectionkey::deliverKey(quickWindow(), pencil->key(), pencil->keyboardModifiers()));
+    QVERIFY(canvasA->pencilMode());
+
+    QString error;
+    SongTab *const tabB = selectionkey::requestSongTab(m_session, m_songB, true, error);
+    QVERIFY2(tabB, qPrintable(error));
+    QCOMPARE(workspace.selectedSongTab(), tabB);
+    QVERIFY(!tabB->isReady());
+    auto *const quickB = selectionkey::quickCanvas(tabB->view());
+    auto *const canvasB = tabB->view().editorDrawer()->automationPage()->canvas();
+    QVERIFY(quickB && canvasB);
+    QCOMPARE(quickB->quickWindow(), quickWindow());
+    QVERIFY(!quickB->inputEligible());
+    // Synchronous delivery preserves the real loading interval.
+    const auto deliver = [&] {
+        for (QEvent::Type type : {QEvent::ShortcutOverride, QEvent::KeyPress, QEvent::KeyRelease}) {
+            QKeyEvent event(type, pencil->key(), pencil->keyboardModifiers());
+            QCoreApplication::sendEvent(quickWindow(), &event);
+        }
+    };
+    const QByteArray beforeB = tabB->document().smf().write();
+    const int undoB = tabB->document().undoStack()->count();
+    deliver();
+    QVERIFY(!tabB->isReady());
+    QVERIFY(canvasA->pencilMode());
+    QVERIFY(!canvasB->pencilMode());
+    workspace.selectSongTab(tabA);
+    QVERIFY(!tabB->isReady());
+    auto *const quickA = selectionkey::quickCanvas(tabA->view());
+    QVERIFY(quickA->inputEligible());
+    // Reselection restores eligibility; the pencil binding belongs to the focused band.
+    QVERIFY(focusAutomationBand(tabA->view()));
+    QCOMPARE(quickA->focusedBand(), std::optional{songview::TimelineBand::Automation});
+    deliver();
+    QVERIFY(!tabB->isReady());
+    QVERIFY(!canvasA->pencilMode());
+    QVERIFY(!canvasB->pencilMode());
+    QCOMPARE(tabA->document().smf().write(), beforeA);
+    QCOMPARE(tabA->document().undoStack()->count(), undoA);
+    QCOMPARE(tabB->document().smf().write(), beforeB);
+    QCOMPARE(tabB->document().undoStack()->count(), undoB);
+
+    QTRY_VERIFY(tabB->isReady());
+    workspace.selectSongTab(tabB);
+    tabB->view().setDrawerSectionVisible(EditorDrawerPage::Automations, true);
+    tabB->view().selectTrack(kTrack);
+    QVERIFY(focusAutomationBand(tabB->view()));
+    QVERIFY(selectionkey::deliverKey(quickWindow(), pencil->key(), pencil->keyboardModifiers()));
+    QVERIFY(!canvasA->pencilMode());
+    QVERIFY(canvasB->pencilMode());
+    QCOMPARE(tabA->document().smf().write(), beforeA);
+    QCOMPARE(tabA->document().undoStack()->count(), undoA);
 }

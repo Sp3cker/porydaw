@@ -6,7 +6,9 @@
 #include <memory>
 #include <vector>
 
+#include "ui/songview/quick/timelinequickview.h"
 #include <QCoreApplication>
+#include <QPointer>
 #include <QTemporaryDir>
 
 #include "checks/support/editorrig.h"
@@ -18,6 +20,23 @@
 #include "ui/songview.h"
 
 namespace checks::host {
+
+// Declare after attachment so borrowed windows and engines outlive scene teardown.
+class SceneDetachGuard final
+{
+  public:
+    explicit SceneDetachGuard(songview::TimelineQuickView &quick) : m_quick(&quick) {}
+    ~SceneDetachGuard()
+    {
+        if (m_quick)
+            m_quick->detachScene();
+    }
+    SceneDetachGuard(const SceneDetachGuard &) = delete;
+    SceneDetachGuard &operator=(const SceneDetachGuard &) = delete;
+
+  private:
+    QPointer<songview::TimelineQuickView> m_quick;
+};
 
 inline SmfEvent noteEvent(uint8_t status, uint64_t tick, uint8_t key, uint8_t velocity)
 {

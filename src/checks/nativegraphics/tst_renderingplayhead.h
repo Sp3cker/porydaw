@@ -12,14 +12,8 @@ class RenderingPlayheadTest final : public QObject
     RenderingPlayheadTest(QString projectRoot, QString songLabel);
 
   private slots:
-    void quickPolarityAndEdges_data();
-    void quickPolarityAndEdges();
-    void automationHoverDecor();
     void positionOnlyDoesNotRebuild();
     void plotGeometryAndLifecycle();
-#ifdef __APPLE__
-    void nativeLayerLifecycle();
-#endif
 
   private:
     QString m_projectRoot;

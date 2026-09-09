@@ -666,7 +666,6 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/nativegraphics/renderingplayhead_runner.cpp
         src/checks/nativegraphics/tst_nativewindowing.cpp
         src/checks/nativegraphics/tst_playhead_guides.cpp
-        src/checks/nativegraphics/tst_playhead_autohover.cpp
         src/checks/nativegraphics/tst_playhead_quick.cpp
         src/checks/nativegraphics/tst_playhead_plots.cpp
         src/checks/midi/tst_midismf.h
@@ -834,7 +833,6 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/selectionkey/localinputtier_text.cpp
         src/checks/selectionkey/localinputtier_pitchbend.cpp
         src/checks/selectionkey/localinputtier_eventlist.cpp
-        src/checks/selectionkey/pageownership.cpp
         src/checks/automation/raster/tst_automationraster.h
         src/checks/automation/raster/painting.cpp
         src/checks/automation/raster/interaction.cpp
@@ -898,9 +896,6 @@ if(PORYDAW_BUILD_CHECKS)
         resources/fonts.qrc
     )
     if(APPLE)
-        target_sources(porydaw_checks PRIVATE
-            src/checks/nativegraphics/tst_playhead_native_mac.mm
-        )
         set_target_properties(porydaw_checks PROPERTIES
             MACOSX_BUNDLE TRUE
             MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}

@@ -5,7 +5,6 @@
 #include <cmath>
 #include <memory>
 
-#include <QColor>
 #include <QCoreApplication>
 #include <QDeadlineTimer>
 #include <QEventLoop>
@@ -16,8 +15,6 @@
 #include <QString>
 #include <QtGlobal>
 
-#include "ui/layout.h"
-#include "ui/playheadoverlay.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -64,56 +61,6 @@ bool showQuickViewport(SongView &view, const QSize &size)
     quickWindow->show();
     pumpQuick();
     return true;
-}
-
-int playheadWidthAt(const QImage &image, int logicalY, qreal logicalX, const QColor &color)
-{
-    const int halfWidth = songview::playheadTriangleHalfWidth() + layout::space(layout::Space::One);
-    int width = 0;
-    for (int x = qFloor(logicalX) - halfWidth; x <= qCeil(logicalX) + halfWidth; ++x) {
-        if (hasPlayheadPixel(image, QRect{x, logicalY, 1, 1}, color))
-            ++width;
-    }
-    return width;
-}
-
-bool isPlayheadPixel(const QColor &actual, const QColor &expected)
-{
-    constexpr int tolerance = 24;
-    return actual.alpha() >= 32 && std::abs(actual.red() - expected.red()) <= tolerance &&
-           std::abs(actual.green() - expected.green()) <= tolerance &&
-           std::abs(actual.blue() - expected.blue()) <= tolerance;
-}
-
-bool hasPlayheadPixel(const QImage &image, const QRect &logicalRect, const QColor &color)
-{
-    const QRect deviceRect = devicePixelRect(image, logicalRect);
-    if (deviceRect.isEmpty())
-        return false;
-    for (int y = deviceRect.top(); y <= deviceRect.bottom(); ++y) {
-        for (int x = deviceRect.left(); x <= deviceRect.right(); ++x) {
-            if (isPlayheadPixel(image.pixelColor(x, y), color))
-                return true;
-        }
-    }
-    return false;
-}
-
-bool hasSolidPlayheadPixel(const QImage &image, const QRect &logicalRect, const QColor &color)
-{
-    const QRect deviceRect = devicePixelRect(image, logicalRect);
-    if (deviceRect.isEmpty())
-        return false;
-
-    const int solidAlpha = std::max(64, color.alpha() / 2);
-    for (int y = deviceRect.top(); y <= deviceRect.bottom(); ++y) {
-        for (int x = deviceRect.left(); x <= deviceRect.right(); ++x) {
-            const QColor actual = image.pixelColor(x, y);
-            if (actual.alpha() >= solidAlpha && isPlayheadPixel(actual, color))
-                return true;
-        }
-    }
-    return false;
 }
 
 qreal quickRootX(const QQuickItem &item, QQuickItem &root)

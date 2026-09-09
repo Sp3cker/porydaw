@@ -1,7 +1,7 @@
 #pragma once
 
 // Shared production-shell session for the selectionkey window, local-input,
-// and page-ownership Qt Test tiers: one shown MainWindow with a scratch
+// Qt Test tiers: one shown MainWindow with a scratch
 // project and song opened through WorkspaceUi's non-dialog seams, plus the
 // readiness waits and Quick lookups they share. Rig-agnostic
 // delivery primitives live in checks/selectionkey/primitives.h, which this

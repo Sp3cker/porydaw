@@ -10,7 +10,6 @@
 #include <array>
 #include <cstddef>
 
-class QColor;
 class QQuickItem;
 class QString;
 class SongView;
@@ -19,10 +18,6 @@ namespace checks::support {
 
 void pumpQuick();
 QRect devicePixelRect(const QImage &image, const QRect &logicalRect);
-int playheadWidthAt(const QImage &image, int logicalY, qreal logicalX, const QColor &color);
-bool isPlayheadPixel(const QColor &actual, const QColor &expected);
-bool hasPlayheadPixel(const QImage &image, const QRect &logicalRect, const QColor &color);
-bool hasSolidPlayheadPixel(const QImage &image, const QRect &logicalRect, const QColor &color);
 qreal quickRootX(const QQuickItem &item, QQuickItem &root);
 using TimelineQuickLayerRevisions =
     std::array<quint64, static_cast<std::size_t>(songview::TimelineQuickLayer::Count)>;

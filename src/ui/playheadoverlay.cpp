@@ -242,16 +242,6 @@ void PlayheadOverlay::synchronizeGeometry()
         const auto relativeToTimelineColumn = [&root, &timelineColumn](const QRectF &canvasRect) {
             return root->mapRectToScene(canvasRect).translated(-timelineColumn.topLeft());
         };
-        const auto mapToVisibleScene = [root](const QRectF &canvasRect) {
-            QRectF sceneRect = root->mapRectToScene(canvasRect);
-            for (QQuickItem *ancestor = root; ancestor && !sceneRect.isEmpty();
-                 ancestor = ancestor->parentItem()) {
-                if (ancestor->clip())
-                    sceneRect =
-                        sceneRect.intersected(ancestor->mapRectToScene(ancestor->boundingRect()));
-            }
-            return sceneRect;
-        };
         const auto visibleBandRect = [&canvasTimelineColumn](const TimelineBandGeometry &band) {
             return QRectF(band.plotRect).intersected(canvasTimelineColumn);
         };
@@ -272,7 +262,7 @@ void PlayheadOverlay::synchronizeGeometry()
                 const QRectF visible = visibleBandRect(*band);
                 if (visible.isEmpty())
                     continue;
-                const QRectF sceneRect = mapToVisibleScene(visible);
+                const QRectF sceneRect = clippedSceneRect(*root, visible);
                 const QRectF localRect = sceneRect.translated(-timelineColumn.topLeft());
                 const QRectF localOcclusion = popupOcclusion.translated(-timelineColumn.topLeft());
                 appendWithoutOcclusion(m_visibleSurfaceRects, localRect, localOcclusion);
@@ -289,10 +279,10 @@ void PlayheadOverlay::synchronizeGeometry()
             if (!triangleCanvasClip.isEmpty()) {
                 const QRectF triangleSceneGeometry = root->mapRectToScene(triangleCanvasClip);
                 m_triangleTop = triangleSceneGeometry.translated(-timelineColumn.topLeft()).top();
-                appendWithoutOcclusion(
-                    m_triangleClips,
-                    mapToVisibleScene(triangleCanvasClip).translated(-timelineColumn.topLeft()),
-                    popupOcclusion.translated(-timelineColumn.topLeft()));
+                appendWithoutOcclusion(m_triangleClips,
+                                       clippedSceneRect(*root, triangleCanvasClip)
+                                           .translated(-timelineColumn.topLeft()),
+                                       popupOcclusion.translated(-timelineColumn.topLeft()));
             }
         }
     }

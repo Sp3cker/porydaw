@@ -2,6 +2,7 @@
 
 #include "ui/layout.h"
 #include "ui/songview/quick/quickwindowinput.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 #include <QDebug>
 #include <QEvent>
@@ -111,13 +112,7 @@ QRectF QuickPopupSession::pageRectInScene() const
     if (!root || !m_window || root->window() != m_window.data() || !root->isEnabled() ||
         !root->isVisible())
         return {};
-    QRectF visible = root->mapRectToScene(QRectF(QPointF(0, 0), root->size()));
-    for (const QQuickItem *ancestor = root->parentItem(); ancestor;
-         ancestor = ancestor->parentItem()) {
-        if (ancestor->clip())
-            visible = visible.intersected(
-                ancestor->mapRectToScene(QRectF(QPointF(0, 0), ancestor->size())));
-    }
+    QRectF visible = clippedSceneRect(*root, root->boundingRect());
     visible =
         visible.intersected(QRectF(QPointF(0, 0), QSizeF(m_window->width(), m_window->height())));
     return visible.isEmpty() ? QRectF() : visible;
