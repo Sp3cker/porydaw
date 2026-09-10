@@ -1,11 +1,13 @@
 #include "ui/editordrawer/cclanes.h"
 
 #include <algorithm>
+#include <array>
 
 #include <QCoreApplication>
 
 #include "core/songdocument.h"
 #include "core/timedefaults.h"
+#include "core/xcmd.h"
 
 #include "core/m4asemantics.h"
 #include "ui/editordrawer/automationpage.h"
@@ -42,6 +44,25 @@ CCLanes::~CCLanes() = default;
 uint8_t CCLanes::bendController() noexcept
 {
     return CoreTimeDefaults::kLaneCcBend;
+}
+
+std::span<const uint8_t> CCLanes::supportedControllers() noexcept
+{
+    static constexpr auto controllers = [] {
+        std::array<uint8_t, 6 + xcmd::kLaneDescriptors.size()> result{};
+        result[0] = CoreTimeDefaults::kCcModulation;
+        result[1] = CoreTimeDefaults::kCcVolume;
+        result[2] = CoreTimeDefaults::kCcPan;
+        result[3] = CoreTimeDefaults::kCcBendRange;
+        result[4] = CoreTimeDefaults::kCcLfoSpeed;
+        std::size_t next = 5;
+        for (const auto &descriptor : xcmd::kLaneDescriptors)
+            result[next++] = descriptor.laneController;
+        result[next] = CoreTimeDefaults::kLaneCcBend;
+        std::sort(result.begin(), result.end());
+        return result;
+    }();
+    return controllers;
 }
 
 bool CCLanes::rangeZoomable(uint8_t controller) noexcept

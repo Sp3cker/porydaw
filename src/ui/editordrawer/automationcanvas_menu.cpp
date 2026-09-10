@@ -280,12 +280,7 @@ void AutomationCanvas::showAddLaneMenu(const QPointF &scenePosition)
     const int track = m_page.m_owner.selectionModel().primaryTrack();
     if (track < 0)
         return;
-    std::vector<uint8_t> candidates{CoreTimeDefaults::kCcModulation, CoreTimeDefaults::kCcVolume,
-                                    CoreTimeDefaults::kCcPan, CoreTimeDefaults::kCcBendRange,
-                                    CoreTimeDefaults::kCcLfoSpeed};
-    for (const xcmd::Descriptor &descriptor : xcmd::laneDescriptors())
-        candidates.push_back(descriptor.laneController);
-    candidates.push_back(CCLanes::bendController());
+    const auto candidates = CCLanes::supportedControllers();
     std::vector<songview::QuickMenuItem> rows;
     std::vector<EditorAutomationRowId> hidden;
     for (const uint8_t controller : candidates) {

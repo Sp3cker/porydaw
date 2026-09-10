@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <span>
 #include <vector>
 
 #include "ui/editordrawer/nodelane/nodelane.h"
@@ -40,6 +41,8 @@ class CCLanes final
 {
   public:
     static uint8_t bendController() noexcept;
+    // The eight supported CC identities, ascending; Tempo is not a CC.
+    static std::span<const uint8_t> supportedControllers() noexcept;
     // Canonical lane title for any controller — bend, descriptor-backed XCMD
     // lanes, and plain M4A CCs. Single source of truth for lane labels.
     static QString laneLabel(uint8_t controller);
