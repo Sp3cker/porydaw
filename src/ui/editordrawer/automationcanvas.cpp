@@ -467,7 +467,6 @@ void AutomationCanvas::cancelInteraction()
     m_pan.active = false;
     m_activeGesture.reset();
     m_band.clear();
-    m_tempoLane.cancel();
     if (m_pendingValuePrompt) {
         // Shared cancellation policy (detach, hide, deactivation, document
         // change) drops the prompt without stealing focus from whoever has it.
