@@ -12,6 +12,7 @@
 
 #include "checks/drawerpresentation/fixtures.h"
 #include "checks/support/timelinequickcheck.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/drawerchrome.h"
 #include "ui/editordrawer/editordrawer.h"
@@ -58,6 +59,28 @@ void sendWindowMouse(songview::TimelineInputItem &input, QEvent::Type type, cons
     QCoreApplication::sendEvent(window, &event);
 }
 
+// QObject::findChild misses visually reparented Quick delegates, so the
+// selector labels resolve through the visual childItems tree.
+QQuickItem *visualDescendant(QQuickItem *root, const QString &objectName)
+{
+    if (!root)
+        return nullptr;
+    if (root->objectName() == objectName)
+        return root;
+    for (QQuickItem *const child : root->childItems())
+        if (QQuickItem *const found = visualDescendant(child, objectName))
+            return found;
+    return nullptr;
+}
+
+// DrawerSections::minimumBodyHeight(EditorDrawerPage::Automations) observed
+// through the public page surface: the shared floor or the measured selector
+// grid, whichever is larger.
+int automationMinimumBodyHeight(const EditorDrawer &drawer, const AutomationCanvas &canvas)
+{
+    return std::max(drawer.minimumSectionHeight(), canvas.minimumContentHeight());
+}
+
 // The Quick window is the whole canonical viewport, so every visible
 // published chrome rectangle must land inside the window: clipping — not a
 // host envelope — is the only way chrome can go missing.
@@ -76,7 +99,6 @@ QRectF publishedChromeRect(const DrawerChrome &chrome)
     add(chrome.velocityHandleRect(), chrome.velocityHandleVisible());
     add(chrome.automationHandleRect(), chrome.automationHandleVisible());
     add(chrome.detentRect(), chrome.detentVisible());
-    add(chrome.automationScrollbarRect(), chrome.automationScrollbarVisible());
     return published;
 }
 
@@ -263,9 +285,9 @@ void DrawerPresentationTest::drawerStackAndCanonicalInputs()
         QCOMPARE(geometry->plotRect.right(), geometry->rect.right());
         QCOMPARE(geometry->plotRect.height(), geometry->rect.height());
     }
-    QVERIFY(fixture.chrome().automationScrollbarVisible());
-    QCOMPARE(fixture.chrome().automationScrollbarRect().top(),
-             fixture.bandRect(songview::TimelineBand::Automation).top());
+    // One shared plot and no vertical scrollbar strip: the automation section
+    // is a single canonical band like velocity and voice changes.
+    QVERIFY(!fixture.chrome().automationScrollbarVisible());
     const QQuickWindow *const quickWindow = fixture.quick->quickWindow();
     QVERIFY(quickWindow);
     const QRectF published = publishedChromeRect(fixture.chrome());
@@ -322,6 +344,76 @@ void DrawerPresentationTest::drawerResizeTransactions()
     QVERIFY(!fixture.chrome().detentVisible() || page == EditorDrawerPage::Velocity);
 }
 
+void DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum()
+{
+    DrawerFixture fixture = makeDrawerFixture();
+    fixture.clickToggle(EditorDrawerPage::Velocity);
+    fixture.clickToggle(EditorDrawerPage::VoiceChanges);
+    SongView &view = *fixture.view;
+    EditorDrawer *const drawer = view.editorDrawer();
+    QVERIFY(drawer);
+    AutomationPage *const automationPage = drawer->automationPage();
+    QVERIFY(automationPage && automationPage->canvas());
+    AutomationCanvas &canvas = *automationPage->canvas();
+
+    // Velocity and Voice Changes keep their own sizes while automation
+    // reflows around the measured label grid.
+    const auto voiceBefore = drawer->bodyRect(EditorDrawerPage::VoiceChanges);
+    const auto velocityBefore = drawer->bodyRect(EditorDrawerPage::Velocity);
+    QVERIFY(voiceBefore);
+    QVERIFY(velocityBefore);
+
+    QTRY_VERIFY(canvas.minimumContentHeight() > 0);
+    const int measuredMinimum = automationMinimumBodyHeight(*drawer, canvas);
+    QVERIFY(measuredMinimum > drawer->minimumSectionHeight());
+
+    // A stored height below the measured grid still allocates the complete
+    // selector grid, and the stored value itself is not rewritten.
+    const int requested = measuredMinimum - layout::fontPx(1.0);
+    QVERIFY(requested > 0);
+    view.setDrawerSectionHeight(EditorDrawerPage::Automations, requested);
+    pump();
+    QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::Automations), requested);
+    const auto clampedBody = drawer->bodyRect(EditorDrawerPage::Automations);
+    QVERIFY(clampedBody);
+    QCOMPARE(clampedBody->height(), measuredMinimum);
+
+    // The bottom-anchored overlay re-anchors as automation and labels
+    // settle, so sibling isolation is height-only: positions move, sizes
+    // do not.
+    const auto voiceAtFloor = drawer->bodyRect(EditorDrawerPage::VoiceChanges);
+    const auto velocityAtFloor = drawer->bodyRect(EditorDrawerPage::Velocity);
+    QVERIFY(voiceAtFloor);
+    QVERIFY(velocityAtFloor);
+    QCOMPARE(voiceAtFloor->height(), voiceBefore->height());
+    QCOMPARE(velocityAtFloor->height(), velocityBefore->height());
+
+    // Every selector label stays inside the automation gutter at that floor.
+    auto *const gutter = fixture.quickRoot->findChild<songview::TimelineInputItem *>(
+        QStringLiteral("timelineAutomationGutterInput"));
+    QVERIFY(gutter);
+    QTRY_COMPARE(qCeil(gutter->height()), measuredMinimum);
+    const QRectF gutterBounds = gutter->mapRectToScene(gutter->boundingRect());
+    QVERIFY(!gutterBounds.isEmpty());
+    const QStringList labels = canvas.parameterLabels();
+    for (int index = 0; index < labels.size(); ++index) {
+        QQuickItem *label = nullptr;
+        QTRY_VERIFY(
+            (label = visualDescendant(fixture.quickRoot,
+                                      QStringLiteral("automationParameterTab%1").arg(index))) &&
+            label->isVisible() && label->width() > 0.0 && label->height() > 0.0);
+        QVERIFY2(
+            gutterBounds.contains(label->mapRectToScene(label->boundingRect())),
+            qPrintable(
+                QStringLiteral("label %1 escaped the automation gutter").arg(labels.at(index))));
+    }
+    const auto voiceAfterLabels = drawer->bodyRect(EditorDrawerPage::VoiceChanges);
+    const auto velocityAfterLabels = drawer->bodyRect(EditorDrawerPage::Velocity);
+    QVERIFY(voiceAfterLabels && velocityAfterLabels);
+    QCOMPARE(voiceAfterLabels->height(), voiceBefore->height());
+    QCOMPARE(velocityAfterLabels->height(), velocityBefore->height());
+}
+
 void DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation()
 {
     DrawerFixture fixture = makeDrawerFixture();
@@ -351,19 +443,14 @@ void DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation()
         previous = voice->height();
     }
     const auto voiceAtMax = drawer->bodyRect(EditorDrawerPage::VoiceChanges);
-    const auto automationAtMax = drawer->bodyRect(EditorDrawerPage::Automations);
     QVERIFY(voiceAtMax);
-    QVERIFY(automationAtMax);
     QCOMPARE(voiceAtMax->height(), voiceMax);
 
     chrome.adjustResizeHandle(static_cast<int>(DrawerChromeTarget::VoiceChangesHandle), 1);
     pump();
     const auto voiceAfter = drawer->bodyRect(EditorDrawerPage::VoiceChanges);
-    const auto automationAfter = drawer->bodyRect(EditorDrawerPage::Automations);
     QVERIFY(voiceAfter);
-    QVERIFY(automationAfter);
     QCOMPARE(voiceAfter->height(), voiceMax);
-    QVERIFY(automationAfter->height() > automationAtMax->height());
 }
 
 void DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights()
@@ -378,6 +465,11 @@ void DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights()
     const auto automationBefore = drawer.bodyRect(EditorDrawerPage::Automations);
     QVERIFY(voiceBefore);
     QVERIFY(automationBefore);
+    auto *const automationPage = drawer.automationPage();
+    QVERIFY(automationPage && automationPage->canvas());
+    const int automationMinimum = automationMinimumBodyHeight(drawer, *automationPage->canvas());
+    QVERIFY(automationBefore->height() >= automationMinimum);
+
     const QPointF start = handle.mapToScene(handle.bounds().center());
     const int overflow = layout::space(layout::Space::Eight);
     const QPointF end = start - QPointF(0, drawer.voiceChangesMaximumBodyHeight() -
@@ -392,6 +484,7 @@ void DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights()
     const auto automationOverflowed = drawer.bodyRect(EditorDrawerPage::Automations);
     QVERIFY(automationOverflowed);
     QCOMPARE(automationOverflowed->height(), automationBefore->height() + overflow);
+    QVERIFY(automationOverflowed->height() >= automationMinimum);
     QCOMPARE(drawer.bodyRect(EditorDrawerPage::VoiceChanges)->height(),
              drawer.voiceChangesMaximumBodyHeight());
 
