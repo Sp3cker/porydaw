@@ -326,7 +326,6 @@ TimelineQuickScene::TimelineQuickScene(QObject *parent) : QObject(parent)
     m_voiceChangesGutterTextModel = new TimelineQuickTextModel(this);
     m_voiceChangesTextModel = new TimelineQuickTextModel(this);
     m_voiceChangesHoverTextModel = new TimelineQuickTextModel(this);
-    m_automationTextModel = new TimelineQuickTextModel(this);
     m_automationHoverTextModel = new TimelineQuickTextModel(this);
     m_automationTransientTextModel = new TimelineQuickTextModel(this);
 }
@@ -376,11 +375,6 @@ QAbstractItemModel *TimelineQuickScene::voiceChangesHoverTextModel() const noexc
     return m_voiceChangesHoverTextModel;
 }
 
-QAbstractItemModel *TimelineQuickScene::automationTextModel() const noexcept
-{
-    return m_automationTextModel;
-}
-
 QAbstractItemModel *TimelineQuickScene::automationHoverTextModel() const noexcept
 {
     return m_automationHoverTextModel;
@@ -425,12 +419,6 @@ void TimelineQuickScene::setVoiceChangesHoverTextRecords(
     std::span<const TimelineQuickTextModel::Record> records)
 {
     m_voiceChangesHoverTextModel->setRecords(records);
-}
-
-void TimelineQuickScene::setAutomationTextRecords(
-    std::span<const TimelineQuickTextModel::Record> records)
-{
-    m_automationTextModel->setRecords(records);
 }
 
 void TimelineQuickScene::setAutomationHoverTextRecords(
@@ -835,31 +823,6 @@ void TimelineQuickScene::setHoverChip(bool visible, const QRectF &rect, const QS
     m_hoverChipFont = font;
     m_hoverChipRadius = radius;
     emit hoverChipChanged();
-}
-
-bool TimelineQuickScene::tempoHeaderVisible() const noexcept
-{
-    return m_tempoHeaderVisible;
-}
-
-QRectF TimelineQuickScene::tempoHeaderRect() const noexcept
-{
-    return m_tempoHeaderRect;
-}
-
-QColor TimelineQuickScene::tempoHeaderFill() const
-{
-    return m_tempoHeaderFill;
-}
-
-void TimelineQuickScene::setTempoHeader(bool visible, const QRectF &rect, const QColor &fill)
-{
-    if (m_tempoHeaderVisible == visible && m_tempoHeaderRect == rect && m_tempoHeaderFill == fill)
-        return;
-    m_tempoHeaderVisible = visible;
-    m_tempoHeaderRect = rect;
-    m_tempoHeaderFill = fill;
-    emit tempoHeaderChanged();
 }
 
 TimelineQuickItem::TimelineQuickItem(QQuickItem *parent) : QQuickItem(parent)

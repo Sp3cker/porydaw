@@ -72,8 +72,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         resetLayer(scene.layer(TimelineQuickLayer::AutomationHover));
     const QRectF viewport = m_inputHost ? m_inputHost->bounds() : QRectF{};
     if (!m_inputHost || !m_page.document() || viewport.height() <= 0.0) {
-        if (gutterContent)
-            scene.setAutomationTextRecords({});
+
         if (transient)
             scene.setAutomationTransientTextRecords({});
         if (hover)
@@ -170,6 +169,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     // selector, so its stale stacked text records are cleared, not painted.
     if (content) {
         addRect(scene.layer(TimelineQuickLayer::AutomationGrid), viewport, background, viewport);
+
         composeBandedGrid(scene, TimelineQuickLayer::AutomationGrid, m_page.m_owner, viewport, 0.0,
                           dpr);
         addBandFrame(scene, TimelineQuickLayer::AutomationGrid, viewport.top(), viewport.bottom(),
@@ -180,7 +180,6 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                 gutterViewport);
         addBandFrame(scene, TimelineQuickLayer::AutomationGutterChrome, viewport.top(),
                      viewport.bottom(), gutter.width(), gutterViewport);
-        scene.setAutomationTextRecords({});
     }
 
     if (active) {

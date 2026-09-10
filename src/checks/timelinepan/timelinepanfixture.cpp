@@ -122,8 +122,7 @@ bool TimelinePanFixture::isReady(bool requiresExposedWindow)
         return false;
     m_input = m_root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineRollInput"));
     m_scene = quick->findChild<songview::TimelineQuickScene *>();
-    return m_input && m_scene && m_scene->automationTextModel()->rowCount() > 0 &&
-           m_scene->voiceChangesGutterTextModel()->rowCount() > 0;
+    return m_input && m_scene && m_scene->voiceChangesGutterTextModel()->rowCount() > 0;
 }
 
 SongView &TimelinePanFixture::view() const

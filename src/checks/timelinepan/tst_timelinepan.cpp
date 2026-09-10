@@ -368,39 +368,29 @@ void TimelinePanTest::wheelPansCamera()
 
     SongView &songView = m_fixture.view();
     const qreal before = songView.camera().scrollX();
-    QAbstractItemModel *const automationModel = m_fixture.scene()->automationTextModel();
     QAbstractItemModel *const voiceChangesModel = m_fixture.scene()->voiceChangesGutterTextModel();
-    TextModelSpies automation(*automationModel);
     TextModelSpies voiceChanges(*voiceChangesModel);
-    QVERIFY(automation.isValid());
     QVERIFY(voiceChanges.isValid());
 
     QVERIFY(closeEnough(panOnce(pixelDelta), expectedDelta));
     QTRY_VERIFY(closeEnough(songView.quickView()->horizontalScrollValue(), before + expectedDelta));
 
     if (expectedDelta == 0.0) {
-        QCOMPARE(automation.signalCount(), 0);
         QCOMPARE(voiceChanges.signalCount(), 0);
     }
 }
 
 void TimelinePanTest::gutterLabelsSurvivePan()
 {
-    QAbstractItemModel *const automationModel = m_fixture.scene()->automationTextModel();
     QAbstractItemModel *const voiceChangesModel = m_fixture.scene()->voiceChangesGutterTextModel();
-    const std::vector<QRectF> automationBefore = labelRects(*automationModel);
     const std::vector<QRectF> voiceChangesBefore = labelRects(*voiceChangesModel);
-    TextModelSpies automation(*automationModel);
     TextModelSpies voiceChanges(*voiceChangesModel);
-    QVERIFY(automation.isValid());
     QVERIFY(voiceChanges.isValid());
 
     for (int count = 0; count < 8; ++count)
         QVERIFY(closeEnough(panOnce(kLegacyPanPixelDelta), 8.0));
 
-    QCOMPARE(automation.structuralChangeCount(), 0);
     QCOMPARE(voiceChanges.structuralChangeCount(), 0);
-    QVERIFY(labelRects(*automationModel) == automationBefore);
     QVERIFY(labelRects(*voiceChangesModel) == voiceChangesBefore);
 }
 
