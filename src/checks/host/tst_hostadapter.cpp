@@ -491,6 +491,7 @@ class HostAdapterTest final : public QObject
         SongView &view = host.view();
         view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
         view.setDrawerActivePage(EditorDrawerPage::Automations);
+        view.setDrawerSectionHeight(EditorDrawerPage::Automations, 180);
         settle();
         auto *quick = view.quickView();
         auto *page = view.editorDrawer()->automationPage();
@@ -498,21 +499,15 @@ class HostAdapterTest final : public QObject
         auto *canvas = page->canvas();
         auto *input = quick->rootObject()->findChild<songview::TimelineInputItem *>(
             QStringLiteral("timelineAutomationInput"));
-        auto *gutter = quick->rootObject()->findChild<songview::TimelineInputItem *>(
-            QStringLiteral("timelineAutomationGutterInput"));
-        QVERIFY(canvas && input && gutter);
-        if (canvas->laneBody(LaneHandle{0}).isEmpty()) {
-            const QPointF header(gutter->bounds().center().x(),
-                                 canvas->pinnedTempoRect().center().y() - page->verticalScroll());
-            checks::events::sendMouse(*gutter, QEvent::MouseButtonPress, header, Qt::LeftButton,
-                                      Qt::LeftButton, Qt::NoModifier);
-            checks::events::sendMouse(*gutter, QEvent::MouseButtonRelease, header, Qt::LeftButton,
-                                      Qt::NoButton, Qt::NoModifier);
-            settle();
-        }
+        QVERIFY(canvas && input);
+        const int tempoIndex = checks::support::automationParameterIndex(
+            *canvas, {EditorAutomationRowKind::Tempo, 0, 0});
+        QVERIFY(tempoIndex >= 0);
+        canvas->activateParameter(tempoIndex);
+        settle();
         const QRect tempo = canvas->laneBody(LaneHandle{0});
         QVERIFY(!tempo.isEmpty());
-        const qreal y = tempo.center().y() - page->verticalScroll();
+        const qreal y = tempo.center().y();
         const QPointF start(layout::space(layout::Space::One), y);
         const QPointF end = start + QPointF(layout::fontPx(12.0), 0.0);
         checks::events::sendMouse(*input, QEvent::MouseButtonPress, start, Qt::RightButton,

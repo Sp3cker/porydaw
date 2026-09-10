@@ -1,5 +1,6 @@
 #include "checks/fwd.hpp"
 #include "checks/host/hosttestsupport.h"
+#include "checks/support/timelinequickcheck.h"
 #include <memory>
 
 #include <QPointer>
@@ -31,7 +32,7 @@ class HostSeamsTest final : public QObject
 
   private slots:
 
-    void automationPageIsSoleScrollStore()
+    void automationPlotFillsHostViewport()
     {
         SyntheticHost host;
         QString error;
@@ -40,14 +41,23 @@ class HostSeamsTest final : public QObject
         QVERIFY(drawer);
         AutomationPage *page = drawer->automationPage();
         host.view().setDrawerSectionVisible(EditorDrawerPage::Automations, true);
+        host.view().setDrawerSectionHeight(EditorDrawerPage::Automations, 180);
         settle();
         QVERIFY(page);
-        const int maximum =
-            qMax(0, page->automationContentHeight() - page->automationViewportSize().height());
-        page->setVerticalScroll(maximum + layout::space(layout::Space::Two));
-        QCOMPARE(page->verticalScroll(), maximum);
-        page->setVerticalScroll(0);
-        QCOMPARE(page->verticalScroll(), 0);
+        auto *canvas = page->canvas();
+        QVERIFY(canvas);
+        const int tempoIndex = checks::support::automationParameterIndex(
+            *canvas, {EditorAutomationRowKind::Tempo, 0, 0});
+        QVERIFY(tempoIndex >= 0);
+        canvas->activateParameter(tempoIndex);
+        settle();
+        const auto geometry =
+            host.view().timelineBandLayout().geometry(songview::TimelineBand::Automation);
+        QVERIFY(geometry.has_value());
+        QCOMPARE(geometry->plotRect.x(), host.view().timelineSplitX());
+        QCOMPARE(page->automationViewportSize(), geometry->plotRect.size());
+        QVERIFY(!page->automationViewportSize().isEmpty());
+        QCOMPARE(canvas->laneBody(LaneHandle{0}), QRect(QPoint{}, page->automationViewportSize()));
     }
 
     void editorEndpointsUpdateCameraAndResolveGridVoice()
