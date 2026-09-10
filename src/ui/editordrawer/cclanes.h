@@ -6,11 +6,9 @@
 
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include <QString>
-#include <QtGlobal>
 
 class AutomationPage;
 class SongDocument;
-struct AutomationGeometry;
 struct AutomationRow;
 
 class CCLaneAdapter final : public NodeLane
@@ -62,7 +60,6 @@ class CCLanes final
     std::vector<RowTextCache> &rowText() noexcept { return m_rowText; }
 
     void rebuildRows();
-    int minimumHeight(const AutomationGeometry &geometry, int topInset) const;
     QString titleFor(const AutomationRow &row) const;
 
   private:

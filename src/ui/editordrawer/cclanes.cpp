@@ -12,9 +12,7 @@
 #include "core/m4asemantics.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/automationprojection.h"
-#include "ui/editordrawer/nodelane/batchcommit.h"
 #include "ui/editorviewstate.h"
-#include "ui/layout.h"
 
 namespace {
 
@@ -100,23 +98,9 @@ void CCLanes::rebuildRows()
     const int track = m_page->m_owner.selectionModel().primaryTrack();
     if (track < 0)
         return;
-    // The full supported catalog is always present: model presence, legacy
-    // empty-row registration and hidden state no longer decide membership —
-    // only which identity the shared plot currently paints.
+    // Every supported identity has a stable row, including lanes without events.
     for (const uint8_t controller : supportedControllers())
         appendRow(laneRow(track, controller));
-}
-
-int CCLanes::minimumHeight(const AutomationGeometry &geometry, int topInset) const
-{
-    int rowsHeight = topInset;
-    for (const auto &row : m_rows) {
-        const int height = m_page ? m_page->laneHeightFor(row.id) : geometry.rowDefaultHeight;
-        rowsHeight += std::clamp(height, geometry.rowMinimumHeight, geometry.rowMaximumHeight);
-    }
-    const int strip = m_page && m_page->document() ? geometry.addLaneStripHeight
-                                                   : layout::space(layout::Space::Zero);
-    return std::max(geometry.rowDefaultHeight, rowsHeight + strip);
 }
 
 QString CCLanes::titleFor(const AutomationRow &row) const
