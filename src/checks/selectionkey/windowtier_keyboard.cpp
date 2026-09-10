@@ -1,40 +1,37 @@
-// Selection keyboard routing, window tier: keyboard scenarios. Window
-// Copy/Solo execute exactly once from timeline/automation focus and an
-// unrecognized key is a terminal no-op (plan 5); deliberately keyboard-focused
-// chrome reached by real Tab traversal — the drawer resize grip, the
-// automation scrollbar, and the drawer toggle — keeps its advertised local
-// keys while the focused toggle still routes note arrows to the selected notes
-// with the exact production effect (plan 13). macOS commonly runs the
-// text-only keyboard navigation policy, so the chrome cases wrap traversal in
-// the process-local Qt::TabFocusAllControls guard; the traversal itself stays
-// real Tab key delivery with visible-focus assertions.
+// Selection keyboard routing through the production Quick window: parameter
+// labels keep activation local and leave shared editing commands to SongView.
+// Drawer grips and toggles retain their existing keyboard behavior.
 
 #include "checks/selectionkey/tst_windowtier.h"
+
+#include "checks/automation/automationvalueprompt.h"
+
+#include "checks/support/timelinequickcheck.h"
 
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/layout.h"
 #include "ui/songview/clipmime.h"
+#include <QClipboard>
 #include <QGuiApplication>
 #include <QQuickItem>
 #include <QStringList>
 #include <QStyleHints>
+#include <QUndoStack>
 #include <cstdio>
 
 namespace {
 
 constexpr int kTrack = 0;
-// A second CC lane next to kController: two lanes plus the tempo lane keep
-// the automation content taller than the short scrollbar viewport.
 constexpr uint8_t kController = 10;
-constexpr uint8_t kSecondController = 74;
+constexpr uint8_t kSecondController = 1;
 
 // Full-control Tab traversal precondition, scoped to the keyboard traversal
 // cases. macOS hosts commonly run the text-only keyboard navigation policy
 // (AppleKeyboardUIMode 0); Qt Quick then skips every non-text control during
 // Tab traversal — QQuickItemPrivate::canAcceptTabFocus only honors
 // activeFocusOnTab for editable text and list/table roles — so plan 13's real
-// Tab delivery to the drawer grip, scrollbar, and toggle could never arrive no
+// Tab delivery to the drawer grip and toggle could never arrive no
 // matter how the fixture is staged. Qt exposes the policy as per-process
 // in-memory state: this guard sets Qt::TabFocusAllControls and restores the
 // previous Qt value at scope end. It never touches the user's OS settings and
@@ -82,7 +79,7 @@ QQuickItem *tabTo(QQuickWindow *window, const QStringList &targets, int maxSteps
 
 int chromeTraversalBound(SongDocument &document)
 {
-    return 2 * document.engineTrackCount() + 12;
+    return 2 * document.engineTrackCount() + 21;
 }
 
 } // namespace
@@ -167,67 +164,170 @@ void SelectionWindowTierTest::chromeGripKeysStayLocal()
              "cross-axis arrows on the focused grip moved the selected notes");
 }
 
-void SelectionWindowTierTest::chromeScrollbarKeysStayLocal()
+void SelectionWindowTierTest::parameterLabelActivationAndSharedCommands()
 {
     SongView &view = this->view();
     SongDocument &document = this->document();
-    EditorDrawer *const drawer = view.editorDrawer();
     const selectionkey::ScenarioRollback rollback(view, document);
-    const FullControlTabTraversal fullControlTabTraversal;
-    view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
     view.selectTrack(kTrack);
-    // Two controller lanes guarantee the automation content overflows the
-    // short viewport, so the scrollbar case exercises real scrolling, and the
-    // scrollbar is a tab stop only while it is scrollable
-    // (activeFocusOnTab: scrollable || activeFocus).
-    document.addLanePoint(kTrack, kController, 48, 32);
-    document.addLanePoint(kTrack, kController, 96, 64);
-    document.addLanePoint(kTrack, kSecondController, 48, 96);
-    view.setDrawerSectionHeight(EditorDrawerPage::Automations, 90);
-    const std::optional<NotePair> pair = addNotePair(document, kTrack, 2400);
-    QVERIFY2(pair.has_value(),
-             "the reserved tick-2400 note pair could not be inserted and resolved");
-    QVERIFY2(focusAutomationBand(view), "could not focus the automation band");
-    view.selectionModel().setNoteSelection({pair->ids[0], pair->ids[1]});
-    const QPointer<QQuickItem> scrollbar =
-        tabTo(quickWindow(), {QStringLiteral("drawerAutomationScrollBar")},
-              chromeTraversalBound(document));
-    QVERIFY2(scrollbar, "Tab traversal never reached the automation scrollbar");
-    QVERIFY2(scrollbar->hasActiveFocus(),
-             "the automation scrollbar does not show its advertised active focus");
-    const bool scrollable =
-        checks::async_wait::waitUntil(
-            [&] { return bool(scrollbar); },
-            [&] { return scrollbar && scrollbar->property("maximum").toDouble() > 0.0; }, 2000,
-            10) == checks::async_wait::Result::Ready;
-    const double maximum = scrollbar ? scrollbar->property("maximum").toDouble() : 0.0;
-    QVERIFY2(scrollable && maximum > 0.0,
-             "the automation scrollbar is not scrollable in this fixture");
-    if (AutomationPage *const automationPage = drawer ? drawer->automationPage() : nullptr) {
-        automationPage->setVerticalScroll(0);
+    view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
+    view.setDrawerSectionHeight(EditorDrawerPage::Automations, 200);
+    constexpr uint64_t tick = 5760;
+    constexpr uint64_t pasteTick = 7680;
+    document.addLanePoint(kTrack, kController, tick, 32);
+    document.addLanePoint(kTrack, kSecondController, tick, 96);
+    document.addLanePoint(kTrack, 7, tick, 48);
+    const auto pair = addNotePair(document, kTrack, 2400);
+    QVERIFY(pair.has_value());
+    QVERIFY(focusAutomationBand(view));
+    auto *const canvas = view.editorDrawer()->automationPage()->canvas();
+    auto *const quick = selectionkey::quickCanvas(view);
+    QVERIFY(canvas && quick);
+    QTRY_VERIFY(quickWindow()->isActive() && QGuiApplication::focusWindow() == quickWindow());
+
+    songview::EditorSelectionModel::TimeSelection selected;
+    selected.startTick = tick;
+    selected.endTick = tick + 24;
+    selected.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
+    selected.lanes = {{kTrack, kController}, {kTrack, kSecondController}};
+    view.selectionModel().setTimeSelection(selected);
+    const auto selectionUnchanged = [&] {
+        const auto &actual = view.selectionModel().timeSelection();
+        return actual.startTick == selected.startTick && actual.endTick == selected.endTick &&
+               actual.scope == selected.scope && actual.lanes == selected.lanes &&
+               actual.tempo == selected.tempo && view.selectionModel().noteSelection().empty();
+    };
+    const QByteArray before = document.smf().write();
+    const int undoBefore = document.undoStack()->index();
+    const uint64_t cursorBefore = view.editCursorTick();
+    QPointer<QQuickItem> label;
+    const auto focusParameter = [&](uint8_t controller) {
+        const int index = checks::support::automationParameterIndex(
+            *canvas, {EditorAutomationRowKind::ControlChange, kTrack, controller});
+        if (index < 0 || !QTest::qWaitFor([&] {
+                label = checks::support::visualDescendant(
+                    quick->rootObject(), QStringLiteral("automationParameterTab%1").arg(index));
+                return label && label->window() == quickWindow() && label->isVisible() &&
+                       label->isEnabled() && label->width() > 0 && label->height() > 0;
+            }))
+            return false;
+        label->forceActiveFocus(Qt::OtherFocusReason);
         selectionkey::settle();
-    }
-    QVERIFY2(scrollbar, "the automation scrollbar was destroyed while resetting its value");
-    const int copyBefore = m_counts.copy;
-    const int soloBefore = m_counts.solo;
-    const double valueBefore = scrollbar->property("value").toDouble();
-    selectionkey::deliverKey(quickWindow(), Qt::Key_Down);
-    QVERIFY2(scrollbar, "the automation scrollbar was destroyed by its Down key");
-    const double valueAfterDown = scrollbar->property("value").toDouble();
-    QVERIFY2(valueAfterDown > valueBefore && valueAfterDown <= maximum,
-             "the focused scrollbar's Down key did not increase its bounded value");
+        return label && label->hasActiveFocus();
+    };
+    QVERIFY(focusParameter(kController));
+    QVERIFY(selectionUnchanged());
+    const auto activeBeforeSpace = canvas->parameterRow(canvas->activeParameter());
+    selectionkey::deliverKey(quickWindow(), Qt::Key_Space);
+    const EditorAutomationRowId pan{EditorAutomationRowKind::ControlChange, kTrack, kController};
+    QCOMPARE(canvas->parameterRow(canvas->activeParameter()), std::optional{pan});
+    QVERIFY(activeBeforeSpace != std::optional{pan});
+    QCOMPARE(document.smf().write(), before);
+    QVERIFY(selectionUnchanged());
+
+    // Only the advertised extension needs an exactly-once integration guard.
+    QSignalSpy parameterChanges(canvas, &AutomationCanvas::activeParameterChanged);
+    QVERIFY(focusParameter(kSecondController));
+    selectionkey::deliverKey(quickWindow(), Qt::Key_Enter);
+    const EditorAutomationRowId modulation{EditorAutomationRowKind::ControlChange, kTrack,
+                                           kSecondController};
+    QCOMPARE(canvas->parameterRow(canvas->activeParameter()), std::optional{modulation});
+    QCOMPARE(parameterChanges.count(), 1);
+    QVERIFY(selectionUnchanged());
+    QVERIFY(focusParameter(7));
+    selectionkey::deliverKey(quickWindow(), Qt::Key_Return);
+    const EditorAutomationRowId volume{EditorAutomationRowKind::ControlChange, kTrack, 7};
+    QCOMPARE(canvas->parameterRow(canvas->activeParameter()), std::optional{volume});
+    QCOMPARE(parameterChanges.count(), 2);
+    QCOMPARE(document.smf().write(), before);
+    QCOMPARE(document.undoStack()->index(), undoBefore);
+    QCOMPARE(view.editCursorTick(), cursorBefore);
+    QCOMPARE(view.selectionModel().primaryTrack(), kTrack);
+    QVERIFY(selectionUnchanged());
+
+    // Up is a shared lane-selection no-op, not selector navigation.
     selectionkey::deliverKey(quickWindow(), Qt::Key_Up);
-    QVERIFY2(scrollbar, "the automation scrollbar was destroyed by its Up key");
-    const double valueAfterUp = scrollbar->property("value").toDouble();
-    QVERIFY2(valueAfterUp < valueAfterDown && valueAfterUp == valueBefore,
-             "the focused scrollbar's inverse Up key did not restore its prior value");
-    selectionkey::deliverKey(quickWindow(), Qt::Key_Left);
+    QCOMPARE(document.smf().write(), before);
+    QCOMPARE(canvas->parameterRow(canvas->activeParameter()), std::optional{volume});
+    QVERIFY(selectionUnchanged());
+    const auto copy = selectionkey::firstBinding(QStringLiteral("roll.copy"));
+    const auto remove = selectionkey::firstBinding(QStringLiteral("roll.delete"));
+    const auto selectAll = selectionkey::firstBinding(QStringLiteral("roll.select_all"));
+    const auto paste = selectionkey::firstBinding(QStringLiteral("roll.paste"));
+    QVERIFY(copy && remove && selectAll && paste);
+    const int copiesBefore = m_counts.copy;
+    // A prompt opened over label focus temporarily owns text commands.
+    std::optional<LaneHandle> volumeLane;
+    const auto &rows = canvas->rows();
+    for (size_t index = 0; index < rows.size(); ++index) {
+        if (rows[index].id == volume)
+            volumeLane = LaneHandle{int(index) + 1};
+    }
+    QVERIFY(volumeLane.has_value());
+    QVERIFY(canvas->openValuePromptForInsertion(*volumeLane, tick + 48, 48));
+    QTRY_VERIFY(canvas->valuePromptVisible() && quickWindow()->activeFocusItem() != label.data() &&
+                automation_valueprompt::focusedTextInput(*quickWindow()));
+    QPointer<QQuickItem> prompt = automation_valueprompt::focusedTextInput(*quickWindow());
+    const int promptCopiesBefore = m_counts.copy;
+    selectionkey::deliverKey(quickWindow(), selectAll->key(), selectAll->keyboardModifiers());
+    QVERIFY(prompt);
+    const QString selectedText = prompt->property("selectedText").toString();
+    QCOMPARE(selectedText, QStringLiteral("48"));
+    selectionkey::deliverKey(quickWindow(), copy->key(), copy->keyboardModifiers());
+    QCOMPARE(QGuiApplication::clipboard()->text(), selectedText);
+    QCOMPARE(m_counts.copy, promptCopiesBefore);
+    selectionkey::deliverKey(quickWindow(), remove->key(), remove->keyboardModifiers());
+    QVERIFY(prompt && prompt->property("text").toString().isEmpty());
+    selectionkey::deliverKey(quickWindow(), paste->key(), paste->keyboardModifiers());
+    QVERIFY(prompt && prompt->property("text").toString() == selectedText);
+    QCOMPARE(document.smf().write(), before);
+    QVERIFY(selectionUnchanged());
+    selectionkey::deliverKey(quickWindow(), Qt::Key_Escape);
+    QTRY_VERIFY(!canvas->valuePromptVisible());
+    QCOMPARE(document.smf().write(), before);
+    QVERIFY(selectionUnchanged());
+    QVERIFY(focusParameter(7));
+    selectionkey::deliverKey(quickWindow(), copy->key(), copy->keyboardModifiers());
+    QCOMPARE(m_counts.copy, copiesBefore + 1);
+    QVERIFY(songview::clipboardHasClipMime());
+    QCOMPARE(document.smf().write(), before);
+    QVERIFY(selectionUnchanged());
+    selectionkey::deliverKey(quickWindow(), remove->key(), remove->keyboardModifiers());
+    QVERIFY(!document.findLanePoint(kTrack, kController, tick, nullptr));
+    QVERIFY(!document.findLanePoint(kTrack, kSecondController, tick, nullptr));
+    QVERIFY(document.findLanePoint(kTrack, 7, tick, nullptr));
+    QVERIFY(notePairUnchanged(document, *pair));
+    QVERIFY(label && label->hasActiveFocus());
+
+    selectionkey::deliverKey(quickWindow(), selectAll->key(), selectAll->keyboardModifiers());
+    QVERIFY(view.selectionModel().isNoteSelected(pair->ids[0]));
+    QVERIFY(view.selectionModel().isNoteSelected(pair->ids[1]));
+    QVERIFY(!view.selectionModel().timeSelection().active());
+    view.selectionModel().clearBothSelections();
+    view.commitEditCursor(pasteTick);
+    selectionkey::deliverKey(quickWindow(), paste->key(), paste->keyboardModifiers());
+    DocLanePoint point;
+    QVERIFY(document.findLanePoint(kTrack, kController, pasteTick, &point));
+    QCOMPARE(point.value, 32);
+    QVERIFY(document.findLanePoint(kTrack, kSecondController, pasteTick, &point));
+    QCOMPARE(point.value, 96);
+    QVERIFY(!document.findLanePoint(kTrack, 7, pasteTick, nullptr));
+    QVERIFY(notePairUnchanged(document, *pair));
+    QCOMPARE(canvas->parameterRow(canvas->activeParameter()), std::optional{volume});
+
+    view.selectionModel().setNoteSelection({pair->ids[0], pair->ids[1]});
+    QVERIFY(label && label->hasActiveFocus());
+    const uint64_t gridStep =
+        view.grid().snapTickUp(double(pair->notes[0].tick) + 1.0) - pair->notes[0].tick;
     selectionkey::deliverKey(quickWindow(), Qt::Key_Right);
-    QVERIFY2(scrollbar && scrollbar->property("value").toDouble() == valueAfterUp,
-             "cross-axis arrows scrolled or destroyed the focused scrollbar");
-    QVERIFY2(notePairUnchanged(document, *pair), "scrollbar arrow keys moved the selected notes");
-    QVERIFY2(m_counts.copy == copyBefore && m_counts.solo == soloBefore,
-             "scrollbar arrow keys triggered a window action");
+    selectionkey::deliverKey(quickWindow(), Qt::Key_Up);
+    for (size_t index = 0; index < pair->ids.size(); ++index) {
+        const auto moved = selectionkey::noteById(document, pair->ids[index]);
+        QVERIFY(moved.has_value());
+        QCOMPARE(moved->tick, pair->notes[index].tick + gridStep);
+        QCOMPARE(moved->key, uint8_t(pair->notes[index].key + 1));
+    }
+    QCOMPARE(canvas->parameterRow(canvas->activeParameter()), std::optional{volume});
 }
 
 void SelectionWindowTierTest::chromeToggleRoutesNoteArrows()

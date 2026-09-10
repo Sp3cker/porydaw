@@ -8,10 +8,9 @@
 // * window Copy with timeline/automation focus executes exactly once, Copy
 //   lands the note clip on the clipboard, and an unrecognized key is a
 //   terminal no-op (plan 5);
-// * deliberately keyboard-focused chrome reached by real Tab traversal — the
-//   drawer resize grip and the automation scrollbar — keeps its advertised
-//   local keys while a focused drawer toggle keeps Space activation and still
-//   routes note arrows to the selected notes (plan 13);
+// * parameter labels activate locally without retargeting multi-lane selection,
+//   and retain shared editing commands; deliberately keyboard-focused drawer
+//   grips keep local arrows and toggles still route selected-note arrows;
 // * a live drawer resize drag holds the
 //   pointer: shared editing keys cannot mutate the selected notes, Escape
 //   cancels only the gesture, and the next idle Escape clears it (plan 6);
@@ -59,7 +58,7 @@ class SelectionWindowTierTest final : public QObject
     void windowCopySoloExecutesExactlyOnce();
     // Plan 13: keyboard-focused chrome keeps its advertised local keys.
     void chromeGripKeysStayLocal();
-    void chromeScrollbarKeysStayLocal();
+    void parameterLabelActivationAndSharedCommands();
     void chromeToggleRoutesNoteArrows();
     // Plan 6: live pointer gestures protect the selected notes.
     void resizeDragProtectsSelectedNotes();
