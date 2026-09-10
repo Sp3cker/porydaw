@@ -22,15 +22,17 @@ struct AutomationProbePoint {
     int value = 0;
 };
 
-// Maps only real, visible CC-lane coordinates. Locating the lane, applying a
-// final camera state for an entire delivery set, and finding a node-free point
-// belong together because each is a precondition for genuine pointer input.
+// Locates a logical CC lane and maps its full-height plot coordinates without
+// changing the active parameter or selection. Pointer-delivery staging must
+// explicitly activate the parameter before using those coordinates.
 class AutomationProbe final
 {
   public:
     static std::optional<AutomationProbe> locate(SongView &view, songview::TimelineInputItem *input,
                                                  int track, uint8_t controller,
                                                  QString *diagnostics = nullptr);
+
+    bool activateParameter(QString *diagnostics = nullptr) const;
 
     bool project(std::span<const AutomationProbePoint> points, std::span<QPoint> projected,
                  QString *diagnostics = nullptr) const;

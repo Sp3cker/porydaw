@@ -1,6 +1,7 @@
 #include "checks/selectionkey/automationprobe.h"
 
 #include "checks/selectionkey/primitives.h"
+#include "checks/support/timelinequickcheck.h"
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
@@ -72,14 +73,16 @@ std::optional<AutomationProbe> AutomationProbe::locate(SongView &view,
     QPointer<AutomationCanvas> canvas(page ? page->canvas() : nullptr);
     QPointer<songview::TimelineInputItem> quickInput(input);
     LaneHandle handle;
-    QRect body;
+    int parameterIndex = -1;
     if (!liveView || !page || !canvas || !quickInput || !QTest::qWaitFor([&] {
             if (!liveView || !page || !canvas || !quickInput)
                 return false;
             handle = ccLaneHandle(*canvas, track, controller);
-            body = handle.valid() ? canvas->laneBody(handle) : QRect{};
+            parameterIndex = checks::support::automationParameterIndex(
+                *canvas,
+                {EditorAutomationRowKind::ControlChange, static_cast<uint8_t>(track), controller});
             return quickInput->window() != nullptr && !quickInput->bounds().isEmpty() &&
-                   handle.valid() && !body.isEmpty();
+                   handle.valid() && parameterIndex >= 0;
         })) {
         if (diagnostics) {
             const QString condition =
@@ -92,20 +95,59 @@ std::optional<AutomationProbe> AutomationProbe::locate(SongView &view,
                 : quickInput->bounds().isEmpty()
                     ? QStringLiteral("automation input bounds are empty")
                 : !handle.valid() ? QStringLiteral("CC lane handle is invalid")
-                                  : QStringLiteral("CC lane body is empty");
+                                  : QStringLiteral("CC parameter is absent from the catalog");
             *diagnostics =
                 QStringLiteral("condition=%1; input-bounds=%2; lane-handle=%3; "
-                               "lane-body=%4; vertical-scroll=%5")
+                               "parameter-index=%4")
                     .arg(condition,
                          quickInput ? describeRect(quickInput->bounds())
                                     : QStringLiteral("missing"),
-                         handle.valid() ? QString::number(handle.index) : QStringLiteral("invalid"),
-                         describeRect(body))
-                    .arg(page ? page->verticalScroll() : -1);
+                         handle.valid() ? QString::number(handle.index) : QStringLiteral("invalid"))
+                    .arg(parameterIndex);
         }
         return std::nullopt;
     }
     return AutomationProbe(*liveView, *page, *canvas, *quickInput, track, controller);
+}
+
+bool AutomationProbe::activateParameter(QString *diagnostics) const
+{
+    if (!m_view || !m_page || !m_canvas || !m_input) {
+        if (diagnostics)
+            *diagnostics = QStringLiteral("the automation probe surface was destroyed");
+        return false;
+    }
+    const EditorAutomationRowId row{EditorAutomationRowKind::ControlChange,
+                                    static_cast<uint8_t>(m_track), m_controller};
+    const int index = checks::support::automationParameterIndex(*m_canvas, row);
+    QPointer<QQuickWindow> window(m_input->window());
+    QPointer<QQuickItem> label;
+    if (index < 0 || !window || !QTest::qWaitFor([&] {
+            if (!m_view || !m_canvas || !m_input || !window)
+                return false;
+            auto *const quick = m_view->quickView();
+            label = checks::support::visualDescendant(
+                quick ? quick->rootObject() : nullptr,
+                QStringLiteral("automationParameterTab%1").arg(index));
+            return label && label->window() == window && label->isVisible() && label->isEnabled() &&
+                   label->width() > 0 && label->height() > 0;
+        })) {
+        if (diagnostics)
+            *diagnostics =
+                QStringLiteral("CC parameter label is unavailable; parameter-index=%1").arg(index);
+        return false;
+    }
+    const QPoint where =
+        label->mapToScene(QPointF(label->width() / 2.0, label->height() / 2.0)).toPoint();
+    QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, where);
+    const bool activated = QTest::qWaitFor(
+        [&] { return m_canvas && m_canvas->parameterRow(m_canvas->activeParameter()) == row; });
+    if (diagnostics)
+        *diagnostics = QStringLiteral("condition=%1; parameter-index=%2")
+                           .arg(activated ? QStringLiteral("active")
+                                          : QStringLiteral("CC parameter did not activate"))
+                           .arg(index);
+    return activated;
 }
 
 bool AutomationProbe::project(std::span<const AutomationProbePoint> points,
@@ -142,11 +184,10 @@ bool AutomationProbe::project(std::span<const AutomationProbePoint> points,
     const AutomationGeometry geometry = AutomationGeometry::resolve();
     uint64_t firstTick = points.front().tick;
     uint64_t lastTick = firstTick;
-    qreal targetY = 0.0;
+    // Only the horizontal camera needs to reveal the requested delivery set.
     for (const AutomationProbePoint &point : points) {
         firstTick = std::min(firstTick, point.tick);
         lastTick = std::max(lastTick, point.tick);
-        targetY += AutomationProjection::valueY(body, geometry, 0, 127, point.value);
     }
 
     // Reveal the entire set before mapping any endpoint. Range endpoints are
@@ -155,9 +196,6 @@ bool AutomationProbe::project(std::span<const AutomationProbePoint> points,
         m_view->ensureTickVisible(firstTick);
     else
         m_view->ensureRangeVisible(firstTick, lastTick, true);
-    const int viewportHeight = m_page->automationViewportSize().height();
-    m_page->setVerticalScroll(qBound(0, qRound(targetY / qreal(points.size())) - viewportHeight / 2,
-                                     qMax(0, m_page->automationContentHeight() - viewportHeight)));
     settle();
     if (!m_view || !m_page || !m_canvas || !m_input) {
         if (diagnostics)
@@ -178,22 +216,19 @@ bool AutomationProbe::project(std::span<const AutomationProbePoint> points,
         const QPointF contentPoint(
             m_view->camera().displayX(point.tick, 0.0, m_input->devicePixelRatio()),
             AutomationProjection::valueY(body, geometry, 0, 127, point.value));
-        const QPointF inputPoint = contentPoint - QPointF(0.0, qreal(m_page->verticalScroll()));
-        const QPoint windowPoint = m_input->mapToScene(inputPoint).toPoint();
-        const QString chosen =
-            QStringLiteral("index=%1,tick=%2,value=%3,content=%4,input=%5,window=%6")
-                .arg(index)
-                .arg(point.tick)
-                .arg(point.value)
-                .arg(describePoint(contentPoint))
-                .arg(describePoint(inputPoint))
-                .arg(describePoint(windowPoint));
-        if (!m_input->bounds().contains(inputPoint) ||
+        const QPoint windowPoint = m_input->mapToScene(contentPoint).toPoint();
+        const QString chosen = QStringLiteral("index=%1,tick=%2,value=%3,content=%4,window=%5")
+                                   .arg(index)
+                                   .arg(point.tick)
+                                   .arg(point.value)
+                                   .arg(describePoint(contentPoint))
+                                   .arg(describePoint(windowPoint));
+        if (!m_input->bounds().contains(contentPoint) ||
             !m_input->bounds().contains(m_input->mapFromScene(QPointF(windowPoint)))) {
             if (diagnostics) {
                 *diagnostics =
                     QStringLiteral("condition=%1; input-bounds=%2; lane-body=%3; chosen={%4}")
-                        .arg(!m_input->bounds().contains(inputPoint)
+                        .arg(!m_input->bounds().contains(contentPoint)
                                  ? QStringLiteral("chosen point is outside automation input bounds")
                                  : QStringLiteral(
                                        "rounded window point maps outside automation input"),

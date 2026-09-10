@@ -17,11 +17,10 @@
 #include <utility>
 
 // Honesty note: fixture staging here is deliberately programmatic — project
-// load, band focus, pencil mode, scroll reveal and selection-model state are
-// arranged through production APIs because they are the conditions of the
-// test, not its subject. What is never bypassed is delivery: every command
-// under test reaches the shown Quick window as a real QTest key or mouse
-// event.
+// load, band focus, pencil mode, horizontal reveal and selection-model state
+// are arranged through production APIs because they are the conditions of the
+// test, not its subject. Parameter activation and every command under test
+// reach the shown Quick window as real QTest key or mouse events.
 
 namespace selectionkey {
 namespace {
@@ -68,6 +67,14 @@ void prepareCoreDocument(SongDocument &document)
     document.addLanePoint(kTrack, kController, kSecondPointTick, 64);
     document.addLanePoint(kTrack, kController, kOutsidePointTick, 96);
     document.addLanePoint(kTrack, kController, kInsidePointTick, 48);
+}
+
+bool activateCoreAutomation(RigWorld &world, QString *diagnostics = nullptr)
+{
+    const auto probe =
+        AutomationProbe::locate(rigView(world), rigInput(world, "timelineAutomationInput"), kTrack,
+                                kController, diagnostics);
+    return probe && probe->activateParameter(diagnostics);
 }
 
 } // namespace
@@ -140,6 +147,10 @@ std::unique_ptr<CoreFixture> CoreFixture::create(const QString &projectRoot,
                                     coreRigConfig(drawerPage), prepareCoreDocument, error);
     if (!fixture->m_world)
         return nullptr;
+    if (drawerPage == EditorDrawerPage::Automations &&
+        !activateCoreAutomation(*fixture->m_world, &error)) {
+        return nullptr;
+    }
     return fixture;
 }
 
@@ -156,6 +167,8 @@ void CoreFixture::configureDrawerSurface(std::optional<EditorDrawerPage> drawerP
         songView.setDrawerSectionVisible(*drawerPage, true);
     }
     settle();
+    if (drawerPage == EditorDrawerPage::Automations)
+        activateCoreAutomation(*m_world);
 }
 
 bool CoreFixture::focusBand(songview::TimelineBand band)

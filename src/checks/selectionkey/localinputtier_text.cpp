@@ -286,6 +286,8 @@ void SelectionLocalInputTierTest::numericPromptOwnsKeys()
     const auto probe = selectionkey::AutomationProbe::locate(view, automation, kTrack, kController,
                                                              &coordinateDiagnostics);
     QVERIFY2(probe.has_value(), qUtf8Printable(coordinateDiagnostics));
+    QVERIFY2(probe->activateParameter(&coordinateDiagnostics),
+             qUtf8Printable(coordinateDiagnostics));
     // The prompt must come from an actual empty lane point rather than from a
     // hardcoded off-camera tick or an existing fixture node.
     QPoint scene;
