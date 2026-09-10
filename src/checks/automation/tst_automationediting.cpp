@@ -7,7 +7,10 @@
 
 #include <QtTest>
 
+#include "core/timedefaults.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/songview/editorselectionmodel.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include <algorithm>
@@ -139,7 +142,7 @@ void AutomationEditingTest::escapeCancelsCcDrag()
 void AutomationEditingTest::releaseWithoutActivationDoesNotCommit()
 {
     const QPointF blank = ccPoint(kBlankTick, kBlankProbeValue);
-    QVERIFY(m_automationInput->bounds().contains(blank - QPointF(0.0, m_page->verticalScroll())));
+    QVERIFY(m_automationInput->bounds().contains(blank));
     QCOMPARE(laneValue(kBlankTick), -1);
 
     const QByteArray smfBefore = m_tab->document().smf().write();
@@ -182,9 +185,8 @@ AutomationEditingTest::armCcDrag(songview::TimelineQuickScene *quickScene)
 
     const QPointF source = ccPoint(kDraggedTick, kDraggedValue);
     const QPointF target = ccPoint(kDraggedTick, kCommittedValue);
-    const QPointF scrollOffset(0.0, m_page->verticalScroll());
-    if (!m_automationInput->bounds().contains(source - scrollOffset) ||
-        !m_automationInput->bounds().contains(target - scrollOffset)) {
+    if (!m_automationInput->bounds().contains(source) ||
+        !m_automationInput->bounds().contains(target)) {
         return std::nullopt;
     }
 
@@ -206,7 +208,7 @@ AutomationEditingTest::armCcDrag(songview::TimelineQuickScene *quickScene)
 
     return ArmedCcDrag{
         .dragEndWindow = dragEndWindow,
-        .targetViewport = target - scrollOffset,
+        .targetViewport = target,
         .transientRevisionBefore = transientRevisionBefore,
     };
 }
@@ -233,6 +235,52 @@ int AutomationEditingTest::timelineCcValue(uint64_t tick) const
         }
     }
     return -1;
+}
+
+// The rendered gutter labels own parameter activation: cycling every catalog
+// row — the pilot's written Pan and Volume lanes plus the empty parameters —
+// must leave the frozen document, the undo state and the explicit shared
+// Volume/Pan/Tempo selection untouched while the active index follows each
+// clicked label.
+void AutomationEditingTest::parameterTabsPreserveDocumentAndSelection()
+{
+    using TimeSelection = songview::EditorSelectionModel::TimeSelection;
+
+    QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
+    QSignalSpy edited(&tab(), &SongTab::edited);
+    QVERIFY(documentChanged.isValid());
+    QVERIFY(edited.isValid());
+
+    // An explicit Lanes selection spanning Volume, Pan and Tempo: unpainted
+    // lanes and the song-global tempo flag must survive switching too.
+    TimeSelection selection;
+    selection.startTick = 48;
+    selection.endTick = 144;
+    selection.scope = TimeSelection::Lanes;
+    selection.lanes = {{0, CoreTimeDefaults::kCcVolume}, {0, CoreTimeDefaults::kCcPan}};
+    selection.tempo = true;
+    tab().view().selectionModel().setTimeSelection(selection);
+    const TimeSelection frozenSelection = tab().view().selectionModel().timeSelection();
+    QVERIFY(frozenSelection.active());
+    const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count(), edited.count());
+
+    const QStringList labels = page().canvas()->parameterLabels();
+    const int labelCount = int(labels.size());
+    QVERIFY(labelCount > 1);
+    for (int index = 0; index < labelCount; ++index) {
+        const std::optional<EditorAutomationRowId> row = page().canvas()->parameterRow(index);
+        QVERIFY(row.has_value());
+        QVERIFY(activateParameter(*row));
+        QCOMPARE(page().canvas()->activeParameter(), index);
+
+        const TimeSelection &current = tab().view().selectionModel().timeSelection();
+        QCOMPARE(current.scope, frozenSelection.scope);
+        QCOMPARE(current.startTick, frozenSelection.startTick);
+        QCOMPARE(current.endTick, frozenSelection.endTick);
+        QCOMPARE(current.tempo, frozenSelection.tempo);
+        QVERIFY(current.lanes == frozenSelection.lanes);
+        QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
+    }
 }
 
 // Dispatched once per process by the automation-editing catalog row; the

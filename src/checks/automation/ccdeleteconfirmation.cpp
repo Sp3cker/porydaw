@@ -155,8 +155,8 @@ void AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRest
     QVERIFY2(quick_popup::clickPromptButton(*opened.session, QLatin1String("acceptButton")),
              "the Delete button never rendered in the confirmation form");
 
-    // Exactly one transaction removes the intended lane: one revision and one
-    // undo step, and the row leaves the strip.
+    // Exactly one transaction removes the intended lane's written events: one
+    // revision and one undo step, and the parameter label stays.
     QCOMPARE(documentChanged.count(), frozen.documentChanges + 1);
     QCOMPARE(songTab.document().revision(), frozen.revision + 1);
     QCOMPARE(songTab.document().undoStack()->count(), frozen.undoCount + 1);
@@ -165,7 +165,10 @@ void AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRest
     DocLanePoint point;
     QVERIFY(!songTab.document().findLanePoint(0, kController, kFirstPointTick, &point));
     QVERIFY(!songTab.document().findLanePoint(0, kController, kSecondPointTick, &point));
-    QTRY_VERIFY(!findRow(ccRow).valid());
+    // The parameter label persists; only its written events are gone.
+    const LaneHandle retained = findRow(ccRow);
+    QVERIFY(retained.valid());
+    QVERIFY(!laneBody(retained).isEmpty());
     QVERIFY(findRow(volumeRow).valid());
     QVERIFY(songTab.document().findLanePoint(0, CoreTimeDefaults::kCcVolume, kVolumeTick, &point));
     QCOMPARE(point.value, CoreTimeDefaults::controllerDefault(CoreTimeDefaults::kCcVolume));
@@ -176,7 +179,7 @@ void AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRest
     QTRY_VERIFY2(songTab.view().quickView()->focusedBand() == songview::TimelineBand::Automation,
                  "accepting did not return focus to the automation band");
 
-    // Undo restores the deleted lane exactly; the sibling never moved.
+    // Undo restores the deleted events exactly; the sibling never moved.
     QVERIFY(songTab.history().canUndo());
     QVERIFY(std::holds_alternative<DocumentHistoryApplied>(songTab.history().requestUndo()));
     QCOMPARE(laneValue(kFirstPointTick), kFirstPointValue);
@@ -184,7 +187,6 @@ void AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRest
     QCOMPARE(volumeLaneValue(songTab, kVolumeTick),
              CoreTimeDefaults::controllerDefault(CoreTimeDefaults::kCcVolume));
     QCOMPARE(songTab.document().smf().write(), frozen.smf);
-    QTRY_VERIFY(findRow(ccRow).valid());
 }
 
 void AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched()
@@ -466,8 +468,8 @@ void AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup()
 }
 
 // A volume lane showing only the synthetic engine-default node carries no
-// written events: its Remove pick takes the existing empty path (the row
-// hides, nothing is written) and this confirmation never opens.
+// written events: its Delete pick dispatches nothing — no confirmation and
+// no write — and the parameter label stays.
 void AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation()
 {
     SongTab &songTab = tab();
@@ -503,7 +505,8 @@ void AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation()
              "the RemoveLane row did not receive a real click");
     QCoreApplication::processEvents();
 
-    // The empty path hides the row without a question and without a write.
+    // The empty dispatch closes the pick without a question and without a
+    // write; the parameter label stays.
     QVERIFY2(!menu.session->isOpen(), "the synthetic-only volume pick left a popup open");
     checks::support::pumpQuick();
     songview::QuickPopupSession *const session = quick_popup::popupSession(songTab.view());
@@ -511,15 +514,17 @@ void AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation()
              "the synthetic-only volume pick opened a delete confirmation");
     QVERIFY2(quick_popup::promptItem(*session, QLatin1String("ccDeleteConfirm")) == nullptr,
              "the synthetic-only volume pick rendered a delete confirmation");
-    QVERIFY(!findRow(volumeRow).valid());
+    QVERIFY(findRow(volumeRow).valid());
+    QVERIFY(!laneBody(findRow(volumeRow)).isEmpty());
     QVERIFY(frozenDocumentState(documentChanged.count()) == frozen);
     QVERIFY(songTab.document().lanePoints(0, CoreTimeDefaults::kCcVolume).empty());
 }
 
 // The confirmation advertises document-written events only. The staged volume
-// lane carries one written point beside its synthetic tick-0 node, so the
-// displayed count must be the written count; a real delete then removes the
-// written events while the default row stays visible, and undo restores both.
+// parameter carries one written point beside its synthetic tick-0 node, so
+// the displayed count must be the written count; a real delete then removes
+// the written events while the parameter stays available, and undo restores
+// them.
 void AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic()
 {
     SongTab &songTab = tab();

@@ -11,29 +11,24 @@
 #include <QVariantMap>
 
 #include "core/songdocument.h"
-#include "core/timedefaults.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/songview/quick/promptappearance.h"
 #include "ui/songview/quick/quickpopupsession.h"
 
-// The lane menu's "Delete CC lane" command on a lane that still carries events
-// opens this confirmation on the shared canvas popup session instead of a
-// native modal: one QML form (CcDeleteConfirm.qml) bound to this canvas as its
-// bridge. The open path publishes the guarded snapshot before openForm, so the
-// QML getters read a complete prompt during component creation, and never
-// carries a lane pointer: acceptance revalidates document, revision, lane
-// handle, and exact row id through the snapshot identity before running the
-// same replaceSpan + removeEmptyLane operations the legacy modal ran, so a
-// stale prompt deletes nothing.
+// The lane menu's "Delete automation events" command on a parameter that
+// still carries written events opens this confirmation on the shared canvas
+// popup session instead of a native modal: one QML form (CcDeleteConfirm.qml)
+// bound to this canvas as its bridge. The open path publishes the guarded
+// snapshot before openForm, so the QML getters read a complete prompt during
+// component creation, and never carries a lane pointer: acceptance
+// revalidates document, revision, lane handle, and exact row id through the
+// snapshot identity before running the same replaceSpan event deletion the
+// legacy modal ran, so a stale prompt deletes nothing. The parameter label
+// itself always survives; only its written events go.
 
 QString AutomationCanvas::ccDeletePromptTitle() const
 {
-    // Deleting a default-visible row only removes its written events; the
-    // default row stays so a document undo restores events into it visibly.
-    if (m_pendingCcDeletePrompt &&
-        CoreTimeDefaults::isDefaultVisibleController(m_pendingCcDeletePrompt->rowId.controller))
-        return tr("Delete CC events");
-    return tr("Delete CC lane");
+    return tr("Delete automation events");
 }
 
 QString AutomationCanvas::ccDeletePromptMessage() const
@@ -41,11 +36,7 @@ QString AutomationCanvas::ccDeletePromptMessage() const
     if (!m_pendingCcDeletePrompt)
         return {};
     const PendingCcDeletePrompt &pending = *m_pendingCcDeletePrompt;
-    if (CoreTimeDefaults::isDefaultVisibleController(pending.rowId.controller))
-        return tr("Delete the %1 lane's %2 written events? The default %1 row remains.")
-            .arg(pending.laneTitle)
-            .arg(pending.eventCount);
-    return tr("Delete the %1 CC lane and its %2 events?")
+    return tr("Delete the %1 parameter's %2 written events? The %1 parameter remains.")
         .arg(pending.laneTitle)
         .arg(pending.eventCount);
 }
@@ -140,7 +131,6 @@ void AutomationCanvas::acceptCcDeletePrompt()
     // synchronously, so nothing below may touch slot or lane state again —
     // the snapshot identity is the only surviving target description.
     slot->lane->replaceSpan(0, std::numeric_limits<uint64_t>::max(), {});
-    m_page.removeEmptyLane(int(pending->rowId.track), pending->rowId.controller);
     m_page.requestRefresh();
 
     // Band focus returns only when no popup owns the session now: a popup

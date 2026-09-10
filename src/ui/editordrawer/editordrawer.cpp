@@ -356,12 +356,8 @@ void EditorDrawer::arrangeChildren()
     m_sections->arrangeLocal(overlay.size());
     publishChromeSnapshot(m_sections->chromeSnapshot(), overlay.topLeft());
 
-    if (const std::optional<QRect> automationBody = bodyRect(EditorDrawerPage::Automations)) {
-        const int scrollbarWidth = layout::space(layout::Space::Two);
-        m_automationPage->synchronizeAutomationViewport(QSize(
-            std::max(layout::space(layout::Space::Zero), automationBody->width() - scrollbarWidth),
-            std::max(layout::space(layout::Space::Zero), automationBody->height())));
-    }
+    if (const std::optional<QRect> automationBody = bodyRect(EditorDrawerPage::Automations))
+        m_automationPage->synchronizeAutomationViewport(automationBody->size());
 
     if (m_owner.m_editorDrawer == this)
         m_owner.synchronizeTimelineBandLayout();
@@ -383,7 +379,6 @@ void EditorDrawer::publishChromeSnapshot(const DrawerChromeSnapshot &localSnapsh
     m_chromeSnapshot.automationToggleRect = translate(localSnapshot.automationToggleRect);
     m_chromeSnapshot.velocityToggleRect = translate(localSnapshot.velocityToggleRect);
     m_chromeSnapshot.detentRect = translate(localSnapshot.detentRect);
-    m_chromeSnapshot.automationScrollbarRect = translate(localSnapshot.automationScrollbarRect);
     m_chromeSnapshot.toggleIconInset = localSnapshot.toggleIconInset;
     m_chromeSnapshot.detentIconInset = localSnapshot.detentIconInset;
     m_chromeSnapshot.voiceChangesHandleVisible = localSnapshot.voiceChangesHandleVisible;

@@ -89,28 +89,27 @@ std::pair<int, int> valueRange(const AutomationPage &page, LaneHandle lane)
 
 } // namespace
 
-QPoint automation_test::windowFromContent(const AutomationPage &page,
+QPoint automation_test::windowFromContent(const AutomationPage &,
                                           const songview::TimelineInputItem &input,
                                           const QPointF &contentPoint)
 {
-    return input.mapToScene(contentPoint - QPointF(0.0, page.verticalScroll())).toPoint();
+    return input.mapToScene(contentPoint).toPoint();
 }
 
-QPointF automation_test::contentFromWindow(const AutomationPage &page,
+QPointF automation_test::contentFromWindow(const AutomationPage &,
                                            const songview::TimelineInputItem &input,
                                            const QPoint &windowPoint)
 {
-    return input.mapFromScene(QPointF(windowPoint)) + QPointF(0.0, page.verticalScroll());
+    return input.mapFromScene(QPointF(windowPoint));
 }
 
-QPointF automation_test::effectiveDragContent(const AutomationPage &page,
+QPointF automation_test::effectiveDragContent(const AutomationPage &,
                                               const songview::TimelineInputItem &input,
                                               const QPoint &press, const QPoint &activation,
                                               const QPoint &end)
 {
-    const QPointF viewport = input.mapFromScene(QPointF(press)) + input.mapFromScene(QPointF(end)) -
-                             input.mapFromScene(QPointF(activation));
-    return viewport + QPointF(0.0, page.verticalScroll());
+    return input.mapFromScene(QPointF(press)) + input.mapFromScene(QPointF(end)) -
+           input.mapFromScene(QPointF(activation));
 }
 
 void AutomationEditingTest::init()
@@ -130,18 +129,23 @@ void AutomationEditingTest::init()
     QVERIFY(stageSong(pilotSmf()));
     arrangeCcLane();
 
+    QTRY_VERIFY(m_quickWindow && m_quickWindow->isVisible() && m_quickWindow->isExposed());
+    QTRY_VERIFY(m_automationInput && !m_automationInput->bounds().isEmpty());
+    QTRY_COMPARE(m_automationInput->window(), m_quickWindow.data());
+
+    // The pilot drives the Pan lane, so its rendered selector label must
+    // activate it before the plot probes run against the single active
+    // parameter.
     const EditorAutomationRowId ccRow{EditorAutomationRowKind::ControlChange, 0, kPilotController};
     setRowMaximumHeight(ccRow);
+    QVERIFY(activateParameter(ccRow));
+
     const LaneHandle lane = findRow(ccRow);
     QTRY_VERIFY(lane.valid());
     QTRY_VERIFY(!laneBody(lane).isEmpty());
     QTRY_COMPARE(laneBody(lane).height(), AutomationGeometry::resolve().rowMaximumHeight);
 
-    QTRY_VERIFY(m_quickWindow && m_quickWindow->isVisible() && m_quickWindow->isExposed());
-    QTRY_VERIFY(m_automationInput && !m_automationInput->bounds().isEmpty());
-    QTRY_COMPARE(m_automationInput->window(), m_quickWindow.data());
-    const QPointF draggedViewport =
-        ccPoint(kPilotDraggedTick, kPilotDraggedValue) - QPointF(0.0, page().verticalScroll());
+    const QPointF draggedViewport = ccPoint(kPilotDraggedTick, kPilotDraggedValue);
     QVERIFY(m_automationInput->bounds().contains(draggedViewport));
     QVERIFY(laneValue(kPilotDraggedTick) == kPilotDraggedValue);
     QVERIFY(laneValue(kPilotIndependentTick) == kPilotIndependentValue);
@@ -621,6 +625,25 @@ bool AutomationEditingTest::focusAutomationBand()
                m_quickWindow->activeFocusItem() ==
                    static_cast<QQuickItem *>(m_automationInput.data());
     });
+}
+
+bool AutomationEditingTest::activateParameter(const EditorAutomationRowId &row)
+{
+    const int index = page().canvas()->parameterIndex(row);
+    if (index < 0 || !m_quickWindow)
+        return false;
+    auto *quick = tab().view().quickView();
+    QQuickItem *root = quick ? quick->rootObject() : nullptr;
+    if (!root)
+        return false;
+    auto *item =
+        root->findChild<QQuickItem *>(QStringLiteral("automationParameterTab%1").arg(index));
+    if (!item || !item->isVisible() || !item->isEnabled())
+        return false;
+    const QPoint where =
+        item->mapToScene(QPointF(item->width() / 2.0, item->height() / 2.0)).toPoint();
+    QTest::mouseClick(m_quickWindow, Qt::LeftButton, Qt::NoModifier, where);
+    return QTest::qWaitFor([this, index] { return page().canvas()->activeParameter() == index; });
 }
 
 void AutomationEditingTest::arrangeCcLane()

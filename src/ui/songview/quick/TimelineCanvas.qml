@@ -301,39 +301,24 @@ Item {
         gutterInputName: "timelineAutomationGutterInput"
         z: 1
 
-        Rectangle {
-            parent: automationBand.gutterSide
-            objectName: "timelineQuickTempoHeaderGutterFill"
-            x: 0
-            y: timelineScene.tempoHeaderRect.y
-            width: parent.width
-            height: timelineScene.tempoHeaderRect.height
-            visible: timelineScene.tempoHeaderVisible
-            color: timelineScene.tempoHeaderFill
-            z: 0
-        }
         TimelineSceneLayer {
             parent: automationBand.gutterSide
             objectName: "timelineQuickAutomationGutterChrome"
             sceneLayer: TimelineQuickItem.AutomationGutterChrome
             z: 0.5
         }
-        Rectangle {
-            parent: automationBand.plotSide
-            objectName: "timelineQuickTempoHeaderPlotFill"
-            x: 0
-            y: timelineScene.tempoHeaderRect.y
-            width: parent.width
-            height: timelineScene.tempoHeaderRect.height
-            visible: timelineScene.tempoHeaderVisible
-            color: timelineScene.tempoHeaderFill
-            z: 0.5
-        }
 
-        TimelineTextLayer {
+
+        // The parameter selector owns the gutter above the old input item:
+        // nine real labels activate the shared plot's single painted
+        // parameter without touching song data or shared selection.
+        AutomationTabs {
             parent: automationBand.gutterSide
-            textModel: timelineScene.automationTextModel
-            z: 1
+            objectName: "automationParameterTabs"
+            anchors.fill: parent
+            canvas: automationCanvas
+            sceneRoot: root
+            z: 3
         }
         TimelineSceneLayer {
             parent: automationBand.plotSide

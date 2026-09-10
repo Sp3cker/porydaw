@@ -5,6 +5,7 @@
 #include <tuple>
 #include <utility>
 
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
@@ -18,15 +19,16 @@ namespace {
 constexpr double kVoiceChangesMaximumHeightInRows = 2.5;
 
 std::pair<int, int> resolveVoiceResize(int requested, int minimum, int voiceCap,
-                                       int availableBodyHeight, int automationStart)
+                                       int availableBodyHeight, int automationStart,
+                                       int automationMinimum)
 {
     const int voiceMaximum = std::min(std::max(minimum, availableBodyHeight), voiceCap);
     const int voice = std::clamp(requested, minimum, voiceMaximum);
-    const int automationMaximum = std::max(minimum, availableBodyHeight - voice);
-    const int automation =
-        requested > voiceMaximum
-            ? std::clamp(automationStart + requested - voiceMaximum, minimum, automationMaximum)
-            : automationStart;
+    const int automationMaximum = std::max(automationMinimum, availableBodyHeight - voice);
+    const int automation = requested > voiceMaximum
+                               ? std::clamp(automationStart + requested - voiceMaximum,
+                                            automationMinimum, automationMaximum)
+                               : automationStart;
     return {voice, automation};
 }
 
@@ -45,6 +47,8 @@ DrawerSections::DrawerSections(SongView &owner, QObject *parent, AutomationPage 
         syncDetentState();
         emit geometryChanged();
     });
+    connect(m_automation->canvas(), &AutomationCanvas::minimumContentHeightChanged, this,
+            &DrawerSections::geometryChanged);
     syncDetentState();
 }
 
@@ -77,10 +81,18 @@ int DrawerSections::velocityBodyHeight(int hostHeight) const
         std::clamp(hostHeight / 6, layout::fontPx(8.0), layout::fontPx(12.0)));
 }
 
+int DrawerSections::minimumBodyHeight(EditorDrawerPage page) const
+{
+    ensureChrome();
+    return page == EditorDrawerPage::Automations
+               ? std::max(m_chrome.minBody, m_automation->canvas()->minimumContentHeight())
+               : m_chrome.minBody;
+}
+
 int DrawerSections::effectiveAutomationBodyHeight() const
 {
-    return m_automationBodyHeight.value_or(
-        m_preferredAutomationBodyHeight.value_or(m_chrome.minBody));
+    return std::max(minimumBodyHeight(EditorDrawerPage::Automations),
+                    m_automationBodyHeight.value_or(m_preferredAutomationBodyHeight.value_or(0)));
 }
 
 int DrawerSections::effectiveVoiceChangesBodyHeight() const
@@ -100,7 +112,8 @@ void DrawerSections::updateHostContext(int hostHeight, int defaultAutomationHeig
 {
     ensureChrome();
     m_lastHostHeight = std::max(0, hostHeight);
-    m_preferredAutomationBodyHeight = std::max(m_chrome.minBody, defaultAutomationHeight);
+    m_preferredAutomationBodyHeight =
+        std::max(minimumBodyHeight(EditorDrawerPage::Automations), defaultAutomationHeight);
 }
 
 int DrawerSections::preferredHeight() const
@@ -221,7 +234,7 @@ const std::optional<int> &DrawerSections::pageStoredHeight(EditorDrawerPage page
 int DrawerSections::resizeBodyHeight(EditorDrawerPage page) const
 {
     ensureChrome();
-    return std::max(m_chrome.minBody, pageBodyHeight(page));
+    return std::max(minimumBodyHeight(page), pageBodyHeight(page));
 }
 
 int DrawerSections::beginResize(EditorDrawerPage page)
@@ -239,6 +252,7 @@ void DrawerSections::applyResize(EditorDrawerPage page, int unconstrainedHeight)
     const ResizeBaseline &baseline = *m_resize;
     const bool voice = page == EditorDrawerPage::VoiceChanges;
     const bool spill = voice && automationVisible();
+    const int minimum = minimumBodyHeight(page);
     int availableBodyHeight = m_lastHostHeight - m_chrome.header;
     for (const EditorDrawerPage candidate : sectionOrder()) {
         if (!pageVisible(candidate))
@@ -251,12 +265,12 @@ void DrawerSections::applyResize(EditorDrawerPage page, int unconstrainedHeight)
     int resolvedHeight;
     int resolvedAutomation = baseline.automationStartHeight;
     if (voice) {
-        std::tie(resolvedHeight, resolvedAutomation) =
-            resolveVoiceResize(unconstrainedHeight, m_chrome.minBody, m_chrome.voiceChangesMaxBody,
-                               availableBodyHeight, baseline.automationStartHeight);
+        std::tie(resolvedHeight, resolvedAutomation) = resolveVoiceResize(
+            unconstrainedHeight, minimum, m_chrome.voiceChangesMaxBody, availableBodyHeight,
+            baseline.automationStartHeight, minimumBodyHeight(EditorDrawerPage::Automations));
     } else {
-        resolvedHeight = std::clamp(unconstrainedHeight, m_chrome.minBody,
-                                    std::max(m_chrome.minBody, availableBodyHeight));
+        resolvedHeight =
+            std::clamp(unconstrainedHeight, minimum, std::max(minimum, availableBodyHeight));
     }
     std::optional<int> height = resolvedHeight == baseline.startHeight
                                     ? baseline.originalHeight
@@ -398,9 +412,6 @@ void DrawerSections::arrangeLocal(const QSize &overlaySize)
     if (automationBodyRect) {
         snapshot.automationHandleRect =
             QRectF(0, automationBodyRect->top() - handleHeight, width, handleHeight);
-        snapshot.automationScrollbarRect =
-            QRectF(automationBodyRect->x(), automationBodyRect->y(),
-                   layout::space(layout::Space::Two), automationBodyRect->height());
     }
 
     snapshot.barRect = QRectF(0, y, width, chrome);

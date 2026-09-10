@@ -14,23 +14,11 @@
 
 namespace {
 
-EditorAutomationRowId laneRow(int track, uint8_t controller)
-{
-    return {EditorAutomationRowKind::ControlChange, uint8_t(track), controller};
-}
-
 songview::QuickMenuItem menuRow(int id, QString text)
 {
     songview::QuickMenuItem item;
     item.id = id;
     item.text = std::move(text);
-    return item;
-}
-
-songview::QuickMenuItem disabledRow(QString text)
-{
-    songview::QuickMenuItem item = menuRow(0, std::move(text));
-    item.enabled = false;
     return item;
 }
 
@@ -76,10 +64,10 @@ LaneMenuKind laneMenuKind(bool tempo, const QString &laneTitle, std::size_t poin
 
 // The automation menus are AutomationCanvas's slice of the shared canvas popup
 // session: one persistent typed QuickMenuHost/QuickMenuModel pair serves the
-// lane menu, the add-lane strip menu, and the inactive time-selection menu,
-// and a second pair in automationcanvas_pointmenu.cpp serves the node point
-// menu. This file owns only the menu lifecycle — every command travels through
-// the existing AutomationPage/SongView primitives, re-resolved and revalidated
+// lane menu and the inactive time-selection menu, and a second pair in
+// automationcanvas_pointmenu.cpp serves the node point menu. This file owns
+// only the menu lifecycle — every command travels through the existing
+// AutomationPage/SongView primitives, re-resolved and revalidated
 // at dispatch, so a stale target writes nothing.
 
 void AutomationCanvas::ensureMenuAdapters()
@@ -186,7 +174,7 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPointF &scenePo
     const LaneMenuKind kind = laneMenuKind(slot->isTempo(), laneTitle);
 
     std::vector<songview::QuickMenuItem> rows;
-    rows.reserve(kind.hasLaneActions ? 7u : 4u);
+    rows.reserve(kind.hasLaneActions ? 6u : 4u);
     songview::QuickMenuItem copy = menuRow(int(Action::Copy), kind.copyLabel);
     copy.enabled = hasPoints;
     rows.push_back(std::move(copy));
@@ -199,19 +187,12 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPointF &scenePo
     rows.push_back(std::move(clear));
     if (kind.hasLaneActions) {
         const uint8_t controller = slot->id.controller;
-        // The delete/remove split classifies on document-written events: the
-        // adapter projects a synthetic tick-0 engine node for Volume and Pan,
-        // so adapter emptiness cannot tell a written lane from a
-        // never-touched default row. Copy stays explicit about what remains.
-        QString removeLabel;
-        if (document->lanePoints(int(slot->id.track), controller).empty())
-            removeLabel = tr("Remove empty CC lane");
-        else if (CoreTimeDefaults::isDefaultVisibleController(controller))
-            removeLabel = tr("Delete CC events (default row remains)");
-        else
-            removeLabel = tr("Delete CC lane");
-        rows.push_back(menuRow(int(Action::RemoveLane), std::move(removeLabel)));
-        rows.push_back(menuRow(int(Action::HideLane), tr("Hide CC lane")));
+        // Delete events never removes the parameter itself: every supported
+        // label stays available, so the row dispatches only the guarded
+        // event deletion and does nothing on a parameter the document never
+        // wrote (the adapter projects a synthetic tick-0 engine node for
+        // Volume and Pan, which is not a written event).
+        rows.push_back(menuRow(int(Action::RemoveLane), tr("Delete automation events")));
         if (CCLanes::rangeZoomable(controller)) {
             const auto range = m_page.m_viewState.laneRanges.find(slot->id);
             const uint8_t current = range == m_page.m_viewState.laneRanges.cend()
@@ -271,61 +252,12 @@ void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPointF &scenePo
     m_pendingMenu = std::move(target);
 }
 
-void AutomationCanvas::showAddLaneMenu(const QPointF &scenePosition)
-{
-    SongDocument *const document = m_page.document();
-    songview::QuickPopupSession *const session = m_menuSession.data();
-    if (!document || !session || !session->window())
-        return;
-    const int track = m_page.m_owner.selectionModel().primaryTrack();
-    if (track < 0)
-        return;
-    const auto candidates = CCLanes::supportedControllers();
-    std::vector<songview::QuickMenuItem> rows;
-    std::vector<EditorAutomationRowId> hidden;
-    for (const uint8_t controller : candidates) {
-        const auto row = laneRow(track, controller);
-        if (m_page.m_viewState.isLaneHidden(row) || m_page.model().findLane(track, controller) ||
-            m_page.m_viewState.emptyLanes.find(row) != m_page.m_viewState.emptyLanes.cend())
-            continue;
-        rows.push_back(
-            menuRow(int(Action::AddLaneBase) + controller, CCLanes::laneLabel(controller)));
-    }
-    for (const auto &row : m_page.m_viewState.hiddenLanes())
-        if (row.kind == EditorAutomationRowKind::ControlChange && row.track == uint8_t(track))
-            hidden.push_back(row);
-    if (rows.empty())
-        rows.push_back(disabledRow(tr("All parameters already have CC lanes")));
-    if (!hidden.empty()) {
-        rows.push_back(songview::QuickMenuItem::makeSeparator());
-        rows.push_back(disabledRow(tr("Hidden CC lanes")));
-        for (const auto &row : hidden)
-            rows.push_back(
-                menuRow(int(Action::ShowLaneBase) + row.controller,
-                        tr("Show: %1 (hidden)").arg(CCLanes::laneLabel(row.controller))));
-    }
-    m_menuModel->setItems(std::move(rows));
-
-    PendingMenu target;
-    target.document = document;
-    target.documentRevision = document->revision();
-    target.track = track;
-
-    // Same grab/focus handoff contract as the lane menu above.
-    if (m_inputHost)
-        m_inputHost->releasePointerGrab();
-    m_menuHost->open(m_menuModel, scenePosition);
-    if (!m_menuHost->isOpen())
-        return;
-    m_pendingMenu = std::move(target);
-}
-
 void AutomationCanvas::handleMenuAction(int actionId)
 {
     if (!m_pendingMenu)
         return;
-    // Consume before any command: the dispatch may rebuild rows (hide,
-    // remove, add) and a target must never fire twice.
+    // Consume before any command: the dispatch may mutate the document and a
+    // target must never fire twice.
     const PendingMenu pending = std::move(*m_pendingMenu);
     m_pendingMenu.reset();
     // Keyboard continuity returns to the band before dispatch, but only when
@@ -350,24 +282,6 @@ void AutomationCanvas::handleMenuAction(int actionId)
         if (model.timeSelection().active()) {
             model.clearTimeSelection();
             requestSelectionQuickUpdate();
-        }
-        return;
-    }
-    if (actionId >= int(Action::ShowLaneBase)) {
-        const uint8_t controller = uint8_t(actionId - int(Action::ShowLaneBase));
-        const auto row = laneRow(pending.track, controller);
-        if (pending.track >= 0 && m_page.m_viewState.unhideLane(row)) {
-            m_page.publishViewState();
-            rebuildRows();
-            m_page.announce(tr("Showed the %1 CC lane").arg(CCLanes::laneLabel(controller)));
-        }
-        return;
-    }
-    if (actionId >= int(Action::AddLaneBase)) {
-        const uint8_t controller = uint8_t(actionId - int(Action::AddLaneBase));
-        if (pending.track >= 0) {
-            m_page.addEmptyLane(pending.track, controller);
-            m_page.announce(tr("Added %1 CC lane").arg(CCLanes::laneLabel(controller)));
         }
         return;
     }
@@ -399,20 +313,19 @@ void AutomationCanvas::handleMenuAction(int actionId)
         lane->replaceSpan(0, maxTick, {});
         // Read the snapshot row from here on: replaceSpan's documentChanged
         // fan-out rebuilds m_nodeStack, invalidating slot pointers.
-        if (pending.rowId.kind == EditorAutomationRowKind::ControlChange)
-            m_page.addEmptyLane(int(pending.rowId.track), pending.rowId.controller);
         m_page.requestRefresh();
         if (const LaneMenuKind kind = laneMenuKind(
                 pending.rowId.kind == EditorAutomationRowKind::Tempo, pending.laneTitle);
             kind.clearedMessage)
             m_page.announce(*kind.clearedMessage);
     } else if (actionId == int(Action::RemoveLane)) {
-        const int track = int(slot->id.track);
-        const uint8_t controller = slot->id.controller;
-        const std::size_t writtenEventCount = document->lanePoints(track, controller).size();
-        // A synthetic-only default row (engine-default node, no writes) takes
-        // the plain remove body below: a Delete confirmation there would
-        // count the projected node and then write nothing.
+        // Delete automation events is the only destructive lane-menu command:
+        // the parameter label itself never goes away. Without document-written
+        // events there is nothing to delete — the adapter's synthetic tick-0
+        // engine node for Volume and Pan is not an event — so the pick ends
+        // without a write and without a confirmation.
+        const std::size_t writtenEventCount =
+            document->lanePoints(int(slot->id.track), slot->id.controller).size();
         if (writtenEventCount != 0) {
             // The QML confirmation opens on the shared canvas popup session;
             // activateRow has already closed the menu before this dispatch,
@@ -423,20 +336,6 @@ void AutomationCanvas::handleMenuAction(int actionId)
             // immutable identity, so a rebuild landing meanwhile deletes
             // nothing.
             openCcDeletePrompt(pending.lane, writtenEventCount);
-            return;
-        }
-        m_page.removeEmptyLane(track, controller);
-        if (CoreTimeDefaults::isDefaultVisibleController(controller) &&
-            m_page.m_viewState.hideLane(laneRow(track, controller))) {
-            m_page.publishViewState();
-            rebuildRows();
-        }
-        m_page.requestRefresh();
-    } else if (actionId == int(Action::HideLane)) {
-        if (m_page.m_viewState.hideLane(slot->id)) {
-            m_page.publishViewState();
-            rebuildRows();
-            m_page.announce(tr("Hid the %1 CC lane").arg(pending.laneTitle));
         }
     } else if (actionId == int(Action::RangeAuto)) {
         m_page.setLaneRange(slot->id, 0);

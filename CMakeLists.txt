@@ -76,7 +76,7 @@ if(PORYDAW_COVERAGE)
     add_link_options(-fprofile-instr-generate)
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Qml Quick Svg Widgets)
+find_package(Qt6 6.9 REQUIRED COMPONENTS Qml Quick QuickControls2 Svg Widgets)
 
 # ---- poryaaaa engine core (MIT, statically linked) ----
 set(PORYAAAA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa/packages/poryaaaa"
@@ -433,11 +433,15 @@ target_include_directories(porydaw_app PUBLIC
 target_compile_definitions(porydaw_app PUBLIC
     PORYDAW_VERSION="${PROJECT_VERSION}")
 target_link_libraries(porydaw_app PUBLIC Qt6::Svg Qt6::Widgets poryaaaa_engine)
-target_link_libraries(porydaw_app PRIVATE Qt6::Qml Qt6::Quick)
+target_link_libraries(porydaw_app PRIVATE Qt6::Qml Qt6::Quick Qt6::QuickControls2)
 if(APPLE)
     set_target_properties(porydaw_app PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
 endif()
 set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+set_source_files_properties(
+    src/ui/songview/quick/AutomationTabs.qml
+    PROPERTIES QT_RESOURCE_ALIAS AutomationTabs.qml
+)
 set_source_files_properties(
     src/ui/songview/quick/TimelineCanvas.qml
     PROPERTIES QT_RESOURCE_ALIAS TimelineCanvas.qml
@@ -524,6 +528,7 @@ qt_add_qml_module(porydaw_app
     RESOURCE_PREFIX /qt/qml
     NO_PLUGIN
     QML_FILES
+        src/ui/songview/quick/AutomationTabs.qml
         src/ui/songview/quick/TimelineCanvas.qml
         src/ui/songview/quick/PianoRollCanvas.qml
         src/ui/songview/quick/TimelineScrollbar.qml

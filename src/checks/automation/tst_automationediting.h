@@ -212,6 +212,10 @@ class AutomationEditingTest final : public QObject
     void ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation();
     void ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic();
 
+    // Parameter tab coverage: cycling the rendered gutter labels preserves
+    // the document, undo state and explicit shared selection.
+    void parameterTabsPreserveDocumentAndSelection();
+
   private:
     struct ArmedCcDrag final {
         QPoint dragEndWindow;
@@ -283,6 +287,9 @@ class AutomationEditingTest final : public QObject
     void keyRelease(Qt::Key key, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     void keyClick(Qt::Key key, Qt::KeyboardModifiers modifiers = Qt::NoModifier);
     bool focusAutomationBand();
+
+    // Activates a supported parameter through its real rendered gutter label.
+    bool activateParameter(const EditorAutomationRowId &row);
 
     // Pilot baseline setup retained with its original literals and assertions.
     void arrangeCcLane();
