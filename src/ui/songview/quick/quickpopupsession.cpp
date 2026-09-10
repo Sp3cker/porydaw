@@ -17,6 +17,20 @@
 #include <QVariant>
 #include <algorithm>
 
+#include "ui/keymap.h"
+
+namespace {
+// A focused numeric field publishes this marker (see DragInput.qml) to opt into
+// the transport-chord exception handled in eventFilter below.
+constexpr auto kYieldsTransportShortcut = "yieldsTransportPlayPauseShortcut";
+
+bool focusedFieldYieldsTransportShortcut(QQuickWindow *window)
+{
+    QQuickItem *const focus = window ? window->activeFocusItem() : nullptr;
+    return focus && focus->property(kYieldsTransportShortcut).toBool();
+}
+} // namespace
+
 namespace songview {
 
 QuickPopupSession::QuickPopupSession(QQuickWindow &window, QObject *parent)
@@ -225,11 +239,23 @@ bool QuickPopupSession::eventFilter(QObject *watched, QEvent *event)
         return QObject::eventFilter(watched, event);
 
     switch (event->type()) {
-    case QEvent::ShortcutOverride:
-        // An open popup owns shortcut arbitration. The following KeyPress is
-        // a separate event and still reaches the focused prompt control.
-        static_cast<QKeyEvent *>(event)->accept();
+    case QEvent::ShortcutOverride: {
+        // An open popup owns shortcut arbitration, so every chord is claimed
+        // here — with one exception: the transport play/pause command over a
+        // focused numeric field. The field has no use for that chord, and its
+        // QQuickTextInput swallows printable keys before any item handler can
+        // decline them, so the session refuses the override on the field's
+        // behalf and lets the window's transport action fire.
+        auto *keyEvent = static_cast<QKeyEvent *>(event);
+        if (focusedFieldYieldsTransportShortcut(m_window.data()) &&
+            keymap::Registry::instance().matches(keyEvent,
+                                                 QStringLiteral("transport.play_pause"))) {
+            keyEvent->ignore();
+            return true;
+        }
+        keyEvent->accept();
         return true;
+    }
     case QEvent::Resize:
         if (m_kind != Kind::Surface)
             cancel(true);

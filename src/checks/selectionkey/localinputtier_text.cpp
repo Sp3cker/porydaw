@@ -531,6 +531,27 @@ void SelectionLocalInputTierTest::velocityPromptOwnsKeys()
                  document.smf().write() == before,
              "arrow keys leaked out of the velocity prompt");
 
+    // Space is the transport command, not numeric text: the focused field
+    // yields it and the window command toggles playback.
+    QVERIFY(QMetaObject::invokeMethod(input, "selectAll"));
+    const QString textBeforeSpace = input->property("text").toString();
+    QSignalSpy playPause(m_workspace, &WorkspaceUi::playPauseRequested);
+    selectionkey::deliverKey(canvas, Qt::Key_Space);
+    QVERIFY2(playPause.count() == 1 && input->property("text").toString() == textBeforeSpace &&
+                 popup->isOpen() && input->property("activeFocus").toBool(),
+             qPrintable(QStringLiteral("Space in the velocity prompt did not toggle the transport: "
+                                       "triggers=%1 text='%2' open=%3 focused=%4")
+                            .arg(playPause.count())
+                            .arg(input->property("text").toString(), textBeforeSpace)
+                            .arg(popup->isOpen())
+                            .arg(input->property("activeFocus").toBool())));
+    // A second Space toggles back through the same route: no playback is
+    // left running for the rest of the shell.
+    selectionkey::deliverKey(canvas, Qt::Key_Space);
+    QVERIFY2(playPause.count() == 2 && popup->isOpen(),
+             qPrintable(QStringLiteral("Space did not toggle the transport twice: triggers=%1")
+                            .arg(playPause.count())));
+
     // Escape cancels without writing, and window commands resume on the roll
     // band exactly once the prompt no longer owns the keys.
     QTest::keyClick(canvas, Qt::Key_Escape);

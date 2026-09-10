@@ -342,6 +342,24 @@ void SelectionLocalInputTierTest::pitchBendOverlayOwnsKeys()
         numericEdit->setProperty("text", textBefore);
     QCOMPARE(popup->bendRange(), textBefore.toInt());
 
+    // Space is the transport command, not numeric text: the focused field
+    // yields it and the window command toggles playback.
+    QVERIFY(QMetaObject::invokeMethod(numericEdit, "selectAll"));
+    QSignalSpy playPause(m_workspace, &WorkspaceUi::playPauseRequested);
+    selectionkey::deliverKey(quickWindow, Qt::Key_Space);
+    QVERIFY2(playPause.count() == 1 && numericEdit->property("text").toString() == textBefore &&
+                 hasCompletedQuickFocus(quickWindow, numericEdit) && popup->isOpen(),
+             qPrintable(QStringLiteral("Space in the pitch-bend field did not toggle the "
+                                       "transport: triggers=%1 text='%2' expected='%3' open=%4 %5")
+                            .arg(playPause.count())
+                            .arg(numericEdit->property("text").toString(), textBefore)
+                            .arg(popup->isOpen())
+                            .arg(applicationFocusState())));
+    selectionkey::deliverKey(quickWindow, Qt::Key_Space);
+    QVERIFY2(playPause.count() == 2,
+             qPrintable(QStringLiteral("Space did not toggle the transport twice: triggers=%1")
+                            .arg(playPause.count())));
+
     requestCompletedQuickFocus(quickWindow, graph, Qt::OtherFocusReason);
     selectionkey::deliverKey(quickWindow, Qt::Key_Escape);
     selectionkey::settle();

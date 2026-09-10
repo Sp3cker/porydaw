@@ -145,4 +145,30 @@ void VoicegroupSaveTest::dockMinimumWidthIsFamilyInvariant()
     QCOMPARE(m_browser->browserMinimumSizeHint().width(), cgbMinimum);
 }
 
+void VoicegroupSaveTest::adsrFieldSpaceTogglesTransport()
+{
+    m_window->show();
+    QCoreApplication::processEvents();
+    m_browser->selectSlot(m_dsSlot);
+    QLineEdit *const field = m_browser->releaseField();
+    QVERIFY2(field, "the release editor has no text field");
+    field->setFocus(Qt::MouseFocusReason);
+    QCoreApplication::processEvents();
+    QVERIFY2(field->hasFocus(), "the release field did not take focus");
+    const QString textBefore = field->text();
+
+    QSignalSpy playPause(m_window->m_workspace.get(), &WorkspaceUi::playPauseRequested);
+    QTest::keyClick(field, Qt::Key_Space);
+    QCoreApplication::processEvents();
+    QVERIFY2(playPause.count() == 1,
+             qUtf8Printable(QStringLiteral("Space in the focused ADSR field did not reach the "
+                                           "transport: triggers=%1")
+                                .arg(playPause.count())));
+    QCOMPARE(field->text(), textBefore);
+    QCOMPARE(field->hasFocus(), true);
+
+    m_window->stopPlayback();
+    QTRY_COMPARE(m_window->m_audio.transport(), Transport::Stopped);
+}
+
 } // namespace checks

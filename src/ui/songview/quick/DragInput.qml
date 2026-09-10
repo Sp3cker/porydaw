@@ -154,6 +154,9 @@ Item {
             bottom: control.minimumValue
             top: control.maximumValue
         }
+        // Yielded to the transport: QuickPopupSession reads this marker to
+        // release the play/pause chord a focused TextInput would swallow.
+        readonly property bool yieldsTransportPlayPauseShortcut: true
 
         onEditingFinished: state.finishEditing()
         onActiveFocusChanged: {

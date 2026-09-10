@@ -52,6 +52,7 @@ class VoicegroupSaveTest final : public QObject
 
     void releaseEditorUsesBankUndoPipeline_data();
     void releaseEditorUsesBankUndoPipeline();
+    void adsrFieldSpaceTogglesTransport();
     void blankTemplateMaterializesUndoably();
     void dockMinimumWidthIsFamilyInvariant();
 
