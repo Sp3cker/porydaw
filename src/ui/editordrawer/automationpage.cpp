@@ -13,7 +13,6 @@
 
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationcanvas.h"
-#include "ui/editordrawer/automationprojection.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
@@ -37,22 +36,12 @@ bool sameLiveState(const DrawerPageLiveState &a, const DrawerPageLiveState &b)
 } // namespace
 AutomationPage::Geometry AutomationPage::Geometry::resolve()
 {
-    return {layout::fontPx(4.0), layout::fontPx(5.0 / 3.0), layout::fontPx(8.0 / 3.0)};
+    return {layout::fontPx(8.0 / 3.0)};
 }
 
 QSize AutomationPage::automationViewportSize() const noexcept
 {
     return m_viewportSize;
-}
-
-int AutomationPage::automationContentHeight() const noexcept
-{
-    return m_contentHeight;
-}
-
-int AutomationPage::verticalScroll() const noexcept
-{
-    return m_scrollY;
 }
 
 void AutomationPage::synchronizeAutomationViewport(QSize viewportSize)
@@ -61,59 +50,6 @@ void AutomationPage::synchronizeAutomationViewport(QSize viewportSize)
         return;
     m_viewportSize = viewportSize;
     m_canvas->viewportResized();
-}
-
-void AutomationPage::setVerticalScroll(int value)
-{
-    const int maximum = std::max(0, m_contentHeight - m_viewportSize.height());
-    const int scrollY = std::clamp(value, 0, maximum);
-    if (m_scrollY == scrollY)
-        return;
-    m_scrollY = scrollY;
-    m_canvas->viewportResized();
-    emit scrollStateChanged();
-}
-
-bool AutomationPage::scrollVertically(const songview::TimelineWheelInput &input)
-{
-    const QPoint delta = input.pixelDelta.isNull() ? input.angleDelta : input.pixelDelta;
-    if ((!input.angleDelta.isNull() &&
-         std::abs(input.angleDelta.x()) > std::abs(input.angleDelta.y())) ||
-        std::abs(delta.x()) > std::abs(delta.y()) || delta.y() == 0) {
-        return false;
-    }
-    constexpr int singleStep = 1;
-    const qreal wheelSteps = input.pixelDelta.isNull() ? qreal(delta.y()) / qreal(120)
-                                                       : qreal(delta.y()) / qreal(singleStep);
-    const qreal scrollSteps = input.inverted ? wheelSteps : -wheelSteps;
-    if (m_verticalWheelRemainder != 0.0 && m_verticalWheelRemainder * scrollSteps < 0.0)
-        m_verticalWheelRemainder = 0.0;
-    m_verticalWheelRemainder += scrollSteps;
-    const int wholeSteps = int(std::trunc(m_verticalWheelRemainder));
-    if (wholeSteps == 0)
-        return true;
-    m_verticalWheelRemainder -= qreal(wholeSteps);
-    const int pageStep = std::max(1, m_viewportSize.height());
-    const int scrollDelta = std::clamp(wholeSteps * singleStep, -pageStep, pageStep);
-    const int requested = m_scrollY + scrollDelta;
-    const int maximum = std::max(0, m_contentHeight - m_viewportSize.height());
-    const int target = std::clamp(requested, 0, maximum);
-    if (target == m_scrollY) {
-        m_verticalWheelRemainder = 0.0;
-        return true;
-    }
-    setVerticalScroll(target);
-    if (target != requested)
-        m_verticalWheelRemainder = 0.0;
-    return true;
-}
-
-int AutomationPage::laneHeightFor(const EditorAutomationRowId &row) const noexcept
-{
-    const int shared =
-        m_viewState.laneHeight > 0 ? m_viewState.laneHeight : m_geometry.rowDefaultHeight;
-    const auto it = m_viewState.laneHeights.find(row);
-    return it == m_viewState.laneHeights.cend() ? shared : it->second;
 }
 
 AutomationPage::AutomationPage(SongView &owner, QObject *parent)
@@ -391,50 +327,11 @@ void AutomationPage::rebuildModel()
         m_canvas->rebuildRows();
 }
 
-void AutomationPage::addEmptyLane(int track, uint8_t controller)
-{
-    const EditorAutomationRowId row{EditorAutomationRowKind::ControlChange, uint8_t(track),
-                                    controller};
-    if (m_viewState.emptyLanes.insert(row).second) {
-        m_viewState.unhideLane(row);
-        publishViewState();
-        m_canvas->rebuildRows();
-    }
-}
-
-void AutomationPage::removeEmptyLane(int track, uint8_t controller)
-{
-    const EditorAutomationRowId row{EditorAutomationRowKind::ControlChange, uint8_t(track),
-                                    controller};
-    if (m_viewState.emptyLanes.erase(row) != 0) {
-        publishViewState();
-        m_canvas->rebuildRows();
-    }
-}
-
 void AutomationPage::setLaneRange(const EditorAutomationRowId &row, uint8_t range)
 {
     m_viewState.laneRanges[row] = range;
     publishViewState();
     m_canvas->requestFullQuickUpdate();
-}
-
-bool AutomationPage::scaleSharedHeight(int wheelSteps, const AutomationGeometry &geometry)
-{
-    const int shared =
-        m_viewState.laneHeight > 0 ? m_viewState.laneHeight : geometry.rowDefaultHeight;
-    const int height = std::clamp(shared + wheelSteps * geometry.rowWheelIncrement,
-                                  geometry.rowMinimumHeight, geometry.rowMaximumHeight);
-    if (height == shared)
-        return false;
-    const double factor = double(height) / double(shared);
-    for (auto &[row, rowHeight] : m_viewState.laneHeights) {
-        rowHeight = std::clamp(int(std::lround(rowHeight * factor)), geometry.rowMinimumHeight,
-                               geometry.rowMaximumHeight);
-    }
-    m_viewState.laneHeight = height;
-    publishViewState();
-    return true;
 }
 
 void AutomationPage::publishTimeSelection(uint64_t startTick, uint64_t endTick,

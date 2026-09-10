@@ -136,8 +136,7 @@ void AutomationEditingTest::actionHeldKeyGestures()
     QVERIFY(pan.valid());
     QVERIFY(activateParameter({EditorAutomationRowKind::ControlChange, 0, kPanController}));
     const QPointF start = inputPoint(pan, 144, 64);
-    QVERIFY(automationInput().bounds().contains(
-        QPointF(start.x(), start.y() - page().verticalScroll())));
+    QVERIFY(automationInput().bounds().contains(start));
     mousePress(Qt::LeftButton, automationWindowPoint(start));
     mouseRelease(Qt::LeftButton, automationWindowPoint(start));
     keyRelease(shortcut.key(), shortcut.keyboardModifiers());

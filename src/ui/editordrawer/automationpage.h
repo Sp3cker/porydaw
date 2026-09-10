@@ -21,14 +21,13 @@ class MidiTimeline;
 class SongDocument;
 class SongView;
 class QWindow;
-struct AutomationGeometry;
 
 namespace songview {
 class Grid;
 struct TimelineWheelInput;
 } // namespace songview
 
-// The concrete automation page owns its scroll state and keeps a stable
+// The concrete automation page owns one plot viewport and keeps a stable
 // SongView owner for shared song data and editor routing.
 class AutomationPage final : public QObject
 {
@@ -46,10 +45,6 @@ class AutomationPage final : public QObject
     // key. Exposed for settings-driven discovery.
     QAction *pencilModeAction() const noexcept { return m_pencilModeAction; }
     QSize automationViewportSize() const noexcept;
-    int automationContentHeight() const noexcept;
-    int verticalScroll() const noexcept;
-    void setVerticalScroll(int value);
-    bool scrollVertically(const songview::TimelineWheelInput &input);
     void synchronizeAutomationViewport(QSize viewportSize);
     bool eventFilter(QObject *watched, QEvent *event) override;
     // The Quick window that delivers this page's timeline input; the pencil
@@ -63,12 +58,7 @@ class AutomationPage final : public QObject
     void refreshLiveState(const DrawerPageLiveState &liveState);
     void cancelInteraction();
     void documentChanged();
-    void addEmptyLane(int track, uint8_t controller);
-    void removeEmptyLane(int track, uint8_t controller);
     void setLaneRange(const EditorAutomationRowId &row, uint8_t range);
-
-  signals:
-    void scrollStateChanged();
 
   private:
     friend class AutomationCanvas;
@@ -77,18 +67,14 @@ class AutomationPage final : public QObject
     friend struct NodeLaneHoverState;
     friend class songview::TimelineQuickView;
     // Read-only access to the timeline mapping queries (tickAtContentX,
-    // displayX, visible grid cells) and m_viewState row layout.
+    // displayX, visible grid cells).
     friend class AutomationProjection;
     struct Geometry {
-        int rowDefaultHeight = 0;
-        int addLaneStripHeight = 0;
         int defaultPixelsPerBeat = 0;
 
         static Geometry resolve();
     };
 
-    int laneHeightFor(const EditorAutomationRowId &row) const noexcept;
-    bool scaleSharedHeight(int wheelSteps, const AutomationGeometry &geometry);
     bool ready() const noexcept;
     const DrawerPageLiveState &liveState() const noexcept { return m_liveState; }
     const MidiTimeline *timeline() const noexcept;
@@ -127,9 +113,6 @@ class AutomationPage final : public QObject
     DrawerPageLiveState m_liveState;
     EditorViewState m_viewState;
     AutomationCanvas *m_canvas = nullptr;
-    int m_scrollY = 0;
-    int m_contentHeight = 0;
     QSize m_viewportSize;
-    qreal m_verticalWheelRemainder = 0.0;
     QPointer<QWindow> m_inputWindow;
 };
