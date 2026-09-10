@@ -371,6 +371,7 @@ qt_add_library(porydaw_app STATIC
     src/ui/editordrawer/drawerchrome.cpp
     src/ui/editordrawer/drawerchrome.h
     src/ui/editordrawer/automationcanvas.cpp
+    src/ui/editordrawer/automationcanvas_tabs.cpp
     src/ui/editordrawer/automationcanvas_gesture.cpp
     src/ui/editordrawer/automationcanvas_input.cpp
     src/ui/editordrawer/automationcanvas_menu.cpp

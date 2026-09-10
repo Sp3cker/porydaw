@@ -57,19 +57,9 @@ int AutomationPage::verticalScroll() const noexcept
 
 void AutomationPage::synchronizeAutomationViewport(QSize viewportSize)
 {
-    const QSize oldViewportSize = m_viewportSize;
-    const int oldContentHeight = m_contentHeight;
-    const int oldMaximum = std::max(0, oldContentHeight - oldViewportSize.height());
-    const int oldScrollY = m_scrollY;
+    if (m_viewportSize == viewportSize)
+        return;
     m_viewportSize = viewportSize;
-    m_contentHeight = std::max(m_viewportSize.height(), m_canvas->minimumContentHeight());
-    const int maximum = std::max(0, m_contentHeight - m_viewportSize.height());
-    m_scrollY = std::clamp(m_scrollY, 0, maximum);
-    if (m_viewportSize != oldViewportSize || m_contentHeight != oldContentHeight ||
-        m_scrollY != oldScrollY || maximum != oldMaximum) {
-        emit scrollStateChanged();
-    }
-    m_canvas->scrollStateChanged();
     m_canvas->viewportResized();
 }
 
@@ -80,7 +70,7 @@ void AutomationPage::setVerticalScroll(int value)
     if (m_scrollY == scrollY)
         return;
     m_scrollY = scrollY;
-    m_canvas->scrollStateChanged();
+    m_canvas->viewportResized();
     emit scrollStateChanged();
 }
 

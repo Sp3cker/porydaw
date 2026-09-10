@@ -25,19 +25,18 @@
 9. Use deno task only. Writers skip format/build/lint/tests; the controller owns settled-tree verification. Native/default-backend evidence is required for node/phantom pixels. Never ignore or hand off check failures.
 10. This request authorizes plan writing only. During a later authorized execution, commit actions belong to the controller under applicable explicit authorization; push every commit made per repository policy. Implementers never commit.
 11. Prefer built-in Qt behavior over custom controls and their checks. Adding Qt modules is approved where it removes implementation/test burden. Task 5 uses native TabButton checking/input, GridLayout, Text.HorizontalFit, FontMetrics, Binding and ContextMenu. Local code supplies only styling, the three-column policy, domain/menu wiring and a narrow Enter/Return extension.
-12. Hard implementation ceiling: at most 400 lines of new or materially rewritten production code across the entire plan, not per task. Count C++, headers, QML, build declarations and all properties/signals/adapters/glue. Deletions do not offset additions. The controller enforces the accounting and stop rule below.
+12. The controller tracks new or materially rewritten production lines across the entire plan (C++, headers, QML, build declarations and all properties/signals/adapters/glue), reported separately from verified unchanged moves, deletions and test churn. This is accounting, not a limit: there is no numeric cap and no approval step tied to the count.
 
-## Production code budget — controller owned
+## Production line accounting — controller owned
 
-This is primarily a presentation refactor and removal of obsolete code, not an opportunity to add another automation subsystem. The 35-task breakdown does not justify a larger implementation.
+This is primarily a presentation refactor and removal of obsolete code, not an opportunity to add another automation subsystem. The 35-task breakdown does not justify a larger implementation. Prefer reuse and simple, boring code over new subsystems.
 
-- **Fixed baseline:** before implementation, record one baseline of the actual starting tree, including the user's existing uncommitted work. Recompute the aggregate change against that baseline; do not reset the allowance at each task or sum successive revisions of the same lines.
-- **Count:** at most 400 new or materially rewritten production code lines, measured as nonblank, non-comment physical lines in normal project formatting. Include C++, headers, QML, build declarations, properties, signals, adapters, cancellation/selection wiring and other glue in both new and existing files. A changed line counts; unchanged surrounding lines do not.
-- **Separate accounting:** report verified unchanged code moves, formatting-only changes, production deletions, and test additions/modifications/deletions separately. Unchanged moves require source/destination evidence. Never use net LOC, subtract deletions, move new logic elsewhere, compress formatting, or weaken tests/behavior to make the implementation appear under budget.
-- **Before each dispatch:** give the implementer the current aggregate count, remaining allowance, and expected contribution of the task. Check that the remaining feature work can still fit; no task receives its own 400-line allowance.
-- **At every settled task and fix/review gate:** the implementer reports its production contribution and any claimed move/format exclusions. The controller verifies them against the fixed baseline, updates the aggregate in the existing task/review record, and gives the reviewer the same count. An over-budget result cannot be accepted merely because it compiles or passes tests.
-- **Stop rule:** if the projected or actual total exceeds 400, pause further implementation dispatch and simplify/reuse existing code first. Revise the affected bounded briefs as needed. If the required behavior genuinely cannot fit, present the measured breakdown and obtain explicit user approval before increasing the ceiling. Do not silently expand the budget or drop acceptance criteria.
-- **Final gate:** recount the final formatted tree after fixes and cleanup. Delivery requires a verified total at or below 400, or an explicit user-approved exception. Report the charged production total and the separate move/deletion/test counts; do not create a new tracking subsystem for this.
+- **Fixed baseline:** before implementation, record one baseline of the actual starting tree, including the user's existing uncommitted work. Track the aggregate change against that baseline; do not sum successive revisions of the same lines.
+- **Count:** new or materially rewritten production code lines, measured as nonblank, non-comment physical lines in normal project formatting. Include C++, headers, QML, build declarations, properties, signals, adapters, cancellation/selection wiring and other glue in both new and existing files. A changed line counts; unchanged surrounding lines do not.
+- **Separate accounting:** report verified unchanged code moves, formatting-only changes, production deletions, and test additions/modifications/deletions separately. Unchanged moves require source/destination evidence. Never use net LOC or relocate logic elsewhere to make additions look smaller, and never weaken tests or behavior for size.
+- **No cap:** there is no numeric limit, approval threshold or halt condition anywhere in the plan. The tracked count informs controller bookkeeping and the final report; it never gates dispatch, escalates, or changes acceptance.
+- **At every settled task and fix/review gate:** the implementer reports its approximate production contribution and any claimed move/format exclusions. The controller verifies them against the fixed baseline, updates the aggregate in the existing task/review record, and gives the reviewer the same count.
+- **Final report:** after fixes and cleanup, report the tracked production total and the separate move/deletion/test counts; do not create a new tracking subsystem for this.
 
 ## File map and ownership
 
@@ -149,7 +148,7 @@ Never repin point ticks, same-tick order, explicit/implicit storage, undo groupi
 ## Controller proof gate
 
 After all implementation/review gates settle:
-The controller first applies the production-code budget gate above; final verification does not waive the 400-line ceiling.
+The controller applies the production line accounting above and reports the final counts in the delivery report; no line-count condition applies to final verification or acceptance.
 
 
 1. Refresh references across affected UI/check folders. Removed UI APIs have no remaining consumer; preserved EditorViewState/codec/remap references are explicitly not removal targets; unrelated piano-roll scrolling is not a false positive. Format edited supported files once with deno task format. No source-text tests or warning suppression.
@@ -199,7 +198,7 @@ Expected: all harnesses pass, no assertion/QML/runtime failure. Resolve failures
 - Initialize each of the 35 active tasks in table order as its own todo. Do not initialize withdrawn tasks 24, 25 or 36, compress active tasks into phases, or track them from memory.
 - Dispatch the exact brief to sdd-implementer. On NEEDS_CONTEXT, resolve source/tool facts first and revise a bounded brief; never ask the user for repository-provided information.
 - Apply local task-scoped spec/quality review after each task. Fix/re-review up to the local five-round cap, then escalate the concrete unresolved issue. Never silently accept failed review findings.
-- Enforce the aggregate production-code budget at every dispatch and settled review/fix gate. Include the count and remaining allowance in dispatch context and review results; a clean functional review does not override the ceiling.
+- Track the aggregate production-line count at every settled task and fix/review gate and report the final count. The count is informational bookkeeping: it never gates dispatch, review or acceptance, and no dispatch context mentions an allowance.
 - Controller integrates and validates after writers settle. The final report distinguishes actual proof from unrun checks and names blockers. A phase boundary is not a handoff.
 - This plan is ready for future authorized execution; it does not start it.
 

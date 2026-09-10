@@ -15,7 +15,6 @@
 #include "ui/editordrawer/nodelane/batchcommit.h"
 #include "ui/editorviewstate.h"
 #include "ui/layout.h"
-#include "ui/songviewmodel.h"
 
 namespace {
 
@@ -101,25 +100,11 @@ void CCLanes::rebuildRows()
     const int track = m_page->m_owner.selectionModel().primaryTrack();
     if (track < 0)
         return;
-    std::vector<uint8_t> controllers;
-    const auto addController = [&controllers](uint8_t controller) {
-        if (std::find(controllers.cbegin(), controllers.cend(), controller) == controllers.cend())
-            controllers.push_back(controller);
-    };
-    for (const uint8_t controller : CoreTimeDefaults::kDefaultVisibleControllers)
-        addController(controller);
-    for (const auto &lane : m_page->model().lanes)
-        if (lane.track == track)
-            addController(lane.cc);
-    for (const auto &row : m_page->m_viewState.emptyLanes)
-        if (row.kind == EditorAutomationRowKind::ControlChange && row.track == uint8_t(track))
-            addController(row.controller);
-    std::sort(controllers.begin(), controllers.end());
-    for (const uint8_t controller : controllers) {
-        const auto row = laneRow(track, controller);
-        if (!m_page->m_viewState.isLaneHidden(row))
-            appendRow(row);
-    }
+    // The full supported catalog is always present: model presence, legacy
+    // empty-row registration and hidden state no longer decide membership —
+    // only which identity the shared plot currently paints.
+    for (const uint8_t controller : supportedControllers())
+        appendRow(laneRow(track, controller));
 }
 
 int CCLanes::minimumHeight(const AutomationGeometry &geometry, int topInset) const

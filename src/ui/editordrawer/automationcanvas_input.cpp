@@ -8,7 +8,6 @@
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/keymap.h"
-#include "ui/layout.h"
 
 bool AutomationCanvas::isEditablePencilHit(const QPointF &position) const noexcept
 {
@@ -37,19 +36,7 @@ bool AutomationCanvas::wheel(const songview::TimelineWheelInput &input)
         return false;
     const QPoint delta = input.pixelDelta.isNull() ? input.angleDelta : input.pixelDelta;
     const int vertical = delta.y() != 0 ? delta.y() : delta.x();
-    if (input.surface == songview::TimelineInputSurface::Gutter) {
-        if (input.modifiers & Qt::ControlModifier) {
-            m_resize.wheelRemainder += vertical;
-            const int steps = m_resize.wheelRemainder / 120;
-            if (steps != 0) {
-                m_resize.wheelRemainder -= steps * 120;
-                if (m_page.scaleSharedHeight(steps, m_geometry))
-                    contentGeometryChanged();
-            }
-            return true;
-        }
-        return vertical != 0 && m_page.scrollVertically(input);
-    }
+    // The QML selector labels own their own wheel input; the gutter declines.
     if (input.surface != songview::TimelineInputSurface::Plot)
         return false;
 
@@ -172,56 +159,8 @@ bool AutomationCanvas::pointerPress(const songview::TimelinePointerInput &input)
     const QPointF position = contentPosition(input.position);
     songview::TimelineInputHost *const host = input.host ? input.host : m_inputHost;
 
-    if (input.surface == songview::TimelineInputSurface::Gutter) {
-        const PointerLaneHit pointer = pointerLaneAt(position.toPoint());
-        const auto *pointerSlot = resolveSlot(pointer.lane);
-        if ((input.button == Qt::LeftButton || input.button == Qt::RightButton) &&
-            m_laneSelection.active()) {
-            clearTimeSelectionIfOutsidePress(position, projection(), pointer.lane, nullptr);
-        }
-        if (pointer.tempoHeader) {
-            if (input.button == Qt::LeftButton) {
-                m_tempoLane.toggleExpanded();
-                updateTempoLayout();
-            } else if (input.button == Qt::RightButton && pointer.lane.valid()) {
-                // The menu owns focus from here: the session restores it on
-                // Escape/outside, and dispatch returns it on activation.
-                showLaneMenuFor(pointer.lane, menuScenePosition(input.globalPosition));
-                return true;
-            } else {
-                return false;
-            }
-            if (m_inputHost)
-                m_inputHost->requestFocus(Qt::MouseFocusReason);
-            return true;
-        }
-        const int boundary =
-            input.button == Qt::LeftButton ? ccRowBoundaryAt(position.toPoint().y()) : -1;
-        if (boundary >= 0) {
-            m_resize.row = boundary;
-            m_resize.startHeight = ccLaneHeight(m_rowData.rows()[std::size_t(boundary)]);
-            m_resize.startY = position.toPoint().y();
-            if (host)
-                host->setCursor(QCursor(Qt::SplitVCursor));
-            if (m_inputHost)
-                m_inputHost->requestFocus(Qt::MouseFocusReason);
-            setGestureActive(true);
-            return true;
-        }
-        const QRect addRect(layout::space(layout::Space::Zero), addLaneStripTop(),
-                            std::max(0, m_page.m_owner.timelineSplitX()),
-                            m_geometry.addLaneStripHeight);
-        if ((input.button == Qt::LeftButton || input.button == Qt::RightButton) &&
-            addRect.contains(position.toPoint())) {
-            showAddLaneMenu(menuScenePosition(input.globalPosition));
-            return true;
-        }
-        if (input.button == Qt::RightButton && pointerSlot) {
-            showLaneMenuFor(pointer.lane, menuScenePosition(input.globalPosition));
-            return true;
-        }
-        return false;
-    }
+    // The QML selector labels own gutter input; unhandled gutter presses
+    // decline here and must never clear the shared selection.
     if (input.surface != songview::TimelineInputSurface::Plot)
         return false;
 
@@ -229,7 +168,6 @@ bool AutomationCanvas::pointerPress(const songview::TimelinePointerInput &input)
         m_pan.active = true;
         m_pan.pos = position;
         m_pan.startHScroll = m_page.liveState().horizontalScroll;
-        m_pan.startVScroll = m_page.verticalScroll();
         if (host)
             host->setCursor(QCursor(Qt::ClosedHandCursor));
         if (m_inputHost)
@@ -273,41 +211,8 @@ bool AutomationCanvas::pointerMove(const songview::TimelinePointerInput &input)
 {
     const QPointF position = contentPosition(input.position);
     songview::TimelineInputHost *const host = input.host ? input.host : m_inputHost;
-    if (input.surface == songview::TimelineInputSurface::Gutter) {
-        if (m_resize.row >= 0 && m_resize.row < int(m_rowData.rows().size())) {
-            const int height =
-                std::clamp(m_resize.startHeight + position.toPoint().y() - m_resize.startY,
-                           m_geometry.rowMinimumHeight, m_geometry.rowMaximumHeight);
-            if (height != ccLaneHeight(m_rowData.rows()[std::size_t(m_resize.row)])) {
-                m_page.m_viewState.laneHeights[m_rowData.rows()[std::size_t(m_resize.row)].id] =
-                    height;
-                m_page.publishViewState();
-                contentGeometryChanged();
-            }
-            return true;
-        }
-        if (m_pan.active || m_band.pending || m_activeGesture)
-            return false;
-        const bool hoverWasActive = m_hoverState.hover.lane.valid();
-        m_hoverState.clearHover();
-        if (hoverWasActive && !m_hoverState.hover.lane.valid())
-            requestHoverQuickUpdate();
-
-        const PointerLaneHit pointer = pointerLaneAt(position.toPoint());
-        if (pointer.tempoHeader) {
-            if (host)
-                host->clearCursor();
-            return true;
-        }
-        if (ccRowBoundaryAt(position.toPoint().y()) >= 0) {
-            if (host)
-                host->setCursor(QCursor(Qt::SplitVCursor));
-            return true;
-        }
-        if (host)
-            host->clearCursor();
-        return true;
-    }
+    // The QML selector labels own gutter input; unhandled gutter moves
+    // decline, and the plot item's hover leave clears any stale hover.
     if (input.surface != songview::TimelineInputSurface::Plot)
         return false;
 
@@ -321,11 +226,8 @@ bool AutomationCanvas::pointerMove(const songview::TimelinePointerInput &input)
         }
         const QPointF delta = position - m_pan.pos;
         m_page.requestHorizontalScroll(m_pan.startHScroll - delta.x());
-        m_page.setVerticalScroll(m_pan.startVScroll - qRound(delta.y()));
         return true;
     }
-    if (m_resize.row >= 0)
-        return false;
 
     const AutomationProjection proj = projection();
     if (m_band.pending) {
@@ -335,10 +237,9 @@ bool AutomationCanvas::pointerMove(const songview::TimelinePointerInput &input)
             m_hoverState.clearHover();
         }
         if (m_band.active) {
-            const int lastY = std::max(layout::space(layout::Space::Zero),
-                                       addLaneStripTop() - layout::singlePixel());
-            const int y =
-                std::clamp(position.toPoint().y(), layout::space(layout::Space::Zero), lastY);
+            const QRect bounds = contentBounds();
+            const int lastY = bounds.top() + std::max(0, bounds.height() - 1);
+            const int y = std::clamp(position.toPoint().y(), bounds.top(), lastY);
             const LaneHandle candidate = laneAt(y);
             const auto *startSlot = resolveSlot(m_band.laneRange().first);
             const auto *candidateSlot = resolveSlot(candidate);
@@ -385,16 +286,6 @@ bool AutomationCanvas::pointerRelease(const songview::TimelinePointerInput &inpu
     m_deletedNodeClick.clear();
     const QPointF position = contentPosition(input.position);
     songview::TimelineInputHost *const host = input.host ? input.host : m_inputHost;
-    if (input.surface == songview::TimelineInputSurface::Gutter) {
-        if (input.button == Qt::LeftButton && m_resize.row >= 0) {
-            m_resize.row = -1;
-            if (host)
-                host->clearCursor();
-            setGestureActive(false);
-            return true;
-        }
-        return false;
-    }
     if (input.surface != songview::TimelineInputSurface::Plot)
         return false;
 
@@ -476,16 +367,6 @@ bool AutomationCanvas::pointerDoubleClick(const songview::TimelinePointerInput &
     if (!m_page.document())
         return false;
     const QPointF position = contentPosition(input.position);
-    if (input.surface == songview::TimelineInputSurface::Gutter) {
-        const PointerLaneHit pointer = pointerLaneAt(position.toPoint());
-        if (!pointer.tempoHeader || input.button != Qt::LeftButton)
-            return false;
-        m_hoverState.clearHover();
-        requestHoverQuickUpdate();
-        m_tempoLane.toggleExpanded();
-        updateTempoLayout();
-        return true;
-    }
     if (input.surface != songview::TimelineInputSurface::Plot || input.button != Qt::LeftButton)
         return false;
 
@@ -522,9 +403,9 @@ bool AutomationCanvas::pointerDoubleClick(const songview::TimelinePointerInput &
 
 bool AutomationCanvas::gestureActive() const
 {
-    // Same ownership set cancelInteraction treats as live: pan, lane resize,
-    // band range press/drag, or a node/sweep/pencil gesture.
-    return m_pan.active || m_resize.row >= 0 || m_band.pending || m_activeGesture.has_value();
+    // Same ownership set cancelInteraction treats as live: pan, band range
+    // press/drag, or a node/sweep/pencil gesture.
+    return m_pan.active || m_band.pending || m_activeGesture.has_value();
 }
 
 bool AutomationCanvas::keyPress(const songview::TimelineKeyInput &input)

@@ -67,6 +67,14 @@ void AutomationCanvas::hostAppearanceChanged()
     if (!m_inputHost)
         return;
     m_pencilCursorDpr = 0.0;
+    // TimelineInputItem::geometryChange publishes after the actual QML bounds
+    // update, so the compared body is never a stale pre-publication band
+    // width. Rebuild geometry only on a size change; appearance notifications
+    // carry the parameter-presentation refresh for font and theme churn.
+    const QRect body = m_inputHost->bounds().toAlignedRect();
+    if (m_nodeStack.empty() || m_nodeStack.front().body.size() != body.size())
+        relayoutContent();
+    emit parameterPresentationChanged();
     requestFullQuickUpdate();
 }
 
@@ -77,7 +85,6 @@ void AutomationCanvas::viewportResized()
 
 void AutomationCanvas::scrollStateChanged()
 {
-    syncPinnedTempoLayout();
     syncHoverValueLabel();
     syncPreviewValueLabel();
     requestViewportQuickUpdate();
@@ -97,14 +104,16 @@ void AutomationCanvas::contentGeometryChanged()
     requestFullQuickUpdate();
 }
 
+// The shared plot fills the viewport, so content and viewport space coincide;
+// the vertical automation scroll transform is identity by design.
 QPointF AutomationCanvas::contentPosition(QPointF viewportPosition) const noexcept
 {
-    return viewportPosition + QPointF(0.0, m_page.verticalScroll());
+    return viewportPosition;
 }
 
 QPointF AutomationCanvas::viewportPosition(QPointF contentPosition) const noexcept
 {
-    return contentPosition - QPointF(0.0, m_page.verticalScroll());
+    return contentPosition;
 }
 
 QPointF AutomationCanvas::contentPositionFromGlobal(QPointF globalPosition) const
@@ -116,19 +125,19 @@ QPointF AutomationCanvas::contentPositionFromGlobal(QPointF globalPosition) cons
 
 QRect AutomationCanvas::viewportRect(QRect contentRect) const noexcept
 {
-    return contentRect.translated(0, -m_page.verticalScroll());
+    return contentRect;
 }
 
 QRect AutomationCanvas::contentBounds() const noexcept
 {
-    return QRect(QPoint{},
-                 QSize(m_page.automationViewportSize().width(), m_page.automationContentHeight()));
+    return m_inputHost ? m_inputHost->bounds().toAlignedRect() : QRect{};
 }
 
+// The QML selector grid's measured implicit height, published through the
+// setMinimumContentHeight Qt Binding — not a stacked-row computation.
 int AutomationCanvas::minimumContentHeight() const noexcept
 {
-    return m_rowData.minimumHeight(m_geometry, layout::space(layout::Space::Zero)) +
-           m_tempoLane.totalHeight(m_geometry);
+    return m_minimumContentHeight;
 }
 
 AutomationProjection AutomationCanvas::projection() const
@@ -216,6 +225,11 @@ void AutomationCanvas::requestSelectionQuickUpdate() const
 {
     invalidateSelectedNodeMultiplicity();
     requestQuickUpdate(songview::AutomationRefresh::Content);
+    // The existing selection refresh doubles as the selector's
+    // shared-selection indicator notification; no membership is cached. The
+    // signal is non-const, so emission crosses this refresh's const surface
+    // explicitly; activating it does not mutate the canvas.
+    const_cast<AutomationCanvas *>(this)->parameterSelectionChanged();
 }
 
 void AutomationCanvas::requestHoverQuickUpdate() const
@@ -298,6 +312,11 @@ void AutomationCanvas::rebuildRows()
     m_rowData.rebuildRows();
     m_laneSelection.setUsedTrackMask(m_page.usedTrackMask());
     contentGeometryChanged();
+    // Document and track rebuilds rebind every adapter and remap the
+    // selector's row identities: labels, appearance and selection markers
+    // are republished together.
+    emit parameterPresentationChanged();
+    emit parameterSelectionChanged();
 }
 
 void AutomationCanvas::updateTempoLayout()
@@ -305,29 +324,8 @@ void AutomationCanvas::updateTempoLayout()
     contentGeometryChanged();
 }
 
-int AutomationCanvas::tempoTop() const
-{
-    return std::min(m_page.verticalScroll() + m_page.automationViewportSize().height(),
-                    m_page.automationContentHeight()) -
-           m_tempoLane.totalHeight(m_geometry);
-}
-
-void AutomationCanvas::syncPinnedTempoLayout()
-{
-    m_tempoLane.updateLayout(m_page.automationViewportSize().width(), tempoTop(),
-                             m_page.m_owner.timelineSplitX(), m_geometry);
-    for (NodeLaneSlot &slot : m_nodeStack) {
-        if (slot.isTempo()) {
-            slot.body = m_tempoLane.bodyRect();
-            break;
-        }
-    }
-}
-
 void AutomationCanvas::layoutLaneStack()
 {
-    cancelNodeGestures();
-    syncPinnedTempoLayout();
     rebuildNodeStack();
 }
 
@@ -339,8 +337,12 @@ void AutomationCanvas::rebuildNodeStack()
     m_hoverState.clearHover();
     m_nodeStack.clear();
     m_ccAdapters.clear();
-    m_nodeStack.push_back(
-        {{EditorAutomationRowKind::Tempo, 0, 0}, &m_tempoLane, m_tempoLane.bodyRect(), nullptr});
+    // One full-height plot: every logical slot shares the input-host body so
+    // selected multi-lane edits keep valid value geometry, and only
+    // activeLane() decides what renders and hit-tests. The Tempo slot stays
+    // in the table alongside every CC adapter.
+    const QRect body = m_inputHost ? m_inputHost->bounds().toAlignedRect() : QRect{};
+    m_nodeStack.push_back({{EditorAutomationRowKind::Tempo, 0, 0}, &m_tempoLane, body, nullptr});
     if (!m_page.document())
         return;
     const auto &rows = m_rowData.rows();
@@ -348,38 +350,27 @@ void AutomationCanvas::rebuildNodeStack()
     m_ccAdapters.reserve(rows.size());
     for (const auto &row : rows)
         m_ccAdapters.emplace_back(*m_page.document(), int(row.id.track), row.id.controller);
-    int top = layout::space(layout::Space::Zero);
-    const int viewportWidth = m_page.automationViewportSize().width();
-    for (int i = 0; i < int(rows.size()); ++i) {
-        const int height = ccLaneHeight(rows[std::size_t(i)]);
-        const QRect body(layout::space(layout::Space::Zero), top, viewportWidth, height);
+    for (int i = 0; i < int(rows.size()); ++i)
         m_nodeStack.push_back({rows[std::size_t(i)].id, &m_ccAdapters[std::size_t(i)], body,
                                &rowText[std::size_t(i)]});
-        top += height;
-    }
 }
 
+// Only the active parameter occupies the shared plot: a y inside the common
+// body resolves the active lane, anywhere else is no lane.
 LaneHandle AutomationCanvas::laneAt(int y) const noexcept
 {
-    for (int i = 0; i < int(m_nodeStack.size()); ++i) {
-        const QRect &body = m_nodeStack[std::size_t(i)].body;
-        if (y >= body.top() && y < body.top() + body.height())
-            return LaneHandle{i};
-    }
-    return {};
+    const LaneHandle active = activeLane();
+    const auto *slot = resolveSlot(active);
+    if (!slot || y < slot->body.top() || y >= slot->body.top() + slot->body.height())
+        return {};
+    return active;
 }
 AutomationCanvas::PointerLaneHit
 AutomationCanvas::pointerLaneAt(const QPoint &position) const noexcept
 {
-    LaneHandle tempoHandle;
-    for (int index = 0; index < int(m_nodeStack.size()); ++index) {
-        if (m_nodeStack[std::size_t(index)].isTempo()) {
-            tempoHandle = LaneHandle{index};
-            break;
-        }
-    }
-    const bool tempoHeader = m_tempoLane.containsHeader(position);
-    return {tempoHeader ? tempoHandle : laneAt(position.y()), tempoHeader};
+    // The pinned Tempo header is gone; gutter surfaces resolve the same
+    // shared-plot lane rule as the plot itself.
+    return {laneAt(position.y()), false};
 }
 void AutomationCanvas::refreshHoverAt(const QPointF &position)
 {
@@ -387,12 +378,9 @@ void AutomationCanvas::refreshHoverAt(const QPointF &position)
         m_hoverState.clearHover();
         return;
     }
-    const PointerLaneHit pointer = pointerLaneAt(position.toPoint());
-    if (pointer.tempoHeader) {
-        m_hoverState.clearHover();
-        return;
-    }
-    const LaneHandle handle = pointer.lane;
+    // Resolve the active slot directly — Tempo is ordinary plot content, not
+    // gutter or header.
+    const LaneHandle handle = activeLane();
     const auto *slot = resolveSlot(handle);
     if (!slot) {
         m_hoverState.clearHover();
@@ -498,37 +486,16 @@ void AutomationCanvas::highlightHoveredPoint(LaneHandle handle, const QPointF &p
     requestHoverQuickUpdate();
 }
 
-int AutomationCanvas::ccRowIndexAt(int y) const noexcept
-{
-    const auto *slot = resolveSlot(laneAt(y));
-    if (!slot)
-        return -1;
-    const auto &rows = m_rowData.rows();
-    const auto found =
-        std::find_if(rows.cbegin(), rows.cend(),
-                     [id = slot->id](const AutomationRow &row) { return row.id == id; });
-    return found == rows.cend() ? -1 : int(found - rows.cbegin());
-}
-
 int AutomationCanvas::ccLaneHeight(const AutomationRow &row) const
 {
     return std::clamp(m_page.laneHeightFor(row.id), m_geometry.rowMinimumHeight,
                       m_geometry.rowMaximumHeight);
 }
 
-int AutomationCanvas::ccRowBoundaryAt(int y) const
+int AutomationCanvas::ccRowBoundaryAt(int /*y*/) const
 {
-    const auto &rows = m_rowData.rows();
-    for (const NodeLaneSlot &slot : m_nodeStack) {
-        const int bottom = slot.body.top() + slot.body.height();
-        if (std::abs(y - bottom) > layout::singlePixel())
-            continue;
-        const auto found =
-            std::find_if(rows.cbegin(), rows.cend(),
-                         [&slot](const AutomationRow &row) { return row.id == slot.id; });
-        if (found != rows.cend())
-            return int(found - rows.cbegin());
-    }
+    // The shared plot gives every slot one full-height body, so the stacked
+    // per-row resize boundary no longer exists.
     return -1;
 }
 

@@ -125,10 +125,6 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     m_flushTimer.setSingleShot(true);
     m_flushTimer.setInterval(std::chrono::milliseconds::zero());
     connect(&m_flushTimer, &QTimer::timeout, this, &TimelineQuickView::flushUpdate);
-    // Drawer chrome repaints through the QML bindings to the chrome context
-    // object directly; scroll changes only repaint the automation layers.
-    connect(m_drawerChrome, &DrawerChrome::scrollChanged, this,
-            [this] { requestAutomationUpdate(AutomationRefresh::All); });
 
     static std::once_flag registered;
     std::call_once(registered, [] {
@@ -171,6 +167,8 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
                                             drawerChrome.releaseIconProvider());
     m_quickView->rootContext()->setContextProperty(QStringLiteral("eventListController"),
                                                    m_eventList.data());
+    m_quickView->rootContext()->setContextProperty(QStringLiteral("automationCanvas"),
+                                                   automation.canvas());
     m_quickView->setSource(QUrl(QStringLiteral("qrc:/qt/qml/Porydaw/Ui/TimelineCanvas.qml")));
     if (m_quickView->status() != QQuickView::Ready) {
         for (const QQmlError &error : m_quickView->errors())
