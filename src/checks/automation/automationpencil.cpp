@@ -23,7 +23,7 @@ namespace {
 
 constexpr int kTrack = 0;
 constexpr uint8_t kPanController = 10;
-constexpr uint8_t kExpressionController = 11;
+constexpr uint8_t kEmptyController = CoreTimeDefaults::kCcModulation;
 
 struct PencilPoint {
     QPointF content;
@@ -105,16 +105,15 @@ void AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce()
     AutomationCanvas &canvas = *page.canvas();
     SongDocument &document = m_tab->document();
     resetPencilView(m_tab->view());
-    page.addEmptyLane(kTrack, kExpressionController);
 
     const EditorAutomationRowId row{EditorAutomationRowKind::ControlChange, kTrack,
-                                    kExpressionController};
+                                    kEmptyController};
     const LaneHandle handle = findRow(row);
     QVERIFY(handle.valid());
-    setRowMaximumHeight(row);
+    QVERIFY(activateParameter(row));
     QTRY_VERIFY(!canvas.laneBody(findRow(row)).isEmpty());
 
-    CCLaneAdapter lane(document, kTrack, kExpressionController);
+    CCLaneAdapter lane(document, kTrack, kEmptyController);
     const PencilPoint start =
         pencilPointInCell(m_tab->view(), page, *m_automationInput, lane, findRow(row), 48, 40);
     const PencilPoint middle =
@@ -144,18 +143,18 @@ void AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce()
     QCOMPARE(document.undoStack()->count(), before.undoCount + 1);
     QCOMPARE(document.undoStack()->index(), before.undoIndex + 1);
     QVERIFY(document.smf().write() != before.smf);
-    const std::vector<DocLanePoint> committed = document.lanePoints(kTrack, kExpressionController);
+    const std::vector<DocLanePoint> committed = document.lanePoints(kTrack, kEmptyController);
     QVERIFY(!committed.empty());
     QVERIFY(containsPoint(committed, start.mapping.cell.tickBegin, start.mapping.point.value));
     QVERIFY(containsPointWithin(committed, end.mapping.cell.tickBegin, end.mapping.point.value, 1));
-    QTRY_VERIFY(std::abs(timelineControllerValue(*m_tab->timeline(), kExpressionController,
+    QTRY_VERIFY(std::abs(timelineControllerValue(*m_tab->timeline(), kEmptyController,
                                                  end.mapping.cell.tickBegin) -
                          end.mapping.point.value) <= 1);
 
     QVERIFY(std::holds_alternative<DocumentHistoryApplied>(m_tab->history().requestUndo()));
-    QVERIFY(document.lanePoints(kTrack, kExpressionController).empty());
+    QVERIFY(document.lanePoints(kTrack, kEmptyController).empty());
     QVERIFY(std::holds_alternative<DocumentHistoryApplied>(m_tab->history().requestRedo()));
-    QVERIFY(!document.lanePoints(kTrack, kExpressionController).empty());
+    QVERIFY(!document.lanePoints(kTrack, kEmptyController).empty());
 }
 
 void AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease()
@@ -245,7 +244,7 @@ void AutomationEditingTest::pencilSingleClickOnTempoLaneRestoresDefaultTempoAtCe
     if (!document.tempoPoints().empty())
         document.applyTempoEdit({document.tempoPoints(), {}});
     QCoreApplication::processEvents();
-    QVERIFY(expandTempo());
+    QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}));
 
     const LaneHandle handle = findRow({EditorAutomationRowKind::Tempo, 0, 0});
     QVERIFY(handle.valid());
@@ -288,7 +287,7 @@ void AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCell
     document.writeLanePoints(kTrack, DOC_CC_BEND, 0, std::numeric_limits<uint64_t>::max(), {});
     const LaneHandle handle = findRow(row);
     QVERIFY(handle.valid());
-    setRowMaximumHeight(row);
+    QVERIFY(activateParameter(row));
     QTRY_VERIFY(!canvas.laneBody(findRow(row)).isEmpty());
 
     CCLaneAdapter lane(document, kTrack, DOC_CC_BEND);
@@ -411,8 +410,8 @@ void AutomationEditingTest::pencilCancellationRoutesAbortGestureWithoutCommit()
     } else if (route == 2) {
         sendWindowDeactivate();
     } else {
-        document.writeLanePoints(kTrack, kExpressionController, 0,
-                                 std::numeric_limits<uint64_t>::max(), {{0, 48}});
+        document.writeLanePoints(kTrack, kEmptyController, 0, std::numeric_limits<uint64_t>::max(),
+                                 {{0, 48}});
     }
     const FrozenDocumentState afterCancellation = frozenDocumentState(0, 0);
     mouseRelease(Qt::LeftButton, end.window, Qt::NoModifier);
