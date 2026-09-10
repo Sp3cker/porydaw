@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Host the timeline, ruler, event list, and editor drawers in one Qt Quick viewport. SongView and drawer layout no longer depend on hidden QWidget spacers; only the SongTab embedding boundary remains widget-based.
 
 ## Fixed
+- Retain stationary timeline gutters and velocity axes while panning; draw only populated geometry vertices, and preserve full refreshes when layout or content changes.
+- Rebuild piano pitch-row shading and time-grid lines independently during panning, zooming, and grid or scale changes.
+- Refresh timeline pixel snapping, text, and cursors when moving between displays with different pixel ratios.
 - Avoid rebuilding and reshaping unchanged track-header labels on every playback update; refresh them when the program or header presentation changes instead.
 - Batch fitting timeline labels together instead of giving each label a separate clip; retain clipping for overflowing text and lane boundaries.
 - Keep tempo curves and nodes visible above the plot header background.
@@ -48,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed bug where the right edge of a note couldn't be grabbed for resizing when two notes were adjacent.
 - Fixed bug where velocity values could visually bleed out of the note box.
 - Avoid recreating velocity-axis QML labels during panning by retaining unchanged model rows; still clear labels when the axis has no valid geometry.
-- Reduced low-zoom SongView panning CPU: velocity notes are culled before per-note lookups, circles reuse one-time exact unit-circle points, Quick geometry chunks use packed colors with incremental clearing, low-zoom ruler labels skip measurement/shaping, and keymap modifier lookups are cached with invalidation on mutation.
+- Reduced low-zoom SongView panning CPU: velocity notes are culled before per-note lookups, circles reuse one-time exact unit-circle points, Quick geometry chunks use packed colors and exact draw counts, low-zoom ruler labels skip measurement/shaping, and keymap modifier lookups are cached with invalidation on mutation.
 - Simplified Quick rectangle and triangle color packing to straight-line per-corner operations, removing nested color-comparison branches.
 - Disabled rows in the shared Quick menu now expose the correct disabled state to assistive technology while clicks on them remain menu-contained.
 - Keep a pressed popup row active when an external document edit cancels timeline gestures. Releasing the row still rejects its stale target rather than overwriting the newer edit.

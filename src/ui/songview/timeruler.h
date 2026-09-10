@@ -136,7 +136,7 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
 
   private:
     friend class TimelineQuickView;
-    void rebuildQuickScene(TimelineQuickScene &scene);
+    void rebuildQuickScene(TimelineQuickScene &scene, bool horizontalPan);
     void requestQuickUpdate();
     static QFont resolveRulerFont(const Geometry &geometry);
     static int markerRowHeight(const QFontMetrics &metrics);

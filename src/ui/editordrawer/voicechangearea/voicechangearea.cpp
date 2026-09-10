@@ -144,7 +144,21 @@ void VoiceChangeArea::refreshLiveState(const DrawerPageLiveState &liveState)
     const int previousTrack = m_engineTrack;
     m_engineTrack = primaryTrack();
     const bool trackChanged = m_engineTrack != previousTrack;
-    if (m_interaction == Interaction::Pan &&
+    const bool scrollOnly = !trackChanged &&
+                            m_live.horizontalScroll != liveState.horizontalScroll &&
+                            m_live.documentRevision == liveState.documentRevision &&
+                            m_live.timeZoom == liveState.timeZoom &&
+                            m_live.editCursorTick == liveState.editCursorTick &&
+                            m_live.trackColor == liveState.trackColor &&
+                            m_live.playback.playheadTick == liveState.playback.playheadTick &&
+                            m_live.playback.playing == liveState.playback.playing;
+    if (scrollOnly) {
+        m_live = liveState;
+        presentPlayhead(liveState.playback.playheadTick);
+        // The shared camera tail requests the moving geometry.
+        return;
+    }
+    if (!trackChanged && m_interaction == Interaction::Pan &&
         m_live.documentRevision == liveState.documentRevision) {
         if (m_live.playback.playheadTick != liveState.playback.playheadTick)
             presentPlayhead(liveState.playback.playheadTick);

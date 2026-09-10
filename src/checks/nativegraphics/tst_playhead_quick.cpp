@@ -5,7 +5,6 @@
 #include <QImage>
 #include <QQuickWindow>
 
-#include <array>
 #include <memory>
 #include <optional>
 
@@ -13,10 +12,12 @@
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
 #include "core/miditimeline.h"
+#include "ui/editordrawer/editordrawer.h"
 #include "ui/editorviewstate.h"
 #include "ui/layout.h"
 #include "ui/playheadoverlay.h"
 #include "ui/songview.h"
+#include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/playheadquick.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -75,11 +76,21 @@ void RenderingPlayheadTest::quickPolarityAndEdges()
     QVERIFY(quick && quick->rootObject() && quick->quickWindow());
     QVERIFY(overlay);
     // This case exercises every plot; other cases retain their own drawer state.
+    const std::optional<songview::TimelineBandGeometry> &headers =
+        view.timelineBandLayout().geometry(songview::TimelineBand::TrackHeaders);
+    auto *drawer = view.editorDrawer();
+    QVERIFY(headers && drawer);
+    const int fixedViewportHeight = quick->quickWindow()->height() - headers->rect.height();
     for (const EditorDrawerPage page : {EditorDrawerPage::Automations, EditorDrawerPage::Velocity,
                                         EditorDrawerPage::VoiceChanges}) {
         view.setDrawerSectionVisible(page, true);
-        view.setDrawerSectionHeight(page, quick->quickWindow()->height() / 6);
+        view.setDrawerSectionHeight(page, drawer->minimumSectionHeight());
     }
+    const int minimumRollHeight =
+        songview::pianoroll_detail::PianoRollGeometry::resolve(view.pianoKeyboardWidth())
+            .minimumVisiblePianoRollHeight;
+    quick->quickWindow()->resize(quick->quickWindow()->width(),
+                                 fixedViewportHeight + drawer->overlayHeight() + minimumRollHeight);
     checks::support::pumpQuick();
     const std::optional<songview::TimelineBandGeometry> &ruler =
         view.timelineBandLayout().geometry(songview::TimelineBand::Ruler);
@@ -111,8 +122,6 @@ void RenderingPlayheadTest::quickPolarityAndEdges()
     const qreal initialTimelineX = view.camera().contentX(0.0);
     overlay->setPlayhead(initialTimelineX, false, playing);
     checks::support::pumpQuick();
-    const std::optional<songview::TimelineBandGeometry> &headers =
-        view.timelineBandLayout().geometry(songview::TimelineBand::TrackHeaders);
     QVERIFY(headers);
     const QImage headerWithoutPlayhead =
         checks::support::captureQuickBand(view, headers->rect, &captureError);

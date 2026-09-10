@@ -2,10 +2,13 @@
 
 #include <QAbstractItemModel>
 #include <QByteArray>
+#include <QImage>
 #include <QList>
 #include <QPersistentModelIndex>
 #include <QPoint>
 #include <QRectF>
+#include <QSGGeometry>
+#include <QSGGeometryNode>
 #include <QSignalSpy>
 #include <QStringList>
 #include <QtTest>
@@ -16,8 +19,10 @@
 #include "ui/songview/quick/timelinequickview.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstddef>
+#include <memory>
 #include <tuple>
 #include <vector>
 
@@ -115,6 +120,9 @@ class TimelinePanTest final : public QObject
     void wheelPansCamera_data();
     void wheelPansCamera();
     void gutterLabelsSurvivePan();
+    void geometryCountsSurviveReuse();
+    void fullRefreshWinsOverPan_data();
+    void fullRefreshWinsOverPan();
 
   private:
     qreal panOnce(const QPoint &pixelDelta);
@@ -175,6 +183,165 @@ void TimelinePanTest::dashPhasePreservesClip()
 
     // Exact same-binary geometry is intentional for this deterministic clipping oracle.
     QVERIFY(orderedRects(reference, layer) == orderedRects(bounded, layer));
+}
+
+void TimelinePanTest::geometryCountsSurviveReuse()
+{
+    struct Result {
+        std::atomic<bool> started{false};
+        std::atomic<bool> done{false};
+        std::vector<bool> stages;
+    };
+    auto result = std::make_shared<Result>();
+    QQuickWindow *window = m_fixture.view().quickView()->quickWindow();
+    QVERIFY(window);
+    // Create, inspect and destroy all scene graph objects on the render thread.
+    const auto connection = connect(
+        window, &QQuickWindow::beforeSynchronizing, window,
+        [result] {
+            if (result->started.exchange(true))
+                return;
+            using namespace songview;
+            using Vertex = std::tuple<float, float, int, int, int, int>;
+            TimelineQuickLayerData data;
+            std::unique_ptr<QSGNode> node;
+            std::vector<Vertex> expected;
+            const auto inspect = [&] {
+                std::vector<Vertex> actual;
+                for (auto *child = node->firstChild(); child; child = child->nextSibling()) {
+                    if (child->isSubtreeBlocked())
+                        continue;
+                    const auto *geometry = static_cast<QSGGeometryNode *>(child)->geometry();
+                    if (geometry->drawingMode() != QSGGeometry::DrawTriangles)
+                        return false;
+                    const auto *vertices = geometry->vertexDataAsColoredPoint2D();
+                    for (int index = 0; index < geometry->vertexCount(); ++index) {
+                        const auto &v = vertices[index];
+                        actual.emplace_back(v.x, v.y, v.r, v.g, v.b, v.a);
+                    }
+                }
+                return actual == expected;
+            };
+            const auto sync = [&](const TimelineQuickLayerData *source) {
+                node.reset(timeline_quick::syncLayerNode(node.release(), source));
+                result->stages.push_back(inspect());
+            };
+            const auto populate = [&](int rectCount, int triangleCount, int offset) {
+                timeline_quick::resetLayer(data);
+                expected.clear();
+                const QColor translucent(200, 100, 50, 128);
+                for (int index = 0; index < rectCount; ++index) {
+                    const float x = float(index + offset);
+                    data.rects.push_back(
+                        {QRectF(x, 2, 3, 4), Qt::red, Qt::green, Qt::blue, translucent});
+                    expected.emplace_back(x, 2, 255, 0, 0, 255);
+                    expected.emplace_back(x, 6, 100, 50, 25, 128);
+                    expected.emplace_back(x + 3, 2, 0, 255, 0, 255);
+                    expected.emplace_back(x + 3, 2, 0, 255, 0, 255);
+                    expected.emplace_back(x, 6, 100, 50, 25, 128);
+                    expected.emplace_back(x + 3, 6, 0, 0, 255, 255);
+                }
+                for (int index = 0; index < triangleCount; ++index) {
+                    const float x = float(index + offset);
+                    data.triangles.push_back(
+                        {{x, 8}, {x + 1, 10}, {x + 2, 8}, Qt::blue, translucent, Qt::red});
+                    expected.emplace_back(x, 8, 0, 0, 255, 255);
+                    expected.emplace_back(x + 1, 10, 100, 50, 25, 128);
+                    expected.emplace_back(x + 2, 8, 255, 0, 0, 255);
+                }
+            };
+            // Mixed primitives straddle a chunk boundary; assertions concern only
+            // the ordered colored vertices Qt will draw, not the pooling policy.
+            populate(255, 5, 0);
+            sync(&data);
+            sync(&data); // Unchanged revision.
+            populate(1, 1, 10);
+            sync(&data);
+            populate(0, 0, 0);
+            sync(&data);
+            populate(520, 7, 20);
+            sync(&data);
+            std::vector<Vertex> saved;
+            expected.swap(saved);
+            sync(nullptr);
+            expected.swap(saved);
+            sync(&data); // Reattach the same data and revision after no data.
+            populate(255, 5, 30);
+            sync(&data);
+            node.reset();
+            result->done.store(true, std::memory_order_release);
+        },
+        Qt::DirectConnection);
+    window->update();
+    checks::support::pumpQuick();
+    QTRY_VERIFY(result->done.load(std::memory_order_acquire));
+    disconnect(connection);
+    QCOMPARE(result->stages.size(), std::size_t(8));
+    for (std::size_t stage = 0; stage < result->stages.size(); ++stage)
+        QVERIFY2(result->stages[stage], qPrintable(QStringLiteral("Geometry stage %1").arg(stage)));
+}
+
+void TimelinePanTest::fullRefreshWinsOverPan_data()
+{
+    QTest::addColumn<bool>("panFirst");
+    QTest::newRow("full-then-pan") << false;
+    QTest::newRow("pan-then-full") << true;
+}
+
+void TimelinePanTest::fullRefreshWinsOverPan()
+{
+    QFETCH(bool, panFirst);
+    using namespace songview;
+    SongView &view = m_fixture.view();
+    TimelineQuickView *const quick = view.quickView();
+    const TimelineQuickScene &scene = *m_fixture.scene();
+    checks::support::pumpQuick();
+    const auto automationBefore = orderedRects(scene, TimelineQuickLayer::AutomationGutterChrome);
+    const auto voiceBefore = orderedRects(scene, TimelineQuickLayer::VoiceChangesGutterChrome);
+    const auto &layout = view.timelineBandLayout();
+    QVERIFY(layout.geometry(TimelineBand::Automation));
+    QVERIFY(layout.geometry(TimelineBand::VoiceChanges));
+    const int automationHeight = layout.geometry(TimelineBand::Automation)->rect.height() + 24;
+    const int voiceHeight = layout.geometry(TimelineBand::VoiceChanges)->rect.height() + 24;
+    const qreal scrollBefore = view.camera().scrollX();
+    const auto resizeDrawers = [&] {
+        view.setDrawerSectionHeight(EditorDrawerPage::Automations, automationHeight);
+        view.setDrawerSectionHeight(EditorDrawerPage::VoiceChanges, voiceHeight);
+    };
+    const auto pan = [&] { quick->setHorizontalScroll(scrollBefore + 8.0); };
+
+    // These public setters enqueue their refreshes synchronously. Do not pump
+    // events (including through the wheel helper) between the two requests:
+    // both must reach the same deferred Quick flush.
+    if (panFirst) {
+        pan();
+        resizeDrawers();
+    } else {
+        resizeDrawers();
+        pan();
+    }
+    QVERIFY(closeEnough(view.camera().scrollX() - scrollBefore, 8.0));
+    checks::support::pumpQuick();
+    const auto automationCoalesced =
+        orderedRects(scene, TimelineQuickLayer::AutomationGutterChrome);
+    const auto voiceCoalesced = orderedRects(scene, TimelineQuickLayer::VoiceChangesGutterChrome);
+    const QImage coalesced = m_fixture.render();
+    QVERIFY(!coalesced.isNull());
+
+    // Same final camera/layout, now without a pan bit: this is the rendering
+    // oracle, including gutter colors and QML text, not dirty/revision metadata.
+    quick->requestTimelineUpdate(TimelineQuickDirty::All);
+    quick->requestAutomationUpdate(AutomationRefresh::All);
+    checks::support::pumpQuick();
+    const QImage full = m_fixture.render();
+    QVERIFY(!full.isNull());
+    const auto automationFull = orderedRects(scene, TimelineQuickLayer::AutomationGutterChrome);
+    const auto voiceFull = orderedRects(scene, TimelineQuickLayer::VoiceChangesGutterChrome);
+    QVERIFY(automationFull != automationBefore);
+    QVERIFY(voiceFull != voiceBefore);
+    QVERIFY(automationCoalesced == automationFull);
+    QVERIFY(voiceCoalesced == voiceFull);
+    QCOMPARE(coalesced, full);
 }
 
 void TimelinePanTest::wheelPansCamera_data()

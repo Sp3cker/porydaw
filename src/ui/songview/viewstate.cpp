@@ -86,7 +86,7 @@ void SongView::setScaleHighlight(bool enabled)
     if (enabled == m_scaleController.scaleHighlight())
         return;
     m_scaleController.setScaleHighlight(enabled);
-    m_roll->requestQuickUpdate(PianoRollQuickDirty::Grid);
+    m_roll->requestQuickUpdate(PianoRollQuickDirty::GridRows);
     emit scaleHighlightChanged();
 }
 void SongView::setScaleFold(bool enabled)
@@ -109,7 +109,7 @@ void SongView::setScaleRoot(int root)
     if (m_scaleController.scaleFold())
         m_roll->requestQuickUpdate(PianoRollQuickDirty::All);
     else if (m_scaleController.scaleHighlight())
-        m_roll->requestQuickUpdate(PianoRollQuickDirty::Grid);
+        m_roll->requestQuickUpdate(PianoRollQuickDirty::GridRows);
     emit scaleRootChanged();
 }
 void SongView::setScaleId(porydaw_scale::ScaleId id)
@@ -123,7 +123,7 @@ void SongView::setScaleId(porydaw_scale::ScaleId id)
     if (m_scaleController.scaleFold())
         m_roll->requestQuickUpdate(PianoRollQuickDirty::All);
     else if (m_scaleController.scaleHighlight())
-        m_roll->requestQuickUpdate(PianoRollQuickDirty::Grid);
+        m_roll->requestQuickUpdate(PianoRollQuickDirty::GridRows);
     emit scaleIdChanged();
 }
 void SongView::setProjectionLocked(bool locked)

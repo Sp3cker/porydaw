@@ -38,7 +38,7 @@ void SongView::setEditorTimeZoom(double pxPerBeatValue)
     if (zoomChanged && m_editorDrawer)
         m_editorDrawer->cancelVisiblePageInteraction();
     updateScrollbars();
-    refreshTimelineViews(cPlotDirty);
+    refreshTimelineViews(cHorizontalCameraDirty);
     refreshDrawerPages();
 }
 void SongView::zoomTimelineAtWheel(const songview::TimelineWheelInput &wheel, qreal anchorContentX)
@@ -56,7 +56,7 @@ void SongView::zoomAroundContentX(double factor, qreal anchorContentX)
     if (r.zoomChanged && m_editorDrawer)
         m_editorDrawer->cancelVisiblePageInteraction();
     updateScrollbars();
-    refreshTimelineViews(cPlotDirty);
+    refreshTimelineViews(cHorizontalCameraDirty);
     refreshDrawerPages();
 }
 void SongView::zoomKeyHeight(const songview::TimelineWheelInput &input)
@@ -76,7 +76,7 @@ void SongView::zoomKeyHeight(const songview::TimelineWheelInput &input)
     updateScrollbars();
     // The camera scale changed even when the cursor anchor keeps its scroll
     // offset numerically unchanged.
-    m_roll->requestQuickUpdate(PianoRollQuickDirty::All);
+    m_roll->requestQuickUpdate(cVerticalCameraDirty);
     refreshDrawerPages();
 }
 void SongView::scrollByPx(double dx)
@@ -92,7 +92,11 @@ void SongView::syncHorizontalCamera(bool cameraChanged)
     if (m_quickView)
         m_quickView->notifyScrollbarsChanged();
     if (cameraChanged) {
-        refreshTimelineViews(cPlotDirty);
+        requestTimelineQuickUpdate(TimelineQuickDirty::HorizontalPan);
+        requestAutomationQuickUpdate(AutomationRefresh::HorizontalPan |
+                                     AutomationRefresh::Transient | AutomationRefresh::Hover);
+        m_roll->requestQuickUpdate(cHorizontalCameraDirty);
+        syncTimelineIndicators();
         refreshDrawerPages();
     }
 }
@@ -105,7 +109,7 @@ void SongView::syncVerticalCamera(bool cameraChanged)
     if (m_quickView)
         m_quickView->notifyScrollbarsChanged();
     if (cameraChanged)
-        m_roll->requestQuickUpdate(PianoRollQuickDirty::All);
+        m_roll->requestQuickUpdate(cVerticalCameraDirty);
 }
 void SongView::setVScroll(double y)
 {

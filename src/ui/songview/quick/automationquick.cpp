@@ -97,12 +97,14 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                                          songview::AutomationRefreshSet refresh)
 {
     using namespace songview;
-    const bool content = refresh.testFlag(AutomationRefresh::Content);
+    const bool gutterContent = refresh.testFlag(AutomationRefresh::Content);
+    const bool content = gutterContent || refresh.testFlag(AutomationRefresh::HorizontalPan);
     const bool transient = refresh.testFlag(AutomationRefresh::Transient);
     const bool hover = refresh.testFlag(AutomationRefresh::Hover);
     // Publish each text model once below. Clearing first destroys its QML delegates.
-    if (content) {
+    if (gutterContent)
         resetLayer(scene.layer(TimelineQuickLayer::AutomationGutterChrome));
+    if (content) {
         resetLayer(scene.layer(TimelineQuickLayer::AutomationGrid));
         resetLayer(scene.layer(TimelineQuickLayer::AutomationCurves));
         resetLayer(scene.layer(TimelineQuickLayer::AutomationNodes));
@@ -116,7 +118,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     }
     const QRectF viewport = m_inputHost ? m_inputHost->bounds() : QRectF{};
     if (!m_inputHost || !m_page.document() || viewport.height() <= 0.0) {
-        if (content) {
+        if (gutterContent) {
             scene.setAutomationTextRecords({});
             scene.setTempoHeader(false, {}, {});
         }
@@ -272,7 +274,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     std::vector<TimelineQuickTextModel::Record> mainText;
     std::vector<TimelineQuickTextModel::Record> hoverTextRecords;
     std::vector<TimelineQuickTextModel::Record> transientTextRecords;
-    if (content)
+    if (gutterContent)
         mainText.reserve(lanes.size() + 1);
     if (hover)
         hoverTextRecords.reserve(1);
@@ -284,13 +286,14 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     const QColor background = opaqueColor(themes::Role::song_view_piano_roll_background);
     const QColor headerFill = opaqueColor(themes::Role::song_view_timeline_chrome_background);
     const QColor primaryText = themes::color(themes::Role::song_view_primary_text);
-    if (content) {
+    if (content)
         addRect(scene.layer(TimelineQuickLayer::AutomationGrid), viewport, background, viewport);
+    if (gutterContent) {
         addRect(scene.layer(TimelineQuickLayer::AutomationGutterChrome), gutterViewport, background,
                 gutterViewport);
     }
 
-    if (content && (!tempoSlot || tempoClip.isEmpty()))
+    if (gutterContent && (!tempoSlot || tempoClip.isEmpty()))
         scene.setTempoHeader(false, {}, {});
 
     for (const VisibleLane &lane : lanes) {
@@ -300,10 +303,12 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                               0.0, dpr);
             addBandFrame(scene, TimelineQuickLayer::AutomationGrid, lane.band.top(),
                          lane.band.bottom(), viewport.width(), lane.plot);
+        }
+        if (!lane.tempo && gutterContent) {
             addBandFrame(scene, TimelineQuickLayer::AutomationGutterChrome, lane.band.top(),
                          gutterBand.bottom(), gutter.width(), gutterBand);
         }
-        if (!lane.tempo && content && lane.slot->text) {
+        if (!lane.tempo && gutterContent && lane.slot->text) {
             const CCLanes::RowTextCache &rowText = *lane.slot->text;
             const QRect textBounds(labelGutter.x(), lane.body.top(), labelGutter.width(),
                                    lane.body.height());
@@ -318,16 +323,19 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
             continue;
         const QRectF gutterBand = gutterClipFor(lane.band);
         if (content) {
+            if (tempoExpanded)
+                composeBandedGrid(scene, TimelineQuickLayer::AutomationGrid, m_page.m_owner,
+                                  lane.plot, 0.0, dpr);
+            addBandFrame(scene, TimelineQuickLayer::AutomationGrid, lane.band.top(),
+                         lane.band.bottom(), viewport.width(), lane.clip);
+        }
+        if (gutterContent) {
             const qreal headerHeight =
                 tempoExpanded ? m_geometry.addLaneStripHeight : lane.band.height();
             if (tempoExpanded) {
                 addRect(scene.layer(TimelineQuickLayer::AutomationGutterChrome), gutterBand,
                         background, gutterBand);
-                composeBandedGrid(scene, TimelineQuickLayer::AutomationGrid, m_page.m_owner,
-                                  lane.plot, 0.0, dpr);
             }
-            addBandFrame(scene, TimelineQuickLayer::AutomationGrid, lane.band.top(),
-                         lane.band.bottom(), viewport.width(), lane.clip);
             addBandFrame(scene, TimelineQuickLayer::AutomationGutterChrome, lane.band.top(),
                          lane.band.bottom(), gutter.width(), gutterBand);
             addHeaderChrome(
@@ -345,7 +353,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                 true, QRectF(0.0, lane.band.top(), gutter.width() + viewport.width(), headerHeight),
                 headerFill);
         }
-        if (content) {
+        if (gutterContent) {
             const QRect strip(0, lane.band.top(), gutter.width(), m_geometry.addLaneStripHeight);
             const int arrowSize = std::max(layout::fontPx(0.5), strip.height() / 3);
             const QRect primary(
@@ -376,7 +384,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         }
     }
 
-    if (content) {
+    if (gutterContent) {
         const QRect strip(0, addLaneStripTop() - verticalScroll, gutter.width(),
                           m_geometry.addLaneStripHeight);
         const QRectF stripClip = rectF(strip).intersected(gutterViewport);
@@ -386,7 +394,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
             addHeaderChrome(scene, rectF(strip), stripClip, std::nullopt, true, true, stripClip);
         }
     }
-    if (content) {
+    if (gutterContent) {
         const QRect strip(0, addLaneStripTop() - verticalScroll, gutter.width(),
                           m_geometry.addLaneStripHeight);
         const QRectF stripClip = rectF(strip).intersected(gutterViewport);
@@ -535,7 +543,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     if (transient && m_activeGesture)
         appendValueLabel(transientTextRecords, TimelineQuickTextKeyKind::AutomationTransient,
                          m_hoverState.previewValueLabel);
-    if (content)
+    if (gutterContent)
         scene.setAutomationTextRecords(mainText);
     if (hover)
         scene.setAutomationHoverTextRecords(hoverTextRecords);

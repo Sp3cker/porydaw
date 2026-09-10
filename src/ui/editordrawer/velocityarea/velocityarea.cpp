@@ -110,6 +110,31 @@ void VelocityArea::songChanged()
 
 void VelocityArea::refreshLiveState(const DrawerPageLiveState &liveState)
 {
+    const bool scrollOnly = m_live.horizontalScroll != liveState.horizontalScroll &&
+                            m_live.documentRevision == liveState.documentRevision &&
+                            m_live.timeZoom == liveState.timeZoom &&
+                            m_live.editCursorTick == liveState.editCursorTick &&
+                            m_live.trackColor == liveState.trackColor &&
+                            m_live.playback.playheadTick == liveState.playback.playheadTick &&
+                            m_live.playback.playing == liveState.playback.playing;
+    if (scrollOnly) {
+        // Match rebuildAxis's hover override before retaining its presentation.
+        const VelocityMap context = [this] {
+            if (m_hoveredNote) {
+                DocNote note;
+                const SongDocument *document = m_owner.document();
+                if (document && document->findNote(*m_hoveredNote, &note))
+                    return contextForNote(note);
+            }
+            return currentContext();
+        }();
+        if (context == m_axis.map()) {
+            m_live = liveState;
+            presentPlayhead(liveState.playback.playheadTick);
+            // The shared camera tail requests the moving geometry.
+            return;
+        }
+    }
     if (m_interaction != Interaction::None &&
         m_live.documentRevision == liveState.documentRevision) {
         if (m_live.playback.playheadTick != liveState.playback.playheadTick)

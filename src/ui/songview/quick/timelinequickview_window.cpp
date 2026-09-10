@@ -164,9 +164,9 @@ bool TimelineQuickView::eventFilter(QObject *watched, QEvent *event)
         scheduleTimelineBandLayoutPublication();
         break;
     case QEvent::DevicePixelRatioChange:
-        // Fractional scale changes move quickDevicePixelRatio(); the same
-        // publication keeps physical-pixel math converged. Screen moves
-        // arrive through the screenChanged connection.
+        // A DPR change can leave logical layout unchanged while invalidating
+        // every physical-pixel snap, text layout, and native cursor.
+        syncAppearance();
         emit viewportChanged();
         scheduleTimelineBandLayoutPublication();
         break;

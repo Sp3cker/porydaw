@@ -15,7 +15,6 @@
 #include <optional>
 
 #include <algorithm>
-#include <array>
 
 namespace lyt = ::layout;
 using Space = lyt::Space;
@@ -174,14 +173,13 @@ void appendTextRecord(std::vector<TimelineQuickTextModel::Record> &records,
 
 } // namespace
 
-void TimelineQuickView::rebuildGrid()
+void TimelineQuickView::rebuildGridRows()
 {
     PianoRoll &roll = *m_roll;
     TimelineQuickScene &scene = *m_scene;
     const qreal dpr = roll.devicePixelRatio();
     const qreal pixel = logicalPhysicalPixel(dpr);
     const QRectF plot(0, 0, roll.bounds().width(), roll.bounds().height());
-    const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
 
     const PitchProjection &projection = roll.m_sv->pitchProjection();
     const auto &edges = roll.rowEdges();
@@ -193,8 +191,8 @@ void TimelineQuickView::rebuildGrid()
         if (!rowRect.intersects(plot))
             continue;
         if (isBlackKey(key))
-            addRect(scene.layer(TimelineQuickLayer::PianoGrid), rowRect, accidental, plot);
-        addHorizontalLine(scene.layer(TimelineQuickLayer::PianoGrid), plot.left(), plot.right(),
+            addRect(scene.layer(TimelineQuickLayer::PianoGridRows), rowRect, accidental, plot);
+        addHorizontalLine(scene.layer(TimelineQuickLayer::PianoGridRows), plot.left(), plot.right(),
                           rowRect.bottom(), pixel, key % 12 == 0 ? octave : gridLineColor(50),
                           plot);
     }
@@ -202,52 +200,32 @@ void TimelineQuickView::rebuildGrid()
         const QColor tint = detail::pianoRollScaleHighlightColor();
         for (int row = 0; row < projection.visibleRowCount(); ++row) {
             if (projection.isScalePitchRow(row)) {
-                addRect(scene.layer(TimelineQuickLayer::PianoGrid),
+                addRect(scene.layer(TimelineQuickLayer::PianoGridRows),
                         QRectF(plot.left(), edges[row], plot.width(), edges[row + 1] - edges[row]),
                         tint, plot);
             }
         }
     }
+}
+
+void TimelineQuickView::rebuildGridTime()
+{
+    PianoRoll &roll = *m_roll;
+    TimelineQuickScene &scene = *m_scene;
+    const qreal dpr = roll.devicePixelRatio();
+    const QRectF plot(0, 0, roll.bounds().width(), roll.bounds().height());
+    const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
 
     const qreal tickZero = roll.m_camera.displayX(0.0, 0.0, dpr);
     if (tickZero > plot.left()) {
-        addRect(scene.layer(TimelineQuickLayer::PianoGrid),
+        addRect(scene.layer(TimelineQuickLayer::PianoGridTime),
                 QRectF(plot.left(), plot.top(), tickZero - plot.left(), plot.height()),
                 mixTowardOklab(background, gridLineColor(), 0.15), plot);
     }
 
-    const qreal roundingMargin = pixel / 2.0;
-    const double t0 = roll.m_camera.tickAtContentX(plot.left() - roundingMargin);
-    const double t1 = roll.m_camera.tickAtContentX(plot.right() - pixel + roundingMargin) + 1.0;
-    // During the first narrow resize pass the plot can have no tick range;
-    // the resolver turns a negative/reversed/unrepresentable one into empty
-    // bounds instead of an undefined uint64 conversion.
-    const detail::TickRange range = detail::tickRange(t0, t1);
-    if (range.empty())
-        return;
-    const std::array<QColor, 6> gridColors = {gridLineColor(125), gridLineColor(100),
-                                              gridLineColor(75),  gridLineColor(160),
-                                              gridLineColor(200), gridLineColor()};
-    // Keep these values aligned with the corresponding SongView geometry metrics.
-    const int detailMinimumPixelsPerBeat = lyt::fontPx(5.0 / 6.0);
-    const qreal gridWidth = lyt::fontPx(1.0 / 6.0) * pixel;
-    const Grid &grid = roll.m_sv->grid();
-    detail::forEachSubGridLine(
-        grid, roll.m_camera, range, detailMinimumPixelsPerBeat, [&](uint64_t tick, int level) {
-            const qreal x = roll.m_camera.displayX(double(tick), 0.0, dpr);
-            addVerticalLine(scene.layer(TimelineQuickLayer::PianoGrid), x, plot.top(),
-                            plot.bottom(), gridWidth, gridColors[std::size_t(level - 1)], plot);
-        });
-    const bool drawBeats = roll.m_camera.pxPerBeat() >= detailMinimumPixelsPerBeat;
-    roll.m_sv->forEachGridLine(range.begin, range.end, [&](uint64_t tick, bool isBar, int, int) {
-        if (!isBar && !drawBeats)
-            return;
-        const bool finest = roll.m_sv->document() && grid.gridTicksAt(tick) == grid.fineGridTicks();
-        const auto colorIndex = isBar ? 5u : finest ? 4u : 3u;
-        const qreal x = roll.m_camera.displayX(double(tick), 0.0, dpr);
-        addVerticalLine(scene.layer(TimelineQuickLayer::PianoGrid), x, plot.top(), plot.bottom(),
-                        gridWidth, gridColors[colorIndex], plot);
-    });
+    // Paint the shared time grid over the piano-specific pre-roll mask.
+    timeline_quick::composeBandedGrid(scene, TimelineQuickLayer::PianoGridTime, *roll.m_sv, plot,
+                                      /*origin=*/0, dpr);
 }
 
 void TimelineQuickView::rebuildNoteFills()
@@ -682,8 +660,10 @@ void TimelineQuickView::syncPianoRoll(PianoRollQuickDirtySet dirty)
             item->update();
     };
 
-    rebuild(PianoRollQuickDirty::Grid, TimelineQuickLayer::PianoGrid,
-            &TimelineQuickView::rebuildGrid);
+    rebuild(PianoRollQuickDirty::GridRows, TimelineQuickLayer::PianoGridRows,
+            &TimelineQuickView::rebuildGridRows);
+    rebuild(PianoRollQuickDirty::GridTime, TimelineQuickLayer::PianoGridTime,
+            &TimelineQuickView::rebuildGridTime);
     rebuild(PianoRollQuickDirty::NoteFills, TimelineQuickLayer::PianoNoteFills,
             &TimelineQuickView::rebuildNoteFills);
     rebuild(PianoRollQuickDirty::DrawPreviewFill, TimelineQuickLayer::PianoDrawPreviewFill,

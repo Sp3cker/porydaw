@@ -53,7 +53,7 @@ class OtherStrip final : public QObject, public TimelineBandInteraction
 
   private:
     friend class TimelineQuickView;
-    void rebuildQuickScene(TimelineQuickScene &scene);
+    void rebuildQuickScene(TimelineQuickScene &scene, bool horizontalPan);
     void requestQuickUpdate();
     void updateToolTip(const QString &text, const QPointF &position);
     void clearToolTip();

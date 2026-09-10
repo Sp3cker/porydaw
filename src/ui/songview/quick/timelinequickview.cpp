@@ -156,6 +156,7 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     m_view = m_quickView.get();
     m_quickView->installEventFilter(this);
     connect(m_view.data(), &QWindow::screenChanged, this, &TimelineQuickView::viewportChanged);
+    connect(m_view.data(), &QWindow::screenChanged, this, &TimelineQuickView::syncAppearance);
 
     m_scene = new TimelineQuickScene(this);
     m_quickView->rootContext()->setContextProperty(QStringLiteral("timelineQuickView"), this);
@@ -194,7 +195,8 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
         std::pair{TimelineQuickLayer::RulerGutterChrome, "timelineQuickRulerGutterChrome"},
         std::pair{TimelineQuickLayer::RulerChrome, "timelineQuickRulerChrome"},
         std::pair{TimelineQuickLayer::RulerMarks, "timelineQuickRulerMarks"},
-        std::pair{TimelineQuickLayer::PianoGrid, "timelineQuickPianoGrid"},
+        std::pair{TimelineQuickLayer::PianoGridRows, "timelineQuickPianoGridRows"},
+        std::pair{TimelineQuickLayer::PianoGridTime, "timelineQuickPianoGridTime"},
         std::pair{TimelineQuickLayer::PianoNoteFills, "timelineQuickPianoNoteFills"},
         std::pair{TimelineQuickLayer::PianoDrawPreviewFill, "timelineQuickPianoDrawPreviewFill"},
         std::pair{TimelineQuickLayer::PianoNoteBordersAndSelection,
@@ -759,9 +761,8 @@ void TimelineQuickView::publishTimelineBandLayout()
 
 void TimelineQuickView::syncAppearance()
 {
-    // SongView is a pure coordinator now: the app-level font and palette
-    // every input item and chrome surface shares are the QGuiApplication
-    // values.
+    // Font, palette, and native DPR changes invalidate text, cursors, and retained
+    // geometry even when the logical viewport is unchanged.
     const QFont font = QGuiApplication::font();
     const QPalette palette = QGuiApplication::palette();
     for (TimelineInputItem *item : m_gutterInputItems) {
@@ -846,16 +847,19 @@ void TimelineQuickView::flushUpdate()
         std::exchange(m_pendingAutomationRefresh, AutomationRefresh::None);
     if (pianoDirty != PianoRollQuickDirty::None)
         syncPianoRoll(pianoDirty);
-    if (timelineDirty & TimelineQuickDirty::Ruler)
-        syncRuler();
-    if (timelineDirty & TimelineQuickDirty::OtherEvents)
-        syncOtherEvents();
+    const bool panRequested = timelineDirty.testFlag(TimelineQuickDirty::HorizontalPan);
+    if (panRequested || timelineDirty.testFlag(TimelineQuickDirty::Ruler))
+        syncRuler(panRequested && !timelineDirty.testFlag(TimelineQuickDirty::Ruler));
+    if (panRequested || timelineDirty.testFlag(TimelineQuickDirty::OtherEvents))
+        syncOtherEvents(panRequested && !timelineDirty.testFlag(TimelineQuickDirty::OtherEvents));
     if (automationRefresh != AutomationRefresh::None)
         syncAutomation(automationRefresh);
-    if (timelineDirty & TimelineQuickDirty::Velocity)
-        syncVelocity();
-    if (timelineDirty & (TimelineQuickDirty::VoiceChanges | TimelineQuickDirty::VoiceChangesHover))
-        syncVoiceChanges(timelineDirty);
+    if (panRequested || timelineDirty.testFlag(TimelineQuickDirty::Velocity))
+        syncVelocity(panRequested && !timelineDirty.testFlag(TimelineQuickDirty::Velocity));
+    if (panRequested || (timelineDirty & (TimelineQuickDirty::VoiceChanges |
+                                          TimelineQuickDirty::VoiceChangesHover)))
+        syncVoiceChanges(timelineDirty,
+                         panRequested && !timelineDirty.testFlag(TimelineQuickDirty::VoiceChanges));
 }
 
 void TimelineQuickView::updateLayer(TimelineQuickLayer layer)
@@ -864,34 +868,38 @@ void TimelineQuickView::updateLayer(TimelineQuickLayer layer)
         item->update();
 }
 
-void TimelineQuickView::syncRuler()
+void TimelineQuickView::syncRuler(bool horizontalPan)
 {
     if (!m_ruler)
         return;
-    m_ruler->rebuildQuickScene(*m_scene);
-    updateLayer(TimelineQuickLayer::RulerGutterChrome);
+    m_ruler->rebuildQuickScene(*m_scene, horizontalPan);
+    if (!horizontalPan)
+        updateLayer(TimelineQuickLayer::RulerGutterChrome);
     updateLayer(TimelineQuickLayer::RulerChrome);
     updateLayer(TimelineQuickLayer::RulerMarks);
 }
 
-void TimelineQuickView::syncOtherEvents()
+void TimelineQuickView::syncOtherEvents(bool horizontalPan)
 {
     if (!m_otherEvents)
         return;
-    m_otherEvents->rebuildQuickScene(*m_scene);
-    updateLayer(TimelineQuickLayer::OtherEventsGutterChrome);
+    m_otherEvents->rebuildQuickScene(*m_scene, horizontalPan);
+    if (!horizontalPan)
+        updateLayer(TimelineQuickLayer::OtherEventsGutterChrome);
     updateLayer(TimelineQuickLayer::OtherEventsChrome);
     updateLayer(TimelineQuickLayer::OtherEventsMarkers);
 }
 
-void TimelineQuickView::syncVelocity()
+void TimelineQuickView::syncVelocity(bool horizontalPan)
 {
     if (!m_velocity)
         return;
-    m_velocity->rebuildQuickScene(*m_scene);
-    updateLayer(TimelineQuickLayer::VelocityGutterChrome);
-    updateLayer(TimelineQuickLayer::VelocityChrome);
-    updateLayer(TimelineQuickLayer::VelocityAxis);
+    m_velocity->rebuildQuickScene(*m_scene, horizontalPan);
+    if (!horizontalPan) {
+        updateLayer(TimelineQuickLayer::VelocityGutterChrome);
+        updateLayer(TimelineQuickLayer::VelocityChrome);
+        updateLayer(TimelineQuickLayer::VelocityAxis);
+    }
     updateLayer(TimelineQuickLayer::VelocityGrid);
     updateLayer(TimelineQuickLayer::VelocityBands);
     updateLayer(TimelineQuickLayer::VelocityStems);
@@ -899,14 +907,16 @@ void TimelineQuickView::syncVelocity()
     updateLayer(TimelineQuickLayer::VelocityTransient);
 }
 
-void TimelineQuickView::syncVoiceChanges(TimelineQuickDirtySet dirty)
+void TimelineQuickView::syncVoiceChanges(TimelineQuickDirtySet dirty, bool horizontalPan)
 {
     if (!m_voiceChanges)
         return;
-    if (dirty & TimelineQuickDirty::VoiceChanges) {
-        m_voiceChanges->rebuildQuickScene(*m_scene);
-        updateLayer(TimelineQuickLayer::VoiceChangesGutterChrome);
-        updateLayer(TimelineQuickLayer::VoiceChangesChrome);
+    if (horizontalPan || dirty.testFlag(TimelineQuickDirty::VoiceChanges)) {
+        m_voiceChanges->rebuildQuickScene(*m_scene, horizontalPan);
+        if (!horizontalPan) {
+            updateLayer(TimelineQuickLayer::VoiceChangesGutterChrome);
+            updateLayer(TimelineQuickLayer::VoiceChangesChrome);
+        }
         updateLayer(TimelineQuickLayer::VoiceChangesGrid);
         updateLayer(TimelineQuickLayer::VoiceChangesSpans);
         updateLayer(TimelineQuickLayer::VoiceChangesMarkers);
@@ -925,8 +935,9 @@ void TimelineQuickView::syncAutomation(AutomationRefreshSet refresh)
     if (refresh == AutomationRefresh::None || !m_automation || !m_automation->canvas())
         return;
     m_automation->canvas()->rebuildQuickScene(*m_scene, refresh);
-    if (refresh.testFlag(AutomationRefresh::Content)) {
+    if (refresh.testFlag(AutomationRefresh::Content))
         updateLayer(TimelineQuickLayer::AutomationGutterChrome);
+    if (refresh & (AutomationRefresh::Content | AutomationRefresh::HorizontalPan)) {
         updateLayer(TimelineQuickLayer::AutomationGrid);
         updateLayer(TimelineQuickLayer::AutomationCurves);
         updateLayer(TimelineQuickLayer::AutomationNodes);

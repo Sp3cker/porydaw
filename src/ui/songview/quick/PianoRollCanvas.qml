@@ -7,12 +7,21 @@ Item {
     required property Item gutterSide
     required property Item plotSide
 
+    // Keep pitch rows below pre-roll shading and time marks.
     TimelineQuickItem {
         parent: root.plotSide
-        objectName: "timelineQuickPianoGrid"
+        objectName: "timelineQuickPianoGridRows"
         anchors.fill: parent
-        sceneLayer: TimelineQuickItem.PianoGrid
+        sceneLayer: TimelineQuickItem.PianoGridRows
         z: 0
+    }
+
+    TimelineQuickItem {
+        parent: root.plotSide
+        objectName: "timelineQuickPianoGridTime"
+        anchors.fill: parent
+        sceneLayer: TimelineQuickItem.PianoGridTime
+        z: 1
     }
 
     TimelineQuickItem {
@@ -20,7 +29,7 @@ Item {
         objectName: "timelineQuickPianoNoteFills"
         anchors.fill: parent
         sceneLayer: TimelineQuickItem.PianoNoteFills
-        z: 1
+        z: 2
     }
 
     TimelineQuickItem {
@@ -28,13 +37,13 @@ Item {
         objectName: "timelineQuickPianoDrawPreviewFill"
         anchors.fill: parent
         sceneLayer: TimelineQuickItem.PianoDrawPreviewFill
-        z: 2
+        z: 3
     }
 
     Item {
         parent: root.plotSide
         anchors.fill: parent
-        z: 3
+        z: 4
 
         Repeater {
             model: timelineScene.pianoNoteTextModel
@@ -70,7 +79,7 @@ Item {
         objectName: "timelineQuickPianoNoteBordersAndSelection"
         anchors.fill: parent
         sceneLayer: TimelineQuickItem.PianoNoteBordersAndSelection
-        z: 4
+        z: 5
     }
 
     TimelineQuickItem {
@@ -78,7 +87,7 @@ Item {
         objectName: "timelineQuickPianoOverlay"
         anchors.fill: parent
         sceneLayer: TimelineQuickItem.PianoOverlay
-        z: 5
+        z: 6
     }
 
     TimelineQuickItem {
@@ -168,7 +177,7 @@ Item {
     Item {
         parent: root.plotSide
         anchors.fill: parent
-        z: 6
+        z: 7
 
         Repeater {
             model: timelineScene.pianoLoadingTextModel

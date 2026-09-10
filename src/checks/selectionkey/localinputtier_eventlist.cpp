@@ -11,6 +11,7 @@
 #include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/quick/timelinequickview.h"
 
+#include <QGuiApplication>
 #include <QQuickWindow>
 
 #include <QtTest>
@@ -64,10 +65,21 @@ void SelectionLocalInputTierTest::eventListKeepsRowLocalKeys()
     // Production keeps timelineEventListInput focused while the list is the
     // visible surface: page window-Shortcuts (nav keys, Select All) match at
     // the window, and the interaction chain consumes its local commands.
-    const auto focusInput = [quick]() -> bool {
-        return quick->focusEventListInput(Qt::OtherFocusReason);
+    const auto focusAndStageInput = [quick, quickWindow]() {
+        if (!quick->focusEventListInput(Qt::OtherFocusReason))
+            return false;
+        selectionkey::settle();
+        return checks::async_wait::waitUntil([] { return true; },
+                                             [quick, quickWindow] {
+                                                 return quick->eventListSurfaceFocused() &&
+                                                        quickWindow->isActive() &&
+                                                        QGuiApplication::focusWindow() ==
+                                                            quickWindow;
+                                             },
+                                             5000, 10) == checks::async_wait::Result::Ready;
     };
-    QVERIFY2(focusInput(), "the event list input did not take focus");
+    QVERIFY2(focusAndStageInput(),
+             "the event-list input did not acquire native Quick-window focus");
 
     // Row navigation stays list-local.
     controller->selectRow(0, Qt::NoModifier);
@@ -93,7 +105,8 @@ void SelectionLocalInputTierTest::eventListKeepsRowLocalKeys()
     const QString row1Before = rowSummary(model, 1);
     controller->selectRow(1, Qt::NoModifier);
     selectionkey::settle();
-    QVERIFY2(focusInput(), "the event list input did not take focus");
+    QVERIFY2(focusAndStageInput(),
+             "the event-list input did not reacquire native Quick-window focus");
     QTest::keyClick(quickWindow, moveUp->key(), moveUp->keyboardModifiers());
     selectionkey::settle();
     QVERIFY2(rowSummary(model, 0) == row1Before && rowSummary(model, 1) == row0Before,
@@ -106,7 +119,8 @@ void SelectionLocalInputTierTest::eventListKeepsRowLocalKeys()
     const auto copy = selectionkey::firstBinding(QStringLiteral("roll.copy"));
     QVERIFY2(copy.has_value(), "Copy has no single-key binding");
     activateShellForCommands();
-    QVERIFY2(focusInput(), "the event list input did not take focus for Copy");
+    QVERIFY2(focusAndStageInput(),
+             "the event-list input did not acquire native Quick-window focus for Copy");
     QTest::keyClick(quickWindow, copy->key(), copy->keyboardModifiers());
     selectionkey::settle();
     QCOMPARE(m_counts.copy, copyBefore + 1);
@@ -163,7 +177,8 @@ void SelectionLocalInputTierTest::eventListKeepsRowLocalKeys()
     // victims — otherwise Delete would remove every selected raw event.
     controller->selectRow(-1, Qt::NoModifier);
     selectionkey::settle();
-    QVERIFY2(focusInput(), "the event list input did not take focus for Delete");
+    QVERIFY2(focusAndStageInput(),
+             "the event-list input did not acquire native Quick-window focus for Delete");
     controller->selectRow(victimRows.front(), Qt::NoModifier);
     controller->selectRow(victimRows.back(), Qt::ControlModifier);
     selectionkey::settle();

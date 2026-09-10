@@ -41,13 +41,14 @@ void appendTextRecord(std::vector<TimelineQuickTextModel::Record> &records, quin
 
 } // namespace
 
-void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
+void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene, bool horizontalPan)
 {
     constexpr TimelineQuickLayer chromeLayer = TimelineQuickLayer::RulerChrome;
     constexpr TimelineQuickLayer gutterChromeLayer = TimelineQuickLayer::RulerGutterChrome;
     constexpr TimelineQuickLayer marksLayer = TimelineQuickLayer::RulerMarks;
     resetLayer(scene.layer(chromeLayer));
-    resetLayer(scene.layer(gutterChromeLayer));
+    if (!horizontalPan)
+        resetLayer(scene.layer(gutterChromeLayer));
     resetLayer(scene.layer(marksLayer));
 
     if (!m_inputHost) {
@@ -64,14 +65,16 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene)
     const QRectF full = m_inputHost->bounds();
     const qreal width = full.width();
     const qreal height = full.height();
-    const QRect gutterGeometry = bandGeometry->gutterRect();
-    const QRectF gutter(0.0, 0.0, gutterGeometry.width(), gutterGeometry.height());
     const QPalette palette = m_inputHost->palette();
     const QColor chrome = themes::color(themes::Role::song_view_timeline_chrome_background);
-    addRect(scene.layer(gutterChromeLayer), gutter, chrome, gutter);
-    addHorizontalLine(scene.layer(gutterChromeLayer), gutter.left(), gutter.right(),
-                      gutter.height() - lyt::singlePixel() / 2.0, lyt::singlePixel(),
-                      themes::color(themes::Role::song_view_separator), gutter);
+    if (!horizontalPan) {
+        const QRect gutterGeometry = bandGeometry->gutterRect();
+        const QRectF gutter(0.0, 0.0, gutterGeometry.width(), gutterGeometry.height());
+        addRect(scene.layer(gutterChromeLayer), gutter, chrome, gutter);
+        addHorizontalLine(scene.layer(gutterChromeLayer), gutter.left(), gutter.right(),
+                          gutter.height() - lyt::singlePixel() / 2.0, lyt::singlePixel(),
+                          themes::color(themes::Role::song_view_separator), gutter);
+    }
     addRect(scene.layer(chromeLayer), full, chrome, full);
     addHorizontalLine(scene.layer(chromeLayer), 0, width, height - lyt::singlePixel() / 2.0,
                       lyt::singlePixel(), themes::color(themes::Role::song_view_separator), full);

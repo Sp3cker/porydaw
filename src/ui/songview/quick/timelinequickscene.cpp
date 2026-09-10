@@ -34,8 +34,6 @@ class TimelineQuickGeometryChunkNode final : public QSGGeometryNode
         markDirty(DirtySubtreeBlocked);
     }
 
-    int writtenVertices = 0;
-
   private:
     bool m_blocked = false;
 };
@@ -64,21 +62,18 @@ PackedColor packColor(const QColor &color)
             uchar(alpha)};
 }
 
-void clearVertices(QSGGeometry::ColoredPoint2D *vertices, int firstVertex, int endVertex)
-{
-    for (int vertex = firstVertex; vertex < endVertex; ++vertex)
-        vertices[vertex].set(0.0f, 0.0f, 0, 0, 0, 0);
-}
-
 TimelineQuickGeometryChunkNode *newGeometryChunk()
 {
     auto *node = new TimelineQuickGeometryChunkNode;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+    constexpr int initialVertexCount = cVerticesPerChunk;
+#else
+    constexpr int initialVertexCount = 0;
+#endif
     auto *geometry =
-        new QSGGeometry(QSGGeometry::defaultAttributes_ColoredPoint2D(), cVerticesPerChunk);
+        new QSGGeometry(QSGGeometry::defaultAttributes_ColoredPoint2D(), initialVertexCount);
     geometry->setDrawingMode(QSGGeometry::DrawTriangles);
     geometry->setVertexDataPattern(QSGGeometry::DynamicPattern);
-    clearVertices(geometry->vertexDataAsColoredPoint2D(), 0, cVerticesPerChunk);
-    geometry->markVertexDataDirty();
     node->setGeometry(geometry);
     node->setFlag(QSGNode::OwnsGeometry);
     auto *material = new QSGVertexColorMaterial;
@@ -552,6 +547,11 @@ QSGNode *syncLayerNode(QSGNode *oldNode, const TimelineQuickLayerData *data)
     std::size_t rect = 0;
     std::size_t triangle = 0;
     while (rect < data->rects.size() || triangle < data->triangles.size()) {
+        const auto rectCount =
+            std::min(data->rects.size() - rect, std::size_t(cVerticesPerChunk / 6));
+        const auto triangleCount = std::min(data->triangles.size() - triangle,
+                                            (std::size_t(cVerticesPerChunk) - rectCount * 6) / 3);
+        const int usedVertices = int(rectCount * 6 + triangleCount * 3);
         if (!child) {
             auto *newChunk = newGeometryChunk();
             node->appendChildNode(newChunk);
@@ -562,20 +562,19 @@ QSGNode *syncLayerNode(QSGNode *oldNode, const TimelineQuickLayerData *data)
         chunk->setBlocked(false);
 
         QSGGeometry *geometry = chunk->geometry();
-        auto *vertices = geometry->vertexDataAsColoredPoint2D();
-        auto *nextVertex = vertices;
-        int usedVertices = 0;
-        while (rect < data->rects.size() && usedVertices + 6 <= cVerticesPerChunk) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 10, 0)
+        geometry->setVertexCount(usedVertices);
+#else
+        if (geometry->vertexCount() != usedVertices)
+            geometry->allocate(usedVertices);
+#endif
+        auto *nextVertex = geometry->vertexDataAsColoredPoint2D();
+        const auto rectEnd = rect + rectCount;
+        const auto triangleEnd = triangle + triangleCount;
+        while (rect < rectEnd)
             writeRect(nextVertex, data->rects[rect++]);
-            usedVertices += 6;
-        }
-        while (triangle < data->triangles.size() && usedVertices + 3 <= cVerticesPerChunk) {
+        while (triangle < triangleEnd)
             writeTriangle(nextVertex, data->triangles[triangle++]);
-            usedVertices += 3;
-        }
-        if (usedVertices < chunk->writtenVertices)
-            clearVertices(vertices, usedVertices, chunk->writtenVertices);
-        chunk->writtenVertices = usedVertices;
         geometry->markVertexDataDirty();
         chunk->markDirty(QSGNode::DirtyGeometry);
     }
@@ -652,6 +651,7 @@ void composeBandedGrid(TimelineQuickScene &scene, TimelineQuickLayer layer, cons
     const std::array<QColor, 6> gridColors = {
         detail::gridLineColor(125), detail::gridLineColor(100), detail::gridLineColor(75),
         detail::gridLineColor(160), detail::gridLineColor(200), detail::gridLineColor()};
+    // Match SongView's geometry metrics, including timelineDetailMinimumPixelsPerBeat.
     const int detailMinimumPixelsPerBeat = ::layout::fontPx(5.0 / 6.0);
     const qreal gridWidth = ::layout::fontPx(1.0 / 6.0) * physicalPixel;
     detail::forEachSubGridLine(

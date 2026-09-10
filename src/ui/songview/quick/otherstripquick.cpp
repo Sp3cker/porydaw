@@ -18,50 +18,56 @@ using timeline_quick::addClippedTriangle;
 using timeline_quick::addRect;
 using timeline_quick::resetLayer;
 
-void OtherStrip::rebuildQuickScene(TimelineQuickScene &scene)
+void OtherStrip::rebuildQuickScene(TimelineQuickScene &scene, bool horizontalPan)
 {
     constexpr TimelineQuickLayer chromeLayer = TimelineQuickLayer::OtherEventsChrome;
     constexpr TimelineQuickLayer gutterChromeLayer = TimelineQuickLayer::OtherEventsGutterChrome;
     constexpr TimelineQuickLayer markersLayer = TimelineQuickLayer::OtherEventsMarkers;
     resetLayer(scene.layer(chromeLayer));
-    resetLayer(scene.layer(gutterChromeLayer));
+    if (!horizontalPan)
+        resetLayer(scene.layer(gutterChromeLayer));
     resetLayer(scene.layer(markersLayer));
 
     if (!m_inputHost) {
-        scene.setOtherEventsTextRecords({});
+        if (!horizontalPan)
+            scene.setOtherEventsTextRecords({});
         return;
     }
     const auto &bandGeometry = m_owner.timelineBandLayout().geometry(TimelineBand::OtherEvents);
     if (!bandGeometry) {
-        scene.setOtherEventsTextRecords({});
+        if (!horizontalPan)
+            scene.setOtherEventsTextRecords({});
         return;
     }
     const qreal dpr = m_inputHost->devicePixelRatio();
     const QRectF full = m_inputHost->bounds();
     const qreal width = full.width();
     const qreal height = full.height();
-    const QRect gutterGeometry = bandGeometry->gutterRect();
-    const QRectF gutter(0.0, 0.0, gutterGeometry.width(), gutterGeometry.height());
     const QColor chrome = themes::color(themes::Role::song_view_timeline_chrome_background);
-    addRect(scene.layer(gutterChromeLayer), gutter, chrome, gutter);
     addRect(scene.layer(chromeLayer), full, chrome, full);
-    addRect(scene.layer(gutterChromeLayer), QRectF(0, 0, gutter.width(), lyt::singlePixel()),
-            themes::color(themes::Role::song_view_separator), gutter);
     addRect(scene.layer(chromeLayer), QRectF(0, 0, width, lyt::singlePixel()),
             themes::color(themes::Role::song_view_separator), full);
 
     const QRectF area = full;
     const SongViewModel &model = m_owner.model();
-    const int textInset = lyt::space(Space::Two);
-    std::vector<TimelineQuickTextModel::Record> labels;
-    labels.push_back({{TimelineQuickTextKeyKind::OtherEvents, {}, 0},
-                      QRectF(textInset, 0, gutter.width() - 2 * textInset, gutter.height()),
-                      SongView::tr("Other events (%1)").arg(model.strip.size()),
-                      themes::color(themes::Role::song_view_primary_text),
-                      m_inputHost->font(),
-                      Qt::AlignLeft,
-                      Qt::AlignVCenter});
-    scene.setOtherEventsTextRecords(labels);
+    if (!horizontalPan) {
+        const QRect gutterGeometry = bandGeometry->gutterRect();
+        const QRectF gutter(0.0, 0.0, gutterGeometry.width(), gutterGeometry.height());
+        addRect(scene.layer(gutterChromeLayer), gutter, chrome, gutter);
+        addRect(scene.layer(gutterChromeLayer), QRectF(0, 0, gutter.width(), lyt::singlePixel()),
+                themes::color(themes::Role::song_view_separator), gutter);
+
+        const int textInset = lyt::space(Space::Two);
+        std::vector<TimelineQuickTextModel::Record> labels;
+        labels.push_back({{TimelineQuickTextKeyKind::OtherEvents, {}, 0},
+                          QRectF(textInset, 0, gutter.width() - 2 * textInset, gutter.height()),
+                          SongView::tr("Other events (%1)").arg(model.strip.size()),
+                          themes::color(themes::Role::song_view_primary_text),
+                          m_inputHost->font(),
+                          Qt::AlignLeft,
+                          Qt::AlignVCenter});
+        scene.setOtherEventsTextRecords(labels);
+    }
     if (!m_owner.timeline())
         return;
 

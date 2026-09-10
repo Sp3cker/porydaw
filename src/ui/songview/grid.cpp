@@ -172,7 +172,7 @@ void SongView::setGridFeel(songview::GridFeel feel)
         m_editorDrawer->cancelVisiblePageInteraction();
     m_grid.setFeel(feel);
     m_ruler->syncGridControls();
-    refreshTimelineViews(PianoRollQuickDirty::Grid);
+    refreshTimelineViews(PianoRollQuickDirty::GridTime);
     refreshDrawerPages();
 }
 void SongView::setGridMinDenom(int denom)
@@ -184,7 +184,7 @@ void SongView::setGridMinDenom(int denom)
         m_editorDrawer->cancelVisiblePageInteraction();
     m_grid.setMinDenom(denom);
     m_ruler->syncGridControls();
-    refreshTimelineViews(PianoRollQuickDirty::Grid);
+    refreshTimelineViews(PianoRollQuickDirty::GridTime);
     refreshDrawerPages();
 }
 void SongView::forEachGridLine(uint64_t tickBegin, uint64_t tickEnd,

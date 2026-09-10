@@ -269,11 +269,22 @@ void AutomationPage::refreshLiveState(const DrawerPageLiveState &liveState)
     const EditorViewState viewState = m_owner.editorViewState();
     const bool liveChanged = !sameLiveState(m_liveState, liveState);
     const bool viewStateChanged = m_viewState != viewState;
+    const bool scrollOnly = !viewStateChanged &&
+                            m_liveState.horizontalScroll != liveState.horizontalScroll &&
+                            m_liveState.documentRevision == liveState.documentRevision &&
+                            m_liveState.timeZoom == liveState.timeZoom &&
+                            m_liveState.editCursorTick == liveState.editCursorTick &&
+                            m_liveState.trackColor == liveState.trackColor &&
+                            m_liveState.playback.playheadTick == liveState.playback.playheadTick &&
+                            m_liveState.playback.playing == liveState.playback.playing;
     const bool preservePan = m_canvas->isPanning() &&
                              m_liveState.documentRevision == liveState.documentRevision &&
                              !viewStateChanged;
     m_liveState = liveState;
     m_viewState = viewState;
+    // The shared camera tail requests moving content and live overlays.
+    if (scrollOnly)
+        return;
     if (!liveChanged && !viewStateChanged) {
         m_canvas->requestSelectionQuickUpdate();
     } else if (preservePan) {

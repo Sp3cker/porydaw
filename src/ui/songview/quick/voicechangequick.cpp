@@ -53,13 +53,16 @@ void appendText(std::vector<songview::TimelineQuickTextModel::Record> &records, 
 
 } // namespace
 
-void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
+void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene, bool horizontalPan)
 {
     using namespace songview;
+    if (!horizontalPan) {
+        timeline_quick::resetLayer(scene.layer(TimelineQuickLayer::VoiceChangesGutterChrome));
+        timeline_quick::resetLayer(scene.layer(TimelineQuickLayer::VoiceChangesChrome));
+    }
     constexpr std::array layers = {
-        TimelineQuickLayer::VoiceChangesGutterChrome, TimelineQuickLayer::VoiceChangesChrome,
-        TimelineQuickLayer::VoiceChangesGrid,         TimelineQuickLayer::VoiceChangesSpans,
-        TimelineQuickLayer::VoiceChangesMarkers,      TimelineQuickLayer::VoiceChangesTransient,
+        TimelineQuickLayer::VoiceChangesGrid,    TimelineQuickLayer::VoiceChangesSpans,
+        TimelineQuickLayer::VoiceChangesMarkers, TimelineQuickLayer::VoiceChangesTransient,
         TimelineQuickLayer::VoiceChangesHover,
     };
     for (const TimelineQuickLayer layer : layers)
@@ -72,51 +75,55 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene)
     const QRectF plot(QPointF(), sceneBounds.size());
     const QRectF gutter = gutterRect();
     if (plot.width() <= 0.0 || plot.height() <= 0.0) {
-        scene.setVoiceChangesGutterTextRecords({});
+        if (!horizontalPan)
+            scene.setVoiceChangesGutterTextRecords({});
         scene.setVoiceChangesTextRecords({});
         scene.setVoiceChangesHoverTextRecords({});
         return;
     }
 
-    const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
-    constexpr TimelineQuickLayer gutterChromeLayer = TimelineQuickLayer::VoiceChangesGutterChrome;
-    constexpr TimelineQuickLayer chromeLayer = TimelineQuickLayer::VoiceChangesChrome;
-    if (gutter.width() > 0.0) {
-        timeline_quick::addRect(scene.layer(gutterChromeLayer), gutter, background, gutter);
-        timeline_quick::addHorizontalLine(scene.layer(gutterChromeLayer), gutter.left(),
-                                          gutter.right(), gutter.bottom(), lyt::singlePixel(),
-                                          themes::color(themes::Role::song_view_separator), gutter);
-    }
-    timeline_quick::addRect(scene.layer(chromeLayer), plot, background, plot);
-    timeline_quick::addHorizontalLine(scene.layer(chromeLayer), plot.left(), plot.right(),
-                                      plot.bottom(), lyt::singlePixel(),
-                                      themes::color(themes::Role::song_view_separator), plot);
-
-    std::vector<TimelineQuickTextModel::Record> gutterTextRecords;
-    const int gutterMargin = lyt::space(Space::Zero);
-    const QRect gutterTextBounds(gutterMargin, 0,
-                                 std::max(0, qRound(gutter.width()) - 2 * gutterMargin),
-                                 qRound(gutter.height()));
-    const lyt::TwoLineTextBoxes textBoxes =
-        m_textLayout.align(gutterTextBounds, lyt::VerticalAlignment::Center);
     const QColor primaryText = themes::color(themes::Role::song_view_primary_text);
     const QColor secondaryText = themes::color(themes::Role::song_view_secondary_text);
-    appendText(gutterTextRecords, kVoiceTitleTextKey, QRectF(textBoxes.primary), tr("Voice"),
-               primaryText, m_titleFont, Qt::AlignLeft, Qt::AlignVCenter);
-
     SongDocument *document = m_owner.document();
-    if (document && m_engineTrack >= 0) {
-        const int changeCount = int(m_voicePoints.size());
-        if (m_changeCount != changeCount) {
-            m_secondary = changeCount
-                              ? tr("%n change(s) · double-click to edit", nullptr, changeCount)
-                              : tr("no voice set · double-click to add");
-            m_changeCount = changeCount;
+    if (!horizontalPan) {
+        const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
+        constexpr TimelineQuickLayer gutterChromeLayer =
+            TimelineQuickLayer::VoiceChangesGutterChrome;
+        constexpr TimelineQuickLayer chromeLayer = TimelineQuickLayer::VoiceChangesChrome;
+        if (gutter.width() > 0.0) {
+            timeline_quick::addRect(scene.layer(gutterChromeLayer), gutter, background, gutter);
+            timeline_quick::addHorizontalLine(
+                scene.layer(gutterChromeLayer), gutter.left(), gutter.right(), gutter.bottom(),
+                lyt::singlePixel(), themes::color(themes::Role::song_view_separator), gutter);
         }
-        appendText(gutterTextRecords, kVoiceSummaryTextKey, QRectF(textBoxes.secondary),
-                   m_secondary, secondaryText, m_captionFont, Qt::AlignLeft, Qt::AlignVCenter);
+        timeline_quick::addRect(scene.layer(chromeLayer), plot, background, plot);
+        timeline_quick::addHorizontalLine(scene.layer(chromeLayer), plot.left(), plot.right(),
+                                          plot.bottom(), lyt::singlePixel(),
+                                          themes::color(themes::Role::song_view_separator), plot);
+
+        std::vector<TimelineQuickTextModel::Record> gutterTextRecords;
+        const int gutterMargin = lyt::space(Space::Zero);
+        const QRect gutterTextBounds(gutterMargin, 0,
+                                     std::max(0, qRound(gutter.width()) - 2 * gutterMargin),
+                                     qRound(gutter.height()));
+        const lyt::TwoLineTextBoxes textBoxes =
+            m_textLayout.align(gutterTextBounds, lyt::VerticalAlignment::Center);
+        appendText(gutterTextRecords, kVoiceTitleTextKey, QRectF(textBoxes.primary), tr("Voice"),
+                   primaryText, m_titleFont, Qt::AlignLeft, Qt::AlignVCenter);
+
+        if (document && m_engineTrack >= 0) {
+            const int changeCount = int(m_voicePoints.size());
+            if (m_changeCount != changeCount) {
+                m_secondary = changeCount
+                                  ? tr("%n change(s) · double-click to edit", nullptr, changeCount)
+                                  : tr("no voice set · double-click to add");
+                m_changeCount = changeCount;
+            }
+            appendText(gutterTextRecords, kVoiceSummaryTextKey, QRectF(textBoxes.secondary),
+                       m_secondary, secondaryText, m_captionFont, Qt::AlignLeft, Qt::AlignVCenter);
+        }
+        scene.setVoiceChangesGutterTextRecords(gutterTextRecords);
     }
-    scene.setVoiceChangesGutterTextRecords(gutterTextRecords);
 
     std::vector<TimelineQuickTextModel::Record> plotTextRecords;
     const QRect plotRect = plot.toRect();

@@ -128,7 +128,7 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
         bool offscreen = true;
     };
     void requestQuickUpdate();
-    void rebuildQuickScene(songview::TimelineQuickScene &scene);
+    void rebuildQuickScene(songview::TimelineQuickScene &scene, bool horizontalPan);
     void rebuildQuickHover(songview::TimelineQuickScene &scene);
     void rebuildVisualState();
     void clearHover();

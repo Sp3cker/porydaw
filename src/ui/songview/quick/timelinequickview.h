@@ -54,6 +54,8 @@ enum class TimelineQuickDirty : quint16 {
     Velocity = 1u << 2,
     VoiceChanges = 1u << 3,
     VoiceChangesHover = 1u << 4,
+    // Pan refreshes every band; a coalesced ordinary band bit wins for that band.
+    HorizontalPan = 1u << 5,
     All = (1u << 5) - 1,
 };
 Q_DECLARE_FLAGS(TimelineQuickDirtySet, TimelineQuickDirty)
@@ -69,6 +71,8 @@ enum class AutomationRefresh : quint8 {
     Content = 1u << 0,
     Transient = 1u << 1,
     Hover = 1u << 2,
+    // Content wins over pan and also refreshes stationary gutter/header content.
+    HorizontalPan = 1u << 3,
     All = (1u << 3) - 1,
 };
 Q_DECLARE_FLAGS(AutomationRefreshSet, AutomationRefresh)
@@ -313,14 +317,15 @@ class TimelineQuickView final : public QObject
     // One sync entry point per band; flushUpdate dispatches one call per
     // dirty band, and each sync owns that band's rebuild + layer updates.
     void syncPianoRoll(PianoRollQuickDirtySet dirty);
-    void syncRuler();
-    void syncOtherEvents();
-    void syncVelocity();
-    void syncVoiceChanges(TimelineQuickDirtySet dirty);
+    void syncRuler(bool horizontalPan);
+    void syncOtherEvents(bool horizontalPan);
+    void syncVelocity(bool horizontalPan);
+    void syncVoiceChanges(TimelineQuickDirtySet dirty, bool horizontalPan);
     void syncAutomation(AutomationRefreshSet refresh);
     void updateLayer(TimelineQuickLayer layer);
 
-    void rebuildGrid();
+    void rebuildGridRows();
+    void rebuildGridTime();
     void rebuildNoteFills();
     void rebuildDrawPreviewFill();
     void rebuildNoteBordersAndSelection();
