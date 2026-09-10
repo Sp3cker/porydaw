@@ -36,10 +36,11 @@ std::unique_ptr<checks::nativegraphics::Rig> quickRig(const QString &projectRoot
                                                       const QString &songLabel)
 {
     QString error;
-    std::unique_ptr<checks::nativegraphics::Rig> rig = checks::nativegraphics::makeRig(
-        projectRoot, songLabel,
-        QSize{90 * layout::space(layout::Space::One), 65 * layout::space(layout::Space::One)},
-        error);
+    // This case opens all three drawer pages at once; the window must leave
+    // the roll pane room above their font-derived minimum bodies. Matches the
+    // sibling native playhead rigs.
+    std::unique_ptr<checks::nativegraphics::Rig> rig =
+        checks::nativegraphics::makeRig(projectRoot, songLabel, QSize{1280, 800}, error);
     if (!rig)
         QTest::qFail(qPrintable(error), __FILE__, __LINE__);
     return rig;
@@ -132,9 +133,30 @@ void RenderingPlayheadTest::quickPolarityAndEdges()
     const QImage headerFrame =
         checks::support::captureQuickBand(view, headers->rect, &captureError);
     QVERIFY2(!headerFrame.isNull(), qPrintable(captureError));
+    const auto firstDifferingPixel = [](const QImage &a, const QImage &b) -> QString {
+        if (a.size() != b.size())
+            return QStringLiteral("size %1x%2 vs %3x%4")
+                .arg(a.width())
+                .arg(a.height())
+                .arg(b.width())
+                .arg(b.height());
+        for (int y = 0; y < a.height(); ++y) {
+            for (int x = 0; x < a.width(); ++x) {
+                if (a.pixel(x, y) != b.pixel(x, y))
+                    return QStringLiteral("pixel (%1, %2) #%3 vs #%4")
+                        .arg(x)
+                        .arg(y)
+                        .arg(QString::number(a.pixel(x, y), 16),
+                             QString::number(b.pixel(x, y), 16));
+            }
+        }
+        return QStringLiteral("identical images");
+    };
     // Header content can legitimately use hues near the playhead color. Its
     // pixels must nevertheless be unchanged when the playhead is shown.
-    QVERIFY(headerFrame == headerWithoutPlayhead);
+    QVERIFY2(headerFrame == headerWithoutPlayhead,
+             qPrintable(QStringLiteral("playhead changed header pixels; first difference at %1")
+                            .arg(firstDifferingPixel(headerFrame, headerWithoutPlayhead))));
 
     const QImage rollFrame = checks::support::captureQuickBand(view, roll->rect, &captureError);
     QVERIFY2(!rollFrame.isNull(), qPrintable(captureError));

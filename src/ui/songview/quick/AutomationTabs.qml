@@ -1,8 +1,8 @@
 // Compact parameter selector for the automation gutter: the nine standard
-// parameter identities as native Basic TabButtons in an at-most-three-column
-// grid. Qt owns checking, focus, activation and accessibility plumbing; the
+// parameter identities as native Basic TabButtons in one full-width vertical
+// list. Qt owns checking, focus, activation and accessibility plumbing; the
 // canvas owns parameter identity, the parameter menu and shared-selection
-// semantics. The grid's intrinsic height is published to
+// semantics. The list's intrinsic height is published to
 // AutomationCanvas::minimumContentHeight so the drawer allocates only what
 // the labels need — never the other way around.
 import QtQuick
@@ -18,31 +18,6 @@ Item {
 
     readonly property var appearance: canvas.parameterAppearance
 
-    // Widest complete label advance at the floor font plus the two text
-    // insets. Reading the metrics font and the label list here keeps the
-    // requirement bound to the floor font and the catalog even if update
-    // order lags; FontMetrics owns the measurement values themselves.
-    readonly property real minimumCellWidth: {
-        let widest = 0
-        const floorFont = labelMetrics.font
-        const labels = root.canvas.parameterLabels
-        if (floorFont.pixelSize > 0) {
-            for (let i = 0; i < labels.length; ++i)
-                widest = Math.max(widest, labelMetrics.advanceWidth(labels[i]))
-        }
-        return widest + 2 * root.appearance.inset
-    }
-
-    // The only local layout policy: at most three uniform columns, each wide
-    // enough for the widest floor-font label; never fewer than one.
-    readonly property int columnCount:
-        Math.min(3, Math.max(1, Math.floor(width / minimumCellWidth)))
-
-    FontMetrics {
-        id: labelMetrics
-        font: root.appearance.minimumFont
-    }
-
     GridLayout {
         id: grid
 
@@ -50,11 +25,10 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
 
-        columns: root.columnCount
-        columnSpacing: 0
+        // One full-width cell per parameter: the labels stack vertically and
+        // each one owns the gutter's whole width.
+        columns: 1
         rowSpacing: 0
-        uniformCellWidths: true
-        uniformCellHeights: true
 
         Repeater {
             model: root.canvas.parameterLabels

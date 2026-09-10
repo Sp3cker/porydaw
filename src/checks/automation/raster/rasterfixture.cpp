@@ -1,6 +1,5 @@
 #include "rasterfixture.h"
 
-#include <algorithm>
 #include <cstring>
 #include <utility>
 
@@ -41,10 +40,8 @@ constexpr double kCheckSampleRate = 48000.0;
 class RasterAutomationInputHost final : public songview::TimelineInputHost
 {
   public:
-    RasterAutomationInputHost(const AutomationPage &page,
-                              const songview::TimelineInputItem &gutterInput)
+    explicit RasterAutomationInputHost(const AutomationPage &page)
         : m_page(page)
-        , m_gutterInput(gutterInput)
         , m_dpr(qGuiApp->devicePixelRatio())
     {}
 
@@ -55,12 +52,9 @@ class RasterAutomationInputHost final : public songview::TimelineInputHost
 
     void setGlobalOffset(QPointF offset) noexcept { m_globalOffset = offset; }
 
-    QRectF bounds() const override
-    {
-        const QSize size = m_page.automationViewportSize();
-        const qreal gutterWidth = m_gutterInput.bounds().width();
-        return {0.0, 0.0, std::max(0.0, qreal(size.width()) - gutterWidth), qreal(size.height())};
-    }
+    // The published automation viewport is already plot-only, matching the
+    // production plot input item, so the synthetic host publishes it verbatim.
+    QRectF bounds() const override { return {QPointF{}, QSizeF(m_page.automationViewportSize())}; }
 
     qreal devicePixelRatio() const override { return m_dpr; }
 
@@ -79,7 +73,6 @@ class RasterAutomationInputHost final : public songview::TimelineInputHost
 
   private:
     const AutomationPage &m_page;
-    const songview::TimelineInputItem &m_gutterInput;
     qreal m_dpr = 1.0;
     QPointF m_globalOffset;
 };
@@ -443,10 +436,25 @@ bool AutomationRasterFixture::initialize(QString &error)
         return false;
     }
 
-    m_inputHost = std::make_unique<RasterAutomationInputHost>(*m_page, *m_automationGutterInput);
+    m_inputHost = std::make_unique<RasterAutomationInputHost>(*m_page);
     m_inputHost->setGlobalOffset(m_automationPlotInput->mapToGlobal(QPointF{}));
     if (const QQuickWindow *window = m_automationPlotInput->window())
         m_inputHost->setDevicePixelRatio(window->devicePixelRatio());
+    // Seam guard: automationViewportSize() is plot-only and the production
+    // plot item spans the same plot, so the synthetic host must agree with
+    // the item's width. A gutter-sized disagreement is the double-subtraction
+    // bug class and silently sends hover hit-testing off-screen. One pixel of
+    // tolerance absorbs QML fractional layout versus the integer QSize.
+    if (const int seamDrift =
+            qAbs(qRound(m_automationPlotInput->width()) - m_page->automationViewportSize().width());
+        seamDrift > 1) {
+        error =
+            QStringLiteral("synthetic automation host width %1 disagrees with production plot item "
+                           "width %2; the viewport seam drifted")
+                .arg(m_page->automationViewportSize().width())
+                .arg(qRound(m_automationPlotInput->width()));
+        return false;
+    }
     m_productionInteraction = m_automationPlotInput->interaction();
     if (m_productionInteraction)
         m_automationPlotInput->setInteraction(nullptr);
