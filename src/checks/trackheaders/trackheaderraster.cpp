@@ -181,4 +181,14 @@ void TrackHeadersTest::voiceSubtitleFollowsProgramPosition()
              "program change did not alter the retained Quick header rendering");
     QObject::disconnect(observed);
     view.setEditCursorTick(0);
+    const auto subtitle = [&] {
+        return rowData(headers, *row, songview::TrackHeaderModel::SubtitleRole).toString();
+    };
+    QCOMPARE(subtitle(), beforeSubtitle);
+    view.setPlayheadSample(view.timeline()->sampleForTick(vcTick), true);
+    QCOMPARE(subtitle(), afterSubtitle);
+    view.setPlayheadSample(view.timeline()->sampleForTick(vcTick + 1), true);
+    QCOMPARE(subtitle(), afterSubtitle);
+    view.setPlayheadSample(0, false);
+    QCOMPARE(subtitle(), beforeSubtitle);
 }

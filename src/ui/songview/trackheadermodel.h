@@ -172,6 +172,7 @@ class TrackHeaderModel final : public QAbstractListModel, public TimelineBandInt
     struct TrackHeaderRecord {
         bool isAddTrack = false;
         int track = -1;
+        int program = -1;
         QString title;
         QString subtitle;
         QRectF titleRect;

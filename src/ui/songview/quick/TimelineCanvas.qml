@@ -64,7 +64,7 @@ Item {
             y: effectiveClipRect.y
             width: effectiveClipRect.width
             height: effectiveClipRect.height
-            // Text already clips to labelRect; only lane-specific clips need a second clip.
+            // Keep lane boundaries even when the text fits its own label box.
             clip: labelClipRect.width > 0 && labelClipRect.height > 0
 
             Text {
@@ -81,7 +81,8 @@ Item {
                 renderType: Text.NativeRendering
                 elide: Text.ElideNone
                 maximumLineCount: 1
-                clip: true
+                // Fitting labels share their band's clip and can batch together.
+                clip: contentWidth > width || contentHeight > height
             }
         }
     }
@@ -326,7 +327,7 @@ Item {
             height: timelineScene.tempoHeaderRect.height
             visible: timelineScene.tempoHeaderVisible
             color: timelineScene.tempoHeaderFill
-            z: 6
+            z: 0.5
         }
 
         TimelineTextLayer {

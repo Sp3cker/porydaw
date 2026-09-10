@@ -263,6 +263,7 @@ void TrackHeaderModel::resolveRecordLabels(TrackHeaderRecord &record) const
     if (record.isAddTrack)
         return;
 
+    record.program = m_owner.currentProgram(record.track);
     const MidiTimeline *timeline = m_owner.timeline();
     QString name = timeline ? timeline->tracks[record.track].name : QString();
     if (name.isEmpty())
@@ -354,7 +355,8 @@ void TrackHeaderModel::syncSelection()
 void TrackHeaderModel::syncVoices()
 {
     for (std::size_t row = 0; row < m_rows.size(); ++row) {
-        if (m_rows[row].isAddTrack)
+        if (m_rows[row].isAddTrack ||
+            m_rows[row].program == m_owner.currentProgram(m_rows[row].track))
             continue;
         TrackHeaderRecord before = m_rows[row];
         resolveRecordLabels(m_rows[row]);

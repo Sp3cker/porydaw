@@ -60,7 +60,7 @@ Item {
                 renderType: Text.NativeRendering
                 elide: Text.ElideNone
                 maximumLineCount: 1
-                clip: true
+                clip: contentWidth > width || contentHeight > height
             }
         }
     }
@@ -139,7 +139,7 @@ Item {
                 renderType: Text.NativeRendering
                 elide: Text.ElideNone
                 maximumLineCount: 1
-                clip: true
+                clip: contentWidth > width || contentHeight > height
             }
         }
     }
@@ -161,7 +161,7 @@ Item {
         renderType: Text.NativeRendering
         elide: Text.ElideNone
         maximumLineCount: 1
-        clip: true
+        clip: contentWidth > width || contentHeight > height
         z: 4
     }
 
@@ -194,7 +194,7 @@ Item {
                 renderType: Text.NativeRendering
                 elide: Text.ElideNone
                 maximumLineCount: 1
-                clip: true
+                clip: contentWidth > width || contentHeight > height
             }
         }
     }

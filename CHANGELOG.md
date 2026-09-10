@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Host the timeline, ruler, event list, and editor drawers in one Qt Quick viewport. SongView and drawer layout no longer depend on hidden QWidget spacers; only the SongTab embedding boundary remains widget-based.
 
 ## Fixed
+- Avoid rebuilding and reshaping unchanged track-header labels on every playback update; refresh them when the program or header presentation changes instead.
+- Batch fitting timeline labels together instead of giving each label a separate clip; retain clipping for overflowing text and lane boundaries.
+- Keep tempo curves and nodes visible above the plot header background.
 - Do not revive a rejected pre-roll hover guide during later timeline synchronization.
 - Initialize empty voicegroup fixtures before binding them in host and window lifecycle checks, preventing intermittent invalid-pointer crashes.
 - Prevent timeline cancellation from releasing a pitch-bend popup's mouse grab and corrupting undo history during an external document edit.

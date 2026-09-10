@@ -239,7 +239,7 @@ Item {
                                 width: trackHeaderRow.titleRect.width
                                 height: trackHeaderRow.titleRect.height
                                 visible: !trackHeaderRow.isAddTrack
-                                clip: true
+                                clip: contentWidth > width || contentHeight > height
                                 color: trackHeaderRow.titleColor
                                 font: trackHeaderRow.titleFont
                                 text: trackHeaderRow.title
@@ -260,7 +260,7 @@ Item {
                                 width: trackHeaderRow.subtitleRect.width
                                 height: trackHeaderRow.subtitleRect.height
                                 visible: !trackHeaderRow.isAddTrack
-                                clip: true
+                                clip: contentWidth > width || contentHeight > height
                                 color: trackHeaderRow.subtitleColor
                                 font: trackHeaderRow.subtitleFont
                                 text: trackHeaderRow.subtitle
