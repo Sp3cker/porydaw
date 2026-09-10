@@ -229,14 +229,6 @@ class SongView : public QObject
     // same screen space. This canonical viewport rectangle covers the
     // event page; empty while hidden.
     QRect eventListRect() const;
-    // User-added automation lanes with no events yet (SPEC §6.1 "addable from
-    // the m4a parameter list). They live in the application-wide editor
-    // projection — the model derives lanes from events — and survive document
-    // rebuilds and song swaps; once the lane gets its first point the model
-    // carries it.
-    void addEmptyLane(int track, uint8_t cc);
-    void removeEmptyLane(int track, uint8_t cc);
-
     // Display max for a CC lane's value axis (0 = auto-fit): the lane
     // menu's "Value range" choice, exposed for the harnesses. View state
     // only — lane values themselves are untouched.

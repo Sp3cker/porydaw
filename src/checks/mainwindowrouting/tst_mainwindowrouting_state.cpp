@@ -224,8 +224,11 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         const int hubBeforeNoop = hub.count();
         const int persistedBeforeNoop = persisted.count();
         b.setLaneDisplayRange(0, 74, 80);
-        b.addEmptyLane(0, 74);
-        b.removeEmptyLane(3, 99);
+        EditorViewState unchanged = b.editorViewState();
+        unchanged.emptyLanes.insert(lane);
+        b.setEditorViewState(unchanged);
+        unchanged.emptyLanes.erase({EditorAutomationRowKind::ControlChange, 3, 99});
+        b.setEditorViewState(unchanged);
         QCoreApplication::processEvents();
         QCOMPARE(origin.count(), originBeforeNoop);
         QCOMPARE(projection.count(), projectionBeforeNoop);
@@ -322,7 +325,10 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         QSignalSpy origin(&b, &SongView::editorViewStateChanged);
         QSignalSpy hub(window.m_workspace.get(), &WorkspaceUi::editorViewStateChanged);
         QSignalSpy persisted(&window, &MainWindow::editorViewStatePersisted);
-        b.addEmptyLane(2, 40);
+        const EditorAutomationRowId lane{EditorAutomationRowKind::ControlChange, 2, 40};
+        EditorViewState next = b.editorViewState();
+        next.emptyLanes.insert(lane);
+        b.setEditorViewState(next);
         QCoreApplication::processEvents();
         QCOMPARE(origin.count(), 1);
         QCOMPARE(hub.count(), 1);
@@ -333,7 +339,9 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         QCOMPARE(b.document()->revision(), revision);
         QCOMPARE(b.document()->undoStack()->count(), undoCount);
         QVERIFY(porydawSnapshot(session->fixture->root()) == snapshot);
-        b.removeEmptyLane(2, 40);
+        next = b.editorViewState();
+        next.emptyLanes.erase(lane);
+        b.setEditorViewState(next);
         QCoreApplication::processEvents();
         QCOMPARE(origin.count(), 2);
         QCOMPARE(hub.count(), 2);

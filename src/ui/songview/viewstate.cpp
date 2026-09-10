@@ -207,26 +207,6 @@ void SongView::setFollowPlayhead(bool on)
     m_events->setFollowPlayhead(on);
     refreshDrawerPages();
 }
-void SongView::addEmptyLane(int track, uint8_t cc)
-{
-    if (track < 0 || track > 15)
-        return;
-    const EditorAutomationRowId lane{EditorAutomationRowKind::ControlChange, uint8_t(track), cc};
-    EditorViewState next = m_editorViewState;
-    if (!next.emptyLanes.insert(lane).second)
-        return;
-    setEditorViewState(next);
-}
-void SongView::removeEmptyLane(int track, uint8_t cc)
-{
-    if (track < 0 || track > 15)
-        return;
-    const EditorAutomationRowId lane{EditorAutomationRowKind::ControlChange, uint8_t(track), cc};
-    EditorViewState next = m_editorViewState;
-    if (next.emptyLanes.erase(lane) == 0)
-        return;
-    setEditorViewState(next);
-}
 void SongView::setLaneDisplayRange(int track, uint8_t cc, int maxValue)
 {
     if (track < 0 || track > 15)

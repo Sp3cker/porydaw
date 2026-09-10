@@ -353,8 +353,8 @@ void PianoRollTest::trackRemapDelete()
     fixture.view.setTrackMute(0, true);
     fixture.view.setTrackMute(removed, true);
     fixture.view.setTrackSolo(removed, true);
-    fixture.view.addEmptyLane(removed, 74);
     EditorViewState deletedCosmetics = fixture.view.editorViewState();
+    deletedCosmetics.emptyLanes.insert(controllerRow(removed, 74));
     deletedCosmetics.laneHeights.emplace(controllerRow(removed, 74), 123);
     deletedCosmetics.laneRanges.emplace(controllerRow(removed, 74), 120);
     fixture.view.applyEditorViewState(deletedCosmetics);
