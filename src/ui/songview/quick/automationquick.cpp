@@ -72,7 +72,6 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         resetLayer(scene.layer(TimelineQuickLayer::AutomationHover));
     const QRectF viewport = m_inputHost ? m_inputHost->bounds() : QRectF{};
     if (!m_inputHost || !m_page.document() || viewport.height() <= 0.0) {
-
         if (transient)
             scene.setAutomationTransientTextRecords({});
         if (hover)
@@ -165,11 +164,9 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     const QColor background = opaqueColor(themes::Role::song_view_piano_roll_background);
     // One grid and one band frame span the whole viewport. The stacked
     // per-row separators, pinned Tempo header, and Add-lane strip are gone
-    // with the shared plot; the gutter belongs to the QML parameter
-    // selector, so its stale stacked text records are cleared, not painted.
+    // with the shared plot; QML owns the parameter labels in the gutter.
     if (content) {
         addRect(scene.layer(TimelineQuickLayer::AutomationGrid), viewport, background, viewport);
-
         composeBandedGrid(scene, TimelineQuickLayer::AutomationGrid, m_page.m_owner, viewport, 0.0,
                           dpr);
         addBandFrame(scene, TimelineQuickLayer::AutomationGrid, viewport.top(), viewport.bottom(),

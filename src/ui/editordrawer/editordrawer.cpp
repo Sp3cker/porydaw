@@ -318,16 +318,16 @@ void EditorDrawer::activatePage(EditorDrawerPage page)
     QString announcement;
     switch (page) {
     case EditorDrawerPage::VoiceChanges:
-        announcement =
-            hiding ? QStringLiteral("Voice changes hidden") : QStringLiteral("Voice changes shown");
+        announcement = hiding ? QStringLiteral("Voice-change drawer hidden")
+                              : QStringLiteral("Voice-change drawer shown");
         break;
     case EditorDrawerPage::Velocity:
-        announcement =
-            hiding ? QStringLiteral("Velocity lane hidden") : QStringLiteral("Velocity lane shown");
+        announcement = hiding ? QStringLiteral("Velocity drawer hidden")
+                              : QStringLiteral("Velocity drawer shown");
         break;
     case EditorDrawerPage::Automations:
-        announcement = hiding ? QStringLiteral("Automation lanes hidden")
-                              : QStringLiteral("Automation lanes shown");
+        announcement = hiding ? QStringLiteral("Automation drawer hidden")
+                              : QStringLiteral("Automation drawer shown");
         break;
     }
     m_owner.announce(announcement);

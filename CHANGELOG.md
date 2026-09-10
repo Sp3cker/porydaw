@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Press `G` with one note selected to edit its channel-wide pitch bend: scroll the graph for a note-scoped BENDR range, hold `Option`/`Alt` for angled lines, reset to zero, and audition from note-on with `Space`. The popup stays open until click-away or `Escape`.
 
 ## Changed
+- View menu, drawer toggles, and show/hide announcements now say Automation drawer, Velocity drawer, and Voice-change drawer.
 - Remove the test-only automation inverse API and redundant single-lane renderer collection; share Quick visual lookup across affected checks.
 - Reuse the timeline's Quick popup session for note automation without a separate native window. The pitch editor owns its note anchoring, resize layout, live-edit dismissal, and click-away routing; the shared session owns hosting and lifetime rather than configurable pitch policies.
 - Share prompt appearance and card/button chrome; remove obsolete Event List MIME drag/drop, drawer QAction shims, and the unused QuickWidgets dependency. Consolidate header checks while retaining their distinct behavior coverage.

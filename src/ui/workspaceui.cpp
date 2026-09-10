@@ -444,16 +444,16 @@ void WorkspaceUi::toggleDrawerPage(EditorDrawerPage page)
     QString status;
     switch (page) {
     case EditorDrawerPage::VoiceChanges:
-        status =
-            hiding ? QStringLiteral("Voice changes hidden") : QStringLiteral("Voice changes shown");
+        status = hiding ? QStringLiteral("Voice-change drawer hidden")
+                        : QStringLiteral("Voice-change drawer shown");
         break;
     case EditorDrawerPage::Velocity:
-        status =
-            hiding ? QStringLiteral("Velocity lane hidden") : QStringLiteral("Velocity lane shown");
+        status = hiding ? QStringLiteral("Velocity drawer hidden")
+                        : QStringLiteral("Velocity drawer shown");
         break;
     case EditorDrawerPage::Automations:
-        status = hiding ? QStringLiteral("Automation lanes hidden")
-                        : QStringLiteral("Automation lanes shown");
+        status = hiding ? QStringLiteral("Automation drawer hidden")
+                        : QStringLiteral("Automation drawer shown");
         break;
     }
     showStatus(status, 6000);

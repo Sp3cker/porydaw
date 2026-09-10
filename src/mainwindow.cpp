@@ -323,27 +323,27 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     connect(m_eventListAction, &QAction::toggled, this,
             [this](bool on) { m_workspace->setSelectedTabEventListVisible(on); });
 
-    m_automationDrawerAction = viewMenu->addAction(tr("Automation Lanes"));
+    m_automationDrawerAction = viewMenu->addAction(tr("Automation Drawer"));
     m_automationDrawerAction->setObjectName(QStringLiteral("automationDrawerWindowAction"));
     m_automationDrawerAction->setShortcut(QKeySequence(Qt::Key_A));
     m_automationDrawerAction->setShortcutContext(Qt::WindowShortcut);
-    m_automationDrawerAction->setToolTip(tr("Show or hide automation lanes (A)"));
+    m_automationDrawerAction->setToolTip(tr("Show or hide the automation drawer (A)"));
     m_automationDrawerAction->setEnabled(false);
     connect(m_automationDrawerAction, &QAction::triggered, this,
             [this] { m_workspace->toggleDrawerPage(EditorDrawerPage::Automations); });
-    m_velocityDrawerAction = viewMenu->addAction(tr("Velocity Lane"));
+    m_velocityDrawerAction = viewMenu->addAction(tr("Velocity Drawer"));
     m_velocityDrawerAction->setObjectName(QStringLiteral("velocityDrawerWindowAction"));
     m_velocityDrawerAction->setShortcut(QKeySequence(Qt::Key_V));
     m_velocityDrawerAction->setShortcutContext(Qt::WindowShortcut);
-    m_velocityDrawerAction->setToolTip(tr("Show or hide note velocities (V)"));
+    m_velocityDrawerAction->setToolTip(tr("Show or hide the velocity drawer (V)"));
     m_velocityDrawerAction->setEnabled(false);
     connect(m_velocityDrawerAction, &QAction::triggered, this,
             [this] { m_workspace->toggleDrawerPage(EditorDrawerPage::Velocity); });
-    m_voiceChangesDrawerAction = viewMenu->addAction(tr("Voice &Changes"));
+    m_voiceChangesDrawerAction = viewMenu->addAction(tr("Voice-change Drawer"));
     m_voiceChangesDrawerAction->setObjectName(QStringLiteral("voiceChangesDrawerWindowAction"));
     m_voiceChangesDrawerAction->setShortcut(QKeySequence(Qt::Key_P));
     m_voiceChangesDrawerAction->setShortcutContext(Qt::WindowShortcut);
-    m_voiceChangesDrawerAction->setToolTip(tr("Show or hide voice changes (P)"));
+    m_voiceChangesDrawerAction->setToolTip(tr("Show or hide the voice-change drawer (P)"));
     m_voiceChangesDrawerAction->setEnabled(false);
     connect(m_voiceChangesDrawerAction, &QAction::triggered, this,
             [this] { m_workspace->toggleDrawerPage(EditorDrawerPage::VoiceChanges); });

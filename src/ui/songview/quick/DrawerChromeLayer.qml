@@ -76,7 +76,7 @@ Item {
         controlRect: layer.chrome.voiceChangesHandleRect
         controlVisible: layer.chrome.voiceChangesHandleVisible
         target: 0
-        accessibleName: qsTr("Resize voice changes")
+        accessibleName: qsTr("Resize voice-change drawer")
         inputObjectName: "drawerVoiceChangesHandleInput"
         handleObjectName: "drawerVoiceChangesHandle"
         controlChrome: layer.chrome
@@ -86,7 +86,7 @@ Item {
         controlRect: layer.chrome.velocityHandleRect
         controlVisible: layer.chrome.velocityHandleVisible
         target: 1
-        accessibleName: qsTr("Resize velocity")
+        accessibleName: qsTr("Resize velocity drawer")
         inputObjectName: "drawerVelocityHandleInput"
         handleObjectName: "drawerVelocityHandle"
         controlChrome: layer.chrome
@@ -96,7 +96,7 @@ Item {
         controlRect: layer.chrome.automationHandleRect
         controlVisible: layer.chrome.automationHandleVisible
         target: 2
-        accessibleName: qsTr("Resize automation")
+        accessibleName: qsTr("Resize automation drawer")
         inputObjectName: "drawerAutomationHandleInput"
         handleObjectName: "drawerAutomationHandle"
         controlChrome: layer.chrome
@@ -181,7 +181,7 @@ Item {
         controlVisible: layer.chrome.voiceChangesToggleVisible
         checked: layer.chrome.voiceChangesChecked
         page: 2
-        accessibleName: qsTr("Voice changes")
+        accessibleName: qsTr("Voice-change drawer")
         iconName: "voiceChanges"
         toggleObjectName: "drawerVoiceChangesToggle"
         controlChrome: layer.chrome
@@ -192,7 +192,7 @@ Item {
         controlVisible: layer.chrome.automationToggleVisible
         checked: layer.chrome.automationChecked
         page: 0
-        accessibleName: qsTr("Automation lanes")
+        accessibleName: qsTr("Automation drawer")
         iconName: "automation"
         toggleObjectName: "drawerAutomationToggle"
         controlChrome: layer.chrome
@@ -203,7 +203,7 @@ Item {
         controlVisible: layer.chrome.velocityToggleVisible
         checked: layer.chrome.velocityChecked
         page: 1
-        accessibleName: qsTr("Velocity")
+        accessibleName: qsTr("Velocity drawer")
         iconName: "velocity"
         toggleObjectName: "drawerVelocityToggle"
         controlChrome: layer.chrome

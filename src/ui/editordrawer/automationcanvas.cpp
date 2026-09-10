@@ -48,7 +48,7 @@ void AutomationCanvas::attachInputHost(songview::TimelineInputHost &host)
 {
     Q_ASSERT(!m_inputHost);
     m_inputHost = &host;
-    m_inputHost->setAccessibilityDescription(tr("Automation lanes"));
+    m_inputHost->setAccessibilityDescription(tr("Automation lane"));
     hostAppearanceChanged();
 }
 
