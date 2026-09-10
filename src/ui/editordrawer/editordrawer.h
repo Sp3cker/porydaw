@@ -45,6 +45,7 @@ class EditorDrawer final : public QObject
     EditorDrawerPage activePage() const noexcept;
     int sectionHeight(EditorDrawerPage page) const noexcept;
     int minimumSectionHeight() const noexcept;
+    int voiceChangesMaximumBodyHeight() const noexcept;
     int maximumSectionHeight() const noexcept;
     int defaultAutomationHeight() const noexcept;
     int plotOrigin() const noexcept;
@@ -85,12 +86,7 @@ class EditorDrawer final : public QObject
     void cancelPageInteraction(EditorDrawerPage page);
     bool ownsFocus() const;
 
-    int resizeMinimumBodyHeight() const;
-    int resizeBodyHeight(EditorDrawerPage page) const;
-    std::optional<int> resizeStoredBodyHeight(EditorDrawerPage page) const;
-    int maximumResizeBodyHeight(EditorDrawerPage page) const;
-    void setResizeBodyHeight(EditorDrawerPage page, std::optional<int> height);
-    void publishResizeState();
+    DrawerSections &sections() const noexcept { return *m_sections; }
 
     SongView &m_owner;
     QRect m_hostBounds;

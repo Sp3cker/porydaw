@@ -25,7 +25,6 @@
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/editordrawer/tempolane.h"
 #include "ui/editorviewstate.h"
-#include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinput.h"
 #include "ui/songviewmodel.h"
@@ -252,8 +251,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     QRect viewportRect(QRect contentRect) const noexcept;
     QRect contentBounds() const noexcept;
     void refreshGeometry();
-    const QString &refreshCcSummaryText(CCLanes::RowTextCache &cache,
-                                        std::span<const NodePoint> points, const NodeLane &lane);
 
     AutomationProjection projection() const;
     NodeLaneHoverTarget hoverTarget() const;
@@ -356,7 +353,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     AutomationGeometry m_geometry;
     QFont m_laneTitleFont;
     QFont m_laneCaptionFont;
-    layout::TwoLineTextLayout m_laneTextLayout;
     AutomationPage &m_page;
     songview::TimelineInputHost *m_inputHost = nullptr;
     CCLanes m_rowData;

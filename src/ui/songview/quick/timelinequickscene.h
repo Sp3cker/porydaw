@@ -191,6 +191,9 @@ struct TimelineQuickScene final : public QObject {
     Q_PROPERTY(QColor hoverChipFill READ hoverChipFill NOTIFY hoverChipChanged FINAL)
     Q_PROPERTY(QFont hoverChipFont READ hoverChipFont NOTIFY hoverChipChanged FINAL)
     Q_PROPERTY(qreal hoverChipRadius READ hoverChipRadius NOTIFY hoverChipChanged FINAL)
+    Q_PROPERTY(bool tempoHeaderVisible READ tempoHeaderVisible NOTIFY tempoHeaderChanged FINAL)
+    Q_PROPERTY(QRectF tempoHeaderRect READ tempoHeaderRect NOTIFY tempoHeaderChanged FINAL)
+    Q_PROPERTY(QColor tempoHeaderFill READ tempoHeaderFill NOTIFY tempoHeaderChanged FINAL)
 
   public:
     explicit TimelineQuickScene(QObject *parent = nullptr);
@@ -229,9 +232,14 @@ struct TimelineQuickScene final : public QObject {
 
     void setHoverChip(bool visible, const QRectF &rect, const QString &text, const QColor &fill,
                       const QFont &font, qreal radius);
+    bool tempoHeaderVisible() const noexcept;
+    QRectF tempoHeaderRect() const noexcept;
+    QColor tempoHeaderFill() const;
+    void setTempoHeader(bool visible, const QRectF &rect, const QColor &fill);
 
   signals:
     void hoverChipChanged();
+    void tempoHeaderChanged();
 
   private:
     friend class TimelineQuickView;
@@ -256,6 +264,10 @@ struct TimelineQuickScene final : public QObject {
     QColor m_hoverChipFill;
     QFont m_hoverChipFont;
     qreal m_hoverChipRadius = 0.0;
+
+    bool m_tempoHeaderVisible = false;
+    QRectF m_tempoHeaderRect;
+    QColor m_tempoHeaderFill;
 };
 
 namespace timeline_quick {

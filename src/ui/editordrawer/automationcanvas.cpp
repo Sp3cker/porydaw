@@ -23,38 +23,11 @@ void AutomationCanvas::refreshGeometry()
     m_geometry = AutomationGeometry::resolve();
 }
 
-const QString &AutomationCanvas::refreshCcSummaryText(CCLanes::RowTextCache &cache,
-                                                      std::span<const NodePoint> points,
-                                                      const NodeLane &lane)
-{
-    if (!points.empty()) {
-        const auto pointCount = points.size();
-        const int minimum = lane.minimumValue();
-        const int maximum = lane.maximumValue();
-        if (cache.summaryKind != CCLanes::SummaryKind::Points || cache.pointCount != pointCount ||
-            cache.minimum != minimum || cache.maximum != maximum) {
-            cache.secondary = tr("%1 points · %2..%3").arg(pointCount).arg(minimum).arg(maximum);
-            cache.summaryKind = CCLanes::SummaryKind::Points;
-            cache.pointCount = pointCount;
-            cache.minimum = minimum;
-            cache.maximum = maximum;
-        }
-        return cache.secondary;
-    }
-    if (cache.summaryKind != CCLanes::SummaryKind::EmptyControl) {
-        cache.secondary = tr("empty · click to add points");
-        cache.summaryKind = CCLanes::SummaryKind::EmptyControl;
-    }
-    return cache.secondary;
-}
-
 AutomationCanvas::AutomationCanvas(AutomationPage &page)
     : QObject(&page)
     , m_geometry(AutomationGeometry::resolve())
     , m_laneTitleFont(typography::bold(typography::caption(QGuiApplication::font())))
     , m_laneCaptionFont(typography::regular(typography::caption(QGuiApplication::font())))
-    , m_laneTextLayout(layout::twoLineText(m_laneTitleFont, m_laneTitleFont, m_laneCaptionFont,
-                                           layout::Space::Zero))
     , m_page(page)
     , m_rowData(&page)
     , m_tempoLane(&page)

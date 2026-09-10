@@ -4,6 +4,7 @@
 #include <QRect>
 #include <QSize>
 
+#include <array>
 #include <optional>
 
 #include "ui/editordrawer/drawerchrome.h"
@@ -19,6 +20,7 @@ struct DrawerMetrics {
     int header = 0;
     int handle = 0;
     int minBody = 0;
+    int voiceChangesMaxBody = 0;
     int pianoRollReserve = 0;
     int plotOrigin = 0;
 };
@@ -31,6 +33,12 @@ class DrawerSections final : public QObject
   public:
     DrawerSections(SongView &owner, QObject *parent, AutomationPage *automation,
                    VelocityArea *velocity, VoiceChangeArea *voiceChanges);
+
+    static constexpr auto sectionOrder() noexcept
+    {
+        return std::array{EditorDrawerPage::Velocity, EditorDrawerPage::VoiceChanges,
+                          EditorDrawerPage::Automations};
+    }
 
     const DrawerMetrics &metrics() const;
     void updateHostContext(int hostHeight, int defaultAutomationHeight);
@@ -56,6 +64,7 @@ class DrawerSections final : public QObject
 
   private:
     friend class EditorDrawer;
+    friend class DrawerChrome;
 
     void ensureChrome() const;
     void syncDetentState();
@@ -67,9 +76,19 @@ class DrawerSections final : public QObject
     std::optional<int> &pageStoredHeight(EditorDrawerPage page) noexcept;
     const std::optional<int> &pageStoredHeight(EditorDrawerPage page) const noexcept;
     int resizeBodyHeight(EditorDrawerPage page) const;
-    int maximumResizeBodyHeight(EditorDrawerPage page) const;
-    void setResizeBodyHeight(EditorDrawerPage page, std::optional<int> height);
+    int beginResize(EditorDrawerPage page);
+    void applyResize(EditorDrawerPage page, int unconstrainedHeight);
+    void endResize() { m_resize.reset(); }
     void publishResizeState();
+
+    struct ResizeBaseline {
+        EditorDrawerPage page;
+        int startHeight;
+        std::optional<int> originalHeight;
+        int automationStartHeight;
+        std::optional<int> automationOriginalHeight;
+    };
+    std::optional<ResizeBaseline> m_resize;
 
     SongView &m_owner;
     AutomationPage *m_automation = nullptr;

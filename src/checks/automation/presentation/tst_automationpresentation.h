@@ -57,6 +57,7 @@ class AutomationPresentationTest final : public QObject
     void expandedTempoClipsCoveredCcCurves();
     void tempoSelectionReticleComposedInCoveredBody();
     void collapsedTempoHeaderClipsCoveredCcCurves();
+    void tempoHeaderFillUsesTimelineChrome();
     void gutterTextRecordsUseSemanticLabelsAndBounds();
     void tempoHoverValueHasVisibleTextRecord();
     void addingEmptyLanePreservesLfoSemanticTitleAndUniqueRows();

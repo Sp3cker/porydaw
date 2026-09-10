@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <optional>
+#include <tuple>
 #include <utility>
 
 #include "ui/editordrawer/automationpage.h"
@@ -10,6 +11,26 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/typography.h"
+
+namespace {
+
+// Voice Changes may grow to two and a half minimum-height rows.
+constexpr double kVoiceChangesMaximumHeightInRows = 2.5;
+
+std::pair<int, int> resolveVoiceResize(int requested, int minimum, int voiceCap,
+                                       int availableBodyHeight, int automationStart)
+{
+    const int voiceMaximum = std::min(std::max(minimum, availableBodyHeight), voiceCap);
+    const int voice = std::clamp(requested, minimum, voiceMaximum);
+    const int automationMaximum = std::max(minimum, availableBodyHeight - voice);
+    const int automation =
+        requested > voiceMaximum
+            ? std::clamp(automationStart + requested - voiceMaximum, minimum, automationMaximum)
+            : automationStart;
+    return {voice, automation};
+}
+
+} // namespace
 
 DrawerSections::DrawerSections(SongView &owner, QObject *parent, AutomationPage *automation,
                                VelocityArea *velocity, VoiceChangeArea *voiceChanges)
@@ -36,6 +57,7 @@ void DrawerSections::ensureChrome() const
         layout::chromeRowHeight(*typography::bodyFont(), layout::space(layout::Space::Zero));
     m_chrome.handle = layout::fontPx(1.0 / 3.0);
     m_chrome.minBody = layout::fontPx(17.0 / 5.0);
+    m_chrome.voiceChangesMaxBody = int(m_chrome.minBody * kVoiceChangesMaximumHeightInRows);
     m_chrome.pianoRollReserve = layout::fontPx(10.0);
     m_chrome.plotOrigin = m_owner.timelineSplitX();
     m_chromeDirty = false;
@@ -63,7 +85,9 @@ int DrawerSections::effectiveAutomationBodyHeight() const
 
 int DrawerSections::effectiveVoiceChangesBodyHeight() const
 {
-    return m_voiceChangesBodyHeight.value_or(m_chrome.minBody);
+    ensureChrome();
+    return std::clamp(m_voiceChangesBodyHeight.value_or(m_chrome.minBody), m_chrome.minBody,
+                      m_chrome.voiceChangesMaxBody);
 }
 
 const DrawerMetrics &DrawerSections::metrics() const
@@ -200,32 +224,55 @@ int DrawerSections::resizeBodyHeight(EditorDrawerPage page) const
     return std::max(m_chrome.minBody, pageBodyHeight(page));
 }
 
-int DrawerSections::maximumResizeBodyHeight(EditorDrawerPage page) const
+int DrawerSections::beginResize(EditorDrawerPage page)
 {
-    ensureChrome();
-
-    int otherBodies = 0;
-    int visibleHandleCount = 0;
-    for (const EditorDrawerPage candidate :
-         {EditorDrawerPage::VoiceChanges, EditorDrawerPage::Velocity,
-          EditorDrawerPage::Automations}) {
-        if (!pageVisible(candidate))
-            continue;
-        ++visibleHandleCount;
-        if (candidate != page)
-            otherBodies += pageBodyHeight(candidate);
-    }
-
-    return std::max(m_chrome.minBody, m_lastHostHeight - m_chrome.header -
-                                          m_chrome.handle * visibleHandleCount - otherBodies);
+    m_resize =
+        ResizeBaseline{page, resizeBodyHeight(page), pageStoredHeight(page),
+                       resizeBodyHeight(EditorDrawerPage::Automations), m_automationBodyHeight};
+    return m_resize->startHeight;
 }
 
-void DrawerSections::setResizeBodyHeight(EditorDrawerPage page, std::optional<int> height)
+void DrawerSections::applyResize(EditorDrawerPage page, int unconstrainedHeight)
 {
-    std::optional<int> &bodyHeight = pageStoredHeight(page);
-    if (bodyHeight == height)
+    Q_ASSERT(m_resize && m_resize->page == page);
+    ensureChrome();
+    const ResizeBaseline &baseline = *m_resize;
+    const bool voice = page == EditorDrawerPage::VoiceChanges;
+    const bool spill = voice && automationVisible();
+    int availableBodyHeight = m_lastHostHeight - m_chrome.header;
+    for (const EditorDrawerPage candidate : sectionOrder()) {
+        if (!pageVisible(candidate))
+            continue;
+        availableBodyHeight -= m_chrome.handle;
+        if (candidate != page && !(voice && candidate == EditorDrawerPage::Automations))
+            availableBodyHeight -= pageBodyHeight(candidate);
+    }
+
+    int resolvedHeight;
+    int resolvedAutomation = baseline.automationStartHeight;
+    if (voice) {
+        std::tie(resolvedHeight, resolvedAutomation) =
+            resolveVoiceResize(unconstrainedHeight, m_chrome.minBody, m_chrome.voiceChangesMaxBody,
+                               availableBodyHeight, baseline.automationStartHeight);
+    } else {
+        resolvedHeight = std::clamp(unconstrainedHeight, m_chrome.minBody,
+                                    std::max(m_chrome.minBody, availableBodyHeight));
+    }
+    std::optional<int> height = resolvedHeight == baseline.startHeight
+                                    ? baseline.originalHeight
+                                    : std::optional<int>{resolvedHeight};
+    if (voice && height)
+        height = std::clamp(*height, m_chrome.minBody, m_chrome.voiceChangesMaxBody);
+    const std::optional<int> automationHeight = resolvedAutomation == baseline.automationStartHeight
+                                                    ? baseline.automationOriginalHeight
+                                                    : std::optional<int>{resolvedAutomation};
+
+    std::optional<int> &storedHeight = pageStoredHeight(page);
+    if (storedHeight == height && (!spill || m_automationBodyHeight == automationHeight))
         return;
-    bodyHeight = height;
+    storedHeight = height;
+    if (spill)
+        m_automationBodyHeight = automationHeight;
     emit geometryChanged();
 }
 
@@ -255,9 +302,7 @@ void DrawerSections::focusActivePage()
     if (focusPage(m_activePage))
         return;
 
-    // Visual order: VoiceChanges above Velocity above Automations.
-    for (const EditorDrawerPage page : {EditorDrawerPage::VoiceChanges, EditorDrawerPage::Velocity,
-                                        EditorDrawerPage::Automations}) {
+    for (const EditorDrawerPage page : sectionOrder()) {
         if (focusPage(page))
             return;
     }
@@ -316,13 +361,13 @@ void DrawerSections::arrangeLocal(const QSize &overlaySize)
     std::optional<QRect> voiceChangesBodyRect;
     std::optional<QRect> velocityBodyRect;
     std::optional<QRect> automationBodyRect;
-    if (showVoiceChanges) {
-        voiceChangesBodyRect = QRect(0, y + handleHeight, width, voiceChangesHeight);
-        y += handleHeight + voiceChangesHeight;
-    }
     if (showVelocity) {
         velocityBodyRect = QRect(velocityLeft, y + handleHeight, velocityWidth, velocityHeight);
         y += handleHeight + velocityHeight;
+    }
+    if (showVoiceChanges) {
+        voiceChangesBodyRect = QRect(0, y + handleHeight, width, voiceChangesHeight);
+        y += handleHeight + voiceChangesHeight;
     }
     if (showAutomation) {
         automationBodyRect = QRect(0, y + handleHeight, width, automationHeight);

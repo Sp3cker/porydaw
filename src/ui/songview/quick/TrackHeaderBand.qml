@@ -176,8 +176,6 @@ Item {
                             required property bool soloPressed
                             required property bool addHovered
                             required property bool addPressed
-                            required property bool voiceHovered
-                            required property bool voicePressed
                             required property color activityDimColor
                             required property color activityActiveColor
                             required property real activityLeftHeight
@@ -252,8 +250,10 @@ Item {
                                 verticalAlignment: Text.AlignVCenter
                             }
 
-                            // The model resolves this subtitle box as the sole voice target and
-                            // publishes its hover/pressed state roles.
+                            // The subtitle box is the voice hit-test target: a double-click there
+                            // opens the voice editor, while a click behaves like the rest of the
+                            // header. Its ink never restyles because the row backdrop is not a
+                            // button fill.
                             Text {
                                 x: trackHeaderRow.subtitleRect.x
                                 y: trackHeaderRow.subtitleRect.y
@@ -261,10 +261,7 @@ Item {
                                 height: trackHeaderRow.subtitleRect.height
                                 visible: !trackHeaderRow.isAddTrack
                                 clip: true
-                                color: trackHeaderRow.voicePressed ? root.buttonPressedText
-                                                                   : trackHeaderRow.voiceHovered
-                                                                     ? root.buttonHoverText
-                                                                     : trackHeaderRow.subtitleColor
+                                color: trackHeaderRow.subtitleColor
                                 font: trackHeaderRow.subtitleFont
                                 text: trackHeaderRow.subtitle
                                 textFormat: Text.PlainText

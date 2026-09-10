@@ -153,25 +153,23 @@ void TrackHeadersTest::selectionAndVoiceRouteThroughHeaders()
                              ++revealCount;
                              revealedProgram = program;
                          });
-    QVERIFY(headers.pointerMove(pointerInput(fx.input(), *voice, Qt::NoButton, Qt::NoButton)));
-    QVERIFY(rowData(headers, *voiceRow, songview::TrackHeaderModel::VoiceHoveredRole).toBool());
+    // A plain click anywhere on the header — voice line included — selects
+    // the track and reveals its voice.
     QVERIFY(headers.pointerPress(pointerInput(fx.input(), *voice, Qt::LeftButton, Qt::LeftButton)));
-    QVERIFY(rowData(headers, *voiceRow, songview::TrackHeaderModel::VoicePressedRole).toBool());
     QCOMPARE(view.selectionModel().primaryTrack(), fx.voiceTrack());
     QVERIFY(headers.pointerRelease(pointerInput(fx.input(), *voice, Qt::LeftButton, Qt::NoButton)));
     QCOMPARE(revealCount, 1);
     QCOMPARE(revealedProgram, view.currentProgram(fx.voiceTrack()));
-    QVERIFY(!rowData(headers, *voiceRow, songview::TrackHeaderModel::VoicePressedRole).toBool());
     checks::support::pumpQuick();
 
-    // A title-line click selects its track without requesting a voice reveal.
+    // The title line behaves the same way.
     const std::optional<QPointF> voiceTitle = fx.titlePoint(*voiceRow);
     QVERIFY(voiceTitle);
     QVERIFY(headers.pointerPress(
         pointerInput(fx.input(), *voiceTitle, Qt::LeftButton, Qt::LeftButton)));
     QVERIFY(headers.pointerRelease(
         pointerInput(fx.input(), *voiceTitle, Qt::LeftButton, Qt::NoButton)));
-    QCOMPARE(revealCount, 1);
+    QCOMPARE(revealCount, 2);
     QCOMPARE(view.selectionModel().primaryTrack(), fx.voiceTrack());
 
     // A drag beginning on the voice line becomes an adjacent no-op reorder
@@ -184,8 +182,22 @@ void TrackHeadersTest::selectionAndVoiceRouteThroughHeaders()
         pointerInput(fx.input(), adjacentDrop, Qt::RightButton, Qt::LeftButton)));
     headers.pointerRelease(pointerInput(fx.input(), adjacentDrop, Qt::LeftButton, Qt::NoButton));
     checks::support::pumpQuick();
-    QCOMPARE(revealCount, 1);
+    QCOMPARE(revealCount, 2);
     QVERIFY(!headers.reorderIndicatorVisible());
+
+    // A ctrl-click extends the track scope; multi-select must not reveal.
+    headers.setScrollY(0.0);
+    const std::optional<QPointF> scopeTitle = fx.titlePoint(*selectionRow);
+    QVERIFY(scopeTitle);
+    const uint32_t scopeBefore = view.selectionModel().storedTrackScope();
+    QVERIFY(headers.pointerPress(pointerInput(fx.input(), *scopeTitle, Qt::LeftButton,
+                                              Qt::LeftButton, Qt::ControlModifier)));
+    headers.pointerRelease(
+        pointerInput(fx.input(), *scopeTitle, Qt::LeftButton, Qt::NoButton, Qt::ControlModifier));
+    QCOMPARE(revealCount, 2);
+    const uint32_t scopeAfter = view.selectionModel().storedTrackScope();
+    QCOMPARE(scopeAfter ^ scopeBefore, 1u << uint32_t(fx.selectionTrack()));
+    QCOMPARE(view.selectionModel().primaryTrack(), fx.voiceTrack());
     QObject::disconnect(reveal);
     QCOMPARE(doc.undoStack()->index(), undo);
     QCOMPARE(doc.smf().write(), before);

@@ -50,8 +50,6 @@ const QHash<int, QByteArray> &trackHeaderRoleNames()
         result.insert(TrackHeaderModel::SoloPressedRole, QByteArrayLiteral("soloPressed"));
         result.insert(TrackHeaderModel::AddHoveredRole, QByteArrayLiteral("addHovered"));
         result.insert(TrackHeaderModel::AddPressedRole, QByteArrayLiteral("addPressed"));
-        result.insert(TrackHeaderModel::VoiceHoveredRole, QByteArrayLiteral("voiceHovered"));
-        result.insert(TrackHeaderModel::VoicePressedRole, QByteArrayLiteral("voicePressed"));
         result.insert(TrackHeaderModel::ActivityDimColorRole,
                       QByteArrayLiteral("activityDimColor"));
         result.insert(TrackHeaderModel::ActivityActiveColorRole,
@@ -170,10 +168,6 @@ QVariant TrackHeaderModel::data(const QModelIndex &index, int role) const
         return record.isAddTrack && hovered(HitTarget::AddTrack);
     case AddPressedRole:
         return record.isAddTrack && pressed(HitTarget::AddTrack);
-    case VoiceHoveredRole:
-        return !record.isAddTrack && hovered(HitTarget::Voice);
-    case VoicePressedRole:
-        return !record.isAddTrack && pressed(HitTarget::Voice);
     case ActivityDimColorRole:
         return record.activityDimColor;
     case ActivityActiveColorRole:
@@ -884,14 +878,6 @@ void TrackHeaderModel::notifyPointerChanges(const PointerState &before)
             visual(m_pointer, row, HitTarget::AddTrack, true)) {
             roles.append(AddPressedRole);
         }
-        if (visual(before, row, HitTarget::Voice, false) !=
-            visual(m_pointer, row, HitTarget::Voice, false)) {
-            roles.append(VoiceHoveredRole);
-        }
-        if (visual(before, row, HitTarget::Voice, true) !=
-            visual(m_pointer, row, HitTarget::Voice, true)) {
-            roles.append(VoicePressedRole);
-        }
         if (!roles.isEmpty())
             emit dataChanged(index(row, 0), index(row, 0), roles);
     }
@@ -1043,6 +1029,8 @@ bool TrackHeaderModel::pointerRelease(const TimelinePointerInput &input)
     if (row != pressedRow || target != pressedTarget)
         return true;
 
+    // Ctrl/shift clicks never reach this switch: pointerPress only arms
+    // press state for plain-left clicks, so scope adjustments stay silent.
     switch (pressedTarget) {
     case HitTarget::AddTrack:
         activateAddTrack();
@@ -1053,11 +1041,13 @@ bool TrackHeaderModel::pointerRelease(const TimelinePointerInput &input)
     case HitTarget::Solo:
         activateSolo(pressedTrack);
         break;
+    case HitTarget::Body:
     case HitTarget::Voice:
+        // A completed plain-left header click anywhere on the row, voice
+        // line included, selects the track and reveals its voice.
         m_owner.revealTrackVoice(pressedTrack);
         break;
     case HitTarget::None:
-    case HitTarget::Body:
         break;
     }
     return true;
@@ -1202,14 +1192,6 @@ void TrackHeaderModel::syncRecordGeometry()
 void TrackHeaderModel::notifyRecordChange(int row, const TrackHeaderRecord &before,
                                           const TrackHeaderRecord &after)
 {
-    const auto voiceHovered = [this, row](const TrackHeaderRecord &record) {
-        return !record.isAddTrack && m_pointer.hoverRow == row &&
-               m_pointer.hoverTarget == HitTarget::Voice;
-    };
-    const auto voicePressed = [this, row, &voiceHovered](const TrackHeaderRecord &record) {
-        return voiceHovered(record) && m_pointer.pressedRow == row &&
-               m_pointer.pressedTarget == HitTarget::Voice;
-    };
     QList<int> roles;
     if (before.isAddTrack != after.isAddTrack)
         roles.append(IsAddTrackRole);
@@ -1241,10 +1223,6 @@ void TrackHeaderModel::notifyRecordChange(int row, const TrackHeaderRecord &befo
         roles.append(MuteCheckedRole);
     if (before.soloed != after.soloed)
         roles.append(SoloCheckedRole);
-    if (voiceHovered(before) != voiceHovered(after))
-        roles.append(VoiceHoveredRole);
-    if (voicePressed(before) != voicePressed(after))
-        roles.append(VoicePressedRole);
     if (before.activityDimColor != after.activityDimColor)
         roles.append(ActivityDimColorRole);
     if (before.activityActiveColor != after.activityActiveColor)

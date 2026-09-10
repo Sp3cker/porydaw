@@ -837,6 +837,31 @@ void TimelineQuickScene::setHoverChip(bool visible, const QRectF &rect, const QS
     emit hoverChipChanged();
 }
 
+bool TimelineQuickScene::tempoHeaderVisible() const noexcept
+{
+    return m_tempoHeaderVisible;
+}
+
+QRectF TimelineQuickScene::tempoHeaderRect() const noexcept
+{
+    return m_tempoHeaderRect;
+}
+
+QColor TimelineQuickScene::tempoHeaderFill() const
+{
+    return m_tempoHeaderFill;
+}
+
+void TimelineQuickScene::setTempoHeader(bool visible, const QRectF &rect, const QColor &fill)
+{
+    if (m_tempoHeaderVisible == visible && m_tempoHeaderRect == rect && m_tempoHeaderFill == fill)
+        return;
+    m_tempoHeaderVisible = visible;
+    m_tempoHeaderRect = rect;
+    m_tempoHeaderFill = fill;
+    emit tempoHeaderChanged();
+}
+
 TimelineQuickItem::TimelineQuickItem(QQuickItem *parent) : QQuickItem(parent)
 {
     setFlag(ItemHasContents, true);

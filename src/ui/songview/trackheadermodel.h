@@ -83,8 +83,6 @@ class TrackHeaderModel final : public QAbstractListModel, public TimelineBandInt
         SoloPressedRole,
         AddHoveredRole,
         AddPressedRole,
-        VoiceHoveredRole,
-        VoicePressedRole,
         ActivityDimColorRole,
         ActivityActiveColorRole,
         ActivityLeftHeightRole,

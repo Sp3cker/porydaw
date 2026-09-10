@@ -230,10 +230,10 @@ void DrawerPresentationTest::drawerStackAndCanonicalInputs()
     const QRect voice = fixture.bandRect(songview::TimelineBand::VoiceChanges);
     const QRect velocity = fixture.bandRect(songview::TimelineBand::Velocity);
     const QRect automation = fixture.bandRect(songview::TimelineBand::Automation);
-    QVERIFY(voice.y() < velocity.y());
-    QVERIFY(velocity.y() < automation.y());
-    QVERIFY(chrome.voiceChangesHandleRect().y() < chrome.velocityHandleRect().y());
-    QVERIFY(chrome.velocityHandleRect().y() < chrome.automationHandleRect().y());
+    QVERIFY(velocity.y() < voice.y());
+    QVERIFY(voice.y() < automation.y());
+    QVERIFY(chrome.velocityHandleRect().y() < chrome.voiceChangesHandleRect().y());
+    QVERIFY(chrome.voiceChangesHandleRect().y() < chrome.automationHandleRect().y());
     QCOMPARE(chrome.automationToggleRect().x(), chrome.voiceChangesToggleRect().x() +
                                                     chrome.voiceChangesToggleRect().width() +
                                                     layout::space(layout::Space::One));
@@ -320,6 +320,90 @@ void DrawerPresentationTest::drawerResizeTransactions()
     QVERIFY(view.drawerSectionHeight(page) > storedBefore);
     QVERIFY(view.drawerSectionHeight(page) <= drawer->maximumSectionHeight());
     QVERIFY(!fixture.chrome().detentVisible() || page == EditorDrawerPage::Velocity);
+}
+
+void DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation()
+{
+    DrawerFixture fixture = makeDrawerFixture();
+    fixture.clickToggle(EditorDrawerPage::VoiceChanges);
+    SongView &view = *fixture.view;
+    EditorDrawer *const drawer = view.editorDrawer();
+    QVERIFY(drawer);
+    DrawerChrome &chrome = fixture.chrome();
+    pump();
+    const auto voiceBefore = drawer->bodyRect(EditorDrawerPage::VoiceChanges);
+    QVERIFY(voiceBefore);
+    const int voiceMin = drawer->minimumSectionHeight();
+    const int voiceMax = drawer->voiceChangesMaximumBodyHeight();
+    QCOMPARE(voiceBefore->height(), voiceMin);
+    QVERIFY(voiceMax > voiceMin);
+
+    int previous = voiceBefore->height();
+    for (int step = 0; step < 64; ++step) {
+        chrome.adjustResizeHandle(static_cast<int>(DrawerChromeTarget::VoiceChangesHandle), 1);
+        pump();
+        const auto voice = drawer->bodyRect(EditorDrawerPage::VoiceChanges);
+        QVERIFY(voice);
+        if (voice->height() == previous)
+            break;
+        QVERIFY(voice->height() > previous);
+        QVERIFY(voice->height() <= voiceMax);
+        previous = voice->height();
+    }
+    const auto voiceAtMax = drawer->bodyRect(EditorDrawerPage::VoiceChanges);
+    const auto automationAtMax = drawer->bodyRect(EditorDrawerPage::Automations);
+    QVERIFY(voiceAtMax);
+    QVERIFY(automationAtMax);
+    QCOMPARE(voiceAtMax->height(), voiceMax);
+
+    chrome.adjustResizeHandle(static_cast<int>(DrawerChromeTarget::VoiceChangesHandle), 1);
+    pump();
+    const auto voiceAfter = drawer->bodyRect(EditorDrawerPage::VoiceChanges);
+    const auto automationAfter = drawer->bodyRect(EditorDrawerPage::Automations);
+    QVERIFY(voiceAfter);
+    QVERIFY(automationAfter);
+    QCOMPARE(voiceAfter->height(), voiceMax);
+    QVERIFY(automationAfter->height() > automationAtMax->height());
+}
+
+void DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights()
+{
+    DrawerFixture fixture = makeDrawerFixture();
+    fixture.clickToggle(EditorDrawerPage::VoiceChanges);
+    SongView &view = *fixture.view;
+    EditorDrawer &drawer = *view.editorDrawer();
+    auto &handle = *fixture.voiceHandle;
+    const EditorViewState stateBefore = view.editorViewState();
+    const auto voiceBefore = drawer.bodyRect(EditorDrawerPage::VoiceChanges);
+    const auto automationBefore = drawer.bodyRect(EditorDrawerPage::Automations);
+    QVERIFY(voiceBefore);
+    QVERIFY(automationBefore);
+    const QPointF start = handle.mapToScene(handle.bounds().center());
+    const int overflow = layout::space(layout::Space::Eight);
+    const QPointF end = start - QPointF(0, drawer.voiceChangesMaximumBodyHeight() -
+                                               voiceBefore->height() + overflow);
+    const auto sendAt = [&](QEvent::Type type, QPointF scenePosition, Qt::MouseButton button,
+                            Qt::MouseButtons buttons) {
+        sendWindowMouse(handle, type, handle.mapFromScene(scenePosition), button, buttons);
+        pump();
+    };
+    sendAt(QEvent::MouseButtonPress, start, Qt::LeftButton, Qt::LeftButton);
+    sendAt(QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton);
+    const auto automationOverflowed = drawer.bodyRect(EditorDrawerPage::Automations);
+    QVERIFY(automationOverflowed);
+    QCOMPARE(automationOverflowed->height(), automationBefore->height() + overflow);
+    QCOMPARE(drawer.bodyRect(EditorDrawerPage::VoiceChanges)->height(),
+             drawer.voiceChangesMaximumBodyHeight());
+
+    // A stationary pointer must not repeatedly add the same overflow.
+    sendAt(QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton);
+    QVERIFY(drawer.bodyRect(EditorDrawerPage::Automations) == automationOverflowed);
+    sendAt(QEvent::MouseMove, start, Qt::NoButton, Qt::LeftButton);
+    QVERIFY(drawer.bodyRect(EditorDrawerPage::VoiceChanges) == voiceBefore);
+    QVERIFY(drawer.bodyRect(EditorDrawerPage::Automations) == automationBefore);
+    sendAt(QEvent::MouseButtonRelease, start, Qt::LeftButton, Qt::NoButton);
+    QVERIFY(view.editorViewState().voiceChanges == stateBefore.voiceChanges);
+    QVERIFY(view.editorViewState().automation == stateBefore.automation);
 }
 
 void DrawerPresentationTest::drawerCollapseAndActivePage()
@@ -422,8 +506,8 @@ void DrawerPresentationTest::drawerHostClampAndHeaderRouting()
     QVERIFY(voice->height() >= 0);
     QVERIFY(velocity->height() >= 0);
     QVERIFY(automation->height() >= 0);
-    QVERIFY(voice->bottom() <= velocity->top());
-    QVERIFY(velocity->bottom() <= automation->top());
+    QVERIFY(velocity->bottom() <= voice->top());
+    QVERIFY(voice->bottom() <= automation->top());
     drawer->setHostBounds(hostBounds);
 
     auto *const headers =

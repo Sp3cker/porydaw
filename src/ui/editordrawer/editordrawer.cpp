@@ -180,8 +180,7 @@ EditorDrawer::DrawerDiff EditorDrawer::prepareViewStateTransition(const EditorVi
                                                                   const EditorViewState &next)
 {
     const DrawerDiff diff = drawerDiff(previous, next);
-    for (const EditorDrawerPage page : {EditorDrawerPage::Automations, EditorDrawerPage::Velocity,
-                                        EditorDrawerPage::VoiceChanges}) {
+    for (const EditorDrawerPage page : DrawerSections::sectionOrder()) {
         if (statePageVisible(previous, page) && !statePageVisible(next, page))
             cancelPageInteraction(page);
     }
@@ -273,6 +272,11 @@ int EditorDrawer::minimumSectionHeight() const noexcept
 {
     // DrawerSections owns the font-relative metrics used to clamp this overlay.
     return std::min(m_hostBounds.height(), m_sections->metrics().minBody);
+}
+
+int EditorDrawer::voiceChangesMaximumBodyHeight() const noexcept
+{
+    return m_sections->metrics().voiceChangesMaxBody;
 }
 
 int EditorDrawer::maximumSectionHeight() const noexcept
@@ -419,34 +423,4 @@ bool EditorDrawer::ownsFocus() const
         return true;
     }
     return false;
-}
-
-int EditorDrawer::resizeMinimumBodyHeight() const
-{
-    return m_sections->metrics().minBody;
-}
-
-int EditorDrawer::resizeBodyHeight(EditorDrawerPage page) const
-{
-    return m_sections->resizeBodyHeight(page);
-}
-
-std::optional<int> EditorDrawer::resizeStoredBodyHeight(EditorDrawerPage page) const
-{
-    return m_sections->pageStoredHeight(page);
-}
-
-int EditorDrawer::maximumResizeBodyHeight(EditorDrawerPage page) const
-{
-    return m_sections->maximumResizeBodyHeight(page);
-}
-
-void EditorDrawer::setResizeBodyHeight(EditorDrawerPage page, std::optional<int> height)
-{
-    m_sections->setResizeBodyHeight(page, height);
-}
-
-void EditorDrawer::publishResizeState()
-{
-    m_sections->publishResizeState();
 }

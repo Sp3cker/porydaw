@@ -47,19 +47,8 @@ class CCLanes final
     static uint8_t defaultRange(uint8_t controller) noexcept;
     static int autoRange(int maximum) noexcept;
 
-    enum class SummaryKind : uint8_t {
-        None,
-        Points,
-        EmptyControl,
-    };
-
     struct RowTextCache {
         QString title;
-        QString secondary;
-        SummaryKind summaryKind = SummaryKind::None;
-        std::size_t pointCount = 0;
-        int minimum = 0;
-        int maximum = 0;
     };
 
     explicit CCLanes(AutomationPage *page) noexcept;

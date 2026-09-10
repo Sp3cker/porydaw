@@ -9,6 +9,8 @@
 #include <QColor>
 #include <QCoreApplication>
 #include <QImage>
+#include <QQuickItem>
+#include <QQuickWindow>
 #include <QRegion>
 #include <QSize>
 
@@ -281,6 +283,38 @@ void AutomationPresentationTest::collapsedTempoHeaderClipsCoveredCcCurves()
                             contentOrigin, ccColor));
 }
 
+void AutomationPresentationTest::tempoHeaderFillUsesTimelineChrome()
+{
+    AutomationPage *const automationPage = page();
+    QVERIFY(automationPage);
+    QVERIFY(m_quickWindow);
+    QVERIFY(setTempoExpanded(false));
+    refreshDocumentPresentation();
+
+    QColor chrome = themes::color(themes::Role::song_view_timeline_chrome_background);
+    chrome.setAlpha(255);
+    auto *gutterFill = m_quickWindow->findChild<QQuickItem *>(
+        QStringLiteral("timelineQuickTempoHeaderGutterFill"));
+    auto *plotFill =
+        m_quickWindow->findChild<QQuickItem *>(QStringLiteral("timelineQuickTempoHeaderPlotFill"));
+    QVERIFY(gutterFill);
+    QVERIFY(plotFill);
+
+    const auto plateMatches = [&](qreal height) {
+        return gutterFill->isVisible() && plotFill->isVisible() && gutterFill->height() == height &&
+               plotFill->height() == height &&
+               gutterFill->property("color").value<QColor>() == chrome &&
+               plotFill->property("color").value<QColor>() == chrome;
+    };
+    const QRect collapsed = automationPage->canvas()->pinnedTempoRect();
+    QVERIFY(!collapsed.isEmpty());
+    QVERIFY(plateMatches(collapsed.height()));
+
+    QVERIFY(setTempoExpanded(true));
+    refreshDocumentPresentation();
+    QVERIFY(plateMatches(AutomationGeometry::resolve().addLaneStripHeight));
+}
+
 void AutomationPresentationTest::gutterTextRecordsUseSemanticLabelsAndBounds()
 {
     AutomationPage *const automationPage = page();
@@ -303,27 +337,18 @@ void AutomationPresentationTest::gutterTextRecordsUseSemanticLabelsAndBounds()
     const QRect gutterColumn(gutterMargin, 0, std::max(0, gutterWidth - 2 * gutterMargin),
                              automationPage->automationViewportSize().height());
     const AutomationGeometry geometry = AutomationGeometry::resolve();
-    const auto labelBounds = [&](const QRect &body, bool summary) {
+    const auto labelBounds = [&](const QRect &body) {
         const int arrow = std::max(layout::fontPx(0.5), geometry.addLaneStripHeight / 3);
-        return QRect(gutterColumn.x() + arrow + layout::space(layout::Space::One),
-                     body.top() + (summary ? geometry.addLaneStripHeight : 0),
+        return QRect(gutterColumn.x() + arrow + layout::space(layout::Space::One), body.top(),
                      std::max(0, gutterColumn.width() - arrow - layout::space(layout::Space::One)),
                      geometry.addLaneStripHeight)
             .intersected(body);
     };
     const QRect tempoBody = automationPage->canvas()->laneBody(LaneHandle{0});
     const QRectF tempoTitle =
-        visibleContentBounds(labelBounds(tempoBody, false), automationPage->verticalScroll(),
-                             automationPage->automationViewportSize());
-    const QRectF tempoSummary =
-        visibleContentBounds(labelBounds(tempoBody, true), automationPage->verticalScroll(),
+        visibleContentBounds(labelBounds(tempoBody), automationPage->verticalScroll(),
                              automationPage->automationViewportSize());
     QVERIFY(textRecord(automationPage->canvas()->tr("Tempo (BPM)"), tempoTitle).has_value());
-    QVERIFY(textRecord(automationPage->canvas()->tr("%n point(s)", nullptr,
-                                                    int(m_document->tempoPoints().size())),
-                       tempoSummary)
-                .has_value());
-
     const auto &rows = automationPage->canvas()->rows();
     for (int index = 0; index < int(rows.size()); ++index) {
         const QRect body = automationPage->canvas()->laneBody({index + 1});

@@ -300,11 +300,33 @@ Item {
         gutterInputName: "timelineAutomationGutterInput"
         z: 1
 
+        Rectangle {
+            parent: automationBand.gutterSide
+            objectName: "timelineQuickTempoHeaderGutterFill"
+            x: 0
+            y: timelineScene.tempoHeaderRect.y
+            width: parent.width
+            height: timelineScene.tempoHeaderRect.height
+            visible: timelineScene.tempoHeaderVisible
+            color: timelineScene.tempoHeaderFill
+            z: 0
+        }
         TimelineSceneLayer {
             parent: automationBand.gutterSide
             objectName: "timelineQuickAutomationGutterChrome"
             sceneLayer: TimelineQuickItem.AutomationGutterChrome
-            z: 0
+            z: 0.5
+        }
+        Rectangle {
+            parent: automationBand.plotSide
+            objectName: "timelineQuickTempoHeaderPlotFill"
+            x: 0
+            y: timelineScene.tempoHeaderRect.y
+            width: parent.width
+            height: timelineScene.tempoHeaderRect.height
+            visible: timelineScene.tempoHeaderVisible
+            color: timelineScene.tempoHeaderFill
+            z: 6
         }
 
         TimelineTextLayer {

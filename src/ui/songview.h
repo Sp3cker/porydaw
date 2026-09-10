@@ -378,9 +378,10 @@ class SongView : public QObject
     // Jump-from-context: surface the program in the voicegroup dock (the
     // main window raises it and selects the slot via revealVoiceRequested).
     // revealTrackVoice resolves the track's program at the display position
-    // (what currentProgram shows in the header) first. Entry points: the
-    // Quick header's voice line and context menu, and the event list's
-    // program-change rows.
+    // (what currentProgram shows in the header) first. Entry points: a plain
+    // left press-release anywhere on the Quick header, voice line included
+    // (ctrl/shift multi-select clicks only adjust scope and stay silent),
+    // the header context menu, and the event list's program-change rows.
     void revealVoice(int program);
     void revealTrackVoice(int track);
     // Every program the song references: each track's first program plus

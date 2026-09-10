@@ -257,14 +257,21 @@ class DrawerChrome final : public QObject
     void setIcons(QImage velocity, QImage velocityOn, QImage automation, QImage automationOn,
                   QImage voiceChanges, QImage voiceChangesOn, QImage detent);
 
+    struct HandleResizeSession {
+        DrawerChromeTarget target{};
+        qreal startGlobalY = 0.0;
+        int startHeight = 0;
+    };
+
+    void endHandleResize();
+    HandleResizeSession makeHandleResizeSession(DrawerChromeTarget target, EditorDrawerPage page,
+                                                qreal startGlobalY);
+
     AutomationPage &m_page;
     EditorDrawer &m_drawer;
     DrawerChromeSnapshot m_snapshot;
     std::array<DrawerChromeInteraction, 5> m_interactions;
-    std::optional<DrawerChromeTarget> m_resizeTarget;
-    qreal m_resizeStartGlobalY = 0.0;
-    int m_resizeStartBodyHeight = 0;
-    std::optional<int> m_resizeOriginalBodyHeight;
+    std::optional<HandleResizeSession> m_resize;
     std::optional<DrawerChromeTarget> m_hoveredHandle;
     std::optional<EditorDrawerPage> m_pressedToggle;
     bool m_pressedDetent = false;

@@ -6,7 +6,7 @@
 
 ## Summary
 
-Build `VoiceChangeArea`, a standalone `songview::TimelineSurface` parallel to `VelocityArea`, and add `EditorDrawerPage::VoiceChanges` as a third persisted drawer section. The page owns Voice Change painting, hover, picker, context menu, scrolling, and `DOC_CC_VOICE` commits for the current primary track; `AutomationCanvas` returns to Tempo and CC lanes only. Put Voice Changes at the top of the visible drawer-band stack because it is a full-timeline program-context strip, while Velocity and Automations are detailed editors below it. Keep all three independently toggleable/resizable.
+Build `VoiceChangeArea`, a standalone `songview::TimelineSurface` parallel to `VelocityArea`, and add `EditorDrawerPage::VoiceChanges` as a third persisted drawer section. The page owns Voice Change painting, hover, picker, context menu, scrolling, and `DOC_CC_VOICE` commits for the current primary track; `AutomationCanvas` returns to Tempo and CC lanes only. Velocity sits at the top of the visible drawer-band stack; Voice Changes and Automations are the editors below it, with Voice Changes as a full-timeline program-context strip. Keep all three independently toggleable/resizable.
 
 ### Rationale and rejected alternatives
 
@@ -211,9 +211,9 @@ Add `effectiveVoiceChangesBodyHeight()`, pointer, optional height, toggle, handl
 
 Toggle: object `voiceChangesDrawerToggle`; icon `:/icons/flat-music.svg` mask; accessible/tooltip `Show or hide voice changes (P)`; same icon-only style. Handle `voiceChangesResizeHandle`, accessible/tooltip `Resize voice changes pane`; add stylesheet selectors. Raise all toggles; bar under them.
 
-Default Voice body `m_chrome.minBody`. Preferred height counts 3 handles/bodies. Apply has 3 blockers/heights/visibility. Page mapping exhaustive. Focus active, else first visible visual order VoiceChanges→Velocity→Automations. Cancel all visible independently. Resize filter maps 3 handles, subtracts sum of both other bodies and all handles, updates only target optional. Detent remains visible PSG Velocity only.
-
-Top-to-bottom arrange: Voice handle/body; Velocity handle/body (existing inset); Automation handle/body; bar. Voice spans width. Under host clamp allocate Voice first, preserve Automation second, Velocity remainder; no negative geometry. Toggle order left-right VoiceChanges, Automations, Velocity in same centered piano-key region. Detent stays Velocity body/gutter. Add new widgets to occupiedRegion.
+Focus active, else first visible visual order Velocity→VoiceChanges→Automations. Cancel all visible independently.
+Resize filter maps 3 handles, subtracts sum of both other bodies and all handles, updates only target optional. Detent remains visible PSG Velocity only.
+Top-to-bottom arrange: Velocity handle/body; Voice handle/body; Automation handle/body; bar. Voice spans width. Under host clamp allocate Voice first, preserve Automation second, Velocity remainder; no negative geometry. Toggle order left-right VoiceChanges, Automations, Velocity in same centered piano-key region. Detent stays Velocity body/gutter. Add new widgets to occupiedRegion.
 
 ### MainWindow action and shortcut
 
@@ -388,7 +388,7 @@ Steps 1 and 2 parallel; later consumption waits for fixed interfaces. No shims.
 ### Behavioral/visual checklist
 
 - Toggle all 3 from bar and View/window; test 8 combinations.
-- Stack Voice→Velocity→Automation→bar; each handle persists only own height.
+- Stack Velocity→Voice→Automation→bar; each handle persists only own height.
 - Detent only visible PSG Velocity.
 - Change primary/voicegroup open/hidden; labels/context refresh.
 - Double-click empty insert/existing edit; right empty insert/marker change+delete; cancel/no-change no undo.
@@ -405,7 +405,7 @@ Steps 1 and 2 parallel; later consumption waits for fixed interfaces. No shims.
 
 - Standalone VoiceChangeArea in voicechangearea/ is sole Voice Change strip UI owner.
 - Persisted VoiceChanges/voiceChanges third page independently toggles/resizes.
-- Voice top; Velocity/Automation retain relative order.
+- Velocity top; Voice/Automation retain relative order below.
 - Insert/change/delete, picker, hover, spans, markers, current program, grid, cursor, pan/zoom, undo/redo, track/voicegroup refresh work.
 - Former visual vocabulary preserved with specified held fill addition.
 - Old files/type and all canvas voice logic/inset/friendship/dispatch/paint deleted.

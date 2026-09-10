@@ -21,6 +21,8 @@ class DrawerPresentationTest final : public QObject
     void drawerStackAndCanonicalInputs();
     void drawerResizeTransactions_data();
     void drawerResizeTransactions();
+    void drawerVoiceHandleOverflowsToAutomation();
+    void drawerVoiceOverflowReversesToOriginalHeights();
     void drawerCollapseAndActivePage();
     void drawerFocusFallback();
     void drawerHostClampAndHeaderRouting();

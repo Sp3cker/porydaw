@@ -12,6 +12,7 @@
 
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/drawersections.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/layout.h"
@@ -66,9 +67,7 @@ const QRectF &toggleRect(const DrawerChromeSnapshot &snapshot, EditorDrawerPage 
 std::optional<EditorDrawerPage> toggleAt(const DrawerChromeSnapshot &snapshot,
                                          QPointF songViewPosition) noexcept
 {
-    for (const EditorDrawerPage page :
-         {EditorDrawerPage::VoiceChanges, EditorDrawerPage::Automations,
-          EditorDrawerPage::Velocity}) {
+    for (const EditorDrawerPage page : DrawerSections::sectionOrder()) {
         if (toggleRect(snapshot, page).contains(songViewPosition))
             return page;
     }
@@ -191,7 +190,7 @@ bool DrawerChromeInteraction::gestureActive() const
     // Live per-target reads of the chrome's actual press state — the same
     // ownership set cancelInteraction() resets; hover alone is not a gesture.
     if (resizePage(m_target))
-        return m_chrome.m_resizeTarget == m_target;
+        return m_chrome.m_resize && m_chrome.m_resize->target == m_target;
     if (m_target == DrawerChromeTarget::Bar)
         return m_chrome.m_pressedToggle.has_value();
     Q_ASSERT(m_target == DrawerChromeTarget::Detent);
@@ -238,17 +237,14 @@ QQuickImageProvider *DrawerChrome::releaseIconProvider()
 void DrawerChrome::cancelInteraction()
 {
     songview::TimelineInputHost *resizeHost = nullptr;
-    if (m_resizeTarget)
-        resizeHost = interaction(*m_resizeTarget).m_host;
+    if (m_resize)
+        resizeHost = interaction(m_resize->target).m_host;
     songview::TimelineInputHost *barHost =
         m_pressedToggle ? interaction(DrawerChromeTarget::Bar).m_host : nullptr;
     songview::TimelineInputHost *detentHost =
         m_pressedDetent ? interaction(DrawerChromeTarget::Detent).m_host : nullptr;
 
-    m_resizeTarget.reset();
-    m_resizeStartGlobalY = 0.0;
-    m_resizeStartBodyHeight = 0;
-    m_resizeOriginalBodyHeight.reset();
+    endHandleResize();
     m_pressedToggle.reset();
     m_pressedDetent = false;
     const bool hadHoveredHandle = m_hoveredHandle.has_value();
@@ -306,10 +302,27 @@ void DrawerChrome::setDetentChecked(bool checked)
     m_drawer.syncDetentChrome();
 }
 
+void DrawerChrome::endHandleResize()
+{
+    m_resize.reset();
+    m_drawer.sections().endResize();
+}
+
+DrawerChrome::HandleResizeSession DrawerChrome::makeHandleResizeSession(DrawerChromeTarget target,
+                                                                        EditorDrawerPage page,
+                                                                        qreal startGlobalY)
+{
+    HandleResizeSession session;
+    session.target = target;
+    session.startGlobalY = startGlobalY;
+    session.startHeight = m_drawer.sections().beginResize(page);
+    return session;
+}
+
 void DrawerChrome::adjustResizeHandle(int target, int direction)
 {
     if (direction == 0 || target < static_cast<int>(DrawerChromeTarget::VoiceChangesHandle) ||
-        target > static_cast<int>(DrawerChromeTarget::AutomationHandle) || m_resizeTarget) {
+        target > static_cast<int>(DrawerChromeTarget::AutomationHandle) || m_resize) {
         return;
     }
 
@@ -318,17 +331,11 @@ void DrawerChrome::adjustResizeHandle(int target, int direction)
     if (!page || !handleVisible(m_snapshot, resizeTarget))
         return;
 
-    const int current =
-        std::max(m_drawer.resizeMinimumBodyHeight(), m_drawer.resizeBodyHeight(*page));
+    const HandleResizeSession session = makeHandleResizeSession(resizeTarget, *page, 0.0);
     const int step = layout::space(layout::Space::Two);
-    const int requested =
-        std::clamp(current + (direction > 0 ? step : -step), m_drawer.resizeMinimumBodyHeight(),
-                   m_drawer.maximumResizeBodyHeight(*page));
-    if (requested == current)
-        return;
-
-    m_drawer.setResizeBodyHeight(*page, requested);
-    m_drawer.publishResizeState();
+    m_drawer.sections().applyResize(*page, session.startHeight + (direction > 0 ? step : -step));
+    endHandleResize();
+    m_drawer.sections().publishResizeState();
 }
 
 int DrawerChrome::scrollbarWidth() const noexcept
@@ -410,18 +417,14 @@ bool DrawerChrome::handlePress(DrawerChromeTarget target,
                                const songview::TimelinePointerInput &input)
 {
     if (const std::optional<EditorDrawerPage> page = resizePage(target)) {
-        if (input.button != Qt::LeftButton || !handleVisible(m_snapshot, target) || m_resizeTarget)
+        if (input.button != Qt::LeftButton || !handleVisible(m_snapshot, target) || m_resize)
             return false;
         songview::TimelineInputHost *const host = interaction(target).m_host;
         if (!host)
             return false;
 
         host->setCursor(Qt::SizeVerCursor);
-        m_resizeTarget = target;
-        m_resizeStartGlobalY = input.globalPosition.y();
-        m_resizeOriginalBodyHeight = m_drawer.resizeStoredBodyHeight(*page);
-        m_resizeStartBodyHeight =
-            std::max(m_drawer.resizeMinimumBodyHeight(), m_drawer.resizeBodyHeight(*page));
+        m_resize = makeHandleResizeSession(target, *page, input.globalPosition.y());
         return true;
     }
 
@@ -447,16 +450,11 @@ bool DrawerChrome::handleMove(DrawerChromeTarget target,
                               const songview::TimelinePointerInput &input)
 {
     if (const std::optional<EditorDrawerPage> page = resizePage(target)) {
-        if (m_resizeTarget == target) {
-            const int requested = std::clamp(
-                m_resizeStartBodyHeight +
-                    static_cast<int>(std::lround(m_resizeStartGlobalY - input.globalPosition.y())),
-                m_drawer.resizeMinimumBodyHeight(), m_drawer.maximumResizeBodyHeight(*page));
-            const std::optional<int> targetHeight = requested == m_resizeStartBodyHeight
-                                                        ? m_resizeOriginalBodyHeight
-                                                        : std::optional<int>{requested};
-            if (m_drawer.resizeStoredBodyHeight(*page) != targetHeight)
-                m_drawer.setResizeBodyHeight(*page, targetHeight);
+        if (m_resize && m_resize->target == target) {
+            const int unconstrained =
+                m_resize->startHeight +
+                static_cast<int>(std::lround(m_resize->startGlobalY - input.globalPosition.y()));
+            m_drawer.sections().applyResize(*page, unconstrained);
             return true;
         }
         if (!handleVisible(m_snapshot, target))
@@ -480,16 +478,13 @@ bool DrawerChrome::handleRelease(DrawerChromeTarget target,
                                  const songview::TimelinePointerInput &input)
 {
     if (resizePage(target)) {
-        if (input.button != Qt::LeftButton || m_resizeTarget != target)
+        if (input.button != Qt::LeftButton || !m_resize || m_resize->target != target)
             return false;
 
-        m_resizeTarget.reset();
-        m_resizeStartGlobalY = 0.0;
-        m_resizeStartBodyHeight = 0;
-        m_resizeOriginalBodyHeight.reset();
+        endHandleResize();
         if (songview::TimelineInputHost *const host = interaction(target).m_host)
             host->clearCursor();
-        m_drawer.publishResizeState();
+        m_drawer.sections().publishResizeState();
         return true;
     }
 
@@ -524,7 +519,7 @@ void DrawerChrome::handleLeave(DrawerChromeTarget target)
 {
     if (!resizePage(target))
         return;
-    if (m_resizeTarget != target) {
+    if (!m_resize || m_resize->target != target) {
         if (songview::TimelineInputHost *const host = interaction(target).m_host)
             host->clearCursor();
     }
