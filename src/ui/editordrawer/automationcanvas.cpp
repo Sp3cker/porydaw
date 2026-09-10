@@ -83,13 +83,6 @@ void AutomationCanvas::viewportResized()
     relayoutContent();
 }
 
-void AutomationCanvas::scrollStateChanged()
-{
-    syncHoverValueLabel();
-    syncPreviewValueLabel();
-    requestViewportQuickUpdate();
-}
-
 void AutomationCanvas::relayoutContent()
 {
     layoutLaneStack();
@@ -319,11 +312,6 @@ void AutomationCanvas::rebuildRows()
     emit parameterSelectionChanged();
 }
 
-void AutomationCanvas::updateTempoLayout()
-{
-    contentGeometryChanged();
-}
-
 void AutomationCanvas::layoutLaneStack()
 {
     rebuildNodeStack();
@@ -364,13 +352,6 @@ LaneHandle AutomationCanvas::laneAt(int y) const noexcept
     if (!slot || y < slot->body.top() || y >= slot->body.top() + slot->body.height())
         return {};
     return active;
-}
-AutomationCanvas::PointerLaneHit
-AutomationCanvas::pointerLaneAt(const QPoint &position) const noexcept
-{
-    // The pinned Tempo header is gone; gutter surfaces resolve the same
-    // shared-plot lane rule as the plot itself.
-    return {laneAt(position.y()), false};
 }
 void AutomationCanvas::refreshHoverAt(const QPointF &position)
 {
@@ -419,12 +400,6 @@ QRect AutomationCanvas::laneBody(LaneHandle handle) const
         return {};
     return body;
 }
-QRect AutomationCanvas::pinnedTempoRect() const noexcept
-{
-    const QRect body = m_tempoLane.bodyRect();
-    return body.isEmpty() ? m_tempoLane.headerRect() : body;
-}
-
 NodeLane *AutomationCanvas::mutableLane(LaneHandle handle) noexcept
 {
     const auto *slot = resolveSlot(handle);
@@ -486,33 +461,10 @@ void AutomationCanvas::highlightHoveredPoint(LaneHandle handle, const QPointF &p
     requestHoverQuickUpdate();
 }
 
-int AutomationCanvas::ccLaneHeight(const AutomationRow &row) const
-{
-    return std::clamp(m_page.laneHeightFor(row.id), m_geometry.rowMinimumHeight,
-                      m_geometry.rowMaximumHeight);
-}
-
-int AutomationCanvas::ccRowBoundaryAt(int /*y*/) const
-{
-    // The shared plot gives every slot one full-height body, so the stacked
-    // per-row resize boundary no longer exists.
-    return -1;
-}
-
-int AutomationCanvas::addLaneStripTop() const
-{
-    if (!m_nodeStack.empty() && !m_nodeStack.back().isTempo()) {
-        return m_nodeStack.back().body.top() + m_nodeStack.back().body.height();
-    }
-    return layout::space(layout::Space::Zero);
-}
-
 void AutomationCanvas::cancelInteraction()
 {
-    const bool wasActive =
-        m_pan.active || m_resize.row >= 0 || m_band.pending || m_activeGesture.has_value();
+    const bool wasActive = m_pan.active || m_band.pending || m_activeGesture.has_value();
     m_pan.active = false;
-    m_resize.row = -1;
     m_activeGesture.reset();
     m_band.clear();
     m_tempoLane.cancel();

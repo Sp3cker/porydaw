@@ -88,7 +88,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void requestFullQuickUpdate() const;
     const std::vector<AutomationRow> &rows() const noexcept { return m_rowData.rows(); }
     void rebuildRows();
-    void updateTempoLayout();
     void cancelInteraction() override;
     // Shared inline value prompt behind the Set Value menu action and the
     // empty-plot double-click. Opening snapshots the document revision and
@@ -148,7 +147,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     bool isPanning() const noexcept;
     bool bandPreviewContainsLane(LaneHandle handle) const noexcept;
     QRect laneBody(LaneHandle handle) const;
-    QRect pinnedTempoRect() const noexcept;
     int minimumContentHeight() const noexcept;
     // The view-local parameter selector for the shared gutter: nine clickable
     // identities — the eight supported CCs plus song-global Tempo, all
@@ -221,10 +219,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void invalidateSelectedNodeMultiplicity() const noexcept;
     bool hasMultipleSelectedNodes(
         const std::optional<std::pair<uint64_t, uint64_t>> &selectedTickRange) const;
-    struct PointerLaneHit {
-        LaneHandle lane;
-        bool tempoHeader = false;
-    };
     struct NodeLaneSlot {
         EditorAutomationRowId id;
         NodeLane *lane = nullptr;
@@ -278,7 +272,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
         NodePoint point = {};
     };
     void viewportResized();
-    void scrollStateChanged();
     void relayoutContent();
     void contentGeometryChanged();
     QPointF contentPosition(QPointF viewportPosition) const noexcept;
@@ -368,12 +361,9 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void ensureMenuAdapters();
     void ensureNodeMenuAdapters();
     void layoutLaneStack();
-    int tempoTop() const;
-    void syncPinnedTempoLayout();
     void cancelNodeGestures();
     void rebuildNodeStack();
     LaneHandle laneAt(int y) const noexcept;
-    PointerLaneHit pointerLaneAt(const QPoint &position) const noexcept;
     const NodeLaneSlot *resolveSlot(LaneHandle handle) const noexcept;
     void refreshHoverAt(const QPointF &position);
     bool resolveLane(LaneHandle handle, const NodeLane **lane, QRect *body) const noexcept;
@@ -381,10 +371,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void syncHoverValueLabel();
     void syncPreviewValueLabel();
     void highlightHoveredPoint(LaneHandle handle, const QPointF &position, const NodePoint &point);
-    int ccRowIndexAt(int y) const noexcept;
-    int ccLaneHeight(const AutomationRow &row) const;
-    int ccRowBoundaryAt(int y) const;
-    int addLaneStripTop() const;
     void publishBandSelection(uint64_t first, uint64_t last, LaneHandle start,
                               LaneHandle end) const;
     void setGestureActive(bool active);
@@ -398,19 +384,10 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     TempoLane m_tempoLane;
     std::vector<CCLaneAdapter> m_ccAdapters;
     std::vector<NodeLaneSlot> m_nodeStack;
-    struct ResizeState {
-        int row = -1;
-        int startHeight = 0;
-        int startY = 0;
-        int wheelRemainder = 0;
-        bool active() const noexcept { return row >= 0; }
-        void clear() noexcept { row = -1; }
-    } m_resize;
     struct PanState {
         bool active = false;
         QPointF pos;
         double startHScroll = 0;
-        int startVScroll = 0;
     } m_pan;
     BandGesture m_band;
     LaneSelection m_laneSelection;
