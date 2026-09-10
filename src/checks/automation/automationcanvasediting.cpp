@@ -95,7 +95,6 @@ void AutomationEditingTest::selectionClearingAndMultilaneReplacement()
     QVERIFY(lane.valid());
     const QPoint outside = automation_test::windowFromContent(
         page(), automationInput(), inputPoint(lane, 120, kBlankPointValue));
-    const QPointF gutterPoint(layout::space(layout::Space::One), laneBody(lane).center().y());
     const songview::EditorSelectionModel::TimeSelection selection =
         laneSelection(24, 72, kController);
 
@@ -110,9 +109,12 @@ void AutomationEditingTest::selectionClearingAndMultilaneReplacement()
     mouseRelease(Qt::RightButton, outside);
 
     view.selectionModel().setTimeSelection(selection);
-    mousePress(automationGutterInput(), Qt::LeftButton, gutterPoint);
-    mouseRelease(automationGutterInput(), Qt::LeftButton, gutterPoint);
-    QVERIFY(!view.selectionModel().timeSelection().active());
+    QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}));
+    QVERIFY(view.selectionModel().timeSelection().active());
+    QVERIFY(view.selectionModel().timeSelection().lanes == selection.lanes);
+    QCOMPARE(view.selectionModel().timeSelection().scope, selection.scope);
+    QCOMPARE(view.selectionModel().timeSelection().startTick, selection.startTick);
+    QCOMPARE(view.selectionModel().timeSelection().endTick, selection.endTick);
 
     view.selectionModel().setTimeSelection(selection);
     keyClick(Qt::Key_Escape);

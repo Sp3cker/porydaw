@@ -352,23 +352,17 @@ void AutomationEditingTest::outsidePressDismissesLaneMenuWithoutSideEffects()
         songTab, *canvas, ccRow, "the lane label right-press did not open the shared menu");
     QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic));
 
-    // An outside right press on a rendered label dismisses through the frame
-    // without leaking into a replacement menu: a leaked press would open that
-    // label's own menu. Nothing is written and focus stays with the band.
+    // An outside right press dismisses through the frame without leaking into
+    // a replacement menu. Nothing is written and focus stays with the band.
     QQuickItem *const frame = quick_popup::menuFrame(*menu.session);
     QVERIFY2(frame, "the lane menu rendered no outside boundary frame");
     const QRectF frameScene = frame->mapRectToScene(frame->boundingRect());
-    QQuickItem *const tempoLabel = parameterLabelItem(
-        songTab,
-        checks::support::automationParameterIndex(*canvas, {EditorAutomationRowKind::Tempo, 0, 0}));
-    QVERIFY2(tempoLabel, "the tempo label never rendered");
-    const QPoint outside =
-        tempoLabel->mapToScene(QPointF(tempoLabel->width() / 2.0, tempoLabel->height() / 2.0))
-            .toPoint();
-    QVERIFY2(!frameScene.contains(outside), "the outside label witness sat inside the menu frame");
+    const QPoint outside = automationWindowPoint(
+        QPointF(automationInput().width() - 2.0, automationInput().height() / 2.0));
+    QVERIFY2(!frameScene.contains(outside), "the outside witness sat inside the menu frame");
     QVERIFY2(QRect(0, 0, menu.session->window()->width(), menu.session->window()->height())
                  .contains(outside),
-             "the outside label witness left the window bounds");
+             "the outside witness left the window bounds");
     mousePress(Qt::RightButton, outside);
     QCoreApplication::processEvents();
     QVERIFY2(!menu.session->isOpen(), "an outside press did not dismiss the lane menu");

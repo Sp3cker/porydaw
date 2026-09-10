@@ -150,6 +150,7 @@ void AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRest
 {
     SongTab &songTab = tab();
     const quick_popup::PromptGuard guard(songTab.view());
+    QVERIFY(focusAutomationBand());
     const EditorAutomationRowId ccRow{EditorAutomationRowKind::ControlChange, 0, kController};
     const EditorAutomationRowId volumeRow{EditorAutomationRowKind::ControlChange, 0,
                                           CoreTimeDefaults::kCcVolume};
@@ -178,6 +179,11 @@ void AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRest
                  "the confirmation did not give Cancel the initial focus");
     QVERIFY2(quick_popup::clickPromptButton(*opened.session, QLatin1String("acceptButton")),
              "the Delete button never rendered in the confirmation form");
+    // Accept consumed the prompt and returned the band focus.
+    QTRY_VERIFY2(opened.session->contentItem() == nullptr,
+                 "accepting left confirmation content on the session");
+    QTRY_VERIFY2(songTab.view().quickView()->focusedBand() == songview::TimelineBand::Automation,
+                 "accepting did not return focus to the automation band");
 
     // Exactly one transaction removes the intended lane's written events: one
     // revision and one undo step, and the parameter label stays.
@@ -199,12 +205,6 @@ void AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRest
     QVERIFY(findRow(volumeRow).valid());
     QVERIFY(songTab.document().findLanePoint(0, CoreTimeDefaults::kCcVolume, kVolumeTick, &point));
     QCOMPARE(point.value, CoreTimeDefaults::controllerDefault(CoreTimeDefaults::kCcVolume));
-
-    // Accept consumed the prompt and returned the band focus.
-    QTRY_VERIFY2(opened.session->contentItem() == nullptr,
-                 "accepting left confirmation content on the session");
-    QTRY_VERIFY2(songTab.view().quickView()->focusedBand() == songview::TimelineBand::Automation,
-                 "accepting did not return focus to the automation band");
 
     // Undo restores the deleted events exactly; the sibling never moved.
     QVERIFY(songTab.history().canUndo());
@@ -272,11 +272,8 @@ void AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched()
 void AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget()
 {
     SongTab &songTab = tab();
-    AutomationCanvas *const canvas = page().canvas();
     const quick_popup::PromptGuard guard(songTab.view());
     const EditorAutomationRowId ccRow{EditorAutomationRowKind::ControlChange, 0, kController};
-    const EditorAutomationRowId volumeRow{EditorAutomationRowKind::ControlChange, 0,
-                                          CoreTimeDefaults::kCcVolume};
 
     QSignalSpy documentChanged(&songTab.document(), &SongDocument::documentChanged);
     QVERIFY(documentChanged.isValid());
@@ -288,18 +285,15 @@ void AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget
     QVERIFY2(opened.session && opened.root && opened.cancelButton,
              qUtf8Printable(opened.diagnostic));
 
-    // The witness sits on the volume parameter's label: a leaked or retargeted
-    // press would open that label's menu right there.
-    QQuickItem *const content = opened.session->contentItem();
-    QVERIFY(content);
-    QQuickItem *const volumeLabel =
-        parameterLabelItem(songTab, checks::support::automationParameterIndex(*canvas, volumeRow));
-    QVERIFY2(volumeLabel, "the volume label never rendered");
-    const QPoint outside =
-        volumeLabel->mapToScene(QPointF(volumeLabel->width() / 2.0, volumeLabel->height() / 2.0))
-            .toPoint();
-    QVERIFY2(!content->contains(content->mapFromScene(QPointF(outside))),
-             "the outside witness did not reach the popup underlay");
+    // A right press outside the actual frame must dismiss without retargeting.
+    QQuickItem *const frame = checks::support::visualDescendant(
+        opened.session->overlayRoot(), QLatin1String("quickPopupFormContainer"));
+    QVERIFY(frame);
+    const QRectF frameScene = frame->mapRectToScene(frame->boundingRect());
+    const QPoint outside = automationWindowPoint(
+        QPointF(automationInput().width() - 2.0, automationInput().height() / 2.0));
+    QVERIFY2(!frameScene.contains(outside), "the outside witness sat inside the confirmation");
+    QVERIFY(QRect(QPoint{}, m_quickWindow->size()).contains(outside));
 
     QTest::mousePress(m_quickWindow, Qt::RightButton, Qt::NoModifier, outside);
     QCoreApplication::processEvents();

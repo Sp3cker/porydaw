@@ -674,9 +674,11 @@ void AutomationEditingTest::parameterSwitchInvalidatesValuePrompt()
     // A fresh Tempo prompt edits Tempo, not the old CC: the held default
     // arrives selected, and the typed BPM commits exactly one tempo event
     // while the CC lane keeps both of its points.
+    QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}));
     const LaneHandle tempo = findRow({EditorAutomationRowKind::Tempo, 0, 0});
     QVERIFY(tempo.valid());
-    mouseDClick(Qt::LeftButton, automationWindowPoint(inputPoint(tempo, kFreshTick, kFreshBpm)));
+    mouseDClick(Qt::LeftButton,
+                automationWindowPoint(inputPoint(tempo, kFreshTick, CoreTimeDefaults::kTempoBpm)));
     QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
     QQuickItem *const freshPrompt = automation_valueprompt::focusedTextInput(quickWindow());
     QVERIFY2(freshPrompt, "the fresh Tempo prompt did not take active focus");
