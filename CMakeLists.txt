@@ -222,6 +222,8 @@ if(PORYDAW_SCRIPTING)
         src/scripting/scriptconsole.h
         src/scripting/pluginspage.cpp
         src/scripting/pluginspage.h
+        src/scripting/plugininstaller.cpp
+        src/scripting/plugininstaller.h
         src/scripting/scriptwidgets.cpp
         src/scripting/scriptwidgets.h
         src/scripting/scriptmenus.cpp

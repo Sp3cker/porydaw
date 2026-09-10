@@ -14,19 +14,21 @@ Porydaw can be customized and extended with JavaScript plugins. A plugin can do 
 ## Installing an existing plugin
 
 1. Open **Edit → Settings… → Plugins**.
-    - This page shows the plugins folder and a button to open it. Note, you can change the plugins folder to your liking.
-2. Copy the plugin's folder into the configured porydaw plugins folder.
+    - Alongside the plugin list, this page shows the plugins folder in use: **Open Plugins Folder** opens it and **Change…** points Porydaw at a different one.
+2. Click **Add Plugin…** and choose either the plugin's folder or the `plugin.json` inside it.
+    - Porydaw copies the whole plugin folder into the configured plugins folder — every file in it, including anything nested — and loads it at once, so the folder you picked stays where it is. Nothing is overwritten: to replace a plugin, remove its installed folder first.
     - A plugin is one folder holding a `plugin.json` and a `main.js` (the folder name must exactly match the id in `plugin.json`).
-3. The plugin will immediately load. Uncheck it in the same settings page to disable it.  The page also shows why a plugin failed to load, if it did.
+3. Uncheck it in the same settings page to disable it. The page also shows why a plugin failed to load, if it did.
+    - Rather copy the folder yourself? **Open Plugins Folder** opens the configured plugins folder; drop the plugin folder in there and Porydaw picks it up the same way.
 
 Plugins automatically reload when their files are modified, so editing one while Porydaw runs is fine.
 
 !!! tip "Where the folder is"
-    By default the plugins folder lives in Porydaw's application-data directory.  **Change…** on the Settings page points Porydaw at any folder you like. **Use Default** resets it to the application-data directory.
+    By default the plugins folder lives in Porydaw's application-data directory. **Change…** on the Settings page points Porydaw at any folder you like — **Add Plugin…** copies into whichever folder is configured. **Use Default** resets it to the application-data directory.
 
 ## Bundled plugin examples
 
-Porydaw has a bunch of example plugins in its  [`plugins/examples`](https://github.com/huderlem/porydaw/blob/main/plugins/examples) folder on GitHub. Copy any of them into your plugins folder to try them. They are decent references to see what the scripting API can do, as well as nice code references.
+Porydaw has a bunch of example plugins in its [`plugins/examples`](https://github.com/huderlem/porydaw/blob/main/plugins/examples) folder on GitHub. Download one, then click **Add Plugin…** on the Settings page and choose its folder or `plugin.json` to try it. They are decent references to see what the scripting API can do, as well as nice code references.
 
 | Plugin | What it adds |
 |---|---|

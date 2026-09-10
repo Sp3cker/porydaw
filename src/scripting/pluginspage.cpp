@@ -1,17 +1,19 @@
 #include "pluginspage.h"
-
 #include <QDesktopServices>
 #include <QDir>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QTreeWidget>
 #include <QUrl>
 #include <QVBoxLayout>
 
+#include "plugininstaller.h"
 #include "scripthost.h"
 #include "ui/layout.h"
 
@@ -19,6 +21,33 @@ namespace scripting {
 
 namespace {
 constexpr int kIdRole = Qt::UserRole;
+
+class PluginSourceDialog final : public QFileDialog
+{
+  public:
+    PluginSourceDialog(QWidget *parent, const QString &directory)
+        : QFileDialog(parent, tr("Choose Plugin Folder or plugin.json"), directory,
+                      tr("Plugin manifest (plugin.json)"))
+    {
+        // Qt has no native mixed file/directory mode. ExistingFile keeps
+        // directories browsable; accept() below also lets the selected folder
+        // itself be returned instead of always entering it.
+        setOption(QFileDialog::DontUseNativeDialog);
+        setFileMode(QFileDialog::ExistingFile);
+        setLabelText(QFileDialog::FileName, tr("Plugin folder or plugin.json:"));
+    }
+
+    void accept() override
+    {
+        const QStringList files = selectedFiles();
+        if (files.size() != 1)
+            return;
+        const QFileInfo picked(files.constFirst());
+        if (picked.isDir() ||
+            (picked.isFile() && picked.fileName() == QLatin1String("plugin.json")))
+            QDialog::accept();
+    }
+};
 } // namespace
 
 PluginsPage::PluginsPage(ScriptHost &host, QWidget *parent) : QWidget(parent), m_host(host)
@@ -65,12 +94,15 @@ PluginsPage::PluginsPage(ScriptHost &host, QWidget *parent) : QWidget(parent), m
     m_reloadAll->setObjectName(QStringLiteral("settingsPluginsReloadAll"));
     m_openFolder = new QPushButton(tr("Open Plugins Folder"), this);
     m_openFolder->setObjectName(QStringLiteral("settingsPluginsOpenFolder"));
+    m_addPlugin = new QPushButton(tr("Add Plugin…"), this);
+    m_addPlugin->setObjectName(QStringLiteral("settingsPluginsAdd"));
 
     auto *buttons = new QHBoxLayout;
     buttons->addWidget(m_reload);
     buttons->addWidget(m_reloadAll);
     buttons->addStretch(1);
     buttons->addWidget(m_openFolder);
+    buttons->addWidget(m_addPlugin);
 
     auto *layout = new QVBoxLayout(this);
     layout->addLayout(folderRow);
@@ -107,6 +139,19 @@ PluginsPage::PluginsPage(ScriptHost &host, QWidget *parent) : QWidget(parent), m
     connect(m_openFolder, &QPushButton::clicked, this, [this] {
         QDir().mkpath(m_host.pluginsDir());
         QDesktopServices::openUrl(QUrl::fromLocalFile(m_host.pluginsDir()));
+    });
+    // The selected folder — or the folder containing a selected plugin.json —
+    // is copied under the active plugins folder. The host reloads immediately.
+    connect(m_addPlugin, &QPushButton::clicked, this, [this] {
+        PluginSourceDialog dialog(this, m_host.pluginsDir());
+        if (dialog.exec() != QDialog::Accepted)
+            return;
+        const QString source = dialog.selectedFiles().constFirst();
+        QString error;
+        if (!installPlugin(source, m_host.pluginsDir(), &error))
+            QMessageBox::warning(this, tr("Add Plugin"), error);
+        else
+            m_host.loadAll();
     });
     rebuild();
 }

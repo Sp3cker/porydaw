@@ -3,7 +3,10 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QFontInfo>
+#include <QIODevice>
 #include <QKeyEvent>
 #include <QListWidget>
 #include <QPushButton>
@@ -25,6 +28,7 @@
 #ifdef PORYDAW_SCRIPTING
 #include <QLineEdit>
 
+#include "scripting/plugininstaller.h"
 #include "scripting/scripthost.h"
 #endif
 
@@ -36,8 +40,11 @@
 // that the Audio page's controls apply immediately (engine knobs persist
 // as they change; the output level reaches the engine) and Restore
 // Defaults returns them all, that the Appearance page's font choice lands
-// in typography and persists, and that the Shortcuts page is the real
-// editor. With a shot path, each page is also saved as <shot>-<page>.png.
+// in typography and persists, that the Shortcuts page is the real
+// editor, and — with scripting — that the Plugins page's folder row is a
+// setting, its Add Plugin button is present, and plugin installation copies
+// the full source tree without overwriting an existing plugin.
+// With a shot path, each page is also saved as <shot>-<page>.png.
 
 int runSettingsCheck(const QString &shotPath)
 {
@@ -48,6 +55,7 @@ int runSettingsCheck(const QString &shotPath)
     }
     QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, settingsDir.path());
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
+    QSettings::setDefaultFormat(QSettings::IniFormat);
     // The plugins-folder check returns to the *default* folder, which must
     // not be the user's real app data (their plugins would load and run).
     QStandardPaths::setTestModeEnabled(true);
@@ -190,6 +198,108 @@ int runSettingsCheck(const QString &shotPath)
                           !useDefault->isEnabled() &&
                           folder->text() == QDir::toNativeSeparators(defaultDir),
                       "Use Default did not return to the default folder");
+            }
+        }
+
+        // Add Plugin… is a small UI wrapper around the installer. Keep the
+        // settings check at that boundary: the button must exist, while the
+        // filesystem behavior is exercised directly without automating a
+        // platform file dialog.
+        {
+            QTemporaryDir sourceRoot;
+            QTemporaryDir installDir;
+            QTemporaryDir manifestInstallDir;
+            scripting::ScriptHost *host = window.scriptHost();
+            auto *page = dialog->pluginsPage();
+            auto *add = page != nullptr
+                            ? page->findChild<QPushButton *>(QStringLiteral("settingsPluginsAdd"))
+                            : nullptr;
+            auto *list = page != nullptr
+                             ? page->findChild<QTreeWidget *>(QStringLiteral("settingsPluginsTree"))
+                             : nullptr;
+            const QString fixtureId = QStringLiteral("add-plugin-fixture");
+            const QString source =
+                sourceRoot.isValid() ? sourceRoot.path() + QLatin1Char('/') + fixtureId : QString();
+            const QString manifest = QStringLiteral(
+                R"({ "id": "add-plugin-fixture", "name": "Add Plugin Fixture", )"
+                R"("version": "1.0.0", "api": 1, "description": "settingscheck fixture" })");
+            const QString main = QStringLiteral("export function activate(ctx) {}\n");
+            const auto write = [](const QString &path, const QString &text) {
+                QDir().mkpath(QFileInfo(path).absolutePath());
+                QFile file(path);
+                if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+                    return false;
+                const QByteArray bytes = text.toUtf8();
+                return file.write(bytes) == bytes.size();
+            };
+            const auto read = [](const QString &path) {
+                QFile file(path);
+                return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll())
+                                                      : QString();
+            };
+            const auto listShows = [list](const QString &name) {
+                for (int i = 0; i < list->topLevelItemCount(); ++i) {
+                    if (list->topLevelItem(i)->text(0) == name)
+                        return true;
+                }
+                return false;
+            };
+            if (check(add && host && list && installDir.isValid() && manifestInstallDir.isValid() &&
+                          !source.isEmpty() &&
+                          write(source + QStringLiteral("/plugin.json"), manifest) &&
+                          write(source + QStringLiteral("/main.js"), main) &&
+                          write(source + QStringLiteral("/assets/data.txt"),
+                                QStringLiteral("nested v1\n")),
+                      "could not prepare the Add Plugin fixture")) {
+                const QString previousDir = host->pluginsDir();
+                const QString dest = installDir.path() + QLatin1Char('/') + fixtureId;
+                host->setPluginsDir(installDir.path());
+
+                QString error;
+                const bool installed = scripting::installPlugin(source, host->pluginsDir(), &error);
+                check(installed && error.isEmpty(), "the plugin installer rejected a valid folder");
+                check(read(dest + QStringLiteral("/plugin.json")) == manifest &&
+                          read(dest + QStringLiteral("/main.js")) == main &&
+                          read(dest + QStringLiteral("/assets/data.txt")) ==
+                              QStringLiteral("nested v1\n"),
+                      "the plugin installer did not copy the complete source tree");
+                check(read(source + QStringLiteral("/assets/data.txt")) ==
+                          QStringLiteral("nested v1\n"),
+                      "the plugin installer changed its source folder");
+
+                QString manifestError;
+                const QString manifestSelection = source + QStringLiteral("/plugin.json");
+                const QString manifestDest =
+                    manifestInstallDir.path() + QLatin1Char('/') + fixtureId;
+                check(scripting::installPlugin(manifestSelection, manifestInstallDir.path(),
+                                               &manifestError) &&
+                          manifestError.isEmpty() &&
+                          read(manifestDest + QStringLiteral("/assets/data.txt")) ==
+                              QStringLiteral("nested v1\n"),
+                      "the plugin installer rejected a valid plugin.json");
+
+                if (installed)
+                    host->loadAll();
+                QApplication::processEvents();
+                const scripting::Plugin *plugin = host->plugin(fixtureId);
+                check(plugin != nullptr && plugin->state == scripting::PluginState::Loaded &&
+                          plugin->error.isEmpty() &&
+                          listShows(QStringLiteral("Add Plugin Fixture")),
+                      "the installed plugin did not load and appear in the list");
+
+                check(write(source + QStringLiteral("/assets/data.txt"),
+                            QStringLiteral("nested v2\n")),
+                      "could not update the Add Plugin fixture");
+                QString collision;
+                check(!scripting::installPlugin(source, host->pluginsDir(), &collision) &&
+                          !collision.isEmpty() &&
+                          read(dest + QStringLiteral("/assets/data.txt")) ==
+                              QStringLiteral("nested v1\n"),
+                      "the plugin installer overwrote an existing plugin");
+
+                host->setPluginsDir(previousDir);
+                host->loadAll();
+                QApplication::processEvents();
             }
         }
 #endif

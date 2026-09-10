@@ -14,9 +14,10 @@ class ScriptHost;
 
 // Settings → Plugins: every plugin found in the plugins folder with an
 // enable checkbox (persisted, applies immediately), its state, and the
-// reason when it failed to load; Reload / Open Folder buttons; and the
-// plugins folder itself (Change… / Use Default, applied and persisted at
-// once; read-only while PORYDAW_PLUGINS_DIR overrides it).
+// reason when it failed to load; Reload / Reload All / Open Folder / Add
+// Plugin… buttons; and the plugins folder itself (Change… / Use Default,
+// applied and persisted at once; read-only while PORYDAW_PLUGINS_DIR
+// overrides it).
 class PluginsPage : public QWidget
 {
     Q_OBJECT
@@ -42,6 +43,7 @@ class PluginsPage : public QWidget
     QPushButton *m_reload = nullptr;
     QPushButton *m_reloadAll = nullptr;
     QPushButton *m_openFolder = nullptr;
+    QPushButton *m_addPlugin = nullptr;
     bool m_rebuilding = false;
 };
 
