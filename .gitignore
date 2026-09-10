@@ -9,3 +9,6 @@ CMakeUserPresets.json
 # MkDocs local build output
 site/
 .worktrees
+
+# SDD loop review breadcrumbs
+docs/plans/**/*-review.diff
