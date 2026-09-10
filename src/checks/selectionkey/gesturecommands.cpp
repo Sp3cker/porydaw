@@ -8,6 +8,8 @@
 
 #include "checks/selectionkey/gesturecheck.h"
 
+#include "checks/selectionkey/automationprobe.h"
+
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
@@ -109,6 +111,11 @@ void SelectionKeyGestureTest::automationPanGuardsSharedCommands()
     QVERIFY2(automation != nullptr && !mAutomationInput.isNull() &&
                  QTest::qWaitFor([this] { return !mAutomationInput->bounds().isEmpty(); }),
              "automation Quick input is unavailable");
+    QString diagnostics;
+    const auto probe = selectionkey::AutomationProbe::locate(view(), mAutomationInput, kTrack,
+                                                             kAutomationController, &diagnostics);
+    QVERIFY2(probe.has_value(), qPrintable(diagnostics));
+    QVERIFY2(probe->activateParameter(&diagnostics), qPrintable(diagnostics));
     QVERIFY2(focusPointerSurface(mAutomationInput, songview::TimelineBand::Automation),
              "automation pan surface did not own live Quick and native focus");
 
@@ -126,7 +133,7 @@ void SelectionKeyGestureTest::automationPanGuardsSharedCommands()
     const QRect body = automation->canvas()->laneBody(*laneRow());
     const QPointF automationPoint(
         view().camera().displayX(double(kFollowingTick), 0.0, mAutomationInput->devicePixelRatio()),
-        body.center().y() - automation->verticalScroll());
+        body.center().y());
     QVERIFY2(mAutomationInput->bounds().contains(automationPoint),
              "production automation geometry did not expose the gesture point");
     view().selectionModel().setTimeSelection(automationSelection());

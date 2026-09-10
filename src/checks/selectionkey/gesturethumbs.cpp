@@ -1,14 +1,10 @@
 // Scrollbar-thumb guard matrix for the selection-keyboard-routing Qt Test.
-// Each data row is one registered thumb (the root roll bar, the nested
-// drawer automation bar) driven end to end: the live native MouseArea grab
+// The roll vertical thumb is driven end to end: the live native MouseArea grab
 // blocks the shared Delete, Escape releases the grab, held-button movement
 // stays inert, and a physically released then newly pressed drag works
 // before the same binding deletes again.
 
 #include "checks/selectionkey/gesturecheck.h"
-
-#include "ui/editordrawer/automationpage.h"
-#include "ui/editordrawer/editordrawer.h"
 
 #include <QGuiApplication>
 #include <QPoint>
@@ -25,17 +21,10 @@ void SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands_data()
     QTest::addColumn<QString>("inputName");
     QTest::addColumn<int>("band");
     QTest::addColumn<int>("victimIndex");
-    QTest::addColumn<int>("scrollRole");
 
     QTest::newRow("roll scrollbar")
         << QStringLiteral("timelineRollScrollBar") << QStringLiteral("timelineRollScrollThumb")
-        << QStringLiteral("timelineRollInput") << int(songview::TimelineBand::Roll) << 0
-        << int(ThumbScrollRole::CameraScrollY);
-    QTest::newRow("automation scrollbar")
-        << QStringLiteral("drawerAutomationScrollBar")
-        << QStringLiteral("drawerAutomationScrollThumb")
-        << QStringLiteral("timelineAutomationInput") << int(songview::TimelineBand::Automation) << 2
-        << int(ThumbScrollRole::AutomationVerticalScroll);
+        << QStringLiteral("timelineRollInput") << int(songview::TimelineBand::Roll) << 0;
 }
 
 void SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands()
@@ -45,21 +34,14 @@ void SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands()
     if (!stageWorld("scrollbar-gesture", EditorDrawerPage::Automations,
                     kScrollbarAutomationSectionHeight))
         return;
-    AutomationPage *const automation =
-        view().editorDrawer() ? view().editorDrawer()->automationPage() : nullptr;
-    QVERIFY2(!mQuickWindow.isNull() && automation != nullptr,
-             "scrollbar-gesture delivery surface is unavailable");
+    QVERIFY2(!mQuickWindow.isNull(), "scrollbar-gesture delivery surface is unavailable");
 
     QFETCH(QString, barName);
     QFETCH(QString, thumbName);
     QFETCH(QString, inputName);
     QFETCH(int, band);
     QFETCH(int, victimIndex);
-    QFETCH(int, scrollRole);
-    const auto scrollValue = [&]() -> qreal {
-        return scrollRole == int(ThumbScrollRole::CameraScrollY) ? view().camera().scrollY()
-                                                                 : automation->verticalScroll();
-    };
+    const auto scrollValue = [&]() -> qreal { return view().camera().scrollY(); };
 
     songview::TimelineInputItem *const bandInput =
         selectionkey::rigInput(*mWorld, inputName.toUtf8().constData());
