@@ -15,6 +15,8 @@
 
 #include <QtTest>
 
+#include <cmath>
+
 #include <cstddef>
 #include <limits>
 #include <variant>
@@ -54,6 +56,11 @@ constexpr int kMissValue = 64;
 // while the Delete row sits half-activated under the pointer.
 constexpr uint64_t kRewrittenTick = 288;
 constexpr int kRewrittenValue = 77;
+
+// The fresh Tempo prompt after the switch: a blank tick on the tempo plot
+// and the typed BPM that must land there instead of the old CC lane.
+constexpr uint64_t kFreshTick = 144;
+constexpr int kFreshBpm = 132;
 
 } // namespace
 
@@ -300,7 +307,12 @@ void AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePr
     const LaneHandle volume =
         findRow({EditorAutomationRowKind::ControlChange, 0, CoreTimeDefaults::kCcVolume});
     QVERIFY(volume.valid());
-    QVERIFY(!laneBody(volume).isEmpty());
+    // The single active plot renders only the active parameter: the
+    // synthetic default's own label must be activated before its fresh
+    // input.
+    QVERIFY(activateParameter(
+        {EditorAutomationRowKind::ControlChange, 0, CoreTimeDefaults::kCcVolume}));
+    QTRY_VERIFY(!laneBody(volume).isEmpty());
     QVERIFY(songTab.document().lanePoints(0, CoreTimeDefaults::kCcVolume).empty());
 
     const QByteArray before = songTab.document().smf().write();
@@ -580,4 +592,119 @@ void AutomationEditingTest::pointMenuForeignPopupPublishedDuringOpenSurvives()
     QCOMPARE(songTab.document().undoStack()->index(), undoIndex);
     QCOMPARE(songTab.document().smf().write(), before);
     QVERIFY(!automation_valueprompt::promptVisible(songTab.view().editorDrawer()->chrome()));
+}
+
+// A parameter switch must not commit a prompt opened on the previous
+// parameter, must not cancel a foreign popup, and must not mutate either
+// lane; a fresh prompt opened afterwards edits the new parameter only.
+void AutomationEditingTest::parameterSwitchInvalidatesValuePrompt()
+{
+    SongTab &songTab = tab();
+    const quick_popup::PromptGuard guard(songTab.view());
+    const EditorAutomationRowId ccRow{EditorAutomationRowKind::ControlChange, 0, kController};
+    QVERIFY(activateParameter(ccRow));
+    const LaneHandle cc = findRow(ccRow);
+    QVERIFY(cc.valid());
+    QVERIFY(expandTempo());
+
+    // The pilot CC's point menu hands its Set Value pick to the inline
+    // prompt with the stored value selected.
+    const NodePointMenu menu =
+        openNodePointMenu(cc, kPointTick, kPointValue,
+                          QStringLiteral("the node right-press did not open the point menu"));
+    QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic));
+    QVERIFY2(quick_popup::clickMenuRow(*menu.session, menu.setValueRow),
+             "the Set Value row did not receive a real click");
+    DrawerChrome &chrome = songTab.view().editorDrawer()->chrome();
+    QVERIFY2(!menu.session->isOpen(), "the Set Value pick left the point menu open");
+    QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
+    QQuickItem *const prompt = automation_valueprompt::focusedTextInput(quickWindow());
+    QVERIFY2(prompt, "the value prompt did not take active focus from the Set Value pick");
+
+    // A foreign ruler menu publishes over the open prompt through its real
+    // production open method and owns the shared session.
+    QQuickItem *const root = songTab.view().quickView()->rootObject();
+    QVERIFY(root);
+    auto *const rulerInput =
+        root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineRulerInput"));
+    QVERIFY(rulerInput);
+    auto *const ruler = dynamic_cast<songview::TimeRuler *>(rulerInput->interaction());
+    QVERIFY(ruler);
+    QQuickItem *const division =
+        root->findChild<QQuickItem *>(QStringLiteral("timelineRulerDivisionControl"));
+    QVERIFY(division);
+    ruler->openDivisionMenu(
+        division->mapToScene(QPointF(division->width() / 2.0, division->height() / 2.0)));
+    const QPointer<songview::QuickPopupSession> live{quick_popup::popupSession(songTab.view())};
+    QVERIFY(live);
+    QVERIFY2(QTest::qWaitFor([&live] {
+                 QQuickItem *const panel = quick_popup::menuPanel(*live);
+                 return live->isOpen() && panel && quick_popup::menuModel(*panel) != nullptr;
+             }),
+             "the foreign ruler menu did not publish over the pending value prompt");
+
+    // The programmatic switch to Tempo drops the owned prompt without a
+    // document change, spares the foreign menu, and makes the old accept
+    // callback a no-op.
+    const FrozenDocumentState before = frozenDocumentState();
+    const int tempoIndex = page().canvas()->parameterIndex({EditorAutomationRowKind::Tempo, 0, 0});
+    QVERIFY(tempoIndex >= 0);
+    page().canvas()->activateParameter(tempoIndex);
+    QCOMPARE(page().canvas()->activeParameter(), tempoIndex);
+    QVERIFY(!page().canvas()->valuePromptVisible());
+    QVERIFY(!automation_valueprompt::promptVisible(chrome));
+    QVERIFY2(live->isOpen(), "the parameter switch cancelled the foreign ruler menu");
+    page().canvas()->acceptNodeValuePrompt(100);
+    QVERIFY(frozenDocumentState() == before);
+
+    // The surviving foreign menu still works: a real row pick changes the
+    // grid.
+    const int currentDenom = songTab.view().viewState().gridMinDenom;
+    const int targetDenom = currentDenom == 8 ? 16 : 8;
+    const int targetRow =
+        quick_popup::menuModel(*quick_popup::menuPanel(*live))->rowForId(targetDenom);
+    QVERIFY2(targetRow >= 0, "the surviving division menu omitted the chosen denominator");
+    QVERIFY2(quick_popup::clickMenuRow(*live, targetRow),
+             "the surviving division row did not receive a real click");
+    QCoreApplication::processEvents();
+    QVERIFY2(!live->isOpen(), "the division pick left the shared menu open");
+    QCOMPARE(songTab.view().viewState().gridMinDenom, targetDenom);
+
+    // A fresh Tempo prompt edits Tempo, not the old CC: the held default
+    // arrives selected, and the typed BPM commits exactly one tempo event
+    // while the CC lane keeps both of its points.
+    const LaneHandle tempo = findRow({EditorAutomationRowKind::Tempo, 0, 0});
+    QVERIFY(tempo.valid());
+    mouseDClick(Qt::LeftButton, automationWindowPoint(inputPoint(tempo, kFreshTick, kFreshBpm)));
+    QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
+    QQuickItem *const freshPrompt = automation_valueprompt::focusedTextInput(quickWindow());
+    QVERIFY2(freshPrompt, "the fresh Tempo prompt did not take active focus");
+    QCOMPARE(freshPrompt->property("selectedText").toString(),
+             QString::number(CoreTimeDefaults::kTempoBpm));
+    QTest::keyClick(&quickWindow(), Qt::Key_1);
+    QTest::keyClick(&quickWindow(), Qt::Key_3);
+    QTest::keyClick(&quickWindow(), Qt::Key_2);
+    QTest::keyClick(&quickWindow(), Qt::Key_Return);
+    QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome));
+
+    QCOMPARE(songTab.document().revision(), before.revision + 1);
+    QCOMPARE(songTab.document().undoStack()->index(), before.undoIndex + 1);
+    const std::vector<TempoPoint> tempoPoints = songTab.document().tempoPoints();
+    QCOMPARE(tempoPoints.size(), std::size_t{1});
+    QCOMPARE(int(std::lround(
+                 CoreTimeDefaults::tempoBpm(tempoPoints.front().microsecondsPerQuarterNote))),
+             kFreshBpm);
+    const auto points = songTab.document().lanePoints(0, kController);
+    QCOMPARE(points.size(), std::size_t{2});
+    QCOMPARE(points[0].tick, kPointTick);
+    QCOMPARE(points[0].value, kPointValue);
+    QCOMPARE(points[1].tick, kOtherPointTick);
+    QCOMPARE(points[1].value, kOtherPointValue);
+
+    // Undo removes the fresh tempo edit again, byte for byte.
+    QVERIFY(songTab.history().canUndo());
+    QVERIFY(std::holds_alternative<DocumentHistoryApplied>(songTab.history().requestUndo()));
+    QVERIFY(songTab.document().tempoPoints().empty());
+    QCOMPARE(songTab.document().smf().write(), before.smf);
+    QTRY_VERIFY(automation_valueprompt::inputOwnsFocus(quickWindow(), automationInput()));
 }

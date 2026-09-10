@@ -38,6 +38,13 @@ constexpr int kCcSecond = 72;
 
 enum class LaneKind { Tempo, Cc };
 
+EditorAutomationRowId rowId(LaneKind kind)
+{
+    return kind == LaneKind::Tempo
+               ? EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0}
+               : EditorAutomationRowId{EditorAutomationRowKind::ControlChange, 0, kController};
+}
+
 struct PreviewLane final {
     LaneHandle handle;
     QRect body;
@@ -142,6 +149,7 @@ void AutomationEditingTest::singleNodeDragPreview()
     QFETCH(int, laneKind);
     const LaneKind kind = LaneKind(laneKind);
     QVERIFY(kind != LaneKind::Tempo || expandTempo());
+    QVERIFY(activateParameter(rowId(kind)));
     SongView &view = m_tab->view();
     SongDocument &document = m_tab->document();
     auto *scene = view.findChild<songview::TimelineQuickScene *>();
@@ -160,8 +168,8 @@ void AutomationEditingTest::singleNodeDragPreview()
     const QPointF source = pointForLane(view, *m_automationInput, lane, kNodeTick, nodeValue);
     const QPointF target =
         pointForLane(view, *m_automationInput, lane, kNodeTick + 48, nodeValue - 24);
-    QVERIFY(m_automationInput->bounds().contains(source - QPointF(0.0, m_page->verticalScroll())));
-    QVERIFY(m_automationInput->bounds().contains(target - QPointF(0.0, m_page->verticalScroll())));
+    QVERIFY(m_automationInput->bounds().contains(source));
+    QVERIFY(m_automationInput->bounds().contains(target));
     const int activationTravel = AutomationGeometry::resolve().nodeDragActivationDistance + 8;
     const QPoint sourceWindow = automationWindowPoint(source);
     const QPoint activationWindow = automationWindowPoint(source + QPointF(activationTravel, 0.0));
@@ -177,13 +185,11 @@ void AutomationEditingTest::singleNodeDragPreview()
     mouseMove(activationWindow, Qt::NoModifier);
     mouseMove(activationWindow + targetWindow - sourceWindow, Qt::NoModifier);
     const QColor preview = themes::color(themes::Role::song_view_edit_preview_outline);
-    const QPointF viewportTarget = target - QPointF(0.0, m_page->verticalScroll());
     QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).revision >
                 transientBefore);
     QVERIFY(checks::support::layerHasColorIn(
         scene->layer(songview::TimelineQuickLayer::AutomationTransient),
-        nodeProbe(viewportTarget, nodelane::hoverRingRadius(AutomationGeometry::resolve())),
-        preview));
+        nodeProbe(target, nodelane::hoverRingRadius(AutomationGeometry::resolve())), preview));
     QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 }
 
@@ -199,6 +205,7 @@ void AutomationEditingTest::multiNodeDragPreview()
     QFETCH(int, laneKind);
     const LaneKind kind = LaneKind(laneKind);
     QVERIFY(kind != LaneKind::Tempo || expandTempo());
+    QVERIFY(activateParameter(rowId(kind)));
     SongView &view = m_tab->view();
     SongDocument &document = m_tab->document();
     auto *scene = view.findChild<songview::TimelineQuickScene *>();
@@ -243,17 +250,14 @@ void AutomationEditingTest::multiNodeDragPreview()
     mouseMove(activationWindow, Qt::NoModifier);
     mouseMove(activationWindow + targetWindow - sourceWindow, Qt::NoModifier);
     const QColor preview = themes::color(themes::Role::song_view_edit_preview_outline);
-    const QPointF scroll(0.0, m_page->verticalScroll());
     QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).revision >
                 transientBefore);
     QVERIFY(checks::support::layerHasColorIn(
         scene->layer(songview::TimelineQuickLayer::AutomationTransient),
-        nodeProbe(target - scroll, nodelane::hoverRingRadius(AutomationGeometry::resolve())),
-        preview));
+        nodeProbe(target, nodelane::hoverRingRadius(AutomationGeometry::resolve())), preview));
     QVERIFY(checks::support::layerHasColorIn(
         scene->layer(songview::TimelineQuickLayer::AutomationTransient),
-        nodeProbe(second - scroll, nodelane::hoverRingRadius(AutomationGeometry::resolve())),
-        preview));
+        nodeProbe(second, nodelane::hoverRingRadius(AutomationGeometry::resolve())), preview));
     QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 }
 
@@ -269,6 +273,7 @@ void AutomationEditingTest::sweepPreview()
     QFETCH(int, laneKind);
     const LaneKind kind = LaneKind(laneKind);
     QVERIFY(kind != LaneKind::Tempo || expandTempo());
+    QVERIFY(activateParameter(rowId(kind)));
     SongView &view = m_tab->view();
     SongDocument &document = m_tab->document();
     auto *scene = view.findChild<songview::TimelineQuickScene *>();
@@ -301,8 +306,7 @@ void AutomationEditingTest::sweepPreview()
                 transientBefore);
     QVERIFY(checks::support::layerHasColorIn(
         scene->layer(songview::TimelineQuickLayer::AutomationTransient),
-        nodeProbe(target - QPointF(0.0, m_page->verticalScroll()),
-                  nodelane::hoverRingRadius(AutomationGeometry::resolve())),
+        nodeProbe(target, nodelane::hoverRingRadius(AutomationGeometry::resolve())),
         themes::color(themes::Role::song_view_edit_preview_outline)));
     QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 }
@@ -319,6 +323,7 @@ void AutomationEditingTest::shiftRampPreview()
     QFETCH(int, laneKind);
     const LaneKind kind = LaneKind(laneKind);
     QVERIFY(kind != LaneKind::Tempo || expandTempo());
+    QVERIFY(activateParameter(rowId(kind)));
     SongView &view = m_tab->view();
     SongDocument &document = m_tab->document();
     auto *scene = view.findChild<songview::TimelineQuickScene *>();
@@ -343,7 +348,7 @@ void AutomationEditingTest::shiftRampPreview()
     mousePress(Qt::LeftButton, automationWindowPoint(start), Qt::ShiftModifier);
     mouseMove(automationWindowPoint(start + QPointF(activationTravel, 0.0)), Qt::ShiftModifier);
     mouseMove(automationWindowPoint(end), Qt::ShiftModifier);
-    const QPointF mid = (start + end) / 2.0 - QPointF(0.0, m_page->verticalScroll());
+    const QPointF mid = (start + end) / 2.0;
     QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).revision >
                 transientBefore);
     QVERIFY(checks::support::layerHasColorIn(
@@ -375,19 +380,17 @@ void AutomationEditingTest::pencilPreviewAndValueLabel()
     mousePress(Qt::LeftButton, automationWindowPoint(start), Qt::NoModifier);
     mouseMove(automationWindowPoint(hold), Qt::NoModifier);
     mouseMove(automationWindowPoint(end), Qt::NoModifier);
-    const QPointF scroll(0.0, m_page->verticalScroll());
     const QColor preview = themes::color(themes::Role::song_view_edit_preview_outline);
     QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).revision >
                 transientBefore);
     QVERIFY(checks::support::layerHasColorIn(
         scene->layer(songview::TimelineQuickLayer::AutomationTransient),
-        lineProbe(pointForLane(view, *m_automationInput, lane, 48, 40) - scroll, 8.0,
+        lineProbe(pointForLane(view, *m_automationInput, lane, 48, 40), 8.0,
                   std::max(qreal(layout::singlePixel()),
                            qreal(AutomationGeometry::resolve().hoverPaintPadding + 1))),
         preview));
-    QVERIFY(textModelHasRecordIn(
-        scene->automationTransientTextModel(),
-        previewLabelProbe(end.x(), end.y(), lane.body).translated(0.0, -m_page->verticalScroll())));
+    QVERIFY(textModelHasRecordIn(scene->automationTransientTextModel(),
+                                 previewLabelProbe(end.x(), end.y(), lane.body)));
     QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 }
 

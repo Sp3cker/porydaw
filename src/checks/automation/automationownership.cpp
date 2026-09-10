@@ -12,9 +12,11 @@
 #include <QKeySequence>
 
 #include <QColor>
+#include <QSignalSpy>
 #include <QtTest>
 
 #include "checks/support/timelinequickcheck.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/songview.h"
@@ -22,6 +24,15 @@
 #include "ui/songview/quick/timelinequickscene.h"
 
 namespace {
+
+// The pilot lane nodes the armed drag targets: the grabbed node at
+// kPilotNodeTick moves value-only, and its independent sibling must never
+// move with it.
+constexpr uint64_t kPilotNodeTick = 48;
+constexpr int kPilotNodeValue = 40;
+constexpr int kPilotCommittedValue = 84;
+constexpr uint64_t kPilotSiblingTick = 96;
+constexpr int kPilotSiblingValue = 100;
 
 constexpr uint8_t kPanController = 10;
 
@@ -372,4 +383,86 @@ void AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence()
     mousePress(Qt::LeftButton, visibleTarget.first);
     mouseRelease(Qt::LeftButton, visibleTarget.first);
     QTRY_VERIFY(!pointAt(tab().document(), visibleTargetCell.tickBegin).has_value());
+}
+
+// A parameter switch during a live provisional drag cancels the owned
+// gesture: the old pointer's release commits nothing, no grab or
+// follow-scroll pause survives, and the reactivated parameter's next
+// ordinary drag commits exactly once.
+void AutomationEditingTest::parameterSwitchCancelsNodeDrag()
+{
+    songview::TimelineQuickScene *const scene = quickScene();
+    QVERIFY(scene);
+    QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
+    QSignalSpy edited(&tab(), &SongTab::edited);
+    QVERIFY(documentChanged.isValid());
+    QVERIFY(edited.isValid());
+    const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count(), edited.count());
+
+    const std::optional<ArmedCcDrag> arm = armCcDrag(scene);
+    QVERIFY(arm.has_value());
+
+    // The provisional preview is live: the retained transient layer carries
+    // the grabbed node while the document stays frozen.
+    QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).revision >
+                arm->transientRevisionBefore);
+    QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
+    QTRY_VERIFY(tab().view().userGestureActive());
+    QTRY_VERIFY(quickWindow().mouseGrabberItem() == &automationInput());
+
+    // Switching to Tempo mid-gesture ends the owned provisional gesture: the
+    // pointer grab and the follow-scroll pause release, and the old
+    // transient preview clears.
+    const int pilotIndex = page().canvas()->activeParameter();
+    const int tempoIndex = page().canvas()->parameterIndex({EditorAutomationRowKind::Tempo, 0, 0});
+    QVERIFY(tempoIndex >= 0);
+    page().canvas()->activateParameter(tempoIndex);
+    QCOMPARE(page().canvas()->activeParameter(), tempoIndex);
+    QTRY_VERIFY(!quickWindow().mouseGrabberItem());
+    QVERIFY(!tab().view().userGestureActive());
+    QVERIFY(!page().canvas()->gestureActive());
+    QVERIFY(!page().canvas()->isPanning());
+    QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).rects.empty());
+    QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).triangles.empty());
+    QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
+
+    // The old pointer's release lands on the cancelled gesture: no
+    // transaction, and both pilot points keep their original values.
+    mouseRelease(Qt::LeftButton, arm->dragEndWindow, Qt::NoModifier);
+    QCOMPARE(documentChanged.count(), 0);
+    QCOMPARE(edited.count(), 0);
+    QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
+    const std::optional<DocLanePoint> heldNode = pointAt(tab().document(), kPilotNodeTick);
+    QVERIFY(heldNode.has_value());
+    QCOMPARE(heldNode->value, kPilotNodeValue);
+    const std::optional<DocLanePoint> sibling = pointAt(tab().document(), kPilotSiblingTick);
+    QVERIFY(sibling.has_value());
+    QCOMPARE(sibling->value, kPilotSiblingValue);
+
+    // Reactivating the pilot parameter through its rendered label restores
+    // its plot, and an ordinary drag commits exactly once again.
+    const EditorAutomationRowId pilotRow{EditorAutomationRowKind::ControlChange, 0, kPanController};
+    QVERIFY(activateParameter(pilotRow));
+    QCOMPARE(page().canvas()->activeParameter(), pilotIndex);
+    const LaneHandle pilot = findRow(pilotRow);
+    QVERIFY(pilot.valid());
+    QTRY_VERIFY(!laneBody(pilot).isEmpty());
+    const std::optional<ArmedCcDrag> rearmed = armCcDrag(scene);
+    QVERIFY(rearmed.has_value());
+    QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).revision >
+                rearmed->transientRevisionBefore);
+    mouseRelease(Qt::LeftButton, rearmed->dragEndWindow, Qt::NoModifier);
+
+    QCOMPARE(documentChanged.count(), 1);
+    QCOMPARE(edited.count(), 1);
+    QCOMPARE(tab().document().revision(), frozen.revision + 1);
+    QCOMPARE(tab().document().undoStack()->count(), frozen.undoCount + 1);
+    QCOMPARE(tab().document().undoStack()->index(), frozen.undoIndex + 1);
+    const std::optional<DocLanePoint> committed = pointAt(tab().document(), kPilotNodeTick);
+    QVERIFY(committed.has_value());
+    QCOMPARE(committed->value, kPilotCommittedValue);
+    const std::optional<DocLanePoint> survivingSibling =
+        pointAt(tab().document(), kPilotSiblingTick);
+    QVERIFY(survivingSibling.has_value());
+    QCOMPARE(survivingSibling->value, kPilotSiblingValue);
 }

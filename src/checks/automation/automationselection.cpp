@@ -18,6 +18,7 @@
 #include "core/songhistory.h"
 #include "core/tempo.h"
 #include "core/timedefaults.h"
+#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/songview/editorselectionmodel.h"
 
@@ -190,17 +191,13 @@ void AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows()
     const LaneHandle tempoLane = findRow({EditorAutomationRowKind::Tempo, 0, 0});
     const LaneHandle panLane =
         findRow({EditorAutomationRowKind::ControlChange, kTrack, kPanController});
-    const LaneHandle volumeLane =
-        findRow({EditorAutomationRowKind::ControlChange, kTrack, kVolumeController});
     QVERIFY(tempoLane.valid());
     QVERIFY(panLane.valid());
-    QVERIFY(volumeLane.valid());
-    setRowMaximumHeight({EditorAutomationRowKind::ControlChange, kTrack, kPanController});
-    setRowMaximumHeight({EditorAutomationRowKind::ControlChange, kTrack, kVolumeController});
     QVERIFY(!laneBody(tempoLane).isEmpty());
     QVERIFY(!laneBody(panLane).isEmpty());
-    QVERIFY(!laneBody(volumeLane).isEmpty());
 
+    // A horizontal band in the shared plot selects the active parameter only.
+    QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}));
     QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
     QSignalSpy edited(&tab(), &SongTab::edited);
     QVERIFY(documentChanged.isValid());
@@ -208,16 +205,19 @@ void AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows()
     const FrozenDocumentState beforeBand =
         frozenDocumentState(documentChanged.count(), edited.count());
     const QPointF tempoBandStart = inputPoint(tempoLane, kSelectionTick - 24, 120);
-    const QPointF panBandEnd = inputPoint(panLane, kDestinationTick, 64);
+    const QPointF tempoBandEnd = inputPoint(tempoLane, kDestinationTick, 120);
     mousePress(Qt::RightButton, automationWindowPoint(tempoBandStart));
-    mouseMove(automationWindowPoint(panBandEnd));
-    mouseRelease(Qt::RightButton, automationWindowPoint(panBandEnd));
+    mouseMove(automationWindowPoint(tempoBandEnd));
+    mouseRelease(Qt::RightButton, automationWindowPoint(tempoBandEnd));
 
     const auto &tempoSelection = tab().view().selectionModel().timeSelection();
     QVERIFY(selectionMatches(tempoSelection, kSelectionTick - 24, kDestinationTick, true, {}));
     QVERIFY(tab().view().selectionModel().timeSelectionCoversTempo(1u));
     QVERIFY(!tab().view().selectionModel().timeSelectionCoversLane(kTrack, kPanController, 1u));
     QVERIFY(!tab().view().selectionModel().timeSelectionCoversLane(kTrack, kLfoController, 1u));
+    const QList<int> tempoOnly{
+        page().canvas()->parameterIndex({EditorAutomationRowKind::Tempo, 0, 0})};
+    QCOMPARE(page().canvas()->selectedParameters(), tempoOnly);
     QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == beforeBand);
 
     const std::vector<SongDocument::LanePointValue> panBefore =
@@ -252,17 +252,23 @@ void AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows()
     QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()));
     QCOMPARE(tempoAt(tab().document(), kSelectionTick), kPreservedTempoUs);
 
-    tab().view().selectionModel().clearTimeSelection();
-    const QPointF ccBandStart = inputPoint(volumeLane, kSelectionTick - 24, 64);
-    const QPointF ccBandEnd = inputPoint(volumeLane, kDestinationTick, 64);
-    mousePress(Qt::RightButton, automationWindowPoint(ccBandStart));
-    mouseMove(automationWindowPoint(ccBandEnd));
-    mouseRelease(Qt::RightButton, automationWindowPoint(ccBandEnd));
+    // Switching the label and drawing again replaces the scope with the new
+    // active parameter only.
+    QVERIFY(activateParameter({EditorAutomationRowKind::ControlChange, kTrack, kPanController}));
+    const QPointF panBandStart = inputPoint(panLane, kSelectionTick - 24, 64);
+    const QPointF panBandEnd = inputPoint(panLane, kDestinationTick, 64);
+    mousePress(Qt::RightButton, automationWindowPoint(panBandStart));
+    mouseMove(automationWindowPoint(panBandEnd));
+    mouseRelease(Qt::RightButton, automationWindowPoint(panBandEnd));
 
     const auto &ccSelection = tab().view().selectionModel().timeSelection();
     QVERIFY(selectionMatches(ccSelection, kSelectionTick - 24, kDestinationTick, false,
-                             {{kTrack, kVolumeController}}));
+                             {{kTrack, kPanController}}));
     QVERIFY(!tab().view().selectionModel().timeSelectionCoversTempo(1u));
+    QVERIFY(tab().view().selectionModel().timeSelectionCoversLane(kTrack, kPanController, 1u));
+    const QList<int> panOnly{page().canvas()->parameterIndex(
+        {EditorAutomationRowKind::ControlChange, kTrack, kPanController})};
+    QCOMPARE(page().canvas()->selectedParameters(), panOnly);
 }
 
 void AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder()
@@ -277,10 +283,15 @@ void AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder()
     QVERIFY(tempoLane.valid());
     QVERIFY(panLane.valid());
     QVERIFY(lfoLane.valid());
-    setRowMaximumHeight({EditorAutomationRowKind::ControlChange, kTrack, kPanController});
-    setRowMaximumHeight({EditorAutomationRowKind::ControlChange, kTrack, kLfoController});
 
     tab().view().selectionModel().setTimeSelection(mixedSelection(true));
+    QVERIFY(selectionMatches(tab().view().selectionModel().timeSelection(), kSelectionTick,
+                             kDestinationTick, true,
+                             {{kTrack, kPanController}, {kTrack, kLfoController}}));
+    // Real label switches between the seeded selection and the drag: the
+    // explicit Tempo+Pan+LFO scope must survive both activations untouched.
+    QVERIFY(activateParameter({EditorAutomationRowKind::ControlChange, kTrack, kPanController}));
+    QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}));
     QVERIFY(selectionMatches(tab().view().selectionModel().timeSelection(), kSelectionTick,
                              kDestinationTick, true,
                              {{kTrack, kPanController}, {kTrack, kLfoController}}));
@@ -362,6 +373,20 @@ void AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop()
     QVERIFY(lfoLane.valid());
 
     tab().view().selectionModel().setTimeSelection(mixedSelection(true));
+    // The Tempo label is displayed, so the delete must still cover the
+    // unpainted Pan and LFO lanes; the scope indicators report every covered
+    // parameter independent of the active tab.
+    QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}));
+    const QList<int> covered = page().canvas()->selectedParameters();
+    QVERIFY(
+        covered.contains(page().canvas()->parameterIndex({EditorAutomationRowKind::Tempo, 0, 0})));
+    QVERIFY(covered.contains(page().canvas()->parameterIndex(
+        {EditorAutomationRowKind::ControlChange, kTrack, kPanController})));
+    QVERIFY(covered.contains(page().canvas()->parameterIndex(
+        {EditorAutomationRowKind::ControlChange, kTrack, kLfoController})));
+    QVERIFY(!covered.contains(page().canvas()->parameterIndex(
+        {EditorAutomationRowKind::ControlChange, kTrack, kVolumeController})));
+    QVERIFY(focusAutomationBand());
     const std::vector<SongDocument::LanePointValue> volumeBefore =
         laneValues(tab().document(), kVolumeController);
     QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
@@ -427,6 +452,7 @@ void AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild()
     QVERIFY(lfoLane.valid());
 
     tab().view().selectionModel().setTimeSelection(mixedSelection(true));
+    QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}));
     const QPointF source =
         inputPoint(tempoLane, kSelectionTick, CoreTimeDefaults::tempoBpm(kPreservedTempoUs));
     const QPointF target =
@@ -481,10 +507,9 @@ void AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume()
         findRow({EditorAutomationRowKind::ControlChange, kTrack, kLfoController});
     QVERIFY(panLane.valid());
     QVERIFY(lfoLane.valid());
-    setRowMaximumHeight({EditorAutomationRowKind::ControlChange, kTrack, kPanController});
-    setRowMaximumHeight({EditorAutomationRowKind::ControlChange, kTrack, kLfoController});
 
     tab().view().selectionModel().setTimeSelection(mixedSelection(false));
+    QVERIFY(activateParameter({EditorAutomationRowKind::ControlChange, kTrack, kPanController}));
     const std::vector<SongDocument::LanePointValue> volumeBefore =
         laneValues(tab().document(), kVolumeController);
     QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);

@@ -37,6 +37,13 @@ constexpr int kCcSecond = 72;
 
 enum class LaneKind { Tempo, Cc };
 
+EditorAutomationRowId rowId(LaneKind kind)
+{
+    return kind == LaneKind::Tempo
+               ? EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0}
+               : EditorAutomationRowId{EditorAutomationRowKind::ControlChange, 0, kController};
+}
+
 struct LanePaint final {
     LaneHandle handle;
     QRect body;
@@ -100,6 +107,7 @@ QPointF nodePoint(const SongView &view, const songview::TimelineInputItem &input
 void AutomationEditingTest::emptyTempoStorageComposesNoLeadIn()
 {
     QVERIFY(expandTempo());
+    QVERIFY(activateParameter(rowId(LaneKind::Tempo)));
     SongDocument &document = m_tab->document();
     SongView &view = m_tab->view();
     const LanePaint tempo = lanePaint(*m_page, LaneKind::Tempo);
@@ -119,17 +127,15 @@ void AutomationEditingTest::emptyTempoStorageComposesNoLeadIn()
         nodePoint(view, *m_automationInput, tempo, kFirstNodeTick / 2, CoreTimeDefaults::kTempoBpm)
             .x();
     const qreal y120 =
-        nodePoint(view, *m_automationInput, tempo, 0, CoreTimeDefaults::kTempoBpm).y() -
-        m_page->verticalScroll();
+        nodePoint(view, *m_automationInput, tempo, 0, CoreTimeDefaults::kTempoBpm).y();
     const qreal radius = nodelane::hoverRingRadius(AutomationGeometry::resolve());
     const qreal lineHalf = std::max(qreal(layout::singlePixel()),
                                     qreal(AutomationGeometry::resolve().hoverPaintPadding + 1));
-    const QPoint origin{0, -m_page->verticalScroll()};
     const auto &curves = scene->layer(songview::TimelineQuickLayer::AutomationCurves);
     const auto &nodes = scene->layer(songview::TimelineQuickLayer::AutomationNodes);
-    QVERIFY(!checks::support::layerHasColorIn(
-        curves, lineProbe(QPointF(xMid, y120) + origin, 8.0, lineHalf), tempo.color));
-    QVERIFY(!checks::support::layerHasColorIn(nodes, nodeProbe(QPointF(x0, y120) + origin, radius),
+    QVERIFY(!checks::support::layerHasColorIn(curves, lineProbe(QPointF(xMid, y120), 8.0, lineHalf),
+                                              tempo.color));
+    QVERIFY(!checks::support::layerHasColorIn(nodes, nodeProbe(QPointF(x0, y120), radius),
                                               tempo.color));
     QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 }
@@ -137,6 +143,7 @@ void AutomationEditingTest::emptyTempoStorageComposesNoLeadIn()
 void AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve()
 {
     QVERIFY(expandTempo());
+    QVERIFY(activateParameter(rowId(LaneKind::Tempo)));
     SongDocument &document = m_tab->document();
     SongView &view = m_tab->view();
     const LanePaint tempo = lanePaint(*m_page, LaneKind::Tempo);
@@ -156,7 +163,6 @@ void AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve()
     QVERIFY(edited.isValid());
     const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
 
-    const QPoint origin{0, -m_page->verticalScroll()};
     const QPointF leadMid =
         nodePoint(view, *m_automationInput, tempo, kFirstNodeTick / 2, CoreTimeDefaults::kTempoBpm);
     const QPointF zero = nodePoint(view, *m_automationInput, tempo, 0, CoreTimeDefaults::kTempoBpm);
@@ -166,19 +172,20 @@ void AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve()
                                     qreal(AutomationGeometry::resolve().hoverPaintPadding + 1));
     QVERIFY(checks::support::layerHasColorIn(
         scene->layer(songview::TimelineQuickLayer::AutomationCurves),
-        lineProbe(leadMid + origin, 8.0, lineHalf), tempo.color));
+        lineProbe(leadMid, 8.0, lineHalf), tempo.color));
     QVERIFY(!checks::support::layerHasColorIn(
-        scene->layer(songview::TimelineQuickLayer::AutomationNodes),
-        nodeProbe(zero + origin, radius), tempo.color));
+        scene->layer(songview::TimelineQuickLayer::AutomationNodes), nodeProbe(zero, radius),
+        tempo.color));
     QVERIFY(checks::support::layerHasColorIn(
-        scene->layer(songview::TimelineQuickLayer::AutomationNodes),
-        nodeProbe(node + origin, radius), tempo.color));
+        scene->layer(songview::TimelineQuickLayer::AutomationNodes), nodeProbe(node, radius),
+        tempo.color));
     QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 }
 
 void AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve()
 {
     QVERIFY(expandTempo());
+    QVERIFY(activateParameter(rowId(LaneKind::Tempo)));
     SongDocument &document = m_tab->document();
     SongView &view = m_tab->view();
     const LanePaint tempo = lanePaint(*m_page, LaneKind::Tempo);
@@ -195,7 +202,6 @@ void AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve()
     QVERIFY(documentChanged.isValid());
     QVERIFY(edited.isValid());
     const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
-    const QPoint origin{0, -m_page->verticalScroll()};
     const QPointF zero = nodePoint(view, *m_automationInput, tempo, 0, kTempoHeld);
     const QPointF leadMid =
         nodePoint(view, *m_automationInput, tempo, kFirstNodeTick / 2, CoreTimeDefaults::kTempoBpm);
@@ -203,11 +209,11 @@ void AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve()
     const qreal lineHalf = std::max(qreal(layout::singlePixel()),
                                     qreal(AutomationGeometry::resolve().hoverPaintPadding + 1));
     QVERIFY(checks::support::layerHasColorIn(
-        scene->layer(songview::TimelineQuickLayer::AutomationNodes),
-        nodeProbe(zero + origin, radius), tempo.color));
+        scene->layer(songview::TimelineQuickLayer::AutomationNodes), nodeProbe(zero, radius),
+        tempo.color));
     QVERIFY(!checks::support::layerHasColorIn(
         scene->layer(songview::TimelineQuickLayer::AutomationCurves),
-        lineProbe(leadMid + origin, 8.0, lineHalf), tempo.color));
+        lineProbe(leadMid, 8.0, lineHalf), tempo.color));
     QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 }
 
@@ -223,6 +229,7 @@ void AutomationEditingTest::stepCurvesAndNodesComposed()
     QFETCH(int, laneKind);
     const LaneKind kind = LaneKind(laneKind);
     QVERIFY(kind != LaneKind::Tempo || expandTempo());
+    QVERIFY(activateParameter(rowId(kind)));
     SongDocument &document = m_tab->document();
     SongView &view = m_tab->view();
     auto *scene = view.findChild<songview::TimelineQuickScene *>();
@@ -254,18 +261,17 @@ void AutomationEditingTest::stepCurvesAndNodesComposed()
     QVERIFY(!lane.body.isEmpty());
     const int held = kind == LaneKind::Tempo ? kTempoHeld : kCcHeld;
     const int node = kind == LaneKind::Tempo ? kTempoNode : kCcNode;
-    const QPoint origin{0, -m_page->verticalScroll()};
     const QPointF mid = nodePoint(view, *m_automationInput, lane, kFirstNodeTick / 2, held);
     const QPointF point = nodePoint(view, *m_automationInput, lane, kFirstNodeTick, node);
     const qreal radius = nodelane::hoverRingRadius(AutomationGeometry::resolve());
     const qreal lineHalf = std::max(qreal(layout::singlePixel()),
                                     qreal(AutomationGeometry::resolve().hoverPaintPadding + 1));
     QVERIFY(checks::support::layerHasColorIn(
-        scene->layer(songview::TimelineQuickLayer::AutomationCurves),
-        lineProbe(mid + origin, 8.0, lineHalf), lane.color));
+        scene->layer(songview::TimelineQuickLayer::AutomationCurves), lineProbe(mid, 8.0, lineHalf),
+        lane.color));
     QVERIFY(checks::support::layerHasColorIn(
-        scene->layer(songview::TimelineQuickLayer::AutomationNodes),
-        nodeProbe(point + origin, radius), lane.color));
+        scene->layer(songview::TimelineQuickLayer::AutomationNodes), nodeProbe(point, radius),
+        lane.color));
 
     QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 }
@@ -282,6 +288,7 @@ void AutomationEditingTest::selectionRingsAndReticlesComposed()
     QFETCH(int, laneKind);
     const LaneKind kind = LaneKind(laneKind);
     QVERIFY(kind != LaneKind::Tempo || expandTempo());
+    QVERIFY(activateParameter(rowId(kind)));
     SongDocument &document = m_tab->document();
     SongView &view = m_tab->view();
     auto *scene = view.findChild<songview::TimelineQuickScene *>();
@@ -322,10 +329,8 @@ void AutomationEditingTest::selectionRingsAndReticlesComposed()
     const QColor highlight = m_automationInput->palette().highlight().color();
     const AutomationGeometry geometry = AutomationGeometry::resolve();
     QVERIFY(checks::support::layerHasRingAt(
-        scene->layer(songview::TimelineQuickLayer::AutomationNodes),
-        node - QPointF(0.0, page().verticalScroll()), geometry.selectedNodeRingRadius,
-        geometry.selectedNodeRingDipWidth, highlight));
-    const QPoint origin{0, -m_page->verticalScroll()};
+        scene->layer(songview::TimelineQuickLayer::AutomationNodes), node,
+        geometry.selectedNodeRingRadius, geometry.selectedNodeRingDipWidth, highlight));
     const QColor edge = themes::color(themes::Role::song_view_selection_edge);
     const QColor fill = themes::color(themes::Role::song_view_selection_fill);
     const qreal firstX = nodePoint(view, *m_automationInput, lane, kFirstNodeTick, nodeValue).x();
@@ -333,12 +338,10 @@ void AutomationEditingTest::selectionRingsAndReticlesComposed()
         nodePoint(view, *m_automationInput, lane, kFirstNodeTick + 1, nodeValue).x();
     const QRectF reticle((firstX + lastX) / 2.0 - 2.0, lane.body.top() + 2.0, 4.0, 6.0);
     QVERIFY(checks::support::layerHasColorIn(
-                scene->layer(songview::TimelineQuickLayer::AutomationSelection),
-                reticle.translated(origin), edge) ||
+                scene->layer(songview::TimelineQuickLayer::AutomationSelection), reticle, edge) ||
             checks::support::layerHasColorIn(
                 scene->layer(songview::TimelineQuickLayer::AutomationSelection),
-                QRectF(firstX + 4.0, lane.body.center().y() - 2.0, 8.0, 4.0).translated(origin),
-                fill));
+                QRectF(firstX + 4.0, lane.body.center().y() - 2.0, 8.0, 4.0), fill));
 
     QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 }
@@ -362,7 +365,6 @@ void AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings()
     const QPointF third = nodePoint(view, *m_automationInput, lane, 120, 55);
     const QColor highlight = m_automationInput->palette().highlight().color();
     const AutomationGeometry geometry = AutomationGeometry::resolve();
-    const QPointF scroll(0.0, page().verticalScroll());
 
     songview::EditorSelectionModel::TimeSelection selection;
     selection.startTick = 48;
@@ -374,14 +376,11 @@ void AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings()
                 initialRevision);
     const songview::TimelineQuickLayerData excluded =
         scene->layer(songview::TimelineQuickLayer::AutomationNodes);
-    QVERIFY(checks::support::layerHasRingAt(excluded, first - scroll,
-                                            geometry.selectedNodeRingRadius,
+    QVERIFY(checks::support::layerHasRingAt(excluded, first, geometry.selectedNodeRingRadius,
                                             geometry.selectedNodeRingDipWidth, highlight));
-    QVERIFY(!checks::support::layerHasRingAt(excluded, second - scroll,
-                                             geometry.selectedNodeRingRadius,
+    QVERIFY(!checks::support::layerHasRingAt(excluded, second, geometry.selectedNodeRingRadius,
                                              geometry.selectedNodeRingDipWidth, highlight));
-    QVERIFY(!checks::support::layerHasRingAt(excluded, third - scroll,
-                                             geometry.selectedNodeRingRadius,
+    QVERIFY(!checks::support::layerHasRingAt(excluded, third, geometry.selectedNodeRingRadius,
                                              geometry.selectedNodeRingDipWidth, highlight));
 
     selection.endTick = 73;
@@ -391,14 +390,11 @@ void AutomationEditingTest::halfOpenTimeSelectionComposesNodeRings()
                 excludedRevision);
     const songview::TimelineQuickLayerData included =
         scene->layer(songview::TimelineQuickLayer::AutomationNodes);
-    QVERIFY(checks::support::layerHasRingAt(included, first - scroll,
-                                            geometry.selectedNodeRingRadius,
+    QVERIFY(checks::support::layerHasRingAt(included, first, geometry.selectedNodeRingRadius,
                                             geometry.selectedNodeRingDipWidth, highlight));
-    QVERIFY(checks::support::layerHasRingAt(included, second - scroll,
-                                            geometry.selectedNodeRingRadius,
+    QVERIFY(checks::support::layerHasRingAt(included, second, geometry.selectedNodeRingRadius,
                                             geometry.selectedNodeRingDipWidth, highlight));
-    QVERIFY(!checks::support::layerHasRingAt(included, third - scroll,
-                                             geometry.selectedNodeRingRadius,
+    QVERIFY(!checks::support::layerHasRingAt(included, third, geometry.selectedNodeRingRadius,
                                              geometry.selectedNodeRingDipWidth, highlight));
 
     QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);

@@ -216,6 +216,13 @@ class AutomationEditingTest final : public QObject
     // the document, undo state and explicit shared selection.
     void parameterTabsPreserveDocumentAndSelection();
 
+    // Parameter switch invalidation: a switch ends only its owned
+    // provisional gestures and prompts, never commits them to the new
+    // parameter, and spares foreign popups; fresh input edits the new
+    // parameter only.
+    void parameterSwitchInvalidatesValuePrompt();
+    void parameterSwitchCancelsNodeDrag();
+
   private:
     struct ArmedCcDrag final {
         QPoint dragEndWindow;

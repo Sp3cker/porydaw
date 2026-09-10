@@ -134,6 +134,7 @@ void AutomationEditingTest::actionHeldKeyGestures()
     QVERIFY(action->isChecked());
     const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
     QVERIFY(pan.valid());
+    QVERIFY(activateParameter({EditorAutomationRowKind::ControlChange, 0, kPanController}));
     const QPointF start = inputPoint(pan, 144, 64);
     QVERIFY(automationInput().bounds().contains(
         QPointF(start.x(), start.y() - page().verticalScroll())));
@@ -221,6 +222,7 @@ void AutomationEditingTest::pencilClickHalfOpenQuantization()
     const EditorAutomationRowId panRow{EditorAutomationRowKind::ControlChange, 0, kPanController};
     const LaneHandle pan = findRow(panRow);
     QVERIFY(pan.valid());
+    QVERIFY(activateParameter(panRow));
     setPencilMode(true);
     const AutomationProjection projection(AutomationGeometry::resolve(), &page());
     const AutomationGridCell cell = projection.snapCellAt(24.0);

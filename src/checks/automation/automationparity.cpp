@@ -6,7 +6,6 @@
 #include <limits>
 #include <vector>
 
-#include <QCoreApplication>
 #include <QSignalSpy>
 #include <QtTest>
 
@@ -120,6 +119,7 @@ void AutomationEditingTest::hoverInsertionDoesNotMutateDocument()
 
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
+    QVERIFY(activateParameter(rowId(adapter)));
     const QPointF hover = inputPoint(lane, kSweepStartTick, 90);
     QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
     QSignalSpy edited(&tab(), &SongTab::edited);
@@ -149,6 +149,7 @@ void AutomationEditingTest::stationaryNodeInteractions()
         QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
+    QVERIFY(activateParameter(rowId(adapter)));
     const QPoint node = automation_test::windowFromContent(page(), automationInput(),
                                                            inputPoint(lane, kNodeTick, kNodeValue));
     const uint64_t revision = m_tab->document().revision();
@@ -193,6 +194,7 @@ void AutomationEditingTest::independentDoubleClickAfterDeleteOpensValuePrompt()
         QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
+    QVERIFY(activateParameter(rowId(adapter)));
     const QPoint node = automation_test::windowFromContent(page(), automationInput(),
                                                            inputPoint(lane, kNodeTick, kNodeValue));
 
@@ -237,6 +239,7 @@ void AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt()
         QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
+    QVERIFY(activateParameter(rowId(adapter)));
     const QPoint node = automation_test::windowFromContent(page(), automationInput(),
                                                            inputPoint(lane, kNodeTick, kNodeValue));
     QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
@@ -279,6 +282,7 @@ void AutomationEditingTest::sweepAndRampCommit()
         QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
+    QVERIFY(activateParameter(rowId(adapter)));
     const QPoint start = automation_test::windowFromContent(page(), automationInput(),
                                                             inputPoint(lane, kSweepStartTick, 80));
     const QPoint target = automation_test::windowFromContent(page(), automationInput(),
@@ -344,14 +348,11 @@ void AutomationEditingTest::pencilPreviewCommits()
 {
     QFETCH(int, adapter);
     setPoints(m_tab->document(), adapter, {});
-    if (adapter == kTempo) {
+    if (adapter == kTempo)
         QVERIFY(expandTempo());
-    } else {
-        m_page->addEmptyLane(0, kController);
-        QCoreApplication::processEvents();
-    }
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
+    QVERIFY(activateParameter(rowId(adapter)));
     setPencilMode(true);
     const QPoint start =
         automation_test::windowFromContent(page(), automationInput(), inputPoint(lane, 36, 80));
@@ -398,6 +399,7 @@ void AutomationEditingTest::laneBandSelectsRange()
         QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
+    QVERIFY(activateParameter(rowId(adapter)));
     m_tab->view().selectionModel().clearTimeSelection();
     const QPoint start = automation_test::windowFromContent(page(), automationInput(),
                                                             inputPoint(lane, kNodeTick, 80));
@@ -443,6 +445,7 @@ void AutomationEditingTest::blankAndSubThresholdNoOps()
         QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
+    QVERIFY(activateParameter(rowId(adapter)));
     const QPoint blank = automation_test::windowFromContent(page(), automationInput(),
                                                             inputPoint(lane, kSweepStartTick, 90));
     QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);

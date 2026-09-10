@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
+#include <variant>
 #include <vector>
 
 #include <QCoreApplication>
@@ -150,6 +151,7 @@ void AutomationEditingTest::nodeDragCommits()
         QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
+    QVERIFY(activateParameter(rowId(adapter)));
     const QPoint source = automation_test::windowFromContent(
         page(), automationInput(), inputPoint(lane, kNodeTick, kNodeValue));
     const QPoint target = automation_test::windowFromContent(
@@ -258,6 +260,7 @@ void AutomationEditingTest::nodeDragShiftAxisLocks()
         QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
+    QVERIFY(activateParameter(rowId(adapter)));
     const QPoint source = automation_test::windowFromContent(
         page(), automationInput(), inputPoint(lane, kNodeTick, kNodeValue));
     const QPoint target =
@@ -309,6 +312,14 @@ void AutomationEditingTest::scrolledOriginPhantomCommits()
     const qreal coveredX = inputPoint(lane, kNodeTick, kNodeValue).x();
     m_tab->view().setEditorHorizontalScroll(coveredX +
                                             2.0 * AutomationGeometry::resolve().pointHitRadius);
+    const FrozenDocumentState switched = frozenDocumentState();
+    const EditorAutomationRowId other =
+        adapter == kTempo
+            ? EditorAutomationRowId{EditorAutomationRowKind::ControlChange, 0, kController}
+            : EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0};
+    QVERIFY(activateParameter(other));
+    QVERIFY(activateParameter(rowId(adapter)));
+    QVERIFY(frozenDocumentState() == switched);
     const QPointF sourceContent(0.0, inputPoint(lane, kNodeTick, kNodeValue).y());
     const QPointF targetContent(0.0, inputPoint(lane, kNodeTick, 110).y());
     const QPoint source =
@@ -357,6 +368,8 @@ void AutomationEditingTest::scrolledOriginPhantomCommits()
     const std::vector<NodePoint> expected{
         {kFirstTick, kFirstValue}, {kNodeTick, movedValue}, {kLateTick, kLateValue}};
     QVERIFY(samePoints(pointsOf(m_tab->document(), adapter), expected));
+    QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()));
+    QCOMPARE(tab().document().smf().write(), before.smf);
 }
 
 void AutomationEditingTest::selectedRangeDragAndDelete_data()
@@ -378,6 +391,7 @@ void AutomationEditingTest::selectedRangeDragAndDelete()
         QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
+    QVERIFY(activateParameter(rowId(adapter)));
     songview::EditorSelectionModel::TimeSelection selection;
     selection.startTick = kNodeTick;
     selection.endTick = kLateTick;
@@ -442,6 +456,7 @@ void AutomationEditingTest::escapeCancelsAdapterDrag()
         QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
+    QVERIFY(activateParameter(rowId(adapter)));
     const QPoint source = automation_test::windowFromContent(
         page(), automationInput(), inputPoint(lane, kNodeTick, kNodeValue));
     const QPoint target = automation_test::windowFromContent(
@@ -488,6 +503,7 @@ void AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers()
         QVERIFY(expandTempo());
     LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
+    QVERIFY(activateParameter(rowId(adapter)));
     QPoint source = automation_test::windowFromContent(page(), automationInput(),
                                                        inputPoint(lane, kNodeTick, kNodeValue));
     QPoint activation =

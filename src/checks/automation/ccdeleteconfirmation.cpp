@@ -1,9 +1,10 @@
 // Regression coverage for the automation canvas' CC-lane delete confirmation:
 // the Quick form that replaced the nonempty-lane QMessageBox on the shared
 // canvas popup session. Every scenario drives the real rendered surface — the
-// gutter right-press, the typed RemoveLane row, and the form's own buttons and
-// keys — and reads the document, the undo stack, and the row stack as oracles.
-// The confirmation invokables are never called directly.
+// parameter label right-press, the typed Delete-events row, and the form's own
+// buttons and keys — and reads the document, the undo stack, and the
+// parameter catalog as oracles. The confirmation invokables are never called
+// directly.
 
 #include "checks/automation/tst_automationediting.h"
 
@@ -28,8 +29,38 @@
 namespace {
 
 using automation_quick::AutomationMenu;
+using automation_quick::waitForAutomationMenu;
 
 using CanvasMenuAction = AutomationCanvas::CanvasMenuAction;
+
+// The rendered parameter label for a catalog index, or null.
+QQuickItem *parameterLabelItem(SongTab &songTab, int index)
+{
+    QQuickItem *const root = songTab.view().quickView()->rootObject();
+    return root ? root->findChild<QQuickItem *>(
+                      QStringLiteral("automationParameterTab%1").arg(index))
+                : nullptr;
+}
+
+// Opens the shared lane menu through the real rendered parameter label: the
+// label's context-menu route activates the target parameter first, then opens
+// its menu at the label. Returns the diagnostic-bearing menu either way.
+AutomationMenu openLabelMenu(SongTab &songTab, AutomationCanvas &canvas,
+                             const EditorAutomationRowId &row, QString why)
+{
+    AutomationMenu menu;
+    menu.diagnostic = std::move(why);
+    const int index = canvas.parameterIndex(row);
+    QQuickItem *const label = index >= 0 ? parameterLabelItem(songTab, index) : nullptr;
+    if (!label) {
+        menu.diagnostic = QStringLiteral("the parameter label never rendered");
+        return menu;
+    }
+    QTest::mouseClick(
+        label->window(), Qt::RightButton, Qt::NoModifier,
+        label->mapToScene(QPointF(label->width() / 2.0, label->height() / 2.0)).toPoint());
+    return waitForAutomationMenu(songTab.view(), std::move(menu.diagnostic));
+}
 
 // The fixture's pilot lane: CC 10 carries two points, and the pilot song's
 // volume lane carries one point a delete of CC 10 must never touch.
@@ -78,19 +109,11 @@ AutomationEditingTest::openCcDeletePrompt(const EditorAutomationRowId &row, QStr
 {
     CcDeletePrompt prompt;
     prompt.diagnostic = std::move(diagnostic);
-    if (!m_page || !m_automationGutterInput)
+    AutomationCanvas *const canvas = m_page ? page().canvas() : nullptr;
+    if (!canvas)
         return prompt;
 
-    const LaneHandle lane = findRow(row);
-    const QRect body = laneBody(lane);
-    if (!lane.valid() || body.isEmpty())
-        return prompt;
-
-    const QPointF gutter{m_automationGutterInput->bounds().center().x(), qreal(body.center().y())};
-    mousePress(Qt::RightButton, automationGutterWindowPoint(gutter));
-    mouseRelease(Qt::RightButton, automationGutterWindowPoint(gutter));
-    const AutomationMenu menu =
-        automation_quick::waitForAutomationMenu(tab().view(), prompt.diagnostic);
+    const AutomationMenu menu = openLabelMenu(tab(), *canvas, row, prompt.diagnostic);
     if (!menu.session || !menu.model)
         return prompt;
 
@@ -165,7 +188,10 @@ void AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRest
     DocLanePoint point;
     QVERIFY(!songTab.document().findLanePoint(0, kController, kFirstPointTick, &point));
     QVERIFY(!songTab.document().findLanePoint(0, kController, kSecondPointTick, &point));
-    // The parameter label persists; only its written events are gone.
+    // The parameter label persists and stays selectable; only its written
+    // events are gone.
+    QVERIFY2(activateParameter(volumeRow), "the volume label was no longer selectable");
+    QVERIFY2(activateParameter(ccRow), "the cleared lane parameter was no longer selectable");
     const LaneHandle retained = findRow(ccRow);
     QVERIFY(retained.valid());
     QVERIFY(!laneBody(retained).isEmpty());
@@ -245,35 +271,44 @@ void AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched()
 void AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget()
 {
     SongTab &songTab = tab();
+    AutomationCanvas *const canvas = page().canvas();
     const quick_popup::PromptGuard guard(songTab.view());
-    const LaneHandle volume =
-        findRow({EditorAutomationRowKind::ControlChange, 0, CoreTimeDefaults::kCcVolume});
-    QVERIFY(volume.valid());
-    QVERIFY(!laneBody(volume).isEmpty());
+    const EditorAutomationRowId ccRow{EditorAutomationRowKind::ControlChange, 0, kController};
+    const EditorAutomationRowId volumeRow{EditorAutomationRowKind::ControlChange, 0,
+                                          CoreTimeDefaults::kCcVolume};
 
     QSignalSpy documentChanged(&songTab.document(), &SongDocument::documentChanged);
     QVERIFY(documentChanged.isValid());
     const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
 
-    const CcDeletePrompt opened = openCcDeletePrompt(
-        {EditorAutomationRowKind::ControlChange, 0, kController},
-        QStringLiteral("the RemoveLane pick did not open the delete confirmation"));
+    const CcDeletePrompt opened =
+        openCcDeletePrompt(ccRow, QStringLiteral("the RemoveLane pick did not open the delete "
+                                                 "confirmation"));
     QVERIFY2(opened.session && opened.root && opened.cancelButton,
              qUtf8Printable(opened.diagnostic));
 
-    // The witness sits on the volume lane's gutter: a leaked or retargeted
-    // press would open a lane menu right there.
+    // The witness sits on the volume parameter's label: a leaked or retargeted
+    // press would open that label's menu right there.
     QQuickItem *const content = opened.session->contentItem();
     QVERIFY(content);
-    const QPoint outside = automationGutterWindowPoint(
-        {m_automationGutterInput->bounds().center().x(), qreal(laneBody(volume).center().y())});
+    QQuickItem *const volumeLabel = parameterLabelItem(songTab, canvas->parameterIndex(volumeRow));
+    QVERIFY2(volumeLabel, "the volume label never rendered");
+    const QPoint outside =
+        volumeLabel->mapToScene(QPointF(volumeLabel->width() / 2.0, volumeLabel->height() / 2.0))
+            .toPoint();
     QVERIFY2(!content->contains(content->mapFromScene(QPointF(outside))),
              "the outside witness did not reach the popup underlay");
 
     QTest::mousePress(m_quickWindow, Qt::RightButton, Qt::NoModifier, outside);
     QCoreApplication::processEvents();
     QVERIFY2(!opened.session->isOpen(), "an outside right press did not dismiss the confirmation");
-    QTest::mouseRelease(m_quickWindow, Qt::RightButton, Qt::NoModifier, outside);
+    // Release over the plot, away from every label, so the release itself can
+    // never open a replacement menu.
+    const LaneHandle cc = findRow(ccRow);
+    QVERIFY(cc.valid());
+    QTRY_VERIFY2(!laneBody(cc).isEmpty(), "the lane plot never rendered");
+    QTest::mouseRelease(m_quickWindow, Qt::RightButton, Qt::NoModifier,
+                        automationWindowPoint(QPointF(laneBody(cc).center())));
     QCoreApplication::processEvents();
     songview::QuickPopupSession *const session = quick_popup::popupSession(songTab.view());
     QVERIFY2(session && !session->isOpen(), "the swallowed outside right release opened a popup");
@@ -492,12 +527,10 @@ void AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation()
     QVERIFY(documentChanged.isValid());
     const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
 
-    const QPointF gutter{m_automationGutterInput->bounds().center().x(),
-                         qreal(laneBody(volume).center().y())};
-    mousePress(Qt::RightButton, automationGutterWindowPoint(gutter));
-    mouseRelease(Qt::RightButton, automationGutterWindowPoint(gutter));
-    const AutomationMenu menu = automation_quick::waitForAutomationMenu(
-        songTab.view(), QStringLiteral("the volume right-press did not open the shared menu"));
+    AutomationCanvas *const canvas = page().canvas();
+    const AutomationMenu menu =
+        openLabelMenu(songTab, *canvas, volumeRow,
+                      QStringLiteral("the volume label right-press did not open the shared menu"));
     QVERIFY2(menu.session && menu.model, qUtf8Printable(menu.diagnostic));
     const int removeRow = menu.model->rowForId(int(CanvasMenuAction::RemoveLane));
     QVERIFY2(removeRow >= 0, "the synthetic-only volume menu offered no RemoveLane row");
