@@ -177,7 +177,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
                    NOTIFY minimumContentHeightChanged FINAL)
     void setMinimumContentHeight(int height);
     std::optional<EditorAutomationRowId> parameterRow(int index) const;
-    int parameterIndex(const EditorAutomationRowId &row) const noexcept;
     Q_INVOKABLE void activateParameter(int index);
     Q_INVOKABLE void openParameterMenu(int index, qreal sceneX, qreal sceneY);
     // Binds the shared canvas popup session once TimelineQuickView exists;

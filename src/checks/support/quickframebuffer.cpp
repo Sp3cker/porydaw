@@ -24,6 +24,47 @@
 
 namespace checks::support {
 
+bool waitForQuickFrame(QQuickWindow &window, QString *error)
+{
+    if (error)
+        error->clear();
+    if (!window.isVisible()) {
+        if (error)
+            *error = QStringLiteral("Quick window is hidden; expose it explicitly "
+                                    "before capturing");
+        return false;
+    }
+    QDeadlineTimer timeout{1000};
+    while (!timeout.hasExpired()) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+        if (window.isExposed())
+            break;
+    }
+    if (timeout.hasExpired()) {
+        if (error)
+            *error = QStringLiteral("Qt Quick timeline window did not become exposed");
+        return false;
+    }
+
+    const auto frameRendered = std::make_shared<std::atomic_bool>(false);
+    const QMetaObject::Connection frameRenderedConnection = QObject::connect(
+        &window, &QQuickWindow::afterRendering, &window,
+        [frameRendered] { frameRendered->store(true, std::memory_order_release); },
+        Qt::QueuedConnection);
+    window.update();
+    QCoreApplication::sendPostedEvents();
+    QDeadlineTimer frameTimeout{1000};
+    while (!frameRendered->load(std::memory_order_acquire) && !frameTimeout.hasExpired())
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+    QObject::disconnect(frameRenderedConnection);
+    if (!frameRendered->load(std::memory_order_acquire)) {
+        if (error)
+            *error = QStringLiteral("Qt Quick timeline canvas did not render a frame");
+        return false;
+    }
+    return true;
+}
+
 void pumpQuick()
 {
     QCoreApplication::sendPostedEvents();
@@ -58,8 +99,7 @@ bool showQuickViewport(SongView &view, const QSize &size)
         return false;
     quickWindow->resize(size);
     quickWindow->show();
-    pumpQuick();
-    return true;
+    return waitForQuickFrame(*quickWindow);
 }
 
 int playheadWidthAt(const QImage &image, int logicalY, qreal logicalX, const QColor &color)
@@ -127,8 +167,6 @@ TimelineQuickLayerRevisions timelineQuickLayerRevisions(const songview::Timeline
 
 QImage captureQuickBand(SongView &view, const QRect &viewportRect, QString *error)
 {
-    if (error)
-        error->clear();
     if (viewportRect.isEmpty()) {
         if (error)
             *error = QStringLiteral("Qt Quick framebuffer crop is empty");
@@ -148,40 +186,8 @@ QImage captureQuickBand(SongView &view, const QRect &viewportRect, QString *erro
         return {};
     }
 
-    if (!quickWindow->isVisible()) {
-        if (error)
-            *error = QStringLiteral("Quick window is hidden; expose it explicitly "
-                                    "before capturing");
+    if (!waitForQuickFrame(*quickWindow, error))
         return {};
-    }
-    QDeadlineTimer timeout{1000};
-    while (!timeout.hasExpired()) {
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
-        if (quickWindow->isExposed())
-            break;
-    }
-    if (timeout.hasExpired()) {
-        if (error)
-            *error = QStringLiteral("Qt Quick timeline window did not become exposed");
-        return {};
-    }
-
-    const auto frameRendered = std::make_shared<std::atomic_bool>(false);
-    const QMetaObject::Connection frameRenderedConnection = QObject::connect(
-        quickWindow, &QQuickWindow::afterRendering, quickWindow,
-        [frameRendered] { frameRendered->store(true, std::memory_order_release); },
-        Qt::QueuedConnection);
-    quickWindow->update();
-    QCoreApplication::sendPostedEvents();
-    QDeadlineTimer frameTimeout{1000};
-    while (!frameRendered->load(std::memory_order_acquire) && !frameTimeout.hasExpired())
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
-    QObject::disconnect(frameRenderedConnection);
-    if (!frameRendered->load(std::memory_order_acquire)) {
-        if (error)
-            *error = QStringLiteral("Qt Quick timeline canvas did not render a frame");
-        return {};
-    }
 
     const QImage framebuffer = quickWindow->grabWindow();
     if (framebuffer.isNull() || framebuffer.size().isEmpty()) {

@@ -18,6 +18,7 @@
 
 #include "checks/automation/automationquickmenu.h"
 #include "checks/quickpopupguard.h"
+#include "checks/support/timelinequickcheck.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
@@ -37,8 +38,8 @@ using CanvasMenuAction = AutomationCanvas::CanvasMenuAction;
 QQuickItem *parameterLabelItem(SongTab &songTab, int index)
 {
     QQuickItem *const root = songTab.view().quickView()->rootObject();
-    return root ? root->findChild<QQuickItem *>(
-                      QStringLiteral("automationParameterTab%1").arg(index))
+    return root ? checks::support::visualDescendant(
+                      root, QStringLiteral("automationParameterTab%1").arg(index))
                 : nullptr;
 }
 
@@ -50,7 +51,7 @@ AutomationMenu openLabelMenu(SongTab &songTab, AutomationCanvas &canvas,
 {
     AutomationMenu menu;
     menu.diagnostic = std::move(why);
-    const int index = canvas.parameterIndex(row);
+    const int index = checks::support::automationParameterIndex(canvas, row);
     QQuickItem *const label = index >= 0 ? parameterLabelItem(songTab, index) : nullptr;
     if (!label) {
         menu.diagnostic = QStringLiteral("the parameter label never rendered");
@@ -291,7 +292,8 @@ void AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget
     // press would open that label's menu right there.
     QQuickItem *const content = opened.session->contentItem();
     QVERIFY(content);
-    QQuickItem *const volumeLabel = parameterLabelItem(songTab, canvas->parameterIndex(volumeRow));
+    QQuickItem *const volumeLabel =
+        parameterLabelItem(songTab, checks::support::automationParameterIndex(*canvas, volumeRow));
     QVERIFY2(volumeLabel, "the volume label never rendered");
     const QPoint outside =
         volumeLabel->mapToScene(QPointF(volumeLabel->width() / 2.0, volumeLabel->height() / 2.0))

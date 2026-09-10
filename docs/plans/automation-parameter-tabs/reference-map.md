@@ -4,6 +4,48 @@ Controller reference, not an implementer brief. Generated from successful parent
 
 Audit scope: EditorViewState fields, QSettings serialization and remap APIs in this inventory are retained unchanged, not deletion targets. Their workspace/main-window/rollcheck callers need no rewrite. minimumContentHeight is retained as the Qt-measured selector minimum. The inventory is evidence for caller closure, not an instruction to change every listed file. The previously unassigned automationstroke.cpp UI caller is owned by task 26 (after task 28).
 
+## Implementation-audit repair set
+
+At audited head `0b432f0c`, clangd found 23 `AutomationCanvas::parameterIndex` calls in the 13 check files listed below, plus its declaration and definition. No product/QML consumer exists. This supplementary inventory covers both compiling references and implicit input assumptions; the older inventories below remain navigation evidence for the pending UI removals.
+
+The controller integrates this bounded group once: relocate the existing visual traversal and add the forward-row-derived test index helper; migrate popup and selector consumers; remove the production inverse and its round-trip assertion; then build checks and run the existing presentation suite and focused editing case. No intermediate compatibility alias or broken-caller checkpoint. Task 8 owns the shared seam; other numbered briefs retain their semantic ownership.
+
+Production:
+- `src/ui/editordrawer/automationcanvas.h` — remove the test-only inverse declaration.
+- `src/ui/editordrawer/automationcanvas_tabs.cpp` — remove its implementation; retain runtime forward mapping.
+- `src/ui/songview/quick/automationquick.cpp` — task 3's zero-or-one visible-lane collection removal, not a compositor rewrite.
+
+Existing support:
+- `src/checks/support/timelinequickcheck.h` — own the relocated visual traversal and one new test-only index helper scanning `parameterRow(index)` until nullopt.
+- `src/checks/quickpopupguard.h` — consume that traversal and delete the original definition; keep popup ownership/content-root selection unchanged.
+- `src/checks/support/quickframebuffer.h` / `src/checks/support/quickframebuffer.cpp` — task 19 extracts the existing exposure/frame wait into `waitForQuickFrame`; capture and viewport-show paths reuse the same implementation/deadlines.
+- `src/checks/support/editorrig.cpp` — task 19 waits before returning shown rigs, without changing hidden-rig behavior.
+
+Inverse callers (all 13 files migrate; source comments are not counted as callers):
+- `src/checks/automation/automationfixture.cpp` — wrong QObject label lookup; task 8.
+- `src/checks/automation/automationclipboard.cpp` — wrong QObject label lookup; task 12.
+- `src/checks/automation/automationmenus.cpp` — wrong QObject label lookup and existing qualified popup traversal call; tasks 8/12.
+- `src/checks/automation/ccdeleteconfirmation.cpp` — wrong QObject label lookup; task 12.
+- `src/checks/automation/automationownership.cpp` — task 11.
+- `src/checks/automation/automationpointmenus.cpp` — task 11.
+- `src/checks/automation/automationselection.cpp` — task 10.
+- `src/checks/automation/presentation/painting.cpp` — task 13; delete only the inverse-roundtrip assertion, retaining expected forward catalog mapping and application styling.
+- `src/checks/automation/presentation/tst_automationpresentation.cpp` — local traversal copy; task 13.
+- `src/checks/automation/hover/hoverfixture.cpp` — local traversal copy; task 14.
+- `src/checks/automation/raster/rasterfixture.cpp` — local traversal copy; task 15.
+- `src/checks/nativegraphics/tst_playhead_autohover.cpp` — local traversal copy; task 16.
+- `src/checks/scrollbar/tst_scrollbar.cpp` — local traversal copy; task 17. Its automation-scrollbar absence gate stays deferred until task 31.
+
+Other bounded consumers:
+- `src/checks/drawerpresentation/drawer.cpp` — sixth local selector traversal copy; task 19 uses the same support helper.
+- `src/checks/drawerpresentation/valueprompt.cpp` — task 19 explicitly activates Pan before insertion/Escape input; adding a CC10 event or obtaining its coordinates does not activate it.
+- `src/checks/drawerpresentation/fixtures.cpp` — task 19 waits for the first rendered layout after staging focus, before geometry snapshots can escape the fixture.
+- `src/checks/automation/raster/rasterfixture.h` — remove caller-free `expandTempo` with its body in rasterfixture.cpp; task 29 verifies residual closure if the repair already deleted it.
+
+The pre-existing eventviews traversal copy is outside this repair; do not turn this into a project-wide helper refactor. Main editing `expandTempo` still has live semantic consumers owned by task 26's migration group; it is not part of the dead-raster deletion.
+
+Voice failure ownership is now measured: during the full drawer suite, the first capture used `QRect(0,325 1000x102)` while frame processing moved the band to `QRect(0,369 1000x102)`. The isolated case began at y=369 and passed; captured PNGs exposed the stale crop. Task 19 owns the four-file readiness repair above, explicitly approved by the `plan` agent. The existing wait is reused earlier, not supplemented with a new retry/scheduler, discarded captures or hidden Automation. All existing Voice comparisons remain unchanged and pass; temporary capture diagnostics are removed.
+
 ## laneHeight
 
 - `src/ui/editorviewstate.h:62:9`

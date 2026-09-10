@@ -32,23 +32,23 @@ Completed/reviewed tasks: 8.
 
 ## Interface contract
 
-Adds slots `parameterSwitchInvalidatesValuePrompt()` and `parameterSwitchCancelsNodeDrag()` to the existing AutomationEditingTest. Uses actual canvas methods for programmatic switch while a modal/session-owned form is open; do not click through a popup underlay unrealistically.
+Adds slots `parameterSwitchInvalidatesValuePrompt()` and `parameterSwitchCancelsNodeDrag()` to the existing AutomationEditingTest. Uses actual canvas methods for programmatic switch while a modal/session-owned form is open; do not click through a popup underlay unrealistically. Resolve the target index through `checks::support::automationParameterIndex` (task 8's shared test-support lookup); no production inverse mapping and no local copy of the visual traversal or row catalog.
 
 ## Implementation steps
 
 ### Step 1
 
-For the prompt scenario activate the pilot CC, open its existing value prompt, capture FrozenDocumentState, switch to Tempo with the validated canvas invokable, and attempt the old accept callback:
+For the prompt scenario activate the pilot CC, open its existing value prompt, capture FrozenDocumentState, switch to Tempo with the validated canvas invokable, and attempt the old accept callback. Example, using the shared lookup for the index and the production invokable for the switch:
 ```cpp
 const FrozenDocumentState before = frozenDocumentState();
-const int tempoIndex = page().canvas()->parameterIndex(
-    {EditorAutomationRowKind::Tempo, 0, 0});
+const int tempoIndex = checks::support::automationParameterIndex(
+    *page().canvas(), {EditorAutomationRowKind::Tempo, 0, 0});
 page().canvas()->activateParameter(tempoIndex);
 QVERIFY(!page().canvas()->valuePromptVisible());
 page().canvas()->acceptNodeValuePrompt(100);
 QVERIFY(frozenDocumentState() == before);
 ```
-Then open a fresh Tempo prompt and prove it edits Tempo, not the old CC. Keep existing stale-document, foreign-session and synthetic-default point-menu tests.
+Then open a fresh Tempo prompt and prove it edits Tempo, not the old CC. Keep existing stale-document, foreign-session and synthetic-default point-menu tests. Activation of a row inside this suite goes through the shared support lookup; the index is never hard-coded and never derived from a production inverse API.
 
 ### Step 2
 

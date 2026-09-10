@@ -9,9 +9,11 @@
 #include <QQuickItem>
 
 #include "checks/quickpopupguard.h"
+#include "checks/support/timelinequickcheck.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/layout.h"
 
 #include "checks/automation/automationquickmenu.h"
 
@@ -28,8 +30,8 @@ using automation_quick::waitForAutomationMenu;
 QQuickItem *parameterLabelItem(SongTab &songTab, int index)
 {
     QQuickItem *const root = songTab.view().quickView()->rootObject();
-    return root ? root->findChild<QQuickItem *>(
-                      QStringLiteral("automationParameterTab%1").arg(index))
+    return root ? checks::support::visualDescendant(
+                      root, QStringLiteral("automationParameterTab%1").arg(index))
                 : nullptr;
 }
 
@@ -41,7 +43,7 @@ AutomationMenu openLabelMenu(SongTab &songTab, AutomationCanvas &canvas,
 {
     AutomationMenu menu;
     menu.diagnostic = std::move(why);
-    const int index = canvas.parameterIndex(row);
+    const int index = checks::support::automationParameterIndex(canvas, row);
     QQuickItem *const label = index >= 0 ? parameterLabelItem(songTab, index) : nullptr;
     if (!label) {
         menu.diagnostic = QStringLiteral("the parameter label never rendered");

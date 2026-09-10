@@ -6,9 +6,11 @@
 // content slot, the menu panel's typed rows, and the canvas' active focus
 // rather than a separate native window.
 // The scoped guard keeps a failed scenario from leaving a popup open to
-// swallow later delivery into the shell canvas.
+// swallow later delivery into the shell canvas. Visual lookups reuse the
+// canonical childItems traversal in checks::support.
 
 #include "checks/support/quickframebuffer.h"
+#include "checks/support/timelinequickcheck.h"
 #include <QPoint>
 #include <QQuickItem>
 #include <QQuickWindow>
@@ -31,27 +33,12 @@ inline songview::QuickPopupSession *popupSession(SongView &view)
     return quick ? quick->popupSession() : nullptr;
 }
 
-// Named prompt controls belong to the live visual tree. Pooled QML content can
-// be visually reparented without matching QObject parentage, so QObject
-// findChild() is not a reliable lookup seam.
-inline QQuickItem *visualDescendant(QQuickItem *root, QLatin1String objectName)
-{
-    if (!root)
-        return nullptr;
-    if (root->objectName() == objectName)
-        return root;
-    for (QQuickItem *const child : root->childItems())
-        if (QQuickItem *const found = visualDescendant(child, objectName))
-            return found;
-    return nullptr;
-}
-
 // A named item inside the current live popup content (dialog root, text input,
 // accept/cancel buttons). The session's content slot distinguishes the current
 // prompt from retired, deferred-deletion QML under the canvas root.
 inline QQuickItem *promptItem(const songview::QuickPopupSession &session, QLatin1String objectName)
 {
-    return visualDescendant(session.contentItem(), objectName);
+    return checks::support::visualDescendant(session.contentItem(), objectName);
 }
 
 // The item's center in window coordinates, ready for QTest delivery.
@@ -84,15 +71,16 @@ inline bool clickPromptButton(songview::QuickPopupSession &session, QLatin1Strin
 // deletion panels from a replaced session.
 inline QQuickItem *menuPanel(const songview::QuickPopupSession &session)
 {
-    QQuickItem *const panel =
-        visualDescendant(session.overlayRoot(), QLatin1String("quickMenuPanelRoot"));
+    QQuickItem *const panel = checks::support::visualDescendant(
+        session.overlayRoot(), QLatin1String("quickMenuPanelRoot"));
     return panel && panel->isVisible() ? panel : nullptr;
 }
 
 // The frame rectangle that absorbs presses around the current menu level.
 inline QQuickItem *menuFrame(const songview::QuickPopupSession &session)
 {
-    return visualDescendant(session.overlayRoot(), QLatin1String("quickMenuFrame"));
+    return checks::support::visualDescendant(session.overlayRoot(),
+                                             QLatin1String("quickMenuFrame"));
 }
 
 // The typed row model a menu panel renders, or null for foreign panels.

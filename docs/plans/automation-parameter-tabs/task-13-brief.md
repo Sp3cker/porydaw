@@ -28,7 +28,9 @@ Replace vertically stacked automation rows with a compact grid of nine clickable
 
 ## Prerequisites
 
-Completed/reviewed tasks: 5, 6.
+Completed/reviewed tasks: 5, 6, 8.
+
+Dependency 8 is the corrected blueprint dependency for the shared test-support lookup. Presentation code that already landed is corrected to call that seam by the bounded repair group, not by re-running historical task order; this brief assumes the seam exists and does not redefine it.
 
 ## Interface contract
 
@@ -43,6 +45,8 @@ Remove slots and bodies for collapsedTempoGeometryIsPinned, headerClickExpandsTe
 ### Step 2
 
 Replace those surface contracts with real-label cases: all nine rectangles are inside the gutter at the derived minimum; labels have distinct centers and full unelided text; each click changes the displayed parameter; Tempo uses the full body; enlarging the drawer changes the active value axis but not horizontal grid alignment. Probe actual QQuickItem bounds and the rendered Text contentWidth/contentHeight at its fitted font, not the unfitted caption QFontMetricsF width, source text or incidental control defaults. Keep this to observable all-label fit; do not test Qt column-placement or font-search internals.
+
+Assert the supported catalog in the forward direction only: for each expected row identity, the matching label objectName/index and the activated parameter. Delete inverse-round-trip helper assertions (index back to row through a production or copied mapping); they test an inverse API that is deliberately not built. When a case must resolve a row to an index, call `checks::support::automationParameterIndex`. Resolve label items with `checks::support::visualDescendant`; no local traversal copy. Real activation, the application's active-versus-selection styling and every existing pixel/bounds assertion stay at full strength — none of them is relaxed, replaced by a non-empty image check, or given extra retries/waits.
 
 ### Step 3
 

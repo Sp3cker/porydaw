@@ -18,6 +18,7 @@
 #include "checks/automation/automationquickmenu.h"
 #include "checks/automation/automationvalueprompt.h"
 #include "checks/quickpopupguard.h"
+#include "checks/support/timelinequickcheck.h"
 #include "core/timedefaults.h"
 #include "core/xcmd.h"
 #include "ui/editordrawer/automationcanvas.h"
@@ -53,8 +54,8 @@ const songview::QuickMenuItem *menuItem(const songview::QuickMenuModel &model,
 // The visible submenu level panel, or null while no submenu renders.
 QQuickItem *menuSubmenuPanel(const songview::QuickPopupSession &session)
 {
-    QQuickItem *const panel = quick_popup::visualDescendant(session.overlayRoot(),
-                                                            QLatin1String("quickMenuPanelSubmenu"));
+    QQuickItem *const panel = checks::support::visualDescendant(
+        session.overlayRoot(), QLatin1String("quickMenuPanelSubmenu"));
     return panel && panel->isVisible() ? panel : nullptr;
 }
 
@@ -62,8 +63,8 @@ QQuickItem *menuSubmenuPanel(const songview::QuickPopupSession &session)
 QQuickItem *parameterLabelItem(SongTab &songTab, int index)
 {
     QQuickItem *const root = songTab.view().quickView()->rootObject();
-    return root ? root->findChild<QQuickItem *>(
-                      QStringLiteral("automationParameterTab%1").arg(index))
+    return root ? checks::support::visualDescendant(
+                      root, QStringLiteral("automationParameterTab%1").arg(index))
                 : nullptr;
 }
 
@@ -75,7 +76,7 @@ AutomationMenu openLabelMenu(SongTab &songTab, AutomationCanvas &canvas,
 {
     AutomationMenu menu;
     menu.diagnostic = std::move(why);
-    const int index = canvas.parameterIndex(row);
+    const int index = checks::support::automationParameterIndex(canvas, row);
     QQuickItem *const label = index >= 0 ? parameterLabelItem(songTab, index) : nullptr;
     if (!label) {
         menu.diagnostic = QStringLiteral("the parameter label never rendered");
@@ -359,8 +360,9 @@ void AutomationEditingTest::outsidePressDismissesLaneMenuWithoutSideEffects()
     QQuickItem *const frame = quick_popup::menuFrame(*menu.session);
     QVERIFY2(frame, "the lane menu rendered no outside boundary frame");
     const QRectF frameScene = frame->mapRectToScene(frame->boundingRect());
-    QQuickItem *const tempoLabel =
-        parameterLabelItem(songTab, canvas->parameterIndex({EditorAutomationRowKind::Tempo, 0, 0}));
+    QQuickItem *const tempoLabel = parameterLabelItem(
+        songTab,
+        checks::support::automationParameterIndex(*canvas, {EditorAutomationRowKind::Tempo, 0, 0}));
     QVERIFY2(tempoLabel, "the tempo label never rendered");
     const QPoint outside =
         tempoLabel->mapToScene(QPointF(tempoLabel->width() / 2.0, tempoLabel->height() / 2.0))

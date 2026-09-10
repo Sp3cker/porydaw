@@ -414,7 +414,8 @@ void AutomationEditingTest::parameterSwitchCancelsNodeDrag()
     // pointer grab and the follow-scroll pause release, and the old
     // transient preview clears.
     const int pilotIndex = page().canvas()->activeParameter();
-    const int tempoIndex = page().canvas()->parameterIndex({EditorAutomationRowKind::Tempo, 0, 0});
+    const int tempoIndex = checks::support::automationParameterIndex(
+        *page().canvas(), {EditorAutomationRowKind::Tempo, 0, 0});
     QVERIFY(tempoIndex >= 0);
     page().canvas()->activateParameter(tempoIndex);
     QCOMPARE(page().canvas()->activeParameter(), tempoIndex);

@@ -32,13 +32,13 @@ Completed/reviewed tasks: 7, 8, 11.
 
 ## Interface contract
 
-Consumes task 8 activation helper and task 7 menu contract. Logical adapter/clipboard data remains unchanged.
+Consumes task 8 activation helper and task 7 menu contract. Logical adapter/clipboard data remains unchanged. Label and menu lookups in this suite call `checks::support::visualDescendant` / `checks::support::automationParameterIndex`; do not copy the traversal or the supported-controller catalog into these files.
 
 ## Implementation steps
 
 ### Step 1
 
-Replace gutter-y/header coordinates with the selected parameter label's scene rectangle for menu-opening scenarios. Activate the intended parameter before plot/node actions. Preserve parameter-local clipboardCrossLanePasteClamps and all value conversion assertions.
+Replace gutter-y/header coordinates with the selected parameter label's scene rectangle for menu-opening scenarios, found through `checks::support::visualDescendant`. Activate the intended parameter before plot/node actions. Preserve parameter-local clipboardCrossLanePasteClamps and all value conversion assertions. Task 8 already migrated the single qualified `quick_popup::visualDescendant` popup lookup in `automationmenus.cpp`; keep that call site on the shared helper and do not reintroduce a local copy.
 
 ### Step 2
 

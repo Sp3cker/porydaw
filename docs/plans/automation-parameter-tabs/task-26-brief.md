@@ -32,7 +32,7 @@ Completed/reviewed tasks: 8, 9, 10, 12, 18, 28. Execute after task 28; the origi
 
 ## Interface contract
 
-Retain the existing stroke/sweep/ramp musical results and real activation helper. Leave rollcheck identity and persisted-state sentinels unchanged; the prior settings-cleanup assignment was withdrawn.
+Retain the existing stroke/sweep/ramp musical results and real activation helper, which resolves rows through task 8's shared `checks::support::automationParameterIndex` / `visualDescendant` seam. Leave rollcheck identity and persisted-state sentinels unchanged; the prior settings-cleanup assignment was withdrawn.
 
 ## Implementation steps
 
@@ -42,7 +42,7 @@ Migrate the previously unassigned AutomationPage::addEmptyLane caller in automat
 
 ### Step 2
 
-After task 28 and all earlier editing migrations, refresh references and remove expandTempo/setRowMaximumHeight declarations and bodies from the main editing fixture together. Keep activateParameter and the pure coordinate queries. No dummy height setter or old-name wrapper; no declared-but-undefined helper between tasks.
+After task 28 and all earlier editing migrations, refresh references and remove expandTempo/setRowMaximumHeight declarations and bodies from the main editing fixture together. Keep activateParameter and the pure coordinate queries. No dummy height setter or old-name wrapper; no declared-but-undefined helper between tasks. Removal of the production inverse `parameterIndex` and every already-landed consumer's call-site correction settle atomically in the current bounded repair group before this validation runs; never retain a temporary alias to satisfy old task order.
 
 ## Acceptance predicate
 
@@ -50,7 +50,7 @@ The complete editing suite uses real supported-parameter activation, including s
 
 ## Controller verification
 
-Controller: build the checks after this writer settles, then run `deno task verify --filter automation-editing --verbose`. This completes the editing-suite migration checkpoint; resolve every failure before any production facade is deleted.
+Controller: build the checks after this writer settles (`deno task build:checks`), then run `deno task verify --filter automation-editing --verbose`. This is the full editing-suite checkpoint; the focused task-8 case is early proof of the seam, not a substitute for it. Resolve every failure before any production facade is deleted.
 
 Controller checkpoint: after this writer settles, run deno task build:checks before closing the task. No undefined methods or missed exported callers may be deferred to a later task. Run the affected suite once its named surface migration is coherent; preserve existing semantic expectations and use the native/default backend for actual node pixels. Writers never run validation.
 

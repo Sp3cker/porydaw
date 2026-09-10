@@ -49,7 +49,6 @@ Q_PROPERTY(int minimumContentHeight READ minimumContentHeight WRITE setMinimumCo
 void setMinimumContentHeight(int height); // Qt grid implicitHeight, rounded up in QML
 // Reuse the existing minimumContentHeight() const noexcept declaration.
 std::optional<EditorAutomationRowId> parameterRow(int index) const;
-int parameterIndex(const EditorAutomationRowId &row) const noexcept;
 Q_INVOKABLE void activateParameter(int index);
 Q_INVOKABLE void openParameterMenu(int index, qreal sceneX, qreal sceneY);
 // signals
@@ -63,12 +62,15 @@ int m_minimumContentHeight = 0;
 std::optional<uint8_t> m_activeController = CoreTimeDefaults::kCcVolume;
 ```
 Explicitly include the Qt containers and core/timedefaults.h. Do not add a font-fitting loop, gutter/font cache, refreshParameterPresentation(), or a second minimum-height getter. Qt owns text measurement, fitting, layout and binding invalidation. parameterAppearance is only the existing project-style bridge for typography/theme/layout primitives, not a cached layout snapshot. The existing minimumContentHeight getter retains its old implementation during this additive task; task 3 changes its real meaning to the Qt-measured selector minimum.
+The interface has no inverse row-to-index method: production code only ever resolves index to row.
 
 ## Implementation steps
 
 ### Step 1
 
-Implement the new methods in the cohesive new automationcanvas_tabs.cpp and register it adjacent to automationcanvas.cpp in CMakeLists.txt. parameterRow(i) validates `0 <= i <= supportedControllers().size()`: the final index returns `{Tempo,0,0}`, otherwise `{ControlChange,uint8_t(primaryTrack),controllers[i]}`. Reject invalid primary tracks. parameterIndex checks kind/primary track/controller and returns -1 for unsupported identities. activeParameter finds m_activeController in the catalog, or returns the final Tempo index. activeLane searches the existing m_nodeStack for the currently resolved row id; never cache its index across rebuilds. parameterLabels uses m4aLaneName for the classified CC, registered XCMD selector, dedicated PitchBend, and final Tempo. Do not duplicate display names or expose nested per-command maps.
+Implement the new methods in the cohesive new automationcanvas_tabs.cpp and register it adjacent to automationcanvas.cpp in CMakeLists.txt. parameterRow(i) validates `0 <= i <= supportedControllers().size()`: the final index returns `{Tempo,0,0}`, otherwise `{ControlChange,uint8_t(primaryTrack),controllers[i]}`. Reject invalid primary tracks. activeParameter finds m_activeController in the catalog, or returns the final Tempo index. activeLane searches the existing m_nodeStack for the currently resolved row id; never cache its index across rebuilds. parameterLabels uses m4aLaneName for the classified CC, registered XCMD selector, dedicated PitchBend, and final Tempo. Do not duplicate display names or expose nested per-command maps.
+
+No production inverse mapping is part of this interface. Every production addition here names a concrete planned runtime consumer (the parameter-tab QML selectors that call activateParameter/openParameterMenu), but that consumer does not have to exist yet for this additive producer task. Row-to-index navigation is test-only: it lives in the existing src/checks/support/timelinequickcheck.h as `checks::support::automationParameterIndex(const AutomationCanvas &canvas, const EditorAutomationRowId &row)`, which scans parameterRow(i) until it returns nullopt and returns -1, with no labels-list allocation; label lookup reuses quick_popup::visualDescendant relocated into checks::support, never a second implementation. The already-landed production `parameterIndex` declaration and body are deleted in one atomic change together with the migration of all 23 existing calls in 13 check files onto checks::support::automationParameterIndex; the exact consumer list is the bounded recovery group recorded in reference-map.md. Never defer that removal to a later task and never keep a temporary alias to satisfy the old task order.
 
 ### Step 2
 
@@ -107,7 +109,7 @@ Keep the existing value-prompt cancellation path in cancelInteraction; do not ad
 
 ## Acceptance predicate
 
-AutomationCanvas exposes a validated, view-local active parameter and the minimal Qt presentation bindings; switching identity cancels stale interaction state but leaves document bytes, revision, undo stack and shared selection unchanged.
+AutomationCanvas exposes a validated, view-local active parameter and the minimal Qt presentation bindings; switching identity cancels stale interaction state but leaves document bytes, revision, undo stack and shared selection unchanged. No test-only production inverse method is added or retained: row-to-index navigation only exists as checks::support::automationParameterIndex.
 
 ## Controller verification
 

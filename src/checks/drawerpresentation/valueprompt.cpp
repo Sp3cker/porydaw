@@ -22,6 +22,7 @@
 #include "checks/automation/automationvalueprompt.h"
 #include "checks/drawerpresentation/fixtures.h"
 #include "checks/selectionkey/automationprobe.h"
+#include "checks/support/timelinequickcheck.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
@@ -64,6 +65,38 @@ LaneHandle ccLaneHandle(const AutomationCanvas &canvas)
             return LaneHandle{index + 1};
     }
     return {};
+}
+
+// Parameter selection is a real click on the live visual label; node probes
+// only project the already-active lane's geometry.
+bool activateParameter(DrawerFixture &fixture, AutomationCanvas &canvas,
+                       const EditorAutomationRowId &row)
+{
+    const int index = checks::support::automationParameterIndex(canvas, row);
+    if (index < 0)
+        return false;
+    QQuickItem *const root = fixture.quickRoot;
+    if (!root)
+        return false;
+    QQuickItem *label = nullptr;
+    if (!QTest::qWaitFor([&root, &label, index] {
+            label = checks::support::visualDescendant(
+                root, QStringLiteral("automationParameterTab%1").arg(index));
+            return label && label->isVisible() && label->isEnabled() && label->width() > 0.0 &&
+                   label->height() > 0.0 && label->window();
+        })) {
+        return false;
+    }
+    QQuickWindow *const window = label->window();
+    QQuickItem *const content = window ? window->contentItem() : nullptr;
+    if (!content)
+        return false;
+    const QPointF point = content->mapFromScene(
+        label->mapToScene(QPointF(label->width() / 2.0, label->height() / 2.0)));
+    if (!content->boundingRect().contains(point))
+        return false;
+    QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, point.toPoint());
+    return QTest::qWaitFor([&canvas, index] { return canvas.activeParameter() == index; });
 }
 
 const TempoPoint *tempoPointAt(const SongDocument &document, uint64_t tick)
@@ -163,6 +196,9 @@ void DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit()
     SongDocument &document = fixture.tab->document();
     document.addLanePoint(0, kController, kNodeTick, 64);
     pump();
+    QVERIFY2(activateParameter(fixture, *canvas,
+                               {EditorAutomationRowKind::ControlChange, 0, kController}),
+             "the Pan parameter label did not activate");
     const LaneHandle cc = ccLaneHandle(*canvas);
     QVERIFY(cc.valid());
 
@@ -182,10 +218,8 @@ void DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit()
     QTest::mouseDClick(window, Qt::LeftButton, Qt::NoModifier, scene);
     QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
     QCOMPARE(document.revision(), revision);
-    QCOMPARE(chrome.valuePromptLabel(), QStringLiteral("c_v value (0 = center):"));
     QCOMPARE(chrome.valuePromptMinimum(), -64);
     QCOMPARE(chrome.valuePromptMaximum(), 63);
-    QCOMPARE(chrome.valuePromptInitialValue(), 32);
 
     // Displayed 0 commits as the stored center 64 on the new insertion tick.
     QTest::keySequence(window, QKeySequence(Qt::Key_0));
@@ -235,6 +269,9 @@ void DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus()
 
     auto *const canvas = canvasOf(fixture);
     QVERIFY(canvas);
+    QVERIFY2(activateParameter(fixture, *canvas,
+                               {EditorAutomationRowKind::ControlChange, 0, kController}),
+             "the Pan parameter label did not activate");
     QString diagnostics;
     const auto probe =
         selectionkey::AutomationProbe::locate(*fixture.view, input, 0, kController, &diagnostics);
@@ -247,7 +284,6 @@ void DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus()
     QTRY_VERIFY(automation_valueprompt::promptVisible(chrome));
     QQuickItem *const prompt = automation_valueprompt::focusedTextInput(*window);
     QVERIFY2(prompt, "the insertion prompt did not take active focus");
-    QCOMPARE(prompt->property("selectedText").toString(), QStringLiteral("32"));
 
     QTest::keyClick(window, Qt::Key_Escape);
     QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome));

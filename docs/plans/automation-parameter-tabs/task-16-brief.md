@@ -32,13 +32,13 @@ Completed/reviewed tasks: 9, 15.
 
 ## Interface contract
 
-Consumes explicit activation and full-height plot geometry. Keeps native rendering setup and real document mutation expectations.
+Consumes explicit activation and full-height plot geometry. Keeps native rendering setup and real document mutation expectations. Rows and label items resolve through `checks::support::automationParameterIndex` / `checks::support::visualDescendant` (transitively available through task 15's dependency on task 8); no copied traversal or production inverse mapping.
 
 ## Implementation steps
 
 ### Step 1
 
-Activate the intended CC or Tempo before each real pointer sequence. Replace only row scrolling, pinned headers and vertical offset conversion; preserve all original node values, command effects and undo checks.
+Activate the intended CC or Tempo before each real pointer sequence. Replace only row scrolling, pinned headers and vertical offset conversion; preserve all original node values, command effects and undo checks. Replace the local `visualDescendant` copy in `tst_playhead_autohover.cpp` with the shared helper rather than editing around it.
 
 ### Step 2
 

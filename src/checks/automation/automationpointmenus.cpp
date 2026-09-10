@@ -29,6 +29,7 @@
 #include "checks/automation/automationquickmenu.h"
 #include "checks/automation/automationvalueprompt.h"
 #include "checks/quickpopupguard.h"
+#include "checks/support/timelinequickcheck.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
@@ -647,7 +648,8 @@ void AutomationEditingTest::parameterSwitchInvalidatesValuePrompt()
     // document change, spares the foreign menu, and makes the old accept
     // callback a no-op.
     const FrozenDocumentState before = frozenDocumentState();
-    const int tempoIndex = page().canvas()->parameterIndex({EditorAutomationRowKind::Tempo, 0, 0});
+    const int tempoIndex = checks::support::automationParameterIndex(
+        *page().canvas(), {EditorAutomationRowKind::Tempo, 0, 0});
     QVERIFY(tempoIndex >= 0);
     page().canvas()->activateParameter(tempoIndex);
     QCOMPARE(page().canvas()->activeParameter(), tempoIndex);

@@ -38,7 +38,7 @@ Preserve AutomationProbe::locate identity behavior and CoreFixture creation. The
 
 ### Step 1
 
-Replace ensure-visible-by-scroll/pinned-Tempo logic with the production parameterIndex/activateParameter interface and the active full-height body. Keep geometry-only probes free of implicit selection changes.
+Replace ensure-visible-by-scroll/pinned-Tempo logic with the shared test-support lookup `checks::support::automationParameterIndex` plus real activation, and the active full-height body. No production inverse `parameterIndex` call and no copied visual traversal. Keep geometry-only probes free of implicit selection changes.
 
 ### Step 2
 

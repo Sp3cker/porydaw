@@ -59,20 +59,6 @@ void sendWindowMouse(songview::TimelineInputItem &input, QEvent::Type type, cons
     QCoreApplication::sendEvent(window, &event);
 }
 
-// QObject::findChild misses visually reparented Quick delegates, so the
-// selector labels resolve through the visual childItems tree.
-QQuickItem *visualDescendant(QQuickItem *root, const QString &objectName)
-{
-    if (!root)
-        return nullptr;
-    if (root->objectName() == objectName)
-        return root;
-    for (QQuickItem *const child : root->childItems())
-        if (QQuickItem *const found = visualDescendant(child, objectName))
-            return found;
-    return nullptr;
-}
-
 // DrawerSections::minimumBodyHeight(EditorDrawerPage::Automations) observed
 // through the public page surface: the shared floor or the measured selector
 // grid, whichever is larger.
@@ -399,8 +385,8 @@ void DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum()
     for (int index = 0; index < labels.size(); ++index) {
         QQuickItem *label = nullptr;
         QTRY_VERIFY(
-            (label = visualDescendant(fixture.quickRoot,
-                                      QStringLiteral("automationParameterTab%1").arg(index))) &&
+            (label = checks::support::visualDescendant(
+                 fixture.quickRoot, QStringLiteral("automationParameterTab%1").arg(index))) &&
             label->isVisible() && label->width() > 0.0 && label->height() > 0.0);
         QVERIFY2(
             gutterBounds.contains(label->mapRectToScene(label->boundingRect())),

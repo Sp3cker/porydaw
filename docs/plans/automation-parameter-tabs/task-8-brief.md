@@ -25,10 +25,17 @@ Replace vertically stacked automation rows with a compact grid of nine clickable
 - `src/checks/automation/tst_automationediting.h`
 - `src/checks/automation/automationfixture.cpp`
 - `src/checks/automation/tst_automationediting.cpp`
+- `src/checks/support/timelinequickcheck.h`
+- `src/checks/quickpopupguard.h`
+- `src/checks/automation/automationmenus.cpp`
+
+Explicit cohesive exception (six files): task 8 owns the single test-support seam. The canonical helper's relocation and its one external qualified call site move in the same edit as the definition, so no duplicate traversal and no temporary alias exists between tasks.
 
 ## Prerequisites
 
 Completed/reviewed tasks: 5, 6.
+
+Task 8 is the seam owner and the only task that physically defines the shared lookups. Already-landed consumers (hover, presentation, raster, scrollbar, playhead, drawer and value-prompt fixtures) are corrected to call them by the current bounded repair group, not by re-running historical task order; do not duplicate that correction here and do not leave a second physical definition of the seam. The pre-existing eventviews copy and the voice-picker copy are outside this repair.
 
 ## Interface contract
 
@@ -38,19 +45,22 @@ Produces `bool AutomationEditingTest::activateParameter(const EditorAutomationRo
 
 ### Step 1
 
-Implement the fixture helper with real label input:
+Implement the fixture helper with real label input, on top of the shared lookups this task owns in `src/checks/support/timelinequickcheck.h` (namespace `checks::support`):
+
+- `QQuickItem *visualDescendant(QQuickItem *root, QAnyStringView objectName)`: relocate the existing `quick_popup::visualDescendant` from `src/checks/quickpopupguard.h` into this header as the single definition. Walk `QQuickItem::childItems()` and match `root` itself too; no alias, overload or second copy in the affected fixtures. Qt 6.9's [QAnyStringView](https://doc.qt.io/archives/qt-6.9/qanystringview.html) accepts the existing QString and QLatin1String arguments without an owning-string conversion. Include QAnyStringView, pass it by value and consume it synchronously; do not store it or rewrite literal call sites.
+- `automationParameterIndex(const AutomationCanvas &canvas, const EditorAutomationRowId &row)`: loop `canvas.parameterRow(i)` from `i = 0` until it returns `std::nullopt`, comparing each validated row identity, and return the matching index or `-1`. Do not read `parameterLabels().size()` and do not add a production inverse mapping.
+- Migrate the one external qualified popup lookup in `src/checks/automation/automationmenus.cpp` (`quick_popup::visualDescendant(session.overlayRoot(), QLatin1String("quickMenuPanelSubmenu"))`) to `checks::support::visualDescendant`. Change nothing else in that file; task 12 owns its menu semantics.
+
 ```cpp
 bool AutomationEditingTest::activateParameter(const EditorAutomationRowId &row)
 {
-    const int index = page().canvas()->parameterIndex(row);
+    const int index = checks::support::automationParameterIndex(*page().canvas(), row);
     if (index < 0 || !m_quickWindow)
         return false;
     auto *quick = tab().view().quickView();
     QQuickItem *root = quick ? quick->rootObject() : nullptr;
-    if (!root)
-        return false;
-    auto *item = root->findChild<QQuickItem *>(
-        QStringLiteral("automationParameterTab%1").arg(index));
+    QQuickItem *const item = checks::support::visualDescendant(
+        root, QStringLiteral("automationParameterTab%1").arg(index));
     if (!item || !item->isVisible() || !item->isEnabled())
         return false;
     const QPoint where = item->mapToScene(
@@ -61,7 +71,9 @@ bool AutomationEditingTest::activateParameter(const EditorAutomationRowId &row)
     });
 }
 ```
-Include QQuickItem/QtTest and the existing TimelineQuickView declaration explicitly. Use the same quickView()->rootObject() lookup as the current fixture and popup tests. In normal pilot setup activate the existing CC10 row after the Quick scene is ready; retain the original SMF literals and outer drawer size. Do not replace the fixture with a fake canvas.
+Include QQuickItem/QtTest, the existing TimelineQuickView declaration and `src/checks/support/timelinequickcheck.h` explicitly. Use the same quickView()->rootObject() lookup as the current fixture and popup tests. In normal pilot setup activate the existing CC10 row after the Quick scene is ready; retain the original SMF literals and outer drawer size. Do not replace the fixture with a fake canvas. No `findChild`/QObject-name search and no production `parameterIndex` call remains here: this helper and every other suite call the same two shared lookups instead of copying them.
+
+The early proof also exposed a stack-era fixture precondition: the active full-height plot was 320 high, not rowMaximumHeight's 128. Remove that exact-height assertion from init; keep lane validity and nonempty-body prerequisites. Do not repin to 320. Retain the still-live setRowMaximumHeight helper and init call until task 26's caller closure; existing presentation/drawer cases own the physical plot-size contract.
 
 ### Step 2
 
@@ -69,7 +81,7 @@ Add the new slot. Set `TimeSelection::scope = TimeSelection::Lanes`. Build an ex
 
 ### Step 3
 
-Keep existing document/edited signal spies and byte/undo snapshots. Do not change point values, expected transactions, stationary-delete or double-click behavior. Migrate expandTempo/setRowMaximumHeight callers in the semantic editing tasks, then remove these two main-fixture helpers in task 28. Task 29 renames only the separate hover/raster helpers; no compatibility alias survives.
+Migrate expandTempo/setRowMaximumHeight callers in the semantic editing tasks, then remove these two main-fixture helpers in task 26 (task 28 does not delete them). The separate hover/raster helpers are not renamed by task 29: the raster dead helper is deleted by the repair group and the hover helper is already absent, so no compatibility alias or wrapper is preserved for them.
 
 ### Step 4
 
@@ -81,9 +93,9 @@ The main editing fixture can activate any supported row through its rendered lab
 
 ## Controller verification
 
-Controller: after writers settle, run `deno task verify --filter automation-editing --verbose` once the editing-suite migration group is complete. Compilation is required at each settled task; run the suite at its completed surface checkpoint. Obsolete scenarios are migrated, not suppressed or declared passing.
+Controller: prove this task's behavior now, not at a later checkpoint. After this writer settles run `deno task build:checks`, then `deno task verify --filter automation-presentation --verbose`, then the focused editing case `deno task verify --filter automation-editing --verbose --qt parameterTabsPreserveDocumentAndSelection`, confirming its body actually executes and passes (a filtered-out or skipped slot is not proof). Shared fixture functionality must be proven before dependent suites reuse it. The complete editing suite remains the task 26 checkpoint: `deno task verify --filter automation-editing --verbose`. Obsolete scenarios are migrated, not suppressed or declared passing.
 
-Controller checkpoint: after this writer settles, run deno task build:checks before closing the task. No undefined methods or missed exported callers may be deferred to a later task. Run the affected suite once its named surface migration is coherent; preserve existing semantic expectations and use the native/default backend for actual node pixels. Writers never run validation.
+Controller checkpoint: no undefined methods or missed exported callers may be deferred to a later task. Removal of the production inverse `parameterIndex` and every landed consumer's call-site correction settle atomically in the current bounded repair group; never retain a temporary alias to satisfy old task order. Writers never run validation.
 
 ## Required report
 

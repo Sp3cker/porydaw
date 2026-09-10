@@ -28,21 +28,23 @@ Replace vertically stacked automation rows with a compact grid of nine clickable
 
 ## Prerequisites
 
-Completed/reviewed tasks: 5, 6.
+Completed/reviewed tasks: 5, 6, 8.
+
+Dependency 8 is the corrected blueprint dependency for the shared test-support lookup. Raster-fixture code that already landed is corrected to call that seam by the bounded repair group, not by re-running historical task order; this brief assumes the seam exists and does not redefine it.
 
 ## Interface contract
 
-Retains real SongTab/project fixtures, CCLaneAdapter/TempoLane adapters, default Quick backend and existing color/ring probes. No software-only replacement of QSG assertions.
+Retains real SongTab/project fixtures, CCLaneAdapter/TempoLane adapters, default Quick backend and existing color/ring probes. No software-only replacement of QSG assertions. Rows and label items resolve through `checks::support::automationParameterIndex` / `checks::support::visualDescendant`; no copied traversal, duplicate catalog or production inverse mapping.
 
 ## Implementation steps
 
 ### Step 1
 
-Replace hidden/empty-lane/row-height setup with outer automation height plus explicit parameter activation. Replace pinnedTempoRect with the active slot body after activating Tempo. Keep find-row and adapter identity helpers, without automatically switching during geometry queries.
+Replace hidden/empty-lane/row-height setup with outer automation height plus explicit parameter activation. Replace pinnedTempoRect with the active slot body after activating Tempo. Keep find-row and adapter identity helpers, without automatically switching during geometry queries. Replace the local `visualDescendant` copy in `rasterfixture.cpp` with `checks::support::visualDescendant`. The retained `AutomationRasterFixture::expandTempo` is already caller-free at the audited head: delete it rather than preserving or renaming it for task 16/29. If refreshed references reveal an unexpected live caller, update the bounded caller-migration write set before removal; do not create a compatibility body or a broken-caller interval.
 
 ### Step 2
 
-In painting cases that previously inspected two visible lane bodies, activate each parameter before its own image/layer observation; retain the same literal node values, ring radii, expected colors, selected tick endpoints and source-event assertions. Do not accept a nonempty image as proof that a node or phantom exists.
+In painting cases that previously inspected two visible lane bodies, activate each parameter before its own image/layer observation; retain the same literal node values, ring radii, expected colors, selected tick endpoints and source-event assertions. Do not accept a nonempty image as proof that a node or phantom exists. Keep every existing pixel probe at its current strength: no added retries, extra waits, relaxed tolerances or replaced expectations to accommodate activation.
 
 ### Step 3
 

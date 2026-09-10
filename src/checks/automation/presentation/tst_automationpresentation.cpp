@@ -16,6 +16,7 @@
 #include <QRectF>
 
 #include "checks/support/eventsynth.h"
+#include "checks/support/timelinequickcheck.h"
 
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
@@ -32,18 +33,6 @@ constexpr int kTrack = 0;
 constexpr uint8_t kPanController = 10;
 constexpr uint8_t kLfoController = 21;
 constexpr uint64_t kEndTick = 384;
-QQuickItem *visualDescendant(QQuickItem *root, const QString &objectName)
-{
-    if (!root)
-        return nullptr;
-    if (root->objectName() == objectName)
-        return root;
-    for (QQuickItem *const child : root->childItems()) {
-        if (QQuickItem *const found = visualDescendant(child, objectName))
-            return found;
-    }
-    return nullptr;
-}
 
 class CursorDprHost final : public songview::TimelineInputHost
 {
@@ -274,14 +263,15 @@ QQuickItem *AutomationPresentationTest::parameterLabelItem(int index) const
 {
     songview::TimelineQuickView *const quick = m_rig ? m_rig->view().quickView() : nullptr;
     QQuickItem *const root = quick ? quick->rootObject() : nullptr;
-    return visualDescendant(root, QStringLiteral("automationParameterTab%1").arg(index));
+    return checks::support::visualDescendant(root,
+                                             QStringLiteral("automationParameterTab%1").arg(index));
 }
 
 bool AutomationPresentationTest::activateParameter(const EditorAutomationRowId &row)
 {
     AutomationPage *const automationPage = page();
     AutomationCanvas *const canvas = automationPage ? automationPage->canvas() : nullptr;
-    const int index = canvas ? canvas->parameterIndex(row) : -1;
+    const int index = canvas ? checks::support::automationParameterIndex(*canvas, row) : -1;
     if (!canvas || index < 0 || !m_quickWindow)
         return false;
     QQuickItem *label = nullptr;

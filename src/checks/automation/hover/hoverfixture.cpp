@@ -16,6 +16,7 @@
 #include <QQuickWindow>
 
 #include "checks/support/eventsynth.h"
+#include "checks/support/timelinequickcheck.h"
 
 #include "core/smf.h"
 #include "core/timedefaults.h"
@@ -69,8 +70,7 @@ int valueAtFraction(int minimum, int maximum, double fractionFromBottom)
     return minimum + int(std::lround(double(maximum - minimum) * fractionFromBottom));
 }
 
-// Stable production row identities for the fixture's two lane kinds; the
-// parameter index itself comes only from AutomationCanvas::parameterIndex.
+// Stable row identities for the fixture's two lane kinds.
 EditorAutomationRowId laneRow(LaneKind kind)
 {
     if (kind == LaneKind::Tempo)
@@ -82,19 +82,6 @@ songview::TimelineInputItem *input(const Fixture &fixture, const QString &name)
 {
     QQuickItem *const root = fixture.rig ? fixture.rig->quickRoot() : nullptr;
     return root ? root->findChild<songview::TimelineInputItem *>(name) : nullptr;
-}
-
-// QObject::findChild misses visually reparented Quick delegates, so the
-// selector label seam walks the visual childItems tree instead of object
-// ownership.
-QQuickItem *visualDescendant(QQuickItem *root, const QString &objectName)
-{
-    if (!root || root->objectName() == objectName)
-        return root;
-    for (QQuickItem *const child : root->childItems())
-        if (QQuickItem *const found = visualDescendant(child, objectName))
-            return found;
-    return nullptr;
 }
 
 bool hasAnnulusAt(const songview::TimelineQuickLayerData &layer, const QPointF &center,
@@ -322,7 +309,7 @@ bool activateParameter(Fixture &fixture, const EditorAutomationRowId &row)
         return false;
     // The catalog position comes from the production mapping only; clicking
     // the real selector label is the same activation path a user takes.
-    const int index = automationCanvas->parameterIndex(row);
+    const int index = checks::support::automationParameterIndex(*automationCanvas, row);
     if (index < 0)
         return false;
     QQuickItem *const root = fixture.rig ? fixture.rig->view().quickView()->rootObject() : nullptr;
@@ -330,7 +317,8 @@ bool activateParameter(Fixture &fixture, const EditorAutomationRowId &row)
         return false;
     QQuickItem *label = nullptr;
     if (!QTest::qWaitFor([&root, &label, index] {
-            label = visualDescendant(root, QStringLiteral("automationParameterTab%1").arg(index));
+            label = checks::support::visualDescendant(
+                root, QStringLiteral("automationParameterTab%1").arg(index));
             return label && label->isVisible() && label->isEnabled() && label->width() > 0.0 &&
                    label->height() > 0.0 && label->window();
         })) {

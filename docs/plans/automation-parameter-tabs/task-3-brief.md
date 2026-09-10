@@ -57,7 +57,7 @@ This is plot-local input geometry, not automationViewportSize().width(): the lat
 
 As part of the real shared-plot cutover, make minimumContentHeight() return m_minimumContentHeight; make content/viewport Y transforms identity and contentBounds use the input-host plot bounds. Keep the existing method names/signatures. Remove pinned layout calls from live layout/scroll-notification paths, preserving their hover/preview/refresh work until their callers migrate in task 4. Do not leave minimumContentHeight dependent on TempoLane::totalHeight or CCLanes::minimumHeight. Notify parameterSelectionChanged from the existing selection refresh and parameterPresentationChanged on document/track rebuild; do not add cached selection membership.
 
-Change rebuildQuickScene visible-lane setup to zero or one active slot; retain the existing node-composition body rather than re-authoring the renderer. Keep the existing Content/Transient/Hover dirty-layer separation. Remove stacked visibility iteration, pinned Tempo clips, collapse/header/add-strip text and `setTempoHeader` publication. Compose the grid once over the viewport. Reuse the existing NodeLaneQuickPaint context, with `body=slot.body`, `plot=viewport`, `overflow=nodelane::nodeOverflowClip(body,m_geometry).intersected(viewport)`, and `contentYOffset=0`. Keep current Tempo versus track color choices; do not redesign node paint.
+Change rebuildQuickScene visible-lane setup to zero or one active slot held directly as a single optional descriptor: delete the zero-or-one VisibleLane vector, its per-refresh allocation and the repeated collection/lookup loop, and do not introduce a new renderer abstraction, renderer file or wholesale renderer rewrite. Retain the existing node-composition body rather than re-authoring the renderer. Keep the existing Content/Transient/Hover dirty-layer separation. Remove stacked visibility iteration, pinned Tempo clips, collapse/header/add-strip text and `setTempoHeader` publication. Compose the grid once over the viewport. Reuse the existing NodeLaneQuickPaint context, with `body=slot.body`, `plot=viewport`, `overflow=nodelane::nodeOverflowClip(body,m_geometry).intersected(viewport)`, and `contentYOffset=0`. Keep current Tempo versus track color choices; do not redesign node paint. Preserve the NodeLaneQuickPaint and origin-phantom algorithms unchanged and keep every logical adapter available for multi-lane editing: do not restrict collectSelectedNodeDrags or hasMultipleSelectedNodes to the active lane.
 
 ### Step 4
 
@@ -72,7 +72,7 @@ Pass this into the same `.phantom` context field; keep composeStatic/composeTran
 
 ## Acceptance predicate
 
-All eight CC adapters and Tempo remain logically available, while exactly the active parameter is rendered and hit-tested in one full-height plot using the unchanged NodeLaneQuickPaint and phantom algorithms.
+All eight CC adapters and Tempo remain logically available, while exactly the active parameter is rendered and hit-tested in one full-height plot using the unchanged NodeLaneQuickPaint and phantom algorithms, with no per-refresh visible-lane container, allocation or repeated lookup.
 
 ## Controller verification
 

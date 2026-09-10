@@ -2,7 +2,7 @@
 
 ## Status and authority
 
-Plan-only work, based on the user's approved clarification in this conversation. Implementation is not authorized by writing this document. The companion plan uses Porydaw's local `sdd-triage-gate` and `sdd-execution-loop`, not an independently invented orchestration framework.
+This records the user's approved behavior. Implementation is partially landed; the implementation audit identified bounded code repairs and corrections to the companion plan. The user has authorized those code repairs and requires the `plan` agent to double-check plan corrections before document edits. Plan status and repair evidence belong in the companion plan; changing this document does not authorize unrelated implementation.
 
 The user's binding requirements are:
 
@@ -24,13 +24,14 @@ The user approved the clarification: a compact grid in the existing left gutter;
 - Leave Velocity, Voice Changes, horizontal timeline scrolling, piano-roll vertical scrolling, playback, the audio engine and file serialization behavior unchanged.
 - Use Qt Quick controls in the existing Quick window; no QWidget fallback, extra window, focus-memory mechanism or duplicated shared-key dispatcher.
 - Prefer built-in Qt types when they own the required behavior. The user permits additional Qt libraries to reduce custom implementation and check code. Use Qt Quick Controls TabButton with Basic visual customization, Qt Quick Layouts GridLayout/Repeater, Text.HorizontalFit and FontMetrics for layout/text fitting, and the existing Qt Test harnesses; do not hand-build ordinary button interaction.
+- A production helper needs a named product consumer, including a concrete planned QML consumer. Navigation needed only by fixtures belongs in existing check support. Reuse the existing visual-tree lookup rather than adding another traversal, inverse catalog policy or production interface for tests; do not add helper-plumbing tests to justify unnecessary code.
 - Use existing typography, theme roles and `layout::` font-relative geometry; smaller label text is allowed, but never replace labels with an overflow menu or scrolling selector.
 - Keep all supported logical lane adapters available independently of which parameter is painted; do not implement tabs by keeping only one lane adapter.
 - Preserve parameter value ranges, all song events and the existing persisted EditorViewState schema; old visibility/height entries stop controlling the UI but are not deleted from storage.
 - The controller tracks new or materially rewritten production lines, including C++, headers, QML, build declarations and all glue, as nonblank, non-comment physical lines in normal project formatting against one preimplementation baseline. Verified unchanged moves, formatting-only changes, deletions and test churn are reported separately; deletions never offset additions. The tracked count is informational bookkeeping: there is no numeric limit and no approval step; preserving required behavior and verification remains mandatory.
 - Use `deno task` for builds, format and checks; never invoke CMake directly. The controller runs validation after writers settle.
 - A software/offscreen image is not proof that native QSG nodes or phantom nodes render correctly; final rendering proof must use the actual native/default backend.
-- No commits, pushes, worktree creation or implementation is authorized by this plan-writing request.
+- The current authorization covers the requested audit corrections and code repairs, not commits, pushes, merges, worktree creation or unrelated implementation.
 
 ## User-visible behavior
 
@@ -102,6 +103,7 @@ Retire live stacked-lane sizing, empty-row registration, hiding and vertical aut
 ## Required proof
 
 Existing semantic tests are the baseline, not expendable scaffolding. Change fixture activation/geometry, not expected musical outcomes, to adapt them to tabs. Delete tests whose sole contract is now-removed pinning, collapse, row-resize, Add/Hide or automation-scrollbar behavior; replace useful surface coverage with real label activation and one-plot assertions.
+Fixture identity/coordinate queries remain pure: a probe for Pan does not activate Pan. Input scenarios explicitly activate their intended parameter before using its coordinates. Shared fixture capability must execute and pass an existing behavioral case before dependent migrations rely on it; a successful build or fixture initialization alone is not behavioral proof.
 
 New permanent coverage is justified for three plausible new failure modes: switching preserves explicit multi-lane selection; a phantom still edits its source event after a parameter switch; a pending gesture/value prompt cannot commit to the new parameter. Use existing QtTest classes and fixtures.
 

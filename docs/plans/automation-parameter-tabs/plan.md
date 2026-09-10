@@ -10,7 +10,7 @@
 
 **Agreed specification:** [spec.md](spec.md). **Reference inventory:** [reference-map.md](reference-map.md). The spec records the user's approved choices and overrides incidental old layout expectations.
 
-**Status:** Plan only. No application code changed, no build/runtime claim, no execution/commit/push/worktree authorization. Source line numbers are navigation evidence, never patch anchors.
+**Status:** Feature implementation is partially landed through `0b432f0c`; the bounded audit repairs are complete and verified. The `plan` agent double-checked both the initial corrections and the subsequently measured Voice-readiness repair before their document edits. The user authorized these code/plan corrections and their commit and push, not unrelated implementation. Targeted repair proof is recorded below; pending feature/full-suite/native-smoke gates are not claimed complete. Source line numbers are navigation evidence, never patch anchors.
 
 ## Global Constraints
 
@@ -23,9 +23,11 @@
 7. Clean cutover: remove Add/Show/Hide, empty/hidden-row registration, individual heights, Tempo pin/collapse, automation scrollbar. Keep EditorViewState storage, codec, remapping and persistence tests unchanged; old row settings no longer drive this UI. Preserve laneRanges, outer drawer state, every event and unrelated scrolling.
 8. No unrelated core/audio/QWidget/shared-key refactor, fake fallback or compatibility shim. Refresh LSP references before public API changes. Preserve concurrent user work.
 9. Use deno task only. Writers skip format/build/lint/tests; the controller owns settled-tree verification. Native/default-backend evidence is required for node/phantom pixels. Never ignore or hand off check failures.
-10. This request authorizes plan writing only. During a later authorized execution, commit actions belong to the controller under applicable explicit authorization; push every commit made per repository policy. Implementers never commit.
+10. The current request authorizes the audited code repairs and plan corrections. Commit actions require separate explicit authorization and belong to the controller; push every commit made per repository policy. Implementers never commit.
 11. Prefer built-in Qt behavior over custom controls and their checks. Adding Qt modules is approved where it removes implementation/test burden. Task 5 uses native TabButton checking/input, GridLayout, Text.HorizontalFit, FontMetrics, Binding and ContextMenu. Local code supplies only styling, the three-column policy, domain/menu wiring and a narrow Enter/Return extension.
 12. The controller tracks new or materially rewritten production lines across the entire plan (C++, headers, QML, build declarations and all properties/signals/adapters/glue), reported separately from verified unchanged moves, deletions and test churn. This is accounting, not a limit: there is no numeric cap and no approval step tied to the count.
+13. A production helper must name a real product consumer, including a concrete planned QML consumer. Fixture-only navigation stays in existing check support. Reuse a canonical implementation before adding another; never add helper-plumbing checks to justify unnecessary code.
+14. Preserve observable behavior, not incidental containers, dead wrappers or copied fixture assumptions. Refresh liveness before preserving/renaming a helper. File-count targets must not force duplicate implementations or leave callers broken.
 
 ## Production line accounting — controller owned
 
@@ -37,6 +39,15 @@ This is primarily a presentation refactor and removal of obsolete code, not an o
 - **No cap:** there is no numeric limit, approval threshold or halt condition anywhere in the plan. The tracked count informs controller bookkeeping and the final report; it never gates dispatch, escalates, or changes acceptance.
 - **At every settled task and fix/review gate:** the implementer reports its approximate production contribution and any claimed move/format exclusions. The controller verifies them against the fixed baseline, updates the aggregate in the existing task/review record, and gives the reviewer the same count.
 - **Final report:** after fixes and cleanup, report the tracked production total and the separate move/deletion/test counts; do not create a new tracking subsystem for this.
+
+**Settled accounting after audit repairs** (nonblank, non-comment physical diff lines; same method as the initial audit):
+
+| Scope / comparison baseline | Production added / deleted | Check code added / deleted |
+| --- | --- | --- |
+| Landed implementation plus repairs vs `af6befba` | 440 / 748 in 17 files | 1482 / 1198 in 37 files |
+| This bounded repair vs `0b432f0c` | 21 / 40 in 3 files | 187 / 169 in 22 files |
+
+Raw line counts including comments/blanks: aggregate production +633/-800 and checks +1782/-1289; repair-only production +21/-44 and checks +208/-202. These figures include extraction and formatting churn; no unchanged-move or formatting-only discounts are claimed. No new permanent test cases accompany the repair.
 
 ## File map and ownership
 
@@ -77,9 +88,32 @@ Task 5 adds QuickControls2 and declares Qt 6.9, matching existing build/release 
 
 Primary references: [Qt Text fitting](https://doc.qt.io/qt-6/qml-qtquick-text.html#fontSizeMode-prop), [GridLayout](https://doc.qt.io/qt-6/qml-qtquick-layouts-gridlayout.html), [ContextMenu](https://doc.qt.io/qt-6/qml-qtquick-controls-contextmenu.html), [TabButton](https://doc.qt.io/qt-6/qml-qtquick-controls-tabbutton.html), [Binding](https://doc.qt.io/qt-6/qml-qtqml-binding.html), and [Fowler's small behavior-preserving transformations](https://refactoring.com/).
 
+### Implementation-audit correction gate
+
+The plan prescribed the test-only inverse method, incorrect QObject lookup and unconditional helper renames. Correct those producer instructions and every affected consumer brief, not just the final review checklist. The existing task IDs remain; this is a bounded repair group for already-landed code, not a new orchestration system.
+
+| Prescribing defect | Owner and correction | Existing proof |
+| --- | --- | --- |
+| Task 2 exposed a fixture-only inverse; task 8 copied a QObject lookup and deferred behavioral proof | Tasks 2/8 own removal and one shared test seam; migrate all landed consumers in the reference-map repair set atomically | Checks build, automation-presentation, and `parameterTabsPreserveDocumentAndSelection` must reach their bodies and pass |
+| Task 3's broad renderer-preservation wording retained a zero-or-one vector/loops/search | Task 3 removes collection overhead while preserving compositor/phantom calls and all logical adapters | Existing hover and native raster cases at the renderer repair boundary; no allocation/source-text test |
+| Task 29 ordered renames without checking liveness | Delete the dead raster helper; hover helper is already absent; live main-fixture cleanup stays task 26 | LSP caller closure and existing checks; no rename-plumbing tests |
+| Task 19 omitted active-parameter consumers and first-frame fixture readiness | Activate Pan explicitly; factor the existing frame wait and reuse it before shown fixtures publish geometry | Both Pan cases and all Voice pixel cases pass; existing minimum/voice-cap/handoff checks pass at normal font; enlarged-font proof remains open |
+
+**Shared seam:** relocate the existing `quick_popup::visualDescendant` traversal into `checks::support` in timelinequickcheck.h and remove the old implementation and six local copies. Do not add another canonical traversal or compatibility alias. One new test-only `automationParameterIndex(canvas, row)` scans validated `parameterRow(index)` until no row exists; it does not reconstruct a catalog or allocate a label list. Keep suite-specific real pointer/key delivery and readiness checks. Coordinate queries never activate a parameter.
+
+**Atomic recovery:** helpers and their popup callers migrate together; migrate all current inverse/lookup consumers, then remove the production inverse declaration/body and its inverse-roundtrip assertion in the same settled change. Task 8 owns the seam; the controller owns the cross-task integration, using the exact repair write set in reference-map.md. The corrected blueprint adds task 8 prerequisites below; it does not claim the historical implementation used that order.
+
+**Pre-repair evidence at `0b432f0c`:** domain/presentation/hover/native raster passed; the focused editing case failed in fixture initialization; drawer had two missed Pan activations and three unresolved Voice pixel failures. The scrollbar absence assertion is explicitly deferred until task 31. Enlarged-font/minimum proof and final full-suite/native smoke remain separate obligations. Never report these deferred or failing cases as green.
+
+**Measured readiness cause:** in the full drawer suite, the first Voice crop was requested at `QRect(0,325 1000x102)` but the band was at `QRect(0,369 1000x102)` after capture processed exposure/rendering. The isolated case began at y=369 and passed; captured PNGs showed displacement. No drawer fixture changes the application font. Task 19 owns the seven-file repair: reuse the existing exposure/afterRendering wait, with its original deadlines and explicit-show precondition, before shown rigs and drawer fixtures return ready. No new retry loop, discarded frame capture or changed Voice pixel tolerance.
+
+**Post-repair proof, Qt 6.11.0/macOS:** domain, presentation, hover, native/default-backend raster and the full editor-drawer suite pass. The focused `parameterTabsPreserveDocumentAndSelection` body and native `automationHoverDecor` scenario pass. Final runs exclude temporary diagnostics. The diagnostic idle/stopped Voice PNGs were byte-identical after the repair. Removed only inverse-roundtrip, obsolete row-height and incidental prompt-wording/initial-number assertions; musical, range, undo, selection, focus and pixel checks remain. No new permanent test cases were added. Local clang-format is 21 while CI pins 22; local formatting is not a CI-version claim.
+
+**Still deferred:** the scrollbar absence assertion awaits task 31; complete editing-suite migration awaits task 26. Full-suite, enlarged-font/minimum and complete native app-smoke obligations remain. None is represented by the targeted green runs above.
+
 ## Numbered execution tasks
 
-Every non-mechanical brief has at most three files, five steps and one acceptance predicate. Task 29 is the explicit same-shaped LSP-rename exception. Binding constraints repeat because each implementer starts without conversation history.
+Aim for at most three files, five steps and one acceptance predicate per brief. Named cohesive exceptions are task 8's six-file shared seam and task 19's seven-file measured drawer-readiness repair; complete caller closure and one canonical implementation take priority over file-count targets. Task 29 has only two potential deletion files, not a rename exception. Binding constraints repeat because each implementer starts without conversation history.
 
 | Task | Brief | Files | Prerequisites |
 | --- | --- | --- | --- |
@@ -90,18 +124,18 @@ Every non-mechanical brief has at most three files, five steps and one acceptanc
 | 5 | [Install accessible compact parameter labels in the gutter](task-5-brief.md) | 3 | 4 |
 | 6 | [Honor the automation-only label minimum and full plot width](task-6-brief.md) | 3 | 5 |
 | 7 | [Retire lane visibility actions without changing event deletion](task-7-brief.md) | 3 | 5 |
-| 8 | [Give the editing fixture real parameter activation](task-8-brief.md) | 3 | 5, 6 |
+| 8 | [Give the editing fixture real parameter activation](task-8-brief.md) | 6 | 5, 6 |
 | 9 | [Preserve phantom source editing and normal node gestures](task-9-brief.md) | 3 | 8 |
 | 10 | [Preserve shared multi-lane edits behind the single visible plot](task-10-brief.md) | 3 | 8, 9 |
 | 11 | [Prove parameter switches invalidate stale forms and gestures](task-11-brief.md) | 3 | 8 |
 | 12 | [Migrate parameter menus and clipboard surface tests](task-12-brief.md) | 3 | 7, 8, 11 |
-| 13 | [Replace pinned Tempo presentation tests with tab presentation](task-13-brief.md) | 3 | 5, 6 |
-| 14 | [Adapt hover fixtures to parameter activation](task-14-brief.md) | 3 | 5, 6 |
-| 15 | [Adapt raster fixture identity and preserve native node pixels](task-15-brief.md) | 3 | 5, 6 |
+| 13 | [Replace pinned Tempo presentation tests with tab presentation](task-13-brief.md) | 3 | 5, 6, 8 |
+| 14 | [Adapt hover fixtures to parameter activation](task-14-brief.md) | 3 | 5, 6, 8 |
+| 15 | [Adapt raster fixture identity and preserve native node pixels](task-15-brief.md) | 3 | 5, 6, 8 |
 | 16 | [Preserve raster interaction and native playhead alignment](task-16-brief.md) | 3 | 9, 15 |
-| 17 | [Remove automation-scrollbar tests without weakening remaining scrollbars](task-17-brief.md) | 2 | 6 |
+| 17 | [Remove automation-scrollbar tests without weakening remaining scrollbars](task-17-brief.md) | 2 | 6, 8 |
 | 18 | [Retire stacked-layout editing cases while retaining input routing](task-18-brief.md) | 3 | 8, 13, 17 |
-| 19 | [Verify automation minimum without changing other drawer sections](task-19-brief.md) | 3 | 6, 13 |
+| 19 | [Verify automation minimum without changing other drawer sections](task-19-brief.md) | 7 | 6, 13 |
 | 20 | [Migrate shared-selection probe and core fixtures](task-20-brief.md) | 3 | 5, 6, 10 |
 | 21 | [Preserve shared gesture arbitration after removing the automation thumb](task-21-brief.md) | 3 | 20 |
 | 22 | [Preserve window-tier selection and SongTab lifetime behavior](task-22-brief.md) | 3 | 20, 21 |
@@ -109,7 +143,7 @@ Every non-mechanical brief has at most three files, five steps and one acceptanc
 | 27 | [Preserve label-local activation and shared keyboard fallback](task-27-brief.md) | 2 | 22 |
 | 28 | [Preserve pencil edits on empty supported parameters](task-28-brief.md) | 1 | 8, 9, 10, 12, 18 |
 | 26 | [Complete stroke activation and editing fixture cutover](task-26-brief.md) | 3 | 8, 9, 10, 12, 18, 28 |
-| 29 | [Rename obsolete expansion helpers after semantic migrations](task-29-brief.md) | 7 (mechanical) | 14, 15, 16, 26, 28 |
+| 29 | [Audit obsolete expansion helpers after semantic migrations](task-29-brief.md) | 2 | 14, 15, 16, 26, 28 |
 | 30 | [Remove obsolete SongView lane-visibility facades](task-30-brief.md) | 2 | 7, 12, 23, 26, 28, 29 |
 | 31 | [Remove automation scrollbar chrome end to end](task-31-brief.md) | 3 | 4, 6, 17, 19, 21, 22, 27, 30 |
 | 32 | [Remove canvas row-resize and pinned-Tempo machinery](task-32-brief.md) | 2 | 18, 28, 29, 30, 31 |
@@ -123,9 +157,9 @@ The table order is the safe default; task 26 now follows task 28. Withdrawn numb
 
 Tasks 1–2 are additive preparation; 3–7 make the intentional UI feature change; the active tasks through 29 adapt only affected consumers; 30 onward remove unused UI interfaces after callers move. Do not describe the new UI behavior as a pure refactoring. Preserve musical behavior throughout.
 
-After every settled task, the controller builds the checks target before closing its review gate. Keep declarations and definitions together; do not accept broken compilation until the end. Run focused behavioral coverage at coherent checkpoints: unchanged domain coverage after preparation; actual selector/allocation smoke after tasks 5–7; each migrated suite when its fixtures are complete (the editing suite closes at task 26); relevant suites after every API-removal task. Do not run obsolete stacked-layout assertions against an intentionally changed surface and call their failure a regression fix; migrate those named cases without weakening musical assertions. The final full-suite/native gate remains mandatory.
+After every settled task, the controller builds the checks target before closing its compile gate. Keep declarations, definitions and callers together; do not accept broken compilation until the end. Build success is compile-complete only. Run focused behavioral coverage at coherent checkpoints: unchanged domain coverage after preparation; actual selector/allocation smoke after tasks 5–7; task 8's existing all-label case immediately before dependent fixture migrations; each migrated suite when its fixtures are complete (the full editing suite closes at task 26); relevant suites after every API removal or renderer repair. Do not run obsolete stacked-layout assertions against an intentionally changed surface and call their failure a regression fix; migrate those named cases without weakening musical assertions. The final full-suite/native gate remains mandatory.
 
-Refactoring guard: retain method names and signatures that still express a real responsibility (rows, laneBody, coordinate queries, minimumContentHeight). No wholesale renderer rewrite, adapter replacement, helper churn or settings cleanup. Change visible-lane enumeration and remove obsolete chrome around the existing composition calls. A caller outside an exact write set requires a bounded caller-migration brief before API deletion, never an undefined-symbol interval or compatibility stub.
+Refactoring guard: retain method names and signatures only while they express a live responsibility (rows, laneBody, coordinate queries, minimumContentHeight). No wholesale renderer rewrite, adapter replacement or settings cleanup; preserving NodeLaneQuickPaint calls does not require keeping a single-element vector or search. Delete caller-free wrappers rather than renaming or testing them. A caller outside an exact write set requires a bounded caller-migration update before API deletion, never an undefined-symbol interval or compatibility stub.
 
 ## Node-preservation matrix
 
@@ -152,6 +186,7 @@ The controller applies the production line accounting above and reports the fina
 
 
 1. Refresh references across affected UI/check folders. Removed UI APIs have no remaining consumer; preserved EditorViewState/codec/remap references are explicitly not removal targets; unrelated piano-roll scrolling is not a false positive. Format edited supported files once with deno task format. No source-text tests or warning suppression.
+   At the shared-seam repair boundary, run `deno task verify --filter automation-presentation --verbose` and `deno task verify --filter automation-editing --verbose --qt parameterTabsPreserveDocumentAndSelection`. The focused case must execute its behavioral body, not merely init/cleanup. Existing hover/native-raster cases also run when the renderer repair settles. Do not add a separate test suite for these helpers.
 2. Compile and run focused coverage. Exact registered filters from src/checks/checkcatalog.cpp:
 
 ~~~sh
@@ -198,12 +233,13 @@ Expected: all harnesses pass, no assertion/QML/runtime failure. Resolve failures
 - Initialize each of the 35 active tasks in table order as its own todo. Do not initialize withdrawn tasks 24, 25 or 36, compress active tasks into phases, or track them from memory.
 - Dispatch the exact brief to sdd-implementer. On NEEDS_CONTEXT, resolve source/tool facts first and revise a bounded brief; never ask the user for repository-provided information.
 - Apply local task-scoped spec/quality review after each task. Fix/re-review up to the local five-round cap, then escalate the concrete unresolved issue. Never silently accept failed review findings.
+- Review additions against their named runtime consumers and the user-visible invariants protected by existing coverage. Test-only helpers stay in test support; an unnecessary helper is deleted, not given new tests to justify retaining it. Check liveness before preserve/rename decisions and identify implicit behavioral consumers (default active parameter, geometry, focus), not just compiling references.
 - Track the aggregate production-line count at every settled task and fix/review gate and report the final count. The count is informational bookkeeping: it never gates dispatch, review or acceptance, and no dispatch context mentions an allowance.
 - Controller integrates and validates after writers settle. The final report distinguishes actual proof from unrun checks and names blockers. A phase boundary is not a handoff.
-- This plan is ready for future authorized execution; it does not start it.
+This corrected plan governs continuation and the authorized audit repairs; its text does not itself authorize further scope or a commit.
 
 ## Plan self-review
 
-Review coverage: catalog, Tempo, all node/phantom invariants, selection, sizing/font, keyboard/accessibility, menus/lifetime, persistence, exported consumers and native/full verification. All listed existing paths were checked; exactly two production paths are new. Numbered tasks own the reference-map consumer inventory. Non-mechanical tasks meet three-file/five-step caps; dependencies precede consumers in table order (task 26 deliberately follows 28). Code/QML snippets use the produced interfaces, not placeholders.
+Review coverage: catalog, Tempo, node/phantom invariants, selection, sizing/font, keyboard/accessibility, menus/lifetime, persistence, exported and implicit behavioral consumers, and native/full verification. The `plan` agent verified the corrective approach before edits; its duplication finding changed the shared lookup from an additional implementation to a relocation. Exactly two production paths are new. The 35 task IDs remain; task 8/19's named cohesive exceptions and task 26-after-28 ordering are explicit. Corrected helper consumers depend on task 8; current code repairs integrate atomically without claiming the historical order or incomplete gates passed.
 
 Method: original [writing-plans skill](https://github.com/obra/superpowers/blob/main/skills/writing-plans/SKILL.md), adapted to the mandatory local SDD brief/review loop. Accessibility API: [Qt Accessible documentation](https://doc.qt.io/qt-6/qml-qtquick-accessible.html).

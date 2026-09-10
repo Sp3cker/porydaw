@@ -12,6 +12,7 @@
 
 #include "checks/support/editorrig.h"
 #include "checks/support/eventsynth.h"
+#include "checks/support/quickframebuffer.h"
 #include "core/miditimeline.h"
 #include "core/smf.h"
 #include "core/tracklimits.h"
@@ -239,6 +240,8 @@ bool DrawerFixture::create(QString &error)
         error = QStringLiteral("drawer fixture could not stage automation focus");
         return false;
     }
+    if (!support::waitForQuickFrame(*quickWindow, &error))
+        return false;
     tab = std::move(candidate);
     return true;
 }

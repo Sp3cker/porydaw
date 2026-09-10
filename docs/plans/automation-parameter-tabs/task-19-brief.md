@@ -25,6 +25,12 @@ Replace vertically stacked automation rows with a compact grid of nine clickable
 - `src/checks/drawerpresentation/tst_drawerpresentation.h`
 - `src/checks/drawerpresentation/drawer.cpp`
 - `src/checks/drawerpresentation/fixtures.cpp`
+- `src/checks/drawerpresentation/valueprompt.cpp`
+- `src/checks/support/quickframebuffer.h`
+- `src/checks/support/quickframebuffer.cpp`
+- `src/checks/support/editorrig.cpp`
+
+Named seven-file cohesive exception: the drawer fixture, geometry checks, real Pan prompt entry points and shared first-frame readiness form one measured repair. The `plan` agent approved the three support-file additions after the stale crop was measured; a file-count target must not force duplicate waits or leave these consumers unowned.
 
 ## Prerequisites
 
@@ -32,7 +38,9 @@ Completed/reviewed tasks: 6, 13.
 
 ## Interface contract
 
-Uses DrawerSections::minimumBodyHeight for public geometry observations, not the old shared minBody as an automation minimum. Existing voice resize baselines and expected musical outcomes remain unchanged.
+Uses DrawerSections::minimumBodyHeight for public geometry observations, not the old shared minBody as an automation minimum. Reuse task 8's `checks::support::visualDescendant` and `automationParameterIndex` from the existing timelinequickcheck.h; do not copy either lookup into drawer fixtures. Identity/geometry probes never activate parameters. Existing voice resize baselines and expected musical outcomes remain unchanged.
+
+Audit status: the normal-font minimum case, both Pan prompt cases and all three Voice pixel cases pass after the bounded repair. The enlarged-font repeat remains unproven. Before repair, a full-suite Voice capture requested `QRect(0,325 1000x102)` and returned after the band moved to `QRect(0,369 1000x102)`; the isolated case started at y=369 and passed. Frame PNGs showed the displaced crop. No drawer fixture changes the application font. Exposed/nonempty inputs were not a first-rendered-layout boundary.
 
 ## Implementation steps
 
@@ -48,13 +56,23 @@ Extend minimum-height/resize tests: request an automation height below the measu
 
 In voice-handle overflow cases use separate voice and automation minimums in expected geometry while keeping the existing voice maximum and delta handoff contract. Do not raise the shared minBody or loosen the voice cap to make automation labels fit.
 
+### Step 4
+
+In valueprompt.cpp, activate CC10 through its rendered label before the two insertion/Escape scenarios obtain Pan probe coordinates and send their double click. The default active parameter is Volume; adding/probing a Pan event does not change it. Keep the real pointer path, displayed centered range/value conversion, committed source event, undo and focus assertions. Do not change production prompt semantics or repin expectations to Volume. Remove wording-only assertions and incidental pixel-quantized initial-number assertions (`32` versus observed `33`), not replace them with new literals. Typing displayed 0 must still commit stored 64; this also detects failure to select the initial input for replacement.
+
+### Step 5
+
+Repair the measured stale-geometry cause, not Voice painting. Extract the existing exposure/afterRendering wait from captureQuickBand into one test-only `waitForQuickFrame(QQuickWindow &, QString * = nullptr)` in quickframebuffer.h/.cpp. Retain the existing deadlines and fail-fast hidden-window precondition; callers explicitly show the window. Reuse it from captureQuickBand and showQuickViewport. EditorRig waits before returning only when `config.show` is true; DrawerFixture waits after staging focus and before returning ready.
+
+This is an earlier first-frame boundary, not another scheduler or retry policy. Keep all three Voice pixel comparisons unchanged. No sleeps, discarded captures, retries, hidden Automation or relaxed pixels. The stronger showQuickViewport boundary applies to all its callers: diagnose any newly failing geometry assertion individually, changing only proven pre-settle/incidental assumptions. Never presume every failure is stale or change musical outcomes to obtain a pass.
+
 ## Acceptance predicate
 
-Automation resizing honors the measured label minimum while Velocity/Voice Changes visibility, stored heights, voice cap and overflow handoff retain their original behavior.
+Automation resizing honors the measured label minimum at normal and enlarged font, Pan prompt input reaches Pan, and Velocity/Voice Changes sizes, voice cap and overflow handoff retain their behavior. Shown fixtures return after the first rendered layout; existing Voice pixel cases pass without changing their comparisons. Normal-font/readiness repair evidence does not close the still-unrun enlarged-font gate.
 
 ## Controller verification
 
-Controller: `deno task verify --filter editor-drawer --verbose`.
+Controller: run `deno task verify --filter editor-drawer --verbose` after source writers settle. Record the two Pan cases, normal/enlarged-font minimum and voice-cap handoff separately from the Voice pixel cases. A passing new minimum case alone does not close this task. Resolve failures in this task's responsibility; a proven external failure must have a named repair owner and remain an explicit final-gate blocker. Do not repeatedly stress-run desktop-input cases.
 
 Controller checkpoint: after this writer settles, run deno task build:checks before closing the task. No undefined methods or missed exported callers may be deferred to a later task. Run the affected suite once its named surface migration is coherent; preserve existing semantic expectations and use the native/default backend for actual node pixels. Writers never run validation.
 

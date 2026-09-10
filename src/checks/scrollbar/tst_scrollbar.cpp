@@ -18,6 +18,7 @@
 
 #include "checks/fwd.hpp"
 #include "checks/support/songfixture.h"
+#include "checks/support/timelinequickcheck.h"
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
 #include "ui/editordrawer/automationcanvas.h"
@@ -117,30 +118,18 @@ bool itemWithinTrack(const QQuickItem &track, const QQuickItem &handle, Qt::Orie
            closeEnough(handle.x(), 0.0) && closeEnough(handle.width(), track.width());
 }
 
-// QObject::findChild misses visually reparented Quick delegates, so the
-// removed-scrollbar absence checks and the selector label seam walk the
-// visual childItems tree instead of object ownership.
-QQuickItem *visualDescendant(QQuickItem *root, const QString &objectName)
-{
-    if (!root || root->objectName() == objectName)
-        return root;
-    for (QQuickItem *const child : root->childItems())
-        if (QQuickItem *const found = visualDescendant(child, objectName))
-            return found;
-    return nullptr;
-}
-
 // The catalog position comes from the production mapping only; clicking the
 // real selector label is the same activation path a user takes.
 bool activateParameterLabel(AutomationCanvas &canvas, QQuickItem &root,
                             const EditorAutomationRowId &row)
 {
-    const int index = canvas.parameterIndex(row);
+    const int index = checks::support::automationParameterIndex(canvas, row);
     if (index < 0)
         return false;
     QQuickItem *label = nullptr;
     if (!QTest::qWaitFor([&root, &label, index] {
-            label = visualDescendant(&root, QStringLiteral("automationParameterTab%1").arg(index));
+            label = checks::support::visualDescendant(
+                &root, QStringLiteral("automationParameterTab%1").arg(index));
             return label && label->isVisible() && label->isEnabled() && label->width() > 0.0 &&
                    label->height() > 0.0 && label->window();
         }))
@@ -284,8 +273,10 @@ void ScrollbarTest::automationLabelActivatesAfterResize()
     // The automation scrollbar is removed end to end: neither its track nor
     // its thumb may exist anywhere in the visual tree, so no gutter strip is
     // reserved for them.
-    QVERIFY(!visualDescendant(m_root, QStringLiteral("drawerAutomationScrollBar")));
-    QVERIFY(!visualDescendant(m_root, QStringLiteral("drawerAutomationScrollThumb")));
+    QVERIFY(
+        !checks::support::visualDescendant(m_root, QStringLiteral("drawerAutomationScrollBar")));
+    QVERIFY(
+        !checks::support::visualDescendant(m_root, QStringLiteral("drawerAutomationScrollThumb")));
 
     // Resizing the section re-flows the compact selector grid; a real click
     // on the repositioned song-global Tempo label proves the reclaimed

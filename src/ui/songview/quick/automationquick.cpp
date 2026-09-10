@@ -119,7 +119,6 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         bool selectedLane = false;
         bool selectedNodesLane = false;
         bool bandLane = false;
-        bool needsPoints = false;
         std::vector<NodePoint> points;
     };
 
@@ -128,7 +127,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     // its adapter in m_nodeStack for shared selection, command targets, and
     // cross-lane batch edits, with the same plot rectangle for value
     // geometry.
-    std::vector<VisibleLane> lanes;
+    std::optional<VisibleLane> active;
     const LaneHandle activeHandle = activeLane();
     if (const NodeLaneSlot *slot = resolveSlot(activeHandle)) {
         const bool bandLane = bandPreviewContainsLane(activeHandle);
@@ -140,21 +139,19 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
              (pencil && pencil->lane == activeHandle));
         const bool needsHoverPoints = hover && m_hoverState.hover.lane == activeHandle;
         const QRect body = slot->body;
-        lanes.push_back(
-            {.handle = activeHandle,
-             .slot = slot,
-             .body = body,
-             .plot = viewport,
-             .overflow = nodelane::nodeOverflowClip(body, m_geometry).intersected(viewport),
-             .tempo = slot->isTempo(),
-             .selectedLane = m_laneSelection.coversLane(slot->id) || bandLane,
-             .selectedNodesLane = m_laneSelection.coversNodes(slot->id) || bandLane,
-             .bandLane = bandLane,
-             .needsPoints = content || needsTransientPoints || needsHoverPoints});
-    }
-    for (VisibleLane &lane : lanes) {
-        if (lane.needsPoints)
-            lane.points = lane.slot->lane->points();
+        active = VisibleLane{.handle = activeHandle,
+                             .slot = slot,
+                             .body = body,
+                             .plot = viewport,
+                             .overflow =
+                                 nodelane::nodeOverflowClip(body, m_geometry).intersected(viewport),
+                             .tempo = slot->isTempo(),
+                             .selectedLane = m_laneSelection.coversLane(slot->id) || bandLane,
+                             .selectedNodesLane = m_laneSelection.coversNodes(slot->id) || bandLane,
+                             .bandLane = bandLane,
+                             .points = content || needsTransientPoints || needsHoverPoints
+                                           ? slot->lane->points()
+                                           : std::vector<NodePoint>{}};
     }
     const bool multipleSelectedNodes = hasMultipleSelectedNodes(selectedTickRange);
 
@@ -186,7 +183,8 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         scene.setAutomationTextRecords({});
     }
 
-    for (const VisibleLane &lane : lanes) {
+    if (active) {
+        const VisibleLane &lane = *active;
         const QColor color =
             lane.tempo
                 ? themes::color(themes::Role::song_view_automation_tempo_curve)
@@ -245,19 +243,14 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     }
     // Plot value labels keep their pre-clip rectangles and clip against the
     // lane overflow, unchanged from the stacked renderer.
-    const auto appendValueLabel = [&lanes](std::vector<TimelineQuickTextModel::Record> &records,
-                                           TimelineQuickTextKeyKind kind,
-                                           const NodeLaneHoverState::ValueLabelCache &label) {
-        if (!label.valid || label.text.isEmpty())
-            return;
-        const auto lane =
-            std::find_if(lanes.cbegin(), lanes.cend(),
-                         [&label](const VisibleLane &item) { return item.handle == label.lane; });
-        if (lane == lanes.cend())
+    const auto appendValueLabel = [&active](std::vector<TimelineQuickTextModel::Record> &records,
+                                            TimelineQuickTextKeyKind kind,
+                                            const NodeLaneHoverState::ValueLabelCache &label) {
+        if (!label.valid || label.text.isEmpty() || !active || active->handle != label.lane)
             return;
         appendText(records, kind, quint64(label.lane.index), QRectF(label.rect), label.text,
                    themes::color(themes::Role::song_view_primary_text), label.font,
-                   Qt::AlignHCenter, lane->overflow);
+                   Qt::AlignHCenter, active->overflow);
     };
     if (hover)
         appendValueLabel(hoverTextRecords, TimelineQuickTextKeyKind::AutomationHover,

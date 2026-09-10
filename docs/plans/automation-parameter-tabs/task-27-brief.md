@@ -41,7 +41,7 @@ Replace automation-scrollbar focus setup in the keyboard cases with a rendered p
 
 ### Step 2
 
-Use one existing-window integration scenario: keep an explicit multi-lane selection, focus a different parameter's TabButton, activate through Space, then exercise the advertised Enter/Return extension on another label. Verify the parameter changes while document/selection remain unchanged. Do not create a matrix of native button pressed/released/canceled signals, repeat timing or generic focus traversal. Check duplicate app effects only where the Enter extension could collide with native handling.
+Use one existing-window integration scenario: keep an explicit multi-lane selection, focus a different parameter's TabButton, activate through Space, then exercise the advertised Enter/Return extension on another label. Verify the parameter changes while document/selection remain unchanged. Resolve label items with the shared `checks::support::visualDescendant`; no copied traversal. Do not create a matrix of native button pressed/released/canceled signals, repeat timing or generic focus traversal. Check duplicate app effects only where the Enter extension could collide with native handling.
 
 ### Step 3
 

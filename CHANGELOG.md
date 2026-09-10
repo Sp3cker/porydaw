@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Press `G` with one note selected to edit its channel-wide pitch bend: scroll the graph for a note-scoped BENDR range, hold `Option`/`Alt` for angled lines, reset to zero, and audition from note-on with `Space`. The popup stays open until click-away or `Escape`.
 
 ## Changed
+- Remove the test-only automation inverse API and redundant single-lane renderer collection; share Quick visual lookup across affected checks.
 - Reuse the timeline's Quick popup session for note automation without a separate native window. The pitch editor owns its note anchoring, resize layout, live-edit dismissal, and click-away routing; the shared session owns hosting and lifetime rather than configurable pitch policies.
 - Share prompt appearance and card/button chrome; remove obsolete Event List MIME drag/drop, drawer QAction shims, and the unused QuickWidgets dependency. Consolidate header checks while retaining their distinct behavior coverage.
 - Expose selection-keyboard routing checks as independently selectable Qt Test cases with isolated fixtures.
@@ -31,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Avoid rebuilding and reshaping unchanged track-header labels on every playback update; refresh them when the program or header presentation changes instead.
 - Batch fitting timeline labels together instead of giving each label a separate clip; retain clipping for overflowing text and lane boundaries.
 - Keep tempo curves and nodes visible above the plot header background.
+- Wait for the first rendered layout before drawer fixtures snapshot geometry, and activate Pan before Pan prompt scenarios.
 - Do not revive a rejected pre-roll hover guide during later timeline synchronization.
 - Initialize empty voicegroup fixtures before binding them in host and window lifecycle checks, preventing intermittent invalid-pointer crashes.
 - Prevent timeline cancellation from releasing a pitch-bend popup's mouse grab and corrupting undo history during an external document edit.

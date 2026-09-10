@@ -37,21 +37,6 @@ std::optional<EditorAutomationRowId> AutomationCanvas::parameterRow(int index) c
                                  CCLanes::supportedControllers()[std::size_t(index)]};
 }
 
-// Tempo is identified by the canonical {Tempo,0,0}; CC rows must carry the
-// current primary track and a cataloged controller. Unsupported identities
-// map to -1, so a stale or foreign row id never selects a parameter.
-int AutomationCanvas::parameterIndex(const EditorAutomationRowId &row) const noexcept
-{
-    if (row.kind == EditorAutomationRowKind::Tempo)
-        return row.track == 0 && row.controller == 0 ? parameterCount() - 1 : -1;
-    const int track = m_page.m_owner.selectionModel().primaryTrack();
-    if (row.kind != EditorAutomationRowKind::ControlChange || track != int(row.track))
-        return -1;
-    const auto controllers = CCLanes::supportedControllers();
-    const auto position = std::find(controllers.begin(), controllers.end(), row.controller);
-    return position == controllers.end() ? -1 : int(position - controllers.begin());
-}
-
 // Labels come from the m4a semantic layer — classified CCs, registered XCMD
 // selectors, dedicated PitchBend, and Tempo — so no display name is
 // duplicated and every identity stays available without written events.

@@ -42,7 +42,7 @@ Remove only test data rows that require the deleted automation scrollbar. Keep e
 
 ### Step 2
 
-Activate the intended automation parameter before starting node gestures. Do not replace real pointer gestures with direct model mutation except to seed an already existing shared selection.
+Activate the intended automation parameter before starting node gestures, through the shared test-support lookup and real label input rather than a copied traversal or production inverse index. Do not replace real pointer gestures with direct model mutation except to seed an already existing shared selection. Preserve foreign menu ownership, cancellation and existing arbitration outcomes.
 
 ### Step 3
 

@@ -38,7 +38,7 @@ Retains existing real host fixtures and all lifecycle data rows, including page-
 
 ### Step 1
 
-Replace addEmptyLane, lane-height/scroll and pinnedTempoRect setup with outer automation size plus explicit supported-parameter activation. Do not remove any lifecycle row merely because it previously used a scrollable automation fixture.
+Replace addEmptyLane, lane-height/scroll and pinnedTempoRect setup with outer automation size plus explicit supported-parameter activation through the shared test-support lookup. Do not remove any lifecycle row merely because it previously used a scrollable automation fixture. Keep every foreign-ownership and cancellation case intact; no copied traversal or production inverse index.
 
 ### Step 2
 

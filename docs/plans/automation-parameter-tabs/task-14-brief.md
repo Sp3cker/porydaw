@@ -28,17 +28,19 @@ Replace vertically stacked automation rows with a compact grid of nine clickable
 
 ## Prerequisites
 
-Completed/reviewed tasks: 5, 6.
+Completed/reviewed tasks: 5, 6, 8.
+
+Dependency 8 is the corrected blueprint dependency for the shared test-support lookup. Hover-fixture code that already landed is corrected to call that seam by the bounded repair group, not by re-running historical task order; this brief assumes the seam exists and does not redefine it.
 
 ## Interface contract
 
-Keep hover fixture identity and projection queries pure; add an explicit parameter activation step before input. Reuse the same production index/row mapping, not a duplicate controller table.
+Keep hover fixture identity and projection queries pure; add an explicit parameter activation step before input. Resolve rows and label items through `checks::support::automationParameterIndex` / `checks::support::visualDescendant`, not a duplicate controller table, a copied traversal or a production inverse mapping.
 
 ## Implementation steps
 
 ### Step 1
 
-Replace the fixture's Tempo-header expansion input with real Tempo-label activation. For CC scenarios activate their row explicitly. Remove scroll-to-row setup; keep horizontal scroll setup used to expose origin phantoms.
+Replace the fixture's Tempo-header expansion input with real Tempo-label activation. For CC scenarios activate their row explicitly. Remove scroll-to-row setup; keep horizontal scroll setup used to expose origin phantoms. The local `visualDescendant` copy in `hoverfixture.cpp` is replaced by the shared `checks::support::visualDescendant`; no second definition survives. This fixture has no `expandTempo` helper to rename, and task 29 performs no renames: if any Tempo-expansion/row-height helper remains in this write set, delete it here once its last caller migrates rather than leaving a wrapper or old name for a later task.
 
 ### Step 2
 

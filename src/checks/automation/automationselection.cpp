@@ -12,6 +12,7 @@
 #include <QSignalSpy>
 #include <QtTest>
 
+#include "checks/support/timelinequickcheck.h"
 #include "core/miditimeline.h"
 #include "core/smf.h"
 #include "core/songdocument.h"
@@ -215,8 +216,8 @@ void AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows()
     QVERIFY(tab().view().selectionModel().timeSelectionCoversTempo(1u));
     QVERIFY(!tab().view().selectionModel().timeSelectionCoversLane(kTrack, kPanController, 1u));
     QVERIFY(!tab().view().selectionModel().timeSelectionCoversLane(kTrack, kLfoController, 1u));
-    const QList<int> tempoOnly{
-        page().canvas()->parameterIndex({EditorAutomationRowKind::Tempo, 0, 0})};
+    const QList<int> tempoOnly{checks::support::automationParameterIndex(
+        *page().canvas(), {EditorAutomationRowKind::Tempo, 0, 0})};
     QCOMPARE(page().canvas()->selectedParameters(), tempoOnly);
     QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == beforeBand);
 
@@ -266,8 +267,8 @@ void AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows()
                              {{kTrack, kPanController}}));
     QVERIFY(!tab().view().selectionModel().timeSelectionCoversTempo(1u));
     QVERIFY(tab().view().selectionModel().timeSelectionCoversLane(kTrack, kPanController, 1u));
-    const QList<int> panOnly{page().canvas()->parameterIndex(
-        {EditorAutomationRowKind::ControlChange, kTrack, kPanController})};
+    const QList<int> panOnly{checks::support::automationParameterIndex(
+        *page().canvas(), {EditorAutomationRowKind::ControlChange, kTrack, kPanController})};
     QCOMPARE(page().canvas()->selectedParameters(), panOnly);
 }
 
@@ -378,14 +379,14 @@ void AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop()
     // parameter independent of the active tab.
     QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}));
     const QList<int> covered = page().canvas()->selectedParameters();
-    QVERIFY(
-        covered.contains(page().canvas()->parameterIndex({EditorAutomationRowKind::Tempo, 0, 0})));
-    QVERIFY(covered.contains(page().canvas()->parameterIndex(
-        {EditorAutomationRowKind::ControlChange, kTrack, kPanController})));
-    QVERIFY(covered.contains(page().canvas()->parameterIndex(
-        {EditorAutomationRowKind::ControlChange, kTrack, kLfoController})));
-    QVERIFY(!covered.contains(page().canvas()->parameterIndex(
-        {EditorAutomationRowKind::ControlChange, kTrack, kVolumeController})));
+    QVERIFY(covered.contains(checks::support::automationParameterIndex(
+        *page().canvas(), {EditorAutomationRowKind::Tempo, 0, 0})));
+    QVERIFY(covered.contains(checks::support::automationParameterIndex(
+        *page().canvas(), {EditorAutomationRowKind::ControlChange, kTrack, kPanController})));
+    QVERIFY(covered.contains(checks::support::automationParameterIndex(
+        *page().canvas(), {EditorAutomationRowKind::ControlChange, kTrack, kLfoController})));
+    QVERIFY(!covered.contains(checks::support::automationParameterIndex(
+        *page().canvas(), {EditorAutomationRowKind::ControlChange, kTrack, kVolumeController})));
     QVERIFY(focusAutomationBand());
     const std::vector<SongDocument::LanePointValue> volumeBefore =
         laneValues(tab().document(), kVolumeController);

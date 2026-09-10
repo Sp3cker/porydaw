@@ -42,7 +42,7 @@ Remove automation-thumb-specific window-tier gesture data/slots; retain remainin
 
 ### Step 2
 
-In the existing two-tab lifetime scenario choose Pan in song A and Tempo in song B through real labels. Switch back and verify A displays Pan; change A's primary track and verify Pan now edits that track using the existing primary-track transition selection policy. Reopen/replace documents and verify old callbacks remain rejected.
+In the existing two-tab lifetime scenario choose Pan in song A and Tempo in song B through real labels (resolved with the shared `checks::support::visualDescendant` lookup, not a copied traversal). Switch back and verify A displays Pan; change A's primary track and verify Pan now edits that track using the existing primary-track transition selection policy. Reopen/replace documents and verify old callbacks remain rejected.
 
 ### Step 3
 

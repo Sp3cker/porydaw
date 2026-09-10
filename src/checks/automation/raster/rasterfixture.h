@@ -74,7 +74,6 @@ class AutomationRasterFixture final
     QPointF automationContentToViewport(const QPointF &position) const;
 
     bool activateParameter(const EditorAutomationRowId &row);
-    bool expandTempo();
     void setAutomationZoom(double zoom);
     void setAutomationScroll(double scroll);
     void setPersistentPencil(bool enabled);

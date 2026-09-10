@@ -21,6 +21,7 @@
 
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
+#include "checks/support/timelinequickcheck.h"
 #include "core/miditimeline.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
@@ -34,19 +35,6 @@
 
 namespace {
 constexpr double kCheckSampleRate = 48000.0;
-
-// QObject::findChild misses visually reparented Quick delegates, so the
-// selector label seam walks the visual childItems tree instead of object
-// ownership.
-QQuickItem *visualDescendant(QQuickItem *root, const QString &objectName)
-{
-    if (!root || root->objectName() == objectName)
-        return root;
-    for (QQuickItem *const child : root->childItems())
-        if (QQuickItem *const found = visualDescendant(child, objectName))
-            return found;
-    return nullptr;
-}
 
 } // namespace
 
@@ -283,7 +271,7 @@ bool AutomationRasterFixture::activateParameter(const EditorAutomationRowId &row
 {
     // The catalog position comes from the production mapping only; clicking
     // the real selector label is the same activation path a user takes.
-    const int index = canvas().parameterIndex(row);
+    const int index = checks::support::automationParameterIndex(canvas(), row);
     if (index < 0)
         return false;
     QQuickItem *const root = m_view ? m_view->quickView()->rootObject() : nullptr;
@@ -291,7 +279,8 @@ bool AutomationRasterFixture::activateParameter(const EditorAutomationRowId &row
         return false;
     QQuickItem *label = nullptr;
     if (!QTest::qWaitFor([&root, &label, index] {
-            label = visualDescendant(root, QStringLiteral("automationParameterTab%1").arg(index));
+            label = checks::support::visualDescendant(
+                root, QStringLiteral("automationParameterTab%1").arg(index));
             return label && label->isVisible() && label->isEnabled() && label->width() > 0.0 &&
                    label->height() > 0.0 && label->window();
         }))
@@ -307,15 +296,6 @@ bool AutomationRasterFixture::activateParameter(const EditorAutomationRowId &row
     QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, point.toPoint());
     pump();
     return canvas().activeParameter() == index;
-}
-
-bool AutomationRasterFixture::expandTempo()
-{
-    // Kept for the interaction suite's callers until its migration: activate
-    // Tempo through the real selector label, then require the active slot's
-    // shared plot body.
-    return activateParameter({EditorAutomationRowKind::Tempo, 0, 0}) &&
-           !canvas().laneBody(kTempoHandle).isEmpty();
 }
 
 void AutomationRasterFixture::setAutomationZoom(double zoom)

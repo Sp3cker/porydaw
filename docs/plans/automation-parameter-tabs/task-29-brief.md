@@ -1,4 +1,4 @@
-# Task 29: Rename obsolete expansion helpers after semantic migrations
+# Task 29: Audit and delete obsolete expansion helpers after semantic migrations
 
 > Route: SDD-track. Execute through rule://sdd-execution-loop with a brief-first sdd-implementer. Read-only task review follows. This brief authorizes only this task, not adjacent work.
 
@@ -22,15 +22,10 @@ Replace vertically stacked automation rows with a compact grid of nine clickable
 
 ## Exact write set
 
-- `src/checks/automation/hover/hoverfixture.h`
-- `src/checks/automation/hover/hoverfixture.cpp`
-- `src/checks/automation/hover/tst_automationhover.cpp`
 - `src/checks/automation/raster/rasterfixture.h`
 - `src/checks/automation/raster/rasterfixture.cpp`
-- `src/checks/automation/raster/painting.cpp`
-- `src/checks/automation/raster/interaction.cpp`
 
-Mechanical exception: this explicit symbol-only rename may touch more than three files. No other task has that exception.
+No mechanical file-count exception and no rename exception: this is a two-file audit-and-delete task.
 
 ## Prerequisites
 
@@ -38,29 +33,29 @@ Completed/reviewed tasks: 14, 15, 16, 26, 28.
 
 ## Interface contract
 
-Explicit mechanical-file-count exception: two symbol-aware same-shaped renames only. More than three files is justified by LSP rename updating each symbol's callers atomically. Do not combine semantic changes with this task.
+Audit liveness before editing. The only possible source change here is deleting the caller-free raster helper's declaration and definition; the hover helper is already absent and the live main editing helper belongs to task 26. No rename is authorized by this task. An unexpected live semantic consumer requires a corrected owner brief, not an expanded cleanup.
 
 ## Implementation steps
 
 ### Step 1
 
-Use LSP references and rename `automation_hover::expandTempo` to `automation_hover::activateTempo` from hoverfixture.h. Its implementation has already been changed to label activation by task 14.
+Query LSP references and confirm `automation_hover::expandTempo` has no remaining declaration or callers. There is no live rename target there: if it is already gone, record that and move on rather than re-adding anything.
 
 ### Step 2
 
-Use LSP references and rename `AutomationRasterFixture::expandTempo` to `AutomationRasterFixture::activateTempo` from rasterfixture.h. Its implementation has already been changed to label activation by task 15. No hand-edited cross-file rename.
+`AutomationRasterFixture::expandTempo` (`rasterfixture.h`, `rasterfixture.cpp`) is already caller-free at the audited head: delete its declaration and definition. If the authorized code repair already removed them, this step closes with zero changes. Do not recreate or rename the helper.
 
 ### Step 3
 
-Confirm no main AutomationEditingTest::expandTempo references remain and no test helper still clicks a Tempo header. If either helper still performs collapse/expand logic, return NEEDS_CONTEXT to its semantic migration owner rather than extending this mechanical task.
+Leave `AutomationEditingTest::expandTempo` to task 26; do not migrate, rename or delete it here. If any remaining helper still performs real collapse/expand logic instead of label activation, return NEEDS_CONTEXT to its semantic migration owner rather than extending this mechanical task.
 
 ## Acceptance predicate
 
-The two remaining fixture helpers that activate Tempo have accurate names at every callsite, with no production or test behavior changes.
+The obsolete hover helper remains absent, the caller-free raster helper is deleted, and no fixture helper still clicks a Tempo header after its semantic migration. Main editing helper closure remains task 26's responsibility; this task introduces no rename or behavioral change.
 
 ## Controller verification
 
-Controller: build checks at the final barrier; automation-hover/raster cover the renamed callsites.
+Controller: build checks at the final barrier; the automation-hover and native raster semantic suites cover the touched callsites. No new test asserts a deletion, a rename, an allocation count or any other source-text property.
 
 Controller checkpoint: after this writer settles, run deno task build:checks before closing the task. No undefined methods or missed exported callers may be deferred to a later task. Run the affected suite once its named surface migration is coherent; preserve existing semantic expectations and use the native/default backend for actual node pixels. Writers never run validation.
 

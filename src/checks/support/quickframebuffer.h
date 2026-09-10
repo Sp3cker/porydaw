@@ -12,12 +12,16 @@
 
 class QColor;
 class QQuickItem;
+class QQuickWindow;
 class QString;
 class SongView;
 
 namespace checks::support {
 
 void pumpQuick();
+// Waits for exposure and a requested frame so QML layout is published before
+// fixtures snapshot geometry. Does not capture or discard a framebuffer.
+bool waitForQuickFrame(QQuickWindow &window, QString *error = nullptr);
 QRect devicePixelRect(const QImage &image, const QRect &logicalRect);
 int playheadWidthAt(const QImage &image, int logicalY, qreal logicalX, const QColor &color);
 bool isPlayheadPixel(const QColor &actual, const QColor &expected);
@@ -31,8 +35,8 @@ TimelineQuickLayerRevisions timelineQuickLayerRevisions(const songview::Timeline
 
 // Sizes and exposes the real unhosted Quick window: SongView is a pure
 // QObject coordinator, so the QQuickWindow is the full canonical viewport.
-// Pumps the event loop once so window-driven layout settles. Returns false
-// when the production Quick canvas or its window is missing.
+// Waits for a rendered frame so QML-measured layout settles. Returns false
+// when the production Quick canvas/window is missing or cannot render.
 bool showQuickViewport(SongView &view, const QSize &size);
 
 // Captures a viewport-local Quick framebuffer crop (the Quick window spans

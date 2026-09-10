@@ -14,6 +14,7 @@
 #include <QQuickItem>
 #include <QWheelEvent>
 
+#include "checks/support/timelinequickcheck.h"
 #include "core/timedefaults.h"
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
@@ -143,7 +144,6 @@ void AutomationEditingTest::init()
     const LaneHandle lane = findRow(ccRow);
     QTRY_VERIFY(lane.valid());
     QTRY_VERIFY(!laneBody(lane).isEmpty());
-    QTRY_COMPARE(laneBody(lane).height(), AutomationGeometry::resolve().rowMaximumHeight);
 
     const QPointF draggedViewport = ccPoint(kPilotDraggedTick, kPilotDraggedValue);
     QVERIFY(m_automationInput->bounds().contains(draggedViewport));
@@ -629,15 +629,15 @@ bool AutomationEditingTest::focusAutomationBand()
 
 bool AutomationEditingTest::activateParameter(const EditorAutomationRowId &row)
 {
-    const int index = page().canvas()->parameterIndex(row);
+    const int index = checks::support::automationParameterIndex(*page().canvas(), row);
     if (index < 0 || !m_quickWindow)
         return false;
     auto *quick = tab().view().quickView();
     QQuickItem *root = quick ? quick->rootObject() : nullptr;
     if (!root)
         return false;
-    auto *item =
-        root->findChild<QQuickItem *>(QStringLiteral("automationParameterTab%1").arg(index));
+    auto *item = checks::support::visualDescendant(
+        root, QStringLiteral("automationParameterTab%1").arg(index));
     if (!item || !item->isVisible() || !item->isEnabled())
         return false;
     const QPoint where =

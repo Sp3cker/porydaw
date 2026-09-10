@@ -30,7 +30,7 @@ Completed/reviewed tasks: 8, 9, 10, 12, 18.
 
 ## Interface contract
 
-Use an empty supported modulation row (CC1) instead of CC11 for the old empty-lane pencil fixture. Preserve all stroke ticks/values/transaction/undo expectations and all existing snapping behavior.
+Use an empty supported modulation row (CC1) instead of CC11 for the old empty-lane pencil fixture, activated through task 8's real fixture helper (shared `checks::support::automationParameterIndex` / `visualDescendant` seam). Preserve all stroke ticks/values/transaction/undo expectations and all existing snapping behavior.
 
 ## Implementation steps
 

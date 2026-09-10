@@ -15,6 +15,7 @@
 #include <QSize>
 
 #include "checks/support/quickframebuffer.h"
+#include "checks/support/timelinequickcheck.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
@@ -131,7 +132,6 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
         QVERIFY(row.has_value());
         QVERIFY((*row == EditorAutomationRowId{EditorAutomationRowKind::ControlChange, kTrack,
                                                controllers[std::size_t(index)]}));
-        QCOMPARE(canvas->parameterIndex(*row), index);
     }
     const auto tempoRow = canvas->parameterRow(expected.size() - 1);
     QVERIFY(tempoRow.has_value());
@@ -354,9 +354,9 @@ void AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators()
                                     CoreTimeDefaults::kCcLfoSpeed};
     const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
     QVERIFY(activateParameter(pan));
-    const int panIndex = canvas->parameterIndex(pan);
-    const int lfoIndex = canvas->parameterIndex(lfo);
-    const int tempoIndex = canvas->parameterIndex(tempo);
+    const int panIndex = checks::support::automationParameterIndex(*canvas, pan);
+    const int lfoIndex = checks::support::automationParameterIndex(*canvas, lfo);
+    const int tempoIndex = checks::support::automationParameterIndex(*canvas, tempo);
     QVERIFY(panIndex >= 0 && lfoIndex >= 0 && tempoIndex >= 0);
 
     songview::EditorSelectionModel::TimeSelection selection;

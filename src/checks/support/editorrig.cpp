@@ -6,6 +6,7 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 
+#include "checks/support/quickframebuffer.h"
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
@@ -65,6 +66,8 @@ std::unique_ptr<EditorRig> EditorRig::create(SongDocument &document, const Edito
     if (config.applyEditCursor)
         rig->m_view->setEditCursorTick(config.editCursorTick);
     QCoreApplication::processEvents();
+    if (config.show && !support::waitForQuickFrame(*quickWindow, &error))
+        return nullptr;
     return rig;
 }
 

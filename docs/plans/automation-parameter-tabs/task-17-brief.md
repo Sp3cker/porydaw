@@ -27,7 +27,9 @@ Replace vertically stacked automation rows with a compact grid of nine clickable
 
 ## Prerequisites
 
-Completed/reviewed tasks: 6.
+Completed/reviewed tasks: 6, 8.
+
+Dependency 8 is the corrected blueprint dependency for the shared test-support lookup: this suite's remaining automation interaction uses `checks::support::visualDescendant`. Already-landed scrollbar code is corrected to call that seam by the bounded repair group, not by re-running historical task order.
 
 ## Interface contract
 
@@ -37,7 +39,7 @@ Automation vertical scroll is removed; `timelineQuickView.verticalScroll*` remai
 
 ### Step 1
 
-Remove automation paging/thumb-drag/zero-range slots and their bodies, including automationTrackPages and automationZeroRange variants. Keep timeline and roll scrollbar drag/wheel/model tests unchanged.
+Remove automation paging/thumb-drag/zero-range slots and their bodies, including automationTrackPages and automationZeroRange variants. Replace the file-local `visualDescendant` copy in `tst_scrollbar.cpp` with `checks::support::visualDescendant`; the absence gates for `drawerAutomationScrollBar`/`drawerAutomationScrollThumb` and the post-resize label click then use the one shared traversal. Keep timeline and roll scrollbar drag/wheel/model tests unchanged.
 
 ### Step 2
 
