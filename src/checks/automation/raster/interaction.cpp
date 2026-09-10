@@ -22,8 +22,9 @@
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/cclanes.h"
 #include "ui/editordrawer/nodelane/hover.h"
-#include "ui/layout.h"
+#include "ui/editordrawer/tempolane.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
@@ -48,12 +49,16 @@ struct PreparedLane {
     qreal heldY = 0.0;
     qreal nodeX = 0.0;
     qreal nodeY = 0.0;
+    int heldValue = 0;
+    int nodeValue = 0;
+    int cursorValue = 0;
 };
 
 struct HoverObservation {
     songview::TimelineQuickLayerData layer;
     QImage framebuffer;
     int textRows = 0;
+    QString valueText;
     bool chromeVisible = false;
     bool framebufferReady = false;
 };
@@ -106,6 +111,10 @@ HoverObservation observeHover(AutomationRasterFixture &fixture)
     observation.layer = fixture.quickScene().layer(songview::TimelineQuickLayer::AutomationHover);
     const QAbstractItemModel *const model = fixture.quickScene().automationHoverTextModel();
     observation.textRows = model->rowCount();
+    if (observation.textRows > 0) {
+        observation.valueText =
+            model->index(0, 0).data(songview::TimelineQuickTextModel::TextRole).toString();
+    }
     auto *quickHost = fixture.view().findChild<songview::TimelineQuickView *>(
         QStringLiteral("timelineQuickCanvas"));
     const QQuickItem *const root = quickHost ? quickHost->rootObject() : nullptr;
@@ -235,6 +244,9 @@ PreparedLane prepareLane(AutomationRasterFixture &fixture, AdapterKind kind)
     const int held = valueAtBodyFraction(minimum, maximum, kHeldBodyFraction);
     const int node = valueAtBodyFraction(minimum, maximum, kNodeBodyFraction);
     const int cursor = valueAtBodyFraction(minimum, maximum, kCursorBodyFraction);
+    lane.heldValue = held;
+    lane.nodeValue = node;
+    lane.cursorValue = cursor;
     if (kind == AdapterKind::Tempo) {
         setTempoPoints(fixture,
                        {{kHeldTick, tempoUsForBpm(held)}, {kNodeTick, tempoUsForBpm(node)}});
@@ -282,6 +294,19 @@ void seedVoice(AutomationRasterFixture &fixture)
     fixture.pump();
 }
 
+// Direct plot presses drive the canvas's attached fixture host, so the input
+// needs no global mapping: left-button phantom drags never consult it.
+songview::TimelinePointerInput plotPointer(Qt::MouseButton button, Qt::MouseButtons buttons,
+                                           const QPointF &position)
+{
+    return {.position = position,
+            .globalPosition = {},
+            .button = button,
+            .buttons = buttons,
+            .modifiers = Qt::NoModifier,
+            .surface = songview::TimelineInputSurface::Plot,
+            .host = nullptr};
+}
 } // namespace
 
 void AutomationRasterTest::hoverGhostRingAndLeaveClear_data()
@@ -296,8 +321,13 @@ void AutomationRasterTest::hoverGhostRingAndLeaveClear()
     QFETCH(int, adapterKind);
     QVERIFY(configureInteraction());
     const auto kind = static_cast<AdapterKind>(adapterKind);
-    if (kind == AdapterKind::Tempo)
-        QVERIFY(fixture().expandTempo());
+    // The shared plot only shows the active parameter, so the intended CC or
+    // Tempo must be activated through its selector label before every real
+    // pointer sequence.
+    const EditorAutomationRowId row =
+        kind == AdapterKind::Tempo ? EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0}
+                                   : fixture().pan.row;
+    QVERIFY(fixture().activateParameter(row));
     const PreparedLane lane = prepareLane(fixture(), kind);
     QVERIFY(lane.handle.valid());
     QVERIFY(!lane.body.isEmpty());
@@ -366,6 +396,132 @@ void AutomationRasterTest::hoverGhostRingAndLeaveClear()
                                insertionCenter + framebufferOffset));
     QVERIFY(pixelMatchesIdleAt(idle.framebuffer, left.framebuffer,
                                insertionCenter + framebufferOffset));
+
+    // Horizontal scroll past the node: the origin phantom must keep
+    // presenting the node's original source event at the plot origin, and a
+    // parameter switch must clear stale hover and transient pixels before the
+    // drag re-arms on the reactivated plot.
+    const AutomationGeometry geometry = fixture().geometry();
+    const QPointF plotOrigin(0.0, lane.nodeY);
+    // The insertion probe y is the cursor fraction of the same body, so the
+    // vertical drag lands on a value distinct from both stored points.
+    const QPointF dragTarget(0.0, lane.insertionPosition.y());
+    const QPointF framebufferOrigin(fixture().automationGutterInput().bounds().width(), 0.0);
+    QVERIFY(std::abs(dragTarget.y() - plotOrigin.y()) > qreal(geometry.nodeDragActivationDistance));
+    fixture().setAutomationScroll(lane.nodeX + 2.0 * geometry.pointHitRadius);
+    fixture().automationPointerLeave();
+    fixture().pump();
+    fixture().pump();
+    const HoverObservation scrolledIdle = observeHover(fixture());
+    QVERIFY(scrolledIdle.framebufferReady);
+    const DocumentSnapshot scrolled = snapshot(fixture().document());
+
+    SongDocument &document = fixture().document();
+    TempoLane tempoLane(document);
+    CCLaneAdapter ccLane(document, fixture().pan.track, fixture().pan.controller);
+    NodeLane &laneAdapter = kind == AdapterKind::Tempo ? static_cast<NodeLane &>(tempoLane)
+                                                       : static_cast<NodeLane &>(ccLane);
+
+    // Before the drag: the scrolled-out node paints as a static phantom at the
+    // plot's left edge, and hovering it rings exactly there with its value
+    // readout.
+    fixture().automationMouseMove(plotOrigin);
+    fixture().pump();
+    fixture().pump();
+    const HoverObservation phantomHover = observeHover(fixture());
+    QVERIFY(phantomHover.framebufferReady);
+    QVERIFY(phantomHover.layer.revision > scrolledIdle.layer.revision);
+    QCOMPARE(phantomHover.textRows, 1);
+    QCOMPARE(phantomHover.valueText, laneAdapter.valueText(lane.nodeValue));
+    QVERIFY(hasAnnulusPixelChanges(scrolledIdle.framebuffer, phantomHover.framebuffer,
+                                   framebufferOrigin + plotOrigin,
+                                   nodelane::hoverRingRadius(geometry), 2 * layout::singlePixel()));
+    QVERIFY(hasFilledNodeAt(
+        fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationNodes), plotOrigin));
+
+    // Arming the vertical drag previews from the plot origin without touching
+    // the document.
+    const auto transientBefore =
+        fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationTransient);
+    const DocumentSnapshot dragged = snapshot(fixture().document());
+    QVERIFY(
+        fixture().canvas().pointerPress(plotPointer(Qt::LeftButton, Qt::LeftButton, plotOrigin)));
+    QVERIFY(fixture().canvas().gestureActive());
+    // The first move crosses the drag-activation slop and becomes the slop
+    // origin; the second mirrors the press around the target so the effective
+    // drag position is exactly the target value.
+    fixture().canvas().pointerMove(plotPointer(Qt::NoButton, Qt::LeftButton, dragTarget));
+    const QPointF dragAnchor = 2.0 * dragTarget - plotOrigin;
+    fixture().canvas().pointerMove(plotPointer(Qt::NoButton, Qt::LeftButton, dragAnchor));
+    fixture().pump();
+    fixture().pump();
+    QTRY_VERIFY(
+        fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationTransient).revision >
+        transientBefore.revision);
+    const auto draggedTransient =
+        fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationTransient);
+    QVERIFY(hasFilledNodeAt(draggedTransient, dragTarget));
+    QVERIFY(snapshot(fixture().document()) == dragged);
+
+    // Switching away cancels the provisional drag and clears the old hover and
+    // transient pixels; every stored value survives both activations.
+    const EditorAutomationRowId away =
+        kind == AdapterKind::Tempo ? fixture().pan.row
+                                   : EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0};
+    QVERIFY(fixture().activateParameter(away));
+    QVERIFY(!fixture().canvas().gestureActive());
+    QTRY_VERIFY(fixture()
+                    .quickScene()
+                    .layer(songview::TimelineQuickLayer::AutomationTransient)
+                    .rects.empty());
+    QTRY_VERIFY(fixture()
+                    .quickScene()
+                    .layer(songview::TimelineQuickLayer::AutomationTransient)
+                    .triangles.empty());
+    QVERIFY(isClear(observeHover(fixture())));
+    QVERIFY(snapshot(fixture().document()) == scrolled);
+    QVERIFY(fixture().activateParameter(row));
+    fixture().automationPointerLeave();
+    fixture().pump();
+    fixture().pump();
+    QVERIFY(isClear(observeHover(fixture())));
+
+    // The committed drag edits the node's original source event: same tick,
+    // moved value, and no duplicate inserted at the viewport edge.
+    fixture().automationMouseMove(plotOrigin);
+    fixture().pump();
+    fixture().pump();
+    QVERIFY(
+        fixture().canvas().pointerPress(plotPointer(Qt::LeftButton, Qt::LeftButton, plotOrigin)));
+    // The first move crosses the drag-activation slop and becomes the slop
+    // origin; the second mirrors the press around the target so the effective
+    // drag position is exactly the target value.
+    fixture().canvas().pointerMove(plotPointer(Qt::NoButton, Qt::LeftButton, dragTarget));
+    const QPointF commitAnchor = 2.0 * dragTarget - plotOrigin;
+    fixture().canvas().pointerMove(plotPointer(Qt::NoButton, Qt::LeftButton, commitAnchor));
+    fixture().pump();
+    QVERIFY(fixture().canvas().gestureActive());
+    // Releasing at the anchor keeps the slop-compensated effective position
+    // on the target value for the commit.
+    QVERIFY(
+        fixture().canvas().pointerRelease(plotPointer(Qt::LeftButton, Qt::NoButton, commitAnchor)));
+    fixture().pump();
+    fixture().pump();
+    QVERIFY(!fixture().canvas().gestureActive());
+    QCOMPARE(fixture().document().revision(), scrolled.revision + 1);
+    if (kind == AdapterKind::Tempo) {
+        const std::vector<TempoPoint> expected{{kHeldTick, tempoUsForBpm(lane.heldValue)},
+                                               {kNodeTick, tempoUsForBpm(lane.cursorValue)}};
+        QCOMPARE(fixture().document().tempoPoints(), expected);
+    } else {
+        const std::vector<DocLanePoint> points =
+            fixture().document().lanePoints(fixture().pan.track, fixture().pan.controller);
+        QCOMPARE(points.size(), std::size_t(2));
+        QCOMPARE(points[0].tick, kHeldTick);
+        QCOMPARE(points[0].value, lane.heldValue);
+        QCOMPARE(points[1].tick, kNodeTick);
+        QCOMPARE(points[1].value, lane.cursorValue);
+    }
 }
 
 void AutomationRasterTest::voicePressWithoutMoveHasNoPreview()

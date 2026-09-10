@@ -17,6 +17,7 @@
 #include <QSize>
 #include <QTimer>
 #include <QWindow>
+#include <QtTest>
 
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
@@ -25,7 +26,6 @@
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
-#include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
@@ -34,6 +34,19 @@
 
 namespace {
 constexpr double kCheckSampleRate = 48000.0;
+
+// QObject::findChild misses visually reparented Quick delegates, so the
+// selector label seam walks the visual childItems tree instead of object
+// ownership.
+QQuickItem *visualDescendant(QQuickItem *root, const QString &objectName)
+{
+    if (!root || root->objectName() == objectName)
+        return root;
+    for (QQuickItem *const child : root->childItems())
+        if (QQuickItem *const found = visualDescendant(child, objectName))
+            return found;
+    return nullptr;
+}
 
 } // namespace
 
@@ -124,14 +137,8 @@ void AutomationRasterFixture::configurePainting()
     songDocument.addLanePoint(0, LANE_CC_BEND, 72, 8191);
     songDocument.addLanePoint(0, DOC_CC_VOICE, 24, 3);
 
-    EditorViewState state;
-    const EditorAutomationRowId volume{EditorAutomationRowKind::ControlChange, 0, 7};
-    const EditorAutomationRowId lfo{EditorAutomationRowKind::ControlChange, 0, 21};
-    state.hideLane(volume);
-    state.emptyLanes.insert(pan.row);
-    state.laneHeights[lfo] = layout::fontPx(4.0) + layout::space(layout::Space::One);
-    state.laneRanges[lfo] = 91;
-    m_view->applyEditorViewState(state);
+    // The outer automation section height owns the shared plot; per-row
+    // hidden/empty/height state no longer shapes the raster surface.
     m_view->setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
     m_view->setDrawerActivePage(EditorDrawerPage::Automations);
     m_view->setDrawerSectionVisible(EditorDrawerPage::Automations, true);
@@ -267,27 +274,48 @@ void AutomationRasterFixture::setAutomationDpr(qreal dpr) noexcept
 
 QPointF AutomationRasterFixture::automationContentToViewport(const QPointF &position) const
 {
-    return {position.x(), position.y() - qreal(page().verticalScroll())};
+    // One shared plot at a zero vertical automation origin: content and
+    // viewport y match; only the horizontal origin and DPR transform remain.
+    return position;
+}
+
+bool AutomationRasterFixture::activateParameter(const EditorAutomationRowId &row)
+{
+    // The catalog position comes from the production mapping only; clicking
+    // the real selector label is the same activation path a user takes.
+    const int index = canvas().parameterIndex(row);
+    if (index < 0)
+        return false;
+    QQuickItem *const root = m_view ? m_view->quickView()->rootObject() : nullptr;
+    if (!root)
+        return false;
+    QQuickItem *label = nullptr;
+    if (!QTest::qWaitFor([&root, &label, index] {
+            label = visualDescendant(root, QStringLiteral("automationParameterTab%1").arg(index));
+            return label && label->isVisible() && label->isEnabled() && label->width() > 0.0 &&
+                   label->height() > 0.0 && label->window();
+        }))
+        return false;
+    QQuickWindow *const window = label->window();
+    QQuickItem *const content = window ? window->contentItem() : nullptr;
+    if (!content)
+        return false;
+    const QPointF point = content->mapFromScene(
+        label->mapToScene(QPointF(label->width() / 2.0, label->height() / 2.0)));
+    if (!content->boundingRect().contains(point))
+        return false;
+    QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, point.toPoint());
+    pump();
+    return canvas().activeParameter() == index;
 }
 
 bool AutomationRasterFixture::expandTempo()
 {
-    if (!canvas().laneBody(kTempoHandle).isEmpty())
-        return true;
-    const QPointF header = tempoHeaderPoint();
-    const QPointF viewportPosition = automationContentToViewport(header);
-    checks::events::sendMouse(*m_automationGutterInput, QEvent::MouseButtonPress, viewportPosition,
-                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-    checks::events::sendMouse(*m_automationGutterInput, QEvent::MouseButtonRelease,
-                              viewportPosition, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
-    pump();
-    return !canvas().laneBody(kTempoHandle).isEmpty();
-}
-
-QPointF AutomationRasterFixture::tempoHeaderPoint() const
-{
-    const QRect tempo = canvas().pinnedTempoRect();
-    return {m_automationGutterInput->bounds().center().x(), qreal(tempo.center().y())};
+    // Kept for the interaction suite's callers until its migration: activate
+    // Tempo through the real selector label, then require the active slot's
+    // shared plot body.
+    return activateParameter({EditorAutomationRowKind::Tempo, 0, 0}) &&
+           !canvas().laneBody(kTempoHandle).isEmpty();
 }
 
 void AutomationRasterFixture::setAutomationZoom(double zoom)
@@ -405,10 +433,6 @@ bool AutomationRasterFixture::initialize(QString &error)
     }
     m_view->setDocument(&songDocument);
     m_view->setSong(m_timeline.get(), m_voicegroup.get());
-
-    EditorViewState state;
-    state.emptyLanes.insert(pan.row);
-    m_view->applyEditorViewState(state);
     m_view->setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
     m_view->setDrawerSectionHeight(EditorDrawerPage::VoiceChanges, 180);
     m_view->setDrawerActivePage(EditorDrawerPage::Automations);
@@ -448,7 +472,7 @@ bool AutomationRasterFixture::initialize(QString &error)
         m_automationPlotInput->setInteraction(nullptr);
     // Plot hover is driven by the synthetic host. Native gutter hover shares
     // the same canvas and must not overwrite that state during frame capture.
-    // Keep gutter button delivery for tempo expansion.
+    // Keep gutter button delivery for the label seam and plot-left input.
     m_automationGutterInput->setAcceptHoverEvents(false);
     m_page->canvas()->attachInputHost(*m_inputHost);
     m_page->canvas()->hostAppearanceChanged();

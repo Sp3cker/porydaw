@@ -13,7 +13,6 @@
 
 #include "checks/automation/hover/hoverfixture.h"
 #include "ui/editordrawer/automationcanvas.h"
-#include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/nodelane/nodelane.h"
 #include "ui/layout.h"
@@ -26,7 +25,6 @@ namespace {
 
 constexpr uint8_t kPanController = 10;
 constexpr uint8_t kLfoController = 21;
-constexpr uint8_t kInsertedController = 11;
 constexpr uint64_t kProbeTick = 96;
 
 qreal expectedRootContentX(const automation_hover::Fixture &fixture, uint64_t tick)
@@ -194,6 +192,7 @@ void AutomationHoverTest::guideGhostTextAndRing()
     QVERIFY(topology.suppressesInsertionGhost);
     QVERIFY(topology.repeatDoesNotChurn);
     QVERIFY(topology.leaveCleared);
+    QVERIFY(topology.reactivatedHeldText);
 }
 
 void AutomationHoverTest::repeatHoverDoesNotChurn()
@@ -256,20 +255,18 @@ void AutomationHoverTest::tempoAndCcTopologyMatch()
     QVERIFY(tempoTopology.suppressesInsertionGhost);
     QVERIFY(tempoTopology.repeatDoesNotChurn);
     QVERIFY(tempoTopology.leaveCleared);
+    QVERIFY(tempoTopology.reactivatedHeldText);
     QVERIFY(tempoTopology == ccTopology);
 }
 
 void AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate()
 {
     AutomationCanvas *const canvas = automation_hover::canvas(*m_fixture);
-    AutomationPage *const page = automation_hover::page(*m_fixture);
     QVERIFY(canvas);
-    QVERIFY(page);
     const EditorAutomationRowId panRow{EditorAutomationRowKind::ControlChange, 0, kPanController};
     const EditorAutomationRowId lfoRow{EditorAutomationRowKind::ControlChange, 0, kLfoController};
-    const EditorAutomationRowId insertedRow{EditorAutomationRowKind::ControlChange, 0,
-                                            kInsertedController};
-    QVERIFY(automation_hover::expandTempo(*m_fixture));
+    // The drag targets the LFO node, so its parameter must be the active one.
+    QVERIFY(automation_hover::activateParameter(*m_fixture, lfoRow));
     const LaneHandle tempoBefore{0};
     const LaneHandle panBefore = automation_hover::findHandle(*canvas, panRow);
     const LaneHandle lfoBefore = automation_hover::findHandle(*canvas, lfoRow);
@@ -293,15 +290,12 @@ void AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate()
     QCoreApplication::processEvents();
     QVERIFY(automation_hover::documentState(*m_fixture) == frozen);
 
-    page->addEmptyLane(0, kInsertedController);
+    // With the fixed nine-identity catalog a structural rebuild no longer
+    // changes row membership; the canvas's own rebuild entry is the honest
+    // mid-gesture trigger, and it must end the pending gesture before the
+    // stale release lands.
+    canvas->rebuildRows();
     QCoreApplication::processEvents();
-    const LaneHandle inserted = automation_hover::findHandle(*canvas, insertedRow);
-    const LaneHandle panAfter = automation_hover::findHandle(*canvas, panRow);
-    const LaneHandle lfoAfter = automation_hover::findHandle(*canvas, lfoRow);
-    QVERIFY(automation_hover::rowMatches(*canvas, panAfter, panRow));
-    QVERIFY(automation_hover::rowMatches(*canvas, inserted, insertedRow));
-    QVERIFY(automation_hover::rowMatches(*canvas, lfoAfter, lfoRow));
-    QCOMPARE(lfoAfter.index, lfoBefore.index + 1);
     QVERIFY(!canvas->laneBody(tempoBefore).isEmpty());
     QVERIFY(canvas->laneBody(LaneHandle{}).isEmpty());
     QVERIFY(canvas->laneBody(LaneHandle{9999}).isEmpty());
@@ -311,8 +305,6 @@ void AutomationHoverTest::rowRebuildStaleReleaseDoesNotMutate()
     QVERIFY(automation_hover::documentState(*m_fixture) == frozen);
     QVERIFY(!automation_hover::quickWindow(*m_fixture)->mouseGrabberItem());
 
-    page->removeEmptyLane(0, kInsertedController);
-    QCoreApplication::processEvents();
     QVERIFY(automation_hover::findHandle(*canvas, panRow) == panBefore);
     QVERIFY(automation_hover::findHandle(*canvas, lfoRow) == lfoBefore);
     QVERIFY(automation_hover::rowMatches(*canvas, automation_hover::findHandle(*canvas, panRow),

@@ -5,6 +5,7 @@
 #include <QEnterEvent>
 #include <QImage>
 #include <QQuickItem>
+#include <QQuickWindow>
 #include <QScopeGuard>
 
 #include <algorithm>
@@ -25,6 +26,54 @@
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 
+namespace {
+
+// QObject::findChild misses visually reparented Quick delegates, so the
+// selector label seam walks the visual childItems tree instead of object
+// ownership.
+QQuickItem *visualDescendant(QQuickItem *root, const QString &objectName)
+{
+    if (!root || root->objectName() == objectName)
+        return root;
+    for (QQuickItem *const child : root->childItems())
+        if (QQuickItem *const found = visualDescendant(child, objectName))
+            return found;
+    return nullptr;
+}
+
+// The catalog position comes from the production mapping only; clicking the
+// real selector label is the same activation path a user takes.
+bool activateAutomationParameter(SongView &view, AutomationCanvas &canvas,
+                                 const EditorAutomationRowId &row)
+{
+    const int index = canvas.parameterIndex(row);
+    if (index < 0)
+        return false;
+    songview::TimelineQuickView *const quick = view.quickView();
+    QQuickItem *const root = quick ? quick->rootObject() : nullptr;
+    if (!root)
+        return false;
+    QQuickItem *label = nullptr;
+    if (!QTest::qWaitFor([&root, &label, index] {
+            label = visualDescendant(root, QStringLiteral("automationParameterTab%1").arg(index));
+            return label && label->isVisible() && label->isEnabled() && label->width() > 0.0 &&
+                   label->height() > 0.0 && label->window();
+        }))
+        return false;
+    QQuickWindow *const window = label->window();
+    QQuickItem *const content = window ? window->contentItem() : nullptr;
+    if (!content)
+        return false;
+    const QPointF point = content->mapFromScene(
+        label->mapToScene(QPointF(label->width() / 2.0, label->height() / 2.0)));
+    if (!content->boundingRect().contains(point))
+        return false;
+    QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, point.toPoint());
+    return QTest::qWaitFor([&canvas, index] { return canvas.activeParameter() == index; });
+}
+
+} // namespace
+
 void RenderingPlayheadTest::automationHoverDecor()
 {
     QString error;
@@ -42,8 +91,6 @@ void RenderingPlayheadTest::automationHoverDecor()
 
     const int track = view.selectionModel().primaryTrack();
     QVERIFY(track >= 0 && track < 16);
-    const EditorViewState originalState = view.editorViewState();
-    const int originalScroll = page->verticalScroll();
     const bool originalPencil = canvas->pencilMode();
     songview::TimelineInputItem *input =
         quick->rootObject()->findChild<songview::TimelineInputItem *>(
@@ -54,31 +101,24 @@ void RenderingPlayheadTest::automationHoverDecor()
         QTest::mouseEvent(QTest::MouseMove, window, Qt::NoButton, Qt::NoModifier, nativeLeavePoint);
         if (canvas->pencilMode() != originalPencil)
             canvas->setPencilMode(originalPencil);
-        if (view.editorViewState() != originalState)
-            view.applyEditorViewState(originalState);
-        if (page->verticalScroll() != originalScroll)
-            page->setVerticalScroll(originalScroll);
         checks::support::pumpQuick();
     });
 
+    // Real activation on the shared plot: the CC1 Modulation selector label
+    // replaces the old add-empty-lane setup, and the active slot's full-height
+    // body replaces the pinned Tempo header. The plot has no vertical
+    // automation scroll, so content and input coordinates already agree.
     const EditorAutomationRowId lane{EditorAutomationRowKind::ControlChange,
                                      static_cast<uint8_t>(track), CoreTimeDefaults::kCcModulation};
-    const auto findLane = [&] {
-        const auto &rows = canvas->rows();
-        for (int index = 0; index < int(rows.size()); ++index) {
-            if (rows[std::size_t(index)].id == lane)
-                return LaneHandle{index + 1};
-        }
-        return LaneHandle{};
-    };
-    LaneHandle handle = findLane();
-    if (!handle.valid()) {
-        EditorViewState fixture = view.editorViewState();
-        fixture.emptyLanes.insert(lane);
-        fixture.unhideLane(lane);
-        view.applyEditorViewState(fixture);
-        checks::support::pumpQuick();
-        handle = findLane();
+    QVERIFY2(activateAutomationParameter(view, *canvas, lane),
+             "the modulation parameter label did not activate");
+    checks::support::pumpQuick();
+
+    LaneHandle handle;
+    const auto &rows = canvas->rows();
+    for (int index = 0; index < int(rows.size()); ++index) {
+        if (rows[std::size_t(index)].id == lane)
+            handle = LaneHandle{index + 1};
     }
     QVERIFY(handle.valid());
     QVERIFY(input->interaction());
@@ -91,36 +131,14 @@ void RenderingPlayheadTest::automationHoverDecor()
     QVERIFY(band && band->rect.isValid());
     const QSize inputSize{qFloor(input->width()), qFloor(input->height())};
     QVERIFY(inputSize.width() > 0 && inputSize.height() > 0);
-    page->setVerticalScroll((std::clamp)(body.center().y() - inputSize.height() / 2, 0,
-                                         page->automationContentHeight()));
-    checks::support::pumpQuick();
-
-    const int scroll = page->verticalScroll();
-    const QRect liveBody = canvas->laneBody(handle);
     const QRect inputBounds{QPoint{}, inputSize};
-    const QRect visible = liveBody.translated(0, -scroll).intersected(inputBounds);
-    const QRect interior =
-        liveBody.adjusted(0, layout::singlePixel() + 1, 0, -layout::singlePixel())
-            .translated(0, -scroll)
-            .intersected(inputBounds);
-    const QRect tempo = canvas->pinnedTempoRect().translated(0, -scroll).intersected(inputBounds);
-    QVERIFY(!visible.isEmpty());
+    const QRect interior = body.adjusted(0, layout::singlePixel() + 1, 0, -layout::singlePixel())
+                               .intersected(inputBounds);
     QVERIFY(!interior.isEmpty());
     const int x = (std::clamp)(inputSize.width() * 2 / 3, interior.left(), interior.right());
-    QRect probe{x, interior.top(), 1, interior.height()};
-    if (tempo.intersects(probe)) {
-        QRect above = probe;
-        above.setBottom(tempo.top() - 1);
-        QRect below = probe;
-        below.setTop(tempo.bottom() + 1);
-        probe = above.isEmpty() || (!below.isEmpty() && below.height() > above.height()) ? below
-                                                                                         : above;
-    }
-    QVERIFY(!probe.isEmpty());
-    const QPoint point{x, probe.center().y()};
+    const QPoint point{x, interior.center().y()};
     QVERIFY(inputBounds.contains(point));
-    QVERIFY(liveBody.contains(point + QPoint{0, scroll}));
-    QVERIFY(!tempo.contains(point));
+    QVERIFY(body.contains(point));
     const QPoint nativeHoverPoint = input->mapToScene(QPointF(point)).toPoint();
     nativeLeavePoint = input->mapToScene(QPointF{-1.0, -1.0}).toPoint();
     const QRect windowBounds{QPoint{}, window->size()};

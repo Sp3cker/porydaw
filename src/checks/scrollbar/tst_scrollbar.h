@@ -45,9 +45,7 @@ class ScrollbarTest final : public QObject
     void init();
     void cleanup();
 
-    void automationTrackPages();
-    void automationDragClampsAndReverses();
-    void automationZeroRangeIgnoresDrag();
+    void automationLabelActivatesAfterResize();
     void signedRangeDragRebasesAndTracksModel();
 
     void trackPaging_data();

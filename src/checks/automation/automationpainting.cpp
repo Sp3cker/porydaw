@@ -106,7 +106,6 @@ QPointF nodePoint(const SongView &view, const songview::TimelineInputItem &input
 
 void AutomationEditingTest::emptyTempoStorageComposesNoLeadIn()
 {
-    QVERIFY(expandTempo());
     QVERIFY(activateParameter(rowId(LaneKind::Tempo)));
     SongDocument &document = m_tab->document();
     SongView &view = m_tab->view();
@@ -142,7 +141,6 @@ void AutomationEditingTest::emptyTempoStorageComposesNoLeadIn()
 
 void AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve()
 {
-    QVERIFY(expandTempo());
     QVERIFY(activateParameter(rowId(LaneKind::Tempo)));
     SongDocument &document = m_tab->document();
     SongView &view = m_tab->view();
@@ -184,7 +182,6 @@ void AutomationEditingTest::firstNonzeroTempoPointComposesImplicitLeadInCurve()
 
 void AutomationEditingTest::explicitTickZeroTempoPointSuppressesLeadInCurve()
 {
-    QVERIFY(expandTempo());
     QVERIFY(activateParameter(rowId(LaneKind::Tempo)));
     SongDocument &document = m_tab->document();
     SongView &view = m_tab->view();
@@ -228,7 +225,6 @@ void AutomationEditingTest::stepCurvesAndNodesComposed()
 {
     QFETCH(int, laneKind);
     const LaneKind kind = LaneKind(laneKind);
-    QVERIFY(kind != LaneKind::Tempo || expandTempo());
     QVERIFY(activateParameter(rowId(kind)));
     SongDocument &document = m_tab->document();
     SongView &view = m_tab->view();
@@ -287,7 +283,6 @@ void AutomationEditingTest::selectionRingsAndReticlesComposed()
 {
     QFETCH(int, laneKind);
     const LaneKind kind = LaneKind(laneKind);
-    QVERIFY(kind != LaneKind::Tempo || expandTempo());
     QVERIFY(activateParameter(rowId(kind)));
     SongDocument &document = m_tab->document();
     SongView &view = m_tab->view();

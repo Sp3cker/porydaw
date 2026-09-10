@@ -23,7 +23,6 @@ class AutomationRasterTest final : public QObject
     void init();
     void cleanup();
 
-    void resizeBoundaryShowsSplitCursorWithoutPreview();
     void curvesNodesAndSelectedRingsRender_data();
     void curvesNodesAndSelectedRingsRender();
     void halfOpenTrackSelectionRendersOnlyIncludedNodes_data();

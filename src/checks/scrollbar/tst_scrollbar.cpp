@@ -12,7 +12,6 @@
 #include <QtTest>
 #include <qqml.h>
 
-#include <algorithm>
 #include <cmath>
 #include <optional>
 #include <utility>
@@ -23,7 +22,6 @@
 #include "project/projectidentity.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
-#include "ui/editordrawer/drawerchrome.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
@@ -35,7 +33,7 @@ namespace {
 constexpr int kViewWidth = 1280;
 constexpr int kViewHeight = 800;
 constexpr int kDefaultAutomationHeight = 400;
-constexpr int kAutomationDragHeight = 180;
+constexpr int kResizedAutomationHeight = 520;
 constexpr qreal kGeometryTolerance = 0.01;
 
 constexpr auto kStandaloneScrollbarQml = R"(
@@ -117,6 +115,46 @@ bool itemWithinTrack(const QQuickItem &track, const QQuickItem &handle, Qt::Orie
     return handle.y() >= -kGeometryTolerance &&
            handle.y() + handle.height() <= track.height() + kGeometryTolerance &&
            closeEnough(handle.x(), 0.0) && closeEnough(handle.width(), track.width());
+}
+
+// QObject::findChild misses visually reparented Quick delegates, so the
+// removed-scrollbar absence checks and the selector label seam walk the
+// visual childItems tree instead of object ownership.
+QQuickItem *visualDescendant(QQuickItem *root, const QString &objectName)
+{
+    if (!root || root->objectName() == objectName)
+        return root;
+    for (QQuickItem *const child : root->childItems())
+        if (QQuickItem *const found = visualDescendant(child, objectName))
+            return found;
+    return nullptr;
+}
+
+// The catalog position comes from the production mapping only; clicking the
+// real selector label is the same activation path a user takes.
+bool activateParameterLabel(AutomationCanvas &canvas, QQuickItem &root,
+                            const EditorAutomationRowId &row)
+{
+    const int index = canvas.parameterIndex(row);
+    if (index < 0)
+        return false;
+    QQuickItem *label = nullptr;
+    if (!QTest::qWaitFor([&root, &label, index] {
+            label = visualDescendant(&root, QStringLiteral("automationParameterTab%1").arg(index));
+            return label && label->isVisible() && label->isEnabled() && label->width() > 0.0 &&
+                   label->height() > 0.0 && label->window();
+        }))
+        return false;
+    QQuickWindow *const window = label->window();
+    QQuickItem *const content = window ? window->contentItem() : nullptr;
+    if (!content)
+        return false;
+    const QPointF point = content->mapFromScene(
+        label->mapToScene(QPointF(label->width() / 2.0, label->height() / 2.0)));
+    if (!content->boundingRect().contains(point))
+        return false;
+    QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, point.toPoint());
+    return QTest::qWaitFor([&canvas, index] { return canvas.activeParameter() == index; });
 }
 
 } // namespace
@@ -234,137 +272,38 @@ void ScrollbarTest::cleanup()
     m_tab.reset();
 }
 
-void ScrollbarTest::automationTrackPages()
-{
-    view().setDrawerSectionHeight(EditorDrawerPage::Automations, kAutomationDragHeight);
-    EditorDrawer *const drawer = view().editorDrawer();
-    QVERIFY(drawer);
-    AutomationPage *const page = drawer->automationPage();
-    QVERIFY(page);
-
-    QQuickItem *const scrollbar =
-        m_root->findChild<QQuickItem *>(QStringLiteral("drawerAutomationScrollBar"));
-    QQuickItem *const scrollbarThumb =
-        m_root->findChild<QQuickItem *>(QStringLiteral("drawerAutomationScrollThumb"));
-    QVERIFY(scrollbar);
-    QVERIFY(scrollbarThumb);
-    QTRY_VERIFY(scrollbar->isVisible() && scrollbarThumb->isVisible());
-
-    const int maximum = drawer->chrome().automationMaximumScrollY();
-    const int viewportHeight = drawer->chrome().automationViewportHeight();
-    QVERIFY(maximum > 0);
-    QVERIFY(viewportHeight > 0);
-    QTRY_COMPARE(scrollbar->property("pageStep").toInt(), viewportHeight);
-    QTRY_VERIFY(scrollbar->height() > scrollbarThumb->height());
-
-    page->setVerticalScroll(0);
-    QTRY_COMPARE(page->verticalScroll(), 0);
-    const QPointF afterThumb(
-        scrollbar->width() / 2.0,
-        scrollbarThumb->y() + scrollbarThumb->height() +
-            (scrollbar->height() - scrollbarThumb->y() - scrollbarThumb->height()) / 2.0);
-    const int expected = std::min(maximum, viewportHeight);
-    press(scrollbar->mapToScene(afterThumb));
-    release();
-    QTRY_COMPARE(page->verticalScroll(), expected);
-}
-
-void ScrollbarTest::automationDragClampsAndReverses()
-{
-    view().setDrawerSectionHeight(EditorDrawerPage::Automations, kAutomationDragHeight);
-    EditorDrawer *const drawer = view().editorDrawer();
-    QVERIFY(drawer);
-    AutomationPage *const page = drawer->automationPage();
-    QVERIFY(page);
-
-    QQuickItem *const scrollbar =
-        m_root->findChild<QQuickItem *>(QStringLiteral("drawerAutomationScrollBar"));
-    QQuickItem *const scrollbarThumb =
-        m_root->findChild<QQuickItem *>(QStringLiteral("drawerAutomationScrollThumb"));
-    QVERIFY(scrollbar);
-    QVERIFY(scrollbarThumb);
-    QTRY_VERIFY(scrollbar->isVisible() && scrollbarThumb->isVisible());
-    QTRY_VERIFY(drawer->chrome().automationMaximumScrollY() > 0);
-    const int maximum = drawer->chrome().automationMaximumScrollY();
-    QTRY_COMPARE(scrollbar->property("maximum").toInt(), maximum);
-    QTRY_VERIFY(scrollbar->height() > scrollbarThumb->height());
-
-    const auto beginAutomationDrag = [&](qreal direction) {
-        const QPointF pressPosition =
-            scrollbarThumb->mapToScene(scrollbarThumb->boundingRect().center());
-        press(pressPosition);
-        const qreal activation = QGuiApplication::styleHints()->startDragDistance() + 1.0;
-        move(pressPosition + QPointF(0.0, direction * activation));
-        const QPointF dragPosition = pressPosition + QPointF(0.0, direction * (activation + 1.0));
-        move(dragPosition);
-        return dragPosition;
-    };
-
-    page->setVerticalScroll(0);
-    QTRY_COMPARE(page->verticalScroll(), 0);
-    QTRY_VERIFY(closeEnough(scrollbarThumb->y(), 0.0));
-    QVERIFY(itemWithinTrack(*scrollbar, *scrollbarThumb, Qt::Vertical));
-    QPointF drag = beginAutomationDrag(1.0);
-    QTRY_VERIFY(page->verticalScroll() > 0);
-    move(QPointF(drag.x(), window().height() - 1.0));
-    QTRY_COMPARE(page->verticalScroll(), maximum);
-    QVERIFY(itemWithinTrack(*scrollbar, *scrollbarThumb, Qt::Vertical));
-    const QPointF middle = scrollbar->mapToScene(scrollbar->boundingRect().center());
-    move(middle);
-    QTRY_VERIFY(page->verticalScroll() > 0 && page->verticalScroll() < maximum);
-    QVERIFY(itemWithinTrack(*scrollbar, *scrollbarThumb, Qt::Vertical));
-    release();
-
-    page->setVerticalScroll(maximum);
-    QTRY_COMPARE(page->verticalScroll(), maximum);
-    QTRY_VERIFY(closeEnough(scrollbarThumb->y() + scrollbarThumb->height(), scrollbar->height()));
-    QVERIFY(itemWithinTrack(*scrollbar, *scrollbarThumb, Qt::Vertical));
-    drag = beginAutomationDrag(-1.0);
-    QTRY_VERIFY(page->verticalScroll() < maximum);
-    move(QPointF(drag.x(), 1.0));
-    QTRY_COMPARE(page->verticalScroll(), 0);
-    QVERIFY(itemWithinTrack(*scrollbar, *scrollbarThumb, Qt::Vertical));
-    move(middle);
-    QTRY_VERIFY(page->verticalScroll() > 0 && page->verticalScroll() < maximum);
-    QVERIFY(itemWithinTrack(*scrollbar, *scrollbarThumb, Qt::Vertical));
-    release();
-}
-
-void ScrollbarTest::automationZeroRangeIgnoresDrag()
+void ScrollbarTest::automationLabelActivatesAfterResize()
 {
     EditorDrawer *const drawer = view().editorDrawer();
     QVERIFY(drawer);
     AutomationPage *const page = drawer->automationPage();
     QVERIFY(page);
+    AutomationCanvas *const canvas = page->canvas();
+    QVERIFY(canvas);
 
-    QQuickItem *const scrollbar =
-        m_root->findChild<QQuickItem *>(QStringLiteral("drawerAutomationScrollBar"));
-    QQuickItem *const scrollbarThumb =
-        m_root->findChild<QQuickItem *>(QStringLiteral("drawerAutomationScrollThumb"));
-    QVERIFY(scrollbar);
-    QVERIFY(scrollbarThumb);
+    // The automation scrollbar is removed end to end: neither its track nor
+    // its thumb may exist anywhere in the visual tree, so no gutter strip is
+    // reserved for them.
+    QVERIFY(!visualDescendant(m_root, QStringLiteral("drawerAutomationScrollBar")));
+    QVERIFY(!visualDescendant(m_root, QStringLiteral("drawerAutomationScrollThumb")));
 
-    const int sectionHeight = view().drawerSectionHeight(EditorDrawerPage::Automations);
-    const int overhead = std::max(0, sectionHeight - drawer->chrome().automationViewportHeight());
-    const int fittingHeight =
-        std::min(drawer->maximumSectionHeight(), page->canvas()->minimumContentHeight() + overhead);
-    view().setDrawerSectionHeight(EditorDrawerPage::Automations, fittingHeight);
+    // Resizing the section re-flows the compact selector grid; a real click
+    // on the repositioned song-global Tempo label proves the reclaimed
+    // gutter/body geometry stays interactive.
+    view().setDrawerSectionHeight(EditorDrawerPage::Automations, kResizedAutomationHeight);
+    const EditorAutomationRowId tempoRow{EditorAutomationRowKind::Tempo, 0, 0};
+    QVERIFY(activateParameterLabel(*canvas, *m_root, tempoRow));
 
-    QTRY_COMPARE(drawer->chrome().automationMaximumScrollY(), 0);
-    QTRY_VERIFY(closeEnough(scrollbarThumb->height(), scrollbar->height()));
-    QVERIFY(itemWithinTrack(*scrollbar, *scrollbarThumb, Qt::Vertical));
-
-    const QPointF pressPosition =
-        scrollbarThumb->mapToScene(scrollbarThumb->boundingRect().center());
-    press(pressPosition);
-    move(pressPosition - QPointF(0.0, 2.0 * scrollbar->height()));
-    QTRY_COMPARE(page->verticalScroll(), 0);
-    QVERIFY(closeEnough(scrollbarThumb->height(), scrollbar->height()));
-    QVERIFY(itemWithinTrack(*scrollbar, *scrollbarThumb, Qt::Vertical));
-    release();
-    QCOMPARE(page->verticalScroll(), 0);
-    QVERIFY(closeEnough(scrollbarThumb->height(), scrollbar->height()));
-    QVERIFY(itemWithinTrack(*scrollbar, *scrollbarThumb, Qt::Vertical));
+    // The newly active plot resolves the Tempo row to a live body at the
+    // resized geometry.
+    LaneHandle handle;
+    const auto &rows = canvas->rows();
+    for (int index = 0; index < int(rows.size()); ++index) {
+        if (rows[std::size_t(index)].id == tempoRow)
+            handle = LaneHandle{index + 1};
+    }
+    QVERIFY(handle.valid());
+    QTRY_VERIFY(!canvas->laneBody(handle).isEmpty());
 }
 
 void ScrollbarTest::signedRangeDragRebasesAndTracksModel()

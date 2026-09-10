@@ -1,6 +1,5 @@
 #include "checks/automation/presentation/tst_automationpresentation.h"
 
-#include <algorithm>
 #include <limits>
 #include <utility>
 
@@ -10,25 +9,22 @@
 #include <QCursor>
 #include <QEnterEvent>
 #include <QFont>
-#include <QImage>
 #include <QPalette>
 #include <QPixmap>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QRectF>
-#include <QWheelEvent>
 
 #include "checks/support/eventsynth.h"
 
-#include "checks/support/quickframebuffer.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/editordrawer.h"
-#include "ui/layout.h"
 #include "ui/songview/quick/timelineinput.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
+#include "ui/songview/quick/timelinequickview.h"
 
 namespace {
 
@@ -36,11 +32,26 @@ constexpr int kTrack = 0;
 constexpr uint8_t kPanController = 10;
 constexpr uint8_t kLfoController = 21;
 constexpr uint64_t kEndTick = 384;
+QQuickItem *visualDescendant(QQuickItem *root, const QString &objectName)
+{
+    if (!root)
+        return nullptr;
+    if (root->objectName() == objectName)
+        return root;
+    for (QQuickItem *const child : root->childItems()) {
+        if (QQuickItem *const found = visualDescendant(child, objectName))
+            return found;
+    }
+    return nullptr;
+}
 
 class CursorDprHost final : public songview::TimelineInputHost
 {
   public:
-    explicit CursorDprHost(qreal devicePixelRatio) : m_devicePixelRatio(devicePixelRatio) {}
+    CursorDprHost(QRectF bounds, qreal devicePixelRatio)
+        : m_bounds(bounds)
+        , m_devicePixelRatio(devicePixelRatio)
+    {}
 
     void setDevicePixelRatio(qreal devicePixelRatio) noexcept
     {
@@ -49,7 +60,7 @@ class CursorDprHost final : public songview::TimelineInputHost
 
     const QCursor &cursor() const noexcept { return m_cursor; }
 
-    QRectF bounds() const override { return {}; }
+    QRectF bounds() const override { return m_bounds; }
     qreal devicePixelRatio() const override { return m_devicePixelRatio; }
     QFont font() const override { return {}; }
     QPalette palette() const override { return {}; }
@@ -62,6 +73,7 @@ class CursorDprHost final : public songview::TimelineInputHost
     void setAccessibilityDescription(const QString &) override {}
 
   private:
+    QRectF m_bounds;
     qreal m_devicePixelRatio = 1.0;
     QCursor m_cursor{Qt::ArrowCursor};
 };
@@ -171,11 +183,6 @@ void AutomationPresentationTest::init()
     m_rig = checks::EditorRig::create(*m_document, config, error);
     QVERIFY2(m_rig, qPrintable(error));
 
-    EditorViewState state = m_rig->view().editorViewState();
-    state.emptyLanes.insert({EditorAutomationRowKind::ControlChange, kTrack, kPanController});
-    m_rig->view().applyEditorViewState(state);
-    QCoreApplication::processEvents();
-
     QObject *const root = m_rig->quickRoot();
     QVERIFY(root);
     m_plotInput =
@@ -258,49 +265,43 @@ QPointF AutomationPresentationTest::lanePoint(LaneHandle handle, uint64_t tick, 
 QPoint AutomationPresentationTest::windowPoint(const songview::TimelineInputItem &input,
                                                QPointF contentPoint) const
 {
-    const AutomationPage *const automationPage = page();
-    if (!automationPage)
-        return {};
-    contentPoint.ry() -= automationPage->verticalScroll();
-    return input.mapToScene(contentPoint).toPoint();
+    QQuickWindow *const window = input.window();
+    QQuickItem *const content = window ? window->contentItem() : nullptr;
+    return content ? content->mapFromScene(input.mapToScene(contentPoint)).toPoint() : QPoint{};
 }
 
-QPointF AutomationPresentationTest::tempoHeaderPoint() const
+QQuickItem *AutomationPresentationTest::parameterLabelItem(int index) const
 {
-    const AutomationPage *const automationPage = page();
-    const QRect tempo = automationPage ? automationPage->canvas()->pinnedTempoRect() : QRect{};
-    return {qreal(layout::space(layout::Space::One)), qreal(tempo.center().y())};
+    songview::TimelineQuickView *const quick = m_rig ? m_rig->view().quickView() : nullptr;
+    QQuickItem *const root = quick ? quick->rootObject() : nullptr;
+    return visualDescendant(root, QStringLiteral("automationParameterTab%1").arg(index));
 }
 
-int AutomationPresentationTest::maximumScroll() const
+bool AutomationPresentationTest::activateParameter(const EditorAutomationRowId &row)
 {
-    const AutomationPage *const automationPage = page();
-    return automationPage ? std::max(0, automationPage->automationContentHeight() -
-                                            automationPage->automationViewportSize().height())
-                          : 0;
-}
-
-bool AutomationPresentationTest::tempoPinnedToViewport() const
-{
-    const AutomationPage *const automationPage = page();
-    if (!automationPage)
+    AutomationPage *const automationPage = page();
+    AutomationCanvas *const canvas = automationPage ? automationPage->canvas() : nullptr;
+    const int index = canvas ? canvas->parameterIndex(row) : -1;
+    if (!canvas || index < 0 || !m_quickWindow)
         return false;
-    const QRect tempo = automationPage->canvas()->pinnedTempoRect();
-    return !tempo.isEmpty() && tempo.bottom() + 1 - automationPage->verticalScroll() ==
-                                   automationPage->automationViewportSize().height();
-}
-
-bool AutomationPresentationTest::setTempoExpanded(bool expanded)
-{
-    const AutomationPage *const automationPage = page();
-    if (!automationPage || !m_gutterInput)
+    QQuickItem *label = nullptr;
+    if (!QTest::qWaitFor([this, index, &label] {
+            label = parameterLabelItem(index);
+            return label && label->isVisible() && label->isEnabled() && label->width() > 0.0 &&
+                   label->height() > 0.0 && label->window();
+        })) {
         return false;
-    const bool current = !automationPage->canvas()->laneBody(LaneHandle{0}).isEmpty();
-    if (current == expanded)
-        return true;
-    gutterClick(tempoHeaderPoint());
-    QCoreApplication::processEvents();
-    return !automationPage->canvas()->laneBody(LaneHandle{0}).isEmpty() == expanded;
+    }
+    QQuickWindow *const window = label->window();
+    QQuickItem *const content = window ? window->contentItem() : nullptr;
+    if (!content)
+        return false;
+    const QPointF point = content->mapFromScene(
+        label->mapToScene(QPointF(label->width() / 2.0, label->height() / 2.0)));
+    if (!content->boundingRect().contains(point))
+        return false;
+    QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, point.toPoint());
+    return QTest::qWaitFor([canvas, index] { return canvas->activeParameter() == index; });
 }
 
 void AutomationPresentationTest::mouseMove(songview::TimelineInputItem &input, QPointF contentPoint)
@@ -322,149 +323,17 @@ void AutomationPresentationTest::mouseMove(songview::TimelineInputItem &input, Q
     QCoreApplication::processEvents();
 }
 
-void AutomationPresentationTest::gutterClick(QPointF contentPoint)
-{
-    if (!m_quickWindow || !m_gutterInput)
-        return;
-    m_lastWindowPoint = windowPoint(*m_gutterInput, contentPoint);
-    QTest::mousePress(m_quickWindow, Qt::LeftButton, Qt::NoModifier, m_lastWindowPoint);
-    m_heldButton = Qt::LeftButton;
-    QTest::mouseRelease(m_quickWindow, Qt::LeftButton, Qt::NoModifier, m_lastWindowPoint);
-    m_heldButton = Qt::NoButton;
-    QCoreApplication::processEvents();
-}
-
-void AutomationPresentationTest::collapsedTempoGeometryIsPinned()
+void AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary()
 {
     AutomationPage *const automationPage = page();
     QVERIFY(automationPage);
-    const AutomationGeometry geometry = AutomationGeometry::resolve();
-    const QRect collapsed = automationPage->canvas()->laneBody(LaneHandle{0});
-    QVERIFY(collapsed.isEmpty());
-    QCOMPARE(automationPage->canvas()->pinnedTempoRect().height(), geometry.addLaneStripHeight);
-    QVERIFY(tempoPinnedToViewport());
-}
-
-void AutomationPresentationTest::headerClickExpandsTempoToConfiguredHeight()
-{
-    AutomationPage *const automationPage = page();
-    QVERIFY(automationPage);
-    const AutomationGeometry geometry = AutomationGeometry::resolve();
-    const EditorAutomationRowId tempoRow{EditorAutomationRowKind::Tempo, 0, 0};
-    EditorViewState state = m_rig->view().editorViewState();
-    state.laneHeights[tempoRow] = geometry.rowDefaultHeight + layout::singlePixel();
-    m_rig->view().applyEditorViewState(state);
-    QCoreApplication::processEvents();
-
-    const int collapsedMinimumHeight = automationPage->canvas()->minimumContentHeight();
-    QVERIFY(setTempoExpanded(true));
-    const QRect expanded = automationPage->canvas()->laneBody(LaneHandle{0});
-    QVERIFY(!expanded.isEmpty());
-    QCOMPARE(expanded.height(), geometry.rowDefaultHeight + layout::singlePixel());
-    QCOMPARE(expanded, automationPage->canvas()->pinnedTempoRect());
-    QVERIFY(tempoPinnedToViewport());
-    QVERIFY(automationPage->canvas()->minimumContentHeight() > collapsedMinimumHeight);
-}
-
-void AutomationPresentationTest::verticalScrollPinsTempoOverCcContent()
-{
-    AutomationPage *const automationPage = page();
-    QVERIFY(automationPage);
-    const AutomationGeometry geometry = AutomationGeometry::resolve();
-    const int originalHeight = m_rig->view().drawerSectionHeight(EditorDrawerPage::Automations);
-    m_rig->view().setDrawerSectionHeight(EditorDrawerPage::Automations,
-                                         2 * geometry.rowDefaultHeight);
-    QCoreApplication::processEvents();
-    QVERIFY(setTempoExpanded(true));
-    const QRect bodyBefore = automationPage->canvas()->laneBody(LaneHandle{0});
-    const int pageYBefore = bodyBefore.top() - automationPage->verticalScroll();
-    const auto &band =
-        m_rig->view().timelineBandLayout().geometry(songview::TimelineBand::Automation);
-    QVERIFY(band);
-    const QImage viewportBefore = checks::support::captureQuickBand(m_rig->view(), band->rect);
-    QVERIFY(!viewportBefore.isNull());
-
-    const QPoint wheelPoint = windowPoint(*m_gutterInput, tempoHeaderPoint());
-    QWheelEvent wheel(wheelPoint, m_quickWindow->mapToGlobal(wheelPoint), QPoint{},
-                      QPoint(0, -std::max(1, maximumScroll())), Qt::NoButton, Qt::NoModifier,
-                      Qt::NoScrollPhase, false);
-    QCoreApplication::sendEvent(m_quickWindow, &wheel);
-    QTRY_VERIFY(automationPage->verticalScroll() > 0);
-
-    const QRect bodyAfter = automationPage->canvas()->laneBody(LaneHandle{0});
-    const QImage viewportAfter = checks::support::captureQuickBand(m_rig->view(), band->rect);
-    QVERIFY(!viewportAfter.isNull());
-    QCOMPARE(bodyAfter.top() - automationPage->verticalScroll(), pageYBefore);
-    QCOMPARE(bodyAfter, automationPage->canvas()->pinnedTempoRect());
-    QVERIFY(tempoPinnedToViewport());
-    QVERIFY(viewportAfter != viewportBefore);
-    m_rig->view().setDrawerSectionHeight(EditorDrawerPage::Automations, originalHeight);
-}
-
-void AutomationPresentationTest::viewportResizeKeepsTempoPinned()
-{
-    AutomationPage *const automationPage = page();
-    QVERIFY(automationPage);
-    const AutomationGeometry geometry = AutomationGeometry::resolve();
-    QVERIFY(setTempoExpanded(true));
-    const int originalHeight = m_rig->view().drawerSectionHeight(EditorDrawerPage::Automations);
-    const QRect before = automationPage->canvas()->laneBody(LaneHandle{0});
-    const int viewportBefore = automationPage->automationViewportSize().height();
-    m_rig->view().setDrawerSectionHeight(EditorDrawerPage::Automations,
-                                         geometry.rowDefaultHeight +
-                                             layout::space(layout::Space::One));
-    QCoreApplication::processEvents();
-    const QRect after = automationPage->canvas()->laneBody(LaneHandle{0});
-    const int viewportAfter = automationPage->automationViewportSize().height();
-    QVERIFY(viewportAfter < viewportBefore);
-    QCOMPARE(after.height(), before.height());
-    QCOMPARE(after.top() - before.top(), viewportAfter - viewportBefore);
-    QCOMPARE(after, automationPage->canvas()->pinnedTempoRect());
-    QVERIFY(tempoPinnedToViewport());
-    m_rig->view().setDrawerSectionHeight(EditorDrawerPage::Automations, originalHeight);
-}
-
-void AutomationPresentationTest::headerClickRecollapsesTempoAndRecoversCanvasSpace()
-{
-    AutomationPage *const automationPage = page();
-    QVERIFY(automationPage);
-    const int collapsedMinimumHeight = automationPage->canvas()->minimumContentHeight();
-    QVERIFY(setTempoExpanded(true));
-    const int expandedMinimumHeight = automationPage->canvas()->minimumContentHeight();
-    QVERIFY(setTempoExpanded(false));
-    QVERIFY(automationPage->canvas()->laneBody(LaneHandle{0}).isEmpty());
-    QCOMPARE(automationPage->canvas()->minimumContentHeight(), collapsedMinimumHeight);
-    QVERIFY(expandedMinimumHeight > collapsedMinimumHeight);
-}
-
-void AutomationPresentationTest::headerReexpansionRestoresConfiguredTempoHeight()
-{
-    AutomationPage *const automationPage = page();
-    QVERIFY(automationPage);
-    const AutomationGeometry geometry = AutomationGeometry::resolve();
-    const EditorAutomationRowId tempoRow{EditorAutomationRowKind::Tempo, 0, 0};
-    EditorViewState state = m_rig->view().editorViewState();
-    state.laneHeights[tempoRow] = geometry.rowMaximumHeight;
-    m_rig->view().applyEditorViewState(state);
-    QVERIFY(setTempoExpanded(true));
-    const int expandedMinimumHeight = automationPage->canvas()->minimumContentHeight();
-    QVERIFY(setTempoExpanded(false));
-    QVERIFY(setTempoExpanded(true));
-    const QRect reexpanded = automationPage->canvas()->laneBody(LaneHandle{0});
-    QCOMPARE(reexpanded.height(), geometry.rowMaximumHeight);
-    QCOMPARE(automationPage->canvas()->minimumContentHeight(), expandedMinimumHeight);
-    QCOMPARE(reexpanded, automationPage->canvas()->pinnedTempoRect());
-}
-
-void AutomationPresentationTest::pencilCursorUsesPlotGutterBoundaryAndTempoPrecedence()
-{
-    AutomationPage *const automationPage = page();
-    QVERIFY(automationPage);
-    const LaneHandle pan =
-        findRow({EditorAutomationRowKind::ControlChange, kTrack, kPanController});
-    const QRect panBody = automationPage->canvas()->laneBody(pan);
+    const EditorAutomationRowId panRow{EditorAutomationRowKind::ControlChange, kTrack,
+                                       kPanController};
+    QVERIFY(activateParameter(panRow));
+    const LaneHandle pan = findRow(panRow);
     QVERIFY(pan.valid());
-    QVERIFY(!panBody.isEmpty());
+    const QRect plot = automationPage->canvas()->laneBody(pan);
+    QVERIFY(!plot.isEmpty());
     automationPage->canvas()->setPencilMode(true);
     const QPointF plotPoint = lanePoint(pan, 24, 64);
     mouseMove(*m_plotInput, plotPoint);
@@ -472,18 +341,9 @@ void AutomationPresentationTest::pencilCursorUsesPlotGutterBoundaryAndTempoPrece
 
     mouseMove(*m_gutterInput, {m_gutterInput->bounds().center().x(), plotPoint.y()});
     QCOMPARE(m_gutterInput->cursor().shape(), Qt::ArrowCursor);
-    mouseMove(*m_gutterInput, {m_gutterInput->bounds().center().x(), qreal(panBody.bottom())});
-    QCOMPARE(m_gutterInput->cursor().shape(), Qt::SplitVCursor);
 
-    const int addLaneY = automationPage->automationContentHeight() -
-                         AutomationGeometry::resolve().addLaneStripHeight / 2;
-    mouseMove(*m_gutterInput, {m_gutterInput->bounds().center().x(), qreal(addLaneY)});
-    QCOMPARE(m_gutterInput->cursor().shape(), Qt::ArrowCursor);
-    mouseMove(*m_gutterInput, tempoHeaderPoint());
-    QCOMPARE(m_gutterInput->cursor().shape(), Qt::ArrowCursor);
-
-    QVERIFY(setTempoExpanded(true));
-    mouseMove(*m_plotInput, lanePoint(LaneHandle{0}, 24, 60));
+    QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}));
+    mouseMove(*m_plotInput, plotPoint);
     QVERIFY(!m_plotInput->cursor().pixmap().isNull());
 }
 
@@ -513,7 +373,7 @@ void AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio(
         findRow({EditorAutomationRowKind::ControlChange, kTrack, kPanController});
     QVERIFY(pan.valid());
 
-    CursorDprHost host{1.0};
+    CursorDprHost host{m_plotInput->bounds(), 1.0};
     ScopedAutomationInputHost hostSwap(*m_plotInput, *canvas);
     canvas->setPencilMode(true);
     hostSwap.attach(host);

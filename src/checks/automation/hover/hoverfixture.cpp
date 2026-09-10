@@ -69,10 +69,32 @@ int valueAtFraction(int minimum, int maximum, double fractionFromBottom)
     return minimum + int(std::lround(double(maximum - minimum) * fractionFromBottom));
 }
 
+// Stable production row identities for the fixture's two lane kinds; the
+// parameter index itself comes only from AutomationCanvas::parameterIndex.
+EditorAutomationRowId laneRow(LaneKind kind)
+{
+    if (kind == LaneKind::Tempo)
+        return {EditorAutomationRowKind::Tempo, 0, 0};
+    return {EditorAutomationRowKind::ControlChange, 0, kPanController};
+}
+
 songview::TimelineInputItem *input(const Fixture &fixture, const QString &name)
 {
     QQuickItem *const root = fixture.rig ? fixture.rig->quickRoot() : nullptr;
     return root ? root->findChild<songview::TimelineInputItem *>(name) : nullptr;
+}
+
+// QObject::findChild misses visually reparented Quick delegates, so the
+// selector label seam walks the visual childItems tree instead of object
+// ownership.
+QQuickItem *visualDescendant(QQuickItem *root, const QString &objectName)
+{
+    if (!root || root->objectName() == objectName)
+        return root;
+    for (QQuickItem *const child : root->childItems())
+        if (QQuickItem *const found = visualDescendant(child, objectName))
+            return found;
+    return nullptr;
 }
 
 bool hasAnnulusAt(const songview::TimelineQuickLayerData &layer, const QPointF &center,
@@ -240,15 +262,10 @@ bool rowMatches(const AutomationCanvas &canvas, LaneHandle handle, const EditorA
            rows[std::size_t(row)].id == id;
 }
 
-QPoint windowPoint(const Fixture &fixture, QPointF contentPoint)
+QPoint windowPoint(const Fixture &fixture, QPointF viewportPoint)
 {
-    const AutomationPage *const automationPage = page(fixture);
     const songview::TimelineInputItem *const plot = plotInput(fixture);
-    if (!automationPage || !plot)
-        return {};
-    const QPointF viewportPoint(contentPoint.x(),
-                                contentPoint.y() - qreal(automationPage->verticalScroll()));
-    return plot->mapToScene(viewportPoint).toPoint();
+    return plot ? plot->mapToScene(viewportPoint).toPoint() : QPoint{};
 }
 
 void mouseMove(Fixture &fixture, QPoint position, bool primeTarget)
@@ -298,26 +315,38 @@ bool leavePlot(Fixture &fixture)
     return true;
 }
 
-bool expandTempo(Fixture &fixture)
+bool activateParameter(Fixture &fixture, const EditorAutomationRowId &row)
 {
     AutomationCanvas *const automationCanvas = canvas(fixture);
-    AutomationPage *const automationPage = page(fixture);
-    songview::TimelineInputItem *const gutter = gutterInput(fixture);
-    if (!automationCanvas || !automationPage || !gutter || !quickWindow(fixture))
+    if (!automationCanvas)
         return false;
-    const LaneHandle tempo{0};
-    if (!automationCanvas->laneBody(tempo).isEmpty())
-        return true;
-    const QRect header = automationCanvas->pinnedTempoRect();
-    if (header.isEmpty())
+    // The catalog position comes from the production mapping only; clicking
+    // the real selector label is the same activation path a user takes.
+    const int index = automationCanvas->parameterIndex(row);
+    if (index < 0)
         return false;
-    const QPointF headerPoint(gutter->bounds().center().x(),
-                              header.center().y() - automationPage->verticalScroll());
-    const QPoint windowPosition = gutter->mapToScene(headerPoint).toPoint();
-    automation_hover::mousePress(fixture, windowPosition);
-    automation_hover::mouseRelease(fixture, windowPosition);
+    QQuickItem *const root = fixture.rig ? fixture.rig->view().quickView()->rootObject() : nullptr;
+    if (!root)
+        return false;
+    QQuickItem *label = nullptr;
+    if (!QTest::qWaitFor([&root, &label, index] {
+            label = visualDescendant(root, QStringLiteral("automationParameterTab%1").arg(index));
+            return label && label->isVisible() && label->isEnabled() && label->width() > 0.0 &&
+                   label->height() > 0.0 && label->window();
+        })) {
+        return false;
+    }
+    QQuickWindow *const window = label->window();
+    QQuickItem *const content = window ? window->contentItem() : nullptr;
+    if (!content)
+        return false;
+    const QPointF point = content->mapFromScene(
+        label->mapToScene(QPointF(label->width() / 2.0, label->height() / 2.0)));
+    if (!content->boundingRect().contains(point))
+        return false;
+    QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, point.toPoint());
     return QTest::qWaitFor(
-        [automationCanvas, tempo] { return !automationCanvas->laneBody(tempo).isEmpty(); });
+        [automationCanvas, index] { return automationCanvas->activeParameter() == index; });
 }
 
 HoverObservation observe(const Fixture &fixture)
@@ -411,21 +440,21 @@ std::optional<PreparedLane> prepareLane(Fixture &fixture, LaneKind kind)
     const int node = valueAtFraction(minimum, maximum, 0.75);
     const int cursor = valueAtFraction(minimum, maximum, 0.50);
     LaneHandle handle;
+    const EditorAutomationRowId row = laneRow(kind);
     if (kind == LaneKind::Tempo) {
         TempoEdit edit;
         edit.remove = fixture.document.tempoPoints();
         edit.add = {{kHeldTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(held)},
                     {kNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(node)}};
         fixture.document.applyTempoEdit(edit);
-        if (!expandTempo(fixture))
-            return std::nullopt;
         handle = {0};
     } else {
         fixture.document.writeLanePoints(0, kPanController, 0, std::numeric_limits<uint64_t>::max(),
                                          {{kHeldTick, held}, {kNodeTick, node}});
-        handle = findHandle(*automationCanvas,
-                            {EditorAutomationRowKind::ControlChange, 0, kPanController});
+        handle = findHandle(*automationCanvas, row);
     }
+    if (!activateParameter(fixture, row))
+        return std::nullopt;
     QCoreApplication::processEvents();
     const QRect body = automationCanvas->laneBody(handle);
     if (!handle.valid() || body.isEmpty())
@@ -438,37 +467,31 @@ std::optional<PreparedLane> prepareLane(Fixture &fixture, LaneKind kind)
     const qreal heldY = AutomationProjection::valueY(body, geometry, minimum, maximum, held);
     const qreal cursorY = AutomationProjection::valueY(body, geometry, minimum, maximum, cursor);
     const qreal nodeY = AutomationProjection::valueY(body, geometry, minimum, maximum, node);
-    const qreal verticalScroll = automationPage->verticalScroll();
-    const auto quantizedContentPoint = [&fixture, automationPage, plot](QPointF contentPoint) {
-        const QPoint windowPosition = automation_hover::windowPoint(fixture, contentPoint);
-        return std::pair{windowPosition, plot->mapFromScene(QPointF(windowPosition)) +
-                                             QPointF(0.0, automationPage->verticalScroll())};
+    const auto quantizedViewportPoint = [&fixture, plot](const QPointF &viewportPoint) {
+        const QPoint windowPosition = automation_hover::windowPoint(fixture, viewportPoint);
+        return std::pair{windowPosition, plot->mapFromScene(QPointF(windowPosition))};
     };
-    const auto [insertionWindowPosition, insertionContent] =
-        quantizedContentPoint({probeX, cursorY});
-    const auto [nodeWindowPosition, nodeContent] = quantizedContentPoint({nodeX, nodeY});
-    const QPointF insertionInputViewport = insertionContent - QPointF(0.0, verticalScroll);
-    const QPointF nodeInputViewport = nodeContent - QPointF(0.0, verticalScroll);
-    if (!plot->bounds().contains(insertionInputViewport) ||
-        !plot->bounds().contains(nodeInputViewport)) {
+    const auto [insertionWindowPosition, insertionPointerViewport] =
+        quantizedViewportPoint({probeX, cursorY});
+    const auto [nodeWindowPosition, nodePointerViewport] = quantizedViewportPoint({nodeX, nodeY});
+    if (!plot->bounds().contains(insertionPointerViewport) ||
+        !plot->bounds().contains(nodePointerViewport)) {
         return std::nullopt;
     }
     const AutomationProjection projection(geometry, automationPage);
     const uint64_t insertionTick =
-        projection.fineSnapTick(projection.rawTickAt(insertionContent.x()));
+        projection.fineSnapTick(projection.rawTickAt(insertionPointerViewport.x()));
     const qreal insertionX = projection.displayX(insertionTick, dpr);
-    const QPointF insertionViewport(insertionX, heldY - verticalScroll);
-    const QPointF nodeViewport(nodeX, nodeY - verticalScroll);
     return PreparedLane{
         .kind = kind,
         .handle = handle,
         .insertionTick = insertionTick,
         .insertionWindowPosition = insertionWindowPosition,
         .nodeWindowPosition = nodeWindowPosition,
-        .pointerViewport = insertionInputViewport,
-        .insertionViewport = insertionViewport,
-        .nodeViewport = nodeViewport,
-        .strayGhostViewport = QPointF(nodeX, heldY - verticalScroll),
+        .pointerViewport = insertionPointerViewport,
+        .insertionViewport = {insertionX, heldY},
+        .nodeViewport = {nodeX, nodeY},
+        .strayGhostViewport = {nodeX, heldY},
         .nodeValue = node,
         .heldValue = held,
     };
@@ -560,9 +583,42 @@ Topology topologyFor(Fixture &fixture, const PreparedLane &lane, QString &error)
         return topology;
     }
     const bool finalCleared = QTest::qWaitFor([&fixture] { return isClear(fixture); });
-    if (!(documentState(fixture) == frozen))
-        error = QStringLiteral("passive hover mutated the document");
     topology.leaveCleared = transitionCleared && finalCleared && isClear(fixture);
+    // Away/back parameter activation: hovering the origin under the away
+    // parameter fills the retained hover, the switch back must clear it, and
+    // the re-hover must show the reactivated parameter's held value — never
+    // the away parameter's stale cache. The away lane must carry written
+    // events (Pan for the Tempo run, LFO for the CC run): a lane without
+    // points publishes no origin hover text at all.
+    const EditorAutomationRowId awayRow =
+        lane.kind == LaneKind::Tempo
+            ? EditorAutomationRowId{EditorAutomationRowKind::ControlChange, 0, kPanController}
+            : EditorAutomationRowId{EditorAutomationRowKind::ControlChange, 0, kLfoController};
+    if (!activateParameter(fixture, awayRow)) {
+        error = QStringLiteral("could not activate the away parameter after passive hover");
+        return topology;
+    }
+    automation_hover::mouseMove(fixture, lane.insertionWindowPosition);
+    if (!QTest::qWaitFor([&fixture] { return hasValueText(fixture, observe(fixture)); })) {
+        error = QStringLiteral("away parameter hover showed no origin value text");
+        return topology;
+    }
+    if (!activateParameter(fixture, laneRow(lane.kind))) {
+        error = QStringLiteral("could not reactivate the origin parameter after switching");
+        return topology;
+    }
+    if (!QTest::qWaitFor([&fixture] { return isClear(fixture); })) {
+        error = QStringLiteral("parameter switching kept a stale retained hover");
+        return topology;
+    }
+    automation_hover::mouseMove(fixture, lane.insertionWindowPosition);
+    QCoreApplication::processEvents();
+    const HoverObservation reactivated = observe(fixture);
+    topology.reactivatedHeldText =
+        hasValueText(fixture, reactivated) &&
+        reactivated.text == expectedValueText(fixture, lane, lane.heldValue);
+    if (!(documentState(fixture) == frozen))
+        error = QStringLiteral("passive hover or parameter switching mutated the document");
     return topology;
 }
 

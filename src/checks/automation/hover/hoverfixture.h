@@ -82,6 +82,7 @@ struct Topology {
     bool suppressesInsertionGhost = false;
     bool repeatDoesNotChurn = false;
     bool leaveCleared = false;
+    bool reactivatedHeldText = false;
     bool operator==(const Topology &) const = default;
 };
 
@@ -107,10 +108,10 @@ DocumentState documentState(Fixture &fixture);
 
 LaneHandle findHandle(const AutomationCanvas &canvas, const EditorAutomationRowId &id);
 bool rowMatches(const AutomationCanvas &canvas, LaneHandle handle, const EditorAutomationRowId &id);
-bool expandTempo(Fixture &fixture);
+bool activateParameter(Fixture &fixture, const EditorAutomationRowId &row);
 std::optional<PreparedLane> prepareLane(Fixture &fixture, LaneKind kind);
 
-QPoint windowPoint(const Fixture &fixture, QPointF contentPoint);
+QPoint windowPoint(const Fixture &fixture, QPointF viewportPoint);
 void mouseMove(Fixture &fixture, QPoint position, bool primeTarget = true);
 void mousePress(Fixture &fixture, QPoint position);
 void mouseRelease(Fixture &fixture, QPoint position);

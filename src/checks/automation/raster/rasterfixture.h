@@ -73,8 +73,8 @@ class AutomationRasterFixture final
     qreal automationDpr() const noexcept;
     QPointF automationContentToViewport(const QPointF &position) const;
 
+    bool activateParameter(const EditorAutomationRowId &row);
     bool expandTempo();
-    QPointF tempoHeaderPoint() const;
     void setAutomationZoom(double zoom);
     void setAutomationScroll(double scroll);
     void setPersistentPencil(bool enabled);
