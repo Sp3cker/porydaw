@@ -210,7 +210,6 @@ DrawerChrome::DrawerChrome(AutomationPage &page, EditorDrawer *parent)
                      DrawerChromeInteraction(*this, DrawerChromeTarget::Detent)}
     , m_icons(new DrawerChromeIconProvider)
 {
-    connect(&m_page, &AutomationPage::scrollStateChanged, this, &DrawerChrome::scrollChanged);
     connect(m_page.canvas(), &AutomationCanvas::valuePromptChanged, this,
             &DrawerChrome::valuePromptChanged);
 }
@@ -263,24 +262,6 @@ void DrawerChrome::cancelInteraction()
     if (hadHoveredHandle) {
         QMetaObject::invokeMethod(this, [this] { emit chromeChanged(); }, Qt::QueuedConnection);
     }
-}
-
-void DrawerChrome::setAutomationScrollY(int value)
-{
-    m_page.setVerticalScroll(value);
-}
-
-void DrawerChrome::scrollAutomationByWheel(int pixelDeltaY, int angleDeltaY, bool inverted)
-{
-    m_page.scrollVertically(songview::TimelineWheelInput{
-        .position = {},
-        .globalPosition = {},
-        .pixelDelta = QPoint(0, pixelDeltaY),
-        .angleDelta = QPoint(0, angleDeltaY),
-        .modifiers = Qt::NoModifier,
-        .phase = Qt::NoScrollPhase,
-        .inverted = inverted,
-    });
 }
 
 void DrawerChrome::activateToggle(int page)
@@ -346,26 +327,6 @@ int DrawerChrome::scrollbarWidth() const noexcept
 int DrawerChrome::scrollbarMinimumThumbHeight() const noexcept
 {
     return layout::space(layout::Space::Eight);
-}
-
-int DrawerChrome::automationScrollY() const noexcept
-{
-    return m_page.verticalScroll();
-}
-
-int DrawerChrome::automationContentHeight() const noexcept
-{
-    return m_page.automationContentHeight();
-}
-
-int DrawerChrome::automationViewportHeight() const noexcept
-{
-    return m_page.automationViewportSize().height();
-}
-
-int DrawerChrome::automationMaximumScrollY() const noexcept
-{
-    return std::max(0, automationContentHeight() - automationViewportHeight());
 }
 
 int DrawerChrome::hoveredHandle() const noexcept

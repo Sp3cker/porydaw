@@ -271,32 +271,6 @@ Item {
         visible: layer.chrome.detentVisible
     }
 
-    TimelineScrollbar {
-        id: automationScrollBar
-        objectName: "drawerAutomationScrollBar"
-        x: layer.chrome.automationScrollbarRect.x
-        y: layer.chrome.automationScrollbarRect.y
-        width: layer.chrome.automationScrollbarRect.width
-        height: layer.chrome.automationScrollbarRect.height
-        orientation: Qt.Vertical
-        minimum: 0
-        value: layer.chrome.automationScrollY
-        maximum: layer.chrome.automationMaximumScrollY
-        pageStep: layer.chrome.automationViewportHeight
-        singleStep: Math.max(1, layer.chrome.automationViewportHeight / 10)
-        minimumThumbLength: layer.chrome.scrollbarMinimumThumbHeight
-        accessibleName: qsTr("Automation lanes")
-        handleColor: layer.chrome.scrollbarHandle
-        handleHoverColor: layer.chrome.scrollbarHandleHover
-        externalVisible: layer.chrome.automationScrollbarVisible
-        visibleWhenNotScrollable: true
-        thumbObjectName: "drawerAutomationScrollThumb"
-
-        onValueRequested: (value) => layer.chrome.setAutomationScrollY(Math.round(value))
-        onWheelRequested: (pixelX, pixelY, angleX, angleY, inverted) =>
-                              layer.chrome.scrollAutomationByWheel(pixelY, angleY, inverted)
-    }
-
     // Prompt session state mirrors the track-header rename editor: the
     // finishing guard keeps a focus loss from cancelling after an accept or
     // cancel already ran, and the visibility flip resets it.

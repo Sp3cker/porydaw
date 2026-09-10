@@ -47,7 +47,9 @@ void verifyActivePlot(SongView &view, AutomationPage &page, const QRect &body)
     QCOMPARE(body.topLeft(), QPoint{});
     QCOMPARE(body.height(), page.automationViewportSize().height());
     QCOMPARE(body.size(), automation->plotRect.size());
-    QVERIFY(view.editorDrawer()->chrome().automationScrollbarRect().isEmpty());
+    QVERIFY(checks::support::visualDescendant(view.quickView()->rootObject(),
+                                              QStringLiteral("drawerAutomationScrollBar")) ==
+            nullptr);
     QCOMPARE(automation->plotRect.left(), view.timelineSplitX());
     QCOMPARE(roll->plotRect.left(), view.timelineSplitX());
     for (int index = 0; index < 9; ++index) {
@@ -110,7 +112,8 @@ void AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStr
         const auto roll = view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
         QVERIFY(automation.has_value());
         QVERIFY(roll.has_value());
-        QVERIFY(drawer->chrome().automationScrollbarRect().isEmpty());
+        QVERIFY(checks::support::visualDescendant(
+                    root, QStringLiteral("drawerAutomationScrollBar")) == nullptr);
         QCOMPARE(view.timelineSplitX(), splitBefore);
         QCOMPARE(automation->plotRect.left(), splitBefore);
         QCOMPARE(roll->plotRect.left(), splitBefore);
@@ -165,7 +168,8 @@ void AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid()
     QVERIFY(QRect(QPoint(0, 0), quickWindow->size()).contains(gutterRect));
     QCOMPARE(automation->plotRect.left(), view.timelineSplitX());
     QCOMPARE(roll->plotRect.left(), view.timelineSplitX());
-    QVERIFY(view.editorDrawer()->chrome().automationScrollbarRect().isEmpty());
+    QVERIFY(checks::support::visualDescendant(
+                quick->rootObject(), QStringLiteral("drawerAutomationScrollBar")) == nullptr);
     QCOMPARE(itemSceneRect(*m_automationInput), QRectF(automation->plotRect));
     QCOMPARE(itemSceneRect(*gutter), QRectF(gutterRect));
     QCOMPARE(qRound(m_automationInput->width()), automation->plotRect.width());

@@ -273,7 +273,8 @@ void DrawerPresentationTest::drawerStackAndCanonicalInputs()
     }
     // One shared plot and no vertical scrollbar strip: the automation section
     // is a single canonical band like velocity and voice changes.
-    QVERIFY(!fixture.chrome().automationScrollbarVisible());
+    QVERIFY(checks::support::visualDescendant(
+                fixture.quickRoot, QStringLiteral("drawerAutomationScrollBar")) == nullptr);
     const QQuickWindow *const quickWindow = fixture.quick->quickWindow();
     QVERIFY(quickWindow);
     const QRectF published = publishedChromeRect(fixture.chrome());

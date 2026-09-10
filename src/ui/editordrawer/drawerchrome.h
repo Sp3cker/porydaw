@@ -38,7 +38,6 @@ struct DrawerChromeSnapshot {
     QRectF automationToggleRect;
     QRectF velocityToggleRect;
     QRectF detentRect;
-    QRectF automationScrollbarRect;
     qreal toggleIconInset = 0;
     qreal detentIconInset = 0;
     bool voiceChangesHandleVisible = false;
@@ -106,10 +105,6 @@ class DrawerChrome final : public QObject
     Q_PROPERTY(QRectF velocityToggleRect READ velocityToggleRect NOTIFY chromeChanged FINAL)
     Q_PROPERTY(QRectF detentRect READ detentRect NOTIFY chromeChanged FINAL)
     Q_PROPERTY(
-        QRectF automationScrollbarRect READ automationScrollbarRect NOTIFY chromeChanged FINAL)
-    Q_PROPERTY(
-        bool automationScrollbarVisible READ automationScrollbarVisible NOTIFY chromeChanged FINAL)
-    Q_PROPERTY(
         bool voiceChangesHandleVisible READ voiceChangesHandleVisible NOTIFY chromeChanged FINAL)
     Q_PROPERTY(bool velocityHandleVisible READ velocityHandleVisible NOTIFY chromeChanged FINAL)
     Q_PROPERTY(bool automationHandleVisible READ automationHandleVisible NOTIFY chromeChanged FINAL)
@@ -143,12 +138,6 @@ class DrawerChrome final : public QObject
     Q_PROPERTY(QColor barOutline READ barOutline NOTIFY chromeChanged FINAL)
     Q_PROPERTY(QColor scrollbarHandle READ scrollbarHandle NOTIFY chromeChanged FINAL)
     Q_PROPERTY(QColor scrollbarHandleHover READ scrollbarHandleHover NOTIFY chromeChanged FINAL)
-    Q_PROPERTY(int automationScrollY READ automationScrollY NOTIFY scrollChanged FINAL)
-    Q_PROPERTY(int automationContentHeight READ automationContentHeight NOTIFY scrollChanged FINAL)
-    Q_PROPERTY(
-        int automationViewportHeight READ automationViewportHeight NOTIFY scrollChanged FINAL)
-    Q_PROPERTY(
-        int automationMaximumScrollY READ automationMaximumScrollY NOTIFY scrollChanged FINAL)
     Q_PROPERTY(int hoveredHandle READ hoveredHandle NOTIFY chromeChanged FINAL)
     Q_PROPERTY(bool valuePromptVisible READ valuePromptVisible NOTIFY valuePromptChanged FINAL)
     Q_PROPERTY(QString valuePromptTitle READ valuePromptTitle NOTIFY valuePromptChanged FINAL)
@@ -166,8 +155,6 @@ class DrawerChrome final : public QObject
     QQuickImageProvider *releaseIconProvider();
     void cancelInteraction();
 
-    Q_INVOKABLE void setAutomationScrollY(int value);
-    Q_INVOKABLE void scrollAutomationByWheel(int pixelDeltaY, int angleDeltaY, bool inverted);
     Q_INVOKABLE void activateToggle(int page);
     Q_INVOKABLE void setDetentChecked(bool checked);
     Q_INVOKABLE void adjustResizeHandle(int target, int direction);
@@ -182,7 +169,6 @@ class DrawerChrome final : public QObject
     QRectF automationToggleRect() const noexcept { return m_snapshot.automationToggleRect; }
     QRectF velocityToggleRect() const noexcept { return m_snapshot.velocityToggleRect; }
     QRectF detentRect() const noexcept { return m_snapshot.detentRect; }
-    QRectF automationScrollbarRect() const noexcept { return m_snapshot.automationScrollbarRect; }
     bool barVisible() const noexcept { return !m_snapshot.barRect.isEmpty(); }
     bool voiceChangesToggleVisible() const noexcept
     {
@@ -195,10 +181,6 @@ class DrawerChrome final : public QObject
     bool velocityToggleVisible() const noexcept
     {
         return barVisible() && !m_snapshot.velocityToggleRect.isEmpty();
-    }
-    bool automationScrollbarVisible() const noexcept
-    {
-        return m_snapshot.automationHandleVisible && !m_snapshot.automationScrollbarRect.isEmpty();
     }
     bool voiceChangesHandleVisible() const noexcept { return m_snapshot.voiceChangesHandleVisible; }
     bool velocityHandleVisible() const noexcept { return m_snapshot.velocityHandleVisible; }
@@ -226,10 +208,6 @@ class DrawerChrome final : public QObject
     QColor barOutline() const { return m_snapshot.barOutline; }
     QColor scrollbarHandle() const { return m_snapshot.scrollbarHandle; }
     QColor scrollbarHandleHover() const { return m_snapshot.scrollbarHandleHover; }
-    int automationScrollY() const noexcept;
-    int automationContentHeight() const noexcept;
-    int automationViewportHeight() const noexcept;
-    int automationMaximumScrollY() const noexcept;
     int hoveredHandle() const noexcept;
     // Inline Tempo/CC value prompt state, published from the canvas-owned
     // pending edit. Chrome never owns the document change.
@@ -242,7 +220,6 @@ class DrawerChrome final : public QObject
 
   signals:
     void chromeChanged();
-    void scrollChanged();
     void valuePromptChanged();
 
   private:
