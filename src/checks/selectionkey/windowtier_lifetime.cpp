@@ -9,6 +9,9 @@
 
 #include "checks/selectionkey/tst_windowtier.h"
 
+#include "checks/support/timelinequickcheck.h"
+#include "ui/editordrawer/automationpage.h"
+
 #include "ui/editordrawer/editordrawer.h"
 
 #include <QPointer>
@@ -17,6 +20,43 @@
 namespace {
 
 constexpr int kTrack = 0;
+constexpr uint8_t kPan = 10;
+constexpr uint64_t kPanTick = 5760;
+
+AutomationCanvas *automationCanvas(SongView &view)
+{
+    return view.editorDrawer()->automationPage()->canvas();
+}
+
+bool clickParameter(SongView &view, const EditorAutomationRowId &row)
+{
+    auto *const canvas = automationCanvas(view);
+    auto *const quick = selectionkey::quickCanvas(view);
+    const int index = checks::support::automationParameterIndex(*canvas, row);
+    QPointer<QQuickItem> label;
+    if (index < 0 || !quick || !QTest::qWaitFor([&] {
+            label = checks::support::visualDescendant(
+                quick->rootObject(), QStringLiteral("automationParameterTab%1").arg(index));
+            return label && label->window() && label->isVisible() && label->isEnabled() &&
+                   label->width() > 0 && label->height() > 0;
+        }))
+        return false;
+    QTest::mouseClick(label->window(), Qt::LeftButton, Qt::NoModifier,
+                      label->mapToScene(label->boundingRect().center()).toPoint());
+    return QTest::qWaitFor([&] { return canvas->parameterRow(canvas->activeParameter()) == row; });
+}
+
+std::optional<LaneHandle> panLane(const AutomationCanvas &canvas, int track)
+{
+    const auto &rows = canvas.rows();
+    for (size_t index = 0; index < rows.size(); ++index) {
+        const auto &row = rows[index].id;
+        if (row.kind == EditorAutomationRowKind::ControlChange && row.track == track &&
+            row.controller == kPan)
+            return LaneHandle{int(index) + 1};
+    }
+    return std::nullopt;
+}
 
 } // namespace
 
@@ -33,6 +73,9 @@ void SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime()
     songview::TimelineQuickView *const quickA = selectionkey::quickCanvas(viewA);
     QQuickWindow *const windowA = quickA ? quickA->quickWindow() : nullptr;
     QVERIFY2(windowA, "the first tab Quick window is missing");
+    AutomationCanvas *const canvasA = automationCanvas(viewA);
+    const EditorAutomationRowId panA{EditorAutomationRowKind::ControlChange, kTrack, kPan};
+    QVERIFY(clickParameter(viewA, panA));
 
     // The per-case scenarios each roll their own edits back, and the explicit
     // undo-to-clean gate keeps this case self-sufficient, so the second-song
@@ -47,6 +90,9 @@ void SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime()
              qUtf8Printable(error));
     const int tabCountBeforeSecondOpen = workspace.openTabCount();
     const QByteArray documentAClean = documentA.smf().write();
+    const auto laneA = panLane(*canvasA, kTrack);
+    QVERIFY(laneA.has_value());
+    QVERIFY(canvasA->openValuePromptForInsertion(*laneA, kPanTick, 64));
 
     SongTab *const tabB = selectionkey::openSongTab(m_session, m_songB, true, error);
     QVERIFY2(tabB, qUtf8Printable(error));
@@ -65,6 +111,12 @@ void SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime()
     songview::TimelineQuickView *const quickB = selectionkey::quickCanvas(viewB);
     QQuickWindow *const windowB = quickB ? quickB->quickWindow() : nullptr;
     QVERIFY2(windowB, "the second tab Quick window is missing");
+    AutomationCanvas *const canvasB = automationCanvas(viewB);
+    const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
+    QVERIFY(clickParameter(viewB, tempo));
+    QVERIFY(!canvasA->valuePromptVisible());
+    canvasA->acceptNodeValuePrompt(96);
+    QCOMPARE(documentA.smf().write(), documentAClean);
     viewB.selectionModel().setNoteSelection({pairB->ids[0], pairB->ids[1]});
     QVERIFY2(focusAutomationBand(viewB), "could not focus the second tab's automation band");
     selectionkey::deliverKey(windowB, Qt::Key_Right);
@@ -77,6 +129,8 @@ void SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime()
     workspace.selectSongTab(tabA);
     selectionkey::settle();
     QCOMPARE(workspace.selectedSongTab(), tabA);
+    QCOMPARE(canvasA->parameterRow(canvasA->activeParameter()), std::optional{panA});
+    QCOMPARE(canvasB->parameterRow(canvasB->activeParameter()), std::optional{tempo});
     const std::optional<NotePair> pairA = addNotePair(documentA, kTrack, 3840);
     QVERIFY2(pairA.has_value(),
              "the reserved tick-3840 note pair could not be inserted on the first tab");
@@ -110,6 +164,25 @@ void SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime()
     viewA.selectTrack(1);
     QVERIFY2(viewA.selectionModel().noteSelection().empty(),
              "the primary-track change did not clear the note selection");
+    const EditorAutomationRowId panTrackOne{EditorAutomationRowKind::ControlChange, 1, kPan};
+    QCOMPARE(canvasA->parameterRow(canvasA->activeParameter()), std::optional{panTrackOne});
+    const auto laneTrackOne = panLane(*canvasA, 1);
+    QVERIFY(laneTrackOne.has_value());
+    QVERIFY(!canvasA->laneBody(*laneTrackOne).isEmpty());
+    DocLanePoint panPoint;
+    QVERIFY(!documentA.findLanePoint(1, kPan, kPanTick, &panPoint));
+    const auto originalTrackPan = documentA.lanePoints(kTrack, kPan);
+    QVERIFY(canvasA->openValuePromptForInsertion(*laneTrackOne, kPanTick, 64));
+    canvasA->acceptNodeValuePrompt(96);
+    QVERIFY(documentA.findLanePoint(1, kPan, kPanTick, &panPoint));
+    QCOMPARE(panPoint.value, 96);
+    const auto originalTrackPanAfter = documentA.lanePoints(kTrack, kPan);
+    QCOMPARE(originalTrackPanAfter.size(), originalTrackPan.size());
+    for (size_t index = 0; index < originalTrackPan.size(); ++index) {
+        QCOMPARE(originalTrackPanAfter[index].tick, originalTrackPan[index].tick);
+        QCOMPARE(originalTrackPanAfter[index].value, originalTrackPan[index].value);
+    }
+    QCOMPARE(documentB.smf().write(), documentBAfterMove);
     viewA.selectionModel().setNoteSelection({pairT1->ids[0], pairT1->ids[1]});
     QVERIFY2(focusAutomationBand(viewA),
              "could not focus the automation band on the new primary track");
@@ -135,6 +208,7 @@ void SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime()
                                           &error),
              qUtf8Printable(error));
     const QPointer<SongTab> closingTab = tabB;
+    const QPointer<AutomationCanvas> closingCanvas = canvasB;
     {
         selectionkey::DeclineModalsWithin guard(
             QStringLiteral("closing the clean second song tab"));
@@ -143,6 +217,8 @@ void SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime()
     selectionkey::settle();
     QVERIFY2(workspace.songTabFor(*SongName::create(m_songB)) == nullptr && closingTab.isNull(),
              "the clean second tab did not close and destroy its session");
+    QVERIFY(closingCanvas.isNull());
+    const QByteArray documentABeforeReopen = documentA.smf().write();
     const int tabCountBeforeReopen = workspace.openTabCount();
     SongTab *const reopened = selectionkey::openSongTab(m_session, m_songB, true, error);
     QVERIFY2(reopened, qUtf8Printable(error));
@@ -161,11 +237,15 @@ void SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime()
     songview::TimelineQuickView *const quickR = selectionkey::quickCanvas(viewR);
     QQuickWindow *const windowR = quickR ? quickR->quickWindow() : nullptr;
     QVERIFY2(windowR, "the reopened tab Quick window is missing");
+    AutomationCanvas *const canvasR = automationCanvas(viewR);
+    const EditorAutomationRowId volume{EditorAutomationRowKind::ControlChange, kTrack, 7};
+    QCOMPARE(canvasR->parameterRow(canvasR->activeParameter()), std::optional{volume});
     viewR.selectionModel().setNoteSelection({pairR->ids[0], pairR->ids[1]});
     QVERIFY2(focusAutomationBand(viewR), "could not focus the reopened tab's automation band");
     selectionkey::deliverKey(windowR, Qt::Key_Right);
     QVERIFY2(!notePairUnchanged(documentR, *pairR),
              "the reopened tab's routing is stale or dead after document replacement");
+    QCOMPARE(documentA.smf().write(), documentABeforeReopen);
     QVERIFY2(selectionkey::undoTabToClean(workspace, documentR,
                                           QStringLiteral("the reopened tab stayed dirty before "
                                                          "the window close"),

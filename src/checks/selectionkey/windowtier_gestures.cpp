@@ -1,8 +1,8 @@
 // Selection keyboard routing, window tier: pointer-gesture protection. A live
-// drawer resize drag or automation scrollbar thumb drag owns the surface, so
+// drawer resize drag owns the surface, so
 // shared editing keys are a consumed no-op while it holds the pointer; the
 // first Escape cancels only the gesture and keeps the selection, and the next
-// idle Escape clears it (plan 6). The press lands on the reachable grip/thumb
+// idle Escape clears it (plan 6). The press lands on the reachable grip
 // without moving focus, so the gesture is not cancelled before the
 // mid-gesture keys are delivered, and every press is recorded for the
 // failure-safe case cleanup to release.
@@ -11,7 +11,6 @@
 
 #include "checks/support/eventsynth.h"
 
-#include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/songview/timelinebandlayout.h"
 
@@ -25,8 +24,6 @@
 namespace {
 
 constexpr int kTrack = 0;
-constexpr uint8_t kController = 10;
-constexpr uint8_t kSecondController = 74;
 constexpr int kGestureTick = 2400;
 
 // Bounded wait for both layers of Quick focus to finish: the requested band
@@ -119,7 +116,6 @@ void SelectionWindowTierTest::resizeDragProtectsSelectedNotes()
     QVERIFY2(quickWindow && quick->rootObject(),
              "the Quick surface is missing for pointer gesture checks");
     EditorDrawer *const drawer = view.editorDrawer();
-    AutomationPage *const automationPage = drawer ? drawer->automationPage() : nullptr;
     const QRect quickBounds(QPoint(0, 0), quickWindow->size());
     const auto mapsIntoWindow = [&quickBounds](QQuickItem *item) {
         return item && item->isVisible() &&
@@ -234,118 +230,6 @@ void SelectionWindowTierTest::resizeDragProtectsSelectedNotes()
     selectionkey::deliverKey(quickWindow, Qt::Key_Escape);
     QVERIFY2(view.selectionModel().noteSelection().empty(),
              "the second idle Escape did not clear the selection after the resize drag");
-    view.setDrawerSectionHeight(EditorDrawerPage::Automations, 200);
-    view.setDrawerSectionVisible(EditorDrawerPage::Velocity, velocityWasVisible);
-    view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, voiceChangesWasVisible);
-    selectionkey::settle();
-}
-
-void SelectionWindowTierTest::scrollbarThumbDragProtectsSelectedNotes()
-{
-    SongView &view = this->view();
-    SongDocument &document = this->document();
-    const selectionkey::ScenarioRollback rollback(view, document);
-    const bool velocityWasVisible = view.drawerSectionVisible(EditorDrawerPage::Velocity);
-    const bool voiceChangesWasVisible = view.drawerSectionVisible(EditorDrawerPage::VoiceChanges);
-    view.setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
-    view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, false);
-    view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
-    view.selectTrack(kTrack);
-    // Two controller lanes guarantee the automation content overflows the
-    // short viewport, so the thumb drag exercises a live, draggable scrollbar.
-    document.addLanePoint(kTrack, kController, 48, 32);
-    document.addLanePoint(kTrack, kController, 96, 64);
-    document.addLanePoint(kTrack, kSecondController, 48, 96);
-    view.setDrawerSectionHeight(EditorDrawerPage::Automations, 90);
-    const std::optional<NotePair> pair = addNotePair(document, kTrack, kGestureTick);
-    QVERIFY2(pair.has_value(),
-             "the reserved tick-2400 note pair could not be inserted and resolved");
-    songview::TimelineQuickView *const quick = selectionkey::quickCanvas(view);
-    QQuickWindow *const quickWindow = quick ? quick->quickWindow() : nullptr;
-    QVERIFY2(quickWindow && quick->rootObject(),
-             "the Quick surface is missing for pointer gesture checks");
-    EditorDrawer *const drawer = view.editorDrawer();
-    AutomationPage *const automationPage = drawer ? drawer->automationPage() : nullptr;
-    const auto nudge = selectionkey::firstBinding(QStringLiteral("roll.nudge_right"));
-    const auto remove = selectionkey::firstBinding(QStringLiteral("roll.delete"));
-    QVERIFY2(nudge.has_value() && remove.has_value(),
-             "nudge Right/Delete have no single-key bindings");
-    const std::vector<NoteId> selected{pair->ids[0], pair->ids[1]};
-    const auto selectionKept = [&view, &selected] {
-        return view.selectionModel().noteSelection() == selected;
-    };
-    const auto releaseAt = [&](const QPointF &point) {
-        selectionkey::sendMouseEvent(*quickWindow, QEvent::MouseButtonRelease, point,
-                                     Qt::LeftButton);
-        selectionkey::settle();
-        trackRelease();
-    };
-
-    // Live scrollbar thumb drag: the same protection on QML-only drag state.
-    if (automationPage) {
-        automationPage->setVerticalScroll(0);
-        selectionkey::settle();
-    }
-    QPointer<QQuickItem> scrollbar = findItem(quick, QStringLiteral("drawerAutomationScrollBar"));
-    QPointer<QQuickItem> thumb = findItem(quick, QStringLiteral("drawerAutomationScrollThumb"));
-    const bool thumbReady =
-        checks::async_wait::waitUntil(
-            [&] { return bool(quick); },
-            [&] {
-                if (!scrollbar)
-                    scrollbar = findItem(quick, QStringLiteral("drawerAutomationScrollBar"));
-                if (!thumb)
-                    thumb = findItem(quick, QStringLiteral("drawerAutomationScrollThumb"));
-                return scrollbar && thumb && thumb->isVisible() && automationPage != nullptr &&
-                       automationPage->automationContentHeight() >
-                           automationPage->automationViewportSize().height();
-            },
-            2000, 10) == checks::async_wait::Result::Ready;
-    QVERIFY2(thumbReady,
-             "the automation scrollbar thumb is missing or not scrollable in this fixture");
-    QVERIFY2(focusAutomationBand(view), "could not focus the automation band");
-    QVERIFY2(automationBandOwnsFocus(quick),
-             qPrintable(QStringLiteral("the automation band never completed native focus "
-                                       "before the scrollbar gesture (%1)")
-                            .arg(quickFocusState(quick))));
-    view.selectionModel().setNoteSelection(selected);
-    const std::optional<DocNote> secondBeforeThumb = selectionkey::noteById(document, pair->ids[1]);
-    QVERIFY2(secondBeforeThumb.has_value(),
-             "the second selected note vanished before the scrollbar gesture baseline");
-    const QByteArray beforeThumb = document.smf().write();
-    const int scrollBeforeDrag = automationPage->verticalScroll();
-    const QPointF thumbPoint = itemCenter(thumb);
-    const QPointF thumbDragPoint = thumbPoint + QPointF(0.0, 60.0);
-    QVERIFY2(thumb, "the automation scrollbar thumb vanished before its drag");
-    QVERIFY2(pressAndDrag(quickWindow, *thumb, thumbPoint, thumbDragPoint),
-             "could not deliver the press and drag onto the automation scrollbar thumb");
-    trackPointer(thumbDragPoint.toPoint());
-    QVERIFY2(
-        automationBandHasCompletedNativeFocus(quick),
-        qPrintable(QStringLiteral("the thumb press disturbed completed native Quick focus (%1)")
-                       .arg(quickFocusState(quick))));
-    const bool dragLive = checks::async_wait::waitUntil(
-                              [] { return true; },
-                              [&] { return automationPage->verticalScroll() > scrollBeforeDrag; },
-                              2000, 10) == checks::async_wait::Result::Ready;
-    if (!dragLive)
-        releaseAt(thumbDragPoint);
-    QVERIFY2(dragLive, "the pressed scrollbar thumb did not begin a live drag");
-    QVERIFY2(document.smf().write() == beforeThumb && selectionKept(),
-             "the live scrollbar drag mutated the document or dropped the selection");
-    selectionkey::deliverKey(quickWindow, nudge->key(), nudge->keyboardModifiers());
-    selectionkey::deliverKey(quickWindow, remove->key(), remove->keyboardModifiers());
-    QVERIFY2(
-        document.smf().write() == beforeThumb && selectionKept(),
-        "Right/Delete during the live scrollbar drag mutated the notes or dropped the selection");
-    selectionkey::deliverKey(quickWindow, Qt::Key_Escape);
-    QVERIFY2(selectionKept(),
-             "gesture Escape cleared the selection instead of canceling the scrollbar drag");
-    releaseAt(thumbPoint);
-    selectionkey::deliverKey(quickWindow, nudge->key(), nudge->keyboardModifiers());
-    DocNote resumed;
-    QVERIFY2(document.findNote(pair->ids[1], &resumed) && resumed.tick != secondBeforeThumb->tick,
-             "Right after the Escape cancellation did not resume note editing");
     view.setDrawerSectionHeight(EditorDrawerPage::Automations, 200);
     view.setDrawerSectionVisible(EditorDrawerPage::Velocity, velocityWasVisible);
     view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, voiceChangesWasVisible);

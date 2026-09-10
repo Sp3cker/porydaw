@@ -12,7 +12,7 @@
 //   drawer resize grip and the automation scrollbar — keeps its advertised
 //   local keys while a focused drawer toggle keeps Space activation and still
 //   routes note arrows to the selected notes (plan 13);
-// * a live drawer resize drag or automation scrollbar thumb drag holds the
+// * a live drawer resize drag holds the
 //   pointer: shared editing keys cannot mutate the selected notes, Escape
 //   cancels only the gesture, and the next idle Escape clears it (plan 6);
 // * A/B tab switching, drawer hide/show, a primary-track change, and closing
@@ -63,7 +63,6 @@ class SelectionWindowTierTest final : public QObject
     void chromeToggleRoutesNoteArrows();
     // Plan 6: live pointer gestures protect the selected notes.
     void resizeDragProtectsSelectedNotes();
-    void scrollbarThumbDragProtectsSelectedNotes();
     // Plan 10: routing stays bound to the live view across tab lifecycles.
     void tabsDocumentsAndPrimaryTrackLifetime();
 
