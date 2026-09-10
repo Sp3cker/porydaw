@@ -12,6 +12,8 @@
 #include <vector>
 
 #include <QCoreApplication>
+#include <QMouseEvent>
+#include <QQuickWindow>
 
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
@@ -304,8 +306,12 @@ void AutomationEditingTest::pencilDiagonalStrokeEventDensityInvariance()
                     const QPointF interpolated =
                         input[index - 1].content +
                         (input[index].content - input[index - 1].content) * (qreal(sample) / 4.0);
-                    mouseMove(automation_test::windowFromContent(page(), automationInput(),
-                                                                 interpolated));
+                    // Keep extra samples on the same delivered segment: integer
+                    // rounding would turn event-density changes into path changes.
+                    const QPointF window = automationInput().mapToScene(interpolated);
+                    QMouseEvent move(QEvent::MouseMove, window, m_quickWindow->mapToGlobal(window),
+                                     Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+                    QCoreApplication::sendEvent(m_quickWindow, &move);
                 }
             }
             mouseMove(input[index].window);
