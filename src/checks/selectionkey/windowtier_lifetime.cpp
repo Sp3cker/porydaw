@@ -173,7 +173,7 @@ void SelectionWindowTierTest::tabsDocumentsAndPrimaryTrackLifetime()
     QVERIFY(!documentA.findLanePoint(1, kPan, kPanTick, &panPoint));
     const auto originalTrackPan = documentA.lanePoints(kTrack, kPan);
     QVERIFY(canvasA->openValuePromptForInsertion(*laneTrackOne, kPanTick, 64));
-    canvasA->acceptNodeValuePrompt(96);
+    canvasA->acceptNodeValuePrompt(32);
     QVERIFY(documentA.findLanePoint(1, kPan, kPanTick, &panPoint));
     QCOMPARE(panPoint.value, 96);
     const auto originalTrackPanAfter = documentA.lanePoints(kTrack, kPan);

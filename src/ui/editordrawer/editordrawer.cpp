@@ -357,7 +357,8 @@ void EditorDrawer::arrangeChildren()
     publishChromeSnapshot(m_sections->chromeSnapshot(), overlay.topLeft());
 
     if (const std::optional<QRect> automationBody = bodyRect(EditorDrawerPage::Automations))
-        m_automationPage->synchronizeAutomationViewport(automationBody->size());
+        m_automationPage->synchronizeAutomationViewport(
+            QSize(plotWidth(), automationBody->height()));
 
     if (m_owner.m_editorDrawer == this)
         m_owner.synchronizeTimelineBandLayout();

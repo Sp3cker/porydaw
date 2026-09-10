@@ -325,11 +325,11 @@ void AutomationCanvas::rebuildNodeStack()
     m_hoverState.clearHover();
     m_nodeStack.clear();
     m_ccAdapters.clear();
-    // One full-height plot: every logical slot shares the input-host body so
-    // selected multi-lane edits keep valid value geometry, and only
-    // activeLane() decides what renders and hit-tests. The Tempo slot stays
-    // in the table alongside every CC adapter.
-    const QRect body = m_inputHost ? m_inputHost->bounds().toAlignedRect() : QRect{};
+    // Use the synchronously published plot viewport: after showing the drawer,
+    // the Quick input host can still have its hidden bounds until QML settles.
+    // Every logical slot shares this body so selected multi-lane edits keep
+    // valid value geometry; only activeLane() decides what renders and hit-tests.
+    const QRect body(QPoint{}, m_page.automationViewportSize());
     m_nodeStack.push_back({{EditorAutomationRowKind::Tempo, 0, 0}, &m_tempoLane, body, nullptr});
     if (!m_page.document())
         return;

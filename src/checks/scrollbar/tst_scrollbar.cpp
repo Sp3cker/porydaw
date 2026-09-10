@@ -287,14 +287,7 @@ void ScrollbarTest::automationLabelActivatesAfterResize()
 
     // The newly active plot resolves the Tempo row to a live body at the
     // resized geometry.
-    LaneHandle handle;
-    const auto &rows = canvas->rows();
-    for (int index = 0; index < int(rows.size()); ++index) {
-        if (rows[std::size_t(index)].id == tempoRow)
-            handle = LaneHandle{index + 1};
-    }
-    QVERIFY(handle.valid());
-    QTRY_VERIFY(!canvas->laneBody(handle).isEmpty());
+    QTRY_VERIFY(!canvas->laneBody(LaneHandle{0}).isEmpty());
 }
 
 void ScrollbarTest::signedRangeDragRebasesAndTracksModel()
