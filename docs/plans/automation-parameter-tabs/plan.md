@@ -1,0 +1,210 @@
+# Automation parameter tabs implementation plan
+
+> **Execution:** Use Porydaw's local rule://sdd-execution-loop, not a new orchestration framework. Dispatch one numbered brief to a fresh brief-first implementer, then apply the task-scoped spec/quality review gate. Implementers never commit or run project-wide validation.
+
+**Goal:** Replace the vertical automation stack with all nine selectable labels in the existing gutter and one parameter plot, while preserving every existing node behavior—including the origin phantom—and shared selection semantics.
+
+**Architecture:** AutomationCanvas owns the transient active controller/Tempo identity; Qt controls/layout/text own the selector presentation. Its existing minimumContentHeight API bridges the grid intrinsic height to the C++ drawer allocator. CCLanes retains the complete supported catalog; Tempo and all CC adapters remain in the logical node table. Real Qt Quick labels change only which logical lane is painted/hit-tested. Existing NodeLane, gesture, projection, shared selection and transaction machinery remains authoritative. DrawerSections applies an automation-only label minimum. Remove the old live stack/visibility/scroll/header UI contract; preserve the existing settings schema.
+
+**Technology:** C++20, Qt 6 Quick/QML plus Qt Quick Controls 2 in the current window, existing QtTest/WindowSystem harnesses, Deno build/verify/format tasks.
+
+**Agreed specification:** [spec.md](spec.md). **Reference inventory:** [reference-map.md](reference-map.md). The spec records the user's approved choices and overrides incidental old layout expectations.
+
+**Status:** Plan only. No application code changed, no build/runtime claim, no execution/commit/push/worktree authorization. Source line numbers are navigation evidence, never patch anchors.
+
+## Global Constraints
+
+1. Preserve all automation-node semantics and existing musical assertions. An origin phantom remains a view of its source event and edits that original event/tick; no synthetic storage at the viewport edge.
+2. Keep all nine logical adapters. Active-tab filtering applies to drawing/ordinary hits, not explicit shared multi-lane command or drag scope.
+3. Switching is view-only: no document revision/dirty/undo/cursor/selection/track change. Cancel unfinished owned gestures/forms before switching; foreign popup ownership survives.
+4. Include song-global Tempo in the same selector/plot. All labels remain available even empty. Default Volume; retain parameter type in each open SongTab and across primary-track changes.
+5. Existing gutter only. At most three measured columns, full labels, smaller typography permitted. Derive automation's minimum from the grid without changing shared minimums, Voice Changes/Velocity rules or the canonical split.
+6. Preserve shared keyboard routing; labels consume only advertised activation keys. Active parameter, shared-selection inclusion and focus are distinct states visually and accessibly.
+7. Clean cutover: remove Add/Show/Hide, empty/hidden-row registration, individual heights, Tempo pin/collapse, automation scrollbar. Keep EditorViewState storage, codec, remapping and persistence tests unchanged; old row settings no longer drive this UI. Preserve laneRanges, outer drawer state, every event and unrelated scrolling.
+8. No unrelated core/audio/QWidget/shared-key refactor, fake fallback or compatibility shim. Refresh LSP references before public API changes. Preserve concurrent user work.
+9. Use deno task only. Writers skip format/build/lint/tests; the controller owns settled-tree verification. Native/default-backend evidence is required for node/phantom pixels. Never ignore or hand off check failures.
+10. This request authorizes plan writing only. During a later authorized execution, commit actions belong to the controller under applicable explicit authorization; push every commit made per repository policy. Implementers never commit.
+11. Prefer built-in Qt behavior over custom controls and their checks. Adding Qt modules is approved where it removes implementation/test burden. Task 5 uses native TabButton checking/input, GridLayout, Text.HorizontalFit, FontMetrics, Binding and ContextMenu. Local code supplies only styling, the three-column policy, domain/menu wiring and a narrow Enter/Return extension.
+12. Hard implementation ceiling: at most 400 lines of new or materially rewritten production code across the entire plan, not per task. Count C++, headers, QML, build declarations and all properties/signals/adapters/glue. Deletions do not offset additions. The controller enforces the accounting and stop rule below.
+
+## Production code budget — controller owned
+
+This is primarily a presentation refactor and removal of obsolete code, not an opportunity to add another automation subsystem. The 35-task breakdown does not justify a larger implementation.
+
+- **Fixed baseline:** before implementation, record one baseline of the actual starting tree, including the user's existing uncommitted work. Recompute the aggregate change against that baseline; do not reset the allowance at each task or sum successive revisions of the same lines.
+- **Count:** at most 400 new or materially rewritten production code lines, measured as nonblank, non-comment physical lines in normal project formatting. Include C++, headers, QML, build declarations, properties, signals, adapters, cancellation/selection wiring and other glue in both new and existing files. A changed line counts; unchanged surrounding lines do not.
+- **Separate accounting:** report verified unchanged code moves, formatting-only changes, production deletions, and test additions/modifications/deletions separately. Unchanged moves require source/destination evidence. Never use net LOC, subtract deletions, move new logic elsewhere, compress formatting, or weaken tests/behavior to make the implementation appear under budget.
+- **Before each dispatch:** give the implementer the current aggregate count, remaining allowance, and expected contribution of the task. Check that the remaining feature work can still fit; no task receives its own 400-line allowance.
+- **At every settled task and fix/review gate:** the implementer reports its production contribution and any claimed move/format exclusions. The controller verifies them against the fixed baseline, updates the aggregate in the existing task/review record, and gives the reviewer the same count. An over-budget result cannot be accepted merely because it compiles or passes tests.
+- **Stop rule:** if the projected or actual total exceeds 400, pause further implementation dispatch and simplify/reuse existing code first. Revise the affected bounded briefs as needed. If the required behavior genuinely cannot fit, present the measured breakdown and obtain explicit user approval before increasing the ceiling. Do not silently expand the budget or drop acceptance criteria.
+- **Final gate:** recount the final formatted tree after fixes and cleanup. Delivery requires a verified total at or below 400, or an explicit user-approved exception. Report the charged production total and the separate move/deletion/test counts; do not create a new tracking subsystem for this.
+
+## File map and ownership
+
+- Catalog/adapters: src/ui/editordrawer/cclanes.h/.cpp; existing core/timedefaults.h and core/xcmd.h supply identities, not new supported controller policy.
+- Active identity, cancellation and minimal presentation bindings: automationcanvas.h and new automationcanvas_tabs.cpp. No custom layout/fit cache.
+- Plot/input: automationcanvas.cpp and automationcanvas_input.cpp. automationcanvas_gesture.cpp remains the authoritative unchanged phantom/multi-lane algorithm.
+- Rendering: src/ui/songview/quick/automationquick.cpp; keep existing NodeLaneQuickPaint paths.
+- Labels/context: new AutomationTabs.qml, TimelineCanvas.qml, timelinequickview.cpp and CMakeLists.txt.
+- Allocation/scrollbar: drawersections, editordrawer, drawerchrome and DrawerChromeLayer.qml; piano-roll vertical scrollbar APIs are out of scope.
+- Old interfaces: AutomationPage, TempoLane, AutomationGeometry, SongView viewstate facades and TimelineQuickScene Tempo header publication.
+- Checks: adapt existing automation editing/presentation/hover/raster, selectionkey, host, drawer, scrollbar and native graphics fixtures only where the UI contract changes. Workspace, mainwindow-routing and rollcheck persistence/identity/remap coverage runs unchanged. Briefs give exact write sets.
+- Event algorithms, NodeLane adapters/paint, shared key dispatch, playback/audio are non-goals. Domain tests run unchanged; any compile fallout must be reviewed against the spec.
+
+Only two new production files: automationcanvas_tabs.cpp and AutomationTabs.qml. Everything else updates/removes existing cohesive code. No generic tab framework or second state model.
+
+### Qt-owned behavior versus application-owned behavior
+
+| Concern | Decision |
+| --- | --- |
+| Button input/checking/exclusivity/focus/accessibility action | Native Controls Basic TabButton; bind checked to domain identity, no second selection model or custom press lifecycle |
+| Text fitting | Text.HorizontalFit/minimumPixelSize; no C++ or JavaScript font-size search or fitting cache |
+| Compact grid and height | FontMetrics plus one at-most-three-column binding; GridLayout handles placement/implicitHeight; one Qt Binding publishes the minimum |
+| Context-menu detection | ContextMenu.onRequested, including platform context-menu events; remove the right-button TapHandler |
+| Active identity, selection, cancellation and existing menus | Existing AutomationCanvas/selection/QuickPopupSession; no Qt models/actions/menu framework introduced just for nine labels |
+| C++ drawer allocation | Reuse minimumContentHeight; one equality-guarded size bridge and existing geometry signal, no second sizing authority or scheduler |
+| Nodes, phantom, musical undo/transactions | Keep the existing NodeLane/adapters/paint/gesture code and regression expectations |
+| Settings | Leave EditorViewState/codec/remap and their tests unchanged; no schema cleanup bundled with the UI feature |
+
+Task 5 adds QuickControls2 and declares Qt 6.9, matching existing build/release CI. Import Basic locally and QtQuick.Layouts through the existing QML module; verify packaged imports. Do not migrate existing menus/value forms to another Qt subsystem as collateral work. Task 27 owns the small application key-routing integration scenario, not a unit suite for Qt controls.
+
+### Audit decisions and evidence
+
+- Removed the custom nested font-fitting solver, measurement cache and hand-calculated grid minimum. Per-label font fitting is acceptable: a uniform fitted font was the old plan's choice, not the user's requirement.
+- Reuse minimumContentHeight rather than add minimumParameterHeight and then delete the old method. Its meaning remains the minimum required canvas content height; only its source changes from stacked rows to the selector.
+- Removed settings-schema cleanup and the dependent workspace/main-window/remap test rewrites (old tasks 24, 25, 36). Retaining an existing storage contract is not a new compatibility wrapper for obsolete UI APIs. Old task 26 is reassigned to the missing stroke consumer and main-fixture helper closure.
+- Fixed the orphan automationstroke.cpp caller and removed the task-30/35 declared-but-undefined AutomationPage window. Task 4 migrates allocation/callback callers before task 32 removes them.
+- A throwaway Qt 6.11.0 offscreen experiment exercised native TabButton click -> checked/model changes -> programmatic reselection, Qt fitting in three/one/two-column layouts, enlarged font, and implicitHeight bound to a C++ QQuickWindow minimumHeight property. All eight reported states had no assertion failures; height-only resize produced no additional minimum notification. This supports native checked bindings and the acyclic intrinsic-size design. It does not prove Porydaw drawer allocation, Qt 6.9 deployment, native pixels or pointer/key integration; those remain implementation gates. Offscreen propagateSizeHints and startup font-alias diagnostics are not native-layout proof.
+
+Primary references: [Qt Text fitting](https://doc.qt.io/qt-6/qml-qtquick-text.html#fontSizeMode-prop), [GridLayout](https://doc.qt.io/qt-6/qml-qtquick-layouts-gridlayout.html), [ContextMenu](https://doc.qt.io/qt-6/qml-qtquick-controls-contextmenu.html), [TabButton](https://doc.qt.io/qt-6/qml-qtquick-controls-tabbutton.html), [Binding](https://doc.qt.io/qt-6/qml-qtqml-binding.html), and [Fowler's small behavior-preserving transformations](https://refactoring.com/).
+
+## Numbered execution tasks
+
+Every non-mechanical brief has at most three files, five steps and one acceptance predicate. Task 29 is the explicit same-shaped LSP-rename exception. Binding constraints repeat because each implementer starts without conversation history.
+
+| Task | Brief | Files | Prerequisites |
+| --- | --- | --- | --- |
+| 1 | [Canonicalize the supported parameter catalog](task-1-brief.md) | 3 | — |
+| 2 | [Add view-local parameter identity and Qt presentation bindings](task-2-brief.md) | 3 | 1 |
+| 3 | [Replace stacked geometry and drawing with one parameter plot](task-3-brief.md) | 3 | 2 |
+| 4 | [Route parameter input and expose the canvas to Quick](task-4-brief.md) | 3 | 3 |
+| 5 | [Install accessible compact parameter labels in the gutter](task-5-brief.md) | 3 | 4 |
+| 6 | [Honor the automation-only label minimum and full plot width](task-6-brief.md) | 3 | 5 |
+| 7 | [Retire lane visibility actions without changing event deletion](task-7-brief.md) | 3 | 5 |
+| 8 | [Give the editing fixture real parameter activation](task-8-brief.md) | 3 | 5, 6 |
+| 9 | [Preserve phantom source editing and normal node gestures](task-9-brief.md) | 3 | 8 |
+| 10 | [Preserve shared multi-lane edits behind the single visible plot](task-10-brief.md) | 3 | 8, 9 |
+| 11 | [Prove parameter switches invalidate stale forms and gestures](task-11-brief.md) | 3 | 8 |
+| 12 | [Migrate parameter menus and clipboard surface tests](task-12-brief.md) | 3 | 7, 8, 11 |
+| 13 | [Replace pinned Tempo presentation tests with tab presentation](task-13-brief.md) | 3 | 5, 6 |
+| 14 | [Adapt hover fixtures to parameter activation](task-14-brief.md) | 3 | 5, 6 |
+| 15 | [Adapt raster fixture identity and preserve native node pixels](task-15-brief.md) | 3 | 5, 6 |
+| 16 | [Preserve raster interaction and native playhead alignment](task-16-brief.md) | 3 | 9, 15 |
+| 17 | [Remove automation-scrollbar tests without weakening remaining scrollbars](task-17-brief.md) | 2 | 6 |
+| 18 | [Retire stacked-layout editing cases while retaining input routing](task-18-brief.md) | 3 | 8, 13, 17 |
+| 19 | [Verify automation minimum without changing other drawer sections](task-19-brief.md) | 3 | 6, 13 |
+| 20 | [Migrate shared-selection probe and core fixtures](task-20-brief.md) | 3 | 5, 6, 10 |
+| 21 | [Preserve shared gesture arbitration after removing the automation thumb](task-21-brief.md) | 3 | 20 |
+| 22 | [Preserve window-tier selection and SongTab lifetime behavior](task-22-brief.md) | 3 | 20, 21 |
+| 23 | [Preserve host seams and cancellation transactions](task-23-brief.md) | 3 | 6, 20, 22 |
+| 27 | [Preserve label-local activation and shared keyboard fallback](task-27-brief.md) | 2 | 22 |
+| 28 | [Preserve pencil edits on empty supported parameters](task-28-brief.md) | 1 | 8, 9, 10, 12, 18 |
+| 26 | [Complete stroke activation and editing fixture cutover](task-26-brief.md) | 3 | 8, 9, 10, 12, 18, 28 |
+| 29 | [Rename obsolete expansion helpers after semantic migrations](task-29-brief.md) | 7 (mechanical) | 14, 15, 16, 26, 28 |
+| 30 | [Remove obsolete SongView lane-visibility facades](task-30-brief.md) | 2 | 7, 12, 23, 26, 28, 29 |
+| 31 | [Remove automation scrollbar chrome end to end](task-31-brief.md) | 3 | 4, 6, 17, 19, 21, 22, 27, 30 |
+| 32 | [Remove canvas row-resize and pinned-Tempo machinery](task-32-brief.md) | 2 | 18, 28, 29, 30, 31 |
+| 33 | [Reduce TempoLane to its unchanged musical adapter](task-33-brief.md) | 3 | 3, 13, 16, 29, 32 |
+| 34 | [Remove CC stack metrics and default-visible presentation constants](task-34-brief.md) | 3 | 1, 3, 7, 18, 30, 32, 33 |
+| 35 | [Remove automation page scroll and per-row sizing state](task-35-brief.md) | 3 | 30, 31, 32, 33, 34 |
+| 37 | [Remove obsolete Tempo header scene publication](task-37-brief.md) | 3 | 3, 5, 13, 16, 33 |
+| 38 | [Remove unused lane-stack geometry constants](task-38-brief.md) | 2 | 18, 28, 32, 33, 34, 35, 37 |
+
+The table order is the safe default; task 26 now follows task 28. Withdrawn numbers 24, 25 and 36 are intentionally not dispatched. Production tasks share canvas/scene/header ownership; do not run those writers concurrently. Independent suite migrations may be batched only after prerequisites exist and their exact write sets are disjoint. The controller owns integration, shared headers and proof. No worker validates while another writer is active.
+
+Tasks 1–2 are additive preparation; 3–7 make the intentional UI feature change; the active tasks through 29 adapt only affected consumers; 30 onward remove unused UI interfaces after callers move. Do not describe the new UI behavior as a pure refactoring. Preserve musical behavior throughout.
+
+After every settled task, the controller builds the checks target before closing its review gate. Keep declarations and definitions together; do not accept broken compilation until the end. Run focused behavioral coverage at coherent checkpoints: unchanged domain coverage after preparation; actual selector/allocation smoke after tasks 5–7; each migrated suite when its fixtures are complete (the editing suite closes at task 26); relevant suites after every API-removal task. Do not run obsolete stacked-layout assertions against an intentionally changed surface and call their failure a regression fix; migrate those named cases without weakening musical assertions. The final full-suite/native gate remains mandatory.
+
+Refactoring guard: retain method names and signatures that still express a real responsibility (rows, laneBody, coordinate queries, minimumContentHeight). No wholesale renderer rewrite, adapter replacement, helper churn or settings cleanup. Change visible-lane enumeration and remove obsolete chrome around the existing composition calls. A caller outside an exact write set requires a bounded caller-migration brief before API deletion, never an undefined-symbol interval or compatibility stub.
+
+## Node-preservation matrix
+
+| Required behavior | Existing machinery kept | Required proof |
+| --- | --- | --- |
+| Phantom source event/tick; no viewport-edge insertion | originPhantom, originPhantomAt, nodePointHit, NodeLaneQuickPaint .phantom | Task 9 extends scrolledOriginPhantomCommits for CC/Tempo with away/back switching and undo; 14–16 retain native hover/raster source checks |
+| Explicit/implicit defaults and Tempo lead-in | Adapter points/leadIn and static composition | Existing emptyTempoStorageComposesNoLeadIn, firstNonzeroTempoPointComposesImplicitLeadInCurve, explicitTickZeroTempoPointSuppressesLeadInCurve and projectionCanvasOrigin |
+| Drag/modifiers/stationary/delete/double-click | Existing node gesture state machine | Existing automationnodedrag cases; adapt activation/geometry, never musical expectations |
+| Pencil/sweep/ramp/snapping/bend | Existing gestures and projection | Task 28 replaces artificial CC11 with empty supported CC1; retains transaction/tick/value/bend results; domain suite unchanged |
+| Selected nodes in unpainted lanes | Complete logical table and collectSelectedNodeDrags | Task 10 preserves mixed Tempo/Pan/LFO same-tick order, untouched Volume, transaction/undo/redo after real tab switches |
+| New band selection | Existing band gesture with active endpoints | Task 10 asserts separate Tempo/CC bands select only the active parameter |
+| Value prompts/menus and stale handles | Revision/row/session guards and cancelInteraction | Task 11 switches during prompt/drag, attempts stale accept/release; foreign-session tests remain |
+| Parameter commands/deletion | Existing clipboard/range and guarded confirmation | Tasks 7/12 preserve data effects/undo; labels remain after Clear/Delete; no Add/Hide/Show |
+| Lifetime/input cancellation | Existing SongView/Quick ownership | Automation ownership, host lifecycle, selectionkey; tasks 22/23 retain relevant cancellation rows |
+| Selection/tab identity | EditorSelectionModel and view-local active type | Tasks 8/10/22/27 prove unchanged bytes/undo/scope, label keys and SongTab/track transitions |
+| Geometry/rendering | Canonical input-host bounds, same clip/paint paths | Tasks 13/16/19 prove minimum/enlarged-font labels, active-only nodes, borders, native phantom and playhead alignment |
+
+Never repin point ticks, same-tick order, explicit/implicit storage, undo grouping or command targets merely because a fixture assumed stacked rows. Such a failure is a production regression until proven otherwise. Tests only about removed stack/header/scrollbar plumbing are deleted, not repinned.
+
+## Controller proof gate
+
+After all implementation/review gates settle:
+The controller first applies the production-code budget gate above; final verification does not waive the 400-line ceiling.
+
+
+1. Refresh references across affected UI/check folders. Removed UI APIs have no remaining consumer; preserved EditorViewState/codec/remap references are explicitly not removal targets; unrelated piano-roll scrolling is not a false positive. Format edited supported files once with deno task format. No source-text tests or warning suppression.
+2. Compile and run focused coverage. Exact registered filters from src/checks/checkcatalog.cpp:
+
+~~~sh
+deno task verify --filter automation- --verbose
+deno task verify --filter selectionkey --verbose
+deno task verify --filter editor-drawer --verbose
+deno task verify --filter scrollbar --verbose
+deno task verify --filter host- --verbose
+deno task verify --filter mainwindow-routing-state --verbose
+deno task verify --filter selftest-workspace --verbose
+deno task verify --filter projectworkspacecheck --verbose
+deno task verify --filter sessioncheck --verbose
+deno task verify --filter rollcheck --verbose
+deno task verify --filter playhead-guides --verbose
+deno task verify --filter rendering-playhead --verbose
+~~~
+
+These commands build first. The controller may avoid duplicate runs by running full verify once and recording every listed family; never silently omit a family. Read skill://verify and skill://porydaw-offscreen-window-checks before choosing backend/invocation settings. Avoid repeated desktop-input stress runs while the user uses the machine.
+
+3. Exercise the real native Quick surface through the adapted WindowSystem fixtures, and launch the built app once through hub using the executable path reported by deno task build:app. Creation is not readiness: observe an exposed/rendered window without QML errors. Use skill://capture-macos-app-window for a bounded screenshot of the correct process window. No Instruments trace.
+
+Native smoke matrix:
+- At automation minimum/normal font: all nine full labels fit, every click changes the sole plot, no automation scroll strip, unchanged horizontal camera/grid alignment.
+- At enlarged font/minimum supported host geometry: resize down to the derived minimum; all labels remain usable/unclipped. Larger height expands the plot, not a stack. Velocity/Voice Changes sizes/cap/handoff unchanged.
+- With explicit multi-lane selection: cycle labels and verify unchanged bytes/revision/undo/selection and scope indicators on inactive included parameters. Group edit and undo through the existing command path.
+- For CC and Tempo: scroll horizontally past a stored node, switch away/back, hover/drag the origin phantom. Observe paint/held-value readout; edit the original source tick, commit once, undo to exact prior bytes. No viewport-edge duplicate.
+- Switch during provisional drag or pending prompt; attempt old release/accept: no wrong-parameter edit. Fresh edits recover; foreign popup ownership preserved.
+- Choose different parameters in two SongTabs, switch tabs, change primary track and edit: the chosen type follows the intended tab/track; Tempo remains global. Exercise Enter/Space, Tab and a shared edit key from a label.
+
+Native harnesses provide deterministic real pointer/keyboard input. Software/offscreen captures do not prove QSG pixels. If native capability is unavailable, finish reachable checks and report the exact missing proof; do not call it verified.
+
+4. Final complete gate:
+
+~~~sh
+deno task verify --verbose
+~~~
+
+Expected: all harnesses pass, no assertion/QML/runtime failure. Resolve failures before handoff. Review the changed GUI against user expectations, not merely compilation.
+
+5. After smoke proves behavior, perform required delivery cleanup. Only then append concrete documentation/cleanup work to the controller execution todo: update SPEC.md's addable-lane/pinned-Tempo prose and clarify that stored old row settings no longer drive this UI (the storage format remains unchanged); replace stale Add-lane material in docsrc/manual/automation.md with implemented selector/Tempo/selection/phantom behavior. Preserve unrelated manual stubs and do not invent supported parameters. Remove throwaway scripts. Add a changelog entry only if an established applicable changelog exists. Do not add tests merely to demonstrate work. Reverify if cleanup changes behavior.
+
+## Execution and review contract
+
+- Initialize each of the 35 active tasks in table order as its own todo. Do not initialize withdrawn tasks 24, 25 or 36, compress active tasks into phases, or track them from memory.
+- Dispatch the exact brief to sdd-implementer. On NEEDS_CONTEXT, resolve source/tool facts first and revise a bounded brief; never ask the user for repository-provided information.
+- Apply local task-scoped spec/quality review after each task. Fix/re-review up to the local five-round cap, then escalate the concrete unresolved issue. Never silently accept failed review findings.
+- Enforce the aggregate production-code budget at every dispatch and settled review/fix gate. Include the count and remaining allowance in dispatch context and review results; a clean functional review does not override the ceiling.
+- Controller integrates and validates after writers settle. The final report distinguishes actual proof from unrun checks and names blockers. A phase boundary is not a handoff.
+- This plan is ready for future authorized execution; it does not start it.
+
+## Plan self-review
+
+Review coverage: catalog, Tempo, all node/phantom invariants, selection, sizing/font, keyboard/accessibility, menus/lifetime, persistence, exported consumers and native/full verification. All listed existing paths were checked; exactly two production paths are new. Numbered tasks own the reference-map consumer inventory. Non-mechanical tasks meet three-file/five-step caps; dependencies precede consumers in table order (task 26 deliberately follows 28). Code/QML snippets use the produced interfaces, not placeholders.
+
+Method: original [writing-plans skill](https://github.com/obra/superpowers/blob/main/skills/writing-plans/SKILL.md), adapted to the mandatory local SDD brief/review loop. Accessibility API: [Qt Accessible documentation](https://doc.qt.io/qt-6/qml-qtquick-accessible.html).
