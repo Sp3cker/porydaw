@@ -89,6 +89,9 @@ PromptCard {
             id: search
 
             objectName: "voicePickerSearch"
+            HoverHandler {
+                cursorShape: Qt.IBeamCursor
+            }
             anchors.fill: parent
             clip: true
             color: appearance.text
