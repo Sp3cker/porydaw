@@ -8,8 +8,10 @@
 // * window Copy with timeline/automation focus executes exactly once, Copy
 //   lands the note clip on the clipboard, and an unrecognized key is a
 //   terminal no-op (plan 5);
-// * parameter labels activate locally without retargeting multi-lane selection,
-//   and retain shared editing commands; deliberately keyboard-focused drawer
+// * parameter labels activate locally with Enter/Return — bare Space on
+//   focused labels or drawer toggles routes exactly one transport
+//   play/pause request — without retargeting multi-lane selection, and
+//   retain shared editing commands; deliberately keyboard-focused drawer
 //   grips keep local arrows and toggles still route selected-note arrows;
 // * a live drawer resize drag holds the
 //   pointer: shared editing keys cannot mutate the selected notes, Escape

@@ -10,6 +10,10 @@ velocity drag chord) are rebindable too. -->
 
 On macOS, `Ctrl` corresponds to the `Cmd` key (Command).
 
+Global shortcuts, such as `Space` for Play/Pause, stay active while timeline
+controls have keyboard focus. Modal prompts, text entry, and auditioning use
+keys locally instead.
+
 ### Piano Roll
 
 | Command | Default Shortcut | Description |

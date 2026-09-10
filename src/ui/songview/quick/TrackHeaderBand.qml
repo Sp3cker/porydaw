@@ -106,7 +106,6 @@ Item {
 
         Keys.onReturnPressed: (event) => toggle.activateFromKeyboard(event)
         Keys.onEnterPressed: (event) => toggle.activateFromKeyboard(event)
-        Keys.onSpacePressed: (event) => toggle.activateFromKeyboard(event)
 
         Accessible.role: Accessible.Button
         Accessible.name: accessibleName
@@ -341,7 +340,6 @@ Item {
 
                                 Keys.onReturnPressed: (event) => addTrackRow.activateFromKeyboard(event)
                                 Keys.onEnterPressed: (event) => addTrackRow.activateFromKeyboard(event)
-                                Keys.onSpacePressed: (event) => addTrackRow.activateFromKeyboard(event)
 
                                 Accessible.role: Accessible.Button
                                 Accessible.name: trackHeaderRow.title

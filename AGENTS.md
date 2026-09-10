@@ -26,6 +26,23 @@ docs/ docsrc/ — spec, plans, manual
 
 Harness root is `src/checks/` — never add a new `*check.cpp` to `src/` top-level.
 
+## Global keyboard shortcut priority
+
+Registered window-level shortcuts outrank incidental keyboard focus in
+persistent application chrome. `keymap::Registry` bindings stay window
+`QAction`s; persistent Quick chrome must never claim bare `Space` through
+`ShortcutOverride` or `Keys.onSpacePressed`. Persistent Quick controls activate
+locally with `Enter`/`Return`, pointer input, and accessibility press actions.
+
+Intentional local `Space` exceptions remain: modal prompts, literal text/IME
+entry, and explicit audition surfaces. Existing popup arbitration stands; a
+focused numeric field still yields `Space` to the window command. Do not add a
+second dispatcher, synthetic forwarding, or focus memory.
+
+Window-tier transport-priority coverage in `src/checks/selectionkey/` observes
+`WorkspaceUi::playPauseRequested` through the shown Quick window; drawer
+activation checks use `Enter`.
+
 ## Timeline keyboard routing
 
 Shared selection commands belong in `SongView::handleEditKey` in

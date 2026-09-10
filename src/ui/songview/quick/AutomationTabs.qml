@@ -72,15 +72,16 @@ Item {
                         event.accepted = true
                     }
                 }
-                // Claim only the plain activation keys before window-level
-                // shortcuts (the transport play/pause Space binding) can take
-                // them from this focused label: an item beats a shortcut only
-                // by accepting the ShortcutOverride event. Modified or
+                // Claim only the plain Return/Enter activation keys before
+                // window-level shortcuts can take them from this focused
+                // label: an item beats a shortcut only by accepting the
+                // ShortcutOverride event. Bare Space stays unclaimed here so
+                // the transport play/pause window shortcut outranks
+                // incidental focus in this persistent control. Modified or
                 // auto-repeat variants stay unclaimed and continue to the
                 // shared SongView policy, matching onPressed below.
                 Keys.onShortcutOverride: (event) => event.accepted =
-                    (event.key === Qt.Key_Space || event.key === Qt.Key_Return
-                     || event.key === Qt.Key_Enter)
+                    (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
                     && event.modifiers === Qt.NoModifier && !event.isAutoRepeat
 
                 // Right-click and the context-menu key route through the

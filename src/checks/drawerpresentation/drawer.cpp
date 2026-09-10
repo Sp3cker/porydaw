@@ -175,7 +175,7 @@ void DrawerPresentationTest::drawerZeroHeightKeyboardToggle()
     QVERIFY(toggle);
     QVERIFY(toggle->property("activeFocusOnTab").toBool());
     toggle->forceActiveFocus(Qt::TabFocusReason);
-    sendKey(*toggle, Qt::Key_Space);
+    sendKey(*toggle, Qt::Key_Return);
     pump();
     QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Velocity));
     QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Automations));

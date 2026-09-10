@@ -124,7 +124,6 @@ Item {
 
         Keys.onReturnPressed: (event) => control.activateFromKeyboard(event)
         Keys.onEnterPressed: (event) => control.activateFromKeyboard(event)
-        Keys.onSpacePressed: (event) => control.activateFromKeyboard(event)
 
         Accessible.role: Accessible.Button
         Accessible.name: control.accessibleName + ": " + control.controlText

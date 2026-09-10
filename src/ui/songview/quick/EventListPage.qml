@@ -343,10 +343,6 @@ Item {
             control.triggered()
             event.accepted = true
         }
-        Keys.onSpacePressed: (event) => {
-            control.triggered()
-            event.accepted = true
-        }
 
         Accessible.role: Accessible.Button
         Accessible.name: control.label

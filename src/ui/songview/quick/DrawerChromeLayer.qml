@@ -149,14 +149,14 @@ Item {
 
         Keys.onReturnPressed: (event) => toggle.activateFromKeyboard(event)
         Keys.onEnterPressed: (event) => toggle.activateFromKeyboard(event)
-        Keys.onSpacePressed: (event) => toggle.activateFromKeyboard(event)
-        // Claim the activation keys before window-level shortcuts (the
-        // transport play/pause Space binding) can take them from this
-        // focused control: an item beats a shortcut only by accepting the
-        // ShortcutOverride event.
+        // Claim only the plain Return/Enter activation keys before
+        // window-level shortcuts can take them from this focused control: an
+        // item beats a shortcut only by accepting the ShortcutOverride
+        // event. Bare Space stays unclaimed so the transport play/pause
+        // window shortcut outranks incidental focus in this persistent
+        // control.
         Keys.onShortcutOverride: (event) => event.accepted =
-            event.key === Qt.Key_Space || event.key === Qt.Key_Return
-            || event.key === Qt.Key_Enter
+            event.key === Qt.Key_Return || event.key === Qt.Key_Enter
 
         Accessible.role: Accessible.Button
         Accessible.name: accessibleName
@@ -247,11 +247,10 @@ Item {
 
         Keys.onReturnPressed: (event) => drawerDetent.activateFromKeyboard(event)
         Keys.onEnterPressed: (event) => drawerDetent.activateFromKeyboard(event)
-        Keys.onSpacePressed: (event) => drawerDetent.activateFromKeyboard(event)
-        // Same activation-key claim as DrawerToggle above.
+        // Same non-transport claim as DrawerToggle above: only the plain
+        // Return/Enter activation keys.
         Keys.onShortcutOverride: (event) => event.accepted =
-            event.key === Qt.Key_Space || event.key === Qt.Key_Return
-            || event.key === Qt.Key_Enter
+            event.key === Qt.Key_Return || event.key === Qt.Key_Enter
 
         Accessible.role: Accessible.CheckBox
         Accessible.name: qsTr("Velocity detents")

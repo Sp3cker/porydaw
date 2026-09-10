@@ -59,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Disabled rows in the shared Quick menu now expose the correct disabled state to assistive technology while clicks on them remain menu-contained.
 - Keep a pressed popup row active when an external document edit cancels timeline gestures. Releasing the row still rejects its stale target rather than overwriting the newer edit.
 - Close shared timeline popups when their song surface is hidden or becomes unavailable, and detach the Quick scene before its document and controller objects are destroyed.
+- `Space` play/pause no longer appears focus-dependent: persistent Quick chrome does not claim bare `Space`, so the global transport shortcut fires while timeline controls have keyboard focus. Those controls activate with `Enter`/`Return`, pointer input, or accessibility press actions; modal prompts, text entry, and auditioning use keys locally as before.
 
 ## [1.0.0] - 2026-08-01
 Initial release.

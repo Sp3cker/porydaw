@@ -1,6 +1,7 @@
 // Selection keyboard routing through the production Quick window: parameter
 // labels keep activation local and leave shared editing commands to SongView.
-// Drawer grips and toggles retain their existing keyboard behavior.
+// Drawer grips and toggles keep their local Enter/Return and arrow keys while
+// bare Space stays with the window transport shortcut.
 
 #include "checks/selectionkey/tst_windowtier.h"
 
@@ -216,16 +217,23 @@ void SelectionWindowTierTest::parameterLabelActivationAndSharedCommands()
         return label && label->hasActiveFocus();
     };
     QVERIFY(focusParameter(kController));
-    QVERIFY(selectionUnchanged());
+    // Bare Space on a focused non-active label is transport input, not label
+    // activation: the window-level play/pause shortcut outranks incidental
+    // focus in this persistent control.
     const auto activeBeforeSpace = canvas->parameterRow(canvas->activeParameter());
-    selectionkey::deliverKey(quickWindow(), Qt::Key_Space);
     const EditorAutomationRowId pan{EditorAutomationRowKind::ControlChange, kTrack, kController};
-    QCOMPARE(canvas->parameterRow(canvas->activeParameter()), std::optional{pan});
-    QVERIFY(activeBeforeSpace != std::optional{pan});
-    QCOMPARE(document.smf().write(), before);
-    QVERIFY(selectionUnchanged());
+    QVERIFY2(canvas->parameterRow(canvas->activeParameter()) != std::optional{pan},
+             "the focused parameter label was already the active parameter before Space");
+    QSignalSpy playPause(m_workspace, &WorkspaceUi::playPauseRequested);
+    selectionkey::deliverKey(quickWindow(), Qt::Key_Space);
+    QVERIFY2(playPause.count() == 1 &&
+                 canvas->parameterRow(canvas->activeParameter()) == activeBeforeSpace &&
+                 document.smf().write() == before && selectionUnchanged(),
+             "bare Space on a focused parameter label did not route exactly one "
+             "transport play/pause request with no label, document or selection change");
 
-    // Only the advertised extension needs an exactly-once integration guard.
+    // Enter/Return are the advertised local label-activation keys: each one
+    // activates exactly once without retargeting selection or editing.
     QSignalSpy parameterChanges(canvas, &AutomationCanvas::activeParameterChanged);
     QVERIFY(focusParameter(kSecondController));
     selectionkey::deliverKey(quickWindow(), Qt::Key_Enter);
@@ -345,8 +353,9 @@ void SelectionWindowTierTest::chromeToggleRoutesNoteArrows()
     QVERIFY2(focusAutomationBand(view), "could not focus the automation band");
     view.selectionModel().setNoteSelection({pair->ids[0], pair->ids[1]});
 
-    // The drawer toggle: activation keys stay local, and the note arrows route
-    // to the selected notes with the exact production effect.
+    // The drawer toggle: bare Space stays with the window transport shortcut,
+    // Enter/Return activate locally, and the note arrows route to the
+    // selected notes with the exact production effect.
     const QPointer<QQuickItem> toggle = tabTo(
         quickWindow(), {QStringLiteral("drawerAutomationToggle")}, chromeTraversalBound(document));
     QVERIFY2(toggle, "Tab traversal never reached the automation drawer toggle");
@@ -368,14 +377,31 @@ void SelectionWindowTierTest::chromeToggleRoutesNoteArrows()
     QVERIFY2(afterUp.has_value() && afterUp->key == uint8_t(beforeRight->key + 1) &&
                  afterUp->tick == afterRight->tick,
              "the routed Up arrow did not transpose exactly the selected notes");
+    // Bare Space on the focused toggle is transport input, not toggle
+    // activation: the window-level play/pause shortcut outranks incidental
+    // focus in this persistent control, and the drawer and selected notes
+    // stay untouched.
     const std::optional<DocNote> beforeActivation = selectionkey::noteById(document, pair->ids[0]);
     const bool visibleBefore = view.drawerSectionVisible(EditorDrawerPage::Automations);
+    QSignalSpy playPause(m_workspace, &WorkspaceUi::playPauseRequested);
     selectionkey::deliverKey(quickWindow(), Qt::Key_Space);
+    QVERIFY2(playPause.count() == 1 &&
+                 view.drawerSectionVisible(EditorDrawerPage::Automations) == visibleBefore,
+             "bare Space on the focused drawer toggle did not route exactly one transport "
+             "play/pause request while leaving the drawer section hidden or shown");
+    const std::optional<DocNote> afterSpace = selectionkey::noteById(document, pair->ids[0]);
+    QVERIFY2(afterSpace.has_value() && beforeActivation.has_value() &&
+                 afterSpace->tick == beforeActivation->tick &&
+                 afterSpace->key == beforeActivation->key,
+             "bare Space on the focused toggle moved or edited the selected note");
+    // Enter and Return are the advertised local activation keys: each one
+    // toggles exactly once and the second press restores the drawer.
+    selectionkey::deliverKey(quickWindow(), Qt::Key_Enter);
     QVERIFY2(view.drawerSectionVisible(EditorDrawerPage::Automations) != visibleBefore,
-             "Space did not activate the focused drawer toggle");
-    selectionkey::deliverKey(quickWindow(), Qt::Key_Space);
+             "Enter did not activate the focused drawer toggle");
+    selectionkey::deliverKey(quickWindow(), Qt::Key_Return);
     QVERIFY2(view.drawerSectionVisible(EditorDrawerPage::Automations) == visibleBefore,
-             "the second Space press did not restore the drawer toggle");
+             "Return did not restore the drawer toggle");
     const std::optional<DocNote> afterActivation = selectionkey::noteById(document, pair->ids[0]);
     QVERIFY2(afterActivation.has_value() && beforeActivation.has_value() &&
                  afterActivation->tick == beforeActivation->tick &&
