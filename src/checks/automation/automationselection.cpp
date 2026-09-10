@@ -187,7 +187,6 @@ bool selectionMatches(const songview::EditorSelectionModel::TimeSelection &selec
 void AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows()
 {
     QVERIFY(stage(mixedSelectionSmf()));
-    QVERIFY(expandTempo());
 
     const LaneHandle tempoLane = findRow({EditorAutomationRowKind::Tempo, 0, 0});
     const LaneHandle panLane =
@@ -275,7 +274,6 @@ void AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows()
 void AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder()
 {
     QVERIFY(stage(mixedSelectionSmf()));
-    QVERIFY(expandTempo());
     const LaneHandle tempoLane = findRow({EditorAutomationRowKind::Tempo, 0, 0});
     const LaneHandle panLane =
         findRow({EditorAutomationRowKind::ControlChange, kTrack, kPanController});
@@ -363,7 +361,6 @@ void AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder()
 void AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop()
 {
     QVERIFY(stage(mixedSelectionSmf()));
-    QVERIFY(expandTempo());
     const LaneHandle tempoLane = findRow({EditorAutomationRowKind::Tempo, 0, 0});
     const LaneHandle panLane =
         findRow({EditorAutomationRowKind::ControlChange, kTrack, kPanController});
@@ -442,7 +439,6 @@ void AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop()
 void AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild()
 {
     QVERIFY(stage(mixedSelectionSmf()));
-    QVERIFY(expandTempo());
     const LaneHandle tempoLane = findRow({EditorAutomationRowKind::Tempo, 0, 0});
     const LaneHandle panLane =
         findRow({EditorAutomationRowKind::ControlChange, kTrack, kPanController});

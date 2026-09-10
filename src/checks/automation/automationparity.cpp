@@ -114,8 +114,6 @@ void AutomationEditingTest::hoverInsertionDoesNotMutateDocument()
     QFETCH(int, adapter);
     setPoints(m_tab->document(), adapter,
               {{kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}});
-    if (adapter == kTempo)
-        QVERIFY(expandTempo());
 
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
@@ -145,8 +143,6 @@ void AutomationEditingTest::stationaryNodeInteractions()
     const std::vector<NodePoint> fixture{
         {kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}};
     setPoints(m_tab->document(), adapter, fixture);
-    if (adapter == kTempo)
-        QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
     QVERIFY(activateParameter(rowId(adapter)));
@@ -190,8 +186,6 @@ void AutomationEditingTest::independentDoubleClickAfterDeleteOpensValuePrompt()
     const std::vector<NodePoint> fixture{
         {kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}};
     setPoints(m_tab->document(), adapter, fixture);
-    if (adapter == kTempo)
-        QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
     QVERIFY(activateParameter(rowId(adapter)));
@@ -235,8 +229,6 @@ void AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt()
     const std::vector<NodePoint> fixture{
         {kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}};
     setPoints(m_tab->document(), adapter, fixture);
-    if (adapter == kTempo)
-        QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
     QVERIFY(activateParameter(rowId(adapter)));
@@ -278,8 +270,6 @@ void AutomationEditingTest::sweepAndRampCommit()
     const std::vector<NodePoint> fixture{
         {kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}};
     setPoints(m_tab->document(), adapter, fixture);
-    if (adapter == kTempo)
-        QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
     QVERIFY(activateParameter(rowId(adapter)));
@@ -348,8 +338,6 @@ void AutomationEditingTest::pencilPreviewCommits()
 {
     QFETCH(int, adapter);
     setPoints(m_tab->document(), adapter, {});
-    if (adapter == kTempo)
-        QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
     QVERIFY(activateParameter(rowId(adapter)));
@@ -395,8 +383,6 @@ void AutomationEditingTest::laneBandSelectsRange()
     QFETCH(int, adapter);
     setPoints(m_tab->document(), adapter,
               {{kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}});
-    if (adapter == kTempo)
-        QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
     QVERIFY(activateParameter(rowId(adapter)));
@@ -441,8 +427,6 @@ void AutomationEditingTest::blankAndSubThresholdNoOps()
     const std::vector<NodePoint> fixture{
         {kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}};
     setPoints(m_tab->document(), adapter, fixture);
-    if (adapter == kTempo)
-        QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
     QVERIFY(activateParameter(rowId(adapter)));

@@ -138,7 +138,6 @@ void AutomationEditingTest::init()
     // activate it before the plot probes run against the single active
     // parameter.
     const EditorAutomationRowId ccRow{EditorAutomationRowKind::ControlChange, 0, kPilotController};
-    setRowMaximumHeight(ccRow);
     QVERIFY(activateParameter(ccRow));
 
     const LaneHandle lane = findRow(ccRow);
@@ -369,33 +368,6 @@ QPointF AutomationEditingTest::voicePoint(uint64_t tick) const
         return {};
     return {m_tab->view().camera().displayX(double(tick), 0.0, m_voiceInput->devicePixelRatio()),
             m_voiceInput->bounds().center().y()};
-}
-
-bool AutomationEditingTest::expandTempo()
-{
-    const LaneHandle tempo{0};
-    if (!laneBody(tempo).isEmpty())
-        return true;
-    if (!m_automationGutterInput)
-        return false;
-
-    const QRect header = m_page->canvas()->pinnedTempoRect();
-    if (header.isEmpty())
-        return false;
-    const QPointF headerPoint(m_automationGutterInput->bounds().center().x(),
-                              header.center().y() - page().verticalScroll());
-    mousePress(*m_automationGutterInput, Qt::LeftButton, headerPoint);
-    mouseRelease(*m_automationGutterInput, Qt::LeftButton, headerPoint);
-    return QTest::qWaitFor([this, tempo] { return !laneBody(tempo).isEmpty(); });
-}
-
-void AutomationEditingTest::setRowMaximumHeight(const EditorAutomationRowId &row)
-{
-    if (!m_tab)
-        return;
-    EditorViewState automationState = m_tab->view().editorViewState();
-    automationState.laneHeights[row] = AutomationGeometry::resolve().rowMaximumHeight;
-    m_tab->view().applyEditorViewState(automationState);
 }
 
 void AutomationEditingTest::setPencilMode(bool enabled)

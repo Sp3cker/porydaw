@@ -63,7 +63,7 @@ void AutomationEditingTest::clipboardCrossLanePasteClamps()
     AutomationPage &automationPage = page();
     AutomationCanvas *const canvas = automationPage.canvas();
     QVERIFY(canvas);
-    QVERIFY(expandTempo());
+    QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}));
     const quick_popup::PromptGuard guard(songTab.view());
 
     songTab.document().applyTempoEdit(TempoEdit{

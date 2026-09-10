@@ -145,7 +145,6 @@ void AutomationEditingTest::contextMenuRoutingAndAvailableLanes()
     QCoreApplication::processEvents();
     QVERIFY2(!ccMenu.session->isOpen(), "Escape did not dismiss the lane menu");
 
-    QVERIFY(expandTempo());
     songTab.document().applyTempoEdit(TempoEdit{
         .remove = songTab.document().tempoPoints(),
         .add = {{kOtherPointTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(120)}}});
@@ -225,7 +224,6 @@ void AutomationEditingTest::contextMenuActionsApplyEffects()
     AutomationPage &automationPage = page();
     AutomationCanvas *const canvas = automationPage.canvas();
     QVERIFY(canvas);
-    QVERIFY(expandTempo());
 
     songTab.document().applyTempoEdit(
         TempoEdit{.remove = songTab.document().tempoPoints(),

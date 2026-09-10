@@ -606,7 +606,6 @@ void AutomationEditingTest::parameterSwitchInvalidatesValuePrompt()
     QVERIFY(activateParameter(ccRow));
     const LaneHandle cc = findRow(ccRow);
     QVERIFY(cc.valid());
-    QVERIFY(expandTempo());
 
     // The pilot CC's point menu hands its Set Value pick to the inline
     // prompt with the stored value selected.

@@ -251,8 +251,6 @@ class AutomationEditingTest final : public QObject
     QPoint automationGutterWindowPoint(QPointF contentPoint) const;
     QPoint voiceWindowPoint(QPointF itemPoint) const;
     QPointF voicePoint(uint64_t tick) const;
-    bool expandTempo();
-    void setRowMaximumHeight(const EditorAutomationRowId &row);
     void setPencilMode(bool enabled);
     QAction *pencilModeAction() const;
     songview::TimelineQuickScene *quickScene() const;

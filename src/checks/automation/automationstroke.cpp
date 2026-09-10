@@ -54,10 +54,9 @@ void resetPencilView(SongView &view, double zoom = 96.0)
     QCoreApplication::processEvents();
 }
 
-void stageEmptyPanLane(SongDocument &document, AutomationPage &page)
+void stageEmptyPanLane(SongDocument &document)
 {
     document.writeLanePoints(kTrack, kPanController, 0, std::numeric_limits<uint64_t>::max(), {});
-    page.addEmptyLane(kTrack, kPanController);
     QCoreApplication::processEvents();
 }
 
@@ -139,7 +138,8 @@ void AutomationEditingTest::pencilSubCellHorizontalJitterDoesNotAlterStroke()
     SongDocument &document = tab().document();
     AutomationCanvas &canvas = *page().canvas();
     resetPencilView(tab().view());
-    stageEmptyPanLane(document, page());
+    stageEmptyPanLane(document);
+    QVERIFY(activateParameter(panRow()));
     QTRY_VERIFY(findRow(panRow()).valid());
     QTRY_VERIFY(!laneBody(findRow(panRow())).isEmpty());
     const LaneHandle handle = findRow(panRow());
@@ -178,7 +178,8 @@ void AutomationEditingTest::pencilZigzagStrokePreservesDirectionalExtrema()
 {
     SongDocument &document = tab().document();
     resetPencilView(tab().view());
-    stageEmptyPanLane(document, page());
+    stageEmptyPanLane(document);
+    QVERIFY(activateParameter(panRow()));
     QTRY_VERIFY(findRow(panRow()).valid());
     QTRY_VERIFY(!laneBody(findRow(panRow())).isEmpty());
     const LaneHandle handle = findRow(panRow());
@@ -216,7 +217,8 @@ void AutomationEditingTest::pencilVerticalMotionInSingleCellRetainsFinalValue()
 {
     SongDocument &document = tab().document();
     resetPencilView(tab().view());
-    stageEmptyPanLane(document, page());
+    stageEmptyPanLane(document);
+    QVERIFY(activateParameter(panRow()));
     QTRY_VERIFY(findRow(panRow()).valid());
     QTRY_VERIFY(!laneBody(findRow(panRow())).isEmpty());
     const LaneHandle handle = findRow(panRow());
@@ -254,11 +256,12 @@ void AutomationEditingTest::pencilDiagonalStrokeEventDensityInvariance()
     QFETCH(bool, canonical);
     SongDocument &document = tab().document();
     resetPencilView(tab().view(), zoom);
-    stageEmptyPanLane(document, page());
+    stageEmptyPanLane(document);
+    QVERIFY(activateParameter(panRow()));
     QTRY_VERIFY(findRow(panRow()).valid());
     QTRY_VERIFY(!laneBody(findRow(panRow())).isEmpty());
     const auto capture = [this, &document, canonical, zoom](bool dense) {
-        stageEmptyPanLane(document, page());
+        stageEmptyPanLane(document);
         setPencilMode(true);
         const LaneHandle handle = findRow(panRow());
         const auto point = [this, &document, handle](double tick, int value) {
@@ -331,7 +334,8 @@ void AutomationEditingTest::pencilBacktrackingStrokeRetainsExtremaAndLatestRevis
 {
     SongDocument &document = tab().document();
     resetPencilView(tab().view());
-    stageEmptyPanLane(document, page());
+    stageEmptyPanLane(document);
+    QVERIFY(activateParameter(panRow()));
     QTRY_VERIFY(findRow(panRow()).valid());
     QTRY_VERIFY(!laneBody(findRow(panRow())).isEmpty());
     const LaneHandle handle = findRow(panRow());
@@ -366,11 +370,12 @@ void AutomationEditingTest::pencilShiftModifierLocksValueDimension()
 {
     SongDocument &document = tab().document();
     resetPencilView(tab().view());
-    stageEmptyPanLane(document, page());
+    stageEmptyPanLane(document);
+    QVERIFY(activateParameter(panRow()));
     QTRY_VERIFY(findRow(panRow()).valid());
     QTRY_VERIFY(!laneBody(findRow(panRow())).isEmpty());
     const auto capture = [this, &document](bool held) {
-        stageEmptyPanLane(document, page());
+        stageEmptyPanLane(document);
         const LaneHandle handle = findRow(panRow());
         setPencilMode(true);
         const auto point = [this, &document, handle](double tick, int value) {
@@ -414,11 +419,12 @@ void AutomationEditingTest::pencilControlModifierDrawsUnsnappedClockQuantizedPoi
 {
     SongDocument &document = tab().document();
     resetPencilView(tab().view());
-    stageEmptyPanLane(document, page());
+    stageEmptyPanLane(document);
+    QVERIFY(activateParameter(panRow()));
     QTRY_VERIFY(findRow(panRow()).valid());
     QTRY_VERIFY(!laneBody(findRow(panRow())).isEmpty());
     const auto capture = [this, &document](bool reverse, bool dense) {
-        stageEmptyPanLane(document, page());
+        stageEmptyPanLane(document);
         const LaneHandle handle = findRow(panRow());
         setPencilMode(true);
         const auto point = [this, &document, handle](double tick, int value) {
@@ -489,7 +495,8 @@ void AutomationEditingTest::pencilMixedModifierComposesFreehandAndSnappedSegment
 {
     SongDocument &document = tab().document();
     resetPencilView(tab().view());
-    stageEmptyPanLane(document, page());
+    stageEmptyPanLane(document);
+    QVERIFY(activateParameter(panRow()));
     QTRY_VERIFY(findRow(panRow()).valid());
     QTRY_VERIFY(!laneBody(findRow(panRow())).isEmpty());
     const LaneHandle handle = findRow(panRow());
@@ -527,11 +534,12 @@ void AutomationEditingTest::pencilAltModifierIsIgnoredDuringStroke()
 {
     SongDocument &document = tab().document();
     resetPencilView(tab().view());
-    stageEmptyPanLane(document, page());
+    stageEmptyPanLane(document);
+    QVERIFY(activateParameter(panRow()));
     QTRY_VERIFY(findRow(panRow()).valid());
     QTRY_VERIFY(!laneBody(findRow(panRow())).isEmpty());
     const auto capture = [this, &document](Qt::KeyboardModifiers modifiers) {
-        stageEmptyPanLane(document, page());
+        stageEmptyPanLane(document);
         setPencilMode(true);
         const LaneHandle handle = findRow(panRow());
         const StrokePoint start =

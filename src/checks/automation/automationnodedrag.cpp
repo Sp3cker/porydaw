@@ -147,8 +147,6 @@ void AutomationEditingTest::nodeDragCommits()
     QFETCH(int, adapter);
     setPoints(m_tab->document(), adapter,
               {{kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}});
-    if (adapter == kTempo)
-        QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
     QVERIFY(activateParameter(rowId(adapter)));
@@ -256,8 +254,6 @@ void AutomationEditingTest::nodeDragShiftAxisLocks()
     QFETCH(bool, horizontal);
     setPoints(m_tab->document(), adapter,
               {{kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}});
-    if (adapter == kTempo)
-        QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
     QVERIFY(activateParameter(rowId(adapter)));
@@ -304,8 +300,6 @@ void AutomationEditingTest::scrolledOriginPhantomCommits()
     QFETCH(int, adapter);
     setPoints(m_tab->document(), adapter,
               {{kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}});
-    if (adapter == kTempo)
-        QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
     m_tab->view().setEditorTimeZoom(96.0);
@@ -387,8 +381,6 @@ void AutomationEditingTest::selectedRangeDragAndDelete()
                                          {kMovedTick, kLateValue},
                                          {kLastTick, kLastValue}};
     setPoints(m_tab->document(), adapter, fixture);
-    if (adapter == kTempo)
-        QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
     QVERIFY(activateParameter(rowId(adapter)));
@@ -452,8 +444,6 @@ void AutomationEditingTest::escapeCancelsAdapterDrag()
     QFETCH(int, adapter);
     setPoints(m_tab->document(), adapter,
               {{kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}});
-    if (adapter == kTempo)
-        QVERIFY(expandTempo());
     const LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
     QVERIFY(activateParameter(rowId(adapter)));
@@ -499,8 +489,6 @@ void AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers()
     const std::vector<NodePoint> fixture{
         {kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}};
     setPoints(m_tab->document(), adapter, fixture);
-    if (adapter == kTempo)
-        QVERIFY(expandTempo());
     LaneHandle lane = findRow(rowId(adapter));
     QVERIFY(lane.valid());
     QVERIFY(activateParameter(rowId(adapter)));

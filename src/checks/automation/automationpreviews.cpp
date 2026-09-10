@@ -148,7 +148,6 @@ void AutomationEditingTest::singleNodeDragPreview()
 {
     QFETCH(int, laneKind);
     const LaneKind kind = LaneKind(laneKind);
-    QVERIFY(kind != LaneKind::Tempo || expandTempo());
     QVERIFY(activateParameter(rowId(kind)));
     SongView &view = m_tab->view();
     SongDocument &document = m_tab->document();
@@ -204,7 +203,6 @@ void AutomationEditingTest::multiNodeDragPreview()
 {
     QFETCH(int, laneKind);
     const LaneKind kind = LaneKind(laneKind);
-    QVERIFY(kind != LaneKind::Tempo || expandTempo());
     QVERIFY(activateParameter(rowId(kind)));
     SongView &view = m_tab->view();
     SongDocument &document = m_tab->document();
@@ -272,7 +270,6 @@ void AutomationEditingTest::sweepPreview()
 {
     QFETCH(int, laneKind);
     const LaneKind kind = LaneKind(laneKind);
-    QVERIFY(kind != LaneKind::Tempo || expandTempo());
     QVERIFY(activateParameter(rowId(kind)));
     SongView &view = m_tab->view();
     SongDocument &document = m_tab->document();
@@ -322,7 +319,6 @@ void AutomationEditingTest::shiftRampPreview()
 {
     QFETCH(int, laneKind);
     const LaneKind kind = LaneKind(laneKind);
-    QVERIFY(kind != LaneKind::Tempo || expandTempo());
     QVERIFY(activateParameter(rowId(kind)));
     SongView &view = m_tab->view();
     SongDocument &document = m_tab->document();
