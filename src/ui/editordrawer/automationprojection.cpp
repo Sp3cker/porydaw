@@ -13,17 +13,12 @@ AutomationGeometry AutomationGeometry::resolve()
 {
     AutomationGeometry geometry;
     geometry.rowDefaultHeight = layout::fontPx(4.0);
-    geometry.rowMinimumHeight = layout::fontPx(7.0 / 3.0);
-    geometry.rowMaximumHeight = layout::fontPx(32.0 / 3.0);
-    geometry.rowWheelIncrement = layout::fontPx(1.0 / 3.0);
-    geometry.addLaneStripHeight = layout::fontPx(5.0 / 3.0);
     geometry.pointHitRadius = layout::fontPx(7.0 / 12.0);
     geometry.neutralSnapRadius = layout::fontPx(2.0 / 3.0);
     geometry.deleteTimeRadius = layout::fontPx(3.0 / 4.0);
     geometry.pointDetailThreshold = layout::fontPx(2.0);
     geometry.hoverPaintPadding = layout::fontPx(1.0 / 6.0);
     geometry.nodeDragActivationDistance = layout::fontPx(5.0 / 12.0);
-    geometry.gridMinimumCellWidth = layout::fontPx(4.0 / 3.0);
     geometry.nodePaintRadius = layout::fontPxF(3.0 / 16.0);
     geometry.selectedNodeRingRadius = layout::fontPxF(9.0 / 32.0);
     geometry.nodeOutlineDipWidth = layout::fontPxF(1.0 / 12.0);

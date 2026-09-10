@@ -28,17 +28,12 @@ struct AutomationGridCell {
 // projection (mapping math) and the canvas (paint and hit-test geometry).
 struct AutomationGeometry {
     int rowDefaultHeight = 0;
-    int rowMinimumHeight = 0;
-    int rowMaximumHeight = 0;
-    int rowWheelIncrement = 0;
-    int addLaneStripHeight = 0;
     int pointHitRadius = 0;
     int neutralSnapRadius = 0;
     int deleteTimeRadius = 0;
     int pointDetailThreshold = 0;
     int hoverPaintPadding = 0;
     int nodeDragActivationDistance = 0;
-    int gridMinimumCellWidth = 0;
     qreal nodePaintRadius = 0.0;
     qreal selectedNodeRingRadius = 0.0;
     qreal nodeOutlineDipWidth = 0.0;
