@@ -6,6 +6,9 @@
 
 namespace {
 
+// MSVC does not define M_PI without _USE_MATH_DEFINES.
+constexpr float kPi = 3.14159265358979323846f;
+
 uint32_t roundUpPow2(uint32_t v)
 {
     uint32_t p = 1;
@@ -77,7 +80,7 @@ AudioAnalyzer::AudioAnalyzer(uint32_t windowFrames)
     , m_mags(m_window / 2, 0.0f)
 {
     for (uint32_t i = 0; i < m_window; i++)
-        m_hann[i] = 0.5f - 0.5f * std::cos(2.0f * float(M_PI) * float(i) / float(m_window));
+        m_hann[i] = 0.5f - 0.5f * std::cos(2.0f * kPi * float(i) / float(m_window));
 }
 
 uint32_t AudioAnalyzer::poll(const AudioTap &tap)
@@ -139,7 +142,7 @@ void AudioAnalyzer::fft(float *reim, uint32_t n)
         }
     }
     for (uint32_t len = 2; len <= n; len <<= 1) {
-        const float ang = -2.0f * float(M_PI) / float(len);
+        const float ang = -2.0f * kPi / float(len);
         const float wr = std::cos(ang), wi = std::sin(ang);
         for (uint32_t i = 0; i < n; i += len) {
             float cr = 1.0f, ci = 0.0f;

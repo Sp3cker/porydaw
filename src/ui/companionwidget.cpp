@@ -15,6 +15,8 @@
 #include <limits>
 
 namespace {
+// MSVC does not define M_PI without _USE_MATH_DEFINES.
+constexpr double kPi = 3.14159265358979323846;
 
 constexpr int kSpriteSize = 12;
 // Custom images up to this many pixels on their longer side are treated as
@@ -150,7 +152,7 @@ QTransform poseTransform(CompanionWidget::Move current, bool playing, double bea
                 b1, std::array<Key, 5>{
                         {{0.0, 0.0}, {0.25, 0.5 * u}, {0.5, 0.0}, {0.75, -0.5 * u}, {1.0, 0.0}}});
             xf.translate(shuffle, 0.0);
-            xf.shear(std::tan(skew * M_PI / 180.0), 0.0);
+            xf.shear(std::tan(skew * kPi / 180.0), 0.0);
             break;
         }
         case Move::Sway: {

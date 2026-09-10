@@ -73,6 +73,9 @@
 
 namespace {
 
+// MSVC does not define M_PI without _USE_MATH_DEFINES.
+constexpr float kScriptCheckPi = 3.14159265358979323846f;
+
 // Stand-in for a `porydaw.*` facade: a plain QObject whose invokables and
 // properties are what a plugin script sees.
 class Bridge : public QObject
@@ -2856,7 +2859,7 @@ int runTapCheck()
     check(an.windowFrames() == 256, "analyzer window did not round");
     in.clear();
     for (int i = 0; i < 1024; i++) {
-        const float v = 0.5f * std::sin(2.0f * float(M_PI) * 8.0f * float(i) / 256.0f);
+        const float v = 0.5f * std::sin(2.0f * kScriptCheckPi * 8.0f * float(i) / 256.0f);
         in.push_back(v);
         in.push_back(v);
     }
