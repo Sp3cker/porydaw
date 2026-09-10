@@ -256,6 +256,8 @@ qt_add_library(porydaw_app STATIC
     src/ui/songviewmodel.h
     src/ui/transportbar.cpp
     src/ui/transportbar.h
+    src/ui/fastlabel.cpp
+    src/ui/fastlabel.h
     src/ui/workspaceui.cpp
     src/ui/workspaceui_tabs.cpp
     src/ui/workspaceui_project.cpp

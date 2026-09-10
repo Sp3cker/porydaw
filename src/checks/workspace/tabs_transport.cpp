@@ -22,6 +22,7 @@
 
 #include "checks/support/eventsynth.h"
 #include "mainwindow.h"
+#include "ui/fastlabel.h"
 #include "ui/layout.h"
 #include "ui/songtab.h"
 #include "ui/theme/themeruntime.h"
@@ -85,17 +86,22 @@ void WorkspaceTabsTest::transportVolumesAndRaster()
     QCOMPARE(fold->focusPolicy(), Qt::NoFocus);
 
     TransportBar defaultTransport;
-    auto *time = defaultTransport.findChild<QLabel *>(QStringLiteral("transportTimeLabel"));
+    auto *time = defaultTransport.findChild<FastLabel *>(QStringLiteral("transportTimeLabel"));
     auto *defaultDial =
         defaultTransport.findChild<QDial *>(QStringLiteral("transportOutputVolume"));
     QVERIFY(time);
     QVERIFY(defaultDial);
-    QVERIFY(time->minimumWidth() > 0);
-    QCOMPARE(time->minimumWidth(), time->maximumWidth());
-    const int reserved = time->minimumWidth();
+    const QSize reservedHint = time->sizeHint();
+    QVERIFY(reservedHint.width() > 0);
+    QCOMPARE(time->minimumSizeHint(), reservedHint);
+    QCOMPARE(time->minimumWidth(), reservedHint.width());
+    QCOMPARE(time->maximumWidth(), reservedHint.width());
     defaultTransport.setTimeText(QStringLiteral("99:59.9 / 99:59.9"));
-    QCOMPARE(time->minimumWidth(), reserved);
-    QCOMPARE(time->maximumWidth(), reserved);
+    // Text changes must never move the hardcoded reserved strip.
+    QCOMPARE(time->sizeHint(), reservedHint);
+    QCOMPARE(time->minimumSizeHint(), reservedHint);
+    QCOMPARE(time->minimumWidth(), reservedHint.width());
+    QCOMPARE(time->maximumWidth(), reservedHint.width());
     QCOMPARE(defaultDial->value(), 100);
     QVERIFY(hasTickAt(*defaultDial, 240.0));
     QVERIFY(hasTickAt(*defaultDial, -60.0));

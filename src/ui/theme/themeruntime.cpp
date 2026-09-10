@@ -75,8 +75,9 @@ QString windowStyleSheet(const Theme &theme)
 
 QString polyphonyStyleSheet(const Theme &theme)
 {
-    return QStringLiteral("QLabel#polyphonyPcmValue,QLabel#polyphonyCgbValue,"
-                          "QLabel#polyphonyLostValue{"
+    // The pcm/cgb values render through FastLabel and read their roles at
+    // paint time; only the rare lost counter is still a stylesheet QLabel.
+    return QStringLiteral("QLabel#polyphonyLostValue{"
                           "background-color:%1;color:%2;font-family:\"%3\";}")
         .arg(colorName(theme, Role::polyphony_value_background))
         .arg(colorName(theme, Role::polyphony_value_text))
@@ -90,7 +91,6 @@ QString toolbarStyleSheet(const Theme &theme)
     // so the click lands visibly without changing the icon's surface (the
     // hovered icon tint stays readable). Checked state, ordered last, wins
     // over hover and press so an engaged Loop never loses its fill.
-    const auto monoFamily = typography::bodyMono(QFont()).family();
     return (QStringLiteral("QToolBar{background-color:%1;color:%2;border-color:%3;}"
                            "QToolBar#transportToolbar "
                            "QToolButton{background-color:transparent;"
@@ -107,10 +107,7 @@ QString toolbarStyleSheet(const Theme &theme)
                            "QToolBar#transportToolbar QToolButton:checked:disabled{"
                            "background-color:%10;}"
                            "QToolBar#transportToolbar QLabel{background-color:transparent;"
-                           "color:%4;}"
-                           "QToolBar#transportToolbar QLabel#transportTimeLabel{"
-                           "font-family:\"") +
-            monoFamily + QStringLiteral("\";}"))
+                           "color:%4;}"))
         .arg(colorName(theme, Role::toolbar_background))
         .arg(colorName(theme, Role::toolbar_text))
         .arg(colorName(theme, Role::toolbar_outline))

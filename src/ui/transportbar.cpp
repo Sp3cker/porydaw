@@ -21,6 +21,7 @@
 #include <array>
 
 #include "core/songdocument.h"
+#include "ui/fastlabel.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/theme/themeruntime.h"
@@ -300,11 +301,13 @@ TransportBar::TransportBar(QWidget *parent) : QToolBar(tr("Transport"), parent)
     connect(m_resonanceAction, &QAction::toggled, this, &TransportBar::resonanceSuppressionChanged);
     addAction(m_resonanceAction);
 
-    m_timeLabel = new QLabel(QStringLiteral("--:--.- / --:--.-"), this);
+    m_timeLabel =
+        new FastLabel(QStringLiteral("--:--.- / --:--.-"), Qt::AlignLeft | Qt::AlignVCenter,
+                      QMargins(::layout::space(::layout::Space::Three), 0,
+                               ::layout::space(::layout::Space::Three), 0),
+                      themes::Role::transport_text, this);
     m_timeLabel->setObjectName(QStringLiteral("transportTimeLabel"));
-    m_timeLabel->setContentsMargins(::layout::space(::layout::Space::Three), 0,
-                                    ::layout::space(::layout::Space::Three), 0);
-    m_timeLabel->setFixedWidth(m_timeLabel->sizeHint().width());
+    m_timeLabel->setText(QStringLiteral("--:--.- / --:--.-"));
     addWidget(m_timeLabel);
 
     m_rootCombo = new QComboBox(this);
@@ -446,9 +449,6 @@ void TransportBar::setFollowPlayhead(bool enabled)
 
 void TransportBar::setTimeText(const QString &text)
 {
-    if (m_lastTimeText == text)
-        return;
-    m_lastTimeText = text;
     m_timeLabel->setText(text);
 }
 

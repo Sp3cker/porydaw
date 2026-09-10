@@ -17,6 +17,7 @@ class QAction;
 class QCloseEvent;
 class QDockWidget;
 class QEvent;
+class FastLabel;
 class QLabel;
 class QSettings;
 class QTimer;
@@ -216,23 +217,11 @@ class MainWindow : public QMainWindow
     QDockWidget *m_polyDock = nullptr;
     PolyphonyPanel *m_polyPanel = nullptr;
     QWidget *m_polyMeter = nullptr;
-    QLabel *m_pcmValueLabel = nullptr;
-    QLabel *m_cgbValueLabel = nullptr;
+    FastLabel *m_pcmValueLabel = nullptr;
+    FastLabel *m_cgbValueLabel = nullptr;
     QLabel *m_polyLostSeparator = nullptr;
     QLabel *m_polyLostCaption = nullptr;
     QLabel *m_polyLostLabel = nullptr;
     QTimer *m_uiTimer = nullptr;
     QTimer *m_playheadTimer = nullptr;
-    // Last values applied to the status widgets (uiTick runs at 2 Hz idle,
-    // 10 Hz during playback; unchanged values skip the label writes).
-    struct PolyStatusSnapshot {
-        bool loaded = false;
-        int activePcm = 0;
-        int maxPcm = 0;
-        int activeCgb = 0;
-        uint64_t lostTotal = 0;
-
-        bool operator==(const PolyStatusSnapshot &) const = default;
-    };
-    std::optional<PolyStatusSnapshot> m_lastPolyStatus;
 };

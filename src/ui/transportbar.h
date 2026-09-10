@@ -10,6 +10,7 @@ class QComboBox;
 class QDial;
 class QEvent;
 class QLabel;
+class FastLabel;
 class QToolButton;
 class QSpinBox;
 
@@ -66,7 +67,7 @@ class TransportBar final : public QToolBar
     QAction *m_loopAction = nullptr;
     QAction *m_followPlayheadAction = nullptr;
     QAction *m_resonanceAction = nullptr;
-    QLabel *m_timeLabel = nullptr;
+    FastLabel *m_timeLabel = nullptr;
     QComboBox *m_rootCombo = nullptr;
     QComboBox *m_scaleCombo = nullptr;
     QToolButton *m_highlightButton = nullptr;
@@ -75,5 +76,4 @@ class TransportBar final : public QToolBar
     QSpinBox *m_masterVolSpin = nullptr;
     QLabel *m_outputVolumeCaption = nullptr;
     QDial *m_outputVolumeDial = nullptr;
-    QString m_lastTimeText;
 };

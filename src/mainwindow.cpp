@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 
+#include "ui/fastlabel.h"
 #include <QApplication>
 #include <QComboBox>
 #include <QDialog>
@@ -47,7 +48,6 @@
 #include "ui/theme/themecontroller.h"
 #include "ui/theme/themedialog.h"
 #include "ui/theme/themeruntime.h"
-#include "ui/typography.h"
 
 namespace {
 constexpr int kIdleUiIntervalMs = 500;
@@ -647,18 +647,18 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     polyLayout->setSpacing(::layout::space(::layout::Space::Half));
     const auto fieldInset = ::layout::space(::layout::Space::Half);
     auto *pcmCaption = new QLabel(tr("PCM"), m_polyMeter);
-    m_pcmValueLabel = new QLabel(m_polyMeter);
+    m_pcmValueLabel = new FastLabel(QStringLiteral("15/15"), Qt::AlignRight | Qt::AlignVCenter,
+                                    QMargins(fieldInset, 0, fieldInset, 0),
+                                    themes::Role::polyphony_value_text, m_polyMeter);
     m_pcmValueLabel->setObjectName(QStringLiteral("polyphonyPcmValue"));
-    m_pcmValueLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    m_pcmValueLabel->setAttribute(Qt::WA_StyledBackground);
-    m_pcmValueLabel->setContentsMargins(fieldInset, 0, fieldInset, 0);
+    m_pcmValueLabel->setFieldBackground(themes::Role::polyphony_value_background);
     auto *separator = new QLabel(QStringLiteral("·"), m_polyMeter);
     auto *cgbCaption = new QLabel(tr("CGB"), m_polyMeter);
-    m_cgbValueLabel = new QLabel(m_polyMeter);
+    m_cgbValueLabel = new FastLabel(QStringLiteral("4/4"), Qt::AlignRight | Qt::AlignVCenter,
+                                    QMargins(fieldInset, 0, fieldInset, 0),
+                                    themes::Role::polyphony_value_text, m_polyMeter);
     m_cgbValueLabel->setObjectName(QStringLiteral("polyphonyCgbValue"));
-    m_cgbValueLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    m_cgbValueLabel->setAttribute(Qt::WA_StyledBackground);
-    m_cgbValueLabel->setContentsMargins(fieldInset, 0, fieldInset, 0);
+    m_cgbValueLabel->setFieldBackground(themes::Role::polyphony_value_background);
     m_polyLostSeparator = new QLabel(QStringLiteral("·"), m_polyMeter);
     m_polyLostLabel = new QLabel(m_polyMeter);
     m_polyLostLabel->setObjectName(QStringLiteral("polyphonyLostValue"));
@@ -680,12 +680,6 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     polyLayout->addWidget(m_polyLostCaption);
     statusBar()->addPermanentWidget(m_polyMeter);
     m_polyMeter->hide();
-    const auto valueFont = typography::bodyMono(font());
-    m_pcmValueLabel->setFixedWidth(
-        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("15/15")) + 2 * fieldInset);
-    m_cgbValueLabel->setFixedWidth(
-        QFontMetrics(valueFont).horizontalAdvance(QStringLiteral("4/4")) + 2 * fieldInset);
-
     // Initial focus goes to the song list (via the panel's focus proxy), not
     // its filter box — first in tab order, which otherwise wins on show and
     // swallowed the first keystrokes into the search field.
@@ -1046,10 +1040,8 @@ void MainWindow::synchronizePlayhead()
     }
 }
 
-// QLabel::setText repaints even for identical text, so both status
-// updaters compare against the last applied value and only touch the
-// widgets on change. Nothing else writes these labels, so the caches
-// cannot go stale.
+// FastLabel and QLabel setters skip unchanged text, so periodic status
+// updates avoid repaint and layout work while the displayed values hold steady.
 void MainWindow::updateTimeLabel()
 {
     const bool loaded = m_audioOk && m_selectedTab && m_audio.songLoaded();
@@ -1062,19 +1054,8 @@ void MainWindow::updateTimeLabel()
 
 void MainWindow::updatePolyStatus()
 {
-    PolyStatusSnapshot status;
-    status.loaded = m_audioOk && m_selectedTab && m_audio.songLoaded();
-    if (status.loaded) {
-        status.activePcm = m_audio.activePcmChannels();
-        status.maxPcm = m_audio.maxPcmChannels();
-        status.activeCgb = m_audio.activeCgbChannels();
-        status.lostTotal = m_audio.polyLostTotal();
-    }
-    if (m_lastPolyStatus && *m_lastPolyStatus == status)
-        return;
-    m_lastPolyStatus = status;
-
-    if (!status.loaded) {
+    const bool loaded = m_audioOk && m_selectedTab && m_audio.songLoaded();
+    if (!loaded) {
         m_pcmValueLabel->clear();
         m_cgbValueLabel->clear();
         m_polyLostLabel->clear();
@@ -1085,10 +1066,12 @@ void MainWindow::updatePolyStatus()
         return;
     }
 
-    m_pcmValueLabel->setText(QStringLiteral("%1/%2").arg(status.activePcm).arg(status.maxPcm));
-    m_cgbValueLabel->setText(QStringLiteral("%1/4").arg(status.activeCgb));
-    const bool hasLost = status.lostTotal > 0;
-    m_polyLostLabel->setText(hasLost ? QString::number(status.lostTotal) : QString());
+    m_pcmValueLabel->setText(
+        QStringLiteral("%1/%2").arg(m_audio.activePcmChannels()).arg(m_audio.maxPcmChannels()));
+    m_cgbValueLabel->setText(QStringLiteral("%1/4").arg(m_audio.activeCgbChannels()));
+    const uint64_t lostTotal = m_audio.polyLostTotal();
+    const bool hasLost = lostTotal > 0;
+    m_polyLostLabel->setText(hasLost ? QString::number(lostTotal) : QString());
     m_polyLostSeparator->setVisible(hasLost);
     m_polyLostLabel->setVisible(hasLost);
     m_polyLostCaption->setVisible(hasLost);
