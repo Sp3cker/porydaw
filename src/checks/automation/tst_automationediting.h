@@ -129,8 +129,6 @@ class AutomationEditingTest final : public QObject
     void voiceDuplicateOccurrenceMovesSingleIdentity();
     void middlePanIsolated();
     void voicePressIsolated();
-    void tempoHeaderExpansionIsolated();
-    void rowResizeChangesOnlyTarget();
     void rightBandPreviewIsolated();
     void pencilEditTargetsOnlyItsLane();
     void defaultBodyClickSetsCursorOnly();
@@ -156,13 +154,12 @@ class AutomationEditingTest final : public QObject
 
     // Automation canvas layout and remaining interaction coverage.
     void automationBandAndInputsExposed();
-    void scrollbarChromeTracksZeroRangeResize();
+    void sectionResizeKeepsLabelsClickableWithoutScrollbarStrip();
     void layoutAlignsPlotGutterAndRollGrid();
-    void rowStackAndGridResolution();
     void middleMousePanSurvivesRefresh();
-    void boundaryHoverAndEmptyLaneUpdateTextAndGrid();
+    void emptyParameterSwitchPreservesGridResolution();
     void viewStateSwitchPreservesAutomationState();
-    void wheelZoomAndCtrlWheelRowHeightPreserveDrawerState();
+    void wheelZoomAndSectionResizePreserveDrawerState();
     void activationSlopDoesNotCommit();
     void selectionClearingAndMultilaneReplacement();
     void additionalDragCancellationRoutesLeaveDocumentUntouched_data();

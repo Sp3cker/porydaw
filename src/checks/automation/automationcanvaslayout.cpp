@@ -4,24 +4,18 @@
 
 #include <QtTest>
 
-#include <QAbstractItemModel>
 #include <QCoreApplication>
 #include <QEventLoop>
-#include <QImage>
 #include <QQuickItem>
-#include <algorithm>
 #include <cmath>
 #include <optional>
-#include <vector>
 
-#include "checks/support/quickframebuffer.h"
+#include "checks/support/timelinequickcheck.h"
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
-#include "ui/editordrawer/cclanes.h"
 #include "ui/editordrawer/drawerchrome.h"
 #include "ui/editordrawer/editordrawer.h"
-#include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -30,7 +24,6 @@ namespace {
 
 constexpr uint8_t kPanController = 10;
 constexpr uint8_t kLfoController = 21;
-constexpr uint8_t kNewLaneController = 11;
 
 void pumpQuick()
 {
@@ -40,41 +33,9 @@ void pumpQuick()
     QCoreApplication::processEvents(QEventLoop::AllEvents);
 }
 
-QQuickItem *automationScrollbar(songview::TimelineQuickView &quick)
-{
-    QObject *const root = quick.rootObject();
-    return root ? root->findChild<QQuickItem *>(QStringLiteral("drawerAutomationScrollBar"))
-                : nullptr;
-}
-
 QRectF itemSceneRect(const songview::TimelineInputItem &item)
 {
     return {item.mapToScene(QPointF{}), QSizeF(item.width(), item.height())};
-}
-
-std::optional<QRectF> textRect(QAbstractItemModel *model, const QString &text)
-{
-    if (!model)
-        return std::nullopt;
-
-    for (int row = 0; row < model->rowCount(); ++row) {
-        const QModelIndex index = model->index(row, 0);
-        if (model->data(index, songview::TimelineQuickTextModel::TextRole).toString() == text)
-            return model->data(index, songview::TimelineQuickTextModel::RectRole).toRectF();
-    }
-    return std::nullopt;
-}
-
-bool rowsHaveUniqueIds(const std::vector<AutomationRow> &rows)
-{
-    for (auto row = rows.cbegin(); row != rows.cend(); ++row) {
-        if (std::find_if(rows.cbegin(), row, [&row](const AutomationRow &candidate) {
-                return candidate.id == row->id;
-            }) != row) {
-            return false;
-        }
-    }
-    return true;
 }
 
 } // namespace
@@ -100,64 +61,59 @@ void AutomationEditingTest::automationBandAndInputsExposed()
     QCOMPARE(gutter->window(), m_quickWindow.data());
 }
 
-void AutomationEditingTest::scrollbarChromeTracksZeroRangeResize()
+void AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip()
 {
     SongView &view = m_tab->view();
     EditorDrawer *const drawer = view.editorDrawer();
     songview::TimelineQuickView *const quick = view.quickView();
     QVERIFY(drawer);
     QVERIFY(quick);
+    QQuickItem *const root = quick->rootObject();
+    QVERIFY(root);
+    AutomationCanvas *const canvas = m_page->canvas();
+    QTRY_VERIFY(canvas->minimumContentHeight() > 0);
 
-    DrawerChrome &chrome = drawer->chrome();
-    const QRectF initialRect = chrome.automationScrollbarRect();
-    QQuickItem *const initialItem = automationScrollbar(*quick);
-    QVERIFY(initialRect.isValid());
-    QVERIFY(!initialRect.isEmpty());
-    QCOMPARE(initialRect.width(), qreal(layout::space(layout::Space::Two)));
-    QVERIFY(initialItem);
-    QVERIFY(initialItem->isVisible());
-    QQuickWindow *const quickWindow = quick->quickWindow();
-    QVERIFY(quickWindow);
-    QVERIFY(QRect(QPoint(0, 0), quickWindow->size()).contains(initialRect.toAlignedRect()));
-    QVERIFY(m_quickWindow->mask().isEmpty());
-
-    const std::optional<songview::TimelineBandGeometry> band =
-        view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
-    QVERIFY(band.has_value());
     const int originalHeight = view.drawerSectionHeight(EditorDrawerPage::Automations);
-    const int overhead = std::max(0, originalHeight - band->rect.height());
-    const int fittingHeight = std::min(drawer->maximumSectionHeight(),
-                                       m_page->canvas()->minimumContentHeight() + overhead);
-    view.setDrawerSectionHeight(EditorDrawerPage::Automations, fittingHeight);
-    pumpQuick();
+    const int splitBefore = view.timelineSplitX();
+    const FrozenDocumentState frozen = frozenDocumentState();
+    const uint64_t cursorBefore = view.editCursorTick();
+    const int minimumHeight = canvas->minimumContentHeight();
+    QVERIFY(drawer->maximumSectionHeight() > minimumHeight);
 
-    const QRectF fittingRect = chrome.automationScrollbarRect();
-    QQuickItem *const fittingItem = automationScrollbar(*quick);
-    QVERIFY(fittingRect.isValid());
-    QVERIFY(!fittingRect.isEmpty());
-    QVERIFY(fittingItem);
-    QVERIFY(fittingItem->isVisible());
-    QCOMPARE(chrome.automationMaximumScrollY(), 0);
-    QCOMPARE(chrome.automationViewportHeight(), chrome.automationContentHeight());
-    QCOMPARE(qRound(fittingItem->height()), chrome.automationViewportHeight());
-    QCOMPARE(qRound(fittingItem->property("thumbLength").toReal()), qRound(fittingItem->height()));
+    for (const int height : {minimumHeight, drawer->maximumSectionHeight()}) {
+        view.setDrawerSectionHeight(EditorDrawerPage::Automations, height);
+        pumpQuick();
+        QTRY_COMPARE(m_page->automationViewportSize().height(), height);
+        const auto automation =
+            view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
+        const auto roll = view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
+        QVERIFY(automation.has_value());
+        QVERIFY(roll.has_value());
+        QVERIFY(drawer->chrome().automationScrollbarRect().isEmpty());
+        QCOMPARE(view.timelineSplitX(), splitBefore);
+        QCOMPARE(automation->plotRect.left(), splitBefore);
+        QCOMPARE(roll->plotRect.left(), splitBefore);
+        QCOMPARE(itemSceneRect(automationGutterInput()), QRectF(automation->gutterRect()));
+        QCOMPARE(itemSceneRect(automationInput()), QRectF(automation->plotRect));
 
-    const int fittingViewportHeight = chrome.automationViewportHeight();
-    view.setDrawerSectionHeight(EditorDrawerPage::Automations, drawer->maximumSectionHeight());
-    pumpQuick();
-
-    const QRectF resizedRect = chrome.automationScrollbarRect();
-    QQuickItem *const resizedItem = automationScrollbar(*quick);
-    QVERIFY(resizedRect.isValid());
-    QVERIFY(!resizedRect.isEmpty());
-    QVERIFY(resizedItem);
-    QVERIFY(resizedItem->isVisible());
-    QCOMPARE(chrome.automationMaximumScrollY(), 0);
-    QVERIFY(chrome.automationViewportHeight() > fittingViewportHeight);
-    QCOMPARE(chrome.automationContentHeight(), chrome.automationViewportHeight());
-    QCOMPARE(qRound(resizedItem->height()), chrome.automationViewportHeight());
-    QCOMPARE(qRound(resizedItem->property("thumbLength").toReal()), qRound(resizedItem->height()));
-
+        for (int index = 0; index < 9; ++index) {
+            const auto row = canvas->parameterRow(index);
+            QVERIFY(row.has_value());
+            QQuickItem *const label = checks::support::visualDescendant(
+                root, QStringLiteral("automationParameterTab%1").arg(index));
+            QVERIFY(label);
+            QVERIFY(label->isVisible());
+            const QRectF labelRect = label->mapRectToScene(label->boundingRect());
+            QVERIFY(!labelRect.isEmpty());
+            QVERIFY(QRectF(automation->gutterRect()).contains(labelRect));
+            QVERIFY(activateParameter(*row));
+            QCOMPARE(canvas->activeParameter(), index);
+            QCOMPARE(laneBody(findRow(*row)), QRect(QPoint{}, m_page->automationViewportSize()));
+            QVERIFY(frozenDocumentState() == frozen);
+            QCOMPARE(view.editCursorTick(), cursorBefore);
+            QCOMPARE(view.timelineSplitX(), splitBefore);
+        }
+    }
     view.setDrawerSectionHeight(EditorDrawerPage::Automations, originalHeight);
     pumpQuick();
 }
@@ -188,64 +144,34 @@ void AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid()
     QVERIFY(QRect(QPoint(0, 0), quickWindow->size()).contains(gutterRect));
     QCOMPARE(automation->plotRect.left(), view.timelineSplitX());
     QCOMPARE(roll->plotRect.left(), view.timelineSplitX());
-    QVERIFY(m_tab->view().editorDrawer()->chrome().automationScrollbarRect().right() <=
-            automation->rect.left());
+    QVERIFY(view.editorDrawer()->chrome().automationScrollbarRect().isEmpty());
     QCOMPARE(itemSceneRect(*m_automationInput), QRectF(automation->plotRect));
     QCOMPARE(itemSceneRect(*gutter), QRectF(gutterRect));
     QCOMPARE(qRound(m_automationInput->width()), automation->plotRect.width());
     QCOMPARE(qRound(gutter->width()), gutterRect.width());
     QCOMPARE(qRound(gutter->height()), automation->rect.height());
-}
 
-void AutomationEditingTest::rowStackAndGridResolution()
-{
-    SongView &view = m_tab->view();
-    const EditorAutomationRowId volume{EditorAutomationRowKind::ControlChange, 0, 7};
-    const EditorAutomationRowId pan{EditorAutomationRowKind::ControlChange, 0, kPanController};
-    const EditorAutomationRowId lfo{EditorAutomationRowKind::ControlChange, 0, kLfoController};
-    const EditorAutomationRowId bend{EditorAutomationRowKind::ControlChange, 0, DOC_CC_BEND};
-
-    m_tab->document().addLanePoint(0, kLfoController, 72, 96);
-    m_tab->document().addLanePoint(0, DOC_CC_BEND, 72, 8191);
-    m_tab->document().addLanePoint(0, DOC_CC_VOICE, 24, 3);
-    EditorViewState state = view.editorViewState();
-    state.hideLane(volume);
-    state.emptyLanes.insert(pan);
-    state.laneRanges[lfo] = 91;
-    view.applyEditorViewState(state);
-    pumpQuick();
-
-    const auto &rows = m_page->canvas()->rows();
-    QVERIFY(!rows.empty());
-    QCOMPARE(m_page->canvas()->laneBody({1}).top(), 0);
-    QVERIFY(findRow(pan).valid());
-    QVERIFY(findRow(lfo).valid());
-    QVERIFY(findRow(bend).valid());
-    QVERIFY(!findRow(volume).valid());
-    QVERIFY(std::none_of(rows.cbegin(), rows.cend(), [](const AutomationRow &row) {
-        return row.id.kind == EditorAutomationRowKind::Tempo || row.id.controller == DOC_CC_VOICE;
-    }));
-    QVERIFY(rows.back().id == bend);
-    QCOMPARE(m_page->automationViewState().laneRanges.at(lfo), uint8_t{91});
-
-    const DrawerPageGridState grid = {
-        view.grid().gridTicksAt(48),
-        view.grid().snapTicksAt(48),
-    };
-    QVERIFY(grid.gridTicks > 0);
-    QVERIFY(grid.snapTicks > 0);
-    const uint64_t snap = view.grid().snapTick(30.0, false);
-    const uint64_t spacing = view.grid().snapTicksAt(snap);
-    QCOMPARE(view.grid().snapTick(double(snap) + 0.1 * double(spacing), false), snap);
-    QCOMPARE(view.grid().snapTick(double(snap) + 0.4 * double(spacing), false), snap);
-    QVERIFY(view.grid().snapTick(double(snap) + 1.1 * double(spacing), false) != snap);
+    AutomationCanvas *const canvas = m_page->canvas();
+    for (int index = 0; index < 9; ++index) {
+        const auto row = canvas->parameterRow(index);
+        QVERIFY(row.has_value());
+        QVERIFY(activateParameter(*row));
+        QCOMPARE(laneBody(findRow(*row)), QRect(QPoint{}, m_page->automationViewportSize()));
+        QQuickItem *const label = checks::support::visualDescendant(
+            quick->rootObject(), QStringLiteral("automationParameterTab%1").arg(index));
+        QVERIFY(label);
+        const QRectF labelRect = label->mapRectToScene(label->boundingRect());
+        QVERIFY(!labelRect.isEmpty());
+        QVERIFY(QRectF(gutterRect).contains(labelRect));
+    }
 }
 
 void AutomationEditingTest::middleMousePanSurvivesRefresh()
 {
     SongView &view = m_tab->view();
-    const QRect body = m_page->canvas()->laneBody(
-        findRow(EditorAutomationRowId{EditorAutomationRowKind::ControlChange, 0, kPanController}));
+    const EditorAutomationRowId pan{EditorAutomationRowKind::ControlChange, 0, kPanController};
+    QVERIFY(activateParameter(pan));
+    const QRect body = laneBody(findRow(pan));
     QVERIFY(!body.isEmpty());
 
     const QPointF start(160.0, body.center().y());
@@ -265,63 +191,50 @@ void AutomationEditingTest::middleMousePanSurvivesRefresh()
     view.setEditorHorizontalScroll(0.0);
 }
 
-void AutomationEditingTest::boundaryHoverAndEmptyLaneUpdateTextAndGrid()
+void AutomationEditingTest::emptyParameterSwitchPreservesGridResolution()
 {
     SongView &view = m_tab->view();
-    songview::TimelineQuickView *const quick = view.quickView();
-    auto *const scene = view.findChild<songview::TimelineQuickScene *>();
-    QVERIFY(quick);
-    QVERIFY(scene);
-    QObject *const root = quick->rootObject();
-    QVERIFY(root);
-    auto *const gutter = root->findChild<songview::TimelineInputItem *>(
-        QStringLiteral("timelineAutomationGutterInput"));
-    QVERIFY(gutter);
+    const EditorAutomationRowId lfo{EditorAutomationRowKind::ControlChange, 0, kLfoController};
+    QVERIFY(m_tab->document().lanePoints(0, kLfoController).empty());
+    const FrozenDocumentState frozen = frozenDocumentState();
+    const uint64_t cursorBefore = view.editCursorTick();
+    const DrawerPageGridState grid = {
+        view.grid().gridTicksAt(48),
+        view.grid().snapTicksAt(48),
+    };
+    const uint64_t snap = view.grid().snapTick(30.0, false);
+    const uint64_t spacing = view.grid().snapTicksAt(snap);
 
-    m_page->addEmptyLane(0, kLfoController);
-    pumpQuick();
-    const LaneHandle lfo =
-        findRow(EditorAutomationRowId{EditorAutomationRowKind::ControlChange, 0, kLfoController});
-    const QRect lfoBody = m_page->canvas()->laneBody(lfo);
-    QVERIFY(lfo.valid());
-    QVERIFY(!lfoBody.isEmpty());
-
-    const std::optional<songview::TimelineBandGeometry> band =
-        view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
-    QVERIFY(band.has_value());
-    QString captureError;
-    const QImage baseline = checks::support::captureQuickBand(view, band->rect, &captureError);
-    QVERIFY2(!baseline.isNull(), qPrintable(captureError));
-
-    const QPoint boundary(layout::space(layout::Space::One), lfoBody.bottom() + 1);
-    mouseMove(*gutter, boundary);
-    pumpQuick();
-    const QImage hover = checks::support::captureQuickBand(view, band->rect, &captureError);
-    QVERIFY2(!hover.isNull(), qPrintable(captureError));
-    QCOMPARE(gutter->cursor().shape(), Qt::SplitVCursor);
-    QVERIFY(hover == baseline);
-
-    QAbstractItemModel *const textModel = scene->automationTextModel();
-    const QString lfoTitle = CCLanes::laneLabel(kLfoController);
-    const std::optional<QRectF> lfoBefore = textRect(textModel, lfoTitle);
-    const quint64 gridBefore = scene->layer(songview::TimelineQuickLayer::AutomationGrid).revision;
-    m_page->addEmptyLane(0, kNewLaneController);
-    pumpQuick();
-
-    QVERIFY(lfoBefore.has_value());
-    QVERIFY(textRect(textModel, lfoTitle).has_value());
-    QVERIFY(textRect(textModel, CCLanes::laneLabel(kNewLaneController)).has_value());
-    QVERIFY(scene->layer(songview::TimelineQuickLayer::AutomationGrid).revision > gridBefore);
-    QVERIFY(rowsHaveUniqueIds(m_page->canvas()->rows()));
+    QVERIFY(activateParameter(lfo));
+    const LaneHandle lane = findRow(lfo);
+    QVERIFY(lane.valid());
+    QCOMPARE(laneBody(lane), QRect(QPoint{}, m_page->automationViewportSize()));
+    QVERIFY(frozenDocumentState() == frozen);
+    QCOMPARE(view.editCursorTick(), cursorBefore);
+    QCOMPARE(view.grid().gridTicksAt(48), grid.gridTicks);
+    QCOMPARE(view.grid().snapTicksAt(48), grid.snapTicks);
+    QCOMPARE(view.grid().snapTick(30.0, false), snap);
+    QCOMPARE(view.grid().snapTicksAt(snap), spacing);
+    QVERIFY(grid.gridTicks > 0);
+    QVERIFY(grid.snapTicks > 0);
+    QCOMPARE(view.grid().snapTick(double(snap) + 0.1 * double(spacing), false), snap);
+    QCOMPARE(view.grid().snapTick(double(snap) + 0.4 * double(spacing), false), snap);
+    QVERIFY(view.grid().snapTick(double(snap) + 1.1 * double(spacing), false) != snap);
 }
 
 void AutomationEditingTest::viewStateSwitchPreservesAutomationState()
 {
     SongView &view = m_tab->view();
-    const EditorAutomationRowId modulation{EditorAutomationRowKind::ControlChange, 0, 20};
-    m_page->addEmptyLane(0, modulation.controller);
-    m_page->setLaneRange(modulation, 64);
+    const EditorAutomationRowId bendRange{EditorAutomationRowKind::ControlChange, 0, 20};
+    QVERIFY(activateParameter(bendRange));
+    m_page->setLaneRange(bendRange, 64);
+    view.setDrawerSectionHeight(EditorDrawerPage::Automations, 300);
+    pumpQuick();
     const EditorViewState beforeSwitch = view.editorViewState();
+    const FrozenDocumentState frozen = frozenDocumentState();
+    const uint64_t cursorBefore = view.editCursorTick();
+    const int activeBefore = m_page->canvas()->activeParameter();
+    const QSize viewportBefore = m_page->automationViewportSize();
 
     view.setDrawerActivePage(EditorDrawerPage::Velocity);
     view.setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
@@ -329,49 +242,58 @@ void AutomationEditingTest::viewStateSwitchPreservesAutomationState()
     pumpQuick();
 
     const EditorViewState whileVelocity = view.editorViewState();
-    QVERIFY(whileVelocity.laneHeight == beforeSwitch.laneHeight);
-    QVERIFY(whileVelocity.laneHeights == beforeSwitch.laneHeights);
+    QVERIFY(whileVelocity.automation == beforeSwitch.automation);
     QVERIFY(whileVelocity.laneRanges == beforeSwitch.laneRanges);
-    QVERIFY(whileVelocity.emptyLanes == beforeSwitch.emptyLanes);
-    QVERIFY(whileVelocity.hiddenLanes() == beforeSwitch.hiddenLanes());
+    QCOMPARE(m_page->automationViewportSize(), viewportBefore);
+    QCOMPARE(m_page->canvas()->activeParameter(), activeBefore);
+    QVERIFY(frozenDocumentState() == frozen);
+    QCOMPARE(view.editCursorTick(), cursorBefore);
 
     view.setDrawerActivePage(EditorDrawerPage::Automations);
-    view.setDrawerSectionHeight(EditorDrawerPage::Automations, 300);
     pumpQuick();
-    QVERIFY(view.editorViewState().emptyLanes.contains(modulation));
-    QCOMPARE(view.editorViewState().laneRanges.at(modulation), uint8_t{64});
+    QCOMPARE(laneBody(findRow(bendRange)), QRect(QPoint{}, viewportBefore));
+    QCOMPARE(view.editorViewState().laneRanges.at(bendRange), uint8_t{64});
+    QVERIFY(frozenDocumentState() == frozen);
+    QCOMPARE(view.editCursorTick(), cursorBefore);
 }
 
-void AutomationEditingTest::wheelZoomAndCtrlWheelRowHeightPreserveDrawerState()
+void AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState()
 {
     SongView &view = m_tab->view();
-    songview::TimelineQuickView *const quick = view.quickView();
-    QVERIFY(quick);
-    QObject *const root = quick->rootObject();
-    QVERIFY(root);
-    auto *const gutter = root->findChild<songview::TimelineInputItem *>(
-        QStringLiteral("timelineAutomationGutterInput"));
-    QVERIFY(gutter);
-
-    const QRect body = m_page->canvas()->laneBody(
-        findRow(EditorAutomationRowId{EditorAutomationRowKind::ControlChange, 0, kPanController}));
+    const EditorAutomationRowId pan{EditorAutomationRowKind::ControlChange, 0, kPanController};
+    QVERIFY(activateParameter(pan));
+    const QRect body = laneBody(findRow(pan));
     QVERIFY(!body.isEmpty());
     const QPointF anchor(200.0, body.center().y());
     const double tickBefore = view.camera().tickAtContentX(anchor.x());
     const double zoomBefore = view.camera().pxPerBeat();
-    wheel(*m_automationInput, anchor - QPointF(0.0, m_page->verticalScroll()), QPoint(0, 120));
+    const EditorViewState beforeZoom = view.editorViewState();
+    const FrozenDocumentState frozen = frozenDocumentState();
+    const uint64_t cursorBefore = view.editCursorTick();
+    wheel(*m_automationInput, anchor, QPoint(0, 120));
     pumpQuick();
     QVERIFY(view.camera().pxPerBeat() > zoomBefore);
     QVERIFY(std::abs(view.camera().tickAtContentX(anchor.x()) - tickBefore) < 0.001);
+    const EditorViewState afterZoom = view.editorViewState();
+    QVERIFY(afterZoom.velocity == beforeZoom.velocity);
+    QVERIFY(afterZoom.voiceChanges == beforeZoom.voiceChanges);
+    QVERIFY(afterZoom.automation == beforeZoom.automation);
+    QVERIFY(afterZoom.activePage == beforeZoom.activePage);
 
-    const EditorViewState beforeHeight = view.editorViewState();
-    const int laneHeight = m_page->automationViewState().laneHeight;
-    wheel(*gutter, QPointF(layout::space(layout::Space::One), body.center().y()), QPoint(0, 120),
-          Qt::ControlModifier);
+    const int originalHeight = view.drawerSectionHeight(EditorDrawerPage::Automations);
+    const int minimumHeight = m_page->canvas()->minimumContentHeight();
+    const int targetHeight = originalHeight == minimumHeight
+                                 ? view.editorDrawer()->maximumSectionHeight()
+                                 : minimumHeight;
+    QVERIFY(targetHeight != originalHeight);
+    view.setDrawerSectionHeight(EditorDrawerPage::Automations, targetHeight);
     pumpQuick();
-    QVERIFY(m_page->automationViewState().laneHeight > laneHeight);
+    QTRY_COMPARE(m_page->automationViewportSize().height(), targetHeight);
+    QCOMPARE(laneBody(findRow(pan)), QRect(QPoint{}, m_page->automationViewportSize()));
     const EditorViewState afterHeight = view.editorViewState();
-    QVERIFY(afterHeight.velocity == beforeHeight.velocity);
-    QVERIFY(afterHeight.automation == beforeHeight.automation);
-    QVERIFY(afterHeight.activePage == beforeHeight.activePage);
+    QVERIFY(afterHeight.velocity == afterZoom.velocity);
+    QVERIFY(afterHeight.voiceChanges == afterZoom.voiceChanges);
+    QVERIFY(afterHeight.activePage == afterZoom.activePage);
+    QVERIFY(frozenDocumentState() == frozen);
+    QCOMPARE(view.editCursorTick(), cursorBefore);
 }
