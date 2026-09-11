@@ -13,12 +13,14 @@
 #include <QQuickItem>
 #include <QRegion>
 #include <QSize>
+#include <QVariant>
 
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/timelinequickcheck.h"
 #include "core/timedefaults.h"
 #include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/nodelane/hover.h"
 #include "ui/editordrawer/tempolane.h"
 #include "ui/layout.h"
@@ -64,6 +66,7 @@ std::optional<QRectF> findTextRecord(const QAbstractItemModel *model, const QStr
     }
     return std::nullopt;
 }
+
 } // namespace
 
 bool AutomationPresentationTest::layerHasColorIn(const songview::TimelineQuickLayerData &layer,
@@ -137,8 +140,10 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
     QVERIFY(tempoRow.has_value());
     QVERIFY((*tempoRow == EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0}));
 
-    QTRY_VERIFY(canvas->minimumContentHeight() > 0);
-    const int minimumHeight = qCeil(canvas->minimumContentHeight());
+    EditorDrawer *const drawer = m_rig->view().editorDrawer();
+    QVERIFY(drawer);
+    const int minimumHeight = drawer->minimumSectionHeight();
+    QVERIFY(minimumHeight > 0);
     const int originalHeight = m_rig->view().drawerSectionHeight(EditorDrawerPage::Automations);
     m_rig->view().setDrawerSectionHeight(EditorDrawerPage::Automations, minimumHeight);
     QTRY_COMPARE(automationPage->automationViewportSize().height(), minimumHeight);
@@ -153,8 +158,9 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
         QTRY_VERIFY((tab = parameterLabelItem(index)) && tab->isVisible() && tab->width() > 0.0 &&
                     tab->height() > 0.0);
         const QRectF bounds = tab->mapRectToScene(tab->boundingRect());
-        QVERIFY2(!bounds.isEmpty() && QRectF(gutter).contains(bounds),
-                 "a label escaped the derived gutter body");
+        QVERIFY2(!bounds.isEmpty() && bounds.left() >= gutter.left() - layout::singlePixel() &&
+                     bounds.right() <= gutter.right() + layout::singlePixel(),
+                 "a label escaped the gutter's width");
         for (const QPointF center : centers) {
             QVERIFY(std::abs(center.x() - bounds.center().x()) > layout::singlePixel() ||
                     std::abs(center.y() - bounds.center().y()) > layout::singlePixel());
@@ -189,6 +195,23 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
              "the song-global Tempo label no longer closes the selector grid");
     QVERIFY2(tempoBounds.width() > labelBounds.front().width() * 1.5,
              "the song-global Tempo label no longer spans the closing selector row");
+
+    QQuickItem *const scroller = checks::support::automationTabsScroller(m_rig->quickRoot());
+    QVERIFY(scroller);
+    QVERIFY(scroller->property("clip").toBool());
+    scroller->setProperty("contentY", QVariant::fromValue(0.0));
+    QTRY_VERIFY(scroller->property("contentHeight").toReal() > scroller->height());
+    const QRectF viewport = scroller->mapRectToScene(scroller->boundingRect());
+    QVERIFY2(checks::support::rectInside(labelBounds.front(), viewport),
+             "the first tab is not visible at the content top");
+    const qreal maximumContentY = scroller->property("contentHeight").toReal() - scroller->height();
+    QVERIFY(maximumContentY > 0.0);
+    scroller->setProperty("contentY", QVariant::fromValue(maximumContentY));
+    QQuickItem *const lastTab = parameterLabelItem(int(expected.size()) - 1);
+    QVERIFY(lastTab);
+    QTRY_VERIFY(
+        checks::support::rectInside(lastTab->mapRectToScene(lastTab->boundingRect()), viewport));
+    scroller->setProperty("contentY", QVariant::fromValue(0.0));
     m_rig->view().setDrawerSectionHeight(EditorDrawerPage::Automations, originalHeight);
 }
 
@@ -402,11 +425,11 @@ void AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators()
     QVERIFY(tempoBackground);
     const QVariantMap appearance = canvas->parameterAppearance();
     QCOMPARE(panBackground->property("color").value<QColor>(),
-             appearance.value(QStringLiteral("currentFill")).value<QColor>());
+             appearance.value(QStringLiteral("tabSelectedBackground")).value<QColor>());
     QCOMPARE(lfoBackground->property("color").value<QColor>(),
-             appearance.value(QStringLiteral("background")).value<QColor>());
+             appearance.value(QStringLiteral("tabBackground")).value<QColor>());
     QCOMPARE(tempoBackground->property("color").value<QColor>(),
-             appearance.value(QStringLiteral("background")).value<QColor>());
+             appearance.value(QStringLiteral("tabBackground")).value<QColor>());
 
     const auto &band =
         m_rig->view().timelineBandLayout().geometry(songview::TimelineBand::Automation);

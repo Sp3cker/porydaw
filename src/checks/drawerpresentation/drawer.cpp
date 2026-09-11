@@ -2,6 +2,7 @@
 
 #include <QtTest>
 
+#include <algorithm>
 #include <cmath>
 
 #include <QApplication>
@@ -9,6 +10,7 @@
 #include <QPalette>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QVariant>
 
 #include "checks/drawerpresentation/fixtures.h"
 #include "checks/support/timelinequickcheck.h"
@@ -57,14 +59,6 @@ void sendWindowMouse(songview::TimelineInputItem &input, QEvent::Type type, cons
     QMouseEvent event(type, windowPosition, QPointF(window->mapToGlobal(windowPosition.toPoint())),
                       button, buttons, Qt::NoModifier);
     QCoreApplication::sendEvent(window, &event);
-}
-
-// DrawerSections::minimumBodyHeight(EditorDrawerPage::Automations) observed
-// through the public page surface: the shared floor or the measured selector
-// grid, whichever is larger.
-int automationMinimumBodyHeight(const EditorDrawer &drawer, const AutomationCanvas &canvas)
-{
-    return std::max(drawer.minimumSectionHeight(), canvas.minimumContentHeight());
 }
 
 // The Quick window is the whole canonical viewport, so every visible
@@ -350,20 +344,17 @@ void DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum()
     QVERIFY(voiceBefore);
     QVERIFY(velocityBefore);
 
-    QTRY_VERIFY(canvas.minimumContentHeight() > 0);
-    const int measuredMinimum = automationMinimumBodyHeight(*drawer, canvas);
-    QVERIFY(measuredMinimum > drawer->minimumSectionHeight());
-
-    // A stored height below the measured grid still allocates the complete
-    // selector grid, and the stored value itself is not rewritten.
-    const int requested = measuredMinimum - layout::fontPx(1.0);
-    QVERIFY(requested > 0);
-    view.setDrawerSectionHeight(EditorDrawerPage::Automations, requested);
+    // The uniform body floor replaced the measured selector grid: a stored
+    // height at the section minimum allocates exactly that body. The Flickable
+    // scrolls tab overflow instead of stretching the drawer.
+    const int sectionMinimum = drawer->minimumSectionHeight();
+    QVERIFY(sectionMinimum > 0);
+    view.setDrawerSectionHeight(EditorDrawerPage::Automations, sectionMinimum);
     pump();
-    QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::Automations), requested);
-    const auto clampedBody = drawer->bodyRect(EditorDrawerPage::Automations);
-    QVERIFY(clampedBody);
-    QCOMPARE(clampedBody->height(), measuredMinimum);
+    QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::Automations), sectionMinimum);
+    const auto flooredBody = drawer->bodyRect(EditorDrawerPage::Automations);
+    QVERIFY(flooredBody);
+    QCOMPARE(flooredBody->height(), sectionMinimum);
 
     // The bottom-anchored overlay re-anchors as automation and labels
     // settle, so sibling isolation is height-only: positions move, sizes
@@ -375,13 +366,24 @@ void DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum()
     QCOMPARE(voiceAtFloor->height(), voiceBefore->height());
     QCOMPARE(velocityAtFloor->height(), velocityBefore->height());
 
-    // Every selector label stays inside the automation gutter at that floor.
+    // Every selector label stays reachable inside the automation gutter at
+    // that floor. The Flickable clips overflow and scrolls each tab into view.
     auto *const gutter = fixture.quickRoot->findChild<songview::TimelineInputItem *>(
         QStringLiteral("timelineAutomationGutterInput"));
     QVERIFY(gutter);
-    QTRY_COMPARE(qCeil(gutter->height()), measuredMinimum);
+    QTRY_COMPARE(qCeil(gutter->height()), sectionMinimum);
     const QRectF gutterBounds = gutter->mapRectToScene(gutter->boundingRect());
     QVERIFY(!gutterBounds.isEmpty());
+    QQuickItem *const scroller = checks::support::automationTabsScroller(fixture.quickRoot);
+    QVERIFY(scroller);
+    QVERIFY(scroller->property("clip").toBool());
+    scroller->setProperty("contentY", QVariant::fromValue(0.0));
+    QTRY_VERIFY(scroller->property("contentHeight").toReal() > scroller->height());
+    QQuickItem *const firstTab = checks::support::visualDescendant(
+        fixture.quickRoot, QStringLiteral("automationParameterTab0"));
+    QVERIFY(firstTab);
+    QTRY_VERIFY(checks::support::rectInside(firstTab->mapRectToScene(firstTab->boundingRect()),
+                                            gutterBounds));
     const QStringList labels = canvas.parameterLabels();
     for (int index = 0; index < labels.size(); ++index) {
         QQuickItem *label = nullptr;
@@ -389,11 +391,11 @@ void DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum()
             (label = checks::support::visualDescendant(
                  fixture.quickRoot, QStringLiteral("automationParameterTab%1").arg(index))) &&
             label->isVisible() && label->width() > 0.0 && label->height() > 0.0);
-        QVERIFY2(
-            gutterBounds.contains(label->mapRectToScene(label->boundingRect())),
-            qPrintable(
-                QStringLiteral("label %1 escaped the automation gutter").arg(labels.at(index))));
+        checks::support::scrollTabIntoView(scroller, *label);
+        QTRY_VERIFY(checks::support::rectInside(label->mapRectToScene(label->boundingRect()),
+                                                gutterBounds));
     }
+    scroller->setProperty("contentY", QVariant::fromValue(0.0));
     const auto voiceAfterLabels = drawer->bodyRect(EditorDrawerPage::VoiceChanges);
     const auto velocityAfterLabels = drawer->bodyRect(EditorDrawerPage::Velocity);
     QVERIFY(voiceAfterLabels && velocityAfterLabels);
@@ -452,9 +454,8 @@ void DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights()
     const auto automationBefore = drawer.bodyRect(EditorDrawerPage::Automations);
     QVERIFY(voiceBefore);
     QVERIFY(automationBefore);
-    auto *const automationPage = drawer.automationPage();
-    QVERIFY(automationPage && automationPage->canvas());
-    const int automationMinimum = automationMinimumBodyHeight(drawer, *automationPage->canvas());
+    QVERIFY(drawer.automationPage());
+    const int automationMinimum = drawer.minimumSectionHeight();
     QVERIFY(automationBefore->height() >= automationMinimum);
 
     const QPointF start = handle.mapToScene(handle.bounds().center());

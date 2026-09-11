@@ -18,6 +18,7 @@
 #include <QRegion>
 #include <QSize>
 #include <QString>
+#include <QVariant>
 
 #include <algorithm>
 #include <optional>
@@ -52,6 +53,43 @@ inline QQuickItem *visualDescendant(QQuickItem *root, QAnyStringView name)
         if (QQuickItem *const found = visualDescendant(child, name))
             return found;
     return nullptr;
+}
+
+// The automation parameter tabs overflow their gutter at the minimum drawer
+// height, so the stack Flickable clips overflow and reveals tabs by contentY.
+// These helpers find that Flickable, scroll one tab into view, and assert a
+// rect stays inside the visible viewport within the hairline epsilon.
+inline QQuickItem *automationTabsScroller(QQuickItem *root)
+{
+    QQuickItem *const tabs =
+        root ? visualDescendant(root, QStringLiteral("automationParameterTabs")) : nullptr;
+    if (!tabs)
+        return nullptr;
+    for (QQuickItem *const child : tabs->childItems()) {
+        if (child->property("contentY").isValid() && child->property("contentHeight").isValid())
+            return child;
+    }
+    return nullptr;
+}
+
+// Synchronous by invariant: the AutomationTabs.qml Flickable leaves contentY
+// unbound and unanimated, so this write and the caller's geometry read-back land
+// in the same frame; a future Behavior/animation on contentY would stale it by one frame.
+inline void scrollTabIntoView(QQuickItem *scroller, const QQuickItem &tab)
+{
+    const qreal contentY = scroller->property("contentY").toReal();
+    const qreal topInContent = tab.mapToItem(scroller, QPointF{}).y() + contentY;
+    const qreal maximumContentY =
+        std::max<qreal>(0.0, scroller->property("contentHeight").toReal() - scroller->height());
+    scroller->setProperty("contentY",
+                          QVariant::fromValue(std::clamp(topInContent, 0.0, maximumContentY)));
+}
+
+inline bool rectInside(const QRectF &inner, const QRectF &outer)
+{
+    const qreal epsilon = layout::singlePixel();
+    return inner.left() >= outer.left() - epsilon && inner.right() <= outer.right() + epsilon &&
+           inner.top() >= outer.top() - epsilon && inner.bottom() <= outer.bottom() + epsilon;
 }
 
 inline bool quickWindowIsUnmasked(const songview::TimelineQuickView &quick)

@@ -7,6 +7,7 @@
 #include <QCoreApplication>
 #include <QEventLoop>
 #include <QQuickItem>
+#include <QVariant>
 #include <cmath>
 #include <optional>
 
@@ -52,12 +53,15 @@ void verifyActivePlot(SongView &view, AutomationPage &page, const QRect &body)
             nullptr);
     QCOMPARE(automation->plotRect.left(), view.timelineSplitX());
     QCOMPARE(roll->plotRect.left(), view.timelineSplitX());
+    const QRectF gutterRect(automation->gutterRect());
     for (int index = 0; index < 9; ++index) {
         QQuickItem *const label = checks::support::visualDescendant(
             view.quickView()->rootObject(), QStringLiteral("automationParameterTab%1").arg(index));
         QVERIFY(label);
-        QVERIFY(QRectF(automation->gutterRect())
-                    .contains(label->mapRectToScene(label->boundingRect())));
+        QVERIFY(label->isVisible());
+        const QRectF labelRect = label->mapRectToScene(label->boundingRect());
+        QVERIFY(!labelRect.isEmpty());
+        QVERIFY(labelRect.left() >= gutterRect.left() && labelRect.right() <= gutterRect.right());
     }
 }
 
@@ -94,13 +98,16 @@ void AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStr
     QQuickItem *const root = quick->rootObject();
     QVERIFY(root);
     AutomationCanvas *const canvas = m_page->canvas();
-    QTRY_VERIFY(canvas->minimumContentHeight() > 0);
+    QQuickItem *const scroller = checks::support::automationTabsScroller(root);
+    QVERIFY(scroller);
+    QVERIFY(scroller->property("clip").toBool());
 
     const int originalHeight = view.drawerSectionHeight(EditorDrawerPage::Automations);
     const int splitBefore = view.timelineSplitX();
     const FrozenDocumentState frozen = frozenDocumentState();
     const uint64_t cursorBefore = view.editCursorTick();
-    const int minimumHeight = canvas->minimumContentHeight();
+    const int minimumHeight = drawer->minimumSectionHeight();
+    QVERIFY(minimumHeight > 0);
     QVERIFY(drawer->maximumSectionHeight() > minimumHeight);
 
     for (const int height : {minimumHeight, drawer->maximumSectionHeight()}) {
@@ -118,8 +125,24 @@ void AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStr
         QCOMPARE(automation->plotRect.left(), splitBefore);
         QCOMPARE(roll->plotRect.left(), splitBefore);
         QCOMPARE(itemSceneRect(automationGutterInput()), QRectF(automation->gutterRect()));
+        scroller->setProperty("contentY", QVariant::fromValue(0.0));
+        pumpQuick();
+        const qreal stackHeight = scroller->property("contentHeight").toReal();
+        QVERIFY(stackHeight > 0.0);
+        if (height == minimumHeight) {
+            QVERIFY2(stackHeight > height,
+                     "the tab stack does not overflow the uniform body floor");
+            QQuickItem *const firstTab =
+                checks::support::visualDescendant(root, QStringLiteral("automationParameterTab0"));
+            QVERIFY(firstTab);
+            QVERIFY2(checks::support::rectInside(firstTab->mapRectToScene(firstTab->boundingRect()),
+                                                 QRectF(automation->gutterRect())),
+                     "the first tab is not visible at the content top");
+        }
         QCOMPARE(itemSceneRect(automationInput()), QRectF(automation->plotRect));
 
+        // The Flickable owns visibility: reveal each overflowed tab before the
+        // real rendered-label click.
         for (int index = 0; index < 9; ++index) {
             const auto row = canvas->parameterRow(index);
             QVERIFY(row.has_value());
@@ -127,9 +150,12 @@ void AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStr
                 root, QStringLiteral("automationParameterTab%1").arg(index));
             QVERIFY(label);
             QVERIFY(label->isVisible());
+            checks::support::scrollTabIntoView(scroller, *label);
+            pumpQuick();
             const QRectF labelRect = label->mapRectToScene(label->boundingRect());
             QVERIFY(!labelRect.isEmpty());
-            QVERIFY(QRectF(automation->gutterRect()).contains(labelRect));
+            QVERIFY2(checks::support::rectInside(labelRect, QRectF(automation->gutterRect())),
+                     "the scrolled tab is not fully inside the gutter viewport");
             QVERIFY(activateParameter(*row));
             QCOMPARE(canvas->activeParameter(), index);
             verifyActivePlot(view, *m_page, laneBody(findRow(*row)));
@@ -137,6 +163,7 @@ void AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStr
             QCOMPARE(view.editCursorTick(), cursorBefore);
             QCOMPARE(view.timelineSplitX(), splitBefore);
         }
+        scroller->setProperty("contentY", QVariant::fromValue(0.0));
     }
     view.setDrawerSectionHeight(EditorDrawerPage::Automations, originalHeight);
     pumpQuick();
@@ -311,7 +338,7 @@ void AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState()
     QVERIFY(afterZoom.activePage == beforeZoom.activePage);
 
     const int originalHeight = view.drawerSectionHeight(EditorDrawerPage::Automations);
-    const int minimumHeight = m_page->canvas()->minimumContentHeight();
+    const int minimumHeight = view.editorDrawer()->minimumSectionHeight();
     const int targetHeight = originalHeight == minimumHeight
                                  ? view.editorDrawer()->maximumSectionHeight()
                                  : minimumHeight;
