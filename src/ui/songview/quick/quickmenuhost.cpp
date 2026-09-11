@@ -26,6 +26,23 @@ namespace {
 constexpr int kPanelZ = 1000000;
 constexpr int kTypeAheadResetMs = 1000;
 
+bool collectActionBackedRows(const std::vector<QuickMenuItem> &items,
+                             std::vector<QAction *> &actions)
+{
+    bool actionBacked = false;
+    for (const QuickMenuItem &item : items) {
+        if (item.isActionBacked()) {
+            actionBacked = true;
+            QAction *const action = item.action.data();
+            if (action && std::find(actions.cbegin(), actions.cend(), action) == actions.cend())
+                actions.push_back(action);
+        }
+        if (collectActionBackedRows(item.children, actions))
+            actionBacked = true;
+    }
+    return actionBacked;
+}
+
 int firstActivatableRow(const QuickMenuModel &model)
 {
     for (int row = 0; row < model.rowCount(); ++row) {
@@ -207,6 +224,21 @@ void QuickMenuHost::activateRow(QQuickItem *panel, int row)
     const QuickMenuItem *item = level->model->itemAt(row);
     if (!item || item->separator || !item->enabled)
         return;
+    if (item->isActionBacked()) {
+        const QPointer<QuickMenuHost> host{this};
+        const QPointer<QuickMenuModel> source{level->model};
+        const QPointer<QAction> action{item->action};
+        const QPointer<QuickPopupSession> session{m_popupSession};
+        if (!host || !source || !action || !session)
+            return;
+        session->close();
+        if (!host || !source || !action || !action->isEnabled())
+            return;
+        action->trigger();
+        if (host && action)
+            emit host->actionActivated(action.data());
+        return;
+    }
     QuickMenuModel *const source = level->model.data();
     if (item->checkable && item->stayOpen) {
         source->setItemChecked(row, !item->checked);
@@ -322,6 +354,23 @@ void QuickMenuHost::pushLevel(QuickMenuModel *model, const QRectF &anchor, bool 
             if (m_sessionActive && m_popupSession)
                 m_popupSession->cancel(false);
         });
+        std::vector<QAction *> actions;
+        stored.actionBackedRoot = collectActionBackedRows(model->items(), actions);
+        stored.actionConnections.reserve(actions.size() * 2);
+        const QPointer<QuickMenuModel> rootModel{model};
+        const auto cancelActionRoot = [this, rootModel] {
+            if (!m_sessionActive || !rootModel || m_levels.isEmpty() ||
+                m_levels.first().model.data() != rootModel.data()) {
+                return;
+            }
+            cancel();
+        };
+        for (QAction *const action : actions) {
+            stored.actionConnections.push_back(
+                connect(action, &QAction::changed, this, cancelActionRoot));
+            stored.actionConnections.push_back(
+                connect(action, &QObject::destroyed, this, cancelActionRoot));
+        }
     }
     applyLevel(stored, layout, anchor, rootLevel);
     setHighlight(stored, -1);
@@ -334,6 +383,8 @@ void QuickMenuHost::popLevel(bool notifyState)
     const Level level = m_levels.takeLast();
     QObject::disconnect(level.resetConnection);
     QObject::disconnect(level.modelDestroyedConnection);
+    for (const QMetaObject::Connection &connection : level.actionConnections)
+        QObject::disconnect(connection);
     if (level.panel) {
         level.panel->setParentItem(nullptr);
         level.panel->deleteLater();
@@ -413,6 +464,10 @@ void QuickMenuHost::handleLevelReset(QuickMenuModel *model)
     }
     if (levelIndex < 0)
         return;
+    if (levelIndex == 0 && m_levels.first().actionBackedRoot) {
+        cancel();
+        return;
+    }
     // Submenu models are QObject children cleared by setItems(): any level
     // above the rebuilt one is dangling and falls back to the rebuilt level.
     while (m_levels.size() > levelIndex + 1)

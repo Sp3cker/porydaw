@@ -1,8 +1,10 @@
 #pragma once
 
 #include <QAbstractListModel>
+#include <QAction>
 #include <QFont>
 #include <QHash>
+#include <QKeySequence>
 #include <QObject>
 #include <QPointF>
 #include <QPointer>
@@ -24,15 +26,17 @@ namespace songview {
 struct MenuMetrics;
 
 /// One typed menu row. Menus never carry QVariant command maps: owners build
-/// vectors of these values and hand them to a QuickMenuModel, and interpret
-/// the integer ids themselves when the model emits activated().
+/// vectors of values and hand them to a QuickMenuModel. Value rows dispatch
+/// their integer ids; action-backed rows borrow the represented QAction.
 ///
 /// A row is either a separator (`separator = true`; text/id are ignored) or a
 /// normal entry. Checkable rows render a check mark while checked; `stayOpen` keeps the
 /// menu session alive across activation so persistent filter toggles do not
 /// close the menu — the owner rebuilds the model and the session survives.
 /// Rows with non-empty `children` expose a submenu model through
-/// QuickMenuModel::submenuForRow().
+/// QuickMenuModel::submenuForRow(). Action-backed rows retain the action
+/// identity and project scalar display roles at menu-open time. The host
+/// guards that identity before triggering.
 struct QuickMenuItem {
     Q_GADGET
     Q_PROPERTY(int id MEMBER id FINAL)
@@ -47,6 +51,11 @@ struct QuickMenuItem {
 
     // Q_GADGET leaves private access behind; restore the struct default.
   public:
+    enum class Backing {
+        Value,
+        Action,
+    };
+
     int id = 0;
     QString text;
     QString shortcutText;
@@ -55,15 +64,44 @@ struct QuickMenuItem {
     bool checked = false;
     bool separator = false;
     bool stayOpen = false;
+    Backing backing = Backing::Value;
+    QPointer<QAction> action;
     std::vector<QuickMenuItem> children;
 
     bool hasSubmenu() const { return !children.empty(); }
+    bool isActionBacked() const { return backing == Backing::Action; }
+
+    /// Projects the action's current presentation without changing its scope,
+    /// shortcut, callback, or ownership.
+    static QuickMenuItem fromAction(QAction &source, int id)
+    {
+        QuickMenuItem item;
+        item.id = id;
+        item.enabled = source.isEnabled();
+        item.checkable = source.isCheckable();
+        item.checked = source.isChecked();
+        item.shortcutText = source.shortcut().toString(QKeySequence::NativeText);
+        item.backing = Backing::Action;
+        item.action = &source;
+
+        const QString actionText = source.text();
+        item.text.reserve(actionText.size());
+        for (qsizetype index = 0; index < actionText.size(); ++index) {
+            if (actionText.at(index) != u'&') {
+                item.text += actionText.at(index);
+                continue;
+            }
+            if (index + 1 < actionText.size() && actionText.at(index + 1) == u'&') {
+                item.text += u'&';
+                ++index;
+            }
+        }
+        return item;
+    }
 
     static QuickMenuItem makeSeparator();
 };
 
-/// Flat list model over QuickMenuItem rows for one menu level.
-///
 /// Roles are explicit typed values served from the owned rows (never maps):
 /// `itemId`, `text`, `shortcutText`, `checkable`, `checked`, `enabled`,
 /// `separator`, `hasSubmenu`. Submenus are child QuickMenuModels parented to
@@ -71,13 +109,14 @@ struct QuickMenuItem {
 /// build vectors of values.
 ///
 /// setItems() replaces all rows and clears cached submenu models (they are
-/// QObject children and die with it). Sessions opened on this model survive a
-/// rebuild: the host re-resolves the highlighted row by id after modelReset().
+/// QObject children and die with it). A value-only session survives a rebuild:
+/// the host re-resolves the highlighted row by id after modelReset(). An
+/// action-backed root is instead retired so its scalar action projection is
+/// never reused.
 ///
-/// activated(id) is the single activation signal for both activation kinds:
-/// ordinary picks are emitted AFTER the host cleared the session (owners may
-/// execute insert/move/delete immediately), stayOpen toggles are emitted with
-/// the session kept alive.
+/// activated(id) dispatches value rows only: ordinary picks arrive AFTER the
+/// host cleared the session, while stayOpen toggles arrive with the session
+/// kept alive. Action-backed rows trigger their QAction through QuickMenuHost.
 class QuickMenuModel : public QAbstractListModel
 {
     Q_OBJECT
@@ -180,6 +219,9 @@ class QuickMenuHost : public QObject
     void appearanceChanged();
     void cancelled();
     void closed();
+    // Emitted after a guarded QAction-backed row triggers successfully. Menu
+    // owners use this only for focus completion.
+    void actionActivated(QAction *action);
     // Emitted when a right-press outside the canvas dismissed THIS host's
     // menu session (never a foreign popup's). The scene position is the
     // press point; owners retarget or stay dismissed from here. The paired
@@ -197,6 +239,8 @@ class QuickMenuHost : public QObject
         int rememberedId = 0;
         QMetaObject::Connection resetConnection;
         QMetaObject::Connection modelDestroyedConnection;
+        bool actionBackedRoot = false;
+        std::vector<QMetaObject::Connection> actionConnections;
     };
 
     QQuickItem *createPanel(QuickMenuModel *model, bool rootLevel, const MenuMetrics &layout);
