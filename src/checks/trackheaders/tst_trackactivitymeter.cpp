@@ -18,6 +18,7 @@
 #include "core/miditimeline.h"
 #include "ui/activity/trackactivityrender.h"
 #include "ui/songview.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/trackheadermodel.h"
@@ -91,6 +92,8 @@ void TrackActivityMeterTest::init()
     m_timeline->tracks[kTrack].used = true;
     m_timeline->usedTrackCount = 1;
     m_view->setSong(m_timeline.get(), nullptr);
+    auto *const editActions = new songview::EditActions(m_view.get());
+    editActions->rebind(m_view.get());
     QVERIFY(checks::support::showQuickViewport(*m_view, QSize(720, 520)));
     m_quick = m_view->quickView();
     m_window = m_quick ? m_quick->quickWindow() : nullptr;

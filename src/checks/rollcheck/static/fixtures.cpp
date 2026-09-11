@@ -11,6 +11,7 @@
 #include "project/projectidentity.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/songtab.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/eventlistcontroller.h"
 #include "ui/songview/quick/timelineinputitem.h"
@@ -113,6 +114,8 @@ bool CameraFixture::create(QString &error)
         error = QStringLiteral("static camera probe tab did not become ready");
         return false;
     }
+    auto *const editActions = new songview::EditActions(&m_tab->view());
+    editActions->rebind(&m_tab->view());
     SongView &songView = m_tab->view();
     auto *quick =
         songView.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
@@ -181,6 +184,8 @@ bool GateFixture::create(QString &error)
         return false;
     }
     m_tab = std::make_unique<SongTab>(*name);
+    auto *const editActions = new songview::EditActions(&m_tab->view());
+    editActions->rebind(&m_tab->view());
     m_tab->setSampleRate(48000.0);
     m_tab->resize(1280, 800);
     m_tab->show();

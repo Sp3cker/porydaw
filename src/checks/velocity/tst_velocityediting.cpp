@@ -21,6 +21,7 @@
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityaxis.h"
 #include "ui/songview.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelinequickview.h"
 
 namespace {
@@ -107,6 +108,8 @@ void VelocityEditingTest::init()
 
     QTRY_VERIFY(m_tab->isReady());
     QVERIFY(m_tab->voicegroupLease().get() == &m_bank);
+    auto *const editActions = new songview::EditActions(&m_tab->view());
+    editActions->rebind(&m_tab->view());
 
     const std::vector<DocNote> notes = m_tab->document().notesForTrack(0);
     QVERIFY2(notes.size() == 3, "the fixture track must carry exactly three notes");

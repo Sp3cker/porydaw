@@ -16,6 +16,7 @@
 #include "project/projectidentity.h"
 #include "project/voicegroupsource.h"
 #include "ui/songview.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelinequickview.h"
 
@@ -91,6 +92,8 @@ bool PitchBendFixture::setUp(bool unterminated, bool duplicateNote)
         m_tab->voicegroupLease().get() != &m_bank) {
         return false;
     }
+    auto *const editActions = new songview::EditActions(&m_tab->view());
+    editActions->rebind(&m_tab->view());
 
     const std::vector<DocNote> notes = m_tab->document().notesForTrack(0);
     if (notes.size() != (duplicateNote ? 2 : 1))

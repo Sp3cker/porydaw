@@ -27,6 +27,7 @@
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/songview.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -406,6 +407,8 @@ bool AutomationRasterFixture::initialize(QString &error)
     }
     m_view->setDocument(&songDocument);
     m_view->setSong(m_timeline.get(), m_voicegroup.get());
+    auto *const editActions = new songview::EditActions(m_view.get());
+    editActions->rebind(m_view.get());
     m_view->setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
     m_view->setDrawerSectionHeight(EditorDrawerPage::VoiceChanges, 180);
     m_view->setDrawerActivePage(EditorDrawerPage::Automations);

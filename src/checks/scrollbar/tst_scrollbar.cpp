@@ -26,6 +26,7 @@
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 
@@ -191,6 +192,8 @@ void ScrollbarTest::init()
 
     QTRY_VERIFY(m_tab->isReady());
     QVERIFY(m_tab->voicegroupLease().get() == &m_bank);
+    auto *const editActions = new songview::EditActions(&m_tab->view());
+    editActions->rebind(&m_tab->view());
 
     SongView &songView = view();
     songView.setDrawerActivePage(EditorDrawerPage::Automations);

@@ -22,6 +22,7 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -101,6 +102,8 @@ void VelocityPageTest::fixtureRoute101AndInputGeometry()
     QVERIFY(quick);
     view.setDocument(&song->document());
     view.setSong(timeline.get(), &voices);
+    auto *const editActions = new songview::EditActions(&view);
+    editActions->rebind(&view);
     view.setDrawerActivePage(EditorDrawerPage::Velocity);
     view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
     QVERIFY(checks::support::showQuickViewport(view, QSize(960, 480)));

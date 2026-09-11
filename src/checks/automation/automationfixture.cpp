@@ -24,6 +24,7 @@
 #include "ui/editordrawer/cclanes.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/tempolane.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
 
@@ -198,6 +199,8 @@ bool AutomationEditingTest::stageSong(SmfFile smf)
     candidate->applyVoicegroupBound(*identity);
     if (!candidate->isReady() || candidate->voicegroupLease().get() != &m_bank)
         return false;
+    auto *const editActions = new songview::EditActions(&candidate->view());
+    editActions->rebind(&candidate->view());
 
     SongView &view = candidate->view();
     view.setDrawerActivePage(EditorDrawerPage::Automations);

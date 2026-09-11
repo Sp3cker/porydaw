@@ -11,6 +11,7 @@
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
 #include "ui/songtab.h"
+#include "ui/songview/editactions.h"
 
 PianoRollTest::PianoRollTest(const QString &projectRoot, const QString &songLabel)
     : m_projectRoot(projectRoot)
@@ -50,6 +51,8 @@ void PianoRollTest::init()
     m_tab->applyVoicegroupBound(*bankId);
     QTRY_VERIFY(m_tab->isReady());
 
+    auto *const editActions = new songview::EditActions(&m_tab->view());
+    editActions->rebind(&m_tab->view());
     m_fixture = std::make_unique<checks::rollcheck::PianoRollFixture>(*m_tab, m_songLabel);
     QVERIFY(m_fixture->prepare());
 }

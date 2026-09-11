@@ -22,6 +22,7 @@ extern "C" {
 #include "project/projectidentity.h"
 #include "project/voicegroupsource.h"
 #include "ui/songtab.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 
@@ -95,6 +96,8 @@ std::unique_ptr<ClipTabRig> ClipTabRig::create(uint16_t ticksPerBeat, QString &e
         error = QStringLiteral("synthetic song tab did not become ready");
         return nullptr;
     }
+    auto *const editActions = new songview::EditActions(&rig->m_tab->view());
+    editActions->rebind(&rig->m_tab->view());
 
     rig->m_tab->show();
     QCoreApplication::processEvents();

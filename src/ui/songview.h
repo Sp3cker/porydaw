@@ -55,6 +55,7 @@ struct TrackRemap;
 
 namespace songview {
 class TimeRuler;
+class EditActions;
 class TrackHeaderModel;
 class EditorSelectionModel;
 class PianoRoll;
@@ -547,6 +548,9 @@ class SongView : public QObject
     // Semantic execution for every presentation. Gesture and readiness
     // protection lives here, not in individual keyboard or menu owners.
     void executeEditCommand(EditCommand command);
+    // The currently bound canonical actions. This guarded borrow is read-only;
+    // EditActions::rebind is the sole binding mutation.
+    const songview::EditActions *editActions() const noexcept;
     // Which surface routed the key to the shared policy: Timeline — the
     // roll-page bands and Quick surfaces whose note canvas is the live
     // editing target — or EventList, the Quick event page whose input item
@@ -649,6 +653,10 @@ class SongView : public QObject
     void muteMaskChanged(uint32_t mask);
     void soloMaskChanged(uint32_t mask);
     void selectedTrackChanged(int track);
+    // Primary track, stored track scope, note, or time-selection context changed.
+    void selectionContextChanged();
+    // Relevant context menus must retire; forms keep their independent lifetime.
+    void contextMenusInvalidated(bool restoreFocus);
     void scaleHighlightChanged();
     void scaleFoldChanged();
     void scaleRootChanged();
@@ -691,6 +699,7 @@ class SongView : public QObject
     friend class songview::PianoRoll;
     friend class songview::TrackHeaderModel;
     friend class songview::VoicePicker;
+    friend class songview::EditActions;
     struct Geometry {
         int trackHeaderWidth;
         int pianoKeyboardWidth;
@@ -827,6 +836,7 @@ class SongView : public QObject
     };
     void coordinateSelectionChange(
         const songview::EditorSelectionModel::SelectionTransition &transition);
+    void invalidateContextMenus(bool restoreFocus);
     std::optional<TimeScopeResolution> resolveTimeSelectionScope() const;
     // Selection-only insertion half of the unified Insert Time command; the
     // unified entry is its sole dispatch. An unresolved selection rejects
@@ -912,6 +922,7 @@ class SongView : public QObject
     const MidiTimeline *m_timeline = nullptr; // loaded content only
     const LoadedVoiceGroup *m_voicegroup = nullptr;
     SongDocument *m_document = nullptr;
+    QPointer<songview::EditActions> m_editActions;
     uint64_t m_transientInputGeneration = 0; // advanced only by cancelTransientInput()
     SongViewModel m_model;
     songview::EditorSelectionModel m_selectionModel;

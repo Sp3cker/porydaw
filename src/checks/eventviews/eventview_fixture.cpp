@@ -16,6 +16,7 @@
 #include "project/voicegroupsource.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/quickpopupsession.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -199,6 +200,8 @@ std::unique_ptr<EventViewTabFixture> EventViewTabFixture::create(FixtureShape sh
         error = QStringLiteral("SongTab did not become ready");
         return nullptr;
     }
+    auto *const editActions = new songview::EditActions(&fixture->m_tab->view());
+    editActions->rebind(&fixture->m_tab->view());
     fixture->m_tab->show();
     QCoreApplication::processEvents();
     return fixture;

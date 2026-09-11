@@ -19,6 +19,7 @@
 #include "project/voicegroupsource.h"
 #include "ui/activity/trackactivity.h"
 #include "ui/songtab.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/trackheadermodel.h"
@@ -100,6 +101,8 @@ bool TrackHeadersFixture::create(QString &error)
         error = QStringLiteral("TrackHeaders SongTab did not reach ready state");
         return false;
     }
+    auto *const editActions = new songview::EditActions(&candidate->view());
+    editActions->rebind(&candidate->view());
 
     SongView &songView = candidate->view();
     m_headers =

@@ -15,6 +15,7 @@
 #include "checks/support/quickframebuffer.h"
 #include "core/miditimeline.h"
 #include "ui/songview.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelinequickview.h"
 
 namespace checks::rollcheck::staticcheck {
@@ -30,6 +31,8 @@ struct BareView {
 
     BareView()
     {
+        auto *const editActions = new songview::EditActions(&view);
+        editActions->rebind(&view);
         if (!checks::support::showQuickViewport(view, QSize(1280, 800)))
             qFatal("static geometry fixture could not expose the Quick window");
         default44 = {.ticksPerBeat = kTicksPerBeat,

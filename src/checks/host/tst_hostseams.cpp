@@ -17,6 +17,7 @@
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/layout.h"
 #include "ui/songtabquickhost.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelinequickview.h"
 
 namespace checks::host {
@@ -139,6 +140,8 @@ class HostSeamsTest final : public QObject
         bool detachWhileWindowValid = false;
         {
             auto view = std::make_unique<SongView>();
+            auto *const editActions = new songview::EditActions(view.get());
+            editActions->rebind(view.get());
             songview::TimelineQuickView *const quick = view->quickView();
             QVERIFY(quick);
             window = quick->quickWindow();
@@ -187,6 +190,8 @@ class HostSeamsTest final : public QObject
     void unhostedDetachEmitsOnceDestroysWindowAndClearsGetters()
     {
         auto view = std::make_unique<SongView>();
+        auto *const editActions = new songview::EditActions(view.get());
+        editActions->rebind(view.get());
         songview::TimelineQuickView *const quick = view->quickView();
         QVERIFY(quick);
         QVERIFY(quick->rootObject());

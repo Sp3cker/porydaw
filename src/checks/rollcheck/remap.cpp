@@ -15,6 +15,7 @@
 #include "core/smf.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
+#include "ui/songview/editactions.h"
 
 namespace {
 using checks::rollcheck::headercheck::model;
@@ -35,6 +36,8 @@ struct RemapFixture {
             return false;
         view.setSong(timeline.get(), nullptr);
         view.setDocument(&document);
+        auto *const editActions = new songview::EditActions(&view);
+        editActions->rebind(&view);
         QObject::connect(&document, &SongDocument::tracksRemapped, &view,
                          [this] { order.push_back(QStringLiteral("remap")); });
         QObject::connect(&document, &SongDocument::documentChanged, &view, [this] {

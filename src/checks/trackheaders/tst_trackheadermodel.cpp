@@ -21,6 +21,7 @@
 #include "ui/activity/trackactivity.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/trackheadermodel.h"
 
@@ -280,6 +281,8 @@ class TrackHeaderModelTest final : public QObject
                 return false;
             view.setSong(timeline.get(), nullptr);
             view.setDocument(&document);
+            auto *const editActions = new songview::EditActions(&view);
+            editActions->rebind(&view);
             headers =
                 view.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"));
             if (!headers)

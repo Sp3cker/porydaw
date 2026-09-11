@@ -136,12 +136,18 @@ std::optional<EditCommand> EditActions::editorCommandForKey(int key,
 
 void EditActions::rebind(SongView *target)
 {
+    SongView *const previousTarget = m_target.data();
     disconnectTargetObservations();
     m_target = nullptr;
     m_clipboardEligible = false;
+    if (previousTarget && previousTarget->m_editActions == this)
+        previousTarget->m_editActions = nullptr;
+    if (previousTarget)
+        previousTarget->invalidateContextMenus(/*restoreFocus=*/false);
 
     if (target) {
         m_target = target;
+        target->m_editActions = this;
         observeTarget(*target);
         updateClipboardEligibility();
     }
@@ -179,7 +185,7 @@ void EditActions::observeTarget(SongView &target)
         refresh();
     }));
     m_targetConnections.emplace_back(
-        connect(&target, &SongView::selectedTrackChanged, this, &EditActions::refresh));
+        connect(&target, &SongView::selectionContextChanged, this, &EditActions::refresh));
     m_targetConnections.emplace_back(
         connect(&target, &SongView::muteMaskChanged, this, &EditActions::refresh));
     m_targetConnections.emplace_back(
@@ -188,6 +194,8 @@ void EditActions::observeTarget(SongView &target)
         connect(&target, &SongView::editorViewStateChanged, this, &EditActions::refresh));
     m_targetConnections.emplace_back(
         connect(&target, &SongView::eventListVisibilityChanged, this, &EditActions::refresh));
+    m_targetConnections.emplace_back(
+        connect(&target, &SongView::editCursorMoved, this, &EditActions::refresh));
 
     if (SongDocument *const document = target.document()) {
         m_targetConnections.emplace_back(

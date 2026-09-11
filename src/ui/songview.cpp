@@ -8,6 +8,7 @@
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/layout.h"
 #include "ui/playheadoverlay.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/otherstrip.h"
 #include "ui/songview/pianoroll.h"
 #include "ui/songview/quick/eventlistcontroller.h"
@@ -22,6 +23,7 @@
 #include <QEvent>
 #include <QFontMetrics>
 #include <QGuiApplication>
+#include <QKeyEvent>
 #include <QPointer>
 #include <QQuickWindow>
 
@@ -335,6 +337,8 @@ SongView::SongView(QObject *parent)
 
 SongView::~SongView()
 {
+    if (m_editActions)
+        m_editActions->rebind(nullptr);
     if (QGuiApplication::instance())
         QGuiApplication::instance()->removeEventFilter(this);
     // Detach FIRST: unload QML and cancel window-level popup/gesture state
@@ -352,6 +356,11 @@ SongView::~SongView()
     cancelVoicePicker(/*restoreFocus=*/false);
     cancelInsertTimePromptWithoutFocus();
     cancelTimeSelectionMenuWithoutFocus();
+}
+
+const songview::EditActions *SongView::editActions() const noexcept
+{
+    return m_editActions.data();
 }
 
 songview::TimelineQuickView *SongView::quickView() const noexcept
@@ -761,7 +770,8 @@ void SongView::cancelTransientInput()
 
 void SongView::setDocument(SongDocument *document)
 {
-    if (m_document != document) {
+    const bool documentChanged = m_document != document;
+    if (documentChanged) {
         if (m_roll) {
             m_roll->cancelVelocityPromptWithoutFocus();
             m_roll->cancelPitchBendPopup();
@@ -776,6 +786,7 @@ void SongView::setDocument(SongDocument *document)
             connect(document, &SongDocument::documentChanged, this, [this] {
                 // Any document edit invalidates a preview captured at the
                 // previous revision before the normal page refresh.
+                invalidateContextMenus(/*restoreFocus=*/true);
                 cancelActiveInteractions();
                 cancelInsertTimePromptWithoutFocus();
                 if (m_ruler)
@@ -793,6 +804,12 @@ void SongView::setDocument(SongDocument *document)
     m_selectionModel.clearNoteSelection();
     m_headers->rebuild(m_trackActivity, m_playing);
     notifyDrawerSongChanged();
+    if (documentChanged) {
+        if (m_editActions)
+            m_editActions->rebind(this);
+        else
+            invalidateContextMenus(/*restoreFocus=*/false);
+    }
 }
 
 bool SongView::eventListVisible() const
@@ -910,6 +927,11 @@ void SongView::setVoicegroup(const LoadedVoiceGroup *voicegroup)
     refreshTimelineViews(PianoRollQuickDirty::All);
 }
 
+void SongView::invalidateContextMenus(bool restoreFocus)
+{
+    emit contextMenusInvalidated(restoreFocus);
+}
+
 void SongView::coordinateSelectionChange(
     const songview::EditorSelectionModel::SelectionTransition &transition)
 {
@@ -925,6 +947,10 @@ void SongView::coordinateSelectionChange(
         changed(songview::EditorSelectionModel::SelectionChange::NoteSelection);
     const bool timeSelectionChanged =
         changed(songview::EditorSelectionModel::SelectionChange::TimeSelection);
+    if (primaryChanged || trackScopeChanged || noteSelectionChanged || timeSelectionChanged) {
+        invalidateContextMenus(/*restoreFocus=*/true);
+        emit selectionContextChanged();
+    }
     // Roll layers already requested in this transition; later branches only
     // request the missing union members (a projection rebuild covers All).
     PianoRollQuickDirtySet rollDirty = PianoRollQuickDirty::None;
@@ -977,6 +1003,16 @@ void SongView::coordinateSelectionChange(
 // and screen changes ride the Quick coordinator's viewportChanged instead.
 bool SongView::eventFilter(QObject *watched, QEvent *event)
 {
+    if (event->type() == QEvent::ShortcutOverride && watched == QGuiApplication::focusObject()) {
+        const auto *const keyEvent = static_cast<const QKeyEvent *>(event);
+        if (const songview::EditActions *const actions = editActions();
+            actions && actions->target() == this &&
+            actions->editorCommandForKey(keyEvent->key(), keyEvent->modifiers())) {
+            event->accept();
+            return true;
+        }
+    }
+
     if (watched == QGuiApplication::instance()) {
         switch (event->type()) {
         case QEvent::ApplicationPaletteChange:
