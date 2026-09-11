@@ -557,3 +557,56 @@ void AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume()
     QCOMPARE(valuesAt(tab().document(), kPanController, kDestinationTick), movedPan);
     QCOMPARE(valuesAt(tab().document(), kLfoController, kDestinationTick), movedLfo);
 }
+
+void AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation()
+{
+    AutomationCanvas *const canvas = page().canvas();
+    QVERIFY(canvas);
+    const EditorAutomationRowId volume{EditorAutomationRowKind::ControlChange, kTrack,
+                                       kVolumeController};
+    const EditorAutomationRowId pan{EditorAutomationRowKind::ControlChange, kTrack, kPanController};
+    const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
+    const int volumeIndex = checks::support::automationParameterIndex(*canvas, volume);
+    const int panIndex = checks::support::automationParameterIndex(*canvas, pan);
+    QVERIFY(volumeIndex >= 0);
+    QVERIFY(panIndex >= 0);
+    QVERIFY(activateParameter(volume));
+    // Synthetic modifier clicks cannot drive parameterPressed in-harness:
+    // the canvas reads the live OS modifier state, not the event. Modifier
+    // dispatch is covered by in-app observation; the view-only toggle
+    // contract is pinned directly here.
+    const QByteArray documentBefore = tab().document().smf().write();
+    const uint64_t revisionBefore = tab().document().revision();
+    const int undoIndexBefore = tab().document().undoStack()->index();
+    const int undoCountBefore = tab().document().undoStack()->count();
+    const QList<int> selectionBefore = canvas->selectedParameters();
+
+    canvas->toggleGhostParameter(panIndex);
+    QCOMPARE(canvas->ghostParameters(), QList<int>{panIndex});
+    QCOMPARE(canvas->activeParameter(), volumeIndex);
+    QCOMPARE(canvas->selectedParameters(), selectionBefore);
+    QCOMPARE(tab().document().smf().write(), documentBefore);
+    QCOMPARE(tab().document().revision(), revisionBefore);
+    QCOMPARE(tab().document().undoStack()->index(), undoIndexBefore);
+    QCOMPARE(tab().document().undoStack()->count(), undoCountBefore);
+
+    // Pins survive activation cycling.
+    QVERIFY(activateParameter(tempo));
+    QVERIFY(activateParameter(volume));
+    QCOMPARE(canvas->ghostParameters(), QList<int>{panIndex});
+
+    // Plain-clicking a ghosted tab activates it and keeps the pin waiting:
+    // the ghost pass skips the active row, the active pass paints it.
+    QVERIFY(activateParameter(pan));
+    QCOMPARE(canvas->activeParameter(), panIndex);
+    QCOMPARE(canvas->ghostParameters(), QList<int>{panIndex});
+
+    // Command-clicking the active tab collapses back to a single lane.
+    canvas->toggleGhostParameter(panIndex);
+    QVERIFY(canvas->ghostParameters().isEmpty());
+    QCOMPARE(canvas->activeParameter(), panIndex);
+    // Invalid indexes are no-ops.
+    canvas->toggleGhostParameter(-1);
+    canvas->toggleGhostParameter(canvas->parameterLabels().size());
+    QVERIFY(canvas->ghostParameters().isEmpty());
+}

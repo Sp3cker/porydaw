@@ -158,18 +158,26 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     Q_PROPERTY(int activeParameter READ activeParameter NOTIFY activeParameterChanged FINAL)
     Q_PROPERTY(QList<int> selectedParameters READ selectedParameters NOTIFY
                    parameterSelectionChanged FINAL)
+    Q_PROPERTY(QList<int> ghostParameters READ ghostParameters NOTIFY ghostParametersChanged FINAL)
     Q_PROPERTY(QVariantMap parameterAppearance READ parameterAppearance NOTIFY
                    parameterPresentationChanged FINAL)
     Q_PROPERTY(
         bool parametersEnabled READ parametersEnabled NOTIFY parameterPresentationChanged FINAL)
+    Q_PROPERTY(
+        QVariantList parameterPips READ parameterPips NOTIFY parameterPresentationChanged FINAL)
     QStringList parameterLabels() const;
     int activeParameter() const noexcept;
     QList<int> selectedParameters() const;
+    QList<int> ghostParameters() const;
     QVariantMap parameterAppearance() const;
+    QVariantList parameterPips() const;
     bool parametersEnabled() const noexcept;
     std::optional<EditorAutomationRowId> parameterRow(int index) const;
     Q_INVOKABLE void activateParameter(int index);
     Q_INVOKABLE void openParameterMenu(int index, qreal sceneX, qreal sceneY);
+    Q_INVOKABLE void toggleGhostParameter(int index);
+    Q_INVOKABLE void parameterPressed(int index);
+    Q_INVOKABLE void parameterClicked(int index);
     // Binds the shared canvas popup session once TimelineQuickView exists;
     // the automation menus are typed QuickMenuHost adapters over it.
     void setPopupSession(songview::QuickPopupSession *session);
@@ -192,6 +200,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void ccDeletePromptChanged();
     void activeParameterChanged();
     void parameterSelectionChanged();
+    void ghostParametersChanged();
     void parameterPresentationChanged();
 
   private:
@@ -354,6 +363,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void rebuildNodeStack();
     LaneHandle laneAt(int y) const noexcept;
     const NodeLaneSlot *resolveSlot(LaneHandle handle) const noexcept;
+    std::vector<LaneHandle> ghostSecondaryHandles() const;
     void refreshHoverAt(const QPointF &position);
     bool resolveLane(LaneHandle handle, const NodeLane **lane, QRect *body) const noexcept;
     NodeLane *mutableLane(LaneHandle handle) noexcept;
@@ -406,4 +416,10 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     NodeDoubleClickGuard m_deletedNodeClick;
     // Active CC controller; nullopt selects Tempo (see Q_PROPERTY docs).
     std::optional<uint8_t> m_activeController = CoreTimeDefaults::kCcVolume;
+    // User ghost-enabled CC controllers; m_ghostTempo covers song-global Tempo.
+    // Controller identities (never catalog indexes) so pins rebind across the
+    // primary track exactly like the active parameter. View-local, never
+    // persisted; toggling touches neither selection, document, nor undo.
+    std::vector<uint8_t> m_ghostControllers;
+    bool m_ghostTempo = false;
 };

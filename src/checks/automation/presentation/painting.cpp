@@ -180,6 +180,20 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
                  "the rendered fitted Text exceeds its label height");
     }
 
+    // Written-event pips mirror the document — never adapter projections
+    // (synthetic tick-0 node, Tempo leadIn): nine entries, each agreeing
+    // with lanePoints/tempoPoints for its resolved row.
+    const QVariantList pips = canvas->parameterPips();
+    QCOMPARE(pips.size(), expected.size());
+    for (int index = 0; index < expected.size(); ++index) {
+        const auto row = canvas->parameterRow(index);
+        QVERIFY(row.has_value());
+        const bool written = row->kind == EditorAutomationRowKind::Tempo
+                                 ? !m_document->tempoPoints().empty()
+                                 : !m_document->lanePoints(row->track, row->controller).empty();
+        QCOMPARE(pips.at(index).toBool(), written);
+    }
+
     // The selector keeps the catalog's grouping visible: each related pair
     // shares one row, and song-global Tempo closes the grid on its own wider
     // row instead of joining a pair.
@@ -318,6 +332,45 @@ void AutomationPresentationTest::tempoUsesFullSharedPlotBody()
                                 QRegion(tempoBody), QPoint{}, tempoColor));
 }
 
+void AutomationPresentationTest::ghostTempoPaintsUnderActiveLane()
+{
+    AutomationPage *const automationPage = page();
+    songview::TimelineQuickScene *const scene = quickScene();
+    AutomationCanvas *const canvas = automationPage ? automationPage->canvas() : nullptr;
+    QVERIFY(automationPage);
+    QVERIFY(scene);
+    QVERIFY(canvas);
+    const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
+    const EditorAutomationRowId volume{EditorAutomationRowKind::ControlChange, kTrack,
+                                       CoreTimeDefaults::kCcVolume};
+    QVERIFY(activateParameter(volume));
+    TempoEdit edit;
+    edit.remove = m_document->tempoPoints();
+    edit.add = {{kHeldTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(120)}};
+    m_document->applyTempoEdit(edit);
+    refreshDocumentPresentation();
+    const QRect body = canvas->laneBody(LaneHandle{0});
+    const QColor tempoColor = themes::color(themes::Role::song_view_automation_tempo_curve);
+    const QColor ccColor = themes::trackIdentityColor(kTrack % themes::trackIdentityColorCount);
+    // Single-lane default: only the active lane paints.
+    QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
+                             QRegion(body), QPoint{}, tempoColor));
+    const int tempoIndex = checks::support::automationParameterIndex(*canvas, tempo);
+    QVERIFY(tempoIndex >= 0);
+    canvas->toggleGhostParameter(tempoIndex);
+    QColor ghostTempo = tempoColor;
+    ghostTempo.setAlphaF(0.45);
+    // The ghost paints beneath: dimmed tempo curve plus the active lane.
+    QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
+                                QRegion(body), QPoint{}, ghostTempo));
+    QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
+                                QRegion(body), QPoint{}, ccColor));
+    canvas->toggleGhostParameter(tempoIndex);
+    QVERIFY(canvas->ghostParameters().isEmpty());
+    QTRY_VERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
+                                 QRegion(body), QPoint{}, ghostTempo));
+}
+
 void AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment()
 {
     AutomationPage *const automationPage = page();
@@ -436,7 +489,8 @@ void AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators()
     QVERIFY(band);
     const QImage image = checks::support::captureQuickBand(m_rig->view(), band->rect);
     QVERIFY(!image.isNull());
-    const QColor outline = appearance.value(QStringLiteral("selectionOutline")).value<QColor>();
+    const QColor selectionBar =
+        appearance.value(QStringLiteral("tabSelectedBackground")).value<QColor>();
     const auto containsOutline = [&image](const QRect &rect, QColor color) {
         color.setAlpha(255);
         const QRect pixels = checks::support::devicePixelRect(image, rect);
@@ -453,10 +507,17 @@ void AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators()
             .toAlignedRect()
             .translated(-band->rect.topLeft());
     };
-    QVERIFY2(containsOutline(localBounds(lfoTab), outline),
+    QVERIFY2(containsOutline(localBounds(lfoTab), selectionBar),
              "the inactive LFO label has no visible shared-selection indicator");
-    QVERIFY2(containsOutline(localBounds(tempoTab), outline),
+    QVERIFY2(containsOutline(localBounds(tempoTab), selectionBar),
              "the inactive Tempo label has no visible shared-selection indicator");
+    // The yellow bottom rule is the ghost toggle now, not selection: with no
+    // ghosts enabled it must not paint on selection-covered tabs.
+    const QColor ghostRule = appearance.value(QStringLiteral("selectionOutline")).value<QColor>();
+    QVERIFY2(!containsOutline(localBounds(lfoTab), ghostRule),
+             "the shared selection leaked onto the ghost rule");
+    QVERIFY2(!containsOutline(localBounds(tempoTab), ghostRule),
+             "the shared selection leaked onto the ghost rule");
 }
 
 void AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord()

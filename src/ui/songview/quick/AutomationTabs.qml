@@ -1,7 +1,7 @@
 // Compact parameter selector for the automation gutter: the nine standard
 // parameter identities as native Basic TabButtons in two columns, one related
 // pair per row in catalog order (mix, pitch, echo), with song-global Tempo
-// spanning the last row. Qt owns checking, focus, activation and accessibility
+// spanning the last row. Qt owns focus, activation and accessibility
 // plumbing; the canvas owns parameter identity, the parameter menu and
 // shared-selection semantics. The grid scrolls inside the gutter: a
 // Flickable owns the vertical overflow, so the tab stack may be taller than
@@ -23,6 +23,15 @@ Item {
     // a QList per read, so the tabs read a single root-level snapshot
     // instead of one per-tab copy.
     readonly property var selectedParams: root.canvas.selectedParameters
+
+    // One shared pip list for the whole grid, same one-snapshot discipline:
+    // one bool per catalog index, true where the document holds written
+    // events for that identity.
+    readonly property var pips: root.canvas.parameterPips
+
+    // One shared ghost list, same one-snapshot discipline: catalog indexes
+    // the user ghost-enabled for display-only plot curves.
+    readonly property var ghostParams: root.canvas.ghostParameters
 
     Flickable {
         id: gutterScroller
@@ -59,11 +68,29 @@ Item {
                         tab.index === root.canvas.parameterLabels.length - 1
                     readonly property bool selectionIncluded:
                         root.selectedParams.includes(tab.index)
+                    // Ghost-enabled tabs show their nodes as ineditable ghosts
+                    // in the plot; the bottom rule is that user toggle.
+                    // Shared-selection inclusion keeps its own mark instead.
+                    readonly property bool ghostShown:
+                        root.ghostParams.includes(tab.index)
+                    // The selection bar marks scope beyond the lane being
+                    // edited: the active tab already carries the checked
+                    // fill, so inclusion is only drawn where it adds
+                    // information.
+                    readonly property bool inclusionMarked:
+                        tab.selectionIncluded && !tab.checked
+                    readonly property bool hasEvents: root.pips[tab.index] === true
 
                     objectName: "automationParameterTab" + index
                     text: modelData
                     font: root.appearance.font
                     padding: root.appearance.inset
+                    // Reserve the pip cell only when the dot draws, so the
+                    // fitted label never collides with it.
+                    leftPadding: tab.hasEvents
+                                     ? root.appearance.inset + root.appearance.pipExtent
+                                           + root.appearance.inset
+                                     : root.appearance.inset
                     focusPolicy: Qt.StrongFocus
                     // The QTabBar-style hover fill must not depend on the
                     // platform's useHoverEffects default.
@@ -72,17 +99,25 @@ Item {
                     Layout.minimumHeight: root.appearance.minimumCellHeight
                     Layout.columnSpan: tab.tempoParameter ? 2 : 1
 
-                    // Native checkable/autoExclusive presentation; the canvas
-                    // stays the sole parameter authority.
+                    // Display-only indicator: the canvas stays the sole
+                    // parameter authority, so neither a click, Space, nor an
+                    // exclusivity group may write `checked` — the explicit
+                    // press/click handlers below own activation.
+                    checkable: false
                     checked: root.canvas.activeParameter === tab.index
 
-                    // Press-down activation: the press itself switches the
-                    // parameter, matching QTabBar; clicked stays the fallback
-                    // for assistive-tech presses and keyboard activation. The
-                    // double fire is free — activateParameter early-returns on
-                    // the active index.
-                    onPressed: root.canvas.activateParameter(tab.index)
-                    onClicked: root.canvas.activateParameter(tab.index)
+                    // Press-down dispatch through the canvas, which reads the
+                    // live modifiers — AbstractButton signals carry none:
+                    // plain press activates (matching QTabBar), command-press
+                    // toggles the ghost. Clicked stays the fallback for
+                    // assistive-tech presses and keyboard activation; a real
+                    // command-click already toggled on press, so the canvas
+                    // never toggles twice.
+                    onPressed: {
+                        tab.forceActiveFocus()
+                        root.canvas.parameterPressed(tab.index)
+                    }
+                    onClicked: root.canvas.parameterClicked(tab.index)
 
                     // Keyboard focus or a checked change must never leave the
                     // tab outside the Flickable viewport: scroll by the
@@ -153,10 +188,11 @@ Item {
                     }
 
                     // Distinct indicators: the active tab takes the selected
-                    // tab fill, shared-selection inclusion demotes to a
-                    // secondary bottom underline (never a full-cell outline),
-                    // and keyboard focus paints the inner focus ring over every
-                    // state.
+                    // tab fill, a user ghost-enabled tab takes the yellow
+                    // bottom rule, shared-selection inclusion takes the
+                    // right-edge bar (never a full-cell outline, never on the
+                    // tab being edited), and keyboard focus paints the inner
+                    // focus ring over every state.
                     background: Rectangle {
                         color: tab.checked ? root.appearance.tabSelectedBackground
                                            : tab.hovered ? root.appearance.tabHoverBackground
@@ -164,14 +200,46 @@ Item {
                         border.width: root.appearance.stroke
                         border.color: root.appearance.tabOutline
 
+                        // Written-event pip: fixed green for all themes, drawn
+                        // on the active tab too; independent of the inclusion
+                        // rule and the checked fill.
                         Rectangle {
-                            visible: tab.selectionIncluded
+                            visible: tab.hasEvents
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.leftMargin: root.appearance.inset
+                            width: root.appearance.pipExtent
+                            height: root.appearance.pipExtent
+                            radius: width / 2
+                            color: "#86D78F"
+                            Accessible.ignored: true
+                        }
+
+                        // Ghost toggle: bottom rule, drawn even on the active
+                        // tab — a pin there waits until another lane
+                        // activates.
+                        Rectangle {
+                            visible: tab.ghostShown
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.bottom: parent.bottom
                             anchors.margins: root.appearance.stroke
                             height: root.appearance.stroke
                             color: root.appearance.selectionOutline
+                        }
+
+                        // Shared-selection inclusion: right-edge bar using the
+                        // selected fill, so the two marks never share geometry.
+                        Rectangle {
+                            visible: tab.inclusionMarked
+                            anchors.top: parent.top
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            anchors.topMargin: root.appearance.stroke
+                            anchors.rightMargin: root.appearance.stroke
+                            anchors.bottomMargin: root.appearance.stroke
+                            width: root.appearance.pipExtent
+                            color: root.appearance.tabSelectedBackground
                         }
 
                         Rectangle {
@@ -193,6 +261,7 @@ Item {
                         + (tab.selectionIncluded
                            ? qsTr("; included in shared selection")
                            : qsTr("; not in shared selection"))
+                        + (tab.ghostShown ? qsTr("; shown as ghost nodes") : "")
                 }
             }
         }

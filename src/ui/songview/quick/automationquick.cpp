@@ -179,6 +179,63 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                      viewport.bottom(), gutter.width(), gutterViewport);
     }
 
+    // User ghost-enabled secondaries: display-only static curves painted
+    // under the active lane. No hit-testing, hover, transient, phantom, or
+    // selection reticle — the active lane keeps every affordance. Point
+    // vectors are hoisted beside the loop: the paint context only views
+    // them, like the active lane's VisibleLane.
+    struct GhostLane {
+        LaneHandle handle;
+        const NodeLaneSlot *slot = nullptr;
+        std::vector<NodePoint> points;
+    };
+    std::vector<GhostLane> ghosts;
+    if (content) {
+        for (const LaneHandle handle : ghostSecondaryHandles()) {
+            if (const NodeLaneSlot *slot = resolveSlot(handle))
+                ghosts.push_back({handle, slot, slot->lane->points()});
+        }
+    }
+    for (const GhostLane &ghostLane : ghosts) {
+        const NodeLaneSlot *slot = ghostLane.slot;
+        QColor ghost =
+            slot->isTempo()
+                ? themes::color(themes::Role::song_view_automation_tempo_curve)
+                : themes::trackIdentityColor(slot->id.track % themes::trackIdentityColorCount);
+        ghost.setAlphaF(0.45);
+        const NodeLaneQuickPaint::Context ghostContext{
+            .scene = scene,
+            .lane = *slot->lane,
+            .points = ghostLane.points,
+            .body = slot->body,
+            .plot = viewport,
+            .contentYOffset = 0.0,
+            .overflow = nodelane::nodeOverflowClip(slot->body, m_geometry).intersected(viewport),
+            .geometry = m_geometry,
+            .projection = projection,
+            .hoverState = m_hoverState,
+            .handle = ghostLane.handle,
+            .color = ghost,
+            .selectedColor = m_inputHost->palette().highlight().color(),
+            .dimmedColor = m_inputHost->palette().mid().color(),
+            .devicePixelRatio = dpr,
+            .selectedTickRange = std::nullopt,
+            .selectedLane = false,
+            .selectedNodesLane = false,
+            .bandLane = false,
+            .bandFirstTick = bandFirst,
+            .bandLastTick = bandLast,
+            .multipleSelectedNodes = false,
+            .pencilMode = m_pencilMode,
+            .nodeDrag = nullptr,
+            .phantomGesture = nullptr,
+            .sweep = nullptr,
+            .pencil = nullptr,
+            .phantom = std::nullopt,
+        };
+        NodeLaneQuickPaint::composeStatic(ghostContext, content, content, false);
+    }
+
     if (active) {
         const VisibleLane &lane = *active;
         const QColor color =

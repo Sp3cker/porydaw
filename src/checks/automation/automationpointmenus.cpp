@@ -315,6 +315,12 @@ void AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePr
         {EditorAutomationRowKind::ControlChange, 0, CoreTimeDefaults::kCcVolume}));
     QTRY_VERIFY(!laneBody(volume).isEmpty());
     QVERIFY(songTab.document().lanePoints(0, CoreTimeDefaults::kCcVolume).empty());
+    // The synthetic tick-0 default is adapter-only: no written events, no pip.
+    const int volumeIndex = checks::support::automationParameterIndex(
+        *page().canvas(), {EditorAutomationRowKind::ControlChange, 0, CoreTimeDefaults::kCcVolume});
+    QVERIFY(volumeIndex >= 0);
+    QCOMPARE(page().canvas()->parameterPips().size(), 9);
+    QVERIFY(!page().canvas()->parameterPips().at(volumeIndex).toBool());
 
     const QByteArray before = songTab.document().smf().write();
     const uint64_t revision = songTab.document().revision();

@@ -103,6 +103,7 @@ class AutomationEditingTest final : public QObject
     void multiLaneSelectionDeleteAndEmptyDeleteNoop();
     void multiLaneSelectionDragAbortsOnDocumentRebuild();
     void multiCcLaneSelectionDragExcludesTempoAndVolume();
+    void ghostToggleIsViewOnlyAndSurvivesActivation();
 
     // Menu and clipboard coverage.
     void contextMenuRoutingAndAvailableLanes();
