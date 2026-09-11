@@ -807,11 +807,12 @@ std::vector<QuickMenuItem> SongView::buildTimeSelectionItems() const
     rows.push_back(row(TimeSelectionAction::Cut, tr("Cut range"),
                        contextShortcutText(QStringLiteral("roll.cut"))));
     rows.push_back(row(TimeSelectionAction::Delete, tr("Delete range"), {}));
-    rows.push_back(row(TimeSelectionAction::InsertBlank, tr("Insert blank time"), {}));
+    rows.push_back(row(TimeSelectionAction::InsertBlank, tr("Insert Time"),
+                       contextShortcutText(QStringLiteral("edit.insert_time"))));
     rows.push_back(row(TimeSelectionAction::Duplicate, tr("Duplicate time"),
                        contextShortcutText(QStringLiteral("roll.duplicate_time"))));
-    rows.push_back(
-        row(TimeSelectionAction::RemoveContents, tr("Remove contents (shift left)"), {}));
+    rows.push_back(row(TimeSelectionAction::RemoveContents, tr("Delete Time (Shift Left)"),
+                       contextShortcutText(QStringLiteral("edit.delete_time"))));
     QuickMenuItem paste = row(TimeSelectionAction::Paste, tr("Paste at edit cursor"),
                               contextShortcutText(QStringLiteral("roll.paste")));
     // Build-time enablement only: the command re-reads the clipboard fresh
@@ -886,7 +887,7 @@ void SongView::handleTimeSelectionAction(int actionId)
         deleteTimeSelection();
         break;
     case TimeSelectionAction::InsertBlank:
-        insertBlankTime();
+        insertTime();
         break;
     case TimeSelectionAction::Duplicate:
         duplicateTimeSelection();

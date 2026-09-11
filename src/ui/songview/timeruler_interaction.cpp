@@ -311,10 +311,12 @@ void TimeRuler::showRulerMenu(uint64_t clickTick, const QPointF &scenePos)
     if (selection.active()) {
         rows.push_back(QuickMenuItem::makeSeparator());
         addRow(RulerMenuAction::LoopFromSelection, SongView::tr("Set loop to selection"));
-        addRow(RulerMenuAction::InsertBlank, SongView::tr("Insert blank time"));
+        addRow(RulerMenuAction::InsertBlank, SongView::tr("Insert Time"));
+        rows.back().shortcutText = contextShortcutText(QStringLiteral("edit.insert_time"));
         addRow(RulerMenuAction::Duplicate, SongView::tr("Duplicate time"));
         rows.back().shortcutText = contextShortcutText(QStringLiteral("roll.duplicate_time"));
-        addRow(RulerMenuAction::RemoveContents, SongView::tr("Remove contents (shift left)"));
+        addRow(RulerMenuAction::RemoveContents, SongView::tr("Delete Time (Shift Left)"));
+        rows.back().shortcutText = contextShortcutText(QStringLiteral("edit.delete_time"));
         addRow(RulerMenuAction::ClearSelection, SongView::tr("Clear time selection"));
     }
     rows.push_back(QuickMenuItem::makeSeparator());
@@ -396,7 +398,7 @@ void TimeRuler::handleRulerMenuAction(int id)
     case RulerMenuAction::InsertBlank:
         if (menuSelectionStale(target))
             return;
-        m_owner.insertBlankTime();
+        m_owner.insertTime();
         break;
     case RulerMenuAction::Duplicate:
         if (menuSelectionStale(target))

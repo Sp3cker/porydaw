@@ -499,9 +499,6 @@ class SongView : public QObject
     static constexpr int insertTimePromptMaximumBeatFractions() noexcept { return 3; }
     QString insertTimePromptTitle() const;
     QVariantMap insertTimePromptAppearance() const;
-    // Selection-only insertion half of the unified command, retained until
-    // the context-menu cutover finishes.
-    void insertBlankTime();
     void duplicateTimeSelection();
     void pasteRangeAtEditCursor(const songview::Clip &clip);
     // Single paste entry from every surface (roll keys, drawer-canvas keys,
@@ -800,6 +797,10 @@ class SongView : public QObject
     void coordinateSelectionChange(
         const songview::EditorSelectionModel::SelectionTransition &transition);
     std::optional<TimeScopeResolution> resolveTimeSelectionScope() const;
+    // Selection-only insertion half of the unified Insert Time command; the
+    // unified entry is its sole dispatch. An unresolved selection rejects
+    // silently; the prompt path never reaches here.
+    void insertBlankTime();
     // Engine tracks a track-scoped time selection resolves to (used and
     // document-mapped), and the copyable lane identities of one track (its
     // model lanes plus the voice changes).
