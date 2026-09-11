@@ -12,8 +12,8 @@ The controller obtained two independent plan-agent opinions on the major enginee
 2. Follow `sdd-triage-gate` and, for SDD-track execution, `sdd-execution-loop`. Routes/seats are recorded below; Direct dispatches carry Target/Change/Acceptance inline, with the linked brief supplying their requirements. Global constraints are not repeated in briefs.
 3. The write sets are closed. Use LSP references before exported-symbol changes; supplement demonstrably incomplete constructor/template references with scoped search. Preserve existing Qt ownership, selection observer, popup session and history conventions. Do not create a command bus, focus framework, implicit action fallback, compatibility alias, or second physical shortcut dispatcher.
 4. Each ordinary task has at most three files, five steps and one acceptance predicate. Tasks 3, 6, 11 and 31 are explicit same-shape mechanical migrations/deletions with exact per-file lists. Time/note dismissal and action-row projection are combined where their union fits the cap; remaining splits follow real ownership/interface boundaries.
-5. Dependencies name consumed interfaces/behavior. The numbered order is a valid serial order. Parallelize only ready tasks with disjoint write sets; shared-file edits are serialized even without a semantic dependency. No concurrent agent runs validation; the controller validates settled changes once per completed batch and applies the per-task review gate.
-6. Verification policy: use only `deno task` build/format/check entry points. Run the named focused checks for each settled behavior change, batching the union for compatible completed tasks rather than rebuilding per micro-edit. Run the full `deno task verify --verbose` once at final integration. Final source formatting uses the project formatter on affected source files; do not restyle unrelated files. `--filter` is substring matching and repeated filters form a union; `rollcheck` also selects `rollcheck-static`. Avoid `--qt` unless exactly one harness is selected.
+5. Dependencies name consumed interfaces/behavior. The numbered order is a valid serial order. Parallelize only ready tasks with disjoint write sets; shared-file edits are serialized even without a semantic dependency. Concurrent implementers perform the read-only, file-local inspection required by `sdd-execution-loop` on their owned files and report its evidence. They defer shared builds/tests and formatter/linter commands to the controller, who validates settled changes once per completed batch before the per-task review gate. Deferred verification is not a pass. Task acceptance does not require a commit; use the checkpoint cadence below.
+6. Verification policy: command-based build/format/check verification uses only `deno task` entry points; read-only local inspection follows `sdd-execution-loop`. Run the named focused checks for each settled behavior change, batching the union for compatible completed tasks rather than rebuilding per micro-edit. Run the full `deno task verify --verbose` once at final integration. Final source formatting uses the project formatter on affected source files; do not restyle unrelated files. `--filter` is substring matching and repeated filters form a union; `rollcheck` also selects `rollcheck-static`. Avoid `--qt` unless exactly one harness is selected.
 7. Native UI changes require the real shown application/Quick surfaces and a final visible walkthrough; use the native-window capture skill for screenshots when needed. Existing checks are preferred. Add a permanent regression only for a plausible target, lifetime, priority or exactly-once failure; delete obsolete wording/parent-layout/remapping/stale-menu pins rather than repinning them. Do not manually activate a closed menu to simulate a removed feature. Retain form-transaction guards.
 8. Keep the current musical editing algorithms, lane/time/tempo scope, clipboard formats, undo granularity, scale-fold/audition behavior and transport distinctions unless the spec explicitly changes them. Window and Editor scope are not interchangeable. No disconnected automation node selection, modifier-hover scaffolding, drag redesign or unrelated menu reorganization.
 9. Producers name their downstream consumers. Intermediate extraction stages preserve existing behavior; the keyboard/action-row cutovers then remove old execution paths, and Task 31 removes remaining unreachable storage. Do not leave stubs, no-op compatibility methods or obsolete paths in the completed implementation.
@@ -69,6 +69,24 @@ Each line is one bounded task with its execution route, reason and implementatio
 | Cursor/final cutover | 28 → 30; 26/27/28/29/30 → 31 → 32 → 33 | Serialize Task 26 before Task 30 for their shared rangeedit.cpp writes, not as an interface prerequisite; final review and whole-suite validation are controller-owned |
 
 The brief prerequisites are authoritative. A shared write set adds serialization, not an invented public API dependency.
+
+## Checkpoint cadence
+
+- Batch accepted work at coherent milestones: after Task 7 (fixed bindings),
+  Task 17 (shared action/keyboard ownership), Task 31 (menu/cursor cutover
+  and cleanup), and Task 33 plus final whole-branch review (verified behavior
+  and documentation). These are checkpoint opportunities, not extra tasks
+  or mandatory additional commits when an earlier checkpoint left no work
+  pending.
+- Before a later task re-edits any file in the accumulated uncommitted
+  write sets of earlier tasks, finish the prior writer's review/fixes and
+  checkpoint its accepted work with other ready work. This includes
+  non-adjacent reuse such as Task 26 → Task 30 in rangeedit.cpp.
+- Serial disjoint-file tasks do not need intervening commits. Retain their
+  check/review gates and captured task-scoped review baselines; do not
+  create commits just to generate a diff. Stage only accepted plan changes,
+  not user reference files or in-flight work, and follow `sdd-execution-loop`
+  and the existing authorization/push constraint.
 
 ## Engineering decisions and second opinions
 

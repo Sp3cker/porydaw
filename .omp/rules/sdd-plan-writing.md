@@ -1,6 +1,6 @@
 ---
 name: sdd-plan-writing
-description: "When authoring an implementation plan executed task-by-task: plan layout, brief skeleton, specificity without code bodies, no repetition across briefs, sizing that amortizes verification."
+description: "When authoring an implementation plan executed task-by-task: bounded briefs, symbol-level change/preservation contracts, no repetition, verification-sized tasks, and sparse milestone checkpoints instead of per-task commits."
 ---
 
 # Plan writing (SDD-compatible output)
@@ -44,6 +44,11 @@ envelopes; the brief owns requirements.
 
 - Every behavior the implementer must produce is named: exact identifiers,
   exact edge-case behavior, exact non-goals ("do not add X").
+- For deletion/extraction or mixed-purpose code surgery, distinguish whole
+  declarations to remove from bodies to edit and named declarations,
+  signatures, enclosing scopes and behavior to preserve. Put these bounds
+  in the existing contract/steps, not a new checklist section. Use symbols,
+  not brittle line ranges or prescribed function bodies.
 - Steps describe decisions already made. A step that needs the implementer
   to choose between valid approaches means the plan is unfinished — decide
   it here, or split the choice into its own design task.
@@ -66,9 +71,36 @@ envelopes; the brief owns requirements.
   with inline Target/Change/Acceptance. SDD-track is for judgment work,
   not the default.
 
+## Checkpoint cadence (not task bookkeeping)
+
+- Put a few coherent checkpoint milestones in plan.md, not a commit step in
+  every brief. Use existing integration/behavior boundaries, not arbitrary
+  task counts, timers, separate commit tasks or a new tracking document.
+- Task completion, review acceptance and Git persistence are independent.
+  Serial tasks with disjoint write sets need no intervening commit, even
+  when one consumes the other's interface. Keep their verification/review
+  requirements; do not weaken those to reduce Git bookkeeping.
+- Identify cross-task file reuse from the accumulated uncommitted write sets,
+  not just adjacent task numbers. Before a later task re-edits such a file,
+  checkpoint its accepted prior writer with other ready work. Unreviewed or
+  failing work is fixed first; repair passes within one task do not force
+  commits. The execution loop owns staging, diff packaging and fix handling.
+- If successive tasks repeatedly hand off the same files for one behavior
+  change, merge them where the existing sizing caps permit instead of
+  creating a train of mandatory checkpoints. Scope tasks for useful work,
+  not one-commit-per-task history.
+- Earlier ownership-boundary checkpoints can satisfy nearby milestones.
+  Final handoff checkpoints any remaining accepted work after final review;
+  never require an empty/redundant checkpoint to satisfy a plan marker.
+
 ## Repetition ban
 
 - Any sentence appearing in 3+ briefs belongs in plan.md Global Constraints
   or the loop — cross-reference it, never copy it.
 - One statement of verification policy per plan, in plan.md. Who runs what
   is decided once, not re-litigated in every brief.
+- Keep the before/edit/after tooling protocol and evidence contract in
+  `sdd-execution-loop`; do not copy them into briefs. Parallel-work policy
+  must distinguish implementer-owned, read-only local inspection from
+  controller-run shared builds/tests and formatter/linter commands. Never
+  use a blanket "skip validation" instruction that suppresses both.
