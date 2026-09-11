@@ -33,6 +33,10 @@ Trust policy:
   downgrade a finding.
 - Run no tests, mutate nothing. If reading raises a doubt no existing run
   answers, name the test you would run in your report.
+- A DONE report with no test evidence (empty `tests`, or
+  NOT_RUN_PER_DISPATCH) is an Important finding — unverified work never
+  passes on prose. DEFERRED_TO_CONTROLLER is the sole exception: note it
+  and move on; the controller owns merged-tree verification.
 
 <spec-compliance>
 Compare the diff against the brief. Missing: requirements skipped, missed,

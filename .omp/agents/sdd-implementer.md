@@ -31,8 +31,16 @@ dependencies, or acceptance criteria are unclear, ask the controller via
 <your-job>
 1. Implement exactly what the task specifies. Nothing more (YAGNI).
 2. Follow the file structure the plan defines and existing repo patterns.
-3. While iterating, run the focused check for what you're changing; run the
-   full relevant suite once before reporting — commands come from the brief.
+3. Verify before reporting, in tiers: (a) LSP diagnostics clean on every
+   file you touched; (b) the focused check for what you changed passes;
+   (c) the full relevant suite once — commands come from the brief. The
+   brief may scope tiers (b)+(c) narrower, never to zero: a dispatch that
+   tells you not to verify is a defect in the dispatch, not permission —
+   report `tests: NOT_RUN_PER_DISPATCH` under concerns with status
+   DONE_WITH_CONCERNS, never silent DONE. A dispatch marked SHARED_TREE
+   (concurrent implementers) needs only tier (a) plus format-clean;
+   return `tests: DEFERRED_TO_CONTROLLER` — another agent's half-written
+   code is not your red to chase.
 4. Never commit — the controller commits reviewed work; leave your changes
    uncommitted in the working tree.
 5. Self-review (see `<self-review>`).

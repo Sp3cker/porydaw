@@ -25,13 +25,19 @@ time: dispatch implementer → review gate → fix loop → controller commit �
   `selfReviewFindings`, `concerns`. Permissive mode. Persist whatever of it
   you want (e.g. `task-N-report.md`) as your own scratch — the implementer
   writes nothing.
+- Never waive verification in a dispatch. Scope it through the brief
+  (narrower target, fewer commands) — never "skip tests" or "no build".
+  Shared tree is the only exception: mark the dispatch SHARED_TREE and the
+  implementer returns build DEFERRED; you then run the focused check on
+  the merged tree at checkpoint-commit, before the review gate.
 - Never paste accumulated prior-task state into a dispatch. A fresh
   implementer needs its task, its interfaces, and the constraints. Nothing
   else.
 - Never make a subagent read the whole plan file.
 - Never dispatch dependent tasks in parallel without pipeline discipline
-  (see Pipelining). Genuinely independent plan tasks may fan out, but every
-  task keeps its own review gate.
+  (see Pipelining). Genuinely independent plan tasks may fan out only with
+  non-overlapping file lists — a shared file is dependence; serialize it.
+  Every task keeps its own review gate.
 - Batch small same-shape mechanical edits (same one-line fix repeated across
   files) into ONE dispatch with a per-file list; review the batch as one
   unit. Reserve one-dispatch-per-task for work needing its own judgment,
