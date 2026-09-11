@@ -126,13 +126,6 @@ QRect AutomationCanvas::contentBounds() const noexcept
     return m_inputHost ? m_inputHost->bounds().toAlignedRect() : QRect{};
 }
 
-// The QML selector grid's measured implicit height, published through the
-// setMinimumContentHeight Qt Binding — not a stacked-row computation.
-int AutomationCanvas::minimumContentHeight() const noexcept
-{
-    return m_minimumContentHeight;
-}
-
 AutomationProjection AutomationCanvas::projection() const
 {
     return AutomationProjection(m_geometry, &m_page);
@@ -188,30 +181,25 @@ bool AutomationCanvas::hasMultipleSelectedNodes(
 
 void AutomationCanvas::requestQuickUpdate(songview::AutomationRefreshSet dirty) const
 {
-    if (dirty.testFlag(songview::AutomationRefresh::Hover))
-        syncTimelineQuickHover();
-    m_page.requestQuickUpdate(dirty);
-}
-
-void AutomationCanvas::syncTimelineQuickHover() const
-{
-    if (!m_hoverState.hover.lane.valid()) {
-        m_page.m_owner.clearTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation);
-        return;
+    if (dirty.testFlag(songview::AutomationRefresh::Hover)) {
+        if (!m_hoverState.hover.lane.valid()) {
+            m_page.m_owner.clearTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation);
+        } else {
+            const uint64_t tick =
+                uint64_t(std::max(0.0, m_hoverState.insertionTick(projection(), m_pencilMode)));
+            m_page.m_owner.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation,
+                                                     tick);
+        }
     }
-    const uint64_t tick =
-        uint64_t(std::max(0.0, m_hoverState.insertionTick(projection(), m_pencilMode)));
-    m_page.m_owner.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation, tick);
+    m_page.requestQuickUpdate(dirty);
 }
 
 void AutomationCanvas::requestFullQuickUpdate() const
 {
+    // Full repaints re-render the selection layer, so the revision-keyed
+    // memo cannot survive them.
+    invalidateSelectedNodeMultiplicity();
     requestQuickUpdate(songview::AutomationRefresh::All);
-}
-
-void AutomationCanvas::requestViewportQuickUpdate() const
-{
-    requestQuickUpdate(songview::AutomationRefresh::Content);
 }
 
 void AutomationCanvas::requestSelectionQuickUpdate() const
@@ -243,12 +231,6 @@ void AutomationCanvas::requestGestureMoveQuickUpdate() const
     if (m_band.active)
         invalidateSelectedNodeMultiplicity();
     requestQuickUpdate(songview::AutomationRefresh::Transient);
-}
-
-void AutomationCanvas::requestGestureEndQuickUpdate() const
-{
-    invalidateSelectedNodeMultiplicity();
-    requestQuickUpdate(songview::AutomationRefresh::All);
 }
 
 bool AutomationCanvas::bandPreviewContainsLane(LaneHandle handle) const noexcept
@@ -485,7 +467,7 @@ void AutomationCanvas::cancelInteraction()
         m_inputHost->releasePointerGrab();
     if (wasActive) {
         setGestureActive(false);
-        requestGestureEndQuickUpdate();
+        requestFullQuickUpdate();
     } else {
         requestHoverQuickUpdate();
     }

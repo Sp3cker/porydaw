@@ -63,9 +63,16 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(TimelineQuickDirtySet)
 
 // Producers OR independent refresh levels; one flush repaints each requested
 // level's layers. Levels are not supersets of one another:
-//   Content   — grid, curves, nodes, selection, primary text
-//   Transient — drag-preview layer + transient text
-//   Hover     — hover layer + hover text
+//   Content   — grid, curves, nodes, selection, primary text + gutter
+//               chrome/text models
+//   Transient — drag-preview layer + transient text only
+//   Hover     — hover layer + hover text, plus a request-time cross-band
+//               hover-owner re-publish
+//   HorizontalPan — Content's plot layers minus the stationary gutter
+//               (skips gutter reset/paint); an alternative trigger for the
+//               content domain, not a fourth pixel domain.
+//   All (bits 0-2) deliberately excludes HorizontalPan: beside Content the
+//               bit would be a no-op.
 enum class AutomationRefresh : quint8 {
     None = 0,
     Content = 1u << 0,

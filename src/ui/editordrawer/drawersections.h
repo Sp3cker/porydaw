@@ -41,9 +41,9 @@ class DrawerSections final : public QObject
     }
 
     const DrawerMetrics &metrics() const;
-    // Single per-page body floor: the automation page honors the selector
-    // grid's measured minimumContentHeight, other pages the shared minimum.
-    int minimumBodyHeight(EditorDrawerPage page) const;
+    // Uniform body floor for every page: the selector grid scrolls inside the
+    // gutter, so body height and tab height are independent.
+    int minimumBodyHeight() const;
     void updateHostContext(int hostHeight, int defaultAutomationHeight);
     int preferredHeight() const;
     std::optional<int> velocityHeight() const noexcept;

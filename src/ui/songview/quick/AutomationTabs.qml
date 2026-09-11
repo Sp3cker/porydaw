@@ -3,9 +3,9 @@
 // pair per row in catalog order (mix, pitch, echo), with song-global Tempo
 // spanning the last row. Qt owns checking, focus, activation and accessibility
 // plumbing; the canvas owns parameter identity, the parameter menu and
-// shared-selection semantics. The grid's intrinsic height is published to
-// AutomationCanvas::minimumContentHeight so the drawer allocates only what
-// the labels need — never the other way around.
+// shared-selection semantics. The grid scrolls inside the gutter: a
+// Flickable owns the vertical overflow, so the tab stack may be taller than
+// the drawer's body floor allows without clipping or fighting the drawer.
 import QtQuick
 import QtQuick.Controls.Basic as Controls
 import QtQuick.Layouts
@@ -19,130 +19,182 @@ Item {
 
     readonly property var appearance: canvas.parameterAppearance
 
-    GridLayout {
-        id: grid
+    // One shared inclusion list for the whole grid: the canvas getter builds
+    // a QList per read, so the tabs read a single root-level snapshot
+    // instead of one per-tab copy.
+    readonly property var selectedParams: root.canvas.selectedParameters
 
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
+    Flickable {
+        id: gutterScroller
 
-        // Two cells per row: each row pairs the identities that belong
-        // together, so the grid halves the height the labels demand from the
-        // drawer while still filling the gutter's width in two equal columns.
-        columns: 2
-        rowSpacing: 0
+        anchors.fill: parent
+        interactive: false
+        clip: true
+        contentWidth: width
+        contentHeight: grid.implicitHeight
 
-        Repeater {
-            model: root.canvas.parameterLabels
+        GridLayout {
+            id: grid
 
-            Controls.TabButton {
-                id: tab
+            width: gutterScroller.width
 
-                required property int index
-                required property string modelData
+            // Two cells per row: each row pairs the identities that belong
+            // together, so the grid halves the labels' cumulative height
+            // while still filling the gutter's width in two equal columns.
+            columns: 2
+            rowSpacing: 0
 
-                // Song-global Tempo closes the catalog, after the CC
-                // identities, on its own full-width row.
-                readonly property bool tempoParameter:
-                    tab.index === root.canvas.parameterLabels.length - 1
-                readonly property bool selectionIncluded:
-                    root.canvas.selectedParameters.includes(tab.index)
+            Repeater {
+                model: root.canvas.parameterLabels
 
-                objectName: "automationParameterTab" + index
-                text: modelData
-                font: root.appearance.font
-                padding: root.appearance.inset
-                focusPolicy: Qt.StrongFocus
-                Layout.fillWidth: true
-                Layout.minimumHeight: root.appearance.minimumCellHeight
-                Layout.columnSpan: tab.tempoParameter ? 2 : 1
+                Controls.TabButton {
+                    id: tab
 
-                // Native checkable/autoExclusive presentation; the canvas
-                // stays the sole parameter authority.
-                checked: root.canvas.activeParameter === tab.index
+                    required property int index
+                    required property string modelData
 
-                onClicked: root.canvas.activateParameter(tab.index)
+                    // Song-global Tempo closes the catalog, after the CC
+                    // identities, on its own full-width row.
+                    readonly property bool tempoParameter:
+                        tab.index === root.canvas.parameterLabels.length - 1
+                    readonly property bool selectionIncluded:
+                        root.selectedParams.includes(tab.index)
 
-                // Extend the advertised activation keys only where the native
-                // button left them unhandled; auto-repeat and modified Return
-                // stay editing input. Unhandled keys continue to the shared
-                // SongView policy exactly once.
-                Keys.priority: Keys.AfterItem
-                Keys.onPressed: (event) => {
-                    if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
-                            && !event.isAutoRepeat
-                            && event.modifiers === Qt.NoModifier) {
-                        root.canvas.activateParameter(tab.index)
-                        event.accepted = true
+                    objectName: "automationParameterTab" + index
+                    text: modelData
+                    font: root.appearance.font
+                    padding: root.appearance.inset
+                    focusPolicy: Qt.StrongFocus
+                    // The QTabBar-style hover fill must not depend on the
+                    // platform's useHoverEffects default.
+                    hoverEnabled: true
+                    Layout.fillWidth: true
+                    Layout.minimumHeight: root.appearance.minimumCellHeight
+                    Layout.columnSpan: tab.tempoParameter ? 2 : 1
+
+                    // Native checkable/autoExclusive presentation; the canvas
+                    // stays the sole parameter authority.
+                    checked: root.canvas.activeParameter === tab.index
+
+                    // Press-down activation: the press itself switches the
+                    // parameter, matching QTabBar; clicked stays the fallback
+                    // for assistive-tech presses and keyboard activation. The
+                    // double fire is free — activateParameter early-returns on
+                    // the active index.
+                    onPressed: root.canvas.activateParameter(tab.index)
+                    onClicked: root.canvas.activateParameter(tab.index)
+
+                    // Keyboard focus or a checked change must never leave the
+                    // tab outside the Flickable viewport: scroll by the
+                    // minimum contentY delta that fits the tab fully into
+                    // view (standard ensure-visible — no recentering, no
+                    // animation). Reacts only to checked/focus transitions,
+                    // never tracks continuously, and stands down while the
+                    // user's drag or flick is still in progress.
+                    onCheckedChanged: if (checked) tab.ensureVisible()
+                    onActiveFocusChanged: if (activeFocus) tab.ensureVisible()
+
+                    function ensureVisible() {
+                        if (gutterScroller.moving) return
+                        const top = tab.y
+                        const bottom = top + tab.height
+                        if (top < gutterScroller.contentY)
+                            gutterScroller.contentY = top
+                        else if (bottom > gutterScroller.contentY + gutterScroller.height)
+                            gutterScroller.contentY = bottom - gutterScroller.height
                     }
-                }
-                // Claim only the plain Return/Enter activation keys before
-                // window-level shortcuts can take them from this focused
-                // label: an item beats a shortcut only by accepting the
-                // ShortcutOverride event. Bare Space stays unclaimed here so
-                // the transport play/pause window shortcut outranks
-                // incidental focus in this persistent control. Modified or
-                // auto-repeat variants stay unclaimed and continue to the
-                // shared SongView policy, matching onPressed below.
-                Keys.onShortcutOverride: (event) => event.accepted =
-                    (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
-                    && event.modifiers === Qt.NoModifier && !event.isAutoRepeat
 
-                // Right-click and the context-menu key route through the
-                // platform event into the existing owned parameter menu.
-                Controls.ContextMenu.onRequested: (position) => {
-                    const p = tab.mapToItem(root.sceneRoot, position.x, position.y)
-                    root.canvas.openParameterMenu(tab.index, p.x, p.y)
-                }
+                    // Extend the advertised activation keys only where the native
+                    // button left them unhandled; auto-repeat and modified Return
+                    // stay editing input. Unhandled keys continue to the shared
+                    // SongView policy exactly once.
+                    Keys.priority: Keys.AfterItem
+                    Keys.onPressed: (event) => {
+                        if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+                                && !event.isAutoRepeat
+                                && event.modifiers === Qt.NoModifier) {
+                            root.canvas.activateParameter(tab.index)
+                            event.accepted = true
+                        }
+                    }
+                    // Claim only the plain Return/Enter activation keys before
+                    // window-level shortcuts can take them from this focused
+                    // label: an item beats a shortcut only by accepting the
+                    // ShortcutOverride event. Bare Space stays unclaimed here so
+                    // the transport play/pause window shortcut outranks
+                    // incidental focus in this persistent control. Modified or
+                    // auto-repeat variants stay unclaimed and continue to the
+                    // shared SongView policy, matching onPressed below.
+                    Keys.onShortcutOverride: (event) => event.accepted =
+                        (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+                        && event.modifiers === Qt.NoModifier && !event.isAutoRepeat
 
-                contentItem: Text {
-                    text: tab.text
-                    font: tab.font
-                    fontSizeMode: Text.HorizontalFit
-                    minimumPixelSize: root.appearance.minimumFont.pixelSize
-                    textFormat: Text.PlainText
-                    wrapMode: Text.NoWrap
-                    elide: Text.ElideNone
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    color: root.appearance.text
-                    Accessible.ignored: true
-                }
+                    // Right-click and the context-menu key route through the
+                    // platform event into the existing owned parameter menu.
+                    Controls.ContextMenu.onRequested: (position) => {
+                        const p = tab.mapToItem(root.sceneRoot, position.x, position.y)
+                        root.canvas.openParameterMenu(tab.index, p.x, p.y)
+                    }
 
-                // Distinct indicators: the active parameter fills with the
-                // chrome color, shared-selection inclusion outlines the cell,
-                // and keyboard focus draws the inner focus ring.
-                background: Rectangle {
-                    color: tab.checked ? root.appearance.currentFill
-                                       : root.appearance.background
-                    border.width: root.appearance.stroke
-                    border.color: tab.selectionIncluded
-                                  ? root.appearance.selectionOutline : "transparent"
+                    contentItem: Text {
+                        text: tab.text
+                        font: tab.font
+                        fontSizeMode: Text.HorizontalFit
+                        minimumPixelSize: root.appearance.minimumFont.pixelSize
+                        textFormat: Text.PlainText
+                        wrapMode: Text.NoWrap
+                        elide: Text.ElideNone
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        color: tab.checked ? root.appearance.tabSelectedText
+                                           : tab.hovered ? root.appearance.tabHoverText
+                                                         : root.appearance.tabText
+                        Accessible.ignored: true
+                    }
 
-                    Rectangle {
-                        anchors.fill: parent
-                        anchors.margins: root.appearance.stroke
-                        color: "transparent"
+                    // Distinct indicators: the active tab takes the selected
+                    // tab fill, shared-selection inclusion demotes to a
+                    // secondary bottom underline (never a full-cell outline),
+                    // and keyboard focus paints the inner focus ring over every
+                    // state.
+                    background: Rectangle {
+                        color: tab.checked ? root.appearance.tabSelectedBackground
+                                           : tab.hovered ? root.appearance.tabHoverBackground
+                                                         : root.appearance.tabBackground
                         border.width: root.appearance.stroke
-                        border.color: tab.visualFocus
-                                      ? root.appearance.focusOutline : "transparent"
-                    }
-                }
+                        border.color: root.appearance.tabOutline
 
-                Accessible.selected: tab.selectionIncluded
-                Accessible.description:
-                    (tab.tempoParameter ? qsTr("Song-global tempo parameter")
-                                        : qsTr("Track automation parameter"))
-                    + (tab.selectionIncluded
-                       ? qsTr("; included in shared selection")
-                       : qsTr("; not in shared selection"))
+                        Rectangle {
+                            visible: tab.selectionIncluded
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            anchors.margins: root.appearance.stroke
+                            height: root.appearance.stroke
+                            color: root.appearance.selectionOutline
+                        }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: root.appearance.stroke
+                            color: "transparent"
+                            border.width: root.appearance.stroke
+                            border.color: tab.visualFocus
+                                          ? root.appearance.focusOutline : "transparent"
+                        }
+                    }
+
+                    // Tab selection for screen readers, never shared-time
+                    // inclusion; inclusion stays text-only in the description.
+                    Accessible.selected: tab.checked
+                    Accessible.description:
+                        (tab.tempoParameter ? qsTr("Song-global tempo parameter")
+                                            : qsTr("Track automation parameter"))
+                        + (tab.selectionIncluded
+                           ? qsTr("; included in shared selection")
+                           : qsTr("; not in shared selection"))
+                }
             }
         }
-    }
-
-    Binding {
-        target: root.canvas
-        property: "minimumContentHeight"
-        value: Math.ceil(grid.implicitHeight)
     }
 }

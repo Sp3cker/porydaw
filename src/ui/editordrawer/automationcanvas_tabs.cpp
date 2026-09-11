@@ -117,8 +117,9 @@ void AutomationCanvas::activateParameter(int index)
     m_hoverState.clearHover();
     m_hoverState.invalidateCaches();
     m_hoverState.hoverValueLabel = {};
-    syncTimelineQuickHover();
     emit activeParameterChanged();
+    // The Hover bit inside All re-syncs the cross-band hover owner after
+    // clearHover above.
     requestFullQuickUpdate();
 }
 
@@ -151,25 +152,18 @@ QVariantMap AutomationCanvas::parameterAppearance() const
     appearance.insert(QStringLiteral("minimumCellHeight"), layout::fontPxF(4.0 / 3.0));
     appearance.insert(QStringLiteral("inset"), layout::space(layout::Space::One));
     appearance.insert(QStringLiteral("stroke"), layout::singlePixel());
-    appearance.insert(QStringLiteral("background"),
-                      themes::color(themes::Role::song_view_piano_roll_background));
-    appearance.insert(QStringLiteral("currentFill"),
-                      themes::color(themes::Role::song_view_timeline_chrome_background));
-    appearance.insert(QStringLiteral("text"), themes::color(themes::Role::song_view_primary_text));
     appearance.insert(QStringLiteral("selectionOutline"),
                       themes::color(themes::Role::song_view_selection_edge));
     appearance.insert(QStringLiteral("focusOutline"), themes::color(themes::Role::focus_outline));
+    appearance.insert(QStringLiteral("tabBackground"), themes::color(themes::Role::tab_background));
+    appearance.insert(QStringLiteral("tabHoverBackground"),
+                      themes::color(themes::Role::tab_hover_background));
+    appearance.insert(QStringLiteral("tabSelectedBackground"),
+                      themes::color(themes::Role::tab_selected_background));
+    appearance.insert(QStringLiteral("tabText"), themes::color(themes::Role::tab_text));
+    appearance.insert(QStringLiteral("tabHoverText"), themes::color(themes::Role::tab_hover_text));
+    appearance.insert(QStringLiteral("tabSelectedText"),
+                      themes::color(themes::Role::tab_selected_text));
+    appearance.insert(QStringLiteral("tabOutline"), themes::color(themes::Role::tab_outline));
     return appearance;
-}
-
-// Nonnegative scalar setter for the QML-published selector minimum
-// (Math.ceil(grid.implicitHeight) through a Qt Binding); the equality guard
-// keeps binding churn flat.
-void AutomationCanvas::setMinimumContentHeight(int height)
-{
-    height = qMax(0, height);
-    if (height == m_minimumContentHeight)
-        return;
-    m_minimumContentHeight = height;
-    emit minimumContentHeightChanged();
 }

@@ -346,7 +346,7 @@ bool AutomationCanvas::pointerRelease(const songview::TimelinePointerInput &inpu
         if (!m_hoverState.hover.highlightLocked)
             refreshHoverAt(position);
         setGestureActive(false);
-        requestGestureEndQuickUpdate();
+        requestFullQuickUpdate();
         return true;
     }
     if (input.button != Qt::LeftButton || !m_activeGesture)
@@ -358,7 +358,7 @@ bool AutomationCanvas::pointerRelease(const songview::TimelinePointerInput &inpu
     refreshHoverAt(position);
     setGestureActive(false);
     updateAxisLockCursor(AxisLock::None);
-    requestGestureEndQuickUpdate();
+    requestFullQuickUpdate();
     return true;
 }
 
@@ -382,7 +382,7 @@ bool AutomationCanvas::pointerDoubleClick(const songview::TimelinePointerInput &
         m_hoverState.previewValueLabel = {};
         refreshHoverAt(position);
         setGestureActive(false);
-        requestGestureEndQuickUpdate();
+        requestFullQuickUpdate();
         return true;
     }
     m_activeGesture.reset();
@@ -466,7 +466,7 @@ void AutomationCanvas::inputCancelled(songview::TimelineInputCancelReason reason
     m_hoverState.previewValueLabel = {};
     if (m_inputHost)
         m_inputHost->clearCursor();
-    requestGestureEndQuickUpdate();
+    requestFullQuickUpdate();
     if (reason == songview::TimelineInputCancelReason::Hidden) {
         cancelLaneMenuWithoutFocus();
         cancelNodeMenuWithoutFocus();

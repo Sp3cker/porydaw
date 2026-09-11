@@ -147,7 +147,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     bool isPanning() const noexcept;
     bool bandPreviewContainsLane(LaneHandle handle) const noexcept;
     QRect laneBody(LaneHandle handle) const;
-    int minimumContentHeight() const noexcept;
     // The view-local parameter selector for the shared gutter: nine clickable
     // identities — the eight supported CCs plus song-global Tempo, all
     // available without written events. `index` is a catalog position
@@ -168,12 +167,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     QList<int> selectedParameters() const;
     QVariantMap parameterAppearance() const;
     bool parametersEnabled() const noexcept;
-    // Qt Binding target for the selector grid's QML-measured implicitHeight
-    // (published rounded up from QML); the only cross-boundary size value.
-    // READ reuses the existing minimumContentHeight() declaration above.
-    Q_PROPERTY(int minimumContentHeight READ minimumContentHeight WRITE setMinimumContentHeight
-                   NOTIFY minimumContentHeightChanged FINAL)
-    void setMinimumContentHeight(int height);
     std::optional<EditorAutomationRowId> parameterRow(int index) const;
     Q_INVOKABLE void activateParameter(int index);
     Q_INVOKABLE void openParameterMenu(int index, qreal sceneX, qreal sceneY);
@@ -200,7 +193,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void activeParameterChanged();
     void parameterSelectionChanged();
     void parameterPresentationChanged();
-    void minimumContentHeightChanged();
 
   private:
     friend class AutomationPage;
@@ -209,13 +201,10 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void rebuildQuickScene(songview::TimelineQuickScene &scene,
                            songview::AutomationRefreshSet refresh);
     void requestQuickUpdate(songview::AutomationRefreshSet dirty) const;
-    void syncTimelineQuickHover() const;
-    void requestViewportQuickUpdate() const;
     void requestSelectionQuickUpdate() const;
     void requestHoverQuickUpdate() const;
     void requestGestureBeginQuickUpdate(bool band) const;
     void requestGestureMoveQuickUpdate() const;
-    void requestGestureEndQuickUpdate() const;
     void invalidateSelectedNodeMultiplicity() const noexcept;
     bool hasMultipleSelectedNodes(
         const std::optional<std::pair<uint64_t, uint64_t>> &selectedTickRange) const;
@@ -415,9 +404,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     QMetaObject::Connection m_ccDeletePromptCancellation;
     NodeLaneHoverState m_hoverState;
     NodeDoubleClickGuard m_deletedNodeClick;
-    // View-local selector state: the QML-published grid minimum and the
-    // active parameter identity (null controller selects song-global Tempo;
-    // the default is Volume).
-    int m_minimumContentHeight = 0;
+    // Active CC controller; nullopt selects Tempo (see Q_PROPERTY docs).
     std::optional<uint8_t> m_activeController = CoreTimeDefaults::kCcVolume;
 };
