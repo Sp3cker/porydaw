@@ -69,6 +69,14 @@ class EventListController : public QObject
     int editingRow() const noexcept { return m_editingRow; }
     int editingColumn() const noexcept { return m_editingColumn; }
     bool menuOpen() const noexcept { return m_menuOpen; }
+    // Semantic event-action eligibility. The controller owns row visibility,
+    // editor state, and same-tick destination legality; unrelated song
+    // selections do not participate.
+    bool canMoveCurrentRow(int delta) const
+    {
+        return m_visible && !isEditing() && m_currentRow >= 0 &&
+               moveDestForRow(m_currentRow, delta) >= 0;
+    }
 
     // The controller owns document and track-selection signal registration.
     void setDocument(SongDocument *document);

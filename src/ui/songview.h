@@ -515,16 +515,47 @@ class SongView : public QObject
     // ruler grid line and the covered contents (notes and automation
     // points) move with it; the band follows.
     void nudgeTimeSelection(bool right);
+    // Closed semantic edit surface shared by keyboard routing and the
+    // canonical actions. Invocation origin remains a routing concern; these
+    // commands resolve their existing musical targets from current state.
+    enum class EditCommand {
+        Copy,
+        Cut,
+        DuplicateTime,
+        Paste,
+        SelectAll,
+        Delete,
+        PitchBend,
+        TransposeUp,
+        TransposeDown,
+        TransposeUpOctave,
+        TransposeDownOctave,
+        NudgeLeft,
+        NudgeRight,
+        MuteTracks,
+        SoloTracks,
+        InsertTime,
+        DeleteTime,
+        ClearTimeSelection,
+        PencilMode,
+        MoveEventUp,
+        MoveEventDown,
+    };
+    // Domain availability for the canonical action set. It does not encode
+    // keyboard origin or focus routing.
+    bool editCommandAvailable(EditCommand command) const;
+    // Semantic execution for every presentation. Gesture and readiness
+    // protection lives here, not in individual keyboard or menu owners.
+    void executeEditCommand(EditCommand command);
     // Which surface routed the key to the shared policy: Timeline — the
     // roll-page bands and Quick surfaces whose note canvas is the live
     // editing target — or EventList, the Quick event page whose input item
     // owns the row-local table commands.
     enum class EditKeyOrigin { Timeline, EventList };
     enum class SharedShortcutOwner { SongView, Window };
-    // Shared command policy entry (src/ui/songview/editkeyrouting.cpp):
-    // resolves shared keymap commands — note, range, and selection edits —
-    // against the live selection. Returns true only when a target consumes
-    // the command; unavailable targets deliberately decline it.
+    // Shared key-recognition policy (src/ui/songview/editkeyrouting.cpp):
+    // resolves shared keymap commands against the live selection while
+    // preserving origin eligibility and terminal consumption.
     bool handleEditKey(const songview::TimelineKeyInput &input,
                        EditKeyOrigin origin = EditKeyOrigin::Timeline);
     // Release tail of the shared policy: finishes the keyboard transpose
