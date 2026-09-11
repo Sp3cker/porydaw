@@ -630,6 +630,12 @@ void SongView::insertTime()
 {
     if (!m_document || !m_timeline)
         return;
+    // Activity is not scope validity: an active but unresolved selection is
+    // a rejected command, never a fall-through to the whole-song prompt.
+    if (m_selectionModel.timeSelection().active()) {
+        insertBlankTime();
+        return;
+    }
     const uint64_t cursorTick =
         m_playing ? uint64_t(std::clamp(m_playheadTick, 0.0, double(m_timeline->lengthTicks)) + 0.5)
                   : m_editCursorTick;
@@ -637,6 +643,9 @@ void SongView::insertTime()
 }
 void SongView::insertBlankTime()
 {
+    // Selection-only insertion half of the unified Insert Time command.
+    // An unresolved selection rejects silently; the prompt path never
+    // reaches here.
     const auto resolved = resolveTimeSelectionScope();
     if (!resolved)
         return;

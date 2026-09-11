@@ -475,8 +475,13 @@ class SongView : public QObject
     // partial scope shifts only its own tracks or lanes so the rest of the
     // song keeps its alignment.
     void removeTimeSelectionContents();
-    // Global Insert Time command: asks for bars, beats, and quarter-beat
-    // fractions, then inserts that much whole-song time at the live playhead
+    // Unified Insert Time command. An active time selection supplies the
+    // inserted span, its start, and the resolved track/lane/tempo scope:
+    // insertion runs without a prompt, keeps the selection over the new
+    // blank span, and commits the edit cursor to its start. An active but
+    // unresolved selection rejects the command silently. Without an active
+    // selection the command asks for bars, beats, and quarter-beat
+    // fractions and inserts that much whole-song time at the live playhead
     // or the edit cursor while stopped.
     void insertTime();
     // Typed Quick-modal bridge for Insert Time. The SongView retains the
@@ -494,7 +499,8 @@ class SongView : public QObject
     static constexpr int insertTimePromptMaximumBeatFractions() noexcept { return 3; }
     QString insertTimePromptTitle() const;
     QVariantMap insertTimePromptAppearance() const;
-    // Insert and duplicate operate only on an active half-open time selection.
+    // Selection-only insertion half of the unified command, retained until
+    // the context-menu cutover finishes.
     void insertBlankTime();
     void duplicateTimeSelection();
     void pasteRangeAtEditCursor(const songview::Clip &clip);
