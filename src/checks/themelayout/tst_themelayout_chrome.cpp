@@ -234,7 +234,7 @@ void ThemeLayoutTest::themeDialogGeometry()
     QTRY_VERIFY(dialog.isVisible());
 
     const auto modeButtons = dialog.findChildren<QRadioButton *>();
-    QCOMPARE(modeButtons.size(), 4);
+    QCOMPARE(modeButtons.size(), 3);
     const QSize initialSize = dialog.size();
     QList<QRect> initialGeometry;
     initialGeometry.reserve(modeButtons.size());
@@ -243,11 +243,8 @@ void ThemeLayoutTest::themeDialogGeometry()
 
     QRadioButton *darkNeutralHigh =
         dialog.findChild<QRadioButton *>(QStringLiteral("darkNeutralHighModeButton"));
-    QRadioButton *custom = dialog.findChild<QRadioButton *>(QStringLiteral("customModeButton"));
     QVERIFY(darkNeutralHigh);
-    QVERIFY(custom);
     darkNeutralHigh->click();
-    custom->click();
     QTRY_COMPARE(dialog.size(), initialSize);
     for (qsizetype index = 0; index < modeButtons.size(); ++index)
         QTRY_COMPARE(

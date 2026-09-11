@@ -144,8 +144,6 @@ qt_add_library(porydaw_app STATIC
     src/ui/theme/themeresolver.h
     src/ui/theme/themecontroller.cpp
     src/ui/theme/themecontroller.h
-    src/ui/theme/oklchpicker.cpp
-    src/ui/theme/oklchpicker.h
     src/ui/theme/themedialog.cpp
     src/ui/theme/themedialog.h
 

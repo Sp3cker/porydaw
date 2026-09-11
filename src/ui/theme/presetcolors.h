@@ -340,12 +340,12 @@ constexpr PresetColors makeVanilla()
     colors.color(PresetColor::polyphony_stolen_text) = "#6E4A06";
     colors.color(PresetColor::polyphony_flash) = "#D92626";
     // The accent is too pale for a trace on the light item surface (the raw
-    // selection cyan sat 1.16:1 there); this is the accent hue walked toward
-    // black by the same policy Custom themes use, landing at 5.09:1.
+    // selection cyan sat 1.16:1 there); the accent hue is walked toward black
+    // until it reaches 4.5:1, landing at 5.09:1.
     colors.color(PresetColor::sample_waveform_ink) = "#005B63";
     // The identity amber/blue/red sat 1.47/1.54/2.29:1 on the light surfaces;
-    // each is its hue walked toward black by the Custom-theme policy to the
-    // 3:1 UI-component bar (3.22, 3.33 worst-surface, 3.05:1).
+    // each hue is walked toward black until it reaches the 3:1 UI-component bar
+    // (3.22, 3.33 worst-surface, 3.05:1).
     colors.color(PresetColor::sample_crop_handle) = "#92681F";
     colors.color(PresetColor::sample_loop_handle) = "#2A7292";
     colors.color(PresetColor::sample_seam_end_ink) = "#C54444";

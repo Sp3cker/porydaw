@@ -40,11 +40,6 @@ QColor colorFromOklch(const Oklch &color);
 /// false for non-finite coordinates or colors outside the sRGB gamut.
 bool sampleSrgb(const Oklab &color, SrgbSample &sample);
 bool sampleSrgb(const Oklch &color, SrgbSample &sample);
-/// Returns the OKLab lightness component of an sRGB color.
-double oklabLightness(const QColor &color);
-/// Shifts an sRGB color's OKLab lightness while preserving its chroma and hue.
-/// The result is clipped to the sRGB gamut.
-QColor shiftOklabLightness(const QColor &color, double distance);
 /// Returns the WCAG relative luminance of an sRGB color.
 double relativeLuminance(const QColor &color);
 double relativeLuminance(const SrgbSample &sample);

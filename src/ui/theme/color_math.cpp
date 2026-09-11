@@ -159,17 +159,6 @@ bool sampleSrgb(const Oklch &color, SrgbSample &sample)
         sample);
 }
 
-double oklabLightness(const QColor &color)
-{
-    return oklabFromColor(color).lightness;
-}
-
-QColor shiftOklabLightness(const QColor &color, double distance)
-{
-    const auto lab = oklabFromColor(color);
-    return colorFromOklab({clamp(lab.lightness + distance, 0.0, 1.0), lab.a, lab.b}, color.alpha());
-}
-
 double relativeLuminance(const QColor &color)
 {
     const auto rgb = color.toRgb();
