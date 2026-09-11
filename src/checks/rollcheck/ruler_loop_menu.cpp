@@ -505,6 +505,8 @@ void PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp()
              "the ruler Insert Time row did not retain the selection over the blank span");
     QVERIFY2(view.editCursorTick() == insertStart,
              "the ruler Insert Time row did not commit the edit cursor to the seam");
+    QVERIFY2(doc.undoStack()->count() == undoIndex + 1,
+             "the ruler Insert Time row did not commit exactly one undo transaction");
     QVERIFY2(doc.smf().write() != before,
              "the ruler Insert Time row did not change the song bytes");
     doc.undoStack()->undo();

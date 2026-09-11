@@ -5,6 +5,14 @@
 #include "checks/rollcheck/rollcheck.h"
 #include "checks/trackheaders/trackheaderoracles.h"
 
+#include "checks/support/eventsynth.h"
+#include "core/songdocument.h"
+#include "ui/songview.h"
+#include "ui/songview/pianoroll.h"
+#include "ui/songview/quick/pianorollquick.h"
+#include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/trackheadermodel.h"
 #include <QByteArray>
 #include <QColor>
 #include <QCoreApplication>
@@ -16,17 +24,8 @@
 #include <QtTest>
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <optional>
-#include <vector>
-
-#include "checks/support/eventsynth.h"
-#include "core/songdocument.h"
-#include "ui/songview.h"
-#include "ui/songview/pianoroll.h"
-#include "ui/songview/quick/pianorollquick.h"
-#include "ui/songview/quick/timelineinputitem.h"
-#include "ui/songview/quick/timelinequickview.h"
-#include "ui/songview/trackheadermodel.h"
 
 using namespace checks::rollcheck;
 
@@ -602,7 +601,9 @@ void PianoRollTest::timelineInsertBlankTimeTracks()
     // An active but unresolved scope is a rejected command: the unified
     // entry must refuse without falling through to the whole-song prompt.
     int unusedTrack = -1;
-    for (int candidate = 0; candidate < 16 && unusedTrack < 0; ++candidate)
+    for (int candidate = 0;
+         candidate < static_cast<int>(std::size(check.timeline().tracks)) && unusedTrack < 0;
+         ++candidate)
         if (!check.timeline().tracks[candidate].used)
             unusedTrack = candidate;
     QVERIFY2(unusedTrack >= 0, "the insert fixture has no timeline-unused track");
@@ -610,6 +611,7 @@ void PianoRollTest::timelineInsertBlankTimeTracks()
     songview::EditorSelectionModel::TimeSelection rejectedSelection;
     rejectedSelection.startTick = insertStart;
     rejectedSelection.endTick = insertEnd;
+    rejectedSelection.scope = songview::EditorSelectionModel::TimeSelection::Tracks;
     view.selectionModel().setTimeSelection(rejectedSelection);
     QVERIFY2(view.selectionModel().primaryTrack() == unusedTrack &&
                  view.selectionModel().storedTrackScope() == (uint32_t{1} << unusedTrack) &&

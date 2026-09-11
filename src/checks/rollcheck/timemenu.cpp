@@ -279,6 +279,7 @@ void PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp()
     const uint64_t insertStart = d.tick + snapCell;
     const uint64_t insertEnd = d.tick + 2 * snapCell;
 
+    const quick_popup::PromptGuard guard(view);
     // Snapshot after fixture setup, open the menu from the real gesture, and
     // click the rendered Insert Time row: the selected span supplies the
     // insertion, and the edit cursor commits to the start seam.
@@ -290,6 +291,8 @@ void PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp()
     QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic));
     const int insertRow = timeMenuRow(*opened.model, songview::TimeSelectionAction::InsertBlank);
     QVERIFY2(insertRow >= 0, "the shared time menu has no Insert Time row");
+    QVERIFY2(opened.model->itemAt(insertRow)->enabled,
+             "the shared time menu rendered an enabled Insert Time row as disabled");
     QVERIFY2(quick_popup::clickMenuRow(*opened.session, insertRow),
              "the Insert Time row did not receive a real click");
     QCoreApplication::processEvents();
