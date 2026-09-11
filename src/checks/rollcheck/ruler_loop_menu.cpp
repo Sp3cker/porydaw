@@ -451,3 +451,92 @@ void PianoRollTest::rulerLoopMenuStaleCancelNoWrite()
     QVERIFY2(doc.smf().write() == afterIntervening && doc.undoStack()->index() == staleUndo,
              "the outside dismissal mutated the document");
 }
+
+void PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp()
+{
+    PianoRollFixture &check = *m_fixture;
+    SongView &view = check.view();
+    const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+    QVERIFY(seed.has_value());
+    songview::TimelineInputItem *input = rulerInput(view);
+    QVERIFY2(input, "could not find the time ruler Quick input");
+    SongDocument &doc = check.document();
+    const uint64_t snapCell = seed->snapCell;
+    const uint64_t insertStart = seed->cell.tick + snapCell;
+    const uint64_t insertEnd = seed->cell.tick + 2 * snapCell;
+    QVERIFY2(view.grid().snapTick(double(insertStart)) == insertStart &&
+                 view.grid().snapTick(double(insertEnd)) == insertEnd,
+             "the ruler insert fixture ticks are not snap-aligned");
+    DocNote movedNote;
+    QVERIFY2(doc.findNote(check.track(), seed->cell.tick, uint8_t(seed->cell.key), &movedNote),
+             "the ruler insert seed note was not found");
+    doc.moveNotes({movedNote}, int64_t(snapCell), 0);
+    DocNote selected;
+    QVERIFY2(doc.findNote(check.track(), insertStart, uint8_t(seed->cell.key), &selected),
+             "the ruler insert seed did not reach its expected state");
+
+    const quick_popup::PromptGuard guard(view);
+
+    // A selection-scoped ruler menu opened at a tick distinct from the
+    // selection start: the rendered Insert Time row must still insert over
+    // the selection, not the click position.
+    view.selectionModel().setTimeSelection(
+        {insertStart, insertEnd, songview::EditorSelectionModel::TimeSelection::Tracks});
+    const QByteArray before = doc.smf().write();
+    const int undoIndex = doc.undoStack()->index();
+    const SharedRulerMenu opened = openRulerMenu(view, *input, insertEnd + snapCell);
+    QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic));
+    const int insertRow = rulerRow(*opened.model, songview::RulerMenuAction::InsertBlank);
+    QVERIFY2(insertRow >= 0, "the ruler menu has no Insert Time row");
+    QVERIFY2(opened.model->itemAt(insertRow)->enabled,
+             "the ruler menu rendered an enabled Insert Time row as disabled");
+    QVERIFY2(quick_popup::clickMenuRow(*opened.session, insertRow),
+             "the Insert Time row did not receive a real click");
+    QCoreApplication::processEvents();
+    QVERIFY2(opened.session && !opened.session->isOpen(),
+             "the Insert Time activation left the ruler menu open");
+    QVERIFY2(doc.undoStack()->index() == undoIndex + 1 &&
+                 doc.findNote(check.track(), insertEnd, selected.key, &selected),
+             "the ruler Insert Time row did not shift the selected note one undo at a time");
+    const songview::EditorSelectionModel::TimeSelection insertedSelection =
+        view.selectionModel().timeSelection();
+    QVERIFY2(insertedSelection.active() && insertedSelection.startTick == insertStart &&
+                 insertedSelection.endTick == insertEnd,
+             "the ruler Insert Time row did not retain the selection over the blank span");
+    QVERIFY2(view.editCursorTick() == insertStart,
+             "the ruler Insert Time row did not commit the edit cursor to the seam");
+    QVERIFY2(doc.smf().write() != before,
+             "the ruler Insert Time row did not change the song bytes");
+    doc.undoStack()->undo();
+    QTRY_VERIFY2(doc.smf().write() == before,
+                 "one undo did not restore the bytes after the ruler insertion");
+
+    // Stale row: open the ruler menu with a selection, then clear it. The
+    // original Insert Time activation must reject silently — no mutation, no
+    // undo push, no cursor move, no duration prompt.
+    view.selectionModel().setTimeSelection(
+        {insertStart, insertEnd, songview::EditorSelectionModel::TimeSelection::Tracks});
+    const SharedRulerMenu reopened = openRulerMenu(view, *input, insertEnd + snapCell);
+    QVERIFY2(reopened.session, qUtf8Printable(reopened.diagnostic));
+    const int staleRow = rulerRow(*reopened.model, songview::RulerMenuAction::InsertBlank);
+    QVERIFY2(staleRow >= 0, "the reopened ruler menu lost its Insert Time row");
+    view.selectionModel().clearTimeSelection();
+    const QByteArray staleBefore = doc.smf().write();
+    const int staleUndoIndex = doc.undoStack()->index();
+    const int staleUndoCount = doc.undoStack()->count();
+    const uint64_t staleRevision = doc.revision();
+    const uint64_t staleCursor = view.editCursorTick();
+    QVERIFY2(quick_popup::clickMenuRow(*reopened.session, staleRow),
+             "the stale Insert Time row did not receive a real click");
+    QCoreApplication::processEvents();
+    QVERIFY2(reopened.session && !reopened.session->isOpen(),
+             "a stale Insert Time activation left the ruler menu open");
+    QVERIFY2(!quick_popup::promptItem(*reopened.session, QLatin1String("insertTimePrompt")),
+             "a stale ruler Insert Time activation opened the duration prompt");
+    QVERIFY2(doc.smf().write() == staleBefore && doc.revision() == staleRevision &&
+                 doc.undoStack()->index() == staleUndoIndex &&
+                 doc.undoStack()->count() == staleUndoCount &&
+                 view.editCursorTick() == staleCursor &&
+                 !view.selectionModel().timeSelection().active(),
+             "a stale ruler Insert Time activation mutated the document");
+}

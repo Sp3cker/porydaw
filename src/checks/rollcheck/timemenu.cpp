@@ -260,3 +260,83 @@ void PianoRollTest::timeSelectionMenuStaleAndCancelNoOp()
                  doc.undoStack()->count() == undoCount && doc.revision() == revision,
              "a stale Duplicate activation mutated the document");
 }
+
+void PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp()
+{
+    PianoRollFixture &check = *m_fixture;
+    const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+    QVERIFY(seed.has_value());
+    SongDocument &doc = check.document();
+    SongView &view = check.view();
+    const SnappedRows rows{view, check.rollInput()};
+    const Cell &d = seed->cell;
+    const uint64_t snapCell = seed->snapCell;
+    DocNote moved;
+    QVERIFY2(doc.findNote(check.track(), d.tick, uint8_t(d.key), &moved),
+             "time menu seed note was not found");
+    doc.moveNotes({moved}, int64_t(snapCell), 0);
+
+    const uint64_t insertStart = d.tick + snapCell;
+    const uint64_t insertEnd = d.tick + 2 * snapCell;
+
+    // Snapshot after fixture setup, open the menu from the real gesture, and
+    // click the rendered Insert Time row: the selected span supplies the
+    // insertion, and the edit cursor commits to the start seam.
+    view.selectionModel().setTimeSelection(
+        {insertStart, insertEnd, songview::EditorSelectionModel::TimeSelection::Tracks});
+    const QByteArray before = doc.smf().write();
+    const int undoIndex = doc.undoStack()->index();
+    const SharedTimeMenu opened = openSharedTimeMenu(check, rows, insertStart, insertEnd);
+    QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic));
+    const int insertRow = timeMenuRow(*opened.model, songview::TimeSelectionAction::InsertBlank);
+    QVERIFY2(insertRow >= 0, "the shared time menu has no Insert Time row");
+    QVERIFY2(quick_popup::clickMenuRow(*opened.session, insertRow),
+             "the Insert Time row did not receive a real click");
+    QCoreApplication::processEvents();
+    QVERIFY2(opened.session && !opened.session->isOpen(),
+             "the Insert Time activation left the shared time menu open");
+    QVERIFY2(doc.undoStack()->index() == undoIndex + 1 &&
+                 doc.findNote(check.track(), insertEnd, moved.key, &moved),
+             "the Insert Time row did not shift the selected note by the span");
+    QVERIFY2(view.editCursorTick() == insertStart,
+             "the menu Insert Time row did not commit the edit cursor to the seam");
+    const songview::EditorSelectionModel::TimeSelection insertedSelection =
+        view.selectionModel().timeSelection();
+    QVERIFY2(insertedSelection.active() && insertedSelection.startTick == insertStart &&
+                 insertedSelection.endTick == insertEnd,
+             "the menu Insert Time row did not retain the selection over the blank span");
+    QVERIFY2(doc.undoStack()->count() == undoIndex + 1,
+             "the Insert Time row did not commit exactly one undo transaction");
+    doc.undoStack()->undo();
+    QTRY_VERIFY2(doc.smf().write() == before,
+                 "one undo did not restore the bytes after the menu insertion");
+
+    // Stale row: open a fresh menu, then clear the selection. The captured
+    // target expired before the original Insert Time activation runs, so the
+    // click must be a silent no-op — no prompt, no mutation, no undo entry.
+    view.selectionModel().setTimeSelection(
+        {insertStart, insertEnd, songview::EditorSelectionModel::TimeSelection::Tracks});
+    const SharedTimeMenu reopened = openSharedTimeMenu(check, rows, insertStart, insertEnd);
+    QVERIFY2(reopened.session, qUtf8Printable(reopened.diagnostic));
+    const int staleRow = timeMenuRow(*reopened.model, songview::TimeSelectionAction::InsertBlank);
+    QVERIFY2(staleRow >= 0, "the reopened shared time menu lost its Insert Time row");
+    view.selectionModel().clearTimeSelection();
+    const QByteArray staleBefore = doc.smf().write();
+    const int staleUndoIndex = doc.undoStack()->index();
+    const int staleUndoCount = doc.undoStack()->count();
+    const uint64_t staleRevision = doc.revision();
+    const uint64_t staleCursor = view.editCursorTick();
+    QVERIFY2(quick_popup::clickMenuRow(*reopened.session, staleRow),
+             "the stale Insert Time row did not receive a real click");
+    QCoreApplication::processEvents();
+    QVERIFY2(reopened.session && !reopened.session->isOpen(),
+             "a stale Insert Time activation left the menu open");
+    QVERIFY2(!quick_popup::promptItem(*reopened.session, QLatin1String("insertTimePrompt")),
+             "a stale Insert Time activation opened the duration prompt");
+    QVERIFY2(doc.smf().write() == staleBefore && doc.revision() == staleRevision &&
+                 doc.undoStack()->index() == staleUndoIndex &&
+                 doc.undoStack()->count() == staleUndoCount &&
+                 view.editCursorTick() == staleCursor &&
+                 !view.selectionModel().timeSelection().active(),
+             "a stale Insert Time activation mutated the document");
+}

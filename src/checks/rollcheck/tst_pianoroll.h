@@ -88,9 +88,11 @@ class PianoRollTest final : public QObject
     void timelineInsertBlankTimeLanes();
     void timeSelectionMenuOpensWithPasteEnablement();
     void timeSelectionMenuStaleAndCancelNoOp();
+    void timeSelectionMenuInsertTimeAndStaleNoOp();
     void rulerLoopMenuSetAndTwoStepUndo();
     void rulerLoopMenuEnablementSelectionContext();
     void rulerLoopMenuStaleCancelNoWrite();
+    void rulerLoopMenuInsertTimeAndStaleNoOp();
     void quickLifecycle();
     void headerPanFollow();
     void headerRename();
