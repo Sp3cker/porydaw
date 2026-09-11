@@ -20,7 +20,7 @@ keys locally instead.
 | --- | --- | --- |
 | Duplicate time | `Ctrl+D` | Duplicates active time selection and advances selection |
 | Copy Selection | `Ctrl+C` | Copies selected notes or active time range |
-| Cut Selection | `Ctrl+X` | Cuts selected notes or active time range |
+| Cut Selection | `Ctrl+X` | Cuts selected notes or clears the **contents** of an active time range (contents-only; time never shifts) |
 | Paste at Edit Cursor | `Ctrl+V` | Pastes clipboard content at the edit cursor |
 | Select All Notes | `Ctrl+A` | Selects all notes on the active track |
 | Delete Selection | `Delete` / `Backspace` | Deletes selected notes, or clears the **contents** of an active time range without shifting later events (contents-only; time never collapses) |
