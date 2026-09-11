@@ -11,6 +11,12 @@ void KeymapCheckTest::initTestCase()
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, m_settingsDirectory.path());
     QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, m_settingsDirectory.path());
+    QSettings settings;
+    settings.setValue(QStringLiteral("keymap/roll.transpose_up"), QStringLiteral("Ctrl+Alt+U"));
+    settings.setValue(QStringLiteral("keymap/transport.play_pause"), QString());
+    settings.setValue(QStringLiteral("keymap/roll.velocity_drag"), QStringLiteral("Shift"));
+    settings.setValue(QStringLiteral("keymap/velocity.detent_unlock"), QString());
+    settings.sync();
 }
 
 bool KeymapCheckTest::matches(const QString &id, int key, Qt::KeyboardModifiers modifiers) const
@@ -76,6 +82,9 @@ void KeymapCheckTest::modifierChords()
 {
     const auto &registry = keymap::Registry::instance();
     const QString dragId = QStringLiteral("roll.velocity_drag");
+    const QString detentId = QStringLiteral("velocity.detent_unlock");
+
+    QVERIFY(registry.matchesModifier(Qt::ControlModifier, detentId));
 
     QVERIFY(registry.matchesModifier(Qt::ControlModifier, dragId));
     QVERIFY(registry.matchesModifier(Qt::ControlModifier | Qt::KeypadModifier, dragId));
