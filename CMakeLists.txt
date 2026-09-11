@@ -240,8 +240,6 @@ qt_add_library(porydaw_app STATIC
     src/ui/voicegroupbrowser.h
     src/ui/keymap.cpp
     src/ui/keymap.h
-    src/ui/keyboardshortcutsdialog.cpp
-    src/ui/keyboardshortcutsdialog.h
     src/ui/enginesettingsdialog.cpp
     src/ui/enginesettingsdialog.h
     src/ui/songsettingsdialog.cpp
@@ -791,7 +789,6 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp
         src/checks/keyboard/tst_keymapcheck.h
         src/checks/keyboard/keymapregistry.cpp
-        src/checks/keyboard/keyboardshortcuts.cpp
         src/checks/keyboard/tst_velocitymodel.h
         src/checks/keyboard/tst_velocitymodel.cpp
         src/checks/keyboard/tst_settingsdialog.h
