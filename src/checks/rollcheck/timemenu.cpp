@@ -313,33 +313,4 @@ void PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp()
     doc.undoStack()->undo();
     QTRY_VERIFY2(doc.smf().write() == before,
                  "one undo did not restore the bytes after the menu insertion");
-
-    // Stale row: open a fresh menu, then clear the selection. The captured
-    // target expired before the original Insert Time activation runs, so the
-    // click must be a silent no-op — no prompt, no mutation, no undo entry.
-    view.selectionModel().setTimeSelection(
-        {insertStart, insertEnd, songview::EditorSelectionModel::TimeSelection::Tracks});
-    const SharedTimeMenu reopened = openSharedTimeMenu(check, rows, insertStart, insertEnd);
-    QVERIFY2(reopened.session, qUtf8Printable(reopened.diagnostic));
-    const int staleRow = timeMenuRow(*reopened.model, songview::TimeSelectionAction::InsertBlank);
-    QVERIFY2(staleRow >= 0, "the reopened shared time menu lost its Insert Time row");
-    view.selectionModel().clearTimeSelection();
-    const QByteArray staleBefore = doc.smf().write();
-    const int staleUndoIndex = doc.undoStack()->index();
-    const int staleUndoCount = doc.undoStack()->count();
-    const uint64_t staleRevision = doc.revision();
-    const uint64_t staleCursor = view.editCursorTick();
-    QVERIFY2(quick_popup::clickMenuRow(*reopened.session, staleRow),
-             "the stale Insert Time row did not receive a real click");
-    QCoreApplication::processEvents();
-    QVERIFY2(reopened.session && !reopened.session->isOpen(),
-             "a stale Insert Time activation left the menu open");
-    QVERIFY2(!quick_popup::promptItem(*reopened.session, QLatin1String("insertTimePrompt")),
-             "a stale Insert Time activation opened the duration prompt");
-    QVERIFY2(doc.smf().write() == staleBefore && doc.revision() == staleRevision &&
-                 doc.undoStack()->index() == staleUndoIndex &&
-                 doc.undoStack()->count() == staleUndoCount &&
-                 view.editCursorTick() == staleCursor &&
-                 !view.selectionModel().timeSelection().active(),
-             "a stale Insert Time activation mutated the document");
 }

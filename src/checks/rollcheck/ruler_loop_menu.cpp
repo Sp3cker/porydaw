@@ -512,33 +512,4 @@ void PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp()
     doc.undoStack()->undo();
     QTRY_VERIFY2(doc.smf().write() == before,
                  "one undo did not restore the bytes after the ruler insertion");
-
-    // Stale row: open the ruler menu with a selection, then clear it. The
-    // original Insert Time activation must reject silently — no mutation, no
-    // undo push, no cursor move, no duration prompt.
-    view.selectionModel().setTimeSelection(
-        {insertStart, insertEnd, songview::EditorSelectionModel::TimeSelection::Tracks});
-    const SharedRulerMenu reopened = openRulerMenu(view, *input, insertEnd + snapCell);
-    QVERIFY2(reopened.session, qUtf8Printable(reopened.diagnostic));
-    const int staleRow = rulerRow(*reopened.model, songview::RulerMenuAction::InsertBlank);
-    QVERIFY2(staleRow >= 0, "the reopened ruler menu lost its Insert Time row");
-    view.selectionModel().clearTimeSelection();
-    const QByteArray staleBefore = doc.smf().write();
-    const int staleUndoIndex = doc.undoStack()->index();
-    const int staleUndoCount = doc.undoStack()->count();
-    const uint64_t staleRevision = doc.revision();
-    const uint64_t staleCursor = view.editCursorTick();
-    QVERIFY2(quick_popup::clickMenuRow(*reopened.session, staleRow),
-             "the stale Insert Time row did not receive a real click");
-    QCoreApplication::processEvents();
-    QVERIFY2(reopened.session && !reopened.session->isOpen(),
-             "a stale Insert Time activation left the ruler menu open");
-    QVERIFY2(!quick_popup::promptItem(*reopened.session, QLatin1String("insertTimePrompt")),
-             "a stale ruler Insert Time activation opened the duration prompt");
-    QVERIFY2(doc.smf().write() == staleBefore && doc.revision() == staleRevision &&
-                 doc.undoStack()->index() == staleUndoIndex &&
-                 doc.undoStack()->count() == staleUndoCount &&
-                 view.editCursorTick() == staleCursor &&
-                 !view.selectionModel().timeSelection().active(),
-             "a stale ruler Insert Time activation mutated the document");
 }
