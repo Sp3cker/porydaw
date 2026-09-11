@@ -13,7 +13,9 @@ never guess, nothing stated twice.
 
 - `docs/plans/<plan>/plan.md` — task list, one line each, plus route per
   task (Direct vs SDD-track with a one-line justification citing triage
-  signals).
+  signals; seat is `sdd-implementer` unless the work is Qt-heavy — Qt
+  Widgets/C++ touching ownership, threading, or model contracts — which
+  names `qt-cpp-reviewer` instead).
 - `docs/plans/<plan>/spec.md` (or a plan section) — agreed behavior, shared
   vocabulary, forward-facing interfaces.
 - `docs/plans/<plan>/task-N-brief.md` — one per task, skeleton below. The

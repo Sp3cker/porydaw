@@ -33,6 +33,11 @@ time: dispatch implementer → review gate → fix loop → controller commit �
 - Implementer model failure falls back per harness config (`omen-alpha` →
   `terra:xhigh`). A fallback-fired run is the same seat under the same
   contract — its report carries the same weight.
+- Seat selection: `sdd-implementer` unless the brief routes Qt-heavy —
+  then dispatch `qt-cpp-reviewer` in Implement mode with the same five
+  slots. Its pack self-review plus build evidence covers the quality
+  verdict; `sdd-task-reviewer` still gates spec compliance. Never point
+  any other seat at the vendored pack.
 - Never paste accumulated prior-task state into a dispatch. A fresh
   implementer needs its task, its interfaces, and the constraints. Nothing
   else.
