@@ -104,7 +104,6 @@ class MainWindow : public QMainWindow
     void openSettings(SettingsDialog::Tab initialTab = SettingsDialog::Tab::Engine);
     void openSongSettings();
     void openEngineSettings();
-    void openKeyboardShortcuts();
     void uiTick();
 
   private:

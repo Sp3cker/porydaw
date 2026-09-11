@@ -54,8 +54,6 @@ const Def kDefs[] = {
      QKeySequence::UnknownKey, ""},
     {"edit.engine_settings", Context::Global, QT_TR_NOOP("Edit"), QT_TR_NOOP("Engine Settings"),
      QKeySequence::UnknownKey, ""},
-    {"edit.keyboard_shortcuts", Context::Global, QT_TR_NOOP("Edit"),
-     QT_TR_NOOP("Keyboard Shortcuts"), QKeySequence::UnknownKey, ""},
     // View
     {"view.theme", Context::Global, QT_TR_NOOP("View"), QT_TR_NOOP("Theme"),
      QKeySequence::UnknownKey, ""},

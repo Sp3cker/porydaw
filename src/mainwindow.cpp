@@ -321,9 +321,6 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     QAction *engineSettingsAction =
         editMenu->addAction(tr("&Engine Settings..."), this, &MainWindow::openEngineSettings);
     keys.attach(QStringLiteral("edit.engine_settings"), engineSettingsAction);
-    QAction *shortcutsAction =
-        editMenu->addAction(tr("&Keyboard Shortcuts..."), this, &MainWindow::openKeyboardShortcuts);
-    keys.attach(QStringLiteral("edit.keyboard_shortcuts"), shortcutsAction);
     auto *viewMenu = menuBar()->addMenu(tr("&View"));
     // View menu: piano roll vs raw MIDI event list, per tab.
     m_eventListAction = viewMenu->addAction(tr("MIDI &Event List"));
@@ -1334,11 +1331,6 @@ void MainWindow::openSettings(SettingsDialog::Tab initialTab)
 void MainWindow::openSongSettings()
 {
     openSettings(SettingsDialog::Tab::Song);
-}
-
-void MainWindow::openKeyboardShortcuts()
-{
-    openSettings(SettingsDialog::Tab::Keyboard);
 }
 
 void MainWindow::openEngineSettings()
