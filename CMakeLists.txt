@@ -72,7 +72,7 @@ if(PORYDAW_COVERAGE)
     if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang")
         message(WARNING "PORYDAW_COVERAGE is only supported with Clang/AppleClang")
     endif()
-    add_compile_options(-fprofile-instr-generate -fcoverage-mapping -O0 -fno-inline)
+    add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
     add_link_options(-fprofile-instr-generate)
 endif()
 
@@ -89,9 +89,25 @@ endif()
 if(NOT EXISTS "${PORYAAAA_DIR}/plugin/porydaw/CMakeLists.txt")
     message(FATAL_ERROR "PORYAAAA_DIR must point to the poryaaaa package source tree")
 endif()
-add_subdirectory(
-    "${PORYAAAA_DIR}/plugin/porydaw"
-    "${CMAKE_CURRENT_BINARY_DIR}/poryaaaa-engine")
+# Keep the engine at Release optimization even when the host is built for debugging.
+# Function scope keeps the host's configuration flags and IPO policy unchanged.
+function(porydaw_add_release_engine)
+    foreach(language IN ITEMS C CXX)
+        foreach(config IN ITEMS Debug Release RelWithDebInfo MinSizeRel ${CMAKE_CONFIGURATION_TYPES} ${CMAKE_BUILD_TYPE})
+            string(TOUPPER "${config}" config_upper)
+            set(CMAKE_${language}_FLAGS_${config_upper} "${CMAKE_${language}_FLAGS_RELEASE}")
+        endforeach()
+    endforeach()
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ${PORYDAW_IPO_SUPPORTED})
+    add_subdirectory(
+        "${PORYAAAA_DIR}/plugin/porydaw"
+        "${CMAKE_CURRENT_BINARY_DIR}/poryaaaa-engine")
+endfunction()
+porydaw_add_release_engine()
+
+if(PORYDAW_COVERAGE)
+    add_compile_options(-O0 -fno-inline)
+endif()
 
 # ---- In-tree m4a converter required by the harness sweep ----
 if(PORYDAW_BUILD_CHECKS)
