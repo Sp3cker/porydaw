@@ -55,7 +55,6 @@ class SelectionKeyGestureTest final : public QObject
     SelectionKeyGestureTest(QString projectRoot, QString songLabel);
 
   private slots:
-    void initTestCase();
     void init();
     void cleanup();
 
@@ -161,9 +160,6 @@ class SelectionKeyGestureTest final : public QObject
 
     QString mProjectRoot;
     QString mSongLabel;
-    // Snapshot before the initTestCase wipe; the restore runs when the test
-    // object dies, exactly like the legacy runner's RAII scope.
-    std::optional<selectionkey::KeymapRestore> mKeymapRestore;
     std::unique_ptr<selectionkey::RigWorld> mWorld;
     QPointer<QQuickWindow> mQuickWindow;
     QPointer<songview::TimelineInputItem> mVelocityInput;

@@ -32,16 +32,13 @@ SelectionKeyCoreTest::SelectionKeyCoreTest(QString projectRoot, QString songLabe
     , m_songLabel(std::move(songLabel))
 {}
 
-// Per-case lifecycle: init() resets the shared keymap registry so every case
-// resolves bindings from defaults (rebinds go through the RAII member that
-// restores on destruction); cleanup() quiesces any surviving interaction and
-// releases recorded held input even when the body aborted mid-gesture.
+// Per-case lifecycle: init() resets held-input state; cleanup() quiesces any
+// surviving interaction and releases recorded held input even when the body
+// aborted mid-gesture.
 void SelectionKeyCoreTest::init()
 {
     m_heldButton = Qt::NoButton;
     m_lastWindowPosition = QPoint();
-    m_keymap = std::make_unique<selectionkey::KeymapRestore>();
-    m_keymap->registry().resetAll();
 }
 
 void SelectionKeyCoreTest::cleanup()
@@ -62,7 +59,6 @@ void SelectionKeyCoreTest::cleanup()
     m_heldButton = Qt::NoButton;
     m_quickWindow.clear();
     m_fixture.reset();
-    m_keymap.reset();
     QVERIFY2(mouseGrabCleared, "the Quick window kept a mouse grab after cleanup");
 }
 

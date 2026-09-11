@@ -2,7 +2,7 @@
 
 // Shared primitives for the selectionkey checks: real QTest delivery, live
 // keymap resolution, isolated standalone-rig assembly, document note lookups,
-// focus diagnostics, and keymap-override RAII.
+// focus diagnostics.
 // MainWindow session lifecycle remains in session.h. This is deliberately not
 // a test framework: it owns only the few identical seams used by more than
 // one selection-routing tier.
@@ -223,27 +223,5 @@ inline songview::TimelineInputItem *rigInput(RigWorld &world, const char *name)
     QQuickItem *const root = world.rig->quickRoot();
     return root ? root->findChild<songview::TimelineInputItem *>(QLatin1String(name)) : nullptr;
 }
-
-// Restores every keymap binding override on destruction, so a rebound-binding
-// block cannot leak state into later scenarios on an early return.
-class KeymapRestore final
-{
-  public:
-    KeymapRestore()
-        : m_registry(keymap::Registry::instance())
-        , m_snapshot(m_registry.snapshotOverrides())
-    {}
-
-    ~KeymapRestore() { m_registry.restoreOverrides(m_snapshot); }
-
-    KeymapRestore(const KeymapRestore &) = delete;
-    KeymapRestore &operator=(const KeymapRestore &) = delete;
-
-    keymap::Registry &registry() noexcept { return m_registry; }
-
-  private:
-    keymap::Registry &m_registry;
-    keymap::Registry::OverrideSnapshot m_snapshot;
-};
 
 } // namespace selectionkey

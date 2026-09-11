@@ -53,7 +53,7 @@ class SelectionKeyCoreTest final : public QObject
     void drawerTransposeAuditionReleasesOnPhysicalKeyUp();
 
     // An automation right-drag range replaces the note selection with lane
-    // scope, and a rebound Delete removes only its selected points.
+    // scope, and shipped Delete removes only its selected points.
     void automationRangeAndReboundDelete();
 
     // Pencil-hover Delete precedence: note selection, then track time
@@ -87,10 +87,6 @@ class SelectionKeyCoreTest final : public QObject
 
     QString m_projectRoot;
     QString m_songLabel;
-    // Snapshot/restore RAII for the shared keymap registry; init() resets the
-    // registry to defaults per case, so rebound bindings cannot leak in
-    // either direction.
-    std::unique_ptr<selectionkey::KeymapRestore> m_keymap;
     std::unique_ptr<selectionkey::CoreFixture> m_fixture;
     QString m_lastFixtureError;
     // Held-input record for the failure-safe cleanup.

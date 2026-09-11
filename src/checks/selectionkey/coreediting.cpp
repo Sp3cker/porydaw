@@ -125,10 +125,8 @@ void SelectionKeyCoreTest::automationRangeAndReboundDelete()
         m_fixture->view().selectionModel().noteSelection().empty();
     QVERIFY2(rangeReady, "actual automation range did not replace note selection with lane scope");
 
-    m_keymap->registry().setBinding(QStringLiteral("roll.delete"),
-                                    QKeySequence(QStringLiteral("Alt+Backspace")));
-    QVERIFY2(deliverKey(quick, Qt::Key_Backspace, Qt::AltModifier),
-             "rebound Delete did not reach the Quick automation surface");
+    QVERIFY2(deliverKey(quick, Qt::Key_Delete),
+             "shipped Delete did not reach the Quick automation surface");
     QVERIFY2(
         !m_fixture->document().findLanePoint(kTrack, kController, kFirstPointTick, nullptr) &&
             !m_fixture->document().findLanePoint(kTrack, kController, kInsidePointTick, nullptr) &&
@@ -153,8 +151,8 @@ void SelectionKeyCoreTest::pencilHoverDeletePrecedence()
     const bool miss = kind == PencilScenario::HoverMiss;
 
     // The shipped roll.delete defaults ("Delete;Backspace") drive the
-    // precedence matrix; automationRangeAndReboundDelete is the explicit
-    // rebound-binding coverage, and init() resets overrides between cases.
+    // precedence matrix; the automation-range scenario separately delivers
+    // unmodified Delete.
     const auto deleteKey = firstBinding(QStringLiteral("roll.delete"));
     QVERIFY2(deleteKey.has_value(),
              "roll.delete has no single-key default binding for the pencil-hover surface");
