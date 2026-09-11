@@ -286,7 +286,7 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     });
     editMenu->addAction(m_soloAction);
     m_soloAction->setEnabled(false);
-    m_insertTimeAction = new QAction(tr("Insert &Time..."), this);
+    m_insertTimeAction = new QAction(tr("Insert &Time"), this);
     connect(m_insertTimeAction, &QAction::triggered, this, [this] {
         if (m_selectedTab)
             m_selectedTab->view().insertTime();
@@ -296,6 +296,16 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     keys.attach(QStringLiteral("edit.insert_time"), m_insertTimeAction);
     editMenu->addAction(m_insertTimeAction);
     m_insertTimeAction->setEnabled(false);
+    m_deleteTimeAction = new QAction(tr("Delete &Time (Shift Left)"), this);
+    connect(m_deleteTimeAction, &QAction::triggered, this, [this] {
+        if (m_selectedTab)
+            m_selectedTab->view().removeTimeSelectionContents();
+    });
+    m_deleteTimeAction->setObjectName(QStringLiteral("deleteTimeWindowAction"));
+    m_deleteTimeAction->setShortcutContext(Qt::WindowShortcut);
+    keys.attach(QStringLiteral("edit.delete_time"), m_deleteTimeAction);
+    editMenu->addAction(m_deleteTimeAction);
+    m_deleteTimeAction->setEnabled(false);
     editMenu->addSeparator();
     QAction *preferencesAction = editMenu->addAction(tr("Prefere&nces..."), this, [this] {
         openSettings(m_selectedTab ? SettingsDialog::Tab::Song : SettingsDialog::Tab::Engine);
@@ -927,6 +937,7 @@ void MainWindow::updateChrome()
     m_copyAction->setEnabled(ready);
     m_soloAction->setEnabled(ready);
     m_insertTimeAction->setEnabled(ready);
+    m_deleteTimeAction->setEnabled(ready);
     m_registerAction->setEnabled(ready && selectedSongRegistrationPending());
     m_closeTabAction->setEnabled(m_workspace->openTabCount() > 0);
     m_eventListAction->setEnabled(ready);
