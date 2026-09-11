@@ -63,6 +63,15 @@ bool enterInsertTimeValues(QQuickWindow &window, const QKeySequence &bars,
     return quick_popup::inputHasActiveFocus(window, QLatin1String("insertTimeBeatFractions"));
 }
 
+uint8_t freeNoteKey(SongTab &tab, int track, uint64_t tick)
+{
+    for (int key = 0; key < 128; ++key) {
+        DocNote existing;
+        if (!tab.document().findNote(track, tick, uint8_t(key), &existing))
+            return uint8_t(key);
+    }
+    return 0;
+}
 } // namespace
 
 namespace checks::mainwindowrouting {
@@ -471,6 +480,281 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         QCOMPARE(tab.document().undoStack()->count(), staleUndoCount);
         QCOMPARE(tab.document().revision(), staleRevision);
         view.setPlayheadSample(0, false);
+    }
+
+    void insertTimeActionAnchorsSelectionDuringPlayback()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        MainWindow &window = *session->window;
+        SongTab &tab = *session->b;
+        SongView &view = tab.view();
+        QAction *action = window.m_insertTimeAction;
+        QVERIFY(action);
+        QVERIFY(action->isEnabled());
+
+        const std::optional<DocNote> source = selectFirstNote(tab);
+        QVERIFY(source.has_value());
+        const int track = view.selectionModel().primaryTrack();
+        const uint64_t span = tab.timeline()->ticksPerBeat;
+        const uint64_t selectionStart = source->tick + span;
+        const uint64_t selectionEnd = selectionStart + span;
+        const uint8_t probeKey = freeNoteKey(tab, track, selectionEnd);
+        tab.document().addNote(track, selectionEnd, probeKey, uint32_t(span), 80);
+        DocNote probe;
+        QVERIFY2(tab.document().findNote(track, selectionEnd, probeKey, &probe),
+                 "could not seed the insert probe note");
+        std::optional<DocNote> untouched;
+        for (int candidate = 0; candidate < tab.document().engineTrackCount() && !untouched;
+             ++candidate) {
+            if (candidate == track)
+                continue;
+            const std::vector<DocNote> notes = tab.document().notesForTrack(candidate);
+            if (!notes.empty())
+                untouched = notes.front();
+        }
+        QVERIFY(untouched.has_value());
+
+        window.m_workspace->selectSongTab(&tab);
+        view.selectTrack(track);
+        songview::EditorSelectionModel::TimeSelection selection;
+        selection.startTick = selectionStart;
+        selection.endTick = selectionEnd;
+        view.selectionModel().setTimeSelection(selection);
+        const QByteArray before = tab.document().smf().write();
+        const QByteArray inactiveBefore = session->a->document().smf().write();
+        const int undoIndex = tab.document().undoStack()->index();
+        const uint64_t revision = tab.document().revision();
+
+        // Playback parks the playhead and edit cursor away from the selection
+        // span: the unified command must anchor on the selection, not either.
+        window.stopPlayback();
+        view.requestPlayPauseFrom(source->tick);
+        QCOMPARE(window.m_audio.transport(), Transport::Playing);
+        QCOMPARE(view.editCursorTick(), source->tick);
+        QVERIFY(view.playheadTick() < double(selectionStart));
+
+        action->trigger();
+        QCoreApplication::processEvents();
+        songview::QuickPopupSession *popup = quick_popup::popupSession(view);
+        QVERIFY(!popup || !popup->isOpen());
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex + 1);
+        QCOMPARE(tab.document().revision(), revision + 1);
+        const songview::EditorSelectionModel::TimeSelection retained =
+            view.selectionModel().timeSelection();
+        QVERIFY(retained.active());
+        QCOMPARE(retained.startTick, selectionStart);
+        QCOMPARE(retained.endTick, selectionEnd);
+        QCOMPARE(retained.scope, songview::EditorSelectionModel::TimeSelection::Tracks);
+        QCOMPARE(view.editCursorTick(), selectionStart);
+        DocNote probeAfter;
+        QVERIFY(tab.document().findNote(probe.noteId, &probeAfter));
+        QCOMPARE(probeAfter.tick, selectionEnd + span);
+        QCOMPARE(probeAfter.key, probe.key);
+        DocNote untouchedAfter;
+        QVERIFY(tab.document().findNote(untouched->noteId, &untouchedAfter));
+        QCOMPARE(untouchedAfter.tick, untouched->tick);
+        QCOMPARE(session->a->document().smf().write(), inactiveBefore);
+
+        window.stopPlayback();
+        tab.document().undoStack()->undo();
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex);
+        QCOMPARE(tab.document().smf().write(), before);
+        QCOMPARE(session->a->document().smf().write(), inactiveBefore);
+        view.setPlayheadSample(0, false);
+    }
+
+    void deleteTimeActionRipplesScopedAndWholeSongSelections()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        MainWindow &window = *session->window;
+        SongTab &tab = *session->b;
+        SongView &view = tab.view();
+        QAction *action = window.m_deleteTimeAction;
+        QVERIFY(action);
+        QVERIFY(action->isEnabled());
+
+        const std::optional<DocNote> source = selectFirstNote(tab);
+        QVERIFY(source.has_value());
+        const int track = view.selectionModel().primaryTrack();
+        const uint64_t span = tab.timeline()->ticksPerBeat;
+        const uint64_t selectionStart = source->tick + span;
+        const uint64_t selectionEnd = selectionStart + span;
+        const uint64_t wholeEnd = selectionEnd + span;
+        const uint8_t insideKey = freeNoteKey(tab, track, selectionStart);
+        tab.document().addNote(track, selectionStart, insideKey, uint32_t(span), 80);
+        DocNote inside;
+        QVERIFY2(tab.document().findNote(track, selectionStart, insideKey, &inside),
+                 "could not seed the removed-range probe note");
+        const uint8_t laterKey = freeNoteKey(tab, track, wholeEnd);
+        tab.document().addNote(track, wholeEnd, laterKey, uint32_t(span), 80);
+        DocNote later;
+        QVERIFY2(tab.document().findNote(track, wholeEnd, laterKey, &later),
+                 "could not seed the later-event probe note");
+        std::optional<DocNote> untouched;
+        for (int candidate = 0; candidate < tab.document().engineTrackCount() && !untouched;
+             ++candidate) {
+            if (candidate == track)
+                continue;
+            const std::vector<DocNote> notes = tab.document().notesForTrack(candidate);
+            if (!notes.empty())
+                untouched = notes.front();
+        }
+        QVERIFY(untouched.has_value());
+        const int untouchedTrack = untouched->engineTrack;
+        const uint8_t excludedKey = freeNoteKey(tab, untouchedTrack, span);
+        tab.document().addNote(untouchedTrack, span, excludedKey, uint32_t(span), 80);
+        DocNote excluded;
+        QVERIFY2(tab.document().findNote(untouchedTrack, span, excludedKey, &excluded),
+                 "could not seed the excluded-track probe note");
+        const uint8_t excludedLaterKey = freeNoteKey(tab, untouchedTrack, wholeEnd + span);
+        tab.document().addNote(untouchedTrack, wholeEnd + span, excludedLaterKey, uint32_t(span),
+                               80);
+        DocNote excludedLater;
+        QVERIFY2(tab.document().findNote(untouchedTrack, wholeEnd + span, excludedLaterKey,
+                                         &excludedLater),
+                 "could not seed the excluded later-event probe note");
+
+        window.m_workspace->selectSongTab(&tab);
+        const QByteArray before = tab.document().smf().write();
+        const QByteArray inactiveBefore = session->a->document().smf().write();
+        const int undoIndex = tab.document().undoStack()->index();
+
+        // Scoped ripple removal: in-range content goes, later events shift
+        // left, the selection clears, and the cursor parks at the seam.
+        view.selectTrack(track);
+        songview::EditorSelectionModel::TimeSelection selection;
+        selection.startTick = selectionStart;
+        selection.endTick = selectionEnd;
+        view.selectionModel().setTimeSelection(selection);
+        const uint64_t revision = tab.document().revision();
+        action->trigger();
+        QCoreApplication::processEvents();
+        songview::QuickPopupSession *popup = quick_popup::popupSession(view);
+        QVERIFY(!popup || !popup->isOpen());
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex + 1);
+        QCOMPARE(tab.document().revision(), revision + 1);
+        QVERIFY(!view.selectionModel().timeSelection().active());
+        QCOMPARE(view.editCursorTick(), selectionStart);
+        DocNote scratch;
+        QVERIFY(!tab.document().findNote(inside.noteId, &scratch));
+        DocNote laterAfter;
+        QVERIFY(tab.document().findNote(later.noteId, &laterAfter));
+        QCOMPARE(laterAfter.tick, selectionEnd);
+        DocNote sourceAfter;
+        QVERIFY(tab.document().findNote(source->noteId, &sourceAfter));
+        QCOMPARE(sourceAfter.tick, source->tick);
+        DocNote untouchedAfter;
+        QVERIFY(tab.document().findNote(untouched->noteId, &untouchedAfter));
+        QCOMPARE(untouchedAfter.tick, untouched->tick);
+        QCOMPARE(session->a->document().smf().write(), inactiveBefore);
+        tab.document().undoStack()->undo();
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex);
+        QCOMPARE(tab.document().smf().write(), before);
+
+        // Whole-song routing: content outside the scoped case participates.
+        uint32_t usedMask = 0;
+        for (int candidate = 0; candidate < 16; ++candidate)
+            if (tab.timeline()->tracks[candidate].used)
+                usedMask |= 1u << candidate;
+        QVERIFY(usedMask != 0);
+        view.selectTrack(track);
+        songview::EditorSelectionModel::TimeSelection whole;
+        whole.startTick = 0;
+        whole.endTick = wholeEnd;
+        view.selectionModel().setTimeSelectionAndTrackScope(whole, 0xFFFFu);
+        QVERIFY(view.selectionModel().timeSelection().active());
+        QCOMPARE(view.selectionModel().storedTrackScope(), 0xFFFFu);
+        QVERIFY(view.selectionModel().timeSelectionCoversTempo(usedMask));
+        const uint64_t wholeRevision = tab.document().revision();
+        action->trigger();
+        QCoreApplication::processEvents();
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex + 1);
+        QCOMPARE(tab.document().revision(), wholeRevision + 1);
+        QVERIFY(!view.selectionModel().timeSelection().active());
+        QCOMPARE(view.editCursorTick(), uint64_t{0});
+        QVERIFY(!tab.document().findNote(source->noteId, &sourceAfter));
+        QVERIFY(!tab.document().findNote(inside.noteId, &scratch));
+        QVERIFY(!tab.document().findNote(excluded.noteId, &scratch));
+        DocNote excludedLaterAfter;
+        QVERIFY(tab.document().findNote(excludedLater.noteId, &excludedLaterAfter));
+        QCOMPARE(excludedLaterAfter.tick, span);
+        QCOMPARE(session->a->document().smf().write(), inactiveBefore);
+        tab.document().undoStack()->undo();
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex);
+        QCOMPARE(tab.document().smf().write(), before);
+        QCOMPARE(session->a->document().smf().write(), inactiveBefore);
+    }
+
+    void deleteTimeActionInertWithoutResolvableSelection()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        MainWindow &window = *session->window;
+        SongTab &tab = *session->b;
+        SongView &view = tab.view();
+        QAction *action = window.m_deleteTimeAction;
+        QVERIFY(action);
+        QVERIFY(action->isEnabled());
+        const std::optional<DocNote> source = selectFirstNote(tab);
+        QVERIFY(source.has_value());
+        const int track = view.selectionModel().primaryTrack();
+        const uint64_t span = tab.timeline()->ticksPerBeat;
+
+        window.m_workspace->selectSongTab(&tab);
+        view.selectTrack(track);
+        view.selectionModel().clearTimeSelection();
+        const QByteArray before = tab.document().smf().write();
+        const int undoIndex = tab.document().undoStack()->index();
+        const uint64_t revision = tab.document().revision();
+        const uint64_t cursor = view.editCursorTick();
+
+        // Without a selection the command is inert: no popup, no mutation.
+        action->trigger();
+        QCoreApplication::processEvents();
+        songview::QuickPopupSession *popup = quick_popup::popupSession(view);
+        QVERIFY(!popup || !popup->isOpen());
+        QCOMPARE(tab.document().smf().write(), before);
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex);
+        QCOMPARE(tab.document().revision(), revision);
+        QCOMPARE(view.editCursorTick(), cursor);
+        QVERIFY(!view.selectionModel().timeSelection().active());
+
+        // Task 2's public invalid-active idiom: an unused selected track with
+        // an active selection never resolves, so Delete must refuse silently.
+        int unusedTrack = -1;
+        for (int candidate = 0; candidate < 16 && unusedTrack < 0; ++candidate)
+            if (!tab.timeline()->tracks[candidate].used)
+                unusedTrack = candidate;
+        QVERIFY2(unusedTrack >= 0, "the routing fixture has no timeline-unused track");
+        view.selectTrack(unusedTrack);
+        songview::EditorSelectionModel::TimeSelection rejected;
+        rejected.startTick = source->tick + span;
+        rejected.endTick = rejected.startTick + span;
+        view.selectionModel().setTimeSelection(rejected);
+        QVERIFY2(view.selectionModel().primaryTrack() == unusedTrack &&
+                     view.selectionModel().storedTrackScope() == (uint32_t{1} << unusedTrack) &&
+                     !tab.timeline()->tracks[unusedTrack].used &&
+                     view.selectionModel().timeSelection().active() &&
+                     view.selectionModel().timeSelection().startTick == rejected.startTick &&
+                     view.selectionModel().timeSelection().endTick == rejected.endTick &&
+                     view.selectionModel().timeSelection().scope ==
+                         songview::EditorSelectionModel::TimeSelection::Tracks,
+                 "could not build the invalid active time-selection scope");
+        action->trigger();
+        QCoreApplication::processEvents();
+        popup = quick_popup::popupSession(view);
+        QVERIFY(!popup || !popup->isOpen());
+        QCOMPARE(tab.document().smf().write(), before);
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex);
+        QCOMPARE(tab.document().revision(), revision);
+        QCOMPARE(view.editCursorTick(), cursor);
+        QVERIFY(view.selectionModel().timeSelection().active());
+        QCOMPARE(view.selectionModel().timeSelection().startTick, rejected.startTick);
+        QCOMPARE(view.selectionModel().timeSelection().endTick, rejected.endTick);
+        QCOMPARE(view.selectionModel().primaryTrack(), unusedTrack);
+        QCOMPARE(view.selectionModel().storedTrackScope(), uint32_t{1} << unusedTrack);
     }
 
   private:
