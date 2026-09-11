@@ -77,6 +77,8 @@ inline QQuickItem *automationTabsScroller(QQuickItem *root)
 // in the same frame; a future Behavior/animation on contentY would stale it by one frame.
 inline void scrollTabIntoView(QQuickItem *scroller, const QQuickItem &tab)
 {
+    if (!scroller)
+        return;
     const qreal contentY = scroller->property("contentY").toReal();
     const qreal topInContent = tab.mapToItem(scroller, QPointF{}).y() + contentY;
     const qreal maximumContentY =
