@@ -115,18 +115,18 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
     QVERIFY(automationPage);
     QVERIFY(canvas);
     const QStringList expected{
-        QStringLiteral("Modulation"),  QStringLiteral("Volume"),     QStringLiteral("Pan"),
-        QStringLiteral("Bend range"),  QStringLiteral("LFO speed"),  QStringLiteral("Echo volume"),
-        QStringLiteral("Echo length"), QStringLiteral("Pitch bend"), QStringLiteral("Tempo")};
+        QStringLiteral("Volume"),      QStringLiteral("Pan"),         QStringLiteral("Modulation"),
+        QStringLiteral("Pitch bend"),  QStringLiteral("LFO speed"),   QStringLiteral("Bend range"),
+        QStringLiteral("Echo volume"), QStringLiteral("Echo length"), QStringLiteral("Tempo")};
     QCOMPARE(canvas->parameterLabels(), expected);
-    const std::array<uint8_t, 8> controllers{CoreTimeDefaults::kCcModulation,
-                                             CoreTimeDefaults::kCcVolume,
+    const std::array<uint8_t, 8> controllers{CoreTimeDefaults::kCcVolume,
                                              CoreTimeDefaults::kCcPan,
-                                             CoreTimeDefaults::kCcBendRange,
+                                             CoreTimeDefaults::kCcModulation,
+                                             CoreTimeDefaults::kLaneCcBend,
                                              CoreTimeDefaults::kCcLfoSpeed,
+                                             CoreTimeDefaults::kCcBendRange,
                                              uint8_t{0xFB},
-                                             uint8_t{0xFC},
-                                             CoreTimeDefaults::kLaneCcBend};
+                                             uint8_t{0xFC}};
     for (int index = 0; index < int(controllers.size()); ++index) {
         const auto row = canvas->parameterRow(index);
         QVERIFY(row.has_value());
@@ -147,6 +147,7 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
     const QRectF gutter = m_gutterInput->mapRectToScene(m_gutterInput->boundingRect());
 
     std::vector<QPointF> centers;
+    std::vector<QRectF> labelBounds;
     for (int index = 0; index < expected.size(); ++index) {
         QQuickItem *tab = nullptr;
         QTRY_VERIFY((tab = parameterLabelItem(index)) && tab->isVisible() && tab->width() > 0.0 &&
@@ -159,6 +160,7 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
                     std::abs(center.y() - bounds.center().y()) > layout::singlePixel());
         }
         centers.push_back(bounds.center());
+        labelBounds.push_back(bounds);
 
         QQuickItem *const text = tab->property("contentItem").value<QQuickItem *>();
         QVERIFY2(text, "a catalog label rendered without its Text item");
@@ -171,6 +173,22 @@ void AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum()
         QVERIFY2(contentHeight <= text->height() + 0.5,
                  "the rendered fitted Text exceeds its label height");
     }
+
+    // The selector keeps the catalog's grouping visible: each related pair
+    // shares one row, and song-global Tempo closes the grid on its own wider
+    // row instead of joining a pair.
+    QCOMPARE(labelBounds.size(), static_cast<std::size_t>(expected.size()));
+    const std::size_t pairedLabels = labelBounds.size() - 1;
+    for (std::size_t pair = 0; pair < pairedLabels; pair += 2) {
+        QVERIFY2(std::abs(labelBounds.at(pair).center().y() -
+                          labelBounds.at(pair + 1).center().y()) <= layout::singlePixel(),
+                 "a related parameter pair no longer shares a selector row");
+    }
+    const QRectF &tempoBounds = labelBounds.back();
+    QVERIFY2(tempoBounds.center().y() > labelBounds.front().center().y(),
+             "the song-global Tempo label no longer closes the selector grid");
+    QVERIFY2(tempoBounds.width() > labelBounds.front().width() * 1.5,
+             "the song-global Tempo label no longer spans the closing selector row");
     m_rig->view().setDrawerSectionHeight(EditorDrawerPage::Automations, originalHeight);
 }
 

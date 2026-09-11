@@ -45,18 +45,21 @@ uint8_t CCLanes::bendController() noexcept
 
 std::span<const uint8_t> CCLanes::supportedControllers() noexcept
 {
+    // Selector display order, deliberately not ascending controller number:
+    // related identities are adjacent so the parameter grid reads as groups —
+    // mix (Volume, Pan), pitch (Modulation, Pitch bend, LFO speed, Bend range),
+    // then the two XCMD echo lanes. Tempo is appended after this catalog.
     static constexpr auto controllers = [] {
         std::array<uint8_t, 6 + xcmd::kLaneDescriptors.size()> result{};
-        result[0] = CoreTimeDefaults::kCcModulation;
-        result[1] = CoreTimeDefaults::kCcVolume;
-        result[2] = CoreTimeDefaults::kCcPan;
-        result[3] = CoreTimeDefaults::kCcBendRange;
+        result[0] = CoreTimeDefaults::kCcVolume;
+        result[1] = CoreTimeDefaults::kCcPan;
+        result[2] = CoreTimeDefaults::kCcModulation;
+        result[3] = CoreTimeDefaults::kLaneCcBend;
         result[4] = CoreTimeDefaults::kCcLfoSpeed;
-        std::size_t next = 5;
+        result[5] = CoreTimeDefaults::kCcBendRange;
+        std::size_t next = 6;
         for (const auto &descriptor : xcmd::kLaneDescriptors)
             result[next++] = descriptor.laneController;
-        result[next] = CoreTimeDefaults::kLaneCcBend;
-        std::sort(result.begin(), result.end());
         return result;
     }();
     return controllers;

@@ -1,8 +1,9 @@
 // Compact parameter selector for the automation gutter: the nine standard
-// parameter identities as native Basic TabButtons in one full-width vertical
-// list. Qt owns checking, focus, activation and accessibility plumbing; the
-// canvas owns parameter identity, the parameter menu and shared-selection
-// semantics. The list's intrinsic height is published to
+// parameter identities as native Basic TabButtons in two columns, one related
+// pair per row in catalog order (mix, pitch, echo), with song-global Tempo
+// spanning the last row. Qt owns checking, focus, activation and accessibility
+// plumbing; the canvas owns parameter identity, the parameter menu and
+// shared-selection semantics. The grid's intrinsic height is published to
 // AutomationCanvas::minimumContentHeight so the drawer allocates only what
 // the labels need — never the other way around.
 import QtQuick
@@ -25,9 +26,10 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
 
-        // One full-width cell per parameter: the labels stack vertically and
-        // each one owns the gutter's whole width.
-        columns: 1
+        // Two cells per row: each row pairs the identities that belong
+        // together, so the grid halves the height the labels demand from the
+        // drawer while still filling the gutter's width in two equal columns.
+        columns: 2
         rowSpacing: 0
 
         Repeater {
@@ -39,7 +41,8 @@ Item {
                 required property int index
                 required property string modelData
 
-                // Song-global Tempo closes the catalog, after the CC identities.
+                // Song-global Tempo closes the catalog, after the CC
+                // identities, on its own full-width row.
                 readonly property bool tempoParameter:
                     tab.index === root.canvas.parameterLabels.length - 1
                 readonly property bool selectionIncluded:
@@ -52,6 +55,7 @@ Item {
                 focusPolicy: Qt.StrongFocus
                 Layout.fillWidth: true
                 Layout.minimumHeight: root.appearance.minimumCellHeight
+                Layout.columnSpan: tab.tempoParameter ? 2 : 1
 
                 // Native checkable/autoExclusive presentation; the canvas
                 // stays the sole parameter authority.

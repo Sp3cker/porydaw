@@ -39,7 +39,8 @@ class CCLanes final
 {
   public:
     static uint8_t bendController() noexcept;
-    // The eight supported CC identities, ascending; Tempo is not a CC.
+    // The eight supported CC identities in selector display order; Tempo is
+    // not a CC and is appended by the canvas catalog after these.
     static std::span<const uint8_t> supportedControllers() noexcept;
     // Canonical lane title for any controller — bend, descriptor-backed XCMD
     // lanes, and plain M4A CCs. Single source of truth for lane labels.
