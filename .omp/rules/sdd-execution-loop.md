@@ -30,6 +30,9 @@ time: dispatch implementer → review gate → fix loop → controller commit �
   Shared tree is the only exception: mark the dispatch SHARED_TREE and the
   implementer returns build DEFERRED; you then run the focused check on
   the merged tree at checkpoint-commit, before the review gate.
+- Implementer model failure falls back per harness config (`omen-alpha` →
+  `terra:xhigh`). A fallback-fired run is the same seat under the same
+  contract — its report carries the same weight.
 - Never paste accumulated prior-task state into a dispatch. A fresh
   implementer needs its task, its interfaces, and the constraints. Nothing
   else.
