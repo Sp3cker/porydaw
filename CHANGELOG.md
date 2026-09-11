@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Added
 - There is now buffer space before the start of the song in the piano roll to make it easier to scroll and focus the start of the song. Similarly, there is now much bigger buffer after the end of the song.
 - Press `G` with one note selected to edit its channel-wide pitch bend: scroll the graph for a note-scoped BENDR range, hold `Option`/`Alt` for angled lines, reset to zero, and audition from note-on with `Space`. The popup stays open until click-away or `Escape`.
+- Insert Time is now selection-aware: with an active time selection it inserts a silent gap the length of the selection immediately (no prompt), honoring the selection's resolved scope, keeping the selection over the new blank span, and committing the edit cursor to the start seam; without a selection it still opens the bars/beats/fractions prompt for a whole-song insertion at the cursor.
+- The Edit menu and both time-selection context menus now offer Delete Time (Shift Left) (`edit.delete_time`, no default binding): it removes the active selection's whole span and shifts later scoped content left, clearing the selection and parking the edit cursor at the seam, with no confirmation and one undo step. Context menus show Insert Time / Delete Time (Shift Left) with the registry shortcuts; ordinary Delete, Backspace, and Cut remain contents-only and never shift time.
 
 ## Changed
 - View menu, drawer toggles, and show/hide announcements now say Automation drawer, Velocity drawer, and Voice-change drawer.
@@ -26,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moved the drawer voice-change menu to the shared in-scene Quick menu. Camera moves do not change its target; outside right-click dismisses without retargeting. Hiding or detaching the lane cancels its picker, and stale edits cannot overwrite newer changes or displace another popup.
 - Host the timeline, ruler, event list, and editor drawers in one Qt Quick viewport. SongView and drawer layout no longer depend on hidden QWidget spacers; only the SongTab embedding boundary remains widget-based.
 - Group the automation parameter selector into two columns of related parameters — Volume/Pan, Modulation/Pitch bend, LFO speed/Bend range, and the two echo lanes — with song-global Tempo closing the grid on its own row. The grouped grid needs less drawer height than the previous single-column list.
+- Replace the always-prompt Insert blank time command with selection-aware Insert Time (`edit.insert_time`, `Ctrl+Shift+I`): an active selection inserts immediately while an active but unresolvable selection rejects silently rather than falling through to the whole-song prompt. Remove Time contents was renamed Delete Time (Shift Left) in both context menus but keeps its guarded, silent no-op behavior.
 
 ## Fixed
 - Retain stationary timeline gutters and velocity axes while panning; draw only populated geometry vertices, and preserve full refreshes when layout or content changes.

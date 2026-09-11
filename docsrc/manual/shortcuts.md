@@ -23,7 +23,7 @@ keys locally instead.
 | Cut Selection | `Ctrl+X` | Cuts selected notes or active time range |
 | Paste at Edit Cursor | `Ctrl+V` | Pastes clipboard content at the edit cursor |
 | Select All Notes | `Ctrl+A` | Selects all notes on the active track |
-| Delete Selection | `Delete` / `Backspace` | Deletes selected notes or active time range |
+| Delete Selection | `Delete` / `Backspace` | Deletes selected notes, or clears the **contents** of an active time range without shifting later events (contents-only; time never collapses) |
 | Transpose Up (Semitone) | `Up` | Transposes selection up by 1 semitone |
 | Transpose Down (Semitone) | `Down` | Transposes selection down by 1 semitone |
 | Transpose Up (Octave) | `Shift+Up` | Transposes selection up by 1 octave |
@@ -45,7 +45,8 @@ keys locally instead.
 
 | Command | Default Shortcut | Description |
 | --- | --- | --- |
-| Insert Time | `Ctrl+Shift+I` | Inserts a bars/beats/fractions duration at the current cursor |
+| Insert Time | `Ctrl+Shift+I` | With an active time selection, inserts a silent gap the length of the selection immediately; otherwise opens a bars/beats/fractions prompt that inserts across the whole song at the cursor |
+| Delete Time (Shift Left) | *(unbound)* | Removes the active time selection's span and shifts later scoped content left; no-op without a selection. Ordinary `Delete`/`Backspace` still clear selection **contents** without shifting time |
 | Undo | `Ctrl+Z` | Undoes the last action |
 | Redo | `Ctrl+Y` / `Ctrl+Shift+Z` | Redoes the previously undone action |
 

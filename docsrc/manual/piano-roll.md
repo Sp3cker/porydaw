@@ -52,21 +52,21 @@ Covered notes and automation nodes use the normal selection highlight without be
 - **Lane-only scope**: When a time selection is made directly within an automation lane in the drawer, time operations apply only to the selected automation lanes, leaving notes and other tracks untouched.
 
 ### Time editing commands
-**Insert Time** (`Ctrl+Shift+I`, or `Cmd+Shift+I` on macOS) is available from
-the Edit menu without a time selection. It opens three draggable number fields
-for bars, beats, and quarter-beat fractions, then inserts that duration across
-the whole song at the live playhead (or at the edit cursor while stopped).
+**Insert Time** (`Ctrl+Shift+I`, or `Cmd+Shift+I` on macOS) is selection-aware:
+- **With an active time selection**: inserts a silent gap exactly the duration of the selection, immediately and without prompting. The selection's resolved scope (track, multi-track, whole-song, or lane-only, as described above) determines what shifts right; notes crossing the start seam are split cleanly so the inserted interval stays completely silent. The time selection remains over the newly created blank space, and the edit cursor is placed at the start seam. An active selection whose scope cannot be resolved rejects the command silently, without opening the prompt.
+- **Without a selection**: opens three draggable number fields for bars, beats, and quarter-beat fractions, then inserts that duration across the whole song at the live playhead (or at the edit cursor while stopped).
 
-When a time selection is active, the following range commands are available via the right-click context menu (by right-clicking the timeline ruler, inside an active time selection on the piano roll canvas, or inside an automation lane time selection):
+**Delete Time (Shift Left)** is available from the Edit menu and both time-selection context menus (by default it has no keyboard shortcut). It removes the active time selection's whole time span — contents plus duration — and shifts all later scoped notes and automation left by that amount. Afterward the selection clears and the edit cursor is parked at the start seam. Without an active selection, or with a selection whose scope cannot be resolved, the command does nothing (no prompt, no edit). **No confirmation prompt is shown**; undo (`Ctrl+Z`) restores the previous song in one step. There is also no default destructive keyboard shortcut for it.
 
-- **Insert blank time**: Inserts a silent gap matching the duration of the active time selection. Notes crossing the start seam are split cleanly so the inserted interval remains completely silent. Scoped notes and automation at or after the insertion point are shifted right. The time selection remains over the newly created blank space, and the edit cursor is placed at the start seam. Requires an active time selection.
+When a time selection is active, both right-click context menus (the timeline ruler, and inside an active time selection on the piano roll canvas or in an automation lane) offer the insertion and ripple-removal commands above, alongside:
+
 - **Duplicate time** (`Ctrl+D` default, or `Cmd+D` on macOS): Copies all scoped content within the active time selection and inserts it immediately after the selection span, shifting later scoped content to the right. Automation streams cleanly seed their effective values at the destination seam. After duplicating, the time selection automatically advances to the newly created duplicate region (and the edit cursor commits to its end), allowing rapid repetition by pressing `Ctrl+D` repeatedly. Requires an active time selection.
-- **Remove contents (shift left)**: Removes the content within the time selection and shifts all later scoped notes and automation left by the selection duration.
-- **Cut range** / **Copy range** / **Delete range**: Standard clipboard and deletion operations scoped to the active time range.
-- **Paste at edit cursor**: Pastes previously copied range data starting at the current edit cursor position.
+- **Cut range** / **Copy range** / **Delete range** / ordinary `Delete`, `Backspace`, and Cut: These clear only the **contents** within the selection — the notes, automation points, and tempo markers inside the span are removed, but later events stay put; time never collapses. In contrast, Delete Time (Shift Left) removes the selected **duration** itself and ripples later content left. Ordinary Delete intentionally does not reassign to the rippling command.
+- **Paste at edit cursor**: pastes previously copied range data starting at the current edit cursor position.
 - **Clear time selection**: Clears the current time selection band.
 
 All time editing operations are undoable as a single command on the undo stack (`Ctrl+Z`).
+
 ## Snapping and the grid
 
 <!-- TODO: Choosing the snap resolution; when to turn snapping off;
