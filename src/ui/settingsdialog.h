@@ -4,12 +4,10 @@
 #include <optional>
 
 #include "enginesettingsdialog.h"
-#include "keymap.h"
 #include "project/decompproject.h"
 
 class QTabWidget;
 class EngineSettingsWidget;
-class KeyboardShortcutsWidget;
 class SongSettingsWidget;
 
 struct SongTarget {
@@ -25,7 +23,6 @@ class SettingsDialog : public QDialog
     enum class Tab {
         Engine,
         Song,
-        Keyboard,
     };
 
     explicit SettingsDialog(const EngineSettings &engineSettings,
@@ -42,15 +39,10 @@ class SettingsDialog : public QDialog
   signals:
     void applyRequested();
 
-  protected:
-    void reject() override;
-
   private:
     void apply();
     QTabWidget *m_tabs = nullptr;
     EngineSettingsWidget *m_engineWidget = nullptr;
     QWidget *m_songTab = nullptr;
     SongSettingsWidget *m_songWidget = nullptr;
-    KeyboardShortcutsWidget *m_keyboardWidget = nullptr;
-    std::optional<keymap::Registry::OverrideSnapshot> m_keymapSnapshot;
 };

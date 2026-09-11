@@ -7,14 +7,12 @@
 #include <QVBoxLayout>
 
 #include "enginesettingsdialog.h"
-#include "keyboardshortcutsdialog.h"
 #include "songsettingsdialog.h"
 
 SettingsDialog::SettingsDialog(const EngineSettings &engineSettings,
                                const std::optional<SongTarget> &song,
                                const QStringList &voicegroupArgs, Tab initialTab, QWidget *parent)
     : QDialog(parent)
-    , m_keymapSnapshot(keymap::Registry::instance().snapshotOverrides())
 {
     setWindowTitle(tr("Settings"));
     m_tabs = new QTabWidget(this);
@@ -30,13 +28,11 @@ SettingsDialog::SettingsDialog(const EngineSettings &engineSettings,
         song && !song->label.isEmpty() ? tr("Song (%1)").arg(song->label) : tr("Song");
     const int songTabIndex = m_tabs->addTab(m_songTab, songTabTitle);
     m_tabs->setTabEnabled(songTabIndex, song.has_value());
-    m_keyboardWidget = new KeyboardShortcutsWidget(this);
-    m_tabs->addTab(m_keyboardWidget, tr("Keyboard"));
     setCurrentTab(initialTab);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     auto *applyButton = new QPushButton(tr("Apply"), this);
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
-    connect(buttons, &QDialogButtonBox::rejected, this, &SettingsDialog::reject);
+    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     connect(applyButton, &QPushButton::clicked, this, &SettingsDialog::apply);
     auto *layout = new QVBoxLayout(this);
     layout->addWidget(m_tabs);
@@ -63,12 +59,10 @@ std::optional<SongCfg> SettingsDialog::songCfg() const
 SettingsDialog::Tab SettingsDialog::currentTab() const
 {
     const QWidget *current = m_tabs->currentWidget();
-    if (current == m_engineWidget)
-        return Tab::Engine;
     if (current == m_songTab)
         return Tab::Song;
-    Q_ASSERT(current == m_keyboardWidget);
-    return Tab::Keyboard;
+    Q_ASSERT(current == m_engineWidget);
+    return Tab::Engine;
 }
 
 void SettingsDialog::setCurrentTab(Tab tab)
@@ -80,24 +74,13 @@ void SettingsDialog::setCurrentTab(Tab tab)
     case Tab::Song:
         if (m_songWidget)
             m_tabs->setCurrentWidget(m_songTab);
-        break;
-    case Tab::Keyboard:
-        m_tabs->setCurrentWidget(m_keyboardWidget);
+        else
+            m_tabs->setCurrentWidget(m_engineWidget);
         break;
     }
 }
 
 void SettingsDialog::apply()
 {
-    m_keymapSnapshot = keymap::Registry::instance().snapshotOverrides();
     emit applyRequested();
-}
-
-void SettingsDialog::reject()
-{
-    if (m_keymapSnapshot) {
-        keymap::Registry::instance().restoreOverrides(*m_keymapSnapshot);
-        m_keymapSnapshot.reset();
-    }
-    QDialog::reject();
 }
