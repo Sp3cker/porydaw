@@ -478,7 +478,7 @@ class SongView : public QObject
     // Global Insert Time command: asks for bars, beats, and quarter-beat
     // fractions, then inserts that much whole-song time at the live playhead
     // or the edit cursor while stopped.
-    void insertTimeAtPlaybackCursor();
+    void insertTime();
     // Typed Quick-modal bridge for Insert Time. The SongView retains the
     // guarded document/cursor snapshot; QML owns only its numeric drafts.
     Q_INVOKABLE void acceptInsertTimePrompt(int bars, int beats, int fractions);

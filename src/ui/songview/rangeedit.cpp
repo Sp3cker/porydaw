@@ -626,7 +626,7 @@ void SongView::removeTimeSelectionContents()
                  .arg(beats, 0, 'g', 4)
                  .arg(resolved->label));
 }
-void SongView::insertTimeAtPlaybackCursor()
+void SongView::insertTime()
 {
     if (!m_document || !m_timeline)
         return;

@@ -289,7 +289,7 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     m_insertTimeAction = new QAction(tr("Insert &Time..."), this);
     connect(m_insertTimeAction, &QAction::triggered, this, [this] {
         if (m_selectedTab)
-            m_selectedTab->view().insertTimeAtPlaybackCursor();
+            m_selectedTab->view().insertTime();
     });
     m_insertTimeAction->setObjectName(QStringLiteral("insertTimeWindowAction"));
     m_insertTimeAction->setShortcutContext(Qt::WindowShortcut);

@@ -375,7 +375,7 @@ void PianoRollTest::popupSessionDismissal()
     // Its real action buttons must remain clickable inside the canvas.
     m_tab->resize(640, 96);
     QCoreApplication::processEvents();
-    view.insertTimeAtPlaybackCursor();
+    view.insertTime();
     QCoreApplication::processEvents();
     songview::QuickPopupSession *const smallViewport = quick_popup::popupSession(view);
     QVERIFY2(smallViewport && smallViewport->isOpen() && smallViewport->window(),
