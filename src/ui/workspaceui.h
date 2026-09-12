@@ -187,6 +187,10 @@ class WorkspaceUi final : public QObject
     bool isSongListed(const QString &label) const;
     qsizetype listedSongCount() const noexcept;
     void bindFindSongShortcut(keymap::Registry &registry);
+    // Borrowed chrome objects for MainWindow's native menu projection; the
+    // transport bar and the song-search action stay owned here.
+    QAction *findSongAction() const noexcept { return m_findSongAction; }
+    TransportBar *transportBar() const noexcept { return m_transport; }
 
     void setTransportPlaybackState(PlaybackState state);
     void setTransportSongAvailable(bool available);

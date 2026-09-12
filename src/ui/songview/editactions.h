@@ -27,11 +27,6 @@ enum class EditDeliveryClass {
     Window = 2,
 };
 
-// The single key recognizer over the canonical command table (hosted in
-// editactions.cpp) only claims EditorRouted rows. Window-class keys always
-// reach their QActions through Qt's shortcut delivery.
-std::optional<SongView::EditCommand> recognizeEditCommand(int key, Qt::KeyboardModifiers modifiers);
-
 // --- Per-command policy rows of the canonical command table ---------------
 //
 // Everything SongView's availability report, semantic dispatch and key
@@ -39,6 +34,9 @@ std::optional<SongView::EditCommand> recognizeEditCommand(int key, Qt::KeyboardM
 // predicate, execution body and keyboard rule is stated exactly once.
 
 // A time-selection operation carries both its availability rule and executor.
+// LoopFromSelection resolves beside the range arms: it needs only a valid
+// active interval. The other loop writes are document-global standalone
+// operations that run even while a selection is active.
 enum class EditRangeOperation {
     None,
     CopySelection,
@@ -50,6 +48,7 @@ enum class EditRangeOperation {
     InsertTime,
     RemoveContents,
     ClearTimeSelection,
+    LoopFromSelection,
 };
 
 // A note-selection operation carries both its availability rule and executor.
@@ -62,6 +61,7 @@ enum class EditNotesOperation {
     Nudge,
     SelectAll,
     PitchBend,
+    SetVelocity,
 };
 
 // An operation that runs when neither selection family owns the command.
@@ -73,6 +73,11 @@ enum class EditStandaloneOperation {
     InsertTime,
     PencilToggle,
     MoveEventRow,
+    SetLoopStart,
+    SetLoopEnd,
+    RemoveLoop,
+    EditTimeSignature,
+    RemoveTimeSignature,
 };
 
 // Text focus is a distinct physical owner for the window actions that defer
@@ -93,14 +98,24 @@ enum class EditKeyRoute {
     AvailabilityGated, // editCommandAvailable gates; unavailable declines
 };
 
-enum class EditOriginRule {
-    AnyOrigin,
-    EventListOnly, // the event page alone owns row-reorder delivery
-};
-
 enum class EditAutoRepeatRule {
     Reexecute,           // repeats re-run the command (transpose audition)
     ConsumeWhenEligible, // repeats stay consumed without re-triggering
+};
+
+// An unavailable command normally resolves the key through the row's
+// terminalWhenUnmatched policy. A row can additionally own the key while
+// merely ineligible: lane-scoped transpose (Up/Down) is a consumed no-op —
+// the selection owns the key even when the mutation cannot run — so it must
+// not be handed to another handler.
+enum class EditKeyOwnershipOnUnavailable {
+    ResolvedByRow, // terminalWhenUnmatched decides (the default)
+    OwnsKey,       // the selection owns the key: consumed without acting
+};
+
+enum class EditOriginRule {
+    AnyOrigin,
+    EventListOnly, // the event page alone owns row-reorder delivery
 };
 
 // One policy row of the canonical command table (editactions.cpp).
@@ -111,6 +126,8 @@ struct EditCommandPolicy {
     EditKeyRoute keyRoute = EditKeyRoute::SelectionTargeted;
     EditOriginRule originRule = EditOriginRule::AnyOrigin;
     EditAutoRepeatRule autoRepeatRule = EditAutoRepeatRule::Reexecute;
+    EditKeyOwnershipOnUnavailable ownershipOnUnavailable =
+        EditKeyOwnershipOnUnavailable::ResolvedByRow;
     int transposeSemitones = 0;
     int nudgeDelta = 0;
     int eventRowDelta = 0;
@@ -121,11 +138,6 @@ struct EditCommandPolicy {
 
 // The policy row of one command, read out of the canonical table.
 const EditCommandPolicy &editCommandPolicy(SongView::EditCommand command);
-
-// Where the canonical Copy command acts after text-focus ownership is
-// resolved: time selections win, then selected notes.
-enum class EditCopyTarget { None, Notes, TimeRange };
-EditCopyTarget resolveCopyTarget(const SongView &view);
 
 class EditActions final : public QObject
 {

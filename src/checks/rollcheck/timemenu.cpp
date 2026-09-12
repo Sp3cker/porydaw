@@ -20,7 +20,7 @@
 #include "core/songdocument.h"
 #include "ui/songtab.h"
 #include "ui/songview/clipmime.h"
-#include "ui/songview/pianoroll.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelineinputitem.h"
 
 using namespace checks::rollcheck;
@@ -35,17 +35,11 @@ struct SharedTimeMenu {
     QString diagnostic = QStringLiteral("the shared time menu did not open");
 };
 
-// Right-clicks an unoccupied row inside the band and waits for the shared
-// session to render its typed menu. The press goes through the roll input item
-// like the production gesture; the occupancy scan covers every track's notes so
-// the click cannot hit a note and open the note menu instead.
-SharedTimeMenu openSharedTimeMenu(PianoRollFixture &check, const SnappedRows &rows,
-                                  uint64_t startTick, uint64_t endTick)
+// First key row with no note covering midTick and a visible center inside
+// the band, or -1 when every row is occupied there.
+int emptyRollKey(PianoRollFixture &check, const SnappedRows &rows, uint64_t midTick)
 {
-    SharedTimeMenu menu;
-    const uint64_t midTick = startTick + (endTick - startTick) / 2;
-    int emptyKey = -1;
-    for (int key = 0; key < 128 && emptyKey < 0; ++key) {
+    for (int key = 0; key < 128; ++key) {
         const int y = rows.centerY(key);
         if (y < 0 || y >= check.rollInput().height())
             continue;
@@ -55,8 +49,16 @@ SharedTimeMenu openSharedTimeMenu(PianoRollFixture &check, const SnappedRows &ro
                 return note.key == key && note.startTick <= midTick && midTick < note.endTick;
             });
         if (!occupied)
-            emptyKey = key;
+            return key;
     }
+    return -1;
+}
+SharedTimeMenu openSharedTimeMenu(PianoRollFixture &check, const SnappedRows &rows,
+                                  uint64_t startTick, uint64_t endTick)
+{
+    SharedTimeMenu menu;
+    const uint64_t midTick = startTick + (endTick - startTick) / 2;
+    const int emptyKey = emptyRollKey(check, rows, midTick);
     if (emptyKey < 0) {
         menu.diagnostic = QStringLiteral("could not find empty roll space inside the band");
         return menu;
@@ -134,18 +136,28 @@ void PianoRollTest::timeSelectionMenuOpensWithPasteEnablement()
              "the shared time menu has no Clear row");
 
     // A real click on the enabled Copy row must run the owner command. The
-    // clipboard is poisoned with an empty clip after the menu opened, so a
-    // no-op Copy cannot pass on stale identical contents: the row must restore
-    // the copied range payload itself while the document and undo stack stay
-    // untouched.
+    // clipboard is poisoned with an empty clip before the Copy phase opens:
+    // an eligibility flip retires an open menu now, so the poisoned state
+    // must already be in place. A no-op Copy cannot pass on stale identical
+    // contents: the row must restore the copied range payload itself while
+    // the document and undo stack stay untouched.
     const QByteArray before = doc.smf().write();
     const int undoIndex = doc.undoStack()->index();
     const int undoCount = doc.undoStack()->count();
     songview::writeClipboard(songview::Clip{}, check.timeline().ticksPerBeat);
-    QVERIFY2(quick_popup::clickMenuRow(*opened.session, copyRow),
+    QTRY_VERIFY2(opened.session && !opened.session->isOpen(),
+                 "the Paste eligibility flip did not retire the open time menu");
+    const SharedTimeMenu copyMenu =
+        openSharedTimeMenu(check, rows, d.tick + snapCell, d.tick + 2 * snapCell);
+    QVERIFY2(copyMenu.session, qUtf8Printable(copyMenu.diagnostic));
+    const int copyMenuRow = timeMenuRow(*copyMenu.model, songview::TimeSelectionAction::Copy);
+    QVERIFY2(copyMenuRow >= 0 && copyMenu.model->itemAt(copyMenuRow)->enabled,
+             "the reopened shared time menu has no enabled Copy row");
+    QVERIFY2(quick_popup::clickMenuRow(*copyMenu.session, copyMenuRow),
              "the Copy row did not receive a real click");
     QCoreApplication::processEvents();
-    QVERIFY2(opened.session && !opened.session->isOpen(), "the Copy activation left the menu open");
+    QVERIFY2(copyMenu.session && !copyMenu.session->isOpen(),
+             "the Copy activation left the menu open");
     const std::optional<songview::Clip> copied =
         songview::readClipboard(check.timeline().ticksPerBeat);
     QVERIFY2(copied.has_value() && copied->span == snapCell,
@@ -243,22 +255,18 @@ void PianoRollTest::timeSelectionMenuStaleAndCancelNoOp()
     QTRY_VERIFY2(check.rollInput().hasActiveFocus(),
                  "dismissing the menu did not return focus to the roll band");
 
-    // Stale target: clearing the selection while the menu is open must turn a
-    // real Duplicate click into a silent no-op.
+    // Stale target: clearing the selection while the menu is open retires it
+    // immediately — no stale row remains to click, and the document and undo
+    // stack stay untouched.
     const SharedTimeMenu reopened =
         openSharedTimeMenu(check, rows, d.tick + snapCell, d.tick + 2 * snapCell);
     QVERIFY2(reopened.session, qUtf8Printable(reopened.diagnostic));
     view.selectionModel().clearTimeSelection();
-    const int duplicateRow = timeMenuRow(*reopened.model, songview::TimeSelectionAction::Duplicate);
-    QVERIFY2(duplicateRow >= 0, "the shared time menu has no Duplicate row");
-    QVERIFY2(quick_popup::clickMenuRow(*reopened.session, duplicateRow),
-             "the Duplicate row did not receive a real click");
-    QCoreApplication::processEvents();
-    QVERIFY2(reopened.session && !reopened.session->isOpen(),
-             "a stale activation left the menu open");
+    QTRY_VERIFY2(reopened.session && !reopened.session->isOpen(),
+                 "clearing the selection did not retire the open time menu");
     QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undoIndex &&
                  doc.undoStack()->count() == undoCount && doc.revision() == revision,
-             "a stale Duplicate activation mutated the document");
+             "retiring the menu on selection loss mutated the document");
 }
 
 void PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp()
@@ -313,4 +321,64 @@ void PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp()
     doc.undoStack()->undo();
     QTRY_VERIFY2(doc.smf().write() == before,
                  "one undo did not restore the bytes after the menu insertion");
+}
+
+void PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement()
+{
+    PianoRollFixture &check = *m_fixture;
+    const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+    QVERIFY(seed.has_value());
+    SongView &view = check.view();
+    const SnappedRows rows{view, check.rollInput()};
+    const Cell &d = seed->cell;
+    const uint64_t snapCell = seed->snapCell;
+
+    // Sweep the selection with a real Shift+right-drag inside the band: every
+    // move commits through the selection model while the pointer gesture is
+    // live. The cached canonical actions must describe that committed
+    // selection, not the live gesture, or every menu snapshot taken after a
+    // sweep renders grey.
+    const uint64_t pressTick = d.tick + snapCell;
+    const uint64_t dragTick = d.tick + 3 * snapCell;
+    const uint64_t midTick = pressTick + (dragTick - pressTick) / 2;
+    const int emptyKey = emptyRollKey(check, rows, midTick);
+    QVERIFY2(emptyKey >= 0, "could not find empty roll space for the sweep");
+    const qreal pressX = check.view().camera().displayX(double(pressTick), 0.0, rows.dpr());
+    const qreal dragX = check.view().camera().displayX(double(dragTick), 0.0, rows.dpr());
+    const qreal sweepY = rows.centerY(emptyKey);
+    checks::events::sendMouse(check.rollInput(), QEvent::MouseButtonPress, QPointF(pressX, sweepY),
+                              Qt::RightButton, Qt::RightButton, Qt::ShiftModifier);
+    for (int step = 1; step <= 4; ++step) {
+        const QPointF pos(pressX + (dragX - pressX) * double(step) / 4.0, sweepY);
+        checks::events::sendMouse(check.rollInput(), QEvent::MouseMove, pos, Qt::NoButton,
+                                  Qt::RightButton, Qt::ShiftModifier);
+    }
+    const songview::EditorSelectionModel::TimeSelection swept =
+        view.selectionModel().timeSelection();
+    QVERIFY2(swept.active() && swept.endTick > swept.startTick,
+             "the Shift+right-drag did not sweep a time selection");
+    // Still holding the button: the gesture is live, but the cached actions
+    // must already carry the swept selection's eligibility.
+    const songview::EditActions *actions = view.editActions();
+    QVERIFY2(actions, "the swept view has no bound canonical actions");
+    QVERIFY2(actions->action(SongView::EditCommand::Copy)->isEnabled(),
+             "the live sweep gesture left Copy cached as disabled");
+    QVERIFY2(actions->action(SongView::EditCommand::DuplicateTime)->isEnabled(),
+             "the live sweep gesture left Duplicate Time cached as disabled");
+    QVERIFY2(actions->action(SongView::EditCommand::ClearTimeSelection)->isEnabled(),
+             "the live sweep gesture left Clear cached as disabled");
+    checks::events::sendMouse(check.rollInput(), QEvent::MouseButtonRelease, QPointF(dragX, sweepY),
+                              Qt::RightButton, Qt::NoButton, Qt::ShiftModifier);
+
+    // A real second click over the swept span opens the shared menu with live
+    // rows: the regression is Copy/Duplicate Time disabled there.
+    const quick_popup::PromptGuard guard(view);
+    const SharedTimeMenu opened = openSharedTimeMenu(check, rows, swept.startTick, swept.endTick);
+    QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic));
+    const int copyRow = timeMenuRow(*opened.model, songview::TimeSelectionAction::Copy);
+    QVERIFY2(copyRow >= 0 && opened.model->itemAt(copyRow)->enabled,
+             "Copy was greyed in the menu after a real sweep");
+    const int duplicateRow = timeMenuRow(*opened.model, songview::TimeSelectionAction::Duplicate);
+    QVERIFY2(duplicateRow >= 0 && opened.model->itemAt(duplicateRow)->enabled,
+             "Duplicate Time was greyed in the menu after a real sweep");
 }

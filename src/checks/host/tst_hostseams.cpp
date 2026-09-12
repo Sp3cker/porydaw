@@ -73,8 +73,6 @@ class HostSeamsTest final : public QObject
         view.setFollowScrollPaused(true);
         view.focusContent();
         view.announce(QStringLiteral("host-seams"));
-        view.requestDrawerPageUndo();
-        view.requestDrawerPageRedo();
         const SongView::ViewState runtime = view.viewState();
         QVERIFY(runtime.valid);
         QCOMPARE(runtime.scrollPx, 96.0);

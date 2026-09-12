@@ -23,7 +23,12 @@ class TransportBar final : public QToolBar
 
     explicit TransportBar(QWidget *parent = nullptr);
 
+    QAction *goToStartAction() const { return m_goToStartAction; }
+    QAction *playAction() const { return m_playAction; }
     QAction *playPauseAction() const { return m_playPauseAction; }
+    QAction *pauseAction() const { return m_pauseAction; }
+    QAction *stopAction() const { return m_stopAction; }
+    QAction *loopAction() const { return m_loopAction; }
     QAction *followPlayheadAction() const { return m_followPlayheadAction; }
     QAction *resonanceAction() const { return m_resonanceAction; }
     bool followPlayhead() const;

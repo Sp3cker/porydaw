@@ -458,14 +458,16 @@ class SongView : public QObject
     // when a selection gesture commits.
     void announceTimeSelection();
 
-    // Canonical Copy command (defined in src/ui/songview/editkeyrouting.cpp
-    // beside the dispatch): an active time selection owns the command;
-    // otherwise the selected notes are copied.
+    // The single canonical musical Copy (defined in
+    // src/ui/songview/editkeyrouting.cpp beside the dispatch): an active
+    // time selection owns the command; otherwise the selected notes are
+    // copied.
     void copySelection();
-    // Range operations on the time selection. Copy captures notes plus every
-    // editable lane (including voice changes) of the scoped tracks — or just
-    // the scoped lanes — with ticks relative to the range start. Paste
-    // merges at the edit cursor: notes are additive, and only exact-tick
+
+    // Time selection copy captures notes plus every editable lane
+    // (including voice changes) of the scoped tracks — or just the scoped
+    // lanes — with ticks relative to the range start. Paste merges at the
+    // edit cursor: notes are additive, and only exact-tick
     // lane/tempo conflicts are replaced. A single-source-track clip retargets
     // to the selected track. Each non-empty operation is one undoable command.
     void copyTimeSelection();
@@ -482,8 +484,9 @@ class SongView : public QObject
     // blank span, and commits the edit cursor to its start. An active but
     // unresolved selection rejects the command silently. Without an active
     // selection the command asks for bars, beats, and quarter-beat
-    // fractions and inserts that much whole-song time at the live playhead
-    // or the edit cursor while stopped.
+    // fractions and inserts that much whole-song time at the edit cursor,
+    // captured when the form opens even while playback advances the
+    // playhead.
     void insertTime();
     // Typed Quick-modal bridge for Insert Time. The SongView retains the
     // guarded document/cursor snapshot; QML owns only its numeric drafts.
@@ -538,13 +541,27 @@ class SongView : public QObject
         InsertTime,
         DeleteTime,
         ClearTimeSelection,
+        // Document-global and selection-resolving commands. Their
+        // canonical operation arms resolve from cursor, interval, marker,
+        // and signature state in editkeyrouting.cpp.
+        SetVelocity,
+        SetLoopStart,
+        SetLoopEnd,
+        LoopFromSelection,
+        RemoveLoop,
+        EditTimeSignature,
+        RemoveTimeSignature,
         PencilMode,
         MoveEventUp,
         MoveEventDown,
     };
     // Domain availability for the canonical action set. It does not encode
-    // keyboard origin or focus routing.
-    bool editCommandAvailable(EditCommand command) const;
+    // keyboard origin or focus routing. The transient pointer-gesture gate
+    // stays on for live dispatch (keys, execute) but presentation refresh
+    // passes ignorePointerGesture: cached QAction state must describe the
+    // committed selection, never the gesture that produced it, or every
+    // menu snapshot taken after a sweep renders grey.
+    bool editCommandAvailable(EditCommand command, bool ignorePointerGesture = false) const;
     // Semantic execution for every presentation. Gesture and readiness
     // protection lives here, not in individual keyboard or menu owners.
     void executeEditCommand(EditCommand command);
@@ -597,8 +614,6 @@ class SongView : public QObject
     void setFollowScrollPaused(bool paused);
     void showDrawerPageTimeSelectionMenu(const DrawerPageTimeSelectionMenuRequest &request);
     void showDrawerPageNoteStatus(std::optional<DrawerPageNoteStatus> status);
-    void requestDrawerPageUndo();
-    void requestDrawerPageRedo();
     DrawerPageLiveState drawerPageLiveState() const;
     void cancelActiveInteractions();
     // Public observation of live pointer ownership. Follow-scroll state and
@@ -887,23 +902,9 @@ class SongView : public QObject
     songview::VoicePicker *m_voicePicker = nullptr;
     std::optional<songview::Clip> readClipboardClip();
 
-    // The selection snapshot taken when the shared time-selection menu
-    // opened, held through the session close until activation consumes it.
-    // Document identity plus revision and exact selection equality make a
-    // stale target a silent no-write.
-    struct PendingTimeSelectionMenu {
-        SongDocument *document = nullptr;
-        uint64_t documentRevision = 0;
-        songview::EditorSelectionModel::TimeSelection selection;
-        songview::TrackMask trackScope = 0;
-    };
     // Pure builder: rows, order, shortcut text, and build-time paste
     // enablement exactly as the former native menu.
     std::vector<songview::QuickMenuItem> buildTimeSelectionItems() const;
-    // QuickMenuModel::activated() sink; consumes the pending target, runs
-    // the owner command after the session already closed, then returns
-    // focus to the active surface.
-    void handleTimeSelectionAction(int actionId);
     // Binds the menu host and the dismissal-focus sink to the shared
     // canvas popup session (one session per view lifetime).
     void bindTimeSelectionMenuSession(songview::QuickPopupSession *session);
@@ -912,11 +913,6 @@ class SongView : public QObject
     songview::QuickMenuHost *m_timeSelectionMenuHost = nullptr;
     songview::QuickMenuModel *m_timeSelectionMenuModel = nullptr;
     QPointer<songview::QuickPopupSession> m_timeSelectionMenuSession;
-    std::optional<PendingTimeSelectionMenu> m_pendingTimeSelectionMenu;
-    // Open flag owned by SongView alone: the host tears down before the
-    // shared session's cancelled(restoreFocus) signal arrives, so ownership
-    // of a dismissed session cannot be re-derived at signal time.
-    bool m_timeSelectionMenuOpen = false;
 
     songview::TimeAxis m_timeAxis;            // musical time; fallback until a song binds
     const MidiTimeline *m_timeline = nullptr; // loaded content only

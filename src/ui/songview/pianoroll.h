@@ -34,9 +34,10 @@ class PitchBendEditor;
 
 namespace songview::pianoroll_detail {
 
-// Typed row ids of the note context menu. The shared Quick menu adapter
-// carries plain ints; PianoRoll builds the rows and interprets these ids
-// when QuickMenuModel::activated() arrives.
+// Typed row ids of the note context menu. Every row is an action
+// projection: the shared Quick menu adapter carries these raw ids for
+// QuickMenuModel::rowForId lookups, while activation triggers the bound
+// QAction through the host and arrives as actionActivated().
 enum class NoteMenuAction : int {
     Velocity = 1,
     Copy = 2,
@@ -273,16 +274,6 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     // Outside-right sink from the menu host: retargets to the note under
     // the press and reopens, or leaves the menu dismissed on a miss.
     void retargetNoteMenu(QPointF scenePos);
-    // Consumes the guarded open-time target; clears it before any command.
-    void handleNoteMenuAction(int action);
-    // The selection at menu-open time, held through the session close until
-    // activation consumes it. Document identity plus revision make a stale
-    // target a silent no-write.
-    struct PendingNoteMenu {
-        std::vector<NoteId> targets;
-        SongDocument *document = nullptr;
-        uint64_t documentRevision = 0;
-    };
     struct PendingVelocityPrompt {
         std::vector<NoteId> targets;
         SongDocument *document = nullptr;
@@ -353,7 +344,6 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     // Typed note-menu adapter over the shared canvas popup session.
     QuickMenuHost *m_noteMenuHost = nullptr;
     QuickMenuModel *m_noteMenuModel = nullptr;
-    std::optional<PendingNoteMenu> m_pendingNoteMenu;
     std::optional<PendingVelocityPrompt> m_pendingVelocityPrompt;
     QMetaObject::Connection m_velocityPromptCancellation;
     uint8_t m_lastVelocity = 100; // latches to touched/velocity-edited notes

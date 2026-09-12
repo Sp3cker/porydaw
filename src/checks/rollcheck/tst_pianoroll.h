@@ -91,6 +91,7 @@ class PianoRollTest final : public QObject
     void timeSelectionMenuOpensWithPasteEnablement();
     void timeSelectionMenuStaleAndCancelNoOp();
     void timeSelectionMenuInsertTimeAndStaleNoOp();
+    void timeSelectionMenuSweepKeepsCanonicalEnablement();
     void rulerLoopMenuSetAndTwoStepUndo();
     void rulerLoopMenuEnablementSelectionContext();
     void rulerLoopMenuStaleCancelNoWrite();

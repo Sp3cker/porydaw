@@ -48,6 +48,7 @@
 #include "ui/theme/themecontroller.h"
 #include "ui/theme/themedialog.h"
 #include "ui/theme/themeruntime.h"
+#include "ui/transportbar.h"
 
 namespace {
 constexpr int kIdleUiIntervalMs = 500;
@@ -68,21 +69,25 @@ bool sameSongSettings(const SongSettings &a, const SongSettings &b)
            a.analogFilter == b.analogFilter;
 }
 
-// Projects the canonical song commands into the Edit menu. These are borrowed
-// actions: labels, bindings, availability, and execution stay in EditActions.
-void buildEditMenu(QMenu *editMenu, songview::EditActions &actions)
+// Projects the canonical song commands plus the borrowed transport and
+// song-search actions into the Edit menu. These are borrowed actions:
+// labels, bindings, availability, and execution stay with their owners.
+void buildEditMenu(QMenu *editMenu, songview::EditActions &actions, WorkspaceUi &workspace)
 {
     editMenu->addAction(actions.action(SongView::EditCommand::Copy));
     editMenu->addAction(actions.action(SongView::EditCommand::Cut));
     editMenu->addAction(actions.action(SongView::EditCommand::Paste));
     editMenu->addAction(actions.action(SongView::EditCommand::Delete));
     editMenu->addAction(actions.action(SongView::EditCommand::SelectAll));
+    editMenu->addAction(workspace.findSongAction());
 
     QMenu *timeMenu = editMenu->addMenu(MainWindow::tr("&Time"));
     timeMenu->addAction(actions.action(SongView::EditCommand::InsertTime));
     timeMenu->addAction(actions.action(SongView::EditCommand::DeleteTime));
     timeMenu->addAction(actions.action(SongView::EditCommand::DuplicateTime));
     timeMenu->addAction(actions.action(SongView::EditCommand::ClearTimeSelection));
+    timeMenu->addAction(actions.action(SongView::EditCommand::EditTimeSignature));
+    timeMenu->addAction(actions.action(SongView::EditCommand::RemoveTimeSignature));
 
     QMenu *notesMenu = editMenu->addMenu(MainWindow::tr("&Notes"));
     notesMenu->addAction(actions.action(SongView::EditCommand::TransposeUp));
@@ -90,6 +95,7 @@ void buildEditMenu(QMenu *editMenu, songview::EditActions &actions)
     notesMenu->addAction(actions.action(SongView::EditCommand::TransposeUpOctave));
     notesMenu->addAction(actions.action(SongView::EditCommand::TransposeDownOctave));
     notesMenu->addAction(actions.action(SongView::EditCommand::PitchBend));
+    notesMenu->addAction(actions.action(SongView::EditCommand::SetVelocity));
 
     QMenu *moveMenu = editMenu->addMenu(MainWindow::tr("&Move"));
     moveMenu->addAction(actions.action(SongView::EditCommand::NudgeLeft));
@@ -105,6 +111,24 @@ void buildEditMenu(QMenu *editMenu, songview::EditActions &actions)
     QMenu *eventsMenu = editMenu->addMenu(MainWindow::tr("&Events"));
     eventsMenu->addAction(actions.action(SongView::EditCommand::MoveEventUp));
     eventsMenu->addAction(actions.action(SongView::EditCommand::MoveEventDown));
+
+    QMenu *loopMenu = editMenu->addMenu(MainWindow::tr("&Loop"));
+    loopMenu->addAction(actions.action(SongView::EditCommand::SetLoopStart));
+    loopMenu->addAction(actions.action(SongView::EditCommand::SetLoopEnd));
+    loopMenu->addAction(actions.action(SongView::EditCommand::LoopFromSelection));
+    loopMenu->addAction(actions.action(SongView::EditCommand::RemoveLoop));
+
+    // The transport rows borrow the TransportBar's own actions: the toolbar
+    // buttons and this menu share one object per command, and Play/Pause
+    // (Space) stays a distinct action from Play.
+    TransportBar *transport = workspace.transportBar();
+    QMenu *transportMenu = editMenu->addMenu(MainWindow::tr("Trans&port"));
+    transportMenu->addAction(transport->goToStartAction());
+    transportMenu->addAction(transport->playAction());
+    transportMenu->addAction(transport->playPauseAction());
+    transportMenu->addAction(transport->pauseAction());
+    transportMenu->addAction(transport->stopAction());
+    transportMenu->addAction(transport->loopAction());
 }
 
 #ifdef Q_OS_WIN
@@ -252,6 +276,12 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     m_editActions = std::make_unique<songview::EditActions>(this);
     m_editActions->installWindowShortcuts(*this);
 
+    // Constructor injection: the loaded global editor state seeds the hub
+    // before any tab exists; no startup write or hub transaction happens.
+    // The workspace chrome is built before the menus so the Edit menu can
+    // borrow its transport and song-search actions.
+    m_workspace = std::make_unique<WorkspaceUi>(*this, initialEditorViewState);
+
     // Menu
     QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
     m_openProjectAction = fileMenu->addAction(tr("&Open Project..."), this,
@@ -296,7 +326,7 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     m_soloAction = m_editActions->action(SongView::EditCommand::SoloTracks);
     m_insertTimeAction = m_editActions->action(SongView::EditCommand::InsertTime);
     m_deleteTimeAction = m_editActions->action(SongView::EditCommand::DeleteTime);
-    buildEditMenu(editMenu, *m_editActions);
+    buildEditMenu(editMenu, *m_editActions, *m_workspace);
     editMenu->addSeparator();
     QAction *preferencesAction = editMenu->addAction(
         tr("Prefere&nces..."), this, [this] { openSettings(m_selectedTab != nullptr); });
@@ -389,10 +419,6 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     // menu on macOS.
     aboutAction->setMenuRole(QAction::AboutRole);
     keys.attach(QStringLiteral("help.about"), aboutAction);
-
-    // Constructor injection: the loaded global editor state seeds the hub
-    // before any tab exists; no startup write or hub transaction happens.
-    m_workspace = std::make_unique<WorkspaceUi>(*this, initialEditorViewState);
 
     {
         QSettings settings;

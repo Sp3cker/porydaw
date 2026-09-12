@@ -175,13 +175,13 @@ void TimeRuler::ensureMenuAdapters()
         m_owner.setGridFeel(static_cast<GridFeel>(id));
         notifyGridMenuChoice(false);
     });
-    // The host closes the session before emitting activated(), so the
-    // guarded open-time target survives until handleRulerMenuAction
-    // consumes it; every dismissal (Escape, outside press, foreign
-    // replacement, teardown) clears it.
-    connect(m_rulerMenuModel, &QuickMenuModel::activated, this,
-            [this](int id) { handleRulerMenuAction(id); });
-    connect(m_menuHost, &QuickMenuHost::cancelled, this, [this] { m_pendingRulerMenu.reset(); });
+    // Every ruler-menu row is an action projection triggered through the
+    // host, so activation arrives as actionActivated() — used only for
+    // terminal focus completion, and only when no follow-on popup (the
+    // time-signature form) already owns the session.
+    connect(m_menuHost, &QuickMenuHost::actionActivated, this, [this](QAction *) {
+        restoreFocusUnlessFormOpen(m_owner, [this] { restoreRulerFocus(); });
+    });
     // Selection/document/cursor transitions retire only this ruler's context
     // menu: the open session must belong to this ruler's menu host AND be
     // rooted at the ruler menu model, so the division/feel grid menus sharing
@@ -199,6 +199,16 @@ void TimeRuler::ensureMenuAdapters()
     // dismisses nothing.
     connect(&m_owner, &SongView::editCursorMoved, this,
             [retireRulerMenu](uint64_t) { retireRulerMenu(/*restoreFocus=*/true); });
+}
+
+void restoreFocusUnlessFormOpen(SongView &owner, const std::function<void()> &restore)
+{
+    if (const TimelineQuickView *const quick = owner.quickView()) {
+        if (const QuickPopupSession *const session = quick->popupSession();
+            session && session->isOpen())
+            return;
+    }
+    restore();
 }
 
 void TimeRuler::openGridMenu(QPointF position, bool division)

@@ -48,7 +48,6 @@ constexpr std::size_t actionIndex(EditCommand command)
 {
     return static_cast<std::size_t>(command);
 }
-
 constexpr CommandRow transposeRow(EditCommand command, const char *id, int semitones)
 {
     return {
@@ -61,6 +60,9 @@ constexpr CommandRow transposeRow(EditCommand command, const char *id, int semit
             .rangeOperation = EditRangeOperation::Transpose,
             .notesOperation = EditNotesOperation::Transpose,
             .keyRoute = EditKeyRoute::SelectionTargeted,
+            // Lane-scoped Up/Down is an ineligible mutation, not a foreign
+            // key: the selection owns it as a consumed no-op.
+            .ownershipOnUnavailable = EditKeyOwnershipOnUnavailable::OwnsKey,
             .transposeSemitones = semitones,
         },
     };
@@ -79,6 +81,31 @@ constexpr CommandRow nudgeRow(EditCommand command, const char *id, int delta)
             .notesOperation = EditNotesOperation::Nudge,
             .keyRoute = EditKeyRoute::SelectionTargeted,
             .nudgeDelta = delta,
+        },
+    };
+}
+
+// One production row shape for the seven unbound cursor/marker/signature
+// commands beside transpose/nudge/event: all are EditorRouted, availability
+// is their only gate, and keys consume unconditionally once eligible. Each
+// row names its vocabulary operation explicitly — without one, availability
+// falls through every switch and the command is dead.
+constexpr CommandRow unboundRow(EditCommand command, const char *id,
+                                EditRangeOperation range = EditRangeOperation::None,
+                                EditNotesOperation notes = EditNotesOperation::None,
+                                EditStandaloneOperation standalone = EditStandaloneOperation::None)
+{
+    return {
+        command,
+        id,
+        false,
+        nullptr,
+        EditDeliveryClass::EditorRouted,
+        {
+            .rangeOperation = range,
+            .notesOperation = notes,
+            .standaloneOperation = standalone,
+            .keyRoute = EditKeyRoute::AlwaysConsume,
         },
     };
 }
@@ -247,6 +274,24 @@ constexpr std::array kCommandTable = {
             .keyRoute = EditKeyRoute::AlwaysConsume,
         },
     },
+    // Commands whose operation arm resolves from cursor/marker/signature
+    // state: availability is the only gate, so keys consume unconditionally
+    // once eligible.
+    unboundRow(EditCommand::SetVelocity, "edit.set_velocity", EditRangeOperation::None,
+               EditNotesOperation::SetVelocity),
+    unboundRow(EditCommand::SetLoopStart, "edit.set_loop_start", EditRangeOperation::None,
+               EditNotesOperation::None, EditStandaloneOperation::SetLoopStart),
+    unboundRow(EditCommand::SetLoopEnd, "edit.set_loop_end", EditRangeOperation::None,
+               EditNotesOperation::None, EditStandaloneOperation::SetLoopEnd),
+    unboundRow(EditCommand::LoopFromSelection, "edit.loop_from_selection",
+               EditRangeOperation::LoopFromSelection),
+    unboundRow(EditCommand::RemoveLoop, "edit.remove_loop", EditRangeOperation::None,
+               EditNotesOperation::None, EditStandaloneOperation::RemoveLoop),
+    unboundRow(EditCommand::EditTimeSignature, "edit.edit_time_signature", EditRangeOperation::None,
+               EditNotesOperation::None, EditStandaloneOperation::EditTimeSignature),
+    unboundRow(EditCommand::RemoveTimeSignature, "edit.remove_time_signature",
+               EditRangeOperation::None, EditNotesOperation::None,
+               EditStandaloneOperation::RemoveTimeSignature),
     CommandRow{
         EditCommand::PencilMode,
         "automation.pencil_mode",
@@ -278,29 +323,21 @@ static_assert(commandTableFollowsEnumOrder());
 
 // Copy alone becomes enabled for focused text; Solo still requires its
 // existing song target even though text focus owns its execution.
+// Presentation refresh ignores the transient pointer gesture: every live
+// dispatch path (keys, execute, triggered) re-applies the gate itself, so
+// the cached state describes the committed selection and never the sweep
+// that produced it.
 bool liveRowEnabled(const SongView &target, const CommandRow &row, bool textFocused)
 {
     if (textFocused && row.policy.focusedTextOwnership == EditFocusedTextOwnership::Copy)
         return true;
-    return target.editCommandAvailable(row.command);
+    return target.editCommandAvailable(row.command, /*ignorePointerGesture=*/true);
 }
 
 } // namespace
-
 const EditCommandPolicy &editCommandPolicy(EditCommand command)
 {
     return kCommandTable[actionIndex(command)].policy;
-}
-
-std::optional<EditCommand> recognizeEditCommand(int key, Qt::KeyboardModifiers modifiers)
-{
-    const keymap::Registry &keys = keymap::Registry::instance();
-    for (const CommandRow &row : kCommandTable) {
-        if (row.delivery == EditDeliveryClass::EditorRouted &&
-            keys.matches(key, modifiers, QLatin1String(row.id)))
-            return row.command;
-    }
-    return std::nullopt;
 }
 
 EditActions::EditActions(QObject *parent) : QObject(parent)
@@ -359,7 +396,20 @@ void EditActions::installWindowShortcuts(QWidget &window)
 std::optional<EditCommand> EditActions::editorCommandForKey(int key,
                                                             Qt::KeyboardModifiers modifiers) const
 {
-    return recognizeEditCommand(key, modifiers);
+    // Every catalogue row with a binding recognizes here, regardless of
+    // delivery class: the column governs Qt shortcut registration
+    // (installWindowShortcuts), not key ownership. Fixtures never install
+    // window shortcuts - their input targets the view directly - and the
+    // ShortcutOverride filter consults this same table, so excluding Window
+    // rows silently drops Copy/Insert Time/Delete Time/Solo from every
+    // manual key route. All dispatch re-gates live (gesture, availability),
+    // and override-first consumption keeps single delivery in production.
+    const keymap::Registry &keys = keymap::Registry::instance();
+    for (const CommandRow &row : kCommandTable) {
+        if (keys.matches(key, modifiers, QLatin1String(row.id)))
+            return row.command;
+    }
+    return std::nullopt;
 }
 
 void EditActions::rebind(SongView *target)

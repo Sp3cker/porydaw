@@ -54,9 +54,20 @@ Covered notes and automation nodes use the normal selection highlight without be
 ### Time editing commands
 **Insert Time** (`Ctrl+Shift+I`, or `Cmd+Shift+I` on macOS) is selection-aware:
 - **With an active time selection**: inserts a silent gap exactly the duration of the selection, immediately and without prompting. The selection's resolved scope (track, multi-track, whole-song, or lane-only, as described above) determines what shifts right; notes crossing the start seam are split cleanly so the inserted interval stays completely silent. The time selection remains over the newly created blank space, and the edit cursor is placed at the start seam. An active selection whose scope cannot be resolved rejects the command silently, without opening the prompt.
-- **Without a selection**: opens three draggable number fields for bars, beats, and quarter-beat fractions, then inserts that duration across the whole song at the live playhead (or at the edit cursor while stopped).
+- **Without a selection**: opens three draggable number fields for bars, beats, and quarter-beat fractions, then inserts that duration across the whole song at the edit cursor — even while playing. The cursor position and meter are captured when the form opens, so accepting after playback has advanced still inserts at that captured edit cursor, never at the moving playhead.
 
 **Delete Time (Shift Left)** is available from the Edit menu and both time-selection context menus. It removes the active time selection's whole time span — contents plus duration — and shifts all later scoped notes and automation left by that amount. Afterward the selection clears and the edit cursor is parked at the start seam. Without an active selection, or with a selection whose scope cannot be resolved, the command does nothing (no prompt, no edit). **No confirmation prompt is shown**; undo (`Ctrl+Z`) restores the previous song in one step. There is also no default destructive keyboard shortcut for it.
+
+### Ruler right-click: selection versus cursor menus
+Right-clicking the timeline ruler has two distinct outcomes, decided by where the press lands:
+
+- **Inside an active time selection** (including on a loop or time-signature chip whose tick lies inside the selection): the selection, its track/lane scope, and the edit cursor are preserved, playback is not moved, and the selection-oriented menu opens (Insert/Delete/Duplicate Time, Loop from Time Selection, Clear Time Selection, Remove Loop Markers).
+- **Outside the selection, or with no selection**: the time selection clears, the edit cursor commits to the clicked tick (exact on a chip, grid-snapped on the background), playback seeks there through the normal transport handoff, and the cursor-oriented menu opens (Insert Time, Paste, loop start/end at cursor, Remove Loop Markers, edit/remove time signature at cursor).
+
+This cursor-and-seek behavior belongs to the ruler only. Right-clicking the note grid keeps its existing selection/menu handling and never moves the edit cursor or seeks.
+
+### Context menu lifetime
+A context menu reflects the state it was opened against: it closes itself when the relevant selection, track scope, or edit cursor changes, when the document is edited or replaced, or when the tab is deactivated or closed. Reopening the menu rebuilds it from current state. Menu rows are enabled from the committed selection — a still-moving drag does not grey out commands until it is committed.
 
 When a time selection is active, both right-click context menus (the timeline ruler, and inside an active time selection on the piano roll canvas or in an automation lane) offer the insertion and ripple-removal commands above, alongside:
 

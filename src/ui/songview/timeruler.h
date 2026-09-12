@@ -1,6 +1,5 @@
 #pragma once
 
-#include "ui/songview/editorselectionmodel.h"
 #include "ui/songview/quick/timelineinput.h"
 
 #include <QFont>
@@ -13,6 +12,7 @@
 #include <QString>
 #include <QVariantMap>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <vector>
 
@@ -43,7 +43,16 @@ enum class RulerMenuAction : int {
     ClearSelection = 8,
     EditTimeSig = 9,
     RemoveTimeSig = 10,
+    Paste = 11,
 };
+
+// Terminal focus completion shared by the action-backed context menus
+// (ruler menu, note menu): the host has already closed the menu session
+// when actionActivated() arrives, so a session still open is a follow-on
+// form the command itself opened (the time-signature or velocity prompt)
+// and keeps focus; otherwise `restore` returns focus to the invoking
+// surface.
+void restoreFocusUnlessFormOpen(SongView &owner, const std::function<void()> &restore);
 
 class TimeRuler final : public QObject, public TimelineBandInteraction
 {
@@ -190,8 +199,14 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
 
     // Loop/selection/signature context menu over the shared canvas popup
     // session. scenePos is a Quick-window scene position (the release
-    // point); the acted tick is the snapped press tick.
-    void showRulerMenu(uint64_t clickTick, const QPointF &scenePos);
+    // point); the target comes from the consumed right-press gesture
+    // state, never a pre-snapped argument.
+    void showRulerMenu(const QPointF &scenePos);
+    // Builds the menu host and row models once and wires their
+    // activation/cancellation/invalidation connections together.
+    void ensureMenuAdapters();
+    // Drops the raw/exact right-press target without opening a menu.
+    void clearRightPressTarget();
 
     struct PendingTimeSigPrompt {
         QPointer<SongDocument> document;
@@ -200,30 +215,6 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
         int initialNumerator = timeSigPromptMinimumNumerator();
         int initialDenominatorPow2 = timeSigPromptMinimumDenominatorPow2();
     };
-
-    // Guarded open-time target for the loop menu: published only after the
-    // host successfully opened the shared session, consumed before any
-    // command, and dropped as stale when the document moved underneath.
-    struct PendingRulerMenu {
-        QPointer<SongDocument> document;
-        uint64_t documentRevision = 0;
-        uint64_t clickTick = 0;
-        uint64_t sigTick = 0;
-        int sigNumerator = 0;
-        int sigDenominatorPow2 = 0;
-        EditorSelectionModel::TimeSelection selection;
-        uint32_t trackScope = 0;
-    };
-
-    // Shared adapter factory for every ruler menu: the grid-control menus
-    // and the loop menu may each be first to create the host and models.
-    void ensureMenuAdapters();
-    // Consumes the guarded open-time target; clears it before any command.
-    void handleRulerMenuAction(int id);
-    // True when the live selection no longer matches the open-time
-    // snapshot; selection-scoped loop-menu actions must not run.
-    bool menuSelectionStale(const PendingRulerMenu &target) const;
-
     void openTimeSigPrompt(uint64_t tick, int numerator, int denominatorPow2);
     void clearTimeSigPrompt(bool restoreFocus);
     void restoreRulerFocus();
@@ -255,7 +246,6 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
     QuickMenuModel *m_feelModel = nullptr;
     QuickMenuModel *m_rulerMenuModel = nullptr;
     std::optional<PendingTimeSigPrompt> m_pendingTimeSigPrompt;
-    std::optional<PendingRulerMenu> m_pendingRulerMenu;
     QMetaObject::Connection m_timeSigPromptCancellation;
     int m_markerHeight = 0;
     int m_dragMarker = -1;
@@ -267,9 +257,15 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
     bool m_selSweep = false;        // left-drag time-selection sweep is live
     bool m_multiTrackSweep = false; // modifier intent captured when the sweep is armed
     QPointF m_leftPressPos;
-    QPointF m_rightPressPos;
-    uint64_t m_selAnchor = 0; // snapped tick of the pending press
-    int m_dragSelEdge = -1;   // selection edge being left-dragged (0/1)
+    // Right-press target state, captured raw/exact at press and consumed by
+    // showRulerMenu before the menu opens — never the left-drag snapped
+    // anchor. Cleared on release and cancellation.
+    double m_rightPressTick = 0.0;     // raw unsnapped press coordinate; meaningful only while
+                                       // m_rightPress is set (tick 0 is a valid press point)
+    bool m_rightPressChip = false;     // press landed on a signature chip
+    uint64_t m_rightPressChipTick = 0; // the chip's exact event tick
+    uint64_t m_selAnchor = 0;          // snapped tick of the pending left press
+    int m_dragSelEdge = -1;            // selection edge being left-dragged (0/1)
 };
 
 } // namespace songview

@@ -128,3 +128,51 @@ once at final integration (task 32 / plan constraint 6).
   once on focus acquisition, passed on identical rerun — exonerated per
   problem 5, not chased.
 - Next: task 24 (Set Velocity / loop / signature commands), then 25/27/28.
+ ## Standup 2026-09-12 — tasks 24/25/26/27/28/30 review-gated, external fix round landed
+
+ - All six gates SPEC YES + QUALITY PASS, no blockers: 24 (commands),
+ 25 (Edit menu borrows; one linkage-nit minor), 26 (time menus; one
+ separator-fallback minor, no scope expansion), 27 (note menus), 28 (ruler
+ context; one null-host hardening note), 30 (cursor anchor).
+ - External reviewer findings (paste-1.md, user-priority) drove one bounded
+ fix round in task 24's area: EditSemanticOperation shadow vocabulary
+ collapsed into the canonical enums, copySelection() made the single Copy,
+ handleEditKey flattened to one activation tail, recognizeEditCommand
+ folded into editorCommandForKey, unboundRow helper added, OwnsKey split
+ for lane transpose. Write-set amendment (user-authorized, recorded):
+ minimal editactions.h extension (enum values, ownership bit, export
+ removals) — the brief's editactions.h exclusion had become permanent
+ architecture.
+ - Controller repair after the fix round: the seven unboundRow rows carried
+ no operation fields (dead commands — RemoveTimeSignature disabled,
+ loop-activation menus left open, velocity/signature prompts broken).
+ Rows now name their operations; unreachable SetLoop range carve-outs/arms
+ and 3 orphaned EditRangeOperation values removed. Repair review-gated
+ clean; rollcheck/eventviews/automation families green.
+ - Stale-build lesson: after header-enum surgery, an incremental build
+ produced a deterministic SIGSEGV in TimelineQuickView::qt_static_metacall
+ during QML creation (stale moc); `rm -rf build` + clean rebuild cleared
+ it. Instant metacall segfault after header-shape edits → clean-build
+ before any code diagnosis.
+ - Environmental: all remaining failures are window-activation acquisition
+ (Cocoa active-window, Quick/native focus) under a contested desktop;
+ zero behavioral failures. Final green confirmation needs an idle desktop.
+ - Next: task 31 (Pending* already absent per controller grep; remaining:
+ requestDrawerPageUndo/Redo trio), then 32, 33, final integration.
+ ## Standup 2026-09-12 — tasks 31/32/33 landed, final integration run
+
+ - Task 31 (Direct, 3 files): Pending* confirmed already absent; deleted
+ requestDrawerPageUndo/Redo decls + defs + host-seam calls. Green
+ (rollcheck/automation/eventviews/host; 2 known focus flakes).
+ - Task 32: 171-line native proof in tst_mainwindowrouting_native.cpp;
+ window/local tiers already carried their scenarios (2 files unchanged).
+ Builds clean; activation-gated scenarios time out under contention.
+ - Task 33: docs cutover (shortcuts.md, piano-roll.md, CHANGELOG.md).
+ - Full `deno task verify`: 82/91 ok, 8 failed — every observed failure
+ is window-activation/focus acquisition (Cocoa active-window, Quick
+ native focus, fixture setUp) under a contested desktop; zero
+ behavioral failures, zero crashes across both full runs.
+ - Remaining for full green: idle-desktop re-run of the 8 suites +
+ shown-app visual walkthrough (Edit groups, ruler flows, native
+ priority). Working tree uncommitted per checkpoint policy (tasks
+ 12-33 + fix round); commit is a separate user-requested operation.

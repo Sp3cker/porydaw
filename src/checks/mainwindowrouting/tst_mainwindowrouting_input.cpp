@@ -2,10 +2,12 @@
 
 #include "checks/clipcheck_support.h"
 #include "checks/quickpopupguard.h"
+#include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/timeruler.h"
 #include <QDockWidget>
+#include <QPointer>
 #include <QQuickItem>
 #include <QQuickWindow>
-
 #include <QtTest>
 
 namespace {
@@ -359,12 +361,23 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
                 insertDiagnostic = QStringLiteral("Insert Time had no focused timeline origin");
                 return false;
             }
-            if (playing)
-                view.setPlayheadSample(tab.timeline()->sampleForTick(source->tick), true);
-            else {
+            // Insert Time anchors on the edit cursor in every transport
+            // state: park the playhead away from it, and while playing let
+            // the playhead keep advancing under the open form.
+            const uint64_t playheadTick = source->tick == 0 ? segment.beatTicks : 0;
+            if (playing) {
+                view.setEditCursorTick(source->tick);
+                view.setPlayheadSample(tab.timeline()->sampleForTick(playheadTick), true);
+            } else {
                 window.stopPlayback();
-                view.setPlayheadSample(tab.timeline()->sampleForTick(source->tick), false);
+                view.setPlayheadSample(tab.timeline()->sampleForTick(playheadTick), false);
                 view.commitEditCursor(source->tick);
+            }
+            if (view.editCursorTick() != source->tick ||
+                uint64_t(view.playheadTick() + 0.5) == source->tick) {
+                insertDiagnostic =
+                    QStringLiteral("Insert Time could not separate the edit cursor and playhead");
+                return false;
             }
 
             action->trigger();
@@ -386,6 +399,20 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
                 insertDiagnostic = QStringLiteral("the Insert Time visual defaults are incorrect");
                 return false;
             }
+            if (playing) {
+                // The form captured the edit cursor at open; the advancing
+                // playhead must not retarget the pending insertion.
+                uint64_t advancedTick = playheadTick + segment.beatTicks;
+                if (advancedTick == source->tick)
+                    advancedTick += segment.beatTicks;
+                view.setPlayheadSample(tab.timeline()->sampleForTick(advancedTick), true);
+                if (uint64_t(view.playheadTick() + 0.5) == source->tick) {
+                    insertDiagnostic = QStringLiteral(
+                        "the advancing playhead did not move under the Insert Time form");
+                    return false;
+                }
+            }
+
             if (!enterInsertTimeValues(*opened.window, bars, beats, fractions)) {
                 insertDiagnostic =
                     QStringLiteral("Tab did not keep Insert Time editing inside the popup");
@@ -606,6 +633,82 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         QCOMPARE(tab.document().smf().write(), before);
         QCOMPARE(session->a->document().smf().write(), inactiveBefore);
         view.setPlayheadSample(0, false);
+    }
+
+    void insertTimeRulerMenuAnchorsEditCursor()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        MainWindow &window = *session->window;
+        SongTab &tab = *session->b;
+        SongView &view = tab.view();
+        window.m_workspace->selectSongTab(&tab);
+        const std::optional<DocNote> source = selectFirstNote(tab);
+        QVERIFY(source.has_value());
+        view.selectionModel().clearTimeSelection();
+        window.stopPlayback();
+
+        auto *const quick =
+            view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+        QVERIFY(quick && quick->rootObject());
+        auto *const rulerInput = quick->rootObject()->findChild<songview::TimelineInputItem *>(
+            QStringLiteral("timelineRulerInput"));
+        QVERIFY2(rulerInput, "could not find the time ruler Quick input");
+
+        // The outside-selection ruler path commits the clicked tick as the
+        // edit cursor before its menu opens; Insert Time then prompts at
+        // that cursor rather than the playhead.
+        const uint64_t rawTick = source->tick;
+        const QPointF local(
+            view.camera().displayX(double(rawTick), 0.0, rulerInput->devicePixelRatio()),
+            (std::max)(1.0, rulerInput->height() * 0.75));
+        QVERIFY2(rulerInput->bounds().contains(local),
+                 "the ruler menu point is outside the live ruler input");
+        checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, local, Qt::RightButton,
+                                  Qt::RightButton, Qt::NoModifier);
+        checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, local, Qt::RightButton,
+                                  Qt::NoButton, Qt::NoModifier);
+        const QPointer<songview::QuickPopupSession> live{quick_popup::popupSession(view)};
+        QVERIFY2(QTest::qWaitFor([&live] {
+                     return live && live->isOpen() && quick_popup::menuPanel(*live) &&
+                            quick_popup::menuModel(*quick_popup::menuPanel(*live)) != nullptr;
+                 }),
+                 "the ruler right-click did not open the shared ruler menu");
+        const uint64_t target = view.editCursorTick();
+        QCOMPARE(target, view.grid().snapTick(double(rawTick)));
+        songview::QuickMenuModel *const model =
+            quick_popup::menuModel(*quick_popup::menuPanel(*live));
+        const int insertRow = model->rowForId(int(songview::RulerMenuAction::InsertBlank));
+        QVERIFY2(insertRow >= 0 && model->itemAt(insertRow)->enabled,
+                 "the cursor ruler menu omitted an enabled Insert Time row");
+
+        const QByteArray before = tab.document().smf().write();
+        const QByteArray inactiveBefore = session->a->document().smf().write();
+        const int undoIndex = tab.document().undoStack()->index();
+        const uint64_t revision = tab.document().revision();
+        const uint64_t insertSpan = view.grid().segmentAt(target).beatTicks;
+
+        QVERIFY2(quick_popup::clickMenuRow(*live, insertRow),
+                 "the ruler Insert Time row did not receive a real click");
+        const InsertTimePromptSession opened = openedInsertTimePrompt(view);
+        QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic));
+        QVERIFY2(enterInsertTimeValues(*opened.window, QKeySequence(Qt::Key_0),
+                                       QKeySequence(Qt::Key_1), QKeySequence(Qt::Key_0)),
+                 "the ruler-flow Insert Time fields could not be edited");
+        QVERIFY2(quick_popup::clickPromptButton(*opened.popup, QLatin1String("insertTimeAccept")),
+                 "the ruler-flow Insert Time prompt has no OK button");
+        QCoreApplication::processEvents();
+        songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
+        QVERIFY(popup && !popup->isOpen());
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex + 1);
+        QCOMPARE(tab.document().revision(), revision + 1);
+        DocNote shifted;
+        QVERIFY(tab.document().findNote(source->noteId, &shifted));
+        QCOMPARE(shifted.tick, source->tick + insertSpan);
+        QCOMPARE(session->a->document().smf().write(), inactiveBefore);
+        tab.document().undoStack()->undo();
+        QCOMPARE(tab.document().smf().write(), before);
+        QCOMPARE(session->a->document().smf().write(), inactiveBefore);
     }
 
     void deleteTimeActionRipplesScopedAndWholeSongSelections()
