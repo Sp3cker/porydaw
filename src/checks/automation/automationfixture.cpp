@@ -602,6 +602,17 @@ bool AutomationEditingTest::focusAutomationBand()
 bool AutomationEditingTest::activateParameter(const EditorAutomationRowId &row)
 {
     const int index = checks::support::automationParameterIndex(*page().canvas(), row);
+    if (index < 0)
+        return false;
+    if (!clickParameterTab(row))
+        return false;
+    return QTest::qWaitFor([this, index] { return page().canvas()->activeParameter() == index; });
+}
+
+bool AutomationEditingTest::clickParameterTab(const EditorAutomationRowId &row,
+                                              Qt::KeyboardModifiers modifiers)
+{
+    const int index = checks::support::automationParameterIndex(*page().canvas(), row);
     if (index < 0 || !m_quickWindow)
         return false;
     auto *quick = tab().view().quickView();
@@ -614,8 +625,8 @@ bool AutomationEditingTest::activateParameter(const EditorAutomationRowId &row)
         return false;
     const QPoint where =
         item->mapToScene(QPointF(item->width() / 2.0, item->height() / 2.0)).toPoint();
-    QTest::mouseClick(m_quickWindow, Qt::LeftButton, Qt::NoModifier, where);
-    return QTest::qWaitFor([this, index] { return page().canvas()->activeParameter() == index; });
+    QTest::mouseClick(m_quickWindow, Qt::LeftButton, modifiers, where);
+    return true;
 }
 
 void AutomationEditingTest::arrangeCcLane()

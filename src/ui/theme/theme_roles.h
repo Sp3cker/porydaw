@@ -179,8 +179,8 @@ enum class Role {
     song_view_automation_tab_hover_background,
     song_view_automation_tab_active_background,
     song_view_automation_tab_outline,
-    // Automation lane node and curve ink: the fixed identity red, shared by
-    // every theme like the playhead.
+    // Automation lane node and curve ink: Ableton's AutomationColor, authored
+    // per theme.
     song_view_automation_node_ink,
     // Ghost-enabled parameter tab bottom rule: Ableton's amber Clip13, fixed
     // across every theme.

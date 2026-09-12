@@ -571,18 +571,16 @@ void AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation()
     QVERIFY(volumeIndex >= 0);
     QVERIFY(panIndex >= 0);
     QVERIFY(activateParameter(volume));
-    // Synthetic modifier clicks cannot drive parameterPressed in-harness:
-    // the canvas reads the live OS modifier state, not the event. Modifier
-    // dispatch is covered by in-app observation; the view-only toggle
-    // contract is pinned directly here.
+    // Command-click drives the real modifier dispatch: the QML MouseArea
+    // reports the event's modifiers to parameterPressed.
     const QByteArray documentBefore = tab().document().smf().write();
     const uint64_t revisionBefore = tab().document().revision();
     const int undoIndexBefore = tab().document().undoStack()->index();
     const int undoCountBefore = tab().document().undoStack()->count();
     const QList<int> selectionBefore = canvas->selectedParameters();
 
-    canvas->toggleGhostParameter(panIndex);
-    QCOMPARE(canvas->ghostParameters(), QList<int>{panIndex});
+    QVERIFY(clickParameterTab(pan, Qt::ControlModifier));
+    QTRY_COMPARE(canvas->ghostParameters(), QList<int>({panIndex}));
     QCOMPARE(canvas->activeParameter(), volumeIndex);
     QCOMPARE(canvas->selectedParameters(), selectionBefore);
     QCOMPARE(tab().document().smf().write(), documentBefore);
@@ -602,8 +600,8 @@ void AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation()
     QCOMPARE(canvas->ghostParameters(), QList<int>{panIndex});
 
     // Command-clicking the active tab collapses back to a single lane.
-    canvas->toggleGhostParameter(panIndex);
-    QVERIFY(canvas->ghostParameters().isEmpty());
+    QVERIFY(clickParameterTab(pan, Qt::ControlModifier));
+    QTRY_VERIFY(canvas->ghostParameters().isEmpty());
     QCOMPARE(canvas->activeParameter(), panIndex);
     // Invalid indexes are no-ops.
     canvas->toggleGhostParameter(-1);

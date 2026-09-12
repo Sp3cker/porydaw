@@ -176,8 +176,8 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     Q_INVOKABLE void activateParameter(int index);
     Q_INVOKABLE void openParameterMenu(int index, qreal sceneX, qreal sceneY);
     Q_INVOKABLE void toggleGhostParameter(int index);
-    Q_INVOKABLE void parameterPressed(int index);
-    Q_INVOKABLE void parameterClicked(int index);
+    Q_INVOKABLE void parameterPressed(int index, Qt::KeyboardModifiers modifiers);
+    Q_INVOKABLE void parameterClicked(int index, Qt::KeyboardModifiers modifiers);
     // Binds the shared canvas popup session once TimelineQuickView exists;
     // the automation menus are typed QuickMenuHost adapters over it.
     void setPopupSession(songview::QuickPopupSession *session);
@@ -217,6 +217,21 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void invalidateSelectedNodeMultiplicity() const noexcept;
     bool hasMultipleSelectedNodes(
         const std::optional<std::pair<uint64_t, uint64_t>> &selectedTickRange) const;
+    // Nine identities: the supported CC catalog plus song-global Tempo.
+    static int parameterCount() noexcept;
+    // Catalog indexes whose resolved row satisfies `predicate` — the shared
+    // projection behind selectedParameters/ghostParameters.
+    template <class Predicate>
+    QList<int> parameterIndexesWhere(Predicate &&predicate) const
+    {
+        QList<int> indexes;
+        for (int index = 0; index < parameterCount(); ++index) {
+            const std::optional<EditorAutomationRowId> row = parameterRow(index);
+            if (row && predicate(*row))
+                indexes.append(index);
+        }
+        return indexes;
+    }
     struct NodeLaneSlot {
         EditorAutomationRowId id;
         NodeLane *lane = nullptr;

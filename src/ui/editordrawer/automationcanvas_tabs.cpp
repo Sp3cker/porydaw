@@ -16,15 +16,11 @@
 #include "ui/layout.h"
 #include "ui/theme/themeruntime.h"
 
-namespace {
-
 // Nine identities: the supported CC catalog plus song-global Tempo.
-int parameterCount() noexcept
+int AutomationCanvas::parameterCount() noexcept
 {
     return int(CCLanes::supportedControllers().size()) + 1;
 }
-
-} // namespace
 
 std::optional<EditorAutomationRowId> AutomationCanvas::parameterRow(int index) const
 {
@@ -87,32 +83,20 @@ LaneHandle AutomationCanvas::activeLane() const noexcept
 // stored nodes; unpainted lanes and global Tempo are included when covered.
 QList<int> AutomationCanvas::selectedParameters() const
 {
-    QList<int> selected;
-    for (int index = 0; index < parameterCount(); ++index) {
-        const std::optional<EditorAutomationRowId> row = parameterRow(index);
-        if (row && m_laneSelection.coversNodes(*row))
-            selected.append(index);
-    }
-    return selected;
+    return parameterIndexesWhere(
+        [this](const EditorAutomationRowId &row) { return m_laneSelection.coversNodes(row); });
 }
 
 // User ghost-enabled identities: the catalog-index projection of the
 // controller-identity ghost set, mirroring selectedParameters.
 QList<int> AutomationCanvas::ghostParameters() const
 {
-    QList<int> ghosts;
-    for (int index = 0; index < parameterCount(); ++index) {
-        const std::optional<EditorAutomationRowId> row = parameterRow(index);
-        if (!row)
-            continue;
-        const bool ghosted = row->kind == EditorAutomationRowKind::Tempo
-                                 ? m_ghostTempo
-                                 : std::find(m_ghostControllers.begin(), m_ghostControllers.end(),
-                                             row->controller) != m_ghostControllers.end();
-        if (ghosted)
-            ghosts.append(index);
-    }
-    return ghosts;
+    return parameterIndexesWhere([this](const EditorAutomationRowId &row) {
+        return row.kind == EditorAutomationRowKind::Tempo
+                   ? m_ghostTempo
+                   : std::find(m_ghostControllers.begin(), m_ghostControllers.end(),
+                               row.controller) != m_ghostControllers.end();
+    });
 }
 
 // Ghost toggling is view-only like activation: selection, document, undo,
@@ -181,21 +165,21 @@ void AutomationCanvas::activateParameter(int index)
     requestFullQuickUpdate();
 }
 
-// AbstractButton press/click carry no modifiers, so the QML tab handlers
-// delegate here and the canvas reads the live modifier state itself.
-void AutomationCanvas::parameterPressed(int index)
+// The QML tab handlers pass the mouse event's modifiers through — AbstractButton
+// signals carry none — so dispatch stays testable and never reads global state.
+void AutomationCanvas::parameterPressed(int index, Qt::KeyboardModifiers modifiers)
 {
-    if (QGuiApplication::queryKeyboardModifiers() & Qt::ControlModifier)
+    if (modifiers & Qt::ControlModifier)
         toggleGhostParameter(index);
     else
         activateParameter(index);
 }
 
-void AutomationCanvas::parameterClicked(int index)
+void AutomationCanvas::parameterClicked(int index, Qt::KeyboardModifiers modifiers)
 {
     // A real command-click already toggled on press; never toggle twice.
     // Assistive activation without modifiers still activates.
-    if (QGuiApplication::queryKeyboardModifiers() & Qt::ControlModifier)
+    if (modifiers & Qt::ControlModifier)
         return;
     activateParameter(index);
 }

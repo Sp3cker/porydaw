@@ -100,18 +100,25 @@ Item {
                     checkable: false
                     checked: root.canvas.activeParameter === tab.index
 
-                    // Press-down dispatch through the canvas, which reads the
-                    // live modifiers — AbstractButton signals carry none:
+                    // Press-down dispatch through the canvas with the mouse
+                    // event's modifiers — AbstractButton signals carry none,
+                    // so a MouseArea observes the press and reports them:
                     // plain press activates (matching QTabBar), command-press
                     // toggles the ghost. Clicked stays the fallback for
                     // assistive-tech presses and keyboard activation; a real
                     // command-click already toggled on press, so the canvas
                     // never toggles twice.
-                    onPressed: {
-                        tab.forceActiveFocus()
-                        root.canvas.parameterPressed(tab.index)
+                    down: pressArea.pressed
+                    onClicked: root.canvas.parameterClicked(tab.index, Qt.NoModifier)
+
+                    MouseArea {
+                        id: pressArea
+                        anchors.fill: parent
+                        onPressed: (mouse) => {
+                            tab.forceActiveFocus()
+                            root.canvas.parameterPressed(tab.index, mouse.modifiers)
+                        }
                     }
-                    onClicked: root.canvas.parameterClicked(tab.index)
 
                     // Keyboard focus or a checked change must never leave the
                     // tab outside the Flickable viewport: scroll by the
@@ -174,7 +181,7 @@ Item {
                         spacing: root.appearance.inset
 
                         Rectangle {
-                            visible: tab.hasEvents
+                            opacity: tab.hasEvents ? 1.0 : 0.0
                             Layout.preferredWidth: root.appearance.pipExtent
                             Layout.preferredHeight: root.appearance.pipExtent
                             Layout.alignment: Qt.AlignVCenter
@@ -184,6 +191,7 @@ Item {
                         }
 
                         Text {
+                            objectName: "automationParameterTabText"
                             text: tab.text
                             font: tab.font
                             fontSizeMode: Text.HorizontalFit

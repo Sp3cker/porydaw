@@ -293,6 +293,10 @@ class AutomationEditingTest final : public QObject
 
     // Activates a supported parameter through its real rendered gutter label.
     bool activateParameter(const EditorAutomationRowId &row);
+    // Clicks a rendered gutter label with real event modifiers — drives the
+    // canvas's modifier dispatch, unlike a direct toggle call.
+    bool clickParameterTab(const EditorAutomationRowId &row,
+                           Qt::KeyboardModifiers modifiers = Qt::NoModifier);
 
     // Pilot baseline setup retained with its original literals and assertions.
     void arrangeCcLane();

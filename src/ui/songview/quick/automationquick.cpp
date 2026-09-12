@@ -12,7 +12,6 @@
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/timelinebandlayout.h"
 #include "ui/theme/themeruntime.h"
-#include "ui/theme/trackidentitycolors.h"
 
 namespace songview {
 namespace {
@@ -41,10 +40,11 @@ void appendText(std::vector<TimelineQuickTextModel::Record> &records, TimelineQu
 }
 
 // A ghost lane resolved for one paint pass: the slot's public surface plus
-// its catalog index for record keys and tab-label text.
+// its catalog index for record keys and tab-label text. The lane reference
+// is non-null by construction — gathering skips slots without a lane.
 struct GhostLane {
     LaneHandle handle;
-    NodeLane *lane = nullptr;
+    NodeLane &lane;
     QRect body;
     int parameterIndex = -1;
     std::vector<NodePoint> points;
@@ -76,10 +76,10 @@ int hoveredGhostIndex(const QPointF &pos, std::span<const GhostLane> ghosts,
     qreal bestDistance = 0.0;
     for (int i = 0; i < int(ghosts.size()); ++i) {
         const GhostLane &ghost = ghosts[std::size_t(i)];
-        const std::optional<int> value = heldValueAt(ghost.points, ghost.lane->leadIn(), tick);
+        const std::optional<int> value = heldValueAt(ghost.points, ghost.lane.leadIn(), tick);
         if (!value)
             continue;
-        const qreal curveY = nodelane::valueY(*ghost.lane, ghost.body, geometry, *value);
+        const qreal curveY = nodelane::valueY(ghost.lane, ghost.body, geometry, *value);
         const qreal distance = std::abs(pos.y() - curveY);
         if (distance <= qreal(geometry.pointHitRadius) && (best < 0 || distance < bestDistance)) {
             best = i;
@@ -89,6 +89,17 @@ int hoveredGhostIndex(const QPointF &pos, std::span<const GhostLane> ghosts,
     return best;
 }
 
+// Clamps a label rect inside the viewport without ever violating
+// std::clamp's lo<=hi precondition: a label larger than the viewport pins to
+// the near edge instead of UB.
+QRectF clampedToViewport(QRectF rect, const QRectF &bounds)
+{
+    rect.moveLeft(std::clamp<qreal>(rect.left(), bounds.left(),
+                                    std::max(bounds.left(), bounds.right() - rect.width())));
+    rect.moveTop(std::clamp<qreal>(rect.top(), bounds.top(),
+                                   std::max(bounds.top(), bounds.bottom() - rect.height())));
+    return rect;
+}
 void addBandFrame(TimelineQuickScene &scene, TimelineQuickLayer layer, qreal top, qreal bottom,
                   qreal width, const QRectF &clip)
 {
@@ -254,7 +265,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
             if (slot == m_nodeStack.cend() || !slot->lane)
                 continue;
             ghosts.push_back({{int(slot - m_nodeStack.cbegin())},
-                              slot->lane,
+                              *slot->lane,
                               slot->body,
                               index,
                               slot->lane->points()});
@@ -270,43 +281,42 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     const qreal labelInset = layout::space(layout::Space::One);
     std::vector<TimelineQuickTextModel::Record> ghostTextRecords;
     std::vector<QRectF> placedGhostLabels;
+    // One paint context shape for every lane: ghosts and the active lane
+    // share the shared-plot fields; only identity, ink, and the active
+    // lane's gesture/selection state vary.
+    const auto basePaintContext = [this, &scene, &viewport, &projection, dpr, bandFirst,
+                                   bandLast](NodeLane &lane, std::span<const NodePoint> points,
+                                             const QRect &body, LaneHandle handle,
+                                             const QColor &color) -> NodeLaneQuickPaint::Context {
+        return {.scene = scene,
+                .lane = lane,
+                .points = points,
+                .body = body,
+                .plot = viewport,
+                .contentYOffset = 0.0,
+                .overflow = nodelane::nodeOverflowClip(body, m_geometry).intersected(viewport),
+                .geometry = m_geometry,
+                .projection = projection,
+                .hoverState = m_hoverState,
+                .handle = handle,
+                .color = color,
+                .selectedColor = m_inputHost->palette().highlight().color(),
+                .dimmedColor = m_inputHost->palette().mid().color(),
+                .devicePixelRatio = dpr,
+                .selectedTickRange = std::nullopt,
+                .bandFirstTick = bandFirst,
+                .bandLastTick = bandLast,
+                .pencilMode = m_pencilMode};
+    };
     for (int ghostIndex = 0; ghostIndex < int(ghosts.size()); ++ghostIndex) {
         const GhostLane &ghostLane = ghosts[std::size_t(ghostIndex)];
         // All automation lanes paint in the theme's automation ink; ghosting
         // is conveyed by Ableton's non-editable alpha (127/255), not hue.
         QColor ghost = themes::color(themes::Role::song_view_automation_node_ink);
         ghost.setAlphaF(0.5);
-        const NodeLaneQuickPaint::Context ghostContext{
-            .scene = scene,
-            .lane = *ghostLane.lane,
-            .points = ghostLane.points,
-            .body = ghostLane.body,
-            .plot = viewport,
-            .contentYOffset = 0.0,
-            .overflow =
-                nodelane::nodeOverflowClip(ghostLane.body, m_geometry).intersected(viewport),
-            .geometry = m_geometry,
-            .projection = projection,
-            .hoverState = m_hoverState,
-            .handle = ghostLane.handle,
-            .color = ghost,
-            .selectedColor = m_inputHost->palette().highlight().color(),
-            .dimmedColor = m_inputHost->palette().mid().color(),
-            .devicePixelRatio = dpr,
-            .selectedTickRange = std::nullopt,
-            .selectedLane = false,
-            .selectedNodesLane = false,
-            .bandLane = false,
-            .bandFirstTick = bandFirst,
-            .bandLastTick = bandLast,
-            .multipleSelectedNodes = false,
-            .pencilMode = m_pencilMode,
-            .nodeDrag = nullptr,
-            .phantomGesture = nullptr,
-            .sweep = nullptr,
-            .pencil = nullptr,
-            .phantom = std::nullopt,
-        };
+        const NodeLaneQuickPaint::Context ghostContext = basePaintContext(
+            ghostLane.lane, ghostLane.points, ghostLane.body, ghostLane.handle, ghost);
+        // curves, nodes, selection
         NodeLaneQuickPaint::composeStatic(ghostContext, content, content, false);
         // Persistent name label at the plot's right edge, centered on the
         // curve's Y at the last visible tick; the hovered ghost's label is
@@ -314,21 +324,21 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         if (ghostIndex == hoveredGhost)
             continue;
         const double lastTick = std::max(0.0, projection.rawTickAt(viewport.right()));
-        const int value = heldValueAt(ghostLane.points, ghostLane.lane->leadIn(), lastTick)
-                              .value_or(ghostLane.lane->neutralValue());
-        const qreal y = nodelane::valueY(*ghostLane.lane, ghostLane.body, m_geometry, value);
+        const int value = heldValueAt(ghostLane.points, ghostLane.lane.leadIn(), lastTick)
+                              .value_or(ghostLane.lane.neutralValue());
+        const qreal y = nodelane::valueY(ghostLane.lane, ghostLane.body, m_geometry, value);
         const QString text = parameterLabelList.value(ghostLane.parameterIndex);
         const qreal width = captionMetrics.horizontalAdvance(text);
         const qreal height = captionMetrics.height();
         QRectF rect(viewport.right() - labelInset - width, y - height / 2.0, width, height);
-        rect.moveTop(std::clamp<qreal>(rect.top(), viewport.top(), viewport.bottom() - height));
+        rect = clampedToViewport(rect, viewport);
         // Two ghosts can share a right-edge Y: nudge later labels down in
         // catalog order until they clear, then re-clamp.
         while (std::any_of(placedGhostLabels.begin(), placedGhostLabels.end(),
                            [&rect](const QRectF &placed) { return placed.intersects(rect); }) &&
                rect.bottom() + height <= viewport.bottom())
             rect.moveTop(rect.top() + height);
-        rect.moveTop(std::clamp<qreal>(rect.top(), viewport.top(), viewport.bottom() - height));
+        rect = clampedToViewport(rect, viewport);
         if (std::any_of(placedGhostLabels.begin(), placedGhostLabels.end(),
                         [&rect](const QRectF &placed) { return placed.intersects(rect); }))
             continue;
@@ -350,36 +360,18 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
                       lane.handle, phantomGesture->point.current,
                       phantomGesture->point.minimumValue, phantomGesture->point.maximumValue}}
                 : originPhantom(lane.handle, projection, lane.points);
-        NodeLaneQuickPaint::Context context{
-            .scene = scene,
-            .lane = *lane.slot->lane,
-            .points = lane.points,
-            .body = lane.body,
-            .plot = lane.plot,
-            .contentYOffset = 0.0,
-            .overflow = lane.overflow,
-            .geometry = m_geometry,
-            .projection = projection,
-            .hoverState = m_hoverState,
-            .handle = lane.handle,
-            .color = color,
-            .selectedColor = m_inputHost->palette().highlight().color(),
-            .dimmedColor = m_inputHost->palette().mid().color(),
-            .devicePixelRatio = dpr,
-            .selectedTickRange = selectedTickRange,
-            .selectedLane = lane.selectedLane,
-            .selectedNodesLane = lane.selectedNodesLane,
-            .bandLane = lane.bandLane,
-            .bandFirstTick = bandFirst,
-            .bandLastTick = bandLast,
-            .multipleSelectedNodes = multipleSelectedNodes,
-            .pencilMode = m_pencilMode,
-            .nodeDrag = nodeDrag,
-            .phantomGesture = phantomGesture,
-            .sweep = sweep,
-            .pencil = pencil,
-            .phantom = phantom,
-        };
+        NodeLaneQuickPaint::Context context =
+            basePaintContext(*lane.slot->lane, lane.points, lane.body, lane.handle, color);
+        context.selectedTickRange = selectedTickRange;
+        context.selectedLane = lane.selectedLane;
+        context.selectedNodesLane = lane.selectedNodesLane;
+        context.bandLane = lane.bandLane;
+        context.multipleSelectedNodes = multipleSelectedNodes;
+        context.nodeDrag = nodeDrag;
+        context.phantomGesture = phantomGesture;
+        context.sweep = sweep;
+        context.pencil = pencil;
+        context.phantom = phantom;
         NodeLaneQuickPaint::Context staticContext = context;
         if (m_band.active) {
             staticContext.selectedTickRange = std::nullopt;
@@ -388,6 +380,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
             staticContext.bandLane = false;
             staticContext.multipleSelectedNodes = false;
         }
+        // curves, nodes, selection
         NodeLaneQuickPaint::composeStatic(staticContext, content, content,
                                           content && !m_band.active);
         NodeLaneQuickPaint::composeTransient(context, transient, m_band.active, outputs);
@@ -407,20 +400,20 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     if (hover)
         appendValueLabel(hoverTextRecords, TimelineQuickTextKeyKind::AutomationHover,
                          m_hoverState.hoverValueLabel);
-    // In-line name for the ghost curve under the pointer, just below the
+    // In-line name for the ghost curve under the pointer, just above the
     // nodeline at the pointer's X — replaces that ghost's right-edge label.
     if (hover && hoveredGhost >= 0) {
         const GhostLane &ghostLane = ghosts[std::size_t(hoveredGhost)];
         const double tick = std::max(0.0, projection.rawTickAt(m_hoverState.hover.pos.x()));
-        const int value = heldValueAt(ghostLane.points, ghostLane.lane->leadIn(), tick)
-                              .value_or(ghostLane.lane->neutralValue());
-        const qreal curveY = nodelane::valueY(*ghostLane.lane, ghostLane.body, m_geometry, value);
+        const int value = heldValueAt(ghostLane.points, ghostLane.lane.leadIn(), tick)
+                              .value_or(ghostLane.lane.neutralValue());
+        const qreal curveY = nodelane::valueY(ghostLane.lane, ghostLane.body, m_geometry, value);
         const QString text = parameterLabelList.value(ghostLane.parameterIndex);
         const qreal width = captionMetrics.horizontalAdvance(text);
         const qreal height = captionMetrics.height();
-        const qreal x = std::clamp<qreal>(m_hoverState.hover.pos.x() - width / 2.0, viewport.left(),
-                                          viewport.right() - width);
-        QRectF rect(x, curveY - labelInset - height, width, height);
+        const QRectF rect = clampedToViewport(QRectF(m_hoverState.hover.pos.x() - width / 2.0,
+                                                     curveY - labelInset - height, width, height),
+                                              viewport);
         appendText(hoverTextRecords, TimelineQuickTextKeyKind::AutomationGhostHover,
                    quint64(ghostLane.parameterIndex), rect, text,
                    themes::color(themes::Role::song_view_secondary_text), m_laneCaptionFont,
