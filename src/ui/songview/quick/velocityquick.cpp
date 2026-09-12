@@ -55,7 +55,7 @@ void VelocityArea::rebuildQuickChrome(songview::TimelineQuickScene &scene, const
     using namespace songview;
     constexpr TimelineQuickLayer gutterLayer = TimelineQuickLayer::VelocityGutterChrome;
     constexpr TimelineQuickLayer chromeLayer = TimelineQuickLayer::VelocityChrome;
-    const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
+    const QColor background = themes::color(themes::Role::window_background);
     const QColor gutterColor = m_inputHost->palette().alternateBase().color();
     const QColor separator = m_inputHost->palette().mid().color();
     addRect(scene.layer(chromeLayer), plot, background, plot);

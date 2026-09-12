@@ -215,7 +215,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     if (transient)
         transientTextRecords.reserve(1);
     const NodeLaneQuickPaint::Outputs outputs;
-    const QColor background = opaqueColor(themes::Role::song_view_piano_roll_background);
+    const QColor background = opaqueColor(themes::Role::window_background);
     // One grid and one band frame span the whole viewport. The stacked
     // per-row separators, pinned Tempo header, and Add-lane strip are gone
     // with the shared plot; QML owns the parameter labels in the gutter.

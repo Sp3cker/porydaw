@@ -153,6 +153,9 @@ void TimelineQuickView::rebuildGridRows()
     const auto &edges = roll.rowEdges();
     const QColor accidental = detail::pianoRollAccidentalLaneColor();
     const QColor octave = themes::color(themes::Role::song_view_piano_keyboard_separator);
+    const QColor gridLine = detail::gridLineColor(50);
+    const bool scaleHighlight = roll.m_sv->scaleHighlight();
+    const QColor tint = detail::pianoRollScaleHighlightColor();
     for (int row = 0; row < projection.visibleRowCount(); ++row) {
         const int key = projection.visiblePitchAt(row);
         const QRectF rowRect = roll.pitchRowRect(row, plot.left(), plot.width());
@@ -161,17 +164,12 @@ void TimelineQuickView::rebuildGridRows()
         if (isBlackKey(key))
             addRect(scene.layer(TimelineQuickLayer::PianoGridRows), rowRect, accidental, plot);
         addHorizontalLine(scene.layer(TimelineQuickLayer::PianoGridRows), plot.left(), plot.right(),
-                          rowRect.bottom(), pixel, key % 12 == 0 ? octave : gridLineColor(50),
-                          plot);
-    }
-    if (roll.m_sv->scaleHighlight()) {
-        const QColor tint = detail::pianoRollScaleHighlightColor();
-        for (int row = 0; row < projection.visibleRowCount(); ++row) {
-            if (projection.isScalePitchRow(row)) {
-                addRect(scene.layer(TimelineQuickLayer::PianoGridRows),
-                        QRectF(plot.left(), edges[row], plot.width(), edges[row + 1] - edges[row]),
-                        tint, plot);
-            }
+                          rowRect.bottom(), pixel, key % 12 == 0 ? octave : gridLine, plot);
+        // After the row's own line: tint must follow the h-lines at both its edges.
+        if (scaleHighlight && projection.isScalePitchRow(row)) {
+            addRect(scene.layer(TimelineQuickLayer::PianoGridRows),
+                    QRectF(plot.left(), edges[row], plot.width(), edges[row + 1] - edges[row]),
+                    tint, plot);
         }
     }
 }
@@ -183,12 +181,13 @@ void TimelineQuickView::rebuildGridTime()
     const qreal dpr = roll.devicePixelRatio();
     const QRectF plot(0, 0, roll.bounds().width(), roll.bounds().height());
     const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
+    const QColor grid = detail::gridLineColor();
 
     const qreal tickZero = roll.m_camera.displayX(0.0, 0.0, dpr);
     if (tickZero > plot.left()) {
         addRect(scene.layer(TimelineQuickLayer::PianoGridTime),
                 QRectF(plot.left(), plot.top(), tickZero - plot.left(), plot.height()),
-                mixTowardOklab(background, gridLineColor(), 0.15), plot);
+                mixTowardOklab(background, grid, 0.15), plot);
     }
 
     // Paint the shared time grid over the piano-specific pre-roll mask.
