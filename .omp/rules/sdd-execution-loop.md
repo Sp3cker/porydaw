@@ -46,9 +46,10 @@ separate batch boundaries, not a condition of task completion.
   its files contain unrelated dirty work, resolve ownership and the review
   baseline first; do not silently include that work in the task or commit.
 - The brief file (`docs/plans/<plan>/task-N-brief.md`) is the single source
-  of requirements. Dispatch `sdd-implementer` with exactly these slots:
+  of task requirements. Dispatch `sdd-implementer` with exactly these slots:
   (1) one line on where this task fits;
-  (2) the brief path — "read first, exact values verbatim" — and the
+  (2) the brief path — "read first, exact values verbatim" — plus the
+  plan.md path for its Global Constraints section and linked spec, and the
   Implementer local inspection section below copied verbatim;
   (3) interfaces and rulings from earlier tasks;
   (4) your resolution of any ambiguity in the brief;
@@ -64,16 +65,17 @@ separate batch boundaries, not a condition of task completion.
   tools and file/symbol scope, baseline-to-final diagnostic changes,
   actual versus permitted declaration/scope changes, and any unavailable
   checks with reasons. Include relevant observations, not just "self-reviewed".
-  Keep command/output evidence and any build DEFERRED status in `tests`.
+  Keep command/output evidence and any `DEFERRED_TO_CONTROLLER` status in
+  `tests`.
 - Never waive verification in a dispatch. Scope it through the brief
   (narrower target, fewer commands), not a blanket "skip validation".
   For concurrent shared-tree work, mark the dispatch SHARED_TREE and defer
   shared build/test runs and formatter/linter commands to the controller.
   Implementers still perform the read-only, file-local inspection below on
   their owned files; do not alter shared build configuration to obtain it.
-  The implementer reports build DEFERRED, not passed. The controller runs
-  the covering focused check on the settled batch before task review.
-  Checkpoint timing follows the separate policy above.
+  The implementer reports `tests: DEFERRED_TO_CONTROLLER`, not passed. The
+  controller runs the covering focused check on the settled batch before
+  task review. Checkpoint timing follows the separate policy above.
 - Implementer model failure falls back per harness config (`omen-alpha` →
   `terra:xhigh`). A fallback-fired run is the same seat under the same
   contract — its report carries the same weight.
@@ -86,10 +88,10 @@ separate batch boundaries, not a condition of task completion.
   Target/Change/Acceptance dispatch and status/summary result. Include the
   same local inspection section and put its evidence in the summary;
   this does not change the task's route or reviewer requirements.
-- Never paste accumulated prior-task state into a dispatch. A fresh
-  implementer needs its task, its interfaces, and the constraints. Nothing
-  else.
-- Never make a subagent read the whole plan file.
+- Implementers read plan.md's Global Constraints section and the spec it
+  links — nothing else in the plan file. Never paste accumulated prior-task
+  state into a dispatch: a fresh implementer needs its task, its interfaces,
+  and the constraints. Nothing else.
 - Never dispatch dependent tasks in parallel without pipeline discipline
   (see Pipelining). Genuinely independent plan tasks may fan out only with
   non-overlapping file lists — a shared file is dependence; serialize it.
@@ -141,8 +143,8 @@ workspace-wide audit or a substitute for the named build/check.
   build/check results. Missing evidence is an incomplete report. New syntax
   errors or unintended structural changes require a fix; unavailable tools
   require equivalent inspection and a covering check, not a waiver. Resolve
-  SHARED_TREE build DEFERRED with the controller's focused check before
-  review. DONE alone is not verification.
+  SHARED_TREE `DEFERRED_TO_CONTROLLER` reports with the controller's focused
+  check before review. DONE alone is not verification.
 - Evidence complete and covering checks pass → freeze the task's review
   package and dispatch `sdd-task-reviewer`, without requiring a commit.
 - DONE_WITH_CONCERNS → read concerns first. Correctness/scope concerns:
@@ -212,9 +214,10 @@ in review. At dispatch time, classify what N+1 consumes from N.
 - Rounds 1–3: `hub send` the findings verbatim to the original implementer
   (agent id from the dispatch result). Its context is intact. Gone? Fresh
   implementer carrying the brief path, the persisted prior results, + findings.
-- Rounds 4–5: fresh implementer on a more capable model, framed: "A prior
-  implementer attempted this task N times; you own it now. The dispatch
-  includes what was tried."
+- Rounds 4–5: fresh `sdd-implementer` dispatch — escalate to a stronger
+  model where the harness seat permits — framed: "A prior implementer
+  attempted this task N times; you own it now. The dispatch includes what
+  was tried."
 - Every round: fix, repeat local inspection and covering checks, return fix
   details and evidence, then freeze the next task package. Send previous and
   current packages plus the prior verdict to the same reviewer. Review only

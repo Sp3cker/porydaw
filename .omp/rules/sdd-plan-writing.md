@@ -20,8 +20,11 @@ never guess, nothing stated twice.
   vocabulary, forward-facing interfaces.
 - `docs/plans/<plan>/task-N-brief.md` — one per task, skeleton below. The
   loop's dispatch quotes it; the reviewer judges against it.
-- Global Constraints live ONCE in plan.md. Briefs reference that section and
-  carry deltas only.
+- Global Constraints live ONCE in plan.md. Implementers read that section
+  and the linked spec directly; briefs link to them and carry deltas only,
+  never copy the block.
+- Direct-route tasks carry their Target/Change/Acceptance inline in plan.md
+  (table cell or short section) — no brief file; the dispatch quotes it.
 
 ## Brief skeleton (these headings, no extras)
 
@@ -32,9 +35,13 @@ never guess, nothing stated twice.
    their implementation detail.
 4. Interface contract — exact names, signatures, and behaviors produced.
 5. Implementation steps — what + constraints + edge cases per step.
-6. Acceptance predicate — ending in NAMED CHECKS (commands). A prose claim
-   with no check is unwritable.
+6. Acceptance predicate — ending in NAMED CHECKS (commands) and who runs
+   them. A prose claim with no check is unwritable.
 7. Task-specific constraints — deltas on top of Global Constraints.
+
+Optional `Controller verification` section: exact commands the controller
+runs after the writer settles, when the acceptance checks are not
+implementer-runnable (SHARED_TREE, native smoke, settled-tree builds).
 
 Briefs contain requirements ONLY: no controller instructions, no report
 shape, no route banners, no line-count accounting. The harness owns
@@ -70,6 +77,22 @@ envelopes; the brief owns requirements.
 - Route honestly: mechanical, reversible, single-predicate work goes Direct
   with inline Target/Change/Acceptance. SDD-track is for judgment work,
   not the default.
+
+## Design pressure (refactor, reuse, obviously-right)
+
+- Frame tasks as Fowler-style refactorings where the seam allows: preserve
+  behavior, reshape structure. New behavior gets the smallest surface that
+  enables it — never a bolted-on subsystem beside the old one.
+- Reuse before inventing: built-in Qt types, existing project helpers, the
+  canonical module that already owns the concept. A step reimplementing
+  what Qt or the codebase provides means the plan is unfinished — find the
+  existing owner and cite it in the Interface contract.
+- Shape work so verification is cheap: pure over stateful,
+  declarative/binding over imperative loops, narrow write sets, no new
+  threading or ownership edges. Code with nothing to break earns a narrow
+  acceptance predicate; clever code buys a wide one.
+- Risk the plan can't design out goes in the brief's task-specific
+  constraints, named — never silently passed to the implementer.
 
 ## Checkpoint cadence (not task bookkeeping)
 

@@ -23,9 +23,11 @@ context. You never see the session history — and you don't need it.
 
 <before-you-begin>
 Read your brief file first. It is the requirements: exact values, names,
-signatures, and commands appear only there. If requirements, approach,
-dependencies, or acceptance criteria are unclear, ask the controller via
-`hub send` BEFORE writing code. Don't guess; don't assume.
+signatures, and commands appear only there. Then read the plan.md section
+your dispatch names — Global Constraints and the spec it links; nothing
+else in the plan file. If requirements, approach, dependencies, or
+acceptance criteria are unclear, ask the controller via `hub send` BEFORE
+writing code. Don't guess; don't assume.
 </before-you-begin>
 
 <your-job>
