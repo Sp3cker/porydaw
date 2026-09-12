@@ -79,6 +79,10 @@ Item {
                     Layout.fillWidth: true
                     Layout.minimumHeight: root.appearance.minimumCellHeight
                     Layout.columnSpan: tab.tempoParameter ? 2 : 1
+                    Layout.topMargin: root.appearance.stroke
+                    Layout.bottomMargin: root.appearance.stroke
+                    Layout.rightMargin: (tab.tempoParameter || tab.index % 2 === 1)
+                                        ? root.appearance.pointHitRadius : 0
 
                     checkable: false
                     checked: root.canvas.activeParameter === tab.index

@@ -233,6 +233,7 @@ QVariantMap AutomationCanvas::parameterAppearance() const
     appearance.insert(QStringLiteral("pipExtent"), layout::fontPx(0.5));
     appearance.insert(QStringLiteral("inset"), layout::space(layout::Space::One));
     appearance.insert(QStringLiteral("stroke"), layout::singlePixel());
+    appearance.insert(QStringLiteral("pointHitRadius"), m_geometry.pointHitRadius);
     appearance.insert(QStringLiteral("ghostEdge"),
                       themes::color(themes::Role::song_view_automation_ghost_edge));
     appearance.insert(QStringLiteral("focusOutline"), themes::color(themes::Role::focus_outline));

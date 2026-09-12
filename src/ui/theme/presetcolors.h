@@ -56,10 +56,13 @@ enum class PresetColor {
     scrollbar_handle,
     /// SongView grid lines.
     grid_line,
-    /// SongView piano-roll note area background; its lightness selects the
-    /// authored accidental-lane color.
+    /// SongView piano-roll note area background: the pre-roll mask and the
+    /// pitch-bend plot. Natural rows are unpainted over a transparent view, so
+    /// the surface they show is the window background below.
     piano_roll_background,
-    /// SongView piano-roll accidental-note lane background.
+    /// SongView piano-roll accidental-note lane background: the window surface
+    /// scaled to 0.919 of its OKLCh lightness at this preset's own hue and
+    /// chroma — vanilla's authored step. A fixed ΔL over-darkens the dark themes.
     piano_roll_accidental_lane,
     /// SongView scale highlight: a fixed lavender (#B595FC) shared by every theme.
     scale_highlight,
@@ -332,7 +335,9 @@ constexpr PresetColors makeVanilla()
     colors.color(PresetColor::scrollbar_handle) = "#A49D97";
     colors.color(PresetColor::grid_line) = "#3F040000";
     colors.color(PresetColor::piano_roll_background) = "#D4CCC7";
-    colors.color(PresetColor::piano_roll_accidental_lane) = "#B7AFA9";
+    // Window surface #C9C1BB × 0.919 L at hue 59.5: 1.26:1. Source ratio for
+    // the other presets.
+    colors.color(PresetColor::piano_roll_accidental_lane) = "#B4ACA6";
     colors.color(PresetColor::scale_highlight) = "#B595FC";
     colors.color(PresetColor::playhead) = "#E24242";
     colors.color(PresetColor::piano_natural_key) = "#F4F4F4";
@@ -393,7 +398,8 @@ constexpr PresetColors makeDarkNeutralHigh()
     colors.color(PresetColor::scrollbar_handle) = "#262626";
     colors.color(PresetColor::grid_line) = "#54030303";
     colors.color(PresetColor::piano_roll_background) = "#454545";
-    colors.color(PresetColor::piano_roll_accidental_lane) = "#363636";
+    // Window surface #373737 × 0.919 L; neutral, so no hue to keep: 1.11:1.
+    colors.color(PresetColor::piano_roll_accidental_lane) = "#303030";
     colors.color(PresetColor::scale_highlight) = "#B595FC";
     colors.color(PresetColor::playhead) = "#E24242";
     colors.color(PresetColor::piano_natural_key) = "#F4F4F4";
@@ -450,7 +456,8 @@ constexpr PresetColors makeImmaterial()
     colors.color(PresetColor::scrollbar_handle) = "#212225";
     colors.color(PresetColor::grid_line) = "#54030606";
     colors.color(PresetColor::piano_roll_background) = "#3C3F46";
-    colors.color(PresetColor::piano_roll_accidental_lane) = "#2F3239";
+    // Window surface #2E3138 × 0.919 L at hue 267: 1.09:1.
+    colors.color(PresetColor::piano_roll_accidental_lane) = "#282B32";
     colors.color(PresetColor::scale_highlight) = "#B595FC";
     colors.color(PresetColor::playhead) = "#E24242";
     colors.color(PresetColor::piano_natural_key) = "#F4F4F4";
