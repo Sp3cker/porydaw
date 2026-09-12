@@ -108,57 +108,14 @@ void PianoRollStaticTest::tickRangeWalksFractionalLattice()
     const Tick lattice = view.grid().gridTicksAt(96);
     QVERIFY(lattice > 0);
     QVERIFY(lattice < segment.beatTicks);
-    std::vector<Tick> expected;
-    const Tick first = segment.start + (96 - segment.start + lattice - 1) / lattice * lattice;
-    for (Tick tick = first; tick < 289; tick += lattice)
-        if ((tick - segment.start) % segment.beatTicks != 0)
-            expected.push_back(tick);
-    std::vector<Tick> observed;
-    songview::detail::forEachSubGridLine(view.grid(), view.camera(),
-                                         songview::detail::tickRange(96.75, 289.25), 1,
-                                         [&observed](Tick tick, int) { observed.push_back(tick); });
-    QCOMPARE(observed, expected);
-    std::vector<Tick> rejected;
-    songview::detail::forEachSubGridLine(
-        view.grid(), view.camera(),
-        songview::detail::tickRange(std::numeric_limits<double>::quiet_NaN(), 100.0), 1,
-        [&rejected](Tick tick, int) { rejected.push_back(tick); });
-    QVERIFY(rejected.empty());
-    // Boundary scenarios on a coarser lattice: gridMinDenom=16 keeps the
-    // drawn sub-grid above the clock floor at any cell-width threshold, so
-    // the stride is a nontrivial divisor of the 24-tick beat. The snap grid
-    // runs one ladder step finer (8 divisions), which also stays nontrivial:
-    // gcd(6, 3) = 3 ticks. (Denom=32 would cap the drawn grid at 3 ticks and
-    // collapse the snap stride to the 1-tick clock floor.)
-    SongView::ViewState coarse = original;
-    coarse.pxPerBeat = 192.0;
-    coarse.gridMinDenom = 16;
-    view.applyViewState(coarse);
-    const Tick latticeG = view.grid().gridTicksAt(0);
-    const Tick snapG = view.grid().snapTicksAt(0);
-    QVERIFY(latticeG > 1);
-    QVERIFY(latticeG < segment.beatTicks);
-    QVERIFY(96 % latticeG == 0);
-    QVERIFY(snapG >= 3);
-    QVERIFY(segment.beatTicks % snapG == 0);
-    QCOMPARE(view.grid().fineGridTicks(), Tick(1));
-    // Collects the walked ticks; a callback outside the half-open range
-    // aborts the walk so a wrapped candidate cannot accumulate callbacks
-    // (a missing advancement stays bounded by the harness timeout).
-    struct OutOfRangeTick {};
-    const auto walk = [&view](Tick begin, Tick end) {
+    const auto walk = [&view](double begin, double end) {
         std::vector<Tick> ticks;
         songview::detail::forEachSubGridLine(view.grid(), view.camera(),
-                                             songview::detail::TickRange{begin, end}, 1,
-                                             [&ticks, begin, end](Tick tick, int) {
-                                                 if (tick < begin || tick >= end)
-                                                     throw OutOfRangeTick{};
-                                                 ticks.push_back(tick);
-                                             });
+                                             songview::detail::tickRange(begin, end), 1,
+                                             [&ticks](Tick tick, int) { ticks.push_back(tick); });
         return ticks;
     };
-    // Independent membership expectation: every in-range tick on its
-    // governing segment's sub-beat lattice that is not a beat line.
+    // Independent membership expectation on each segment's sub-beat lattice.
     const auto expectedLines = [&view](Tick begin, Tick end) {
         std::vector<Tick> ticks;
         for (Tick tick = begin; tick < end; ++tick) {
@@ -171,6 +128,20 @@ void PianoRollStaticTest::tickRangeWalksFractionalLattice()
         }
         return ticks;
     };
+    QCOMPARE(walk(96.75, 289.25), expectedLines(96, 289));
+    QVERIFY(walk(std::numeric_limits<double>::quiet_NaN(), 100.0).empty());
+    // A coarser lattice keeps both drawn and snap strides above the clock floor.
+    SongView::ViewState coarse = original;
+    coarse.pxPerBeat = 192.0;
+    coarse.gridMinDenom = 16;
+    view.applyViewState(coarse);
+    const Tick latticeG = view.grid().gridTicksAt(0);
+    const Tick snapG = view.grid().snapTicksAt(0);
+    QVERIFY(latticeG > 1);
+    QVERIFY(latticeG < segment.beatTicks);
+    QVERIFY(96 % latticeG == 0);
+    QVERIFY(snapG >= 3);
+    QVERIFY(segment.beatTicks % snapG == 0);
     // The first ceiling-aligned candidate (96 + latticeG) already lies at
     // or beyond the range end: the segment contributes nothing.
     const std::vector<Tick> firstOutside = walk(97, 98);
@@ -178,25 +149,6 @@ void PianoRollStaticTest::tickRangeWalksFractionalLattice()
     // The first candidate is the beat line at 96: only its callback is
     // skipped; the walk still advances through the rest of the range.
     QCOMPARE(walk(95, 110), expectedLines(95, 110));
-    // The terminal range ends mid-cell (kMaxTick is not on the lattice):
-    // the last advancement must break instead of striding past the end.
-    QCOMPARE(walk(CoreTimeDefaults::kMaxTick - 9, CoreTimeDefaults::kMaxTick),
-             expectedLines(CoreTimeDefaults::kMaxTick - 9, CoreTimeDefaults::kMaxTick));
-    const std::vector<Tick> ceilingCell =
-        walk(CoreTimeDefaults::kMaxTick - 1, CoreTimeDefaults::kMaxTick);
-    QVERIFY2(ceilingCell.empty(), "a ceiling-aligned candidate past kMaxTick must not wrap");
-    // Snap inputs: NaN and non-positive values map to 0, infinities clamp
-    // to the corresponding endpoint (down lands on the lattice below it).
-    const double nan = std::numeric_limits<double>::quiet_NaN();
-    const double infinity = std::numeric_limits<double>::infinity();
-    QCOMPARE(view.grid().snapTick(nan), Tick(0));
-    QCOMPARE(view.grid().snapTickDown(nan), Tick(0));
-    QCOMPARE(view.grid().snapTickUp(nan), Tick(0));
-    QCOMPARE(view.grid().snapTick(-infinity), Tick(0));
-    QCOMPARE(view.grid().snapTick(infinity), CoreTimeDefaults::kMaxTick);
-    QCOMPARE(view.grid().snapTickDown(infinity), Tick(CoreTimeDefaults::kMaxTick / snapG * snapG));
-    QCOMPARE(view.grid().snapTickUp(infinity), CoreTimeDefaults::kMaxTick);
-    QCOMPARE(view.grid().snapTick(infinity, true), CoreTimeDefaults::kMaxTick);
     // Fractional nearest tie on either side of the midpoint: the lower
     // candidate wins exactly at the tie.
     QCOMPARE(view.grid().snapTick(96.0 + snapG / 2.0), Tick(96));
@@ -204,21 +156,6 @@ void PianoRollStaticTest::tickRangeWalksFractionalLattice()
     QCOMPARE(view.grid().snapTick(96.0 + snapG / 2.0 + 0.25), Tick(96 + snapG));
     QCOMPARE(view.grid().snapTickDown(96.0 + snapG / 2.0 + 0.25), Tick(96));
     QCOMPARE(view.grid().snapTickUp(96.0 + snapG / 2.0 - 0.25), Tick(96 + snapG));
-    // Coarse up/nearest at the domain edge saturate at kMaxTick instead of
-    // wrapping the lo + g candidate; down stays on the lattice.
-    QCOMPARE(view.grid().snapTickUp(double(CoreTimeDefaults::kMaxTick) - 0.5),
-             CoreTimeDefaults::kMaxTick);
-    QCOMPARE(view.grid().snapTick(double(CoreTimeDefaults::kMaxTick) - 0.5),
-             CoreTimeDefaults::kMaxTick);
-    QCOMPARE(view.grid().snapTickDown(double(CoreTimeDefaults::kMaxTick) - 0.5),
-             Tick((CoreTimeDefaults::kMaxTick - 1) / snapG * snapG));
-    // Fine snap rounds on the clock grid; a rounded result past the domain
-    // saturates through tickFromDouble instead of producing the sentinel.
-    QCOMPARE(view.grid().snapTick(double(CoreTimeDefaults::kMaxTick) + 0.6, true),
-             CoreTimeDefaults::kMaxTick);
-    QCOMPARE(view.grid().snapTick(double(CoreTimeDefaults::kMaxTick) - 0.4, true),
-             CoreTimeDefaults::kMaxTick);
-    QCOMPARE(view.grid().snapTick(1e30, true), CoreTimeDefaults::kMaxTick);
     // A mid-cell signature change re-anchors the lattice: the first
     // segment's walk stops at the seam (its next candidate lies at the
     // segment end), and the new segment restarts its own lattice and

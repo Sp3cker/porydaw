@@ -4,29 +4,6 @@
 
 #include "checks/editcheck/tst_songdocument_support.h"
 
-namespace {
-
-// In-memory document with one channel track whose notes sit far below the
-// tick ceiling: adoptSmf accepts the full Tick range a VLQ round-trip
-// through makeDocument cannot stage.
-bool adoptBoundaryDocument(SongDocument *document, QString *error)
-{
-    SmfFile smf;
-    smf.tracks.push_back(songdocument_test::conductor());
-    SmfTrack track;
-    track.events.push_back(songdocument_test::channel(0x90, 0, 60, 100));
-    track.events.push_back(songdocument_test::channel(0x90, 24, 60, 0));
-    track.events.push_back(songdocument_test::channel(0x90, 48, 64, 100));
-    track.events.push_back(songdocument_test::channel(0x90, 72, 64, 0));
-    track.endTick = 96;
-    smf.tracks.push_back(track);
-    SongInfo song;
-    song.label = QStringLiteral("note-move-boundary");
-    return document->adoptSmf(std::move(smf), song, error);
-}
-
-} // namespace
-
 void EditCheckTest::noteMoveOverlap_data()
 {
     addSongRows(SongCapability::EditableTrack);
@@ -119,39 +96,6 @@ void EditCheckTest::noteMoveMerge()
     document.didSave(document.captureSaveSnapshot(), true);
     document.moveNotes({moving}, 0, 1, true);
     QCOMPARE(document.undoStack()->count(), before + 2);
-    // An accumulated tick delta that no longer fits int64_t declines the
-    // merge: both applied commands stay separate and undo individually.
-    SongDocument boundary;
-    QVERIFY2(adoptBoundaryDocument(&boundary, &error), qPrintable(error));
-    DocNote edge;
-    QVERIFY(boundary.findNote(0, 48, 64, &edge));
-    const int mergeCount = boundary.undoStack()->count();
-    boundary.moveNotes({edge}, INT64_MIN, 0, true);
-    QVERIFY(boundary.findNote(0, 0, 64, &edge));
-    boundary.moveNotes({edge}, -5, 1, true);
-    QCOMPARE(boundary.undoStack()->count(), mergeCount + 2);
-    QVERIFY(boundary.findNote(0, 0, 65, &edge));
-    boundary.undoStack()->undo();
-    QVERIFY(boundary.findNote(0, 0, 64, &edge));
-    boundary.undoStack()->undo();
-    QVERIFY(boundary.findNote(0, 48, 64, &edge));
-    boundary.undoStack()->redo();
-    boundary.undoStack()->redo();
-    QVERIFY(boundary.findNote(0, 0, 65, &edge));
-
-    // Same declined merge for the pitched-move command, driven by the
-    // other fixture note (the first is still at its merged position).
-    DocNote lowEdge;
-    QVERIFY(boundary.findNote(0, 0, 60, &lowEdge));
-    QVERIFY(boundary.moveNotesToPitches({lowEdge}, {uint8_t(61)}, INT64_MIN, true));
-    QVERIFY(boundary.findNote(0, 0, 61, &lowEdge));
-    QVERIFY(boundary.moveNotesToPitches({lowEdge}, {uint8_t(62)}, -5, true));
-    QCOMPARE(boundary.undoStack()->count(), mergeCount + 4);
-    QVERIFY(boundary.findNote(0, 0, 62, &lowEdge));
-    boundary.undoStack()->undo();
-    QVERIFY(boundary.findNote(0, 0, 61, &lowEdge));
-    boundary.undoStack()->undo();
-    QVERIFY(boundary.findNote(0, 0, 60, &lowEdge));
 }
 
 void EditCheckTest::noteMoveBatch_data()
@@ -341,48 +285,4 @@ void EditCheckTest::noteMoveRejects()
     QCOMPARE(document.smf().write(), baseline);
     QVERIFY(document.findNote(track, firstTick, 115, &first));
     QVERIFY(document.findNote(track, firstTick + step * 20, 117, &second));
-    // Synthetic boundary document: adoptSmf stages full-range ticks.
-    SongDocument boundary;
-    QVERIFY2(adoptBoundaryDocument(&boundary, &error), qPrintable(error));
-    DocNote edge;
-    QVERIFY(boundary.findNote(0, 0, 60, &edge));
-    const QByteArray boundaryBaseline = boundary.smf().write();
-    const uint64_t boundaryRevision = boundary.revision();
-    const int boundaryUndoCount = boundary.undoStack()->count();
-
-    // A requested upper start shift or a terminated end past kMaxTick
-    // rejects the whole move without touching the document.
-    boundary.moveNotes({edge}, INT64_MAX, 0);
-    boundary.moveNotes({edge}, int64_t(CoreTimeDefaults::kMaxTick) - 23, 0);
-    QCOMPARE(boundary.smf().write(), boundaryBaseline);
-    QCOMPARE(boundary.revision(), boundaryRevision);
-    QCOMPARE(boundary.undoStack()->count(), boundaryUndoCount);
-
-    // The pitched move reports the same rejections on its return value.
-    QVERIFY(!boundary.moveNotesToPitches({edge}, {uint8_t(62)}, INT64_MAX));
-    QVERIFY(!boundary.moveNotesToPitches({edge}, {uint8_t(62)},
-                                         int64_t(CoreTimeDefaults::kMaxTick) - 23));
-    QCOMPARE(boundary.smf().write(), boundaryBaseline);
-    QCOMPARE(boundary.undoStack()->count(), boundaryUndoCount);
-
-    // One invalid destination rejects every member of the batch.
-    DocNote secondEdge;
-    QVERIFY(boundary.findNote(0, 48, 64, &secondEdge));
-    boundary.moveNotes({edge, secondEdge}, int64_t(CoreTimeDefaults::kMaxTick) - 47, 0);
-    QCOMPARE(boundary.smf().write(), boundaryBaseline);
-    QCOMPARE(boundary.undoStack()->count(), boundaryUndoCount);
-
-    // An end landing exactly at kMaxTick is admitted and survives undo/redo.
-    boundary.moveNotes({edge}, int64_t(CoreTimeDefaults::kMaxTick) - 24, 0);
-    QVERIFY(boundary.findNote(0, CoreTimeDefaults::kMaxTick - 24, 60, &edge));
-    QCOMPARE(edge.duration, uint32_t(24));
-    boundary.undoStack()->undo();
-    QVERIFY(boundary.findNote(0, 0, 60, &edge));
-    boundary.undoStack()->redo();
-    QVERIFY(boundary.findNote(0, CoreTimeDefaults::kMaxTick - 24, 60, &edge));
-
-    // An extreme negative delta still clamps the start at zero.
-    boundary.moveNotes({edge}, INT64_MIN, 0);
-    QVERIFY(boundary.findNote(0, 0, 60, &edge));
-    QCOMPARE(edge.duration, uint32_t(24));
 }

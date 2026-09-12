@@ -99,13 +99,6 @@ bool cfgSemanticEqual(const SongCfg &a, const SongCfg &b)
            a.extendedClocks == b.extendedClocks && a.noCompression == b.noCompression;
 }
 
-// Whether accumulating delta `b` onto `a` stays inside int64_t; classified
-// before any arithmetic so no overflow executes.
-constexpr bool deltasAccumulateFits(int64_t a, int64_t b)
-{
-    return !(b > 0 && a > INT64_MAX - b) && !(b < 0 && a < INT64_MIN - b);
-}
-
 } // namespace
 
 // Applies a prebuilt op list; undo reverts it. Op index rules: removals and
@@ -224,10 +217,6 @@ class MoveNotesCommand : public QUndoCommand
             const_cast<MoveNotesCommand *>(static_cast<const MoveNotesCommand *>(command));
         if (!other->m_mergeable || !movesMyOutputs(other->m_notes))
             return false;
-        // An accumulated delta that no longer fits int64_t cannot be
-        // re-landed; decline the merge and keep both applied commands.
-        if (!deltasAccumulateFits(m_dTick, other->m_dTick))
-            return false;
         // Both commands are applied here (the stack redoes the new one
         // before offering the merge). Rewind to the pre-gesture state, then
         // land the accumulated move in one hop.
@@ -314,8 +303,6 @@ class MoveNotesToPitchesCommand : public QUndoCommand
         auto *other = const_cast<MoveNotesToPitchesCommand *>(
             static_cast<const MoveNotesToPitchesCommand *>(command));
         if (!other->m_mergeable || !movesMyOutputs(other->m_notes))
-            return false;
-        if (!deltasAccumulateFits(m_dTick, other->m_dTick))
             return false;
         m_doc->revertOps(other->m_ops);
         m_doc->revertOps(m_ops);
@@ -1094,7 +1081,8 @@ void SongDocument::deleteNotes(const std::vector<DocNote> &notes)
 void SongDocument::moveNotes(const std::vector<DocNote> &notes, int64_t dTick, int dKey,
                              bool mergeable)
 {
-    if (notes.empty() || (dTick == 0 && dKey == 0))
+    if (notes.empty() || (dTick == 0 && dKey == 0) ||
+        dTick < -int64_t(CoreTimeDefaults::kMaxTick) || dTick > int64_t(CoreTimeDefaults::kMaxTick))
         return;
     // Every participating note must keep its stored start and, when
     // terminated, its end at or below kMaxTick; one invalid upper
@@ -1127,7 +1115,8 @@ bool SongDocument::moveNotesToPitches(const std::vector<DocNote> &notes,
                                       const std::vector<uint8_t> &destPitches, int64_t dTick,
                                       bool mergeable)
 {
-    if (notes.empty() || notes.size() != destPitches.size())
+    if (notes.empty() || notes.size() != destPitches.size() ||
+        dTick < -int64_t(CoreTimeDefaults::kMaxTick) || dTick > int64_t(CoreTimeDefaults::kMaxTick))
         return false;
     for (uint8_t destKey : destPitches) {
         if (destKey > 127)
@@ -1276,9 +1265,9 @@ void SongDocument::resizeNotes(const std::vector<DocNote> &notes, int64_t dDurat
     if (notes.empty() || dDuration == 0)
         return;
     // The resized end of every note this writes must stay at or below
-    // kMaxTick. The delta is classified against the remaining duration
-    // headroom before any addition, so extreme signed deltas neither
-    // overflow int64_t nor narrow early; one overflow rejects the batch.
+    // kMaxTick. Classify the delta against the remaining headroom before
+    // any addition so an out-of-range resize is rejected rather than
+    // overflowing the int64_t sum; one overflow rejects the batch.
     for (const DocNote &note : notes) {
         if (dDuration >
             int64_t(CoreTimeDefaults::kMaxTick) - int64_t(note.tick) - int64_t(note.duration))

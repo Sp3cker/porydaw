@@ -128,63 +128,40 @@ Tick Grid::fineGridTicks() const
     return m_clock == 0 ? gridTicksAt(0) : std::max<uint32_t>(1, m_clock);
 }
 
-namespace {
-
-// Clamp a raw snap input to the valid position domain without truncating
-// its fraction: NaN and non-positive values map to 0, +inf and anything
-// at or beyond kMaxTick clamp to kMaxTick.
-double clampSnapInput(double tick)
-{
-    if (!(tick >= 0.0))
-        return 0.0;
-    return std::min(tick, double(CoreTimeDefaults::kMaxTick));
-}
-
-// The upper snap candidate above `lo`: the next signature's tick is itself
-// a grid position (the grid restarts there), so the candidate never
-// crosses it; at the domain edge kMaxTick is the saturating terminal
-// candidate even when it is not on the grid. Headroom is checked before
-// the addition so lo + g never wraps.
-Tick upperSnapCandidate(Tick lo, Tick g, Tick next)
-{
-    const Tick ceiling = std::min(next, CoreTimeDefaults::kMaxTick);
-    return lo < ceiling && g <= ceiling - lo ? Tick(lo + g) : ceiling;
-}
-
-} // namespace
-
 Tick Grid::snapTick(double tick, bool fine) const
 {
-    tick = clampSnapInput(tick);
+    tick = std::max(0.0, tick);
     if (fine) {
         // The clock grid is the document's absolute resolution; it does not
         // restart at time-signature changes.
         const double g = double(fineGridTicks());
         return CoreTimeDefaults::tickFromDouble(std::round(tick / g) * g);
     }
-    const Segment seg = segmentAt(CoreTimeDefaults::tickFromDouble(tick));
+    const Tick position = CoreTimeDefaults::tickFromDouble(tick);
+    const Segment seg = segmentAt(position);
     const Tick g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
-    const Tick k = Tick((tick - double(seg.start)) / double(g));
-    const Tick lo = seg.start + Tick(k * g);
-    const Tick hi = upperSnapCandidate(lo, g, seg.next);
+    const Tick lo = seg.start + (position - seg.start) / g * g;
+    // The grid restarts at the next signature, so the upper candidate stops there.
+    const Tick hi = Tick(std::min<uint64_t>(uint64_t(lo) + g, seg.next));
     return tick - double(lo) <= double(hi) - tick ? lo : hi;
 }
 Tick Grid::snapTickDown(double tick) const
 {
-    tick = clampSnapInput(tick);
-    const Segment seg = segmentAt(CoreTimeDefaults::tickFromDouble(tick));
+    const Tick position = CoreTimeDefaults::tickFromDouble(tick);
+    const Segment seg = segmentAt(position);
     const Tick g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
-    return seg.start + Tick(Tick((tick - double(seg.start)) / double(g)) * g);
+    return seg.start + (position - seg.start) / g * g;
 }
 Tick Grid::snapTickUp(double tick) const
 {
-    tick = clampSnapInput(tick);
-    const Segment seg = segmentAt(CoreTimeDefaults::tickFromDouble(tick));
+    tick = std::max(0.0, tick);
+    const Tick position = CoreTimeDefaults::tickFromDouble(tick);
+    const Segment seg = segmentAt(position);
     const Tick g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
-    const Tick lo = seg.start + Tick(Tick((tick - double(seg.start)) / double(g)) * g);
+    const Tick lo = seg.start + (position - seg.start) / g * g;
     if (double(lo) >= tick)
         return lo;
-    return upperSnapCandidate(lo, g, seg.next);
+    return Tick(std::min<uint64_t>(uint64_t(lo) + g, seg.next));
 }
 
 // --- SongView: host setters and axis iteration ---

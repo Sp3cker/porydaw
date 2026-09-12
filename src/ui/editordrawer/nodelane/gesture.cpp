@@ -191,17 +191,10 @@ void NodeDragGesture::applyDrag(const NodePoint &grabCurrent)
     const NodePoint grabOriginal = points[grabbedPoint].original;
     const int64_t requestedTickDelta = int64_t(grabCurrent.tick) - int64_t(grabOriginal.tick);
     Tick earliestTick = points.front().original.tick;
-    Tick latestTick = earliestTick;
-    for (const NodeDrag &point : points) {
+    for (const NodeDrag &point : points)
         earliestTick = std::min<Tick>(earliestTick, point.original.tick);
-        latestTick = std::max<Tick>(latestTick, point.original.tick);
-    }
-    // One common delta for the whole group: the earliest point bounds the
-    // lower edge at zero and the latest bounds the upper headroom, so
-    // inter-point spacing survives a clamp at either domain edge.
-    const int64_t upperHeadroom =
-        std::max<int64_t>(0, int64_t(CoreTimeDefaults::kMaxTick) - int64_t(latestTick));
-    const int64_t dTick = std::clamp(requestedTickDelta, -int64_t(earliestTick), upperHeadroom);
+    // Clamp the common delta at zero so a leftward group drag keeps its spacing.
+    const int64_t dTick = std::max<int64_t>(requestedTickDelta, -int64_t(earliestTick));
     const int dValue = grabCurrent.value - grabOriginal.value;
     for (NodeDrag &point : points) {
         point.current.tick = CoreTimeDefaults::shiftTickClamped(point.original.tick, dTick);
