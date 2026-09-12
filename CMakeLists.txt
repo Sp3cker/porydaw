@@ -41,6 +41,22 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
+# Optimize the audio path even in debug builds: the miniaudio converter and
+# engine callbacks dominate audio-thread cost, and profile/listening sessions
+# with a debug app must not measure inflated audio DSP. -g stays on.
+set(PORYDAW_AUDIO_ALWAYS_OPTIMIZE_SRCS
+    src/audio/miniaudio_impl.c
+    src/audio/stb_vorbis_impl.c
+    src/audio/audioengine.cpp)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    foreach(PORYDAW_AUDIO_SRC IN LISTS PORYDAW_AUDIO_ALWAYS_OPTIMIZE_SRCS)
+        set_source_files_properties(
+            "${PORYDAW_AUDIO_SRC}"
+            PROPERTIES COMPILE_OPTIONS "-O2"
+                       SKIP_PRECOMPILE_HEADERS ON)
+    endforeach()
+endif()
+
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
@@ -452,90 +468,18 @@ if(APPLE)
     set_target_properties(porydaw_app PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
 endif()
 set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-set_source_files_properties(
-    src/ui/songview/quick/AutomationTabs.qml
-    PROPERTIES QT_RESOURCE_ALIAS AutomationTabs.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/TimelineCanvas.qml
-    PROPERTIES QT_RESOURCE_ALIAS TimelineCanvas.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/PianoRollCanvas.qml
-    PROPERTIES QT_RESOURCE_ALIAS PianoRollCanvas.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/TimelineScrollbar.qml
-    PROPERTIES QT_RESOURCE_ALIAS TimelineScrollbar.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/RulerControls.qml
-    PROPERTIES QT_RESOURCE_ALIAS RulerControls.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/RulerToolTip.qml
-    PROPERTIES QT_RESOURCE_ALIAS RulerToolTip.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/TrackHeaderBand.qml
-    PROPERTIES QT_RESOURCE_ALIAS TrackHeaderBand.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/OtherStripToolTip.qml
-    PROPERTIES QT_RESOURCE_ALIAS OtherStripToolTip.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/DrawerChromeLayer.qml
-    PROPERTIES QT_RESOURCE_ALIAS DrawerChromeLayer.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/DragInput.qml
-    PROPERTIES QT_RESOURCE_ALIAS DragInput.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/PromptCard.qml
-    PROPERTIES QT_RESOURCE_ALIAS PromptCard.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/PromptButton.qml
-    PROPERTIES QT_RESOURCE_ALIAS PromptButton.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/PitchBendPopup.qml
-    PROPERTIES QT_RESOURCE_ALIAS PitchBendPopup.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/VelocityPrompt.qml
-    PROPERTIES QT_RESOURCE_ALIAS VelocityPrompt.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/CcDeleteConfirm.qml
-    PROPERTIES QT_RESOURCE_ALIAS CcDeleteConfirm.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/TimeSignaturePrompt.qml
-    PROPERTIES QT_RESOURCE_ALIAS TimeSignaturePrompt.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/InsertTimePrompt.qml
-    PROPERTIES QT_RESOURCE_ALIAS InsertTimePrompt.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/VoicePickerPrompt.qml
-    PROPERTIES QT_RESOURCE_ALIAS VoicePickerPrompt.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/EventListPage.qml
-    PROPERTIES QT_RESOURCE_ALIAS EventListPage.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/QuickMenuPanel.qml
-    PROPERTIES QT_RESOURCE_ALIAS QuickMenuPanel.qml
-)
-set_source_files_properties(
-    src/ui/songview/quick/QuickPopupLayer.qml
-    PROPERTIES QT_RESOURCE_ALIAS QuickPopupLayer.qml
-)
+# Each Quick file is bundled at its basename; one loop instead of one
+# set_source_files_properties block per file.
+foreach(qml IN
+    ITEMS AutomationTabs TimelineCanvas PianoRollCanvas TimelineScrollbar
+          RulerControls RulerToolTip TrackHeaderBand OtherStripToolTip
+          DrawerChromeLayer DragInput PromptCard PromptButton PitchBendPopup
+          VelocityPrompt CcDeleteConfirm TimeSignaturePrompt InsertTimePrompt
+          VoicePickerPrompt EventListPage QuickMenuPanel QuickPopupLayer)
+    set_source_files_properties(
+        src/ui/songview/quick/${qml}.qml
+        PROPERTIES QT_RESOURCE_ALIAS ${qml}.qml)
+endforeach()
 qt_add_qml_module(porydaw_app
     URI Porydaw.Ui
     VERSION 1.0
