@@ -115,12 +115,15 @@ enum class PresetColor {
     /// Automation lane node/curve ink and the written-event tab pip: Ableton's
     /// AutomationColor, authored per theme.
     automation_ink,
+    /// Ghost-enabled automation parameter tab bottom rule: Ableton's amber
+    /// Clip13, identical in every theme.
+    automation_ghost_edge,
     /// Sentinel for the number of authored preset colors; not rendered.
     count,
 };
 
 inline constexpr auto presetColorCount = static_cast<std::size_t>(PresetColor::count);
-static_assert(presetColorCount == 41);
+static_assert(presetColorCount == 42);
 
 constexpr PresetColor presetColorFor(Role role);
 
@@ -300,6 +303,7 @@ inline constexpr auto rolePresetColors = std::array{
     PresetColor::control_pressed_background,
     PresetColor::automation_tab_outline,
     PresetColor::automation_ink,
+    PresetColor::automation_ghost_edge,
 
     PresetColor::sample_waveform_ink,
     PresetColor::sample_crop_handle,
@@ -369,6 +373,7 @@ constexpr PresetColors makeVanilla()
     colors.color(PresetColor::automation_tab_outline) = "#8C857F";
     // Ableton Default Light Neutral High AutomationColor.
     colors.color(PresetColor::automation_ink) = "#EA3C3C";
+    colors.color(PresetColor::automation_ghost_edge) = "#E0AA2A";
     return colors;
 }
 
@@ -430,6 +435,7 @@ constexpr PresetColors makeDarkNeutralHigh()
     colors.color(PresetColor::automation_tab_outline) = "#62666F";
     // Ableton Default Dark Neutral High AutomationColor.
     colors.color(PresetColor::automation_ink) = "#FF4D47";
+    colors.color(PresetColor::automation_ghost_edge) = "#E0AA2A";
     return colors;
 }
 
@@ -488,6 +494,7 @@ constexpr PresetColors makeImmaterial()
     colors.color(PresetColor::automation_tab_outline) = "#616571";
     // Ableton Immaterial AutomationColor.
     colors.color(PresetColor::automation_ink) = "#FF91C3";
+    colors.color(PresetColor::automation_ghost_edge) = "#E0AA2A";
     return colors;
 }
 

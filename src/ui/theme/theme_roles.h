@@ -182,6 +182,9 @@ enum class Role {
     // Automation lane node and curve ink: the fixed identity red, shared by
     // every theme like the playhead.
     song_view_automation_node_ink,
+    // Ghost-enabled parameter tab bottom rule: Ableton's amber Clip13, fixed
+    // across every theme.
+    song_view_automation_ghost_edge,
 
     // Sample Editor waveform trace, painted on the item surface behind it.
     sample_waveform_ink,

@@ -222,7 +222,7 @@ Item {
                             anchors.bottom: parent.bottom
                             anchors.margins: root.appearance.stroke
                             height: root.appearance.stroke
-                            color: root.appearance.selectionOutline
+                            color: root.appearance.ghostEdge
                         }
 
                         // Shared-selection inclusion: right-edge bar using the

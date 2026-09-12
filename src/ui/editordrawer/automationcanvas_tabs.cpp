@@ -250,8 +250,8 @@ QVariantMap AutomationCanvas::parameterAppearance() const
     appearance.insert(QStringLiteral("pipExtent"), layout::fontPxF(0.5));
     appearance.insert(QStringLiteral("inset"), layout::space(layout::Space::One));
     appearance.insert(QStringLiteral("stroke"), layout::singlePixel());
-    appearance.insert(QStringLiteral("selectionOutline"),
-                      themes::color(themes::Role::song_view_selection_edge));
+    appearance.insert(QStringLiteral("ghostEdge"),
+                      themes::color(themes::Role::song_view_automation_ghost_edge));
     appearance.insert(QStringLiteral("focusOutline"), themes::color(themes::Role::focus_outline));
     appearance.insert(QStringLiteral("tabBackground"),
                       themes::color(themes::Role::song_view_automation_tab_background));
