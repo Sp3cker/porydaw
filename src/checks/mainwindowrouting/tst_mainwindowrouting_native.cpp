@@ -42,28 +42,11 @@ class MainWindowRoutingNativeTest final : public QObject, private MainWindowRout
         QVERIFY(menu);
         QAction *copy = window.m_copyAction;
         QAction *solo = window.m_soloAction;
-        QAction *insertTime = window.m_insertTimeAction;
         QVERIFY(copy);
         QVERIFY(solo);
-        QVERIFY(insertTime);
         menu->popup(window.mapToGlobal(QPoint(12, 12)));
         QTRY_VERIFY(menu->isVisible());
         menu->hide();
-        QCOMPARE(copy->parent(), &window);
-        QCOMPARE(solo->parent(), &window);
-        QCOMPARE(insertTime->parent(), &window);
-        QVERIFY(menu->actions().contains(copy));
-        QVERIFY(menu->actions().contains(solo));
-        QVERIFY(menu->actions().contains(insertTime));
-        QCOMPARE(copy->shortcutContext(), Qt::WindowShortcut);
-        QCOMPARE(solo->shortcutContext(), Qt::WindowShortcut);
-        QCOMPARE(insertTime->shortcutContext(), Qt::WindowShortcut);
-        QCOMPARE(copy->shortcuts(),
-                 keymap::Registry::instance().bindings(QStringLiteral("roll.copy")));
-        QCOMPARE(solo->shortcuts(),
-                 keymap::Registry::instance().bindings(QStringLiteral("roll.solo_tracks")));
-        QCOMPARE(insertTime->shortcuts(),
-                 keymap::Registry::instance().bindings(QStringLiteral("edit.insert_time")));
 
         SongView &view = session->b->view();
         std::optional<DocNote> note;

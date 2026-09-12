@@ -2,7 +2,6 @@
 
 #include <QObject>
 #include <QString>
-#include <QTemporaryDir>
 
 #include "ui/keymap.h"
 
@@ -15,7 +14,7 @@ class KeymapCheckTest final : public QObject
     KeymapCheckTest() = default;
 
   private slots:
-    void initTestCase();
+    void keymapSettingsSeedsAreIgnored();
 
     void defaultMatching_data();
     void defaultMatching();
@@ -23,7 +22,8 @@ class KeymapCheckTest final : public QObject
 
   private:
     bool matches(const QString &id, int key, Qt::KeyboardModifiers modifiers) const;
-    QTemporaryDir m_settingsDirectory;
+    // No QSettings isolation: keymapSettingsSeedsAreIgnored() seeds the real
+    // user-scope keymap/ store on purpose.
 };
 
 int runKeymapCheck(const QStringList &qtArguments);

@@ -72,11 +72,7 @@ class EventListController : public QObject
     // Semantic event-action eligibility. The controller owns row visibility,
     // editor state, and same-tick destination legality; unrelated song
     // selections do not participate.
-    bool canMoveCurrentRow(int delta) const
-    {
-        return m_visible && !isEditing() && m_currentRow >= 0 &&
-               moveDestForRow(m_currentRow, delta) >= 0;
-    }
+    bool canMoveCurrentRow(int delta) const;
 
     // The controller owns document and track-selection signal registration.
     void setDocument(SongDocument *document);

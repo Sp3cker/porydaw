@@ -44,6 +44,52 @@ Each line is one bounded task with its execution route, reason and implementatio
 20. [Dismiss and share the automation fallback Clear action](task-20-brief.md) — **SDD-track**: Automation menu lifetime must track lane/time identity, not focused drawer. Seat: `qt-cpp-reviewer`.
 21. [Dismiss automation point menus without invalidating drafts](task-21-brief.md) — **SDD-track**: Point-menu retirement must not erase guarded numeric transactions. Seat: `qt-cpp-reviewer`.
 22. [Expose the existing selected-note velocity form](task-22-brief.md) — **SDD-track**: New canonical entry must preserve the real guarded form transaction. Seat: `qt-cpp-reviewer`.
+R1. Remediation — [Keymap catalogue collapse](task-R1-brief.md) —
+    **SDD-track**: dead keymap plumbing deleted (K-B1); forwarding accessors
+    consolidated with the allowShift carve-out and `singleStroke` helper
+    (K-M5), matches overload split with `isModifierKey` kept public (K-M6);
+    K-m7/K-m8 opportunistic. Seat: `qt-cpp-reviewer`.
+R2. Remediation — [Make attach the single context writer](task-R2-brief.md)
+    — **SDD-track**: five caller-side `setShortcutContext` pre-writes deleted
+    (K-B2), including the automation-page live contradiction. Seat:
+    `qt-cpp-reviewer`.
+R3. Remediation — [Keymap override-immunity regression](task-R3-brief.md) —
+    **SDD-track**: seeded registry keys provably ignored (K-B3). Seat:
+    `qt-cpp-reviewer`.
+R4. Remediation — [SettingsDialog bool cutover](task-R4-brief.md) —
+    **SDD-track**: two-value Tab machine to a constructor bool (K-M4). Seat:
+    `qt-cpp-reviewer`.
+R5. Remediation — [Canonical command table + delivery-class recognizer](task-R5-brief.md)
+    — **SDD-track**: one table, one recognizer (E-B1/E-B2) with the
+    delivery-class parameter; preserves the window-delivered vs
+    EditorRouted/manually-delivered split (cross-cutting gate 1). Seat:
+    `qt-cpp-reviewer`.
+R6. Remediation — [Availability/dispatch collapse](task-R6-brief.md) —
+    **SDD-track**: shared predicates and per-command rows (E-M4/E-M5);
+    focus/owner precedence resolved once (E-m7, E-m8 absorbed). Seat:
+    `qt-cpp-reviewer`.
+R7. Remediation — [Narrowed EditActions bind contract](task-R7-brief.md) —
+    **SDD-track**: E-M3 option (b), bind/unbind without reassignment; the
+    destroyed-refresh connection is kept under the borrow contract (E-m11);
+    decided once per cross-cutting gate 2, before Q-F1's helper lands. Seat:
+    `qt-cpp-reviewer`.
+R8. Remediation — [EditActions refresh regimes](task-R8-brief.md) —
+    **SDD-track**: clipboard cache kept; never-replaced-canvas machinery
+    deleted; Copy folded into focus precedence (E-M6 amended). Seat:
+    `qt-cpp-reviewer`.
+R9. Remediation — [Fixture bind helper + per-site mechanical migration](task-R9-brief.md)
+    — **Direct**: one `checks::support` helper replaces all identical
+    `EditActions`/`rebind` fixture construction sites (29 sites / 23 files,
+    Q-F1; explicit mechanical-migration exception). Seat: `qt-cpp-reviewer`.
+R10. Remediation — [Quick-menu restructure](task-R10-brief.md) —
+     **SDD-track**: Q-F2 header move + contract doc (Q-F3 rejected, folded as
+     a doc sentence), Q-F4 per-level observation, Q-F5 trigger extraction
+     keeping the post-trigger guard, Q-F6 shared predicate keeping the
+     `isEditing` guard. Seat: `qt-cpp-reviewer`.
+T22R. Mid-plan review gate — [Thermo-nuclear review after task 22](task-T22R-brief.md)
+      — **Gate, not a task**: single `thermo-nuclear-reviewer` pass over tasks
+      12–22 + R-fixes; gates 1/2 re-verified; fix loop bounded to one round.
+      Seat: `thermo-nuclear-reviewer`.
 23. [Expose cursor-based time signature form entry](task-23-brief.md) — **SDD-track**: Exact cursor/event identity must survive the existing modal transaction. Seat: `qt-cpp-reviewer`.
 24. [Implement canonical velocity and positional commands](task-24-brief.md) — **SDD-track**: Current cursor/selection and multi-command undo define the new shared entries. Seat: `qt-cpp-reviewer`.
 25. [Complete Edit menu with existing action objects](task-25-brief.md) — **SDD-track**: Transport ownership and native menu projection must remain identity-preserving. Seat: `qt-cpp-reviewer`.
@@ -67,6 +113,10 @@ Each line is one bounded task with its execution route, reason and implementatio
 | Remaining canonical actions | 15/22/23 → 24 → 25 | SongView enum/dispatch and EditActions factory stay one ownership slice |
 | Context-menu cutover | 19/25/20/21 → 26; 19/24 → 27; 18/19/24 → 28; 16/19 → 29 | Range, note, ruler and event rows migrate only after their contracts exist; Task 28 composes ruler rows independently of Task 26's range-menu producer |
 | Cursor/final cutover | 28 → 30; 26/27/28/29/30 → 31 → 32 → 33 | Serialize Task 26 before Task 30 for their shared rangeedit.cpp writes, not as an interface prerequisite; final review and whole-suite validation are controller-owned |
+| Remediation (keymap/settings) | R1 → R2 → R3; R4 independent | Keymap/settings writes serialized; SettingsDialog cutover may run parallel to R1 |
+| Remediation (editactions core) | R5 → R6 → R7 → R8 | `editactions.h/.cpp` and `editkeyrouting.cpp` edits serialized; gate 1 (delivery split) and gate 2 (E-M3 option (b), decided in R7 before R9's helper) hold across all four |
+| Remediation (fixtures + quick) | R5 → R9; R5 → R10 | R9 is Direct and independent once R7's contract is decided-but-not-required-to-land; R10 follows R5's final recognizer shape |
+| Mid-plan review gate | R1–R10 in flight or landed → T22R → then tasks 23+ resume | T22R after task 22 and the R batch; single `thermo-nuclear-reviewer` pass, one bounded fix round; outcome recorded in progress.md |
 
 The brief prerequisites are authoritative. A shared write set adds serialization, not an invented public API dependency.
 
@@ -101,7 +151,7 @@ The brief prerequisites are authoritative. A shared write set adds serialization
 | Ruler targeting | Selection path finishes before the cursor path can snap; menu opening takes only scene position, not a pre-snapped tick | A cold scout classified after snapping despite quoting the opposite rule. Removed the pre-snapped argument/left-drag-anchor reuse; exact chip or raw press coordinates decide the path, and only the outside background path snaps |
 | Menu metadata/lifetime | Action-derived open-time projection; dismiss on relevant context or represented action metadata changes | Rejected local mutation switches and a second live metadata model. Paste empty↔valid can retire a menu; valid↔valid reads fresh payload at execution. Disabled Paste remains genuinely disabled |
 | Checked-state synchronization | Canonical semantics use triggered only; plain setChecked preserves changed notifications; borrowed toggle owners stay unchanged | Qt review found that QSignalBlocker would suppress the menu-retirement signal. The obsolete Pencil toggled sink is explicitly removed; no metadata replay or custom signal is added |
-| Submenu observation lifetime | Observe the full represented item tree on the existing root Level; detach at root teardown and cancel action-backed root resets | Qt review confirmed that per-open-level observation misses changes in unopened/popped submenu snapshots. One tree walk preserves lazy submenu models; value-only reset/stayOpen behavior remains |
+| Submenu observation lifetime | Observe each open level on its own existing Level; detach each level's connections at its teardown; retirement on `changed()` is level-scoped | Q-F4 sign-off amended the remedy: the root tree walk also observed popped/unopened submenu snapshots and forced whole-session cancels; per-level observation retires only the affected level's stack (root retirement remains the session cancel) and the `actionBackedRoot` reset special case dies with the recursion |
 | Shared popup hosts | Require session ownership plus the relevant root model or typed fallback row | Review found that host-only cancellation also closes unrelated grid/lane menus. Ruler root identity and the stable automation Clear row distinguish existing menu kinds without new state; the inactive Clear row also explicitly borrows its canonical action |
 | Menu activation and focus | Scope-agnostic fromAction borrowing; one terminal host branch closes, rechecks guards and triggers, then reports focus-only completion | Cold scouts inferred menu-side scope and uncertainty after close callbacks. Callers now have no shortcut/lifetime decisions; failed guards return with no retry or completion, and a new form keeps focus |
 | Forms and positional edits | Keep existing guarded forms; loop/signature/velocity actions use current cursor/selection | Stale menus disappear, not numeric transaction guards. Loop set/remove remains two undo commands. Static Set Velocity label replaces the context-only suffix |
@@ -118,3 +168,4 @@ Plan-agent second opinions: `ActionArchitectureReview` (action ownership, fixed 
 - Ruler inside/outside/end/chip behavior, no note-grid seek, selected versus cursor Insert Time and advancing-playback form acceptance match the spec.
 - Context changes dismiss menus without later stale activation; commands close before opening a form; form guards and two-step loop undo remain.
 - All named checks and final full suite pass, actual visual walkthrough evidence is recorded, and existing manual/changelog text matches the final behavior.
+

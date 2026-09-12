@@ -1,5 +1,6 @@
+#include "checks/support/support.h"
 #include "mainwindowroutingfixture.h"
-#include "ui/songview/editactions.h"
+#include "ui/songview.h"
 
 #include <QCloseEvent>
 
@@ -159,8 +160,7 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         QCOMPARE(ready.count(), 0);
         probe.applyVoicegroupBound(*session->b->voicegroupId());
         QVERIFY(probe.isReady());
-        auto *const editActions = new songview::EditActions(&probe.view());
-        editActions->rebind(&probe.view());
+        checks::support::bindEditActionsForTest(probe.view());
         QCOMPARE(ready.count(), 1);
     }
 
@@ -188,8 +188,7 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
         probe.applyMidiStage(*song, std::move(initial), budget);
         probe.applyBankView(LoadedBankView{identity, borrowVoicegroupLease(&bank), QString()});
         probe.applyVoicegroupBound(identity);
-        auto *const editActions = new songview::EditActions(&probe.view());
-        editActions->rebind(&probe.view());
+        checks::support::bindEditActionsForTest(probe.view());
         QVERIFY(probe.isReady());
         const MidiTimeline *bound = probe.timeline().get();
         SongView::ViewState state = probe.view().viewState();
@@ -241,8 +240,7 @@ class MainWindowRoutingLifecycleTest final : public QObject, private MainWindowR
                              workspace.projectState().snapshot.trackBudgetFor(*song));
         probe.applyBankView(LoadedBankView{identity, borrowVoicegroupLease(&initial), QString()});
         probe.applyVoicegroupBound(identity);
-        auto *const editActions = new songview::EditActions(&probe.view());
-        editActions->rebind(&probe.view());
+        checks::support::bindEditActionsForTest(probe.view());
         QVERIFY(probe.isReady());
         const MidiTimeline *timeline = probe.timeline().get();
         const SongView::ViewState state = probe.view().viewState();

@@ -631,8 +631,8 @@ bool PitchBendEditor::handleUnclaimedKeyPress(QKeyEvent *event)
         return true;
     // Only solo routes out of the popup; the remaining roll edit commands
     // must not reach the song while the note automation popup has focus.
-    if (m_songView &&
-        keymap::Registry::instance().matches(event, QStringLiteral("roll.solo_tracks"))) {
+    if (m_songView && keymap::Registry::instance().matches(event->key(), event->modifiers(),
+                                                           QStringLiteral("roll.solo_tracks"))) {
         m_songView->toggleSoloOnSelectedTracks();
         return true;
     }

@@ -364,6 +364,47 @@ class RulerGridMenuTest final : public QObject
                  "the dismissal probe point does not act on the ruler");
     }
 
+    void rulerGridMenusSurviveSelectionAndCursorChanges()
+    {
+        SyntheticHost host;
+        QString error;
+        QVERIFY2(host.prepare(&error), qPrintable(error));
+        SongView &view = host.view();
+        const RulerGridSurface surface = rulerGridSurface(view);
+        QVERIFY2(surface.valid(), "could not discover the Quick ruler grid controls");
+        const quick_popup::PromptGuard guard(view);
+
+        const RulerGridMenu divisionMenu = openRulerGridMenu(view, *surface.division);
+        QVERIFY2(divisionMenu.session, qUtf8Printable(divisionMenu.diagnostic));
+
+        // Ruler-menu retirement is scoped to the ruler loop menu's root
+        // model: a selection change and a committed cursor move must leave
+        // the division menu sharing the host open and fully functional.
+        songview::EditorSelectionModel::TimeSelection range;
+        range.startTick = 0;
+        range.endTick = 48;
+        range.scope = songview::EditorSelectionModel::TimeSelection::Tracks;
+        view.selectionModel().setTimeSelection(range);
+        QCoreApplication::processEvents();
+        QVERIFY2(divisionMenu.session && divisionMenu.session->isOpen(),
+                 "a selection change dismissed the open division menu");
+
+        view.commitEditCursor(view.editCursorTick() + 96);
+        QCoreApplication::processEvents();
+        QVERIFY2(divisionMenu.session && divisionMenu.session->isOpen(),
+                 "a committed cursor move dismissed the open division menu");
+
+        const int targetDivision = view.viewState().gridMinDenom == 8 ? 16 : 8;
+        const int targetDivisionRow = divisionMenu.model->rowForId(targetDivision);
+        QVERIFY2(targetDivisionRow >= 0, "the division menu omitted the chosen denominator");
+        QVERIFY2(quick_popup::clickMenuRow(*divisionMenu.session, targetDivisionRow),
+                 "the division row did not receive a real click");
+        QCoreApplication::processEvents();
+        QVERIFY2(!divisionMenu.session->isOpen(), "a division pick left the shared menu open");
+        QCOMPARE(view.viewState().gridMinDenom, targetDivision);
+        view.selectionModel().clearTimeSelection();
+    }
+
     void rulerGridClosePopupsCancelsOwnedNotForeignPopups()
     {
         SyntheticHost host;
@@ -577,7 +618,8 @@ class RulerGridMenuTest final : public QObject
                  "the unopened-submenu QAction row did not render its root menu");
         submenuAction.setText(QStringLiteral("Changed while unopened"));
         QCoreApplication::processEvents();
-        QVERIFY2(!session->isOpen(), "changing an unopened submenu action did not cancel its root");
+        QVERIFY2(session->isOpen(),
+                 "changing an unopened submenu action retired its unobserved root");
 
         QVERIFY2(openActionMenu(submenuModel),
                  "the reopened submenu QAction root did not render as a Quick menu");
@@ -589,7 +631,8 @@ class RulerGridMenuTest final : public QObject
         QCOMPARE(actionHost.currentModel(), &submenuModel);
         submenuAction.setText(QStringLiteral("Changed after submenu pop"));
         QCoreApplication::processEvents();
-        QVERIFY2(!session->isOpen(), "changing a popped submenu action did not cancel its root");
+        QVERIFY2(session->isOpen(),
+                 "changing a popped submenu action retired its detached level's former root");
 
         QAction resetAction(QStringLiteral("Reset root"));
         songview::QuickMenuModel resetModel;
@@ -598,7 +641,8 @@ class RulerGridMenuTest final : public QObject
                  "the action-backed reset root did not render as a Quick menu");
         resetModel.setItems({songview::QuickMenuItem::fromAction(resetAction, 106)});
         QCoreApplication::processEvents();
-        QVERIFY2(!session->isOpen(), "resetting an action-backed root did not cancel its menu");
+        QVERIFY2(session->isOpen(),
+                 "resetting an action-backed root rebuilt it in place instead of cancelling");
 
         songview::QuickMenuItem stayOpenItem;
         stayOpenItem.id = 107;

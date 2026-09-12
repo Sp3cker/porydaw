@@ -138,7 +138,6 @@ class AutomationEditingTest final : public QObject
     void actionShortcutLatching();
     void actionTextInputImmunity();
     void actionRepeatImmunity();
-    void actionCustomBinding();
     void actionHeldKeyGestures();
     void projectionPartialCell();
     void projectionValueBounds();

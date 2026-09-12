@@ -116,10 +116,7 @@ inline QString focusObjectIdentity(const QObject *object)
 // keymap instead of hardcoded keys.
 inline std::optional<QKeyCombination> firstBinding(const QString &id)
 {
-    const QList<QKeySequence> bindings = keymap::Registry::instance().bindings(id);
-    if (bindings.isEmpty() || bindings.front().count() != 1)
-        return std::nullopt;
-    return bindings.front()[0];
+    return keymap::Registry::instance().singleStroke(id);
 }
 
 // --- document note lookups ---

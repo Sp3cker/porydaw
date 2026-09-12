@@ -66,6 +66,8 @@ class PianoRollTest final : public QObject
     void timeSignaturePromptCancelStale();
     void timeSignaturePromptMenuEntries_data();
     void timeSignaturePromptMenuEntries();
+    void timeSignaturePromptCursorEntry_data();
+    void timeSignaturePromptCursorEntry();
     void gestureInterlock();
     void selectionBandSweep();
     void selectionPressAudition();

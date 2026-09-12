@@ -12,6 +12,7 @@
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
+#include "checks/support/support.h"
 #include "checks/support/timelinequickcheck.h"
 #include "core/velocitymodel.h"
 #include "ui/editordrawer/drawerchrome.h"
@@ -22,7 +23,6 @@
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
-#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -102,8 +102,7 @@ void VelocityPageTest::fixtureRoute101AndInputGeometry()
     QVERIFY(quick);
     view.setDocument(&song->document());
     view.setSong(timeline.get(), &voices);
-    auto *const editActions = new songview::EditActions(&view);
-    editActions->rebind(&view);
+    checks::support::bindEditActionsForTest(view);
     view.setDrawerActivePage(EditorDrawerPage::Velocity);
     view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
     QVERIFY(checks::support::showQuickViewport(view, QSize(960, 480)));

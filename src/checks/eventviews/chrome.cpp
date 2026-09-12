@@ -44,6 +44,16 @@ bool tickRenderedChecked(QQuickItem &row)
     return false;
 }
 
+SmfEvent controlChange(uint64_t tick, uint8_t controller, uint8_t value)
+{
+    SmfEvent event;
+    event.tick = tick;
+    event.status = 0xb0;
+    event.data0 = controller;
+    event.data1 = value;
+    return event;
+}
+
 } // namespace
 
 void EventViewsChromeTest::visibilityAndTrackSelection()
@@ -407,6 +417,54 @@ void EventViewsChromeTest::rowMenuActivationCloses()
     QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets));
     QTRY_COMPARE(widgets.model->rowCount(), rowsBefore + 1);
     QCOMPARE(opened.fixture->document().undoStack()->index(), undoBefore + 1);
+
+    // The owned row menu retires when its target context moves: a different
+    // current row, a chunk switch, a document edit, or a selection change.
+    const auto openRowMenu = [&] {
+        const QPointF point = checks::eventviews::cellSceneCenter(
+            widgets, controller.currentRow(), eventlist::EventTableModel::ColData);
+        if (point.isNull())
+            return false;
+        QTest::mouseClick(&window, Qt::RightButton, Qt::NoModifier, point.toPoint());
+        return QTest::qWaitFor([&controller] { return controller.menuOpen(); });
+    };
+
+    controller.selectRow(0, Qt::NoModifier);
+    QTRY_COMPARE(controller.currentRow(), 0);
+    QVERIFY(openRowMenu());
+    controller.selectRow(1, Qt::NoModifier);
+    QTRY_VERIFY(!controller.menuOpen());
+    QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets));
+
+    QVERIFY(openRowMenu());
+    QVERIFY(checks::eventviews::selectChunk(controller, 1));
+    QTRY_VERIFY(!controller.menuOpen());
+    QVERIFY(checks::eventviews::selectChunk(controller, 0));
+    QTRY_COMPARE(controller.chunk(), 0);
+
+    controller.selectRow(0, Qt::NoModifier);
+    QTRY_COMPARE(controller.currentRow(), 0);
+    QVERIFY(openRowMenu());
+    const int revisionBeforeInsert = opened.fixture->document().revision();
+    opened.fixture->document().insertRawEvent(0, controlChange(118, 7, 64));
+    QTRY_VERIFY(!controller.menuOpen());
+    QCOMPARE(opened.fixture->document().revision(), revisionBeforeInsert + 1);
+
+    // A stay-open filter menu is a different owned root: row changes while it
+    // is open must not dismiss it.
+    QQuickItem *const filterButton =
+        checks::eventviews::visualItem(window, QStringLiteral("eventListFilter"));
+    QVERIFY(filterButton);
+    const QPointF filterCenter = filterButton->mapToScene(
+        QPointF(filterButton->width() / 2.0, filterButton->height() / 2.0));
+    QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, filterCenter.toPoint());
+    QTRY_VERIFY(controller.menuOpen());
+    controller.selectRow(2, Qt::NoModifier);
+    QTRY_COMPARE(controller.currentRow(), 2);
+    QVERIFY(controller.menuOpen());
+    QVERIFY(checks::eventviews::activeMenuPanel(widgets));
+    QTest::keyClick(&window, Qt::Key_Escape);
+    QTRY_VERIFY(!controller.menuOpen());
 }
 
 // An outside right press reports the dismissed menu's owner and the retarget

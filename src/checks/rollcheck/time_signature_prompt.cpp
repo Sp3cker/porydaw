@@ -81,6 +81,11 @@ struct TimeSignatureFixture final {
 
     SongDocument &document() const noexcept { return song->document(); }
     SongView &view() const noexcept { return rig->view(); }
+    songview::TimeRuler *ruler() const
+    {
+        return rulerInput ? dynamic_cast<songview::TimeRuler *>(rulerInput->interaction())
+                          : nullptr;
+    }
 
     QPoint rulerPoint(uint64_t tick) const
     {
@@ -367,4 +372,74 @@ void PianoRollTest::timeSignaturePromptMenuEntries()
              "Escape did not close the ruler-menu time-signature prompt");
     QTRY_VERIFY2(fixture->rulerInput->hasActiveFocus(),
                  "closing the ruler-menu prompt did not return focus to the ruler input");
+}
+
+void PianoRollTest::timeSignaturePromptCursorEntry_data()
+{
+    QTest::addColumn<bool>("onEvent");
+    QTest::newRow("at an explicit signature event") << true;
+    QTest::newRow("at a cursor without a signature") << false;
+}
+
+// The shared Edit Time Signature entry resolves the live edit cursor: on an
+// explicit event it edits that event; elsewhere it inserts at the exact
+// cursor tick — not an adjacent snap point — seeded with the in-effect
+// signature. Both paths reuse the guarded form and its one-undo acceptance.
+void PianoRollTest::timeSignaturePromptCursorEntry()
+{
+    QFETCH(bool, onEvent);
+    QString error;
+    std::unique_ptr<TimeSignatureFixture> fixture =
+        TimeSignatureFixture::create(m_project->root(), m_songLabel, error);
+    QVERIFY2(fixture, qPrintable(error));
+    SongDocument &document = fixture->document();
+    const quick_popup::PromptGuard guard(fixture->view());
+    const int undo = document.undoStack()->index();
+    const int undoCount = document.undoStack()->count();
+    const uint64_t revision = document.revision();
+    const uint64_t cursorTick =
+        onEvent ? fixture->signatureTick : fixture->signatureTick + 7; // off any snap point
+
+    fixture->view().commitEditCursor(cursorTick);
+    songview::TimeRuler *const ruler = fixture->ruler();
+    QVERIFY2(ruler, "the live ruler input has no TimeRuler interaction");
+    ruler->editTimeSignatureAtCursor();
+    const TimeSignaturePromptSession opened = openedPrompt(fixture->view());
+    QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic));
+
+    // The form seeds the signature in effect at the cursor: the fixture's
+    // 3/4, whether or not an explicit event sits there.
+    QQuickItem *const numerator =
+        quick_popup::promptItem(*opened.popup, QLatin1String("timeSignatureNumerator"));
+    QVERIFY2(numerator, "the time-signature prompt has no numerator input");
+    QCOMPARE(numerator->property("text").toString(), QStringLiteral("3"));
+
+    QTest::keySequence(opened.window, QKeySequence(Qt::Key_5));
+    QCoreApplication::processEvents();
+    QCOMPARE(numerator->property("text").toString(), QStringLiteral("5"));
+    QVERIFY2(chooseDenominator(*opened.popup, 3), "the time-signature prompt has no 8 button");
+    QTest::keyClick(opened.window, Qt::Key_Return);
+    QCoreApplication::processEvents();
+
+    songview::QuickPopupSession *const popup = quick_popup::popupSession(fixture->view());
+    QVERIFY2(popup && !popup->isOpen(), "Return did not close the time-signature prompt");
+    const std::vector<DocTimeSig> signatures = document.timeSigs();
+    const auto signature =
+        std::find_if(signatures.cbegin(), signatures.cend(),
+                     [cursorTick](const DocTimeSig &value) { return value.tick == cursorTick; });
+    QVERIFY2(signature != signatures.cend() && signature->numerator == 5 &&
+                 signature->denomPow2 == 3 && document.revision() == revision + 1 &&
+                 document.undoStack()->index() == undo + 1 &&
+                 document.undoStack()->count() == undoCount + 1,
+             "Return did not commit 5/8 at the exact edit cursor as one undoable edit");
+    if (!onEvent) {
+        const auto original = std::find_if(
+            signatures.cbegin(), signatures.cend(),
+            [&fixture](const DocTimeSig &value) { return value.tick == fixture->signatureTick; });
+        QVERIFY2(original != signatures.cend() && original->numerator == 3 &&
+                     original->denomPow2 == 2,
+                 "inserting at the cursor moved or rewrote the existing 3/4 event");
+    }
+    QTRY_VERIFY2(fixture->rulerInput->hasActiveFocus(),
+                 "Return did not return focus to the ruler input");
 }

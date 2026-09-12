@@ -1,5 +1,6 @@
 #include "ui/editordrawer/automationcanvas.h"
 
+#include <QAction>
 #include <QQuickWindow>
 #include <algorithm>
 #include <limits>
@@ -9,8 +10,10 @@
 
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationpage.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/quickpopupsession.h"
+#include "ui/songview/quick/retirehostmenu.h"
 
 namespace {
 
@@ -63,8 +66,8 @@ LaneMenuKind laneMenuKind(bool tempo, const QString &laneTitle, std::size_t poin
 } // namespace
 
 // The automation menus are AutomationCanvas's slice of the shared canvas popup
-// session: one persistent typed QuickMenuHost/QuickMenuModel pair serves the
-// lane menu and the inactive time-selection menu, and a second pair in
+// session: one persistent typed QuickMenuHost with separate lane and inactive
+// time-selection root models, and a second pair in
 // automationcanvas_pointmenu.cpp serves the node point menu. This file owns
 // only the menu lifecycle — every command travels through the existing
 // AutomationPage/SongView primitives, re-resolved and revalidated
@@ -76,12 +79,22 @@ void AutomationCanvas::ensureMenuAdapters()
         return;
     m_menuHost = new songview::QuickMenuHost(this);
     m_menuModel = new songview::QuickMenuModel(this);
+    m_timeSelectionMenuModel = new songview::QuickMenuModel(this);
     connect(m_menuModel, &songview::QuickMenuModel::activated, this,
             &AutomationCanvas::handleMenuAction);
     // Any teardown of our session ownership (outside press, Escape, resize,
     // foreign replacement, window deactivation) drops the pending target.
     connect(m_menuHost, &songview::QuickMenuHost::cancelled, this,
             [this] { m_pendingMenu.reset(); });
+    // Selection, document and rebinding invalidation retire only this
+    // canvas's inactive time-selection fallback. Its dedicated model identity
+    // leaves lane menus sharing the host and foreign session content untouched.
+    // Ordinary invalidation restores focus; teardown/rebinding passes
+    // restoreFocus=false and leaves it alone.
+    connect(&m_page.m_owner, &SongView::contextMenusInvalidated, this, [this](bool restoreFocus) {
+        songview::retireHostMenu(m_menuSession.data(), m_menuHost, m_timeSelectionMenuModel,
+                                 restoreFocus);
+    });
 }
 
 void AutomationCanvas::setPopupSession(songview::QuickPopupSession *session)
@@ -136,26 +149,29 @@ void AutomationCanvas::showTimeSelectionMenuFor(LaneHandle contextLane,
         m_page.showTimeSelectionMenu(request);
         return;
     }
-    SongDocument *const document = m_page.document();
     songview::QuickPopupSession *const session = m_menuSession.data();
-    if (!document || !session || !session->window())
+    // The canonical row needs the view's bound action set; without it there
+    // is nothing to project and no menu opens.
+    const songview::EditActions *const actions = m_page.m_owner.editActions();
+    QAction *const clearAction =
+        actions ? actions->action(SongView::EditCommand::ClearTimeSelection) : nullptr;
+    if (!session || !session->window() || !clearAction)
         return;
-    // Inactive fallback: the same single clear row the native menu carried.
-    // Dispatch rechecks activation, exactly as the post-exec path did.
+    // Inactive fallback: the same single clear row the native menu carried,
+    // projected from the canonical command action. No active interval means
+    // the row renders disabled, and the host's guarded trigger replaces the
+    // old dispatch-time activation recheck, so the row can never act on a
+    // later selection; the action's changed() retirement and the
+    // invalidation subscription above dismiss the open menu instead.
     std::vector<songview::QuickMenuItem> rows;
-    rows.push_back(menuRow(int(Action::ClearTimeSelection), tr("Clear time selection")));
-    m_menuModel->setItems(std::move(rows));
-
-    PendingMenu target;
-    target.document = document;
-    target.documentRevision = document->revision();
-    target.lane = contextLane;
-    target.rowId = slot->id;
-
-    m_menuHost->open(m_menuModel, scenePosition);
-    if (!m_menuHost->isOpen())
-        return;
-    m_pendingMenu = std::move(target);
+    rows.push_back(
+        songview::QuickMenuItem::fromAction(*clearAction, int(Action::ClearTimeSelection)));
+    m_timeSelectionMenuModel->setItems(std::move(rows));
+    // End the press's implicit grab before the menu publishes: the panel
+    // must receive the following clicks, exactly as the node menu open does.
+    if (m_inputHost)
+        m_inputHost->releasePointerGrab();
+    m_menuHost->open(m_timeSelectionMenuModel, scenePosition);
 }
 
 void AutomationCanvas::showLaneMenuFor(LaneHandle handle, const QPointF &scenePosition)
@@ -277,14 +293,6 @@ void AutomationCanvas::handleMenuAction(int actionId)
         document->revision() != pending.documentRevision)
         return; // Stale document: no mutation, no announcement.
 
-    if (actionId == int(Action::ClearTimeSelection)) {
-        auto &model = m_page.m_owner.selectionModel();
-        if (model.timeSelection().active()) {
-            model.clearTimeSelection();
-            requestSelectionQuickUpdate();
-        }
-        return;
-    }
     // Lane-menu commands re-resolve the captured handle and require the same
     // row: a remap landing between open and dispatch cannot mutate a
     // different lane.

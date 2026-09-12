@@ -2,6 +2,10 @@
 
 #include "checks/clipcheck_support.h"
 #include "checks/quickpopupguard.h"
+#include <QDockWidget>
+#include <QQuickItem>
+#include <QQuickWindow>
+
 #include <QtTest>
 
 namespace {
@@ -112,37 +116,83 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         QCOMPARE(uint64_t(session->b->view().playheadTick() + 0.5), tick);
     }
 
+    void catalogueViewBindingsReachPersistentQuickFocus()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        MainWindow &window = *session->window;
+        SongView &view = session->b->view();
+        const auto &keys = keymap::Registry::instance();
+        QAction *const automation = window.m_automationDrawerAction;
+        QAction *const velocity = window.m_velocityDrawerAction;
+        QAction *const voiceChanges = window.m_voiceChangesDrawerAction;
+        QVERIFY(window.m_polyDock);
+        QAction *const polyphony = window.m_polyDock->toggleViewAction();
+        QVERIFY(automation);
+        QVERIFY(velocity);
+        QVERIFY(voiceChanges);
+        QVERIFY(polyphony);
+
+        QCOMPARE(automation->shortcuts(), keys.sequences(QStringLiteral("view.automation_drawer")));
+        QCOMPARE(velocity->shortcuts(), keys.sequences(QStringLiteral("view.velocity_drawer")));
+        QCOMPARE(voiceChanges->shortcuts(),
+                 keys.sequences(QStringLiteral("view.voice_changes_drawer")));
+        QCOMPARE(polyphony->shortcuts(), keys.sequences(QStringLiteral("view.polyphony_debugger")));
+        for (QAction *const action : {automation, velocity, voiceChanges, polyphony}) {
+            QCOMPARE(action->shortcutContext(), Qt::WindowShortcut);
+            QVERIFY(!action->shortcut().isEmpty());
+        }
+        QVERIFY(automation->toolTip().endsWith(
+            QStringLiteral("(%1)").arg(automation->shortcut().toString(QKeySequence::NativeText))));
+        QVERIFY(velocity->toolTip().endsWith(
+            QStringLiteral("(%1)").arg(velocity->shortcut().toString(QKeySequence::NativeText))));
+        QVERIFY(voiceChanges->toolTip().endsWith(QStringLiteral("(%1)").arg(
+            voiceChanges->shortcut().toString(QKeySequence::NativeText))));
+
+        songview::TimelineQuickView *const quick = view.quickView();
+        QQuickWindow *const quickWindow = quick ? quick->quickWindow() : nullptr;
+        QQuickItem *const velocityToggle = quick && quick->rootObject()
+                                               ? quick->rootObject()->findChild<QQuickItem *>(
+                                                     QStringLiteral("drawerVelocityToggle"))
+                                               : nullptr;
+        QVERIFY2(quickWindow && velocityToggle,
+                 "the active tab's persistent velocity drawer toggle is unavailable");
+        velocityToggle->forceActiveFocus(Qt::OtherFocusReason);
+        QTRY_VERIFY(velocityToggle->hasActiveFocus());
+        QCOMPARE(quickWindow->activeFocusItem(), velocityToggle);
+
+        QSignalSpy automationTriggered(automation, &QAction::triggered);
+        QSignalSpy velocityTriggered(velocity, &QAction::triggered);
+        QSignalSpy voiceChangesTriggered(voiceChanges, &QAction::triggered);
+        QSignalSpy polyphonyTriggered(polyphony, &QAction::triggered);
+
+        QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::Automations));
+        QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Velocity));
+        QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::VoiceChanges));
+        QVERIFY(!window.m_polyDock->isVisible());
+        sendShortcut(*quickWindow, automation->shortcut());
+        QCOMPARE(automationTriggered.count(), 1);
+        QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Automations));
+        sendShortcut(*quickWindow, velocity->shortcut());
+        QCOMPARE(velocityTriggered.count(), 1);
+        QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::Velocity));
+        sendShortcut(*quickWindow, voiceChanges->shortcut());
+        QCOMPARE(voiceChangesTriggered.count(), 1);
+        QVERIFY(view.drawerSectionVisible(EditorDrawerPage::VoiceChanges));
+        sendShortcut(*quickWindow, polyphony->shortcut());
+        QCOMPARE(polyphonyTriggered.count(), 1);
+        QVERIFY(window.m_polyDock->isVisible());
+    }
+
     void copyActionRoutesCompleteClipAndTimeSelection()
     {
         const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
         QVERIFY(session.has_value());
         MainWindow &window = *session->window;
-        QMenu *menu = editMenu(window);
         QAction *copy = window.m_copyAction;
-        QAction *insertTime = window.m_insertTimeAction;
-        QVERIFY(menu);
         QVERIFY(copy);
-        QVERIFY(insertTime);
-        QCOMPARE(copy->parent(), &window);
-        QCOMPARE(insertTime->parent(), &window);
-        QVERIFY(menu->actions().contains(copy));
-        QVERIFY(menu->actions().contains(insertTime));
-        QCOMPARE(copy->shortcutContext(), Qt::WindowShortcut);
-        QCOMPARE(insertTime->shortcutContext(), Qt::WindowShortcut);
         const QList<QKeySequence> bindings =
-            keymap::Registry::instance().bindings(QStringLiteral("roll.copy"));
-        QCOMPARE(copy->shortcuts(), bindings);
-        QCOMPARE(insertTime->shortcuts(),
-                 keymap::Registry::instance().bindings(QStringLiteral("edit.insert_time")));
-        int owners = 0;
-        for (QAction *action : window.findChildren<QAction *>()) {
-            if (action->isEnabled() &&
-                std::any_of(bindings.cbegin(), bindings.cend(), [action](const QKeySequence &key) {
-                    return action->shortcuts().contains(key);
-                }))
-                ++owners;
-        }
-        QVERIFY(bindings.isEmpty() || owners == 1);
+            keymap::Registry::instance().sequences(QStringLiteral("roll.copy"));
 
         const std::optional<DocNote> note = selectFirstNote(*session->b);
         QVERIFY(note.has_value());
@@ -208,16 +258,10 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
         QVERIFY(session.has_value());
         MainWindow &window = *session->window;
-        QMenu *menu = editMenu(window);
         QAction *solo = window.m_soloAction;
-        QVERIFY(menu);
         QVERIFY(solo);
-        QCOMPARE(solo->parent(), &window);
-        QVERIFY(menu->actions().contains(solo));
-        QCOMPARE(solo->shortcutContext(), Qt::WindowShortcut);
         const QList<QKeySequence> bindings =
-            keymap::Registry::instance().bindings(QStringLiteral("roll.solo_tracks"));
-        QCOMPARE(solo->shortcuts(), bindings);
+            keymap::Registry::instance().sequences(QStringLiteral("roll.solo_tracks"));
         QVERIFY(!bindings.isEmpty());
         const int track = session->b->view().selectionModel().primaryTrack();
         session->b->view().setTrackSolo(track, false);
@@ -573,7 +617,7 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         SongView &view = tab.view();
         QAction *action = window.m_deleteTimeAction;
         QVERIFY(action);
-        QVERIFY(action->isEnabled());
+        QVERIFY(!action->isEnabled());
 
         const std::optional<DocNote> source = selectFirstNote(tab);
         QVERIFY(source.has_value());
@@ -628,6 +672,7 @@ class MainWindowRoutingInputTest final : public QObject, private MainWindowRouti
         selection.startTick = selectionStart;
         selection.endTick = selectionEnd;
         view.selectionModel().setTimeSelection(selection);
+        QVERIFY(action->isEnabled());
         const uint64_t revision = tab.document().revision();
         action->trigger();
         QCoreApplication::processEvents();

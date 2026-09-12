@@ -549,24 +549,24 @@ class SongView : public QObject
     // protection lives here, not in individual keyboard or menu owners.
     void executeEditCommand(EditCommand command);
     // The currently bound canonical actions. This guarded borrow is read-only;
-    // EditActions::rebind is the sole binding mutation.
+    // EditActions::rebind is the sole binding mutation and accepts only
+    // nullptr (unbind) or this view (bind) — never a handover to another
+    // live view.
     const songview::EditActions *editActions() const noexcept;
     // Which surface routed the key to the shared policy: Timeline — the
     // roll-page bands and Quick surfaces whose note canvas is the live
     // editing target — or EventList, the Quick event page whose input item
     // owns the row-local table commands.
     enum class EditKeyOrigin { Timeline, EventList };
-    enum class SharedShortcutOwner { SongView, Window };
-    // Shared key-recognition policy (src/ui/songview/editkeyrouting.cpp):
-    // resolves shared keymap commands against the live selection while
-    // preserving origin eligibility and terminal consumption.
+    // Shared editor-key policy: recognizes canonical Editor-routed actions,
+    // preserves origin eligibility and terminal consumption, and activates
+    // each enabled action once.
     bool handleEditKey(const songview::TimelineKeyInput &input,
                        EditKeyOrigin origin = EditKeyOrigin::Timeline);
     // Release tail of the shared policy: finishes the keyboard transpose
     // audition from whichever surface the chord came up on. It reports
     // whether that release actually stopped an audition.
     bool handleEditKeyRelease(const songview::TimelineKeyInput &input);
-    void setSharedShortcutOwner(SharedShortcutOwner owner);
     // Shared Copy/Cut/Delete/Insert-blank/Duplicate/Remove-contents/Paste/
     // Clear context menu on the active selection, rendered through the
     // timeline Quick popup session. scenePos is a Quick-window scene
@@ -950,7 +950,6 @@ class SongView : public QObject
 
     EditorViewState m_editorViewState;
     EditorDrawer *m_editorDrawer = nullptr;
-    SharedShortcutOwner m_sharedShortcutOwner = SharedShortcutOwner::SongView;
     bool m_followScrollPaused = false;
     VelocityGestureModel m_velocityGesture;
     std::unique_ptr<songview::TimeRuler> m_ruler;

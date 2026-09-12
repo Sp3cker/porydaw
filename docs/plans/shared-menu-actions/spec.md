@@ -196,9 +196,21 @@ The [Qt widget shortcut-context implementation](https://raw.githubusercontent.co
 
 ### Action-backed Quick rows
 
-`QuickMenuItem::fromAction(QAction &, int id)` is a read-only, scope-agnostic projection. A menu caller supplies an existing action and lookup ID; it neither consults the catalogue nor attaches shortcuts, changes scope, or installs a callback. The helper produces a tagged action-backed row with `QPointer<QAction>` and open-time scalar roles: text (remove mnemonic markers while preserving escaped `&&`), primary native shortcut, enabled, checkable and checked. No label/enablement override API exists. A distinct tag prevents a destroyed action from becoming a value row.
+`QuickMenuItem::fromAction(QAction &, int id)` snapshots presentation text/enabled/checked at
+open time, retains a guarded non-owning identity the host triggers, requires the QAction to
+outlive the open menu, and retires the level on `changed()`. A menu caller supplies an existing
+action and lookup ID; the helper produces a tagged action-backed row with `QPointer<QAction>`
+and open-time scalar roles: text (remove mnemonic markers while preserving escaped `&&`),
+primary native shortcut, enabled, checkable and checked. No label/enablement override API
+exists. A distinct tag prevents a destroyed action from becoming a value row.
 
-QuickMenuHost cancels an open action-backed menu when a represented QAction changes metadata/eligibility or is destroyed. Walk the root `items()`/`children` tree once, including unopened submenu descendants, without calling `submenuForRow()` merely to observe actions. Store those connections and the action-backed-root flag on the existing root Level; disconnect when the root pops or tears down. Popping a child level leaves its still-represented actions observed. An action-backed root reset cancels the session rather than maintaining another set of projected rows; value-only roots retain their existing reset/stayOpen behavior. Destruction handlers never dereference the destroyed action.
+QuickMenuHost retires an open action-backed level when a represented QAction changes
+metadata/eligibility or is destroyed. Observe each open level on its own existing Level:
+collect only that level's own action-backed rows at push and store the connections in the
+level's `actionConnections`; detach each level's connections at its teardown; retirement on
+`changed()` is level-scoped. An action-backed level resets in place like any value-only level;
+value-only roots retain their existing reset/stayOpen behavior. Destruction handlers never
+dereference the destroyed action.
 
 This deliberately includes a clipboard transition that changes Paste eligibility; valid-to-valid payload changes need not close it. This avoids a second live metadata model while keeping reachable submenu rows accurate. Local value rows and lazy submenus retain their behavior; action-backed stayOpen rows are not supported.
 

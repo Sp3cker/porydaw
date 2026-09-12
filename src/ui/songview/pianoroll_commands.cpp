@@ -443,6 +443,17 @@ QVariantMap PianoRoll::velocityPromptAppearance() const
     return promptDialogAppearance(QGuiApplication::font());
 }
 
+void PianoRoll::openSelectedVelocityPrompt()
+{
+    // The shared Set Velocity entry resolves the live selection; the guarded
+    // snapshot, initial value, bounds, and one-undo acceptance all stay in
+    // openVelocityPrompt. No menu snapshot is consulted.
+    const std::vector<DocNote> notes = resolveSelection();
+    if (notes.empty())
+        return;
+    openVelocityPrompt(notes);
+}
+
 void PianoRoll::openVelocityPrompt(const std::vector<DocNote> &notes)
 {
     SongDocument *const document = m_sv->document();

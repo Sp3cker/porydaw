@@ -1,28 +1,44 @@
 #include "checks/keyboard/tst_keymapcheck.h"
 
-#include <QKeyEvent>
 #include <QSettings>
 #include <QStringList>
 #include <QtTest>
 
-void KeymapCheckTest::initTestCase()
+// spec.md line 22: "Old `keymap/` settings do not affect behavior". These four
+// seeds are that contract's regression proof: with an override chord, an empty
+// binding, and a conflicting hold chord present in the user-scope QSettings
+// store, the Registry still reports the shipped bindings and rejects the seeds.
+void KeymapCheckTest::keymapSettingsSeedsAreIgnored()
 {
-    QVERIFY2(m_settingsDirectory.isValid(), "could not create isolated QSettings directory");
-    QSettings::setDefaultFormat(QSettings::IniFormat);
-    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, m_settingsDirectory.path());
-    QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, m_settingsDirectory.path());
+    const auto &registry = keymap::Registry::instance();
+    const QString dragId = QStringLiteral("roll.velocity_drag");
+    const QString detentId = QStringLiteral("velocity.detent_unlock");
+
     QSettings settings;
     settings.setValue(QStringLiteral("keymap/roll.transpose_up"), QStringLiteral("Ctrl+Alt+U"));
     settings.setValue(QStringLiteral("keymap/transport.play_pause"), QString());
     settings.setValue(QStringLiteral("keymap/roll.velocity_drag"), QStringLiteral("Shift"));
     settings.setValue(QStringLiteral("keymap/velocity.detent_unlock"), QString());
     settings.sync();
+
+    QCOMPARE(registry.sequences(QStringLiteral("roll.transpose_up")),
+             QList<QKeySequence>{QKeySequence(Qt::Key_Up)});
+    QVERIFY(!matches(QStringLiteral("roll.transpose_up"), int(Qt::Key_U),
+                     Qt::ControlModifier | Qt::AltModifier));
+    QVERIFY(matches(QStringLiteral("roll.transpose_up"), int(Qt::Key_Up), Qt::NoModifier));
+
+    QCOMPARE(registry.sequences(QStringLiteral("transport.play_pause")),
+             QList<QKeySequence>{QKeySequence(Qt::Key_Space)});
+    QVERIFY(matches(QStringLiteral("transport.play_pause"), int(Qt::Key_Space), Qt::NoModifier));
+
+    QVERIFY(!registry.matchesModifier(Qt::ShiftModifier, dragId));
+    QVERIFY(registry.matchesModifier(Qt::ControlModifier, dragId));
+    QVERIFY(registry.matchesModifier(Qt::ControlModifier, detentId));
 }
 
 bool KeymapCheckTest::matches(const QString &id, int key, Qt::KeyboardModifiers modifiers) const
 {
-    QKeyEvent event(QEvent::KeyPress, key, modifiers);
-    return keymap::Registry::instance().matches(&event, id);
+    return keymap::Registry::instance().matches(key, modifiers, id);
 }
 
 void KeymapCheckTest::defaultMatching_data()

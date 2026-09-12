@@ -31,6 +31,10 @@ class ThemeController;
 class ThemeDialog;
 } // namespace themes
 
+namespace songview {
+class EditActions;
+} // namespace songview
+
 class OnboardingTest;
 class WorkspaceSessionTest;
 class WorkspaceTabsTest;
@@ -101,9 +105,7 @@ class MainWindow : public QMainWindow
   private slots:
     void saveSong();
     void exportWav();
-    void openSettings(SettingsDialog::Tab initialTab = SettingsDialog::Tab::Engine);
-    void openSongSettings();
-    void openEngineSettings();
+    void openSettings(bool songFirst = false);
     void uiTick();
 
   private:
@@ -132,6 +134,15 @@ class MainWindow : public QMainWindow
     // The tab's cfg (volume/reverb) merged with the global engine knobs —
     // everything AudioEngine::updateSettings applies.
     SongSettings songSettingsFor(const SongTab &tab) const;
+
+    // ---- Canonical edit actions ----
+    // The one retarget seam for the production set, called only at
+    // selected-tab and readiness changes. A change of target unbinds before
+    // the fresh bind — the narrowed borrow contract allows no live handover —
+    // and a null or unready view leaves every action disabled through the
+    // set's own refresh. All other state updates ride the set's target
+    // observations.
+    void rebindEditActions(SongTab *tab);
 
     // ---- Browse auditions (engine-owned; values resolved per call) ----
     // Browse-audition a keysplit instrument: play whatever sub-voice the
@@ -193,6 +204,13 @@ class MainWindow : public QMainWindow
     std::unique_ptr<QSettings> m_themeSettings;
     std::unique_ptr<themes::ThemeController> m_themeController;
     std::unique_ptr<themes::ThemeDialog> m_themeDialog;
+    // The one production canonical edit action set (songview::EditActions).
+    // The Edit menu borrows its QActions for presentation, and the four
+    // song-command pointers below are borrowed views of the same objects —
+    // never owning duplicates or separate handlers.
+    std::unique_ptr<songview::EditActions> m_editActions;
+    // Borrowed presentation pointers into m_editActions (Window-class
+    // commands), assigned once next to the menu composition.
     QAction *m_openProjectAction = nullptr;
     QAction *m_newSongAction = nullptr;
     QAction *m_importAction = nullptr;

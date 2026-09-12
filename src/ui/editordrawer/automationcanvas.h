@@ -394,6 +394,8 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     std::optional<PendingValuePrompt> m_pendingValuePrompt;
     songview::QuickMenuHost *m_menuHost = nullptr;
     songview::QuickMenuModel *m_menuModel = nullptr;
+    // Dedicated root used to retire only the inactive time-selection fallback.
+    songview::QuickMenuModel *m_timeSelectionMenuModel = nullptr;
     QPointer<songview::QuickPopupSession> m_menuSession;
     std::optional<PendingMenu> m_pendingMenu;
     // Typed node point menu adapter over the shared canvas popup session.

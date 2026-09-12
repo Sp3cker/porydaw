@@ -2,6 +2,7 @@
 
 #include "ui/fastlabel.h"
 #include <QApplication>
+#include <QCloseEvent>
 #include <QComboBox>
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -14,17 +15,15 @@
 #include <QHBoxLayout>
 #include <QKeySequence>
 #include <QLabel>
-#include <QLineEdit>
+#include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
-#include <QPlainTextEdit>
 #include <QPointer>
 #include <QProgressDialog>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QSpinBox>
 #include <QStatusBar>
-#include <QTextEdit>
 #include <QTimer>
 
 #ifdef Q_OS_WIN
@@ -45,6 +44,7 @@
 #include "ui/polyphonypanel.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
+#include "ui/songview/editactions.h"
 #include "ui/theme/themecontroller.h"
 #include "ui/theme/themedialog.h"
 #include "ui/theme/themeruntime.h"
@@ -66,6 +66,45 @@ bool sameSongSettings(const SongSettings &a, const SongSettings &b)
     return a.pcmMixer == b.pcmMixer && a.songVolume == b.songVolume && a.reverb == b.reverb &&
            a.maxPcmChannels == b.maxPcmChannels && a.pcmMixRate == b.pcmMixRate &&
            a.analogFilter == b.analogFilter;
+}
+
+// Projects the canonical song commands into the Edit menu. These are borrowed
+// actions: labels, bindings, availability, and execution stay in EditActions.
+void buildEditMenu(QMenu *editMenu, songview::EditActions &actions)
+{
+    editMenu->addAction(actions.action(SongView::EditCommand::Copy));
+    editMenu->addAction(actions.action(SongView::EditCommand::Cut));
+    editMenu->addAction(actions.action(SongView::EditCommand::Paste));
+    editMenu->addAction(actions.action(SongView::EditCommand::Delete));
+    editMenu->addAction(actions.action(SongView::EditCommand::SelectAll));
+
+    QMenu *timeMenu = editMenu->addMenu(MainWindow::tr("&Time"));
+    timeMenu->addAction(actions.action(SongView::EditCommand::InsertTime));
+    timeMenu->addAction(actions.action(SongView::EditCommand::DeleteTime));
+    timeMenu->addAction(actions.action(SongView::EditCommand::DuplicateTime));
+    timeMenu->addAction(actions.action(SongView::EditCommand::ClearTimeSelection));
+
+    QMenu *notesMenu = editMenu->addMenu(MainWindow::tr("&Notes"));
+    notesMenu->addAction(actions.action(SongView::EditCommand::TransposeUp));
+    notesMenu->addAction(actions.action(SongView::EditCommand::TransposeDown));
+    notesMenu->addAction(actions.action(SongView::EditCommand::TransposeUpOctave));
+    notesMenu->addAction(actions.action(SongView::EditCommand::TransposeDownOctave));
+    notesMenu->addAction(actions.action(SongView::EditCommand::PitchBend));
+
+    QMenu *moveMenu = editMenu->addMenu(MainWindow::tr("&Move"));
+    moveMenu->addAction(actions.action(SongView::EditCommand::NudgeLeft));
+    moveMenu->addAction(actions.action(SongView::EditCommand::NudgeRight));
+
+    QMenu *tracksMenu = editMenu->addMenu(MainWindow::tr("Tr&acks"));
+    tracksMenu->addAction(actions.action(SongView::EditCommand::MuteTracks));
+    tracksMenu->addAction(actions.action(SongView::EditCommand::SoloTracks));
+
+    QMenu *automationMenu = editMenu->addMenu(MainWindow::tr("&Automation"));
+    automationMenu->addAction(actions.action(SongView::EditCommand::PencilMode));
+
+    QMenu *eventsMenu = editMenu->addMenu(MainWindow::tr("&Events"));
+    eventsMenu->addAction(actions.action(SongView::EditCommand::MoveEventUp));
+    eventsMenu->addAction(actions.action(SongView::EditCommand::MoveEventDown));
 }
 
 #ifdef Q_OS_WIN
@@ -202,9 +241,16 @@ MainWindow::~MainWindow()
 
 void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
 {
-    // Every user-facing action registers with the keymap so its shortcut is
-    // rebindable; the registry owns defaults and re-applies user changes.
+    // Every user-facing action registers with the fixed keymap catalogue; the
+    // registry owns the shipped sequences and their shortcut context.
     auto &keys = keymap::Registry::instance();
+
+    // The production canonical edit action set is composed first: the menus
+    // below project borrowed pointers into it, and the set alone owns the
+    // Window shortcut registration — no editor widget receives a QAction
+    // association.
+    m_editActions = std::make_unique<songview::EditActions>(this);
+    m_editActions->installWindowShortcuts(*this);
 
     // Menu
     QMenu *fileMenu = menuBar()->addMenu(tr("&File"));
@@ -246,80 +292,24 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     keys.attach(QStringLiteral("edit.redo"), m_redoAction);
     m_redoAction->setEnabled(false);
     editMenu->addSeparator();
-    m_copyAction = new QAction(tr("&Copy"), this);
-    m_copyAction->setObjectName(QStringLiteral("copyWindowAction"));
-    m_copyAction->setShortcutContext(Qt::WindowShortcut);
-    keys.attach(QStringLiteral("roll.copy"), m_copyAction);
-    connect(m_copyAction, &QAction::triggered, this, [this] {
-        if (auto *lineEdit = qobject_cast<QLineEdit *>(QApplication::focusWidget())) {
-            lineEdit->copy();
-            return;
-        }
-        if (auto *plainTextEdit = qobject_cast<QPlainTextEdit *>(QApplication::focusWidget())) {
-            plainTextEdit->copy();
-            return;
-        }
-        if (auto *textEdit = qobject_cast<QTextEdit *>(QApplication::focusWidget())) {
-            textEdit->copy();
-            return;
-        }
-        if (m_selectedTab)
-            m_selectedTab->view().copySelection();
-    });
-    editMenu->addAction(m_copyAction);
-    m_copyAction->setEnabled(false);
-    // S solos at window scope so it works with focus anywhere outside text
-    // entry; the roll surface defers to this owner (see handleEditKey) so a
-    // focused roll never toggles twice.
-    m_soloAction = new QAction(tr("&Solo Selected Tracks"), this);
-    m_soloAction->setObjectName(QStringLiteral("soloWindowAction"));
-    m_soloAction->setShortcutContext(Qt::WindowShortcut);
-    keys.attach(QStringLiteral("roll.solo_tracks"), m_soloAction);
-    connect(m_soloAction, &QAction::triggered, this, [this] {
-        if (qobject_cast<QLineEdit *>(QApplication::focusWidget()) ||
-            qobject_cast<QPlainTextEdit *>(QApplication::focusWidget()) ||
-            qobject_cast<QTextEdit *>(QApplication::focusWidget())) {
-            return;
-        }
-        if (m_selectedTab)
-            m_selectedTab->view().toggleSoloOnSelectedTracks();
-    });
-    editMenu->addAction(m_soloAction);
-    m_soloAction->setEnabled(false);
-    m_insertTimeAction = new QAction(tr("Insert &Time"), this);
-    connect(m_insertTimeAction, &QAction::triggered, this, [this] {
-        if (m_selectedTab)
-            m_selectedTab->view().insertTime();
-    });
-    m_insertTimeAction->setObjectName(QStringLiteral("insertTimeWindowAction"));
-    m_insertTimeAction->setShortcutContext(Qt::WindowShortcut);
-    keys.attach(QStringLiteral("edit.insert_time"), m_insertTimeAction);
-    editMenu->addAction(m_insertTimeAction);
-    m_insertTimeAction->setEnabled(false);
-    m_deleteTimeAction = new QAction(tr("Delete &Time (Shift Left)"), this);
-    connect(m_deleteTimeAction, &QAction::triggered, this, [this] {
-        if (m_selectedTab)
-            m_selectedTab->view().removeTimeSelectionContents();
-    });
-    m_deleteTimeAction->setObjectName(QStringLiteral("deleteTimeWindowAction"));
-    m_deleteTimeAction->setShortcutContext(Qt::WindowShortcut);
-    keys.attach(QStringLiteral("edit.delete_time"), m_deleteTimeAction);
-    editMenu->addAction(m_deleteTimeAction);
-    m_deleteTimeAction->setEnabled(false);
+    m_copyAction = m_editActions->action(SongView::EditCommand::Copy);
+    m_soloAction = m_editActions->action(SongView::EditCommand::SoloTracks);
+    m_insertTimeAction = m_editActions->action(SongView::EditCommand::InsertTime);
+    m_deleteTimeAction = m_editActions->action(SongView::EditCommand::DeleteTime);
+    buildEditMenu(editMenu, *m_editActions);
     editMenu->addSeparator();
-    QAction *preferencesAction = editMenu->addAction(tr("Prefere&nces..."), this, [this] {
-        openSettings(m_selectedTab ? SettingsDialog::Tab::Song : SettingsDialog::Tab::Engine);
-    });
+    QAction *preferencesAction = editMenu->addAction(
+        tr("Prefere&nces..."), this, [this] { openSettings(m_selectedTab != nullptr); });
     preferencesAction->setMenuRole(QAction::PreferencesRole);
     keys.attach(QStringLiteral("edit.preferences"), preferencesAction);
 
     m_settingsAction =
-        editMenu->addAction(tr("Song Se&ttings..."), this, &MainWindow::openSongSettings);
+        editMenu->addAction(tr("Song Se&ttings..."), this, [this] { openSettings(true); });
     keys.attach(QStringLiteral("edit.song_settings"), m_settingsAction);
     m_settingsAction->setEnabled(false);
     // Global GBA-accuracy knobs (SPEC §7); not song-scoped, so always enabled.
     QAction *engineSettingsAction =
-        editMenu->addAction(tr("&Engine Settings..."), this, &MainWindow::openEngineSettings);
+        editMenu->addAction(tr("&Engine Settings..."), this, [this] { openSettings(false); });
     keys.attach(QStringLiteral("edit.engine_settings"), engineSettingsAction);
     auto *viewMenu = menuBar()->addMenu(tr("&View"));
     // View menu: piano roll vs raw MIDI event list, per tab.
@@ -332,25 +322,28 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
 
     m_automationDrawerAction = viewMenu->addAction(tr("Automation Drawer"));
     m_automationDrawerAction->setObjectName(QStringLiteral("automationDrawerWindowAction"));
-    m_automationDrawerAction->setShortcut(QKeySequence(Qt::Key_A));
-    m_automationDrawerAction->setShortcutContext(Qt::WindowShortcut);
-    m_automationDrawerAction->setToolTip(tr("Show or hide the automation drawer (A)"));
+    keys.attach(QStringLiteral("view.automation_drawer"), m_automationDrawerAction);
+    m_automationDrawerAction->setToolTip(
+        tr("Show or hide the automation drawer (%1)")
+            .arg(m_automationDrawerAction->shortcut().toString(QKeySequence::NativeText)));
     m_automationDrawerAction->setEnabled(false);
     connect(m_automationDrawerAction, &QAction::triggered, this,
             [this] { m_workspace->toggleDrawerPage(EditorDrawerPage::Automations); });
     m_velocityDrawerAction = viewMenu->addAction(tr("Velocity Drawer"));
     m_velocityDrawerAction->setObjectName(QStringLiteral("velocityDrawerWindowAction"));
-    m_velocityDrawerAction->setShortcut(QKeySequence(Qt::Key_V));
-    m_velocityDrawerAction->setShortcutContext(Qt::WindowShortcut);
-    m_velocityDrawerAction->setToolTip(tr("Show or hide the velocity drawer (V)"));
+    keys.attach(QStringLiteral("view.velocity_drawer"), m_velocityDrawerAction);
+    m_velocityDrawerAction->setToolTip(
+        tr("Show or hide the velocity drawer (%1)")
+            .arg(m_velocityDrawerAction->shortcut().toString(QKeySequence::NativeText)));
     m_velocityDrawerAction->setEnabled(false);
     connect(m_velocityDrawerAction, &QAction::triggered, this,
             [this] { m_workspace->toggleDrawerPage(EditorDrawerPage::Velocity); });
     m_voiceChangesDrawerAction = viewMenu->addAction(tr("Voice-change Drawer"));
     m_voiceChangesDrawerAction->setObjectName(QStringLiteral("voiceChangesDrawerWindowAction"));
-    m_voiceChangesDrawerAction->setShortcut(QKeySequence(Qt::Key_P));
-    m_voiceChangesDrawerAction->setShortcutContext(Qt::WindowShortcut);
-    m_voiceChangesDrawerAction->setToolTip(tr("Show or hide the voice-change drawer (P)"));
+    keys.attach(QStringLiteral("view.voice_changes_drawer"), m_voiceChangesDrawerAction);
+    m_voiceChangesDrawerAction->setToolTip(
+        tr("Show or hide the voice-change drawer (%1)")
+            .arg(m_voiceChangesDrawerAction->shortcut().toString(QKeySequence::NativeText)));
     m_voiceChangesDrawerAction->setEnabled(false);
     connect(m_voiceChangesDrawerAction, &QAction::triggered, this,
             [this] { m_workspace->toggleDrawerPage(EditorDrawerPage::VoiceChanges); });
@@ -400,8 +393,6 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     // Constructor injection: the loaded global editor state seeds the hub
     // before any tab exists; no startup write or hub transaction happens.
     m_workspace = std::make_unique<WorkspaceUi>(*this, initialEditorViewState);
-    for (SongTab *tab : m_workspace->tabsInDisplayOrder())
-        tab->view().setSharedShortcutOwner(SongView::SharedShortcutOwner::Window);
 
     {
         QSettings settings;
@@ -600,7 +591,7 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     m_polyDock->hide();
     QAction *polyDockAction = m_polyDock->toggleViewAction();
     polyDockAction->setText(tr("&Polyphony Debugger"));
-    polyDockAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+P")));
+    keys.attach(QStringLiteral("view.polyphony_debugger"), polyDockAction);
     viewMenu->addAction(polyDockAction);
 
     // App-wide appearance preferences, set off a separator from the
@@ -721,12 +712,13 @@ void MainWindow::changeEvent(QEvent *event)
 
 void MainWindow::onSelectedTabChanged(SongTab *tab)
 {
-    if (tab)
-        tab->view().setSharedShortcutOwner(SongView::SharedShortcutOwner::Window);
     // Switching tabs stops playback in the tab being left.
     if (m_audioOk)
         m_audio.stop();
     m_selectedTab = tab;
+    // The canonical set follows the selection before any chrome reads it;
+    // a null or unready view leaves every command disabled.
+    rebindEditActions(tab);
 
     {
         // Reflect the incoming tab's roll/event-list state without the
@@ -771,9 +763,9 @@ void MainWindow::onSelectedTabReady(SongTab *tab)
 {
     if (tab != m_selectedTab)
         return;
-    // The selected tab's terminal VoicegroupBound just landed (or the
-    // selection moved to an already-ready tab): bind the engine, then
-    // refresh the chrome that reads loaded state.
+    // The selected tab reached readiness: retarget the canonical set first,
+    // then bind the engine and refresh the chrome that reads loaded state.
+    rebindEditActions(tab);
     applySelectedAudio();
     updatePolyPanelContext(tab);
     syncMasterVolumeControl();
@@ -784,6 +776,18 @@ void MainWindow::onSelectedTabReady(SongTab *tab)
     updateWindowTitle();
     updateChrome();
     updateTransportActions();
+}
+
+// ---- Canonical edit actions --------------------------------------------------
+
+// The one retarget seam for the production set, called only at selected-tab
+// and readiness changes. A change of target unbinds before the fresh bind —
+// the narrowed borrow contract allows no live handover — and a null or
+// unready view leaves every action disabled through the set's own refresh.
+// Every other state update rides the set's target observations and refresh().
+void MainWindow::rebindEditActions(SongTab *tab)
+{
+    m_editActions->rebind(tab ? &tab->view() : nullptr);
 }
 
 void MainWindow::onSelectedSongStateChanged()
@@ -931,10 +935,8 @@ void MainWindow::updateChrome()
     m_saveAction->setEnabled(ready);
     m_exportWavAction->setEnabled(ready && m_audioOk && m_audio.songLoaded());
     m_settingsAction->setEnabled(ready);
-    m_copyAction->setEnabled(ready);
-    m_soloAction->setEnabled(ready);
-    m_insertTimeAction->setEnabled(ready);
-    m_deleteTimeAction->setEnabled(ready);
+    // Song-command availability is the canonical set's own refresh — driven
+    // by the bound target's live eligibility, never this ready-only pass.
     m_registerAction->setEnabled(ready && selectedSongRegistrationPending());
     m_closeTabAction->setEnabled(m_workspace->openTabCount() > 0);
     m_eventListAction->setEnabled(ready);
@@ -1297,13 +1299,13 @@ void MainWindow::exportWav()
                              8000);
 }
 
-void MainWindow::openSettings(SettingsDialog::Tab initialTab)
+void MainWindow::openSettings(bool songFirst)
 {
     auto song = std::optional<SongTarget>();
     if (m_selectedTab && m_selectedTab->isReady())
         song = SongTarget{m_selectedTab->document().cfg(), m_selectedTab->document().label()};
     const QStringList vgArgs = m_workspace->projectState().catalog.groupArgs;
-    SettingsDialog dialog(m_engineSettings, song, vgArgs, initialTab, this);
+    SettingsDialog dialog(m_engineSettings, song, vgArgs, songFirst, this);
     const auto apply = [this, &dialog] {
         const EngineSettings newEngine = dialog.engineSettings();
         if (newEngine.pcmMixer != m_engineSettings.pcmMixer ||
@@ -1324,18 +1326,8 @@ void MainWindow::openSettings(SettingsDialog::Tab initialTab)
         }
     };
     connect(&dialog, &SettingsDialog::applyRequested, this, apply);
-    if (dialog.exec() == QDialog::Accepted)
-        apply();
-}
-
-void MainWindow::openSongSettings()
-{
-    openSettings(SettingsDialog::Tab::Song);
-}
-
-void MainWindow::openEngineSettings()
-{
-    openSettings(SettingsDialog::Tab::Engine);
+    connect(&dialog, &QDialog::accepted, this, apply);
+    dialog.exec();
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)

@@ -7,9 +7,9 @@
 #include <cmath>
 #include <utility>
 
+#include "checks/support/support.h"
 #include "core/miditimeline.h"
 #include "ui/songview.h"
-#include "ui/songview/editactions.h"
 
 namespace checks {
 
@@ -111,8 +111,7 @@ std::unique_ptr<SongViewRig> SongViewRig::create(std::unique_ptr<LoadedSong> loa
         new SongViewRig(std::move(loadedSong), std::move(timeline), sampleRate));
     rig->m_view->setSong(rig->m_timeline.get(), nullptr);
     rig->m_view->setDocument(&rig->m_song->document());
-    auto *const editActions = new songview::EditActions(rig->m_view.get());
-    editActions->rebind(rig->m_view.get());
+    support::bindEditActionsForTest(*rig->m_view);
     return rig;
 }
 

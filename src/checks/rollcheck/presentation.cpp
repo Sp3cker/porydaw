@@ -16,10 +16,10 @@
 #include "checks/trackheaders/trackheaderoracles.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/trackheadermodel.h"
-
 using namespace checks::rollcheck;
 
 using checks::rollcheck::headercheck::model;
@@ -202,6 +202,14 @@ void PianoRollTest::headerKeyboardMuteSolo()
             const std::optional<int> row = rowForTrack(*headers, track);
             return row && headers->data(headers->index(*row, 0), role).toBool();
         };
+        // S is a Window-scope command: the isolated fixture owns no window
+        // shortcut, so the canonical action is the stimulus (the same
+        // treatment the spec gives the isolated Copy fixture stimulus).
+        const songview::EditActions *const actions = view.editActions();
+        QAction *const soloAction =
+            actions ? actions->action(SongView::EditCommand::SoloTracks) : nullptr;
+        if (!soloAction)
+            QFAIL("canonical solo action was not bound to the view");
 
         const int selectedTrack = view.selectionModel().primaryTrack();
         if (view.muteMask() != 0 || view.soloMask() != 0)
@@ -216,12 +224,12 @@ void PianoRollTest::headerKeyboardMuteSolo()
             QFAIL("second M did not unmute the selected track");
         if (roleChecked(selectedTrack, songview::TrackHeaderModel::MuteCheckedRole))
             QFAIL("keyboard unmute did not clear the checked Quick header role");
-        sendKeyStroke(roll, Qt::Key_S, Qt::NoModifier, false);
+        soloAction->trigger();
         if (!view.trackSoloed(selectedTrack) ||
             !roleChecked(selectedTrack, songview::TrackHeaderModel::SoloCheckedRole)) {
             QFAIL("S did not publish the selected track's solo role");
         }
-        sendKeyStroke(roll, Qt::Key_S, Qt::NoModifier, false);
+        soloAction->trigger();
         if (view.soloMask() != 0 ||
             roleChecked(selectedTrack, songview::TrackHeaderModel::SoloCheckedRole)) {
             QFAIL("second S did not clear the selected track's solo role");

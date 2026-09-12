@@ -1,5 +1,16 @@
 # Shared menu actions — progress and problems (2026-09-11)
 
+## Remediation amendment (2026-09-11)
+
+Plan amended with R1–R10 remediation briefs and a T22R mid-plan review gate.
+**Next step: R1** (Keymap catalogue collapse, task-R1-brief.md). R1–R4 cover
+the keymap/settings sign-off remediation, R5–R8 the editactions core, R9 the
+Direct per-site fixture helper migration, R10 the quick-menu restructure.
+T22R is the mid-plan thermo-nuclear review gate after task 22
+(task-T22R-brief.md). E-M3 is decided as option (b) — narrowed bind contract,
+decided once before R9's helper lands (task-R9-brief.md Context).
+The amendment is implementation-plan-only; these are plan docs, not code.
+
 Executed tasks 1–11 on `feature/time-editing`. Tasks 1–10 review-gated clean
 (SPEC YES / PASS); task 11 is Direct, covering checks green. Full suite runs
 once at final integration (task 32 / plan constraint 6).
@@ -9,7 +20,10 @@ once at final integration (task 32 / plan constraint 6).
 - Committed per-task (old policy): tasks 1–9 (`08fee420` … `39720d28`).
 - Uncommitted, accepted: task 10 (r0 package `task-10-review-r0.diff`,
   review clean) + task 11 (23 fixture files, 29 EditActions/rebind roots).
-- Next: task 12 (Direct), then 13. Milestones per plan Checkpoint cadence:
+- Next: task 12 (Direct), then 13; the top of the remediation queue is R1
+  (Keymap catalogue collapse) once this amendment is accepted — full order
+  R1 → R2 → R3/R4 → R5 → R6 → R7 → R8 → R9 → R10, T22R after task 22 + the
+  R batch, then tasks 23–33 resume. Milestones per plan Checkpoint cadence:
   T17, T31, T33+final. No per-task commits going forward.
 - CHECKPOINT for BASE purposes: `39720d28`.
 
@@ -83,3 +97,34 @@ once at final integration (task 32 / plan constraint 6).
 - Task 4/5 acceptance app-launch inspections were deferred the same way;
   menu-route behavior is covered by `mainwindow-routing` + `settings-dialog`
   harnesses in the meantime.
+
+## Standup 2026-09-11 — tasks 12–22 + R-fixes + T22R gate CLOSED
+
+- Tasks 12–22 all landed (19 was pre-committed; 16 last: Alt+Up/Down via
+  shared MoveEventRow command, verified selectionkey + eventviews-edits).
+- Dual thermo audit (request-changes) → 7-item fix list landed; T22R single
+  gate: Gate 1 HELD (delivery split structural), Gate 2 HELD (narrowed
+  rebind; residual two-call seam closed by fix round R11).
+- T22R fix round (R11 single-seam rebind, R12 live-eligibility key gating,
+  m1 row-menu honesty) verified: 20/91 ok, 71 skipped, 0 failed.
+- Residual (accepted, pre-existing): setDocument→rebind(this) A→A no-op no
+  longer re-observes; harmless while SongTab::m_document is a stable member.
+- Next: tasks 23–33 (context-menu migration 25–31, final integration 32–33).
+
+## Standup 2026-09-11 — tasks 23 + 29 landed, wave-A repairs closed
+
+- Task 23 (editTimeSignatureAtCursor + cursor-entry coverage) and task 29
+  (row-menu Move rows project canonical actions, retireHostMenu on row/
+  chunk/filter/selection/document changes) landed; eventviews + rollcheck
+  named suites green after repairs.
+- Repairs (all test-side, no production change): sameTickReorder clicked a
+  legitimately-disabled pinned setup row — test now exercises the legal
+  move + async focus wait + index() undo counting; headerKeyboardMuteSolo
+  synthetic S is undeliverable in the shortcut-less isolated fixture — test
+  triggers the canonical SoloTracks QAction per spec; velocity via-selection
+  focus gap was a fixture focusWindow precondition — helper now delivers a
+  real gutter click first, assertions intact.
+- Flake note: selectionkey-local-input eventListKeepsRowLocalKeys failed
+  once on focus acquisition, passed on identical rerun — exonerated per
+  problem 5, not chased.
+- Next: task 24 (Set Velocity / loop / signature commands), then 25/27/28.

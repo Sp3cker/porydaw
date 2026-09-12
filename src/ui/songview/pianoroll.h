@@ -111,6 +111,11 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     void transposeSelectedNotes(int semitones);
     void nudgeSelectedNotes(bool right);
     void openPitchBendEditor();
+    // Narrow semantic entry for the shared Set Velocity action: resolves the
+    // current selected notes and opens the existing guarded velocity form.
+    // An empty selection is a silent no-op, matching the other selected-note
+    // commands.
+    void openSelectedVelocityPrompt();
     // Ends a keyboard-command audition from the shared key-release path;
     // a chord can come up over another band or the Quick root. Returns true
     // only when an existing keyboard audition was stopped.

@@ -380,42 +380,35 @@ void PianoRollTest::rulerLoopMenuStaleCancelNoWrite()
     QTRY_VERIFY2(input->hasActiveFocus(),
                  "dismissing the ruler menu did not return focus to the ruler band");
 
-    // A document revision change after the open owns stale retirement: the
-    // loop-start click consumes the stale target as a silent no-op.
+    // A document edit after the open retires the menu at the invalidation
+    // seam with the ordinary focus policy, and no loop-start write follows.
     const SharedRulerMenu stale = openRulerMenu(view, *input, tick);
     QVERIFY2(stale.session, qUtf8Printable(stale.diagnostic));
     doc.setTimeSig(tick + 4 * snapCell, 7, 2);
     const QByteArray afterIntervening = doc.smf().write();
     const int staleUndo = doc.undoStack()->index();
     const uint64_t staleRevision = doc.revision();
-    const int setStartRow = rulerRow(*stale.model, songview::RulerMenuAction::SetLoopStart);
-    QVERIFY2(setStartRow >= 0, "the stale ruler menu lost its Set loop start row");
-    QVERIFY2(quick_popup::clickMenuRow(*stale.session, setStartRow),
-             "the stale Set loop start row did not receive a real click");
     QCoreApplication::processEvents();
     QVERIFY2(stale.session && !stale.session->isOpen(),
-             "a stale activation left the ruler menu open");
+             "a document edit did not dismiss the open ruler menu");
+    QTRY_VERIFY2(input->hasActiveFocus(),
+                 "the document-edit dismissal did not return focus to the ruler band");
     QVERIFY2(doc.smf().write() == afterIntervening && doc.undoStack()->index() == staleUndo &&
                  doc.revision() == staleRevision && check.timeline().loopStartTick == UINT64_MAX,
-             "a stale loop-start activation wrote a marker");
+             "the document-edit dismissal wrote a loop marker");
 
-    // A selection change after the open invalidates the captured scope the
-    // same way.
+    // A selection change after the open retires the menu the same way, so
+    // the captured scope can never dispatch a stale range command.
     view.selectionModel().setTimeSelection(
         {tick, tick + 2 * snapCell, songview::EditorSelectionModel::TimeSelection::Tracks});
     const SharedRulerMenu scoped = openRulerMenu(view, *input, tick);
     QVERIFY2(scoped.session, qUtf8Printable(scoped.diagnostic));
     view.selectionModel().clearTimeSelection();
-    const int loopSelectionRow =
-        rulerRow(*scoped.model, songview::RulerMenuAction::LoopFromSelection);
-    QVERIFY2(loopSelectionRow >= 0, "the stale ruler menu lost its Set loop to selection row");
-    QVERIFY2(quick_popup::clickMenuRow(*scoped.session, loopSelectionRow),
-             "the stale Set loop to selection row did not receive a real click");
     QCoreApplication::processEvents();
     QVERIFY2(scoped.session && !scoped.session->isOpen(),
-             "a stale selection activation left the ruler menu open");
+             "a selection change did not dismiss the open ruler menu");
     QVERIFY2(doc.smf().write() == afterIntervening && doc.undoStack()->index() == staleUndo,
-             "a stale loop-from-selection activation wrote markers");
+             "the selection-change dismissal wrote markers");
 
     // An outside left press dismisses through the menu frame without
     // retargeting the menu and without any document effect.

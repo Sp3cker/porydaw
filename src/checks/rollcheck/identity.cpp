@@ -12,9 +12,9 @@
 #include <vector>
 
 #include "checks/support/songfixture.h"
+#include "checks/support/support.h"
 #include "core/songdocument.h"
 #include "ui/songview.h"
-#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songviewmodel.h"
@@ -62,8 +62,7 @@ void PianoRollTest::duplicateNoteIdentity()
     identityQuick->quickWindow()->resize(QSize(800, 480));
     identityView.setSong(identityTimeline.get(), nullptr);
     identityView.setDocument(&projectionDoc);
-    auto *const editActions = new songview::EditActions(&identityView);
-    editActions->rebind(&identityView);
+    checks::support::bindEditActionsForTest(identityView);
     QObject::connect(&projectionDoc, &SongDocument::documentChanged, &identityView, [&] {
         auto rebuilt = projectionDoc.buildTimeline(48000.0);
         identityView.updateSong(rebuilt.get());

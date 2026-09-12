@@ -248,7 +248,7 @@ bool QuickPopupSession::eventFilter(QObject *watched, QEvent *event)
         // behalf and lets the window's transport action fire.
         auto *keyEvent = static_cast<QKeyEvent *>(event);
         if (focusedFieldYieldsTransportShortcut(m_window.data()) &&
-            keymap::Registry::instance().matches(keyEvent,
+            keymap::Registry::instance().matches(keyEvent->key(), keyEvent->modifiers(),
                                                  QStringLiteral("transport.play_pause"))) {
             keyEvent->ignore();
             return true;

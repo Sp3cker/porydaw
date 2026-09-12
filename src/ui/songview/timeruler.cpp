@@ -10,6 +10,7 @@
 #include "ui/songview/quick/promptappearance.h"
 #include "ui/songview/quick/quickmenumodel.h"
 #include "ui/songview/quick/quickpopupsession.h"
+#include "ui/songview/quick/retirehostmenu.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/typography.h"
@@ -181,6 +182,23 @@ void TimeRuler::ensureMenuAdapters()
     connect(m_rulerMenuModel, &QuickMenuModel::activated, this,
             [this](int id) { handleRulerMenuAction(id); });
     connect(m_menuHost, &QuickMenuHost::cancelled, this, [this] { m_pendingRulerMenu.reset(); });
+    // Selection/document/cursor transitions retire only this ruler's context
+    // menu: the open session must belong to this ruler's menu host AND be
+    // rooted at the ruler menu model, so the division/feel grid menus sharing
+    // the host and the time-signature form owning the session directly keep
+    // their independent lifetimes. Normal transitions hand focus back; the
+    // teardown paths keep closePopups()'s no-focus policy.
+    const auto retireRulerMenu = [this](bool restoreFocus) {
+        TimelineQuickView *const quick = m_owner.quickView();
+        retireHostMenu(quick ? quick->popupSession() : nullptr, m_menuHost, m_rulerMenuModel,
+                       restoreFocus);
+    };
+    connect(&m_owner, &SongView::contextMenusInvalidated, this, retireRulerMenu);
+    // A committed cursor move retires the positional menu with the ordinary
+    // focus policy; the drag preview (setEditCursorTick) emits nothing and
+    // dismisses nothing.
+    connect(&m_owner, &SongView::editCursorMoved, this,
+            [retireRulerMenu](uint64_t) { retireRulerMenu(/*restoreFocus=*/true); });
 }
 
 void TimeRuler::openGridMenu(QPointF position, bool division)

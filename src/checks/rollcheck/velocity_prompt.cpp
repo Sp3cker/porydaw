@@ -1,4 +1,5 @@
-// Note velocity prompt through the real note-menu action. The Quick popup
+// Note velocity prompt through its two real production entries: the rendered
+// note-menu action and the selected-note semantic entry. The Quick popup
 // session keeps draft acceptance, cancellation, staleness, and bounds on the
 // live canvas surface (real menu trigger, real TextInput, real OK/Cancel
 // buttons) and on the document, undo stack, and pencil velocity latch.
@@ -37,11 +38,52 @@ struct VelocityPromptSession {
     QString diagnostic = QStringLiteral("the velocity prompt did not open");
 };
 
-// Opens the velocity prompt through the production menu path: the right
-// content takes focus in the already-exposed canvas.
+// The prompt exists only after the session transitions to Form content, and
+// that transition is asynchronous. Both production entries share this wait:
+// it requires the live content slot plus the named input's active focus, and
+// the session pointers stay null until the form is real, so a failed open
+// reaches the caller's guard with the diagnostic instead of a misleading
+// downstream input failure.
+VelocityPromptSession awaitVelocityPromptForm(SongView &view, const QString &notOpenedDiagnostic)
+{
+    VelocityPromptSession session;
+    songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
+    if (!popup || !popup->isOpen() || !popup->window()) {
+        session.diagnostic = notOpenedDiagnostic;
+        return session;
+    }
+    const QPointer<songview::QuickPopupSession> livePopup(popup);
+    if (checks::async_wait::waitUntil([&livePopup] { return livePopup && livePopup->isOpen(); },
+                                      [&livePopup] {
+                                          return livePopup && livePopup->isOpen() &&
+                                                 livePopup->window() && livePopup->contentItem() &&
+                                                 quick_popup::inputHasActiveFocus(
+                                                     *livePopup->window(),
+                                                     QLatin1String("noteVelocityInput"));
+                                      },
+                                      5000, 10) != checks::async_wait::Result::Ready) {
+        QQuickWindow *const w = popup->window();
+        const QQuickItem *const focus = w ? w->activeFocusItem() : nullptr;
+        session.diagnostic =
+            QStringLiteral("the velocity prompt form did not open with a focused text input "
+                           "(open=%1 winActive=%2 focus=%3 content=%4)")
+                .arg(popup->isOpen())
+                .arg(w && w->isActive())
+                .arg(focus ? focus->objectName() : QStringLiteral("null"))
+                .arg(popup->contentItem() != nullptr);
+        return session;
+    }
+    session.popup = popup;
+    session.window = popup->window();
+    session.diagnostic.clear();
+    return session;
+}
 
-VelocityPromptSession openVelocityPrompt(checks::rollcheck::PianoRollFixture &check,
-                                         const Cell &cell)
+// Opens the velocity prompt through the rendered note-menu action: the right
+// press opens the guarded menu in the already-exposed canvas and the velocity
+// row triggers the form.
+VelocityPromptSession openVelocityPromptViaMenu(checks::rollcheck::PianoRollFixture &check,
+                                                const Cell &cell)
 {
     VelocityPromptSession session;
     SongView &view = check.view();
@@ -68,36 +110,40 @@ VelocityPromptSession openVelocityPrompt(checks::rollcheck::PianoRollFixture &ch
         return session;
     }
     QCoreApplication::processEvents();
-    songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
-    if (!popup || !popup->isOpen() || !popup->window()) {
-        session.diagnostic =
-            QStringLiteral("the velocity menu action did not open the canvas prompt");
+    return awaitVelocityPromptForm(
+        view, QStringLiteral("the velocity menu action did not open the canvas prompt"));
+}
+
+// Opens the velocity prompt through the production selected-note semantic
+// entry: the fixture seeds the current selection and the roll resolves it,
+// exercising the entry Task 24's Set Velocity action will call.
+VelocityPromptSession openVelocityPromptViaSelection(checks::rollcheck::PianoRollFixture &check,
+                                                     const DocNote &note)
+{
+    VelocityPromptSession session;
+    SongView &view = check.view();
+    songview::TimelineInputItem &roll = check.rollInput();
+    QQuickWindow *const window = roll.window();
+    if (!window) {
+        session.diagnostic = QStringLiteral("the canvas window is missing for the velocity entry");
         return session;
     }
-    // The prompt exists only after the session transitions to Form content,
-    // and that transition is asynchronous. The wait therefore requires the
-    // live content slot plus the named input's active focus, and the session
-    // pointers stay null until the form is real: a failed open reaches the
-    // caller's guard with the diagnostic instead of a misleading downstream
-    // input failure.
-    const QPointer<songview::QuickPopupSession> livePopup(popup);
-    if (checks::async_wait::waitUntil([&livePopup] { return livePopup && livePopup->isOpen(); },
-                                      [&livePopup] {
-                                          return livePopup && livePopup->isOpen() &&
-                                                 livePopup->window() && livePopup->contentItem() &&
-                                                 quick_popup::inputHasActiveFocus(
-                                                     *livePopup->window(),
-                                                     QLatin1String("noteVelocityInput"));
-                                      },
-                                      5000, 10) != checks::async_wait::Result::Ready) {
-        session.diagnostic =
-            QStringLiteral("the velocity prompt form did not open with a focused text input");
-        return session;
-    }
-    session.popup = popup;
-    session.window = popup->window();
-    session.diagnostic.clear();
-    return session;
+    // A real window-level click precedes the open: forceActiveFocus only
+    // grants active focus while the item's window is
+    // QGuiApplication::focusWindow, and only real window delivery (not
+    // sendMouse's direct item send) moves the focus window off the hosting
+    // QWidgetWindow onto the Quick canvas — the same precondition the menu
+    // path gets from its right-click. The click lands on the keyboard gutter:
+    // a plot click would draw or move a note, while the gutter only auditions.
+    songview::TimelineInputItem &gutter = check.rollGutterInput();
+    QTest::mouseClick(
+        window, Qt::LeftButton, Qt::NoModifier,
+        gutter.mapToScene(QPointF(gutter.width() / 2, gutter.height() / 2)).toPoint());
+    QCoreApplication::processEvents();
+    view.selectionModel().setNoteSelection({note.noteId});
+    check.roll().openSelectedVelocityPrompt();
+    return awaitVelocityPromptForm(
+        view, QStringLiteral("the selected-note velocity entry did not open the canvas prompt"));
 }
 
 } // namespace
@@ -116,7 +162,7 @@ void PianoRollTest::velocityPromptAcceptUndoLatch()
     const int undoCount = doc.undoStack()->count();
     const uint64_t revision = doc.revision();
 
-    const VelocityPromptSession opened = openVelocityPrompt(check, seed->b);
+    const VelocityPromptSession opened = openVelocityPromptViaMenu(check, seed->b);
     QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic));
     QQuickItem *const input =
         quick_popup::promptItem(*opened.popup, QLatin1String("noteVelocityInput"));
@@ -171,7 +217,7 @@ void PianoRollTest::velocityPromptAcceptUndoLatch()
     const int drawUndo = doc.undoStack()->index();
     const int drawUndoCount = doc.undoStack()->count();
 
-    const VelocityPromptSession reopened = openVelocityPrompt(check, seed->b);
+    const VelocityPromptSession reopened = openVelocityPromptViaMenu(check, seed->b);
     QVERIFY2(reopened.window && reopened.popup, qUtf8Printable(reopened.diagnostic));
     QVERIFY2(quick_popup::clickPromptButton(*reopened.popup, QLatin1String("noteVelocityAccept")),
              "the reopened velocity prompt has no OK button");
@@ -209,10 +255,21 @@ void PianoRollTest::velocityPromptCancelStale()
     const int undo = doc.undoStack()->index();
     const int undoCount = doc.undoStack()->count();
     const uint64_t revision = doc.revision();
+    // The production entry resolves the current selection: with nothing
+    // selected it must not open a prompt or touch the song.
+    view.selectionModel().clearNoteSelection();
+    check.roll().openSelectedVelocityPrompt();
+    QCoreApplication::processEvents();
+    songview::QuickPopupSession *const unopened = quick_popup::popupSession(view);
+    QVERIFY2(!unopened || !unopened->isOpen(),
+             "the selected-note velocity entry opened without a selection");
+    QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
+                 doc.undoStack()->count() == undoCount && doc.revision() == revision,
+             "the selectionless velocity entry wrote to the song");
 
     // Escape cancels the typed draft without writing, and the roll gets its
     // focus back so window commands resume.
-    const VelocityPromptSession escapee = openVelocityPrompt(check, seed->b);
+    const VelocityPromptSession escapee = openVelocityPromptViaSelection(check, seed->noteB);
     QVERIFY2(escapee.window && escapee.popup, qUtf8Printable(escapee.diagnostic));
     QQuickItem *const input =
         quick_popup::promptItem(*escapee.popup, QLatin1String("noteVelocityInput"));
@@ -230,7 +287,7 @@ void PianoRollTest::velocityPromptCancelStale()
     QTRY_VERIFY2(roll.hasFocus(), "focus did not return to the roll after Escape");
 
     // The Cancel button is the same no-write exit for edited text.
-    const VelocityPromptSession cancelled = openVelocityPrompt(check, seed->b);
+    const VelocityPromptSession cancelled = openVelocityPromptViaSelection(check, seed->noteB);
     QVERIFY2(cancelled.window && cancelled.popup, qUtf8Printable(cancelled.diagnostic));
     QTest::keySequence(cancelled.window, QKeySequence(Qt::Key_2, Qt::Key_1));
     QCoreApplication::processEvents();
@@ -246,7 +303,7 @@ void PianoRollTest::velocityPromptCancelStale()
     // Stale acceptance: the document moves while the prompt is open, so the
     // snapshot is out of date. Accepting must still close but must not
     // modify anything beyond the direct write made while the prompt was up.
-    const VelocityPromptSession stale = openVelocityPrompt(check, seed->b);
+    const VelocityPromptSession stale = openVelocityPromptViaSelection(check, seed->noteB);
     QVERIFY2(stale.window && stale.popup, qUtf8Printable(stale.diagnostic));
     doc.setNotesVelocity({seed->noteB}, 40);
     QTest::keySequence(stale.window, QKeySequence(Qt::Key_3, Qt::Key_0));
@@ -281,7 +338,7 @@ void PianoRollTest::popupSessionDismissal()
     const int undoCount = doc.undoStack()->count();
     const uint64_t revision = doc.revision();
 
-    const VelocityPromptSession outside = openVelocityPrompt(check, seed->b);
+    const VelocityPromptSession outside = openVelocityPromptViaMenu(check, seed->b);
     QVERIFY2(outside.window && outside.popup, qUtf8Printable(outside.diagnostic));
     QTest::keySequence(outside.window, QKeySequence(Qt::Key_2, Qt::Key_0));
     QCoreApplication::processEvents();
@@ -310,7 +367,7 @@ void PianoRollTest::popupSessionDismissal()
     // An interruption can lose the dismissing release entirely. Deactivation
     // must retire the old paired-release marker, so a fresh same-button
     // gesture reaches the timeline normally.
-    const VelocityPromptSession interrupted = openVelocityPrompt(check, seed->b);
+    const VelocityPromptSession interrupted = openVelocityPromptViaMenu(check, seed->b);
     QVERIFY2(interrupted.window && interrupted.popup, qUtf8Printable(interrupted.diagnostic));
     QTest::mousePress(interrupted.window, Qt::LeftButton, Qt::NoModifier, outsidePoint);
     QCoreApplication::processEvents();
@@ -347,7 +404,7 @@ void PianoRollTest::popupSessionDismissal()
     const int postInterruptionUndoCount = doc.undoStack()->count();
     const uint64_t postInterruptionRevision = doc.revision();
 
-    const VelocityPromptSession deactivated = openVelocityPrompt(check, seed->b);
+    const VelocityPromptSession deactivated = openVelocityPromptViaMenu(check, seed->b);
     QVERIFY2(deactivated.window && deactivated.popup, qUtf8Printable(deactivated.diagnostic));
     QTest::keySequence(deactivated.window, QKeySequence(Qt::Key_2, Qt::Key_1));
     QEvent deactivate(QEvent::WindowDeactivate);
@@ -359,7 +416,7 @@ void PianoRollTest::popupSessionDismissal()
                  doc.revision() == postInterruptionRevision,
              "window deactivation wrote the draft or reactivated the timeline");
 
-    const VelocityPromptSession resized = openVelocityPrompt(check, seed->b);
+    const VelocityPromptSession resized = openVelocityPromptViaMenu(check, seed->b);
     QVERIFY2(resized.window && resized.popup, qUtf8Printable(resized.diagnostic));
     QTest::keySequence(resized.window, QKeySequence(Qt::Key_2, Qt::Key_2));
     QResizeEvent resize(resized.window->size(), resized.window->size());
@@ -437,7 +494,7 @@ void PianoRollTest::velocityPromptOutsideRightNoRetarget()
     const int undoCount = doc.undoStack()->count();
     const uint64_t revision = doc.revision();
 
-    const VelocityPromptSession outside = openVelocityPrompt(check, seed->b);
+    const VelocityPromptSession outside = openVelocityPromptViaMenu(check, seed->b);
     QVERIFY2(outside.window && outside.popup, qUtf8Printable(outside.diagnostic));
     const std::vector<NoteId> selectionBefore = view.selectionModel().noteSelection();
     const Cell outsideCell = check.findFreeCell(120);
@@ -477,7 +534,7 @@ void PianoRollTest::velocityPromptBounds()
 
     // Tab traversal is a form contract: all three known controls cycle
     // without dismissing the draft or leaking a document edit.
-    const VelocityPromptSession cycled = openVelocityPrompt(check, seed->b);
+    const VelocityPromptSession cycled = openVelocityPromptViaSelection(check, seed->noteB);
     QVERIFY2(cycled.window && cycled.popup, qUtf8Printable(cycled.diagnostic));
     QQuickItem *const cycleInput =
         quick_popup::promptItem(*cycled.popup, QLatin1String("noteVelocityInput"));
@@ -513,7 +570,7 @@ void PianoRollTest::velocityPromptBounds()
     // An out-of-range draft may remain validator-intermediate while typing.
     // Return must correct it to the current value without accepting or writing;
     // Escape then closes the untouched prompt.
-    const VelocityPromptSession opened = openVelocityPrompt(check, seed->b);
+    const VelocityPromptSession opened = openVelocityPromptViaSelection(check, seed->noteB);
     QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic));
     QQuickItem *const input =
         quick_popup::promptItem(*opened.popup, QLatin1String("noteVelocityInput"));
@@ -534,7 +591,7 @@ void PianoRollTest::velocityPromptBounds()
     QVERIFY2(!popup->isOpen(), "Escape did not close the corrected-draft prompt");
 
     // PageDown steps clamp at the lower bound and Return commits exactly 1.
-    const VelocityPromptSession lowered = openVelocityPrompt(check, seed->b);
+    const VelocityPromptSession lowered = openVelocityPromptViaSelection(check, seed->noteB);
     QVERIFY2(lowered.window && lowered.popup, qUtf8Printable(lowered.diagnostic));
     for (int i = 0; i < 8; ++i)
         QTest::keyClick(lowered.window, Qt::Key_PageDown);
@@ -552,7 +609,7 @@ void PianoRollTest::velocityPromptBounds()
              "the lower bound velocity acceptance did not commit exactly velocity 1");
 
     // PageUp steps clamp at the upper bound and Return commits exactly 127.
-    const VelocityPromptSession raised = openVelocityPrompt(check, seed->b);
+    const VelocityPromptSession raised = openVelocityPromptViaSelection(check, seed->noteB);
     QVERIFY2(raised.window && raised.popup, qUtf8Printable(raised.diagnostic));
     for (int i = 0; i < 13; ++i)
         QTest::keyClick(raised.window, Qt::Key_PageUp);
@@ -571,7 +628,7 @@ void PianoRollTest::velocityPromptBounds()
 
     // At the bound the step keys are no-ops: single and ten-step arrows stay
     // clamped, the prompt stays open, and the song stays frozen.
-    const VelocityPromptSession capped = openVelocityPrompt(check, seed->b);
+    const VelocityPromptSession capped = openVelocityPromptViaSelection(check, seed->noteB);
     QVERIFY2(capped.window && capped.popup, qUtf8Printable(capped.diagnostic));
     QQuickItem *const cappedInput =
         quick_popup::promptItem(*capped.popup, QLatin1String("noteVelocityInput"));

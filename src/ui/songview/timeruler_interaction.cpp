@@ -231,6 +231,16 @@ bool TimeRuler::pointerDoubleClick(const TimelinePointerInput &input)
     return true;
 }
 
+void TimeRuler::editTimeSignatureAtCursor()
+{
+    if (!m_owner.document())
+        return;
+    const uint64_t tick = m_owner.editCursorTick();
+    int numerator, denomPow2;
+    sigAtTick(tick, &numerator, &denomPow2);
+    openTimeSigPrompt(tick, numerator, denomPow2);
+}
+
 void TimeRuler::pointerLeave()
 {
     if (m_inputHost)
@@ -351,8 +361,9 @@ void TimeRuler::showRulerMenu(uint64_t clickTick, const QPointF &scenePos)
 }
 
 // Selection-scoped rows may only act on the selection the user saw when the
-// menu opened; a live selection that drifted or went inactive turns every
-// range command into a stale action.
+// menu opened. Invalidation normally dismisses the menu before the live
+// selection can drift; this comparison is a release-build backstop for a
+// missed transition.
 bool TimeRuler::menuSelectionStale(const PendingRulerMenu &target) const
 {
     const EditorSelectionModel::TimeSelection &current = m_owner.selectionModel().timeSelection();
@@ -372,7 +383,13 @@ void TimeRuler::handleRulerMenuAction(int id)
     const PendingRulerMenu target = std::move(*m_pendingRulerMenu);
     m_pendingRulerMenu.reset();
     SongDocument *const doc = m_owner.document();
-    if (!doc || doc != target.document || doc->revision() != target.documentRevision)
+    if (!doc)
+        return;
+    // Every document/selection/cursor transition dismisses the menu and
+    // clears the target before a row can activate. Keep a runtime backstop
+    // if an invalidation transition was missed.
+    Q_ASSERT(doc == target.document && doc->revision() == target.documentRevision);
+    if (doc != target.document || doc->revision() != target.documentRevision)
         return;
     switch (static_cast<RulerMenuAction>(id)) {
     case RulerMenuAction::SetLoopStart:
@@ -389,6 +406,7 @@ void TimeRuler::handleRulerMenuAction(int id)
             doc->setLoopTick(true, -1);
         break;
     case RulerMenuAction::LoopFromSelection:
+        Q_ASSERT(!menuSelectionStale(target));
         if (menuSelectionStale(target))
             return;
         // Same two-command shape as "Remove loop markers".
@@ -396,21 +414,25 @@ void TimeRuler::handleRulerMenuAction(int id)
         doc->setLoopTick(true, int64_t(target.selection.endTick));
         break;
     case RulerMenuAction::InsertBlank:
+        Q_ASSERT(!menuSelectionStale(target));
         if (menuSelectionStale(target))
             return;
         m_owner.insertTime();
         break;
     case RulerMenuAction::Duplicate:
+        Q_ASSERT(!menuSelectionStale(target));
         if (menuSelectionStale(target))
             return;
         m_owner.duplicateTimeSelection();
         break;
     case RulerMenuAction::RemoveContents:
+        Q_ASSERT(!menuSelectionStale(target));
         if (menuSelectionStale(target))
             return;
         m_owner.removeTimeSelectionContents();
         break;
     case RulerMenuAction::ClearSelection:
+        Q_ASSERT(!menuSelectionStale(target));
         if (menuSelectionStale(target))
             return;
         m_owner.selectionModel().clearTimeSelection();

@@ -11,29 +11,30 @@
 
 SettingsDialog::SettingsDialog(const EngineSettings &engineSettings,
                                const std::optional<SongTarget> &song,
-                               const QStringList &voicegroupArgs, Tab initialTab, QWidget *parent)
+                               const QStringList &voicegroupArgs, bool songFirst, QWidget *parent)
     : QDialog(parent)
 {
     setWindowTitle(tr("Settings"));
     m_tabs = new QTabWidget(this);
     m_engineWidget = new EngineSettingsWidget(engineSettings, this);
     m_tabs->addTab(m_engineWidget, tr("Engine"));
+    QWidget *songTab = nullptr;
     if (song) {
         m_songWidget = new SongSettingsWidget(song->cfg, voicegroupArgs, this);
-        m_songTab = m_songWidget;
+        songTab = m_songWidget;
     } else {
-        m_songTab = new QWidget(this);
+        songTab = new QWidget(this);
     }
     const QString songTabTitle =
         song && !song->label.isEmpty() ? tr("Song (%1)").arg(song->label) : tr("Song");
-    const int songTabIndex = m_tabs->addTab(m_songTab, songTabTitle);
+    const int songTabIndex = m_tabs->addTab(songTab, songTabTitle);
     m_tabs->setTabEnabled(songTabIndex, song.has_value());
-    setCurrentTab(initialTab);
+    m_tabs->setCurrentIndex(song && songFirst ? 1 : 0);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     auto *applyButton = new QPushButton(tr("Apply"), this);
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-    connect(applyButton, &QPushButton::clicked, this, &SettingsDialog::apply);
+    connect(applyButton, &QPushButton::clicked, this, &SettingsDialog::applyRequested);
     auto *layout = new QVBoxLayout(this);
     layout->addWidget(m_tabs);
     auto *buttonRow = new QHBoxLayout;
@@ -54,33 +55,4 @@ std::optional<SongCfg> SettingsDialog::songCfg() const
     if (!m_songWidget)
         return std::nullopt;
     return m_songWidget->cfg();
-}
-
-SettingsDialog::Tab SettingsDialog::currentTab() const
-{
-    const QWidget *current = m_tabs->currentWidget();
-    if (current == m_songTab)
-        return Tab::Song;
-    Q_ASSERT(current == m_engineWidget);
-    return Tab::Engine;
-}
-
-void SettingsDialog::setCurrentTab(Tab tab)
-{
-    switch (tab) {
-    case Tab::Engine:
-        m_tabs->setCurrentWidget(m_engineWidget);
-        break;
-    case Tab::Song:
-        if (m_songWidget)
-            m_tabs->setCurrentWidget(m_songTab);
-        else
-            m_tabs->setCurrentWidget(m_engineWidget);
-        break;
-    }
-}
-
-void SettingsDialog::apply()
-{
-    emit applyRequested();
 }

@@ -14,6 +14,7 @@
 #include <QQuickItem>
 #include <QWheelEvent>
 
+#include "checks/support/support.h"
 #include "checks/support/timelinequickcheck.h"
 #include "core/timedefaults.h"
 #include "core/tracklimits.h"
@@ -24,7 +25,7 @@
 #include "ui/editordrawer/cclanes.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/tempolane.h"
-#include "ui/songview/editactions.h"
+#include "ui/songview.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
 
@@ -199,8 +200,7 @@ bool AutomationEditingTest::stageSong(SmfFile smf)
     candidate->applyVoicegroupBound(*identity);
     if (!candidate->isReady() || candidate->voicegroupLease().get() != &m_bank)
         return false;
-    auto *const editActions = new songview::EditActions(&candidate->view());
-    editActions->rebind(&candidate->view());
+    checks::support::bindEditActionsForTest(candidate->view());
 
     SongView &view = candidate->view();
     view.setDrawerActivePage(EditorDrawerPage::Automations);
@@ -375,8 +375,8 @@ QPointF AutomationEditingTest::voicePoint(uint64_t tick) const
 
 void AutomationEditingTest::setPencilMode(bool enabled)
 {
-    if (QAction *const action = pencilModeAction())
-        action->setChecked(enabled);
+    if (QAction *const action = pencilModeAction(); action && action->isChecked() != enabled)
+        action->trigger();
 }
 
 QAction *AutomationEditingTest::pencilModeAction() const

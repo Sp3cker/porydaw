@@ -15,13 +15,13 @@
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
+#include "checks/support/support.h"
 #include "checks/trackheaders/trackheaderoracles.h"
 #include "core/miditimeline.h"
 #include "core/songdocument.h"
 #include "ui/activity/trackactivity.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
-#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/trackheadermodel.h"
 
@@ -281,8 +281,7 @@ class TrackHeaderModelTest final : public QObject
                 return false;
             view.setSong(timeline.get(), nullptr);
             view.setDocument(&document);
-            auto *const editActions = new songview::EditActions(&view);
-            editActions->rebind(&view);
+            checks::support::bindEditActionsForTest(view);
             headers =
                 view.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"));
             if (!headers)

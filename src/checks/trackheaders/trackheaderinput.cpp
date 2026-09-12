@@ -15,10 +15,10 @@
 
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
+#include "checks/support/support.h"
 #include "core/miditimeline.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
-#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickview.h"
 #include "ui/songview/trackheadermodel.h"
@@ -349,8 +349,7 @@ void TrackHeadersTest::emptyTrackHeadersRejectInputWithoutMutation()
     MidiTimeline timeline;
     SongView emptyView;
     emptyView.setSong(&timeline, nullptr);
-    auto *const editActions = new songview::EditActions(&emptyView);
-    editActions->rebind(&emptyView);
+    checks::support::bindEditActionsForTest(emptyView);
     QVERIFY(checks::support::showQuickViewport(emptyView, QSize(320, 180)));
     auto *const quick = emptyView.quickView();
     auto *const model =

@@ -21,20 +21,6 @@ namespace {
 constexpr uint8_t kPanController = 10;
 constexpr uint8_t kLfoController = 21;
 
-class ScopedShortcut final
-{
-  public:
-    explicit ScopedShortcut(QAction &action) : m_action(action), m_previous(action.shortcut()) {}
-    ~ScopedShortcut() { m_action.setShortcut(m_previous); }
-
-    ScopedShortcut(const ScopedShortcut &) = delete;
-    ScopedShortcut &operator=(const ScopedShortcut &) = delete;
-
-  private:
-    QAction &m_action;
-    QKeySequence m_previous;
-};
-
 QKeyCombination singleShortcut(const QAction &action)
 {
     const QKeySequence shortcut = action.shortcut();
@@ -50,7 +36,7 @@ void AutomationEditingTest::actionShortcutLatching()
     const QKeyCombination shortcut = singleShortcut(*action);
     QVERIFY(shortcut.key() != Qt::Key_unknown);
 
-    action->setChecked(false);
+    setPencilMode(false);
     keyPress(shortcut.key(), shortcut.keyboardModifiers());
     QVERIFY(action->isChecked());
     keyRelease(shortcut.key(), shortcut.keyboardModifiers());
@@ -69,7 +55,7 @@ void AutomationEditingTest::actionTextInputImmunity()
     const QKeyCombination shortcut = singleShortcut(*action);
     QVERIFY(shortcut.key() != Qt::Key_unknown);
 
-    action->setChecked(false);
+    setPencilMode(false);
     QLineEdit editor(&tab());
     editor.show();
     editor.setFocus(Qt::OtherFocusReason);
@@ -88,7 +74,7 @@ void AutomationEditingTest::actionRepeatImmunity()
     const QKeyCombination shortcut = singleShortcut(*action);
     QVERIFY(shortcut.key() != Qt::Key_unknown);
 
-    action->setChecked(false);
+    setPencilMode(false);
     keyPress(shortcut.key(), shortcut.keyboardModifiers());
     QVERIFY(action->isChecked());
 
@@ -100,20 +86,10 @@ void AutomationEditingTest::actionRepeatImmunity()
     QVERIFY(action->isChecked());
 }
 
-void AutomationEditingTest::actionCustomBinding()
-{
-    QAction *const action = pencilModeAction();
-    QVERIFY(action);
-    const ScopedShortcut restore(*action);
-    const QKeyCombination customShortcut(Qt::ControlModifier, Qt::Key_P);
-    action->setShortcut(QKeySequence(customShortcut));
-    action->setChecked(false);
-
-    keyClick(customShortcut.key(), customShortcut.keyboardModifiers());
-    QVERIFY(action->isChecked());
-    keyClick(customShortcut.key(), customShortcut.keyboardModifiers());
-    QVERIFY(!action->isChecked());
-}
+// actionCustomBinding retired (R1/K-M5): mutating a live QAction shortcut is
+// the removed remap concept. Fixed-catalogue delivery matches the Registry
+// binding, never the action's read-back shortcut; fixed latching stays pinned
+// by actionShortcutLatching above.
 
 void AutomationEditingTest::actionHeldKeyGestures()
 {
@@ -122,14 +98,14 @@ void AutomationEditingTest::actionHeldKeyGestures()
     const QKeyCombination shortcut = singleShortcut(*action);
     QVERIFY(shortcut.key() != Qt::Key_unknown);
 
-    action->setChecked(false);
+    setPencilMode(false);
     keyPress(shortcut.key(), shortcut.keyboardModifiers());
     QVERIFY(action->isChecked());
     QTest::qWait(510);
     keyRelease(shortcut.key(), shortcut.keyboardModifiers());
     QVERIFY(action->isChecked());
 
-    action->setChecked(false);
+    setPencilMode(false);
     keyPress(shortcut.key(), shortcut.keyboardModifiers());
     QVERIFY(action->isChecked());
     const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});

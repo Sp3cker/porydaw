@@ -12,11 +12,11 @@
 #include "checks/support/eventsynth.h"
 #include "checks/support/quickframebuffer.h"
 #include "checks/support/songfixture.h"
+#include "checks/support/support.h"
 #include "core/tracklimits.h"
 #include "project/projectidentity.h"
 #include "ui/songtab.h"
 #include "ui/songview.h"
-#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
 #include "ui/songview/quick/timelinequickview.h"
@@ -90,8 +90,7 @@ bool TimelinePanFixture::load(QString &error)
     }
     m_tab->applyBankView(LoadedBankView{*identity, borrowVoicegroupLease(&m_bank), QString()});
     m_tab->applyVoicegroupBound(*identity);
-    auto *const editActions = new songview::EditActions(&m_tab->view());
-    editActions->rebind(&m_tab->view());
+    checks::support::bindEditActionsForTest(m_tab->view());
 
     SongView &songView = view();
     songView.setDrawerSectionVisible(EditorDrawerPage::Automations, true);

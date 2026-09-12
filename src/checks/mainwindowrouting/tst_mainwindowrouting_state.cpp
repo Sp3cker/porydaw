@@ -1,6 +1,24 @@
 #include "mainwindowroutingfixture.h"
 
+#include "ui/songview/editactions.h"
+
 #include <QtTest>
+
+namespace {
+
+// The Edit menu's named command group with the given mnemonic-stripped
+// title, or null when task 13's projection is absent.
+QMenu *submenuWithTitle(QMenu &menu, const QString &title)
+{
+    for (QAction *menuAction : menu.actions()) {
+        QMenu *sub = menuAction->menu();
+        if (sub && QString(sub->title()).remove(QLatin1Char('&')) == title)
+            return sub;
+    }
+    return nullptr;
+}
+
+} // namespace
 
 namespace checks::mainwindowrouting {
 
@@ -176,6 +194,75 @@ class MainWindowRoutingStateTest final : public QObject, private MainWindowRouti
         focus = QApplication::focusWidget();
         QVERIFY(focus);
         QVERIFY(focus == session->b || session->b->isAncestorOf(focus));
+    }
+
+    void editActionProjectionAndIdentity()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+        QVERIFY(session.has_value());
+        MainWindow &window = *session->window;
+        SongTab *a = session->a;
+        SongTab *b = session->b;
+
+        // The window commands are the canonical set's own objects, projected
+        // into the native Edit groups — no duplicates, no per-entry handlers.
+        QAction *copy = window.m_copyAction;
+        QAction *solo = window.m_soloAction;
+        QAction *insertTime = window.m_insertTimeAction;
+        QAction *deleteTime = window.m_deleteTimeAction;
+        QVERIFY(copy && solo && insertTime && deleteTime);
+        QCOMPARE(copy, window.m_editActions->action(SongView::EditCommand::Copy));
+        QCOMPARE(solo, window.m_editActions->action(SongView::EditCommand::SoloTracks));
+        QCOMPARE(insertTime, window.m_editActions->action(SongView::EditCommand::InsertTime));
+        QCOMPARE(deleteTime, window.m_editActions->action(SongView::EditCommand::DeleteTime));
+        QMenu *edit = editMenu(window);
+        QVERIFY(edit);
+        QVERIFY(edit->actions().contains(copy));
+        QMenu *timeMenu = submenuWithTitle(*edit, QStringLiteral("Time"));
+        QMenu *tracksMenu = submenuWithTitle(*edit, QStringLiteral("Tracks"));
+        QVERIFY(timeMenu);
+        QVERIFY(tracksMenu);
+        QVERIFY(timeMenu->actions().contains(insertTime));
+        QVERIFY(timeMenu->actions().contains(deleteTime));
+        QVERIFY(tracksMenu->actions().contains(solo));
+
+        // Retargeting follows the selection; the projected objects do not.
+        window.m_workspace->selectSongTab(a);
+        QCOMPARE(window.m_editActions->target(), &a->view());
+        window.m_workspace->selectSongTab(b);
+        QCOMPARE(window.m_editActions->target(), &b->view());
+        QCOMPARE(window.m_copyAction, copy);
+        QCOMPARE(window.m_soloAction, solo);
+        QCOMPARE(window.m_insertTimeAction, insertTime);
+        QCOMPARE(window.m_deleteTimeAction, deleteTime);
+        // A ready selected tab opens the readiness-gated commands; an
+        // explicit unbind through the production seam disables everything
+        // until the next real selection change retargets the set.
+        QVERIFY(solo->isEnabled());
+        window.m_editActions->rebind(nullptr);
+        QVERIFY(!window.m_editActions->target());
+        QVERIFY(!copy->isEnabled());
+        QVERIFY(!solo->isEnabled());
+        QVERIFY(!insertTime->isEnabled());
+        QVERIFY(!deleteTime->isEnabled());
+        window.m_workspace->selectSongTab(a);
+        QCOMPARE(window.m_editActions->target(), &a->view());
+        QVERIFY(solo->isEnabled());
+    }
+
+    void editActionsStartUnboundWithNoWorkspace()
+    {
+        // Without a saved workspace recipe there are no startup tabs at all:
+        // the set constructs unbound and every projected command is
+        // disabled — the null-target arm of the readiness predicate.
+        const SettingsGuard settings;
+        MainWindow window;
+        QVERIFY(window.m_editActions);
+        QVERIFY(!window.m_editActions->target());
+        QVERIFY(!window.m_copyAction->isEnabled());
+        QVERIFY(!window.m_soloAction->isEnabled());
+        QVERIFY(!window.m_insertTimeAction->isEnabled());
+        QVERIFY(!window.m_deleteTimeAction->isEnabled());
     }
 
     void nonSelectedOriginFansCompleteStateOutAndNoopsStaySilent()

@@ -24,17 +24,8 @@ namespace {
 
 bool detentUnlockHeld(Qt::KeyboardModifiers modifiers, bool allowShift)
 {
-    const auto &registry = keymap::Registry::instance();
-    const QString command = QStringLiteral("velocity.detent_unlock");
-    const Qt::KeyboardModifiers binding = registry.modifierBinding(command);
-    if (binding == Qt::NoModifier)
-        return false;
-    const Qt::KeyboardModifiers shortcutModifiers =
-        modifiers & (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier | Qt::MetaModifier);
-    if (shortcutModifiers == binding)
-        return true;
-    // Shift-ramp adds exactly one Shift modifier to the configured hold chord.
-    return allowShift && shortcutModifiers == (binding | Qt::ShiftModifier);
+    return keymap::Registry::instance().matchesModifier(
+        modifiers, QStringLiteral("velocity.detent_unlock"), allowShift);
 }
 
 uint64_t drawerContextTick(double tick)

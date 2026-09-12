@@ -4,26 +4,15 @@
 #include <cmath>
 
 #include <QAction>
-#include <QCoreApplication>
-#include <QEvent>
-#include <QKeyEvent>
-#include <QQuickItem>
-#include <QQuickWindow>
 #include <QWindow>
 
 #include "core/songdocument.h"
 #include "ui/editordrawer/automationcanvas.h"
-#include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
+#include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelineinput.h"
 namespace {
-
-Qt::KeyboardModifiers shortcutModifiers(Qt::KeyboardModifiers modifiers)
-{
-    return modifiers &
-           (Qt::ControlModifier | Qt::ShiftModifier | Qt::AltModifier | Qt::MetaModifier);
-}
 
 bool sameLiveState(const DrawerPageLiveState &a, const DrawerPageLiveState &b)
 {
@@ -59,91 +48,35 @@ AutomationPage::AutomationPage(SongView &owner, QObject *parent)
     , m_grid(owner.grid())
 {
     m_canvas = new AutomationCanvas(*this);
-    m_pencilModeAction = new QAction(tr("Pencil Mode"), this);
-    m_pencilModeAction->setCheckable(true);
-    m_pencilModeAction->setShortcutContext(Qt::WindowShortcut);
-    keymap::Registry::instance().attach(QStringLiteral("automation.pencil_mode"),
-                                        m_pencilModeAction);
-    connect(m_pencilModeAction, &QAction::toggled, m_canvas, &AutomationCanvas::setPencilMode);
-    qApp->installEventFilter(this);
 }
 
-AutomationPage::~AutomationPage()
+QPointer<QAction> AutomationPage::pencilModeAction() const noexcept
 {
-    qApp->removeEventFilter(this);
-}
-
-bool AutomationPage::eventFilter(QObject *watched, QEvent *event)
-{
-    const QEvent::Type type = event->type();
-    if (type == QEvent::WindowDeactivate && belongsToPageWindow(watched)) {
-        // Synthetic and native deactivation both terminate a pending draft.
-        // Do not request focus here: the foreground window now owns it.
-        if (m_canvas && m_canvas->valuePromptVisible())
-            m_canvas->cancelInteraction();
-        return QObject::eventFilter(watched, event);
-    }
-    if (type != QEvent::ShortcutOverride && type != QEvent::KeyPress)
-        return QObject::eventFilter(watched, event);
-    if (!belongsToPageWindow(watched) ||
-        !m_owner.drawerSectionVisible(EditorDrawerPage::Automations) || !m_pencilModeAction ||
-        !m_pencilModeAction->isEnabled()) {
-        return QObject::eventFilter(watched, event);
-    }
-    const auto *keyEvent = static_cast<QKeyEvent *>(event);
-    if (!matchesPencilShortcut(keyEvent->key(), keyEvent->modifiers()))
-        return QObject::eventFilter(watched, event);
-    // The inline value prompt owns text input while it is open; the pencil
-    // shortcut must stay claimable by its editor and resume after it closes.
-    if (m_canvas && m_canvas->valuePromptVisible())
-        return QObject::eventFilter(watched, event);
-    // Any input-method surface in the Quick scene (the value prompt's editor,
-    // a rename field, future text items) owns its keys; identify it through
-    // the injected input window so the bare-letter shortcut never steals from
-    // an editing item.
-    const auto *quickWindow = qobject_cast<const QQuickWindow *>(m_inputWindow.data());
-    if (quickWindow) {
-        const QQuickItem *quickFocus = quickWindow->activeFocusItem();
-        if (quickFocus && quickFocus->flags().testFlag(QQuickItem::ItemAcceptsInputMethod))
-            return QObject::eventFilter(watched, event);
-    }
-    if (type == QEvent::ShortcutOverride) {
-        event->accept();
-        return true;
-    }
-    if (keyEvent->isAutoRepeat())
-        return true;
-    m_pencilModeAction->trigger();
-    return true;
-}
-
-bool AutomationPage::matchesPencilShortcut(int key, Qt::KeyboardModifiers modifiers) const noexcept
-{
-    const QKeySequence shortcut = m_pencilModeAction->shortcut();
-    if (shortcut.count() != 1)
-        return false;
-    const QKeyCombination combination = shortcut[0];
-    const int shortcutKey = int(combination.key());
-    return shortcutKey != 0 && shortcutKey != Qt::Key_unknown &&
-           !keymap::Registry::isModifierKey(shortcutKey) && key == shortcutKey &&
-           shortcutModifiers(modifiers) == shortcutModifiers(combination.keyboardModifiers());
-}
-
-bool AutomationPage::belongsToPageWindow(const QObject *target) const noexcept
-{
-    if (!m_inputWindow)
-        return false;
-    for (const auto *window = qobject_cast<const QWindow *>(target); window;
-         window = qobject_cast<const QWindow *>(window->parent())) {
-        if (window == m_inputWindow)
-            return true;
-    }
-    return false;
+    const songview::EditActions *const actions = m_owner.editActions();
+    if (!actions)
+        return {};
+    return actions->action(SongView::EditCommand::PencilMode);
 }
 
 void AutomationPage::setInputWindow(QWindow *window) noexcept
 {
+    if (m_inputWindow == window)
+        return;
+    QObject::disconnect(m_inputWindowDeactivationConnection);
     m_inputWindow = window;
+    if (!window)
+        return;
+    const QPointer<QWindow> inputWindow{window};
+    m_inputWindowDeactivationConnection =
+        connect(window, &QWindow::activeChanged, this, [this, inputWindow] {
+            if (!inputWindow || m_inputWindow.data() != inputWindow.data() ||
+                inputWindow->isActive() || !m_canvas || !m_canvas->valuePromptVisible()) {
+                return;
+            }
+            // Synthetic and native deactivation both terminate a pending draft.
+            // Do not request focus here: the foreground window now owns it.
+            m_canvas->cancelInteraction();
+        });
 }
 
 bool AutomationPage::ready() const noexcept

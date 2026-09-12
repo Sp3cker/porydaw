@@ -583,6 +583,8 @@ if(PORYDAW_BUILD_CHECKS)
         src/checks/support/quickframebuffer.h
         src/checks/support/songfixture.cpp
         src/checks/support/songfixture.h
+        src/checks/support/support.cpp
+        src/checks/support/support.h
         src/checks/support/voicegroupbrowserdriver.cpp
         src/checks/support/voicegroupbrowserdriver.h
         src/checks/clipboard/clipcheck_test.h

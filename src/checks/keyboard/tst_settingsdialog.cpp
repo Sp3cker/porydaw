@@ -61,9 +61,11 @@ void SettingsDialogCheckTest::configuredSettingsRoundTrip()
 {
     const EngineSettings engineSettings = configuredEngineSettings();
     const SongTarget songTarget = configuredSongTarget();
-    SettingsDialog dialog(engineSettings, songTarget, voicegroupArguments(),
-                          SettingsDialog::Tab::Engine);
-    QCOMPARE(dialog.currentTab(), SettingsDialog::Tab::Engine);
+    SettingsDialog dialog(engineSettings, songTarget, voicegroupArguments());
+
+    auto *const tabs = dialog.findChild<QTabWidget *>();
+    QVERIFY(tabs);
+    QCOMPARE(tabs->currentIndex(), 0);
 
     auto *const mixer = dialog.findChild<QComboBox *>(QStringLiteral("pcmMixerCombo"));
     QVERIFY(mixer);
@@ -73,9 +75,6 @@ void SettingsDialogCheckTest::configuredSettingsRoundTrip()
     QCOMPARE(mixer->count(), 2);
     mixer->setCurrentIndex(mixer->findData(int(M4A_PCM_MIXER_IPATIX)));
     QCOMPARE(dialog.engineSettings().pcmMixer, M4A_PCM_MIXER_IPATIX);
-
-    dialog.setCurrentTab(SettingsDialog::Tab::Song);
-    QCOMPARE(dialog.currentTab(), SettingsDialog::Tab::Song);
     const std::optional<SongCfg> editedSong = dialog.songCfg();
     QVERIFY(editedSong.has_value());
     QCOMPARE(editedSong->masterVolume, songTarget.cfg.masterVolume);
@@ -84,13 +83,12 @@ void SettingsDialogCheckTest::configuredSettingsRoundTrip()
 
 void SettingsDialogCheckTest::unavailableSongTabFallsBackToEngine()
 {
-    SettingsDialog dialog(configuredEngineSettings(), std::nullopt, voicegroupArguments(),
-                          SettingsDialog::Tab::Song);
+    SettingsDialog dialog(configuredEngineSettings(), std::nullopt, voicegroupArguments());
 
     auto *const tabs = dialog.findChild<QTabWidget *>();
     QVERIFY(tabs);
     QVERIFY(!tabs->isTabEnabled(1));
-    QCOMPARE(dialog.currentTab(), SettingsDialog::Tab::Engine);
+    QCOMPARE(tabs->currentIndex(), 0);
     QVERIFY(!dialog.songCfg().has_value());
 }
 

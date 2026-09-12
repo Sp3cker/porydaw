@@ -71,33 +71,10 @@ struct QuickMenuItem {
     bool hasSubmenu() const { return !children.empty(); }
     bool isActionBacked() const { return backing == Backing::Action; }
 
-    /// Projects the action's current presentation without changing its scope,
-    /// shortcut, callback, or ownership.
-    static QuickMenuItem fromAction(QAction &source, int id)
-    {
-        QuickMenuItem item;
-        item.id = id;
-        item.enabled = source.isEnabled();
-        item.checkable = source.isCheckable();
-        item.checked = source.isChecked();
-        item.shortcutText = source.shortcut().toString(QKeySequence::NativeText);
-        item.backing = Backing::Action;
-        item.action = &source;
-
-        const QString actionText = source.text();
-        item.text.reserve(actionText.size());
-        for (qsizetype index = 0; index < actionText.size(); ++index) {
-            if (actionText.at(index) != u'&') {
-                item.text += actionText.at(index);
-                continue;
-            }
-            if (index + 1 < actionText.size() && actionText.at(index + 1) == u'&') {
-                item.text += u'&';
-                ++index;
-            }
-        }
-        return item;
-    }
+    /// Snapshots the action's presentation text/enabled/checked at open time,
+    /// retains a guarded non-owning identity the host triggers, requires the
+    /// QAction to outlive the open menu, and retires the level on changed().
+    static QuickMenuItem fromAction(QAction &source, int id);
 
     static QuickMenuItem makeSeparator();
 };
@@ -239,7 +216,6 @@ class QuickMenuHost : public QObject
         int rememberedId = 0;
         QMetaObject::Connection resetConnection;
         QMetaObject::Connection modelDestroyedConnection;
-        bool actionBackedRoot = false;
         std::vector<QMetaObject::Connection> actionConnections;
     };
 
@@ -252,6 +228,7 @@ class QuickMenuHost : public QObject
     void handleSessionClosed();
     void handleSessionOutsideRightPressed(QObject *dismissedOwner, const QPointF &scenePos);
     void handleLevelReset(QuickMenuModel *model);
+    void triggerActionBackedRow(QAction *action);
     void layoutLevel(Level &level, const QRectF &anchor, bool rootLevel);
     void applyLevel(Level &level, const MenuMetrics &layout, const QRectF &anchor, bool rootLevel);
     void relayoutRoot();

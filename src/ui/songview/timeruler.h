@@ -102,6 +102,11 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
     Q_INVOKABLE void acceptTimeSigPrompt(int numerator, int denominatorPow2);
     Q_INVOKABLE void cancelTimeSigPrompt();
     void cancelTimeSigPromptWithoutFocus();
+    // Semantic entry for the shared Edit Time Signature action: opens the
+    // guarded form at the current edit cursor — editing an explicit event
+    // at that tick or inserting a new one seeded with the in-effect
+    // signature. No menu snapshot is consulted.
+    void editTimeSignatureAtCursor();
     int timeSigPromptInitialNumerator() const noexcept;
     int timeSigPromptInitialDenominatorPow2() const noexcept;
     static constexpr int timeSigPromptMinimumNumerator() noexcept { return 1; }
