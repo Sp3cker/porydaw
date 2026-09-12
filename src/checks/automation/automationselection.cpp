@@ -609,12 +609,13 @@ void AutomationEditingTest::ghostToggleSkipsEventlessLane()
     const EditorAutomationRowId volume{EditorAutomationRowKind::ControlChange, kTrack,
                                        kVolumeController};
     QVERIFY(activateParameter(volume));
+    const int volumeIndex = checks::support::automationParameterIndex(*canvas, volume);
+    QVERIFY(volumeIndex >= 0);
     const EditorAutomationRowId modulation{EditorAutomationRowKind::ControlChange, kTrack,
                                            CoreTimeDefaults::kCcModulation};
     QVERIFY(tab().document().lanePoints(kTrack, CoreTimeDefaults::kCcModulation).empty());
     QVERIFY(clickParameterTab(modulation, Qt::ControlModifier));
-    const int modulationIndex = checks::support::automationParameterIndex(*canvas, modulation);
-    QVERIFY(modulationIndex >= 0);
-    QTRY_COMPARE(canvas->activeParameter(), modulationIndex);
+    QVERIFY(checks::support::automationParameterIndex(*canvas, modulation) >= 0);
+    QTRY_COMPARE(canvas->activeParameter(), volumeIndex);
     QVERIFY(canvas->ghostParameters().isEmpty());
 }

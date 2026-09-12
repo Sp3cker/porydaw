@@ -84,10 +84,11 @@ Item {
                     checked: root.canvas.activeParameter === tab.index
 
                     down: pressArea.pressed
-                    onClicked: root.canvas.parameterClicked(tab.index, Qt.NoModifier)
+                    onClicked: root.canvas.parameterClicked(tab.index)
 
                     MouseArea {
                         id: pressArea
+                        acceptedButtons: Qt.LeftButton
                         anchors.fill: parent
                         onPressed: (mouse) => {
                             tab.forceActiveFocus()

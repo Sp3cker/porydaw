@@ -5,7 +5,6 @@
 #include <algorithm>
 
 #include <QFontInfo>
-#include <QGuiApplication>
 #include <QVariantMap>
 
 #include "core/m4asemantics.h"
@@ -90,10 +89,11 @@ QList<int> AutomationCanvas::selectedParameters() const
 QList<int> AutomationCanvas::ghostParameters() const
 {
     return parameterIndexesWhere([this](const EditorAutomationRowId &row) {
-        return row.kind == EditorAutomationRowKind::Tempo
-                   ? m_ghostTempo
-                   : std::find(m_ghostControllers.begin(), m_ghostControllers.end(),
-                               row.controller) != m_ghostControllers.end();
+        const bool pinned = row.kind == EditorAutomationRowKind::Tempo
+                                ? m_ghostTempo
+                                : std::find(m_ghostControllers.begin(), m_ghostControllers.end(),
+                                            row.controller) != m_ghostControllers.end();
+        return pinned && parameterHasEvents(row);
     });
 }
 
@@ -190,16 +190,16 @@ void AutomationCanvas::activateParameter(int index)
 
 void AutomationCanvas::parameterPressed(int index, Qt::KeyboardModifiers modifiers)
 {
-    if ((modifiers & Qt::ControlModifier) && canGhostParameter(index))
-        toggleGhostParameter(index);
-    else
-        activateParameter(index);
+    if (modifiers & Qt::ControlModifier) {
+        if (canGhostParameter(index))
+            toggleGhostParameter(index);
+        return;
+    }
+    activateParameter(index);
 }
 
-void AutomationCanvas::parameterClicked(int index, Qt::KeyboardModifiers modifiers)
+void AutomationCanvas::parameterClicked(int index)
 {
-    if (modifiers & Qt::ControlModifier)
-        return;
     activateParameter(index);
 }
 

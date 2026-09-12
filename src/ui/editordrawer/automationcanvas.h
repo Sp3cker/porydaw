@@ -177,7 +177,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     Q_INVOKABLE void openParameterMenu(int index, qreal sceneX, qreal sceneY);
     Q_INVOKABLE void toggleGhostParameter(int index);
     Q_INVOKABLE void parameterPressed(int index, Qt::KeyboardModifiers modifiers);
-    Q_INVOKABLE void parameterClicked(int index, Qt::KeyboardModifiers modifiers);
+    Q_INVOKABLE void parameterClicked(int index);
     // Binds the shared canvas popup session once TimelineQuickView exists;
     // the automation menus are typed QuickMenuHost adapters over it.
     void setPopupSession(songview::QuickPopupSession *session);
