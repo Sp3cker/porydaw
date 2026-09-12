@@ -334,7 +334,8 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
             continue;
         placedGhostLabels.push_back(rect);
         appendText(ghostTextRecords, TimelineQuickTextKeyKind::AutomationGhostLabel,
-                   quint64(ghostLane.parameterIndex), rect, text, ghost, m_laneCaptionFont,
+                   quint64(ghostLane.parameterIndex), rect, text,
+                   themes::color(themes::Role::song_view_secondary_text), m_laneCaptionFont,
                    Qt::AlignRight, viewport);
     }
     if (active) {
@@ -420,10 +421,9 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         const qreal x = std::clamp<qreal>(m_hoverState.hover.pos.x() - width / 2.0, viewport.left(),
                                           viewport.right() - width);
         QRectF rect(x, curveY + labelInset, width, height);
-        rect.moveTop(std::clamp<qreal>(rect.top(), viewport.top(), viewport.bottom() - height));
         appendText(hoverTextRecords, TimelineQuickTextKeyKind::AutomationGhostHover,
                    quint64(ghostLane.parameterIndex), rect, text,
-                   themes::color(themes::Role::song_view_automation_node_ink), m_laneCaptionFont,
+                   themes::color(themes::Role::song_view_secondary_text), m_laneCaptionFont,
                    Qt::AlignHCenter, viewport);
     }
     if (transient && m_activeGesture)
