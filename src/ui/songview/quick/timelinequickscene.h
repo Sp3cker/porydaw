@@ -35,8 +35,8 @@ enum class TimelineQuickTextKeyKind : quint8 {
     VelocityAxis,
     VoiceChanges,
     VoiceChangesHover,
-    AutomationHeader,
-    AutomationAddLane,
+    AutomationGhostLabel,
+    AutomationGhostHover,
     AutomationHover,
     AutomationTransient,
 };
@@ -185,6 +185,8 @@ struct TimelineQuickScene final : public QObject {
         QAbstractItemModel *automationHoverTextModel READ automationHoverTextModel CONSTANT FINAL)
     Q_PROPERTY(QAbstractItemModel *automationTransientTextModel READ automationTransientTextModel
                    CONSTANT FINAL)
+    Q_PROPERTY(
+        QAbstractItemModel *automationGhostTextModel READ automationGhostTextModel CONSTANT FINAL)
     Q_PROPERTY(bool hoverChipVisible READ hoverChipVisible NOTIFY hoverChipChanged FINAL)
     Q_PROPERTY(QRectF hoverChipRect READ hoverChipRect NOTIFY hoverChipChanged FINAL)
     Q_PROPERTY(QString hoverChipText READ hoverChipText NOTIFY hoverChipChanged FINAL)
@@ -206,6 +208,7 @@ struct TimelineQuickScene final : public QObject {
     QAbstractItemModel *voiceChangesHoverTextModel() const noexcept;
     QAbstractItemModel *automationHoverTextModel() const noexcept;
     QAbstractItemModel *automationTransientTextModel() const noexcept;
+    QAbstractItemModel *automationGhostTextModel() const noexcept;
     void setRulerTextRecords(std::span<const TimelineQuickTextModel::Record> records);
     void setOtherEventsTextRecords(std::span<const TimelineQuickTextModel::Record> records);
     void setVelocityTextRecords(std::span<const TimelineQuickTextModel::Record> records);
@@ -214,6 +217,7 @@ struct TimelineQuickScene final : public QObject {
     void setVoiceChangesHoverTextRecords(std::span<const TimelineQuickTextModel::Record> records);
     void setAutomationHoverTextRecords(std::span<const TimelineQuickTextModel::Record> records);
     void setAutomationTransientTextRecords(std::span<const TimelineQuickTextModel::Record> records);
+    void setAutomationGhostTextRecords(std::span<const TimelineQuickTextModel::Record> records);
 
     const TimelineQuickLayerData &layer(TimelineQuickLayer layer) const noexcept;
     TimelineQuickLayerData &layer(TimelineQuickLayer layer) noexcept;
@@ -246,6 +250,7 @@ struct TimelineQuickScene final : public QObject {
     TimelineQuickTextModel *m_voiceChangesHoverTextModel = nullptr;
     TimelineQuickTextModel *m_automationHoverTextModel = nullptr;
     TimelineQuickTextModel *m_automationTransientTextModel = nullptr;
+    TimelineQuickTextModel *m_automationGhostTextModel = nullptr;
 
     bool m_hoverChipVisible = false;
     QRectF m_hoverChipRect;

@@ -47,6 +47,7 @@ class AutomationPresentationTest final : public QObject
     void ghostTempoPaintsUnderActiveLane();
     void drawerGrowthMovesValueAxisKeepsGridAlignment();
     void selectedInactiveParametersKeepScopeIndicators();
+    void ghostLabelNamesCurveAndFollowsHover();
 
     void pencilCursorUsesPlotGutterBoundary();
     void pencilCursorUsesInputDevicePixelRatio();

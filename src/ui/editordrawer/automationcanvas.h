@@ -363,7 +363,6 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void rebuildNodeStack();
     LaneHandle laneAt(int y) const noexcept;
     const NodeLaneSlot *resolveSlot(LaneHandle handle) const noexcept;
-    std::vector<LaneHandle> ghostSecondaryHandles() const;
     void refreshHoverAt(const QPointF &position);
     bool resolveLane(LaneHandle handle, const NodeLane **lane, QRect *body) const noexcept;
     NodeLane *mutableLane(LaneHandle handle) noexcept;

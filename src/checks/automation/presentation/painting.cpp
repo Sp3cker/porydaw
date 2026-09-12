@@ -564,3 +564,63 @@ void AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord()
     QVERIFY(!after.isNull());
     QVERIFY(after != before);
 }
+
+void AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover()
+{
+    AutomationPage *const automationPage = page();
+    songview::TimelineQuickScene *const scene = quickScene();
+    AutomationCanvas *const canvas = automationPage ? automationPage->canvas() : nullptr;
+    QVERIFY(automationPage);
+    QVERIFY(scene);
+    QVERIFY(canvas);
+    const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
+    const EditorAutomationRowId volume{EditorAutomationRowKind::ControlChange, kTrack,
+                                       CoreTimeDefaults::kCcVolume};
+    QVERIFY(activateParameter(volume));
+    TempoEdit edit;
+    edit.remove = m_document->tempoPoints();
+    edit.add = {{kHeldTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(120)}};
+    m_document->applyTempoEdit(edit);
+    refreshDocumentPresentation();
+    const QRectF viewport(QPointF{}, QSizeF(automationPage->automationViewportSize()));
+    const QAbstractItemModel *const ghostModel = scene->automationGhostTextModel();
+    QVERIFY(ghostModel);
+
+    const int tempoIndex = checks::support::automationParameterIndex(*canvas, tempo);
+    QVERIFY(tempoIndex >= 0);
+    canvas->toggleGhostParameter(tempoIndex);
+
+    // Persistent label: the ghost's tab name hugs the plot's right edge at
+    // the curve's Y for the last visible tick.
+    std::optional<QRectF> label;
+    QTRY_VERIFY(
+        (label = findTextRecord(ghostModel, QStringLiteral("Tempo"), viewport)).has_value());
+    QVERIFY2(label->right() <= viewport.right() && label->right() > viewport.right() * 0.5,
+             "the ghost name label no longer hugs the plot's right edge");
+    TempoLane lane(*m_document);
+    const QRect body = canvas->laneBody(LaneHandle{0});
+    const qreal curveY = nodelane::valueY(lane, body, AutomationGeometry::resolve(), 120);
+    QVERIFY2(std::abs(label->center().y() - curveY) <= label->height(),
+             "the ghost name label no longer tracks its curve's height");
+    QVERIFY(!findTextRecord(ghostModel, QStringLiteral("Volume"), viewport).has_value());
+
+    // Hover near the ghost curve swaps the right-edge label for an in-line
+    // name below the nodeline at the pointer's X.
+    const QPointF hoverPoint(viewport.width() / 2.0, curveY);
+    mouseMove(*m_plotInput, hoverPoint);
+    QTRY_VERIFY((label = findTextRecord(scene->automationHoverTextModel(), QStringLiteral("Tempo"),
+                                        viewport))
+                    .has_value());
+    QVERIFY2(std::abs(label->center().x() - hoverPoint.x()) <= label->width(),
+             "the ghost hover label no longer tracks the pointer horizontally");
+    QVERIFY2(label->top() >= curveY, "the ghost hover label no longer sits below the nodeline");
+    QVERIFY(!findTextRecord(ghostModel, QStringLiteral("Tempo"), viewport).has_value());
+
+    // Unpinning clears both labels without further pointer movement.
+    canvas->toggleGhostParameter(tempoIndex);
+    QVERIFY(canvas->ghostParameters().isEmpty());
+    QTRY_VERIFY(!findTextRecord(ghostModel, QStringLiteral("Tempo"), viewport).has_value());
+    QTRY_VERIFY(
+        !findTextRecord(scene->automationHoverTextModel(), QStringLiteral("Tempo"), viewport)
+             .has_value());
+}

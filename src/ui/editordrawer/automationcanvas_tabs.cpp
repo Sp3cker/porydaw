@@ -83,26 +83,6 @@ LaneHandle AutomationCanvas::activeLane() const noexcept
     return {int(slot - m_nodeStack.cbegin())};
 }
 
-// Ghost secondaries resolved fresh per paint: rebuilds remap m_nodeStack
-// handles, so no handle is cached. The active row is skipped — it paints
-// through the active pass; a pin on it simply waits there.
-std::vector<LaneHandle> AutomationCanvas::ghostSecondaryHandles() const
-{
-    std::vector<LaneHandle> handles;
-    const std::optional<EditorAutomationRowId> activeRow = parameterRow(activeParameter());
-    for (const int index : ghostParameters()) {
-        const std::optional<EditorAutomationRowId> row = parameterRow(index);
-        if (!row || (activeRow && *row == *activeRow))
-            continue;
-        const auto slot =
-            std::find_if(m_nodeStack.cbegin(), m_nodeStack.cend(),
-                         [&row](const NodeLaneSlot &candidate) { return candidate.id == *row; });
-        if (slot != m_nodeStack.cend())
-            handles.push_back({int(slot - m_nodeStack.cbegin())});
-    }
-    return handles;
-}
-
 // Selection-scope inclusion over the nine catalog identities — not a count of
 // stored nodes; unpainted lanes and global Tempo are included when covered.
 QList<int> AutomationCanvas::selectedParameters() const
