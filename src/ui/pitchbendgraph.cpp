@@ -651,7 +651,7 @@ Tick PitchBendGraph::tickAtFraction(double fraction, Sampling sampling) const
         return lastEditableTick(sampling);
     const double raw = double(m_startTick) + fraction * double(m_endTick - m_startTick);
     const Tick rawTick =
-        std::clamp<Tick>(Tick(std::max(0.0, std::round(raw))), m_startTick, m_endTick);
+        std::clamp<Tick>(CoreTimeDefaults::tickFromDouble(std::round(raw)), m_startTick, m_endTick);
     const uint32_t cell = samplingCellTicksAt(rawTick, sampling);
     const Tick anchor =
         sampling == Sampling::Fine ? 0 : (m_grid ? m_grid->segmentAt(rawTick).start : 0);
@@ -664,7 +664,7 @@ Tick PitchBendGraph::tickAtFraction(double fraction, Sampling sampling) const
         if (snapped >= double(segmentEnd) && segmentEnd < m_endTick)
             return segmentEnd;
     }
-    return std::min<Tick>(Tick(snapped), lastEditableTick(sampling));
+    return std::min<Tick>(CoreTimeDefaults::tickFromDouble(snapped), lastEditableTick(sampling));
 }
 
 Tick PitchBendGraph::tickAtX(qreal x, Sampling sampling) const

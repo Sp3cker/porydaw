@@ -15,6 +15,32 @@ namespace CoreTimeDefaults {
 inline constexpr Tick kNoTick = std::numeric_limits<Tick>::max(); // absent loop; parse bound
 inline constexpr Tick kMaxTick = Tick(kNoTick - 1);               // highest representable tick
 
+// Mathematical tick + delta saturated to [0, kMaxTick]; never emits kNoTick.
+// Headroom is classified before any arithmetic so INT64_MIN/INT64_MAX deltas
+// and a sentinel-valued tick stay safe: no int64_t(tick) + delta overflow and
+// no negation of INT64_MIN.
+constexpr Tick shiftTickClamped(Tick tick, int64_t delta)
+{
+    if (delta <= -int64_t(tick))
+        return 0;
+    if (delta >= int64_t(kMaxTick) - int64_t(tick))
+        return kMaxTick;
+    return Tick(int64_t(tick) + delta);
+}
+
+// Floating position to Tick: NaN and non-positive inputs map to 0, finite
+// values below double(kNoTick) truncate toward zero, and anything at or above
+// double(kNoTick) (including +inf) saturates to kMaxTick. No out-of-range
+// floating-to-integer conversion executes; rounding stays at each caller.
+inline Tick tickFromDouble(double tick)
+{
+    if (!(tick > 0.0))
+        return 0;
+    if (tick >= double(kNoTick))
+        return kMaxTick;
+    return Tick(tick);
+}
+
 inline constexpr int kTempoBpm = 120;
 inline constexpr int kMinTempoBpm = 20;
 inline constexpr int kMaxTempoBpm = 255;

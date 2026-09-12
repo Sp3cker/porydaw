@@ -561,8 +561,8 @@ void NodeLaneQuickPaint::composeHover(const Context &context, bool hover, const 
         return;
     const NodeLaneHoverState::HoverState &hoverState = context.hoverState.hover;
     const qreal x =
-        tickX(context, Tick(std::max(0.0, context.hoverState.insertionTick(context.projection,
-                                                                           context.pencilMode))));
+        tickX(context, CoreTimeDefaults::tickFromDouble(context.hoverState.insertionTick(
+                           context.projection, context.pencilMode)));
     const QString &text = context.hoverState.hoverTextCache.text;
     const auto &label = context.hoverState.hoverValueLabel;
     if (hoverState.hasPoint) {

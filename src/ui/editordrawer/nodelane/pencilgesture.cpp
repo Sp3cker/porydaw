@@ -26,7 +26,8 @@ double clampedRawTick(double tick, Tick songEndTick)
 Tick clampedTick(double tick, Tick songEndTick)
 {
     const double clamped = clampedRawTick(tick, songEndTick);
-    return clamped >= double(songEndTick) ? songEndTick : Tick(std::floor(clamped));
+    return clamped >= double(songEndTick) ? songEndTick
+                                          : CoreTimeDefaults::tickFromDouble(std::floor(clamped));
 }
 
 AutomationPencilGesture::Sample normalizedSample(AutomationPencilGesture::Sample sample,

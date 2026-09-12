@@ -18,7 +18,7 @@ namespace songview {
 void PianoRoll::updateMoveDrag(const TimelinePointerInput &input)
 {
     const double tick = m_camera.tickAtContentX(input.position.x());
-    const int64_t grid = int64_t(m_grid.snapTicksAt(Tick(std::max(0.0, m_pressTick))));
+    const int64_t grid = int64_t(m_grid.snapTicksAt(CoreTimeDefaults::tickFromDouble(m_pressTick)));
     const int64_t snappedD = int64_t(std::llround((tick - m_pressTick) / double(grid))) * grid;
     const int dKey = m_sv->scaleFold() ? foldDegreeDeltaForPointer(input.position.y())
                                        : yToKey(input.position.y()) - m_pressKey;
@@ -89,7 +89,7 @@ void PianoRoll::updateVelocityDrag(const TimelinePointerInput &input)
 void PianoRoll::updateDrawDrag(const TimelinePointerInput &input)
 {
     const double tick = m_camera.tickAtContentX(input.position.x());
-    const Tick grid = m_grid.snapTicksAt(Tick(std::max(0.0, m_pressTick)));
+    const Tick grid = m_grid.snapTicksAt(CoreTimeDefaults::tickFromDouble(m_pressTick));
     Tick start;
     int64_t dur;
     drawSpanAt(tick, grid, start, dur);

@@ -49,6 +49,18 @@ void EditCheckTest::timeRangeNoOps()
     QCOMPARE(document.smf().write(), bytes);
     QVERIFY(document.tempoPoints() == tempos);
     QCOMPARE(document.undoStack()->count(), undoCount);
+
+    // A reserved kNoTick endpoint is rejected before any range arithmetic,
+    // even when the range would otherwise move real content.
+    document.addNote(0, 30, 60, 10, 90);
+    const QByteArray sentinelBytes = document.smf().write();
+    const int sentinelUndoCount = document.undoStack()->count();
+    QVERIFY(!document.removeTimeRange({20, CoreTimeDefaults::kNoTick}, trackZero()));
+    QVERIFY(!document.insertBlankTime({20, CoreTimeDefaults::kNoTick}, trackZero()));
+    QVERIFY(!document.duplicateTimeRange({20, CoreTimeDefaults::kNoTick}, trackZero()));
+    QCOMPARE(document.smf().write(), sentinelBytes);
+    QVERIFY(document.tempoPoints() == tempos);
+    QCOMPARE(document.undoStack()->count(), sentinelUndoCount);
 }
 
 void EditCheckTest::timeRangeInsertScopeAndSplit()
@@ -237,6 +249,42 @@ void EditCheckTest::timeRangeDuplicateClippingAndOrder()
     document.insertRawEvent(smfTrack, songdocument_test::channel(0x90, 800, 73, 66));
     QVERIFY(document.insertBlankTime({800, 820}, scope));
     QVERIFY(songdocument_test::noteEndsBeforeOnsAt(document, 0, 820));
+
+    // Duplicate overflow is atomic: a range whose destination end passes
+    // kMaxTick, or a covered event that cannot shift by the span, rejects
+    // before any mutation. A destination landing exactly on kMaxTick is
+    // admitted and stays undoable.
+    SmfFile overflowSmf;
+    overflowSmf.format = 1;
+    overflowSmf.division = 24;
+    overflowSmf.tracks.push_back(SmfTrack{{}, 48});
+    overflowSmf.tracks.push_back(SmfTrack{{songdocument_test::channel(0xC0, 0, 1, 0)}, 48});
+    auto overflowFixture = songdocument_test::makeDocument(std::move(overflowSmf),
+                                                           QStringLiteral("time-dup-overflow"));
+    QVERIFY(overflowFixture);
+    SongDocument &overflow = overflowFixture->document;
+    const int overflowTrack = overflow.smfTrackFor(0);
+    QVERIFY(overflowTrack >= 0);
+    overflow.insertRawEvent(overflowTrack,
+                            songdocument_test::channel(0xB0, CoreTimeDefaults::kMaxTick - 4, 7, 0));
+    const QByteArray overflowBytes = overflow.smf().write();
+    const int overflowUndoCount = overflow.undoStack()->count();
+    QVERIFY(!overflow.duplicateTimeRange(
+        {CoreTimeDefaults::kMaxTick - 14, CoreTimeDefaults::kMaxTick - 4}, trackZero()));
+    QVERIFY(!overflow.duplicateTimeRange(
+        {CoreTimeDefaults::kMaxTick - 20, CoreTimeDefaults::kMaxTick - 10}, trackZero()));
+    QCOMPARE(overflow.smf().write(), overflowBytes);
+    QCOMPARE(overflow.undoStack()->count(), overflowUndoCount);
+    QVERIFY(overflow.duplicateTimeRange(
+        {CoreTimeDefaults::kMaxTick - 8, CoreTimeDefaults::kMaxTick - 4}, trackZero()));
+    QCOMPARE(overflow.smf().tracks[size_t(overflowTrack)].events.back().tick,
+             CoreTimeDefaults::kMaxTick);
+    QCOMPARE(overflow.smf().tracks[size_t(overflowTrack)].endTick, CoreTimeDefaults::kMaxTick);
+    const QByteArray ceilingAfter = overflow.smf().write();
+    overflow.undoStack()->undo();
+    QCOMPARE(overflow.smf().write(), overflowBytes);
+    overflow.undoStack()->redo();
+    QCOMPARE(overflow.smf().write(), ceilingAfter);
 }
 
 void EditCheckTest::timeRangeSignatureAndOrphans()
@@ -500,4 +548,40 @@ void EditCheckTest::timeRangeInsertBlankOverflow()
     QVERIFY(!document.insertBlankTime({0, 1}, trackZero()));
     QCOMPARE(document.smf().write(), bytes);
     QCOMPARE(document.undoStack()->count(), undoCount);
+
+    // A shift landing exactly on kMaxTick is admitted and stays undoable.
+    auto ceilingFixture =
+        songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-blank-ceiling"));
+    QVERIFY(ceilingFixture);
+    SongDocument &ceiling = ceilingFixture->document;
+    const int ceilingTrack = ceiling.smfTrackFor(0);
+    QVERIFY(ceilingTrack >= 0);
+    ceiling.insertRawEvent(ceilingTrack,
+                           songdocument_test::channel(0xB0, CoreTimeDefaults::kMaxTick - 5, 7, 0));
+    const QByteArray ceilingBefore = ceiling.smf().write();
+    QVERIFY(ceiling.insertBlankTime(
+        {CoreTimeDefaults::kMaxTick - 10, CoreTimeDefaults::kMaxTick - 5}, trackZero()));
+    QCOMPARE(ceiling.smf().tracks[size_t(ceilingTrack)].events.back().tick,
+             CoreTimeDefaults::kMaxTick);
+    QCOMPARE(ceiling.smf().tracks[size_t(ceilingTrack)].endTick, CoreTimeDefaults::kMaxTick);
+    const QByteArray ceilingAfter = ceiling.smf().write();
+    ceiling.undoStack()->undo();
+    QCOMPARE(ceiling.smf().write(), ceilingBefore);
+    ceiling.undoStack()->redo();
+    QCOMPARE(ceiling.smf().write(), ceilingAfter);
+
+    // A track end alone at the ceiling rejects the insert without any event
+    // or tempo point participating in the overflow.
+    SmfFile endOnly;
+    endOnly.format = 1;
+    endOnly.division = 24;
+    endOnly.tracks.push_back(SmfTrack{{}, 48});
+    endOnly.tracks.push_back(
+        SmfTrack{{songdocument_test::channel(0xC0, 0, 1, 0)}, CoreTimeDefaults::kMaxTick});
+    QVERIFY(document.adoptSmf(std::move(endOnly), fixture->song, nullptr));
+    const QByteArray endBytes = document.smf().write();
+    const int endUndoCount = document.undoStack()->count();
+    QVERIFY(!document.insertBlankTime({0, 1}, trackZero()));
+    QCOMPARE(document.smf().write(), endBytes);
+    QCOMPARE(document.undoStack()->count(), endUndoCount);
 }

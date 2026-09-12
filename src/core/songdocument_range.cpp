@@ -14,6 +14,33 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
     std::vector<EditOp> ops;
     const int targetEngineTrackCount =
         std::clamp(edit.minimumEngineTrackCount, engineTrackCount(), 16);
+    // Admission: every destination the edit writes must fit the Tick domain.
+    // One out-of-range member rejects the whole edit before track expansion,
+    // removal planning, or history. Eligibility mirrors the write passes
+    // below: notes and lane points on engine tracks outside the post-
+    // expansion map are skipped there, so they are not checked here; tempo
+    // points always participate.
+    for (const RangeEdit::TrackNotes &tn : edit.addNotes) {
+        if (tn.engineTrack < 0 || tn.engineTrack >= targetEngineTrackCount)
+            continue;
+        for (const NewNote &note : tn.notes) {
+            const uint64_t end = uint64_t(note.tick) + std::max<uint32_t>(1, note.duration);
+            if (end > CoreTimeDefaults::kMaxTick)
+                return;
+        }
+    }
+    for (const RangeEdit::LaneWrite &lw : edit.addPoints) {
+        if (lw.engineTrack < 0 || lw.engineTrack >= targetEngineTrackCount)
+            continue;
+        for (const LanePointValue &point : lw.points) {
+            if (point.tick > CoreTimeDefaults::kMaxTick)
+                return;
+        }
+    }
+    for (const TempoPoint &point : edit.addTempo) {
+        if (point.tick > CoreTimeDefaults::kMaxTick)
+            return;
+    }
     std::vector<int> engineToSmf = m_engineToSmf;
     std::vector<uint8_t> engineChannels = m_engineChannel;
     bool usedChannels[16] = {};
@@ -81,7 +108,7 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
                 for (const LanePointValue &point : lw.points) {
                     const int clamped = std::clamp(point.value, int(descriptor->minimumValue),
                                                    int(descriptor->maximumValue));
-                    trackWrites.push_back({Tick(point.tick), lw.cc, uint8_t(clamped),
+                    trackWrites.push_back({point.tick, lw.cc, uint8_t(clamped),
                                            uint8_t(lw.engineTrack),
                                            engineChannels[size_t(lw.engineTrack)]});
                 }
@@ -178,6 +205,31 @@ void SongDocument::moveRange(const std::vector<DocNote> &notes,
 {
     if ((notes.empty() && points.empty() && tempo.empty()) || dTick == 0)
         return;
+    // Admission: every requested destination must fit the Tick domain. One
+    // overflowing member rejects the complete mixed move before any removal
+    // is planned. Headroom is compared, never added, so extreme dTick values
+    // cannot overflow int64_t. Terminated notes also validate their wide
+    // note-off destination (tick + duration + dTick).
+    constexpr int64_t ceiling = int64_t(CoreTimeDefaults::kMaxTick);
+    const auto fits = [dTick](uint64_t tick) { return dTick <= ceiling - int64_t(tick); };
+    if (!m_smf.tracks.empty()) {
+        for (const DocNote &note : notes) {
+            if (!fits(note.tick))
+                return;
+            if (!note.unterminated() && !fits(uint64_t(note.tick) + note.duration))
+                return;
+        }
+        for (const DocLanePoint &point : points) {
+            if (point.smfTrack < 0 || point.smfTrack >= int(m_smf.tracks.size()))
+                continue;
+            if (!fits(point.tick))
+                return;
+        }
+    }
+    for (const TempoPoint &point : tempo) {
+        if (!fits(point.tick))
+            return;
+    }
     std::vector<EditOp> ops;
     if (!m_smf.tracks.empty() && (!notes.empty() || !points.empty())) {
         std::vector<std::vector<size_t>> moved(m_smf.tracks.size());
@@ -240,8 +292,8 @@ void SongDocument::moveRange(const std::vector<DocNote> &notes,
                 if (!std::binary_search(removeIdentities.begin(), removeIdentities.end(),
                                         point.index))
                     continue;
-                writes.push_back({Tick(std::max<int64_t>(0, int64_t(point.tick) + dTick)),
-                                  point.lane, uint8_t(point.value), point.stream, point.channel});
+                writes.push_back({CoreTimeDefaults::shiftTickClamped(point.tick, dTick), point.lane,
+                                  uint8_t(point.value), point.stream, point.channel});
             }
             const auto patch = xcmd::rewritePoints(events, removeIdentities, writes);
             if (!patch)
@@ -258,7 +310,7 @@ void SongDocument::moveRange(const std::vector<DocNote> &notes,
         for (const DocNote &note : notes) {
             if (note.unterminated())
                 continue;
-            const Tick newTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick));
+            const Tick newTick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
             written.push_back(
                 {note.engineTrack, note.key, newTick, uint64_t(newTick) + note.duration});
         }
@@ -276,7 +328,7 @@ void SongDocument::moveRange(const std::vector<DocNote> &notes,
                 op.type = EditOp::InsertEvent;
                 op.smfTrack = int(t);
                 op.event = m_smf.tracks[t].events[index];
-                op.event.tick = Tick(std::max<int64_t>(0, int64_t(op.event.tick) + dTick));
+                op.event.tick = CoreTimeDefaults::shiftTickClamped(op.event.tick, dTick);
                 op.preservesNoteId = op.event.isNoteOn();
                 ops.push_back(op);
             }
@@ -288,13 +340,13 @@ void SongDocument::moveRange(const std::vector<DocNote> &notes,
         return;
     }
     std::vector<TempoPoint> nextTempo = m_tempoPoints;
-    std::set<uint64_t> moving;
+    std::set<Tick> moving;
     for (const TempoPoint &point : tempo)
         moving.insert(point.tick);
     std::erase_if(nextTempo, [&](const TempoPoint &point) { return moving.contains(point.tick); });
     for (const TempoPoint &point : tempo) {
         TempoPoint shifted = point;
-        shifted.tick = Tick(std::max<int64_t>(0, int64_t(point.tick) + dTick));
+        shifted.tick = CoreTimeDefaults::shiftTickClamped(point.tick, dTick);
         nextTempo.push_back(shifted);
     }
     pushEdit(tr("move range"), std::move(ops), std::move(nextTempo));

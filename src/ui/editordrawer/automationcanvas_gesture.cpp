@@ -300,9 +300,9 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
                 const auto &selection = m_page.m_owner.selectionModel().timeSelection();
                 if (selection.active()) {
                     const Tick startTick =
-                        Tick(std::max<int64_t>(0, int64_t(selection.startTick) + finish.dTick));
+                        CoreTimeDefaults::shiftTickClamped(selection.startTick, finish.dTick);
                     const Tick endTick =
-                        Tick(std::max<int64_t>(0, int64_t(selection.endTick) + finish.dTick));
+                        CoreTimeDefaults::shiftTickClamped(selection.endTick, finish.dTick);
                     if (endTick > startTick) {
                         auto movedSelection = selection;
                         movedSelection.startTick = startTick;

@@ -4,6 +4,29 @@
 
 #include "checks/editcheck/tst_songdocument_support.h"
 
+namespace {
+
+// In-memory document with one channel track whose notes sit far below the
+// tick ceiling: adoptSmf accepts the full Tick range a VLQ round-trip
+// through makeDocument cannot stage.
+bool adoptBoundaryDocument(SongDocument *document, QString *error)
+{
+    SmfFile smf;
+    smf.tracks.push_back(songdocument_test::conductor());
+    SmfTrack track;
+    track.events.push_back(songdocument_test::channel(0x90, 0, 60, 100));
+    track.events.push_back(songdocument_test::channel(0x90, 24, 60, 0));
+    track.events.push_back(songdocument_test::channel(0x90, 48, 64, 100));
+    track.events.push_back(songdocument_test::channel(0x90, 72, 64, 0));
+    track.endTick = 96;
+    smf.tracks.push_back(track);
+    SongInfo song;
+    song.label = QStringLiteral("note-boundary");
+    return document->adoptSmf(std::move(smf), song, error);
+}
+
+} // namespace
+
 void EditCheckTest::noteEditingBasic_data()
 {
     addSongRows(SongCapability::EditableTrack);
@@ -54,6 +77,61 @@ void EditCheckTest::noteEditingBasic()
     document.deleteNotes({note});
     QVERIFY(!document.findNote(track, base + step * 6, 63, &note));
     QVERIFY(songdocument_test::tracksSorted(document.smf()));
+
+    // Synthetic boundary document: adoptSmf stages full-range ticks.
+    SongDocument boundary;
+    QVERIFY2(adoptBoundaryDocument(&boundary, &error), qPrintable(error));
+    QCOMPARE(boundary.engineTrackCount(), 1);
+    DocNote edge;
+    QVERIFY(boundary.findNote(0, 0, 60, &edge));
+    // noteEndTick reports the wide mathematical end even when that end is
+    // not persistable.
+    edge.tick = CoreTimeDefaults::kMaxTick - 20;
+    edge.duration = 30;
+    QCOMPARE(boundary.noteEndTick(edge), uint64_t(CoreTimeDefaults::kMaxTick) + 10);
+
+    // A note ending exactly at kMaxTick is valid; a zero duration
+    // normalizes to one tick before the end check.
+    boundary.addNote(0, CoreTimeDefaults::kMaxTick - 24, 62, 24, 100);
+    QVERIFY(boundary.findNote(0, CoreTimeDefaults::kMaxTick - 24, 62, &edge));
+    QCOMPARE(edge.duration, uint32_t(24));
+    boundary.addNote(0, CoreTimeDefaults::kMaxTick - 20, 63, 0, 100);
+    QVERIFY(boundary.findNote(0, CoreTimeDefaults::kMaxTick - 20, 63, &edge));
+    QCOMPARE(edge.duration, uint32_t(1));
+
+    // Spec regressions: start 4294967293 + 2 must not write the reserved
+    // 4294967295; start 4294967284 + 20 must not wrap to 8; a one-tick note
+    // at kMaxTick is invalid. Rejection leaves the document, revision, and
+    // undo stack untouched.
+    const QByteArray baseline = boundary.smf().write();
+    const uint64_t revision = boundary.revision();
+    const int undoCount = boundary.undoStack()->count();
+    boundary.addNote(0, CoreTimeDefaults::kMaxTick - 1, 65, 2, 100);
+    boundary.addNote(0, CoreTimeDefaults::kMaxTick - 10, 66, 20, 100);
+    boundary.addNote(0, CoreTimeDefaults::kMaxTick, 67, 1, 100);
+    QCOMPARE(boundary.smf().write(), baseline);
+    QCOMPARE(boundary.revision(), revision);
+    QCOMPARE(boundary.undoStack()->count(), undoCount);
+
+    // Right-resize: an end past kMaxTick rejects; the exact ceiling and an
+    // extreme negative delta (floored at one tick) are admitted.
+    QVERIFY(boundary.findNote(0, 0, 60, &edge));
+    boundary.resizeNotes({edge}, int64_t(CoreTimeDefaults::kMaxTick) - 23);
+    boundary.resizeNotes({edge}, INT64_MAX);
+    QCOMPARE(boundary.smf().write(), baseline);
+    QCOMPARE(boundary.undoStack()->count(), undoCount);
+    boundary.resizeNotes({edge}, int64_t(CoreTimeDefaults::kMaxTick) - 24);
+    QVERIFY(boundary.findNote(0, 0, 60, &edge));
+    QCOMPARE(edge.duration, CoreTimeDefaults::kMaxTick);
+    boundary.undoStack()->undo();
+    QVERIFY(boundary.findNote(0, 0, 60, &edge));
+    QCOMPARE(edge.duration, uint32_t(24));
+    boundary.undoStack()->redo();
+    QVERIFY(boundary.findNote(0, 0, 60, &edge));
+    QCOMPARE(edge.duration, CoreTimeDefaults::kMaxTick);
+    boundary.resizeNotes({edge}, INT64_MIN);
+    QVERIFY(boundary.findNote(0, 0, 60, &edge));
+    QCOMPARE(edge.duration, uint32_t(1));
 }
 
 void EditCheckTest::noteEditingBatch_data()
@@ -89,6 +167,31 @@ void EditCheckTest::noteEditingBatch()
     document.undoStack()->redo();
     QVERIFY(document.findNote(track, base + step * 20, 64, &first));
     QVERIFY(document.findNote(track, base + step * 22, 67, &second));
+
+    // Synthetic boundary document: one invalid end rejects the whole batch
+    // before any note lands.
+    SongDocument boundary;
+    QVERIFY2(adoptBoundaryDocument(&boundary, &error), qPrintable(error));
+    const QByteArray baseline = boundary.smf().write();
+    const uint64_t revision = boundary.revision();
+    const int undoCount = boundary.undoStack()->count();
+    boundary.addNotes(0, {{CoreTimeDefaults::kMaxTick - 24, 62, 24, 96},
+                          {CoreTimeDefaults::kMaxTick - 1, 65, 2, 96}});
+    QCOMPARE(boundary.smf().write(), baseline);
+    QCOMPARE(boundary.revision(), revision);
+    QCOMPARE(boundary.undoStack()->count(), undoCount);
+    QCOMPARE(boundary.notesForTrack(0).size(), size_t(2));
+    boundary.addNotes(0, {{CoreTimeDefaults::kMaxTick - 24, 62, 24, 96},
+                          {CoreTimeDefaults::kMaxTick - 48, 66, 24, 96}});
+    QCOMPARE(boundary.undoStack()->count(), undoCount + 1);
+    QVERIFY(boundary.findNote(0, CoreTimeDefaults::kMaxTick - 24, 62, &first));
+    QVERIFY(boundary.findNote(0, CoreTimeDefaults::kMaxTick - 48, 66, &second));
+    boundary.undoStack()->undo();
+    QVERIFY(!boundary.findNote(0, CoreTimeDefaults::kMaxTick - 24, 62, &first));
+    QVERIFY(!boundary.findNote(0, CoreTimeDefaults::kMaxTick - 48, 66, &second));
+    boundary.undoStack()->redo();
+    QVERIFY(boundary.findNote(0, CoreTimeDefaults::kMaxTick - 24, 62, &first));
+    QVERIFY(boundary.findNote(0, CoreTimeDefaults::kMaxTick - 48, 66, &second));
 }
 
 void EditCheckTest::noteEditingAbutting_data()

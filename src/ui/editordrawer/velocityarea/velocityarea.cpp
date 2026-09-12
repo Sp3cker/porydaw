@@ -39,7 +39,7 @@ bool detentUnlockHeld(Qt::KeyboardModifiers modifiers, bool allowShift)
 
 Tick drawerContextTick(double tick)
 {
-    return static_cast<Tick>(std::floor(std::max(0.0, tick) + 0.5));
+    return CoreTimeDefaults::tickFromDouble(std::floor(tick + 0.5));
 }
 
 } // namespace

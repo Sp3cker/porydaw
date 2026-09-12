@@ -63,8 +63,8 @@ Tick AutomationProjection::snapTickDown(double tick, bool fine) const
             return m_page->snapTickDown(tick, false);
         return m_grid ? m_grid->snapTickDown(tick) : 0;
     }
-    const uint32_t spacing = gridSnapTicks(Tick(tick), true);
-    return Tick(uint64_t(tick / double(spacing)) * spacing);
+    const uint32_t spacing = gridSnapTicks(CoreTimeDefaults::tickFromDouble(tick), true);
+    return CoreTimeDefaults::tickFromDouble(std::floor(tick / double(spacing)) * spacing);
 }
 
 Tick AutomationProjection::nextGridTick(Tick tick, bool fine, Tick limit) const
@@ -169,7 +169,9 @@ AutomationGridCell AutomationProjection::snapCellAt(double rawTick) const
         return {};
     const Tick length = songTimeline->lengthTicks;
     const double clamped = std::clamp(rawTick, 0.0, double(length));
-    const Tick tick = clamped >= double(length) ? length - 1 : Tick(std::floor(clamped));
+    const Tick tick = clamped >= double(length)
+                          ? length - 1
+                          : CoreTimeDefaults::tickFromDouble(std::floor(clamped));
     const Tick start = snapTickDown(double(tick), false);
     return {start, nextGridTick(start, false, length)};
 }

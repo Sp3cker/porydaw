@@ -4,6 +4,7 @@
 #include "checks/rollcheck/headerchecksupport.h"
 #include "checks/rollcheck/rollcheck.h"
 #include "checks/trackheaders/trackheaderoracles.h"
+#include "core/timedefaults.h"
 
 #include <QByteArray>
 #include <QColor>
@@ -127,6 +128,30 @@ void PianoRollTest::keyboardKeepVisible()
         sendKeyStroke(roll, Qt::Key_Left, Qt::NoModifier, false);
     QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed),
              "the ride right and back did not return the note home");
+    while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
+        doc.undoStack()->undo();
+    // Rejected near-limit Right through the same key driver: no document
+    // mutation and no keep-visible camera reveal.
+    const Tick ceilingStart = CoreTimeDefaults::kMaxTick - 1;
+    doc.addNote(track, ceilingStart, uint8_t(d.key), 1, 100);
+    DocNote ceiling;
+    QVERIFY2(doc.findNote(track, ceilingStart, uint8_t(d.key), &ceiling),
+             "could not place the near-limit note for the rejected nudge");
+    view.selectionModel().setNoteSelection({ceiling.noteId});
+    QCoreApplication::processEvents();
+    const QByteArray ceilingBefore = doc.smf().write();
+    const int ceilingUndo = doc.undoStack()->index();
+    const uint64_t ceilingRevision = doc.revision();
+    const double ceilingScroll = view.camera().scrollX();
+    sendKeyStroke(roll, Qt::Key_Right, Qt::NoModifier, false);
+    QCoreApplication::processEvents();
+    QCOMPARE(doc.revision(), ceilingRevision);
+    QCOMPARE(doc.undoStack()->index(), ceilingUndo);
+    QCOMPARE(doc.smf().write(), ceilingBefore);
+    QCOMPARE(view.camera().scrollX(), ceilingScroll);
+    QVERIFY2(doc.findNote(track, ceilingStart, uint8_t(d.key), &ceiling),
+             "rejected Right moved the near-limit note");
+    QCOMPARE(ceiling.duration, uint32_t(1));
     while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
         doc.undoStack()->undo();
     QCOMPARE(doc.smf().write(), before);

@@ -241,7 +241,7 @@ void AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor()
           PlaybackBoundary{timeline->sampleForTick(24), 24.0, 24, 3}}) {
         view.setPlayheadSample(boundary.sample, true);
         QCOMPARE(view.playheadTick(), boundary.tick);
-        const Tick roundedPlayhead = Tick(std::max(0.0, view.playheadTick()) + 0.5);
+        const Tick roundedPlayhead = CoreTimeDefaults::tickFromDouble(view.playheadTick() + 0.5);
         QCOMPARE(roundedPlayhead, boundary.contextTick);
         const DrawerPageVoiceContext context = view.voiceContext(roundedPlayhead);
         QCOMPARE(context.voice, &m_bank.voices[boundary.voiceSlot]);

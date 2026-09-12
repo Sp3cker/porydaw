@@ -220,8 +220,8 @@ void VoiceChangeArea::presentPlayhead(double tick)
     // context changes.
     if (m_live.playback.playing && m_lastPresentedPlayheadTick &&
         *m_lastPresentedPlayheadTick != tick &&
-        voiceSlotAt(Tick(std::round(std::max(0.0, *m_lastPresentedPlayheadTick)))) !=
-            voiceSlotAt(Tick(std::round(std::max(0.0, tick)))))
+        voiceSlotAt(CoreTimeDefaults::tickFromDouble(std::round(*m_lastPresentedPlayheadTick))) !=
+            voiceSlotAt(CoreTimeDefaults::tickFromDouble(std::round(tick))))
         requestQuickUpdate();
     m_live.playback.playheadTick = tick;
     m_lastPresentedPlayheadTick = tick;

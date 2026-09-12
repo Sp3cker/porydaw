@@ -8,14 +8,17 @@
 
 #include <QtTest>
 
+#include "core/timedefaults.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/cclanes.h"
+#include "ui/editordrawer/nodelane/batchcommit.h"
 #include "ui/editordrawer/nodelane/gesture.h"
 
 namespace {
 
 constexpr int kTrack = 0;
 constexpr uint8_t kPan = 10;
+constexpr uint8_t kCcController = 11;
 
 NodeDrag laneNode(const DocLanePoint &point, NodePoint current)
 {
@@ -164,6 +167,76 @@ void AutomationDomainTest::nodeDragAndPhantomOutcomes()
         QVERIFY(finish.selectionDrag);
         QVERIFY(hasPoint(gesture.points[0].current, 30, 70));
         QVERIFY(hasPoint(gesture.points[1].current, 54, 90));
+    }
+    {
+        // Lower edge preserved: a leftward drag past the earliest sibling's
+        // zero headroom clamps the common delta, so the group keeps its
+        // spacing instead of collapsing onto tick zero.
+        NodeDragGesture gesture;
+        const DocLanePoint original0{kTrack, 7, 24, 60};
+        const DocLanePoint original1{kTrack, 7, 48, 80};
+        gesture.points = {laneNode(original0, {24, 60}), laneNode(original1, {48, 80})};
+        gesture.grabbedPoint = 1;
+        gesture.drag.press({100.0, 100.0}, false);
+        gesture.drag.dragSlop.markExceeded({105.0, 100.0});
+        gesture.update({PointDragUpdate::Phase::Dragging, {}, AxisLock::None}, {0, 80});
+        QVERIFY(hasPoint(gesture.points[0].current, 0, 60));
+        QVERIFY(hasPoint(gesture.points[1].current, 24, 80));
+        const NodeDragFinish finish = gesture.finish();
+        QCOMPARE(finish.release, PointDragRelease::Move);
+        QVERIFY(finish.changed);
+        QCOMPARE(finish.dTick, int64_t{-24});
+    }
+    {
+        // Upper edge: the grabbed point asks for more than the latest
+        // sibling's headroom, so the common delta clamps once and every
+        // original point shifts through the helper — the latest lands
+        // exactly on kMaxTick and the inter-point distance survives.
+        constexpr Tick kFirstOriginal = CoreTimeDefaults::kMaxTick - 20;
+        constexpr Tick kLastOriginal = CoreTimeDefaults::kMaxTick - 5;
+        setLane(document(), kTrack, kCcController, {{kFirstOriginal, 60}, {kLastOriginal, 80}});
+
+        NodeDragGesture gesture;
+        const DocLanePoint original0{kTrack, 7, kFirstOriginal, 60};
+        const DocLanePoint original1{kTrack, 7, kLastOriginal, 80};
+        gesture.points = {laneNode(original0, {kFirstOriginal, 60}),
+                          laneNode(original1, {kLastOriginal, 80})};
+        gesture.grabbedPoint = 0;
+        gesture.drag.press({100.0, 100.0}, false);
+        gesture.drag.dragSlop.markExceeded({105.0, 100.0});
+        gesture.preparePreview(1, {{{kFirstOriginal, 60}, {kLastOriginal, 80}}});
+        gesture.update({PointDragUpdate::Phase::Dragging, {}, AxisLock::None},
+                       {CoreTimeDefaults::kMaxTick, 60});
+        QVERIFY(hasPoint(gesture.points[0].current, CoreTimeDefaults::kMaxTick - 15, 60));
+        QVERIFY(hasPoint(gesture.points[1].current, CoreTimeDefaults::kMaxTick, 80));
+        QCOMPARE(gesture.points[1].current.tick - gesture.points[0].current.tick,
+                 kLastOriginal - kFirstOriginal);
+        QCOMPARE(gesture.previewPoints.size(), std::size_t{1});
+        QVERIFY(samePoints(gesture.previewPoints[0], {{CoreTimeDefaults::kMaxTick - 15, 60},
+                                                      {CoreTimeDefaults::kMaxTick, 80}}));
+        const NodeDragFinish finish = gesture.finish();
+        QCOMPARE(finish.release, PointDragRelease::Move);
+        QVERIFY(finish.changed);
+        QCOMPARE(finish.dTick, int64_t{5});
+
+        // Committing the resolved moves through the production CC path lands
+        // the document on the same destinations the preview showed.
+        std::vector<NodePointMove> moves;
+        for (const NodeDrag &point : gesture.points)
+            moves.push_back({point.original.tick, point.current});
+        const auto resolved = nodelane::resolveCcMoves(document(), kTrack, kCcController, moves);
+        QVERIFY(resolved.has_value());
+        SongDocument::RangeEdit edit;
+        nodelane::appendResolvedCcMoves(edit, *resolved);
+        QVERIFY(!edit.empty());
+        document().applyRangeEdit(QStringLiteral("automation domain move"), edit);
+        DocLanePoint landed;
+        QVERIFY(document().findLanePoint(kTrack, kCcController, CoreTimeDefaults::kMaxTick - 15,
+                                         &landed));
+        QCOMPARE(landed.value, 60);
+        QVERIFY(
+            document().findLanePoint(kTrack, kCcController, CoreTimeDefaults::kMaxTick, &landed));
+        QCOMPARE(landed.value, 80);
     }
     {
         const DocLanePoint original{kTrack, 7, 24, 60};

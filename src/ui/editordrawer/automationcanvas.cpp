@@ -185,8 +185,8 @@ void AutomationCanvas::requestQuickUpdate(songview::AutomationRefreshSet dirty) 
         if (!m_hoverState.hover.lane.valid()) {
             m_page.m_owner.clearTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation);
         } else {
-            const Tick tick =
-                Tick(std::max(0.0, m_hoverState.insertionTick(projection(), m_pencilMode)));
+            const Tick tick = CoreTimeDefaults::tickFromDouble(
+                m_hoverState.insertionTick(projection(), m_pencilMode));
             m_page.m_owner.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation,
                                                      tick);
         }

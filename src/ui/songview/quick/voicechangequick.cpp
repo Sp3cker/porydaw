@@ -198,7 +198,7 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene, boo
     static const QString noVoiceText = tr("No voice");
     const double contextTick =
         m_live.playback.playing ? m_live.playback.playheadTick : m_live.editCursorTick;
-    const int contextSlot = voiceSlotAt(Tick(std::round(std::max(0.0, contextTick))));
+    const int contextSlot = voiceSlotAt(CoreTimeDefaults::tickFromDouble(std::round(contextTick)));
     const QString &contextText = contextSlot >= 0 && contextSlot < VOICEGROUP_SIZE
                                      ? paintTextFor(contextSlot).label
                                      : noVoiceText;

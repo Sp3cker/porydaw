@@ -208,13 +208,21 @@ void PianoRoll::nudgeSelectedNotes(bool right)
     if (dTick == 0)
         return;
     const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
+    const uint64_t revision = doc->revision();
     doc->moveNotes(notes, dTick, 0, /*mergeable=*/true);
+    // A rejected or no-op move leaves the revision untouched; there is no
+    // accepted destination to reveal.
+    if (doc->revision() == revision)
+        return;
     // Keep the moved notes in sight, scrolling just enough.
     Tick lo = CoreTimeDefaults::kNoTick, hi = 0;
     for (const DocNote &note : notes) {
-        const Tick tick = Tick(int64_t(note.tick) + dTick);
+        const Tick tick = CoreTimeDefaults::shiftTickClamped(note.tick, dTick);
         lo = std::min(lo, tick);
-        hi = Tick(std::max(uint64_t(hi), uint64_t(tick) + note.duration));
+        // The mathematical end can pass the display domain; saturate at the
+        // checked Tick conversion instead of narrowing into a wrap.
+        const uint64_t end = uint64_t(tick) + note.duration;
+        hi = std::max(hi, Tick(std::min<uint64_t>(end, CoreTimeDefaults::kMaxTick)));
     }
     m_sv->ensureRangeVisible(lo, hi, right);
     // Only note pixels changed here; the ensureRangeVisible reveal above

@@ -470,7 +470,7 @@ void AutomationEditingTest::pencilControlModifierDrawsUnsnappedClockQuantizedPoi
         return ControlCapture{lanePoints(document), turn, finish};
     };
     const auto clockTick = [&document](const StrokePoint &sample) {
-        const Tick raw = Tick(std::floor(std::max(0.0, sample.mapping.rawTick)));
+        const Tick raw = CoreTimeDefaults::tickFromDouble(std::floor(sample.mapping.rawTick));
         return (raw / document.ticksPerClock()) * document.ticksPerClock();
     };
     const auto matches = [&clockTick](const ControlCapture &sparse, const ControlCapture &dense) {

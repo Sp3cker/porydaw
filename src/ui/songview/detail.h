@@ -73,10 +73,21 @@ void forEachSubGridLine(const Grid &grid, const TimeCamera &camera, TickRange ra
         if (g > 0 && g < seg.beatTicks &&
             camera.pxPerTick() * double(seg.beatTicks) >= timelineDetailMinimumPixelsPerBeat) {
             const uint64_t k = at > seg.start ? (uint64_t(at) - seg.start + g - 1) / g : 0;
-            for (Tick tick = seg.start + Tick(k * g); tick < segEnd; tick += g) {
-                if ((tick - seg.start) % seg.beatTicks == 0)
-                    continue; // beat/bar lines are drawn separately
-                fn(tick, subGridLevel(Tick(tick - seg.start), seg.beatTicks, triplet));
+            // The ceiling-aligned first candidate is computed wide: it can
+            // land at or beyond segEnd (and past the Tick range), in which
+            // case this segment contributes no lines at all.
+            const uint64_t first = uint64_t(seg.start) + k * g;
+            if (first < segEnd) {
+                for (Tick tick = Tick(first);;) {
+                    if ((tick - seg.start) % seg.beatTicks != 0)
+                        fn(tick, subGridLevel(Tick(tick - seg.start), seg.beatTicks, triplet));
+                    // Beat/bar lines are drawn separately; they skip only
+                    // the callback. Break before the increment so the
+                    // stride can never carry tick past segEnd or wrap.
+                    if (g >= segEnd - tick)
+                        break;
+                    tick += g;
+                }
             }
         }
         if (seg.next >= range.end)

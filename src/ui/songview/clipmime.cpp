@@ -224,8 +224,8 @@ Clip rescaleClip(Clip result, uint32_t sourceTicksPerBeat, uint32_t destinationT
         return result;
     if (result.span != 0)
         result.span =
-            Tick(std::max<Tick>(1, scaleTick(result.span, sourceTicksPerBeat,
-                                             destinationTicksPerBeat, CoreTimeDefaults::kMaxTick)));
+            std::max<Tick>(1, scaleTick(result.span, sourceTicksPerBeat, destinationTicksPerBeat,
+                                        CoreTimeDefaults::kMaxTick));
     for (auto &track : result.tracks) {
         for (auto &note : track.notes) {
             note.relTick = uint32_t(

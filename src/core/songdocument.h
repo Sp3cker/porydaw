@@ -310,7 +310,13 @@ class SongDocument : public QObject
         Tick endTick = 0;
 
         bool empty() const { return endTick <= startTick; }
-        uint64_t span() const { return empty() ? 0 : uint64_t(endTick) - startTick; }
+        Tick span() const { return empty() ? 0 : endTick - startTick; }
+        // Either endpoint holds the kNoTick sentinel (absent/unbounded), so
+        // the range cannot be edited.
+        bool hasReservedEndpoint() const
+        {
+            return startTick == CoreTimeDefaults::kNoTick || endTick == CoreTimeDefaults::kNoTick;
+        }
         bool contains(Tick tick) const { return tick >= startTick && tick < endTick; }
         bool overlaps(Tick start, Tick end) const
         {
