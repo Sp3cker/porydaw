@@ -85,6 +85,9 @@ bool parseTrack(Reader &r, size_t end, int trackIndex, SmfTrack *track, QString 
         if (!r.readVlq(&delta))
             return fail(error, QStringLiteral("Track %1: truncated delta time").arg(trackIndex));
         tick += delta;
+        if (tick >= UINT32_MAX)
+            return fail(error, QStringLiteral("Track %1: tick position exceeds 32-bit tick range")
+                                   .arg(trackIndex));
 
         uint8_t b;
         if (!r.readByte(&b))

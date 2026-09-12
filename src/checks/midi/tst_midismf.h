@@ -24,6 +24,7 @@ class MidiSmfTest final : public QObject
     void programChangesRejectOutOfRangeValues();
     void noteOnsRejectOutOfRangeKeys();
     void tempoConversionSchedulesExactSamples();
+    void overlongTickFailsParsing();
     void engineTrackMappingAgreesAcrossProjections();
 };
 
