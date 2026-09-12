@@ -83,9 +83,12 @@ void PianoRollStaticTest::tickRangeRejectsInvalidBounds()
     const songview::detail::TickRange fractional = tickRange(96.75, 289.25);
     QCOMPARE(fractional.begin, uint64_t(96));
     QCOMPARE(fractional.end, uint64_t(289));
-    const double largestBelowCeiling = 0x1p64 - 0x1p11;
-    QCOMPARE(tickRange(0.0, largestBelowCeiling).end, uint64_t(largestBelowCeiling));
-    QCOMPARE(tickRange(0x1p63, 0x1p63 + 0x1p11).begin, uint64_t(0x1p63));
+    const double largestBelowCeiling = std::nextafter(double(CoreTimeDefaults::kNoTick), 0.0);
+    QCOMPARE(tickRange(0.0, largestBelowCeiling).end, Tick(largestBelowCeiling));
+    QCOMPARE(tickRange(double(CoreTimeDefaults::kMaxTick) - 2048.0,
+                       double(CoreTimeDefaults::kMaxTick) - 1024.0)
+                 .begin,
+             CoreTimeDefaults::kMaxTick - 2048);
 }
 
 void PianoRollStaticTest::tickRangeWalksFractionalLattice()
@@ -102,24 +105,24 @@ void PianoRollStaticTest::tickRangeWalksFractionalLattice()
     const songview::Grid::Segment segment = view.grid().segmentAt(96);
     QVERIFY(segment.start <= 96);
     QVERIFY(segment.next >= 289);
-    const uint64_t lattice = view.grid().gridTicksAt(96);
+    const Tick lattice = view.grid().gridTicksAt(96);
     QVERIFY(lattice > 0);
     QVERIFY(lattice < segment.beatTicks);
-    std::vector<uint64_t> expected;
-    const uint64_t first = segment.start + (96 - segment.start + lattice - 1) / lattice * lattice;
-    for (uint64_t tick = first; tick < 289; tick += lattice)
+    std::vector<Tick> expected;
+    const Tick first = segment.start + (96 - segment.start + lattice - 1) / lattice * lattice;
+    for (Tick tick = first; tick < 289; tick += lattice)
         if ((tick - segment.start) % segment.beatTicks != 0)
             expected.push_back(tick);
-    std::vector<uint64_t> observed;
-    songview::detail::forEachSubGridLine(
-        view.grid(), view.camera(), songview::detail::tickRange(96.75, 289.25), 1,
-        [&observed](uint64_t tick, int) { observed.push_back(tick); });
+    std::vector<Tick> observed;
+    songview::detail::forEachSubGridLine(view.grid(), view.camera(),
+                                         songview::detail::tickRange(96.75, 289.25), 1,
+                                         [&observed](Tick tick, int) { observed.push_back(tick); });
     QCOMPARE(observed, expected);
-    std::vector<uint64_t> rejected;
+    std::vector<Tick> rejected;
     songview::detail::forEachSubGridLine(
         view.grid(), view.camera(),
         songview::detail::tickRange(std::numeric_limits<double>::quiet_NaN(), 100.0), 1,
-        [&rejected](uint64_t tick, int) { rejected.push_back(tick); });
+        [&rejected](Tick tick, int) { rejected.push_back(tick); });
     QVERIFY(rejected.empty());
     view.applyViewState(original);
 }
@@ -279,7 +282,7 @@ void PianoRollStaticTest::affineCameraProjection()
     const double affineTick = view.camera().tickAtContentX(visibleWidth * 0.371) + 0.375;
     QVERIFY(std::abs(view.camera().tickAtContentX(view.camera().contentX(affineTick)) -
                      affineTick) <= 1e-9);
-    uint64_t tick = view.grid().snapTickUp(std::max(0.0, view.camera().tickAtContentX(0.0)));
+    Tick tick = view.grid().snapTickUp(std::max(0.0, view.camera().tickAtContentX(0.0)));
     int visible = 0;
     for (int guard = 0; guard < 10000; ++guard) {
         const qreal x = view.camera().contentX(double(tick));
@@ -296,7 +299,7 @@ void PianoRollStaticTest::affineCameraProjection()
                 }
             }
         }
-        const uint64_t next = view.grid().snapTickUp(double(tick) + 1.0);
+        const Tick next = view.grid().snapTickUp(double(tick) + 1.0);
         QVERIFY(next > tick);
         tick = next;
     }
@@ -386,13 +389,13 @@ void PianoRollStaticTest::scratchSpaceDrawGrowsTimeline()
     SongDocument &document = fixture.tab()->document();
     auto &roll = *fixture.rollInput();
     const SongView::ViewState original = view.viewState();
-    const uint64_t length = fixture.tab()->timeline()->lengthTicks;
+    const Tick length = fixture.tab()->timeline()->lengthTicks;
     const QByteArray bytes = document.smf().write();
     const int undo = document.undoStack()->index();
     SongView::ViewState state = original;
     state.scrollPx = 1e9;
     view.applyViewState(state);
-    const uint64_t tick =
+    const Tick tick =
         view.grid().snapTickDown(view.camera().tickAtContentX(roll.bounds().width() / 2.0));
     const int key = keyAt(view, roll.bounds().height() / 2.0);
     const qreal begin = view.camera().contentX(double(tick));

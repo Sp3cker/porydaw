@@ -238,7 +238,7 @@ void PianoRollStaticTest::freshTabStaysGated()
     }
     fixture.view()->setEditCursorTick(96);
     QCOMPARE(fixture.view()->editCursorTick(), uint64_t(96));
-    const uint64_t before = fixture.view()->editCursorTick();
+    const Tick before = fixture.view()->editCursorTick();
     sendRulerClick(*fixture.rulerInput(), *fixture.view());
     QCOMPARE(fixture.view()->editCursorTick(), before);
     QVERIFY(!fixture.view()->userGestureActive());
@@ -258,7 +258,7 @@ void PianoRollStaticTest::midiStageStaysGated()
     QCOMPARE(fixture.view()->editCursorTick(), uint64_t(0));
     QVERIFY(controlsMatchRuler(fixture));
     QTRY_VERIFY(allFixedSurfacesEnabled(fixture));
-    const uint64_t cursor = fixture.view()->editCursorTick();
+    const Tick cursor = fixture.view()->editCursorTick();
     sendRulerClick(*fixture.rulerInput(), *fixture.view());
     QCOMPARE(fixture.view()->editCursorTick(), cursor);
     const double scroll = fixture.view()->camera().scrollX();
@@ -301,12 +301,12 @@ void PianoRollStaticTest::gatedAndReadyRulerScrub()
     QString error;
     QVERIFY2(fixture.create(error), qPrintable(error));
     QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()));
-    const uint64_t gated = fixture.view()->editCursorTick();
+    const Tick gated = fixture.view()->editCursorTick();
     sendRulerClick(*fixture.rulerInput(), *fixture.view());
     QCOMPARE(fixture.view()->editCursorTick(), gated);
     QVERIFY(!fixture.view()->userGestureActive());
     QVERIFY(bindVoicegroup(fixture));
-    const uint64_t ready = fixture.view()->editCursorTick();
+    const Tick ready = fixture.view()->editCursorTick();
     sendRulerClick(*fixture.rulerInput(), *fixture.view());
     QVERIFY(fixture.view()->editCursorTick() != ready);
     QVERIFY(!fixture.view()->userGestureActive());

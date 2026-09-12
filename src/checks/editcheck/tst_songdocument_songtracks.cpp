@@ -2,8 +2,6 @@
 
 #include <QtTest>
 
-#include <limits>
-
 #include "checks/editcheck/tst_songdocument_support.h"
 #include "core/miditimeline.h"
 
@@ -308,9 +306,9 @@ void EditCheckTest::loopCfgUndoRedo()
     QVERIFY2(document.load(song, &error), qPrintable(error));
     const QByteArray baseline = document.smf().write();
     const uint32_t step = document.ticksPerClock();
-    const uint64_t loopStart = document.loopTick(false);
-    document.setLoopTick(
-        false, loopStart == std::numeric_limits<uint64_t>::max() ? 0 : int64_t(loopStart + step));
+    const Tick loopStart = document.loopTick(false);
+    document.setLoopTick(false,
+                         loopStart == CoreTimeDefaults::kNoTick ? 0 : int64_t(loopStart) + step);
     QVERIFY(songdocument_test::tracksSorted(document.smf()));
     SongCfg cfg = document.cfg();
     cfg.masterVolume = cfg.masterVolume == 80 ? 90 : 80;

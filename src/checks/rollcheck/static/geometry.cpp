@@ -19,7 +19,7 @@
 
 namespace checks::rollcheck::staticcheck {
 namespace {
-constexpr uint64_t kTicksPerBeat = 24;
+constexpr Tick kTicksPerBeat = 24;
 constexpr int kBeatsPerBar = 4;
 
 struct BareView {
@@ -109,14 +109,14 @@ void PianoRollStaticTest::fallbackGrid()
 {
     BareView fixture;
     struct Line {
-        uint64_t tick;
+        Tick tick;
         bool bar;
         int barNumber;
         int beatNumber;
     };
     std::vector<Line> lines;
     fixture.view.forEachGridLine(0, 4 * kBeatsPerBar * kTicksPerBeat,
-                                 [&lines](uint64_t tick, bool bar, int barNumber, int beatNumber) {
+                                 [&lines](Tick tick, bool bar, int barNumber, int beatNumber) {
                                      lines.push_back({tick, bar, barNumber, beatNumber});
                                  });
     QCOMPARE(lines.size(), size_t(16));
@@ -129,7 +129,7 @@ void PianoRollStaticTest::fallbackGrid()
     }
     const songview::Grid::Segment segment = fixture.view.grid().segmentAt(0);
     QCOMPARE(segment.start, uint64_t(0));
-    QCOMPARE(segment.next, UINT64_MAX);
+    QCOMPARE(segment.next, CoreTimeDefaults::kNoTick);
     QCOMPARE(segment.beatTicks, kTicksPerBeat);
     QCOMPARE(segment.beatsPerBar, kBeatsPerBar);
 }
@@ -137,12 +137,12 @@ void PianoRollStaticTest::fallbackGrid()
 void PianoRollStaticTest::tickCeilingDoesNotWrap()
 {
     BareView fixture;
-    std::vector<uint64_t> ticks;
-    fixture.view.forEachGridLine(
-        UINT64_MAX - kTicksPerBeat, UINT64_MAX,
-        [&ticks](uint64_t tick, bool, int, int) { ticks.push_back(tick); });
+    std::vector<Tick> ticks;
+    fixture.view.forEachGridLine(CoreTimeDefaults::kMaxTick - kTicksPerBeat,
+                                 CoreTimeDefaults::kNoTick,
+                                 [&ticks](Tick tick, bool, int, int) { ticks.push_back(tick); });
     QVERIFY(ticks.size() <= 1);
-    QVERIFY(ticks.empty() || ticks.front() >= UINT64_MAX - kTicksPerBeat);
+    QVERIFY(ticks.empty() || ticks.front() >= CoreTimeDefaults::kMaxTick - kTicksPerBeat);
 }
 
 void PianoRollStaticTest::preRollRulerShade()
@@ -192,7 +192,7 @@ void PianoRollStaticTest::fallbackRulerStemAndBars()
     const QRgb backdrop = raster.at(offset + fixture.view.camera().leadPadPx() + 80.0, 2.0);
     int paintedBars = 0;
     for (int bar = 0; bar < 6; ++bar) {
-        const uint64_t tick = uint64_t(bar) * kBeatsPerBar * kTicksPerBeat;
+        const Tick tick = Tick(bar) * kBeatsPerBar * kTicksPerBeat;
         const int expected =
             raster.deviceX(fixture.view.camera().displayX(double(tick), offset, raster.dpr));
         const int line = detectedLine(raster, expected, int(raster.image.height() * 0.55),
@@ -225,7 +225,7 @@ void PianoRollStaticTest::defaultBindKeepsGeometry()
     std::array<int, 6> columns{};
     std::array<double, 6> geometry{};
     for (int bar = 0; bar < 6; ++bar) {
-        const uint64_t tick = uint64_t(bar) * kBeatsPerBar * kTicksPerBeat;
+        const Tick tick = Tick(bar) * kBeatsPerBar * kTicksPerBeat;
         columns[size_t(bar)] = detectedLine(
             before,
             before.deviceX(fixture.view.camera().displayX(double(tick), offset, before.dpr)),
@@ -238,7 +238,7 @@ void PianoRollStaticTest::defaultBindKeepsGeometry()
     const Raster after = captureRuler(fixture.view);
     QVERIFY(after.valid());
     for (int bar = 0; bar < 6; ++bar) {
-        const uint64_t tick = uint64_t(bar) * kBeatsPerBar * kTicksPerBeat;
+        const Tick tick = Tick(bar) * kBeatsPerBar * kTicksPerBeat;
         const int expected =
             after.deviceX(fixture.view.camera().displayX(double(tick), offset, after.dpr));
         QCOMPARE(detectedLine(after, expected, int(after.image.height() * 0.55),
@@ -260,7 +260,7 @@ void PianoRollStaticTest::ticksPerBeatKeepsGeometry()
     const QRgb backdrop = before.at(offset + fixture.view.camera().leadPadPx() + 80.0, 2.0);
     std::array<int, 6> barColumns{};
     for (int bar = 0; bar < 6; ++bar) {
-        const uint64_t tick = uint64_t(bar) * kBeatsPerBar * kTicksPerBeat;
+        const Tick tick = Tick(bar) * kBeatsPerBar * kTicksPerBeat;
         const int expected =
             before.deviceX(fixture.view.camera().displayX(double(tick), offset, before.dpr));
         barColumns[size_t(bar)] = detectedLine(before, expected, int(before.image.height() * .55),
@@ -287,7 +287,7 @@ void PianoRollStaticTest::ticksPerBeatKeepsGeometry()
                        backdrop, 6, 1));
     }
     for (int bar = 0; bar < 6; ++bar) {
-        const uint64_t tick = uint64_t(bar) * kBeatsPerBar * 48;
+        const Tick tick = Tick(bar) * kBeatsPerBar * 48;
         const int expected =
             after.deviceX(fixture.view.camera().displayX(double(tick), offset, after.dpr));
         QCOMPARE(detectedLine(after, expected, int(after.image.height() * .55),
@@ -311,7 +311,7 @@ void PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars()
     std::array<int, 6> fallbackBars{};
     std::array<double, 8> beats{};
     for (int bar = 0; bar < 6; ++bar) {
-        const uint64_t tick = uint64_t(bar) * kBeatsPerBar * kTicksPerBeat;
+        const Tick tick = Tick(bar) * kBeatsPerBar * kTicksPerBeat;
         fallbackBars[size_t(bar)] = detectedLine(
             before,
             before.deviceX(fixture.view.camera().displayX(double(tick), offset, before.dpr)),
@@ -324,7 +324,7 @@ void PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars()
     QCoreApplication::processEvents();
     const songview::Grid::Segment segment = fixture.view.grid().segmentAt(0);
     QCOMPARE(segment.start, uint64_t(0));
-    QCOMPARE(segment.next, UINT64_MAX);
+    QCOMPARE(segment.next, CoreTimeDefaults::kNoTick);
     QCOMPARE(segment.beatTicks, kTicksPerBeat);
     QCOMPARE(segment.beatsPerBar, 3);
     QCOMPARE(rulerBandHeight(fixture.view), height);
@@ -336,7 +336,7 @@ void PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars()
     QVERIFY(after.valid());
     bool moved = false;
     for (int bar = 0; bar < 6; ++bar) {
-        const uint64_t tick = uint64_t(bar) * 3 * kTicksPerBeat;
+        const Tick tick = Tick(bar) * 3 * kTicksPerBeat;
         const int expected =
             after.deviceX(fixture.view.camera().displayX(double(tick), offset, after.dpr));
         const int line = detectedLine(after, expected, int(after.image.height() * .55),

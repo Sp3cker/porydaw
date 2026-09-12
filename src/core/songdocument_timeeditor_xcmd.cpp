@@ -49,7 +49,7 @@ std::optional<std::vector<SongDocument::EditOp>> SongDocument::TimeEditor::xcmdA
         if (record.smfTrack < 0 || record.smfTrack >= int(trackCount))
             continue;
         relocated[size_t(record.smfTrack)].push_back(record.eventIndex);
-        const xcmd::Relocation relocation{uint64_t(record.eventIndex), Tick(record.newTick),
+        const xcmd::Relocation relocation{uint64_t(record.eventIndex), record.newTick,
                                           record.channel};
         std::vector<xcmd::Relocation> &target =
             record.isCopy ? rawCopies[size_t(record.smfTrack)] : rawMoves[size_t(record.smfTrack)];
@@ -110,8 +110,8 @@ std::optional<std::vector<SongDocument::EditOp>> SongDocument::TimeEditor::xcmdA
     return ops;
 }
 
-void SongDocument::TimeEditor::recordXcmdRelocation(int smfTrack, size_t eventIndex,
-                                                    uint64_t newTick, size_t opIndex, bool isCopy,
+void SongDocument::TimeEditor::recordXcmdRelocation(int smfTrack, size_t eventIndex, Tick newTick,
+                                                    size_t opIndex, bool isCopy,
                                                     std::vector<XcmdEventRecord> &records) const
 {
     if (smfTrack < 0 || smfTrack >= int(m_xcmdConsumedOfEvent.size()))

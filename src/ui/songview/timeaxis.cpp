@@ -15,13 +15,14 @@ constexpr uint32_t kFallbackTicksPerBeat = 24;
 // a blank numerator reads as 4, and the denominator shift is clamped so a
 // corrupt 0x58 denominator cannot shift into undefined behavior. The floor
 // keeps every beat length a valid stride.
-uint64_t beatsPerBarFor(uint8_t numerator) noexcept
+uint32_t beatsPerBarFor(uint8_t numerator) noexcept
 {
     return numerator ? numerator : 4;
 }
-uint64_t beatTicksFor(uint32_t ticksPerBeat, uint8_t denomPow2) noexcept
+uint32_t beatTicksFor(uint32_t ticksPerBeat, uint8_t denomPow2) noexcept
 {
-    return (std::max)(uint64_t(1), (uint64_t(ticksPerBeat) * 4) >> (std::min)(int(denomPow2), 63));
+    return (std::max)(uint32_t(1),
+                      uint32_t(uint64_t(ticksPerBeat) * 4) >> (std::min)(int(denomPow2), 31));
 }
 
 } // namespace
@@ -43,19 +44,19 @@ uint32_t TimeAxis::ticksPerBeat() const noexcept
     return m_timeline ? (std::max)(uint32_t(1), m_timeline->ticksPerBeat) : kFallbackTicksPerBeat;
 }
 
-uint64_t TimeAxis::lengthTicks() const noexcept
+Tick TimeAxis::lengthTicks() const noexcept
 {
     return m_timeline ? m_timeline->lengthTicks : 0;
 }
 
-uint64_t TimeAxis::loopStartTick() const noexcept
+Tick TimeAxis::loopStartTick() const noexcept
 {
-    return m_timeline ? m_timeline->loopStartTick : UINT64_MAX;
+    return m_timeline ? m_timeline->loopStartTick : CoreTimeDefaults::kNoTick;
 }
 
-uint64_t TimeAxis::loopEndTick() const noexcept
+Tick TimeAxis::loopEndTick() const noexcept
 {
-    return m_timeline ? m_timeline->loopEndTick : UINT64_MAX;
+    return m_timeline ? m_timeline->loopEndTick : CoreTimeDefaults::kNoTick;
 }
 
 std::span<const TimeSigPoint> TimeAxis::explicitTimeSignatures() const noexcept
@@ -71,7 +72,7 @@ bool TimeAxis::hasImplicitOpeningSignature() const noexcept
     return !m_timeline || m_timeline->timeSigs.empty() || m_timeline->timeSigs.front().tick != 0;
 }
 
-TimeAxis::ResolvedTimeSignature TimeAxis::signatureAt(uint64_t tick) const noexcept
+TimeAxis::ResolvedTimeSignature TimeAxis::signatureAt(Tick tick) const noexcept
 {
     if (!m_timeline)
         return {};                                        // the fallback's implicit opening 4/4
@@ -90,7 +91,7 @@ TimeAxis::ResolvedTimeSignature TimeAxis::signatureAt(uint64_t tick) const noexc
     return resolved;
 }
 
-TimeAxis::GridSegment TimeAxis::segmentAt(uint64_t tick) const noexcept
+TimeAxis::GridSegment TimeAxis::segmentAt(Tick tick) const noexcept
 {
     GridSegment seg; // the implicit opening 4/4 at tick 0
     seg.beatTicks = ticksPerBeat();
@@ -110,8 +111,7 @@ TimeAxis::GridSegment TimeAxis::segmentAt(uint64_t tick) const noexcept
     return seg;
 }
 
-void TimeAxis::forEachGridLine(uint64_t tickBegin, uint64_t tickEnd,
-                               const GridLineVisitor &visitor) const
+void TimeAxis::forEachGridLine(Tick tickBegin, Tick tickEnd, const GridLineVisitor &visitor) const
 {
     if (tickEnd <= tickBegin)
         return;
@@ -131,11 +131,12 @@ void TimeAxis::forEachGridLine(uint64_t tickBegin, uint64_t tickEnd,
     }
     int bar = 1;
     while (seg.start < tickEnd) {
-        const uint64_t segEnd = next < sigs.size() ? sigs[next].tick : tickEnd;
-        const uint64_t clampedEnd = (std::min)(segEnd, tickEnd);
+        const Tick segEnd = next < sigs.size() ? sigs[next].tick : tickEnd;
+        const Tick clampedEnd = (std::min)(segEnd, tickEnd);
         if (seg.start < clampedEnd) {
-            uint64_t k = tickBegin > seg.start ? (tickBegin - seg.start) / seg.beatTicks : 0;
-            for (uint64_t tick = seg.start + k * seg.beatTicks; tick < clampedEnd;) {
+            uint64_t k =
+                tickBegin > seg.start ? (uint64_t(tickBegin) - seg.start) / seg.beatTicks : 0;
+            for (Tick tick = seg.start + Tick(k * seg.beatTicks); tick < clampedEnd;) {
                 if (tick >= tickBegin)
                     visitor(tick, k % seg.beatsPerBar == 0, bar + int(k / seg.beatsPerBar),
                             int(k % seg.beatsPerBar) + 1);
@@ -150,8 +151,8 @@ void TimeAxis::forEachGridLine(uint64_t tickBegin, uint64_t tickEnd,
         // Bar numbering carries across each segment's measure count,
         // including trailing partial measures, so bars stay 1-based over the
         // whole song rather than per segment.
-        const uint64_t segTicks = sigs[next].tick - seg.start;
-        const uint64_t barTicks = seg.beatTicks * seg.beatsPerBar;
+        const uint64_t segTicks = uint64_t(sigs[next].tick) - seg.start;
+        const uint64_t barTicks = uint64_t(seg.beatTicks) * seg.beatsPerBar;
         bar += int((segTicks + barTicks - 1) / barTicks);
         seg.start = sigs[next].tick;
         seg.beatTicks = beatTicksFor(tpb, sigs[next].denomPow2);

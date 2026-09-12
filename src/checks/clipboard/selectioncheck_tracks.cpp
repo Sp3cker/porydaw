@@ -18,7 +18,7 @@ constexpr uint32_t kTrackScope = static_cast<uint32_t>(SelectionChange::TrackSco
 constexpr uint32_t kNoteSelection = static_cast<uint32_t>(SelectionChange::NoteSelection);
 constexpr uint32_t kTimeSelection = static_cast<uint32_t>(SelectionChange::TimeSelection);
 
-EditorSelectionModel::TimeSelection trackRange(uint64_t start, uint64_t end)
+EditorSelectionModel::TimeSelection trackRange(Tick start, Tick end)
 {
     EditorSelectionModel::TimeSelection selection;
     selection.startTick = start;

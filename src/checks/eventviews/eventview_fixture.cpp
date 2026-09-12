@@ -23,7 +23,7 @@
 namespace checks::eventviews {
 namespace {
 
-SmfEvent event(uint64_t tick, uint8_t status, uint8_t data0 = 0, uint8_t data1 = 0)
+SmfEvent event(Tick tick, uint8_t status, uint8_t data0 = 0, uint8_t data1 = 0)
 {
     SmfEvent value;
     value.tick = tick;
@@ -33,7 +33,7 @@ SmfEvent event(uint64_t tick, uint8_t status, uint8_t data0 = 0, uint8_t data1 =
     return value;
 }
 
-SmfEvent meta(uint64_t tick, uint8_t type, QByteArray payload)
+SmfEvent meta(Tick tick, uint8_t type, QByteArray payload)
 {
     SmfEvent value;
     value.tick = tick;
@@ -79,7 +79,7 @@ SmfFile fixtureSmf(FixtureShape shape)
                               meta(36, 0x58, QByteArray::fromHex("06031808")));
     primary.endTick = shape == FixtureShape::Long ? 500 : 120;
     if (shape == FixtureShape::Long) {
-        for (uint64_t tick = 100; tick < 500; tick++)
+        for (Tick tick = 100; tick < 500; tick++)
             primary.events.push_back(event(tick, 0xb0, 11, uint8_t(tick % 127)));
     }
     smf.tracks.push_back(std::move(primary));
@@ -246,7 +246,7 @@ bool trackIsSorted(const SmfTrack &track)
         [](const SmfEvent &left, const SmfEvent &right) { return left.tick < right.tick; });
 }
 
-int rowForTickAndType(const eventlist::EventTableModel &model, uint64_t tick, int type)
+int rowForTickAndType(const eventlist::EventTableModel &model, Tick tick, int type)
 {
     for (int row = 0; row + 1 < model.rowCount(); row++) {
         if (model.data(model.index(row, eventlist::EventTableModel::ColTick), Qt::EditRole)

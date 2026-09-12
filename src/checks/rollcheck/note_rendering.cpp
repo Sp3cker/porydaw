@@ -437,13 +437,13 @@ void PianoRollTest::noteNameRaster()
         // note wide enough for its name. The pair stays unlabeled while the
         // distant wide note keeps its label.
         const qreal pxPerTick = view.camera().contentX(1.0) - view.camera().contentX(0.0);
-        const auto closeTicks = uint64_t(std::max(1.0, std::ceil(5.0 / pxPerTick)));
+        const auto closeTicks = Tick(std::max(1.0, std::ceil(5.0 / pxPerTick)));
         const auto labelProbeWidth = 3 * layout::space(layout::Space::Eight);
-        const auto labelTicks = uint64_t(std::ceil(labelProbeWidth / pxPerTick));
-        const auto farTicks = uint64_t(std::ceil(90.0 / pxPerTick));
-        const uint64_t runTick2 = a.tick + closeTicks;
-        const uint64_t runTick3 = runTick2 + farTicks;
-        const uint64_t runTick4 = runTick3 + labelTicks + closeTicks;
+        const auto labelTicks = Tick(std::ceil(labelProbeWidth / pxPerTick));
+        const auto farTicks = Tick(std::ceil(90.0 / pxPerTick));
+        const Tick runTick2 = a.tick + closeTicks;
+        const Tick runTick3 = runTick2 + farTicks;
+        const Tick runTick4 = runTick3 + labelTicks + closeTicks;
         int runKey = -1;
         for (int key = 115; key >= 24 && runKey < 0; --key) {
             if (namedRows.top(key) < 0.0 || namedRows.bottom(key) > roll.height())
@@ -456,7 +456,7 @@ void PianoRollTest::noteNameRaster()
             namedRows.noteBox(namedRows.noteRect(0.0, 1.0, runKey < 0 ? 60 : runKey));
         const int runRowTop = toNamesPixel(runRowBox.top());
         const int runRowBottom = toNamesPixel(runRowBox.bottom()) - 1;
-        const auto labelStrip = [&](uint64_t tick, int width) {
+        const auto labelStrip = [&](Tick tick, int width) {
             const int left =
                 toNamesPixel(plotToBandX(view.camera().displayX(double(tick), 0, namedRows.dpr())));
             return QRect(QPoint(left, runRowTop), QPoint(left + width - 1, runRowBottom));
@@ -466,10 +466,10 @@ void PianoRollTest::noteNameRaster()
             QFAIL("no room for the note-name width probe");
         } else {
             const int undoIndexBeforeRun = doc.undoStack()->index();
-            doc.addNotes(track, {{a.tick, uint8_t(runKey), uint32_t(closeTicks), 100},
-                                 {runTick2, uint8_t(runKey), uint32_t(closeTicks), 100},
-                                 {runTick3, uint8_t(runKey), uint32_t(labelTicks), 100},
-                                 {runTick4, uint8_t(runKey), uint32_t(labelTicks), 1}});
+            doc.addNotes(track, {{Tick(a.tick), uint8_t(runKey), uint32_t(closeTicks), 100},
+                                 {Tick(runTick2), uint8_t(runKey), uint32_t(closeTicks), 100},
+                                 {Tick(runTick3), uint8_t(runKey), uint32_t(labelTicks), 100},
+                                 {Tick(runTick4), uint8_t(runKey), uint32_t(labelTicks), 1}});
             const QImage runNamed = check.captureQuickFramebuffer();
             view.setNoteNameMode(false);
             const QImage runUnnamed = check.captureQuickFramebuffer();
@@ -584,7 +584,7 @@ void PianoRollTest::velocityValueRaster()
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
     {
-        const uint64_t overlayTick = a.tick + 3 * a.dur;
+        const Tick overlayTick = a.tick + 3 * a.dur;
         const SongView::ViewState originalView = view.viewState();
         QFETCH(double, keyHeight);
         {
@@ -611,9 +611,8 @@ void PianoRollTest::velocityValueRaster()
                 if (shortRows.top(key) < 3.0 || shortRows.bottom(key) > roll.height() - 3.0)
                     continue;
                 for (int probe = 8; probe < roll.width() - 40; probe += 24) {
-                    const uint64_t tick =
-                        view.grid().snapTickDown(view.camera().tickAtContentX(probe));
-                    const uint64_t dur = view.grid().gridTicksAt(tick);
+                    const Tick tick = view.grid().snapTickDown(view.camera().tickAtContentX(probe));
+                    const Tick dur = view.grid().gridTicksAt(tick);
                     const int x0 = view.camera().contentX(double(tick));
                     const int xs =
                         view.camera().contentX(double(tick + view.grid().snapTicksAt(tick)));
@@ -623,9 +622,9 @@ void PianoRollTest::velocityValueRaster()
                     bool blocked = false;
                     for (int neighborKey = key - 1; neighborKey <= key + 1; ++neighborKey)
                         blocked = blocked || check.isOccupied(tick, 2 * dur, neighborKey, true);
-                    const auto nearSpan = [&](uint64_t overlay) {
-                        return overlay != UINT64_MAX && overlay + dur >= tick &&
-                               overlay <= tick + 3 * dur;
+                    const auto nearSpan = [&](Tick overlay) {
+                        return overlay != CoreTimeDefaults::kNoTick &&
+                               uint64_t(overlay) + dur >= tick && overlay <= tick + 3 * dur;
                     };
                     if (blocked || nearSpan(check.timeline().loopStartTick) ||
                         nearSpan(check.timeline().loopEndTick) || nearSpan(overlayTick))

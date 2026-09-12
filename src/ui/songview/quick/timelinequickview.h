@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/timedefaults.h"
 #include "ui/songview/quick/pianorollquick.h"
 #include "ui/songview/quick/timelineinput.h"
 #include "ui/songview/quick/timelinequickchrome.h"
@@ -175,7 +176,7 @@ class TimelineQuickView final : public QObject
     void setPlayhead(qreal localX, bool effectiveVisible, bool playing, bool trianglePointsUp);
     void setPlayheadColor(const QColor &color);
     void synchronizeGuides(qreal songViewSplitX, std::optional<qreal> editSongViewContentX);
-    void publishHover(TimelineQuickHoverOwner owner, uint64_t tick, qreal songViewContentX);
+    void publishHover(TimelineQuickHoverOwner owner, Tick tick, qreal songViewContentX);
     void clearHover(TimelineQuickHoverOwner owner);
     // Live QML borrows. rootObject() is the cached scene root; both return
     // null after detachWindow() or once an external container destroyed a
@@ -402,7 +403,7 @@ class TimelineQuickView final : public QObject
     bool m_playheadTrianglePointsUp = false;
     QColor m_playheadColor;
     TimelineQuickHoverOwner m_hoverOwner = TimelineQuickHoverOwner::None;
-    uint64_t m_hoverTick = 0;
+    Tick m_hoverTick = 0;
     PianoRollQuickDirtySet m_pendingDirty = {PianoRollQuickDirty::None};
     TimelineQuickDirtySet m_pendingTimelineDirty = {TimelineQuickDirty::None};
     AutomationRefreshSet m_pendingAutomationRefresh = {AutomationRefresh::None};

@@ -26,7 +26,7 @@ constexpr quint64 kVoiceTitleTextKey = std::numeric_limits<quint64>::max();
 constexpr quint64 kVoiceSummaryTextKey = kVoiceTitleTextKey - 1;
 constexpr quint64 kVoiceReadoutTextKey = kVoiceTitleTextKey - 2;
 
-QRectF heldSpanRect(uint64_t beginTick, uint64_t endTick, const songview::TimeCamera &camera,
+QRectF heldSpanRect(Tick beginTick, Tick endTick, const songview::TimeCamera &camera,
                     const QRectF &plot)
 {
     const qreal left = std::max<qreal>(0.0, camera.contentX(double(beginTick)));
@@ -178,7 +178,7 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene, boo
     QColor heldColor = trackColor;
     heldColor.setAlpha(18);
     int program = timeline->tracks[track].firstProgram;
-    uint64_t spanStart = 0;
+    Tick spanStart = 0;
     for (std::size_t index = 0; index < paintEntryCount; ++index) {
         const VoicePaintEntry entry = paintEntryAt(index);
         if (program >= 0 && entry.tick > spanStart) {
@@ -198,7 +198,7 @@ void VoiceChangeArea::rebuildQuickScene(songview::TimelineQuickScene &scene, boo
     static const QString noVoiceText = tr("No voice");
     const double contextTick =
         m_live.playback.playing ? m_live.playback.playheadTick : m_live.editCursorTick;
-    const int contextSlot = voiceSlotAt(uint64_t(std::round(std::max(0.0, contextTick))));
+    const int contextSlot = voiceSlotAt(Tick(std::round(std::max(0.0, contextTick))));
     const QString &contextText = contextSlot >= 0 && contextSlot < VOICEGROUP_SIZE
                                      ? paintTextFor(contextSlot).label
                                      : noVoiceText;

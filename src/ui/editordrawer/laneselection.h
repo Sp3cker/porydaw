@@ -7,6 +7,8 @@
 
 #include <QtGlobal>
 
+#include "core/timedefaults.h"
+
 #include "ui/editorviewstate.h"
 
 class AutomationProjection;
@@ -29,7 +31,7 @@ class LaneSelection
     void setUsedTrackMask(uint32_t usedTrackMask) noexcept;
 
     bool active() const noexcept;
-    std::optional<std::pair<uint64_t, uint64_t>> activeTickRange() const noexcept;
+    std::optional<std::pair<Tick, Tick>> activeTickRange() const noexcept;
     // coversLane drives lane selection hit/menu/reticle behavior. Tempo uses
     // tempo coverage; CC rows require Lanes scope and a visible row identity.
     bool coversLane(EditorAutomationRowId id) const noexcept;

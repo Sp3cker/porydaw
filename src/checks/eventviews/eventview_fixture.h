@@ -90,7 +90,7 @@ FixtureOpen<EventViewRigFixture> openRigFixture(FixtureShape shape);
 FixtureOpen<EventViewTabFixture> openTabFixture(FixtureShape shape);
 
 bool trackIsSorted(const SmfTrack &track);
-int rowForTickAndType(const eventlist::EventTableModel &model, uint64_t tick, int type);
+int rowForTickAndType(const eventlist::EventTableModel &model, Tick tick, int type);
 int chunkForTrack(const SongDocument &document, int engineTrack);
 // Selects the given SMF chunk the way the page's chunk menu does.
 bool selectChunk(EventListController &controller, int chunk);

@@ -29,12 +29,12 @@ constexpr int kTrack = 0;
 constexpr uint8_t kPanController = CoreTimeDefaults::kCcPan;
 constexpr uint8_t kVolumeController = CoreTimeDefaults::kCcVolume;
 constexpr uint8_t kLfoController = CoreTimeDefaults::kCcLfoSpeed;
-constexpr uint64_t kSelectionTick = 96;
-constexpr uint64_t kDestinationTick = 144;
-constexpr uint64_t kLateTick = 384;
+constexpr Tick kSelectionTick = 96;
+constexpr Tick kDestinationTick = 144;
+constexpr Tick kLateTick = 384;
 constexpr uint32_t kPreservedTempoUs = 499999;
 
-SmfEvent programChange(uint64_t tick, uint8_t program)
+SmfEvent programChange(Tick tick, uint8_t program)
 {
     SmfEvent event;
     event.tick = tick;
@@ -43,7 +43,7 @@ SmfEvent programChange(uint64_t tick, uint8_t program)
     return event;
 }
 
-SmfEvent controlChange(uint64_t tick, uint8_t controller, uint8_t value)
+SmfEvent controlChange(Tick tick, uint8_t controller, uint8_t value)
 {
     SmfEvent event;
     event.tick = tick;
@@ -53,7 +53,7 @@ SmfEvent controlChange(uint64_t tick, uint8_t controller, uint8_t value)
     return event;
 }
 
-SmfEvent tempo(uint64_t tick, uint32_t microsecondsPerQuarterNote)
+SmfEvent tempo(Tick tick, uint32_t microsecondsPerQuarterNote)
 {
     SmfEvent event;
     event.tick = tick;
@@ -94,7 +94,7 @@ SmfFile mixedSelectionSmf()
     return smf;
 }
 
-std::vector<int> valuesAt(const SongDocument &document, uint8_t controller, uint64_t tick)
+std::vector<int> valuesAt(const SongDocument &document, uint8_t controller, Tick tick)
 {
     std::vector<int> values;
     for (const DocLanePoint &point : document.lanePoints(kTrack, controller)) {
@@ -125,7 +125,7 @@ bool sameLaneValues(const std::vector<SongDocument::LanePointValue> &left,
     return true;
 }
 
-uint32_t tempoAt(const SongDocument &document, uint64_t tick)
+uint32_t tempoAt(const SongDocument &document, Tick tick)
 {
     for (const TempoPoint &point : document.tempoPoints()) {
         if (point.tick == tick)
@@ -134,7 +134,7 @@ uint32_t tempoAt(const SongDocument &document, uint64_t tick)
     return 0;
 }
 
-std::vector<int> timelineValuesAt(const SongTab &tab, uint8_t controller, uint64_t tick)
+std::vector<int> timelineValuesAt(const SongTab &tab, uint8_t controller, Tick tick)
 {
     std::vector<int> values;
     const std::shared_ptr<const MidiTimeline> timeline = tab.timeline();
@@ -149,7 +149,7 @@ std::vector<int> timelineValuesAt(const SongTab &tab, uint8_t controller, uint64
     return values;
 }
 
-bool timelineHasTempo(const SongTab &tab, uint64_t tick, double bpm)
+bool timelineHasTempo(const SongTab &tab, Tick tick, double bpm)
 {
     const std::shared_ptr<const MidiTimeline> timeline = tab.timeline();
     if (!timeline)
@@ -172,8 +172,8 @@ songview::EditorSelectionModel::TimeSelection mixedSelection(bool includeTempo)
     return selection;
 }
 
-bool selectionMatches(const songview::EditorSelectionModel::TimeSelection &selection,
-                      uint64_t first, uint64_t last, bool tempoSelected,
+bool selectionMatches(const songview::EditorSelectionModel::TimeSelection &selection, Tick first,
+                      Tick last, bool tempoSelected,
                       const std::vector<std::pair<int, uint8_t>> &lanes)
 {
     return selection.active() &&
@@ -424,7 +424,7 @@ void AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop()
 
     // The shared fixture deliberately keeps pan occupants at kDestinationTick for
     // drag-collision coverage. Probe the following half-open cell for the no-op.
-    constexpr uint64_t selectionSpan = kDestinationTick - kSelectionTick;
+    constexpr Tick selectionSpan = kDestinationTick - kSelectionTick;
     songview::EditorSelectionModel::TimeSelection empty = mixedSelection(true);
     empty.startTick = kDestinationTick + selectionSpan;
     empty.endTick = empty.startTick + selectionSpan;

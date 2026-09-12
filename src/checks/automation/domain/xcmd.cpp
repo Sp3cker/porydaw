@@ -14,7 +14,7 @@ namespace {
 constexpr int kTrack = 0;
 
 struct CcByte {
-    uint64_t tick = 0;
+    Tick tick = 0;
     uint8_t controller = 0;
     uint8_t value = 0;
 
@@ -22,7 +22,7 @@ struct CcByte {
 };
 
 std::vector<std::pair<uint8_t, uint8_t>> xcmdBytesAt(const SongDocument &document, int track,
-                                                     uint64_t tick)
+                                                     Tick tick)
 {
     std::vector<std::pair<uint8_t, uint8_t>> bytes;
     const int smfTrack = document.smfTrackFor(track);
@@ -87,18 +87,14 @@ std::vector<SmfEvent> notes(const SongDocument &document, int track)
 
 void clearXcmd(SongDocument &document)
 {
-    document.writeLanePoints(kTrack, DOC_CC_ECHO_VOLUME, 0, std::numeric_limits<uint64_t>::max(),
-                             {});
-    document.writeLanePoints(kTrack, DOC_CC_ECHO_LENGTH, 0, std::numeric_limits<uint64_t>::max(),
-                             {});
+    document.writeLanePoints(kTrack, DOC_CC_ECHO_VOLUME, 0, CoreTimeDefaults::kNoTick, {});
+    document.writeLanePoints(kTrack, DOC_CC_ECHO_LENGTH, 0, CoreTimeDefaults::kNoTick, {});
 }
 
 void seedBaseline(SongDocument &document)
 {
-    document.writeLanePoints(kTrack, 10, 0, std::numeric_limits<uint64_t>::max(),
-                             {{0, 80}, {384, 110}});
-    document.writeLanePoints(kTrack, 7, 0, std::numeric_limits<uint64_t>::max(),
-                             {{0, 64}, {288, 48}});
+    document.writeLanePoints(kTrack, 10, 0, CoreTimeDefaults::kNoTick, {{0, 80}, {384, 110}});
+    document.writeLanePoints(kTrack, 7, 0, CoreTimeDefaults::kNoTick, {{0, 64}, {288, 48}});
 }
 
 } // namespace
@@ -261,10 +257,10 @@ void AutomationDomainTest::xcmdSweepPreservesNotes()
 {
     SongDocument &doc = document();
     const Snapshot before = snapshot();
-    constexpr uint64_t kDragBegin = 8736;
-    constexpr uint64_t kNoteBegin = 8772;
-    constexpr uint64_t kNoteEnd = 8808;
-    constexpr uint64_t kExistingPoint = 8844;
+    constexpr Tick kDragBegin = 8736;
+    constexpr Tick kNoteBegin = 8772;
+    constexpr Tick kNoteEnd = 8808;
+    constexpr Tick kExistingPoint = 8844;
     SmfEvent noteOn{.tick = kNoteBegin,
                     .status = uint8_t(0x90 | (doc.channelFor(kTrack) & 0x0F)),
                     .data0 = 60,

@@ -30,14 +30,14 @@
 namespace {
 
 constexpr uint8_t kPilotController = 10;
-constexpr uint64_t kPilotDraggedTick = 48;
-constexpr uint64_t kPilotIndependentTick = 96;
-constexpr uint64_t kPilotEndTick = 192;
+constexpr Tick kPilotDraggedTick = 48;
+constexpr Tick kPilotIndependentTick = 96;
+constexpr Tick kPilotEndTick = 192;
 constexpr int kPilotDraggedValue = 40;
 constexpr int kPilotIndependentValue = 100;
 constexpr double kFixtureSampleRate = 48000.0;
 
-SmfEvent programChange(uint64_t tick, uint8_t program)
+SmfEvent programChange(Tick tick, uint8_t program)
 {
     SmfEvent event;
     event.status = 0xC0;
@@ -46,7 +46,7 @@ SmfEvent programChange(uint64_t tick, uint8_t program)
     return event;
 }
 
-SmfEvent controlChange(uint64_t tick, uint8_t controller, uint8_t value)
+SmfEvent controlChange(Tick tick, uint8_t controller, uint8_t value)
 {
     SmfEvent event;
     event.status = 0xB0;

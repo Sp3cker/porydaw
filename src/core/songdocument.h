@@ -72,7 +72,7 @@ struct DocNote {
     int smfTrack = -1;
     size_t onIndex = 0;
     size_t endIndex = SIZE_MAX; // SIZE_MAX = unterminated note-on
-    uint64_t tick = 0;
+    Tick tick = 0;
     uint32_t duration = 0; // ticks (0 when unterminated)
     uint8_t key = 0;
     uint8_t velocity = 0;
@@ -86,7 +86,7 @@ struct DocNote {
 struct DocLanePoint {
     int smfTrack = -1;
     size_t index = 0;
-    uint64_t tick = 0;
+    Tick tick = 0;
     int value = 0; // CoreTimeDefaults::laneValueMinimum/Maximum
 };
 
@@ -105,7 +105,7 @@ struct TempoEdit {
 struct DocTimeSig {
     int smfTrack = -1;
     size_t index = 0;
-    uint64_t tick = 0;
+    Tick tick = 0;
     uint8_t numerator = 4;
     uint8_t denomPow2 = 2; // denominator = 1 << denomPow2
 };
@@ -171,23 +171,23 @@ class SongDocument : public QObject
     // The ids of the track's current notes that were not in the before
     // snapshot — what an insert (draw commit or paste) added.
     std::vector<NoteId> insertedNoteIds(int engineTrack, const std::vector<DocNote> &before) const;
-    bool findNote(int engineTrack, uint64_t tick, uint8_t key, DocNote *out) const;
+    bool findNote(int engineTrack, Tick tick, uint8_t key, DocNote *out) const;
     bool findNote(NoteId id, DocNote *out) const;
     uint64_t noteEndTick(const DocNote &note) const;
     bool containsNoteSpan(int engineTrack, const DocNote &snapshot, uint64_t expectedEndTick) const;
     std::vector<DocLanePoint> lanePoints(int engineTrack, uint8_t cc) const;
-    bool findLanePoint(int engineTrack, uint8_t cc, uint64_t tick, DocLanePoint *out) const;
-    // Loop markers ('[' / ']' text metas); UINT64_MAX when absent.
-    uint64_t loopTick(bool endMarker) const;
+    bool findLanePoint(int engineTrack, uint8_t cc, Tick tick, DocLanePoint *out) const;
+    // Loop markers ('[' / ']' text metas); kNoTick when absent.
+    Tick loopTick(bool endMarker) const;
     // Time signatures (meta 0x58), sorted by tick. When several share a tick
     // the last one is the one the bar grid honors.
     std::vector<DocTimeSig> timeSigs() const;
 
     // Edits that change document state each push one undoable command and emit documentChanged.
-    void addNote(int engineTrack, uint64_t tick, uint8_t key, uint32_t duration, uint8_t velocity);
+    void addNote(int engineTrack, Tick tick, uint8_t key, uint32_t duration, uint8_t velocity);
     // Batch insert (clipboard paste): all notes land in one undoable command.
     struct NewNote {
-        uint64_t tick;
+        Tick tick;
         uint8_t key;
         uint32_t duration;
         uint8_t velocity;
@@ -223,21 +223,21 @@ class SongDocument : public QObject
     // Relative velocity change, clamped to 1-127 per note.
     void nudgeNotesVelocity(const std::vector<DocNote> &notes, int delta);
 
-    void addLanePoint(int engineTrack, uint8_t cc, uint64_t tick, int value);
+    void addLanePoint(int engineTrack, uint8_t cc, Tick tick, int value);
     // Gesture write (freehand sweep / line ramp): replaces every point of the
     // lane inside [tickBegin, tickEnd] with the given stream, as one undoable
     // command. Voice uses identity-preserving point operations instead.
     struct LanePointValue {
-        uint64_t tick;
+        Tick tick;
         int value;
     };
-    void writeLanePoints(int engineTrack, uint8_t cc, uint64_t tickBegin, uint64_t tickEnd,
+    void writeLanePoints(int engineTrack, uint8_t cc, Tick tickBegin, Tick tickEnd,
                          const std::vector<LanePointValue> &points);
     struct LanePointMove {
         int engineTrack = -1;
         uint8_t cc = 0;
         DocLanePoint point;
-        uint64_t newTick = 0;
+        Tick newTick = 0;
         int newValue = 0;
     };
     // Descriptor-lane identities (point.index) are trusted: callers resolve
@@ -306,13 +306,13 @@ class SongDocument : public QObject
     // end-of-track tick, so the song itself gets shorter. One undoable command;
     // returns false when nothing would change.
     struct TimeRange {
-        uint64_t startTick = 0;
-        uint64_t endTick = 0;
+        Tick startTick = 0;
+        Tick endTick = 0;
 
         bool empty() const { return endTick <= startTick; }
-        uint64_t span() const { return empty() ? 0 : endTick - startTick; }
-        bool contains(uint64_t tick) const { return tick >= startTick && tick < endTick; }
-        bool overlaps(uint64_t start, uint64_t end) const
+        uint64_t span() const { return empty() ? 0 : uint64_t(endTick) - startTick; }
+        bool contains(Tick tick) const { return tick >= startTick && tick < endTick; }
+        bool overlaps(Tick start, Tick end) const
         {
             return startTick < endTick && start < end && startTick < end && start < endTick;
         }
@@ -378,7 +378,7 @@ class SongDocument : public QObject
     bool rawEventMoveBounds(int smfTrack, size_t index, size_t *first, size_t *last) const;
     // Move the chunk's end-of-track marker; clamped so it never precedes the
     // chunk's last event.
-    void setTrackEndTick(int smfTrack, uint64_t tick);
+    void setTrackEndTick(int smfTrack, Tick tick);
 
     // Move or create a loop marker; tick == -1 removes it.
     void setLoopTick(bool endMarker, int64_t tick);
@@ -388,9 +388,9 @@ class SongDocument : public QObject
     // new one in the seq chunk, like tempo and loop markers. moveTimeSig
     // relocates every 0x58 at fromTick, overwriting any at toTick;
     // deleteTimeSig removes every 0x58 at the tick.
-    void setTimeSig(uint64_t tick, int numerator, int denomPow2);
-    void moveTimeSig(uint64_t fromTick, uint64_t toTick);
-    void deleteTimeSig(uint64_t tick);
+    void setTimeSig(Tick tick, int numerator, int denomPow2);
+    void moveTimeSig(Tick fromTick, Tick toTick);
+    void deleteTimeSig(Tick tick);
 
     // Track create/delete. A track needs a channel event to occupy an engine
     // slot (rebuildTrackMap), so a new track is seeded with a program change
@@ -502,9 +502,9 @@ class SongDocument : public QObject
     int freeChannel() const;
 
     // Builder helpers (operate on current state; see applyOps for index rules).
-    SmfEvent makeChannelEvent(uint8_t typeNibble, uint8_t channel, uint64_t tick, uint8_t data0,
+    SmfEvent makeChannelEvent(uint8_t typeNibble, uint8_t channel, Tick tick, uint8_t data0,
                               uint8_t data1) const;
-    void appendNoteInsertOps(std::vector<EditOp> &ops, int smfTrack, uint8_t channel, uint64_t tick,
+    void appendNoteInsertOps(std::vector<EditOp> &ops, int smfTrack, uint8_t channel, Tick tick,
                              uint8_t key, uint32_t duration, uint8_t velocity) const;
     void appendRemoveOps(std::vector<EditOp> &ops, int smfTrack, std::vector<size_t> indices) const;
     // Same-key overlap resolution for edits that write notes. The pairing
@@ -523,7 +523,7 @@ class SongDocument : public QObject
     struct PlannedNote {
         int engineTrack;
         uint8_t key;
-        uint64_t tick;
+        Tick tick;
         uint64_t endTick; // exclusive
     };
     void resolveNoteOverlaps(const std::vector<PlannedNote> &written,
@@ -548,9 +548,9 @@ class SongDocument : public QObject
                             const SmfEvent &event) const;
     bool laneEventMatches(const SmfEvent &ev, uint8_t cc) const;
     int laneValue(const SmfEvent &ev, uint8_t cc) const;
-    SmfEvent makeLaneEvent(uint8_t cc, uint8_t channel, uint64_t tick, int value) const;
+    SmfEvent makeLaneEvent(uint8_t cc, uint8_t channel, Tick tick, int value) const;
     void appendLaneInsertOps(std::vector<EditOp> &ops, int smfTrack, uint8_t channel, uint8_t cc,
-                             uint64_t tick, int value) const;
+                             Tick tick, int value) const;
     // The one XCMD adapter for an SMF track: one pass over the chunk's
     // channel events as a single decoder stream (the same slot playback
     // uses per engine track), rows carrying each event's chunk index as

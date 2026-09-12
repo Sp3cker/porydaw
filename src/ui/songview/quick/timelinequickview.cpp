@@ -564,7 +564,7 @@ void TimelineQuickView::synchronizeGuides(qreal songViewSplitX,
         setHoverChrome(songViewSplitX + m_camera.contentX(m_hoverTick));
 }
 
-void TimelineQuickView::publishHover(TimelineQuickHoverOwner owner, uint64_t tick,
+void TimelineQuickView::publishHover(TimelineQuickHoverOwner owner, Tick tick,
                                      qreal songViewContentX)
 {
     if (owner == TimelineQuickHoverOwner::None)

@@ -199,10 +199,10 @@ void PianoRoll::nudgeSelectedNotes(bool right)
     const std::vector<DocNote> notes = resolveSelection();
     if (!doc || notes.empty())
         return;
-    uint64_t anchor = UINT64_MAX;
+    Tick anchor = CoreTimeDefaults::kNoTick;
     for (const DocNote &note : notes)
         anchor = std::min(anchor, note.tick);
-    const uint64_t snapped =
+    const Tick snapped =
         right ? m_grid.snapTickUp(double(anchor) + 1.0) : m_grid.snapTickDown(double(anchor) - 1.0);
     const int64_t dTick = int64_t(snapped) - int64_t(anchor);
     if (dTick == 0)
@@ -210,11 +210,11 @@ void PianoRoll::nudgeSelectedNotes(bool right)
     const SongView::DocumentSwapHintScope swapHint{*m_sv, cNoteMutationDirty};
     doc->moveNotes(notes, dTick, 0, /*mergeable=*/true);
     // Keep the moved notes in sight, scrolling just enough.
-    uint64_t lo = UINT64_MAX, hi = 0;
+    Tick lo = CoreTimeDefaults::kNoTick, hi = 0;
     for (const DocNote &note : notes) {
-        const uint64_t tick = uint64_t(int64_t(note.tick) + dTick);
+        const Tick tick = Tick(int64_t(note.tick) + dTick);
         lo = std::min(lo, tick);
-        hi = std::max(hi, tick + note.duration);
+        hi = Tick(std::max(uint64_t(hi), uint64_t(tick) + note.duration));
     }
     m_sv->ensureRangeVisible(lo, hi, right);
     // Only note pixels changed here; the ensureRangeVisible reveal above
@@ -254,7 +254,7 @@ void PianoRoll::deleteSelectedNotes()
 
 void PianoRoll::copyNotes(const std::vector<DocNote> &notes)
 {
-    uint64_t base = UINT64_MAX;
+    Tick base = CoreTimeDefaults::kNoTick;
     for (const DocNote &note : notes)
         base = std::min(base, note.tick);
     Clip clip;

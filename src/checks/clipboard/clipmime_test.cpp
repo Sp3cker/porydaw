@@ -40,10 +40,11 @@ Clip rescaleInput(RescaleFamily family)
         clip.tempo = {{2, 500000}, {1, 600000}, {3, 700000}};
         return clip;
     case RescaleFamily::Saturation:
-        clip.span = UINT64_MAX;
-        clip.tracks = {{0, {{UINT32_MAX, 127, UINT32_MAX, 255}}}};
-        clip.lanes = {{0, kCcModulation, {{UINT32_MAX, std::numeric_limits<int>::min()}}}};
-        clip.tempo = {{Tick(UINT64_MAX), UINT32_MAX}};
+        clip.span = CoreTimeDefaults::kNoTick;
+        clip.tracks = {{0, {{CoreTimeDefaults::kNoTick, 127, UINT32_MAX, 255}}}};
+        clip.lanes = {
+            {0, kCcModulation, {{CoreTimeDefaults::kNoTick, std::numeric_limits<int>::min()}}}};
+        clip.tempo = {{CoreTimeDefaults::kNoTick, UINT32_MAX}};
         return clip;
     case RescaleFamily::Identity:
         clip.tracks = {{7, {{9, 72, 5, 44}}}};
@@ -70,7 +71,14 @@ Clip rescaleExpected(RescaleFamily family)
         expected.lanes = {{2, kCcVolume, {{1, 10}, {2, 30}}}};
         expected.tempo = {{1, 600000}, {2, 700000}};
         return expected;
-    case RescaleFamily::Saturation:
+    case RescaleFamily::Saturation: {
+        Clip saturated = rescaleInput(family);
+        // span and tempo ticks clamp at kMaxTick; relTick and lane ticks
+        // saturate at UINT32_MAX (== kNoTick), unchanged from the input.
+        saturated.span = CoreTimeDefaults::kMaxTick;
+        saturated.tempo = {{CoreTimeDefaults::kMaxTick, UINT32_MAX}};
+        return saturated;
+    }
     case RescaleFamily::Identity:
         return rescaleInput(family);
     }

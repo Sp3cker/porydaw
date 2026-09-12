@@ -167,14 +167,14 @@ std::optional<TempoPoint> decodeTempo(const QJsonValue &value)
         return std::nullopt;
     uint64_t relTick = 0;
     uint64_t microseconds = 0;
-    if (!requireUint(object, "relTick", UINT64_MAX, relTick) ||
+    if (!requireUint(object, "relTick", CoreTimeDefaults::kMaxTick, relTick) ||
         !requireUint(object, "microsecondsPerQuarterNote", UINT32_MAX, microseconds))
         return std::nullopt;
     return TempoPoint{Tick(relTick), uint32_t(microseconds)};
 }
 
-uint64_t scaleTick(uint64_t tick, uint32_t sourceTicksPerBeat, uint32_t destinationTicksPerBeat,
-                   uint64_t maximum)
+Tick scaleTick(uint64_t tick, uint32_t sourceTicksPerBeat, uint32_t destinationTicksPerBeat,
+               Tick maximum)
 {
     const auto quotient = tick / sourceTicksPerBeat;
     const auto remainder = tick % sourceTicksPerBeat;
@@ -188,7 +188,7 @@ uint64_t scaleTick(uint64_t tick, uint32_t sourceTicksPerBeat, uint32_t destinat
         fractional++;
     if (fractional > maximum - whole)
         return maximum;
-    return whole + fractional;
+    return Tick(whole + fractional);
 }
 // Stable-sorts by tick and coalesces same-tick entries, the later entry
 // winning — the collision policy rescaleClip relies on for both lane points
@@ -223,8 +223,9 @@ Clip rescaleClip(Clip result, uint32_t sourceTicksPerBeat, uint32_t destinationT
     if (sourceTicksPerBeat == destinationTicksPerBeat)
         return result;
     if (result.span != 0)
-        result.span = std::max(uint64_t{1}, scaleTick(result.span, sourceTicksPerBeat,
-                                                      destinationTicksPerBeat, UINT64_MAX));
+        result.span =
+            Tick(std::max<Tick>(1, scaleTick(result.span, sourceTicksPerBeat,
+                                             destinationTicksPerBeat, CoreTimeDefaults::kMaxTick)));
     for (auto &track : result.tracks) {
         for (auto &note : track.notes) {
             note.relTick = uint32_t(
@@ -244,7 +245,8 @@ Clip rescaleClip(Clip result, uint32_t sourceTicksPerBeat, uint32_t destinationT
         dedupLastWinsByTick(lane.points);
     }
     for (auto &point : result.tempo)
-        point.tick = scaleTick(point.tick, sourceTicksPerBeat, destinationTicksPerBeat, UINT64_MAX);
+        point.tick = scaleTick(point.tick, sourceTicksPerBeat, destinationTicksPerBeat,
+                               CoreTimeDefaults::kMaxTick);
     dedupLastWinsByTick(result.tempo);
     return result;
 }
@@ -288,7 +290,7 @@ std::optional<DecodedClip> decodeClip(const QByteArray &payload)
     uint64_t span = 0;
     if (!requireUint(object, "format", 1, format) || format != 1 ||
         !requireUint(object, "ticksPerBeat", UINT32_MAX, ticksPerBeat) || ticksPerBeat == 0 ||
-        !requireUint(object, "span", UINT64_MAX, span) ||
+        !requireUint(object, "span", CoreTimeDefaults::kMaxTick, span) ||
         !object.value(QStringLiteral("tracks")).isArray() ||
         !object.value(QStringLiteral("lanes")).isArray() ||
         !object.value(QStringLiteral("tempo")).isArray())

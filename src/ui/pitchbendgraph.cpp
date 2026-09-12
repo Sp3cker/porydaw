@@ -79,7 +79,7 @@ void PitchBendGraph::setBendRange(int range)
     notifyLiveValueChanged();
 }
 
-void PitchBendGraph::setCurve(const std::map<uint64_t, int> &points, int endValue)
+void PitchBendGraph::setCurve(const std::map<Tick, int> &points, int endValue)
 {
     if (!m_initialized)
         return;
@@ -112,12 +112,12 @@ void PitchBendGraph::resetCurve()
     notifyLiveValueChanged();
 }
 
-std::optional<uint64_t> PitchBendGraph::selectedTick() const
+std::optional<Tick> PitchBendGraph::selectedTick() const
 {
     return m_selectedTick;
 }
 
-void PitchBendGraph::setSelectedTick(std::optional<uint64_t> tick)
+void PitchBendGraph::setSelectedTick(std::optional<Tick> tick)
 {
     if (!m_initialized)
         return;
@@ -129,7 +129,7 @@ void PitchBendGraph::setSelectedTick(std::optional<uint64_t> tick)
     redraw();
 }
 
-std::optional<std::pair<uint64_t, int>> PitchBendGraph::hitTest(const QPointF &position) const
+std::optional<std::pair<Tick, int>> PitchBendGraph::hitTest(const QPointF &position) const
 {
     if (!m_initialized)
         return std::nullopt;
@@ -137,7 +137,7 @@ std::optional<std::pair<uint64_t, int>> PitchBendGraph::hitTest(const QPointF &p
     // widget surface there is no per-window DPR multiplier here.
     const qreal radiusSquared = m_geometry.nodeHitRadius * m_geometry.nodeHitRadius;
     qreal nearestDistanceSquared = radiusSquared;
-    std::optional<std::pair<uint64_t, int>> nearest;
+    std::optional<std::pair<Tick, int>> nearest;
     for (const auto &[tick, value] : m_points) {
         const QPoint center = vertexPosition(tick, value);
         const qreal dx = position.x() - center.x();
@@ -170,7 +170,7 @@ bool PitchBendGraph::removeSelectedVertex()
     return true;
 }
 
-QPoint PitchBendGraph::vertexPosition(uint64_t tick, int value) const
+QPoint PitchBendGraph::vertexPosition(Tick tick, int value) const
 {
     if (!m_initialized)
         return {};
@@ -248,9 +248,9 @@ std::vector<SongDocument::LanePointValue> PitchBendGraph::curvePoints() const
         return {};
     std::vector<SongDocument::LanePointValue> points;
     points.reserve(m_points.size());
-    const uint64_t fineTick = m_grid ? m_grid->fineGridTicks() : 1;
+    const uint32_t fineTick = m_grid ? m_grid->fineGridTicks() : 1;
     int previous = 0;
-    uint64_t previousTick = 0;
+    Tick previousTick = 0;
     bool havePrevious = false;
     for (const auto &[tick, value] : m_points) {
         const bool endpoint = tick == m_startTick || tick == m_endTick;
@@ -483,7 +483,7 @@ void PitchBendGraph::updateStroke(const QPointF &position)
     if (!m_initialized || !m_strokeState)
         return;
     auto &state = *m_strokeState;
-    const uint64_t tick = tickAtX(position.x(), gestureSampling());
+    const Tick tick = tickAtX(position.x(), gestureSampling());
     const int value = valueAtY(position.y());
     if (isLineGesture()) {
         m_points = state.snapshot;
@@ -507,16 +507,16 @@ void PitchBendGraph::updateVertexDrag(const QPointF &position, Qt::KeyboardModif
     auto &state = *m_vertexDragState;
     m_points = state.snapshot;
     const int value = valueAtY(position.y());
-    uint64_t tick = state.originalTick;
+    Tick tick = state.originalTick;
     const bool endpoint = tick == m_startTick || tick == m_endTick;
     if (!endpoint && m_endTick > m_startTick + 1) {
         const Sampling sampling = modifiers & Qt::AltModifier ? Sampling::Fine : Sampling::Normal;
-        const uint64_t minimumTick = m_startTick + 1;
-        const uint64_t maximumTick = m_endTick - 1;
+        const Tick minimumTick = m_startTick + 1;
+        const Tick maximumTick = m_endTick - 1;
         tick = std::clamp(tickAtX(position.x(), sampling), minimumTick, maximumTick);
         if (tick != state.originalTick && m_points.contains(tick)) {
             const int direction = tick > state.originalTick ? 1 : -1;
-            uint64_t candidate = tick;
+            Tick candidate = tick;
             bool found = false;
             while (true) {
                 if (direction > 0) {
@@ -558,15 +558,15 @@ void PitchBendGraph::finishGesture()
     notifyCommitRequested();
 }
 
-void PitchBendGraph::replaceSegment(uint64_t tick0, int value0, uint64_t tick1, int value1,
+void PitchBendGraph::replaceSegment(Tick tick0, int value0, Tick tick1, int value1,
                                     Sampling sampling)
 {
-    const uint64_t low = std::min(tick0, tick1);
-    const uint64_t high = std::max(tick0, tick1);
+    const Tick low = std::min(tick0, tick1);
+    const Tick high = std::max(tick0, tick1);
     const auto eraseBegin = m_points.lower_bound(low);
     const auto eraseEnd = m_points.upper_bound(high);
     m_points.erase(eraseBegin, eraseEnd);
-    const auto writeSample = [&](uint64_t sampleTick) {
+    const auto writeSample = [&](Tick sampleTick) {
         const double fraction =
             tick1 == tick0
                 ? 1.0
@@ -576,9 +576,9 @@ void PitchBendGraph::replaceSegment(uint64_t tick0, int value0, uint64_t tick1, 
                                           minimumValue(), maximumValue());
     };
     writeSample(low);
-    uint64_t tick = low;
+    Tick tick = low;
     while (tick < high) {
-        const uint64_t next = nextSampleTick(tick, sampling);
+        const Tick next = nextSampleTick(tick, sampling);
         if (next <= tick || next >= high)
             break;
         writeSample(next);
@@ -599,80 +599,75 @@ PitchBendGraph::Sampling PitchBendGraph::gestureSampling() const
     return isLineGesture() ? Sampling::Fine : Sampling::Normal;
 }
 
-uint64_t PitchBendGraph::normalCellTicksAt(uint64_t tick) const
+uint32_t PitchBendGraph::normalCellTicksAt(Tick tick) const
 {
     if (!m_grid)
         return 1;
-    const uint64_t span = std::max<uint64_t>(1, m_endTick - m_startTick);
+    const uint32_t span = std::max<Tick>(1, m_endTick - m_startTick);
     const double pixelsPerTick = double(canvasRect().width() - 1) / double(span);
     return m_grid->gridTicksAtScale(tick, pixelsPerTick);
 }
 
-uint64_t PitchBendGraph::samplingCellTicksAt(uint64_t tick, Sampling sampling) const
+uint32_t PitchBendGraph::samplingCellTicksAt(Tick tick, Sampling sampling) const
 {
     return sampling == Sampling::Fine ? (m_grid ? m_grid->fineGridTicks() : 1)
                                       : normalCellTicksAt(tick);
 }
 
-uint64_t PitchBendGraph::nextSampleTick(uint64_t tick, Sampling sampling) const
+Tick PitchBendGraph::nextSampleTick(Tick tick, Sampling sampling) const
 {
     if (tick >= m_endTick)
         return m_endTick;
-    const uint64_t cell = samplingCellTicksAt(tick, sampling);
-    uint64_t segmentEnd = m_endTick;
-    const uint64_t anchor =
+    const uint32_t cell = samplingCellTicksAt(tick, sampling);
+    Tick segmentEnd = m_endTick;
+    const Tick anchor =
         sampling == Sampling::Fine ? 0 : (m_grid ? m_grid->segmentAt(tick).start : 0);
     if (sampling == Sampling::Normal && m_grid)
         segmentEnd = std::min(m_endTick, m_grid->segmentAt(tick).next);
     const uint64_t offset = tick > anchor ? tick - anchor : 0;
     const uint64_t quotient = offset / cell;
-    if (quotient >= UINT64_MAX / cell)
-        return segmentEnd;
-    const uint64_t aligned = anchor + (quotient + 1) * cell;
+    const uint64_t aligned = uint64_t(anchor) + (quotient + 1) * cell;
     if (aligned > tick)
-        return std::min(aligned, segmentEnd);
-    if (tick == UINT64_MAX)
-        return segmentEnd;
-    return std::min(tick + 1, segmentEnd);
+        return std::min(Tick(aligned), segmentEnd);
+    return std::min(Tick(tick + 1), segmentEnd);
 }
 
-uint64_t PitchBendGraph::lastEditableTick(Sampling sampling) const
+Tick PitchBendGraph::lastEditableTick(Sampling sampling) const
 {
     if (m_endTick <= m_startTick + 1)
         return m_startTick;
-    const uint64_t lastRaw = m_endTick - 1;
-    const uint64_t cell = samplingCellTicksAt(lastRaw, sampling);
-    const uint64_t anchor =
+    const Tick lastRaw = m_endTick - 1;
+    const uint32_t cell = samplingCellTicksAt(lastRaw, sampling);
+    const Tick anchor =
         sampling == Sampling::Fine ? 0 : (m_grid ? m_grid->segmentAt(lastRaw).start : 0);
-    const uint64_t tick =
-        lastRaw < anchor ? m_startTick : anchor + ((lastRaw - anchor) / cell) * cell;
+    const Tick tick = lastRaw < anchor ? m_startTick : anchor + ((lastRaw - anchor) / cell) * cell;
     return std::clamp(tick, m_startTick, lastRaw);
 }
-uint64_t PitchBendGraph::tickAtFraction(double fraction, Sampling sampling) const
+Tick PitchBendGraph::tickAtFraction(double fraction, Sampling sampling) const
 {
     if (fraction <= 0.0)
         return m_startTick;
     if (fraction >= 1.0)
         return lastEditableTick(sampling);
     const double raw = double(m_startTick) + fraction * double(m_endTick - m_startTick);
-    const uint64_t rawTick =
-        std::clamp<uint64_t>(uint64_t(std::max(0.0, std::round(raw))), m_startTick, m_endTick);
-    const uint64_t cell = samplingCellTicksAt(rawTick, sampling);
-    const uint64_t anchor =
+    const Tick rawTick =
+        std::clamp<Tick>(Tick(std::max(0.0, std::round(raw))), m_startTick, m_endTick);
+    const uint32_t cell = samplingCellTicksAt(rawTick, sampling);
+    const Tick anchor =
         sampling == Sampling::Fine ? 0 : (m_grid ? m_grid->segmentAt(rawTick).start : 0);
     const double snapped =
         double(anchor) + std::round((raw - double(anchor)) / double(cell)) * cell;
     if (snapped <= double(m_startTick))
         return m_startTick;
     if (sampling == Sampling::Normal && m_grid) {
-        const uint64_t segmentEnd = std::min(m_endTick, m_grid->segmentAt(rawTick).next);
+        const Tick segmentEnd = std::min(m_endTick, m_grid->segmentAt(rawTick).next);
         if (snapped >= double(segmentEnd) && segmentEnd < m_endTick)
             return segmentEnd;
     }
-    return std::min<uint64_t>(uint64_t(snapped), lastEditableTick(sampling));
+    return std::min<Tick>(Tick(snapped), lastEditableTick(sampling));
 }
 
-uint64_t PitchBendGraph::tickAtX(qreal x, Sampling sampling) const
+Tick PitchBendGraph::tickAtX(qreal x, Sampling sampling) const
 {
     const QRect graph = canvasRect();
     const double fraction =
@@ -680,7 +675,7 @@ uint64_t PitchBendGraph::tickAtX(qreal x, Sampling sampling) const
     return tickAtFraction(fraction, sampling);
 }
 
-int PitchBendGraph::xAtTick(uint64_t tick) const
+int PitchBendGraph::xAtTick(Tick tick) const
 {
     const QRect graph = canvasRect();
     const double fraction = m_endTick > m_startTick && tick >= m_startTick
@@ -724,7 +719,7 @@ int PitchBendGraph::yAtValue(int value) const
     return center + qRound(double(-value) * double(graph.bottom() - center) / 8192.0);
 }
 
-int PitchBendGraph::valueAtTick(uint64_t tick) const
+int PitchBendGraph::valueAtTick(Tick tick) const
 {
     const auto it = m_points.upper_bound(tick);
     if (it == m_points.begin())

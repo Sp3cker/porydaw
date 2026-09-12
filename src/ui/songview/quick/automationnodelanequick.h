@@ -10,6 +10,7 @@
 #include <QRect>
 #include <QRectF>
 
+#include "core/timedefaults.h"
 #include "ui/editordrawer/automationprojection.h"
 #include "ui/editordrawer/nodelane/gesture.h"
 #include "ui/editordrawer/nodelane/hover.h"
@@ -37,12 +38,12 @@ class NodeLaneQuickPaint final
         QColor selectedColor;
         QColor dimmedColor;
         qreal devicePixelRatio = 1.0;
-        std::optional<std::pair<uint64_t, uint64_t>> selectedTickRange;
+        std::optional<std::pair<Tick, Tick>> selectedTickRange;
         bool selectedLane = false;
         bool selectedNodesLane = false;
         bool bandLane = false;
-        uint64_t bandFirstTick = 0;
-        uint64_t bandLastTick = 0;
+        Tick bandFirstTick = 0;
+        Tick bandLastTick = 0;
         bool multipleSelectedNodes = false;
         bool pencilMode = false;
         const NodeDragGesture *nodeDrag = nullptr;

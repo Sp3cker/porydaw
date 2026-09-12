@@ -29,8 +29,7 @@ void PianoRollTest::scaleFoldOccupancy()
     view.setScaleRoot(0);
     view.setScaleId(scaleMajor);
     const auto &proj = view.pitchProjection();
-    const uint64_t cTick =
-        uint64_t(check.timeline().lengthTicks) + uint64_t(doc.ticksPerClock()) * 8;
+    const Tick cTick = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
     const auto firstFreeOffScale = [&](const bool occ[128]) {
         for (int k = 1; k < 128; k += 12)
             if (!occ[k])
@@ -80,8 +79,7 @@ void PianoRollTest::scaleFoldTrackScope()
     view.setScaleRoot(0);
     view.setScaleId(scaleMajor);
     const auto &proj = view.pitchProjection();
-    const uint64_t cTick =
-        uint64_t(check.timeline().lengthTicks) + uint64_t(doc.ticksPerClock()) * 8;
+    const Tick cTick = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
     const int other = doc.engineTrackCount() > 1 ? (scaleTrack == 0 ? 1 : 0) : -1;
     const auto firstFreeOffScale = [&](const bool occ[128]) {
         for (int k = 1; k < 128; k += 12)
@@ -173,8 +171,7 @@ void PianoRollTest::scaleFoldUndoLifecycle()
     view.setScaleRoot(0);
     view.setScaleId(scaleMajor);
     const auto &proj = view.pitchProjection();
-    const uint64_t cTick =
-        uint64_t(check.timeline().lengthTicks) + uint64_t(doc.ticksPerClock()) * 8;
+    const Tick cTick = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
     const auto firstFreeOffScale = [&](const bool occ[128]) {
         for (int k = 1; k < 128; k += 12)
             if (!occ[k])

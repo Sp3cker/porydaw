@@ -17,7 +17,7 @@ namespace {
 
 constexpr uint8_t kCcModulation = 0x01;
 
-songview::EditorSelectionModel::TimeSelection tracksSelection(uint64_t start, uint64_t end)
+songview::EditorSelectionModel::TimeSelection tracksSelection(Tick start, Tick end)
 {
     songview::EditorSelectionModel::TimeSelection selection;
     selection.startTick = start;

@@ -146,7 +146,7 @@ void AutomationCanvas::invalidateSelectedNodeMultiplicity() const noexcept
 }
 
 bool AutomationCanvas::hasMultipleSelectedNodes(
-    const std::optional<std::pair<uint64_t, uint64_t>> &selectedTickRange) const
+    const std::optional<std::pair<Tick, Tick>> &selectedTickRange) const
 {
     if (!selectedTickRange)
         return false;
@@ -185,8 +185,8 @@ void AutomationCanvas::requestQuickUpdate(songview::AutomationRefreshSet dirty) 
         if (!m_hoverState.hover.lane.valid()) {
             m_page.m_owner.clearTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation);
         } else {
-            const uint64_t tick =
-                uint64_t(std::max(0.0, m_hoverState.insertionTick(projection(), m_pencilMode)));
+            const Tick tick =
+                Tick(std::max(0.0, m_hoverState.insertionTick(projection(), m_pencilMode)));
             m_page.m_owner.publishTimelineQuickHover(songview::TimelineQuickHoverOwner::Automation,
                                                      tick);
         }
@@ -495,8 +495,7 @@ bool AutomationCanvas::openValuePromptForNode(LaneHandle handle, const NodePoint
     return true;
 }
 
-bool AutomationCanvas::openValuePromptForInsertion(LaneHandle handle, uint64_t tick,
-                                                   int storedValue)
+bool AutomationCanvas::openValuePromptForInsertion(LaneHandle handle, Tick tick, int storedValue)
 {
     SongDocument *document = m_page.document();
     const NodeLaneSlot *slot = resolveSlot(handle);
@@ -590,14 +589,14 @@ NodePoint AutomationCanvas::mappedForLane(LaneHandle handle, QPointF pos, bool f
     QRect body;
     if (!resolveLane(handle, &lane, &body) || !lane)
         return {};
-    const uint64_t tick = m_page.snapTick(proj.rawTickAt(pos.x()), fine);
+    const Tick tick = m_page.snapTick(proj.rawTickAt(pos.x()), fine);
     NodePoint out;
     updateValuePoint(proj, *lane, body, out, pos.y(), tick, snapValue, m_geometry.neutralSnapRadius,
                      lane->neutralValue());
     return out;
 }
 
-void AutomationCanvas::publishBandSelection(uint64_t first, uint64_t last, LaneHandle start,
+void AutomationCanvas::publishBandSelection(Tick first, Tick last, LaneHandle start,
                                             LaneHandle end) const
 {
     if (first >= last || !start.valid() || !end.valid())

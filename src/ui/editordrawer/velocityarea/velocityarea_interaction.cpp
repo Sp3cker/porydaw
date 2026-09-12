@@ -243,7 +243,7 @@ void VelocityArea::announcePreview()
         if (note.noteId != m_announcedNote)
             continue;
         const uint8_t velocity = m_owner.previewVelocity(note.noteId).value_or(note.velocity);
-        const uint64_t clocks =
+        const uint32_t clocks =
             document->ticksPerClock() == 0 ? 0 : note.duration / document->ticksPerClock();
         const DrawerPageNoteStatus status{
             note.key, velocity, uint8_t(mid2agbEffectiveVelocity(velocity)), note.duration, clocks};

@@ -39,9 +39,9 @@ struct LaneGeometry {
     QColor curveColor;
 };
 
-constexpr uint64_t kHeldTick = 0;
-constexpr uint64_t kNodeTick = 96;
-constexpr uint64_t kSecondTick = 144;
+constexpr Tick kHeldTick = 0;
+constexpr Tick kNodeTick = 96;
+constexpr Tick kSecondTick = 144;
 constexpr int kTempoHeld = 80;
 constexpr int kTempoNode = 200;
 constexpr int kTempoSecond = 160;
@@ -294,7 +294,7 @@ void AutomationRasterTest::curvesNodesAndSelectedRingsRender()
                 {kSecondTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoSecond)}};
     document.applyTempoEdit(edit);
     document.writeLanePoints(
-        0, uint8_t{10}, 0, std::numeric_limits<uint64_t>::max(),
+        0, uint8_t{10}, 0, CoreTimeDefaults::kNoTick,
         {{kHeldTick, kCcHeld}, {kNodeTick, kCcNode}, {kSecondTick, kCcSecond}});
 
     const quint64 curvesBefore =
@@ -426,15 +426,15 @@ void AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes()
     fixture().setAutomationDpr(fixture().nativeAutomationDpr());
 
     SongView &view = fixture().view();
-    const uint64_t groupA = view.grid().snapTick(48.0, false);
-    const uint64_t groupB = view.grid().snapTick(72.0, false);
-    const uint64_t groupC = view.grid().snapTick(120.0, false);
+    const Tick groupA = view.grid().snapTick(48.0, false);
+    const Tick groupB = view.grid().snapTick(72.0, false);
+    const Tick groupC = view.grid().snapTick(120.0, false);
     constexpr int kGroupAValue = 40;
     constexpr int kGroupBValue = 80;
     constexpr int kGroupCValue = 55;
     fixture().document().writeLanePoints(
-        0, fixture().pan.controller, 0, std::numeric_limits<uint64_t>::max(),
-        {{groupA, kGroupAValue}, {groupB, kGroupBValue}, {groupC, kGroupCValue}});
+        0, fixture().pan.controller, 0, CoreTimeDefaults::kNoTick,
+        {{Tick(groupA), kGroupAValue}, {Tick(groupB), kGroupBValue}, {Tick(groupC), kGroupCValue}});
     fixture().documentChanged();
 
     const LaneHandle panHandle = fixture().handleFor(fixture().pan);
@@ -442,7 +442,7 @@ void AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes()
     QVERIFY(panHandle.valid());
     QVERIFY(!body.isEmpty());
     CCLaneAdapter panLane(fixture().document(), fixture().pan.track, fixture().pan.controller);
-    const auto pointAt = [&](uint64_t tick, int value) {
+    const auto pointAt = [&](Tick tick, int value) {
         return QPoint(qRound(fixture().projection().displayX(tick, fixture().automationDpr())),
                       qRound(nodelane::valueY(panLane, body, fixture().geometry(), value)));
     };

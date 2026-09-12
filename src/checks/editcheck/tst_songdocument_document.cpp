@@ -455,8 +455,8 @@ void EditCheckTest::documentGlobalMetadata()
                    std::vector<TempoPoint>{songdocument_test::tempo(0, 120)} &&
                sigs.size() == 1 && sigs.front().tick == 0 && sigs.front().numerator == 4 &&
                sigs.front().denomPow2 == 2 && document.loopTick(false) == 12 &&
-               document.loopTick(true) == UINT64_MAX && tempos == 0 && signatures == 1 &&
-               starts == 1 && labels == 1;
+               document.loopTick(true) == CoreTimeDefaults::kNoTick && tempos == 0 &&
+               signatures == 1 && starts == 1 && labels == 1;
     };
     QVERIFY(globalsOriginal());
     const int copy = document.duplicateTrack(0);

@@ -292,7 +292,7 @@ void AutomationCanvas::handleMenuAction(int actionId)
     if (!slot || !slot->lane || slot->id != pending.rowId)
         return;
     NodeLane *lane = slot->lane;
-    const auto maxTick = std::numeric_limits<uint64_t>::max();
+    const Tick maxTick = CoreTimeDefaults::kNoTick;
     if (actionId == int(Action::Copy)) {
         m_clipboard = lane->points();
         m_page.announce(

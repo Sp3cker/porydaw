@@ -24,17 +24,17 @@ constexpr uint32_t kDivision = 24;
 constexpr double kSampleRate = 48000.0;
 constexpr uint64_t kSamplesPerTick = 1000;
 
-constexpr uint64_t kLoopStartTick = 96; // measure 2
-constexpr uint64_t kLoopEndTick = 288;  // downbeat of measure 4
-constexpr uint8_t kBodyKey = 60;        // ticks 96-120, plays every pass
-constexpr uint8_t kEndsAtKey = 62;      // ticks 264-288, off exactly at loop end
-constexpr uint8_t kSpansKey = 65;       // ticks 240-300, crosses the loop end (60
-                                        // clocks: direct note -> gate-carry)
-constexpr uint8_t kBoundaryKey = 64;    // ticks 288-312, the reported stuck note
-constexpr uint8_t kTieKey = 67;         // ticks 192-312, crosses the loop end (120
-                                        // clocks: TIE + EOT -> held forever)
+constexpr Tick kLoopStartTick = 96;  // measure 2
+constexpr Tick kLoopEndTick = 288;   // downbeat of measure 4
+constexpr uint8_t kBodyKey = 60;     // ticks 96-120, plays every pass
+constexpr uint8_t kEndsAtKey = 62;   // ticks 264-288, off exactly at loop end
+constexpr uint8_t kSpansKey = 65;    // ticks 240-300, crosses the loop end (60
+                                     // clocks: direct note -> gate-carry)
+constexpr uint8_t kBoundaryKey = 64; // ticks 288-312, the reported stuck note
+constexpr uint8_t kTieKey = 67;      // ticks 192-312, crosses the loop end (120
+                                     // clocks: TIE + EOT -> held forever)
 
-SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data1)
+SmfEvent channelEvent(Tick tick, uint8_t status, uint8_t data0, uint8_t data1)
 {
     SmfEvent ev;
     ev.tick = tick;
@@ -44,7 +44,7 @@ SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data
     return ev;
 }
 
-SmfEvent metaEvent(uint64_t tick, uint8_t metaType, const QByteArray &blob)
+SmfEvent metaEvent(Tick tick, uint8_t metaType, const QByteArray &blob)
 {
     SmfEvent ev;
     ev.tick = tick;
@@ -72,7 +72,7 @@ SmfFile buildLoopSong()
     conductor.endTick = 384;
 
     SmfTrack &notes = smf.tracks[1];
-    auto note = [&notes](uint64_t on, uint64_t off, uint8_t key) {
+    auto note = [&notes](Tick on, Tick off, uint8_t key) {
         notes.events.push_back(channelEvent(on, 0x90, key, 100));
         notes.events.push_back(channelEvent(off, 0x80, key, 0));
     };

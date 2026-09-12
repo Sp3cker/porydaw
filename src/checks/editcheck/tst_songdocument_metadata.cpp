@@ -39,7 +39,7 @@ SmfFile formatZeroFile()
     return smf;
 }
 
-SmfEvent tempoMeta(uint64_t tick, uint32_t microseconds)
+SmfEvent tempoMeta(Tick tick, uint32_t microseconds)
 {
     QByteArray bytes(3, '\0');
     bytes[0] = char((microseconds >> 16) & 0xFF);
@@ -78,7 +78,7 @@ SmfFile duplicateFile()
     return smf;
 }
 
-std::vector<DocLanePoint> pointsAt(const SongDocument &document, uint8_t cc, uint64_t tick)
+std::vector<DocLanePoint> pointsAt(const SongDocument &document, uint8_t cc, Tick tick)
 {
     std::vector<DocLanePoint> result;
     for (const DocLanePoint &point : document.lanePoints(0, cc)) {
@@ -111,7 +111,7 @@ void EditCheckTest::xcmdSaveSnapshot()
     SongDocument &document = fixture->document;
     const int smfTrack = document.smfTrackFor(0);
     QVERIFY(smfTrack >= 0);
-    const uint64_t base = 100;
+    const Tick base = 100;
     const uint8_t status = uint8_t(0xB0 | document.channelFor(0));
     document.insertRawEvent(
         smfTrack, songdocument_test::channel(status, base + 1, xcmd::kSelectorController, 0x08));
@@ -236,7 +236,7 @@ void EditCheckTest::formatZeroSaveRoundTrip()
     bool tempoOutsideConductor = false;
     std::vector<TempoPoint> savedTempos;
     for (size_t track = 0; track < saved.tracks.size(); ++track) {
-        uint64_t tick = 0;
+        Tick tick = 0;
         bool haveTick = false;
         bool nonTempoAtTick = false;
         for (const SmfEvent &event : saved.tracks[track].events) {

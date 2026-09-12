@@ -41,7 +41,7 @@ bool TimeRuler::pointerPress(const TimelinePointerInput &input)
     const MidiTimeline *timeline = m_owner.timeline();
     if (!timeline || input.surface != TimelineInputSurface::Plot)
         return false;
-    const uint64_t clickTick = m_grid.snapTick(m_camera.tickAtContentX(input.position.x()));
+    const Tick clickTick = m_grid.snapTick(m_camera.tickAtContentX(input.position.x()));
 
     if (input.button == Qt::RightButton) {
         // Deferred until release so the loop/selection menu opens at the
@@ -61,7 +61,7 @@ bool TimeRuler::pointerPress(const TimelinePointerInput &input)
         requestQuickUpdate();
         return true;
     }
-    uint64_t sigTick;
+    Tick sigTick;
     int sigNum, sigDen;
     bool sigImplicit;
     if (doc && hitTimeSigChip(input.position, &sigTick, &sigNum, &sigDen, &sigImplicit) &&
@@ -102,7 +102,7 @@ bool TimeRuler::pointerMove(const TimelinePointerInput &input)
             m_selSweep = true;
         }
         if (m_selSweep) {
-            const uint64_t tick = dragTick();
+            const Tick tick = dragTick();
             EditorSelectionModel::TimeSelection selection;
             selection.startTick = std::min(m_selAnchor, tick);
             selection.endTick = std::max(m_selAnchor, tick);
@@ -130,7 +130,7 @@ bool TimeRuler::pointerMove(const TimelinePointerInput &input)
         // Selection edges move live (view state, unlike the loop
         // markers' commit-on-release document edit).
         EditorSelectionModel::TimeSelection selection = m_owner.selectionModel().timeSelection();
-        const uint64_t tick = dragTick();
+        const Tick tick = dragTick();
         if (m_dragSelEdge == 0)
             selection.startTick = tick;
         else
@@ -142,7 +142,7 @@ bool TimeRuler::pointerMove(const TimelinePointerInput &input)
         m_owner.selectionModel().setTimeSelection(selection);
         return true;
     }
-    uint64_t sigTick;
+    Tick sigTick;
     int sigNum, sigDen;
     bool sigImplicit;
     m_inputHost->setCursor(
@@ -214,7 +214,7 @@ bool TimeRuler::pointerDoubleClick(const TimelinePointerInput &input)
         return false;
 
     SongDocument *doc = m_owner.document();
-    uint64_t sigTick;
+    Tick sigTick;
     int numerator, denomPow2;
     bool implicit;
     if (input.button != Qt::LeftButton || !doc ||
@@ -276,7 +276,7 @@ void TimeRuler::inputCancelled(TimelineInputCancelReason reason)
     cancelInteraction();
 }
 
-void TimeRuler::showRulerMenu(uint64_t clickTick, const QPointF &scenePos)
+void TimeRuler::showRulerMenu(Tick clickTick, const QPointF &scenePos)
 {
     SongDocument *doc = m_owner.document();
     const MidiTimeline *timeline = m_owner.timeline();
@@ -286,7 +286,7 @@ void TimeRuler::showRulerMenu(uint64_t clickTick, const QPointF &scenePos)
 
     // Chip hit snapshotted at open from the press position: it decides the
     // Edit/Remove time-signature rows and the prompt's initial values.
-    uint64_t sigTick = clickTick;
+    Tick sigTick = clickTick;
     int sigNum, sigDen;
     bool sigImplicit = true;
     const bool onChip = hitTimeSigChip(m_rightPressPos, &sigTick, &sigNum, &sigDen, &sigImplicit);
@@ -307,7 +307,8 @@ void TimeRuler::showRulerMenu(uint64_t clickTick, const QPointF &scenePos)
     addRow(RulerMenuAction::SetLoopStart, SongView::tr("Set loop start here"));
     addRow(RulerMenuAction::SetLoopEnd, SongView::tr("Set loop end here"));
     addRow(RulerMenuAction::RemoveLoop, SongView::tr("Remove loop markers"),
-           timeline->loopStartTick != UINT64_MAX || timeline->loopEndTick != UINT64_MAX);
+           timeline->loopStartTick != CoreTimeDefaults::kNoTick ||
+               timeline->loopEndTick != CoreTimeDefaults::kNoTick);
     const EditorSelectionModel::TimeSelection selection = m_owner.selectionModel().timeSelection();
     if (selection.active()) {
         rows.push_back(QuickMenuItem::makeSeparator());
@@ -382,9 +383,9 @@ void TimeRuler::handleRulerMenuAction(int id)
         break;
     case RulerMenuAction::RemoveLoop:
         // Two commands; undo restores them one at a time.
-        if (m_owner.timeline()->loopStartTick != UINT64_MAX)
+        if (m_owner.timeline()->loopStartTick != CoreTimeDefaults::kNoTick)
             doc->setLoopTick(false, -1);
-        if (m_owner.timeline()->loopEndTick != UINT64_MAX)
+        if (m_owner.timeline()->loopEndTick != CoreTimeDefaults::kNoTick)
             doc->setLoopTick(true, -1);
         break;
     case RulerMenuAction::LoopFromSelection:

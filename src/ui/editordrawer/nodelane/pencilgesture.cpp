@@ -15,7 +15,7 @@ bool finiteSample(const AutomationPencilGesture::Sample &sample)
            std::isfinite(sample.continuousValue);
 }
 
-double clampedRawTick(double tick, uint64_t songEndTick)
+double clampedRawTick(double tick, Tick songEndTick)
 {
     if (tick <= 0.0)
         return 0.0;
@@ -23,20 +23,20 @@ double clampedRawTick(double tick, uint64_t songEndTick)
     return tick >= songEnd ? songEnd : tick;
 }
 
-uint64_t clampedTick(double tick, uint64_t songEndTick)
+Tick clampedTick(double tick, Tick songEndTick)
 {
     const double clamped = clampedRawTick(tick, songEndTick);
-    return clamped >= double(songEndTick) ? songEndTick : uint64_t(std::floor(clamped));
+    return clamped >= double(songEndTick) ? songEndTick : Tick(std::floor(clamped));
 }
 
 AutomationPencilGesture::Sample normalizedSample(AutomationPencilGesture::Sample sample,
-                                                 uint64_t songEndTick)
+                                                 Tick songEndTick)
 {
     sample.rawTick = clampedRawTick(sample.rawTick, songEndTick);
     return sample;
 }
 
-uint64_t nextClockTick(uint64_t tick, uint64_t clockTicks, uint64_t songEndTick)
+Tick nextClockTick(Tick tick, uint32_t clockTicks, Tick songEndTick)
 {
     if (tick >= songEndTick || clockTicks > songEndTick - tick)
         return songEndTick;
@@ -61,8 +61,8 @@ bool collinearForward(double previousDeltaAxis, double previousDeltaValue, doubl
 } // namespace
 
 std::optional<AutomationPencilGesture> AutomationPencilGesture::start(
-    Target target, int minimumValue, int maximumValue, uint64_t songEndTick,
-    uint64_t documentClockTicks, std::vector<NodeLaneEdit::Point> originalPoints,
+    Target target, int minimumValue, int maximumValue, Tick songEndTick,
+    uint32_t documentClockTicks, std::vector<NodeLaneEdit::Point> originalPoints,
     std::optional<NodePoint> leadIn, Sample firstSample, AutomationGridCell firstCell)
 {
     if (!target.lane.valid() || minimumValue > maximumValue || documentClockTicks == 0 ||
@@ -80,7 +80,7 @@ std::optional<AutomationPencilGesture> AutomationPencilGesture::start(
 }
 
 AutomationPencilGesture::AutomationPencilGesture(Target target, int minimumValue, int maximumValue,
-                                                 uint64_t songEndTick, uint64_t documentClockTicks,
+                                                 Tick songEndTick, uint32_t documentClockTicks,
                                                  std::vector<NodeLaneEdit::Point> originalPoints,
                                                  Sample firstSample, AutomationGridCell firstCell)
     : m_minimumValue(minimumValue)
@@ -187,7 +187,7 @@ bool AutomationPencilGesture::applyFreehandSegment(Sample sample)
     m_snappedSegmentStart.reset();
     const Sample previous = m_previous;
     const double deltaX = sample.logicalX - previous.logicalX;
-    std::optional<uint64_t> preservedTurnTick;
+    std::optional<Tick> preservedTurnTick;
     if (m_provisionalFreehandEndpoint) {
         bool continuesFreehandLine = false;
         if (m_freehandSegmentStart) {
@@ -211,14 +211,14 @@ bool AutomationPencilGesture::applyFreehandSegment(Sample sample)
         const double continuousValue =
             previous.continuousValue +
             (sample.continuousValue - previous.continuousValue) * fraction;
-        const uint64_t rawIntegerTick = clampedTick(rawTick, m_songEndTick);
-        const uint64_t clockTick = (rawIntegerTick / m_documentClockTicks) * m_documentClockTicks;
+        const Tick rawIntegerTick = clampedTick(rawTick, m_songEndTick);
+        const Tick clockTick = (rawIntegerTick / m_documentClockTicks) * m_documentClockTicks;
         const NodePoint point{clockTick, roundedValue(continuousValue)};
         if (provisionalEndpoint)
             m_provisionalFreehandEndpoint = point;
         else if (!interiorSample || !preservedTurnTick || point.tick != *preservedTurnTick)
             upsertByTick(m_strokePoints, point);
-        const uint64_t rangeEnd = nextClockTick(clockTick, m_documentClockTicks, m_songEndTick);
+        const Tick rangeEnd = nextClockTick(clockTick, m_documentClockTicks, m_songEndTick);
         m_tickBegin = std::min(m_tickBegin, clockTick);
         m_tickEnd = std::max(m_tickEnd, rangeEnd);
     };
@@ -240,13 +240,12 @@ bool AutomationPencilGesture::applyFreehandSegment(Sample sample)
     return true;
 }
 
-bool AutomationPencilGesture::lessPointTick(const NodePoint &left, uint64_t tick) noexcept
+bool AutomationPencilGesture::lessPointTick(const NodePoint &left, Tick tick) noexcept
 {
     return left.tick < tick;
 }
 
-bool AutomationPencilGesture::validCell(const AutomationGridCell &cell,
-                                        uint64_t songEndTick) noexcept
+bool AutomationPencilGesture::validCell(const AutomationGridCell &cell, Tick songEndTick) noexcept
 {
     return cell.tickBegin < cell.tickEnd && cell.tickEnd <= songEndTick;
 }
@@ -261,7 +260,7 @@ void AutomationPencilGesture::rebuildPreview()
                                                  m_minimumValue, m_maximumValue, std::move(points));
 }
 
-void AutomationPencilGesture::eraseStrokePointsIn(uint64_t tickBegin, uint64_t tickEnd)
+void AutomationPencilGesture::eraseStrokePointsIn(Tick tickBegin, Tick tickEnd)
 {
     const auto first =
         std::lower_bound(m_strokePoints.begin(), m_strokePoints.end(), tickBegin, lessPointTick);

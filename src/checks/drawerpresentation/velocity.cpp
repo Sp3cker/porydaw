@@ -199,7 +199,7 @@ void VelocityPageTest::gridAndPanClamp()
     createVelocityFixture(fixture);
     SongView &view = fixture.rig->view();
     const auto &timeline = fixture.rig->timeline();
-    const uint64_t firstPastEnd =
+    const Tick firstPastEnd =
         (timeline.lengthTicks / (timeline.ticksPerBeat * 4) + 1) * timeline.ticksPerBeat * 4;
     const QPointF gridPoint(fixture.xForTick(double(firstPastEnd)),
                             fixture.plotRect().center().y());

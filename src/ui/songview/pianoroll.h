@@ -225,7 +225,7 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     void updateVelocityDrag(const TimelinePointerInput &input);
     void updateDrawDrag(const TimelinePointerInput &input);
     bool isDrawableKey(int key) const;
-    void drawSpanAt(double tick, uint64_t grid, uint64_t &start, int64_t &dur) const;
+    void drawSpanAt(double tick, Tick grid, Tick &start, int64_t &dur) const;
     void updateTimeSelDrag(const TimelinePointerInput &input);
     void updateBandDrag();
     void updateLeftDragMove(const TimelinePointerInput &input);
@@ -321,18 +321,18 @@ class PianoRoll final : public QObject, public TimelineBandInteraction
     bool m_curPosValid = false; // valid while the pointer is inside the plot
     double m_pressTick = 0.0;
     int m_pressKey = 0;
-    uint64_t m_gripTick = 0;     // edge tick grabbed by a resize drag
-    uint64_t m_gripOpposite = 0; // the note's other edge (the pivot)
+    Tick m_gripTick = 0;     // edge tick grabbed by a resize drag
+    Tick m_gripOpposite = 0; // the note's other edge (the pivot)
     int64_t m_dTick = 0;
     int m_dKey = 0; // semitones, or scale degrees during a Fold move
     int64_t m_dDur = 0;
     int m_dVel = 0;
-    uint64_t m_drawTick = 0; // pending note of a draw gesture
+    Tick m_drawTick = 0; // pending note of a draw gesture
     int64_t m_drawDur = 0;
     int m_drawKey = 0;               // follows the cursor vertically mid-draw
-    uint64_t m_drawAnchor = 0;       // grid cell pressed; drags pivot around it
+    Tick m_drawAnchor = 0;           // grid cell pressed; drags pivot around it
     bool m_rightShift = false;       // …with Shift: drag sweeps a time selection
-    uint64_t m_rightAnchorTick = 0;  // snapped tick of the right press
+    Tick m_rightAnchorTick = 0;      // snapped tick of the right press
     bool m_rightHit = false;         // that press landed on a note…
     NoteId m_rightHitId{};           // …this one
     std::vector<ViewNote> m_bandAud; // notes the band currently covers; entrants audition

@@ -9,7 +9,7 @@ namespace {
 
 constexpr uint32_t kDivision = 24;
 
-SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data1)
+SmfEvent channelEvent(Tick tick, uint8_t status, uint8_t data0, uint8_t data1)
 {
     SmfEvent ev;
     ev.tick = tick;
@@ -19,7 +19,7 @@ SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data
     return ev;
 }
 
-SmfEvent metaEvent(uint64_t tick, uint8_t metaType, const QByteArray &blob)
+SmfEvent metaEvent(Tick tick, uint8_t metaType, const QByteArray &blob)
 {
     SmfEvent ev;
     ev.tick = tick;

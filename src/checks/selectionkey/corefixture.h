@@ -8,6 +8,7 @@
 // window and local-input tiers keep using primitives.h directly.
 
 #include "checks/selectionkey/primitives.h"
+#include "core/timedefaults.h"
 #include "ui/songview/editorselectionmodel.h"
 
 #include <QPoint>
@@ -28,12 +29,12 @@ namespace selectionkey {
 // tick ranges so an edit to one cannot silently retarget another.
 inline constexpr int kTrack = 0;
 inline constexpr uint8_t kController = 10;
-inline constexpr uint64_t kFirstNoteTick = 960;
-inline constexpr uint64_t kFirstPointTick = 48;
-inline constexpr uint64_t kInsidePointTick = 72;
-inline constexpr uint64_t kSecondPointTick = 96;
-inline constexpr uint64_t kOutsidePointTick = 144;
-inline constexpr uint64_t kPasteTick = 1200;
+inline constexpr Tick kFirstNoteTick = 960;
+inline constexpr Tick kFirstPointTick = 48;
+inline constexpr Tick kInsidePointTick = 72;
+inline constexpr Tick kSecondPointTick = 96;
+inline constexpr Tick kOutsidePointTick = 144;
+inline constexpr Tick kPasteTick = 1200;
 
 // A located click point plus the geometry diagnostics that explain it when a
 // delivery assertion fails.
@@ -47,8 +48,8 @@ QString describeRect(const QRectF &rect);
 QString describeNoteIds(const std::vector<NoteId> &ids);
 
 // Lane-scoped and track-scoped time selections used as staged inputs.
-songview::EditorSelectionModel::TimeSelection coreLaneRange(uint64_t begin, uint64_t end);
-songview::EditorSelectionModel::TimeSelection coreTrackRange(uint64_t begin, uint64_t end);
+songview::EditorSelectionModel::TimeSelection coreLaneRange(Tick begin, Tick end);
+songview::EditorSelectionModel::TimeSelection coreTrackRange(Tick begin, Tick end);
 
 // The drawer page mirroring a timeline band; empty for bands outside the
 // drawer (roll, ruler, other events).
@@ -89,10 +90,10 @@ class CoreFixture final
     ClickTarget selectedVelocityStemPoint() const;
     std::optional<QPoint> plainRulerPoint(songview::TimelineInputItem *ruler) const;
 
-    std::optional<QPoint> laneWindowPoint(uint64_t tick, int value,
+    std::optional<QPoint> laneWindowPoint(Tick tick, int value,
                                           QString *diagnostics = nullptr) const;
     std::optional<std::vector<QPoint>>
-    laneWindowPoints(const std::vector<std::pair<uint64_t, int>> &pointSpecs,
+    laneWindowPoints(const std::vector<std::pair<Tick, int>> &pointSpecs,
                      QString *diagnostics = nullptr) const;
 
   private:

@@ -25,9 +25,9 @@ namespace {
 
 constexpr uint8_t kPanController = 10;
 constexpr uint8_t kLfoController = 21;
-constexpr uint64_t kProbeTick = 96;
+constexpr Tick kProbeTick = 96;
 
-qreal expectedRootContentX(const automation_hover::Fixture &fixture, uint64_t tick)
+qreal expectedRootContentX(const automation_hover::Fixture &fixture, Tick tick)
 {
     const SongView &view = fixture.rig->view();
     return view.timelineSplitX() + view.camera().contentX(tick);

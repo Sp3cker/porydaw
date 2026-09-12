@@ -90,7 +90,7 @@ bool AutomationCanvas::beginPencilPress(QPointF position, Qt::KeyboardModifiers 
                                              projection, m_pencilMode)) {
         const auto grabbedPoint = nodeGesture->grabbedPoint;
         if (grabbedPoint < nodeGesture->points.size()) {
-            const uint64_t hitTick = nodeGesture->points[grabbedPoint].original.tick;
+            const Tick hitTick = nodeGesture->points[grabbedPoint].original.tick;
             if (std::clamp(hitTick, mapped.cell.tickBegin, mapped.cell.tickEnd - 1) == hitTick) {
                 m_activeGesture.emplace(std::move(*nodeGesture));
                 setGestureActive(true);
@@ -389,7 +389,7 @@ bool AutomationCanvas::pointerDoubleClick(const songview::TimelinePointerInput &
     m_hoverState.previewValueLabel = {};
     setGestureActive(false);
     const AutomationProjection proj = projection();
-    const uint64_t tick =
+    const Tick tick =
         m_page.snapTick(proj.rawTickAt(position.x()), input.modifiers & Qt::AltModifier);
     const int storedValue = mappedForLane(pointerLane, position, false, false, proj).value;
     // End the double-click's implicit grab before publishing the prompt. The

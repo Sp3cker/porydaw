@@ -45,22 +45,22 @@ using NodeMenuAction = AutomationCanvas::NodeMenuAction;
 
 // The fixture's pilot CC lane: two written points the point menu targets.
 constexpr uint8_t kController = 10;
-constexpr uint64_t kPointTick = 48;
-constexpr uint64_t kOtherPointTick = 96;
+constexpr Tick kPointTick = 48;
+constexpr Tick kOtherPointTick = 96;
 constexpr int kPointValue = 40;
 constexpr int kOtherPointValue = 100;
 // A miss witness on the plot: inside the staged time selection and on no
 // node, so a leaked dismissal click would open the time-selection menu.
-constexpr uint64_t kMissTick = 120;
+constexpr Tick kMissTick = 120;
 constexpr int kMissValue = 64;
 // The stale-document rewrite: another writer replaces the lane's content
 // while the Delete row sits half-activated under the pointer.
-constexpr uint64_t kRewrittenTick = 288;
+constexpr Tick kRewrittenTick = 288;
 constexpr int kRewrittenValue = 77;
 
 // The fresh Tempo prompt after the switch: a blank tick on the tempo plot
 // and the typed BPM that must land there instead of the old CC lane.
-constexpr uint64_t kFreshTick = 144;
+constexpr Tick kFreshTick = 144;
 constexpr int kFreshBpm = 132;
 
 } // namespace
@@ -142,7 +142,7 @@ void AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence()
 {
     SongTab &songTab = tab();
     const quick_popup::PromptGuard guard(songTab.view());
-    songTab.document().writeLanePoints(0, kController, 0, std::numeric_limits<uint64_t>::max(),
+    songTab.document().writeLanePoints(0, kController, 0, CoreTimeDefaults::kNoTick,
                                        {{kPointTick, 32}, {kPointTick, 96}});
     QCoreApplication::processEvents();
     const LaneHandle cc = findRow({EditorAutomationRowKind::ControlChange, 0, kController});
@@ -187,7 +187,7 @@ void AutomationEditingTest::pointMenuValuePromptEscapeLeavesDocumentUntouched()
 {
     SongTab &songTab = tab();
     const quick_popup::PromptGuard guard(songTab.view());
-    songTab.document().writeLanePoints(0, kController, 0, std::numeric_limits<uint64_t>::max(),
+    songTab.document().writeLanePoints(0, kController, 0, CoreTimeDefaults::kNoTick,
                                        {{kPointTick, 96}});
     QCoreApplication::processEvents();
     const LaneHandle cc = findRow({EditorAutomationRowKind::ControlChange, 0, kController});
@@ -302,8 +302,8 @@ void AutomationEditingTest::pointMenuSyntheticDefaultDeleteDisabledAndSetValuePr
     const quick_popup::PromptGuard guard(songTab.view());
     // Clearing the staged written point leaves the default-visible volume row
     // with just its synthetic tick-0 engine node.
-    songTab.document().writeLanePoints(0, CoreTimeDefaults::kCcVolume, 0,
-                                       std::numeric_limits<uint64_t>::max(), {});
+    songTab.document().writeLanePoints(0, CoreTimeDefaults::kCcVolume, 0, CoreTimeDefaults::kNoTick,
+                                       {});
     QCoreApplication::processEvents();
     const LaneHandle volume =
         findRow({EditorAutomationRowKind::ControlChange, 0, CoreTimeDefaults::kCcVolume});
@@ -415,7 +415,7 @@ void AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget()
     QTest::mousePress(menu.session->window(), Qt::LeftButton, Qt::NoModifier,
                       deleteCenter.toPoint());
     QCoreApplication::processEvents();
-    songTab.document().writeLanePoints(0, kController, 0, std::numeric_limits<uint64_t>::max(),
+    songTab.document().writeLanePoints(0, kController, 0, CoreTimeDefaults::kNoTick,
                                        {{kRewrittenTick, kRewrittenValue}});
     QCoreApplication::processEvents();
     const uint64_t revisionAfterWrite = songTab.document().revision();

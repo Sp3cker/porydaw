@@ -33,9 +33,9 @@
 namespace {
 
 constexpr int kTrack = 0;
-constexpr uint64_t kHeldTick = 48;
-constexpr uint64_t kNodeTick = 96;
-constexpr uint64_t kSecondTick = 144;
+constexpr Tick kHeldTick = 48;
+constexpr Tick kNodeTick = 96;
+constexpr Tick kSecondTick = 144;
 
 QRectF triangleBounds(const songview::TimelineQuickTriangle &triangle)
 {

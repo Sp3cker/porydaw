@@ -27,8 +27,8 @@ class AutomationPencilGesture
     // `leadIn` supplies an implicit pre-roll held value excluded from the
     // lane's editable point list.
     static std::optional<AutomationPencilGesture>
-    start(Target target, int minimumValue, int maximumValue, uint64_t songEndTick,
-          uint64_t documentClockTicks, std::vector<NodeLaneEdit::Point> originalPoints,
+    start(Target target, int minimumValue, int maximumValue, Tick songEndTick,
+          uint32_t documentClockTicks, std::vector<NodeLaneEdit::Point> originalPoints,
           std::optional<NodePoint> leadIn, Sample firstSample, AutomationGridCell firstCell);
 
     bool applySnappedSegment(Sample sample, const std::vector<AutomationGridCell> &cells);
@@ -39,22 +39,22 @@ class AutomationPencilGesture
     const Sample &lastSample() const noexcept { return m_previous; }
 
   private:
-    AutomationPencilGesture(Target target, int minimumValue, int maximumValue, uint64_t songEndTick,
-                            uint64_t documentClockTicks,
+    AutomationPencilGesture(Target target, int minimumValue, int maximumValue, Tick songEndTick,
+                            uint32_t documentClockTicks,
                             std::vector<NodeLaneEdit::Point> originalPoints, Sample firstSample,
                             AutomationGridCell firstCell);
 
-    static bool lessPointTick(const NodePoint &left, uint64_t tick) noexcept;
-    static bool validCell(const AutomationGridCell &cell, uint64_t songEndTick) noexcept;
+    static bool lessPointTick(const NodePoint &left, Tick tick) noexcept;
+    static bool validCell(const AutomationGridCell &cell, Tick songEndTick) noexcept;
 
     void rebuildPreview();
-    void eraseStrokePointsIn(uint64_t tickBegin, uint64_t tickEnd);
+    void eraseStrokePointsIn(Tick tickBegin, Tick tickEnd);
     int roundedValue(double continuousValue) const noexcept;
 
     int m_minimumValue = 0;
     int m_maximumValue = 0;
-    uint64_t m_songEndTick = 0;
-    uint64_t m_documentClockTicks = 0;
+    Tick m_songEndTick = 0;
+    uint32_t m_documentClockTicks = 0;
     Sample m_previous;
     NodeLaneEdit m_laneEdit;
     std::vector<NodePoint> m_strokePoints;
@@ -66,7 +66,7 @@ class AutomationPencilGesture
     std::optional<NodePoint> m_provisionalFreehandEndpoint;
     std::optional<Sample> m_freehandSegmentStart;
     std::optional<Sample> m_snappedSegmentStart;
-    uint64_t m_tickBegin = 0;
-    uint64_t m_tickEnd = 0;
+    Tick m_tickBegin = 0;
+    Tick m_tickEnd = 0;
     Completion m_cachedPreview;
 };

@@ -7,7 +7,6 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <limits>
 #include <memory>
 #include <optional>
 
@@ -39,15 +38,15 @@ struct EditWindow {
 
 std::optional<EditWindow> emptyTailWindow(const SongDocument &document, int track)
 {
-    uint64_t lastEnd = 0;
+    Tick lastEnd = 0;
     for (const SmfTrack &smfTrack : document.smf().tracks)
-        lastEnd = std::max(lastEnd, uint64_t(smfTrack.endTick));
-    constexpr uint64_t kRequiredTail = 96 + 528;
-    if (lastEnd > std::numeric_limits<uint64_t>::max() - kRequiredTail)
+        lastEnd = std::max(lastEnd, smfTrack.endTick);
+    const Tick kRequiredTail = 96 + 528;
+    if (lastEnd > CoreTimeDefaults::kMaxTick - kRequiredTail)
         return std::nullopt;
 
-    const uint64_t base = lastEnd + 96;
-    const uint64_t windowEnd = base + 528;
+    const Tick base = lastEnd + 96;
+    const Tick windowEnd = base + 528;
     for (const DocNote &note : document.notesForTrack(track))
         if (note.tick < windowEnd && document.noteEndTick(note) > base)
             return std::nullopt;
@@ -71,7 +70,7 @@ bool saveEditedDocument(SongDocument &document, const EditWindow &window, SavedE
     document.addNote(window.track, window.base, 72, 24, 93);
     const uint64_t oldLoopStart = document.loopTick(false);
     saved.expectedLoopStart =
-        oldLoopStart == std::numeric_limits<uint64_t>::max() ? 0 : oldLoopStart + 24;
+        oldLoopStart == CoreTimeDefaults::kNoTick ? 0 : uint64_t(oldLoopStart) + 24;
     document.setLoopTick(false, static_cast<int64_t>(saved.expectedLoopStart));
     SongCfg cfg = document.cfg();
     cfg.masterVolume = 111;

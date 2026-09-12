@@ -42,7 +42,7 @@ void SongView::transitionSelectedTrack(int newTrack, bool trackIdentityChanged)
     cancelActiveInteractions();
     m_selectionModel.applyPrimaryTrackTransition(newTrack);
 }
-bool SongView::revealNote(int track, uint8_t key, uint64_t tick)
+bool SongView::revealNote(int track, uint8_t key, Tick tick)
 {
     if (track < 0 || track > 15)
         return false;
@@ -194,7 +194,7 @@ int SongView::currentProgram(int track) const
     if (!m_timeline)
         return -1;
     int prog = m_timeline->tracks[track].firstProgram;
-    const uint64_t tick = m_playing ? uint64_t(m_playheadTick) : m_editCursorTick;
+    const Tick tick = m_playing ? Tick(m_playheadTick) : m_editCursorTick;
     for (const VoiceChange &vc : m_model.voices) {
         if (vc.tick > tick)
             break;
@@ -225,13 +225,13 @@ QString SongView::voiceShortName(uint8_t program) const
         return type.isEmpty() ? tr("Voice") : type;
     return QStringLiteral("%1 (%2)").arg(name, type);
 }
-DrawerPageVoiceContext SongView::voiceContext(uint64_t tick) const
+DrawerPageVoiceContext SongView::voiceContext(Tick tick) const
 {
     const int primaryTrack = m_selectionModel.primaryTrack();
     if (!m_timeline || !m_voicegroup || primaryTrack < 0 || primaryTrack >= 16)
         return {};
     int program = m_timeline->tracks[primaryTrack].firstProgram;
-    uint64_t endTick = UINT64_MAX;
+    Tick endTick = CoreTimeDefaults::kNoTick;
     for (const VoiceChange &change : m_model.voices) {
         if (change.track != primaryTrack)
             continue;
@@ -448,7 +448,7 @@ void SongView::onTracksRemapped(const TrackRemap &remap)
     if (soloChanged)
         emit soloMaskChanged(m_soloMask);
 }
-void SongView::auditionTimed(int track, int key, int velocity, uint64_t startTick, uint64_t endTick)
+void SongView::auditionTimed(int track, int key, int velocity, Tick startTick, Tick endTick)
 {
     if (!m_timeline || endTick <= startTick)
         return;

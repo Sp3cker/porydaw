@@ -4,6 +4,8 @@
 #include <QStringList>
 #include <QWidget>
 
+#include "core/timedefaults.h"
+
 #include "audio/audioengine.h"
 
 class QCheckBox;
@@ -61,7 +63,7 @@ class PolyphonyPanel : public QWidget
     void resetRequested();
     // Double-clicked event row: jump the edit cursor to tick and reveal the
     // lost note (track + midiKey identify it; see SongView::revealNote).
-    void jumpToEvent(uint64_t tick, int track, int midiKey);
+    void jumpToEvent(Tick tick, int track, int midiKey);
 
   protected:
     void resizeEvent(QResizeEvent *event) override;

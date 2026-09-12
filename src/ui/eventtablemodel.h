@@ -72,13 +72,13 @@ class EventTableModel : public QAbstractTableModel
     std::optional<TempoPoint> tempoPointForRow(int row) const;
     // QModelIndex-compatible row lookups return -1 when no row matches.
     int rowForRawEventIndex(size_t index) const;
-    int tempoRowForExactTick(uint64_t tick) const;
-    std::optional<uint64_t> exactTickForRow(int row) const;
+    int tempoRowForExactTick(Tick tick) const;
+    std::optional<Tick> exactTickForRow(int row) const;
     int playheadRowAtOrBeforeTick(double tick) const;
     int playRow() const { return m_playRow; }
     void setPlayRow(int row);
     uint8_t fallbackChannel() const;
-    void setSelectionHandler(std::function<void(int, uint64_t)> handler);
+    void setSelectionHandler(std::function<void(int, Tick)> handler);
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -95,14 +95,14 @@ class EventTableModel : public QAbstractTableModel
         size_t eventIndex;
     };
     struct TempoRow {
-        uint64_t tick;
+        Tick tick;
     };
     using RowKey = std::variant<RawRow, TempoRow>;
 
     static RowKind rowKind(const RowKey &key);
     const SmfTrack *track() const;
     static bool filterMatches(int mask, const SmfEvent &ev);
-    const TempoPoint *tempoPoint(uint64_t tick) const;
+    const TempoPoint *tempoPoint(Tick tick) const;
     bool handleEndTick(const QVariant &value);
     bool handleTempoTick(const TempoPoint &point, const QVariant &value);
     bool handleTempoTypeChange(const TempoPoint &point, const QVariant &value);
@@ -116,8 +116,8 @@ class EventTableModel : public QAbstractTableModel
     bool handleRawBlob(size_t eventIndex, const SmfEvent &event, const QVariant &value);
     SmfEvent pendingRawEvent(size_t eventIndex, const SmfEvent &fallback) const;
     bool commitRawEdit(size_t eventIndex, const SmfEvent &event);
-    void queueTempoEdit(const TempoEdit &edit, uint64_t selectTick);
-    uint64_t rowTick(const RowKey &key) const;
+    void queueTempoEdit(const TempoEdit &edit, Tick selectTick);
+    Tick rowTick(const RowKey &key) const;
     void rebuildRows();
 
     QFont m_bodyFont;
@@ -131,7 +131,7 @@ class EventTableModel : public QAbstractTableModel
     int m_playRow = -1;
     std::vector<RowKey> m_rows;
     std::vector<std::shared_ptr<PendingRawEdit>> m_pendingRawEdits;
-    std::function<void(int, uint64_t)> m_select;
+    std::function<void(int, Tick)> m_select;
 };
 
 } // namespace eventlist

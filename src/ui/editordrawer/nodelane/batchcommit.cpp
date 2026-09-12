@@ -16,7 +16,7 @@ namespace {
 std::vector<NodePointMove> lastMovesBySourceTick(const std::vector<NodePointMove> &moves)
 {
     std::vector<NodePointMove> unique;
-    std::set<uint64_t> seen;
+    std::set<Tick> seen;
     unique.reserve(moves.size());
     for (auto it = moves.crbegin(); it != moves.crend(); ++it) {
         if (seen.insert(it->fromTick).second)
@@ -26,7 +26,7 @@ std::vector<NodePointMove> lastMovesBySourceTick(const std::vector<NodePointMove
     return unique;
 }
 
-const TempoPoint *tempoAtTick(const std::vector<TempoPoint> &points, uint64_t tick)
+const TempoPoint *tempoAtTick(const std::vector<TempoPoint> &points, Tick tick)
 {
     for (const TempoPoint &point : points) {
         if (point.tick == tick)
@@ -38,7 +38,7 @@ const TempoPoint *tempoAtTick(const std::vector<TempoPoint> &points, uint64_t ti
 TempoPoint tempoDestination(const TempoPoint &source, const NodePoint &to)
 {
     const int currentBpm = qRound(CoreTimeDefaults::tempoBpm(source.microsecondsPerQuarterNote));
-    TempoPoint destination{Tick(to.tick), source.microsecondsPerQuarterNote};
+    TempoPoint destination{to.tick, source.microsecondsPerQuarterNote};
     if (to.value != currentBpm)
         destination.microsecondsPerQuarterNote =
             CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(to.value);
@@ -59,8 +59,8 @@ std::optional<TempoEdit> resolveTempoMoves(const SongDocument &document,
             return std::nullopt;
     }
     const auto unique = lastMovesBySourceTick(moves);
-    std::map<uint64_t, TempoPoint> addByTick;
-    std::set<uint64_t> removedTicks;
+    std::map<Tick, TempoPoint> addByTick;
+    std::set<Tick> removedTicks;
     const auto removePoint = [&](const TempoPoint &point) {
         if (!removedTicks.insert(point.tick).second)
             return;
@@ -96,7 +96,7 @@ std::optional<CcResolvedMoves> resolveCcMoves(const SongDocument &document, int 
     existing.reserve(raw.size() + 1);
     std::vector<std::optional<size_t>> rawIdByPoint;
     rawIdByPoint.reserve(raw.size() + 1);
-    std::map<uint64_t, std::vector<size_t>> idsByTick;
+    std::map<Tick, std::vector<size_t>> idsByTick;
     if (const auto synthetic = CoreTimeDefaults::syntheticTickZero(controller, raw)) {
         idsByTick[0].push_back(existing.size());
         existing.push_back({0, *synthetic});
@@ -104,7 +104,7 @@ std::optional<CcResolvedMoves> resolveCcMoves(const SongDocument &document, int 
     }
     for (size_t rawId = 0; rawId < raw.size(); ++rawId) {
         idsByTick[raw[rawId].tick].push_back(existing.size());
-        existing.push_back({Tick(raw[rawId].tick), raw[rawId].value});
+        existing.push_back({raw[rawId].tick, raw[rawId].value});
         rawIdByPoint.push_back(rawId);
     }
     for (const NodePointMove &move : moves) {
@@ -119,7 +119,7 @@ std::optional<CcResolvedMoves> resolveCcMoves(const SongDocument &document, int 
         for (size_t index = 0; index < group.size(); ++index) {
             const size_t id = group[index];
             const int value = index + 1 == group.size() ? newValue : existing[id].value;
-            requests.push_back({id, Tick(move.to.tick), value});
+            requests.push_back({id, move.to.tick, value});
         }
     }
     const auto plan = planLaneMoves(existing, requests);
@@ -141,13 +141,13 @@ std::optional<CcResolvedMoves> resolveCcMoves(const SongDocument &document, int 
 }
 
 std::optional<SongDocument::RangeEdit>
-resolveBatchDeletes(const SongDocument &document, const std::vector<uint64_t> &tempoTicks,
+resolveBatchDeletes(const SongDocument &document, const std::vector<Tick> &tempoTicks,
                     const std::vector<CcDeleteRequest> &ccDeletes)
 {
     SongDocument::RangeEdit edit;
     const auto &tempoPoints = document.tempoPoints();
-    std::set<uint64_t> seenTempo;
-    for (uint64_t tick : tempoTicks) {
+    std::set<Tick> seenTempo;
+    for (Tick tick : tempoTicks) {
         const TempoPoint *point = tempoAtTick(tempoPoints, tick);
         if (!point)
             return std::nullopt;
@@ -157,13 +157,13 @@ resolveBatchDeletes(const SongDocument &document, const std::vector<uint64_t> &t
     }
     for (const CcDeleteRequest &lane : ccDeletes) {
         const auto raw = document.lanePoints(lane.engineTrack, lane.controller);
-        std::map<uint64_t, std::vector<DocLanePoint>> groups;
+        std::map<Tick, std::vector<DocLanePoint>> groups;
         for (const DocLanePoint &point : raw)
             groups[point.tick].push_back(point);
         const bool hasSyntheticTickZero =
             CoreTimeDefaults::syntheticTickZero(lane.controller, raw).has_value();
-        std::set<uint64_t> seen;
-        for (uint64_t tick : lane.ticks) {
+        std::set<Tick> seen;
+        for (Tick tick : lane.ticks) {
             const auto found = groups.find(tick);
             if (found == groups.end() || found->second.empty()) {
                 if (tick == 0 && hasSyntheticTickZero) {

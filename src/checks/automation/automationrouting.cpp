@@ -17,7 +17,7 @@ constexpr uint8_t kPanController = 10;
 constexpr uint8_t kLfoController = 21;
 constexpr uint8_t kVolumeController = 7;
 
-using LanePoints = std::vector<std::pair<uint64_t, int>>;
+using LanePoints = std::vector<std::pair<Tick, int>>;
 
 LanePoints lanePoints(const SongDocument &document, uint8_t controller)
 {
@@ -51,7 +51,7 @@ void AutomationEditingTest::middlePanIsolated()
     const auto automationBefore =
         tab().view().timelineBandLayout().geometry(songview::TimelineBand::Automation);
     QVERIFY(automationBefore.has_value());
-    const uint64_t cursorBefore = tab().view().editCursorTick();
+    const Tick cursorBefore = tab().view().editCursorTick();
 
     mousePress(Qt::MiddleButton,
                automation_test::windowFromContent(page(), automationInput(), input));
@@ -81,7 +81,7 @@ void AutomationEditingTest::voicePressIsolated()
     const auto automationBefore =
         tab().view().timelineBandLayout().geometry(songview::TimelineBand::Automation);
     QVERIFY(automationBefore.has_value());
-    const uint64_t cursorBefore = tab().view().editCursorTick();
+    const Tick cursorBefore = tab().view().editCursorTick();
     const QPointF input = voicePoint(48);
 
     mousePress(voiceChangeInput(), Qt::LeftButton, input);
@@ -105,7 +105,7 @@ void AutomationEditingTest::rightBandPreviewIsolated()
     const auto automationBefore =
         tab().view().timelineBandLayout().geometry(songview::TimelineBand::Automation);
     QVERIFY(automationBefore.has_value());
-    const uint64_t cursorBefore = tab().view().editCursorTick();
+    const Tick cursorBefore = tab().view().editCursorTick();
 
     mousePress(Qt::RightButton,
                automation_test::windowFromContent(page(), automationInput(), input));
@@ -134,8 +134,7 @@ void AutomationEditingTest::rightBandPreviewIsolated()
 
 void AutomationEditingTest::pencilEditTargetsOnlyItsLane()
 {
-    tab().document().writeLanePoints(0, kPanController, 0, (std::numeric_limits<uint64_t>::max)(),
-                                     {});
+    tab().document().writeLanePoints(0, kPanController, 0, CoreTimeDefaults::kNoTick, {});
     QVERIFY(activateParameter(controlRow(kPanController)));
     QTRY_VERIFY(findRow(controlRow(kPanController)).valid());
     const LaneHandle pan = findRow(controlRow(kPanController));
@@ -160,7 +159,7 @@ void AutomationEditingTest::pencilEditTargetsOnlyItsLane()
     const LanePoints voiceBefore = lanePoints(tab().document(), DOC_CC_VOICE);
     const LanePoints bendBefore = lanePoints(tab().document(), DOC_CC_BEND);
     const std::vector<TempoPoint> tempoBefore = tab().document().tempoPoints();
-    const uint64_t cursorBefore = tab().view().editCursorTick();
+    const Tick cursorBefore = tab().view().editCursorTick();
 
     mousePress(Qt::LeftButton, inputWindow);
 
@@ -195,20 +194,19 @@ void AutomationEditingTest::pencilEditTargetsOnlyItsLane()
 
 void AutomationEditingTest::defaultBodyClickSetsCursorOnly()
 {
-    tab().document().writeLanePoints(0, kPanController, 0, (std::numeric_limits<uint64_t>::max)(),
-                                     {});
+    tab().document().writeLanePoints(0, kPanController, 0, CoreTimeDefaults::kNoTick, {});
     QVERIFY(activateParameter(controlRow(kPanController)));
     const LaneHandle pan = findRow(controlRow(kPanController));
     QVERIFY(pan.valid());
     setPencilMode(false);
     const QPointF input = inputPoint(pan, 384, 41);
-    const uint64_t expectedCursor =
+    const Tick expectedCursor =
         tab().view().grid().snapTick(tab().view().camera().tickAtContentX(input.x()), false);
     const FrozenDocumentState frozen = frozenDocumentState();
     const auto automationBefore =
         tab().view().timelineBandLayout().geometry(songview::TimelineBand::Automation);
     QVERIFY(automationBefore.has_value());
-    const uint64_t cursorBefore = tab().view().editCursorTick();
+    const Tick cursorBefore = tab().view().editCursorTick();
     QVERIFY(expectedCursor != cursorBefore);
 
     mousePress(Qt::LeftButton,

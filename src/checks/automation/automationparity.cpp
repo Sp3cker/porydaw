@@ -22,11 +22,11 @@ namespace {
 constexpr int kTempo = 0;
 constexpr int kCc = 1;
 constexpr uint8_t kController = 10;
-constexpr uint64_t kFirstTick = 0;
-constexpr uint64_t kNodeTick = 96;
-constexpr uint64_t kLateTick = 288;
-constexpr uint64_t kSweepStartTick = 48;
-constexpr uint64_t kSweepEndTick = 144;
+constexpr Tick kFirstTick = 0;
+constexpr Tick kNodeTick = 96;
+constexpr Tick kLateTick = 288;
+constexpr Tick kSweepStartTick = 48;
+constexpr Tick kSweepEndTick = 144;
 constexpr int kFirstValue = 80;
 constexpr int kNodeValue = 100;
 constexpr int kLateValue = 64;
@@ -56,8 +56,8 @@ void setPoints(SongDocument &document, int adapter, const std::vector<NodePoint>
     std::vector<SongDocument::LanePointValue> values;
     values.reserve(points.size());
     for (const NodePoint &point : points)
-        values.push_back({point.tick, point.value});
-    document.writeLanePoints(0, kController, 0, std::numeric_limits<uint64_t>::max(), values);
+        values.push_back({Tick(point.tick), point.value});
+    document.writeLanePoints(0, kController, 0, CoreTimeDefaults::kNoTick, values);
 }
 
 std::vector<NodePoint> pointsOf(const SongDocument &document, int adapter)
@@ -78,7 +78,7 @@ std::vector<NodePoint> pointsOf(const SongDocument &document, int adapter)
     return points;
 }
 
-bool containsPoint(const std::vector<NodePoint> &points, uint64_t tick, int value)
+bool containsPoint(const std::vector<NodePoint> &points, Tick tick, int value)
 {
     return std::any_of(points.cbegin(), points.cend(), [tick, value](const NodePoint &point) {
         return point.tick == tick && point.value == value;

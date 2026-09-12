@@ -18,7 +18,7 @@ struct CcResolvedMoves {
 struct CcDeleteRequest {
     int engineTrack = -1;
     uint8_t controller = 0;
-    std::vector<uint64_t> ticks;
+    std::vector<Tick> ticks;
 };
 
 std::optional<TempoEdit> resolveTempoMoves(const SongDocument &document,
@@ -27,7 +27,7 @@ std::optional<CcResolvedMoves> resolveCcMoves(const SongDocument &document, int 
                                               uint8_t controller,
                                               const std::vector<NodePointMove> &moves);
 std::optional<SongDocument::RangeEdit>
-resolveBatchDeletes(const SongDocument &document, const std::vector<uint64_t> &tempoTicks,
+resolveBatchDeletes(const SongDocument &document, const std::vector<Tick> &tempoTicks,
                     const std::vector<CcDeleteRequest> &ccDeletes);
 
 void appendResolvedTempoMoves(SongDocument::RangeEdit &edit, const TempoEdit &resolved);

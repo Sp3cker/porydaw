@@ -39,7 +39,7 @@ void resetPencilView(SongView &view)
 }
 
 PencilPoint pencilPoint(SongView &view, AutomationPage &page, songview::TimelineInputItem &input,
-                        const NodeLane &lane, LaneHandle handle, uint64_t tick, int value)
+                        const NodeLane &lane, LaneHandle handle, Tick tick, int value)
 {
     AutomationCanvas *const canvas = page.canvas();
     const QRect body = canvas ? canvas->laneBody(handle) : QRect{};
@@ -55,7 +55,7 @@ PencilPoint pencilPoint(SongView &view, AutomationPage &page, songview::Timeline
 
 PencilPoint pencilPointInCell(SongView &view, AutomationPage &page,
                               songview::TimelineInputItem &input, const NodeLane &lane,
-                              LaneHandle handle, uint64_t tick, int value)
+                              LaneHandle handle, Tick tick, int value)
 {
     const PencilPoint probe = pencilPoint(view, page, input, lane, handle, tick, value);
     const AutomationGridCell &cell = probe.mapping.cell;
@@ -70,14 +70,14 @@ PencilPoint nextCellPoint(SongView &view, AutomationPage &page, songview::Timeli
     return pencilPointInCell(view, page, input, lane, handle, point.mapping.cell.tickEnd, value);
 }
 
-bool containsPoint(const std::vector<DocLanePoint> &points, uint64_t tick, int value)
+bool containsPoint(const std::vector<DocLanePoint> &points, Tick tick, int value)
 {
     return std::any_of(points.cbegin(), points.cend(), [tick, value](const DocLanePoint &point) {
         return point.tick == tick && point.value == value;
     });
 }
 
-bool containsPointWithin(const std::vector<DocLanePoint> &points, uint64_t tick, int value,
+bool containsPointWithin(const std::vector<DocLanePoint> &points, Tick tick, int value,
                          int tolerance)
 {
     return std::any_of(points.cbegin(), points.cend(),
@@ -86,7 +86,7 @@ bool containsPointWithin(const std::vector<DocLanePoint> &points, uint64_t tick,
                        });
 }
 
-int timelineControllerValue(const MidiTimeline &timeline, uint8_t controller, uint64_t tick)
+int timelineControllerValue(const MidiTimeline &timeline, uint8_t controller, Tick tick)
 {
     for (const TimelineEvent &event : timeline.events) {
         if (event.type == 0xB && event.track == kTrack && event.tick == tick &&
@@ -209,8 +209,7 @@ void AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue()
     const PencilPoint baselineProbe =
         pencilPointInCell(m_tab->view(), page, *m_automationInput, lane, handle, 96, 72);
     const int baseline = baselineProbe.mapping.point.value;
-    document.writeLanePoints(kTrack, kPanController, 0, std::numeric_limits<uint64_t>::max(),
-                             {{0, baseline}});
+    document.writeLanePoints(kTrack, kPanController, 0, CoreTimeDefaults::kNoTick, {{0, baseline}});
     QTRY_COMPARE(laneValue(0), baseline);
     handle = findRow({EditorAutomationRowKind::ControlChange, kTrack, kPanController});
     QVERIFY(handle.valid());
@@ -284,7 +283,7 @@ void AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCell
     AutomationCanvas &canvas = *page.canvas();
     SongDocument &document = m_tab->document();
     const EditorAutomationRowId row{EditorAutomationRowKind::ControlChange, kTrack, DOC_CC_BEND};
-    document.writeLanePoints(kTrack, DOC_CC_BEND, 0, std::numeric_limits<uint64_t>::max(), {});
+    document.writeLanePoints(kTrack, DOC_CC_BEND, 0, CoreTimeDefaults::kNoTick, {});
     const LaneHandle handle = findRow(row);
     QVERIFY(handle.valid());
     QVERIFY(activateParameter(row));
@@ -315,7 +314,7 @@ void AutomationEditingTest::pencilFlatStrokeAndRedundantClickAreNoOps()
     QVERIFY(handle.valid());
     const PencilPoint probe =
         pencilPoint(m_tab->view(), page, *m_automationInput, lane, handle, 144, 60);
-    document.writeLanePoints(kTrack, kPanController, 0, std::numeric_limits<uint64_t>::max(),
+    document.writeLanePoints(kTrack, kPanController, 0, CoreTimeDefaults::kNoTick,
                              {{0, probe.mapping.point.value}});
     handle = findRow({EditorAutomationRowKind::ControlChange, kTrack, kPanController});
     QVERIFY(handle.valid());
@@ -349,10 +348,10 @@ void AutomationEditingTest::pencilClickOnExcursionNodeDeletesExcursion()
         pencilPointInCell(m_tab->view(), page, *m_automationInput, lane, handle, 144, 60);
     const int baseline = deletionPoint.mapping.point.value;
     const int excursion = baseline < 64 ? baseline + 32 : baseline - 32;
-    document.writeLanePoints(kTrack, kPanController, 0, std::numeric_limits<uint64_t>::max(),
+    document.writeLanePoints(kTrack, kPanController, 0, CoreTimeDefaults::kNoTick,
                              {{0, baseline},
-                              {deletionPoint.mapping.cell.tickBegin, excursion},
-                              {deletionPoint.mapping.cell.tickEnd, baseline}});
+                              {Tick(deletionPoint.mapping.cell.tickBegin), excursion},
+                              {Tick(deletionPoint.mapping.cell.tickEnd), baseline}});
     handle = findRow({EditorAutomationRowKind::ControlChange, kTrack, kPanController});
     QVERIFY(handle.valid());
     deletionPoint =
@@ -388,8 +387,7 @@ void AutomationEditingTest::pencilCancellationRoutesAbortGestureWithoutCommit()
     CCLaneAdapter lane(document, kTrack, kPanController);
     LaneHandle handle = findRow({EditorAutomationRowKind::ControlChange, kTrack, kPanController});
     QVERIFY(handle.valid());
-    document.writeLanePoints(kTrack, kPanController, 0, std::numeric_limits<uint64_t>::max(),
-                             {{0, 36}});
+    document.writeLanePoints(kTrack, kPanController, 0, CoreTimeDefaults::kNoTick, {{0, 36}});
     handle = findRow({EditorAutomationRowKind::ControlChange, kTrack, kPanController});
     QVERIFY(handle.valid());
     setPencilMode(true);
@@ -410,8 +408,7 @@ void AutomationEditingTest::pencilCancellationRoutesAbortGestureWithoutCommit()
     } else if (route == 2) {
         sendWindowDeactivate();
     } else {
-        document.writeLanePoints(kTrack, kEmptyController, 0, std::numeric_limits<uint64_t>::max(),
-                                 {{0, 48}});
+        document.writeLanePoints(kTrack, kEmptyController, 0, CoreTimeDefaults::kNoTick, {{0, 48}});
     }
     const FrozenDocumentState afterCancellation = frozenDocumentState(0, 0);
     mouseRelease(Qt::LeftButton, end.window, Qt::NoModifier);

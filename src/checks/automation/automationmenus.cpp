@@ -37,8 +37,8 @@ constexpr int kAddLaneBase = int(CanvasMenuAction::AddLaneBase);
 
 constexpr uint8_t kController = 10;
 constexpr uint8_t kLfoController = 21;
-constexpr uint64_t kPointTick = 48;
-constexpr uint64_t kOtherPointTick = 96;
+constexpr Tick kPointTick = 48;
+constexpr Tick kOtherPointTick = 96;
 
 using automation_quick::AutomationMenu;
 using automation_quick::waitForAutomationMenu;
@@ -187,7 +187,7 @@ void AutomationEditingTest::contextMenuRoutingAndAvailableLanes()
     QCOMPARE(songTab.document().revision(), revisionBeforeTempo);
     QCOMPARE(songTab.document().undoStack()->index(), undoIndexBeforeTempo);
 
-    songTab.document().writeLanePoints(0, kLfoController, 0, std::numeric_limits<uint64_t>::max(),
+    songTab.document().writeLanePoints(0, kLfoController, 0, CoreTimeDefaults::kNoTick,
                                        {{kOtherPointTick, 96}});
     QCoreApplication::processEvents();
     QVERIFY2(activateParameter({EditorAutomationRowKind::ControlChange, 0, kLfoController}),
@@ -228,7 +228,7 @@ void AutomationEditingTest::contextMenuActionsApplyEffects()
     songTab.document().applyTempoEdit(
         TempoEdit{.remove = songTab.document().tempoPoints(),
                   .add = {{kPointTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(120)}}});
-    songTab.document().writeLanePoints(0, kController, 0, std::numeric_limits<uint64_t>::max(),
+    songTab.document().writeLanePoints(0, kController, 0, CoreTimeDefaults::kNoTick,
                                        {{kPointTick, 64}});
     QCoreApplication::processEvents();
 
@@ -274,7 +274,7 @@ void AutomationEditingTest::laneMenuValueRangeSubmenuPickRescalesAndCloses()
     AutomationCanvas *const canvas = automationPage.canvas();
     const quick_popup::PromptGuard guard(songTab.view());
     const EditorAutomationRowId lfoId{EditorAutomationRowKind::ControlChange, 0, kLfoController};
-    songTab.document().writeLanePoints(0, kLfoController, 0, std::numeric_limits<uint64_t>::max(),
+    songTab.document().writeLanePoints(0, kLfoController, 0, CoreTimeDefaults::kNoTick,
                                        {{kPointTick, 96}});
     QCoreApplication::processEvents();
     const AutomationMenu menu = openLabelMenu(

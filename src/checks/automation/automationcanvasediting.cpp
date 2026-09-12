@@ -25,8 +25,8 @@
 namespace {
 
 constexpr uint8_t kController = 10;
-constexpr uint64_t kFirstPointTick = 48;
-constexpr uint64_t kBlankPointTick = 144;
+constexpr Tick kFirstPointTick = 48;
+constexpr Tick kBlankPointTick = 144;
 constexpr int kFirstPointValue = 40;
 constexpr int kBlankPointValue = 64;
 
@@ -37,7 +37,7 @@ enum class CancellationRoute : int {
     PageHidden,
 };
 
-songview::EditorSelectionModel::TimeSelection laneSelection(uint64_t begin, uint64_t end,
+songview::EditorSelectionModel::TimeSelection laneSelection(Tick begin, Tick end,
                                                             uint8_t controller)
 {
     songview::EditorSelectionModel::TimeSelection selection;
@@ -225,7 +225,7 @@ void AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor()
     struct PlaybackBoundary {
         uint64_t sample = 0;
         double tick = 0.0;
-        uint64_t contextTick = 0;
+        Tick contextTick = 0;
         int voiceSlot = 0;
     };
     const uint64_t tickTenSample = timeline->sampleForTick(10);
@@ -241,8 +241,7 @@ void AutomationEditingTest::voiceContextFollowsPlaybackOrEditCursor()
           PlaybackBoundary{timeline->sampleForTick(24), 24.0, 24, 3}}) {
         view.setPlayheadSample(boundary.sample, true);
         QCOMPARE(view.playheadTick(), boundary.tick);
-        const uint64_t roundedPlayhead =
-            static_cast<uint64_t>(std::max(0.0, view.playheadTick()) + 0.5);
+        const Tick roundedPlayhead = Tick(std::max(0.0, view.playheadTick()) + 0.5);
         QCOMPARE(roundedPlayhead, boundary.contextTick);
         const DrawerPageVoiceContext context = view.voiceContext(roundedPlayhead);
         QCOMPARE(context.voice, &m_bank.voices[boundary.voiceSlot]);

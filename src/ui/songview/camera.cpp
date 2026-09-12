@@ -142,12 +142,12 @@ int SongView::rollViewportHeight() const
     const int height = roll ? roll->rect.height() : 0;
     return std::max(0, height);
 }
-void SongView::ensureTickVisible(uint64_t tick)
+void SongView::ensureTickVisible(Tick tick)
 {
     const qreal dpr = m_quickView ? m_quickView->quickDevicePixelRatio() : 1.0;
     syncHorizontalCamera(m_camera.ensureTickVisible(tick, dpr));
 }
-void SongView::ensureRangeVisible(uint64_t startTick, uint64_t endTick, bool preferEnd)
+void SongView::ensureRangeVisible(Tick startTick, Tick endTick, bool preferEnd)
 {
     const qreal dpr = m_quickView ? m_quickView->quickDevicePixelRatio() : 1.0;
     syncHorizontalCamera(m_camera.ensureRangeVisible(startTick, endTick, preferEnd, dpr));

@@ -244,8 +244,7 @@ class MoveNotesCommand : public QUndoCommand
         if (next.size() != m_notes.size())
             return false;
         for (const DocNote &note : m_notes) {
-            const uint64_t outputTick =
-                uint64_t(std::max<int64_t>(0, int64_t(note.tick) + m_dTick));
+            const Tick outputTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + m_dTick));
             const uint8_t outputKey = uint8_t(std::clamp(int(note.key) + m_dKey, 0, 127));
             const auto output =
                 std::find_if(next.begin(), next.end(), [&](const DocNote &candidate) {
@@ -331,13 +330,13 @@ class MoveNotesToPitchesCommand : public QUndoCommand
         if (next.size() != m_notes.size() || !allOnSameEngineTrack(m_notes) ||
             !allOnSameEngineTrack(next) || m_notes.front().engineTrack != next.front().engineTrack)
             return false;
-        using Pos = std::tuple<int, uint64_t, int, uint32_t, uint8_t, uint8_t>;
+        using Pos = std::tuple<int, Tick, int, uint32_t, uint8_t, uint8_t>;
         std::vector<Pos> mine, theirs;
         for (size_t i = 0; i < m_notes.size(); i++) {
             const DocNote &note = m_notes[i];
-            const uint64_t tick =
-                note.unterminated() ? note.tick
-                                    : uint64_t(std::max<int64_t>(0, int64_t(note.tick) + m_dTick));
+            const Tick tick = note.unterminated()
+                                  ? note.tick
+                                  : Tick(std::max<int64_t>(0, int64_t(note.tick) + m_dTick));
             const int key = note.unterminated() ? note.key : m_destPitches[i];
             mine.push_back(
                 {note.engineTrack, tick, key, note.duration, note.velocity, note.channel});
@@ -701,7 +700,7 @@ bool SongDocument::containsNoteSpan(int engineTrack, const DocNote &snapshot,
            noteEndTick(current) == expectedEndTick;
 }
 
-bool SongDocument::findNote(int engineTrack, uint64_t tick, uint8_t key, DocNote *out) const
+bool SongDocument::findNote(int engineTrack, Tick tick, uint8_t key, DocNote *out) const
 {
     for (const DocNote &note : notesForTrack(engineTrack)) {
         if (note.tick == tick && note.key == key) {
@@ -773,8 +772,7 @@ std::vector<DocLanePoint> SongDocument::lanePoints(int engineTrack, uint8_t cc) 
     return points;
 }
 
-bool SongDocument::findLanePoint(int engineTrack, uint8_t cc, uint64_t tick,
-                                 DocLanePoint *out) const
+bool SongDocument::findLanePoint(int engineTrack, uint8_t cc, Tick tick, DocLanePoint *out) const
 {
     // The LAST point at the tick, mirroring setTimeSig: playback applies a
     // tick's events in order, so among same-tick duplicates the last is the
@@ -828,12 +826,12 @@ bool SongDocument::findLoopMarkerEvent(bool endMarker, int *smfTrack, size_t *in
     return false;
 }
 
-uint64_t SongDocument::loopTick(bool endMarker) const
+Tick SongDocument::loopTick(bool endMarker) const
 {
     int track;
     size_t index;
     if (!findLoopMarkerEvent(endMarker, &track, &index))
-        return UINT64_MAX;
+        return CoreTimeDefaults::kNoTick;
     return m_smf.tracks[track].events[index].tick;
 }
 
@@ -853,7 +851,7 @@ std::vector<DocTimeSig> SongDocument::timeSigs() const
     return sigs;
 }
 
-SmfEvent SongDocument::makeChannelEvent(uint8_t typeNibble, uint8_t channel, uint64_t tick,
+SmfEvent SongDocument::makeChannelEvent(uint8_t typeNibble, uint8_t channel, Tick tick,
                                         uint8_t data0, uint8_t data1) const
 {
     SmfEvent ev;
@@ -865,7 +863,7 @@ SmfEvent SongDocument::makeChannelEvent(uint8_t typeNibble, uint8_t channel, uin
 }
 
 void SongDocument::appendNoteInsertOps(std::vector<EditOp> &ops, int smfTrack, uint8_t channel,
-                                       uint64_t tick, uint8_t key, uint32_t duration,
+                                       Tick tick, uint8_t key, uint32_t duration,
                                        uint8_t velocity) const
 {
     EditOp on;
@@ -954,8 +952,8 @@ void SongDocument::resolveNoteOverlaps(const std::vector<PlannedNote> &written,
             // An unterminated note has no end to trim; it stays as-is.
             if (s.unterminated() || isEdited(s))
                 continue;
-            uint64_t sTick = s.tick;
-            uint64_t sEnd = s.tick + s.duration;
+            Tick sTick = s.tick;
+            uint64_t sEnd = uint64_t(s.tick) + s.duration;
             bool covered = false, trimEnd = false, trimLeft = false;
             for (const PlannedNote &w : spans) {
                 if (w.engineTrack != t || w.key != s.key || w.endTick <= sTick || w.tick >= sEnd)
@@ -1005,7 +1003,7 @@ void SongDocument::resolveNoteOverlaps(const std::vector<PlannedNote> &written,
     }
 }
 
-void SongDocument::addNote(int engineTrack, uint64_t tick, uint8_t key, uint32_t duration,
+void SongDocument::addNote(int engineTrack, Tick tick, uint8_t key, uint32_t duration,
                            uint8_t velocity)
 {
     const int smfTrack = smfTrackFor(engineTrack);
@@ -1013,8 +1011,9 @@ void SongDocument::addNote(int engineTrack, uint64_t tick, uint8_t key, uint32_t
         return;
     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
     std::vector<EditOp> trims;
-    resolveNoteOverlaps({{engineTrack, key, tick, tick + std::max<uint32_t>(1, duration)}}, {},
-                        removals, trims);
+    resolveNoteOverlaps(
+        {{engineTrack, key, tick, uint64_t(tick) + std::max<uint32_t>(1, duration)}}, {}, removals,
+        trims);
     std::vector<EditOp> ops;
     for (size_t t = 0; t < m_smf.tracks.size(); t++)
         appendRemoveOps(ops, int(t), std::move(removals[t]));
@@ -1031,8 +1030,8 @@ void SongDocument::addNotes(int engineTrack, const std::vector<NewNote> &notes)
     std::vector<std::vector<size_t>> removals(m_smf.tracks.size());
     std::vector<PlannedNote> written;
     for (const NewNote &note : notes)
-        written.push_back(
-            {engineTrack, note.key, note.tick, note.tick + std::max<uint32_t>(1, note.duration)});
+        written.push_back({engineTrack, note.key, note.tick,
+                           uint64_t(note.tick) + std::max<uint32_t>(1, note.duration)});
     std::vector<EditOp> trims;
     resolveNoteOverlaps(written, {}, removals, trims);
     const uint8_t channel = channelFor(engineTrack);
@@ -1074,7 +1073,7 @@ void SongDocument::moveNotes(const std::vector<DocNote> &notes, int64_t dTick, i
         return;
     const bool changes =
         std::any_of(notes.begin(), notes.end(), [dTick, dKey](const DocNote &note) {
-            return uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick)) != note.tick ||
+            return Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick)) != note.tick ||
                    uint8_t(std::clamp(int(note.key) + dKey, 0, 127)) != note.key;
         });
     if (!changes)
@@ -1134,8 +1133,9 @@ void collectMovePlans(const std::vector<DocNote> &notes, int64_t dTick, auto des
         if (note.unterminated())
             continue;
         outRemovals[size_t(note.smfTrack)].push_back(note.endIndex);
-        const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
-        outWritten.push_back({note.engineTrack, destKey, newTick, newTick + note.duration});
+        const Tick newTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick));
+        outWritten.push_back(
+            {note.engineTrack, destKey, newTick, uint64_t(newTick) + note.duration});
     }
 }
 
@@ -1165,7 +1165,7 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesOps(const std::vec
         if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()) ||
             shouldSkip(note, destKey))
             continue;
-        const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
+        const Tick newTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick));
         EditOp on;
         on.type = EditOp::InsertEvent;
         on.smfTrack = note.smfTrack;
@@ -1210,7 +1210,7 @@ std::vector<SongDocument::EditOp> SongDocument::buildMoveNotesToPitchesOps(
         if (note.smfTrack < 0 || note.smfTrack >= int(m_smf.tracks.size()) ||
             shouldSkip(note, destKey))
             continue;
-        const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
+        const Tick newTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick));
         appendNoteInsertOps(ops, note.smfTrack, note.channel, newTick, destKey, note.duration,
                             note.velocity);
     }
@@ -1236,7 +1236,8 @@ void SongDocument::resizeNotes(const std::vector<DocNote> &notes, int64_t dDurat
         removals[size_t(note.smfTrack)].push_back(note.endIndex);
         const uint32_t newDuration =
             uint32_t(std::max<int64_t>(1, int64_t(note.duration) + dDuration));
-        written.push_back({note.engineTrack, note.key, note.tick, note.tick + newDuration});
+        written.push_back(
+            {note.engineTrack, note.key, note.tick, uint64_t(note.tick) + uint64_t(newDuration)});
     }
     std::vector<EditOp> trims;
     resolveNoteOverlaps(written, notes, removals, trims);
@@ -1262,8 +1263,8 @@ void SongDocument::resizeNotesLeft(const std::vector<DocNote> &notes, int64_t dT
         return;
     const bool changes = std::any_of(notes.begin(), notes.end(), [dTick](const DocNote &note) {
         const int64_t maxTick =
-            note.unterminated() ? INT64_MAX : int64_t(note.tick + note.duration) - 1;
-        return uint64_t(std::clamp<int64_t>(int64_t(note.tick) + dTick, 0, maxTick)) != note.tick;
+            note.unterminated() ? INT64_MAX : int64_t(note.tick) + note.duration - 1;
+        return Tick(std::clamp<int64_t>(int64_t(note.tick) + dTick, 0, maxTick)) != note.tick;
     });
     if (!changes)
         return;
@@ -1275,9 +1276,9 @@ void SongDocument::resizeNotesLeft(const std::vector<DocNote> &notes, int64_t dT
         removals[size_t(note.smfTrack)].push_back(note.onIndex);
         if (note.unterminated())
             continue;
-        const uint64_t endTick = note.tick + note.duration;
-        const uint64_t newTick =
-            uint64_t(std::clamp<int64_t>(int64_t(note.tick) + dTick, 0, int64_t(endTick) - 1));
+        const uint64_t endTick = uint64_t(note.tick) + uint64_t(note.duration);
+        const Tick newTick =
+            Tick(std::clamp<int64_t>(int64_t(note.tick) + dTick, 0, int64_t(endTick) - 1));
         written.push_back({note.engineTrack, note.key, newTick, endTick});
     }
     std::vector<EditOp> trims;
@@ -1288,9 +1289,8 @@ void SongDocument::resizeNotesLeft(const std::vector<DocNote> &notes, int64_t dT
     for (const DocNote &note : notes) {
         // An unterminated note has no note-off to pin; its note-on just moves.
         const int64_t maxTick =
-            note.unterminated() ? INT64_MAX : int64_t(note.tick + note.duration) - 1;
-        const uint64_t newTick =
-            uint64_t(std::clamp<int64_t>(int64_t(note.tick) + dTick, 0, maxTick));
+            note.unterminated() ? INT64_MAX : int64_t(note.tick) + int64_t(note.duration) - 1;
+        const Tick newTick = Tick(std::clamp<int64_t>(int64_t(note.tick) + dTick, 0, maxTick));
         EditOp on;
         on.type = EditOp::InsertEvent;
         on.smfTrack = note.smfTrack;
@@ -1468,13 +1468,13 @@ void SongDocument::moveRawEvent(int smfTrack, size_t index, size_t destIndex)
     pushEdit(tr("reorder event"), std::move(ops));
 }
 
-void SongDocument::setTrackEndTick(int smfTrack, uint64_t tick)
+void SongDocument::setTrackEndTick(int smfTrack, Tick tick)
 {
     if (smfTrack < 0 || smfTrack >= int(m_smf.tracks.size()))
         return;
     const SmfTrack &track = m_smf.tracks[smfTrack];
     // Ticks are non-decreasing, so the last event is the latest.
-    const uint64_t minTick = track.events.empty() ? 0 : track.events.back().tick;
+    const Tick minTick = track.events.empty() ? 0 : track.events.back().tick;
     tick = std::max(tick, minTick);
     if (tick == track.endTick)
         return;
@@ -1515,7 +1515,7 @@ void SongDocument::setLoopTick(bool endMarker, int64_t tick)
         smfTrack = 0;
     }
     if (tick >= 0) {
-        markerEvent.tick = uint64_t(tick);
+        markerEvent.tick = Tick(tick);
         EditOp insert;
         insert.type = EditOp::InsertEvent;
         insert.smfTrack = smfTrack;
@@ -1525,7 +1525,7 @@ void SongDocument::setLoopTick(bool endMarker, int64_t tick)
     pushEdit(endMarker ? tr("set loop end") : tr("set loop start"), std::move(ops));
 }
 
-void SongDocument::setTimeSig(uint64_t tick, int numerator, int denomPow2)
+void SongDocument::setTimeSig(Tick tick, int numerator, int denomPow2)
 {
     if (m_smf.tracks.empty())
         return;
@@ -1567,7 +1567,7 @@ void SongDocument::setTimeSig(uint64_t tick, int numerator, int denomPow2)
     pushEdit(tr("set time signature"), std::move(ops));
 }
 
-void SongDocument::moveTimeSig(uint64_t fromTick, uint64_t toTick)
+void SongDocument::moveTimeSig(Tick fromTick, Tick toTick)
 {
     if (fromTick == toTick)
         return;
@@ -1598,7 +1598,7 @@ void SongDocument::moveTimeSig(uint64_t fromTick, uint64_t toTick)
     pushEdit(tr("move time signature"), std::move(ops));
 }
 
-void SongDocument::deleteTimeSig(uint64_t tick)
+void SongDocument::deleteTimeSig(Tick tick)
 {
     std::vector<EditOp> ops;
     for (size_t t = 0; t < m_smf.tracks.size(); t++) {
@@ -1935,7 +1935,7 @@ size_t SongDocument::insertEventIntoTrack(SmfTrack &track, const SmfEvent &event
     auto &events = track.events;
     auto it = std::upper_bound(
         events.begin(), events.end(), event.tick,
-        [](uint64_t tick, const SmfEvent &candidate) { return tick < candidate.tick; });
+        [](Tick tick, const SmfEvent &candidate) { return tick < candidate.tick; });
     // Canonical placement within the tick group: walk back over same-tick
     // events the new one is pinned ahead of — a setup event over notes, a
     // note-end over note-ons. Metas, sysex and unconstrained channel types

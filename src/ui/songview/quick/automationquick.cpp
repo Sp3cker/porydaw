@@ -84,18 +84,20 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
     const QRectF gutterViewport(0.0, 0.0, gutter.width(), gutter.height());
     const qreal dpr = m_inputHost->devicePixelRatio();
     const AutomationProjection projection = this->projection();
-    const auto selectedTickRange = [this]() -> std::optional<std::pair<uint64_t, uint64_t>> {
+    const auto selectedTickRange = [this]() -> std::optional<std::pair<Tick, Tick>> {
         if (m_band.active) {
-            const uint64_t first = std::min(m_band.startTick, m_band.endTick);
-            const uint64_t last = std::max(m_band.startTick, m_band.endTick);
+            const Tick first = std::min(m_band.startTick, m_band.endTick);
+            const Tick last = std::max(m_band.startTick, m_band.endTick);
             if (first != last)
                 return std::pair{first, last};
             return std::nullopt;
         }
-        return m_laneSelection.activeTickRange();
+        const auto range = m_laneSelection.activeTickRange();
+        return range ? std::optional{std::pair{Tick(range->first), Tick(range->second)}}
+                     : std::nullopt;
     }();
-    const uint64_t bandFirst = std::min(m_band.startTick, m_band.endTick);
-    const uint64_t bandLast = std::max(m_band.startTick, m_band.endTick);
+    const Tick bandFirst = std::min(m_band.startTick, m_band.endTick);
+    const Tick bandLast = std::max(m_band.startTick, m_band.endTick);
     const NodeDragGesture *nodeDrag = nullptr;
     const PhantomGesture *phantomGesture = nullptr;
     const SweepGesture *sweep = nullptr;

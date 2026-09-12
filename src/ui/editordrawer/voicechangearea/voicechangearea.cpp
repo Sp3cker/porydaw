@@ -220,8 +220,8 @@ void VoiceChangeArea::presentPlayhead(double tick)
     // context changes.
     if (m_live.playback.playing && m_lastPresentedPlayheadTick &&
         *m_lastPresentedPlayheadTick != tick &&
-        voiceSlotAt(uint64_t(std::round(std::max(0.0, *m_lastPresentedPlayheadTick)))) !=
-            voiceSlotAt(uint64_t(std::round(std::max(0.0, tick)))))
+        voiceSlotAt(Tick(std::round(std::max(0.0, *m_lastPresentedPlayheadTick)))) !=
+            voiceSlotAt(Tick(std::round(std::max(0.0, tick)))))
         requestQuickUpdate();
     m_live.playback.playheadTick = tick;
     m_lastPresentedPlayheadTick = tick;
@@ -293,10 +293,10 @@ void VoiceChangeArea::updateHover(qreal x)
     }
     const qreal dpr = devicePixelRatio();
     const double tick = std::max(0.0, m_camera.tickAtContentX(std::max<qreal>(0.0, x)));
-    const uint64_t snapped = m_grid.snapTick(tick, true);
+    const Tick snapped = m_grid.snapTick(tick, true);
     DocLanePoint markerPoint;
     const bool atMarker = voiceMarkerAt(x, &markerPoint);
-    const uint64_t hoverTick = atMarker ? markerPoint.tick : snapped;
+    const Tick hoverTick = atMarker ? markerPoint.tick : snapped;
     const qreal lineX = m_camera.displayX(double(hoverTick), 0.0, dpr);
     QString hoverLabel;
     if (!voiceMarkerAt(lineX, &markerPoint)) {
@@ -362,7 +362,7 @@ const VoiceChangeArea::VoicePaintText &VoiceChangeArea::paintTextFor(int program
     return cache;
 }
 
-int VoiceChangeArea::voiceSlotAt(uint64_t tick) const
+int VoiceChangeArea::voiceSlotAt(Tick tick) const
 {
     if (m_engineTrack < 0 || m_engineTrack >= 16)
         return -1;
@@ -494,7 +494,7 @@ bool VoiceChangeArea::pointerMove(const songview::TimelinePointerInput &input)
         }
         const double rawTick =
             std::max(0.0, m_camera.tickAtContentX(std::max<qreal>(0.0, position.x())));
-        const uint64_t tick = m_grid.snapTick(rawTick, input.modifiers & Qt::AltModifier);
+        const Tick tick = m_grid.snapTick(rawTick, input.modifiers & Qt::AltModifier);
         if (tick != m_voiceDrag->previewTick) {
             m_voiceDrag->previewTick = tick;
             requestQuickUpdate();

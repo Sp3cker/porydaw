@@ -26,15 +26,15 @@ void EditCheckTest::timeRangeRemove()
     const uint64_t base = songdocument_test::distantBase(document);
     const uint32_t step = document.ticksPerClock();
 
-    document.addNotes(track, {{base + step * 50, 60, step, 90},
-                              {base + step * 52, 62, step, 90},
-                              {base + step * 56, 64, step, 90}});
+    document.addNotes(track, {{Tick(base + step * 50), 60, step, 90},
+                              {Tick(base + step * 52), 62, step, 90},
+                              {Tick(base + step * 56), 64, step, 90}});
     document.addLanePoint(track, 7, base + step * 51, 30);
     document.addLanePoint(track, 7, base + step * 52, 40);
     SongDocument::TimeScope scope;
     scope.tracks = {track};
     const int before = document.undoStack()->count();
-    QVERIFY(document.removeTimeRange({base + step * 51, base + step * 54}, scope));
+    QVERIFY(document.removeTimeRange({Tick(base + step * 51), Tick(base + step * 54)}, scope));
     DocNote note;
     DocLanePoint point;
     QVERIFY(document.findNote(track, base + step * 50, 60, &note));
@@ -85,12 +85,12 @@ void EditCheckTest::songWholeSongRemove()
     document.addNote(track, base + step * 66, 65, step, 90);
     const QByteArray bytesBefore = document.smf().write();
     const uint64_t endBefore = maxEnd();
-    const uint64_t loopStart = document.loopTick(false);
-    const uint64_t loopEnd = document.loopTick(true);
+    const Tick loopStart = document.loopTick(false);
+    const Tick loopEnd = document.loopTick(true);
     SongDocument::TimeScope scope;
     scope.wholeSong = true;
     const int before = document.undoStack()->count();
-    QVERIFY(document.removeTimeRange({base + step * 61, base + step * 65}, scope));
+    QVERIFY(document.removeTimeRange({Tick(base + step * 61), Tick(base + step * 65)}, scope));
     QVERIFY(songdocument_test::tracksSorted(document.smf()));
     DocTimeSig signature;
     DocNote shifted;
@@ -142,7 +142,7 @@ void EditCheckTest::voiceLanePoint()
     document.moveLanePoints({{track, DOC_CC_VOICE, point, point.tick, 9}});
     QVERIFY(document.findLanePoint(track, DOC_CC_VOICE, base + step, &point));
     QCOMPARE(point.value, 9);
-    document.moveLanePoints({{track, DOC_CC_VOICE, point, base + step * 6, 9}});
+    document.moveLanePoints({{track, DOC_CC_VOICE, point, Tick(base + step * 6), 9}});
     QVERIFY(document.findLanePoint(track, DOC_CC_VOICE, base + step * 6, &point));
     document.deleteLanePoints(track, DOC_CC_VOICE, {point});
     QVERIFY(!document.findLanePoint(track, DOC_CC_VOICE, base + step * 6, &point));
@@ -179,7 +179,7 @@ void EditCheckTest::automationLanePoints()
     DocLanePoint bend;
     QVERIFY(document.findLanePoint(track, 7, base + step * 2, &cc));
     QVERIFY(document.findLanePoint(track, DOC_CC_BEND, base + step * 3, &bend));
-    document.moveLanePoints({{track, 7, cc, base + step * 5, 90}});
+    document.moveLanePoints({{track, 7, cc, Tick(base + step * 5), 90}});
     QVERIFY(document.findLanePoint(track, 7, base + step * 5, &cc));
     QCOMPARE(cc.value, 90);
     QVERIFY(document.findLanePoint(track, DOC_CC_BEND, base + step * 3, &bend));

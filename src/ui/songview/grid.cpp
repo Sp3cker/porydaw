@@ -38,11 +38,11 @@ void Grid::setThresholds(int timelineDetailMinimumPixelsPerBeat,
     m_timelineDetailMinimumPixelsPerBeat = timelineDetailMinimumPixelsPerBeat;
     m_automationGridMinimumCellWidth = automationGridMinimumCellWidth;
 }
-Grid::Segment Grid::segmentAt(uint64_t tick) const
+Grid::Segment Grid::segmentAt(Tick tick) const
 {
     return m_axis.segmentAt(tick);
 }
-GridCell Grid::visibleGridCellContaining(uint64_t tick) const
+GridCell Grid::visibleGridCellContaining(Tick tick) const
 {
     const Segment seg = segmentAt(tick);
     const bool drawBeats = m_camera.pxPerBeat() >= m_timelineDetailMinimumPixelsPerBeat;
@@ -56,33 +56,38 @@ GridCell Grid::visibleGridCellContaining(uint64_t tick) const
         grid = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/false);
     }
     grid = std::max<uint64_t>(1, grid);
-    const uint64_t start = seg.start + ((tick - seg.start) / grid) * grid;
-    const uint64_t next = start > UINT64_MAX - grid ? UINT64_MAX : start + grid;
-    return {start, std::min(next, seg.next)};
+    const uint64_t startRaw = (uint64_t(tick) - seg.start) / grid * grid + seg.start;
+    const Tick start = Tick(startRaw);
+    // One explicit uint64 computation keeps the overflow guard exact: test
+    // `start`, not `tick`, since start <= tick.
+    const uint64_t nextRaw = uint64_t(start) > CoreTimeDefaults::kMaxTick - grid
+                                 ? CoreTimeDefaults::kNoTick
+                                 : uint64_t(start) + grid;
+    return {start, std::min(Tick(nextRaw), seg.next)};
 }
-uint64_t Grid::visibleGridTickDown(uint64_t tick) const
+Tick Grid::visibleGridTickDown(Tick tick) const
 {
     return visibleGridCellContaining(tick).start;
 }
-uint64_t Grid::visibleGridTickUp(uint64_t tick) const
+Tick Grid::visibleGridTickUp(Tick tick) const
 {
     return visibleGridCellContaining(tick).end;
 }
-uint64_t Grid::gridTicksAt(uint64_t tick) const
+Tick Grid::gridTicksAt(Tick tick) const
 {
     return gridTicksIn(segmentAt(tick), m_camera.pxPerTick());
 }
-uint64_t Grid::gridTicksAtScale(uint64_t tick, double pixelsPerTick) const
+Tick Grid::gridTicksAtScale(Tick tick, double pixelsPerTick) const
 {
     return gridTicksIn(segmentAt(tick), pixelsPerTick);
 }
-uint64_t Grid::snapTicksAt(uint64_t tick) const
+Tick Grid::snapTicksAt(Tick tick) const
 {
     return gridTicksIn(segmentAt(tick), m_camera.pxPerTick(), /*snap=*/true);
 }
-uint64_t Grid::gridTicksIn(const Segment &seg, double pixelsPerTick, bool snap) const
+Tick Grid::gridTicksIn(const Segment &seg, double pixelsPerTick, bool snap) const
 {
-    const uint64_t clock = m_clock == 0 ? 1 : m_clock;
+    const uint32_t clock = m_clock == 0 ? 1 : m_clock;
     // Finest visible subdivision at least automationGridMinimumCellWidth() wide from the
     // feel's ladder
     // (divisions per beat), floored at the mid2agb clock grid and at the
@@ -93,16 +98,14 @@ uint64_t Grid::gridTicksIn(const Segment &seg, double pixelsPerTick, bool snap) 
     static constexpr uint64_t kStraight[] = {32, 16, 8, 4, 2, 1};
     static constexpr uint64_t kTriplet[] = {48, 24, 12, 6, 3, 1};
     const bool triplet = m_feel == GridFeel::Triplet;
-    const uint64_t maxDiv =
-        m_minDenom == 0 ? UINT64_MAX
-                        : std::max<uint64_t>(1, uint64_t(m_minDenom) * (triplet ? 3 : 2) / 8);
+    const uint64_t maxDiv = std::max<uint64_t>(1, uint64_t(m_minDenom) * (triplet ? 3 : 2) / 8);
     const double pxPerSegBeat = pixelsPerTick * double(seg.beatTicks);
     const uint64_t *ladder = triplet ? kTriplet : kStraight;
     constexpr int kSteps = 6;
     int step = kSteps - 1; // whole beats when even one-per-beat cells are
                            // too narrow (ladder[kSteps - 1] == 1)
     for (int i = 0; i < kSteps; i++) {
-        if (ladder[i] > maxDiv)
+        if (m_minDenom != 0 && ladder[i] > maxDiv)
             continue;
         if (pxPerSegBeat / double(ladder[i]) >= m_automationGridMinimumCellWidth) {
             step = i;
@@ -114,47 +117,47 @@ uint64_t Grid::gridTicksIn(const Segment &seg, double pixelsPerTick, bool snap) 
     // floor only — snapping steps past it too. gcd keeps the snap grid a
     // divisor of the drawn grid when a beat's ticks don't split evenly, so
     // every drawn line stays snappable.
-    const uint64_t vis = std::max(seg.beatTicks / ladder[step], clock);
+    const uint32_t vis = std::max(uint32_t(seg.beatTicks / ladder[step]), clock);
     if (!snap || step == 0)
         return vis;
-    const uint64_t fine = std::max<uint64_t>(1, seg.beatTicks / ladder[step - 1]);
-    return std::max(std::gcd(vis, fine), clock);
+    const uint32_t fine = std::max<uint32_t>(1, seg.beatTicks / ladder[step - 1]);
+    return std::max(uint32_t(std::gcd(vis, fine)), clock);
 }
-uint64_t Grid::fineGridTicks() const
+Tick Grid::fineGridTicks() const
 {
     return m_clock == 0 ? gridTicksAt(0) : std::max<uint32_t>(1, m_clock);
 }
-uint64_t Grid::snapTick(double tick, bool fine) const
+Tick Grid::snapTick(double tick, bool fine) const
 {
     tick = std::max(0.0, tick);
     if (fine) {
         // The clock grid is the document's absolute resolution; it does not
         // restart at time-signature changes.
         const double g = double(fineGridTicks());
-        return uint64_t(std::round(tick / g) * g);
+        return Tick(std::round(tick / g) * g);
     }
-    const Segment seg = segmentAt(uint64_t(tick));
-    const uint64_t g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
-    const uint64_t k = uint64_t((tick - double(seg.start)) / double(g));
-    const uint64_t lo = seg.start + k * g;
+    const Segment seg = segmentAt(Tick(tick));
+    const Tick g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
+    const Tick k = Tick((tick - double(seg.start)) / double(g));
+    const Tick lo = seg.start + Tick(k * g);
     // The next signature's tick is itself a grid position (the grid
     // restarts there), so the upper candidate never crosses it.
-    const uint64_t hi = std::min(lo + g, seg.next);
+    const Tick hi = std::min(lo + g, seg.next);
     return tick - double(lo) <= double(hi) - tick ? lo : hi;
 }
-uint64_t Grid::snapTickDown(double tick) const
+Tick Grid::snapTickDown(double tick) const
 {
     tick = std::max(0.0, tick);
-    const Segment seg = segmentAt(uint64_t(tick));
-    const uint64_t g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
-    return seg.start + uint64_t((tick - double(seg.start)) / double(g)) * g;
+    const Segment seg = segmentAt(Tick(tick));
+    const Tick g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
+    return seg.start + Tick(Tick((tick - double(seg.start)) / double(g)) * g);
 }
-uint64_t Grid::snapTickUp(double tick) const
+Tick Grid::snapTickUp(double tick) const
 {
     tick = std::max(0.0, tick);
-    const Segment seg = segmentAt(uint64_t(tick));
-    const uint64_t g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
-    const uint64_t lo = seg.start + uint64_t((tick - double(seg.start)) / double(g)) * g;
+    const Segment seg = segmentAt(Tick(tick));
+    const Tick g = gridTicksIn(seg, m_camera.pxPerTick(), /*snap=*/true);
+    const Tick lo = seg.start + Tick(Tick((tick - double(seg.start)) / double(g)) * g);
     if (double(lo) >= tick)
         return lo;
     // The next signature's tick is itself a grid position, so the upper
@@ -187,8 +190,8 @@ void SongView::setGridMinDenom(int denom)
     refreshTimelineViews(PianoRollQuickDirty::GridTime);
     refreshDrawerPages();
 }
-void SongView::forEachGridLine(uint64_t tickBegin, uint64_t tickEnd,
-                               const std::function<void(uint64_t, bool, int, int)> &fn) const
+void SongView::forEachGridLine(Tick tickBegin, Tick tickEnd,
+                               const std::function<void(Tick, bool, int, int)> &fn) const
 {
     m_timeAxis.forEachGridLine(tickBegin, tickEnd, fn);
 }

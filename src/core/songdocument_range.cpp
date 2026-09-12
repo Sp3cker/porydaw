@@ -129,7 +129,7 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
         for (const RangeEdit::TrackNotes &tn : edit.addNotes) {
             for (const NewNote &note : tn.notes)
                 written.push_back({tn.engineTrack, note.key, note.tick,
-                                   note.tick + std::max<uint32_t>(1, note.duration)});
+                                   uint64_t(note.tick) + std::max<uint32_t>(1, note.duration)});
         }
         resolveNoteOverlaps(written, edit.removeNotes, removals, trims);
         // All removals first (per SMF track, descending — appendRemoveOps sorts
@@ -163,7 +163,7 @@ void SongDocument::applyRangeEdit(const QString &text, const RangeEdit &edit)
         return;
     }
     std::vector<TempoPoint> nextTempo = m_tempoPoints;
-    std::set<uint64_t> removeTicks;
+    std::set<Tick> removeTicks;
     for (const TempoPoint &point : edit.removeTempo)
         removeTicks.insert(point.tick);
     std::erase_if(nextTempo,
@@ -258,8 +258,9 @@ void SongDocument::moveRange(const std::vector<DocNote> &notes,
         for (const DocNote &note : notes) {
             if (note.unterminated())
                 continue;
-            const uint64_t newTick = uint64_t(std::max<int64_t>(0, int64_t(note.tick) + dTick));
-            written.push_back({note.engineTrack, note.key, newTick, newTick + note.duration});
+            const Tick newTick = Tick(std::max<int64_t>(0, int64_t(note.tick) + dTick));
+            written.push_back(
+                {note.engineTrack, note.key, newTick, uint64_t(newTick) + note.duration});
         }
         std::vector<EditOp> trims;
         resolveNoteOverlaps(written, notes, removals, trims);
@@ -275,7 +276,7 @@ void SongDocument::moveRange(const std::vector<DocNote> &notes,
                 op.type = EditOp::InsertEvent;
                 op.smfTrack = int(t);
                 op.event = m_smf.tracks[t].events[index];
-                op.event.tick = uint64_t(std::max<int64_t>(0, int64_t(op.event.tick) + dTick));
+                op.event.tick = Tick(std::max<int64_t>(0, int64_t(op.event.tick) + dTick));
                 op.preservesNoteId = op.event.isNoteOn();
                 ops.push_back(op);
             }
@@ -293,7 +294,7 @@ void SongDocument::moveRange(const std::vector<DocNote> &notes,
     std::erase_if(nextTempo, [&](const TempoPoint &point) { return moving.contains(point.tick); });
     for (const TempoPoint &point : tempo) {
         TempoPoint shifted = point;
-        shifted.tick = uint64_t(std::max<int64_t>(0, int64_t(point.tick) + dTick));
+        shifted.tick = Tick(std::max<int64_t>(0, int64_t(point.tick) + dTick));
         nextTempo.push_back(shifted);
     }
     pushEdit(tr("move range"), std::move(ops), std::move(nextTempo));

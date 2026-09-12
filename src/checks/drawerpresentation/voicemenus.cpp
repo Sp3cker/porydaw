@@ -37,9 +37,9 @@ using VoiceMenuAction = VoiceChangeArea::VoiceMenuAction;
 
 // The staged marker (tick 48, program 3) is the marker target; tick 144 is
 // the empty-lane witness.
-constexpr uint64_t kMarkerTick = 48;
+constexpr Tick kMarkerTick = 48;
 constexpr int kMarkerVoice = 3;
-constexpr uint64_t kEmptyTick = 144;
+constexpr Tick kEmptyTick = 144;
 
 // One opened voice menu: session, rendered panel's typed row model, resolved
 // rows, open-failure diagnostic.
@@ -54,7 +54,7 @@ struct VoiceMenu {
 
 // Opens the voice menu through the real band right-press: live on the press
 // itself, the paired release picking nothing.
-VoiceMenu openVoiceMenu(VoiceTransactionFixture &fixture, uint64_t tick, QString diagnostic)
+VoiceMenu openVoiceMenu(VoiceTransactionFixture &fixture, Tick tick, QString diagnostic)
 {
     VoiceMenu menu;
     menu.diagnostic = std::move(diagnostic);

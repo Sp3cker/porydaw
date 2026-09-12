@@ -65,8 +65,7 @@ EventListController::EventListController(SongView *songView, QObject *parent)
     , m_songView(songView)
     , m_model(new eventlist::EventTableModel(songView, this))
 {
-    m_model->setSelectionHandler(
-        [this](int chunk, uint64_t tick) { selectRowAtTick(chunk, tick); });
+    m_model->setSelectionHandler([this](int chunk, Tick tick) { selectRowAtTick(chunk, tick); });
     m_menuHost = new songview::QuickMenuHost(this);
     m_chunkMenu = new songview::QuickMenuModel(this);
     m_filterMenu = new songview::QuickMenuModel(this);
@@ -566,7 +565,7 @@ void EventListController::jumpCursorToRow(int row)
     if (!hasChunk(m_document, m_model->chunk()) || !m_songView)
         return;
     const auto rowTick = m_model->exactTickForRow(row);
-    uint64_t tick = 0;
+    Tick tick = 0;
     if (rowTick) {
         tick = *rowTick;
     } else {
@@ -1120,7 +1119,7 @@ void EventListController::openTypeMenu(const QPointF &scenePosition)
     openMenu(m_typeMenu, scenePosition);
 }
 
-void EventListController::selectRowAtTick(int chunk, uint64_t tick)
+void EventListController::selectRowAtTick(int chunk, Tick tick)
 {
     if (!m_document || m_model->chunk() != chunk)
         return;

@@ -64,8 +64,8 @@ class TimeCamera
     bool setKeyHeight(double keyHeight); // no anchor
     ZoomResult zoomAroundContentX(double factor, double anchorContentX);
     bool zoomKeyHeight(double factor, double anchorY);
-    bool ensureTickVisible(uint64_t tick, double dpr);
-    bool ensureRangeVisible(uint64_t startTick, uint64_t endTick, bool preferEnd, double dpr);
+    bool ensureTickVisible(Tick tick, double dpr);
+    bool ensureRangeVisible(Tick startTick, Tick endTick, bool preferEnd, double dpr);
     bool ensureKeyVisible(int key); // uses ctor projection; cHiddenRow -> false
 
   private:

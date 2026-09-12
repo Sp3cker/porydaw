@@ -20,8 +20,8 @@ class TimeCamera;
 // A half-open visible grid cell. Snapped callers provide crossed cells in
 // pointer traversal order, including both endpoint cells.
 struct AutomationGridCell {
-    uint64_t tickBegin = 0;
-    uint64_t tickEnd = 0;
+    Tick tickBegin = 0;
+    Tick tickEnd = 0;
 };
 
 // Automation drawer layout constants resolved from the UI scale. Shared by the
@@ -64,13 +64,13 @@ class AutomationProjection
 
     const AutomationGeometry &geometry() const noexcept { return m_geometry; }
     double rawTickAt(qreal x) const;
-    qreal displayX(uint64_t tick, qreal devicePixelRatio) const;
-    uint64_t snapTickAt(qreal x, bool fine) const;
+    qreal displayX(Tick tick, qreal devicePixelRatio) const;
+    Tick snapTickAt(qreal x, bool fine) const;
     static qreal valueY(const QRect &bounds, const AutomationGeometry &geometry, double minimum,
                         double maximum, double value);
     static double valueAtY(const QRect &bounds, const AutomationGeometry &geometry, double minimum,
                            double maximum, qreal y);
-    uint64_t fineSnapTick(double rawTick) const;
+    Tick fineSnapTick(double rawTick) const;
     bool nodeMarkersVisible() const;
     PointerMapping pointerMapping(const NodeLane &lane, const QRect &body, qreal x, qreal y) const;
     AutomationGridCell snapCellAt(double rawTick) const;
@@ -81,9 +81,9 @@ class AutomationProjection
 
   private:
     const MidiTimeline *timeline() const;
-    uint64_t gridSnapTicks(uint64_t tick, bool fine) const;
-    uint64_t snapTickDown(double tick, bool fine) const;
-    uint64_t nextGridTick(uint64_t tick, bool fine, uint64_t limit) const;
+    uint32_t gridSnapTicks(Tick tick, bool fine) const;
+    Tick snapTickDown(double tick, bool fine) const;
+    Tick nextGridTick(Tick tick, bool fine, Tick limit) const;
 
     AutomationGeometry m_geometry;
     const AutomationPage *m_page = nullptr;

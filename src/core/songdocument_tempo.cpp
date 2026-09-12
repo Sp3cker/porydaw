@@ -24,7 +24,7 @@ std::vector<TempoPoint> editedTempoPointCandidates(const std::vector<TempoPoint>
                                                    const TempoEdit &edit)
 {
     auto next = current;
-    std::set<uint64_t> removeTicks;
+    std::set<Tick> removeTicks;
     for (const TempoPoint &point : edit.remove)
         removeTicks.insert(point.tick);
     std::erase_if(next, [&](const TempoPoint &point) { return removeTicks.contains(point.tick); });

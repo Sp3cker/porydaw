@@ -50,7 +50,7 @@ std::optional<NodePoint> TempoLane::leadIn() const
     return NodePoint{0, CoreTimeDefaults::kTempoBpm};
 }
 
-void TempoLane::replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points)
+void TempoLane::replaceSpan(Tick first, Tick last, const std::vector<NodePoint> &points)
 {
     SongDocument *document = m_page ? m_page->document() : m_document;
     if (!document)
@@ -64,6 +64,6 @@ void TempoLane::replaceSpan(uint64_t first, uint64_t last, const std::vector<Nod
     edit.add.reserve(points.size());
     for (const NodePoint &point : points)
         edit.add.push_back(
-            {Tick(point.tick), CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
+            {point.tick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
     document->applyTempoEdit(edit);
 }

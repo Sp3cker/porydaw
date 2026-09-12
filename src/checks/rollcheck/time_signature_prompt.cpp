@@ -41,7 +41,7 @@ struct TimeSignatureFixture final {
     std::unique_ptr<checks::LoadedSong> song;
     std::unique_ptr<checks::EditorRig> rig;
     QPointer<songview::TimelineInputItem> rulerInput;
-    uint64_t signatureTick = 0;
+    Tick signatureTick = 0;
 
     static std::unique_ptr<TimeSignatureFixture> create(const QString &projectRoot,
                                                         const QString &songLabel, QString &error)
@@ -52,7 +52,7 @@ struct TimeSignatureFixture final {
             return nullptr;
 
         SongDocument &document = fixture->song->document();
-        const uint64_t ticksPerBeat = document.ticksPerClock();
+        const uint32_t ticksPerBeat = document.ticksPerClock();
         if (ticksPerBeat == 0) {
             error = QStringLiteral("the loaded song has no tick resolution");
             return nullptr;
@@ -82,7 +82,7 @@ struct TimeSignatureFixture final {
     SongDocument &document() const noexcept { return song->document(); }
     SongView &view() const noexcept { return rig->view(); }
 
-    QPoint rulerPoint(uint64_t tick) const
+    QPoint rulerPoint(Tick tick) const
     {
         const qreal x = view().camera().displayX(double(tick), 0.0, rulerInput->devicePixelRatio());
         return QPoint(qRound(x), (std::max)(1, qRound(rulerInput->height()) / 4));
@@ -154,7 +154,7 @@ TimeSignaturePromptSession openFromRulerMenu(TimeSignatureFixture &fixture, bool
 {
     TimeSignaturePromptSession session;
     QQuickWindow *const window = fixture.rulerInput->window();
-    const uint64_t targetTick =
+    const Tick targetTick =
         onChip ? fixture.signatureTick : fixture.signatureTick + fixture.document().ticksPerClock();
     const QPoint local = fixture.rulerPoint(targetTick);
     if (!window || !fixture.rulerInput->bounds().contains(local)) {

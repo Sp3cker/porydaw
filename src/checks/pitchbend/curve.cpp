@@ -259,8 +259,9 @@ void PitchBendEditingTest::activeGesturePreservesPreviewAcrossExternalEdit()
     const auto preview = graph->curvePoints();
     const QByteArray beforeExternalEdit = m_fixture.smf();
     const int externalEditIndex = m_fixture.document().undoStack()->index();
-    m_fixture.document().writeLanePoints(0, 0x15, m_fixture.note().tick, m_fixture.endTick(),
-                                         {{m_fixture.note().tick, 23}, {m_fixture.endTick(), 22}});
+    m_fixture.document().writeLanePoints(
+        0, 0x15, m_fixture.note().tick, m_fixture.endTick(),
+        {{m_fixture.note().tick, 23}, {Tick(m_fixture.endTick()), 22}});
     // The external edit pushes exactly one command and must not resolve the
     // live preview through a reentrant history push.
     QCOMPARE(m_fixture.document().undoStack()->index(), externalEditIndex + 1);
@@ -330,9 +331,9 @@ void PitchBendEditingTest::altDragCreatesFineGridRamp()
 
 void PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid()
 {
-    constexpr uint64_t start = 288;
-    constexpr uint64_t duration = 384;
-    constexpr uint64_t boundary = start + duration / 2;
+    constexpr Tick start = 288;
+    constexpr uint32_t duration = 384;
+    constexpr Tick boundary = start + duration / 2;
     m_fixture.document().addNote(0, start, 61, uint32_t(duration), 100);
     m_fixture.document().setTimeSig(boundary, 8, 3);
     DocNote boundaryNote;
@@ -356,7 +357,7 @@ void PitchBendEditingTest::strokeAcrossSignatureBoundaryAlignsToDynamicGrid()
         if (point.tick <= start || point.tick >= start + duration)
             continue;
         const songview::Grid::Segment segment = m_fixture.view().grid().segmentAt(point.tick);
-        const uint64_t cell = m_fixture.view().grid().gridTicksAtScale(point.tick, pixelsPerTick);
+        const Tick cell = m_fixture.view().grid().gridTicksAtScale(point.tick, pixelsPerTick);
         QVERIFY(cell > 0 && point.tick >= segment.start &&
                 (point.tick - segment.start) % cell == 0);
         before |= point.tick < boundary;

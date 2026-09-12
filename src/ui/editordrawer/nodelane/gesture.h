@@ -132,8 +132,8 @@ struct SweepGesture {
     Slop slop;
 
     template <typename NextGridTick>
-    void update(const NodePoint &mapped, uint64_t first, uint64_t last, double rawTick,
-                bool fineGrid, NextGridTick &&nextGridTick);
+    void update(const NodePoint &mapped, Tick first, Tick last, double rawTick, bool fineGrid,
+                NextGridTick &&nextGridTick);
     void update(const NodePoint &mapped) { current = mapped; }
     std::optional<QPointF> dragPosition(QPointF position, bool activate, int activationDistance);
     template <typename NextGridTick>
@@ -161,24 +161,24 @@ struct BandGesture {
     bool pending = false;
     bool active = false;
     QPoint pressPos;
-    uint64_t startTick = 0;
-    uint64_t endTick = 0;
+    Tick startTick = 0;
+    Tick endTick = 0;
     LaneHandle laneStart;
     LaneHandle laneEnd;
 
-    void press(QPoint pos, uint64_t tick);
+    void press(QPoint pos, Tick tick);
     void pressLane(LaneHandle handle) { laneStart = laneEnd = handle; }
     void extendTo(LaneHandle candidate, bool compatible);
     std::pair<LaneHandle, LaneHandle> laneRange() const noexcept { return {laneStart, laneEnd}; }
     bool coversLane(LaneHandle handle) const noexcept;
     // Owns QApplication::startDragDistance. Returns true only on the move
     // that first activates (callers clear locked hover on that transition).
-    bool move(QPoint pos, uint64_t tick);
+    bool move(QPoint pos, Tick tick);
     // Clears pending/active. Returns:
     //   nullopt            — never activated (click)
     //   {t, t}             — activated drag, snapped width zero
     //   {first, last}      — activated drag, first < last
-    std::optional<std::pair<uint64_t, uint64_t>> release();
+    std::optional<std::pair<Tick, Tick>> release();
     void clear() noexcept
     {
         pending = false;
@@ -217,15 +217,15 @@ std::optional<std::size_t> nearestPointInRadius(const Points &points, double cen
                                                 QPointF pos, qreal radius, XOf &&xOf, YOf &&yOf);
 
 void updateValuePoint(const AutomationProjection &proj, const NodeLane &lane, const QRect &body,
-                      NodePoint &point, qreal y, uint64_t tick, bool snapValue,
-                      int neutralSnapRadius, int snapNeutral);
+                      NodePoint &point, qreal y, Tick tick, bool snapValue, int neutralSnapRadius,
+                      int snapNeutral);
 bool hitNodePoint(const NodeLane &lane, const QRect &body, const AutomationProjection &proj,
                   const AutomationGeometry &geometry, QPointF position, qreal devicePixelRatio,
                   bool requireVisibleMarkers, NodePoint *point);
 
 template <typename NextGridTick>
-void extendSweepPoints(SweepGesture &gesture, uint64_t first, uint64_t last, double rawTick,
-                       bool fineGrid, NextGridTick &&nextGridTick);
+void extendSweepPoints(SweepGesture &gesture, Tick first, Tick last, double rawTick, bool fineGrid,
+                       NextGridTick &&nextGridTick);
 
 bool updatePencilDrawPath(PencilGesture &gesture, const QPointF &position, bool freehand,
                           AxisLock lock, const AutomationProjection &proj, const NodeLane &lane,
@@ -237,7 +237,7 @@ template <class Points, class Point>
 void upsertByTick(Points &points, Point point)
 {
     auto it = std::lower_bound(points.begin(), points.end(), point.tick,
-                               [](const auto &p, uint64_t tick) { return p.tick < tick; });
+                               [](const auto &p, Tick tick) { return p.tick < tick; });
     if (it != points.end() && it->tick == point.tick)
         *it = point;
     else
@@ -279,11 +279,11 @@ std::optional<std::size_t> nearestPointInRadius(const Points &points, double cen
 }
 
 template <typename NextGridTick>
-void extendSweepPoints(SweepGesture &gesture, uint64_t first, uint64_t last, double rawTick,
-                       bool fineGrid, NextGridTick &&nextGridTick)
+void extendSweepPoints(SweepGesture &gesture, Tick first, Tick last, double rawTick, bool fineGrid,
+                       NextGridTick &&nextGridTick)
 {
     const double from = gesture.previousRawTick;
-    for (uint64_t tick = first;;) {
+    for (Tick tick = first;;) {
         int value = gesture.current.value;
         if (rawTick != from) {
             const double fraction = std::clamp((double(tick) - from) / (rawTick - from), 0.0, 1.0);
@@ -300,7 +300,7 @@ void extendSweepPoints(SweepGesture &gesture, uint64_t first, uint64_t last, dou
 }
 
 template <typename NextGridTick>
-void SweepGesture::update(const NodePoint &mapped, uint64_t first, uint64_t last, double rawTick,
+void SweepGesture::update(const NodePoint &mapped, Tick first, Tick last, double rawTick,
                           bool fineGrid, NextGridTick &&nextGridTick)
 {
     current = mapped;
@@ -314,8 +314,8 @@ std::vector<NodePoint> SweepGesture::finishedPoints(bool fineGrid,
 {
     if (mode != Mode::Ramp)
         return points;
-    uint64_t first = anchor.tick;
-    uint64_t last = current.tick;
+    Tick first = anchor.tick;
+    Tick last = current.tick;
     int firstValue = anchor.value;
     int lastValue = current.value;
     if (first > last) {
@@ -323,7 +323,7 @@ std::vector<NodePoint> SweepGesture::finishedPoints(bool fineGrid,
         std::swap(firstValue, lastValue);
     }
     std::vector<NodePoint> result;
-    for (uint64_t tick = first;;) {
+    for (Tick tick = first;;) {
         const int value = int(std::llround(ui::linearRampValue(
             double(tick), double(first), double(firstValue), double(last), double(lastValue))));
         result.push_back({tick, value});
@@ -343,8 +343,8 @@ NodeLaneEdit::Completion SweepGesture::finish(LaneHandle handle, uint64_t revisi
         finishedPoints(fineGrid, std::forward<NextGridTick>(nextGridTick));
     if (result.empty())
         return {};
-    const uint64_t tickBegin = result.front().tick;
-    const uint64_t tickEnd = result.back().tick;
+    const Tick tickBegin = result.front().tick;
+    const Tick tickEnd = result.back().tick;
     const NodeLaneEdit laneEdit({handle, revision}, existing);
     return laneEdit.replacePointRange(tickBegin, tickEnd, std::move(result));
 }

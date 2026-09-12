@@ -202,7 +202,7 @@ std::optional<NodePoint> CCLaneAdapter::leadIn() const
     return defaultValue >= 0 ? std::optional<NodePoint>{{0, defaultValue}} : std::nullopt;
 }
 
-void CCLaneAdapter::replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points)
+void CCLaneAdapter::replaceSpan(Tick first, Tick last, const std::vector<NodePoint> &points)
 {
     std::vector<SongDocument::LanePointValue> written;
     written.reserve(points.size());

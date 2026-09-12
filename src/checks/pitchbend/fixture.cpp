@@ -20,12 +20,12 @@
 #include "ui/songview/quick/timelinequickview.h"
 
 namespace {
-constexpr uint64_t kNoteTick = 48;
-constexpr uint64_t kNoteEndTick = 144;
+constexpr Tick kNoteTick = 48;
+constexpr Tick kNoteEndTick = 144;
 constexpr uint8_t kNoteKey = 60;
 constexpr uint8_t kNoteVelocity = 100;
 
-SmfEvent noteEvent(uint8_t status, uint64_t tick, uint8_t key, uint8_t velocity)
+SmfEvent noteEvent(uint8_t status, Tick tick, uint8_t key, uint8_t velocity)
 {
     SmfEvent event;
     event.status = status;

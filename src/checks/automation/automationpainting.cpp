@@ -26,8 +26,8 @@
 namespace {
 
 constexpr uint8_t kController = 10;
-constexpr uint64_t kFirstNodeTick = 96;
-constexpr uint64_t kSecondNodeTick = 144;
+constexpr Tick kFirstNodeTick = 96;
+constexpr Tick kSecondNodeTick = 144;
 constexpr int kTempoHeld = 80;
 constexpr int kTempoNode = 200;
 constexpr int kTempoSecond = 160;
@@ -72,7 +72,7 @@ void setTempo(SongDocument &document, const std::vector<TempoPoint> &points)
 
 void setCc(SongDocument &document, const std::vector<SongDocument::LanePointValue> &points)
 {
-    document.writeLanePoints(0, kController, 0, std::numeric_limits<uint64_t>::max(), points);
+    document.writeLanePoints(0, kController, 0, CoreTimeDefaults::kNoTick, points);
 }
 
 LanePaint lanePaint(AutomationPage &page, LaneKind kind)
@@ -95,7 +95,7 @@ LanePaint lanePaint(AutomationPage &page, LaneKind kind)
 }
 
 QPointF nodePoint(const SongView &view, const songview::TimelineInputItem &input,
-                  const LanePaint &lane, uint64_t tick, int value)
+                  const LanePaint &lane, Tick tick, int value)
 {
     return {view.camera().displayX(double(tick), 0.0, input.devicePixelRatio()),
             AutomationProjection::valueY(lane.body, AutomationGeometry::resolve(), lane.minimum,

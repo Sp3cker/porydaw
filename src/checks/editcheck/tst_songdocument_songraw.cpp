@@ -95,7 +95,7 @@ void EditCheckTest::rawEventMutate()
 
     document.setTrackEndTick(chunk, base + 500);
     QCOMPARE(track.endTick, base + 500);
-    const uint64_t lastTick = track.events.empty() ? 0 : track.events.back().tick;
+    const Tick lastTick = track.events.empty() ? Tick(0) : track.events.back().tick;
     document.setTrackEndTick(chunk, 0);
     QCOMPARE(track.endTick, lastTick);
 

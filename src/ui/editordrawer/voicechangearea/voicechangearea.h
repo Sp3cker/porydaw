@@ -99,10 +99,10 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
         int engineTrack = -1;
         DocLanePoint point;
         uint64_t revision = 0;
-        uint64_t previewTick = 0;
+        Tick previewTick = 0;
     };
     struct VoicePaintEntry {
-        uint64_t tick = 0;
+        Tick tick = 0;
         int program = 0;
     };
     struct Geometry {
@@ -139,7 +139,7 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
     bool ready() const noexcept;
     int primaryTrack() const noexcept;
     const VoicePaintText &paintTextFor(int program) const;
-    int voiceSlotAt(uint64_t tick) const;
+    int voiceSlotAt(Tick tick) const;
     QRect plotRect() const;
     bool voiceMarkerAt(qreal x, DocLanePoint *out) const;
     bool voiceDragActive() const noexcept;
@@ -153,7 +153,7 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
         QPointer<SongDocument> document;
         uint64_t revision = 0;
         int track = -1;
-        uint64_t tick = 0;
+        Tick tick = 0;
         // Present when the press hit an existing marker; carries the full
         // occurrence (tick and value) so a Change pick re-finds exactly it.
         std::optional<DocLanePoint> marker;
@@ -183,7 +183,7 @@ class VoiceChangeArea final : public QObject, public songview::TimelineBandInter
     QPointF m_previousPosition;
     bool m_hoverActive = false;
     qreal m_hoverX = 0.0;
-    uint64_t m_hoverTick = 0;
+    Tick m_hoverTick = 0;
     QString m_hoverLabel;
     QRectF m_hoverLabelRect;
     QFont m_titleFont;

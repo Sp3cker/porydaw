@@ -182,7 +182,7 @@ bool TimeCamera::zoomKeyHeight(double factor, double anchorY)
     return true;
 }
 
-bool TimeCamera::ensureTickVisible(uint64_t tick, double dpr)
+bool TimeCamera::ensureTickVisible(Tick tick, double dpr)
 {
     const double vw = m_viewportWidth;
     const double physicalPixel = logicalPhysicalPixel(dpr);
@@ -192,8 +192,7 @@ bool TimeCamera::ensureTickVisible(uint64_t tick, double dpr)
     return setHScroll(double(tick) * pxPerTick() - vw * m_limits.revealViewportFraction);
 }
 
-bool TimeCamera::ensureRangeVisible(uint64_t startTick, uint64_t endTick, bool preferEnd,
-                                    double dpr)
+bool TimeCamera::ensureRangeVisible(Tick startTick, Tick endTick, bool preferEnd, double dpr)
 {
     const double x0 = contentX(double(startTick));
     const double x1 = contentX(double(endTick));

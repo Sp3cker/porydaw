@@ -71,7 +71,7 @@ class XcmdTest final : public QObject
 };
 
 // Test-local event adapters (the legacy ev()/makeEvents()/project()).
-xcmd::Event ev(uint64_t index, uint64_t tick, uint8_t stream, uint8_t controller, uint8_t value,
+xcmd::Event ev(uint64_t index, Tick tick, uint8_t stream, uint8_t controller, uint8_t value,
                uint8_t channel = 0);
 
 template <typename... Events>

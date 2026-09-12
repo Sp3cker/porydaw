@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "core/noteid.h"
+#include "core/timedefaults.h"
 
 struct TrackRemap;
 
@@ -22,8 +23,8 @@ class EditorSelectionModel
     struct TimeSelection {
         enum Scope { Tracks, Lanes };
 
-        uint64_t startTick = 0;
-        uint64_t endTick = 0;
+        Tick startTick = 0;
+        Tick endTick = 0;
         Scope scope = Tracks;
         std::vector<std::pair<int, uint8_t>> lanes;
         bool tempo = false;
@@ -40,8 +41,8 @@ class EditorSelectionModel
     };
 
     struct TrackTimeSelection {
-        uint64_t startTick = 0;
-        uint64_t endTick = 0;
+        Tick startTick = 0;
+        Tick endTick = 0;
         TrackMask trackScope = 0;
 
         bool active() const noexcept { return trackScope != 0 && endTick > startTick; }

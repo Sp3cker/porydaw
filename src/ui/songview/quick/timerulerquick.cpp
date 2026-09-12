@@ -105,8 +105,8 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene, bool horizontalPan)
             }
         }
 
-        const bool hasLoopStart = timeline->loopStartTick != UINT64_MAX;
-        const bool hasLoopEnd = timeline->loopEndTick != UINT64_MAX;
+        const bool hasLoopStart = timeline->loopStartTick != CoreTimeDefaults::kNoTick;
+        const bool hasLoopEnd = timeline->loopEndTick != CoreTimeDefaults::kNoTick;
         if (hasLoopStart || hasLoopEnd) {
             const qreal x0 = hasLoopStart
                                  ? m_camera.displayX(double(timeline->loopStartTick), 0.0, dpr)
@@ -182,7 +182,7 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene, bool horizontalPan)
 
     detail::forEachSubGridLine(
         m_owner.grid(), m_camera, range, m_geometry.timelineDetailMinimumPixelsPerBeat,
-        [&](uint64_t tick, int level) {
+        [&](Tick tick, int level) {
             const qreal x = m_camera.displayX(double(tick), 0.0, dpr);
             const int tickHeight = level == 1 ? lyt::space(Space::Half) : lyt::singlePixel();
             addVerticalLine(scene.layer(marksLayer), x,
@@ -194,7 +194,7 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene, bool horizontalPan)
     if (m_camera.pxPerBeat() >= m_geometry.timeRulerBeatLabelZoomFactor *
                                     (barCapWidth + 2 * labelGap + beatDetailReserve)) {
         m_owner.forEachGridLine(
-            range.begin, range.end, [&](uint64_t, bool, int barNumber, int beatNumber) {
+            range.begin, range.end, [&](Tick, bool, int barNumber, int beatNumber) {
                 widestDetailWidth = std::max(
                     widestDetailWidth, beatMetrics.horizontalAdvance(
                                            QStringLiteral("%1.%2").arg(barNumber).arg(beatNumber)));
@@ -206,7 +206,7 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene, bool horizontalPan)
     std::vector<TimelineQuickTextModel::Record> labels;
     qreal lastLabelRight = area.left() - labelGap;
     m_owner.forEachGridLine(
-        range.begin, range.end, [&](uint64_t tick, bool isBar, int barNumber, int beatNumber) {
+        range.begin, range.end, [&](Tick tick, bool isBar, int barNumber, int beatNumber) {
             const qreal x = m_camera.displayX(double(tick), 0.0, dpr);
             if (!isBar && !showBeatLabels) {
                 if (drawBeatTicks) {
@@ -267,7 +267,7 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene, bool horizontalPan)
 
     if (m_owner.timeline()) {
         const TimeAxis &axis = m_owner.timeAxis();
-        if (axis.loopStartTick() != UINT64_MAX) {
+        if (axis.loopStartTick() != CoreTimeDefaults::kNoTick) {
             const QString label = QStringLiteral("[");
             const qreal x =
                 m_camera.displayX(double(axis.loopStartTick()), 0.0, dpr) + lyt::space(Space::Half);
@@ -276,7 +276,7 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene, bool horizontalPan)
                                     markerMetrics.horizontalAdvance(label), markerMetrics.height()),
                              label, m_boldRulerFont, detail::loopEdge());
         }
-        if (axis.loopEndTick() != UINT64_MAX) {
+        if (axis.loopEndTick() != CoreTimeDefaults::kNoTick) {
             const QString label = QStringLiteral("]");
             const qreal x =
                 m_camera.displayX(double(axis.loopEndTick()), 0.0, dpr) + lyt::space(Space::Half);

@@ -44,7 +44,7 @@ struct PreparedLane {
     QRect body;
     QPointF insertionPosition;
     QPointF nodePosition;
-    uint64_t insertionTick = 0;
+    Tick insertionTick = 0;
     qreal insertionX = 0.0;
     qreal heldY = 0.0;
     qreal nodeX = 0.0;
@@ -75,9 +75,9 @@ constexpr std::array kHoverCases{
     HoverCase{AdapterKind::Tempo, "Tempo"},
     HoverCase{AdapterKind::Cc, "CC"},
 };
-constexpr uint64_t kHeldTick = 0;
-constexpr uint64_t kNodeTick = 144;
-constexpr uint64_t kInsertionTick = 96;
+constexpr Tick kHeldTick = 0;
+constexpr Tick kNodeTick = 144;
+constexpr Tick kInsertionTick = 96;
 constexpr double kHeldBodyFraction = 0.25;
 constexpr double kNodeBodyFraction = 0.75;
 constexpr double kCursorBodyFraction = 0.50;
@@ -232,7 +232,7 @@ void setCcPoints(AutomationRasterFixture &fixture,
                  const std::vector<SongDocument::LanePointValue> &points)
 {
     fixture.document().writeLanePoints(fixture.pan.track, fixture.pan.controller, 0,
-                                       std::numeric_limits<uint64_t>::max(), points);
+                                       CoreTimeDefaults::kNoTick, points);
     fixture.documentChanged();
 }
 
@@ -275,20 +275,20 @@ PreparedLane prepareLane(AutomationRasterFixture &fixture, AdapterKind kind)
     return lane;
 }
 
-qreal voiceX(const AutomationRasterFixture &fixture, uint64_t tick)
+qreal voiceX(const AutomationRasterFixture &fixture, Tick tick)
 {
     return fixture.view().camera().displayX(double(tick), 0.0,
                                             fixture.voiceInput().devicePixelRatio());
 }
 
-QPointF voicePoint(const AutomationRasterFixture &fixture, uint64_t tick)
+QPointF voicePoint(const AutomationRasterFixture &fixture, Tick tick)
 {
     return {voiceX(fixture, tick), fixture.voiceInput().bounds().center().y()};
 }
 
 void seedVoice(AutomationRasterFixture &fixture)
 {
-    fixture.document().writeLanePoints(0, DOC_CC_VOICE, 0, std::numeric_limits<uint64_t>::max(),
+    fixture.document().writeLanePoints(0, DOC_CC_VOICE, 0, CoreTimeDefaults::kNoTick,
                                        {{24, 5}, {48, 6}});
     fixture.documentChanged();
     fixture.pump();

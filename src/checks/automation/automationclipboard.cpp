@@ -19,8 +19,8 @@
 
 namespace {
 constexpr uint8_t kLfoController = 21;
-constexpr uint64_t kTempoCopyTick = 96;
-constexpr uint64_t kCcCopyTick = 144;
+constexpr Tick kTempoCopyTick = 96;
+constexpr Tick kCcCopyTick = 144;
 using CanvasMenuAction = AutomationCanvas::CanvasMenuAction;
 
 using automation_quick::AutomationMenu;
@@ -69,7 +69,7 @@ void AutomationEditingTest::clipboardCrossLanePasteClamps()
     songTab.document().applyTempoEdit(TempoEdit{
         .remove = songTab.document().tempoPoints(),
         .add = {{kTempoCopyTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(300)}}});
-    songTab.document().writeLanePoints(0, kLfoController, 0, std::numeric_limits<uint64_t>::max(),
+    songTab.document().writeLanePoints(0, kLfoController, 0, CoreTimeDefaults::kNoTick,
                                        {{kTempoCopyTick, 96}});
     QCoreApplication::processEvents();
 
@@ -98,7 +98,7 @@ void AutomationEditingTest::clipboardCrossLanePasteClamps()
     QCOMPARE(clampedCc.front().tick, kTempoCopyTick);
     QCOMPARE(clampedCc.front().value, 127);
 
-    songTab.document().writeLanePoints(0, kLfoController, 0, std::numeric_limits<uint64_t>::max(),
+    songTab.document().writeLanePoints(0, kLfoController, 0, CoreTimeDefaults::kNoTick,
                                        {{kCcCopyTick, 0}});
     QCoreApplication::processEvents();
 

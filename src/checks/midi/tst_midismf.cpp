@@ -49,7 +49,7 @@ QByteArray format0Bytes(const QByteArray &trackBody)
     return bytes;
 }
 
-SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data1)
+SmfEvent channelEvent(Tick tick, uint8_t status, uint8_t data0, uint8_t data1)
 {
     auto event = SmfEvent{};
     event.tick = tick;
@@ -59,7 +59,7 @@ SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data
     return event;
 }
 
-SmfEvent metaEvent(uint64_t tick, uint8_t metaType, const QByteArray &blob)
+SmfEvent metaEvent(Tick tick, uint8_t metaType, const QByteArray &blob)
 {
     auto event = SmfEvent{};
     event.tick = tick;
@@ -151,7 +151,7 @@ void expectTempoProjection(const MidiTimeline &timeline, int expectedTick1Tempos
     }
     QCOMPARE(noteOns, 1);
     QCOMPARE(tick1Tempos, expectedTick1Tempos);
-    const uint64_t expectedTicks[] = {0, 1, 2, 3, 9};
+    const Tick expectedTicks[] = {0, 1, 2, 3, 9};
     const uint64_t expectedSamples[] = {0, 230, 505, 781, 2435};
     for (size_t i = 0; i < sizeof(expectedTicks) / sizeof(expectedTicks[0]); ++i) {
         QCOMPARE(qulonglong(timeline.sampleForTick(expectedTicks[i])),
@@ -367,7 +367,7 @@ void MidiSmfTest::automationBurstPreservesEveryChannelEvent()
     constexpr size_t kEventsPerGroup = 3;
     constexpr size_t kAutomationEventCount = size_t(kGroupCount) * kEventsPerGroup;
     constexpr size_t kEventTrackEventCount = 1 + kAutomationEventCount + 2;
-    constexpr uint64_t kEndTick = 352;
+    constexpr Tick kEndTick = 352;
 
     QVERIFY2(SmfFile::readFile(fixturePath(kFixture), &smf, &error), qPrintable(error));
     QCOMPARE(int(smf.format), 1);
@@ -404,7 +404,7 @@ void MidiSmfTest::automationBurstPreservesEveryChannelEvent()
             const uint8_t secondValue = uint8_t(channel == 0 ? 0x7F - group : 40 + group);
             const uint8_t bendLsb = uint8_t(channel == 0 ? group : (5 * group) & 0x7F);
             const uint8_t bendMsb = uint8_t(channel == 0 ? (2 * group) & 0x7F : (7 * group) & 0x7F);
-            const uint64_t tick = uint64_t(4 * group);
+            const Tick tick = Tick(4 * group);
 
             const auto &firstCc = track.events[base];
             QCOMPARE(qulonglong(firstCc.tick), qulonglong(tick));
@@ -598,7 +598,7 @@ void MidiSmfTest::unterminatedNotePairingStaysLinear()
     auto &track = smf.tracks[1];
     track.events.reserve(kNoteOns);
     for (int index = 0; index < kNoteOns; ++index)
-        track.events.push_back(channelEvent(uint64_t(index), 0x90, 60, 100));
+        track.events.push_back(channelEvent(Tick(index), 0x90, 60, 100));
     track.endTick = kNoteOns;
 
     auto scratch = QTemporaryDir{};
@@ -659,7 +659,7 @@ void MidiSmfTest::noteOnsRejectOutOfRangeKeys()
 // reaches the 32-bit boundary is by accumulating deltas. The uint64
 // accumulator must fail there rather than wrap: sixteen 0x0FFFFFFF deltas
 // put the tick at 0xFFFFFFF0, and one more delta of 0x10 crosses the bound
-// while 0x0E (a total of UINT32_MAX-1) must still parse.
+// while 0x0E (a total of CoreTimeDefaults::kMaxTick) must still parse.
 void MidiSmfTest::overlongTickFailsParsing()
 {
     const auto delta = QByteArray::fromHex("ffffff7f");
@@ -679,7 +679,7 @@ void MidiSmfTest::overlongTickFailsParsing()
     justInsideBody.chop(1);
     justInsideBody.append(QByteArray::fromHex("0eff2f00"));
     QVERIFY2(SmfFile::read(format0Bytes(justInsideBody), &smf, &error), qPrintable(error));
-    QCOMPARE(qulonglong(smf.tracks[1].endTick), qulonglong(UINT32_MAX - 1));
+    QCOMPARE(qulonglong(smf.tracks[1].endTick), qulonglong(CoreTimeDefaults::kMaxTick));
 }
 
 void MidiSmfTest::tempoConversionSchedulesExactSamples()

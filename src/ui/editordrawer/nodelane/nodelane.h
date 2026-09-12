@@ -7,6 +7,8 @@
 #include <span>
 #include <vector>
 
+#include "core/timedefaults.h"
+
 #include <QRect>
 #include <QRectF>
 #include <QString>
@@ -21,13 +23,14 @@ struct NodeValuePrompt {
 };
 
 struct NodePoint {
-    uint64_t tick = 0;
+    Tick tick = 0;
     int value = 0;
 };
+static_assert(sizeof(NodePoint) == 8);
 
 struct NodePointMove {
-    uint64_t fromTick = 0; // identifies the point (one per tick per lane)
-    NodePoint to;          // destination tick + value
+    Tick fromTick = 0; // identifies the point (one per tick per lane)
+    NodePoint to;      // destination tick + value
 };
 
 struct LaneHandle {
@@ -80,8 +83,7 @@ class NodeLane
     // point supersedes it.
     virtual std::optional<NodePoint> leadIn() const { return std::nullopt; }
 
-    virtual void replaceSpan(uint64_t first, uint64_t last,
-                             const std::vector<NodePoint> &points) = 0;
+    virtual void replaceSpan(Tick first, Tick last, const std::vector<NodePoint> &points) = 0;
 };
 
 namespace nodelane {
@@ -104,18 +106,17 @@ class NodeLaneEdit
 
     struct Completion {
         Target target;
-        uint64_t tickBegin = 0;
-        uint64_t tickEnd = 0;
+        Tick tickBegin = 0;
+        Tick tickEnd = 0;
         std::vector<Point> points;
         bool unchanged = false;
     };
 
     NodeLaneEdit(Target target, std::vector<Point> originalPoints);
 
-    Completion replacePointRange(uint64_t tickBegin, uint64_t tickEnd,
-                                 std::vector<Point> points) const;
-    Completion replaceHeldSpan(uint64_t tickBegin, uint64_t tickEnd, uint64_t songEndTick,
-                               int minimumValue, int maximumValue, std::vector<Point> points) const;
+    Completion replacePointRange(Tick tickBegin, Tick tickEnd, std::vector<Point> points) const;
+    Completion replaceHeldSpan(Tick tickBegin, Tick tickEnd, Tick songEndTick, int minimumValue,
+                               int maximumValue, std::vector<Point> points) const;
 
   private:
     Target m_target;

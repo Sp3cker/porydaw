@@ -1605,7 +1605,7 @@ SmfFile blankSong()
     SmfFile smf;
     smf.format = 1;
     smf.division = 24; // vanilla pokeemerald resolution: 1 tick per m4a clock
-    const uint64_t oneBar = uint64_t(smf.division) * 4;
+    const Tick oneBar = Tick(smf.division) * 4;
 
     SmfTrack seq; // MTrk chunk 0: the only chunk mid2agb reads seq events from
     SmfEvent tempo;

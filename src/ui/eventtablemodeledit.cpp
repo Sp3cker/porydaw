@@ -15,9 +15,9 @@ namespace eventlist {
 
 namespace {
 
-TempoPoint tempoPointForBpm(uint64_t tick, int bpm)
+TempoPoint tempoPointForBpm(Tick tick, int bpm)
 {
-    return {Tick(tick), uint32_t(std::lround(60000000.0 / bpm))};
+    return {tick, uint32_t(std::lround(60000000.0 / bpm))};
 }
 
 } // namespace
@@ -35,13 +35,16 @@ bool EventTableModel::handleEndTick(const QVariant &value)
 {
     const auto doc = m_doc;
     const auto chunk = m_chunk;
-    const auto tick = uint64_t(value.toULongLong());
+    const auto tick = value.toULongLong();
+    if (tick > CoreTimeDefaults::kMaxTick)
+        return false;
     QMetaObject::invokeMethod(
-        this, [doc, chunk, tick] { doc->setTrackEndTick(chunk, tick); }, Qt::QueuedConnection);
+        this, [doc, chunk, tick] { doc->setTrackEndTick(chunk, Tick(tick)); },
+        Qt::QueuedConnection);
     return true;
 }
 
-void EventTableModel::queueTempoEdit(const TempoEdit &edit, uint64_t selectTick)
+void EventTableModel::queueTempoEdit(const TempoEdit &edit, Tick selectTick)
 {
     const auto doc = m_doc;
     const auto select = m_select;
@@ -58,8 +61,10 @@ void EventTableModel::queueTempoEdit(const TempoEdit &edit, uint64_t selectTick)
 
 bool EventTableModel::handleTempoTick(const TempoPoint &point, const QVariant &value)
 {
-    const auto tick = uint64_t(value.toULongLong());
-    queueTempoEdit({{point}, {{Tick(tick), point.microsecondsPerQuarterNote}}}, tick);
+    const auto tick = value.toULongLong();
+    if (tick > CoreTimeDefaults::kMaxTick)
+        return false;
+    queueTempoEdit({{point}, {{Tick(tick), point.microsecondsPerQuarterNote}}}, Tick(tick));
     return true;
 }
 
@@ -107,7 +112,10 @@ bool EventTableModel::handleTempoBpm(const TempoPoint &point, const QVariant &va
 bool EventTableModel::handleRawTick(size_t eventIndex, const SmfEvent &event, const QVariant &value)
 {
     auto next = pendingRawEvent(eventIndex, event);
-    next.tick = value.toULongLong();
+    const auto tick = value.toULongLong();
+    if (tick > CoreTimeDefaults::kMaxTick)
+        return false;
+    next.tick = Tick(tick);
     return commitRawEdit(eventIndex, next);
 }
 

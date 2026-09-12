@@ -272,8 +272,8 @@ void TimelinePlayer::wrapNotes(M4AEngine *engine, const MidiTimeline *timeline)
                 if (m_pendingOffCount < kMaxPendingOffs) {
                     const uint64_t tick =
                         timeline->loopStartTick + (uint64_t(off->tick) - timeline->loopEndTick);
-                    m_pendingOffs[m_pendingOffCount++] = {timeline->sampleForTick(tick), tick,
-                                                          uint8_t(track), uint8_t(key)};
+                    m_pendingOffs[m_pendingOffCount++] = {timeline->sampleForTick(Tick(tick)),
+                                                          Tick(tick), uint8_t(track), uint8_t(key)};
                     continue;
                 }
             }

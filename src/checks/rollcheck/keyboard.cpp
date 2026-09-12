@@ -40,7 +40,7 @@ void PianoRollTest::keyboardTranspose()
     songview::TimelineInputItem &roll = check.rollInput();
     const SnappedRows rows{view, roll};
     const Cell &d = seed->cell;
-    const uint64_t snapCell = seed->snapCell;
+    const Tick snapCell = seed->snapCell;
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
     const QPoint center(
@@ -78,7 +78,7 @@ void PianoRollTest::keyboardKeepVisible()
     const int track = check.track();
     const SnappedRows rows{view, roll};
     const Cell &d = seed->cell;
-    const uint64_t snapCell = seed->snapCell;
+    const Tick snapCell = seed->snapCell;
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
     DocNote transposed;
@@ -100,7 +100,7 @@ void PianoRollTest::keyboardKeepVisible()
              "Up above the viewport did not keep the transposed row fully visible");
     sendKeyStroke(roll, Qt::Key_Down, Qt::NoModifier, false);
 
-    uint64_t nStart = d.tick + snapCell;
+    Tick nStart = d.tick + snapCell;
     const qreal dpr = roll.devicePixelRatio();
     const qreal physicalPixel = dpr > 0.0 ? 1.0 / dpr : 1.0;
     view.scrollByPx(view.camera().contentX(double(nStart + snapCell)) + 40);
@@ -143,7 +143,7 @@ void PianoRollTest::timelineRulerScope()
     const int track = check.track();
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const Cell &d = seed->cell;
-    const uint64_t snapCell = seed->snapCell;
+    const Tick snapCell = seed->snapCell;
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
     DocNote transposed;
@@ -167,8 +167,8 @@ void PianoRollTest::timelineRulerScope()
              "Quick header records did not match the current timeline");
     QVERIFY2(rulerInput && rulerBand, "could not find the time ruler");
     const qreal rulerDpr = rulerInput->devicePixelRatio();
-    const uint64_t startTick = d.tick + snapCell;
-    const uint64_t endTick = d.tick + 2 * snapCell;
+    const Tick startTick = d.tick + snapCell;
+    const Tick endTick = d.tick + 2 * snapCell;
     const QPointF start(view.camera().displayX(double(startTick), 0.0, rulerDpr),
                         rulerBand->rect.height() - 2.0);
     const QPointF end(view.camera().displayX(double(endTick), 0.0, rulerDpr),
@@ -310,7 +310,7 @@ void PianoRollTest::timelineOtherEventsStrip()
     SongDocument &doc = check.document();
     SongView &view = check.view();
     const Cell &d = seed->cell;
-    const uint64_t snapCell = seed->snapCell;
+    const Tick snapCell = seed->snapCell;
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
     const std::optional<songview::TimelineBandGeometry> otherEvents =
@@ -376,7 +376,7 @@ void PianoRollTest::timelinePartialSelectionRepaint()
     SongDocument &doc = check.document();
     SongView &view = check.view();
     const Cell &d = seed->cell;
-    const uint64_t snapCell = seed->snapCell;
+    const Tick snapCell = seed->snapCell;
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
     view.selectionModel().setTimeSelection({d.tick + snapCell, d.tick + 2 * snapCell,
@@ -407,7 +407,7 @@ void PianoRollTest::keyboardTimeSelectionShortcuts()
     const int pianoKeyboardWidth = check.pianoKeyboardWidth();
     const SnappedRows rows{view, roll};
     const Cell &d = seed->cell;
-    const uint64_t snapCell = seed->snapCell;
+    const Tick snapCell = seed->snapCell;
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
     DocNote transposed;
@@ -436,7 +436,7 @@ void PianoRollTest::keyboardTimeSelectionShortcuts()
              "time-selected note did not show the normal selection ring");
     QVERIFY2(view.selectionModel().noteSelection().empty(),
              "time-selected note leaked into the explicit note selection");
-    const uint64_t emptyTick = band.startTick + (band.endTick - band.startTick) / 2;
+    const Tick emptyTick = band.startTick + (band.endTick - band.startTick) / 2;
     int emptyKey = -1;
     for (int key = 0; key < 128 && emptyKey < 0; ++key) {
         const int y = rows.centerY(key);
@@ -480,7 +480,7 @@ void PianoRollTest::timelineDuplicateTime()
     songview::TimelineInputItem &roll = check.rollInput();
     const int track = check.track();
     const Cell &d = seed->cell;
-    const uint64_t snapCell = seed->snapCell;
+    const Tick snapCell = seed->snapCell;
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
     DocNote transposed;
@@ -493,16 +493,16 @@ void PianoRollTest::timelineDuplicateTime()
                                             songview::EditorSelectionModel::TimeSelection::Tracks});
     const songview::EditorSelectionModel::TimeSelection duplicateSource =
         view.selectionModel().timeSelection();
-    const uint64_t duplicateSpan = duplicateSource.endTick - duplicateSource.startTick;
+    const Tick duplicateSpan = duplicateSource.endTick - duplicateSource.startTick;
     const int duplicateUndoIndex = doc.undoStack()->index();
     const uint8_t duplicateKey = transposed.key;
-    const auto hasNoteAt = [&](uint64_t tick) {
+    const auto hasNoteAt = [&](Tick tick) {
         DocNote note;
         return doc.findNote(track, tick, duplicateKey, &note);
     };
     sendKeyStroke(roll, Qt::Key_D, Qt::ControlModifier, false);
-    const uint64_t firstStart = duplicateSource.endTick;
-    const uint64_t firstEnd = firstStart + duplicateSpan;
+    const Tick firstStart = duplicateSource.endTick;
+    const Tick firstEnd = firstStart + duplicateSpan;
     const songview::EditorSelectionModel::TimeSelection firstSelection =
         view.selectionModel().timeSelection();
     QVERIFY2(doc.undoStack()->index() == duplicateUndoIndex + 1 && firstSelection.active() &&
@@ -515,8 +515,8 @@ void PianoRollTest::timelineDuplicateTime()
                  view.camera().displayX(double(firstEnd), 0.0, duplicateDpr) <= duplicateViewport,
              "first duplicated range was not made visible");
     sendKeyStroke(roll, Qt::Key_D, Qt::ControlModifier, false);
-    const uint64_t secondStart = firstEnd;
-    const uint64_t secondEnd = secondStart + duplicateSpan;
+    const Tick secondStart = firstEnd;
+    const Tick secondEnd = secondStart + duplicateSpan;
     const songview::EditorSelectionModel::TimeSelection secondSelection =
         view.selectionModel().timeSelection();
     QVERIFY2(doc.undoStack()->index() == duplicateUndoIndex + 2 && secondSelection.active() &&
@@ -537,7 +537,7 @@ void PianoRollTest::timelineInsertBlankTimeTracks()
     SongView &view = check.view();
     const int track = check.track();
     const Cell &d = seed->cell;
-    const uint64_t snapCell = seed->snapCell;
+    const Tick snapCell = seed->snapCell;
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
     DocNote transposed;
@@ -546,8 +546,8 @@ void PianoRollTest::timelineInsertBlankTimeTracks()
     doc.moveNotes({transposed}, int64_t(2 * snapCell), -10);
     QVERIFY2(doc.findNote(track, d.tick + 2 * snapCell, uint8_t(d.key - 10), &transposed),
              "track insertion seed did not reach the expected shortcut state");
-    const uint64_t insertStart = d.tick + 2 * snapCell;
-    const uint64_t insertEnd = insertStart + snapCell;
+    const Tick insertStart = d.tick + 2 * snapCell;
+    const Tick insertEnd = insertStart + snapCell;
     if (doc.engineTrackCount() < 2) {
         while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
             doc.undoStack()->undo();
@@ -604,7 +604,7 @@ void PianoRollTest::timelineInsertBlankTimeLanes()
     SongView &view = check.view();
     const int track = check.track();
     const Cell &d = seed->cell;
-    const uint64_t snapCell = seed->snapCell;
+    const Tick snapCell = seed->snapCell;
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
     DocNote transposed;
@@ -613,10 +613,10 @@ void PianoRollTest::timelineInsertBlankTimeLanes()
     doc.moveNotes({transposed}, int64_t(2 * snapCell), -10);
     QVERIFY2(doc.findNote(track, d.tick + 2 * snapCell, uint8_t(d.key - 10), &transposed),
              "lane insertion seed did not reach the expected shortcut state");
-    const uint64_t insertStart = d.tick + 2 * snapCell;
-    const uint64_t insertEnd = insertStart + snapCell;
+    const Tick insertStart = d.tick + 2 * snapCell;
+    const Tick insertEnd = insertStart + snapCell;
     const uint8_t laneCc = 7;
-    const uint64_t lanePointTick = insertStart + snapCell / 2;
+    const Tick lanePointTick = insertStart + snapCell / 2;
     doc.addLanePoint(track, laneCc, lanePointTick, 80);
     DocLanePoint laneBefore;
     DocNote laneNoteBefore;

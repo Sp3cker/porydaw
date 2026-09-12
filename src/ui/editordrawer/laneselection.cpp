@@ -23,7 +23,7 @@ bool LaneSelection::active() const noexcept
     return m_model.timeSelection().active();
 }
 
-std::optional<std::pair<uint64_t, uint64_t>> LaneSelection::activeTickRange() const noexcept
+std::optional<std::pair<Tick, Tick>> LaneSelection::activeTickRange() const noexcept
 {
     if (!active())
         return std::nullopt;

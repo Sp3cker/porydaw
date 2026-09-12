@@ -24,7 +24,7 @@ class CCLaneAdapter final : public NodeLane
     NodeValuePrompt valuePrompt(int storedValue) const override;
     int neutralValue() const override;
     std::optional<NodePoint> leadIn() const override;
-    void replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points) override;
+    void replaceSpan(Tick first, Tick last, const std::vector<NodePoint> &points) override;
 
   private:
     SongDocument &m_document;

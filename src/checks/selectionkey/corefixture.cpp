@@ -104,7 +104,7 @@ QString describeNoteIds(const std::vector<NoteId> &ids)
     return QStringLiteral("[%1]").arg(values.join(QLatin1Char(',')));
 }
 
-songview::EditorSelectionModel::TimeSelection coreLaneRange(uint64_t begin, uint64_t end)
+songview::EditorSelectionModel::TimeSelection coreLaneRange(Tick begin, Tick end)
 {
     songview::EditorSelectionModel::TimeSelection selection;
     selection.startTick = begin;
@@ -114,7 +114,7 @@ songview::EditorSelectionModel::TimeSelection coreLaneRange(uint64_t begin, uint
     return selection;
 }
 
-songview::EditorSelectionModel::TimeSelection coreTrackRange(uint64_t begin, uint64_t end)
+songview::EditorSelectionModel::TimeSelection coreTrackRange(Tick begin, Tick end)
 {
     songview::EditorSelectionModel::TimeSelection selection;
     selection.startTick = begin;
@@ -251,8 +251,8 @@ std::optional<QPoint> CoreFixture::plainRulerPoint(songview::TimelineInputItem *
     if (!ruler || ruler->bounds().isEmpty())
         return std::nullopt;
     std::vector<qreal> reservedX;
-    const auto reserve = [&reservedX, this, ruler](uint64_t tick) {
-        if (tick != UINT64_MAX)
+    const auto reserve = [&reservedX, this, ruler](Tick tick) {
+        if (tick != CoreTimeDefaults::kNoTick)
             reservedX.push_back(
                 rigView(*m_world).camera().displayX(double(tick), 0.0, ruler->devicePixelRatio()));
     };
@@ -272,7 +272,7 @@ std::optional<QPoint> CoreFixture::plainRulerPoint(songview::TimelineInputItem *
 }
 
 std::optional<std::vector<QPoint>>
-CoreFixture::laneWindowPoints(const std::vector<std::pair<uint64_t, int>> &pointSpecs,
+CoreFixture::laneWindowPoints(const std::vector<std::pair<Tick, int>> &pointSpecs,
                               QString *diagnostics) const
 {
     const auto probe =
@@ -290,8 +290,7 @@ CoreFixture::laneWindowPoints(const std::vector<std::pair<uint64_t, int>> &point
     return projected;
 }
 
-std::optional<QPoint> CoreFixture::laneWindowPoint(uint64_t tick, int value,
-                                                   QString *diagnostics) const
+std::optional<QPoint> CoreFixture::laneWindowPoint(Tick tick, int value, QString *diagnostics) const
 {
     const auto points = laneWindowPoints({{tick, value}}, diagnostics);
     return points ? std::optional(points->front()) : std::nullopt;

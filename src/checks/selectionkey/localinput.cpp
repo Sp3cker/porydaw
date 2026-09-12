@@ -77,8 +77,8 @@ std::optional<SelectionLocalInputTierTest::NoteRef>
 SelectionLocalInputTierTest::addNote(int track, uint64_t tick, uint8_t key, uint32_t duration)
 {
     QString error;
-    const std::vector<NoteId> inserted =
-        selectionkey::insertIsolatedNotes(document(), track, {{tick, key, duration, 100}}, error);
+    const std::vector<NoteId> inserted = selectionkey::insertIsolatedNotes(
+        document(), track, {{Tick(tick), key, duration, 100}}, error);
     if (inserted.size() != 1)
         return std::nullopt;
     const std::optional<DocNote> note = selectionkey::noteById(document(), inserted.front());

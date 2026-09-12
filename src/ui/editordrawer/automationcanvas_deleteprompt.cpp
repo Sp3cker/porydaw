@@ -130,7 +130,7 @@ void AutomationCanvas::acceptCcDeletePrompt()
     // replaceSpan's documentChanged fan-out rebuilds m_nodeStack
     // synchronously, so nothing below may touch slot or lane state again —
     // the snapshot identity is the only surviving target description.
-    slot->lane->replaceSpan(0, std::numeric_limits<uint64_t>::max(), {});
+    slot->lane->replaceSpan(0, CoreTimeDefaults::kNoTick, {});
     m_page.requestRefresh();
 
     // Band focus returns only when no popup owns the session now: a popup

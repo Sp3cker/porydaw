@@ -38,15 +38,15 @@ QColor mixTowardOklabImpl(const QColor &color, const QColor &backdrop, double t)
 std::size_t trackIdentityIndex(int track);
 QColor contrastingTextColor(const QColor &backdrop);
 QColor ghostNoteColor(int track, bool accidentalRow);
-int subGridLevel(uint64_t relTick, uint64_t beatTicks, bool triplet);
+int subGridLevel(Tick relTick, uint32_t beatTicks, bool triplet);
 
 // Half-open tick bounds for grid iteration, resolved from the fractional
 // tick interval a viewport covers. empty() unless the interval is finite,
 // non-empty once a negative begin clips to the song start, and strictly
-// below 2^64, where double -> uint64 conversion stays defined.
+// below kNoTick, where double -> tick conversion stays defined.
 struct TickRange {
-    uint64_t begin = 0;
-    uint64_t end = 0;
+    Tick begin = 0;
+    Tick end = 0;
 
     bool empty() const noexcept { return begin == end; }
 };
@@ -65,18 +65,18 @@ void forEachSubGridLine(const Grid &grid, const TimeCamera &camera, TickRange ra
                         int timelineDetailMinimumPixelsPerBeat, F &&fn)
 {
     const bool triplet = grid.feel() == GridFeel::Triplet;
-    uint64_t at = range.begin;
+    Tick at = range.begin;
     while (at < range.end) {
         const Grid::Segment seg = grid.segmentAt(at);
-        const uint64_t segEnd = std::min(seg.next, range.end);
-        const uint64_t g = grid.gridTicksAt(at);
+        const Tick segEnd = std::min(seg.next, range.end);
+        const Tick g = grid.gridTicksAt(at);
         if (g > 0 && g < seg.beatTicks &&
             camera.pxPerTick() * double(seg.beatTicks) >= timelineDetailMinimumPixelsPerBeat) {
-            const uint64_t k = at > seg.start ? (at - seg.start + g - 1) / g : 0;
-            for (uint64_t tick = seg.start + k * g; tick < segEnd; tick += g) {
+            const uint64_t k = at > seg.start ? (uint64_t(at) - seg.start + g - 1) / g : 0;
+            for (Tick tick = seg.start + Tick(k * g); tick < segEnd; tick += g) {
                 if ((tick - seg.start) % seg.beatTicks == 0)
                     continue; // beat/bar lines are drawn separately
-                fn(tick, subGridLevel(tick - seg.start, seg.beatTicks, triplet));
+                fn(tick, subGridLevel(Tick(tick - seg.start), seg.beatTicks, triplet));
             }
         }
         if (seg.next >= range.end)

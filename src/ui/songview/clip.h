@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/tempo.h"
+#include "core/timedefaults.h"
 
 #include <cstdint>
 #include <utility>
@@ -27,7 +28,7 @@ struct ClipLane {
 };
 
 struct Clip {
-    uint64_t span = 0; // ticks covered; 0 = plain note clip
+    Tick span = 0; // ticks covered; 0 = plain note clip
     std::vector<ClipTrack> tracks;
     std::vector<ClipLane> lanes;
     std::vector<TempoPoint> tempo; // relative ticks, microseconds per quarter note

@@ -71,7 +71,8 @@ int EventTableModel::qmlTempoRowForTick(const QString &tickDigits) const
 {
     bool ok = false;
     const qulonglong tick = tickDigits.toULongLong(&ok);
-    return ok ? tempoRowForExactTick(uint64_t(tick)) : -1;
+    return ok && tick <= qulonglong(CoreTimeDefaults::kMaxTick) ? tempoRowForExactTick(Tick(tick))
+                                                                : -1;
 }
 
 bool EventTableModel::qmlUsesNumericFont(int column)
@@ -173,7 +174,7 @@ int EventTableModel::rowForRawEventIndex(size_t index) const
     return it == m_rows.end() ? -1 : int(it - m_rows.begin());
 }
 
-int EventTableModel::tempoRowForExactTick(uint64_t tick) const
+int EventTableModel::tempoRowForExactTick(Tick tick) const
 {
     const auto it = std::find_if(m_rows.begin(), m_rows.end(), [tick](const RowKey &key) {
         const auto *tempo = std::get_if<TempoRow>(&key);
@@ -182,12 +183,12 @@ int EventTableModel::tempoRowForExactTick(uint64_t tick) const
     return it == m_rows.end() ? -1 : int(it - m_rows.begin());
 }
 
-std::optional<uint64_t> EventTableModel::exactTickForRow(int row) const
+std::optional<Tick> EventTableModel::exactTickForRow(int row) const
 {
     if (row < 0 || row >= int(m_rows.size()))
         return std::nullopt;
-    const uint64_t tick = rowTick(m_rows[row]);
-    if (tick == std::numeric_limits<uint64_t>::max())
+    const Tick tick = rowTick(m_rows[row]);
+    if (tick == CoreTimeDefaults::kNoTick)
         return std::nullopt;
     return tick;
 }
@@ -515,25 +516,25 @@ const SmfTrack *EventTableModel::track() const
     return &m_doc->smf().tracks[m_chunk];
 }
 
-const TempoPoint *EventTableModel::tempoPoint(uint64_t tick) const
+const TempoPoint *EventTableModel::tempoPoint(Tick tick) const
 {
     if (!m_doc || m_chunk != 0)
         return nullptr;
     const auto &points = m_doc->tempoPoints();
     const auto it =
         std::lower_bound(points.begin(), points.end(), tick,
-                         [](const TempoPoint &point, uint64_t t) { return point.tick < t; });
+                         [](const TempoPoint &point, Tick t) { return point.tick < t; });
     return it != points.end() && it->tick == tick ? &*it : nullptr;
 }
 
-uint64_t EventTableModel::rowTick(const RowKey &key) const
+Tick EventTableModel::rowTick(const RowKey &key) const
 {
     if (const auto *tempo = std::get_if<TempoRow>(&key))
         return tempo->tick;
     const auto *raw = std::get_if<RawRow>(&key);
     const SmfTrack *tr = track();
     if (!raw || !tr || raw->eventIndex >= tr->events.size())
-        return std::numeric_limits<uint64_t>::max();
+        return CoreTimeDefaults::kNoTick;
     return tr->events[raw->eventIndex].tick;
 }
 
@@ -570,7 +571,7 @@ void EventTableModel::rebuildRows()
     }
 }
 
-void EventTableModel::setSelectionHandler(std::function<void(int, uint64_t)> handler)
+void EventTableModel::setSelectionHandler(std::function<void(int, Tick)> handler)
 {
     m_select = std::move(handler);
 }

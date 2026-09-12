@@ -219,11 +219,11 @@ void WorkspaceUi::wireTab(SongTab *tab)
         if (tab == m_selectedTab)
             emit auditionVoiceRequested(uint8_t(voice), uint8_t(key), uint8_t(velocity));
     });
-    connect(&view, &SongView::editCursorMoved, this, [this, tab](uint64_t tick) {
+    connect(&view, &SongView::editCursorMoved, this, [this, tab](Tick tick) {
         if (tab == m_selectedTab)
             emit editCursorSeekRequested(tick);
     });
-    connect(&view, &SongView::playPauseFromRequested, this, [this, tab](uint64_t tick) {
+    connect(&view, &SongView::playPauseFromRequested, this, [this, tab](Tick tick) {
         if (tab == m_selectedTab)
             emit playPauseFromRequested(tick);
     });

@@ -23,7 +23,7 @@ class TempoLane final : public NodeLane
     int maximumValue() const override;
     QString valueText(int value) const override;
     std::optional<NodePoint> leadIn() const override;
-    void replaceSpan(uint64_t first, uint64_t last, const std::vector<NodePoint> &points) override;
+    void replaceSpan(Tick first, Tick last, const std::vector<NodePoint> &points) override;
     NodeValuePrompt valuePrompt(int storedValue) const override;
 
   private:

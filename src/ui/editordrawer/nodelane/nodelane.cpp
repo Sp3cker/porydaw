@@ -31,7 +31,7 @@ QRectF nodeOverflowClip(const QRect &plot, const AutomationGeometry &geometry)
 namespace {
 
 using Point = NodeLaneEdit::Point;
-void canonicalize(std::vector<Point> &points, uint64_t tickBegin, uint64_t tickEnd,
+void canonicalize(std::vector<Point> &points, Tick tickBegin, Tick tickEnd,
                   int minimumValue = std::numeric_limits<int>::min(),
                   int maximumValue = std::numeric_limits<int>::max(),
                   std::optional<int> priorValue = std::nullopt)
@@ -54,25 +54,25 @@ void canonicalize(std::vector<Point> &points, uint64_t tickBegin, uint64_t tickE
     points.resize(kept);
 }
 
-std::optional<int> heldValue(const std::vector<Point> &points, uint64_t tick, bool inclusive)
+std::optional<int> heldValue(const std::vector<Point> &points, Tick tick, bool inclusive)
 {
     auto position =
         std::lower_bound(points.cbegin(), points.cend(), tick,
-                         [](const Point &point, uint64_t value) { return point.tick < value; });
+                         [](const Point &point, Tick value) { return point.tick < value; });
     if (inclusive && position != points.cend() && position->tick == tick)
         ++position;
     return position == points.cbegin() ? std::nullopt : std::optional<int>((position - 1)->value);
 }
 
-bool rangeMatches(const std::vector<Point> &original, uint64_t tickBegin, uint64_t tickEnd,
+bool rangeMatches(const std::vector<Point> &original, Tick tickBegin, Tick tickEnd,
                   const std::vector<Point> &replacement)
 {
     const auto first =
         std::lower_bound(original.cbegin(), original.cend(), tickBegin,
-                         [](const Point &point, uint64_t tick) { return point.tick < tick; });
+                         [](const Point &point, Tick tick) { return point.tick < tick; });
     const auto last =
         std::upper_bound(first, original.cend(), tickEnd,
-                         [](uint64_t tick, const Point &point) { return tick < point.tick; });
+                         [](Tick tick, const Point &point) { return tick < point.tick; });
     return std::equal(first, last, replacement.cbegin(), replacement.cend(),
                       [](const Point &left, const Point &right) {
                           return left.tick == right.tick && left.value == right.value;
@@ -86,18 +86,18 @@ NodeLaneEdit::NodeLaneEdit(Target target, std::vector<Point> originalPoints)
     , m_originalPoints(std::move(originalPoints))
     , m_heldOriginalPoints(m_originalPoints)
 {
-    canonicalize(m_heldOriginalPoints, 0, std::numeric_limits<uint64_t>::max());
+    canonicalize(m_heldOriginalPoints, 0, CoreTimeDefaults::kNoTick);
 }
 
-NodeLaneEdit::Completion NodeLaneEdit::replacePointRange(uint64_t tickBegin, uint64_t tickEnd,
+NodeLaneEdit::Completion NodeLaneEdit::replacePointRange(Tick tickBegin, Tick tickEnd,
                                                          std::vector<Point> points) const
 {
     const bool unchanged = rangeMatches(m_originalPoints, tickBegin, tickEnd, points);
     return {m_target, tickBegin, tickEnd, std::move(points), unchanged};
 }
 
-NodeLaneEdit::Completion NodeLaneEdit::replaceHeldSpan(uint64_t tickBegin, uint64_t tickEnd,
-                                                       uint64_t songEndTick, int minimumValue,
+NodeLaneEdit::Completion NodeLaneEdit::replaceHeldSpan(Tick tickBegin, Tick tickEnd,
+                                                       Tick songEndTick, int minimumValue,
                                                        int maximumValue,
                                                        std::vector<Point> points) const
 {

@@ -43,12 +43,12 @@ qreal chromeDpr(const QPointer<::SongView> &songView)
 }
 
 struct CurveSnapshot {
-    std::map<uint64_t, int> points;
+    std::map<Tick, int> points;
     int endValue = 0;
 };
 
 CurveSnapshot readCurveSnapshot(const SongDocument *document, int engineTrack, uint8_t cc,
-                                uint64_t startTick, uint64_t endTick)
+                                Tick startTick, Tick endTick)
 {
     CurveSnapshot snapshot;
     int enteringValue = 0;
@@ -226,8 +226,8 @@ bool PitchBendEditor::writeController(uint8_t cc, int value, int endValue)
 {
     if (!noteSpanStillPresent())
         return false;
-    m_document->writeLanePoints(m_engineTrack, cc, m_startTick, m_endTick,
-                                {{m_startTick, value}, {m_endTick, endValue}});
+    m_document->writeLanePoints(m_engineTrack, cc, Tick(m_startTick), Tick(m_endTick),
+                                {{Tick(m_startTick), value}, {Tick(m_endTick), endValue}});
     return true;
 }
 
@@ -235,8 +235,8 @@ void PitchBendEditor::writeCurve(PitchBendGraph *graph)
 {
     if (!noteSpanStillPresent())
         return;
-    m_document->writeLanePoints(m_engineTrack, ccForGraph(graph), m_startTick, m_endTick,
-                                graph->curvePoints());
+    m_document->writeLanePoints(m_engineTrack, ccForGraph(graph), Tick(m_startTick),
+                                Tick(m_endTick), graph->curvePoints());
 }
 
 void PitchBendEditor::markCurvePending(PitchBendGraph *graph)
@@ -390,12 +390,12 @@ void PitchBendEditor::bindGraph(PitchBendGraph *graph, PitchBendGraph::Lane lane
     callbacks.grabLost = [this] { onGrabLost(); };
 
     CurveSnapshot snapshot = readCurveSnapshot(m_document.data(), m_engineTrack, ccForGraph(graph),
-                                               m_startTick, m_endTick);
+                                               Tick(m_startTick), Tick(m_endTick));
     graph->initialize({
         .songView = m_songView.data(),
         .engineTrack = m_engineTrack,
-        .startTick = m_startTick,
-        .endTick = m_endTick,
+        .startTick = Tick(m_startTick),
+        .endTick = Tick(m_endTick),
         .unterminated = m_unterminated,
         .lane = lane,
         .geometry = m_geometry,

@@ -55,7 +55,7 @@ class PianoRollFixture final
     int pianoRollDefaultKeyHeight() const noexcept;
 
     const QString &songLabel() const noexcept;
-    bool isOccupied(uint64_t tick, uint64_t dur, int key, bool checkAllTracks = false);
+    bool isOccupied(Tick tick, uint32_t dur, int key, bool checkAllTracks = false);
     Cell findFreeCell(int firstProbe = 8, bool checkAllTracks = false);
 
   private:
@@ -89,8 +89,8 @@ struct SnappedRows {
 bool isSelectionRingColor(QRgb pixel);
 
 struct Cell {
-    uint64_t tick = 0;
-    uint64_t dur = 0;
+    Tick tick = 0;
+    Tick dur = 0;
     int key = -1;
     QPoint center;
 };
@@ -109,7 +109,7 @@ struct PencilVelocityFixture {
 
 struct ResizeFixture {
     Cell cell;
-    uint64_t snapCell = 0;
+    Tick snapCell = 0;
 };
 
 std::optional<PencilPaintingFixture> makePaintingSeed(PianoRollFixture &fixture);

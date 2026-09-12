@@ -106,7 +106,7 @@ class VelocityArea final : public QObject, public songview::TimelineBandInteract
     // the gesture must stay on the axis it started on.
     struct FrozenNote {
         NoteId noteId;
-        uint64_t tick = 0;
+        Tick tick = 0;
         uint32_t duration = 0;
         uint8_t key = 0;
         uint8_t velocity = 1;

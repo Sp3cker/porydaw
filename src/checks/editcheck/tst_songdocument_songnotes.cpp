@@ -76,8 +76,8 @@ void EditCheckTest::noteEditingBatch()
     const uint32_t step = document.ticksPerClock();
 
     const int before = document.undoStack()->count();
-    document.addNotes(track,
-                      {{base + step * 20, 64, step * 2, 96}, {base + step * 22, 67, step * 2, 96}});
+    document.addNotes(track, {{Tick(base + step * 20), 64, step * 2, 96},
+                              {Tick(base + step * 22), 67, step * 2, 96}});
     DocNote first;
     DocNote second;
     QVERIFY(document.findNote(track, base + step * 20, 64, &first));

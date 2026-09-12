@@ -59,7 +59,7 @@ struct PitchBendGeometry {
 
 // One editable lane of the note-automation popup. A QQuickItem whose curve,
 // gesture, sampling, collision, and wheel algorithms stay in C++ with exact
-// uint64_t tick precision; QML owns only the labels around the canvas. The
+// Tick tick precision; QML owns only the labels around the canvas. The
 // retained scene-graph layer is rebuilt on the GUI thread and synchronized on
 // the render thread through timeline_quick::syncLayerNode (see
 // pitchbendgraph_render.cpp). Not final: QML registration instantiates the
@@ -94,13 +94,13 @@ class PitchBendGraph : public QQuickItem
     struct Initialization {
         ::SongView *songView = nullptr;
         int engineTrack = -1;
-        uint64_t startTick = 0;
-        uint64_t endTick = 0;
+        Tick startTick = 0;
+        Tick endTick = 0;
         bool unterminated = false;
         Lane lane = Lane::PitchBend;
         PitchBendGeometry geometry;
         int bendRange = 2;
-        std::map<uint64_t, int> points;
+        std::map<Tick, int> points;
         int endValue = 0;
         Callbacks callbacks;
     };
@@ -113,13 +113,13 @@ class PitchBendGraph : public QQuickItem
     void setMetrics(const PitchBendGeometry &geometry);
 
     void setBendRange(int range);
-    void setCurve(const std::map<uint64_t, int> &points, int endValue);
+    void setCurve(const std::map<Tick, int> &points, int endValue);
     void resetCurve();
-    std::optional<uint64_t> selectedTick() const;
-    void setSelectedTick(std::optional<uint64_t> tick);
-    std::optional<std::pair<uint64_t, int>> hitTest(const QPointF &position) const;
+    std::optional<Tick> selectedTick() const;
+    void setSelectedTick(std::optional<Tick> tick);
+    std::optional<std::pair<Tick, int>> hitTest(const QPointF &position) const;
     bool removeSelectedVertex();
-    QPoint vertexPosition(uint64_t tick, int value) const;
+    QPoint vertexPosition(Tick tick, int value) const;
     void setKeyboardFraction(double fraction);
     void cancelGesture();
     bool handleKeyPress(QKeyEvent *event);
@@ -159,16 +159,16 @@ class PitchBendGraph : public QQuickItem
 
     struct StrokeState {
         StrokeMode mode = StrokeMode::Freehand;
-        std::map<uint64_t, int> snapshot;
-        uint64_t anchorTick = 0;
+        std::map<Tick, int> snapshot;
+        Tick anchorTick = 0;
         int anchorValue = 0;
-        uint64_t previousTick = 0;
+        Tick previousTick = 0;
         int previousValue = 0;
     };
 
     struct VertexDragState {
-        std::map<uint64_t, int> snapshot;
-        uint64_t originalTick = 0;
+        std::map<Tick, int> snapshot;
+        Tick originalTick = 0;
     };
 
     // redraw() rebuilds the retained layer and schedules a scene-graph sync.
@@ -191,19 +191,19 @@ class PitchBendGraph : public QQuickItem
     void updateStroke(const QPointF &position);
     void updateVertexDrag(const QPointF &position, Qt::KeyboardModifiers modifiers = {});
     void finishGesture();
-    void replaceSegment(uint64_t tick0, int value0, uint64_t tick1, int value1, Sampling sampling);
+    void replaceSegment(Tick tick0, int value0, Tick tick1, int value1, Sampling sampling);
     bool isLineGesture() const;
     Sampling gestureSampling() const;
-    uint64_t normalCellTicksAt(uint64_t tick) const;
-    uint64_t samplingCellTicksAt(uint64_t tick, Sampling sampling) const;
-    uint64_t nextSampleTick(uint64_t tick, Sampling sampling) const;
-    uint64_t lastEditableTick(Sampling sampling) const;
-    uint64_t tickAtFraction(double fraction, Sampling sampling) const;
-    uint64_t tickAtX(qreal x, Sampling sampling) const;
-    int xAtTick(uint64_t tick) const;
+    uint32_t normalCellTicksAt(Tick tick) const;
+    uint32_t samplingCellTicksAt(Tick tick, Sampling sampling) const;
+    Tick nextSampleTick(Tick tick, Sampling sampling) const;
+    Tick lastEditableTick(Sampling sampling) const;
+    Tick tickAtFraction(double fraction, Sampling sampling) const;
+    Tick tickAtX(qreal x, Sampling sampling) const;
+    int xAtTick(Tick tick) const;
     int valueAtY(qreal y) const;
     int yAtValue(int value) const;
-    int valueAtTick(uint64_t tick) const;
+    int valueAtTick(Tick tick) const;
     int minimumValue() const;
     int maximumValue() const;
     int defaultValue() const;
@@ -216,19 +216,19 @@ class PitchBendGraph : public QQuickItem
     ::SongView *m_songView = nullptr;
     const songview::Grid *m_grid = nullptr;
     int m_engineTrack = -1;
-    uint64_t m_startTick = 0;
-    uint64_t m_endTick = 0;
+    Tick m_startTick = 0;
+    Tick m_endTick = 0;
     bool m_unterminated = false;
     int m_bendRange = 2;
     int m_endValue = 0;
     Lane m_lane = Lane::PitchBend;
-    std::map<uint64_t, int> m_points;
-    uint64_t m_keyboardTick = 0;
+    std::map<Tick, int> m_points;
+    Tick m_keyboardTick = 0;
     int m_liveValue = 0;
     double m_rangeWheelRemainder = 0.0;
     std::optional<StrokeState> m_strokeState;
     std::optional<VertexDragState> m_vertexDragState;
-    std::optional<uint64_t> m_selectedTick;
+    std::optional<Tick> m_selectedTick;
     Callbacks m_callbacks;
     PitchBendGeometry m_geometry;
     TimelineQuickLayerData m_layer;

@@ -186,7 +186,7 @@ void EditCheckTest::timeRangeDuplicateClippingAndOrder()
     QVERIFY(fixture);
     SongDocument &document = fixture->document;
     const SongDocument::TimeScope scope = trackZero();
-    constexpr uint64_t start = 600;
+    constexpr Tick start = 600;
     document.addNote(0, start + 10, 64, 10, 90);
     document.addNote(0, start - 5, 65, 15, 80);
     document.addNote(0, start + 10, 66, 20, 70);
@@ -245,8 +245,8 @@ void EditCheckTest::timeRangeSignatureAndOrphans()
         songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-signature"));
     QVERIFY(fixture);
     SongDocument &document = fixture->document;
-    constexpr uint64_t seam = 960;
-    const uint64_t bar = 3 * uint64_t(document.smf().division);
+    constexpr Tick seam = 960;
+    const Tick bar = 3 * Tick(document.smf().division);
     document.setTimeSig(0, 4, 2);
     document.setTimeSig(seam, 3, 2);
     SongDocument::TimeScope whole;
@@ -325,7 +325,7 @@ void EditCheckTest::timeRangeAutomationSeamsAndDefaults()
         songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-automation"));
     QVERIFY(fixture);
     SongDocument &document = fixture->document;
-    constexpr uint64_t seam = 1000;
+    constexpr Tick seam = 1000;
     SongDocument::TimeScope laneScope;
     laneScope.lanes = {{0, 7}};
     document.addLanePoint(0, 7, seam - 20, 33);
@@ -365,7 +365,7 @@ void EditCheckTest::timeRangeAutomationSeamsAndDefaults()
                                                      {DOC_CC_BEND, 500, 0}};
     for (size_t remaining = defaults.size(); remaining > 0; --remaining) {
         const size_t index = remaining - 1;
-        const uint64_t start = 1100 + index * 40;
+        const Tick start = 1100 + index * 40U;
         defaultsDocument.addLanePoint(0, defaults[index].cc, start + 10, defaults[index].source);
         const QByteArray before = defaultsDocument.smf().write();
         const int undoCount = defaultsDocument.undoStack()->count();
@@ -446,7 +446,7 @@ void EditCheckTest::timeRangeWholeSong()
         songdocument_test::makeDocument(timeRangeFile(), QStringLiteral("time-whole-song"));
     QVERIFY(fixture);
     SongDocument &document = fixture->document;
-    constexpr uint64_t start = 1800;
+    constexpr Tick start = 1800;
     document.addNote(0, 1900, 70, 5, 50);
     document.setTimeSig(start + 10, 3, 2);
     document.applyTempoEdit({{}, {songdocument_test::tempo(start + 10, 180)}});
@@ -477,4 +477,27 @@ void EditCheckTest::timeRangeWholeSong()
     QCOMPARE(document.smf().write(), before);
     document.undoStack()->redo();
     QCOMPARE(document.smf().write(), after);
+}
+
+void EditCheckTest::timeRangeInsertBlankOverflow()
+{
+    SmfFile smf;
+    smf.format = 1;
+    smf.division = 24;
+    smf.tracks.push_back(SmfTrack{{}, 48});
+    smf.tracks.push_back(SmfTrack{{songdocument_test::channel(0xC0, 0, 1, 0)}, 48});
+    auto fixture =
+        songdocument_test::makeDocument(std::move(smf), QStringLiteral("time-blank-overflow"));
+    QVERIFY(fixture);
+    SongDocument &document = fixture->document;
+    const int smfTrack = document.smfTrackFor(0);
+    QVERIFY(smfTrack >= 0);
+    // SMF VLQ is 28-bit, so kMaxTick cannot round-trip as EOT through makeDocument.
+    document.insertRawEvent(smfTrack,
+                            songdocument_test::channel(0xB0, CoreTimeDefaults::kMaxTick, 7, 0));
+    const QByteArray bytes = document.smf().write();
+    const int undoCount = document.undoStack()->count();
+    QVERIFY(!document.insertBlankTime({0, 1}, trackZero()));
+    QCOMPARE(document.smf().write(), bytes);
+    QCOMPARE(document.undoStack()->count(), undoCount);
 }

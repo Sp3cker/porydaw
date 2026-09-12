@@ -64,7 +64,7 @@ class AutomationPresentationTest final : public QObject
     AutomationPage *page() const;
     songview::TimelineQuickScene *quickScene() const;
     LaneHandle findRow(EditorAutomationRowId id) const;
-    QPointF lanePoint(LaneHandle handle, uint64_t tick, int value) const;
+    QPointF lanePoint(LaneHandle handle, Tick tick, int value) const;
     QPoint windowPoint(const songview::TimelineInputItem &input, QPointF contentPoint) const;
     void refreshDocumentPresentation();
     void mouseMove(songview::TimelineInputItem &input, QPointF contentPoint);

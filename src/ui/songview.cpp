@@ -893,7 +893,7 @@ void SongView::applyViewState(const ViewState &state)
     setHScroll(state.scrollPx); // setHScroll clamps to the camera's range
     setVScroll(state.scrollY);
     setEventListVisible(state.eventList);
-    m_editCursorTick = std::min<uint64_t>(state.editCursorTick, m_timeline->lengthTicks);
+    m_editCursorTick = std::min<Tick>(state.editCursorTick, m_timeline->lengthTicks);
     // Whole view-state applied: every roll domain may differ.
     refreshTimelineViews(PianoRollQuickDirty::All);
 }
@@ -1084,7 +1084,7 @@ void SongView::syncTimelineQuickAppearance()
     m_events->syncAppearance();
 }
 
-void SongView::publishTimelineQuickHover(songview::TimelineQuickHoverOwner owner, uint64_t tick)
+void SongView::publishTimelineQuickHover(songview::TimelineQuickHoverOwner owner, Tick tick)
 {
     if (m_quickView && m_timeline)
         m_quickView->publishHover(owner, tick, timelineSplitX() + m_camera.contentX(tick));
@@ -1111,7 +1111,7 @@ void SongView::syncTimelineIndicators()
     }
 }
 
-void SongView::setEditCursorTick(uint64_t tick)
+void SongView::setEditCursorTick(Tick tick)
 {
     if (m_editCursorTick == tick)
         return;
@@ -1121,7 +1121,7 @@ void SongView::setEditCursorTick(uint64_t tick)
     refreshDrawerPages();
 }
 
-void SongView::commitEditCursor(uint64_t tick)
+void SongView::commitEditCursor(Tick tick)
 {
     setEditCursorTick(tick);
     emit editCursorMoved(tick);

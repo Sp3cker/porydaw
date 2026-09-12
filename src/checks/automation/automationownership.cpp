@@ -28,26 +28,26 @@ namespace {
 // The pilot lane nodes the armed drag targets: the grabbed node at
 // kPilotNodeTick moves value-only, and its independent sibling must never
 // move with it.
-constexpr uint64_t kPilotNodeTick = 48;
+constexpr Tick kPilotNodeTick = 48;
 constexpr int kPilotNodeValue = 40;
 constexpr int kPilotCommittedValue = 84;
-constexpr uint64_t kPilotSiblingTick = 96;
+constexpr Tick kPilotSiblingTick = 96;
 constexpr int kPilotSiblingValue = 100;
 
 constexpr uint8_t kPanController = 10;
 
-bool heldValueAt(const std::vector<DocLanePoint> &points, uint64_t tick, int *value)
+bool heldValueAt(const std::vector<DocLanePoint> &points, Tick tick, int *value)
 {
     const auto firstAfterTick = std::upper_bound(
         points.cbegin(), points.cend(), tick,
-        [](uint64_t needle, const DocLanePoint &point) { return needle < point.tick; });
+        [](Tick needle, const DocLanePoint &point) { return needle < point.tick; });
     if (firstAfterTick == points.cbegin())
         return false;
     *value = std::prev(firstAfterTick)->value;
     return true;
 }
 
-std::optional<DocLanePoint> pointAt(const SongDocument &document, uint64_t tick)
+std::optional<DocLanePoint> pointAt(const SongDocument &document, Tick tick)
 {
     DocLanePoint point;
     if (!document.findLanePoint(0, kPanController, tick, &point))
@@ -62,7 +62,7 @@ void AutomationEditingTest::tracksSelectionRings()
     const EditorAutomationRowId panRow{EditorAutomationRowKind::ControlChange, 0, kPanController};
     const LaneHandle pan = findRow(panRow);
     QVERIFY(pan.valid());
-    tab().document().writeLanePoints(0, kPanController, 0, std::numeric_limits<uint64_t>::max(),
+    tab().document().writeLanePoints(0, kPanController, 0, CoreTimeDefaults::kNoTick,
                                      {{48, 32}, {96, 64}, {144, 96}, {192, 80}});
 
     songview::TimelineQuickScene *const scene = quickScene();
@@ -99,7 +99,7 @@ void AutomationEditingTest::tracksSelectionGroupDragUndo()
     const EditorAutomationRowId panRow{EditorAutomationRowKind::ControlChange, 0, kPanController};
     const LaneHandle pan = findRow(panRow);
     QVERIFY(pan.valid());
-    tab().document().writeLanePoints(0, kPanController, 0, std::numeric_limits<uint64_t>::max(),
+    tab().document().writeLanePoints(0, kPanController, 0, CoreTimeDefaults::kNoTick,
                                      {{48, 32}, {96, 64}, {144, 96}, {192, 80}});
     songview::EditorSelectionModel::TimeSelection selection;
     selection.startTick = 24;
@@ -209,8 +209,7 @@ void AutomationEditingTest::pencilModeChangeRetainsNodeGesture()
     const LaneHandle pan = findRow(panRow);
     QVERIFY(pan.valid());
     setPencilMode(false);
-    tab().document().writeLanePoints(0, kPanController, 0, std::numeric_limits<uint64_t>::max(),
-                                     {{72, 64}});
+    tab().document().writeLanePoints(0, kPanController, 0, CoreTimeDefaults::kNoTick, {{72, 64}});
     songview::EditorSelectionModel::TimeSelection selection;
     selection.startTick = 72;
     selection.endTick = 96;
@@ -294,7 +293,7 @@ void AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence()
     const AutomationGeometry geometry = AutomationGeometry::resolve();
     QVERIFY(geometry.pointDetailThreshold > 1);
     using DeliveredPoint = std::pair<QPoint, AutomationProjection::PointerMapping>;
-    const auto deliveredPoint = [this, pan](double tick, int value, uint64_t expectedTick) {
+    const auto deliveredPoint = [this, pan](double tick, int value, Tick expectedTick) {
         const QPoint seed = automation_test::windowFromContent(page(), automationInput(),
                                                                inputPoint(pan, tick, value));
         const auto mapWindow = [this, pan](const QPoint &window) {
@@ -323,8 +322,8 @@ void AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence()
     const DeliveredPoint hiddenSource = deliveredPoint(72.0, 40, hiddenSourceCell.tickBegin);
     QCOMPARE(hiddenSource.second.point.tick, uint64_t{72});
     tab().document().writeLanePoints(
-        0, kPanController, 0, std::numeric_limits<uint64_t>::max(),
-        {{hiddenSource.second.point.tick, hiddenSource.second.point.value}});
+        0, kPanController, 0, CoreTimeDefaults::kNoTick,
+        {{Tick(hiddenSource.second.point.tick), hiddenSource.second.point.value}});
     const AutomationGridCell hiddenEndCell = hiddenProjection.snapCellAt(192.0);
     const DeliveredPoint hiddenEnd = deliveredPoint(192.0, 96, hiddenEndCell.tickBegin);
     QCOMPARE(hiddenEnd.second.point.tick, hiddenEndCell.tickBegin);
@@ -353,8 +352,8 @@ void AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence()
     const DeliveredPoint visibleSource = deliveredPoint(72.0, 40, visibleSourceCell.tickBegin);
     QCOMPARE(visibleSource.second.point.tick, uint64_t{72});
     tab().document().writeLanePoints(
-        0, kPanController, 0, std::numeric_limits<uint64_t>::max(),
-        {{visibleSource.second.point.tick, visibleSource.second.point.value}});
+        0, kPanController, 0, CoreTimeDefaults::kNoTick,
+        {{Tick(visibleSource.second.point.tick), visibleSource.second.point.value}});
     const AutomationGridCell visibleTargetCell = visibleProjection.snapCellAt(168.0);
     const DeliveredPoint visibleTarget = deliveredPoint(168.0, 96, visibleTargetCell.tickBegin);
     QCOMPARE(visibleTarget.second.point.tick, visibleTargetCell.tickBegin);

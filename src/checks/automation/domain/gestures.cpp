@@ -22,7 +22,7 @@ NodeDrag laneNode(const DocLanePoint &point, NodePoint current)
     return {LaneHandle{0}, {point.tick, point.value}, current, 0, 127};
 }
 
-bool hasPoint(const NodePoint &point, uint64_t tick, int value)
+bool hasPoint(const NodePoint &point, Tick tick, int value)
 {
     return point.tick == tick && point.value == value;
 }
@@ -31,7 +31,7 @@ bool hasPoint(const NodePoint &point, uint64_t tick, int value)
 
 void AutomationDomainTest::sweepSteppingAndRampFinish()
 {
-    const auto nextGridTick = [](uint64_t tick, bool, uint64_t) { return tick + 1; };
+    const auto nextGridTick = [](Tick tick, bool, Tick) { return tick + 1; };
 
     SweepGesture sweep;
     sweep.lane = LaneHandle{0};

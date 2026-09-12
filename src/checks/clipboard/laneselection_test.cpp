@@ -37,7 +37,7 @@ EditorAutomationRowId invalidId()
     return ccId(0, 99);
 }
 
-EditorSelectionModel selectedModel(uint64_t startTick, uint64_t endTick,
+EditorSelectionModel selectedModel(Tick startTick, Tick endTick,
                                    EditorSelectionModel::TimeSelection::Scope scope,
                                    std::vector<std::pair<int, uint8_t>> lanes = {},
                                    bool tempo = false)

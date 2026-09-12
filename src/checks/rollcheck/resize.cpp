@@ -158,7 +158,7 @@ void PianoRollTest::resizeMinimum()
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
     const SnappedRows rows{view, roll};
-    const uint64_t snap = view.grid().snapTicksAt(d.tick);
+    const Tick snap = view.grid().snapTicksAt(d.tick);
     const qreal dpr = roll.devicePixelRatio();
     const QPointF edge(view.camera().displayX(double(d.tick + 2 * d.dur), 0.0, dpr),
                        rows.centerY(d.key));
@@ -224,7 +224,7 @@ void PianoRollTest::resizeAbutting()
     const int undo = doc.undoStack()->index();
     const SnappedRows rows{view, roll};
     const qreal dpr = roll.devicePixelRatio();
-    const uint64_t snap = view.grid().snapTicksAt(g.tick);
+    const Tick snap = view.grid().snapTicksAt(g.tick);
     const qreal boundary = view.camera().displayX(double(g.tick + g.dur), 0.0, dpr);
     const QPointF left(boundary - 2.8, rows.centerY(g.key));
     const QPointF right(boundary + 2.8, rows.centerY(g.key));

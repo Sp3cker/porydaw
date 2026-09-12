@@ -105,7 +105,7 @@ void AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStr
     const int originalHeight = view.drawerSectionHeight(EditorDrawerPage::Automations);
     const int splitBefore = view.timelineSplitX();
     const FrozenDocumentState frozen = frozenDocumentState();
-    const uint64_t cursorBefore = view.editCursorTick();
+    const Tick cursorBefore = view.editCursorTick();
     const int minimumHeight = drawer->minimumSectionHeight();
     QVERIFY(minimumHeight > 0);
     QVERIFY(drawer->maximumSectionHeight() > minimumHeight);
@@ -249,14 +249,14 @@ void AutomationEditingTest::emptyParameterSwitchPreservesGridResolution()
     const EditorAutomationRowId lfo{EditorAutomationRowKind::ControlChange, 0, kLfoController};
     QVERIFY(m_tab->document().lanePoints(0, kLfoController).empty());
     const FrozenDocumentState frozen = frozenDocumentState();
-    const uint64_t cursorBefore = view.editCursorTick();
+    const Tick cursorBefore = view.editCursorTick();
     const int splitBefore = view.timelineSplitX();
     const DrawerPageGridState grid = {
         view.grid().gridTicksAt(48),
         view.grid().snapTicksAt(48),
     };
-    const uint64_t snap = view.grid().snapTick(30.0, false);
-    const uint64_t spacing = view.grid().snapTicksAt(snap);
+    const Tick snap = view.grid().snapTick(30.0, false);
+    const Tick spacing = view.grid().snapTicksAt(snap);
 
     QVERIFY(activateParameter(lfo));
     const LaneHandle lane = findRow(lfo);
@@ -286,7 +286,7 @@ void AutomationEditingTest::viewStateSwitchPreservesAutomationState()
     pumpQuick();
     const EditorViewState beforeSwitch = view.editorViewState();
     const FrozenDocumentState frozen = frozenDocumentState();
-    const uint64_t cursorBefore = view.editCursorTick();
+    const Tick cursorBefore = view.editCursorTick();
     const int splitBefore = view.timelineSplitX();
     const int activeBefore = m_page->canvas()->activeParameter();
     const QSize viewportBefore = m_page->automationViewportSize();
@@ -326,7 +326,7 @@ void AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState()
     const EditorViewState beforeZoom = view.editorViewState();
     const FrozenDocumentState frozen = frozenDocumentState();
     const int splitBefore = view.timelineSplitX();
-    const uint64_t cursorBefore = view.editCursorTick();
+    const Tick cursorBefore = view.editCursorTick();
     wheel(*m_automationInput, anchor, QPoint(0, 120));
     pumpQuick();
     QVERIFY(view.camera().pxPerBeat() > zoomBefore);

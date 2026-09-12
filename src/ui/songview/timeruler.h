@@ -157,7 +157,7 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
 
     // One time-signature chip as laid out in the marker row.
     struct SigChip {
-        uint64_t tick;
+        Tick tick;
         int numerator;
         int denomPow2;
         bool implicit; // no 0x58 meta behind it (editing one creates the event)
@@ -174,11 +174,11 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
 
     // Chip hit-test in the ruler's top half, including the placeholder 4/4
     // at tick 0. Fills the chip's tick and values.
-    bool hitTimeSigChip(QPointF pos, uint64_t *tick, int *numerator, int *denomPow2,
+    bool hitTimeSigChip(QPointF pos, Tick *tick, int *numerator, int *denomPow2,
                         bool *implicit) const;
 
     // Values in effect at tick (4/4 before any 0x58 meta).
-    void sigAtTick(uint64_t tick, int *numerator, int *denomPow2) const;
+    void sigAtTick(Tick tick, int *numerator, int *denomPow2) const;
 
     // 0 = selection start edge, 1 = end edge, -1 = neither near pos.
     int hitSelEdge(QPointF pos) const;
@@ -186,12 +186,12 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
     // Loop/selection/signature context menu over the shared canvas popup
     // session. scenePos is a Quick-window scene position (the release
     // point); the acted tick is the snapped press tick.
-    void showRulerMenu(uint64_t clickTick, const QPointF &scenePos);
+    void showRulerMenu(Tick clickTick, const QPointF &scenePos);
 
     struct PendingTimeSigPrompt {
         QPointer<SongDocument> document;
         uint64_t documentRevision = 0;
-        uint64_t tick = 0;
+        Tick tick = 0;
         int initialNumerator = timeSigPromptMinimumNumerator();
         int initialDenominatorPow2 = timeSigPromptMinimumDenominatorPow2();
     };
@@ -202,8 +202,8 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
     struct PendingRulerMenu {
         QPointer<SongDocument> document;
         uint64_t documentRevision = 0;
-        uint64_t clickTick = 0;
-        uint64_t sigTick = 0;
+        Tick clickTick = 0;
+        Tick sigTick = 0;
         int sigNumerator = 0;
         int sigDenominatorPow2 = 0;
         EditorSelectionModel::TimeSelection selection;
@@ -219,7 +219,7 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
     // snapshot; selection-scoped loop-menu actions must not run.
     bool menuSelectionStale(const PendingRulerMenu &target) const;
 
-    void openTimeSigPrompt(uint64_t tick, int numerator, int denominatorPow2);
+    void openTimeSigPrompt(Tick tick, int numerator, int denominatorPow2);
     void clearTimeSigPrompt(bool restoreFocus);
     void restoreRulerFocus();
 
@@ -254,17 +254,17 @@ class TimeRuler final : public QObject, public TimelineBandInteraction
     QMetaObject::Connection m_timeSigPromptCancellation;
     int m_markerHeight = 0;
     int m_dragMarker = -1;
-    uint64_t m_dragTick = 0;
+    Tick m_dragTick = 0;
     bool m_dragTimeSig = false;     // chip drag is live; commits moveTimeSig
-    uint64_t m_dragTimeSigFrom = 0; // the dragged signature's original tick
+    Tick m_dragTimeSigFrom = 0;     // the dragged signature's original tick
     bool m_leftPress = false;       // plain click vs. time-selection sweep undecided
     bool m_rightPress = false;      // right click held until the ruler menu opens
     bool m_selSweep = false;        // left-drag time-selection sweep is live
     bool m_multiTrackSweep = false; // modifier intent captured when the sweep is armed
     QPointF m_leftPressPos;
     QPointF m_rightPressPos;
-    uint64_t m_selAnchor = 0; // snapped tick of the pending press
-    int m_dragSelEdge = -1;   // selection edge being left-dragged (0/1)
+    Tick m_selAnchor = 0;   // snapped tick of the pending press
+    int m_dragSelEdge = -1; // selection edge being left-dragged (0/1)
 };
 
 } // namespace songview

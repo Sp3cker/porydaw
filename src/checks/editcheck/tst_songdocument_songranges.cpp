@@ -23,8 +23,8 @@ void EditCheckTest::rangeEdit()
     const uint64_t base = songdocument_test::distantBase(document);
     const uint32_t step = document.ticksPerClock();
 
-    document.addNotes(track,
-                      {{base + step * 30, 60, step * 2, 90}, {base + step * 32, 62, step * 2, 90}});
+    document.addNotes(track, {{Tick(base + step * 30), 60, step * 2, 90},
+                              {Tick(base + step * 32), 62, step * 2, 90}});
     document.addLanePoint(track, 7, base + step * 30, 80);
     document.applyTempoEdit({{}, {songdocument_test::tempo(base + step * 31, 140)}});
     SongDocument::RangeEdit edit;
@@ -37,8 +37,8 @@ void EditCheckTest::rangeEdit()
             edit.removePoints.push_back(point);
     }
     edit.removeTempo.push_back(songdocument_test::tempo(base + step * 31, 140));
-    edit.addNotes.push_back({track, {{base + step * 40, 65, step * 2, 90}}});
-    edit.addPoints.push_back({track, 7, {{base + step * 40, 70}}});
+    edit.addNotes.push_back({track, {{Tick(base + step * 40), 65, step * 2, 90}}});
+    edit.addPoints.push_back({track, 7, {{Tick(base + step * 40), 70}}});
     edit.addTempo.push_back(songdocument_test::tempo(base + step * 41, 155));
     const int before = document.undoStack()->count();
     document.applyRangeEdit(QStringLiteral("range edit"), edit);
@@ -81,8 +81,8 @@ void EditCheckTest::rangeMove()
     const uint64_t base = songdocument_test::distantBase(document);
     const uint32_t step = document.ticksPerClock();
 
-    document.addNotes(track,
-                      {{base + step * 80, 60, step * 2, 90}, {base + step * 82, 64, step * 2, 90}});
+    document.addNotes(track, {{Tick(base + step * 80), 60, step * 2, 90},
+                              {Tick(base + step * 82), 64, step * 2, 90}});
     document.addLanePoint(track, 7, base + step * 80, 45);
     document.applyTempoEdit({{}, {songdocument_test::tempo(base + step * 81, 140)}});
     DocNote first;
@@ -139,8 +139,8 @@ void EditCheckTest::rangeLaneBulk()
     QVERIFY(document.findLanePoint(track, 7, base + step * 90, &first));
     QVERIFY(document.findLanePoint(track, 7, base + step * 91, &second));
     const int before = document.undoStack()->count();
-    document.moveLanePoints(
-        {{track, 7, first, base + step * 93, 25}, {track, 7, second, base + step * 94, 45}});
+    document.moveLanePoints({{track, 7, first, Tick(base + step * 93), 25},
+                             {track, 7, second, Tick(base + step * 94), 45}});
     DocLanePoint point;
     QVERIFY(document.findLanePoint(track, 7, base + step * 93, &point));
     QCOMPARE(point.value, 25);
@@ -185,8 +185,8 @@ void EditCheckTest::rangeLaneConverge()
     QVERIFY(document.findLanePoint(track, 7, base + step * 90, &first));
     QVERIFY(document.findLanePoint(track, 7, base + step * 91, &second));
     const int before = document.undoStack()->count();
-    document.moveLanePoints(
-        {{track, 7, first, base + step * 97, 70}, {track, 7, second, base + step * 97, 72}});
+    document.moveLanePoints({{track, 7, first, Tick(base + step * 97), 70},
+                             {track, 7, second, Tick(base + step * 97), 72}});
     const auto atDestination = document.lanePoints(track, 7);
     int destinationCount = 0;
     for (const DocLanePoint &point : atDestination) {

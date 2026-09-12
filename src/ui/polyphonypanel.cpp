@@ -57,7 +57,7 @@ QColor cellColor(int state)
 // way the ruler grid does: a signature change restarts the bar at its own
 // tick, and a partial bar before it still counts as a bar. 4/4 is assumed
 // before the first (or without any) signature.
-QString formatBarBeat(const MidiTimeline *tl, uint32_t tick)
+QString formatBarBeat(const MidiTimeline *tl, Tick tick)
 {
     if (!tl)
         return QString::number(tick);
@@ -470,7 +470,7 @@ void PolyphonyPanel::activateLogRow(int row)
         return;
     const QVariant tick = item->data(Qt::UserRole);
     if (tick.isValid())
-        emit jumpToEvent(tick.toULongLong(), item->data(Qt::UserRole + 1).toInt(),
+        emit jumpToEvent(Tick(tick.toULongLong()), item->data(Qt::UserRole + 1).toInt(),
                          item->data(Qt::UserRole + 2).toInt());
 }
 

@@ -233,37 +233,37 @@ void AutomationPage::documentChanged()
     rebuildModel();
 }
 
-uint64_t AutomationPage::snapTick(double tick, bool fineMode) const noexcept
+Tick AutomationPage::snapTick(double tick, bool fineMode) const noexcept
 {
     return m_grid.snapTick(tick, fineMode);
 }
-uint64_t AutomationPage::snapTickDown(double tick, bool fineMode) const noexcept
+Tick AutomationPage::snapTickDown(double tick, bool fineMode) const noexcept
 {
     tick = std::max(0.0, tick);
     if (!fineMode)
         return m_grid.snapTickDown(tick);
-    const uint64_t spacing = gridState(uint64_t(tick), true).snapTicks;
-    return uint64_t(tick / double(spacing)) * spacing;
+    const uint32_t spacing = gridState(Tick(tick), true).snapTicks;
+    return Tick(uint64_t(tick / double(spacing)) * spacing);
 }
 
-DrawerPageGridState AutomationPage::gridState(uint64_t tick, bool fineMode) const noexcept
+DrawerPageGridState AutomationPage::gridState(Tick tick, bool fineMode) const noexcept
 {
     return {m_grid.gridTicksAt(tick), fineMode ? m_grid.fineGridTicks() : m_grid.snapTicksAt(tick)};
 }
 
-uint64_t AutomationPage::nextGridTick(uint64_t tick, bool fineMode, uint64_t limit) const noexcept
+Tick AutomationPage::nextGridTick(Tick tick, bool fineMode, Tick limit) const noexcept
 {
     if (tick >= limit)
         return limit;
-    const uint64_t spacing = gridState(tick, fineMode).snapTicks;
-    const uint64_t candidate = spacing >= limit - tick ? limit : tick + spacing;
+    const uint32_t spacing = gridState(tick, fineMode).snapTicks;
+    const Tick candidate = spacing >= limit - tick ? limit : tick + spacing;
     if (gridState(candidate, fineMode).snapTicks == spacing)
         return candidate;
-    uint64_t first = tick + 1;
-    uint64_t last = candidate;
+    Tick first = tick + 1;
+    Tick last = candidate;
     while (first < last) {
-        const uint64_t probe = first + (last - first) / 2;
-        const uint64_t probeSpacing = gridState(probe, fineMode).snapTicks;
+        const Tick probe = first + (last - first) / 2;
+        const uint32_t probeSpacing = gridState(probe, fineMode).snapTicks;
         if (probeSpacing == spacing)
             first = probe + 1;
         else
@@ -334,7 +334,7 @@ void AutomationPage::setLaneRange(const EditorAutomationRowId &row, uint8_t rang
     m_canvas->requestFullQuickUpdate();
 }
 
-void AutomationPage::publishTimeSelection(uint64_t startTick, uint64_t endTick,
+void AutomationPage::publishTimeSelection(Tick startTick, Tick endTick,
                                           const std::vector<std::pair<int, uint8_t>> &lanes,
                                           bool tempo) const
 {
@@ -347,7 +347,7 @@ void AutomationPage::publishTimeSelection(uint64_t startTick, uint64_t endTick,
     m_owner.selectionModel().setTimeSelection(selection);
 }
 
-DrawerPageVoiceContext AutomationPage::voiceContext(uint64_t tick) const
+DrawerPageVoiceContext AutomationPage::voiceContext(Tick tick) const
 {
     return m_owner.voiceContext(tick);
 }
@@ -366,7 +366,7 @@ void AutomationPage::requestQuickUpdate(songview::AutomationRefreshSet dirty) co
     m_owner.requestAutomationQuickUpdate(dirty);
 }
 
-void AutomationPage::commitEditCursor(uint64_t tick) const
+void AutomationPage::commitEditCursor(Tick tick) const
 {
     m_owner.commitEditCursor(tick);
 }

@@ -54,7 +54,7 @@ std::optional<PointReplacement> pointReplacement(const NodeLaneQuickPaint::Conte
     return std::nullopt;
 }
 
-bool pointSelected(const NodeLaneQuickPaint::Context &context, uint64_t tick)
+bool pointSelected(const NodeLaneQuickPaint::Context &context, Tick tick)
 {
     if (context.selectedNodesLane && context.selectedTickRange) {
         const auto [firstTick, lastTick] = *context.selectedTickRange;
@@ -95,7 +95,7 @@ qreal nodeY(const NodeLaneQuickPaint::Context &context, int value)
     return nodelane::valueY(context.lane, context.body, context.geometry, value);
 }
 
-qreal tickX(const NodeLaneQuickPaint::Context &context, uint64_t tick)
+qreal tickX(const NodeLaneQuickPaint::Context &context, Tick tick)
 {
     return context.projection.displayX(tick, context.devicePixelRatio);
 }
@@ -173,7 +173,7 @@ void addPhantomCurvePreview(const NodeLaneQuickPaint::Context &context, Timeline
 {
     const auto next =
         std::upper_bound(points.begin(), points.end(), phantom.point.tick,
-                         [](uint64_t tick, const NodePoint &point) { return tick < point.tick; });
+                         [](Tick tick, const NodePoint &point) { return tick < point.tick; });
     const qreal y =
         AutomationProjection::valueY(context.body, context.geometry, phantom.minimumValue,
                                      phantom.maximumValue, phantom.point.value);
@@ -356,7 +356,7 @@ void addPencilPreview(const NodeLaneQuickPaint::Context &context,
     if (gesture.lane != context.handle)
         return;
     const NodeLaneEdit::Completion &preview = gesture.stroke.preview();
-    const auto addHeld = [&](uint64_t first, uint64_t last, int value, const QColor &color) {
+    const auto addHeld = [&](Tick first, Tick last, int value, const QColor &color) {
         if (first >= last)
             return;
         addLine(context.scene.layer(TimelineQuickLayer::AutomationTransient),
@@ -376,7 +376,7 @@ void addPencilPreview(const NodeLaneQuickPaint::Context &context,
     }
     for (std::size_t index = 0; index < context.points.size(); ++index) {
         const NodePoint &point = context.points[index];
-        const uint64_t nextTick =
+        const Tick nextTick =
             index + 1 < context.points.size() ? context.points[index + 1].tick : preview.tickBegin;
         if (point.tick < preview.tickBegin) {
             addHeld(point.tick, std::min(nextTick, preview.tickBegin), point.value, context.color);
@@ -389,7 +389,7 @@ void addPencilPreview(const NodeLaneQuickPaint::Context &context,
             }
         } else if (point.tick > preview.tickEnd) {
             if (index + 1 < context.points.size()) {
-                const uint64_t last = context.points[index + 1].tick;
+                const Tick last = context.points[index + 1].tick;
                 addHeld(point.tick, last, point.value, context.color);
                 addLine(
                     context.scene.layer(TimelineQuickLayer::AutomationTransient),
@@ -406,7 +406,7 @@ void addPencilPreview(const NodeLaneQuickPaint::Context &context,
     }
     const QColor previewColor = themes::color(themes::Role::song_view_edit_preview_outline);
     std::optional<int> previewValue = heldBefore;
-    uint64_t cursor = preview.tickBegin;
+    Tick cursor = preview.tickBegin;
     for (const NodePoint &point : preview.points) {
         if (point.tick < preview.tickBegin || point.tick > preview.tickEnd)
             continue;
@@ -561,8 +561,8 @@ void NodeLaneQuickPaint::composeHover(const Context &context, bool hover, const 
         return;
     const NodeLaneHoverState::HoverState &hoverState = context.hoverState.hover;
     const qreal x =
-        tickX(context, uint64_t(std::max(0.0, context.hoverState.insertionTick(
-                                                  context.projection, context.pencilMode))));
+        tickX(context, Tick(std::max(0.0, context.hoverState.insertionTick(context.projection,
+                                                                           context.pencilMode))));
     const QString &text = context.hoverState.hoverTextCache.text;
     const auto &label = context.hoverState.hoverValueLabel;
     if (hoverState.hasPoint) {

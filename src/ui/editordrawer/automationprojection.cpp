@@ -46,7 +46,7 @@ const MidiTimeline *AutomationProjection::timeline() const
     return m_songView ? m_songView->timeline() : nullptr;
 }
 
-uint64_t AutomationProjection::gridSnapTicks(uint64_t tick, bool fine) const
+uint32_t AutomationProjection::gridSnapTicks(Tick tick, bool fine) const
 {
     if (m_page)
         return m_page->gridState(tick, fine).snapTicks;
@@ -55,7 +55,7 @@ uint64_t AutomationProjection::gridSnapTicks(uint64_t tick, bool fine) const
     return 1;
 }
 
-uint64_t AutomationProjection::snapTickDown(double tick, bool fine) const
+Tick AutomationProjection::snapTickDown(double tick, bool fine) const
 {
     tick = std::max(0.0, tick);
     if (!fine) {
@@ -63,22 +63,22 @@ uint64_t AutomationProjection::snapTickDown(double tick, bool fine) const
             return m_page->snapTickDown(tick, false);
         return m_grid ? m_grid->snapTickDown(tick) : 0;
     }
-    const uint64_t spacing = gridSnapTicks(uint64_t(tick), true);
-    return uint64_t(tick / double(spacing)) * spacing;
+    const uint32_t spacing = gridSnapTicks(Tick(tick), true);
+    return Tick(uint64_t(tick / double(spacing)) * spacing);
 }
 
-uint64_t AutomationProjection::nextGridTick(uint64_t tick, bool fine, uint64_t limit) const
+Tick AutomationProjection::nextGridTick(Tick tick, bool fine, Tick limit) const
 {
     if (tick >= limit)
         return limit;
-    const uint64_t spacing = gridSnapTicks(tick, fine);
-    const uint64_t candidate = spacing >= limit - tick ? limit : tick + spacing;
+    const uint32_t spacing = gridSnapTicks(tick, fine);
+    const Tick candidate = spacing >= limit - tick ? limit : tick + spacing;
     if (gridSnapTicks(candidate, fine) == spacing)
         return candidate;
-    uint64_t first = tick + 1;
-    uint64_t last = candidate;
+    Tick first = tick + 1;
+    Tick last = candidate;
     while (first < last) {
-        const uint64_t probe = first + (last - first) / 2;
+        const Tick probe = first + (last - first) / 2;
         if (gridSnapTicks(probe, fine) == spacing)
             first = probe + 1;
         else
@@ -95,7 +95,7 @@ AutomationProjection::PointerMapping AutomationProjection::pointerMapping(const 
     const MidiTimeline *songTimeline = timeline();
     if (!songTimeline)
         return mapped;
-    const uint64_t length = songTimeline->lengthTicks;
+    const Tick length = songTimeline->lengthTicks;
     mapped.rawTick = std::clamp(rawTickAt(x), 0.0, double(length));
     mapped.point.value =
         std::clamp(qRound(valueAtY(body, m_geometry, lane.minimumValue(), lane.maximumValue(), y)),
@@ -113,14 +113,14 @@ double AutomationProjection::rawTickAt(qreal x) const
     return m_camera ? std::max(0.0, m_camera->tickAtContentX(contentX)) : 0.0;
 }
 
-qreal AutomationProjection::displayX(uint64_t tick, qreal devicePixelRatio) const
+qreal AutomationProjection::displayX(Tick tick, qreal devicePixelRatio) const
 {
     if (m_page)
         return m_page->displayX(tick, 0.0, devicePixelRatio);
     return m_camera ? m_camera->displayX(tick, 0.0, devicePixelRatio) : 0.0;
 }
 
-uint64_t AutomationProjection::snapTickAt(qreal x, bool fine) const
+Tick AutomationProjection::snapTickAt(qreal x, bool fine) const
 {
     const double tick = rawTickAt(x);
     if (m_page)
@@ -148,7 +148,7 @@ double AutomationProjection::valueAtY(const QRect &bounds, const AutomationGeome
            double(bottom - clamped) * (maximum - minimum) / std::max<qreal>(1.0, bottom - top);
 }
 
-uint64_t AutomationProjection::fineSnapTick(double rawTick) const
+Tick AutomationProjection::fineSnapTick(double rawTick) const
 {
     if (m_page)
         return m_page->snapTick(rawTick, true);
@@ -167,10 +167,10 @@ AutomationGridCell AutomationProjection::snapCellAt(double rawTick) const
     const MidiTimeline *songTimeline = timeline();
     if (!songTimeline || songTimeline->lengthTicks == 0)
         return {};
-    const uint64_t length = songTimeline->lengthTicks;
+    const Tick length = songTimeline->lengthTicks;
     const double clamped = std::clamp(rawTick, 0.0, double(length));
-    const uint64_t tick = clamped >= double(length) ? length - 1 : uint64_t(std::floor(clamped));
-    const uint64_t start = snapTickDown(double(tick), false);
+    const Tick tick = clamped >= double(length) ? length - 1 : Tick(std::floor(clamped));
+    const Tick start = snapTickDown(double(tick), false);
     return {start, nextGridTick(start, false, length)};
 }
 
@@ -182,7 +182,7 @@ AutomationProjection::snapCellsCrossed(std::vector<AutomationGridCell> &cells,
     const MidiTimeline *songTimeline = timeline();
     if (!songTimeline || songTimeline->lengthTicks == 0)
         return cells;
-    const uint64_t length = songTimeline->lengthTicks;
+    const Tick length = songTimeline->lengthTicks;
     const bool forward = currentRawTick >= previousRawTick;
     const auto target = snapCellAt(currentRawTick);
     auto cell = snapCellAt(previousRawTick);
@@ -191,7 +191,7 @@ AutomationProjection::snapCellsCrossed(std::vector<AutomationGridCell> &cells,
         if (cell.tickBegin == target.tickBegin)
             return cells;
         if (forward) {
-            const uint64_t nextStart = nextGridTick(cell.tickBegin, false, length);
+            const Tick nextStart = nextGridTick(cell.tickBegin, false, length);
             if (nextStart >= length)
                 break;
             const auto next = snapCellAt(double(nextStart));

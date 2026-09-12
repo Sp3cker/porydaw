@@ -245,7 +245,7 @@ void TimelineQuickView::rebuildDrawPreviewFill()
     const int selectedTrack = roll.m_sv->selectionModel().primaryTrack();
     const qreal x0 = roll.m_camera.displayX(double(roll.m_drawTick), 0.0, dpr);
     const qreal x1 =
-        roll.m_camera.displayX(double(roll.m_drawTick + uint64_t(roll.m_drawDur)), 0.0, dpr);
+        roll.m_camera.displayX(double(roll.m_drawTick + Tick(roll.m_drawDur)), 0.0, dpr);
     const QRectF previewRect = roll.noteRect(x0, x1, roll.m_drawKey);
     const QRectF box = roll.noteBox(previewRect);
     const QColor fill = roll.m_sv->noteFillColor(selectedTrack, roll.m_lastVelocity);
@@ -266,7 +266,8 @@ void TimelineQuickView::rebuildNoteBordersAndSelection()
     const auto &selection = roll.m_sv->selectionModel();
     const int selectedTrack = selection.primaryTrack();
     const auto &timeSelection = selection.timeSelection();
-    const SongDocument::TimeRange timeRange{timeSelection.startTick, timeSelection.endTick};
+    const SongDocument::TimeRange timeRange{Tick(timeSelection.startTick),
+                                            Tick(timeSelection.endTick)};
     const uint32_t usedTracks = usedTrackMask(roll.m_sv->timeline());
     const uint32_t timeSelectedTracks =
         timeSelection.active() && timeSelection.scope == EditorSelectionModel::TimeSelection::Tracks
@@ -341,7 +342,7 @@ void TimelineQuickView::rebuildOverlay()
     if (roll.m_leftDrag == PianoRoll::LeftDrag::Draw) {
         const qreal x0 = roll.m_camera.displayX(double(roll.m_drawTick), 0.0, dpr);
         const qreal x1 =
-            roll.m_camera.displayX(double(roll.m_drawTick + uint64_t(roll.m_drawDur)), 0.0, dpr);
+            roll.m_camera.displayX(double(roll.m_drawTick + Tick(roll.m_drawDur)), 0.0, dpr);
         const QRectF previewRect = roll.noteRect(x0, x1, roll.m_drawKey);
         const QRectF box = roll.noteBox(previewRect);
         addNoteBorder(scene, TimelineQuickLayer::PianoOverlay, box, 0, dpr, plot);
@@ -376,9 +377,10 @@ void TimelineQuickView::rebuildOverlay()
     }
 
     const MidiTimeline *timeline = roll.m_sv->timeline();
-    if (timeline->loopStartTick != UINT64_MAX || timeline->loopEndTick != UINT64_MAX) {
-        const bool hasStart = timeline->loopStartTick != UINT64_MAX;
-        const bool hasEnd = timeline->loopEndTick != UINT64_MAX;
+    if (timeline->loopStartTick != CoreTimeDefaults::kNoTick ||
+        timeline->loopEndTick != CoreTimeDefaults::kNoTick) {
+        const bool hasStart = timeline->loopStartTick != CoreTimeDefaults::kNoTick;
+        const bool hasEnd = timeline->loopEndTick != CoreTimeDefaults::kNoTick;
         const qreal x0 = hasStart
                              ? roll.m_camera.displayX(double(timeline->loopStartTick), 0.0, dpr)
                              : plot.left();
@@ -537,7 +539,7 @@ void TimelineQuickView::synchronizeNoteText()
         roll.m_velocityLabelFont) {
         const qreal x0 = roll.m_camera.displayX(double(roll.m_drawTick), 0.0, dpr);
         const qreal x1 =
-            roll.m_camera.displayX(double(roll.m_drawTick + uint64_t(roll.m_drawDur)), 0.0, dpr);
+            roll.m_camera.displayX(double(roll.m_drawTick + Tick(roll.m_drawDur)), 0.0, dpr);
         const QRectF previewRect = roll.noteRect(x0, x1, roll.m_drawKey);
         const QRectF box = roll.noteBox(previewRect);
         const QString text = QString::number(roll.m_lastVelocity);

@@ -19,7 +19,7 @@ using checks::eventviews::FixtureShape;
 
 namespace {
 
-SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data1)
+SmfEvent channelEvent(Tick tick, uint8_t status, uint8_t data0, uint8_t data1)
 {
     SmfEvent event;
     event.tick = tick;
@@ -149,21 +149,21 @@ void ViewBucketsGridTest::snapLadder_data()
     QTest::addColumn<double>("pixelsPerBeat");
     QTest::addColumn<int>("minimumDenom");
     QTest::addColumn<int>("feel");
-    QTest::addColumn<uint64_t>("grid");
-    QTest::addColumn<uint64_t>("snap");
+    QTest::addColumn<Tick>("grid");
+    QTest::addColumn<Tick>("snap");
     const double cell = layout::fontPx(4.0 / 3.0);
-    QTest::newRow("straight below") << 4.0 * cell - 1.0 << 0 << int(songview::GridFeel::Straight)
-                                    << uint64_t{12} << uint64_t{6};
+    QTest::newRow("straight below")
+        << 4.0 * cell - 1.0 << 0 << int(songview::GridFeel::Straight) << Tick{12} << Tick{6};
     QTest::newRow("straight threshold")
-        << 4.0 * cell << 0 << int(songview::GridFeel::Straight) << uint64_t{6} << uint64_t{3};
-    QTest::newRow("triplet") << 6.0 * cell << 0 << int(songview::GridFeel::Triplet) << uint64_t{4}
-                             << uint64_t{2};
+        << 4.0 * cell << 0 << int(songview::GridFeel::Straight) << Tick{6} << Tick{3};
+    QTest::newRow("triplet") << 6.0 * cell << 0 << int(songview::GridFeel::Triplet) << Tick{4}
+                             << Tick{2};
     QTest::newRow("triplet eighth floor")
-        << 6.0 * cell << 8 << int(songview::GridFeel::Triplet) << uint64_t{8} << uint64_t{4};
+        << 6.0 * cell << 8 << int(songview::GridFeel::Triplet) << Tick{8} << Tick{4};
     QTest::newRow("straight sixteenth floor")
-        << 4.0 * cell << 16 << int(songview::GridFeel::Straight) << uint64_t{6} << uint64_t{3};
+        << 4.0 * cell << 16 << int(songview::GridFeel::Straight) << Tick{6} << Tick{3};
     QTest::newRow("straight quarter floor")
-        << 4.0 * cell << 4 << int(songview::GridFeel::Straight) << uint64_t{24} << uint64_t{12};
+        << 4.0 * cell << 4 << int(songview::GridFeel::Straight) << Tick{24} << Tick{12};
 }
 
 void ViewBucketsGridTest::snapLadder()
@@ -171,8 +171,8 @@ void ViewBucketsGridTest::snapLadder()
     QFETCH(double, pixelsPerBeat);
     QFETCH(int, minimumDenom);
     QFETCH(int, feel);
-    QFETCH(uint64_t, grid);
-    QFETCH(uint64_t, snap);
+    QFETCH(Tick, grid);
+    QFETCH(Tick, snap);
     const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
     QVERIFY2(opened, qPrintable(opened.error));
     SongView::ViewState state = opened.fixture->view().viewState();
@@ -204,9 +204,9 @@ void ViewBucketsGridTest::gridLinesSnappable()
     const MidiTimeline *timeline = opened.fixture->view().timeline();
     QVERIFY(timeline);
     int lines = 0;
-    std::vector<uint64_t> unsnappable;
+    std::vector<Tick> unsnappable;
     opened.fixture->view().forEachGridLine(
-        0, timeline->lengthTicks, [&](uint64_t tick, bool, int, int) {
+        0, timeline->lengthTicks, [&](Tick tick, bool, int, int) {
             ++lines;
             if (opened.fixture->view().grid().snapTick(double(tick)) != tick)
                 unsnappable.push_back(tick);

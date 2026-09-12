@@ -103,7 +103,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
 
     bool openValuePromptForNode(LaneHandle handle, const NodePoint &point);
     // displayedValue is prompt-domain; tick and storedValue are lane-domain.
-    bool openValuePromptForInsertion(LaneHandle handle, uint64_t tick, int storedValue);
+    bool openValuePromptForInsertion(LaneHandle handle, Tick tick, int storedValue);
     void acceptNodeValuePrompt(int displayedValue);
     void cancelNodeValuePrompt();
     bool valuePromptVisible() const noexcept { return m_pendingValuePrompt.has_value(); }
@@ -206,8 +206,8 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void requestGestureBeginQuickUpdate(bool band) const;
     void requestGestureMoveQuickUpdate() const;
     void invalidateSelectedNodeMultiplicity() const noexcept;
-    bool hasMultipleSelectedNodes(
-        const std::optional<std::pair<uint64_t, uint64_t>> &selectedTickRange) const;
+    bool
+    hasMultipleSelectedNodes(const std::optional<std::pair<Tick, Tick>> &selectedTickRange) const;
     struct NodeLaneSlot {
         EditorAutomationRowId id;
         NodeLane *lane = nullptr;
@@ -229,7 +229,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     struct NodeLaneChange {
         const NodeLaneSlot *slot = nullptr;
         std::vector<NodePointMove> moves;
-        std::vector<uint64_t> deleteTicks;
+        std::vector<Tick> deleteTicks;
     };
     // The guarded open-time target for one automation canvas menu. Document
     // identity plus revision reject any document change since the open; the
@@ -360,8 +360,7 @@ class AutomationCanvas final : public QObject, public songview::TimelineBandInte
     void syncHoverValueLabel();
     void syncPreviewValueLabel();
     void highlightHoveredPoint(LaneHandle handle, const QPointF &position, const NodePoint &point);
-    void publishBandSelection(uint64_t first, uint64_t last, LaneHandle start,
-                              LaneHandle end) const;
+    void publishBandSelection(Tick first, Tick last, LaneHandle start, LaneHandle end) const;
     void setGestureActive(bool active);
 
     AutomationGeometry m_geometry;

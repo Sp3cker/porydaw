@@ -267,7 +267,7 @@ QVariantMap TimeRuler::timeSigPromptAppearance() const
     return promptDialogAppearance(m_inputHost ? m_inputHost->font() : QGuiApplication::font());
 }
 
-void TimeRuler::openTimeSigPrompt(uint64_t tick, int numerator, int denominatorPow2)
+void TimeRuler::openTimeSigPrompt(Tick tick, int numerator, int denominatorPow2)
 {
     SongDocument *const document = m_owner.document();
     TimelineQuickView *const quick = m_owner.quickView();
@@ -494,11 +494,11 @@ int TimeRuler::hitMarker(QPointF pos) const
         return -1;
     const auto markerHitHalfWidth = lyt::space(Space::Two);
     const qreal dpr = m_inputHost->devicePixelRatio();
-    if (tl->loopStartTick != UINT64_MAX &&
+    if (tl->loopStartTick != CoreTimeDefaults::kNoTick &&
         std::abs(m_camera.displayX(double(tl->loopStartTick), 0.0, dpr) - pos.x()) <=
             markerHitHalfWidth)
         return 0;
-    if (tl->loopEndTick != UINT64_MAX &&
+    if (tl->loopEndTick != CoreTimeDefaults::kNoTick &&
         std::abs(m_camera.displayX(double(tl->loopEndTick), 0.0, dpr) - pos.x()) <=
             markerHitHalfWidth)
         return 1;
@@ -531,11 +531,11 @@ std::vector<TimeRuler::SigChip> TimeRuler::sigChips() const
             continue; // shadowed duplicate: the last at a tick wins
         add(axis.signatureAt(sigs[i].tick));
     }
-    const uint64_t loops[2] = {axis.loopStartTick(), axis.loopEndTick()};
+    const Tick loops[2] = {axis.loopStartTick(), axis.loopEndTick()};
     const qreal bracketWidth = fm.horizontalAdvance(QStringLiteral("["));
     for (SigChip &chip : chips) {
-        for (uint64_t loopTick : loops) {
-            if (loopTick == UINT64_MAX)
+        for (Tick loopTick : loops) {
+            if (loopTick == CoreTimeDefaults::kNoTick)
                 continue;
             const qreal bracketStart = m_camera.displayX(double(loopTick), 0.0, dpr) + labelInset;
             const qreal bracketRight = bracketStart + bracketWidth;
@@ -552,7 +552,7 @@ std::vector<TimeRuler::SigChip> TimeRuler::sigChips() const
 
 // Chip hit-test in the ruler's top half, including the placeholder 4/4
 // at tick 0. Fills the chip's tick and values.
-bool TimeRuler::hitTimeSigChip(QPointF pos, uint64_t *tick, int *numerator, int *denomPow2,
+bool TimeRuler::hitTimeSigChip(QPointF pos, Tick *tick, int *numerator, int *denomPow2,
                                bool *implicit) const
 {
     if (!QRectF(markerRow()).contains(pos))
@@ -577,7 +577,7 @@ bool TimeRuler::hitTimeSigChip(QPointF pos, uint64_t *tick, int *numerator, int 
 }
 
 // Values in effect at tick; the axis resolves the implicit opening 4/4.
-void TimeRuler::sigAtTick(uint64_t tick, int *numerator, int *denomPow2) const
+void TimeRuler::sigAtTick(Tick tick, int *numerator, int *denomPow2) const
 {
     const TimeAxis::ResolvedTimeSignature sig = m_owner.timeAxis().signatureAt(tick);
     *numerator = sig.numerator;

@@ -25,7 +25,7 @@ using namespace checks::drawerpresentation;
 
 namespace {
 
-void doubleClick(VoiceTransactionFixture &fixture, uint64_t tick)
+void doubleClick(VoiceTransactionFixture &fixture, Tick tick)
 {
     const QPointF point(fixture.xForTick(double(tick)), fixture.bandRect().height() / 2.0);
     sendMouse(fixture.input(), QEvent::MouseButtonDblClick, point, Qt::LeftButton, Qt::LeftButton);

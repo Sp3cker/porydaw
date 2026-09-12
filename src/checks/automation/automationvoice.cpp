@@ -18,11 +18,11 @@
 
 namespace {
 
-constexpr uint64_t kSourceTick = 48;
+constexpr Tick kSourceTick = 48;
 constexpr uint8_t kPanController = 10;
-constexpr uint64_t kTargetTick = 192;
+constexpr Tick kTargetTick = 192;
 
-uint64_t snappedVoiceTick(const SongView &view, qreal x, bool fine)
+Tick snappedVoiceTick(const SongView &view, qreal x, bool fine)
 {
     const double rawTick = view.camera().tickAtContentX(std::max<qreal>(0.0, x));
     return view.grid().snapTick(std::max(0.0, rawTick), fine);
@@ -31,10 +31,10 @@ uint64_t snappedVoiceTick(const SongView &view, qreal x, bool fine)
 void writeVoicePoints(SongDocument &document,
                       const std::vector<SongDocument::LanePointValue> &points)
 {
-    document.writeLanePoints(0, DOC_CC_VOICE, 0, (std::numeric_limits<uint64_t>::max)(), points);
+    document.writeLanePoints(0, DOC_CC_VOICE, 0, CoreTimeDefaults::kNoTick, points);
 }
 
-bool hasVoicePoint(const SongDocument &document, uint64_t tick, int value)
+bool hasVoicePoint(const SongDocument &document, Tick tick, int value)
 {
     const std::vector<DocLanePoint> points = document.lanePoints(0, DOC_CC_VOICE);
     return std::any_of(points.cbegin(), points.cend(), [tick, value](const DocLanePoint &point) {
@@ -42,7 +42,7 @@ bool hasVoicePoint(const SongDocument &document, uint64_t tick, int value)
     });
 }
 
-int voicePointCount(const SongDocument &document, uint64_t tick, int value)
+int voicePointCount(const SongDocument &document, Tick tick, int value)
 {
     const std::vector<DocLanePoint> points = document.lanePoints(0, DOC_CC_VOICE);
     return int(
@@ -87,7 +87,7 @@ void AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes()
 
     const QPointF source = voicePoint(24);
     const QPointF target = voicePoint(72);
-    const uint64_t destination = snappedVoiceTick(tab().view(), target.x(), false);
+    const Tick destination = snappedVoiceTick(tab().view(), target.x(), false);
     QVERIFY(destination != 24);
     const auto markersBefore = scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers);
     QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
@@ -183,12 +183,12 @@ void AutomationEditingTest::voiceAltDragUsesFineSnap()
                  1);
     const QPointF source = voicePoint(kSourceTick);
     QPointF target;
-    uint64_t fineTick = 0;
-    uint64_t normalTick = 0;
+    Tick fineTick = 0;
+    Tick normalTick = 0;
     for (int x = int(std::ceil(voiceChangeInput().bounds().left()));
          x < int(std::floor(voiceChangeInput().bounds().right())); ++x) {
-        const uint64_t fine = snappedVoiceTick(tab().view(), x, true);
-        const uint64_t normal = snappedVoiceTick(tab().view(), x, false);
+        const Tick fine = snappedVoiceTick(tab().view(), x, true);
+        const Tick normal = snappedVoiceTick(tab().view(), x, false);
         if (fine != normal && fine != kSourceTick &&
             std::abs(qreal(x) - source.x()) >= QApplication::startDragDistance()) {
             target = {qreal(x), voiceChangeInput().bounds().center().y()};
@@ -228,7 +228,7 @@ void AutomationEditingTest::voiceCollisionAndStaleRevision()
     QVERIFY(pan.valid());
     const QPointF source = voicePoint(kSourceTick);
     const QPointF target = voicePoint(kTargetTick);
-    const uint64_t destination = snappedVoiceTick(tab().view(), target.x(), false);
+    const Tick destination = snappedVoiceTick(tab().view(), target.x(), false);
 
     writeVoicePoints(tab().document(), {{kSourceTick, 9}, {kTargetTick, 10}});
     songview::TimelineQuickScene *const scene = quickScene();
@@ -341,7 +341,7 @@ void AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity()
     QVERIFY(scene);
     const QPointF source = voicePoint(kSourceTick);
     const QPointF target = voicePoint(72);
-    const uint64_t destination = snappedVoiceTick(tab().view(), target.x(), false);
+    const Tick destination = snappedVoiceTick(tab().view(), target.x(), false);
     QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
     QSignalSpy edited(&tab(), &SongTab::edited);
     QTRY_COMPARE(markerCountAt(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers),

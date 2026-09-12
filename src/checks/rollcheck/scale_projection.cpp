@@ -108,8 +108,7 @@ void PianoRollTest::scaleProjectionInvariants()
         bool noteOnSelected[128] = {};
         for (const DocNote &n : doc.notesForTrack(scaleTrack))
             noteOnSelected[n.key] = true;
-        const uint64_t aTick =
-            uint64_t(check.timeline().lengthTicks) + uint64_t(doc.ticksPerClock()) * 8;
+        const Tick aTick = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
         int exceptBase = -1;
         for (int k = 1; k + 12 < 128; k += 12) { // C#/Db classes
             if (!noteOnSelected[k] && !noteOnSelected[k + 12]) {
@@ -305,8 +304,7 @@ void PianoRollTest::scaleHighlightRaster()
             // Fold's projection and receives the same Highlight tint.
             const int cmd0 = doc.undoStack()->index();
             constexpr int foldTintKey = 127; // G9 in C Major; always the top Fold row.
-            const uint64_t tintTick =
-                uint64_t(check.timeline().lengthTicks) + uint64_t(doc.ticksPerClock()) * 8;
+            const Tick tintTick = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
             doc.addNote(scaleTrack, tintTick, uint8_t(foldTintKey), doc.ticksPerClock(), 100);
             view.setScaleHighlight(false);
             view.setScaleFold(true);

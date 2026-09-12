@@ -81,10 +81,10 @@ class AutomationPage final : public QObject
     uint32_t usedTrackMask() const noexcept;
     SongDocument *document() const noexcept;
     const LoadedVoiceGroup *voicegroup() const noexcept;
-    uint64_t snapTick(double tick, bool fineMode) const noexcept;
-    uint64_t snapTickDown(double tick, bool fineMode) const noexcept;
-    DrawerPageGridState gridState(uint64_t tick, bool fineMode) const noexcept;
-    uint64_t nextGridTick(uint64_t tick, bool fineMode, uint64_t limit) const noexcept;
+    Tick snapTick(double tick, bool fineMode) const noexcept;
+    Tick snapTickDown(double tick, bool fineMode) const noexcept;
+    DrawerPageGridState gridState(Tick tick, bool fineMode) const noexcept;
+    Tick nextGridTick(Tick tick, bool fineMode, Tick limit) const noexcept;
     double tickAtContentX(double x) const noexcept;
     qreal displayX(double tick, qreal origin, qreal dpr) const noexcept;
     double pxPerBeat() const noexcept;
@@ -93,14 +93,14 @@ class AutomationPage final : public QObject
     void setFollowScrollPaused(bool paused) const;
     void publishViewState();
     void rebuildModel();
-    void publishTimeSelection(uint64_t startTick, uint64_t endTick,
+    void publishTimeSelection(Tick startTick, Tick endTick,
                               const std::vector<std::pair<int, uint8_t>> &lanes,
                               bool tempo = false) const;
-    DrawerPageVoiceContext voiceContext(uint64_t tick) const;
+    DrawerPageVoiceContext voiceContext(Tick tick) const;
     void showTimeSelectionMenu(const DrawerPageTimeSelectionMenuRequest &request) const;
     void requestRefresh() const;
     void requestQuickUpdate(songview::AutomationRefreshSet dirty) const;
-    void commitEditCursor(uint64_t tick) const;
+    void commitEditCursor(Tick tick) const;
     void announce(const QString &message) const;
 
     bool matchesPencilShortcut(int key, Qt::KeyboardModifiers modifiers) const noexcept;

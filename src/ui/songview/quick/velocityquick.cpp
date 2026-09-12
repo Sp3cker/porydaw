@@ -148,15 +148,15 @@ void VelocityArea::rebuildQuickPsgBands(songview::TimelineQuickScene &scene, con
     using namespace songview;
     constexpr TimelineQuickLayer bandsLayer = TimelineQuickLayer::VelocityBands;
     if (m_owner.timeline()) {
-        const uint64_t firstTick =
-            uint64_t(std::max(0.0, std::floor(m_camera.tickAtContentX(plot.left()))));
-        const uint64_t lastTick =
-            std::max(firstTick + 1,
-                     uint64_t(std::max(0.0, std::ceil(m_camera.tickAtContentX(plot.right())))));
-        uint64_t sectionTick = firstTick;
+        const Tick firstTick =
+            Tick(std::max(0.0, std::floor(m_camera.tickAtContentX(plot.left()))));
+        const Tick lastTick =
+            std::max(Tick(firstTick + 1),
+                     Tick(std::max(0.0, std::ceil(m_camera.tickAtContentX(plot.right())))));
+        Tick sectionTick = firstTick;
         while (sectionTick < lastTick) {
             const DrawerPageVoiceContext context = m_owner.voiceContext(sectionTick);
-            const uint64_t sectionEnd = std::min(lastTick, context.endTick);
+            const Tick sectionEnd = std::min(lastTick, context.endTick);
             if (sectionEnd <= sectionTick)
                 break;
             const VelocityMap map = VelocityMap::resolve(context.voice, std::nullopt);

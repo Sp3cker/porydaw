@@ -47,7 +47,7 @@ void PianoRollTest::headerPanFollow()
     }
     const auto probe = [&](auto &surface) {
         const int home = view.camera().contentX(0.0);
-        const uint64_t farTick = uint64_t(std::max(0.0, view.camera().tickAtContentX(width * 2)));
+        const Tick farTick = Tick(std::max(0.0, view.camera().tickAtContentX(width * 2)));
         const QPointF middle(surface.width() / 2.0, surface.height() / 2.0);
         checks::events::sendMouse(surface, QEvent::MouseButtonPress, middle, Qt::MiddleButton,
                                   Qt::MiddleButton, Qt::NoModifier);

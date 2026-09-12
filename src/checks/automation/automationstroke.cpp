@@ -24,7 +24,7 @@ namespace {
 constexpr int kTrack = 0;
 constexpr uint8_t kPanController = 10;
 
-using LanePoints = std::vector<std::pair<uint64_t, int>>;
+using LanePoints = std::vector<std::pair<Tick, int>>;
 
 struct StrokePoint {
     QPointF content;
@@ -58,7 +58,7 @@ void resetPencilView(SongView &view, double zoom = 96.0)
 
 void stageEmptyPanLane(SongDocument &document)
 {
-    document.writeLanePoints(kTrack, kPanController, 0, std::numeric_limits<uint64_t>::max(), {});
+    document.writeLanePoints(kTrack, kPanController, 0, CoreTimeDefaults::kNoTick, {});
     QCoreApplication::processEvents();
 }
 
@@ -105,7 +105,7 @@ LanePoints lanePoints(const SongDocument &document)
     return points;
 }
 
-bool pointValue(const LanePoints &points, uint64_t tick, int *value)
+bool pointValue(const LanePoints &points, Tick tick, int *value)
 {
     const auto found = std::find_if(points.cbegin(), points.cend(),
                                     [tick](const auto &point) { return point.first == tick; });
@@ -115,18 +115,18 @@ bool pointValue(const LanePoints &points, uint64_t tick, int *value)
     return true;
 }
 
-bool heldValue(const LanePoints &points, uint64_t tick, int *value)
+bool heldValue(const LanePoints &points, Tick tick, int *value)
 {
-    const auto next = std::upper_bound(
-        points.cbegin(), points.cend(), tick,
-        [](uint64_t candidate, const auto &point) { return candidate < point.first; });
+    const auto next =
+        std::upper_bound(points.cbegin(), points.cend(), tick,
+                         [](Tick candidate, const auto &point) { return candidate < point.first; });
     if (next == points.cbegin())
         return false;
     *value = std::prev(next)->second;
     return true;
 }
 
-bool containsInteriorPoint(const LanePoints &points, uint64_t first, uint64_t last)
+bool containsInteriorPoint(const LanePoints &points, Tick first, Tick last)
 {
     return std::any_of(points.cbegin(), points.cend(), [first, last](const auto &point) {
         return point.first > first && point.first < last;
@@ -470,7 +470,7 @@ void AutomationEditingTest::pencilControlModifierDrawsUnsnappedClockQuantizedPoi
         return ControlCapture{lanePoints(document), turn, finish};
     };
     const auto clockTick = [&document](const StrokePoint &sample) {
-        const uint64_t raw = uint64_t(std::floor(std::max(0.0, sample.mapping.rawTick)));
+        const Tick raw = Tick(std::floor(std::max(0.0, sample.mapping.rawTick)));
         return (raw / document.ticksPerClock()) * document.ticksPerClock();
     };
     const auto matches = [&clockTick](const ControlCapture &sparse, const ControlCapture &dense) {

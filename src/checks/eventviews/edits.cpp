@@ -36,7 +36,7 @@ int countMatching(const SmfTrack &track, const SmfEvent &target)
     return int(std::count(track.events.begin(), track.events.end(), target));
 }
 
-SmfEvent controlChange(uint64_t tick, uint8_t controller, uint8_t value)
+SmfEvent controlChange(Tick tick, uint8_t controller, uint8_t value)
 {
     SmfEvent event;
     event.tick = tick;
@@ -104,10 +104,10 @@ void EventViewsEditsTest::tickEditQueued()
         checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist::TypeNoteOn);
     QVERIFY(row >= 0);
 
-    const uint64_t originalTick =
-        widgets.model->data(widgets.model->index(row, EventTableModel::ColTick), Qt::EditRole)
-            .toULongLong();
-    const uint64_t editedTick =
+    const Tick originalTick =
+        Tick(widgets.model->data(widgets.model->index(row, EventTableModel::ColTick), Qt::EditRole)
+                 .toULongLong());
+    const Tick editedTick =
         opened.fixture->document().smf().tracks[widgets.model->chunk()].endTick + 3;
     const int beforeIndex = opened.fixture->document().undoStack()->index();
     QVERIFY(widgets.controller->commitCellEdit(row, EventTableModel::ColTick,
@@ -139,7 +139,7 @@ void EventViewsEditsTest::tick64BitExact()
         checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist::TypeNoteOn);
     QVERIFY(row >= 0);
 
-    constexpr uint64_t tick = 3000000000ULL;
+    constexpr Tick tick = 3000000000ULL;
     const int chunk = widgets.model->chunk();
     const int beforeIndex = opened.fixture->document().undoStack()->index();
     QVERIFY(widgets.model->setData(widgets.model->index(row, EventTableModel::ColTick),
@@ -155,10 +155,10 @@ void EventViewsEditsTest::tick64BitExact()
                 0);
 }
 
-// 2^53+1 cannot survive a double, so a Number round-trip anywhere between the
-// rendered editor and the document would corrupt ...993 into ...992. The
-// commit is isolated on purpose: one raw event on the small Basic fixture,
-// asserted at the document, then undone — no dense rendering or playback.
+// kMaxTick is the largest tick the document accepts; kNoTick is the reserved
+// absent-loop sentinel and must be refused. The commit is isolated on
+// purpose: one raw event on the small Basic fixture, asserted at the
+// document, then undone — no dense rendering or playback.
 void EventViewsEditsTest::tickHighBitExact()
 {
     const auto opened = checks::eventviews::openTabFixture(FixtureShape::Basic);
@@ -169,15 +169,19 @@ void EventViewsEditsTest::tickHighBitExact()
         checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist::TypeNoteOn);
     QVERIFY(row >= 0);
 
-    const QString digits = QStringLiteral("9007199254740993");
     const int chunk = widgets.model->chunk();
     const int beforeIndex = opened.fixture->document().undoStack()->index();
-    QVERIFY(widgets.model->setData(widgets.model->index(row, EventTableModel::ColTick), digits,
-                                   Qt::EditRole));
+    QVERIFY(!widgets.model->setData(widgets.model->index(row, EventTableModel::ColTick),
+                                    QString::number(CoreTimeDefaults::kNoTick), Qt::EditRole));
+    QCoreApplication::processEvents();
+    QCOMPARE(opened.fixture->document().undoStack()->index(), beforeIndex);
+
+    QVERIFY(widgets.model->setData(widgets.model->index(row, EventTableModel::ColTick),
+                                   QString::number(CoreTimeDefaults::kMaxTick), Qt::EditRole));
     QTRY_COMPARE(opened.fixture->document().undoStack()->index(), beforeIndex + 1);
     const SmfTrack &track = opened.fixture->document().smf().tracks[chunk];
     QVERIFY(!track.events.empty());
-    QCOMPARE(track.events.back().tick, 9007199254740993ULL);
+    QCOMPARE(track.events.back().tick, CoreTimeDefaults::kMaxTick);
     QVERIFY(checks::eventviews::trackIsSorted(track));
 
     opened.fixture->document().undoStack()->undo();
@@ -185,7 +189,7 @@ void EventViewsEditsTest::tickHighBitExact()
                 0);
 }
 
-// Same digits through the rendered Tick TextInput: the proof that the page
+// Same boundary through the rendered Tick TextInput: the proof that the page
 // hands the editor's QString straight to the model instead of a JS Number.
 void EventViewsEditsTest::tickHighBitThroughEditor()
 {
@@ -202,24 +206,24 @@ void EventViewsEditsTest::tickHighBitThroughEditor()
     QVERIFY(checks::eventviews::openCellEditor(widgets, row, EventTableModel::ColTick,
                                                QStringLiteral("eventListTickEditor"), &editor));
     QVERIFY(QMetaObject::invokeMethod(editor, "selectAll"));
-    typeDigits(*widgets.quickWindow, QStringLiteral("9007199254740993"));
+    typeDigits(*widgets.quickWindow, QStringLiteral("4294967294"));
     QTest::keyClick(widgets.quickWindow, Qt::Key_Return);
     QCoreApplication::processEvents();
 
     QTRY_COMPARE(opened.fixture->document().smf().tracks[chunk].events.back().tick,
-                 9007199254740993ULL);
+                 CoreTimeDefaults::kMaxTick);
     const SmfTrack &track = opened.fixture->document().smf().tracks[chunk];
     QVERIFY(!track.events.empty());
-    QCOMPARE(track.events.back().tick, 9007199254740993ULL);
+    QCOMPARE(track.events.back().tick, CoreTimeDefaults::kMaxTick);
 
-    const int movedRow = checks::eventviews::rowForTickAndType(*widgets.model, 9007199254740993ULL,
-                                                               eventlist::TypeNoteOn);
+    const int movedRow = checks::eventviews::rowForTickAndType(
+        *widgets.model, CoreTimeDefaults::kMaxTick, eventlist::TypeNoteOn);
     QVERIFY(movedRow >= 0);
     QCOMPARE(widgets.model
                  ->data(widgets.model->index(movedRow, EventTableModel::ColTick),
                         EventTableModel::EventRoles::TickStringRole)
                  .toString(),
-             QStringLiteral("9007199254740993"));
+             QStringLiteral("4294967294"));
     QVERIFY(checks::eventviews::trackIsSorted(track));
 
     opened.fixture->document().undoStack()->undo();
@@ -427,7 +431,7 @@ void EventViewsEditsTest::sameTickReorder()
     QVERIFY(widgets);
     SongDocument &document = opened.fixture->document();
     const int chunk = widgets.model->chunk();
-    const uint64_t tick = document.smf().tracks[chunk].endTick + 100;
+    const Tick tick = document.smf().tracks[chunk].endTick + 100;
     const SmfEvent ccA = controlChange(tick, 7, 1);
     const SmfEvent ccB = controlChange(tick, 10, 2);
     SmfEvent noteOn;
@@ -478,7 +482,7 @@ void EventViewsEditsTest::sameTickReorder()
 
     // Canonical same-tick ordering pins a note-end ahead of its note-on.
     // Dragging the end after the on must remain a no-op.
-    const uint64_t pinnedTick = document.smf().tracks[chunk].endTick + 200;
+    const Tick pinnedTick = document.smf().tracks[chunk].endTick + 200;
     SmfEvent pinnedOn;
     pinnedOn.tick = pinnedTick;
     pinnedOn.status = 0x90;
@@ -528,7 +532,7 @@ void EventViewsEditsTest::deleteMatrix()
     QVERIFY(widgets);
     SongDocument &document = opened.fixture->document();
     const int chunk = widgets.model->chunk();
-    const uint64_t tick = document.smf().tracks[chunk].endTick + 100;
+    const Tick tick = document.smf().tracks[chunk].endTick + 100;
     const SmfEvent firstEvent = controlChange(tick, 7, 11);
     const SmfEvent secondEvent = controlChange(tick, 10, 22);
     document.insertRawEvent(chunk, firstEvent);

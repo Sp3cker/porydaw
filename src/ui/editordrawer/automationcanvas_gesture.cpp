@@ -75,11 +75,10 @@ AutomationCanvas::originPhantom(LaneHandle handle, const AutomationProjection &p
     QRect body;
     if (!resolveLane(handle, &lane, &body) || !lane)
         return std::nullopt;
-    return ::originPhantomAt(points, handle, lane->minimumValue(), lane->maximumValue(), 0.0,
-                             [this, &proj](uint64_t tick) {
-                                 return proj.displayX(
-                                     tick, m_inputHost ? m_inputHost->devicePixelRatio() : 1.0);
-                             });
+    return ::originPhantomAt(
+        points, handle, lane->minimumValue(), lane->maximumValue(), 0.0, [this, &proj](Tick tick) {
+            return proj.displayX(tick, m_inputHost ? m_inputHost->devicePixelRatio() : 1.0);
+        });
 }
 
 bool AutomationCanvas::commitResolvedNodeLaneChanges(std::optional<uint64_t> expectedRevision,
@@ -92,7 +91,7 @@ bool AutomationCanvas::commitResolvedNodeLaneChanges(std::optional<uint64_t> exp
     if (expectedRevision && document->revision() != *expectedRevision)
         return false;
     SongDocument::RangeEdit edit;
-    std::vector<uint64_t> tempoDeletes;
+    std::vector<Tick> tempoDeletes;
     std::vector<nodelane::CcDeleteRequest> ccDeletes;
     for (const NodeLaneChange &change : changes) {
         const NodeLaneSlot *slot = change.slot;
@@ -201,11 +200,11 @@ void AutomationCanvas::updateActiveGesture(const QPointF &position, Qt::Keyboard
     const bool snapValue = modifiers & Qt::ControlModifier;
     const AutomationProjection proj = projection();
     AxisLock axisCursor = AxisLock::None;
-    auto snappedRange = [&](double a, double b) -> std::pair<uint64_t, uint64_t> {
+    auto snappedRange = [&](double a, double b) -> std::pair<Tick, Tick> {
         return {m_page.snapTick(std::min(a, b), fineGrid),
                 m_page.snapTick(std::max(a, b), fineGrid)};
     };
-    auto nextGridTick = [this](uint64_t tick, bool useFineGrid, uint64_t limit) -> uint64_t {
+    auto nextGridTick = [this](Tick tick, bool useFineGrid, Tick limit) -> Tick {
         return m_page.nextGridTick(tick, useFineGrid, limit);
     };
     std::visit(
@@ -300,10 +299,10 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
             if (changed && finish.dTick != 0 && finish.selectionDrag) {
                 const auto &selection = m_page.m_owner.selectionModel().timeSelection();
                 if (selection.active()) {
-                    const auto startTick =
-                        uint64_t(std::max<int64_t>(0, int64_t(selection.startTick) + finish.dTick));
-                    const auto endTick =
-                        uint64_t(std::max<int64_t>(0, int64_t(selection.endTick) + finish.dTick));
+                    const Tick startTick =
+                        Tick(std::max<int64_t>(0, int64_t(selection.startTick) + finish.dTick));
+                    const Tick endTick =
+                        Tick(std::max<int64_t>(0, int64_t(selection.endTick) + finish.dTick));
                     if (endTick > startTick) {
                         auto movedSelection = selection;
                         movedSelection.startTick = startTick;
@@ -325,7 +324,7 @@ void AutomationCanvas::finishActiveGesture(bool fineMode)
         } else if (lane) {
             auto completion =
                 gesture->finish(handle, document->revision(), lane->points(), fineMode,
-                                [this](uint64_t tick, bool fineGrid, uint64_t last) {
+                                [this](Tick tick, bool fineGrid, Tick last) {
                                     return m_page.nextGridTick(tick, fineGrid, last);
                                 });
             if (!completion.unchanged)

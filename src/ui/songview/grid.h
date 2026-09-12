@@ -15,8 +15,8 @@ enum class GridFeel : uint8_t { Straight, Triplet };
 // One painted visible-grid cell. Cells are half-open [start, end): a
 // tick exactly at an end belongs to the next cell.
 struct GridCell {
-    uint64_t start = 0;
-    uint64_t end = 0;
+    Tick start = 0;
+    Tick end = 0;
 };
 
 // Pure zoom- and editor-dependent grid math for the song view: the visible
@@ -49,10 +49,10 @@ class Grid final
     // Time-signature segment governing a tick (the axis's GridSegment).
     // The grid — beats, snap positions, sub-beat lines — restarts at every
     // signature change and scales the beat by the signature's denominator.
-    Segment segmentAt(uint64_t tick) const;
-    GridCell visibleGridCellContaining(uint64_t tick) const;
-    uint64_t visibleGridTickDown(uint64_t tick) const;
-    uint64_t visibleGridTickUp(uint64_t tick) const;
+    Segment segmentAt(Tick tick) const;
+    GridCell visibleGridCellContaining(Tick tick) const;
+    Tick visibleGridTickDown(Tick tick) const;
+    Tick visibleGridTickUp(Tick tick) const;
 
     // Every tick-spacing accessor below returns a value >= 1 (floored at
     // the clock base), so callers may divide by them or use them as loop
@@ -62,29 +62,29 @@ class Grid final
     // It is not the painted-cell spacing; use visibleGridCellContaining().
     // The subdivision follows the governing segment's beat at the current
     // feel, floored at the minimum and never finer than the clock base.
-    uint64_t gridTicksAt(uint64_t tick) const;
+    Tick gridTicksAt(Tick tick) const;
     // Visible grid at an explicit pixels-per-tick scale, using the
     // time-signature segment governing tick.
-    uint64_t gridTicksAtScale(uint64_t tick, double pixelsPerTick) const;
+    Tick gridTicksAtScale(Tick tick, double pixelsPerTick) const;
     // Snap grid in ticks at a position: one feel-ladder step finer than the
     // visible grid, so edits can land halfway between drawn lines (thirds
     // stepping from beats in triplet feel). The minimum subdivision is a
     // display floor only — snapping steps past it too.
-    uint64_t snapTicksAt(uint64_t tick) const;
+    Tick snapTicksAt(Tick tick) const;
     // Fine placement (Alt-drag in the lanes): the clock grid — the
     // document's real resolution — regardless of the zoom-dependent grid.
     // Unbound (no document), it falls back to the grid at tick 0.
-    uint64_t fineGridTicks() const;
+    Tick fineGridTicks() const;
     // Nearest / previous snap-grid position, anchored at the governing
     // time-signature segment (fine snap stays on the absolute clock grid).
-    uint64_t snapTick(double tick, bool fine = false) const;
-    uint64_t snapTickDown(double tick) const;
-    uint64_t snapTickUp(double tick) const;
+    Tick snapTick(double tick, bool fine = false) const;
+    Tick snapTickDown(double tick) const;
+    Tick snapTickUp(double tick) const;
 
   private:
     // Both exits floor at the clock base: the result is >= 1 for any
     // segment, so snap math may divide by it unchecked.
-    uint64_t gridTicksIn(const Segment &seg, double pixelsPerTick, bool snap = false) const;
+    Tick gridTicksIn(const Segment &seg, double pixelsPerTick, bool snap = false) const;
 
     const TimeAxis &m_axis;
     const TimeCamera &m_camera;

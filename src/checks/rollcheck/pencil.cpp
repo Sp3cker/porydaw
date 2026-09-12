@@ -47,9 +47,9 @@ void PianoRollTest::pencilFractionalPlacement()
              "fractional edit camera did not apply exactly");
 
     struct FractionalEditProbe {
-        uint64_t tick = 0;
-        uint64_t previous = 0;
-        uint64_t next = 0;
+        Tick tick = 0;
+        Tick previous = 0;
+        Tick next = 0;
         int key = -1;
         QPointF center;
     } probe;
@@ -60,18 +60,17 @@ void PianoRollTest::pencilFractionalPlacement()
         const qreal bottom = rows.bottom(key);
         if (top < 0.0 || bottom > roll.height())
             continue;
-        uint64_t tick = view.grid().snapTickUp(std::max(0.0, view.camera().tickAtContentX(4.0)));
+        Tick tick = view.grid().snapTickUp(std::max(0.0, view.camera().tickAtContentX(4.0)));
         for (int guard = 0; guard < 1000; ++guard) {
-            const uint64_t next = view.grid().snapTickUp(double(tick) + 1.0);
+            const Tick next = view.grid().snapTickUp(double(tick) + 1.0);
             if (next <= tick)
                 break;
             const qreal leftX = view.camera().displayX(double(tick), 0.0, dpr);
             const qreal rightX = view.camera().displayX(double(next), 0.0, dpr);
             if (leftX > rightLimit)
                 break;
-            const uint64_t dur = view.grid().gridTicksAt(tick);
-            const uint64_t previous =
-                tick == 0 ? tick : view.grid().snapTickDown(double(tick) - 1.0);
+            const Tick dur = view.grid().gridTicksAt(tick);
+            const Tick previous = tick == 0 ? tick : view.grid().snapTickDown(double(tick) - 1.0);
             if (leftX >= 4.0 && rightX <= rightLimit && rightX - leftX >= 4.0 &&
                 !check.isOccupied(tick, dur, key)) {
                 const qreal centerX = (leftX + rightX) / 2.0;
@@ -128,7 +127,7 @@ void PianoRollTest::pencilPlacement()
     const int undo = doc.undoStack()->index();
     const Cell cell = check.findFreeCell(40, true);
     QVERIFY2(cell.key >= 0, "no free grid cell to draw in");
-    const uint64_t overlayTick = cell.tick + 3 * cell.dur;
+    const Tick overlayTick = cell.tick + 3 * cell.dur;
     view.setPlayheadSample(check.timeline().sampleForTick(overlayTick), false);
     view.setEditCursorTick(overlayTick);
     drawNote(roll, cell.center);
@@ -154,7 +153,7 @@ void PianoRollTest::pencilAbuttingRaster()
     const SnappedRows rows{view, roll};
     const Cell cell = check.findFreeCell(40, true);
     QVERIFY2(cell.key >= 0, "no free grid cell to draw in");
-    const uint64_t overlayTick = cell.tick + 3 * cell.dur;
+    const Tick overlayTick = cell.tick + 3 * cell.dur;
     view.setPlayheadSample(check.timeline().sampleForTick(overlayTick), false);
     view.setEditCursorTick(overlayTick);
     const QImage beforeImage = check.captureQuickFramebuffer();

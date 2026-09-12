@@ -32,7 +32,7 @@ namespace {
 constexpr int kTrack = 0;
 constexpr uint8_t kPanController = 10;
 constexpr uint8_t kLfoController = 21;
-constexpr uint64_t kEndTick = 384;
+constexpr Tick kEndTick = 384;
 
 class CursorDprHost final : public songview::TimelineInputHost
 {
@@ -119,9 +119,9 @@ songview::TimelinePointerInput plotPointerInput(QPointF position, songview::Time
     };
 }
 
-SmfEvent programChange(uint64_t tick, uint8_t program)
+SmfEvent programChange(Tick tick, uint8_t program)
 {
-    return {.tick = Tick(tick), .status = 0xC0, .data0 = program};
+    return {.tick = tick, .status = 0xC0, .data0 = program};
 }
 
 } // namespace
@@ -155,10 +155,10 @@ void AutomationPresentationTest::init()
     song.hasMid = true;
     QString error;
     QVERIFY2(m_document->adoptSmf(presentationSmf(), song, &error), qPrintable(error));
-    m_document->writeLanePoints(kTrack, 7, 0, std::numeric_limits<uint64_t>::max(), {{24, 48}});
-    m_document->writeLanePoints(kTrack, kPanController, 0, std::numeric_limits<uint64_t>::max(),
+    m_document->writeLanePoints(kTrack, 7, 0, CoreTimeDefaults::kNoTick, {{24, 48}});
+    m_document->writeLanePoints(kTrack, kPanController, 0, CoreTimeDefaults::kNoTick,
                                 {{48, 32}, {144, 96}});
-    m_document->writeLanePoints(kTrack, kLfoController, 0, std::numeric_limits<uint64_t>::max(),
+    m_document->writeLanePoints(kTrack, kLfoController, 0, CoreTimeDefaults::kNoTick,
                                 {{96, 32}, {96, 96}});
 
     checks::EditorRigConfig config;
@@ -238,7 +238,7 @@ LaneHandle AutomationPresentationTest::findRow(EditorAutomationRowId id) const
     return {};
 }
 
-QPointF AutomationPresentationTest::lanePoint(LaneHandle handle, uint64_t tick, int value) const
+QPointF AutomationPresentationTest::lanePoint(LaneHandle handle, Tick tick, int value) const
 {
     const AutomationPage *const automationPage = page();
     if (!automationPage || !m_plotInput)

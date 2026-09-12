@@ -643,13 +643,13 @@ void composeBandedGrid(TimelineQuickScene &scene, TimelineQuickLayer layer, cons
     const int detailMinimumPixelsPerBeat = ::layout::fontPx(5.0 / 6.0);
     const qreal gridWidth = ::layout::fontPx(1.0 / 6.0) * physicalPixel;
     detail::forEachSubGridLine(
-        grid, camera, range, detailMinimumPixelsPerBeat, [&](uint64_t tick, int level) {
+        grid, camera, range, detailMinimumPixelsPerBeat, [&](Tick tick, int level) {
             const qreal x = camera.displayX(double(tick), origin, dpr);
             addVerticalLine(scene.layer(layer), x, plot.top(), plot.bottom(), gridWidth,
                             gridColors[std::size_t(level - 1)], plot);
         });
     const bool drawBeats = camera.pxPerBeat() >= detailMinimumPixelsPerBeat;
-    owner.forEachGridLine(range.begin, range.end, [&](uint64_t tick, bool isBar, int, int) {
+    owner.forEachGridLine(range.begin, range.end, [&](Tick tick, bool isBar, int, int) {
         if (!isBar && !drawBeats)
             return;
         const bool finest = owner.document() && grid.gridTicksAt(tick) == grid.fineGridTicks();

@@ -20,10 +20,10 @@
 namespace {
 
 constexpr uint8_t kController = 10;
-constexpr uint64_t kDraggedTick = 48;
-constexpr uint64_t kIndependentTick = 96;
-constexpr uint64_t kBlankTick = 144;
-constexpr uint64_t kEndTick = 192;
+constexpr Tick kDraggedTick = 48;
+constexpr Tick kIndependentTick = 96;
+constexpr Tick kBlankTick = 144;
+constexpr Tick kEndTick = 192;
 constexpr int kDraggedValue = 40;
 constexpr int kCommittedValue = 84;
 constexpr int kIndependentValue = 100;

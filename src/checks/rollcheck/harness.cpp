@@ -127,7 +127,7 @@ const QString &PianoRollFixture::songLabel() const noexcept
     return m_songLabel;
 }
 
-bool PianoRollFixture::isOccupied(uint64_t tick, uint64_t dur, int key, bool checkAllTracks)
+bool PianoRollFixture::isOccupied(Tick tick, uint32_t dur, int key, bool checkAllTracks)
 {
     const SongDocument &doc = document();
     const int startTrack = checkAllTracks ? 0 : m_track;
@@ -136,7 +136,8 @@ bool PianoRollFixture::isOccupied(uint64_t tick, uint64_t dur, int key, bool che
         for (const DocNote &note : doc.notesForTrack(track)) {
             if (int(note.key) != key)
                 continue;
-            const uint64_t end = note.unterminated() ? UINT64_MAX : note.tick + note.duration + dur;
+            const uint64_t end = note.unterminated() ? CoreTimeDefaults::kNoTick
+                                                     : uint64_t(note.tick) + note.duration + dur;
             if (note.tick < tick + 2 * dur && end > tick)
                 return true;
         }
@@ -156,9 +157,8 @@ Cell PianoRollFixture::findFreeCell(int firstProbe, bool checkAllTracks)
         if (top < 0 || bottom > pianoRoll.bounds().height())
             continue;
         for (int probe = firstProbe; probe < int(pianoRoll.bounds().width()) - 40; probe += 24) {
-            const uint64_t tick =
-                songView.grid().snapTickDown(songView.camera().tickAtContentX(probe));
-            const uint64_t dur = songView.grid().gridTicksAt(tick);
+            const Tick tick = songView.grid().snapTickDown(songView.camera().tickAtContentX(probe));
+            const Tick dur = songView.grid().gridTicksAt(tick);
             const int x0 = songView.camera().contentX(double(tick));
             const int x1 = songView.camera().contentX(double(tick + dur));
             const int xs =
@@ -167,8 +167,8 @@ Cell PianoRollFixture::findFreeCell(int firstProbe, bool checkAllTracks)
                 continue;
             if (isOccupied(tick, dur, key, checkAllTracks))
                 continue;
-            const auto markerInSpan = [&](uint64_t markerTick) {
-                return markerTick != UINT64_MAX && markerTick >= tick &&
+            const auto markerInSpan = [&](Tick markerTick) {
+                return markerTick != CoreTimeDefaults::kNoTick && markerTick >= tick &&
                        markerTick <= tick + 2 * dur;
             };
             if (markerInSpan(timeline().loopStartTick) || markerInSpan(timeline().loopEndTick))

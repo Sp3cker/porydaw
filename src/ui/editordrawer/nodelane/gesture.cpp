@@ -49,7 +49,7 @@ PointDragRelease PointDragGesture::release() const noexcept
     return PointDragRelease::Move;
 }
 
-void BandGesture::press(QPoint pos, uint64_t tick)
+void BandGesture::press(QPoint pos, Tick tick)
 {
     pending = true;
     active = false;
@@ -58,7 +58,7 @@ void BandGesture::press(QPoint pos, uint64_t tick)
     endTick = tick;
 }
 
-bool BandGesture::move(QPoint pos, uint64_t tick)
+bool BandGesture::move(QPoint pos, Tick tick)
 {
     if (!pending)
         return false;
@@ -72,14 +72,14 @@ bool BandGesture::move(QPoint pos, uint64_t tick)
     return false;
 }
 
-std::optional<std::pair<uint64_t, uint64_t>> BandGesture::release()
+std::optional<std::pair<Tick, Tick>> BandGesture::release()
 {
     if (!pending || !active) {
         clear();
         return std::nullopt;
     }
-    const std::pair<uint64_t, uint64_t> result{std::min<uint64_t>(startTick, endTick),
-                                               std::max<uint64_t>(startTick, endTick)};
+    const std::pair<Tick, Tick> result{std::min<Tick>(startTick, endTick),
+                                       std::max<Tick>(startTick, endTick)};
     clear();
     return result;
 }
@@ -189,13 +189,13 @@ void NodeDragGesture::applyDrag(const NodePoint &grabCurrent)
         return;
     const NodePoint grabOriginal = points[grabbedPoint].original;
     const int64_t requestedTickDelta = int64_t(grabCurrent.tick) - int64_t(grabOriginal.tick);
-    uint64_t earliestTick = points.front().original.tick;
+    Tick earliestTick = points.front().original.tick;
     for (const NodeDrag &point : points)
-        earliestTick = std::min<uint64_t>(earliestTick, point.original.tick);
+        earliestTick = std::min<Tick>(earliestTick, point.original.tick);
     const int64_t dTick = std::max<int64_t>(requestedTickDelta, -int64_t(earliestTick));
     const int dValue = grabCurrent.value - grabOriginal.value;
     for (NodeDrag &point : points) {
-        point.current.tick = uint64_t(int64_t(point.original.tick) + dTick);
+        point.current.tick = Tick(int64_t(point.original.tick) + dTick);
         point.current.value =
             std::clamp(point.original.value + dValue, point.minimumValue, point.maximumValue);
     }
@@ -260,8 +260,8 @@ bool PencilGesture::update(const QPointF &position, bool freehand, AxisLock lock
 }
 
 void updateValuePoint(const AutomationProjection &proj, const NodeLane &lane, const QRect &body,
-                      NodePoint &point, qreal y, uint64_t tick, bool snapValue,
-                      int neutralSnapRadius, int snapNeutral)
+                      NodePoint &point, qreal y, Tick tick, bool snapValue, int neutralSnapRadius,
+                      int snapNeutral)
 {
     point.value =
         std::clamp(qRound(AutomationProjection::valueAtY(body, proj.geometry(), lane.minimumValue(),

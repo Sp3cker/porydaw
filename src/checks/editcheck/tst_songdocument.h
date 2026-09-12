@@ -121,6 +121,7 @@ class EditCheckTest final : public QObject
     void timeRangeSignatureAndOrphans();
     void timeRangeAutomationSeamsAndDefaults();
     void timeRangeWholeSong();
+    void timeRangeInsertBlankOverflow();
 
     // SMF byte-format contracts: foreign/synthetic files and the save
     // pipeline.

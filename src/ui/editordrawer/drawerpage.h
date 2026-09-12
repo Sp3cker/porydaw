@@ -9,6 +9,7 @@
 #include <QPointF>
 
 #include "core/noteid.h"
+#include "core/timedefaults.h"
 
 extern "C" {
 #include "voicegroup_loader.h"
@@ -16,8 +17,8 @@ extern "C" {
 
 // Both fields are >= 1 and safe as divisors or loop strides.
 struct DrawerPageGridState {
-    uint64_t gridTicks = 0;
-    uint64_t snapTicks = 0;
+    uint32_t gridTicks = 0;
+    uint32_t snapTicks = 0;
 };
 
 struct DrawerPagePlaybackState {
@@ -31,7 +32,7 @@ struct DrawerPageLiveState {
     uint64_t documentRevision = 0;
     double timeZoom = 1.0;
     double horizontalScroll = 0.0;
-    uint64_t editCursorTick = 0;
+    Tick editCursorTick = 0;
     QColor trackColor;
     DrawerPagePlaybackState playback;
 };
@@ -39,12 +40,12 @@ struct DrawerPageLiveState {
 struct DrawerPageVoiceContext {
     const ToneData *voice = nullptr;
     int voiceSlot = -1;
-    uint64_t endTick = UINT64_MAX;
+    Tick endTick = CoreTimeDefaults::kNoTick;
 };
 
 struct DrawerPageTimeSelectionMenuRequest {
-    uint64_t startTick = 0;
-    uint64_t endTick = 0;
+    Tick startTick = 0;
+    Tick endTick = 0;
     std::vector<std::pair<int, uint8_t>> lanes;
     bool tempo = false;
     // Quick-window scene position of the menu anchor (never screen-global:
@@ -56,6 +57,6 @@ struct DrawerPageNoteStatus {
     uint8_t key = 0;
     uint8_t storedVelocity = 0;
     uint8_t effectiveVelocity = 0;
-    uint64_t durationTicks = 0;
-    uint64_t durationClocks = 0;
+    uint32_t durationTicks = 0;
+    uint32_t durationClocks = 0;
 };

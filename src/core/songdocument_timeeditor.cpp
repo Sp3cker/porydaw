@@ -252,8 +252,8 @@ bool SongDocument::TimeEditor::consumeTimeEditEvent(std::vector<std::vector<bool
 }
 
 void SongDocument::TimeEditor::appendTimeEditInsert(std::vector<SongDocument::EditOp> &inserts,
-                                                    int smfTrack, const SmfEvent &source,
-                                                    uint64_t tick, bool preserveNoteId)
+                                                    int smfTrack, const SmfEvent &source, Tick tick,
+                                                    bool preserveNoteId)
 {
     SongDocument::EditOp op;
     op.type = SongDocument::EditOp::InsertEvent;
@@ -275,7 +275,7 @@ void SongDocument::TimeEditor::appendTimeEditRemove(std::vector<std::vector<size
 bool SongDocument::TimeEditor::appendTimeEditMove(std::vector<std::vector<size_t>> &removals,
                                                   std::vector<SongDocument::EditOp> &inserts,
                                                   std::vector<std::vector<bool>> &taken,
-                                                  int smfTrack, size_t index, uint64_t tick,
+                                                  int smfTrack, size_t index, Tick tick,
                                                   MoveMode mode,
                                                   std::vector<XcmdEventRecord> &records) const
 {
@@ -322,7 +322,7 @@ std::vector<SongDocument::EditOp> SongDocument::TimeEditor::timeEditCloseGapTrac
 
 std::vector<SongDocument::EditOp> SongDocument::TimeEditor::timeEditShiftRightTrackEnds(
     const std::vector<bool> &affectedTracks, const std::vector<SongDocument::EditOp> &inserts,
-    uint64_t threshold) const
+    Tick threshold) const
 {
     std::vector<SongDocument::EditOp> trackEnds;
     const uint64_t span = m_range.span();
@@ -437,12 +437,12 @@ bool SongDocument::TimeEditor::remove()
     for (const DocNote &note : plan.notes) {
         if (note.tick >= e) {
             appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.onIndex,
-                               note.tick - span, MoveMode::SkipUnchanged, xcmdEventRecords);
+                               Tick(note.tick - span), MoveMode::SkipUnchanged, xcmdEventRecords);
             if (!note.unterminated()) {
-                const uint64_t endTick =
+                const Tick endTick =
                     m_document.m_smf.tracks[size_t(note.smfTrack)].events[note.endIndex].tick;
                 appendTimeEditMove(removals, inserts, taken, note.smfTrack, note.endIndex,
-                                   endTick - span, MoveMode::SkipUnchanged, xcmdEventRecords);
+                                   Tick(endTick - span), MoveMode::SkipUnchanged, xcmdEventRecords);
             }
         } else if (note.tick >= s) {
             appendTimeEditRemove(removals, taken, note.smfTrack, note.onIndex);
@@ -462,8 +462,8 @@ bool SongDocument::TimeEditor::remove()
         if (ref.tick < s)
             consumeTimeEditEvent(taken, ref.smfTrack, ref.index);
         else if (ref.tick >= e)
-            appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, ref.tick - span,
-                               MoveMode::SkipUnchanged, xcmdEventRecords);
+            appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index,
+                               Tick(ref.tick - span), MoveMode::SkipUnchanged, xcmdEventRecords);
         else
             appendTimeEditRemove(removals, taken, ref.smfTrack, ref.index);
     }
@@ -489,9 +489,10 @@ bool SongDocument::TimeEditor::remove()
                 consumeTimeEditEvent(taken, ref.smfTrack, ref.index);
             else if (ref.tick >= e)
                 appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index,
-                                   ref.tick - span, MoveMode::SkipUnchanged, xcmdEventRecords);
+                                   Tick(ref.tick - span), MoveMode::SkipUnchanged,
+                                   xcmdEventRecords);
             else if (int(i) == winner && !seamCovered)
-                appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, s,
+                appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, Tick(s),
                                    MoveMode::SkipUnchanged, xcmdEventRecords);
             else
                 appendTimeEditRemove(removals, taken, ref.smfTrack, ref.index);
@@ -503,9 +504,10 @@ bool SongDocument::TimeEditor::remove()
                 continue;
             if (ref.tick >= e)
                 appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index,
-                                   ref.tick - span, MoveMode::SkipUnchanged, xcmdEventRecords);
+                                   Tick(ref.tick - span), MoveMode::SkipUnchanged,
+                                   xcmdEventRecords);
             else if (ref.tick > s)
-                appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, s,
+                appendTimeEditMove(removals, inserts, taken, ref.smfTrack, ref.index, Tick(s),
                                    MoveMode::SkipUnchanged, xcmdEventRecords);
             else
                 consumeTimeEditEvent(taken, ref.smfTrack, ref.index);

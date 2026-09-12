@@ -16,7 +16,7 @@
 
 struct ViewNote {
     NoteId noteId; // source document identity; unassigned for ordinary timeline notes
-    uint32_t startTick;
+    Tick startTick;
     uint32_t duration; // 0 = unpaired note-on or same-tick pair
     uint8_t key;
     uint8_t velocity;
@@ -26,7 +26,7 @@ struct ViewNote {
 };
 
 struct LanePoint {
-    uint32_t tick;
+    Tick tick;
     int value;
 };
 
@@ -41,13 +41,13 @@ struct CcLane {
 };
 
 struct VoiceChange {
-    uint32_t tick;
+    Tick tick;
     uint8_t track;
     uint8_t program;
 };
 
 struct StripItem {
-    uint64_t tick;
+    Tick tick;
     int track; // -1 = file-level
     QString label;
 };

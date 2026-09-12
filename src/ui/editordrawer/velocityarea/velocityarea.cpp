@@ -37,9 +37,9 @@ bool detentUnlockHeld(Qt::KeyboardModifiers modifiers, bool allowShift)
     return allowShift && shortcutModifiers == (binding | Qt::ShiftModifier);
 }
 
-uint64_t drawerContextTick(double tick)
+Tick drawerContextTick(double tick)
 {
-    return static_cast<uint64_t>(std::floor(std::max(0.0, tick) + 0.5));
+    return static_cast<Tick>(std::floor(std::max(0.0, tick) + 0.5));
 }
 
 } // namespace
@@ -337,9 +337,8 @@ VelocityMap VelocityArea::currentContext() const
 {
     const std::vector<DocNote> notes = selectedNotes();
     if (notes.empty()) {
-        const uint64_t tick = m_live.playback.playing
-                                  ? drawerContextTick(m_live.playback.playheadTick)
-                                  : m_live.editCursorTick;
+        const Tick tick = m_live.playback.playing ? drawerContextTick(m_live.playback.playheadTick)
+                                                  : m_live.editCursorTick;
         return VelocityMap::resolve(m_owner.voiceContext(tick).voice, std::nullopt);
     }
     const VelocityMap first = contextForNote(notes.front());
@@ -432,7 +431,7 @@ QRectF VelocityArea::stemRect(const DocNote &note) const
     const double verticalRadius = double(m_geometry.durationLineVerticalRadius);
     const double horizontalSlop = double(m_geometry.durationLineHorizontalSlop);
     const double start = xForTick(note.tick) - horizontalSlop;
-    const double end = xForTick(note.tick + note.duration) + horizontalSlop;
+    const double end = xForTick(uint64_t(note.tick) + note.duration) + horizontalSlop;
     const uint8_t velocity = displayedVelocity(note);
     return QRectF(start, yForNote(note, velocity) - verticalRadius, std::max(0.0, end - start),
                   verticalRadius * 2.0);

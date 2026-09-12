@@ -34,7 +34,7 @@ class SongDocument::TimeEditor
     struct TimeEventRef {
         int smfTrack = -1;
         size_t index = 0;
-        uint64_t tick = 0;
+        Tick tick = 0;
         StreamIdentity stream;
         EventKind kind = EventKind::Other;
     };
@@ -46,7 +46,7 @@ class SongDocument::TimeEditor
     struct XcmdEventRecord {
         int smfTrack = -1;
         size_t eventIndex = 0; // source event this byte came from
-        uint64_t newTick = 0;
+        Tick newTick = 0;
         size_t opIndex = 0;
         uint8_t channel = 0; // MIDI channel of the relocated source event
         bool isCopy = false; // source kept (duplicate) vs. moved (removed)
@@ -68,20 +68,19 @@ class SongDocument::TimeEditor
     static bool consumeTimeEditEvent(std::vector<std::vector<bool>> &taken, int smfTrack,
                                      size_t index);
     static void appendTimeEditInsert(std::vector<SongDocument::EditOp> &inserts, int smfTrack,
-                                     const SmfEvent &source, uint64_t tick, bool preserveNoteId);
+                                     const SmfEvent &source, Tick tick, bool preserveNoteId);
     void appendTimeEditRemove(std::vector<std::vector<size_t>> &removals,
                               std::vector<std::vector<bool>> &taken, int smfTrack,
                               size_t index) const;
     bool appendTimeEditMove(std::vector<std::vector<size_t>> &removals,
                             std::vector<SongDocument::EditOp> &inserts,
                             std::vector<std::vector<bool>> &taken, int smfTrack, size_t index,
-                            uint64_t tick, MoveMode mode,
-                            std::vector<XcmdEventRecord> &records) const;
+                            Tick tick, MoveMode mode, std::vector<XcmdEventRecord> &records) const;
     std::vector<SongDocument::EditOp> timeEditCloseGapTrackEnds() const;
     std::vector<SongDocument::EditOp>
     timeEditShiftRightTrackEnds(const std::vector<bool> &affectedTracks,
                                 const std::vector<SongDocument::EditOp> &inserts,
-                                uint64_t threshold) const;
+                                Tick threshold) const;
     // Per-track XCMD reconciliation (see songdocument_timeeditor_xcmd.cpp):
     // plans consumed-byte removals/relocations through xcmd::reconcileRaw,
     // translates each patch via the document's adapter, and assembles with
@@ -96,7 +95,7 @@ class SongDocument::TimeEditor
     // re-plan it: the generic insert it names (opIndex) is suppressed and the
     // byte handled by the deep planner instead. Operation-local: records is
     // the per-edit vector threaded through the pass.
-    void recordXcmdRelocation(int smfTrack, size_t eventIndex, uint64_t newTick, size_t opIndex,
+    void recordXcmdRelocation(int smfTrack, size_t eventIndex, Tick newTick, size_t opIndex,
                               bool isCopy, std::vector<XcmdEventRecord> &records) const;
     // True when a stream point may act as the remove-seam value keeper.
     // Consumed XCMD bytes are never eligible: their epochs are rebuilt

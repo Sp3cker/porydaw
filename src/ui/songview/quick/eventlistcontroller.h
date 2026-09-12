@@ -144,7 +144,7 @@ class EventListController : public QObject
     void updatePlayRow();
     void setCurrentRow(int row);
     void setSelectedRows(QList<int> rows);
-    void selectRowAtTick(int chunk, uint64_t tick);
+    void selectRowAtTick(int chunk, Tick tick);
     void jumpCursorToRow(int row);
     void selectEventRow(int chunk, const SmfEvent &event);
     bool editValueFor(int row, int column, const QString &text, QVariant *value) const;

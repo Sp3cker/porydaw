@@ -50,12 +50,11 @@ void PianoRollTest::scaleFoldKeyboardNudges()
     songview::TimelineInputItem *roll = &check.rollInput();
     const int scaleTrack = view.selectionModel().primaryTrack();
     const auto scaleMajor = porydaw_scale::ScaleId::major;
-    const uint64_t tBase =
-        uint64_t(check.timeline().lengthTicks) + uint64_t(doc.ticksPerClock()) * 8;
+    const Tick tBase = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
     const uint32_t dur = uint32_t(doc.ticksPerClock());
     const QByteArray before = doc.smf().write();
     const int undo = doc.undoStack()->index();
-    const auto noteIdAt = [&](uint64_t tick, uint8_t key) {
+    const auto noteIdAt = [&](Tick tick, uint8_t key) {
         DocNote note;
         return doc.findNote(scaleTrack, tick, key, &note) ? note.noteId : NoteId{};
     };
@@ -96,10 +95,9 @@ void PianoRollTest::scaleFoldMultiNoteMapping()
     view.setScaleRoot(0);
     view.setScaleId(scaleMajor);
     songview::TimelineInputItem *roll = &check.rollInput();
-    const uint64_t tBase =
-        uint64_t(check.timeline().lengthTicks) + uint64_t(doc.ticksPerClock()) * 8;
+    const Tick tBase = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
     const uint32_t dur = uint32_t(doc.ticksPerClock());
-    const auto noteIdAt = [&](uint64_t tick, uint8_t key) {
+    const auto noteIdAt = [&](Tick tick, uint8_t key) {
         DocNote note;
         return doc.findNote(scaleTrack, tick, key, &note) ? note.noteId : NoteId{};
     };
@@ -145,10 +143,9 @@ void PianoRollTest::scaleFoldRepeatedPitchMapping()
     view.setScaleRoot(0);
     view.setScaleId(scaleMajor);
     songview::TimelineInputItem *roll = &check.rollInput();
-    const uint64_t tBase =
-        uint64_t(check.timeline().lengthTicks) + uint64_t(doc.ticksPerClock()) * 8;
+    const Tick tBase = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
     const uint32_t dur = uint32_t(doc.ticksPerClock());
-    const auto noteIdAt = [&](uint64_t tick, uint8_t key) {
+    const auto noteIdAt = [&](Tick tick, uint8_t key) {
         DocNote note;
         return doc.findNote(scaleTrack, tick, key, &note) ? note.noteId : NoteId{};
     };
@@ -156,7 +153,7 @@ void PianoRollTest::scaleFoldRepeatedPitchMapping()
     // D5. Repeated source pitch: two C60 notes both go to D62.
     {
         const int cmd0 = doc.undoStack()->index();
-        const uint64_t tA = tBase, tB = tBase + uint64_t(doc.ticksPerClock());
+        const Tick tA = tBase, tB = tBase + doc.ticksPerClock();
         doc.addNote(scaleTrack, tA, 60, dur, 100);
         doc.addNote(scaleTrack, tB, 60, dur, 100);
         view.selectionModel().setNoteSelection({noteIdAt(tA, 60), noteIdAt(tB, 60)});
@@ -195,10 +192,9 @@ void PianoRollTest::scaleFoldExceptionNudge()
     view.setScaleRoot(0);
     view.setScaleId(scaleMajor);
     songview::TimelineInputItem *roll = &check.rollInput();
-    const uint64_t tBase =
-        uint64_t(check.timeline().lengthTicks) + uint64_t(doc.ticksPerClock()) * 8;
+    const Tick tBase = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
     const uint32_t dur = uint32_t(doc.ticksPerClock());
-    const auto noteIdAt = [&](uint64_t tick, uint8_t key) {
+    const auto noteIdAt = [&](Tick tick, uint8_t key) {
         DocNote note;
         return doc.findNote(scaleTrack, tick, key, &note) ? note.noteId : NoteId{};
     };
@@ -258,8 +254,7 @@ void PianoRollTest::scaleFoldExceptionDraw()
             dpr;
         return int(std::floor((top + bottom) / 2.0));
     };
-    const uint64_t tBase =
-        uint64_t(check.timeline().lengthTicks) + uint64_t(doc.ticksPerClock()) * 8;
+    const Tick tBase = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
     const uint32_t dur = uint32_t(doc.ticksPerClock());
 
     // D7. Fold rejects drawing into an off-scale exception row.
@@ -325,8 +320,7 @@ void PianoRollTest::scaleFoldExceptionAudition()
             dpr;
         return int(std::floor((top + bottom) / 2.0));
     };
-    const uint64_t tBase =
-        uint64_t(check.timeline().lengthTicks) + uint64_t(doc.ticksPerClock()) * 8;
+    const Tick tBase = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
     const uint32_t dur = uint32_t(doc.ticksPerClock());
 
     // D8. The exception row's piano key still auditions its pitch.
@@ -401,8 +395,7 @@ void PianoRollTest::scaleFoldPointerDrag()
             dpr;
         return int(std::floor((top + bottom) / 2.0));
     };
-    const uint64_t tBase =
-        uint64_t(check.timeline().lengthTicks) + uint64_t(doc.ticksPerClock()) * 8;
+    const Tick tBase = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
 
     // D9+D12. A vertical pointer drag previews and commits the fold
     // degree; the layout only rebuilds once the gesture commits. The
@@ -434,8 +427,7 @@ void PianoRollTest::scaleFoldPointerDrag()
         // target. Add a distant support note when the track does not
         // already use that destination pitch.
         if (!occ[dst])
-            doc.addNote(scaleTrack,
-                        uint64_t(check.timeline().lengthTicks) + doc.ticksPerClock() * 32,
+            doc.addNote(scaleTrack, check.timeline().lengthTicks + doc.ticksPerClock() * 32,
                         uint8_t(dst), doc.ticksPerClock(), 100);
         const int rowsBeforeSource = proj.visibleRowCount();
         doc.addNote(scaleTrack, tBase, uint8_t(src), uint32_t(doc.ticksPerClock()) * 4, 100);
@@ -513,8 +505,7 @@ void PianoRollTest::scaleFoldHorizontalException()
     view.setScaleFold(false);
     view.setScaleRoot(0);
     view.setScaleId(scaleMajor);
-    const uint64_t tBase =
-        uint64_t(check.timeline().lengthTicks) + uint64_t(doc.ticksPerClock()) * 8;
+    const Tick tBase = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
     const uint32_t dur = uint32_t(doc.ticksPerClock());
 
     // D10. A horizontal-only move preserves an off-scale exception pitch.
@@ -525,7 +516,7 @@ void PianoRollTest::scaleFoldHorizontalException()
         view.setScaleFold(true);
         DocNote n;
         if (doc.findNote(scaleTrack, tBase, 61, &n)) {
-            const uint64_t next = tBase + uint64_t(doc.ticksPerClock()) * 4;
+            const Tick next = tBase + doc.ticksPerClock() * 4;
             doc.moveNotes({n}, int64_t(next) - int64_t(tBase), 0, /*mergeable=*/true);
             DocNote moved;
             if (!doc.findNote(scaleTrack, next, 61, &moved))
@@ -558,10 +549,9 @@ void PianoRollTest::scaleFoldOutOfRange()
     view.setScaleRoot(0);
     view.setScaleId(scaleMajor);
     songview::TimelineInputItem *roll = &check.rollInput();
-    const uint64_t tBase =
-        uint64_t(check.timeline().lengthTicks) + uint64_t(doc.ticksPerClock()) * 8;
+    const Tick tBase = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
     const uint32_t dur = uint32_t(doc.ticksPerClock());
-    const auto noteIdAt = [&](uint64_t tick, uint8_t key) {
+    const auto noteIdAt = [&](Tick tick, uint8_t key) {
         DocNote note;
         return doc.findNote(scaleTrack, tick, key, &note) ? note.noteId : NoteId{};
     };

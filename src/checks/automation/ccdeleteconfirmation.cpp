@@ -66,18 +66,18 @@ AutomationMenu openLabelMenu(SongTab &songTab, AutomationCanvas &canvas,
 // The fixture's pilot lane: CC 10 carries two points, and the pilot song's
 // volume lane carries one point a delete of CC 10 must never touch.
 constexpr uint8_t kController = 10;
-constexpr uint64_t kFirstPointTick = 48;
-constexpr uint64_t kSecondPointTick = 96;
+constexpr Tick kFirstPointTick = 48;
+constexpr Tick kSecondPointTick = 96;
 constexpr int kFirstPointValue = 40;
 constexpr int kSecondPointValue = 100;
-constexpr uint64_t kVolumeTick = 192;
+constexpr Tick kVolumeTick = 192;
 constexpr int kInterveningVolumeValue = 90;
 // The stale-document rewrite: another writer replaces the lane's content while
 // the confirmation is pending.
-constexpr uint64_t kRewrittenTick = 288;
+constexpr Tick kRewrittenTick = 288;
 constexpr int kRewrittenValue = 77;
 
-int volumeLaneValue(SongTab &songTab, uint64_t tick)
+int volumeLaneValue(SongTab &songTab, Tick tick)
 {
     DocLanePoint point;
     if (!songTab.document().findLanePoint(0, CoreTimeDefaults::kCcVolume, tick, &point))
@@ -368,10 +368,9 @@ void AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget()
     const QPoint acceptCenter = quick_popup::itemCenter(*opened.acceptButton);
     QTest::mousePress(opened.session->window(), Qt::LeftButton, Qt::NoModifier, acceptCenter);
     QCoreApplication::processEvents();
-    songTab.document().writeLanePoints(0, kController, 0, std::numeric_limits<uint64_t>::max(),
+    songTab.document().writeLanePoints(0, kController, 0, CoreTimeDefaults::kNoTick,
                                        {{kRewrittenTick, kRewrittenValue}});
-    songTab.document().writeLanePoints(0, CoreTimeDefaults::kCcVolume, 0,
-                                       std::numeric_limits<uint64_t>::max(),
+    songTab.document().writeLanePoints(0, CoreTimeDefaults::kCcVolume, 0, CoreTimeDefaults::kNoTick,
                                        {{kVolumeTick, kInterveningVolumeValue}});
     QCoreApplication::processEvents();
     const uint64_t revisionAfterWrite = songTab.document().revision();
@@ -444,7 +443,7 @@ void AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup()
     QVERIFY(quick_popup::promptItem(*live, QLatin1String("ccDeleteConfirm")) == nullptr);
 
     // A canvas-only document rewrite must not disturb the foreign menu.
-    songTab.document().writeLanePoints(0, kController, 0, std::numeric_limits<uint64_t>::max(),
+    songTab.document().writeLanePoints(0, kController, 0, CoreTimeDefaults::kNoTick,
                                        {{kRewrittenTick, kRewrittenValue}});
     QCoreApplication::processEvents();
     checks::support::pumpQuick();
@@ -511,8 +510,8 @@ void AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation()
 
     // Clearing the staged written point leaves the default-visible row with
     // just its synthetic tick-0 node.
-    songTab.document().writeLanePoints(0, CoreTimeDefaults::kCcVolume, 0,
-                                       std::numeric_limits<uint64_t>::max(), {});
+    songTab.document().writeLanePoints(0, CoreTimeDefaults::kCcVolume, 0, CoreTimeDefaults::kNoTick,
+                                       {});
     QCoreApplication::processEvents();
     QVERIFY(songTab.document().lanePoints(0, CoreTimeDefaults::kCcVolume).empty());
     const LaneHandle volume = findRow(volumeRow);

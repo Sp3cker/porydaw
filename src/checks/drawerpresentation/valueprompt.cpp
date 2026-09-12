@@ -38,7 +38,7 @@ using namespace checks::drawerpresentation;
 namespace {
 
 constexpr uint8_t kController = 10;
-constexpr uint64_t kNodeTick = 24;
+constexpr Tick kNodeTick = 24;
 
 Snapshot snapshot(SongDocument &document)
 {
@@ -99,7 +99,7 @@ bool activateParameter(DrawerFixture &fixture, AutomationCanvas &canvas,
     return QTest::qWaitFor([&canvas, index] { return canvas.activeParameter() == index; });
 }
 
-const TempoPoint *tempoPointAt(const SongDocument &document, uint64_t tick)
+const TempoPoint *tempoPointAt(const SongDocument &document, Tick tick)
 {
     const auto &points = document.tempoPoints();
     const auto found = std::find_if(points.cbegin(), points.cend(),
@@ -107,7 +107,7 @@ const TempoPoint *tempoPointAt(const SongDocument &document, uint64_t tick)
     return found == points.cend() ? nullptr : &*found;
 }
 
-int tempoBpmAt(const SongDocument &document, uint64_t tick)
+int tempoBpmAt(const SongDocument &document, Tick tick)
 {
     const TempoPoint *const point = tempoPointAt(document, tick);
     Q_ASSERT(point);
@@ -116,7 +116,7 @@ int tempoBpmAt(const SongDocument &document, uint64_t tick)
 
 // Opens the Set-Value prompt on an existing CC node and waits until the chrome
 // publishes it.
-bool openCcNodePrompt(DrawerFixture &fixture, LaneHandle cc, uint64_t tick, int storedValue)
+bool openCcNodePrompt(DrawerFixture &fixture, LaneHandle cc, Tick tick, int storedValue)
 {
     AutomationCanvas *const canvas = canvasOf(fixture);
     if (!canvas || !canvas->openValuePromptForNode(cc, NodePoint{tick, storedValue}))

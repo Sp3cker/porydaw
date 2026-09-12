@@ -39,11 +39,11 @@ struct SharedTimeMenu {
 // session to render its typed menu. The press goes through the roll input item
 // like the production gesture; the occupancy scan covers every track's notes so
 // the click cannot hit a note and open the note menu instead.
-SharedTimeMenu openSharedTimeMenu(PianoRollFixture &check, const SnappedRows &rows,
-                                  uint64_t startTick, uint64_t endTick)
+SharedTimeMenu openSharedTimeMenu(PianoRollFixture &check, const SnappedRows &rows, Tick startTick,
+                                  Tick endTick)
 {
     SharedTimeMenu menu;
-    const uint64_t midTick = startTick + (endTick - startTick) / 2;
+    const Tick midTick = startTick + (endTick - startTick) / 2;
     int emptyKey = -1;
     for (int key = 0; key < 128 && emptyKey < 0; ++key) {
         const int y = rows.centerY(key);
@@ -100,7 +100,7 @@ void PianoRollTest::timeSelectionMenuOpensWithPasteEnablement()
     SongView &view = check.view();
     const SnappedRows rows{view, check.rollInput()};
     const Cell &d = seed->cell;
-    const uint64_t snapCell = seed->snapCell;
+    const Tick snapCell = seed->snapCell;
     DocNote moved;
     QVERIFY2(doc.findNote(check.track(), d.tick, uint8_t(d.key), &moved),
              "time menu seed note was not found");
@@ -212,7 +212,7 @@ void PianoRollTest::timeSelectionMenuStaleAndCancelNoOp()
     SongDocument &doc = check.document();
     const SnappedRows rows{view, check.rollInput()};
     const Cell &d = seed->cell;
-    const uint64_t snapCell = seed->snapCell;
+    const Tick snapCell = seed->snapCell;
     DocNote moved;
     QVERIFY2(doc.findNote(check.track(), d.tick, uint8_t(d.key), &moved),
              "time menu seed note was not found");

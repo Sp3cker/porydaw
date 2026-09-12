@@ -42,10 +42,11 @@ class TimelinePlayer
     // tempo map, like the channel gate it models.
     struct PendingOff {
         uint64_t samplePos;
-        uint64_t tick;
+        Tick tick;
         uint8_t track;
         uint8_t key;
     };
+    static_assert(sizeof(PendingOff) == 16);
 
     // Repositions for a transport seek. The caller releases the engine's
     // sounding notes because their note-offs may be behind the new position

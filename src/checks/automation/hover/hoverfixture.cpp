@@ -39,12 +39,12 @@ namespace {
 
 constexpr uint8_t kPanController = 10;
 constexpr uint8_t kLfoController = 21;
-constexpr uint64_t kHeldTick = 0;
-constexpr uint64_t kProbeTick = 96;
-constexpr uint64_t kNodeTick = 144;
-constexpr uint64_t kEndTick = 192;
+constexpr Tick kHeldTick = 0;
+constexpr Tick kProbeTick = 96;
+constexpr Tick kNodeTick = 144;
+constexpr Tick kEndTick = 192;
 
-SmfEvent programChange(uint64_t tick, uint8_t program)
+SmfEvent programChange(Tick tick, uint8_t program)
 {
     SmfEvent event;
     event.status = 0xC0;
@@ -154,9 +154,9 @@ bool create(Fixture &fixture, QString &error)
         error = QStringLiteral("could not load Automation hover fixture: %1").arg(error);
         return false;
     }
-    fixture.document.writeLanePoints(0, kPanController, 0, std::numeric_limits<uint64_t>::max(),
+    fixture.document.writeLanePoints(0, kPanController, 0, CoreTimeDefaults::kNoTick,
                                      {{kHeldTick, 32}, {kNodeTick, 96}});
-    fixture.document.writeLanePoints(0, kLfoController, 0, std::numeric_limits<uint64_t>::max(),
+    fixture.document.writeLanePoints(0, kLfoController, 0, CoreTimeDefaults::kNoTick,
                                      {{kHeldTick, 32}, {kProbeTick, 96}});
     fixture.bank.voices[0].type = VOICE_DIRECTSOUND;
     fixture.bank.voices[1].type = VOICE_SQUARE_1;
@@ -437,7 +437,7 @@ std::optional<PreparedLane> prepareLane(Fixture &fixture, LaneKind kind)
         fixture.document.applyTempoEdit(edit);
         handle = {0};
     } else {
-        fixture.document.writeLanePoints(0, kPanController, 0, std::numeric_limits<uint64_t>::max(),
+        fixture.document.writeLanePoints(0, kPanController, 0, CoreTimeDefaults::kNoTick,
                                          {{kHeldTick, held}, {kNodeTick, node}});
         handle = findHandle(*automationCanvas, row);
     }
@@ -467,7 +467,7 @@ std::optional<PreparedLane> prepareLane(Fixture &fixture, LaneKind kind)
         return std::nullopt;
     }
     const AutomationProjection projection(geometry, automationPage);
-    const uint64_t insertionTick =
+    const Tick insertionTick =
         projection.fineSnapTick(projection.rawTickAt(insertionPointerViewport.x()));
     const qreal insertionX = projection.displayX(insertionTick, dpr);
     return PreparedLane{

@@ -24,11 +24,11 @@ namespace {
 constexpr int kTempo = 0;
 constexpr int kCc = 1;
 constexpr uint8_t kController = 10;
-constexpr uint64_t kFirstTick = 0;
-constexpr uint64_t kNodeTick = 96;
-constexpr uint64_t kMovedTick = 192;
-constexpr uint64_t kLateTick = 288;
-constexpr uint64_t kLastTick = 384;
+constexpr Tick kFirstTick = 0;
+constexpr Tick kNodeTick = 96;
+constexpr Tick kMovedTick = 192;
+constexpr Tick kLateTick = 288;
+constexpr Tick kLastTick = 384;
 constexpr int kFirstValue = 80;
 constexpr int kNodeValue = 100;
 constexpr int kLowValue = 64;
@@ -61,8 +61,8 @@ void setPoints(SongDocument &document, int adapter, const std::vector<NodePoint>
     std::vector<SongDocument::LanePointValue> values;
     values.reserve(points.size());
     for (const NodePoint &point : points)
-        values.push_back({point.tick, point.value});
-    document.writeLanePoints(0, kController, 0, std::numeric_limits<uint64_t>::max(), values);
+        values.push_back({Tick(point.tick), point.value});
+    document.writeLanePoints(0, kController, 0, CoreTimeDefaults::kNoTick, values);
 }
 
 std::vector<NodePoint> pointsOf(const SongDocument &document, int adapter)
@@ -97,7 +97,7 @@ QPoint dragEnd(const QPoint &source, const QPoint &target, const QPoint &activat
     return activation + target - source;
 }
 
-std::vector<int> rawValuesAt(const SongDocument &document, uint64_t tick)
+std::vector<int> rawValuesAt(const SongDocument &document, Tick tick)
 {
     std::vector<int> values;
     const int track = document.smfTrackFor(0);
@@ -208,7 +208,7 @@ void AutomationEditingTest::nodeDragCommits()
         return;
     }
 
-    m_tab->document().writeLanePoints(0, kController, 0, std::numeric_limits<uint64_t>::max(),
+    m_tab->document().writeLanePoints(0, kController, 0, CoreTimeDefaults::kNoTick,
                                       {{kLateTick, 40}});
     SmfEvent first;
     first.tick = kNodeTick;
@@ -499,7 +499,7 @@ void AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers()
 
     mousePress(Qt::LeftButton, source, Qt::NoModifier);
     mouseMove(activation, Qt::NoModifier);
-    m_tab->document().writeLanePoints(0, 11, 0, std::numeric_limits<uint64_t>::max(), {{0, 1}});
+    m_tab->document().writeLanePoints(0, 11, 0, CoreTimeDefaults::kNoTick, {{0, 1}});
     QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
     QSignalSpy edited(&tab(), &SongTab::edited);
     QVERIFY(documentChanged.isValid());

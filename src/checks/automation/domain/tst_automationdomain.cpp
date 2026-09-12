@@ -25,7 +25,7 @@ constexpr uint8_t kController = 11;
 constexpr uint32_t kPreservedTempoUs = 499999;
 constexpr uint32_t kFractionalTempoUs = 398406;
 
-TempoPoint tempoPoint(uint64_t tick, int bpm)
+TempoPoint tempoPoint(Tick tick, int bpm)
 {
     return {Tick(tick), CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(bpm)};
 }
@@ -119,7 +119,7 @@ void AutomationDomainTest::setTempo(SongDocument &document, const std::vector<Te
 void AutomationDomainTest::setLane(SongDocument &document, int track, uint8_t controller,
                                    const std::vector<SongDocument::LanePointValue> &points)
 {
-    document.writeLanePoints(track, controller, 0, std::numeric_limits<uint64_t>::max(), points);
+    document.writeLanePoints(track, controller, 0, CoreTimeDefaults::kNoTick, points);
 }
 
 void AutomationDomainTest::insertCc(SongDocument &document, int track, uint8_t controller,
@@ -147,7 +147,7 @@ void AutomationDomainTest::setUniquePoints(SongDocument &document, int adapterKi
     std::vector<SongDocument::LanePointValue> values;
     values.reserve(points.size());
     for (const NodePoint &point : points)
-        values.push_back({point.tick, point.value});
+        values.push_back({Tick(point.tick), point.value});
     setLane(document, kTrack, kController, values);
 }
 
@@ -175,12 +175,13 @@ bool AutomationDomainTest::applyMoves(SongDocument &document, int adapterKind,
 bool AutomationDomainTest::applyDeletes(SongDocument &document, int adapterKind,
                                         const std::vector<uint64_t> &ticks)
 {
-    std::vector<uint64_t> tempoTicks;
+    const std::vector<Tick> tickPositions(ticks.begin(), ticks.end());
+    std::vector<Tick> tempoTicks;
     std::vector<nodelane::CcDeleteRequest> ccDeletes;
     if (adapterKind == kTempo)
-        tempoTicks = ticks;
-    else if (!ticks.empty())
-        ccDeletes.push_back({kTrack, kController, ticks});
+        tempoTicks = tickPositions;
+    else if (!tickPositions.empty())
+        ccDeletes.push_back({kTrack, kController, tickPositions});
     const auto edit = nodelane::resolveBatchDeletes(document, tempoTicks, ccDeletes);
     if (!edit || edit->empty())
         return false;
@@ -290,8 +291,7 @@ void AutomationDomainTest::rangesAndSelection()
     else
         timeSelection.lanes.push_back({kTrack, kController});
     selection.setTimeSelection(std::move(timeSelection));
-    QVERIFY(laneSelection.activeTickRange() ==
-            (std::optional<std::pair<uint64_t, uint64_t>>{{50, 150}}));
+    QVERIFY(laneSelection.activeTickRange() == (std::optional<std::pair<Tick, Tick>>{{50, 150}}));
     QVERIFY(laneSelection.coversLane(selectedId));
 
     auto unselected = selection.timeSelection();

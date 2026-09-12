@@ -109,22 +109,18 @@ void PitchBendGraph::buildGrid(const QRectF &plot)
 {
     const QColor gridColor = themes::color(themes::Role::song_view_grid);
     if (m_grid && m_endTick > m_startTick) {
-        uint64_t segmentTick = m_startTick;
+        Tick segmentTick = m_startTick;
         while (segmentTick < m_endTick) {
             const Grid::Segment segment = m_grid->segmentAt(segmentTick);
-            const uint64_t segmentEnd = std::min(m_endTick, segment.next);
-            const uint64_t cell = normalCellTicksAt(segmentTick);
-            const uint64_t anchor = segment.start;
+            const Tick segmentEnd = std::min(m_endTick, segment.next);
+            const uint32_t cell = normalCellTicksAt(segmentTick);
+            const Tick anchor = segment.start;
             const uint64_t offset = segmentTick > anchor ? segmentTick - anchor : 0;
             const uint64_t quotient = offset / cell;
-            uint64_t tick = anchor;
-            if (quotient < UINT64_MAX / cell)
-                tick = anchor + (quotient + 1) * cell;
+            uint64_t tick = uint64_t(anchor) + (quotient + 1) * cell;
             while (tick < segmentEnd) {
-                addVerticalLine(m_layer, xAtTick(tick), plot.top(), plot.bottom(),
+                addVerticalLine(m_layer, xAtTick(Tick(tick)), plot.top(), plot.bottom(),
                                 m_geometry.hairline, gridColor, plot);
-                if (UINT64_MAX - tick < cell)
-                    break;
                 tick += cell;
             }
             if (segmentEnd >= m_endTick)
@@ -142,7 +138,7 @@ void PitchBendGraph::buildCurve(const QRectF &plot)
     const QColor curveColor = SongView::trackColor(m_engineTrack);
     const QColor endpointColor = themes::color(themes::Role::song_view_secondary_text);
     const QColor selectedRing = themes::color(themes::Role::focus_outline);
-    const uint64_t fineTick = m_grid ? m_grid->fineGridTicks() : 1;
+    const uint32_t fineTick = m_grid ? m_grid->fineGridTicks() : 1;
     for (auto it = m_points.cbegin(); it != m_points.cend(); ++it) {
         const auto next = std::next(it);
         const qreal x0 = xAtTick(it->first);

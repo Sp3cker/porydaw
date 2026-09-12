@@ -5,6 +5,7 @@
 #include <span>
 
 #include "core/miditimeline.h"
+#include "core/timedefaults.h"
 
 namespace songview {
 
@@ -30,24 +31,25 @@ class TimeAxis
     // scales the beat by the signature's denominator; a signature placed
     // mid-measure must still leave the drawn lines snappable.
     struct GridSegment {
-        uint64_t start = 0;         // governing signature's tick (0 = song start)
-        uint64_t next = UINT64_MAX; // next signature's tick; the grid restarts there
-        uint64_t beatTicks = 24;    // denominator-scaled beat length in ticks
-        uint64_t beatsPerBar = 4;   // numerator, matching forEachGridLine()
+        Tick start = 0;                        // governing signature's tick (0 = song start)
+        Tick next = CoreTimeDefaults::kNoTick; // next signature's tick; the grid restarts there
+        uint32_t beatTicks = 24;               // denominator-scaled beat length in ticks
+        uint32_t beatsPerBar = 4;              // numerator, matching forEachGridLine()
     };
+    static_assert(sizeof(GridSegment) == 16);
 
     // The signature governing a tick, normalized: a blank numerator reads
     // as 4, and `implicit` marks the synthesized opening 4/4 of a song (or
     // of the fallback axis) whose tick 0 carries no actual signature event.
     struct ResolvedTimeSignature {
-        uint64_t tick = 0;
+        Tick tick = 0;
         int numerator = 4;
         int denomPow2 = 2;
         bool implicit = true;
     };
 
     using GridLineVisitor =
-        std::function<void(uint64_t tick, bool isBar, int barNumber, int beatNumber)>;
+        std::function<void(Tick tick, bool isBar, int barNumber, int beatNumber)>;
 
     TimeAxis() noexcept;
 
@@ -58,24 +60,22 @@ class TimeAxis
     bool isBound() const noexcept;
 
     uint32_t ticksPerBeat() const noexcept;
-    uint64_t lengthTicks() const noexcept;
-    uint64_t loopStartTick() const noexcept; // UINT64_MAX when absent
-    uint64_t loopEndTick() const noexcept;   // UINT64_MAX when absent
+    Tick lengthTicks() const noexcept;
+    Tick loopStartTick() const noexcept; // kNoTick when absent
+    Tick loopEndTick() const noexcept;   // kNoTick when absent
 
     // Actual 0x58 events only. Fallback returns an empty span; storage
     // remains borrowed from the bound immutable timeline.
     std::span<const TimeSigPoint> explicitTimeSignatures() const noexcept;
     // True in fallback and whenever no actual signature governs tick zero.
     bool hasImplicitOpeningSignature() const noexcept;
-    ResolvedTimeSignature signatureAt(uint64_t tick) const noexcept;
-
-    GridSegment segmentAt(uint64_t tick) const noexcept;
+    ResolvedTimeSignature signatureAt(Tick tick) const noexcept;
+    GridSegment segmentAt(Tick tick) const noexcept;
     // Bar/beat grid over [tickBegin, tickEnd): visitor(tick, isBarStart,
     // barNumber, beatNumber) for every beat — 1-based numbering, bars
     // counted across signature changes. Walks the borrowed signatures in
     // place; no segment list is copied.
-    void forEachGridLine(uint64_t tickBegin, uint64_t tickEnd,
-                         const GridLineVisitor &visitor) const;
+    void forEachGridLine(Tick tickBegin, Tick tickEnd, const GridLineVisitor &visitor) const;
 
   private:
     const MidiTimeline *m_timeline = nullptr;

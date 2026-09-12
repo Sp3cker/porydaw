@@ -15,6 +15,8 @@
 #include <optional>
 #include <vector>
 
+#include "core/timedefaults.h"
+
 #include "porydaw_scale.h"
 #include "project/projectidentity.h"
 #include "project/projectworkspace.h"
@@ -256,8 +258,8 @@ class WorkspaceUi final : public QObject
     void selectedTabSoloMaskChanged(uint32_t mask);
     void selectedTabEventListChanged(bool visible);
     void editorViewStateChanged(const EditorViewState &state);
-    void editCursorSeekRequested(uint64_t tick);
-    void playPauseFromRequested(uint64_t tick);
+    void editCursorSeekRequested(Tick tick);
+    void playPauseFromRequested(Tick tick);
 
     // Audition intents are copied values; MainWindow owns every engine call.
     void auditionNoteRequested(uint8_t track, uint8_t key, uint8_t velocity);

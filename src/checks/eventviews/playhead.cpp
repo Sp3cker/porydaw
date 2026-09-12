@@ -53,15 +53,15 @@ int onlyTintedRow(const eventlist::EventTableModel &model)
 
 void EventViewsPlayheadTest::tintLastOfRun_data()
 {
-    QTest::addColumn<uint64_t>("tick");
-    QTest::newRow("before first event") << uint64_t{1};
-    QTest::newRow("same tick run") << uint64_t{60};
-    QTest::newRow("past end of track") << uint64_t{130};
+    QTest::addColumn<Tick>("tick");
+    QTest::newRow("before first event") << Tick{1};
+    QTest::newRow("same tick run") << Tick{60};
+    QTest::newRow("past end of track") << Tick{130};
 }
 
 void EventViewsPlayheadTest::tintLastOfRun()
 {
-    QFETCH(uint64_t, tick);
+    QFETCH(Tick, tick);
     const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
     QVERIFY2(opened, qPrintable(opened.error));
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -153,7 +153,7 @@ void EventViewsPlayheadTest::samplePathAndProgrammaticRestore()
     QVERIFY(focused >= 0);
     widgets.controller->focusRow(focused);
     QTRY_COMPARE(opened.fixture->view().editCursorTick(), 70ULL);
-    const uint64_t cursorBefore = opened.fixture->view().editCursorTick();
+    const Tick cursorBefore = opened.fixture->view().editCursorTick();
     SmfEvent probe;
     probe.tick = track.endTick + 50;
     probe.status = 0xb0;
@@ -174,8 +174,7 @@ void EventViewsPlayheadTest::followScroll()
     EventListController &controller = *widgets.controller;
     QSignalSpy scrolled(&controller, &EventListController::scrollToRow);
     QVERIFY(scrolled.isValid());
-    const uint64_t pastEnd =
-        opened.fixture->document().smf().tracks[controller.chunk()].endTick + 10;
+    const Tick pastEnd = opened.fixture->document().smf().tracks[controller.chunk()].endTick + 10;
 
     // Follow scroll targets the playing row; a full pass emits at least one
     // scrollToRow for the past-end (EOT) position.

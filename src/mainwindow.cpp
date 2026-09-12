@@ -490,7 +490,7 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
     });
     connect(m_workspace.get(), &WorkspaceUi::editorViewStateChanged, this,
             &MainWindow::persistEditorViewState);
-    connect(m_workspace.get(), &WorkspaceUi::editCursorSeekRequested, this, [this](uint64_t tick) {
+    connect(m_workspace.get(), &WorkspaceUi::editCursorSeekRequested, this, [this](Tick tick) {
         if (!m_audioOk || !m_audio.songLoaded() || m_audio.transport() == Transport::Stopped)
             return;
         const uint64_t target = m_audio.timeline()->sampleForTick(tick);
@@ -499,7 +499,7 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
             m_selectedTab->view().setPlayheadSample(target,
                                                     m_audio.transport() == Transport::Playing);
     });
-    connect(m_workspace.get(), &WorkspaceUi::playPauseFromRequested, this, [this](uint64_t tick) {
+    connect(m_workspace.get(), &WorkspaceUi::playPauseFromRequested, this, [this](Tick tick) {
         if (!m_selectedTab)
             return;
         if (m_audioOk && m_audio.transport() == Transport::Playing) {
@@ -576,7 +576,7 @@ void MainWindow::buildUi(const EditorViewState &initialEditorViewState)
             m_audio.resetPolyStats();
     });
     connect(m_polyPanel, &PolyphonyPanel::jumpToEvent, this,
-            [this](uint64_t tick, int track, int midiKey) {
+            [this](Tick tick, int track, int midiKey) {
                 // editCursorMoved's seek (above) already follows the cursor
                 // while playing/paused; when stopped, playback starts from
                 // the edit cursor. revealNote selects the losing track and

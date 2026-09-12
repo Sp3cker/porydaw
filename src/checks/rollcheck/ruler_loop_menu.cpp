@@ -55,7 +55,7 @@ songview::TimelineInputItem *rulerInput(SongView &view)
 // half is the marker row, where production's loop-bracket and signature-chip
 // hit-tests guard on the row, so chip-sensitive menus press there while a
 // bottom-half (tick row) press is provably off-chip regardless of zoom.
-QPointF rulerPressPoint(SongView &view, const songview::TimelineInputItem &input, uint64_t tick,
+QPointF rulerPressPoint(SongView &view, const songview::TimelineInputItem &input, Tick tick,
                         qreal rowFraction = 0.25)
 {
     const qreal x = view.camera().displayX(double(tick), 0.0, input.devicePixelRatio());
@@ -72,7 +72,7 @@ struct SharedRulerMenu {
 // session to render its typed menu. The deferred-open gesture is the
 // production one: the menu anchors at the release, the action tick is the
 // snapped press tick.
-SharedRulerMenu openRulerMenu(SongView &view, songview::TimelineInputItem &input, uint64_t tick,
+SharedRulerMenu openRulerMenu(SongView &view, songview::TimelineInputItem &input, Tick tick,
                               qreal rowFraction = 0.25)
 {
     SharedRulerMenu menu;
@@ -118,17 +118,17 @@ void PianoRollTest::rulerLoopMenuSetAndTwoStepUndo()
     songview::TimelineInputItem *input = rulerInput(view);
     QVERIFY2(input, "could not find the time ruler Quick input");
     SongDocument &doc = check.document();
-    const uint64_t snapCell = seed->snapCell;
-    const uint64_t startTick = seed->cell.tick + snapCell;
-    const uint64_t endTick = seed->cell.tick + 2 * snapCell;
+    const Tick snapCell = seed->snapCell;
+    const Tick startTick = seed->cell.tick + snapCell;
+    const Tick endTick = seed->cell.tick + 2 * snapCell;
     QVERIFY2(view.grid().snapTick(double(startTick)) == startTick &&
                  view.grid().snapTick(double(endTick)) == endTick,
              "the ruler loop fixture ticks are not snap-aligned");
     // Start from a known empty loop state regardless of song-seeded markers.
     doc.setLoopTick(false, -1);
     doc.setLoopTick(true, -1);
-    QTRY_VERIFY2(check.timeline().loopStartTick == UINT64_MAX &&
-                     check.timeline().loopEndTick == UINT64_MAX,
+    QTRY_VERIFY2(check.timeline().loopStartTick == CoreTimeDefaults::kNoTick &&
+                     check.timeline().loopEndTick == CoreTimeDefaults::kNoTick,
                  "the ruler loop fixture could not clear seeded loop markers");
 
     const quick_popup::PromptGuard guard(view);
@@ -177,14 +177,14 @@ void PianoRollTest::rulerLoopMenuSetAndTwoStepUndo()
     QCoreApplication::processEvents();
     QVERIFY2(removeMenu.session && !removeMenu.session->isOpen(),
              "the Remove loop activation left the ruler menu open");
-    QTRY_VERIFY2(check.timeline().loopStartTick == UINT64_MAX &&
-                     check.timeline().loopEndTick == UINT64_MAX,
+    QTRY_VERIFY2(check.timeline().loopStartTick == CoreTimeDefaults::kNoTick &&
+                     check.timeline().loopEndTick == CoreTimeDefaults::kNoTick,
                  "the Remove loop row did not clear both loop markers");
     QVERIFY2(doc.undoStack()->index() == undo + 4,
              "removing both loop markers did not push exactly two commands");
     doc.undoStack()->undo();
     QTRY_VERIFY2(check.timeline().loopEndTick == endTick &&
-                     check.timeline().loopStartTick == UINT64_MAX,
+                     check.timeline().loopStartTick == CoreTimeDefaults::kNoTick,
                  "the first undo did not restore only the loop end marker");
     doc.undoStack()->undo();
     QTRY_VERIFY2(check.timeline().loopStartTick == startTick &&
@@ -195,7 +195,7 @@ void PianoRollTest::rulerLoopMenuSetAndTwoStepUndo()
     // Loop from selection runs the same two-command shape over a selection
     // distinct from the manual markers, so neither write can coalesce into
     // a no-op.
-    const uint64_t selectionStart = startTick - snapCell;
+    const Tick selectionStart = startTick - snapCell;
     view.selectionModel().setTimeSelection(
         {selectionStart, startTick, songview::EditorSelectionModel::TimeSelection::Tracks});
     const SharedRulerMenu selectionMenu = openRulerMenu(view, *input, endTick);
@@ -231,8 +231,8 @@ void PianoRollTest::rulerLoopMenuEnablementSelectionContext()
     songview::TimelineInputItem *input = rulerInput(view);
     QVERIFY2(input, "could not find the time ruler Quick input");
     SongDocument &doc = check.document();
-    const uint64_t snapCell = seed->snapCell;
-    const uint64_t chipTick = seed->cell.tick + snapCell;
+    const Tick snapCell = seed->snapCell;
+    const Tick chipTick = seed->cell.tick + snapCell;
     QVERIFY2(view.grid().snapTick(double(chipTick)) == chipTick,
              "the ruler menu fixture tick is not snap-aligned");
     doc.setLoopTick(false, -1);
@@ -341,8 +341,8 @@ void PianoRollTest::rulerLoopMenuStaleCancelNoWrite()
     songview::TimelineInputItem *input = rulerInput(view);
     QVERIFY2(input, "could not find the time ruler Quick input");
     SongDocument &doc = check.document();
-    const uint64_t snapCell = seed->snapCell;
-    const uint64_t tick = seed->cell.tick + snapCell;
+    const Tick snapCell = seed->snapCell;
+    const Tick tick = seed->cell.tick + snapCell;
     QVERIFY2(view.grid().snapTick(double(tick)) == tick,
              "the ruler menu fixture tick is not snap-aligned");
     // The escape focus contract routes to a visible drawer page first; close
@@ -396,7 +396,8 @@ void PianoRollTest::rulerLoopMenuStaleCancelNoWrite()
     QVERIFY2(stale.session && !stale.session->isOpen(),
              "a stale activation left the ruler menu open");
     QVERIFY2(doc.smf().write() == afterIntervening && doc.undoStack()->index() == staleUndo &&
-                 doc.revision() == staleRevision && check.timeline().loopStartTick == UINT64_MAX,
+                 doc.revision() == staleRevision &&
+                 check.timeline().loopStartTick == CoreTimeDefaults::kNoTick,
              "a stale loop-start activation wrote a marker");
 
     // A selection change after the open invalidates the captured scope the
@@ -431,7 +432,7 @@ void PianoRollTest::rulerLoopMenuStaleCancelNoWrite()
             const int64_t probeTick = int64_t(tick) + offset * int64_t(snapCell);
             if (probeTick < 0)
                 continue;
-            const QPointF candidate = rulerPressPoint(view, *input, uint64_t(probeTick));
+            const QPointF candidate = rulerPressPoint(view, *input, Tick(probeTick));
             if (!input->bounds().contains(candidate) ||
                 frameScene.contains(input->mapToScene(candidate)))
                 continue;

@@ -559,11 +559,11 @@ void PianoRollTest::selectionNonScaleMove()
             view.setScaleFold(foldBefore);
             return;
         }
-        const uint64_t snap = view.grid().snapTicksAt(cell.tick);
+        const Tick snap = view.grid().snapTicksAt(cell.tick);
         const qreal dpr = roll->devicePixelRatio();
         const qreal cellPx = view.camera().displayX(double(cell.tick + snap), 0.0, dpr) -
                              view.camera().displayX(double(cell.tick), 0.0, dpr);
-        uint64_t widthTicks = snap * 4;
+        Tick widthTicks = snap * 4;
         while (
             (view.camera().displayX(double(cell.tick + widthTicks), 0.0, dpr) > roll->width() - 4 ||
              check.isOccupied(cell.tick, widthTicks, cell.key)) &&

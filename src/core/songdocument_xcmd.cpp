@@ -22,7 +22,7 @@
 #include "core/lanemoveplan.h"
 #include "core/timedefaults.h"
 
-SmfEvent SongDocument::makeLaneEvent(uint8_t cc, uint8_t channel, uint64_t tick, int value) const
+SmfEvent SongDocument::makeLaneEvent(uint8_t cc, uint8_t channel, Tick tick, int value) const
 {
     value = CoreTimeDefaults::clampLaneValue(cc, value);
     if (cc == DOC_CC_BEND) {
@@ -36,7 +36,7 @@ SmfEvent SongDocument::makeLaneEvent(uint8_t cc, uint8_t channel, uint64_t tick,
 }
 
 void SongDocument::appendLaneInsertOps(std::vector<EditOp> &ops, int smfTrack, uint8_t channel,
-                                       uint8_t cc, uint64_t tick, int value) const
+                                       uint8_t cc, Tick tick, int value) const
 {
     // Descriptor lanes never reach this path: their writes go through
     // rewritePoints, which emits the canonical selector+payload pair.
@@ -124,7 +124,7 @@ SmfFile SongDocument::canonicalizedForExport() const
     return copy;
 }
 
-void SongDocument::addLanePoint(int engineTrack, uint8_t cc, uint64_t tick, int value)
+void SongDocument::addLanePoint(int engineTrack, uint8_t cc, Tick tick, int value)
 {
     const int smfTrack = smfTrackFor(engineTrack);
     if (smfTrack < 0 || m_smf.tracks.empty())
@@ -173,8 +173,8 @@ void SongDocument::addLanePoint(int engineTrack, uint8_t cc, uint64_t tick, int 
              std::move(ops));
 }
 
-void SongDocument::writeLanePoints(int engineTrack, uint8_t cc, uint64_t tickBegin,
-                                   uint64_t tickEnd, const std::vector<LanePointValue> &points)
+void SongDocument::writeLanePoints(int engineTrack, uint8_t cc, Tick tickBegin, Tick tickEnd,
+                                   const std::vector<LanePointValue> &points)
 {
     const int smfTrack = smfTrackFor(engineTrack);
     if (smfTrack < 0 || m_smf.tracks.empty())

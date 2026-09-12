@@ -172,7 +172,7 @@ class SongView : public QObject
         double scrollPx = 0.0;
         double scrollY = 0.0;
         int selectedTrack = 0;
-        uint64_t editCursorTick = 0;
+        Tick editCursorTick = 0;
         int gridMinDenom = 0;     // drawn-grid floor as a note denominator
                                   // (4/8/16/32); 0 = down to the clock grid
         bool gridTriplet = false; // triplet vs straight beat subdivisions
@@ -253,7 +253,7 @@ class SongView : public QObject
     int trackHeaderWidth() const noexcept { return m_geometry.trackHeaderWidth; }
     int pianoKeyboardWidth() const noexcept { return m_geometry.pianoKeyboardWidth; }
     int timelineSplitX() const noexcept { return m_geometry.timelineSplitX; }
-    void publishTimelineQuickHover(songview::TimelineQuickHoverOwner owner, uint64_t tick);
+    void publishTimelineQuickHover(songview::TimelineQuickHoverOwner owner, Tick tick);
     void clearTimelineQuickHover(songview::TimelineQuickHoverOwner owner);
     // Widget-owned migrated bands route retained-scene invalidation through this seam.
     void requestTimelineQuickUpdate(songview::TimelineQuickDirtySet dirty);
@@ -281,11 +281,11 @@ class SongView : public QObject
     // roll space (with a document, dragging or double-clicking there draws
     // a note instead), distinct from the moving playback cursor. Playback
     // starts here, and paste anchors here.
-    uint64_t editCursorTick() const { return m_editCursorTick; }
+    Tick editCursorTick() const { return m_editCursorTick; }
     // Visual placement only (ruler drag preview); commit emits
     // editCursorMoved so playback can follow.
-    void setEditCursorTick(uint64_t tick);
-    void commitEditCursor(uint64_t tick);
+    void setEditCursorTick(Tick tick);
+    void commitEditCursor(Tick tick);
     // Transport "go to start": edit cursor to tick 0 and scroll home.
     void goToStart();
     void resetScrollPosition();
@@ -323,7 +323,7 @@ class SongView : public QObject
     // dropped note starts exactly there, a stolen one spans it, a cut tail
     // ended just before) — and scroll the key into view. Returns whether a
     // note was found and selected (the track selection sticks either way).
-    bool revealNote(int track, uint8_t key, uint64_t tick);
+    bool revealNote(int track, uint8_t key, Tick tick);
     void trackHeaderClicked(int track, Qt::KeyboardModifiers modifiers);
     bool trackMuted(int track) const { return m_muteMask & (1u << track); }
     bool trackSoloed(int track) const { return m_soloMask & (1u << track); }
@@ -429,8 +429,8 @@ class SongView : public QObject
     // Bar/beat grid over [tickBegin, tickEnd): calls fn(tick, isBarStart,
     // barNumber, beatNumber) for every beat, honoring the song's time
     // signature changes.
-    void forEachGridLine(uint64_t tickBegin, uint64_t tickEnd,
-                         const std::function<void(uint64_t, bool, int, int)> &fn) const;
+    void forEachGridLine(Tick tickBegin, Tick tickEnd,
+                         const std::function<void(Tick, bool, int, int)> &fn) const;
 
     // --- editing support for the child widgets ---
     // Grid feel and floor (the ruler's grid controls): the zoom-adaptive
@@ -442,7 +442,7 @@ class SongView : public QObject
     void setGridFeel(songview::GridFeel feel);
     void setGridMinDenom(int denom); // 4/8/16/32; anything else means 0
 
-    DrawerPageVoiceContext voiceContext(uint64_t tick) const;
+    DrawerPageVoiceContext voiceContext(Tick tick) const;
     // Shared deferred velocity gesture; document mutation happens only when
     // commitVelocityGesture() accepts the captured revision.
     enum class VelocityCommitResult { NoGesture, Unchanged, Committed, Rejected };
@@ -546,7 +546,7 @@ class SongView : public QObject
     // span converts to samples through the display timeline, so the preview
     // lasts at most as long as the note does in the song (tempo changes
     // included).
-    void auditionTimed(int track, int key, int velocity, uint64_t startTick, uint64_t endTick);
+    void auditionTimed(int track, int key, int velocity, Tick startTick, Tick endTick);
 
     // Early release for a timed audition (the band no longer covers the
     // note); the velocity-0 form of the same signal.
@@ -567,7 +567,7 @@ class SongView : public QObject
     // popup focus deliberately remain separate from command ownership.
     bool userGestureActive() const;
     // Child-widget request to toggle transport from a specific song tick.
-    void requestPlayPauseFrom(uint64_t tick) { emit playPauseFromRequested(tick); }
+    void requestPlayPauseFrom(Tick tick) { emit playPauseFromRequested(tick); }
 
     // Interaction from children.
     void zoomTimelineAtWheel(const songview::TimelineWheelInput &wheel, qreal anchorContentX);
@@ -592,13 +592,13 @@ class SongView : public QObject
     // viewport if it is currently off-screen; on-screen ticks are left
     // alone. Pastes anchor at the edit cursor, which can be scrolled out
     // of view — without this the paste looks like a no-op.
-    void ensureTickVisible(uint64_t tick);
+    void ensureTickVisible(Tick tick);
     // Minimal-scroll companion for the keyboard transpose/nudge moves:
     // shifts the view just enough to bring the tick span back inside,
     // instead of ensureTickVisible's jump-to-a-third anchoring. A span
     // wider than the viewport keeps the edge the move headed toward
     // (the end when preferEnd, else the start).
-    void ensureRangeVisible(uint64_t startTick, uint64_t endTick, bool preferEnd);
+    void ensureRangeVisible(Tick startTick, Tick endTick, bool preferEnd);
     // Vertical counterpart: scrolls the roll just enough for the key's
     // row to be fully visible.
     void ensureKeyVisible(int key);
@@ -632,10 +632,10 @@ class SongView : public QObject
     void insertTimePromptChanged();
     // Edit cursor committed to a new position (click released); the main
     // window seeks playback here when not stopped.
-    void editCursorMoved(uint64_t tick);
+    void editCursorMoved(Tick tick);
     // Popup/editor audition: start from tick when stopped or paused; when
     // playing, pause and return the transport to tick for the next audition.
-    void playPauseFromRequested(uint64_t tick);
+    void playPauseFromRequested(Tick tick);
     // Roll/event-list swap (user toggle or applyViewState); the main window
     // mirrors it into the View-menu checkbox.
     void eventListVisibilityChanged(bool visible);
@@ -809,14 +809,14 @@ class SongView : public QObject
     struct PendingInsertTimePrompt {
         QPointer<SongDocument> document;
         uint64_t documentRevision = 0;
-        uint64_t cursorTick = 0;
-        uint64_t beatTicks = 1;
-        uint64_t beatsPerBar = 4;
+        Tick cursorTick = 0;
+        uint32_t beatTicks = 1;
+        uint32_t beatsPerBar = 4;
         int initialBars = 1;
         int initialBeats = 0;
         int initialBeatFractions = 0;
     };
-    void openInsertTimePrompt(uint64_t cursorTick, const songview::Grid::Segment &segment);
+    void openInsertTimePrompt(Tick cursorTick, const songview::Grid::Segment &segment);
     void clearInsertTimePrompt(bool restoreFocus);
     void cancelInsertTimePromptWithoutFocus();
     struct PendingVoicePicker {
@@ -888,7 +888,7 @@ class SongView : public QObject
     songview::TimeCamera m_camera; // zoom/scroll state over m_timeAxis + m_projection
     songview::Grid m_grid;         // zoom-adaptive grid state over m_timeAxis + m_camera
     double m_playheadTick = 0.0;
-    uint64_t m_editCursorTick = 0;
+    Tick m_editCursorTick = 0;
     bool m_playing = false;
     std::optional<PendingInsertTimePrompt> m_pendingInsertTimePrompt;
     QMetaObject::Connection m_insertTimePromptCancellation;

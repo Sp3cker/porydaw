@@ -42,8 +42,8 @@ QQuickWindow *SelectionWindowTierTest::quickWindow() const
 std::optional<SelectionWindowTierTest::NotePair>
 SelectionWindowTierTest::addNotePair(SongDocument &document, int track, uint64_t firstTick)
 {
-    const std::vector<SongDocument::NewNote> specs{{firstTick, 60, 48, 100},
-                                                   {firstTick + 96, 64, 48, 96}};
+    const std::vector<SongDocument::NewNote> specs{{Tick(firstTick), 60, 48, 100},
+                                                   {Tick(firstTick + 96), 64, 48, 96}};
     QString error;
     const std::vector<NoteId> inserted =
         selectionkey::insertIsolatedNotes(document, track, specs, error);

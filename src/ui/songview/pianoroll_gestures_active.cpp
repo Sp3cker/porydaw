@@ -18,7 +18,7 @@ namespace songview {
 void PianoRoll::updateMoveDrag(const TimelinePointerInput &input)
 {
     const double tick = m_camera.tickAtContentX(input.position.x());
-    const int64_t grid = int64_t(m_grid.snapTicksAt(uint64_t(std::max(0.0, m_pressTick))));
+    const int64_t grid = int64_t(m_grid.snapTicksAt(Tick(std::max(0.0, m_pressTick))));
     const int64_t snappedD = int64_t(std::llround((tick - m_pressTick) / double(grid))) * grid;
     const int dKey = m_sv->scaleFold() ? foldDegreeDeltaForPointer(input.position.y())
                                        : yToKey(input.position.y()) - m_pressKey;
@@ -51,7 +51,7 @@ void PianoRoll::updateResizeDrag(const TimelinePointerInput &input)
 {
     const double tick = m_camera.tickAtContentX(input.position.x());
     const double desired = double(m_gripTick) + (tick - m_pressTick);
-    const uint64_t snapped =
+    const Tick snapped =
         m_leftDrag == LeftDrag::Resize
             ? std::max(m_grid.snapTick(desired), m_grid.snapTickUp(double(m_gripOpposite) + 1.0))
             : std::min(m_grid.snapTick(desired), m_grid.snapTickDown(double(m_gripOpposite) - 1.0));
@@ -89,8 +89,8 @@ void PianoRoll::updateVelocityDrag(const TimelinePointerInput &input)
 void PianoRoll::updateDrawDrag(const TimelinePointerInput &input)
 {
     const double tick = m_camera.tickAtContentX(input.position.x());
-    const uint64_t grid = m_grid.snapTicksAt(uint64_t(std::max(0.0, m_pressTick)));
-    uint64_t start;
+    const Tick grid = m_grid.snapTicksAt(Tick(std::max(0.0, m_pressTick)));
+    Tick start;
     int64_t dur;
     drawSpanAt(tick, grid, start, dur);
     const int key = yToKey(input.position.y());
@@ -114,12 +114,12 @@ bool PianoRoll::isDrawableKey(int key) const
            (key >= 0 && porydaw_scale::isScalePitch(m_sv->scaleId(), m_sv->scaleRoot(), key));
 }
 
-void PianoRoll::drawSpanAt(double tick, uint64_t grid, uint64_t &start, int64_t &dur) const
+void PianoRoll::drawSpanAt(double tick, Tick grid, Tick &start, int64_t &dur) const
 {
-    const uint64_t anchor = m_drawAnchor;
+    const Tick anchor = m_drawAnchor;
     start = anchor;
     if (tick >= double(anchor)) {
-        const uint64_t end = std::max(anchor + grid, m_grid.snapTickUp(tick));
+        const Tick end = std::max(anchor + grid, m_grid.snapTickUp(tick));
         dur = int64_t(end - anchor);
     } else {
         start = m_grid.snapTickDown(tick);
@@ -130,7 +130,7 @@ void PianoRoll::drawSpanAt(double tick, uint64_t grid, uint64_t &start, int64_t 
 void PianoRoll::updateTimeSelDrag(const TimelinePointerInput &input)
 {
     const double tick = m_camera.tickAtContentX(input.position.x());
-    const uint64_t t = m_grid.snapTick(tick);
+    const Tick t = m_grid.snapTick(tick);
     EditorSelectionModel::TimeSelection sel;
     sel.startTick = std::min(m_rightAnchorTick, t);
     sel.endTick = std::max(m_rightAnchorTick, t);
