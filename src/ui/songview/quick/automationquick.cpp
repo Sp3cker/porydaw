@@ -420,7 +420,7 @@ void AutomationCanvas::rebuildQuickScene(songview::TimelineQuickScene &scene,
         const qreal height = captionMetrics.height();
         const qreal x = std::clamp<qreal>(m_hoverState.hover.pos.x() - width / 2.0, viewport.left(),
                                           viewport.right() - width);
-        QRectF rect(x, curveY + labelInset, width, height);
+        QRectF rect(x, curveY - labelInset - height, width, height);
         appendText(hoverTextRecords, TimelineQuickTextKeyKind::AutomationGhostHover,
                    quint64(ghostLane.parameterIndex), rect, text,
                    themes::color(themes::Role::song_view_secondary_text), m_laneCaptionFont,

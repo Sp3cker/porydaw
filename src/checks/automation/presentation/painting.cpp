@@ -613,7 +613,7 @@ void AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover()
                     .has_value());
     QVERIFY2(std::abs(label->center().x() - hoverPoint.x()) <= label->width(),
              "the ghost hover label no longer tracks the pointer horizontally");
-    QVERIFY2(label->top() >= curveY, "the ghost hover label no longer sits below the nodeline");
+    QVERIFY2(label->bottom() <= curveY, "the ghost hover label no longer sits above the nodeline");
     QVERIFY(!findTextRecord(ghostModel, QStringLiteral("Tempo"), viewport).has_value());
 
     // Unpinning clears both labels without further pointer movement.
