@@ -129,8 +129,8 @@ void PianoRollTest::rulerLoopMenuSetAndTwoStepUndo()
     // Start from a known empty loop state regardless of song-seeded markers.
     doc.setLoopTick(false, -1);
     doc.setLoopTick(true, -1);
-    QTRY_VERIFY2(check.timeline().loopStartTick == UINT64_MAX &&
-                     check.timeline().loopEndTick == UINT64_MAX,
+    QTRY_VERIFY2(check.timeline().loopStartTick == CoreTimeDefaults::kNoTick &&
+                     check.timeline().loopEndTick == CoreTimeDefaults::kNoTick,
                  "the ruler loop fixture could not clear seeded loop markers");
 
     const quick_popup::PromptGuard guard(view);
@@ -179,14 +179,14 @@ void PianoRollTest::rulerLoopMenuSetAndTwoStepUndo()
     QCoreApplication::processEvents();
     QVERIFY2(removeMenu.session && !removeMenu.session->isOpen(),
              "the Remove loop activation left the ruler menu open");
-    QTRY_VERIFY2(check.timeline().loopStartTick == UINT64_MAX &&
-                     check.timeline().loopEndTick == UINT64_MAX,
+    QTRY_VERIFY2(check.timeline().loopStartTick == CoreTimeDefaults::kNoTick &&
+                     check.timeline().loopEndTick == CoreTimeDefaults::kNoTick,
                  "the Remove loop row did not clear both loop markers");
     QVERIFY2(doc.undoStack()->index() == undo + 4,
              "removing both loop markers did not push exactly two commands");
     doc.undoStack()->undo();
     QTRY_VERIFY2(check.timeline().loopEndTick == endTick &&
-                     check.timeline().loopStartTick == UINT64_MAX,
+                     check.timeline().loopStartTick == CoreTimeDefaults::kNoTick,
                  "the first undo did not restore only the loop end marker");
     doc.undoStack()->undo();
     QTRY_VERIFY2(check.timeline().loopStartTick == startTick &&
@@ -427,7 +427,8 @@ void PianoRollTest::rulerLoopMenuStaleCancelNoWrite()
     QTRY_VERIFY2(input->hasActiveFocus(),
                  "the document-edit dismissal did not return focus to the ruler band");
     QVERIFY2(doc.smf().write() == afterIntervening && doc.undoStack()->index() == staleUndo &&
-                 doc.revision() == staleRevision && check.timeline().loopStartTick == UINT64_MAX,
+                 doc.revision() == staleRevision &&
+                 check.timeline().loopStartTick == CoreTimeDefaults::kNoTick,
              "the document-edit dismissal wrote a loop marker");
 
     // A selection change after the open retires the menu the same way, so

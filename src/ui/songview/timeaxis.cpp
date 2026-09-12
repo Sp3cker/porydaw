@@ -1,5 +1,6 @@
 #include "ui/songview/timeaxis.h"
 
+#include "core/timedefaults.h"
 #include <algorithm>
 #include <cstddef>
 
@@ -50,12 +51,16 @@ uint64_t TimeAxis::lengthTicks() const noexcept
 
 uint64_t TimeAxis::loopStartTick() const noexcept
 {
-    return m_timeline ? m_timeline->loopStartTick : UINT64_MAX;
+    return m_timeline && m_timeline->loopStartTick != CoreTimeDefaults::kNoTick
+               ? uint64_t(m_timeline->loopStartTick)
+               : UINT64_MAX;
 }
 
 uint64_t TimeAxis::loopEndTick() const noexcept
 {
-    return m_timeline ? m_timeline->loopEndTick : UINT64_MAX;
+    return m_timeline && m_timeline->loopEndTick != CoreTimeDefaults::kNoTick
+               ? uint64_t(m_timeline->loopEndTick)
+               : UINT64_MAX;
 }
 
 std::span<const TimeSigPoint> TimeAxis::explicitTimeSignatures() const noexcept

@@ -9,8 +9,8 @@
 #include <memory>
 #include <optional>
 
+#include "core/timedefaults.h"
 #include "ui/songview/clip.h"
-#include "ui/songview/clipmime.h"
 
 namespace {
 
@@ -43,7 +43,7 @@ Clip rescaleInput(RescaleFamily family)
         clip.span = UINT64_MAX;
         clip.tracks = {{0, {{UINT32_MAX, 127, UINT32_MAX, 255}}}};
         clip.lanes = {{0, kCcModulation, {{UINT32_MAX, std::numeric_limits<int>::min()}}}};
-        clip.tempo = {{Tick(UINT64_MAX), UINT32_MAX}};
+        clip.tempo = {{CoreTimeDefaults::kMaxTick, UINT32_MAX}};
         return clip;
     case RescaleFamily::Identity:
         clip.tracks = {{7, {{9, 72, 5, 44}}}};

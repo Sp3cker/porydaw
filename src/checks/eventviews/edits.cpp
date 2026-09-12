@@ -157,8 +157,8 @@ void EventViewsEditsTest::tick64BitExact()
                 0);
 }
 
-// 2^53+1 cannot survive a double, so a Number round-trip anywhere between the
-// rendered editor and the document would corrupt ...993 into ...992. The
+// CoreTimeDefaults::kMaxTick (4294967294) is the top representable tick of
+// the 32-bit Tick storage; 2^53+1 sits above it and cannot be committed. The
 // commit is isolated on purpose: one raw event on the small Basic fixture,
 // asserted at the document, then undone — no dense rendering or playback.
 void EventViewsEditsTest::tickHighBitExact()
@@ -171,24 +171,33 @@ void EventViewsEditsTest::tickHighBitExact()
         checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist::TypeNoteOn);
     QVERIFY(row >= 0);
 
-    const QString digits = QStringLiteral("9007199254740993");
+    SongDocument &document = opened.fixture->document();
     const int chunk = widgets.model->chunk();
-    const int beforeIndex = opened.fixture->document().undoStack()->index();
+    const int beforeIndex = document.undoStack()->index();
+    QVERIFY(!widgets.model->setData(widgets.model->index(row, EventTableModel::ColTick),
+                                    QStringLiteral("9007199254740993"), Qt::EditRole));
+    QCOMPARE(document.undoStack()->index(), beforeIndex);
+    QVERIFY(checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist::TypeNoteOn) >= 0);
+
+    const QString digits = QStringLiteral("4294967294");
     QVERIFY(widgets.model->setData(widgets.model->index(row, EventTableModel::ColTick), digits,
                                    Qt::EditRole));
-    QTRY_COMPARE(opened.fixture->document().undoStack()->index(), beforeIndex + 1);
-    const SmfTrack &track = opened.fixture->document().smf().tracks[chunk];
+    QTRY_COMPARE(document.undoStack()->index(), beforeIndex + 1);
+    const SmfTrack &track = document.smf().tracks[chunk];
     QVERIFY(!track.events.empty());
-    QCOMPARE(track.events.back().tick, 9007199254740993ULL);
+    QCOMPARE(track.events.back().tick, 4294967294ULL);
     QVERIFY(checks::eventviews::trackIsSorted(track));
 
-    opened.fixture->document().undoStack()->undo();
+    document.undoStack()->undo();
     QTRY_VERIFY(checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist::TypeNoteOn) >=
                 0);
 }
 
 // Same digits through the rendered Tick TextInput: the proof that the page
 // hands the editor's QString straight to the model instead of a JS Number.
+// kMaxTick (4294967294) fits the 32-bit Tick storage and must land exactly;
+// anything above it (9007199254740993) is rejected by validateCellEdit, so
+// QML never calls commitCellEdit.
 void EventViewsEditsTest::tickHighBitThroughEditor()
 {
     const auto opened = checks::eventviews::openTabFixture(FixtureShape::Basic);
@@ -199,7 +208,8 @@ void EventViewsEditsTest::tickHighBitThroughEditor()
         checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist::TypeNoteOn);
     QVERIFY(row >= 0);
     const int chunk = widgets.model->chunk();
-
+    SongDocument &document = opened.fixture->document();
+    const int beforeIndex = document.undoStack()->index();
     QQuickItem *editor = nullptr;
     QVERIFY(checks::eventviews::openCellEditor(widgets, row, EventTableModel::ColTick,
                                                QStringLiteral("eventListTickEditor"), &editor));
@@ -207,24 +217,27 @@ void EventViewsEditsTest::tickHighBitThroughEditor()
     typeDigits(*widgets.quickWindow, QStringLiteral("9007199254740993"));
     QTest::keyClick(widgets.quickWindow, Qt::Key_Return);
     QCoreApplication::processEvents();
+    QCOMPARE(document.undoStack()->index(), beforeIndex);
 
-    QTRY_COMPARE(opened.fixture->document().smf().tracks[chunk].events.back().tick,
-                 9007199254740993ULL);
-    const SmfTrack &track = opened.fixture->document().smf().tracks[chunk];
-    QVERIFY(!track.events.empty());
-    QCOMPARE(track.events.back().tick, 9007199254740993ULL);
+    QVERIFY(checks::eventviews::openCellEditor(widgets, row, EventTableModel::ColTick,
+                                               QStringLiteral("eventListTickEditor"), &editor));
+    QVERIFY(QMetaObject::invokeMethod(editor, "selectAll"));
+    typeDigits(*widgets.quickWindow, QStringLiteral("4294967294"));
+    QTest::keyClick(widgets.quickWindow, Qt::Key_Return);
+    QCoreApplication::processEvents();
 
-    const int movedRow = checks::eventviews::rowForTickAndType(*widgets.model, 9007199254740993ULL,
-                                                               eventlist::TypeNoteOn);
+    QTRY_COMPARE(document.smf().tracks[chunk].events.back().tick, 4294967294ULL);
+    const int movedRow =
+        checks::eventviews::rowForTickAndType(*widgets.model, 4294967294, eventlist::TypeNoteOn);
     QVERIFY(movedRow >= 0);
     QCOMPARE(widgets.model
                  ->data(widgets.model->index(movedRow, EventTableModel::ColTick),
                         EventTableModel::EventRoles::TickStringRole)
                  .toString(),
-             QStringLiteral("9007199254740993"));
-    QVERIFY(checks::eventviews::trackIsSorted(track));
+             QStringLiteral("4294967294"));
+    QVERIFY(checks::eventviews::trackIsSorted(document.smf().tracks[chunk]));
 
-    opened.fixture->document().undoStack()->undo();
+    document.undoStack()->undo();
     QTRY_VERIFY(checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist::TypeNoteOn) >=
                 0);
 }

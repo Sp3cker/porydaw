@@ -6,8 +6,8 @@
 #include <algorithm>
 #include <cmath>
 
-#include "core/smf.h"
 #include "core/songdocument.h"
+#include "core/timedefaults.h"
 #include "eventtabletypes.h"
 #include "ui/songview.h"
 
@@ -58,7 +58,10 @@ void EventTableModel::queueTempoEdit(const TempoEdit &edit, uint64_t selectTick)
 
 bool EventTableModel::handleTempoTick(const TempoPoint &point, const QVariant &value)
 {
-    const auto tick = uint64_t(value.toULongLong());
+    bool ok = false;
+    const auto tick = value.toULongLong(&ok);
+    if (!ok || tick > CoreTimeDefaults::kMaxTick)
+        return false;
     queueTempoEdit({{point}, {{Tick(tick), point.microsecondsPerQuarterNote}}}, tick);
     return true;
 }
@@ -106,8 +109,12 @@ bool EventTableModel::handleTempoBpm(const TempoPoint &point, const QVariant &va
 
 bool EventTableModel::handleRawTick(size_t eventIndex, const SmfEvent &event, const QVariant &value)
 {
+    bool ok = false;
+    const auto tick = value.toULongLong(&ok);
+    if (!ok || tick > CoreTimeDefaults::kMaxTick)
+        return false;
     auto next = pendingRawEvent(eventIndex, event);
-    next.tick = value.toULongLong();
+    next.tick = tick;
     return commitRawEdit(eventIndex, next);
 }
 

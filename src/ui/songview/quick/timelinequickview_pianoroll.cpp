@@ -1,5 +1,6 @@
 #include "ui/songview/quick/timelinequickview.h"
 
+#include "core/timedefaults.h"
 #include "ui/keymap.h"
 #include "ui/layout.h"
 #include "ui/songview/detail.h"
@@ -376,9 +377,10 @@ void TimelineQuickView::rebuildOverlay()
     }
 
     const MidiTimeline *timeline = roll.m_sv->timeline();
-    if (timeline->loopStartTick != UINT64_MAX || timeline->loopEndTick != UINT64_MAX) {
-        const bool hasStart = timeline->loopStartTick != UINT64_MAX;
-        const bool hasEnd = timeline->loopEndTick != UINT64_MAX;
+    if (timeline->loopStartTick != CoreTimeDefaults::kNoTick ||
+        timeline->loopEndTick != CoreTimeDefaults::kNoTick) {
+        const bool hasStart = timeline->loopStartTick != CoreTimeDefaults::kNoTick;
+        const bool hasEnd = timeline->loopEndTick != CoreTimeDefaults::kNoTick;
         const qreal x0 = hasStart
                              ? roll.m_camera.displayX(double(timeline->loopStartTick), 0.0, dpr)
                              : plot.left();

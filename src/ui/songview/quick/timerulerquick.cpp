@@ -1,5 +1,6 @@
 #include "ui/songview/timeruler.h"
 
+#include "core/timedefaults.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
@@ -105,49 +106,46 @@ void TimeRuler::rebuildQuickScene(TimelineQuickScene &scene, bool horizontalPan)
             }
         }
 
-        const bool hasLoopStart = timeline->loopStartTick != UINT64_MAX;
-        const bool hasLoopEnd = timeline->loopEndTick != UINT64_MAX;
-        if (hasLoopStart || hasLoopEnd) {
-            const qreal x0 = hasLoopStart
-                                 ? m_camera.displayX(double(timeline->loopStartTick), 0.0, dpr)
-                                 : area.left();
-            const qreal x1 = hasLoopEnd ? m_camera.displayX(double(timeline->loopEndTick), 0.0, dpr)
-                                        : area.right();
-            if (x1 > area.left() && x0 < area.right()) {
-                const qreal glowWidth = std::min<qreal>(lyt::space(Space::Eight), x1 - x0);
-                QColor strong = detail::loopEdge();
-                strong.setAlpha(150);
-                QColor middle = strong;
-                middle.setAlpha(18);
-                QColor transparent = strong;
-                transparent.setAlpha(0);
-                if (hasLoopStart && glowWidth > 0) {
-                    const qreal knee = glowWidth * 0.2;
-                    addHorizontalGradient(scene.layer(chromeLayer),
-                                          QRectF(x0, area.top(), knee, area.height()), strong,
-                                          middle, area);
-                    addHorizontalGradient(
-                        scene.layer(chromeLayer),
-                        QRectF(x0 + knee, area.top(), glowWidth - knee, area.height()), middle,
-                        transparent, area);
-                }
-                if (hasLoopEnd && glowWidth > 0) {
-                    const qreal knee = glowWidth * 0.2;
-                    addHorizontalGradient(scene.layer(chromeLayer),
-                                          QRectF(x1 - knee, area.top(), knee, area.height()),
-                                          middle, strong, area);
-                    addHorizontalGradient(
-                        scene.layer(chromeLayer),
-                        QRectF(x1 - glowWidth, area.top(), glowWidth - knee, area.height()),
-                        transparent, middle, area);
-                }
-                if (hasLoopStart)
-                    addVerticalLine(scene.layer(chromeLayer), x0, area.top(), area.bottom(),
-                                    lyt::singlePixel(), detail::loopEdge(), area);
-                if (hasLoopEnd)
-                    addVerticalLine(scene.layer(chromeLayer), x1, area.top(), area.bottom(),
-                                    lyt::singlePixel(), detail::loopEdge(), area);
+        const bool hasLoopStart = timeline->loopStartTick != CoreTimeDefaults::kNoTick;
+        const bool hasLoopEnd = timeline->loopEndTick != CoreTimeDefaults::kNoTick;
+        const qreal x0 = hasLoopStart ? m_camera.displayX(double(timeline->loopStartTick), 0.0, dpr)
+                                      : area.left();
+        const qreal x1 =
+            hasLoopEnd ? m_camera.displayX(double(timeline->loopEndTick), 0.0, dpr) : area.right();
+        if (x1 > area.left() && x0 < area.right()) {
+            const qreal glowWidth = std::min<qreal>(lyt::space(Space::Eight), x1 - x0);
+            QColor strong = detail::loopEdge();
+            strong.setAlpha(150);
+            QColor middle = strong;
+            middle.setAlpha(18);
+            QColor transparent = strong;
+            transparent.setAlpha(0);
+            if (hasLoopStart && glowWidth > 0) {
+                const qreal knee = glowWidth * 0.2;
+                addHorizontalGradient(scene.layer(chromeLayer),
+                                      QRectF(x0, area.top(), knee, area.height()), strong, middle,
+                                      area);
+                addHorizontalGradient(
+                    scene.layer(chromeLayer),
+                    QRectF(x0 + knee, area.top(), glowWidth - knee, area.height()), middle,
+                    transparent, area);
             }
+            if (hasLoopEnd && glowWidth > 0) {
+                const qreal knee = glowWidth * 0.2;
+                addHorizontalGradient(scene.layer(chromeLayer),
+                                      QRectF(x1 - knee, area.top(), knee, area.height()), middle,
+                                      strong, area);
+                addHorizontalGradient(
+                    scene.layer(chromeLayer),
+                    QRectF(x1 - glowWidth, area.top(), glowWidth - knee, area.height()),
+                    transparent, middle, area);
+            }
+            if (hasLoopStart)
+                addVerticalLine(scene.layer(chromeLayer), x0, area.top(), area.bottom(),
+                                lyt::singlePixel(), detail::loopEdge(), area);
+            if (hasLoopEnd)
+                addVerticalLine(scene.layer(chromeLayer), x1, area.top(), area.bottom(),
+                                lyt::singlePixel(), detail::loopEdge(), area);
         }
     }
 

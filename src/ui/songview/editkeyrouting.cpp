@@ -94,17 +94,17 @@ void runLoopFromSelection(SongDocument &document, const MidiTimeline *timeline,
 
 bool canRemoveLoop(const MidiTimeline *timeline)
 {
-    return timeline &&
-           (timeline->loopStartTick != UINT64_MAX || timeline->loopEndTick != UINT64_MAX);
+    return timeline && (timeline->loopStartTick != CoreTimeDefaults::kNoTick ||
+                        timeline->loopEndTick != CoreTimeDefaults::kNoTick);
 }
 
 void runRemoveLoop(SongDocument &document, const MidiTimeline *timeline)
 {
     if (!timeline)
         return;
-    if (timeline->loopStartTick != UINT64_MAX)
+    if (timeline->loopStartTick != CoreTimeDefaults::kNoTick)
         document.setLoopTick(false, -1);
-    if (timeline->loopEndTick != UINT64_MAX)
+    if (timeline->loopEndTick != CoreTimeDefaults::kNoTick)
         document.setLoopTick(true, -1);
 }
 

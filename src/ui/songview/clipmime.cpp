@@ -1,5 +1,7 @@
 #include "ui/songview/clipmime.h"
 
+#include "core/timedefaults.h"
+
 #include <QClipboard>
 #include <QGuiApplication>
 #include <QJsonArray>
@@ -244,7 +246,8 @@ Clip rescaleClip(Clip result, uint32_t sourceTicksPerBeat, uint32_t destinationT
         dedupLastWinsByTick(lane.points);
     }
     for (auto &point : result.tempo)
-        point.tick = scaleTick(point.tick, sourceTicksPerBeat, destinationTicksPerBeat, UINT64_MAX);
+        point.tick = scaleTick(point.tick, sourceTicksPerBeat, destinationTicksPerBeat,
+                               CoreTimeDefaults::kMaxTick);
     dedupLastWinsByTick(result.tempo);
     return result;
 }

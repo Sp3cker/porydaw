@@ -3,6 +3,7 @@
 #include "ui/songview/timeruler.h"
 
 #include "core/songdocument.h"
+#include "core/timedefaults.h"
 #include "ui/layout.h"
 #include "ui/songview.h"
 #include "ui/songview/detail.h"
@@ -522,11 +523,11 @@ int TimeRuler::hitMarker(QPointF pos) const
         return -1;
     const auto markerHitHalfWidth = lyt::space(Space::Two);
     const qreal dpr = m_inputHost->devicePixelRatio();
-    if (tl->loopStartTick != UINT64_MAX &&
+    if (tl->loopStartTick != CoreTimeDefaults::kNoTick &&
         std::abs(m_camera.displayX(double(tl->loopStartTick), 0.0, dpr) - pos.x()) <=
             markerHitHalfWidth)
         return 0;
-    if (tl->loopEndTick != UINT64_MAX &&
+    if (tl->loopEndTick != CoreTimeDefaults::kNoTick &&
         std::abs(m_camera.displayX(double(tl->loopEndTick), 0.0, dpr) - pos.x()) <=
             markerHitHalfWidth)
         return 1;

@@ -2,6 +2,7 @@
 
 #include "core/smf.h"
 #include "core/songdocument.h"
+#include "core/timedefaults.h"
 #include "ui/eventtabletypes.h"
 #include "ui/keymap.h"
 #include "ui/songview.h"
@@ -873,12 +874,13 @@ bool EventListController::editValueFor(int row, int column, const QString &text,
 
     bool ok = false;
     switch (column) {
-    case eventlist::EventTableModel::ColTick:
+    case eventlist::EventTableModel::ColTick: {
         text.toULongLong(&ok);
-        if (!ok)
+        if (!ok || text.toULongLong() > CoreTimeDefaults::kMaxTick)
             return false;
         *value = text;
         return true;
+    }
     case eventlist::EventTableModel::ColType: {
         const int type = text.toInt(&ok);
         if (!ok || type < 0 || type >= eventlist::TypeKindCount ||
